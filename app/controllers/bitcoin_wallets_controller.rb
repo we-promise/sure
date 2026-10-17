@@ -163,7 +163,7 @@ class BitcoinWalletsController < ApplicationController
     # canonical security that would duplicate its manually tracked quantity.
     def bitcoin_securities
       ids = @account.holdings.distinct.pluck(:security_id) + @account.trades.distinct.pluck(:security_id)
-      Security.where(id: ids.uniq).select { |security| security.ticker.to_s.upcase.match?(/\A(?:CRYPTO:)?(?:BTC|XBT)(?:-?USD)?\z/) }
+      Security.where(id: ids.uniq).select { |security| security.ticker.to_s.upcase.match?(BitcoinWalletAccount::BTC_TICKER) }
     end
 
     # Require a choice from this account's BTC positions, or resolve Bitcoin

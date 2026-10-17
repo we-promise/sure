@@ -5,6 +5,8 @@ class BitcoinWalletAccount < ApplicationRecord
 
   ROUTINE_LOOKAHEAD = 20
   FULL_RESCAN_INTERVAL = 1.day
+  # Tickers a wallet may publish; the setup form offers only these.
+  BTC_TICKER = /\A(?:CRYPTO:)?(?:BTC|XBT)(?:-?USD)?\z/
 
   belongs_to :onchain_wallet_item
   belongs_to :account
@@ -159,6 +161,6 @@ class BitcoinWalletAccount < ApplicationRecord
       other_links = account.account_providers.where.not(provider_type: self.class.name)
       errors.add(:account, :linked) if other_links.exists? || account.plaid_account_id || account.simplefin_account_id
       return if security.nil?
-      errors.add(:security, :invalid) unless security.ticker.to_s.upcase.match?(/\A(?:CRYPTO:)?(?:BTC|XBT)(?:-?USD)?\z/)
+      errors.add(:security, :invalid) unless security.ticker.to_s.upcase.match?(BTC_TICKER)
     end
 end

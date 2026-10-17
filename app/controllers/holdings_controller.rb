@@ -57,10 +57,7 @@ class HoldingsController < ApplicationController
 
   # Remap editable securities and rebuild through the account's accounting strategy.
   def remap_security
-    if @holding.account.provider_managed_security?(@holding.security_id)
-      redirect_to account_path(@holding.account, tab: "holdings"), alert: t("holdings.remap_security.managed_position")
-      return
-    end
+    return reject_managed_position_change if @holding.account.provider_managed_security?(@holding.security_id)
 
     # Combobox returns "TICKER|EXCHANGE|PROVIDER" format
     parsed = Security.parse_combobox_id(params[:security_id])
@@ -78,10 +75,7 @@ class HoldingsController < ApplicationController
       ticker: parsed[:ticker],
       exchange_operating_mic: parsed[:exchange_operating_mic]
     )
-    if @holding.account.provider_managed_security?(new_security.id)
-      reject_managed_position_change
-      return
-    end
+    return reject_managed_position_change if @holding.account.provider_managed_security?(new_security.id)
 
     # Honor the user's provider choice (validated by model inclusion check on save)
     new_security.price_provider = parsed[:price_provider] if parsed[:price_provider].present?

@@ -115,9 +115,7 @@ module Account::Linkable
 
   # Cash and other securities remain editable when every link publishes positions.
   def manual_accounting?
-    return plaid_account_id.nil? && simplefin_account_id.nil? && providers.all?(&:position_only?) if accounting_start_date
-
-    unlinked? || (plaid_account_id.nil? && simplefin_account_id.nil? && providers.all?(&:position_only?))
+    plaid_account_id.nil? && simplefin_account_id.nil? && providers.all?(&:position_only?)
   end
 
   # Scope quantity ownership to a security and, for dated edits, its connection.
