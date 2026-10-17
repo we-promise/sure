@@ -132,7 +132,31 @@ class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
     other&.close
   end
 
+  test "run! preloads recurrence rules instead of querying them per series" do
+    3.times { |i| create_series(name: "SERIES #{i}", amount: 10 + i, day_offset: i) }
+
+    statements = capture_sql { Pipeline.new(@family).run! }
+
+    per_series_rule_loads = statements.grep(
+      /FROM "recurrence_rules" WHERE "recurrence_rules"\."recurring_transaction_id" = /
+    )
+    assert_empty per_series_rule_loads,
+      "occurrence generation must not load recurrence_rules one series at a time"
+  end
+
   private
+
+    def capture_sql
+      statements = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*args|
+        payload = args.last
+        statements << payload[:sql] unless payload[:name].to_s =~ /SCHEMA|TRANSACTION/
+      end
+      yield
+      statements
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
 
     def create_series(amount:, day_offset:, name: nil, merchant: nil)
       due = Date.current + day_offset
