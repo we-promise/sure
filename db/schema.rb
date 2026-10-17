@@ -97,7 +97,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
   end
 
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.integer "account_providers_count", default: 0, null: false
     t.uuid "accountable_id"
     t.string "accountable_type"
     t.decimal "balance", precision: 19, scale: 4
