@@ -1,0 +1,23 @@
+<%# locals: (entry:, transaction:, in_split_group: false, drawer_params: {}) %>
+<% if transaction.one_time? %>
+  <span class="text-warning" title="<%= t(entry.amount.negative? ? "transactions.transaction.one_time_income_tooltip" : "transactions.transaction.one_time_expense_tooltip") %>">
+    <%= icon "asterisk", size: "sm", color: "current" %>
+  </span>
+<% end %>
+<% if transaction.pending? %>
+  <%= render DS::Pill.new(label: t("transactions.transaction.pending"), tone: :neutral, marker: false, icon: "clock", title: t("transactions.transaction.pending_tooltip")) %>
+<% end %>
+<% if transaction.has_potential_duplicate? %>
+  <%= render DS::Pill.new(label: transaction.low_confidence_duplicate? ? t("transactions.transaction.review_recommended") : t("transactions.transaction.possible_duplicate"), tone: transaction.low_confidence_duplicate? ? :neutral : :warning, marker: false, icon: transaction.low_confidence_duplicate? ? "help-circle" : "alert-triangle", title: t(transaction.low_confidence_duplicate? ? "transactions.transaction.review_recommended_tooltip" : "transactions.transaction.potential_duplicate_tooltip")) %>
+<% end %>
+<% if @split_parent_entry_ids ? @split_parent_entry_ids.include?(entry.id) : entry.split_parent? %>
+  <%= render DS::Pill.new(label: t("transactions.transaction.split"), tone: :neutral, marker: false, icon: "split", title: t("transactions.transaction.split_tooltip")) %>
+<% end %>
+<% if entry.split_child? && !in_split_group %>
+  <%= link_to entry_path(entry, drawer_params), data: { turbo_frame: "drawer", turbo_prefetch: false }, aria: { label: t("transactions.transaction.split_child_tooltip") }, class: "inline-flex focus-ring rounded" do %>
+    <%= render DS::Tooltip.new(text: t("transactions.transaction.split_child_tooltip"), icon: "corner-down-right", size: "sm", as: :span) %>
+  <% end %>
+<% end %>
+<% if transaction.transfer.present? %>
+  <%= render "transactions/transfer_match", transaction: transaction %>
+<% end %>

@@ -31,6 +31,25 @@ class Settings::AppearancesController < ApplicationController
         selected = (account_groups.is_a?(Array) ? account_groups : [ account_groups ])
         updated_prefs["always_expanded_account_groups"] = selected.select { |k| valid_keys.include?(k) }
       end
+
+      if params.dig(:user, :transactions_compact)
+        updated_prefs["transactions_compact"] = params.dig(:user, :transactions_compact) == "1"
+      end
+
+      if params.dig(:user, :transactions_group_by_date)
+        updated_prefs["transactions_group_by_date"] = params.dig(:user, :transactions_group_by_date) == "1"
+      end
+
+      if params.dig(:user, :transactions_show_notes)
+        updated_prefs["transactions_show_notes"] = params.dig(:user, :transactions_show_notes) == "1"
+      end
+
+      if params.dig(:user, :transactions_per_page)
+        per_page = params.dig(:user, :transactions_per_page).to_i
+        allowed = User::TRANSACTIONS_PER_PAGE_OPTIONS
+        updated_prefs["transactions_per_page"] = per_page if allowed.include?(per_page)
+      end
+
       @user.update!(preferences: updated_prefs)
     end
     redirect_to settings_appearance_path

@@ -5,7 +5,7 @@
               data: { controller: "auto-submit-form" } do |form| %>
   <%= hidden_field_tag :per_page, params[:per_page] %>
 
-  <div class="flex gap-2 mb-4">
+  <div class="flex gap-2 <%= @compact_view ? "mb-2" : "mb-4" %>">
     <div class="grow">
       <div class="flex items-center px-3 py-2 gap-2 border border-secondary rounded-lg focus-within:ring-secondary focus-within:border-secondary">
         <%= icon("search") %>
@@ -34,7 +34,7 @@
     <%= button_tag type: "button",
         id: "toggle-checkboxes-button",
         aria: { label: t(".toggle_selection_checkboxes") },
-        class: "lg:hidden font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
+        class: "#{@compact_view ? "@3xl/compact-table:hidden" : "lg:hidden"} font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary hover:bg-surface-hover",
         data: {
           action: "click->checkbox-toggle#toggle",
           checkbox_toggle_target: "toggleButton"

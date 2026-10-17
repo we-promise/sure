@@ -2,7 +2,7 @@ class UI::AccountPage < ApplicationComponent
   attr_reader :account, :chart_view, :chart_period, :loan_chart, :as_of, :statement_coverage, :statements,
               :reconciliation_statuses, :can_manage_statements
 
-  renders_one :activity_feed, ->(feed_data:, pagy:, search:) { UI::Account::ActivityFeed.new(feed_data: feed_data, pagy: pagy, search: search) }
+  renders_one :activity_feed, ->(feed_data:, pagy:, search:, compact: false, group_by_date: true, running_balances: {}, q: {}) { UI::Account::ActivityFeed.new(feed_data: feed_data, pagy: pagy, search: search, compact: compact, group_by_date: group_by_date, running_balances: running_balances, q: q) }
 
   # `loan_chart` is the Loan::PayoffChart payload the controller built for a
   # loan account, nil for every other type and for a loan with no schedule.

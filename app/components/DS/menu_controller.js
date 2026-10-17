@@ -169,27 +169,43 @@ export default class extends Controller {
 
     const isSmallScreen = !window.matchMedia("(min-width: 768px)").matches;
     const useMobileFullwidth = isSmallScreen && this.mobileFullwidthValue;
+    // Size containers establish a containing block for positioned descendants.
+    // A fixed panel would apply Floating UI's viewport-relative coordinates
+    // against the container and drift away from its trigger — same guard as
+    // DS--popover.
+    const insideSizeContainer = this.hasSizeContainer();
+    const strategy = insideSizeContainer ? "absolute" : "fixed";
+    // Commit the positioning mode before measuring so Floating UI resolves
+    // the offset parent under the same mode the coordinates are applied in.
+    this.contentTarget.style.position = strategy;
 
     computePosition(this.buttonTarget, this.contentTarget, {
       placement: useMobileFullwidth ? "bottom" : this.placementValue,
       middleware: [offset(this.offsetValue), flip({ padding: 5 }), shift({ padding: 5 })],
-      strategy: "fixed",
+      strategy,
     }).then(({ x, y }) => {
       if (useMobileFullwidth) {
         Object.assign(this.contentTarget.style, {
-          position: "fixed",
+          position: strategy,
           left: "0px",
           width: "100vw",
           top: `${y}px`,
         });
       } else {
         Object.assign(this.contentTarget.style, {
-          position: "fixed",
+          position: strategy,
           left: `${x}px`,
           top: `${y}px`,
           width: "",
         });
       }
     });
+  }
+
+  hasSizeContainer() {
+    for (let ancestor = this.element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      if (getComputedStyle(ancestor).containerType !== "normal") return true;
+    }
+    return false;
   }
 }
