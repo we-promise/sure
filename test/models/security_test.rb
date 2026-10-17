@@ -368,4 +368,41 @@ class SecurityTest < ActiveSupport::TestCase
 
     assert_nil security.crypto_base_asset
   end
+
+  # The convert-to-trade picker lists every security in the account. Each
+  # asking for the same rate was a lookup per security, and with the rate
+  # missing a provider call per security.
+  test "securities quoted in the same currency on the same day share one rate lookup" do
+    aapl, msft = securities(:aapl), securities(:msft)
+    [ aapl, msft ].each do |security|
+      security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 200, currency: "USD", date: Date.current))
+    end
+    ExchangeRate.expects(:find_or_fetch_rate)
+      .with(from: "USD", to: "EUR", date: Date.current).once
+      .returns(ExchangeRate.new(rate: 0.9))
+
+    rates = {}
+    assert_equal Money.new(180, "EUR"), aapl.current_price_in("EUR", rates: rates)
+    assert_equal Money.new(180, "EUR"), msft.current_price_in("EUR", rates: rates)
+  end
+
+  test "a shared missing rate converts nothing and is not looked up again" do
+    aapl, msft = securities(:aapl), securities(:msft)
+    [ aapl, msft ].each do |security|
+      security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 200, currency: "USD", date: Date.current))
+    end
+    ExchangeRate.expects(:find_or_fetch_rate).once.returns(nil)
+
+    rates = {}
+    assert_nil aapl.current_price_in("EUR", rates: rates)
+    assert_nil msft.current_price_in("EUR", rates: rates)
+  end
+
+  test "a quote already in the currency asked for needs no rate" do
+    security = securities(:aapl)
+    security.stubs(:find_or_fetch_price).returns(Security::Price.new(price: 200, currency: "USD", date: Date.current))
+    ExchangeRate.expects(:find_or_fetch_rate).never
+
+    assert_equal Money.new(200, "USD"), security.current_price_in("USD")
+  end
 end
