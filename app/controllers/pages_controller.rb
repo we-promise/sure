@@ -694,12 +694,14 @@ class PagesController < ApplicationController
 
     # A comparison running past the axis (day 31 against a 30-day month) is
     # clipped to it, with the rest folded into the final visible point, so
-    # the curve still ends at the full total shown in the header.
+    # the curve still ends at the full total shown in the header. A final
+    # point the period doesn't reach stays blank rather than carrying days
+    # beyond the axis.
     def fold_extra_days(series, axis_days)
       return series if series.size <= axis_days
 
       series.first(axis_days).tap do |folded|
-        folded[-1] = folded[-1].merge(value: series.last[:value])
+        folded[-1] = folded[-1].merge(value: series.last[:value]) unless folded[-1][:value].nil?
       end
     end
 

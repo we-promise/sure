@@ -984,6 +984,20 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ money_text(10), money_text(250) ], spending_trend_header_totals
   end
 
+  test "dashboard spending trend leaves the last axis day blank when the period only covers later days" do
+    account = @family.accounts.create!(name: "Spending Trend Late Days Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    create_transaction(account: account, name: "Feb spend", amount: 10, date: Date.new(2026, 2, 3))
+    create_transaction(account: account, name: "Mar 31", amount: 70, date: Date.new(2026, 3, 31))
+
+    # A 28-day axis against a period of only March 30-31: nothing to draw.
+    get root_path, params: { spending_month: "2026-02-01", start_date: "2026-03-30", end_date: "2026-03-31" }
+    assert_response :ok
+
+    previous = spending_trend_chart_data.fetch("previous")
+    assert_equal 28, previous.size
+    assert previous.all? { |point| point["value"].nil? }
+  end
+
   test "dashboard spending trend lines match when the dashboard period is month to date" do
     travel_to Date.current.beginning_of_month + 14.days do
       account = @family.accounts.create!(name: "Spending Trend MTD Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
