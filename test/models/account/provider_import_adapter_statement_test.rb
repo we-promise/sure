@@ -37,6 +37,42 @@ class Account::ProviderImportAdapterStatementTest < ActiveSupport::TestCase
     assert_equal manual, found
   end
 
+  test "provider-only search skips manual entries with the same date and amount" do
+    create_transaction(account: @account, date: @date, amount: 50, name: "Other purchase")
+    create_transaction(account: @account, date: @date, amount: 50,
+                       name: "Blank external ID", external_id: "")
+    @account.entries.create!(
+      date: @date, amount: 50, currency: "USD", name: "Pending purchase",
+      external_id: "plaid-pending", source: "plaid",
+      entryable: Transaction.new(extra: { "plaid" => { "pending" => true } })
+    )
+    synced = create_transaction(account: @account, date: @date, amount: 50,
+                                name: "Bank description", external_id: "plaid-2", source: "plaid")
+
+    found = @adapter.find_duplicate_transaction(
+      date: @date, amount: 50, currency: "USD", provider_entries_only: true
+    )
+
+    assert_equal synced, found
+  end
+
+  test "provider-only search ignores excluded entries but keeps split parents" do
+    create_transaction(account: @account, date: @date, amount: 50,
+                       external_id: "stale-pending", source: "plaid", excluded: true)
+    split_parent = create_transaction(account: @account, date: @date, amount: 50,
+                                      external_id: "split-parent", source: "plaid")
+    split_parent.split!([
+      { name: "Coffee", amount: 20 },
+      { name: "Groceries", amount: 30 }
+    ])
+
+    found = @adapter.find_duplicate_transaction(
+      date: @date, amount: 50, currency: "USD", provider_entries_only: true
+    )
+
+    assert_equal split_parent, found
+  end
+
   test "an exact-date search ignores neighbouring dates" do
     create_transaction(account: @account, date: @date - 2, amount: 50)
 
