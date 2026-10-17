@@ -117,7 +117,7 @@ class PlaidItem::AccountsSnapshotTest < ActiveSupport::TestCase
     @plaid_item.update!(available_products: [ "investments" ], billed_products: [])
     @snapshot.stubs(:accounts).returns([ OpenStruct.new(account_id: "123", type: "investment") ])
 
-    @plaid_provider.expects(:get_item_investments).returns(
+    @plaid_provider.expects(:get_item_investments).with(@plaid_item.access_token).returns(
       OpenStruct.new(
         holdings: [ OpenStruct.new(account_id: "other", security_id: "sec_1") ],
         transactions: [],
