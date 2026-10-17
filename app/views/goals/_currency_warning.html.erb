@@ -1,0 +1,13 @@
+<%# locals: (goal:) %>
+<% if goal.currency_conversion_incomplete? %>
+  <div>
+    <%= render DS::Alert.new(variant: "warning", title: t("goals.currency_warning.title"),
+          message: t("goals.currency_warning.body", from: goal.missing_exchange_rate_currencies.to_a.to_sentence, to: goal.currency)) %>
+    <%# Rates come from the exchange rate provider; only a self-hosted admin can change it. %>
+    <% if self_hosted? && Current.user&.admin? %>
+      <div class="mt-2 text-sm">
+        <%= render DS::Link.new(text: t("goals.currency_warning.settings_link"), variant: :default, href: settings_hosting_path) %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

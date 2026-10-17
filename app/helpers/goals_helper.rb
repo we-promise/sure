@@ -47,6 +47,14 @@ module GoalsHelper
     other_goal_rows(account, pooled, current_goal).any? { |row| row[:allocated_amount].nil? }
   end
 
+  # Today's account-to-goal rate, so the earmark hint can show the goal-currency
+  # equivalent while typing. nil when the currencies match or no rate exists.
+  def earmark_conversion_rate(goal, account, currency)
+    return if account.currency == currency
+
+    goal.convert_money(Money.new(1, account.currency), to: currency).amount.nonzero?
+  end
+
   private
     def other_goal_rows(account, pooled, current_goal)
       (pooled[account.id] || [])
