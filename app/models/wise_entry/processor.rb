@@ -63,8 +63,11 @@ class WiseEntry::Processor
 
   # Why a transfer books nothing on its balance, or nil when it books. The
   # balance replay marks a payout Wise took from a card or bank instead of
-  # the balance as externally funded ("wise_funding").
+  # the balance as externally funded ("wise_funding"); a statement row that
+  # carries the transfer's movement books it instead ("wise_superseded_by",
+  # see WiseItem::StatementMigration).
   def self.skip_reason(transfer, direction:)
+    return :superseded if transfer["wise_superseded_by"].present?
     return :external_funding if transfer["wise_funding"] == "external"
     return :activity_cancelled if activity_of(transfer)&.dig("status") == "CANCELLED"
 

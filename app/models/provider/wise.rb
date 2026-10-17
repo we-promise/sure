@@ -78,26 +78,26 @@ class Provider::Wise
     )
   end
 
-  def get_balance_statements(profile_id, balance_id, currency:, start_date:, end_date: Date.current)
+  # The statement rows between two instants, which Wise reads as UTC (so a
+  # window starts at the moment given, not at midnight in whatever zone the
+  # job runs in). Longer intervals are asked for in windows of
+  # MAX_STATEMENT_DAYS, each retried on its own (.with_retries) so earlier
+  # windows are not fetched again.
+  def get_balance_statements(profile_id, balance_id, currency:, interval_start:, interval_end: Time.current)
     transactions = []
-    window_start = start_date.to_date
-    end_date = end_date.to_date
+    window_start = interval_start.to_time.utc
+    finish = interval_end.to_time.utc
+    return transactions if window_start > finish
 
-    while window_start <= end_date
-      window_end = [ window_start + MAX_STATEMENT_DAYS - 1, end_date ].min
-      # Retries only the failed window so a rate-limited request does not
-      # restart earlier windows in a multi-window statement fetch.
+    loop do
+      window_end = [ window_start + MAX_STATEMENT_DAYS.days, finish ].min
       response = self.class.with_retries do
-        get_balance_statement(
-          profile_id,
-          balance_id,
-          currency: currency,
-          interval_start: window_start.beginning_of_day,
-          interval_end: window_end.end_of_day
-        )
+        get_balance_statement(profile_id, balance_id, currency: currency, interval_start: window_start, interval_end: window_end)
       end
       transactions.concat(Array(response["transactions"] || response[:transactions]))
-      window_start = window_end + 1.day
+      break if window_end >= finish
+
+      window_start = window_end
     end
 
     transactions

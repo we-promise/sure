@@ -1,15 +1,13 @@
 # frozen_string_literal: true
 
 class WiseAccount::Processor
-  attr_reader :wise_account, :import_complete, :coverage_upgraded
+  attr_reader :wise_account, :import_complete
 
-  # import_complete, coverage_upgraded: see WiseItem#process_accounts.
-  # Processing an account on its own leaves them false, so nothing is
-  # deleted or rewritten.
-  def initialize(wise_account, import_complete: false, coverage_upgraded: false)
+  # import_complete: see WiseItem#process_accounts. Processing an account on
+  # its own leaves it false, so nothing is deleted or rewritten.
+  def initialize(wise_account, import_complete: false)
     @wise_account = wise_account
     @import_complete = import_complete
-    @coverage_upgraded = coverage_upgraded
   end
 
   def process
@@ -70,9 +68,7 @@ class WiseAccount::Processor
     end
 
     def process_transactions
-      WiseAccount::Transactions::Processor.new(
-        wise_account, import_complete: import_complete, coverage_upgraded: coverage_upgraded
-      ).process
+      WiseAccount::Transactions::Processor.new(wise_account, import_complete: import_complete).process
     rescue StandardError => e
       Rails.logger.error "WiseAccount::Processor - Failed to process transactions for wise_account #{wise_account.id}: #{e.message}"
       Rails.logger.error Array(e.backtrace).first(10).join("\n")
@@ -168,14 +164,16 @@ class WiseAccount::Processor
         ((anchor.created_at.utc - 2.years).to_date - anchor.date).abs <= 1
     end
 
-    # Both transfers and activities were fetched back to `time`.
+    # Activities, and transfers or the balance's statements (which carry what
+    # its transfers did), were fetched back to `time`. A connection whose
+    # balances all have statements fetches no transfer list.
     def covered_since?(time)
       return false unless time
 
-      %i[transfers activities].all? do |source|
-        coverage = wise_account.wise_item.fetch_coverage(source)
-        coverage.present? && coverage[:from] <= time
-      end
+      reaches = ->(coverage) { coverage.present? && coverage[:from] <= time }
+      wise_item = wise_account.wise_item
+      reaches.call(wise_item.fetch_coverage(:activities)) &&
+        (reaches.call(wise_item.fetch_coverage(:transfers)) || reaches.call(wise_account.statements_coverage))
     end
 
     def capture_debug_log(category:, level:, message:, **metadata)

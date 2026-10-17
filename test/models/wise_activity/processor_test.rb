@@ -310,6 +310,31 @@ class WiseActivity::ProcessorTest < ActiveSupport::TestCase
     assert_equal "wise_activity_card_done", completed.process.external_id
   end
 
+  # What WiseItem::StatementMigration compares statement rows with.
+  test "tells what it books on a balance, without a linked account" do
+    gbp = WiseAccount.create!(wise_item: @wise_item, balance_id: "10000003", name: "Wise GBP", currency: "GBP",
+                              raw_payload: { "type" => "STANDARD" })
+    payment = build_activity("CARD_PAYMENT", "7.40 EUR", "6.42 GBP", id: "card_1")
+    conversion = build_interbalance("To <strong>EUR</strong>", amount: "22.91 EUR", resource_id: "777", secondary: "20 GBP")
+
+    assert_equal({ external_id: "wise_activity_card_1", amount: BigDecimal("6.42"), currency: "GBP" },
+                 WiseActivity::Processor.new(payment, wise_account: gbp).booking)
+    assert_equal({ external_id: "wise_interbalance_777_inflow", amount: BigDecimal("-22.91"), currency: "EUR" },
+                 WiseActivity::Processor.new(conversion, wise_account: @standard_account).booking)
+    assert_nil WiseActivity::Processor.new(payment.merge("status" => "IN_PROGRESS"), wise_account: gbp).booking
+  end
+
+  # WiseItem::StatementMigration: a statement row carries it now.
+  test "books nothing once a statement row took it over" do
+    payment = build_activity("CARD_PAYMENT", "12 EUR", id: "card_1").merge("wise_superseded_by" => "wise_statement_CARD-3000001")
+    processor = WiseActivity::Processor.new(payment, wise_account: @standard_account)
+
+    assert_equal :skipped, processor.process
+    assert_empty processor.expected_external_ids
+    assert_nil processor.booking
+    assert_empty @standard_sure_account.entries
+  end
+
   # A cancelled activity is not booked.
   test "a cancelled conversion books neither leg" do
     activity = build_interbalance("To <strong>EUR</strong>", amount: "22.91 EUR", resource_id: "778", secondary: "20 GBP")

@@ -18,13 +18,12 @@ class WiseItem::SyncerTest < ActiveSupport::TestCase
 
   # A failed fetch completed the sync with no error anywhere. It still
   # completes, but the error is in the sync stats the Wise card shows, and
-  # processing is told the import was incomplete. process_accounts also takes
-  # coverage_upgraded.
+  # processing is told the import was incomplete.
   test "reports failed fetches and withholds the complete flag from processing" do
     wise_item = linked_wise_item
     WiseItem.any_instance.stubs(:import_latest_wise_data)
             .returns(success: false, complete: false, fetch_failures: 2, accounts_failed: 0, transactions_failed: 0)
-    WiseItem.any_instance.expects(:process_accounts).with(import_complete: false, coverage_upgraded: false).returns([])
+    WiseItem.any_instance.expects(:process_accounts).with(import_complete: false).returns([])
     WiseItem.any_instance.stubs(:schedule_account_syncs).returns([])
     sync = Sync.create!(syncable: wise_item)
 
@@ -35,12 +34,11 @@ class WiseItem::SyncerTest < ActiveSupport::TestCase
     assert_equal [ I18n.t("wise_items.syncer.fetch_failed", count: 2) ], sync.sync_stats["errors"].map { |error| error["message"] }
   end
 
-  # process_accounts also takes coverage_upgraded.
   test "tells processing the import was complete when every fetch succeeded" do
     wise_item = linked_wise_item
     WiseItem.any_instance.stubs(:import_latest_wise_data)
             .returns(success: true, complete: true, fetch_failures: 0, accounts_failed: 0, transactions_failed: 0)
-    WiseItem.any_instance.expects(:process_accounts).with(import_complete: true, coverage_upgraded: false).returns([])
+    WiseItem.any_instance.expects(:process_accounts).with(import_complete: true).returns([])
     WiseItem.any_instance.stubs(:schedule_account_syncs).returns([])
     sync = Sync.create!(syncable: wise_item)
 
@@ -49,11 +47,14 @@ class WiseItem::SyncerTest < ActiveSupport::TestCase
     assert_equal 0, sync.reload.sync_stats["total_errors"]
   end
 
-  test "passes a full re-fetch on to processing and records the stale entries it deleted" do
+  # A full re-fetch (coverage_upgraded) is no longer passed on; the balances
+  # it rebuilt keep their cap bypass themselves
+  # (WiseAccount#prune_cap_bypass_ids).
+  test "records the stale entries processing deleted" do
     wise_item = linked_wise_item
     WiseItem.any_instance.stubs(:import_latest_wise_data)
             .returns(success: true, complete: true, coverage_upgraded: true, fetch_failures: 0, accounts_failed: 0, transactions_failed: 0)
-    WiseItem.any_instance.expects(:process_accounts).with(import_complete: true, coverage_upgraded: true).returns([
+    WiseItem.any_instance.expects(:process_accounts).with(import_complete: true).returns([
       { wise_account_id: 1, success: true, result: { imported: 3, skipped: 0, failed: 0, pruned: 2 } },
       { wise_account_id: 2, success: true, result: { imported: 1, skipped: 0, failed: 0, pruned: 1 } },
       { wise_account_id: 3, success: true, result: nil }

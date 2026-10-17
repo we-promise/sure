@@ -11,15 +11,23 @@ class WiseAccount::Transactions::Processor
   # activities; statement rows never move). With no row to date an empty
   # payload by, only these can be stale on it.
   ROUTED_EXTERNAL_ID_PREFIXES = %w[wise_transfer_ wise_fee_ wise_refund_ wise_interbalance_ wise_activity_].freeze
+  # The fetches each kind of entry's rows come from: a transfer's entries
+  # from the transfer list and its activities (its fee and refund), an
+  # activity's (conversion legs included) from the activities, a statement
+  # row's from the balance's statements.
+  COVERAGE_SOURCES = {
+    "wise_transfer_" => %i[transfers activities], "wise_fee_" => %i[transfers activities],
+    "wise_refund_" => %i[transfers activities], "wise_interbalance_" => %i[activities],
+    "wise_activity_" => %i[activities], "wise_statement_" => %i[statements]
+  }.freeze
   MAX_LOGGED_EXTERNAL_IDS = 20
 
-  attr_reader :wise_account, :import_complete, :coverage_upgraded
+  attr_reader :wise_account, :import_complete
 
-  # import_complete, coverage_upgraded: see WiseItem#process_accounts.
-  def initialize(wise_account, import_complete: false, coverage_upgraded: false)
+  # import_complete: see WiseItem#process_accounts.
+  def initialize(wise_account, import_complete: false)
     @wise_account = wise_account
     @import_complete = import_complete
-    @coverage_upgraded = coverage_upgraded
   end
 
   def process
@@ -38,9 +46,11 @@ class WiseAccount::Transactions::Processor
     errors = []
     expected_ids = Set.new
     row_dates = []
+    @rekeys = Hash.new { |outcomes, outcome| outcomes[outcome] = [] }
 
     rows.each_with_index do |tx_data, index|
       processor = processor_for(tx_data)
+      take_over_entries(processor)
       result = processor.process
       expected_ids.merge(processor.expected_external_ids)
       row_dates << processor.booking_date
@@ -65,6 +75,7 @@ class WiseAccount::Transactions::Processor
       errors << { index: index, error: "#{e.class}: #{e.message}" }
     end
 
+    log_rekeys
     prune = prune?(payload, failed) ? prune_stale_entries(rows, expected_ids, row_dates) : { destroyed: 0, kept: 0 }
     Rails.logger.info "WiseAccount::Transactions::Processor - Done: #{imported} imported, #{skipped} skipped, #{failed} failed, #{prune[:destroyed]} stale deleted"
 
@@ -88,6 +99,99 @@ class WiseAccount::Transactions::Processor
       end
     end
 
+    # A statement row that carries the movement of a row the balance booked
+    # before it had statements (WiseItem::StatementMigration) first takes
+    # that row's entries over, main entry and fee together, so they keep
+    # what a person did to them: renamed to the statement row's ids when
+    # those are free. When both exist (an older migration booked both), the
+    # one a person acted on or linked stays under the statement id and the
+    # other is deleted; if a person acted on both, both stay (logged).
+    # Deleting waits for a complete import.
+    def take_over_entries(processor)
+      return unless account.present? && processor.respond_to?(:superseded_external_ids)
+
+      mapping = processor.superseded_external_ids
+      return if mapping.empty?
+
+      outcomes = Entry.transaction(requires_new: true) { mapping.map { |from, to| rekey_entry(from, to) } }
+      outcomes.each { |outcome, external_id| @rekeys[outcome] << external_id unless outcome == :none }
+    rescue StandardError
+      # The row fails rather than book a second entry next to the old one;
+      # the next sync tries again.
+      @rekeys[:failed].concat(Array(mapping&.keys))
+      raise
+    end
+
+    # [outcome, the external id it concerns]; destroyed entries are named by
+    # the id they had.
+    def rekey_entry(from, to)
+      scope = account.entries.where(source: "wise", entryable_type: "Transaction")
+      old = scope.lock.find_by(external_id: from)
+      return [ :none, from ] unless old
+
+      current = scope.lock.find_by(external_id: to)
+      if current.nil?
+        old.update!(external_id: to)
+        [ :renamed, to ]
+      elsif !import_complete || wise_account.processing_lock_lost?
+        [ :deferred, from ]
+      elsif keep_rank(old) > keep_rank(current) && !protected_entry?(current)
+        current.destroy!
+        old.update!(external_id: to)
+        [ :replaced, to ]
+      elsif !protected_entry?(old)
+        old.destroy!
+        [ :dropped, from ]
+      else
+        [ :kept_both, from ]
+      end
+    end
+
+    # Which of two entries for one movement to keep: one a person acted on
+    # (#protected_entry?), then one in a transfer (a suggestion included),
+    # then one not excluded (a person may have hidden the other copy).
+    def keep_rank(entry)
+      return 3 if protected_entry?(entry)
+
+      transaction = entry.entryable
+      return 2 if transaction.transfer_as_inflow.present? || transaction.transfer_as_outflow.present?
+
+      entry.excluded? ? 0 : 1
+    end
+
+    def log_rekeys
+      return if @rekeys.values.all?(&:empty?)
+
+      warn = @rekeys[:kept_both].any? || @rekeys[:failed].any?
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: warn ? "warn" : "info",
+        message: "WiseAccount::Transactions::Processor - Statement rows took over #{@rekeys[:renamed].size + @rekeys[:replaced].size} " \
+                 "Wise entries booked before the balance had statements",
+        source: self.class.name,
+        provider_key: "wise",
+        family: account.family,
+        account_provider: wise_account.account_provider,
+        metadata: {
+          wise_item_id: wise_account.wise_item_id,
+          wise_account_id: wise_account.id,
+          currency: wise_account.currency,
+          operation: "statement_rekey",
+          renamed_count: @rekeys[:renamed].size,
+          replaced_count: @rekeys[:replaced].size.nonzero?,
+          replaced_external_ids: @rekeys[:replaced].first(MAX_LOGGED_EXTERNAL_IDS).presence,
+          dropped_count: @rekeys[:dropped].size.nonzero?,
+          dropped_external_ids: @rekeys[:dropped].first(MAX_LOGGED_EXTERNAL_IDS).presence,
+          deferred_count: @rekeys[:deferred].size.nonzero?,
+          kept_both_count: @rekeys[:kept_both].size.nonzero?,
+          kept_both_external_ids: @rekeys[:kept_both].first(MAX_LOGGED_EXTERNAL_IDS).presence,
+          failed_count: @rekeys[:failed].size.nonzero?
+        }.compact
+      )
+    rescue StandardError => e
+      Rails.logger.warn "WiseAccount::Transactions::Processor - Failed to capture Wise debug log: #{e.message}"
+    end
+
     # Looked up once per run rather than once per transfer.
     def own_recipient_ids
       @own_recipient_ids ||= wise_account.wise_item.own_recipient_ids
@@ -102,76 +206,99 @@ class WiseAccount::Transactions::Processor
     end
 
     # The payload speaks for the balance only after an import that fetched
-    # everything (nil: nothing was ever stored for it), and only if every
-    # row was processed. A closed balance's payload is frozen as it was, and
-    # nothing is deleted once the balance's processing lock was lost
-    # (WiseAccount#processing_lock_lost?).
+    # everything (nil: nothing was ever stored for it), only if every row was
+    # processed, and only where Sure knows what it fetched (#first_covered_days).
+    # A closed balance's payload is frozen as it was, and nothing is deleted
+    # once the balance's processing lock was lost (WiseAccount#processing_lock_lost?).
     def prune?(payload, failed)
       import_complete && payload.is_a?(Array) && failed.zero? && !wise_account.closed? && account.present? &&
-        !wise_account.processing_lock_lost?
+        first_covered_days.any? && !wise_account.processing_lock_lost?
     end
 
     # Deletes the Wise entries no stored row books any more: a leg routed to
     # this balance by an older rule, a payout Wise cancelled or the balance
-    # replay found paid by card, a split part now 0. Entries a person acted
-    # on stay (#protected_entry?), and nothing is deleted when there are too
-    # many (#prune_cap) unless this sync re-fetched the whole history.
-    # Logged with the external ids.
+    # replay found paid by card, a split part now 0, a statement row of a
+    # conversion whose own row books it, an activity a statement row books
+    # under a reference Sure could not match. Entries a person acted
+    # on stay (#protected_entry?). When there are too many (#prune_cap),
+    # only those whose rows a sync that re-fetched the whole history moved
+    # out of the payload go (WiseAccount#prune_cap_bypass_ids, spent once
+    # this has run); the rest wait. Logged with the external ids.
     def prune_stale_entries(rows, expected_ids, row_dates)
-      stale = stale_entries(rows, expected_ids, row_dates)
-      return { destroyed: 0, kept: 0 } if stale.empty?
-
-      kept, doomed = stale.partition { |entry| protected_entry?(entry) }
-      cap = prune_cap
-      capped = doomed.size > cap && !coverage_upgraded
       destroyed = []
-      unless capped
-        doomed.each do |entry|
-          destroy_stale_entry(entry) ? destroyed << entry : kept << entry
-        end
+      stale = stale_entries(rows, expected_ids, row_dates)
+      kept, doomed = stale.partition { |entry| protected_entry?(entry) }
+      cap = doomed.empty? ? 0 : prune_cap
+      capped = []
+      bypassed = false
+      if doomed.size > cap
+        moved = wise_account.prune_cap_bypass_ids.to_set
+        capped = doomed.reject { |entry| moved.include?(entry.external_id) }
+        doomed -= capped
+        bypassed = doomed.any?
+      end
+      doomed.each do |entry|
+        destroy_stale_entry(entry) ? destroyed << entry : kept << entry
       end
 
-      log_prune(destroyed: destroyed, kept: kept, capped: capped ? doomed : [], cap: cap,
-                cap_bypassed: doomed.size > cap && coverage_upgraded)
+      log_prune(destroyed: destroyed, kept: kept, capped: capped, cap: cap, cap_bypassed: bypassed) if stale.any?
+      wise_account.spend_prune_cap_bypass!
       { destroyed: destroyed.size, kept: kept.size }
     rescue StandardError => e
       # The rows are booked by now; a failed clean-up only waits for the next sync.
       Rails.logger.error "WiseAccount::Transactions::Processor - Stale entry clean-up failed for wise_account #{wise_account.id}: #{e.class} - #{e.message}"
       Sentry.capture_exception(e) { |scope| scope.set_tags(wise_account_id: wise_account.id) }
-      { destroyed: destroyed&.size.to_i, kept: 0 }
+      { destroyed: destroyed.size, kept: 0 }
     end
 
     # Wise transaction entries on this balance that no row of the payload
     # expects (each processor's #expected_external_ids, none for a row that
     # books nothing here), booked since the balance was linked to the account
-    # (an older one is an earlier connection's history) and dated from the
-    # payload's earliest row on: the payload may not reach further back (a
-    # shorter history). An empty payload has no date to go by, so only the
-    # entries of routed rows count there.
+    # (an older one is an earlier connection's history), dated where Sure
+    # fetched every row of their kind (#first_covered_days) and from the
+    # payload's earliest row on: before that an entry can stand for a movement
+    # Sure never fetched (a shorter history), unless a row the item holds
+    # booked it (WiseAccount#prune_cap_bypass_ids). An empty payload has no
+    # row to date by, and only the entries of routed rows count there.
     def stale_entries(rows, expected_ids, row_dates)
+      first_days = first_covered_days
+      first_days = first_days.slice(*ROUTED_EXTERNAL_ID_PREFIXES) if rows.empty?
+      return [] if first_days.empty?
+
       scope = account.entries.where(source: "wise", entryable_type: "Transaction")
-                     .where("entries.external_id LIKE ?", "wise\\_%")
                      .where.not(external_id: expected_ids.to_a)
                      .where(created_at: wise_account.account_provider.created_at..)
-
-      if rows.empty?
-        prefixes = ROUTED_EXTERNAL_ID_PREFIXES.map { |prefix| "#{Entry.sanitize_sql_like(prefix)}%" }
-        scope = scope.where("entries.external_id LIKE ANY (ARRAY[?])", prefixes)
-      else
+      unless rows.empty?
         earliest = row_dates.compact.min
-        return [] unless earliest
-
-        scope = scope.where(date: earliest..)
+        dated = earliest ? scope.where(date: earliest..) : scope.none
+        explained = wise_account.prune_cap_bypass_ids
+        scope = explained.any? ? dated.or(scope.where(external_id: explained)) : dated
       end
 
-      # A balance that gained statements drops its card payments' activity
-      # rows, but their entries are for the statement rows to take over
-      # (renamed, keeping what a person did to them), not to be deleted.
-      if rows.any? { |row| row["wise_statement"].present? }
-        scope = scope.where.not("entries.external_id LIKE ?", "wise\\_activity\\_%")
+      covered = first_days.map do |prefix, day|
+        Entry.sanitize_sql_array([ "(entries.external_id LIKE ? AND entries.date >= ?)", "#{Entry.sanitize_sql_like(prefix)}%", day ])
       end
+      scope.where(covered.join(" OR ")).includes(:entryable).order(:date, :external_id).to_a
+    end
 
-      scope.includes(:entryable).order(:date, :external_id).to_a
+    # { external id prefix => the first day, in the family's zone, from which
+    # every fetch its rows come from (COVERAGE_SOURCES) covered the whole
+    # day }, for the kinds of entries all of whose fetches have coverage.
+    def first_covered_days
+      return @first_covered_days if defined?(@first_covered_days)
+
+      wise_item = wise_account.wise_item
+      starts = { transfers: wise_item.fetch_coverage(:transfers)&.dig(:from),
+                 activities: wise_item.fetch_coverage(:activities)&.dig(:from),
+                 statements: wise_account.statements_coverage&.dig(:from) }
+
+      @first_covered_days = COVERAGE_SOURCES.each_with_object({}) do |(prefix, sources), days|
+        froms = starts.values_at(*sources)
+        next unless froms.all?
+
+        start = froms.max.in_time_zone(wise_item.time_zone)
+        days[prefix] = start == start.beginning_of_day ? start.to_date : start.to_date.next_day
+      end
     end
 
     # What a person decided about an entry, which a re-routed row must not
@@ -233,7 +360,10 @@ class WiseAccount::Transactions::Processor
 
     def log_prune(destroyed:, kept:, capped:, cap:, cap_bypassed:)
       message =
-        if capped.any?
+        if capped.any? && destroyed.any?
+          "Deleted #{destroyed.size} Wise entries whose rows a full re-fetch moved out of the payload; #{capped.size} more " \
+          "no stored row books are more than one sync may delete (#{cap.to_f.round(1)}) and stay"
+        elsif capped.any?
           "#{capped.size} Wise entries no stored row books are more than one sync may delete (#{cap.to_f.round(1)}); none was deleted"
         else
           "Deleted #{destroyed.size} Wise entries no stored row books any more; kept #{kept.size} a person acted on"

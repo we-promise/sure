@@ -269,6 +269,16 @@ class WiseEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal :skipped, processor.process
   end
 
+  # WiseItem::StatementMigration: the balance's statement row carries it now.
+  test "skips a transfer a statement row took over" do
+    transfer = build_transfer(id: 8502, target_account: 9999).merge("wise_superseded_by" => "wise_statement_TRANSFER-8502")
+    processor = WiseEntry::Processor.new(transfer, wise_account: @wise_account)
+
+    assert_equal [], processor.expected_external_ids
+    assert_equal :skipped, processor.process
+    assert_empty @account.entries
+  end
+
   # External ID and deduplication
 
   test "uses stable external_id based on transfer id" do

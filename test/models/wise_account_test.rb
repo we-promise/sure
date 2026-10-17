@@ -87,10 +87,14 @@ class WiseAccountTest < ActiveSupport::TestCase
   end
 
   # A failed borderless/multi-currency-account lookup must not drop the ids
-  # that decide transfer direction, nor Sure's own markers on the payload.
+  # that decide transfer direction, nor Sure's own markers on the payload. A
+  # pending clean-up cap bypass and the opening anchor Sure last set are among
+  # those markers.
   test "upsert_wise_snapshot! keeps stored ids and markers the new payload lacks" do
+    written = { "entry_id" => "f3a6c1d2-0000-4000-8000-000000000001", "date" => "2026-04-30", "amount" => "0.0" }
     @checking.update!(raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001, "borderless_account_id" => 88888001,
-                                     "recipientId" => 77777001, "absent_count" => 1, "amount" => { "value" => 1.0 } })
+                                     "recipientId" => 77777001, "absent_count" => 1, "amount" => { "value" => 1.0 },
+                                     "prune_cap_bypass" => [ "wise_transfer_1" ], "opening_anchor" => written })
     balance_data = {
       "id" => "10000001",
       "amount" => { "value" => 2.0, "currency" => "EUR" },
@@ -102,6 +106,8 @@ class WiseAccountTest < ActiveSupport::TestCase
     payload = @checking.reload.raw_payload
     assert_equal [ 99999001, 88888001, 77777002, 1 ], payload.values_at("recipient_id", "borderless_account_id", "recipientId", "absent_count")
     assert_equal 2.0, payload.dig("amount", "value")
+    assert_equal [ "wise_transfer_1" ], @checking.prune_cap_bypass_ids
+    assert_equal({ entry_id: written["entry_id"], date: Date.new(2026, 4, 30), amount: BigDecimal("0") }, @checking.written_opening_anchor)
   end
 
   test "upsert_wise_snapshot! preserves existing name" do
@@ -200,6 +206,26 @@ class WiseAccountTest < ActiveSupport::TestCase
     payload = @checking.reload.raw_payload
     assert_equal "2026-10-01T08:00:00Z", payload["closed_at"]
     assert_equal({ "entry_id" => "anchor-1", "date" => "2024-07-09", "amount" => "0.0" }, payload["opening_anchor"])
+  end
+
+  # A sync's statement coverage and clean-up marks are merged into the
+  # snapshot as stored now, so an opening anchor recorded meanwhile stays.
+  test "upsert_wise_transactions_snapshot! merges its marks into what another copy stored meanwhile" do
+    earlier_copy = WiseAccount.find(@checking.id)
+    @checking.update!(raw_payload: { "type" => "STANDARD", "opening_anchor" => { "entry_id" => "anchor-1" } })
+
+    earlier_copy.upsert_wise_transactions_snapshot!([ { "id" => 1 } ], prune_cap_bypass: [ "wise_transfer_1" ])
+
+    @checking.reload
+    assert_equal [ { "id" => 1 } ], @checking.raw_transactions_payload
+    assert_equal [ "anchor-1", [ "wise_transfer_1" ] ], @checking.raw_payload.values_at("opening_anchor", "prune_cap_bypass").then { |a, b| [ a["entry_id"], b ] }
+
+    spending_copy = WiseAccount.find(@checking.id)
+    @checking.update!(raw_payload: @checking.raw_payload.merge("closed_at" => "2026-10-01T08:00:00Z"))
+    spending_copy.spend_prune_cap_bypass!
+    payload = @checking.reload.raw_payload
+    assert_equal "2026-10-01T08:00:00Z", payload["closed_at"]
+    assert_not payload.key?("prune_cap_bypass")
   end
 
   test "closed_at and creation_time read Sure's and Wise's timestamps" do

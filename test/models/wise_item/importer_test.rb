@@ -8,6 +8,9 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
   # it (HTTP 422 inconsistent.pagination).
   # transfer_pages: { offset => rows } instead of slices of `transfers`.
   # later_balances: what the balances read after the first one returns.
+  # statements: the rows every balance's statement returns, or
+  # statements_by_balance: { balance id => rows }; windowed_statements: only
+  # the rows dated inside the requested interval come back, as from Wise.
   # windowed_activities: only the activities created at or after `since`
   # come back (the field Wise filters on is undocumented; this is the
   # narrowest reading).
@@ -18,7 +21,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
 
     def initialize(balances: nil, later_balances: nil, savings_balances: nil, borderless_accounts: nil, multi_currency_account: nil,
                    transfers: nil, transfer_pages: nil, transfer_details: {}, activities: nil, activity_pages: nil, windowed_activities: false,
-                   statements: nil, raise_on: {}, statement_fail_balance_ids: [])
+                   statements: nil, statements_by_balance: nil, windowed_statements: false, raise_on: {}, statement_fail_balance_ids: [])
       @balances = balances || [ standard_balance ]
       @later_balances = later_balances
       @savings_balances = savings_balances || []
@@ -31,6 +34,8 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
       @activity_pages = activity_pages
       @windowed_activities = windowed_activities
       @statements = statements || []
+      @statements_by_balance = statements_by_balance
+      @windowed_statements = windowed_statements
       @raise_on = raise_on
       @statement_fail_balance_ids = statement_fail_balance_ids
       @calls = []
@@ -81,13 +86,16 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
       @transfer_details.fetch(transfer_id.to_s) { raise Provider::Wise::WiseError.new("Resource not found", :not_found) }
     end
 
-    def get_balance_statements(profile_id, balance_id, currency:, start_date:, end_date:)
+    def get_balance_statements(profile_id, balance_id, currency:, interval_start:, interval_end:)
       @calls << :get_balance_statements
       @statement_requests << { profile_id: profile_id, balance_id: balance_id, currency: currency,
-                               start_date: start_date, end_date: end_date }
+                               interval_start: interval_start, interval_end: interval_end }
       raise_if(:get_balance_statements)
       raise Provider::Wise::WiseError.new("forbidden", :fetch_failed) if @statement_fail_balance_ids.include?(balance_id)
-      @statements
+      rows = @statements_by_balance ? Array(@statements_by_balance[balance_id.to_s]) : @statements
+      return rows unless @windowed_statements
+
+      rows.select { |row| (interval_start..interval_end).cover?(ActiveSupport::TimeZone["UTC"].parse(row["date"])) }
     end
 
     def get_activities(profile_id, cursor: nil, size: 100, since: nil, until_time: nil)
@@ -609,52 +617,93 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ 11 ], pln.reload.raw_transactions_payload.map { |t| t["id"] }
   end
 
+  # Statement intervals are UTC instants, starting at midnight of the explicit
+  # start date in the family's zone (UTC here) and ending when the fetch
+  # started, instead of dates the provider read in the job's zone.
   test "imports standard account balance statements and honors configured history start" do
-    @wise_item.update!(sync_start_date: Date.new(2024, 1, 1))
-    statements = [
-      {
-        "type" => "CREDIT",
-        "date" => "2024-01-02T10:00:00Z",
-        "amount" => { "value" => "25.00", "currency" => "EUR" },
-        "details" => { "description" => "Salary" },
-        "referenceNumber" => "statement-1"
-      }
-    ]
-    provider = FakeWiseProvider.new(statements: statements)
+    travel_to Time.utc(2026, 10, 17, 12) do
+      @wise_item.update!(sync_start_date: Date.new(2024, 1, 1))
+      statements = [
+        {
+          "type" => "CREDIT",
+          "date" => "2024-01-02T10:00:00Z",
+          "amount" => { "value" => "25.00", "currency" => "EUR" },
+          "details" => { "description" => "Salary" },
+          "referenceNumber" => "statement-1"
+        }
+      ]
+      provider = FakeWiseProvider.new(statements: statements)
 
-    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
 
-    account = @wise_item.wise_accounts.find_by(currency: "EUR")
-    assert_equal statements.first.merge("wise_statement" => true), account.raw_transactions_payload.first
-    assert_equal Date.new(2024, 1, 1), provider.statement_requests.first[:start_date]
-    assert_equal Date.current, provider.statement_requests.first[:end_date]
+      account = @wise_item.wise_accounts.find_by(currency: "EUR")
+      assert_equal statements.first.merge("wise_statement" => true), account.raw_transactions_payload.first
+      assert_equal Time.utc(2024, 1, 1), provider.statement_requests.first[:interval_start]
+      assert_equal Time.current, provider.statement_requests.first[:interval_end]
+    end
   end
 
+  # The sync start date starts a balance's statements as it starts transfers
+  # and activities, once: with statement coverage reaching back to it, they
+  # resume a week before the last statement fetch.
+  test "fetches a balance's statements incrementally once their coverage reaches the sync start date" do
+    travel_to Time.utc(2026, 10, 17, 12) do
+      @wise_item.update!(sync_start_date: Date.new(2024, 1, 1))
+      @wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR", raw_payload: {
+        "type" => "STANDARD", "statements_coverage" => { "from" => "2023-06-01T00:00:00Z", "through" => "2026-10-10T12:00:00Z" }
+      })
+      provider = FakeWiseProvider.new(statements: [])
+
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+      assert_equal Time.utc(2026, 10, 3, 12), provider.statement_requests.sole[:interval_start]
+    end
+  end
+
+  # A balance without its own creationTime starts its statements where a
+  # full-history import starts transfers and activities, a day before Wise
+  # opened the account; only when Wise does not say when that was do they
+  # start on FULL_HISTORY_START_DATE.
   test "fetches full statement history when import_all_history is enabled" do
     @wise_item.update!(import_all_history: true)
     provider = FakeWiseProvider.new(statements: [])
 
     WiseItem::Importer.new(@wise_item, wise_provider: provider).import
 
-    assert_equal WiseItem::Importer::FULL_HISTORY_START_DATE, provider.statement_requests.first[:start_date]
-    assert_equal Date.current, provider.statement_requests.first[:end_date]
+    assert_equal Time.utc(2020, 5, 20, 14, 43, 16.658r) - 1.day, provider.statement_requests.first[:interval_start]
+
+    unknown = WiseItem.create!(family: @family, name: "Other Wise", token: "other_token", profile_id: "22222222",
+                               profile_type: :business, import_all_history: true)
+    provider = FakeWiseProvider.new(statements: [], raise_on: { get_multi_currency_account: "server error" })
+
+    WiseItem::Importer.new(unknown, wise_provider: provider).import
+
+    assert_equal WiseItem::Importer::FULL_HISTORY_START_DATE.in_time_zone("UTC"), provider.statement_requests.first[:interval_start]
   end
 
+  # The window starts at the moment Wise opened the balance (a job running in
+  # New York used to start at midnight there, after an evening opening).
   test "starts full history from balance creation time when available" do
     @wise_item.update!(import_all_history: true)
     balance = {
       "id" => "10000001",
       "amount" => { "value" => 100.0, "currency" => "EUR" },
       "type" => "STANDARD",
-      "creationTime" => "2015-04-12T10:00:00Z"
+      "creationTime" => "2015-04-12T02:46:31Z"
     }
     provider = FakeWiseProvider.new(balances: [ balance ], statements: [])
 
-    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    Time.use_zone("America/New_York") do
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
 
-    assert_equal Date.new(2015, 4, 12), provider.statement_requests.first[:start_date]
+    assert_equal Time.utc(2015, 4, 12, 2, 46, 31), provider.statement_requests.first[:interval_start]
   end
 
+  # The incremental window follows the balance's own statement coverage (a
+  # week before the end of its last successful statement fetch, kept in its
+  # raw_payload), not the item's last completed sync, which advanced through
+  # statement outages.
   test "keeps incremental sync window after statements already exist" do
     @wise_item.update!(import_all_history: true)
     statements = [
@@ -666,16 +715,20 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
         "referenceNumber" => "statement-1"
       }
     ]
-    WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(statements: statements)).import
+    first_fetch = Time.utc(2026, 10, 10, 12)
+    travel_to(first_fetch) { WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(statements: statements)).import }
+    account = @wise_item.wise_accounts.find_by(currency: "EUR")
+    assert_equal({ from: Time.utc(2020, 5, 19, 14, 43, 16), through: first_fetch }, account.statements_coverage)
 
-    sync = @wise_item.syncs.create!(status: :completed, completed_at: Time.current)
+    travel_to Time.utc(2026, 10, 17, 12) do
+      second_provider = FakeWiseProvider.new(statements: [])
+      WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: second_provider).import
 
-    second_provider = FakeWiseProvider.new(statements: [])
-    WiseItem::Importer.new(@wise_item, wise_provider: second_provider).import
-
-    assert_equal (sync.completed_at - 7.days).to_date, second_provider.statement_requests.first[:start_date]
-    assert_equal Date.current, second_provider.statement_requests.first[:end_date]
-    refute_includes second_provider.calls, :get_transfers
+      assert_equal first_fetch - 7.days, second_provider.statement_requests.first[:interval_start]
+      assert_equal Time.current, second_provider.statement_requests.first[:interval_end]
+      refute_includes second_provider.calls, :get_transfers
+      assert_equal({ from: Time.utc(2020, 5, 19, 14, 43, 16), through: Time.current }, account.reload.statements_coverage)
+    end
   end
 
   test "falls back to transfers when every statement request fails" do
@@ -868,7 +921,11 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_equal %w[activities transfers], @wise_item.reload.raw_payload["coverage"].keys.sort
   end
 
-  test "backfills incoming statement rows into the window already covered by legacy transfers" do
+  # The cutoff that dropped every outgoing statement row dated from the oldest
+  # legacy transfer on is gone (it also dropped card payments and every later
+  # debit); all statement rows stay. The legacy payout stays too: it predates
+  # the statements' window, which no statement row from it carries.
+  test "keeps every statement row in the window legacy transfers covered" do
     @wise_item.wise_accounts.create!(
       balance_id: "10000001",
       name: "Wise EUR",
@@ -898,89 +955,113 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     account = @wise_item.wise_accounts.find_by(currency: "EUR")
     refs = account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }
 
-    assert_includes refs, "st-incoming-in-window"
-    assert_includes refs, "st-before-window"
-    refute_includes refs, "st-outgoing-in-window"
+    assert_equal %w[st-outgoing-in-window st-incoming-in-window st-before-window], refs
+    assert_equal [ [ 1, nil ] ], account.raw_transactions_payload.filter_map { |t| t.values_at("id", "wise_superseded_by") if t["id"] }
   end
 
+  # A statement row takes a legacy transfer over only by its reference
+  # (TRANSFER-<id>) or as a TRANSFER row of the same amount within a day. A
+  # deposit on the same day for the same amount is neither, so it stays a
+  # movement of its own; the pay-in it resembles keeps booking from its row,
+  # transfers are still fetched for the balance, and support is told.
   test "keeps an incoming statement row that coincidentally shares its date and amount with a legacy transfer" do
-    # A same-day, same-amount external payment must never be dropped just
-    # because it looks like it could be the credit leg of a prior internal
-    # conversion -- silently losing a real transaction is worse than an
-    # occasional visible duplicate (see legacy_overlap_outgoing_row?).
-    @wise_item.wise_accounts.create!(
-      balance_id: "10000001",
-      name: "Wise EUR",
-      currency: "EUR",
-      raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },
-      raw_transactions_payload: [
-        {
-          "id" => 10,
-          "targetAccount" => 99999001,
-          "sourceCurrency" => "USD",
-          "targetCurrency" => "EUR",
-          "sourceValue" => 500.0,
-          "targetValue" => 450.0,
-          "status" => "incoming_payment_received",
-          "created" => "2024-02-01"
-        }
+    travel_to Time.utc(2024, 2, 3, 12) do
+      @wise_item.wise_accounts.create!(
+        balance_id: "10000001",
+        name: "Wise EUR",
+        currency: "EUR",
+        raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },
+        raw_transactions_payload: [
+          {
+            "id" => 10,
+            "targetAccount" => 99999001,
+            "sourceCurrency" => "USD",
+            "targetCurrency" => "EUR",
+            "sourceValue" => 500.0,
+            "targetValue" => 455.0,
+            "status" => "outgoing_payment_sent",
+            "created" => "2024-02-01 09:00:00"
+          }
+        ]
+      )
+      statements = [
+        { "type" => "CREDIT", "date" => "2024-02-01T09:00:00Z", "amount" => { "value" => "455.00", "currency" => "EUR" },
+          "details" => { "type" => "DEPOSIT" }, "referenceNumber" => "st-same-date-and-amount" }
       ]
-    )
-    statements = [
-      { "date" => "2024-02-01T09:00:00Z", "amount" => { "value" => "450.00", "currency" => "EUR" }, "referenceNumber" => "st-same-date-and-amount" }
-    ]
-    provider = FakeWiseProvider.new(statements: statements)
 
-    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+      WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(statements: statements)).import
 
-    account = @wise_item.wise_accounts.find_by(currency: "EUR")
-    refs = account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }
+      account = @wise_item.wise_accounts.find_by(currency: "EUR")
+      payload = account.raw_transactions_payload
+      assert_equal [ "st-same-date-and-amount" ], payload.filter_map { |t| t["referenceNumber"] }
+      assert payload.none? { |t| t["wise_superseded_by"] || t["wise_supersedes"] }
+      assert_equal [ 10 ], payload.filter_map { |t| t["id"] }
+      note = statement_migration_notes.sole
+      assert_equal "warn", note.level
+      assert_equal 1, note.metadata["transfers_unmatched"]
 
-    assert_includes refs, "st-same-date-and-amount"
+      provider = FakeWiseProvider.new(statements: statements)
+      WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+      assert_includes provider.calls, :get_transfers
+    end
   end
 
-  test "stops fetching legacy transfers once an account has a successful statement row" do
-    @wise_item.wise_accounts.create!(
-      balance_id: "10000001",
-      name: "Wise EUR",
-      currency: "EUR",
-      raw_payload: { "type" => "STANDARD" },
-      raw_transactions_payload: [
-        {
-          "id" => 1,
-          "sourceCurrency" => "EUR",
-          "targetCurrency" => "EUR",
-          "sourceValue" => 100.0,
-          "targetValue" => 100.0,
-          "status" => "outgoing_payment_sent",
-          "created" => "2024-01-10"
-        },
-        {
-          "wise_statement" => true,
-          "date" => "2024-01-20",
-          "amount" => { "value" => "10.0", "currency" => "EUR" },
-          "referenceNumber" => "already-migrated"
-        }
-      ]
-    )
-    provider = FakeWiseProvider.new(statements: [])
+  # Transfers stay fetched for a balance with statement rows until its
+  # statements take over every transfer that books inside their window
+  # (one-off: a statement row existing at all used to stop them, which lost
+  # every later payout when TRANSFER-<id> rows were dropped).
+  test "fetches transfers for a balance until its statements take over every transfer it booked" do
+    travel_to Time.utc(2024, 1, 25, 12) do
+      payout = build_transfer(id: 1).merge("created" => "2024-01-10 10:00:00", "status" => "processing")
+      @wise_item.wise_accounts.create!(
+        balance_id: "10000001",
+        name: "Wise EUR",
+        currency: "EUR",
+        raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001,
+                       "statements_coverage" => { "from" => "2023-06-01T00:00:00Z", "through" => "2024-01-24T12:00:00Z" } },
+        raw_transactions_payload: [
+          payout,
+          {
+            "wise_statement" => true,
+            "date" => "2024-01-20T10:00:00Z",
+            "amount" => { "value" => "10.0", "currency" => "EUR" },
+            "referenceNumber" => "already-migrated"
+          }
+        ]
+      )
+      import = lambda do |statements|
+        provider = FakeWiseProvider.new(transfers: [ payout.merge("status" => "outgoing_payment_sent") ], statements: statements)
+        WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+        provider
+      end
 
-    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+      assert_includes import.call([]).calls, :get_transfers
+      account = @wise_item.wise_accounts.find_by(currency: "EUR")
+      assert_equal "outgoing_payment_sent", account.raw_transactions_payload.find { |t| t["id"] == 1 }["status"]
 
-    refute_includes provider.calls, :get_transfers
+      assert_includes import.call([ statement_row("TRANSFER-1", "-100", "EUR", date: "2024-01-10T10:05:00Z", details_type: "TRANSFER") ]).calls,
+                      :get_transfers
+      assert_equal "wise_statement_TRANSFER-1", account.reload.raw_transactions_payload.find { |t| t["id"] == 1 }["wise_superseded_by"]
+
+      refute_includes import.call([]).calls, :get_transfers
+    end
   end
 
+  # A balance with statements takes no new /v1/transfers row (its statement
+  # rows carry them), only fresh copies of the rows it still holds.
   test "does not merge the profile-wide transfer fallback into an account that already migrated to statements" do
     balances = [
       { "id" => "10000001", "amount" => { "value" => 1000.0, "currency" => "EUR" }, "type" => "STANDARD" },
       { "id" => "10000002", "amount" => { "value" => 500.0, "currency" => "USD" }, "type" => "STANDARD" }
     ]
+    held = build_transfer(id: 98, source_currency: "EUR", target_currency: "EUR", target_account: 9999).merge("status" => "processing")
     eur_account = @wise_item.wise_accounts.create!(
       balance_id: "10000001",
       name: "Wise EUR",
       currency: "EUR",
       raw_payload: { "type" => "STANDARD" },
       raw_transactions_payload: [
+        held,
         {
           "wise_statement" => true,
           "date" => "2024-01-20",
@@ -1008,16 +1089,485 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     )
     # USD still needs the legacy fallback, so transfers get fetched profile-wide --
     # including this EUR-currency row, which must not land on the already-migrated
-    # EUR account.
-    transfers = [ build_transfer(id: 99, source_currency: "EUR", target_currency: "EUR", target_account: 9999) ]
+    # EUR account, and a fresh copy of the payout EUR still holds.
+    transfers = [ build_transfer(id: 99, source_currency: "EUR", target_currency: "EUR", target_account: 9999),
+                  held.merge("status" => "outgoing_payment_sent") ]
     provider = FakeWiseProvider.new(balances: balances, transfers: transfers, statement_fail_balance_ids: [ "10000002" ])
 
     WiseItem::Importer.new(@wise_item, wise_provider: provider).import
 
     eur_account.reload
     assert_includes provider.calls, :get_transfers
-    refute_includes eur_account.raw_transactions_payload.filter_map { |t| t["id"] }, 99
+    assert_equal [ [ 98, "outgoing_payment_sent" ] ], eur_account.raw_transactions_payload.filter_map { |t| t.values_at("id", "status") if t["id"] }
     assert_includes eur_account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }, "already-migrated-eur"
+  end
+
+  # The documented SCA onboarding books /v1/transfers rows in the first sync,
+  # as statements answer 403 until a key is registered. Once they work, each
+  # statement row takes over the entry of the transfer its reference names
+  # (the same entry, renamed), so every movement books once, the card payments
+  # and later debits are all kept, and transfers stop.
+  test "hands a balance over from its transfers to its statements once they work" do
+    eur = link_account(@wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR",
+                                                         raw_payload: { "type" => "STANDARD" }))
+    account = eur.current_account
+    balance = standard_balance("10000001", "EUR", 80).merge("recipientId" => 77710001)
+    top_up = build_transfer(id: 1001, target_account: 77710001)
+               .merge("sourceValue" => 500.0, "targetValue" => 500.0, "created" => 20.days.ago.utc.strftime("%Y-%m-%d %H:%M:%S"))
+    payout = build_transfer(id: 1002, target_account: 424242).merge("created" => 19.days.ago.utc.strftime("%Y-%m-%d %H:%M:%S"))
+    sync = lambda do |**options|
+      provider = FakeWiseProvider.new(balances: [ balance ], borderless_accounts: [], **options)
+      result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+      WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+      provider
+    end
+    entries = -> { account.entries.where(source: "wise").order(:external_id).pluck(:external_id, :amount, :id) }
+
+    sync.call(transfers: [ top_up, payout ], raise_on: { get_balance_statements: statements_forbidden })
+    legacy = entries.call
+    assert_equal [ [ "wise_transfer_1001", BigDecimal("-500") ], [ "wise_transfer_1002", BigDecimal("100") ] ], legacy.map { |e| e.first(2) }
+
+    sync.call(transfers: [ top_up, payout ], statements: [
+      statement_row("TRANSFER-1001", "500", "EUR", date: 20.days.ago.utc.iso8601, details_type: "DEPOSIT"),
+      statement_row("TRANSFER-1002", "-100", "EUR", date: 19.days.ago.utc.iso8601, details_type: "TRANSFER"),
+      statement_row("CARD-9001", "-30", "EUR", date: 5.days.ago.utc.iso8601)
+    ])
+    assert_equal [ [ "wise_statement_CARD-9001", BigDecimal("30") ], [ "wise_statement_TRANSFER-1001", BigDecimal("-500"), legacy[0].last ],
+                   [ "wise_statement_TRANSFER-1002", BigDecimal("100"), legacy[1].last ] ],
+                 entries.call.map { |e| e.first.end_with?("9001") ? e.first(2) : e }
+
+    payout_today = build_transfer(id: 1003, target_account: 424242).merge("sourceValue" => 250.0, "targetValue" => 250.0)
+    last = sync.call(transfers: [ top_up, payout, payout_today ], statements: [
+      statement_row("CARD-9002", "-40", "EUR", date: 1.hour.ago.utc.iso8601),
+      statement_row("TRANSFER-1003", "-250", "EUR", date: 1.hour.ago.utc.iso8601, details_type: "TRANSFER")
+    ])
+    refute_includes last.calls, :get_transfers
+    assert_equal BigDecimal("-80"), account.entries.where(source: "wise").sum(:amount)
+    assert_includes entries.call.map(&:first), "wise_statement_CARD-9002"
+    assert_empty eur.reload.raw_transactions_payload.select { |row| row["id"].present? }
+  end
+
+  # The old statement migration booked a legacy top-up again from its
+  # statement row, so both entries exist. The statement row keeps the one the
+  # person edited under its id and the other goes; the top-up is income once.
+  test "keeps one entry for a transfer the old statement migration booked twice" do
+    top_up = build_transfer(id: 9000000104, target_account: 99999001).merge("sourceValue" => 2465.0, "targetValue" => 2465.0)
+    credit = statement_row("TRANSFER-9000000104", "2465", "EUR", date: 7.days.ago.utc.iso8601, details_type: "DEPOSIT")
+    eur = link_account(@wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR",
+                                                         raw_payload: { "type" => "STANDARD" },
+                                                         raw_transactions_payload: [ top_up, credit.merge("wise_statement" => true) ]))
+    account = eur.current_account
+    edited = account.entries.create!(external_id: "wise_transfer_9000000104", source: "wise", amount: -2465, currency: "EUR",
+                                     date: 7.days.ago.to_date, name: "Top-up", notes: "From savings", entryable: Transaction.new)
+    account.entries.create!(external_id: "wise_statement_TRANSFER-9000000104", source: "wise", amount: -2465, currency: "EUR",
+                            date: 7.days.ago.to_date, name: "Received money", entryable: Transaction.new)
+
+    result = WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(statements: [ credit ])).import
+    WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+
+    assert_equal [ [ edited.id, "wise_statement_TRANSFER-9000000104", BigDecimal("-2465") ] ],
+                 account.entries.where(source: "wise").pluck(:id, :external_id, :amount)
+    assert_equal "From savings", edited.reload.notes
+  end
+
+  # A conversion is in both balances' statements and in the activity feed. Its
+  # activity legs book it (they link as a transfer) and the statement rows of
+  # the same move book nothing; likewise a move into a jar.
+  test "books a conversion once on each balance when statements report it too" do
+    jar = { "id" => "32000009", "type" => "SAVINGS", "name" => "Holiday", "amount" => { "value" => 500, "currency" => "EUR" },
+            "totalWorth" => { "value" => 500, "currency" => "EUR" } }
+    conversion = build_interbalance("To <strong>EUR</strong>", resource_id: "4001", primary: "117.50 EUR", secondary: "100 GBP")
+                   .merge("createdOn" => 3.days.ago.utc.iso8601)
+    deposit = build_interbalance("To <strong>Holiday</strong>", resource_id: "6000", primary: "500 EUR")
+                .merge("createdOn" => 2.days.ago.utc.iso8601)
+    statements = {
+      "32000001" => [ statement_row("BALANCE-4001", "-100", "GBP", date: 3.days.ago.utc.iso8601, details_type: "CONVERSION") ],
+      "32000002" => [ statement_row("BALANCE-4001", "117.50", "EUR", date: 3.days.ago.utc.iso8601, details_type: "CONVERSION"),
+                      statement_row("BALANCE-6000", "-500", "EUR", date: 2.days.ago.utc.iso8601, details_type: "OUTGOING_CROSS_BALANCE") ]
+    }
+    provider = FakeWiseProvider.new(balances: [ standard_balance("32000001", "GBP", 0), standard_balance("32000002", "EUR", 117.5) ],
+                                    savings_balances: [ jar ], borderless_accounts: [], activities: [ conversion, deposit ],
+                                    statements_by_balance: statements)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    booked = @wise_item.wise_accounts.reload.to_h do |wise_account|
+      wise_account = link_account(wise_account)
+      WiseAccount::Transactions::Processor.new(wise_account).process
+      [ wise_account.name, wise_account.current_account.entries.order(:external_id).pluck(:external_id, :amount) ]
+    end
+
+    assert_equal({ "Wise GBP" => [ [ "wise_interbalance_4001_outflow", BigDecimal("100") ] ],
+                   "Wise EUR" => [ [ "wise_interbalance_4001_inflow", BigDecimal("-117.5") ], [ "wise_interbalance_6000_outflow", BigDecimal("500") ] ],
+                   "Holiday" => [ [ "wise_interbalance_6000_inflow", BigDecimal("-500") ] ] }, booked)
+    assert_equal({ "BALANCE-4001" => "wise_interbalance_4001_inflow", "BALANCE-6000" => "wise_interbalance_6000_outflow" },
+                 @wise_item.wise_accounts.find_by!(currency: "EUR", balance_id: "32000002").raw_transactions_payload
+                           .select { |row| row["wise_statement"] }.to_h { |row| [ row["referenceNumber"], row["wise_superseded_by"] ] })
+  end
+
+  # Wise reuses a transfer's reference on its refund. Both rows are kept. The
+  # first sync with statement coverage fetches the whole window again, so a
+  # debit the old [ref] key had let its refund overwrite comes back; the
+  # refund keeps the id it booked under, and the debit gets one of its own.
+  test "keeps a refund that shares its transfer's reference next to the debit" do
+    debit = statement_row("TRANSFER-555", "-100", "EUR", date: "2026-03-01T10:00:00Z", details_type: "TRANSFER")
+    refund = statement_row("TRANSFER-555", "100", "EUR", date: "2026-03-03T10:00:00Z", details_type: "TRANSFER")
+    eur = link_account(@wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR",
+                                                         raw_payload: { "type" => "STANDARD" },
+                                                         raw_transactions_payload: [ refund.merge("wise_statement" => true) ]))
+    eur.current_account.entries.create!(external_id: "wise_statement_TRANSFER-555", source: "wise", amount: -100, currency: "EUR",
+                                        date: Date.new(2026, 3, 3), name: "Refund", entryable: Transaction.new)
+
+    travel_to Time.utc(2026, 3, 20, 12) do
+      2.times do
+        result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: FakeWiseProvider.new(statements: [ debit, refund ])).import
+        WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+      end
+    end
+
+    assert_equal [ "TRANSFER-555_DEBIT_20260301", "TRANSFER-555" ],
+                 eur.reload.raw_transactions_payload.sort_by { |row| row["date"] }.map { |row| row["wise_statement_id"] }
+    assert_equal({ "wise_statement_TRANSFER-555" => BigDecimal("-100"), "wise_statement_TRANSFER-555_DEBIT_20260301" => BigDecimal("100") },
+                 eur.current_account.entries.where(source: "wise").pluck(:external_id, :amount).to_h)
+  end
+
+  # Upgraded from a build that keyed statement rows by reference, so the
+  # refund overwrote the payout's row and the payout's own entry stands next
+  # to the refund's, which a person categorized. The debit's statement row
+  # comes back with an id of its own and takes the payout's entry over; the
+  # refund keeps its entry. Nothing is deleted or booked twice.
+  test "a payout's statement row takes its transfer's entry over next to a refund a person edited" do
+    payout = build_transfer(id: 777, target_account: 4444).merge("status" => "funds_refunded", "created" => "2026-03-01 10:00:00")
+    activities = [
+      build_transfer_activity(777, primary: "100 EUR", created_on: "2026-03-01T10:00:01.000Z"),
+      build_transfer_activity(777, id: "refund-777", primary: "<positive>+ 100 EUR</positive>", created_on: "2026-03-03T10:00:00.000Z")
+    ]
+    debit = statement_row("TRANSFER-777", "-100", "EUR", date: "2026-03-01T10:00:05Z", details_type: "TRANSFER")
+    refund = statement_row("TRANSFER-777", "100", "EUR", date: "2026-03-03T10:00:00Z", details_type: "TRANSFER")
+    eur = link_account(@wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR",
+                                                         raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },
+                                                         raw_transactions_payload: [ payout, refund.merge("wise_statement" => true) ]))
+    account = eur.current_account
+    payout_entry = account.entries.create!(external_id: "wise_transfer_777", source: "wise", amount: 100, currency: "EUR",
+                                           date: Date.new(2026, 3, 1), name: "Payout", entryable: Transaction.new)
+    refund_entry = account.entries.create!(external_id: "wise_statement_TRANSFER-777", source: "wise", amount: -100, currency: "EUR",
+                                           date: Date.new(2026, 3, 3), name: "Refund", user_modified: true, entryable: Transaction.new)
+
+    travel_to Time.utc(2026, 3, 20, 12) do
+      2.times do
+        provider = FakeWiseProvider.new(transfers: [ payout ], activities: activities, statements: [ debit, refund ])
+        result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+        WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+      end
+    end
+
+    assert_equal({ payout_entry.id => [ "wise_statement_TRANSFER-777_DEBIT_20260301", BigDecimal("100") ],
+                   refund_entry.id => [ "wise_statement_TRANSFER-777", BigDecimal("-100") ] },
+                 account.entries.where(source: "wise").to_h { |entry| [ entry.id, [ entry.external_id, entry.amount ] ] })
+  end
+
+  # The window grew back (the sync start date moved earlier) past the debit
+  # of a refund booked, and edited, under the plain reference: the refund
+  # keeps its entry and the debit books on its own.
+  test "books the debit an earlier window start brings back next to the refund that kept its reference" do
+    debit = statement_row("TRANSFER-555", "-100", "EUR", date: "2026-03-01T10:00:00Z", details_type: "TRANSFER")
+    refund = statement_row("TRANSFER-555", "100", "EUR", date: "2026-03-03T10:00:00Z", details_type: "TRANSFER")
+    @wise_item.update!(sync_start_date: Date.new(2026, 3, 2))
+    sync = lambda do
+      provider = FakeWiseProvider.new(statements: [ debit, refund ], windowed_statements: true)
+      result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+      wise_account = WiseItem.find(@wise_item.id).wise_accounts.sole
+      link_account(wise_account) unless wise_account.current_account
+      WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+      wise_account.reload.current_account
+    end
+
+    account = travel_to(Time.utc(2026, 3, 20, 12)) { sync.call }
+    account.entries.find_by!(external_id: "wise_statement_TRANSFER-555").update!(user_modified: true, notes: "Cancelled order")
+    @wise_item.update!(sync_start_date: Date.new(2026, 2, 1))
+    travel_to(Time.utc(2026, 3, 21, 12)) { sync.call }
+
+    assert_equal({ "wise_statement_TRANSFER-555" => BigDecimal("-100"), "wise_statement_TRANSFER-555_DEBIT_20260301" => BigDecimal("100") },
+                 account.entries.where(source: "wise").pluck(:external_id, :amount).to_h)
+  end
+
+  # Once Wise refuses a balance's statements (an SCA key removed or no
+  # longer registered), its statement rows carry what happened until they
+  # last reached, and its transfers and activities what happened after; when
+  # they work again, their rows take those over.
+  test "a balance whose statements Wise refuses takes what happened after them from transfers and activities" do
+    travel_to Time.utc(2026, 10, 17, 12) do
+      reached = { "from" => "2025-10-17T12:00:00Z", "through" => "2026-10-01T12:00:00Z" }
+      eur = @wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR",
+                                             raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001, "statements_coverage" => reached },
+                                             raw_transactions_payload: [ statement_row("CARD-1", "-5", "EUR", date: "2026-09-20T10:00:00Z")
+                                                                           .merge("wise_statement" => true) ])
+      before = build_transfer(id: 500).merge("created" => "2026-09-25 10:00:00")
+      after = build_transfer(id: 501).merge("created" => "2026-10-10 10:00:00")
+      cards = [ build_card_activity("card_before", "7 EUR", created_on: "2026-09-26T10:00:00.000Z"),
+                build_card_activity("card_after", "12 EUR", created_on: "2026-10-11T10:00:00.000Z") ]
+      provider = FakeWiseProvider.new(transfers: [ before, after ], activities: cards, raise_on: { get_balance_statements: statements_forbidden })
+
+      result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+      assert result[:complete]
+      assert_includes provider.calls, :get_transfers
+      rows = eur.reload.raw_transactions_payload
+      assert_equal [ "CARD-1" ], rows.filter_map { |row| row["referenceNumber"] }
+      assert_equal [ "501", "card_after" ], rows.filter_map { |row| row["id"]&.to_s }.sort
+    end
+  end
+
+  # The statements' window opened after a refunded payout was made, so only
+  # its refund credit is in it. That credit took the payout over, rewriting
+  # its entry as the refund and deleting its fee and refund entries (net -50
+  # instead of 52.50). The payout's row keeps booking all three, the credit
+  # books nothing, and the later payout is taken over by its own statement
+  # row.
+  test "keeps a refunded payout booked when only its refund is inside the statements' window" do
+    payout = build_transfer(id: 501, target_account: 4444).merge("status" => "funds_refunded", "created" => "2025-10-02 10:00:00")
+    later = build_transfer(id: 502, target_account: 4445).merge("sourceValue" => 50.0, "targetValue" => 50.0, "created" => "2026-09-01 10:00:00")
+    activities = [
+      build_transfer_activity(501, primary: "100 EUR", secondary: "102.50 EUR", created_on: "2025-10-02T10:00:01.000Z"),
+      build_transfer_activity(501, id: "refund-501", primary: "<positive>+ 100 EUR</positive>", created_on: "2025-10-20T10:00:00.000Z"),
+      build_transfer_activity(502, primary: "50 EUR", created_on: "2026-09-01T10:00:01.000Z")
+    ]
+    statements = [
+      statement_row("TRANSFER-501", "-102.50", "EUR", date: "2025-10-02T10:00:05Z", details_type: "TRANSFER",
+                                                      "totalFees" => { "value" => "2.50", "currency" => "EUR" }),
+      statement_row("TRANSFER-501", "100", "EUR", date: "2025-10-20T10:00:00Z", details_type: "TRANSFER"),
+      statement_row("TRANSFER-502", "-50", "EUR", date: "2026-09-01T10:00:05Z", details_type: "TRANSFER")
+    ]
+    booked = -> { @wise_item.wise_accounts.sole.current_account.entries.where(source: "wise").order(:external_id).pluck(:external_id, :amount) }
+
+    travel_to Time.utc(2026, 10, 1, 12) do
+      provider = FakeWiseProvider.new(transfers: [ payout, later ], activities: activities, raise_on: { get_balance_statements: statements_forbidden })
+      result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+      link_account(@wise_item.wise_accounts.sole)
+      WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+    end
+    assert_equal [ [ "wise_fee_501", BigDecimal("2.5") ], [ "wise_refund_501", BigDecimal("-100") ], [ "wise_transfer_501", BigDecimal("100") ],
+                   [ "wise_transfer_502", BigDecimal("50") ] ], booked.call
+
+    # Statements now work; their window starts a year back, after the payout.
+    travel_to Time.utc(2026, 10, 11, 12) do
+      provider = FakeWiseProvider.new(transfers: [ payout, later ], activities: activities, statements: statements, windowed_statements: true)
+      result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+      assert_equal Time.utc(2025, 10, 11, 12), provider.statement_requests.sole[:interval_start]
+      WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+    end
+
+    assert_equal [ [ "wise_fee_501", BigDecimal("2.5") ], [ "wise_refund_501", BigDecimal("-100") ],
+                   [ "wise_statement_TRANSFER-502", BigDecimal("50") ], [ "wise_transfer_501", BigDecimal("100") ] ], booked.call
+  end
+
+  # A balance's statements resume a week before the end of its last successful
+  # statement fetch, so an outage longer than that overlap leaves no gap; the
+  # outage counts as a failed fetch for a balance that holds statement rows.
+  test "resumes a balance's statements from its own coverage after an outage" do
+    rows = [ statement_row("CARD-1", "-10", "EUR", date: "2026-09-20T10:00:00Z"),
+             statement_row("CARD-2", "-90", "EUR", date: "2026-09-25T10:00:00Z"),
+             statement_row("CARD-3", "-5", "EUR", date: "2026-10-05T10:00:00Z") ]
+    import = lambda do |**options|
+      provider = FakeWiseProvider.new(statements: rows, windowed_statements: true, **options)
+      [ WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import, provider ]
+    end
+
+    travel_to(Time.utc(2026, 9, 21, 12)) { import.call }
+    outage, = travel_to(Time.utc(2026, 10, 6, 12)) { import.call(raise_on: { get_balance_statements: "Unexpected response 503" }) }
+    _, recovery = travel_to(Time.utc(2026, 10, 7, 12)) { import.call }
+
+    assert_equal [ false, false, 1 ], outage.values_at(:success, :complete, :fetch_failures)
+    assert_equal Time.utc(2026, 9, 14, 12), recovery.statement_requests.first[:interval_start]
+    eur = @wise_item.wise_accounts.find_by!(currency: "EUR")
+    assert_equal %w[CARD-1 CARD-2 CARD-3], eur.raw_transactions_payload.map { |row| row["referenceNumber"] }
+    assert_equal({ from: Time.utc(2025, 9, 21, 12), through: Time.utc(2026, 10, 7, 12) }, eur.statements_coverage)
+  end
+
+  test "counts a statement failure on a balance with statement rows even when transfers stand in" do
+    @wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR", raw_payload: { "type" => "STANDARD" },
+                                     raw_transactions_payload: [ statement_row("CARD-1", "-5", "EUR").merge("wise_statement" => true) ])
+    provider = FakeWiseProvider.new(balances: [ standard_balance("10000001", "EUR", 0), standard_balance("10000002", "USD", 0) ],
+                                    borderless_accounts: [], raise_on: { get_balance_statements: "Unexpected response 502" })
+
+    result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_includes provider.calls, :get_transfers
+    assert_equal [ false, 1 ], result.values_at(:complete, :fetch_failures)
+  end
+
+  # Consecutive statement rows chain through their runningBalance. A break
+  # (CARD-2, which its fee would explain) tells support Sure may read the
+  # amounts wrongly; the credit's amount, already net of its fee, chains, and
+  # so do two rows of the same second whatever their order.
+  test "tells support when statement rows do not follow on from the running balance" do
+    running = ->(value) { { "runningBalance" => { "value" => value, "currency" => "EUR" } } }
+    rows = [
+      statement_row("DEPOSIT-1", "95.86", "EUR", date: "2026-10-01T10:00:00Z", details_type: "DEPOSIT",
+                    "totalFees" => { "value" => 4.14, "currency" => "EUR" }, **running.call(95.86)),
+      statement_row("CARD-1", "-10", "EUR", date: "2026-10-02T10:00:00Z", **running.call(85.86)),
+      statement_row("CARD-2", "-5", "EUR", date: "2026-10-03T10:00:00Z", "totalFees" => { "value" => 2, "currency" => "EUR" },
+                    **running.call(78.86)),
+      statement_row("CARD-4", "-2", "EUR", date: "2026-10-04T10:00:00Z", **running.call(75.86)),
+      statement_row("CARD-3", "-1", "EUR", date: "2026-10-04T10:00:00Z", **running.call(77.86))
+    ]
+
+    WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(statements: rows.reverse)).import
+
+    note = DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "running_balance").sole
+    assert_equal "warn", note.level
+    assert_equal [ 5, 1, 1 ], note.metadata.values_at("row_count", "break_count", "fee_explained_count")
+  end
+
+  # Until statements work, an SCA profile books its card payments from the
+  # activity feed. Each statement row then takes its card payment's entry over
+  # (by CARD-<resource id>, else by sign, amount and day), keeping the
+  # person's category; an activity no statement row carries is dropped and its
+  # entry cleaned up, and the activity rows leave once their entries are
+  # renamed.
+  test "hands card payments booked from activities over to the statement rows" do
+    eur = link_account(@wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR",
+                                                         raw_payload: { "type" => "STANDARD" }))
+    account = eur.current_account
+    cards = [ build_card_activity("card_1", "12.50 EUR", created_on: 4.days.ago.utc.iso8601(3)),
+              build_card_activity("card_2", "8 EUR", created_on: 3.days.ago.utc.iso8601(3)),
+              build_card_activity("card_3", "5 EUR", created_on: 2.days.ago.utc.iso8601(3)) ]
+    sync = lambda do |**options|
+      result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: FakeWiseProvider.new(activities: cards, **options)).import
+      WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+    end
+    statements = [ statement_row("CARD-resource_card_1", "-12.50", "EUR", date: 4.days.ago.utc.iso8601),
+                   statement_row("CARD-80002", "-8", "EUR", date: 3.days.ago.utc.iso8601) ]
+
+    sync.call(raise_on: { get_balance_statements: statements_forbidden })
+    booked = account.entries.where(source: "wise").pluck(:external_id, :id).to_h
+    account.entries.find(booked["wise_activity_card_1"]).entryable.update!(locked_attributes: { "category_id" => Time.current.iso8601 })
+
+    sync.call(statements: statements)
+
+    assert_equal({ "wise_statement_CARD-resource_card_1" => booked["wise_activity_card_1"], "wise_statement_CARD-80002" => booked["wise_activity_card_2"] },
+                 account.entries.where(source: "wise").pluck(:external_id, :id).to_h)
+    assert account.entries.find(booked["wise_activity_card_1"]).entryable.locked_attributes.key?("category_id")
+    note = statement_migration_notes.sole
+    assert_equal [ 2, 1 ], note.metadata.values_at("activities_matched", "activities_unmatched")
+
+    sync.call(statements: statements)
+    assert_equal [ "CARD-resource_card_1", "CARD-80002" ], eur.reload.raw_transactions_payload.map { |row| row["referenceNumber"] }
+  end
+
+  # A balance's first statement coverage rebuilds its stored rows from a
+  # whole window, like a source's first coverage (#coverage_upgraded?).
+  test "a balance's first statement coverage counts as a coverage upgrade once" do
+    covered = { "from" => "2020-01-01T00:00:00Z", "through" => 1.day.ago.utc.iso8601, "version" => WiseItem::COVERAGE_VERSION }
+    @wise_item.update!(raw_payload: { "coverage" => { "transfers" => covered, "activities" => covered } })
+    @wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR", raw_payload: { "type" => "STANDARD" },
+                                     raw_transactions_payload: [ statement_row("CARD-1", "-5", "EUR").merge("wise_statement" => true) ])
+    import = -> { WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: FakeWiseProvider.new(statements: [])).import }
+
+    assert import.call[:coverage_upgraded]
+    assert_not import.call[:coverage_upgraded]
+  end
+
+  # A balance's first statement sync may delete beyond the clean-up's cap the
+  # statement entries an old install booked next to a conversion's own legs.
+  # That sync being incomplete ran no clean-up, and the later complete ones
+  # were capped for good, so each conversion stayed booked twice. The balance
+  # now keeps the bypass for those entries until a clean-up after a complete
+  # import used it.
+  test "removes the conversions an old install booked twice even when its first statement sync was incomplete" do
+    travel_to Time.utc(2026, 10, 1, 12) do
+      covered = { "from" => "2020-01-01T00:00:00Z", "through" => 1.day.ago.utc.iso8601, "version" => WiseItem::COVERAGE_VERSION }
+      @wise_item.update!(raw_payload: { "coverage" => { "transfers" => covered, "activities" => covered } })
+      conversions = %w[117.50 230 45.10 80 64.25 99].each_with_index.map do |amount, i|
+        build_interbalance("To <strong>EUR</strong>", resource_id: (800 + i).to_s, primary: "#{amount} EUR",
+                                                      secondary: "#{(amount.to_d * 0.85).round(2)} GBP")
+          .merge("createdOn" => (60 - i * 5).days.ago.utc.iso8601(3))
+      end
+      statements = conversions.map do |conversion|
+        statement_row("BALANCE-#{conversion.dig('resource', 'id')}", conversion["primaryAmount"].to_d.to_s("F"), "EUR",
+                      date: conversion["createdOn"], details_type: "CONVERSION")
+      end
+      eur = @wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR", raw_payload: { "type" => "STANDARD" },
+                                             raw_transactions_payload: conversions + statements.map { |row| row.merge("wise_statement" => true) })
+      account = link_account(eur).current_account
+      # What older code booked: each conversion's leg and its statement
+      # credit.
+      conversions.zip(statements) do |conversion, statement|
+        date = Time.zone.parse(conversion["createdOn"]).to_date
+        amount = -conversion["primaryAmount"].to_d
+        account.entries.create!(external_id: "wise_interbalance_#{conversion.dig('resource', 'id')}_inflow", source: "wise", amount: amount,
+                                currency: "EUR", date: date, name: "From GBP", entryable: Transaction.new)
+        account.entries.create!(external_id: "wise_statement_#{statement['referenceNumber']}", source: "wise", amount: amount,
+                                currency: "EUR", date: date, name: "Converted", entryable: Transaction.new)
+      end
+      sync = lambda do |**options|
+        provider = FakeWiseProvider.new(balances: [ eur_balance("10000001", 0) ], borderless_accounts: [], activities: conversions,
+                                        statements: statements, windowed_statements: true, **options)
+        result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+        WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+        result
+      end
+
+      assert_not sync.call(raise_on: { get_activities: "Unexpected response 502" })[:complete]
+      assert_equal 12, account.entries.where(source: "wise").count
+      assert_equal account.entries.where(source: "wise").pluck(:external_id).sort, eur.reload.prune_cap_bypass_ids.sort
+
+      assert sync.call[:complete]
+      assert_equal conversions.map { |conversion| "wise_interbalance_#{conversion.dig('resource', 'id')}_inflow" },
+                   account.entries.where(source: "wise").order(:external_id).pluck(:external_id)
+      assert_equal [ true, 6 ], prune_notes.order(:created_at).last.metadata.values_at("cap_bypassed", "destroyed_count")
+      assert_empty eur.reload.prune_cap_bypass_ids
+    end
+  end
+
+  # A sync that fetched the whole history again lifts the clean-up's cap only
+  # for the entries a row Sure holds can have booked, never for every stale
+  # entry: here Wise entries no row of the item explains.
+  test "lifts the clean-up's cap only for the entries a row Sure holds explains" do
+    usd = @wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise USD", currency: "USD", raw_payload: { "type" => "STANDARD" })
+    account = link_account(usd).current_account
+    history = (1..12).map do |i|
+      account.entries.create!(external_id: "wise_transfer_150000#{i.to_s.rjust(2, '0')}", source: "wise", amount: i.odd? ? -50 : 50,
+                              currency: "USD", date: i.days.ago.to_date, name: "Wise", entryable: Transaction.new)
+    end
+    WiseItem.any_instance.stubs(:wise_provider).returns(
+      FakeWiseProvider.new(balances: [ standard_balance("10000001", "USD", 0) ], borderless_accounts: [],
+                           raise_on: { get_balance_statements: statements_forbidden })
+    )
+
+    # The item's first sync: the whole default history is fetched and covered.
+    Sync.create!(syncable: @wise_item).perform
+
+    assert @wise_item.reload.fetch_coverage(:transfers)
+    assert history.all? { |entry| Entry.exists?(entry.id) }
+    assert_equal [ 12, 0 ], prune_notes.sole.metadata.values_at("capped_count", "destroyed_count")
+  end
+
+  # An account can keep the history an earlier connection booked (the person
+  # removed that connection, which keeps its accounts, and linked the balance
+  # of a new one to the account). Those entries predate the new connection's
+  # fetched history, so no row will ever book them; the clean-up deleted them,
+  # up to its cap, from the balance's empty payload.
+  test "keeps the history an earlier connection left on an account a balance is linked to" do
+    travel_to Time.utc(2026, 10, 17, 12) do
+      account = Account.create!(family: @family, name: "Wise USD", balance: 0, currency: "USD", accountable: Depository.new(subtype: "checking"))
+      history = [ [ "wise_transfer_1500000001", -400, Date.new(2024, 3, 1) ], [ "wise_transfer_1500000002", 150, Date.new(2024, 3, 9) ],
+                  [ "wise_fee_1500000002", 1.2, Date.new(2024, 3, 9) ], [ "wise_interbalance_3000000001_outflow", 100, Date.new(2024, 4, 2) ],
+                  [ "wise_transfer_1500000003", 148.8, Date.new(2024, 5, 20) ] ].map do |external_id, amount, date|
+        account.entries.create!(external_id: external_id, source: "wise", amount: amount, currency: "USD", date: date, name: "Wise",
+                                entryable: Transaction.new)
+      end
+      balance = standard_balance("10000001", "USD", 0).merge("recipientId" => 70000000, "creationTime" => "2023-01-10T10:00:00Z")
+      WiseItem.any_instance.stubs(:wise_provider).returns(
+        FakeWiseProvider.new(balances: [ balance ], borderless_accounts: [], raise_on: { get_balance_statements: statements_forbidden })
+      )
+
+      Sync.create!(syncable: @wise_item).perform
+      AccountProvider.create!(account: account, provider: @wise_item.wise_accounts.reload.sole)
+      Sync.create!(syncable: @wise_item.reload).perform
+
+      assert history.all? { |entry| Entry.exists?(entry.id) }
+      assert_empty prune_notes
+    end
   end
 
   # The incremental window follows the transfers coverage marker (the last
@@ -1832,6 +2382,52 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  # Statement rows are not replayed, so a balance with statements is not
+  # either, although its transfer rows (kept until its statements take them
+  # over) would reconcile here with the payout marked.
+  test "replays no balance its statements cover" do
+    @wise_item.update!(import_all_history: true)
+    @wise_item.wise_accounts.create!(
+      balance_id: "60000001", name: "Wise GBP", currency: "GBP",
+      raw_payload: { "type" => "STANDARD", "statements_coverage" => { "from" => "2026-07-01T08:00:00Z", "through" => "2026-07-03T08:00:00Z" } },
+      raw_transactions_payload: [ statement_row("CARD-9", "-1", "GBP", date: "2026-07-03T07:00:00Z").merge("wise_statement" => true),
+                                  *card_funded_transfers ]
+    )
+    provider = card_funded_payout_provider(live: 120.0, statements: [], raise_on: { get_balance_statements: nil })
+
+    assert WiseItem::Importer.new(@wise_item, wise_provider: provider).import[:complete]
+
+    assert_includes provider.calls, :get_transfers
+    assert_equal 2, provider.calls.count(:get_balances)
+    assert_equal [ 7101, 7102 ], @wise_item.wise_accounts.sole.raw_transactions_payload.filter_map { |row| row["id"] }
+    assert_empty funding_marks
+  end
+
+  # Coverage alone may stem from an earlier sync. In this one the statements
+  # of a third balance arrived, so no transfer was listed: the two balances
+  # sharing a card payment are not replayed, though their rows would reconcile
+  # and write split parts.
+  test "replays nothing in a sync that listed no transfers" do
+    covered = { "from" => "2020-01-01T00:00:00Z", "through" => 1.day.ago.utc.iso8601, "version" => WiseItem::COVERAGE_VERSION }
+    @wise_item.update!(import_all_history: true, raw_payload: { "coverage" => { "transfers" => covered, "activities" => covered } })
+    @wise_item.wise_accounts.create!(balance_id: "50000002", name: "Wise USD", currency: "USD", raw_payload: { "type" => "STANDARD" },
+                                     raw_transactions_payload: [ statement_row("CARD-1", "-5", "USD").merge("wise_statement" => true) ])
+    replayable = { "investmentState" => "NOT_INVESTED", "creationTime" => "2026-09-30T08:00:00Z" }
+    provider = FakeWiseProvider.new(
+      balances: [ standard_balance("50000000", "EUR", 0.0).merge(replayable), standard_balance("50000001", "GBP", 0.0).merge(replayable),
+                  standard_balance("50000002", "USD", 0.0) ],
+      borderless_accounts: [], activities: [ build_card_activity("card_1", "25 EUR", "GBP, EUR") ],
+      statements_by_balance: { "50000002" => [ statement_row("CARD-1", "-5", "USD") ] }
+    )
+
+    assert WiseItem::Importer.new(@wise_item, wise_provider: provider).import[:complete]
+
+    assert_not_includes provider.calls, :get_transfers
+    assert_equal 2, provider.calls.count(:get_balances)
+    assert_equal [ "card_1" ], @wise_item.wise_accounts.find_by!(balance_id: "50000001").raw_transactions_payload.map { |row| row["id"] }
+    assert_empty split_marks
+  end
+
   # Payloads are stored in one transaction with a savepoint per balance, so
   # the database refusing one balance's rows (PostgreSQL takes no NUL in
   # jsonb) keeps the others'.
@@ -2329,7 +2925,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
 
     2.times do
       result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: emptied).import
-      WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete], coverage_upgraded: result[:coverage_upgraded])
+      WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
     end
 
     assert eur.reload.closed?
@@ -2419,14 +3015,56 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
 
     result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
     assert result[:coverage_upgraded]
-    WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete], coverage_upgraded: result[:coverage_upgraded])
+    # The conversion's row explains each balance's copy, so each may go
+    # beyond the cap if stale: on USD, which the row left, and on AUD, where
+    # the conversion's leg is its inflow.
+    assert_equal({ "GBP" => %w[wise_interbalance_9000000106_outflow], "AUD" => %w[wise_interbalance_9000000106_outflow],
+                   "USD" => %w[wise_interbalance_9000000106_outflow] },
+                 @wise_item.wise_accounts.reload.to_h { |wise_account| [ wise_account.currency, wise_account.prune_cap_bypass_ids ] })
+    WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
 
     assert_empty @wise_item.wise_accounts.find_by!(currency: "USD").raw_transactions_payload
+    assert_empty @wise_item.wise_accounts.find_by!(currency: "USD").prune_cap_bypass_ids
     assert_not accounts["USD"].entries.exists?
     assert_equal [ [ "wise_interbalance_9000000106_outflow", BigDecimal("1875"), "GBP" ] ],
                  accounts["GBP"].entries.pluck(:external_id, :amount, :currency)
     assert_equal BigDecimal("-3710.65"), accounts["AUD"].entries.sum(:amount)
     assert_equal 1, Entry.where(source: "wise", external_id: "wise_interbalance_9000000106_outflow").count
+  end
+
+  # An older build booked each conversion as an outflow on every balance, on
+  # its target too, which then counted what it received as spent. Ten such
+  # copies are more than a clean-up may delete at once (the cap), but the
+  # conversions' rows explain them, so the sync that re-fetched the whole
+  # history removes them all.
+  test "the first full sync removes the conversion copies an older routing booked on their target balance, beyond the cap" do
+    conversions = (1..10).map do |i|
+      build_interbalance("To <strong>USD</strong>", resource_id: "77#{i}", primary: "120 USD", secondary: "100 GBP")
+        .merge("id" => "conv_#{i}", "createdOn" => (40 - i).days.ago.utc.iso8601(3))
+    end
+    balances = [ standard_balance("32000001", "GBP", 0.0), standard_balance("32000002", "USD", 1200.0) ]
+    gbp, usd = balances.map do |balance|
+      wise_account = @wise_item.wise_accounts.create!(balance_id: balance["id"], name: "Wise #{balance.dig('amount', 'currency')}",
+                                                      currency: balance.dig("amount", "currency"), raw_payload: balance,
+                                                      raw_transactions_payload: conversions)
+      link_account(wise_account).current_account
+    end
+    conversions.each do |activity|
+      [ gbp, usd ].each do |account|
+        account.entries.create!(external_id: "wise_interbalance_#{activity.dig('resource', 'id')}_outflow", source: "wise", amount: 120,
+                                currency: "USD", date: Time.zone.parse(activity["createdOn"]).to_date, name: "To USD", entryable: Transaction.new)
+      end
+    end
+    provider = FakeWiseProvider.new(balances: balances, borderless_accounts: [], activities: conversions,
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    2.times do
+      result = WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+      WiseItem.find(@wise_item.id).process_accounts(import_complete: result[:complete])
+    end
+
+    assert_equal [ 10, BigDecimal("-1200") ], [ usd.entries.where(source: "wise").count, usd.entries.where(source: "wise").sum(:amount) ]
+    assert_equal({ [ BigDecimal("100"), "GBP" ] => 10 }, gbp.entries.where(source: "wise").group(:amount, :currency).count)
   end
 
   test "says when the import covered a source for the first time or re-fetched the whole history" do
@@ -2574,15 +3212,26 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
       }
     end
 
-    def statement_row(reference, value, currency, date: 2.days.ago.utc.iso8601)
+    # extra: more of Wise's keys (totalFees, runningBalance).
+    def statement_row(reference, value, currency, date: 2.days.ago.utc.iso8601, details_type: "CARD", **extra)
       { "type" => value.to_d.negative? ? "DEBIT" : "CREDIT", "date" => date,
-        "amount" => { "value" => value, "currency" => currency }, "details" => { "type" => "CARD" },
-        "referenceNumber" => reference }
+        "amount" => { "value" => value, "currency" => currency }, "details" => { "type" => details_type },
+        "referenceNumber" => reference }.merge(extra)
+    end
+
+    # What the importer reports about rows waiting for a statement row.
+    def statement_migration_notes
+      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "statement_migration")
     end
 
     # What the importer reports about activities it books on no balance.
     def activity_notes
       DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "activity_routing")
+    end
+
+    # What processing reports about the stale entries it deleted or kept.
+    def prune_notes
+      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "prune")
     end
 
     # What the importer reports about the balance replay.

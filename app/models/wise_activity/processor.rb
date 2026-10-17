@@ -203,11 +203,18 @@ class WiseActivity::Processor
   end
 
   # The external ids of the entries processing this activity keeps on its
-  # balance: none when it books nothing there (not completed, or another
-  # balance's share of a split payment), so an entry it booked earlier is
-  # stale.
+  # balance: none when it books nothing there (not completed, another
+  # balance's share of a split payment, or carried by a statement row now),
+  # so an entry it booked earlier is stale.
   def expected_external_ids
     skip_reason ? [] : [ external_id ]
+  end
+
+  # What the activity books on this balance, { external_id:, amount:,
+  # currency: } with Sure's sign (positive = money out), or nil when it
+  # books nothing here. Needs no linked account.
+  def booking
+    { external_id: external_id, amount: amount, currency: currency } unless skip_reason
   end
 
   # The day the activity books on, whether it books here or not; nil when
@@ -238,11 +245,15 @@ class WiseActivity::Processor
     end
 
     # Why the activity books nothing on this balance, or nil when it books.
+    # A statement row that carries its movement books it instead
+    # ("wise_superseded_by", see WiseItem::StatementMigration).
     def skip_reason
       return @skip_reason if defined?(@skip_reason)
 
       @skip_reason =
-        if activity[:status].to_s != BOOKED_STATUS
+        if activity[:wise_superseded_by].present?
+          :superseded
+        elsif activity[:status].to_s != BOOKED_STATUS
           :status
         elsif split? && split_amount.nil?
           :split_paid_elsewhere

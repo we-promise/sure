@@ -39,10 +39,7 @@ class WiseItem::Syncer
     if linked_count.positive?
       update_status(sync, :processing_transactions)
       mark_import_started(sync)
-      process_results = wise_item.process_accounts(
-        import_complete: import_complete?(import_result),
-        coverage_upgraded: import_result.is_a?(Hash) && import_result[:coverage_upgraded] == true
-      )
+      process_results = wise_item.process_accounts(import_complete: import_complete?(import_result))
       sync_errors.concat(result_failure_errors(process_results, category: :account_processing_error, message_key: :account_processing_failed))
       capture_transaction_processing_summary(process_results)
       collect_wise_prune_stats(sync, process_results)

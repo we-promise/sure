@@ -217,22 +217,21 @@ class WiseItemTest < ActiveSupport::TestCase
     queries.each { |sql| assert_no_match(/raw_transactions_payload|wise_accounts"\.\*/, sql) }
   end
 
-  # Whether the import re-fetched the whole history (coverage_upgraded)
-  # reaches the account processors too.
+  # Whether the import re-fetched the whole history no longer travels with it:
+  # the balances whose rows that moved keep it themselves
+  # (WiseAccount#prune_cap_bypass_ids).
   test "process_accounts tells each account processor whether the import was complete" do
-    WiseAccount::Processor.expects(:new).with(@standard_account, import_complete: true, coverage_upgraded: true)
-                          .returns(stub(process: { imported: 0 }))
-    WiseAccount::Processor.expects(:new).with(@jar_account, import_complete: true, coverage_upgraded: true)
-                          .returns(stub(process: { imported: 0 }))
+    WiseAccount::Processor.expects(:new).with(@standard_account, import_complete: true).returns(stub(process: { imported: 0 }))
+    WiseAccount::Processor.expects(:new).with(@jar_account, import_complete: true).returns(stub(process: { imported: 0 }))
 
-    results = @wise_item.process_accounts(import_complete: true, coverage_upgraded: true)
+    results = @wise_item.process_accounts(import_complete: true)
 
     assert_equal [ true, true ], results.map { |result| result[:success] }
   end
 
   test "process_accounts assumes an incomplete import unless told otherwise" do
     WiseAccount::Processor.expects(:new).twice
-                          .with { |_wise_account, options| options == { import_complete: false, coverage_upgraded: false } }
+                          .with { |_wise_account, options| options == { import_complete: false } }
                           .returns(stub(process: nil))
 
     @wise_item.process_accounts
