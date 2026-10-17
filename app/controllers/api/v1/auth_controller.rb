@@ -250,11 +250,14 @@ module Api
         return unless cached
 
         email = cached[:email]
+        # JIT creation and invitation redemption trust the IdP's email, so they
+        # require it to be verified.
+        email_verified = email.present? && cached[:email_verified] == true
 
         # Check for a pending invitation for this email
-        invitation = Invitation.pending.find_by(email: email)
+        invitation = Invitation.pending.find_by(email: email) if email_verified
 
-        unless invitation.present? || cached[:allow_account_creation]
+        unless email_verified && (invitation.present? || cached[:allow_account_creation])
           render json: { error: "SSO account creation is disabled. Please contact an administrator." }, status: :forbidden
           return
         end

@@ -57,7 +57,7 @@ OIDC_REDIRECT_URI="https://yourdomain.com/auth/openid_connect/callback"
 
 Restart the application after saving the variables.
 
-When OIDC is correctly configured, users can sign in from the login page using the **Sign in with OpenID Connect** button (label can be customized, see below). The IdP must report the user's email as verified, and it must match an existing user or be allowed for JIT creation.
+When OIDC is correctly configured, users can sign in from the login page using the **Sign in with OpenID Connect** button (label can be customized, see below). The IdP must report the user's email as verified, and it must match an existing user or be allowed for JIT creation. For OIDC and Google this is the `email_verified` claim (`true`, or the string `"true"`); GitHub uses its verified primary email; SAML trusts the email the IdP asserts. Without it, the user can still link an existing account with its password, but no account is created and no invitation is redeemed.
 
 ---
 

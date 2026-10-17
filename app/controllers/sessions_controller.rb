@@ -344,6 +344,7 @@ class SessionsController < ApplicationController
         provider: auth.provider,
         uid: auth.uid,
         email: auth.info&.email,
+        email_verified: SsoEmailVerification.verified?(auth),
         name: auth.info&.name,
         first_name: auth.info&.first_name,
         last_name: auth.info&.last_name
@@ -487,9 +488,13 @@ class SessionsController < ApplicationController
     def handle_mobile_sso_onboarding(auth)
       device_info = session.delete(:mobile_sso)
       email = auth.info&.email
+      # JIT creation and invitation redemption trust the IdP's email, so they
+      # require it to be verified. Linking an existing account does not.
+      email_verified = SsoEmailVerification.verified?(auth)
 
-      has_pending_invitation = email.present? && Invitation.pending.exists?(email: email)
-      allow_creation = has_pending_invitation || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email))
+      has_pending_invitation = email_verified && Invitation.pending.exists?(email: email)
+      allow_creation = email_verified &&
+        (has_pending_invitation || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email)))
 
       linking_code = SecureRandom.urlsafe_base64(32)
       Rails.cache.write(
@@ -498,6 +503,7 @@ class SessionsController < ApplicationController
           provider: auth.provider,
           uid: auth.uid,
           email: email,
+          email_verified: email_verified,
           first_name: auth.info&.first_name,
           last_name: auth.info&.last_name,
           name: auth.info&.name,
