@@ -16,7 +16,7 @@ pl:
         contribution: Wpłata
         dividend: Dywidenda
         interest: Odsetki
-        round_up: Round up
+        round_up: "Round up"
         tax_refund: Zwrot podatku
         withdrawal: Wypłata
     complete_account_setup:
@@ -45,9 +45,6 @@ pl:
       still_pending: Jeszcze nie potwierdzono. Zatwierdź logowanie w aplikacji Trade
         Republic i spróbuj ponownie.
       success: Trade Republic połączono pomyślnie.
-    create:
-      success: Trade Republic zapisano. Potwierdź logowanie w aplikacji Trade Republic,
-        aby zakończyć łączenie.
     duplicate_connection: "To konto Trade Republic jest już połączone. Nowe połączenie zostało usunięte."
     defaults:
       name: Trade Republic
@@ -56,10 +53,7 @@ pl:
       unlink_failed: Nie udało się w pełni rozłączyć Trade Republic. Połączenie zostało
         zachowane, aby można je było bezpiecznie ponowić.
     initiate_login:
-      not_configured: Trade Republic nie jest skonfigurowane.
       pin_required: Podaj swój PIN lub hasło Trade Republic, aby rozpocząć nowe logowanie.
-      verification_required: Logowanie rozpoczęte. Potwierdź je przez %{method}, a
-        następnie kliknij Potwierdź logowanie.
     initiate_qr_login:
       not_configured: Trade Republic nie jest skonfigurowane.
     link_existing_account:
@@ -80,10 +74,10 @@ pl:
       no_pending_login: Żadne logowanie kodem QR nie jest oczekujące.
       success: Trade Republic połączono pomyślnie.
     portfolio_categories:
-      brokerage: Rachunek maklerski
-      crypto_wallet: Portfel kryptowalut
+      brokerage: "Brokerage"
+      crypto_wallet: "Crypto Wallet"
       interest_products: Produkty oprocentowane
-      private_markets: Rynki prywatne
+      private_markets: "Private Markets"
     repair:
       scheduled: Zaplanowano naprawę danych Trade Republic.
     select_accounts:
@@ -101,6 +95,7 @@ pl:
         account_id: 'ID konta: %{account_id}'
         account_summary: "%{account_type} • Saldo: %{balance}"
         account_type_cash: Konto gotówkowe
+        account_type_crypto: Konto kryptowalutowe
         account_type_investment: Portfel inwestycyjny
         title: Dostępne konto
       buttons:
@@ -209,6 +204,7 @@ pl:
       no_accounts_discovered_description: Zakończ logowanie i uruchom synchronizację,
         aby wykryć rachunek.
       requires_update: Wymagana ponowna autoryzacja
+      session_expires_in: "Logowanie wygasa za %{time} (%{at})."
       setup_accounts: Skonfiguruj rachunki
       synced: Zsynchronizowano %{time} temu. %{summary}.
       syncing: Synchronizowanie

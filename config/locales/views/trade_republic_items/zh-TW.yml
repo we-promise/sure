@@ -6,17 +6,22 @@ zh-TW:
       connection_description: "透過安全的網頁登入連結 Trade Republic 投資帳戶"
       institution_name: Trade Republic
   trade_republic_items:
-    duplicate_connection: "此 Trade Republic 帳戶已連結。新的連結已被移除。"
     portfolio_categories:
-      brokerage: "經紀帳戶"
-      private_markets: "私人市場"
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
       interest_products: "計息產品"
-      crypto_wallet: "加密貨幣錢包"
+      crypto_wallet: "Crypto Wallet"
+    duplicate_connection: "此 Trade Republic 帳戶已連結。新的連結已被移除。"
+    defaults:
+      name: Trade Republic
     trade_republic_item:
+      deletion_in_progress: "正在刪除"
       syncing: "正在同步"
       requires_update: "需要重新驗證"
+      session_expires_in: "登入將在 %{time}後過期（%{at}）。"
       error: "錯誤"
       synced: "%{time}前同步。%{summary}。"
+      never_synced: "從未同步。"
       setup_accounts: "設定帳戶"
       delete: "刪除"
       accounts_need_setup: "帳戶需要設定"
@@ -54,13 +59,37 @@ zh-TW:
           stale: 已過期
     setup_accounts:
       page_title: "設定 Trade Republic 帳戶"
+      dialog_title: "設定您的 Trade Republic 帳戶"
       subtitle: "連結您的 Trade Republic 投資帳戶。"
+      info_box:
+        title: "Trade Republic 匯入"
+        items:
+          item_1: "目前持倉及其價格與數量"
+          item_2: "已成交的交易（買進與賣出）"
+          item_3: "入金、出金與利息發放"
+      status:
+        fetching_accounts: "正在從 Trade Republic 取得帳戶..."
+        no_accounts_found_title: "找不到帳戶。"
+        no_accounts_found_description: "Sure 找不到 Trade Republic 帳戶。請確認您的工作階段是否仍然有效。"
       available_accounts:
-        account_type_investment: "Investment portfolio"
-        account_type_cash: "Cash account"
+        title: "可用帳戶"
+        account_type_investment: "投資組合"
+        account_type_cash: "現金帳戶"
+        account_type_crypto: "加密貨幣帳戶"
+        account_summary: "%{account_type} • 餘額：%{balance}"
+        account_id: "帳戶 ID：%{account_id}"
+      link_existing:
+        description: "或將偵測到的 Trade Republic 帳戶連結至現有的手動投資帳戶。"
+        manual_account_option: "%{name}（%{balance}）"
+        select_prompt: "選擇帳戶..."
+      linked_accounts:
+        title: "已連結"
+        linked_to_html: "已連結至：%{account}"
       buttons:
         refresh: "重新整理"
         cancel: "取消"
+        back_to_settings: "返回設定"
+        create_selected_accounts: "建立所選帳戶"
         link: "連結"
         done: "完成"
     sync:
@@ -70,27 +99,64 @@ zh-TW:
       status:
         checking_credentials: "正在檢查 Trade Republic 認證資訊..."
         importing_account: "正在匯入 Trade Republic 帳戶..."
+        checking_configuration: "正在檢查帳戶設定..."
+        accounts_need_setup:
+          one: "1 個 Trade Republic 帳戶需要設定..."
+          other: "%{count} 個 Trade Republic 帳戶需要設定..."
         processing_activity: "正在處理持股與活動..."
         calculating_balances: "正在計算餘額..."
     repair:
       scheduled: "已排程修復 Trade Republic 資料。"
+    sync_status:
+      no_accounts: "尚未發現 Trade Republic 帳戶"
+      all_linked:
+        one: "已連結 1 個帳戶"
+        other: "已連結 %{count} 個帳戶"
+      partial: "%{linked} 個已連結，%{unlinked} 個需要設定"
     select_existing_account:
       title: "連結 Trade Republic 帳戶"
+      no_accounts_available: "目前沒有未連結的 Trade Republic 帳戶。"
+      run_sync_hint: "請完成登入，然後從設定 > 供應商執行同步。"
+      wait_for_sync: "請等待帳戶偵測同步完成。"
+      balance: "餘額"
       link: "連結"
       cancel: "取消"
+    update:
+      success: "已成功更新 Trade Republic 設定。"
+      pin_required: "請輸入您的 Trade Republic PIN 或密碼以重新驗證。"
+    destroy:
+      success: "已排程刪除 Trade Republic 連線。"
+      unlink_failed: "無法完全中斷 Trade Republic 連線。連線已保留，以便安全地重試。"
+    select_accounts:
+      not_configured: "Trade Republic 尚未設定。"
     initiate_login:
-      verification_required: "登入已開始。請透過 %{method} 確認，然後按下確認登入。"
+      pin_required: "請輸入您的 Trade Republic PIN 或密碼以開始新的登入。"
+    initiate_qr_login:
+      not_configured: "Trade Republic 尚未設定。"
+    poll_login:
+      no_pending_login: "目前沒有待處理的登入。請先開始新的登入。"
+      login_expired: "登入要求已過期。請重新開始。"
+    poll_qr_login:
+      no_pending_login: "沒有待處理的 QR 登入。"
+      success: "Trade Republic 已成功連線。"
     complete_login:
+      no_pending_login: "目前沒有待處理的登入。請先開始新的登入。"
       approval_pending: "尚未確認。請在 Trade Republic 應用程式中核准登入後再試一次。"
+      still_pending: "尚未確認。請在 Trade Republic 應用程式中核准登入後再試一次。"
       success: "Trade Republic 已成功連線。"
       login_expired: "登入要求已過期。請重新開始。"
     link_existing_account:
       not_found: "找不到帳戶或 Trade Republic 設定。"
+      only_manual_investment: "只有手動投資帳戶可以連結至 Trade Republic。"
+      already_linked: "此 Trade Republic 帳戶已連結。"
       success: "已成功連結至 Trade Republic 帳戶。"
+      processing_failed: "帳戶已連結，但初始資料處理失敗。已排程同步；若資料仍不完整，請檢查除錯記錄。"
+      failed: "連結 Trade Republic 帳戶失敗。"
     complete_account_setup:
       success:
         one: "已成功建立 %{count} 個 Trade Republic 帳戶。"
         other: "已成功建立 %{count} 個 Trade Republic 帳戶。"
+      none_selected: "未選擇任何帳戶。"
       none_created: "未建立任何帳戶。"
       partial_failure:
         one: "無法完整設定所選的一個 Trade Republic 帳戶。請檢查除錯記錄並重試。"
@@ -106,4 +172,4 @@ zh-TW:
         card_fee: 卡片費用
         card_refund: 卡片退款
         tax_refund: 退稅
-        round_up: Round up
+        round_up: "Round up"

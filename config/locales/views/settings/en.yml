@@ -441,6 +441,8 @@ en:
         sync_error: Sync error
         no_recent_sync: Sync overdue
         reconsent_required: Re-consent required
+        login_required: Login required
+        login_expires_soon: Login expires in %{time} (%{at})
         reconsent_needed:
           one: Re-consent needed in 1 day
           other: Re-consent needed in %{count} days
@@ -722,18 +724,16 @@ en:
           title: Encryption is not configured
           message: Trade Republic credentials and session data cannot be stored securely until Active Record Encryption is configured.
         steps:
-          step_1: Enter the phone number and PIN or password you use for the Trade Republic app, then save.
-          step_2: Enter the code from your authenticator app when requested.
-          step_3: Approve the login in your Trade Republic app when prompted.
+          step_1: "Under Add a connection, choose QR login or PIN login."
+          step_2: "QR login: scan the QR code with your phone's camera, then approve the login in the Trade Republic app."
+          step_3: "PIN login: enter the phone number and PIN or password you use for the Trade Republic app, then the code from your authenticator app, and approve the login in the Trade Republic app."
         phone_number_label: Phone number
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Leave blank to keep the current phone number
         pin_label: PIN or password
         pin_placeholder_new: Your Trade Republic PIN or password
-        pin_placeholder_existing: Leave blank to keep the current PIN or password
         currency_label: Account currency
         connect: Log in
-        confirm_login: Check login
         complete_login: Continue
         authenticator_code_label: Authenticator code (if prompted)
         authenticator_code_placeholder: "6-digit code"
@@ -744,25 +744,28 @@ en:
         awaiting_confirmation: Approval in the Trade Republic app is pending.
         awaiting_authenticator_code: Authenticator code required.
         login_expired: The approval request has expired.
-        restart_login: Start login again
         connection_success:
           title: Trade Republic connected successfully
           message: Your Trade Republic connection is ready.
           description: Sure is now syncing your Trade Republic data in the background.
           close: Done
-        qr_login: Log in with QR code
+        qr_login: QR login
         qr_cancel: Cancel QR login
-        qr_back_to_credentials: Back to phone number and PIN or password
         qr_loading: Preparing QR code …
-        qr_instruction: Scan the QR code with your Trade Republic app and approve the login.
+        qr_instruction: Scan the QR code with your phone's camera, then approve the login in the Trade Republic app.
         qr_success: Login approved. Sure is refreshing the provider page.
         qr_error: QR login could not be started. Please try again.
-        add_account: Add another connection
-        save_configuration: Save & Start Login
-        update_configuration: Update Configuration
+        requires_update: Log in again to resume syncing.
+        session_expires_in: Login expires in %{time} (%{at}).
+        pin_login: PIN login
+        pin_cancel: "Cancel PIN login"
+        remove: Remove
+        new_connection: New connection
+        cancel_login: Cancel
+        add_connection: "Add a connection"
+        pin_login_hint: "Enter the phone number and PIN or password you use for the Trade Republic app."
         sync: Sync
         syncing: Syncing...
-        disconnect: Disconnect Trade Republic
         disconnect_confirm: Disconnect Trade Republic? Your synced accounts will become manual accounts.
         disconnect_confirm_with_identifier: "Disconnect the Trade Republic connection ending in %{last4}? Your synced accounts will become manual accounts."
         identifier_phone: Phone

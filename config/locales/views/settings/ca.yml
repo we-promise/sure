@@ -489,6 +489,8 @@ ca:
           one: Cal renovar el consentiment en %{count} dia
           other: Cal renovar el consentiment en %{count} dies
         reconsent_required: Cal renovar el consentiment
+        login_required: "Cal iniciar sessió"
+        login_expires_soon: "La sessió caduca d'aquí a %{time} (%{at})"
         sync_error: Error de sincronització
       not_authorized: No autoritzat
       not_found: Proveïdor no trobat.
@@ -635,18 +637,16 @@ ca:
           title: El xifratge no està configurat
           message: Les credencials i les dades de sessió de Trade Republic no es poden desar de manera segura fins que es configuri Active Record Encryption.
         steps:
-          step_1: Introdueix el número de telèfon i el PIN que fas servir a l'aplicació de Trade Republic i desa.
-          step_2: Introdueix el codi de la teva aplicació d'autenticació quan se't demani.
-          step_3: Aprova l'inici de sessió a l'aplicació de Trade Republic quan se't demani.
+          step_1: "A Afegeix una connexió, tria Accés amb QR o Accés amb PIN."
+          step_2: "Accés amb QR: escaneja el codi QR amb la càmera del telèfon i després aprova l'inici de sessió a l'aplicació de Trade Republic."
+          step_3: "Accés amb PIN: introdueix el número de telèfon i el PIN o la contrasenya que fas servir a l'aplicació de Trade Republic, després el codi de la teva aplicació d'autenticació, i aprova l'inici de sessió a l'aplicació de Trade Republic."
         phone_number_label: Número de telèfon
         phone_number_placeholder_new: +49 170 1234567
         phone_number_placeholder_existing: Deixa-ho en blanc per mantenir el número de telèfon actual
-        pin_label: PIN
-        pin_placeholder_new: El PIN de l'aplicació de Trade Republic
-        pin_placeholder_existing: Deixa-ho en blanc per mantenir el PIN actual
+        pin_label: PIN o contrasenya
+        pin_placeholder_new: El PIN o la contrasenya de Trade Republic
         currency_label: Divisa del compte
         connect: Inicia sessió
-        confirm_login: Comprova l'inici de sessió
         complete_login: Continua
         authenticator_code_label: Codi d'autenticació (si se't demana)
         authenticator_code_placeholder: Codi de 6 dígits
@@ -657,25 +657,28 @@ ca:
         awaiting_confirmation: L'aprovació a l'aplicació de Trade Republic està pendent.
         awaiting_authenticator_code: Cal el codi d'autenticació.
         login_expired: La sol·licitud d'aprovació ha caducat.
-        restart_login: Torna a iniciar sessió
         connection_success:
           title: Trade Republic s'ha connectat correctament
           message: La teva connexió de Trade Republic està a punt.
           description: Sure està sincronitzant les teves dades de Trade Republic en segon pla.
           close: Fet
-        qr_login: Inicia sessió amb codi QR
+        qr_login: Accés amb QR
         qr_cancel: Cancel·la l'inici de sessió amb QR
-        qr_back_to_credentials: Torna al número de telèfon i PIN
         qr_loading: Preparant el codi QR…
-        qr_instruction: Escaneja el codi QR amb l'aplicació de Trade Republic i aprova l'inici de sessió.
+        qr_instruction: Escaneja el codi QR amb la càmera del telèfon i després aprova l'inici de sessió a l'aplicació de Trade Republic.
         qr_success: Inici de sessió aprovat. Sure està actualitzant la pàgina del proveïdor.
         qr_error: No s'ha pogut iniciar la sessió amb QR. Torna-ho a provar.
-        add_account: "Afegeix una altra connexió"
-        save_configuration: Desa i inicia sessió
-        update_configuration: Actualitza la configuració
+        requires_update: "Torna a iniciar sessió per reprendre la sincronització."
+        session_expires_in: "La sessió caduca d'aquí a %{time} (%{at})."
+        pin_login: "Accés amb PIN"
+        pin_cancel: "Cancel·la l'accés amb PIN"
+        remove: "Elimina"
+        new_connection: "Nova connexió"
+        cancel_login: "Cancel·la"
+        add_connection: "Afegeix una connexió"
+        pin_login_hint: "Introdueix el número de telèfon i el PIN o la contrasenya que fas servir a l'aplicació de Trade Republic."
         sync: Sincronitza
         syncing: "Sincronitzant..."
-        disconnect: Desconnecta Trade Republic
         disconnect_confirm: Vols desconnectar Trade Republic? Els comptes sincronitzats passaran a ser comptes manuals.
         disconnect_confirm_with_identifier: "Vols desconnectar la connexió de Trade Republic acabada en %{last4}? Els comptes sincronitzats passaran a ser comptes manuals."
         identifier_phone: Telèfon
@@ -684,7 +687,7 @@ ca:
         accounts_tab: Comptes
         setup_accounts: Configura els comptes
         accounts_discovered:
-          one: S'ha descobert %{count} compte de Trade Republic.
+          one: S'ha descobert 1 compte de Trade Republic.
           other: S'han descobert %{count} comptes de Trade Republic.
         status_configured_suffix: per gestionar els comptes descoberts.
         not_configured: No configurat.

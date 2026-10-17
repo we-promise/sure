@@ -1,40 +1,36 @@
 class TradeRepublic::AccountEditorComponent < ApplicationComponent
   include TradeRepublic::PanelTranslatable
 
-  def initialize(items: nil, family:, qr_code_svg: nil, qr_login_auto_poll_item: nil, new_item: nil)
+  # `qr_code_svg` belongs to the pending connection whose QR login just
+  # started; `new_connection` redisplays a failed attempt to add one.
+  def initialize(items: nil, family:, pending_connection: nil, qr_code_svg: nil, new_connection: nil)
     @items = items || family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
     @family = family
+    @pending_connection = pending_connection
     @qr_code_svg = qr_code_svg
-    @qr_login_auto_poll_item = qr_login_auto_poll_item
-    @new_item = new_item
+    @new_connection = new_connection
+    @failed_connection = new_connection
   end
 
-  attr_reader :items, :family
+  attr_reader :items, :family, :qr_code_svg
 
-  def new_item
-    @new_item ||= family.trade_republic_items.build
+  def pending_connection
+    return @pending_connection if defined?(@loaded_pending_connection)
+
+    @loaded_pending_connection = true
+    @pending_connection ||= family.trade_republic_pending_connections.order(:created_at).last
   end
 
-  # A collapsed card would hide the QR code, the push notice, the
-  # authenticator form or the "accounts discovered" setup CTA, so only
-  # healthy, fully linked connections among several start closed.
-  def open?(item)
-    items.size == 1 || qr_login_active?(item) || item.pending_login_state.present? ||
-      !item.good? || setup_cta_visible?(item)
+  def new_connection
+    @new_connection ||= family.trade_republic_pending_connections.build
   end
 
-  # Mirrors the card template's condition for the "X accounts discovered —
-  # Set up accounts" link: without a configured session the CTA never
-  # renders, so unlinked accounts alone are no reason to expand.
-  def setup_cta_visible?(item)
-    item.session_configured? && item.unlinked_accounts_count.positive?
+  # A failed PIN login opens its form again, even without a phone number.
+  def failed_pin_login?
+    @failed_connection.present? && !@failed_connection.qr_login
   end
 
   def qr_login_active?(item)
-    item == @qr_login_auto_poll_item || item.login_stage == "qr_pending"
-  end
-
-  def qr_code_svg_for(item)
-    @qr_code_svg if item == @qr_login_auto_poll_item
+    item.login_stage == "qr_pending"
   end
 end

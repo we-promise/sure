@@ -385,6 +385,8 @@ zh-TW:
         sync_error: 同步錯誤
         no_recent_sync: 同步逾期
         reconsent_required: 需要重新授權
+        login_required: "需要登入"
+        login_expires_soon: "登入將在 %{time}後過期（%{at}）"
         reconsent_needed:
           one: 1 天後需要重新授權
           other: '%{count} 天後需要重新授權'
@@ -607,6 +609,65 @@ zh-TW:
         update_configuration: 更新設定
         status_configured_prefix: '%{summary}。請前往'
         accounts_tab: 帳戶管理
+        status_configured_suffix: 分頁管理已偵測到的帳戶。
+        not_configured: 尚未設定。
+      trade_republic_panel:
+        encryption_warning:
+          title: 尚未設定加密
+          message: 在設定 Active Record Encryption 之前，無法安全地儲存 Trade Republic 認證資訊與工作階段資料。
+        steps:
+          step_1: "在「新增連線」中選擇 QR 登入或 PIN 登入。"
+          step_2: "QR 登入：使用手機相機掃描 QR 碼，然後在 Trade Republic 應用程式中核准登入。"
+          step_3: "PIN 登入：輸入您在 Trade Republic 應用程式中使用的電話號碼與 PIN 或密碼，接著輸入驗證器應用程式中的驗證碼，並在 Trade Republic 應用程式中核准登入。"
+        phone_number_label: 電話號碼
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: 留白即維持目前的電話號碼
+        pin_label: PIN 或密碼
+        pin_placeholder_new: 您的 Trade Republic PIN 或密碼
+        currency_label: 帳戶幣別
+        connect: 登入
+        complete_login: 繼續
+        authenticator_code_label: 驗證器驗證碼（若出現提示）
+        authenticator_code_placeholder: 6 位數驗證碼
+        push_login_notice: 請立即在 Trade Republic 應用程式中核准登入。Sure 會在背景自動檢查，您也可以自行檢查狀態。
+        check_login_status: 立即檢查狀態
+        authenticator_code_notice: 請輸入驗證器應用程式中的驗證碼。
+        approval_pending: 登入已開始。請在 Trade Republic 應用程式中核准；Sure 正在自動檢查。
+        awaiting_confirmation: 正在等待於 Trade Republic 應用程式中核准。
+        awaiting_authenticator_code: 需要驗證器驗證碼。
+        login_expired: 核准要求已過期。
+        connection_success:
+          title: Trade Republic 已成功連線
+          message: 您的 Trade Republic 連線已就緒。
+          description: Sure 正在背景同步您的 Trade Republic 資料。
+          close: 完成
+        qr_login: QR 登入
+        qr_cancel: 取消 QR 登入
+        qr_loading: 正在準備 QR 碼…
+        qr_instruction: 使用手機相機掃描 QR 碼，然後在 Trade Republic 應用程式中核准登入。
+        qr_success: 登入已核准。Sure 正在重新整理供應商頁面。
+        qr_error: 無法啟動 QR 登入。請再試一次。
+        requires_update: 請重新登入以恢復同步。
+        session_expires_in: 登入將在 %{time}後過期（%{at}）。
+        pin_login: PIN 登入
+        pin_cancel: "取消 PIN 登入"
+        remove: 移除
+        new_connection: 新增連線
+        cancel_login: 取消
+        add_connection: "新增連線"
+        pin_login_hint: "輸入您在 Trade Republic 應用程式中使用的電話號碼與 PIN 或密碼。"
+        sync: 同步
+        syncing: 同步中...
+        disconnect_confirm: 要中斷 Trade Republic 連線嗎？您已同步的帳戶將變成手動帳戶。
+        disconnect_confirm_with_identifier: 要中斷末碼為 %{last4} 的 Trade Republic 連線嗎？您已同步的帳戶將變成手動帳戶。
+        identifier_phone: 電話
+        identifier_account: 帳戶
+        status_configured_prefix: 已連線。請前往
+        accounts_tab: 帳戶管理
+        setup_accounts: 設定帳戶
+        accounts_discovered:
+          one: 已偵測到 1 個 Trade Republic 帳戶。
+          other: "已偵測到 %{count} 個 Trade Republic 帳戶。"
         status_configured_suffix: 分頁管理已偵測到的帳戶。
         not_configured: 尚未設定。
       trading212_panel:

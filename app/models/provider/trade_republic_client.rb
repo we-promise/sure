@@ -178,9 +178,10 @@ class Provider::TradeRepublicClient
 
   attr_reader :phone_number, :pin
 
-  def initialize(phone_number:, pin: nil)
+  def initialize(phone_number:, pin: nil, device_id: nil)
     @phone_number = phone_number.to_s.strip
     @pin = pin.to_s
+    @device_id = device_id
   end
 
   def initiate_login
@@ -346,7 +347,11 @@ class Provider::TradeRepublicClient
   end
 
   def login_stage(pending_login_b64:)
-    return "qr_pending" if qr_login?(pending_login_b64: pending_login_b64)
+    if qr_login?(pending_login_b64: pending_login_b64)
+      # Raises LoginExpired once the challenge has lapsed, as for a push login.
+      decode_qr_pending(pending_login_b64)
+      return "qr_pending"
+    end
 
     pending = decode_pending(pending_login_b64)
     if pending["required_action"] == "AUTHENTICATOR_VERIFICATION" && !pending["authenticator_verified"]
@@ -380,7 +385,9 @@ class Provider::TradeRepublicClient
   def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, timeline_cursors: {}, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {}, interrupted_backfills: {})
     session = new_session(session_blob: session_txt)
     account_response = session.get("/api/v2/auth/account")
-    return Result.new(data: { "status" => "session_expired" }) if [ 401, 403 ].include?(account_response.code.to_i)
+    if [ 401, 403 ].include?(account_response.code.to_i) && !waf_error?(account_response)
+      return Result.new(data: { "status" => "session_expired" })
+    end
     raise_http_error(account_response)
     account = parse_json(account_response)
     raise MalformedResponse, "Trade Republic account response did not contain a securities account number" if account["securitiesAccountNumber"].blank?
@@ -492,6 +499,16 @@ class Provider::TradeRepublicClient
 
   class << self
     def available? = !!defined?(WebSocket::Driver)
+
+    # Identifies one login across its steps: a QR login keeps its challenge
+    # and a PIN login its process. Only a digest leaves the server.
+    def login_token(pending_login_b64)
+      pending = JSON.parse(Base64.strict_decode64(pending_login_b64.to_s))
+      id = pending["challenge_id"].presence || pending["process_id"].presence if pending.is_a?(Hash)
+      Digest::SHA256.hexdigest(id.to_s)[0, 16] if id
+    rescue JSON::ParserError, ArgumentError
+      nil
+    end
 
     # Stops the given topics' backfills that read further back in history.
     # Gap backfills fetch events newer than anything stored, so they keep
@@ -678,7 +695,11 @@ class Provider::TradeRepublicClient
     end
 
     def new_session(session_blob: nil)
-      Provider::TradeRepublicSession.new(phone_number: phone_number, pin: pin, session_blob: session_blob)
+      Provider::TradeRepublicSession.new(phone_number: phone_number, pin: pin, session_blob: session_blob, device_id: @device_id)
+    end
+
+    def waf_error?(response)
+      response_error_code(response).to_s.match?(/WAF|MISSING_REQUIRED_HEADER/)
     end
 
     def require_pin!
@@ -757,7 +778,7 @@ class Provider::TradeRepublicClient
     def raise_http_error(response, login: false)
       return if response.is_a?(Net::HTTPSuccess)
       error_code = response_error_code(response)
-      if error_code.to_s.match?(/WAF|MISSING_REQUIRED_HEADER/)
+      if waf_error?(response)
         raise WafRequired, "Trade Republic requires an AWS WAF browser token"
       end
       raise_login_error(response) if login
@@ -799,6 +820,8 @@ class Provider::TradeRepublicClient
 
     def response_error_code(response)
       body = parse_json(response)
+      return unless body.is_a?(Hash)
+
       body["errorCode"].presence || body.dig("errors", 0, "errorCode").presence
     rescue MalformedResponse
       nil
