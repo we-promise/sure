@@ -7,6 +7,7 @@ zh-TW:
     entries:
       default_name: Wise 交易
       fee_name: Wise 手續費
+      refund_name: Wise 退款
     activities:
       jar_deposit: 轉入 Jar
       jar_withdrawal: 從 Jar 轉出

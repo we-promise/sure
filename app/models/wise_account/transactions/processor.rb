@@ -24,14 +24,7 @@ class WiseAccount::Transactions::Processor
     errors = []
 
     wise_account.raw_transactions_payload.each_with_index do |tx_data, index|
-      processor_class = if WiseActivity::Processor::JAR_ACTIVITY_TYPES.include?(tx_data["type"])
-        WiseActivity::Processor
-      elsif tx_data["wise_statement"].present?
-        WiseStatement::Processor
-      else
-        WiseEntry::Processor
-      end
-      result = processor_class.new(tx_data, wise_account: wise_account).process
+      result = processor_for(tx_data).process
 
       case result
       when :skipped
@@ -57,4 +50,26 @@ class WiseAccount::Transactions::Processor
 
     { success: failed == 0, total: total, imported: imported, skipped: skipped, failed: failed, errors: errors }
   end
+
+  private
+
+    def processor_for(tx_data)
+      if WiseActivity::Processor::JAR_ACTIVITY_TYPES.include?(tx_data["type"])
+        WiseActivity::Processor.new(tx_data, wise_account: wise_account)
+      elsif tx_data["wise_statement"].present?
+        WiseStatement::Processor.new(tx_data, wise_account: wise_account)
+      else
+        WiseEntry::Processor.new(tx_data, wise_account: wise_account, own_recipient_ids: own_recipient_ids,
+                                          recipient_owners: recipient_owners)
+      end
+    end
+
+    # Looked up once per run rather than once per transfer.
+    def own_recipient_ids
+      @own_recipient_ids ||= wise_account.wise_item.own_recipient_ids
+    end
+
+    def recipient_owners
+      @recipient_owners ||= wise_account.wise_item.balance_recipient_owners
+    end
 end

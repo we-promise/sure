@@ -127,6 +127,12 @@ class WiseActivity::Processor
     ActiveSupport::TimeZone["UTC"].parse(raw.to_s) if raw.present?
   end
 
+  # A Wise title such as "<strong>Tom &amp; Jerry</strong>" as plain text
+  # ("Tom & Jerry"): strip_tags alone leaves the entities escaped.
+  def self.plain_text(html)
+    CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(html.to_s)).strip
+  end
+
   def self.split_funding?(parsed)
     parsed[:value].nil? && parsed[:currencies].size >= 2
   end

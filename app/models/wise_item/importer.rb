@@ -20,12 +20,20 @@ class WiseItem::Importer
 
   # A transfer in one of these statuses no longer changes. Stored transfers
   # in any other status but outgoing_payment_sent (which the 60-day window
-  # re-lists) are read again by id each sync, newest first.
+  # re-lists) are read again by id each sync, newest first, and so is a sent
+  # payout once a refund credit for it shows up.
   FINAL_TRANSFER_STATUSES = %w[cancelled funds_refunded charged_back].freeze
   MAX_TRANSFER_REREADS = 50
   # A stored transfer Wise no longer finds by id is read again on this many
   # syncs ("wise_missing_count" on its stored copy), then left as stored.
   MISSING_TRANSFER_REREADS = 3
+
+  # What Sure attaches to a stored transfer row: the activity Wise shows for
+  # the transfer and the refund credit of a refunded payout. A re-fetched
+  # copy of the row keeps them unless it brings its own, so a sync whose
+  # activities do not reach that far back (or failed) loses nothing.
+  STICKY_ROW_KEYS = %w[wise_activity wise_refund_activity].freeze
+  MAX_LOGGED_TRANSFER_IDS = 20
 
   # Wise answered with a page this fetch had already read.
   PaginationError = Class.new(StandardError)
@@ -166,9 +174,9 @@ class WiseItem::Importer
     end
 
     # Returns a map of { balance_id => { borderless_account_id:, recipient_id: } }.
-    # Used in WiseEntry::Processor to distinguish expenses (targetAccount != recipientId)
-    # from incomes (targetAccount == recipientId). The recipient is the
-    # fallback for the multi-currency account's.
+    # The recipient is the fallback for the multi-currency account's, one of
+    # the profile's own recipients that tell a pay-in from a payout
+    # (WiseItem#own_recipient_ids).
     def fetch_borderless_accounts
       trace_wise_fetch(operation: "borderless_accounts", status: "started", level: "info")
       result = Provider::Wise.with_retries { wise_provider.get_borderless_accounts(wise_item.profile_id) }
@@ -369,9 +377,14 @@ class WiseItem::Importer
       nil
     end
 
+    # A payout Wise refunds after the window stopped re-listing it is read
+    # again once its refund credit is on its row (from the sync that saw the
+    # credit on), so its new status books the refund.
     def reread_transfer?(row)
       status = row["status"].to_s
-      status != "outgoing_payment_sent" && FINAL_TRANSFER_STATUSES.exclude?(status)
+      return false if FINAL_TRANSFER_STATUSES.include?(status)
+
+      status != "outgoing_payment_sent" || WiseEntry::Processor.refund(row).present?
     end
 
     # One copy per transfer stored on the balances that still take
@@ -707,13 +720,17 @@ class WiseItem::Importer
       end
     end
 
-    # Partitions transactions by the currency relevant to each WiseAccount:
-    # - Expenses (outgoing): matched by sourceCurrency
-    # - Incomes (incoming): matched by targetCurrency
-    # Routes transfers to STANDARD accounts and activities to JAR accounts.
+    # Partitions transactions by the balance each one moved money on (see
+    # #transfer_for_account? and #activity_for_account?). Routes transfers to
+    # STANDARD accounts and activities to JAR accounts. Transfers, fetched or
+    # stored, first get the activity this sync saw for them.
     def store_transfers_per_account(transfers, activities: [], statements: {}, statement_failures: [], fallback_to_transfers: false)
       transactions_imported = 0
       transactions_failed = 0
+      transfer_activities = transfer_activities_by_id(activities)
+      stored_transfers = stored_transfer_rows.index_by { |row| row["id"].to_s }
+      transfers = transfers.map { |transfer| enrich_transfer(transfer, transfer_activities) }
+      report_transfer_notes(transfers, stored_transfers, transfer_activities)
 
       wise_item.wise_accounts.find_each do |wise_account|
         # A failed statement request for a balance that holds statement rows
@@ -735,15 +752,17 @@ class WiseItem::Importer
           transactions_imported += payload.size
         else
           account_statements = statements[wise_account.id] || []
-          # Stored activities are re-routed too, so snapshots saved before
-          # INTERBALANCE routing honored currency drop rows for other balances.
-          existing_legacy = Array(wise_account.raw_transactions_payload).reject do |transaction|
-            next true if transaction["wise_statement"].present?
+          # Stored rows are re-routed too, so rows saved under an older
+          # routing rule (an INTERBALANCE for another currency, the funding
+          # side of a pay-in) drop out.
+          existing_legacy = Array(wise_account.raw_transactions_payload).filter_map do |transaction|
+            next if transaction["wise_statement"].present?
 
             if jar_activity?(transaction)
-              !activity_for_account?(transaction, wise_account)
+              transaction if activity_for_account?(transaction, wise_account)
             else
-              !transfer_for_account?(transaction, wise_account)
+              transfer = enrich_transfer(transaction, transfer_activities)
+              transfer if transfer_for_account?(transfer, wise_account)
             end
           end
           existing_statements = Array(wise_account.raw_transactions_payload).select { |transaction| transaction["wise_statement"].present? }
@@ -778,19 +797,158 @@ class WiseItem::Importer
       { transactions_imported: transactions_imported, transactions_failed: transactions_failed }
     end
 
-    # An outgoing transfer only touches the balance it was paid from, and an
-    # incoming one only the balance it landed in. Matching either currency
-    # would also book e.g. a GBP-funded payout in PLN on the PLN balance.
+    # A pay-in (a transfer into one of the profile's own recipients) only
+    # touches the balance whose account details it paid into or, paid to the
+    # account recipient, the balance in its target currency. Any other
+    # transfer only touches the balance it was paid from: matching either
+    # currency would also book e.g. a GBP-funded payout in PLN on the PLN
+    # balance. Wise does not say whether a balance paid for a pay-in ("send to
+    # myself"), so none is debited for it (see #report_transfer_notes).
     def transfer_for_account?(transfer, wise_account)
-      outgoing = WiseEntry::Processor.outgoing?(
-        transfer,
-        recipient_id: wise_account.raw_payload&.dig("recipient_id"),
-        balance_recipient_id: wise_account.raw_payload&.dig("recipientId")
-      )
-      currency = outgoing ? transfer["sourceCurrency"] : transfer["targetCurrency"]
+      incoming = WiseEntry::Processor.direction(transfer, own_recipient_ids: own_recipient_ids) == :incoming
+      owners = balance_recipient_owners[transfer["targetAccount"].to_s] if incoming
+      return owners.include?(wise_account.id) if owners
+
+      currency = incoming ? transfer["targetCurrency"] : transfer["sourceCurrency"]
       currency.blank? || currency == wise_account.currency
     end
 
+    def own_recipient_ids
+      @own_recipient_ids ||= wise_item.own_recipient_ids
+    end
+
+    def balance_recipient_owners
+      @balance_recipient_owners ||= wise_item.balance_recipient_owners
+    end
+
+    # Activities whose resource is a transfer, by transfer id.
+    def transfer_activities_by_id(activities)
+      Array(activities).each_with_object({}) do |activity, index|
+        resource = activity["resource"] if activity.is_a?(Hash)
+        next unless resource.is_a?(Hash) && resource["type"] == "TRANSFER" && resource["id"].present?
+
+        (index[resource["id"].to_s] ||= []) << activity
+      end
+    end
+
+    # Attaches the activity Wise shows for a transfer: it carries the gross
+    # debit (sourceValue excludes the fee), the direction markup and the
+    # counterparty's name. Several activities can share a transfer's id (a
+    # refund credit, a send to the profile's own account details): the one
+    # created closest to the transfer whose markup fits its direction becomes
+    # "wise_activity" (with no recipient known, the closest one decides the
+    # direction), and a credit on a payout becomes "wise_refund_activity": the
+    # latest one Wise did not cancel, else the latest cancelled one, whose
+    # snapshot then replaces one an earlier sync took while it was in
+    # progress (WiseEntry::Processor.refund books no cancelled credit). A
+    # transfer this sync saw no activity for keeps its stored ones
+    # (#merge_transaction_payloads).
+    def enrich_transfer(transfer, transfer_activities)
+      candidates = transfer_activities[transfer["id"].to_s]
+      return transfer if candidates.blank?
+
+      direction = (WiseEntry::Processor.direction(transfer, own_recipient_ids: own_recipient_ids) if own_recipient_ids.any?)
+      fitting = candidates.select { |activity| direction.nil? || credit_activity?(activity) == (direction == :incoming) }
+      activity = closest_to_created(transfer, fitting)
+      direction ||= activity && credit_activity?(activity) ? :incoming : :outgoing
+      if direction == :outgoing
+        credits = candidates.select { |candidate| credit_activity?(candidate) }
+        refund = latest_created(credits.reject { |credit| credit["status"] == "CANCELLED" }) || latest_created(credits)
+      end
+
+      enrichment = { "wise_activity" => activity, "wise_refund_activity" => refund }.compact
+      return transfer if enrichment.empty?
+
+      transfer.merge(enrichment.transform_values { |snapshot| WiseEntry::Processor.activity_snapshot(snapshot) })
+    end
+
+    def credit_activity?(activity)
+      WiseActivity::Processor.direction(activity) == :credit
+    end
+
+    def closest_to_created(transfer, activities)
+      created = transfer_created_at(transfer)
+      activities.min_by do |activity|
+        time = activity_created_at(activity)
+        [ created && time ? (time - created).abs : Float::INFINITY, time&.to_f || Float::INFINITY, activity["id"].to_s ]
+      end
+    end
+
+    def latest_created(activities)
+      activities.max_by { |activity| [ activity_created_at(activity)&.to_f || -Float::INFINITY, activity["id"].to_s ] }
+    end
+
+    # Tells support about transfers Sure cannot book in full, once per change
+    # (a new transfer, a new status, a new enrichment): a status Sure does not
+    # book (Wise's "unknown" or an undocumented one), several activities
+    # sharing a transfer's id, and pay-ins whose activity shows a debit or
+    # another currency. Another balance may have paid such a pay-in ("send to
+    # myself"), but Wise does not say, so Sure books only the credit.
+    def report_transfer_notes(transfers, stored_transfers, transfer_activities)
+      unknown_status = []
+      shared = []
+      balance_funded = []
+
+      transfers.each do |transfer|
+        id = transfer["id"].to_s
+        stored = stored_transfers[id]
+        if WiseEntry::Processor.unknown_status?(transfer) && (stored.nil? || stored["status"] != transfer["status"])
+          unknown_status << transfer
+        end
+
+        candidates = transfer_activities[id]
+        next if candidates.blank? || (stored && enrichment_ids(stored) == enrichment_ids(transfer))
+
+        shared << transfer if candidates.size > 1
+        balance_funded << transfer if pay_in?(transfer) && possibly_balance_funded?(transfer, candidates)
+      end
+
+      log_transfer_note(unknown_status, level: "warn",
+                                        message: "have a status Sure does not book; they stay unbooked until Wise moves them on",
+                                        statuses: unknown_status.map { |transfer| transfer["status"].to_s }.uniq)
+      log_transfer_note(shared, level: "info",
+                                message: "share their id with several activities; the one created closest to the transfer that fits its direction is used",
+                                activity_counts: shared.first(MAX_LOGGED_TRANSFER_IDS).map { |transfer| transfer_activities[transfer["id"].to_s].size })
+      log_transfer_note(balance_funded, level: "warn",
+                                        message: "into the profile's own account details show a debit or another currency in their activity; " \
+                                                 "if another balance paid them (\"send to myself\"), that debit is not booked")
+    end
+
+    def enrichment_ids(transfer)
+      transfer.values_at(*STICKY_ROW_KEYS).map { |activity| activity["id"] if activity.is_a?(Hash) }
+    end
+
+    def pay_in?(transfer)
+      WiseEntry::Processor.direction(transfer, own_recipient_ids: own_recipient_ids) == :incoming
+    end
+
+    # A pay-in's activities normally only credit its target currency.
+    def possibly_balance_funded?(transfer, activities)
+      target = transfer["targetCurrency"].presence
+      activities.any? do |activity|
+        currencies = %w[primaryAmount secondaryAmount].flat_map do |key|
+          WiseActivity::Processor.parse_amount(activity[key])[:currencies]
+        end
+        !credit_activity?(activity) || (target.present? && (currencies - [ target ]).any?)
+      end
+    end
+
+    def log_transfer_note(transfers, level:, message:, **metadata)
+      return if transfers.empty?
+
+      capture_debug_log(
+        category: "provider_sync",
+        level: level,
+        message: "WiseItem::Importer - #{transfers.size} Wise transfers #{message}",
+        operation: "transfers",
+        transfer_count: transfers.size,
+        transfer_ids: transfers.first(MAX_LOGGED_TRANSFER_IDS).map { |transfer| transfer["id"] },
+        **metadata
+      )
+    end
+
+    # A re-fetched row replaces its stored copy but keeps what Sure attached
+    # to that copy (STICKY_ROW_KEYS) unless it brings its own.
     def merge_transaction_payloads(transactions)
       transactions.each_with_object({}) do |transaction, merged|
         key = if transaction["wise_statement"].present?
@@ -800,8 +958,13 @@ class WiseItem::Importer
         else
           [ "transfer", transaction["id"] || transaction.to_json ]
         end
-        merged[key] = transaction
+        merged[key] = with_sticky_keys(transaction, merged[key])
       end.values
+    end
+
+    def with_sticky_keys(row, stored)
+      kept = stored.is_a?(Hash) ? stored.slice(*STICKY_ROW_KEYS).except(*row.keys) : {}
+      kept.empty? ? row : row.merge(kept)
     end
 
     def jar_activity?(transaction)

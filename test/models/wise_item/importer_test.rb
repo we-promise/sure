@@ -292,7 +292,11 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_empty Array(@wise_item.wise_accounts.find_by(currency: "PLN").raw_transactions_payload)
   end
 
-  test "routes a transfer into a balance's own recipient to that balance and to its funding balance" do
+  # A transfer into one of the profile's own recipients is a pay-in, booked
+  # only on the balance it paid into. Wise does not say whether the GBP
+  # balance, a card or a bank paid for it, so GBP is not debited (logged
+  # instead), and a GBP copy stored by the old rule drops out of the payload.
+  test "routes a transfer into a balance's own recipient only to that balance" do
     balances = [ %w[GBP 77777000], %w[USD 77777001] ].each_with_index.map do |(currency, recipient_id), i|
       { "id" => "3000000#{i}", "amount" => { "value" => 100.0, "currency" => currency }, "type" => "STANDARD",
         "recipientId" => recipient_id.to_i }
@@ -301,13 +305,291 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
                      "balances" => [ { "id" => 30000000 }, { "id" => 30000001 } ] } ]
     top_up = build_transfer(id: 12, source_currency: "USD", target_currency: "USD", target_account: 77777001)
     funded = build_transfer(id: 13, source_currency: "GBP", target_currency: "USD", target_account: 77777001)
+    gbp = @wise_item.wise_accounts.create!(balance_id: "30000000", currency: "GBP", name: "Wise GBP",
+                                           raw_payload: { "type" => "STANDARD" }, raw_transactions_payload: [ funded ])
     provider = FakeWiseProvider.new(balances: balances, borderless_accounts: borderless, transfers: [ top_up, funded ],
                                     raise_on: { get_balance_statements: "forbidden" })
 
     WiseItem::Importer.new(@wise_item, wise_provider: provider).import
 
-    assert_equal [ 13 ], @wise_item.wise_accounts.find_by(currency: "GBP").raw_transactions_payload.map { |t| t["id"] }
+    assert_empty gbp.reload.raw_transactions_payload
     assert_equal [ 12, 13 ], @wise_item.wise_accounts.find_by(currency: "USD").raw_transactions_payload.map { |t| t["id"] }.sort
+  end
+
+  # The own-recipient set includes every stored balance, so a past top-up into
+  # a since-closed balance is not re-read as a payout of the open balance in
+  # that currency.
+  test "routes a pay-in into a balance Wise no longer lists to that balance only" do
+    old_eur = @wise_item.wise_accounts.create!(balance_id: "10000009", currency: "EUR", name: "Wise EUR (old)",
+                                               raw_payload: { "type" => "STANDARD", "recipientId" => 77777009 })
+    top_up = build_transfer(id: 14, target_account: 77777009)
+    provider = FakeWiseProvider.new(transfers: [ top_up ], raise_on: { get_balance_statements: statements_forbidden })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_empty Array(@wise_item.wise_accounts.find_by!(balance_id: "10000001").raw_transactions_payload)
+    assert_equal [ 14 ], old_eur.reload.raw_transactions_payload.map { |t| t["id"] }
+  end
+
+  # An import that fails before it stores the payloads leaves them as they
+  # were, and processing still books them. An older build also stored a GBP to
+  # USD top-up into the USD balance's own account details on the GBP balance
+  # (and booked it there as a payout); that copy was then booked on the GBP
+  # balance as a USD income.
+  test "a failed import leaves an older build's funding-side copy of a pay-in unbooked" do
+    gbp = @wise_item.wise_accounts.create!(balance_id: "30000000", currency: "GBP", name: "Wise GBP",
+                                           raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001, "recipientId" => 77777000 })
+    @wise_item.wise_accounts.create!(balance_id: "30000001", currency: "USD", name: "Wise USD",
+                                     raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001, "recipientId" => 77777001 })
+    top_up = build_transfer(id: 13, source_currency: "GBP", target_currency: "USD", target_account: 77777001)
+               .merge("sourceValue" => 158.4, "targetValue" => 213.0, "created" => "2025-09-30 18:22:07")
+    gbp.update!(raw_transactions_payload: [ top_up ])
+    account = link_account(gbp).current_account
+    Account::ProviderImportAdapter.new(account).import_transaction(external_id: "wise_transfer_13", amount: 158.4, currency: "GBP",
+                                                                   date: Date.new(2025, 9, 30), name: "Wise transaction", source: "wise")
+
+    result = WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(raise_on: { get_balances: "Bad gateway" })).import
+    assert_not result[:complete]
+    @wise_item.reload.process_accounts(import_complete: result[:complete])
+
+    assert_equal [ [ BigDecimal("158.40"), "GBP" ] ], account.entries.where(source: "wise").pluck(:amount, :currency)
+  end
+
+  test "routes by the activity's markup when no recipient of the profile is known" do
+    balances = %w[EUR USD].each_with_index.map do |currency, i|
+      { "id" => "4000000#{i}", "amount" => { "value" => 10.0, "currency" => currency }, "type" => "STANDARD" }
+    end
+    top_up = build_transfer(id: 15, source_currency: "EUR", target_currency: "USD", target_account: 4242)
+    payout = build_transfer(id: 16, source_currency: "EUR", target_currency: "USD", target_account: 4343)
+    provider = FakeWiseProvider.new(
+      balances: balances, borderless_accounts: [], multi_currency_account: { "id" => 77001 },
+      transfers: [ top_up, payout ],
+      activities: [ build_transfer_activity(15, primary: "<positive>+ 117.50 USD</positive>", secondary: "100 EUR"),
+                    build_transfer_activity(16, primary: "117.50 USD", secondary: "100 EUR") ],
+      raise_on: { get_balance_statements: statements_forbidden }
+    )
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    routed = @wise_item.wise_accounts.to_h { |wa| [ wa.currency, Array(wa.raw_transactions_payload).map { |t| t["id"] } ] }
+    assert_equal({ "EUR" => [ 16 ], "USD" => [ 15 ] }, routed)
+  end
+
+  # Activity enrichment
+
+  test "attaches the transfer's activity to its stored row" do
+    payout = build_transfer(id: 17)
+    activity = build_transfer_activity(17, primary: "100 EUR", secondary: "101.20 EUR", title: "<strong>Tom &amp; Jerry</strong>")
+    provider = FakeWiseProvider.new(transfers: [ payout ], activities: [ activity ],
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    stored = @wise_item.wise_accounts.first.raw_transactions_payload.sole
+    assert_equal({ "id" => "transfer-activity-17", "type" => "TRANSFER", "status" => "COMPLETED", "primaryAmount" => "100 EUR",
+                   "secondaryAmount" => "101.20 EUR", "title" => "Tom & Jerry", "description" => "Sent",
+                   "createdOn" => activity["createdOn"], "updatedOn" => activity["updatedOn"] }, stored["wise_activity"])
+    assert_equal 100.0, stored["sourceValue"]
+  end
+
+  # Re-listed and re-read transfers replace their stored copies; the
+  # activity seen by an earlier sync must survive a sync that sees none.
+  test "keeps a transfer's activity when a later sync does not see it" do
+    payout = build_transfer(id: 18).merge("status" => "processing")
+    activity = build_transfer_activity(18, primary: "100 EUR", secondary: "101.20 EUR")
+    WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(
+      transfers: [ payout ], activities: [ activity ], raise_on: { get_balance_statements: statements_forbidden }
+    )).import
+    eur = @wise_item.wise_accounts.first
+    assert_equal "transfer-activity-18", eur.raw_transactions_payload.sole.dig("wise_activity", "id")
+
+    relisted = FakeWiseProvider.new(transfers: [ payout ], raise_on: { get_balance_statements: statements_forbidden })
+    WiseItem::Importer.new(@wise_item, wise_provider: relisted).import
+    assert_equal "transfer-activity-18", eur.reload.raw_transactions_payload.sole.dig("wise_activity", "id")
+
+    reread = FakeWiseProvider.new(transfer_details: { "18" => payout.merge("status" => "outgoing_payment_sent") },
+                                  raise_on: { get_activities: "Unexpected response 502", get_balance_statements: statements_forbidden })
+    WiseItem::Importer.new(@wise_item, wise_provider: reread).import
+    stored = eur.reload.raw_transactions_payload.sole
+    assert_equal [ 18 ], reread.transfer_reads
+    assert_equal [ "outgoing_payment_sent", "transfer-activity-18" ], [ stored["status"], stored.dig("wise_activity", "id") ]
+  end
+
+  test "attaches the activity closest to the transfer that fits its direction, and a refund credit" do
+    payout = build_transfer(id: 19).merge("status" => "funds_refunded", "created" => "2026-10-10 12:00:00")
+    activities = [
+      build_transfer_activity(19, id: "19-later", primary: "100 EUR", created_on: "2026-10-12T12:00:00Z"),
+      build_transfer_activity(19, id: "19-refund", primary: "<positive>+ 101.20 EUR</positive>", created_on: "2026-10-10T12:00:02Z"),
+      build_transfer_activity(19, id: "19-sent", primary: "100 EUR", secondary: "101.20 EUR", created_on: "2026-10-10T12:00:05Z")
+    ]
+    provider = FakeWiseProvider.new(transfers: [ payout ], activities: activities,
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    assert_difference -> { transfer_notes.where(level: "info").count }, 1 do
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
+
+    stored = @wise_item.wise_accounts.first.raw_transactions_payload.sole
+    assert_equal [ "19-sent", "19-refund" ], [ stored.dig("wise_activity", "id"), stored.dig("wise_refund_activity", "id") ]
+    assert_equal [ 1, [ 19 ], [ 3 ] ], transfer_notes.recent.first.metadata.values_at("transfer_count", "transfer_ids", "activity_counts")
+
+    # Reported once: the next sync sees the same activities.
+    assert_no_difference -> { transfer_notes.count } do
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
+  end
+
+  # The refund credit a refunded payout books with stays on its row through
+  # syncs whose activity window no longer reaches it, like the payout's own
+  # activity.
+  test "keeps a refunded payout's refund credit through a sync that does not see its activities" do
+    payout = build_transfer(id: 30).merge("status" => "funds_refunded", "created" => "2026-10-10 12:00:00")
+    activities = [ build_transfer_activity(30, id: "30-sent", primary: "100 EUR", secondary: "101.20 EUR", created_on: "2026-10-10T12:00:01Z"),
+                   build_transfer_activity(30, id: "30-refund", primary: "<positive>+ 101.20 EUR</positive>", created_on: "2026-10-12T08:00:00Z") ]
+    [ activities, [] ].each do |seen|
+      provider = FakeWiseProvider.new(transfers: [ payout ], activities: seen, raise_on: { get_balance_statements: statements_forbidden })
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
+
+    eur = link_account(@wise_item.wise_accounts.sole)
+    assert_equal [ "30-sent", "30-refund" ], eur.raw_transactions_payload.sole.values_at("wise_activity", "wise_refund_activity").map { |snapshot| snapshot&.dig("id") }
+    WiseAccount::Transactions::Processor.new(eur).process
+    assert_equal({ "wise_fee_30" => BigDecimal("1.2"), "wise_refund_30" => BigDecimal("-101.2"), "wise_transfer_30" => BigDecimal("100") },
+                 eur.current_account.entries.where(source: "wise").pluck(:external_id, :amount).to_h)
+  end
+
+  # Wise can cancel a refund credit after a sync saw it in progress; the
+  # cancelled snapshot replaces the stored one, so the refund stops booking.
+  test "stops booking a refund credit Wise cancelled after a sync saw it in progress" do
+    payout = build_transfer(id: 33).merge("status" => "funds_refunded", "created" => 5.days.ago.utc.strftime("%Y-%m-%d %H:%M:%S"))
+    sent = build_transfer_activity(33, id: "33-sent", primary: "100 EUR", secondary: "101.20 EUR", created_on: (5.days.ago + 1.second).utc.iso8601(3))
+    %w[IN_PROGRESS CANCELLED].each do |status|
+      refund = build_transfer_activity(33, id: "33-refund", primary: "<positive>+ 101.20 EUR</positive>", status: status,
+                                           created_on: 3.days.ago.utc.iso8601(3))
+      provider = FakeWiseProvider.new(transfers: [ payout ], activities: [ sent, refund ], raise_on: { get_balance_statements: statements_forbidden })
+      WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+    end
+
+    eur = link_account(@wise_item.wise_accounts.sole)
+    assert_equal "CANCELLED", eur.raw_transactions_payload.sole.dig("wise_refund_activity", "status")
+    WiseAccount::Transactions::Processor.new(eur).process
+    assert_empty eur.current_account.entries.where(source: "wise").pluck(:external_id)
+  end
+
+  # A sent payout is no longer listed 60 days after it was made, so when
+  # Wise refunds it later only its refund credit shows up: the payout is read
+  # again by id from the next sync on, and its refunded status books the
+  # refund.
+  test "books a refund Wise makes after the payout left the window it is listed in" do
+    travel_to Time.utc(2026, 10, 17, 12) do
+      payout = build_transfer(id: 900).merge("created" => "2026-07-01 12:00:00")
+      sent = build_transfer_activity(900, id: "sent-900", primary: "100 EUR", created_on: "2026-07-01T12:00:01Z")
+      coverage = %w[transfers activities].index_with { { "from" => "2025-01-01T00:00:00Z", "through" => "2026-10-10T12:00:00Z", "version" => WiseItem::COVERAGE_VERSION } }
+      @wise_item.update!(raw_payload: { "coverage" => coverage })
+      eur = @wise_item.wise_accounts.create!(balance_id: "10000001", name: "Wise EUR", currency: "EUR",
+                                             raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },
+                                             raw_transactions_payload: [ payout.merge("wise_activity" => WiseEntry::Processor.activity_snapshot(sent)) ])
+      refund = build_transfer_activity(900, id: "refund-900", primary: "<positive>+ 100 EUR</positive>", created_on: "2026-10-15T09:00:00Z")
+      readings = 2.times.map do
+        provider = FakeWiseProvider.new(activities: [ refund ], transfer_details: { "900" => payout.merge("status" => "funds_refunded") },
+                                        raise_on: { get_balance_statements: statements_forbidden })
+        WiseItem::Importer.new(WiseItem.find(@wise_item.id), wise_provider: provider).import
+        provider.transfer_reads
+      end
+
+      assert_equal [ [], [ "900" ] ], readings.map { |reads| reads.map(&:to_s) }
+      row = eur.reload.raw_transactions_payload.sole
+      assert_equal [ "funds_refunded", "refund-900" ], [ row["status"], row.dig("wise_refund_activity", "id") ]
+      link_account(eur)
+      WiseAccount::Transactions::Processor.new(eur).process
+      assert_equal({ "wise_refund_900" => BigDecimal("-100"), "wise_transfer_900" => BigDecimal("100") },
+                   eur.current_account.entries.where(source: "wise").pluck(:external_id, :amount).to_h)
+    end
+  end
+
+  # A refund credit counts unless Wise cancelled it, since one seen in
+  # progress may never be seen again.
+  test "books a refund credit Wise still shows in progress, never a cancelled one" do
+    payouts = [ 31, 32 ].map { |id| build_transfer(id: id).merge("status" => "funds_refunded", "created" => "2026-10-10 12:00:00") }
+    activities = { 31 => "IN_PROGRESS", 32 => "CANCELLED" }.flat_map do |id, status|
+      [ build_transfer_activity(id, id: "#{id}-sent", primary: "100 EUR", secondary: "101.20 EUR", created_on: "2026-10-10T12:00:01Z"),
+        build_transfer_activity(id, id: "#{id}-refund", primary: "<positive>+ 101.20 EUR</positive>", status: status,
+                                    created_on: "2026-10-12T08:00:00Z") ]
+    end
+    provider = FakeWiseProvider.new(transfers: payouts, activities: activities, raise_on: { get_balance_statements: statements_forbidden })
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    eur = link_account(@wise_item.wise_accounts.sole)
+    rows = eur.raw_transactions_payload.index_by { |row| row["id"] }
+    assert_equal [ "31-refund", "CANCELLED" ], [ rows[31].dig("wise_refund_activity", "id"), rows[32].dig("wise_refund_activity", "status") ]
+    WiseAccount::Transactions::Processor.new(eur).process
+    assert_equal({ "wise_fee_31" => BigDecimal("1.2"), "wise_refund_31" => BigDecimal("-101.2"), "wise_transfer_31" => BigDecimal("100") },
+                 eur.current_account.entries.where(source: "wise").pluck(:external_id, :amount).to_h)
+  end
+
+  test "reports a transfer in a status Sure does not book once" do
+    stuck = build_transfer(id: 20).merge("status" => "unknown")
+    provider = FakeWiseProvider.new(transfers: [ stuck ], transfer_details: { "20" => stuck },
+                                    raise_on: { get_balance_statements: statements_forbidden })
+
+    assert_difference -> { transfer_notes.where(level: "warn").count }, 1 do
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
+    assert_equal [ [ "unknown" ], [ 20 ] ], transfer_notes.recent.first.metadata.values_at("statuses", "transfer_ids")
+
+    assert_no_difference -> { transfer_notes.count } do
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
+  end
+
+  # Known limitation: Wise does not say whether a pay-in was drawn from
+  # another balance ("send to myself"), so Sure books only its credit and
+  # says so once.
+  test "reports a pay-in whose activity shows a debit or another currency once" do
+    balances = [ %w[GBP 77777000], %w[USD 77777001] ].each_with_index.map do |(currency, recipient_id), i|
+      { "id" => "3000000#{i}", "amount" => { "value" => 100.0, "currency" => currency }, "type" => "STANDARD",
+        "recipientId" => recipient_id.to_i }
+    end
+    to_myself = build_transfer(id: 21, source_currency: "GBP", target_currency: "USD", target_account: 77777001)
+    top_up = build_transfer(id: 22, source_currency: "USD", target_currency: "USD", target_account: 77777001)
+    debited = build_transfer(id: 23, source_currency: "USD", target_currency: "USD", target_account: 77777001)
+    provider = FakeWiseProvider.new(
+      balances: balances, borderless_accounts: [], transfers: [ to_myself, top_up, debited ],
+      activities: [ build_transfer_activity(21, primary: "<positive>+ 213 USD</positive>", secondary: "160.25 GBP"),
+                    build_transfer_activity(22, primary: "<positive>+ 50 USD</positive>"),
+                    build_transfer_activity(23, primary: "50 USD") ],
+      raise_on: { get_balance_statements: statements_forbidden }
+    )
+
+    assert_difference -> { transfer_notes.where(level: "warn").count }, 1 do
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
+    assert_equal [ 21, 23 ], transfer_notes.recent.first.metadata["transfer_ids"]
+    assert_empty Array(@wise_item.wise_accounts.find_by!(currency: "GBP").raw_transactions_payload)
+
+    assert_no_difference -> { transfer_notes.count } do
+      WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
+  end
+
+  # The fee reaches the balance through the activity attached on import.
+  test "a payout lowers its balance by Wise's gross debit once imported and processed" do
+    balance = { "id" => "900000201", "type" => "STANDARD", "recipientId" => 900000202,
+                "amount" => { "value" => 0.0, "currency" => "USD" }, "reservedAmount" => { "value" => 0.0, "currency" => "USD" } }
+    payout = build_transfer(id: 9000000103, source_currency: "USD", target_currency: "USD", target_account: 55555555)
+               .merge("sourceValue" => 5482.37, "targetValue" => 5482.37)
+    provider = FakeWiseProvider.new(
+      balances: [ balance ], borderless_accounts: [],
+      transfers: [ payout ], activities: [ build_transfer_activity(9000000103, primary: "5,482.37 USD", secondary: "5,492.01 USD") ],
+      raise_on: { get_balance_statements: statements_forbidden }
+    )
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    usd = link_account(@wise_item.wise_accounts.find_by!(currency: "USD"))
+    WiseAccount::Transactions::Processor.new(usd).process
+
+    assert_equal BigDecimal("5492.01"), usd.current_account.entries.where(source: "wise").sum(:amount)
   end
 
   test "drops previously stored transfers that did not move money in the STANDARD balance" do
@@ -1406,6 +1688,36 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
         "status" => "outgoing_payment_sent",
         "created" => 7.days.ago.strftime("%Y-%m-%d %H:%M:%S")
       }
+    end
+
+    # The activity Wise lists for a transfer (resource TRANSFER, same id).
+    # What the importer reports about transfers it cannot book in full.
+    def transfer_notes
+      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "transfers")
+    end
+
+    def build_transfer_activity(transfer_id, primary:, secondary: nil, id: "transfer-activity-#{transfer_id}",
+                                status: "COMPLETED", title: "<strong>Recipient</strong>",
+                                created_on: 7.days.ago.utc.iso8601(3))
+      {
+        "id" => id,
+        "type" => "TRANSFER",
+        "resource" => { "type" => "TRANSFER", "id" => transfer_id.to_s },
+        "title" => title,
+        "description" => "Sent",
+        "primaryAmount" => primary,
+        "secondaryAmount" => secondary,
+        "status" => status,
+        "createdOn" => created_on,
+        "updatedOn" => created_on
+      }.compact
+    end
+
+    def link_account(wise_account)
+      account = Account.create!(family: @family, name: wise_account.name, balance: 0, currency: wise_account.currency,
+                                accountable: Depository.new(subtype: "checking"))
+      AccountProvider.create!(account: account, provider: wise_account)
+      wise_account.reload
     end
 
     def build_interbalance(title, resource_id:, primary: "1,000 EUR", secondary: nil)

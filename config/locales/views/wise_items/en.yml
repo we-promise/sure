@@ -7,6 +7,7 @@ en:
     entries:
       default_name: Wise transaction
       fee_name: Wise fee
+      refund_name: Wise refund
     activities:
       jar_deposit: Transfer to Jar
       jar_withdrawal: Transfer from Jar
