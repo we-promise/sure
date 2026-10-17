@@ -156,6 +156,9 @@ en:
       failed: Failed to link Wise balance. Please try again.
     link_existing_account:
       not_found: Account or Wise balance not found.
+      account_already_linked: This account is already linked to a provider.
+      unsupported_account_type: Wise balances can only be linked to cash accounts.
+      currency_mismatch: "This Wise balance is in %{balance_currency}, but the account is in %{account_currency}. Choose a balance in the account's currency."
       success: "Successfully linked %{account_name} with Wise"
       failed: Failed to link account. Please try again.
     complete_account_setup:

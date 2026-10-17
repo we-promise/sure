@@ -33,9 +33,12 @@ fr:
       not_found: Solde Wise introuvable.
       success: Solde Wise lié au compte avec succès.
     link_existing_account:
+      account_already_linked: Ce compte est déjà lié à un fournisseur.
+      currency_mismatch: "Ce solde Wise est en %{balance_currency}, mais le compte est en %{account_currency}. Choisissez un solde dans la devise du compte."
       failed: Échec de la liaison du compte. Veuillez réessayer.
       not_found: Compte ou solde Wise introuvable.
       success: "Liaison de %{account_name} à Wise réussie"
+      unsupported_account_type: Les soldes Wise ne peuvent être liés qu'à des comptes de liquidités.
     link_profiles:
       already_connected: Tous les profils sélectionnés sont déjà connectés.
       no_profiles_selected: Veuillez sélectionner au moins un profil.

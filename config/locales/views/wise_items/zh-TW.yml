@@ -142,6 +142,9 @@ zh-TW:
       failed: 無法連結 Wise 餘額。請再試一次。
     link_existing_account:
       not_found: 找不到帳戶或 Wise 餘額。
+      account_already_linked: 此帳戶已與供應商連結。
+      unsupported_account_type: Wise 餘額只能連結至現金/存款帳戶。
+      currency_mismatch: "此 Wise 餘額的幣別為 %{balance_currency}，但帳戶的幣別為 %{account_currency}。請選擇與帳戶幣別相同的餘額。"
       success: 已成功將 %{account_name} 與 Wise 連結
       failed: 無法連結帳戶。請再試一次。
     complete_account_setup:
