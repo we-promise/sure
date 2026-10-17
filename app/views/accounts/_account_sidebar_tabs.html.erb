@@ -111,10 +111,10 @@
     <% end %>
   <% end %>
 </div>
-<%= javascript_tag nonce: true do %>
+<script nonce="<%= content_security_policy_nonce %>">
   // Expand/Collapse all for the account sidebar. Event-delegated on document
   // so it works for both the desktop and mobile sidebar instances and survives
-  // Turbo re-renders. Wrapped in javascript_tag for CSP nonce compliance
+  // Turbo re-renders. Includes a nonce for CSP compliance
   // (matches the dashboard balance sheet).
   (function () {
     function setLabel(btn, expanded) {
@@ -174,5 +174,5 @@
       syncPanel(panel);
     });
   })();
-<% end %>
+</script>
 <% end %>

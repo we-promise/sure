@@ -317,6 +317,8 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_includes tool_names, "get_account_types"
       assert_includes tool_names, "get_holdings"
       assert_includes tool_names, "get_merchants"
+      assert_includes tool_names, "set_opening_balance"
+      assert_includes tool_names, "unmatch_transfer"
       assert_includes tool_names, "get_balance_sheet"
       assert_includes tool_names, "get_income_statement"
       assert_includes tool_names, "create_transaction"
@@ -333,7 +335,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         update_budget
       ]
       assert_empty expected_action_tools - tool_names
-      assert_equal 34, tools.size
+      assert_equal 42, tools.size
       assert_includes Assistant.mcp_function_classes(@user), Assistant::Function::DeleteTransaction
       assert_not_includes Assistant.function_classes, Assistant::Function::DeleteTransaction
 
@@ -359,6 +361,27 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       depository = result["account_types"].find { |item| item["type"] == "Depository" }
 
       assert_equal Depository::SUBTYPES.keys, depository["subtypes"]
+    end
+  end
+
+  test "tools stay available to external agents when the in-app assistant is off" do
+    @user.family.update!(assistant_type: "mcp_only")
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      assert_equal Assistant.mcp_function_classes(@user).size,
+                   JSON.parse(response.body)["result"]["tools"].size
+
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "get_accounts", arguments: {} }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      result = JSON.parse(response.body)["result"]
+      assert_not result["isError"]
+      assert JSON.parse(result["content"][0]["text"]).key?("accounts")
     end
   end
 

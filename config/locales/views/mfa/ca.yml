@@ -11,6 +11,7 @@ ca:
       page_title: Codis de recuperació
       title: Desa els teus codis de recuperació
     create:
+      code_already_used: Aquest codi ja s'ha utilitzat. Introdueix el codi següent de la teva aplicació d'autenticació.
       invalid_code: Codi de verificació invàlid. Torna-ho a provar.
     disable:
       success: L'autenticació de dos factors s'ha desactivat

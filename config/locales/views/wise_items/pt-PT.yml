@@ -55,7 +55,6 @@ pt-PT:
         one: "%{count} sincronização de conta da Wise não pôde ser agendada."
         other: "%{count} sincronizações de contas da Wise não puderam ser agendadas."
     provider_panel:
-      setup_title: "Instruções de configuração:"
       add_connection: Adicionar ligação à Wise
       token_label: Token de API
       token_placeholder: Cole o seu token de API pessoal da Wise
@@ -73,9 +72,6 @@ pt-PT:
       disconnect: Desligar
       disconnect_label: "Desligar %{name}"
       disconnect_confirm: "Tem a certeza de que pretende desligar %{name}? Isto irá remover todos os dados de contas sincronizados."
-      accounts_link: Contas
-      configured_html: "Ligado e a sincronizar. Visite o separador %{accounts_link} para gerir as suas contas."
-      not_configured: Não configurado
       sandbox_note_html: "Utilize o URL base <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>) para testes. Defina <code>WISE_BASE_URL</code> no seu ambiente."
       encryption_warning:
         title: A encriptação da base de dados não está configurada

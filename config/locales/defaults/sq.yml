@@ -43,6 +43,7 @@ sq:
       default: "%d-%m-%Y"
       long: "%d %B, %Y"
       short: "%d %b"
+      short_with_year: "%d %b, %Y"
     month_names:
     -
     - Janar

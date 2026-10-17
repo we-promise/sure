@@ -11,6 +11,7 @@ pt-PT:
       page_title: Códigos de Cópia de Segurança
       title: Guarde Os Seus Códigos de Cópia de Segurança
     create:
+      code_already_used: Esse código já foi utilizado. Introduza o próximo código da sua aplicação de autenticação.
       invalid_code: Código de verificação inválido. Tente novamente.
     disable:
       success: A autenticação de dois fatores foi desativada

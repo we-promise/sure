@@ -146,6 +146,44 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "pending_deletion", account_a.status, "expected orphaned duplicate to be hidden after relink"
   end
 
+  # The orphan cleanup's enqueue runs once the relink transaction commits. If it
+  # ran inside that transaction, its error would escape the action's rescue
+  # after the relink had committed, and the request would fail.
+  test "relink still succeeds when the orphan's destroy enqueue fails" do
+    account_a = Account.create!(
+      family: @family,
+      name: "Duplicate A",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    account_b = Account.create!(
+      family: @family,
+      name: "Target B",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.create!(subtype: "savings")
+    )
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "SF For Duplicate",
+      account_id: "sf_dup_enqueue",
+      account_type: "depository",
+      currency: "USD",
+      current_balance: 0
+    )
+    AccountProvider.create!(account: account_a, provider: sfa)
+    DestroyJob.queue_adapter.expects(:enqueue).once.raises(RedisClient::CannotConnectError, "Connection refused")
+
+    post link_existing_account_simplefin_items_path, params: {
+      account_id: account_b.id,
+      simplefin_account_id: sfa.id
+    }
+
+    assert_response :see_other
+    assert_equal account_b, AccountProvider.find_by!(provider: sfa).account
+    assert_equal "active", account_a.reload.status
+  end
+
   test "should get edit" do
     @simplefin_item.update!(status: :requires_update)
     get edit_simplefin_item_url(@simplefin_item)
@@ -180,6 +218,39 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_includes response.body, I18n.t("simplefin_items.update.errors.blank_token", default: "Please enter a SimpleFIN setup token")
+  end
+
+  # The edit modal sits in turbo-frame#modal, so Turbo swaps in that frame from
+  # the response. A stream aimed at the Bank sync panel left the modal as it was.
+  test "invalid update from the edit modal shows the error in the modal" do
+    @simplefin_item.update!(status: :requires_update)
+
+    patch simplefin_item_url(@simplefin_item),
+          params: { simplefin_item: { setup_token: "" } },
+          headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :unprocessable_entity
+    assert_select "turbo-frame#modal form[action=?]", simplefin_item_path(@simplefin_item)
+    assert_select "turbo-frame#modal", text: /#{I18n.t("simplefin_items.update.errors.blank_token")}/
+  end
+
+  test "invalid create from the Bank sync panel shows the error in the panel" do
+    post simplefin_items_url, params: { source: "panel", simplefin_item: { setup_token: "" } }, as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "simplefin-providers-panel"
+    assert_includes response.body, I18n.t("simplefin_items.create.errors.blank_token")
+  end
+
+  # The new-connection modal posts to the top of the page, with the same Accept
+  # header as the panel, and shows its error in its own template.
+  test "invalid create from the new connection modal renders the modal with the error" do
+    post simplefin_items_url,
+         params: { simplefin_item: { setup_token: "" } },
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :unprocessable_entity
+    assert_select "turbo-frame#modal form[action=?]", simplefin_items_path
+    assert_includes response.body, I18n.t("simplefin_items.create.errors.blank_token")
   end
 
   test "should update simplefin item access_url in place preserving account linkages" do

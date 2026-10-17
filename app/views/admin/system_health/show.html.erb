@@ -3,12 +3,14 @@
 <%= render DS::Tabs.new(
   active_tab: @active_tab,
   url_param_key: "tab",
-  navigate_on_change: true,
   testid: "system-health-tabs"
 ) do |tabs| %>
   <% tabs.with_nav do |nav| %>
     <% nav.with_btn(id: "background_jobs", label: t(".tabs.background_jobs")) %>
     <% nav.with_btn(id: "ai", label: t(".tabs.ai")) %>
+    <% if @hosted_usage_available %>
+      <% nav.with_btn(id: "hosted_usage", label: t(".tabs.hosted_usage")) %>
+    <% end %>
   <% end %>
 
   <% tabs.with_panel(tab_id: "background_jobs") do %>
@@ -18,6 +20,25 @@
   <% end %>
 
   <% tabs.with_panel(tab_id: "ai") do %>
-    <%= render "ai_status", ai_health: @ai_health, worker_ai_health_results: @worker_ai_health_results %>
+    <%# Loads when the tab is first shown. The buttons inside navigate the page,
+        so their flash shows. A redirect back to this URL is a morphing refresh,
+        and `refresh: :morph` makes it reload the frame instead of morphing the
+        status back into the placeholder. A `?locale=` override only applies to
+        the request that carries it, so the src passes a valid one on. %>
+    <%= turbo_frame_tag "ai_status",
+          src: ai_status_admin_system_health_path(refresh_ai_health: params[:refresh_ai_health].presence_in(%w[1]), locale: locale_from_param),
+          loading: :lazy, target: "_top", refresh: :morph do %>
+      <%= render "entries/loading", message: t(".ai.loading") %>
+    <% end %>
+  <% end %>
+
+  <% if @hosted_usage_available %>
+    <% tabs.with_panel(tab_id: "hosted_usage") do %>
+      <%= turbo_frame_tag "hosted_usage",
+            src: hosted_usage_admin_system_health_path(locale: locale_from_param),
+            loading: :lazy, target: "_top", refresh: :morph do %>
+        <%= render "entries/loading", message: t("admin.system_health.hosted_usage.loading") %>
+      <% end %>
+    <% end %>
   <% end %>
 <% end %>

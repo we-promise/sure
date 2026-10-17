@@ -62,6 +62,136 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
            "Inverse rates should be computed automatically"
   end
 
+  test "imports account exchange rates into the primary currency when the family currency is blank" do
+    family = Family.create!(name: "Smith", currency: "")
+
+    account = family.accounts.create!(
+      name: "Chequing",
+      currency: "CAD",
+      balance: 100,
+      accountable: Depository.new
+    )
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "CAD", to: "USD", start_date: anything, end_date: anything)
+             .returns(provider_success_response([]))
+
+    Account::MarketDataImporter.new(account).import_all
+  end
+
+  test "fetches foreign entry currencies against the family currency as well as the account currency" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Chequing",
+      currency: "CAD",
+      balance: 100,
+      accountable: Depository.new
+    )
+    account.entries.create!(date: 10.days.ago.to_date, amount: 10, currency: "GBP", name: "Card payment", entryable: Transaction.new)
+
+    [ %w[GBP CAD], %w[GBP USD], %w[CAD USD] ].each do |from, to|
+      @provider.expects(:fetch_exchange_rates)
+               .with(from: from, to: to, start_date: anything, end_date: anything)
+               .once
+               .returns(provider_success_response([]))
+    end
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
+  test "fetches rates from security price currencies into the account currency" do
+    family = Family.create!(name: "Smith", currency: "EUR")
+
+    account = family.accounts.create!(
+      name: "Brokerage",
+      currency: "EUR",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
+
+    # Securities are shared across families; prices older than this account's
+    # first trade must not pull the exchange rate start date back.
+    Security::Price.create!(security: security, date: 2.years.ago.to_date, price: 90, currency: "USD")
+
+    trade_date = 10.days.ago.to_date
+    trade      = Trade.new(security: security, qty: 1, price: 100, currency: "EUR", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy AAPL", date: trade_date, amount: 100, currency: "EUR", entryable: trade)
+
+    end_date = Date.current.in_time_zone("America/New_York").to_date
+
+    # Prices are imported before exchange rates so a first sync already knows the USD price currency
+    fetch_sequence = sequence("fetch")
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: security.ticker, exchange_operating_mic: security.exchange_operating_mic, start_date: anything, end_date: anything)
+             .in_sequence(fetch_sequence)
+             .returns(provider_success_response([
+               OpenStruct.new(security: security, date: trade_date, price: 110, currency: "USD")
+             ]))
+
+    @provider.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Apple", logo_url: nil)))
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "EUR", start_date: trade_date - EXCHANGE_RATE_BUFFER, end_date: end_date)
+             .once
+             .in_sequence(fetch_sequence)
+             .returns(provider_success_response([
+               OpenStruct.new(from: "USD", to: "EUR", date: trade_date, rate: 0.9)
+             ]))
+
+    Account::MarketDataImporter.new(account).import_all
+
+    assert ExchangeRate.where(from_currency: "USD", to_currency: "EUR", date: trade_date).exists?
+  end
+
+  test "ignores price currencies that only occur before the account needs prices" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Brokerage",
+      currency: "USD",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    security = Security.create!(ticker: "SHEL", exchange_operating_mic: "XLON")
+    trade_date = 10.days.ago.to_date
+    trade      = Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy SHEL", date: trade_date, amount: 100, currency: "USD", entryable: trade)
+
+    # Older GBP prices from before this account traded the security, then USD prices
+    Security::Price.create!(security: security, date: 2.years.ago.to_date, price: 20, currency: "GBP")
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+
+    @provider.expects(:fetch_exchange_rates).never
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
+  test "does not fetch exchange rates for security prices in the account currency" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Brokerage",
+      currency: "USD",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
+    trade    = Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy AAPL", date: 10.days.ago.to_date, amount: 100, currency: "USD", entryable: trade)
+
+    Security::Price.create!(security: security, date: 10.days.ago.to_date, price: 100, currency: "USD")
+
+    @provider.expects(:fetch_exchange_rates).never
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
   test "syncs security prices for securities traded by the account" do
     family = Family.create!(name: "Smith", currency: "USD")
 
@@ -112,7 +242,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     assert_equal 1, Security::Price.where(security: security, date: trade_date).count
   end
 
-  test "caps end_date at last holding date for securities no longer held" do
+  test "caps a sold security at its closing trade despite later zero holdings" do
     family = Family.create!(name: "Smith", currency: "USD")
 
     account = family.accounts.create!(
@@ -132,13 +262,16 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
       trade = Trade.new(security: sec, qty: 10, price: 100, currency: "USD", investment_activity_label: "Buy")
       account.entries.create!(name: "Buy #{sec.ticker}", date: trade_date, amount: 1000, currency: "USD", entryable: trade)
     end
+    account.entries.create!(name: "Sell HIST", date: sold_date, amount: 1100, currency: "USD",
+                            entryable: Trade.new(security: historical_sec, qty: -10, price: 110, currency: "USD", investment_activity_label: "Sell"))
 
     # Current: most-recent holding has qty > 0 — shows up in current_holdings
     account.holdings.create!(security: current_sec, date: Date.current, qty: 10, price: 110, amount: 1100, currency: "USD")
 
-    # Historical: most-recent holding has qty == 0 (sold) — excluded from current_holdings
+    # Historical: zero-quantity holdings continue through today after the sale.
     account.holdings.create!(security: historical_sec, date: 10.days.ago.to_date, qty: 10, price: 105, amount: 1050, currency: "USD")
     account.holdings.create!(security: historical_sec, date: sold_date, qty: 0, price: 0, amount: 0, currency: "USD")
+    account.holdings.create!(security: historical_sec, date: Date.current, qty: 0, price: 0, amount: 0, currency: "USD")
 
     expected_start_date = trade_date - SECURITY_PRICE_BUFFER
 
@@ -160,6 +293,38 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     @provider.stubs(:fetch_exchange_rates).returns(provider_success_response([]))
 
     Account::MarketDataImporter.new(account).import_all
+  end
+
+  test "a closed account stays quiet after another account extends the shared prices" do
+    security = Security.create!(ticker: "SHARED", exchange_operating_mic: "XNAS")
+    closed_account = Family.create!(name: "Closed", currency: "USD").accounts.create!(
+      name: "Sold", currency: "USD", balance: 0, accountable: Investment.new
+    )
+    open_account = Family.create!(name: "Open", currency: "USD").accounts.create!(
+      name: "Held", currency: "USD", balance: 0, accountable: Investment.new
+    )
+    buy_date  = 30.days.ago.to_date
+    sold_date = 5.days.ago.to_date
+
+    closed_account.entries.create!(name: "Buy", date: buy_date, amount: 1000, currency: "USD",
+                                   entryable: Trade.new(security: security, qty: 10, price: 100, currency: "USD", investment_activity_label: "Buy"))
+    closed_account.entries.create!(name: "Sell", date: sold_date, amount: 1100, currency: "USD",
+                                   entryable: Trade.new(security: security, qty: -10, price: 110, currency: "USD", investment_activity_label: "Sell"))
+    closed_account.holdings.create!(security: security, date: sold_date - 1.day, qty: 10, price: 105, amount: 1050, currency: "USD")
+    closed_account.holdings.create!(security: security, date: Date.current, qty: 0, price: 0, amount: 0, currency: "USD")
+    open_account.holdings.create!(security: security, date: Date.current, qty: 1, price: 120, amount: 120, currency: "USD")
+
+    # The open account's last sync carried the shared prices past the sale, up to
+    # yesterday. Today's price is still missing: only the open account needs it.
+    ((buy_date - SECURITY_PRICE_BUFFER)..Date.yesterday).each do |date|
+      Security::Price.create!(security: security, date: date, price: 100, currency: "USD", provisional: false)
+    end
+
+    @provider.expects(:fetch_security_prices).never
+    @provider.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Shared", logo_url: "logo")))
+    @provider.stubs(:fetch_exchange_rates).returns(provider_success_response([]))
+
+    Account::MarketDataImporter.new(closed_account).import_all
   end
 
   test "fetches prices through today when a sold security is repurchased before holdings are rematerialized" do
@@ -188,6 +353,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
 
     # Stale materialized holdings — qty=0 means current_holdings excludes this security
     account.holdings.create!(security: security, date: sold_date, qty: 0, price: 0, amount: 0, currency: "USD")
+    account.holdings.create!(security: security, date: Date.current, qty: 0, price: 0, amount: 0, currency: "USD")
 
     # Repurchase trade added after last materialization — holdings haven't been rematerialized yet
     repurchase = Trade.new(security: security, qty: 5, price: 130, currency: "USD", investment_activity_label: "Buy")
@@ -348,6 +514,34 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     Account::MarketDataImporter.new(account).import_all
 
     assert_equal 1, Security::Price.where(security: security, date: account.start_date).count
+  end
+
+  test "backfills a closed provider-held position once and then skips it" do
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    security = Security.create!(ticker: "OLDPROV", exchange_operating_mic: "XNAS")
+    provider_item = family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider_account = provider_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account_provider = AccountProvider.create!(account: account, provider: provider_account)
+    held_date = 10.days.ago.to_date
+
+    account.holdings.create!(security: security, date: held_date, qty: 1, price: 100, amount: 100,
+                             currency: "USD", account_provider: account_provider)
+    account.holdings.create!(security: security, date: Date.current, qty: 0, price: 100, amount: 0,
+                             currency: "USD", account_provider: account_provider)
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: security.ticker, exchange_operating_mic: "XNAS",
+                   start_date: held_date - SECURITY_PRICE_BUFFER, end_date: held_date)
+             .once
+             .returns(provider_success_response([
+               OpenStruct.new(security: security, date: held_date, price: 100, currency: "USD")
+             ]))
+    @provider.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Old", logo_url: "logo")))
+
+    2.times { Account::MarketDataImporter.new(account).import_security_prices }
+
+    assert Security::Price.exists?(security: security, date: held_date)
   end
 
   test "handles provider error response gracefully for exchange rates" do

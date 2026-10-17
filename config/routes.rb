@@ -336,6 +336,7 @@ Rails.application.routes.draw do
   get "feedback", to: "pages#feedback"
   get "dashboard/cash_flow", to: "cash_flows#show", as: :dashboard_cash_flow
   patch "dashboard/preferences", to: "pages#update_preferences"
+  patch "dashboard/sections/:section_key/hidden", to: "pages#update_section_hidden", as: :dashboard_section_hidden
 
   resource :current_session, only: %i[update]
 
@@ -425,6 +426,10 @@ Rails.application.routes.draw do
   resources :tags, except: :show do
     resources :deletions, only: %i[new create], module: :tag
     delete :destroy_all, on: :collection
+  end
+
+  namespace :tag do
+    resource :dropdown, only: :show
   end
 
   namespace :category do
@@ -649,6 +654,7 @@ Rails.application.routes.draw do
 
     collection do
       delete :destroy_all
+      patch :reorder
       get :confirm_all
       post :apply_all
       post :clear_ai_cache
@@ -698,6 +704,8 @@ Rails.application.routes.draw do
 
       get :address
       patch :update_address
+
+      post :refresh_valuation
     end
   end
   resources :vehicles, only: %i[new create edit update]
@@ -718,6 +726,18 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
+      namespace :financekit do
+        get "capabilities", to: "connections#capabilities"
+        resources :connections, only: [ :create, :show, :destroy ] do
+          put "account_mappings/:source_id", to: "connections#mapping"
+          post :activate, to: "connections#activate"
+          post :credential, to: "connections#credential"
+          post :repair, to: "connections#repair"
+          resources :conflicts, only: [ :index, :update ]
+        end
+        post "publishers/:publisher_id/batches", to: "batches#create", as: :publisher_batches_upload
+        get "publishers/:publisher_id/batches/:batch_id", to: "batches#show", as: :publisher_batch_status
+      end
       # Authentication endpoints
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
@@ -740,7 +760,9 @@ Rails.application.routes.draw do
       resources :security_prices, only: [ :index, :show ]
       resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
-      resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :transactions, only: [ :index, :show, :create, :update, :destroy ] do
+        resource :split, only: [ :show, :create, :update, :destroy ]
+      end
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
       resources :holdings, only: [ :index, :show ]
       resources :transfers, only: [ :index, :show ]
@@ -997,6 +1019,8 @@ Rails.application.routes.draw do
     # that happen to round-trip cleanly). The controller file is singular,
     # so name it explicitly.
     resource :system_health, only: :show, controller: "system_health" do
+      get :ai_status
+      get :hosted_usage
       post :verify_worker_ai
       post :send_test_push
     end

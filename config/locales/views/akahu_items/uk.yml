@@ -26,7 +26,7 @@ uk:
     sync_status:
       no_accounts: "Рахунків не знайдено"
       all_synced:
-        one: "1 рахунок синхронізовано"
+        one: "%{count} рахунок синхронізовано"
         few: "%{count} рахунки синхронізовано"
         many: "%{count} рахунків синхронізовано"
         other: "%{count} рахунків синхронізовано"
@@ -35,7 +35,7 @@ uk:
       none: "Немає підключених установ"
       one: "1 установа"
       count:
-        one: "1 установа"
+        one: "%{count} установа"
         few: "%{count} установи"
         many: "%{count} установ"
         other: "%{count} установ"
@@ -73,7 +73,7 @@ uk:
       link_accounts: "Прив'язати рахунки"
     link_accounts:
       success:
-        one: "Прив'язано 1 рахунок Akahu."
+        one: "Прив'язано %{count} рахунок Akahu."
         few: "Прив'язано %{count} рахунки Akahu."
         many: "Прив'язано %{count} рахунків Akahu."
         other: "Прив'язано %{count} рахунків Akahu."
@@ -106,7 +106,7 @@ uk:
       account_type_label: "Тип рахунку"
       account_types:
         skip: "Пропустити"
-        depository: "Готівка"
+        depository: "Грошові кошти"
         credit_card: "Кредитна картка"
         investment: "Інвестиції"
         loan: "Позика"
@@ -114,7 +114,7 @@ uk:
       cancel: "Скасувати"
     complete_account_setup:
       success:
-        one: "Створено 1 рахунок Akahu."
+        one: "Створено %{count} рахунок Akahu."
         few: "Створено %{count} рахунки Akahu."
         many: "Створено %{count} рахунків Akahu."
         other: "Створено %{count} рахунків Akahu."

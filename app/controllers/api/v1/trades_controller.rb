@@ -248,7 +248,7 @@ class Api::V1::TradesController < Api::V1::BaseController
           amount: parse_positive_amount!(trade_params[:amount], context: "deposit/withdrawal"),
           currency: trade_params[:currency].presence || account.currency,
           type: type,
-          transfer_account_id: trade_params[:transfer_account_id]
+          transfer_account_id: writable_transfer_account_id
         }.compact
 
       when "interest", "fee"
@@ -438,6 +438,16 @@ class Api::V1::TradesController < Api::V1::BaseController
       return security.ticker if security.exchange_operating_mic.blank?
 
       "#{security.ticker}|#{security.exchange_operating_mic}"
+    end
+
+    # A deposit or withdrawal also books an entry on the other account, so it
+    # has to be one the key's user may write to. Raises RecordNotFound, which
+    # #create answers with "Account not found".
+    def writable_transfer_account_id
+      return if trade_params[:transfer_account_id].blank?
+
+      current_resource_owner.family.accounts.writable_by(current_resource_owner)
+        .find(trade_params[:transfer_account_id]).id
     end
 
     def render_validation_error(message, errors)

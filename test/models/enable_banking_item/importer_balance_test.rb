@@ -29,6 +29,18 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @mock_provider)
   end
 
+  test "FRESHNESS_BALANCE_TYPES only lists normalized spellings that BALANCE_TYPE_PRIORITY itself accepts" do
+    normalized_priority_types = EnableBankingItem::Importer::BALANCE_TYPE_PRIORITY.map { |type| type.delete("_-").downcase }
+
+    assert_empty EnableBankingItem::Importer::FRESHNESS_BALANCE_TYPES - normalized_priority_types,
+      "FRESHNESS_BALANCE_TYPES drifted from BALANCE_TYPE_PRIORITY - every accepted spelling here must also be recognized there"
+  end
+
+  test "PERIOD_BOUNDARY_TYPES lists both the ISO code and descriptive spelling for OPBD and PRCD" do
+    assert_equal %w[opbd openingbooked prcd previouslyclosedbooked].sort, EnableBankingItem::Importer::PERIOD_BOUNDARY_TYPES.sort,
+      "PERIOD_BOUNDARY_TYPES must cover both spellings for OPBD/PRCD, mirroring FRESHNESS_BALANCE_TYPES, or the freshness guard silently skips ASPSPs that send the descriptive spelling"
+  end
+
   test "fetch_and_update_balance prefers booked balance before available balance" do
     @mock_provider.stubs(:get_account_balances).returns(
       balances: [
@@ -48,6 +60,325 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("-50.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance prefers opening/previously-closed booked balance over expected and available" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "CLAV",
+          balance_amount: { amount: "2000.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "XPCD",
+          balance_amount: { amount: "1500.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "PRCD",
+          balance_amount: { amount: "50.00", currency: "EUR" },
+          credit_debit_indicator: "DBIT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("-50.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance prefers opening booked balance over previously-closed booked balance" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "PRCD",
+          balance_amount: { amount: "50.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "openingBooked",
+          balance_amount: { amount: "75.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("75.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance prefers a materially newer expected balance over a stale opening booked balance" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "OPBD",
+          reference_date: "2026-09-01",
+          balance_amount: { amount: "50.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "XPCD",
+          reference_date: "2026-09-25",
+          balance_amount: { amount: "75.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("75.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance keeps the period-boundary balance when reference_date is missing" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "OPBD",
+          balance_amount: { amount: "50.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "XPCD",
+          reference_date: "2026-09-25",
+          balance_amount: { amount: "75.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("50.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance prefers a materially newer descriptive-spelling balance over a stale opening booked balance" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "OPBD",
+          reference_date: "2026-09-01",
+          balance_amount: { amount: "50.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "closingAvailable",
+          reference_date: "2026-09-25",
+          balance_amount: { amount: "75.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("75.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance prefers a materially newer balance over a stale descriptive-spelling opening booked balance" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "openingBooked",
+          reference_date: "2026-09-01",
+          balance_amount: { amount: "50.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "closingAvailable",
+          reference_date: "2026-09-25",
+          balance_amount: { amount: "75.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("75.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance ignores a newer reference_date on a non-accounting balance type" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "OPBD",
+          reference_date: "2026-09-01",
+          balance_amount: { amount: "50.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "FWAV",
+          reference_date: "2026-09-25",
+          balance_amount: { amount: "999.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("50.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance keeps the period-boundary balance when it is not older than other balances" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "OPBD",
+          reference_date: "2026-09-25",
+          balance_amount: { amount: "50.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "XPCD",
+          reference_date: "2026-09-01",
+          balance_amount: { amount: "75.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("50.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance falls back to the first balance when only unprioritized types are present" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "FWAV",
+          balance_amount: { amount: "10.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "OTHR",
+          balance_amount: { amount: "999.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("10.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance uses the account currency's balance from a multi-currency wallet" do
+    # PayPal reports one balance per currency under the same type. The stored
+    # USD currency is what the old last-entry pick left behind.
+    @enable_banking_account.update!(currency: "USD", raw_payload: { "uid" => "paypal", "currency" => "EUR" })
+    @mock_provider.stubs(:get_account_balances).returns(balances: paypal_balances)
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("392.04"), @enable_banking_account.current_balance
+    assert_equal "EUR", @enable_banking_account.currency
+  end
+
+  test "fetch_and_update_balance uses the first listed currency when the snapshot has none" do
+    @enable_banking_account.update!(raw_payload: { "uid" => "paypal" })
+    @mock_provider.stubs(:get_account_balances).returns(balances: paypal_balances)
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("392.04"), @enable_banking_account.current_balance
+    assert_equal "EUR", @enable_banking_account.currency
+  end
+
+  test "fetch_and_update_balance follows the snapshot currency even when it is not listed first" do
+    @enable_banking_account.update!(raw_payload: { "uid" => "paypal", "currency" => "USD" })
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        { balance_type: "CLBD", balance_amount: { amount: "10.00", currency: "EUR" }, credit_debit_indicator: "CRDT" },
+        { balance_type: "ITAV", balance_amount: { amount: "30.00", currency: "USD" }, credit_debit_indicator: "CRDT" },
+        { balance_type: "ITBD", balance_amount: { amount: "25.00", currency: "USD" }, credit_debit_indicator: "CRDT" }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("25.00"), @enable_banking_account.current_balance
+    assert_equal "USD", @enable_banking_account.currency
+  end
+
+  test "fetch_and_update_balance uses the first listed currency when the snapshot reports XXX" do
+    # PayPal's accounts endpoint reports the wallet's currency as XXX.
+    @enable_banking_account.update!(currency: "USD", raw_payload: { "uid" => "paypal", "currency" => "XXX" })
+    @mock_provider.stubs(:get_account_balances).returns(balances: paypal_balances)
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("392.04"), @enable_banking_account.current_balance
+    assert_equal "EUR", @enable_banking_account.currency
+  end
+
+  test "fetch_and_update_balance keeps the stored currency when the balance has no valid currency" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [ { balance_type: "CLBD", balance_amount: { amount: "12.00", currency: "XXX" }, credit_debit_indicator: "CRDT" } ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("12.00"), @enable_banking_account.current_balance
+    assert_equal "EUR", @enable_banking_account.currency
+  end
+
+  test "fetch_and_update_balance stores the normalized balance currency" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [ { balance_type: "CLBD", balance_amount: { amount: "12.00", currency: " usd " }, credit_debit_indicator: "CRDT" } ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal "USD", @enable_banking_account.reload.currency
+  end
+
+  test "fetch_and_update_balance logs funded balances left out in other currencies" do
+    @enable_banking_account.update!(raw_payload: { "uid" => "paypal", "currency" => "EUR" })
+    balances = paypal_balances
+    balances[2] = balances[2].merge(balance_amount: { amount: "15.50", currency: "USD" })
+    @mock_provider.stubs(:get_account_balances).returns(balances: balances)
+
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync").count }, 1 do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+
+    entry = DebugLogEntry.where(category: "provider_sync").order(:created_at).last
+    assert_equal "EUR", entry.metadata["currency"]
+    assert_equal [ { "currency" => "USD", "balance_type" => "CLBD", "amount" => "15.50" } ], entry.metadata["other_balances"]
+  end
+
+  test "fetch_and_update_balance does not log other currencies when the chosen balance has no amount" do
+    @enable_banking_account.update!(raw_payload: { "uid" => "paypal", "currency" => "EUR" })
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        { balance_type: "CLBD", balance_amount: { currency: "EUR" }, credit_debit_indicator: "CRDT" },
+        { balance_type: "CLBD", balance_amount: { amount: "15.50", currency: "USD" }, credit_debit_indicator: "CRDT" }
+      ]
+    )
+
+    assert_no_difference -> { DebugLogEntry.where(category: "provider_sync").count } do
+      assert_not @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+    assert_nil @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance does not log empty balances in other currencies" do
+    @enable_banking_account.update!(raw_payload: { "uid" => "paypal", "currency" => "EUR" })
+    @mock_provider.stubs(:get_account_balances).returns(balances: paypal_balances)
+
+    assert_no_difference -> { DebugLogEntry.where(category: "provider_sync").count } do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
   end
 
   test "fetch_and_update_balance handles descriptive booked balance types" do
@@ -173,4 +504,14 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
 
     assert_nil unsaved_account.current_balance
   end
+
+  private
+
+    # Shaped like PayPal's response: the primary EUR balance first, then empty
+    # CAD and USD balances under the same type.
+    def paypal_balances
+      %w[EUR CAD USD].zip(%w[392.04 0.00 0.00]).map do |currency, amount|
+        { balance_type: "CLBD", balance_amount: { amount: amount, currency: currency }, credit_debit_indicator: "CRDT" }
+      end
+    end
 end

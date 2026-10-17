@@ -1,4 +1,4 @@
-<%# locals: (up_item:) %>
+<%# locals: (up_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(up_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -17,7 +17,9 @@
               <% end %>
             </div>
 
-            <% if up_item.accounts.any? %>
+            <%# The institution belongs to every account on the connection, so it is
+                shown only to a viewer who can see them all (#3630). %>
+            <% if up_item.accounts.any? && visible_accounts.size == up_item.accounts.size %>
               <p class="text-xs text-secondary"><%= up_item.institution_summary %></p>
             <% end %>
 
@@ -62,8 +64,8 @@
 
     <% unless up_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if up_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: up_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <% stats = if defined?(@up_sync_stats_map) && @up_sync_stats_map
@@ -73,7 +75,7 @@
            end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: up_item,
+          provider_item: up_item, show_account_details: visible_accounts.size == up_item.accounts.size,
           institutions_count: up_item.connected_institutions.size
         ) %>
 

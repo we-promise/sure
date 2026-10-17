@@ -14,11 +14,13 @@ tr:
       service_down_label: Hizmet Kapalı
       title: Lunch Flow Bağlantı Hatası
       unable_to_connect: Lunch Flow'a bağlanılamıyor
+      unexpected_error: Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.
     complete_account_setup:
       all_skipped: Tüm hesaplar atlandı. Hiçbir hesap oluşturulmadı.
       creation_failed: 'Hesaplar oluşturulamadı: %{error}'
       no_accounts: Kurulacak hesap yok.
       success: "%{count} hesap başarıyla oluşturuldu."
+      unexpected_error: Beklenmeyen bir hata oluştu
     create:
       success: Lunch Flow bağlantısı başarıyla oluşturuldu
     destroy:
@@ -73,6 +75,14 @@ tr:
       syncing: Senkronize ediliyor...
       total: Toplam
       unlinked: Bağlı değil
+      sync_status:
+        no_accounts: Hesap bulunamadı
+        synced:
+          one: '%{count} hesap senkronize edildi'
+          other: '%{count} hesap senkronize edildi'
+        partial_setup:
+          one: '%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor'
+          other: '%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor'
     select_accounts:
       accounts_selected: hesap seçildi
       api_error: 'API hatası: %{message}'
@@ -165,6 +175,7 @@ tr:
         seçin. En fazla 3 yıllık geçmiş kullanılabilir.
       sync_start_date_label: 'İşlemleri şu tarihten itibaren senkronize etmeye başla:'
       title: Lunch Flow Hesaplarınızı Kurun
+      page_title: Lunch Flow Hesaplarını Kur
     setup_required:
       api_key_description: Lunch Flow hesaplarını bağlamadan önce Lunch Flow API anahtarınızı
         yapılandırmanız gerekir.
@@ -180,3 +191,7 @@ tr:
       success: Senkronizasyon başlatıldı
     update:
       success: Lunch Flow bağlantısı güncellendi
+    subtype_select:
+      placeholder:
+        subtype: Alt tür seçin
+        type: Tür seçin

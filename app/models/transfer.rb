@@ -1,6 +1,6 @@
 class Transfer < ApplicationRecord
-  belongs_to :inflow_transaction, class_name: "Transaction"
-  belongs_to :outflow_transaction, class_name: "Transaction"
+  belongs_to :inflow_transaction, class_name: "Transaction", inverse_of: :transfer_as_inflow
+  belongs_to :outflow_transaction, class_name: "Transaction", inverse_of: :transfer_as_outflow
 
   has_many :fee_transactions, class_name: "Transaction", dependent: :destroy
 
@@ -16,14 +16,29 @@ class Transfer < ApplicationRecord
   validate :transfer_within_date_range
   validate :transfer_has_same_family
 
+  # Runs on every destroy, including the cascade when one leg's transaction
+  # (or its entry) is deleted, so the surviving leg never keeps a transfer kind
+  # without a transfer.
+  before_destroy :release_transactions
+
   class << self
-    def kind_for_account(account)
+    # The outflow leg's kind for a transfer into this account. Transfer::Creator,
+    # Family::DataImporter, auto-matching, rules and manual matches all call
+    # it (the inflow leg is always funds_movement, see kind_for_leg).
+    # from_account: an investment/crypto destination only counts as a
+    # contribution when the source isn't itself an investment/crypto account,
+    # otherwise it's a plain funds movement.
+    def kind_for_account(account, from_account: nil)
       if account.loan?
         "loan_payment"
       elsif account.credit_card?
         "cc_payment"
       elsif account.investment? || account.crypto?
-        "investment_contribution"
+        if from_account && (from_account.investment? || from_account.crypto?)
+          "funds_movement"
+        else
+          "investment_contribution"
+        end
       elsif account.liability?
         "cc_payment"
       else
@@ -100,8 +115,22 @@ class Transfer < ApplicationRecord
     "transfer"
   end
 
+  # The kind a leg carries while this transfer exists: the outflow by the
+  # destination account, the inflow always funds_movement.
+  def kind_for_leg(transaction)
+    return "funds_movement" if transaction.id == inflow_transaction_id
+
+    Transfer.kind_for_account(to_account, from_account: from_account)
+  end
+
+  # Based on the destination account rather than outflow_transaction.kind,
+  # which can be stale on rows a provider sync overwrote before
+  # Account::ProviderImportAdapter derived matched legs from their transfer
+  # (see Transaction#payment?, which has the same to_account-based reasoning).
   def categorizable?
-    to_account&.accountable_type == "Loan"
+    return false unless to_account
+
+    !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(Transfer.kind_for_account(to_account, from_account: from_account))
   end
 
   def reject!
@@ -111,31 +140,26 @@ class Transfer < ApplicationRecord
     end
   end
 
-  def destroy!
-    Transfer.transaction do
-      [ inflow_transaction, outflow_transaction ].each do |transaction|
-        next if transaction.nil?
-        next unless Transaction.exists?(transaction.id)
-        begin
-          transaction.update!(kind: "standard")
-          # The entry survives this destroy (only the Transfer join row and
-          # fee transactions go away), but its idempotency_key must not: a
-          # later retry of the original create request looks up that key,
-          # finds no Transfer anymore, and would otherwise hit the unique
-          # index on the stale entry and raise instead of creating a new
-          # transfer (see Transfer::Creator#find_existing_transfer).
-          transaction.entry.update!(idempotency_key: nil) if transaction.entry&.idempotency_key.present?
-        rescue ActiveRecord::RecordNotFound
-        rescue NoMethodError
-          next
-        end
-      end
-      super
-    end
-  end
-
+  # Auto-matched transfers start out pending and leave both transactions as
+  # they were, so an unconfirmed suggestion never moves budgets or reports.
+  # The transfer kinds (and the Investment Contributions category) only apply
+  # once the user confirms the match.
   def confirm!
-    update!(status: "confirmed")
+    Transfer.transaction do
+      update!(status: "confirmed")
+
+      # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
+      outflow_kind = Transfer.kind_for_account(to_account, from_account: from_account)
+      outflow_attrs = { kind: outflow_kind }
+
+      if outflow_kind == "investment_contribution" && outflow_transaction.category_id.blank?
+        category = to_account.family.investment_contributions_category
+        outflow_attrs[:category] = category if category.present?
+      end
+
+      inflow_transaction.update!(kind: "funds_movement")
+      outflow_transaction.update!(outflow_attrs)
+    end
   end
 
   def date
@@ -157,6 +181,33 @@ class Transfer < ApplicationRecord
   end
 
   private
+    # Gives each surviving transaction back its standalone state. When the
+    # transfer goes because one leg is being deleted (dependent: :destroy on
+    # Transaction), that leg is skipped.
+    def release_transactions
+      deleted_leg_key = destroyed_by_association&.foreign_key&.to_s
+
+      { "inflow_transaction_id" => inflow_transaction, "outflow_transaction_id" => outflow_transaction }.each do |key, transaction|
+        next if transaction.nil? || key == deleted_leg_key
+        next unless Transaction.exists?(transaction.id)
+        begin
+          # A pending auto-match never changed the kind (see #confirm!), so a
+          # transfer kind on its transactions predates the match and stays.
+          transaction.update!(kind: "standard") if transaction.transfer? && !pending?
+          # The entry survives this destroy (only the Transfer join row and
+          # fee transactions go away), but its idempotency_key must not: a
+          # later retry of the original create request looks up that key,
+          # finds no Transfer anymore, and would otherwise hit the unique
+          # index on the stale entry and raise instead of creating a new
+          # transfer (see Transfer::Creator#find_existing_transfer).
+          transaction.entry.update!(idempotency_key: nil) if transaction.entry&.idempotency_key.present?
+        rescue ActiveRecord::RecordNotFound
+        rescue NoMethodError
+          next
+        end
+      end
+    end
+
     def transfer_has_different_accounts
       return unless inflow_transaction&.entry && outflow_transaction&.entry
       errors.add(:base, :different_accounts) if to_account == from_account

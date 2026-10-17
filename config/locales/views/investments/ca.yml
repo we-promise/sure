@@ -182,6 +182,9 @@ ca:
       workplace_pension_uk:
         long: Pensió laboral
         short: Pensió
+      cash_management:
+        short: CMA
+        long: Compte de gestió d'efectiu
     value_tooltip:
       cash: Efectiu
       holdings: Posicions

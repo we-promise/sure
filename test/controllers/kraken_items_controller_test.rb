@@ -89,6 +89,36 @@ class KrakenItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/API key can't be blank/i, flash[:alert])
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post kraken_items_url,
+         params: { kraken_item: { name: "Blank Kraken", api_key: "   ", api_secret: "\n" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "kraken-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Api key can't be blank")
+  end
+
+  # The new connection belongs in Your connections, so the page reloads.
+  test "create from the page still reloads Bank sync" do
+    post kraken_items_url,
+         params: { kraken_item: { name: "Joint Kraken", api_key: "joint_kraken_key", api_secret: "joint_kraken_secret" } },
+         as: :turbo_stream
+
+    assert_redirected_to settings_providers_path
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row. The panel
+  # root carries the id, so it is replaced rather than nested inside itself.
+  test "update from the page re-renders the panel in place" do
+    patch kraken_item_url(@second_item),
+          params: { kraken_item: { name: "Renamed Business Kraken" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "kraken-providers-panel"
+    assert_includes response.body, %(id="kraken-providers-panel")
+    assert_equal "Renamed Business Kraken", @second_item.reload.name
+  end
+
   test "select accounts requires an explicit connection when multiple kraken items exist" do
     get select_accounts_kraken_items_url, params: { accountable_type: "Crypto" }
 
@@ -123,6 +153,15 @@ class KrakenItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :redirect
+  end
+
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_kraken_item_url(@second_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "kraken-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @second_item.reload.syncing?
   end
 
   test "setup accounts creates crypto exchange account for selected item only" do
@@ -250,6 +289,44 @@ class KrakenItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes @response.body, %(name="kraken_item_id")
     assert_includes @response.body, %(value="#{@second_item.id}")
+  end
+
+  # The figure on the setup screen is what the user checks the import against,
+  # so it has to be in the currency the account will be created in -- the family
+  # currency -- not the one Kraken happens to report in.
+  test "setup accounts shows the balance in the family currency" do
+    ensure_tailwind_build
+    @family.update!(currency: "EUR")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    @second_item.kraken_accounts.create!(
+      name: "Kraken", account_id: "combined", account_type: "combined",
+      currency: "USD", current_balance: 1_000
+    )
+
+    get setup_accounts_kraken_item_url(@second_item)
+
+    assert_response :success
+    assert_includes @response.body, "€900.00"
+    assert_includes @response.body, "EUR"
+  end
+
+  # With no rate the account opens at zero, so the screen says zero: showing the
+  # reported figure would promise a balance the account will not have.
+  test "setup accounts shows zero when the balance cannot be converted" do
+    ensure_tailwind_build
+    @family.update!(currency: "EUR")
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    @second_item.kraken_accounts.create!(
+      name: "Kraken", account_id: "combined", account_type: "combined",
+      currency: "USD", current_balance: 1_000
+    )
+
+    get setup_accounts_kraken_item_url(@second_item)
+
+    assert_response :success
+    # The balance cell itself: other accounts on the page carry figures of their own.
+    assert_match %r{text-primary">€0\.00<}, @response.body
+    assert_no_match %r{text-primary">\$1,000\.00<}, @response.body
   end
 
   test "cannot access another family's kraken item" do

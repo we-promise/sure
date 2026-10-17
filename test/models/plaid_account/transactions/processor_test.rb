@@ -35,6 +35,59 @@ class PlaidAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     processor.process
   end
 
+  test "removes imported transactions that plaid retracts" do
+    account = @plaid_account.current_account
+    retracted_id = "retracted_by_plaid"
+
+    Account::ProviderImportAdapter.new(account).import_transaction(
+      external_id: retracted_id,
+      amount: 100,
+      currency: "USD",
+      date: Date.current,
+      name: "Retracted",
+      source: PlaidEntry::Processor::SOURCE
+    )
+
+    # The import path does not set plaid_id, so a lookup on it alone finds nothing.
+    assert_nil account.entries.find_by(external_id: retracted_id).plaid_id
+
+    @plaid_account.update!(raw_transactions_payload: {
+      added: [],
+      modified: [],
+      removed: [ { "transaction_id" => retracted_id } ]
+    })
+
+    assert_difference [ "Entry.count", "Transaction.count" ], -1 do
+      PlaidAccount::Transactions::Processor.new(@plaid_account).process
+    end
+
+    assert_nil account.entries.find_by(external_id: retracted_id)
+  end
+
+  test "leaves another provider's entry with the same external id alone" do
+    account = @plaid_account.current_account
+    shared_id = "shared_external_id"
+
+    Account::ProviderImportAdapter.new(account).import_transaction(
+      external_id: shared_id,
+      amount: 100,
+      currency: "USD",
+      date: Date.current,
+      name: "Not from Plaid",
+      source: "simplefin"
+    )
+
+    @plaid_account.update!(raw_transactions_payload: {
+      added: [],
+      modified: [],
+      removed: [ { "transaction_id" => shared_id } ]
+    })
+
+    assert_no_difference "Entry.count" do
+      PlaidAccount::Transactions::Processor.new(@plaid_account).process
+    end
+  end
+
   test "removes transactions no longer in plaid" do
     destroyable_transaction_id = "destroy_me"
     @plaid_account.current_account.entries.create!(

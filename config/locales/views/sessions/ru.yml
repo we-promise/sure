@@ -5,6 +5,7 @@ ru:
       invalid_credentials: Неверный адрес электронной почты или пароль.
       local_login_disabled: Локальная авторизация по паролю отключена. Пожалуйста,
         используйте единый вход.
+      account_deactivated: Эта учётная запись деактивирована. Обратитесь к администратору.
     destroy:
       logout_successful: Вы успешно вышли из системы.
     failure:
@@ -36,6 +37,8 @@ ru:
       password_placeholder: Введите ваш пароль
       submit: Войти
       title: Sure
+      passkey_button: Войти с ключом доступа
+      passkey_unsupported: Этот браузер не поддерживает ключи доступа.
     openid_connect:
       account_linked: Учётная запись успешно связана с %{provider}
       failed: Не удалось аутентифицироваться через OpenID Connect.
