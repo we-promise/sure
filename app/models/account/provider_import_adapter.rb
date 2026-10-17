@@ -56,6 +56,16 @@ class Account::ProviderImportAdapter
       # the protection check (pending→booked bypass) and the auto-claim path below.
       incoming_pending = extra.is_a?(Hash) && Transaction.pending_extra?(extra.with_indifferent_access)
 
+      # An automatically excluded stale pending (see Entry.auto_exclude_stale_pending)
+      # that the provider now delivers as booked under the same id becomes a normal
+      # entry again. Entries the user excluded are never touched. An import_locked
+      # entry that is not user_modified keeps its pending flag below, so it stays
+      # excluded rather than being re-excluded on every sync.
+      if entry.persisted? && !incoming_pending && entry.auto_excluded_pending? &&
+          (entry.user_modified? || !entry.import_locked?)
+        entry.update!(excluded: false) # also drops the mark (Entry callback)
+      end
+
       # === PROTECTION CHECK: Skip entries that should not be overwritten ===
       # Check persisted Transaction entries for protection flags before making changes.
       # This prevents sync from overwriting user edits, CSV imports, or excluded entries.
@@ -824,7 +834,7 @@ class Account::ProviderImportAdapter
   # @param currency [String] Currency code
   # @param source [String] Provider name (e.g., "simplefin")
   # @param date_window [Integer] Days to search around the posted date (default: 8)
-  # @return [Entry, nil] The pending entry or nil if not found
+  # @return [Entry, nil] The pending entry, or nil when none or several match
   def find_pending_transaction(date:, amount:, currency:, source:, date_window: 8)
     date = Date.parse(date.to_s) unless date.is_a?(Date)
 
@@ -844,9 +854,15 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
       .where(Transaction.pending_sql("transactions"))
-      .order(date: :desc) # Prefer most recent pending transaction
+      .where(excluded: false)
+      .limit(2)
+      .to_a
 
-    candidates.first
+    # Amount, currency and date alone cannot tell two same-amount pendings apart,
+    # so only claim when the match is unambiguous (#2013). Otherwise the posted
+    # transaction is imported as a new entry and the pendings stay for the
+    # stale-pending cleanup.
+    candidates.size == 1 ? candidates.first : nil
   end
 
   # Finds a pending transaction using fuzzy amount matching for tip adjustments
