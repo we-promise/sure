@@ -76,7 +76,8 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
         # Two split rules (or a manual apply and a queued run) can reach the
         # same transaction at once; split_once! locks the parent and skips it
         # if the other run already split it (or it was excluded meanwhile).
-        next false unless entry.split_once!(splits)
+        # The lock keeps rules further down from overwriting the children's categories.
+        next false unless entry.split_once!(splits, lock_attributes: true)
 
         entry.sync_account_later
         true

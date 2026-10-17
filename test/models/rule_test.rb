@@ -220,6 +220,22 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal [ 30, 70 ], transaction_entry.child_entries.order(:amount).pluck(:amount).map(&:to_i)
   end
 
+  test "a split rule cannot have other actions" do
+    split = { splits: [ { type: "percentage", name: "A", share: "50" }, { type: "percentage", name: "B", share: "50" } ] }
+
+    rule = @family.rules.build(
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Bundle") ],
+      actions: [
+        Rule::Action.new(action_type: "split_transaction", value: split.to_json),
+        Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id)
+      ]
+    )
+
+    assert_not rule.valid?
+    assert_includes rule.errors[:base], I18n.t("activerecord.errors.models.rule.split_not_alone")
+  end
+
   test "compound rule" do
     transaction_entry1 = create_transaction(date: Date.current, amount: 50, account: @account, merchant: @whole_foods_merchant)
     transaction_entry2 = create_transaction(date: Date.current, amount: 100, account: @account, merchant: @whole_foods_merchant)

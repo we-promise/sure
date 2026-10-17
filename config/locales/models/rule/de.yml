@@ -7,6 +7,7 @@ de:
           duplicate_actions: 'Eine Regel darf keine doppelten Aktionen enthalten: %{types}'
           min_actions: braucht mindestens eine Aktion
           nested_conditions: Zusammengesetzte Bedingungen lassen sich nicht verschachteln
+          split_not_alone: Eine Regel mit Aufteilung darf keine weiteren Aktionen haben
         rule/action:
           attributes:
             value:

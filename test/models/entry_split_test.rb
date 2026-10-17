@@ -27,6 +27,28 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert @entry.split_parent?
   end
 
+  test "split! locks only the fields a split sets when asked to" do
+    merchant = @entry.account.family.merchants.create!(name: "Lock merchant", type: "FamilyMerchant")
+    splits = [
+      { name: "Groceries", amount: 70, category_id: categories(:food_and_drink).id, merchant_id: merchant.id },
+      { name: "Household", amount: 30, category_id: nil }
+    ]
+
+    locked, unlocked = @entry.split!(splits, lock_attributes: true).map(&:transaction)
+
+    assert_equal %w[category_id merchant_id], locked.locked_attributes.keys.sort
+    assert_empty unlocked.locked_attributes
+  end
+
+  test "split! locks nothing by default" do
+    children = @entry.split!([
+      { name: "Groceries", amount: 70, category_id: categories(:food_and_drink).id },
+      { name: "Household", amount: 30, category_id: nil }
+    ])
+
+    assert children.all? { |child| child.transaction.locked_attributes.empty? }
+  end
+
   test "split! supports a per-split merchant override, falling back to the parent's merchant" do
     parent_merchant = @entry.account.family.merchants.create!(name: "Parent merchant", type: "FamilyMerchant")
     split_merchant = @entry.account.family.merchants.create!(name: "Split merchant", type: "FamilyMerchant")

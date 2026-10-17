@@ -7,6 +7,7 @@ en:
           min_actions: "must have at least one action"
           duplicate_actions: "Rule cannot have duplicate actions %{types}"
           nested_conditions: "Compound conditions cannot be nested"
+          split_not_alone: "A split rule cannot have other actions"
         rule/action:
           attributes:
             value:
