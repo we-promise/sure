@@ -75,6 +75,28 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert @holding.cost_basis_locked?
   end
 
+  test "updates cost basis with the submitted per-share cost" do
+    @holding.update!(qty: 10, cost_basis: nil, cost_basis_source: nil, cost_basis_locked: false)
+
+    # 10 x 0.0049 is 0.049, which a total rounded to cents would turn into 0.005
+    patch holding_path(@holding), params: { holding: { per_share_cost_basis: "0.0049" } }
+
+    @holding.reload
+    assert_equal BigDecimal("0.0049"), @holding.cost_basis
+    assert_equal "manual", @holding.cost_basis_source
+    assert @holding.cost_basis_locked?
+  end
+
+  test "cost basis editor shows the stored decimals of a per-share cost below a cent" do
+    @holding.update!(qty: 10, cost_basis: 0.0049, cost_basis_locked: true)
+
+    get holding_path(@holding)
+
+    form_id = "#{dom_id(@holding, :drawer_cost_basis)}_holding"
+    assert_select "##{form_id}_per_share_cost_basis[value='0.0049']"
+    assert_select "##{form_id}_total_cost_basis[value='0.05']"
+  end
+
   test "cost basis editor reads per share times quantity equals total" do
     @holding.update!(qty: 10, cost_basis: 12.5)
 
@@ -84,9 +106,9 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[data-controller=cost-basis-form]" do |forms|
       rows = forms.first.element_children.select { |node| node.matches?(".form-field, p") }
       assert_equal 3, rows.size
-      assert rows[0].at_css("input##{form_id}_per_share_cost_basis:not([name])[value='12.50']")
+      assert rows[0].at_css("input##{form_id}_per_share_cost_basis[name='holding[per_share_cost_basis]'][value='12.50']")
       assert_equal "× 10 shares", rows[1].text.squish
-      assert rows[2].at_css("input##{form_id}_total_cost_basis[name='holding[cost_basis]'][value='125.00']")
+      assert rows[2].at_css("input##{form_id}_total_cost_basis:not([name])[value='125.00']")
     end
     assert_select "label[for=#{form_id}_per_share_cost_basis]", text: I18n.t("holdings.cost_basis_cell.per_share_label")
     assert_select "label[for=#{form_id}_total_cost_basis]", text: "= #{I18n.t("holdings.cost_basis_cell.total_cost_basis_label")}"
@@ -144,7 +166,7 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
     get holdings_url(account_id: @account.id)
 
-    assert_select "##{dom_id(holding, :popover_cost_basis)}_holding_total_cost_basis[name='holding[cost_basis]']", count: 1
+    assert_select "##{dom_id(holding, :popover_cost_basis)}_holding_per_share_cost_basis[name='holding[per_share_cost_basis]']", count: 1
     assert_select "[id^=drawer_cost_basis_]", count: 0
   end
 
