@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2788,6 +2788,54 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
     t.check_constraint "amount >= 0::numeric", name: "check_transfer_amount_non_negative"
   end
 
+  create_table "truelayer_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_id"
+    t.string "account_kind", default: "account", null: false
+    t.string "account_type"
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.jsonb "institution_metadata"
+    t.string "name"
+    t.string "provider"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.uuid "truelayer_item_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_truelayer_accounts_on_account_id"
+    t.index ["truelayer_item_id", "account_id"], name: "index_truelayer_accounts_on_truelayer_item_id_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
+    t.index ["truelayer_item_id"], name: "index_truelayer_accounts_on_truelayer_item_id"
+  end
+
+  create_table "truelayer_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "access_token"
+    t.datetime "access_token_expires_at"
+    t.string "client_id"
+    t.text "client_secret"
+    t.datetime "consent_expires_at"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.datetime "history_backfilled_at"
+    t.string "institution_color"
+    t.string "institution_domain"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_url"
+    t.datetime "last_authorized_at"
+    t.string "name"
+    t.boolean "pending_account_setup", default: false
+    t.jsonb "raw_institution_payload"
+    t.jsonb "raw_payload"
+    t.string "reauth_reason"
+    t.text "refresh_token"
+    t.boolean "scheduled_for_deletion", default: false
+    t.string "status", default: "good"
+    t.datetime "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_truelayer_items_on_family_id"
+    t.index ["status"], name: "index_truelayer_items_on_status"
+  end
+
   create_table "up_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "account_id"
     t.string "account_status"
@@ -3124,6 +3172,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
   add_foreign_key "transactions", "transfers"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
+  add_foreign_key "truelayer_accounts", "truelayer_items"
+  add_foreign_key "truelayer_items", "families"
   add_foreign_key "up_accounts", "up_items"
   add_foreign_key "up_items", "families"
   add_foreign_key "users", "accounts", column: "default_account_id", on_delete: :nullify

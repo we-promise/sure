@@ -78,6 +78,9 @@ module SettingsHelper
     when "enable_banking"
       return { status: :off } unless @enable_banking_items&.any?
       enable_banking_summary
+    when "truelayer"
+      return { status: :off } unless @truelayer_items&.any?
+      truelayer_summary
     when "coinstats"
       return { status: :off } unless @coinstats_items&.any?
       sync_based_summary(key)
@@ -266,6 +269,31 @@ module SettingsHelper
 
       if expiring
         days = [ ((expiring.session_expires_at - Time.current) / 1.day).ceil, 1 ].max
+        return { status: :warn, meta: t("settings.providers.meta.reconsent_needed", count: days), last_synced_at: last_synced_at }
+      end
+
+      return { status: :warn, meta: t("settings.providers.meta.no_recent_sync"), last_synced_at: last_synced_at } if health[:stale]
+
+      if last_synced_at.present?
+        { status: :ok, meta: t("settings.providers.meta.last_synced", time: concise_time_ago(last_synced_at)), last_synced_at: last_synced_at }
+      else
+        { status: :ok, last_synced_at: nil }
+      end
+    end
+
+    def truelayer_summary
+      health = @provider_sync_health&.dig("truelayer") || {}
+      last_synced_at = health[:last_synced_at]
+
+      return { status: :err, meta: t("settings.providers.meta.sync_error"), last_synced_at: nil } if health[:error]
+
+      connected = @truelayer_items.select(&:connected?)
+      return { status: :ok, last_synced_at: nil } if connected.empty?
+      return { status: :warn, meta: t("settings.providers.meta.reconsent_required"), last_synced_at: last_synced_at } if connected.any?(&:requires_update?)
+
+      expiring = connected.select { |item| item.consent_expiring_soon?(within: 7.days) }.min_by(&:consent_expires_at)
+      if expiring
+        days = [ ((expiring.consent_expires_at - Time.current) / 1.day).ceil, 1 ].max
         return { status: :warn, meta: t("settings.providers.meta.reconsent_needed", count: days), last_synced_at: last_synced_at }
       end
 

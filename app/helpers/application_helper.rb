@@ -259,6 +259,13 @@ module ApplicationHelper
     ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
   end
 
+  # The redirect URI registered on the TrueLayer app. TRUELAYER_REDIRECT_URI
+  # overrides it for instances behind a proxy that doesn't forward the
+  # public host; it must exactly match one registered on the TrueLayer app.
+  def truelayer_callback_url
+    ENV["TRUELAYER_REDIRECT_URI"].presence || callback_truelayer_items_url
+  end
+
   # Formats a holding quantity with adaptive precision based on the value size.
   # Shows more decimal places for small quantities (common with crypto).
   #

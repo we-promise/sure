@@ -29,6 +29,7 @@ class AccountsController < ApplicationController
     @monobank_items = visible_provider_items(family.monobank_items.ordered.with_attached_logo.includes(:monobank_accounts))
     @fio_items = visible_provider_items(family.fio_items.active.ordered.with_attached_logo.includes(:fio_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
+    @truelayer_items = visible_provider_items(family.truelayer_items.connected.ordered.with_attached_logo.includes(:truelayer_accounts))
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts))
     @mercury_items = visible_provider_items(family.mercury_items.ordered.with_attached_logo.includes(:mercury_accounts))
     @brex_items = visible_provider_items(family.brex_items.ordered.with_attached_logo.includes(:accounts, brex_accounts: :account_provider))
@@ -447,6 +448,7 @@ class AccountsController < ApplicationController
         @monobank_items,
         @fio_items,
         @enable_banking_items,
+        @truelayer_items,
         @coinstats_items,
         @mercury_items,
         @brex_items,
@@ -608,6 +610,13 @@ class AccountsController < ApplicationController
         latest_sync = item.latest_sync_record
         @enable_banking_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
         @enable_banking_latest_sync_error_map[item.id] = latest_sync&.error
+      end
+
+      # TrueLayer sync stats
+      @truelayer_sync_stats_map = {}
+      @truelayer_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @truelayer_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # CoinStats sync stats

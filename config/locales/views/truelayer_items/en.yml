@@ -1,0 +1,113 @@
+---
+en:
+  truelayer_items:
+    default_name: TrueLayer Connection
+    redirect_blocked: Couldn't open TrueLayer. Please try again.
+    create:
+      success: TrueLayer credentials saved. You can now connect a bank.
+    update:
+      success: TrueLayer credentials updated.
+    destroy:
+      success: TrueLayer connection scheduled for deletion.
+    connect:
+      credentials_required: Add your TrueLayer client ID and secret first.
+    sync:
+      not_connected: Connect a bank before syncing.
+    callback:
+      authorization_error: "TrueLayer authorization failed: %{error}"
+      authorization_failed: "Couldn't complete the TrueLayer connection: %{message}"
+      invalid_callback: The TrueLayer sign-in expired or didn't match this session. Please start again.
+      success: Bank connected. Your accounts are being imported; set them up once the sync finishes.
+    truelayer_item:
+      consent_expiring: "Bank access expires on %{date}"
+      delete: Delete connection
+      deletion_in_progress: deletion in progress...
+      error: Error
+      history_missed: Older history wasn't imported. Reconnect to fetch it.
+      no_accounts_description: This connection has no linked accounts yet.
+      no_accounts_title: No accounts
+      reconnect: Reconnect
+      requires_update: Reconnect this bank to keep syncing
+      setup_action: Set Up New Accounts
+      setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported TrueLayer accounts."
+      setup_needed: New accounts ready to set up
+      status: "Synced %{timestamp} ago"
+      status_never: Never synced
+      status_with_summary: "Last synced %{timestamp} ago • %{summary}"
+      syncing: Syncing...
+      sync_status:
+        no_accounts: No accounts found
+        synced:
+          one: "%{count} account synced"
+          other: "%{count} accounts synced"
+        partial_setup:
+          one: "%{linked} synced, %{unlinked} needs setup"
+          other: "%{linked} synced, %{unlinked} need setup"
+    subtype_select:
+      placeholder:
+        subtype: Select subtype
+        type: Select type
+    setup_accounts:
+      account_type_label: "Account Type:"
+      all_accounts_linked: All your TrueLayer accounts have already been set up.
+      cancel: Cancel
+      choose_account_type: "Choose the correct account type for each TrueLayer account:"
+      create_accounts: Create Accounts
+      creating_accounts: Creating Accounts...
+      kind_account: Bank account
+      kind_card: Card
+      no_accounts_to_setup: No Accounts to Set Up
+      page_title: Set Up TrueLayer Accounts
+      subtitle: Choose the correct account types for your imported accounts
+      sync_start_date_help: Transactions before this date are left out. Leave it blank to keep everything the bank provided.
+      sync_start_date_label: Import transactions from
+      title: Set Up Your TrueLayer Accounts
+      account_types:
+        skip: Skip this account
+        depository: Checking or Savings Account
+        credit_card: Credit Card
+        loan: Loan or Mortgage
+      subtype_labels:
+        depository: "Account Subtype:"
+        credit_card: ""
+        loan: "Loan Type:"
+      subtype_messages:
+        credit_card: Credit cards will be automatically set up as credit card accounts.
+    complete_account_setup:
+      all_skipped: All accounts were skipped. No accounts were created.
+      creation_failed: "Failed to create accounts: %{error}"
+      success:
+        one: Created %{count} account.
+        other: Created %{count} accounts.
+    select_existing_account:
+      cancel: Cancel
+      description: Choose the TrueLayer account to link. Its transactions will sync into this account.
+      link_account: Link account
+      no_accounts: There are no unlinked TrueLayer accounts. Connect a bank in Settings → Providers first.
+      title: "Link %{account_name} with TrueLayer"
+    link_existing_account:
+      already_linked: That TrueLayer account is already linked to another account.
+      only_manual: Only manual accounts can be linked to TrueLayer.
+      success: "Linked %{account_name} with TrueLayer."
+  settings:
+    providers:
+      truelayer_panel:
+        client_id_label: Client ID
+        client_id_placeholder: e.g. sure-abc123 (sandbox-... for the Mock Bank)
+        client_secret_label: Client secret
+        client_secret_placeholder_new: Paste your client secret
+        client_secret_placeholder_update: Leave blank to keep the current secret
+        connect_bank: Connect a bank
+        consent_expires: "Bank access expires %{date}"
+        reconnect: Reconnect
+        reconnect_required: Reconnect required
+        remove: Remove
+        remove_confirm: Remove this bank connection? Linked accounts keep their history but stop syncing.
+        save_credentials: Save credentials
+        step_1_html: "Create an app at %{link} and copy its client ID and secret."
+        step_2_html: "Add %{callback_url} to the app's Allowed redirect URIs."
+        step_3: Save the credentials below, then connect a bank. Sure imports full history in the few minutes after you approve access.
+        step_4: UK banks ask you to reconnect every 90 days; Sure shows a Reconnect button before access expires.
+        sync: Sync
+        syncing: Syncing...
+        update_credentials: Update credentials
