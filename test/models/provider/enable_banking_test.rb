@@ -99,6 +99,217 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_equal 30.days.ago.to_date.iso8601, requested_queries.second[:date_from]
   end
 
+  test "get_account_transactions escalates to strategy: longest when allow_longest_retry is true and no corrected_date_from is usable" do
+    requested_queries = []
+
+    validation_response = OpenStruct.new(
+      code: 422,
+      body: { error: "WRONG_TRANSACTIONS_PERIOD", detail: { message: "out of bound" } }.to_json
+    )
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+
+    Provider::EnableBanking.expects(:get).twice.with do |_url, options|
+      requested_queries << options[:query].dup
+      true
+    end.returns(validation_response, success_response)
+
+    result = @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: 6.months.ago.to_date,
+      transaction_status: "BOOK",
+      allow_longest_retry: true
+    )
+
+    assert_equal [], result[:transactions]
+    assert_nil requested_queries.first[:strategy]
+    assert_nil requested_queries.second[:date_from]
+    assert_equal "longest", requested_queries.second[:strategy]
+  end
+
+  test "get_account_transactions still tries corrected_date_from first even with allow_longest_retry: true" do
+    requested_queries = []
+
+    validation_response = OpenStruct.new(
+      code: 422,
+      body: {
+        error: "WRONG_TRANSACTIONS_PERIOD",
+        detail: { message: "...", date_from: "2026-01-17" }
+      }.to_json
+    )
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+
+    Provider::EnableBanking.expects(:get).twice.with do |_url, options|
+      requested_queries << options[:query].dup
+      true
+    end.returns(validation_response, success_response)
+
+    result = @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: Date.new(2025, 12, 1),
+      transaction_status: "BOOK",
+      allow_longest_retry: true
+    )
+
+    assert_equal [], result[:transactions]
+    assert_equal "2026-01-17", requested_queries.second[:date_from]
+    assert_nil requested_queries.second[:strategy]
+  end
+
+  test "get_account_transactions omits date_from for the longest retry after a failed corrected_date_from retry" do
+    requested_queries = []
+
+    corrected_validation_response = OpenStruct.new(
+      code: 422,
+      body: {
+        error: "WRONG_TRANSACTIONS_PERIOD",
+        detail: { message: "...", date_from: "2026-01-17" }
+      }.to_json
+    )
+    validation_response = OpenStruct.new(
+      code: 422,
+      body: { error: "WRONG_TRANSACTIONS_PERIOD", detail: { message: "out of bound" } }.to_json
+    )
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+
+    Provider::EnableBanking.expects(:get).times(3).with do |_url, options|
+      requested_queries << options[:query].dup
+      true
+    end.returns(corrected_validation_response, validation_response, success_response)
+
+    result = @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: Date.new(2025, 12, 1),
+      transaction_status: "BOOK",
+      allow_longest_retry: true
+    )
+
+    assert_equal [], result[:transactions]
+    assert_equal "2026-01-17", requested_queries.second[:date_from]
+    assert_nil requested_queries.second[:strategy]
+    assert_nil requested_queries.third[:date_from]
+    assert_equal "longest", requested_queries.third[:strategy]
+  end
+
+  test "get_account_transactions falls through a failed longest retry to the full 89/60/30 ladder" do
+    requested_queries = []
+
+    validation_response = OpenStruct.new(
+      code: 422,
+      body: { error: "WRONG_TRANSACTIONS_PERIOD", detail: { message: "out of bound" } }.to_json
+    )
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+
+    # 1 original + 1 longest attempt + 3 ladder rungs (89/60/30) = 5 requests,
+    # the last of which finally succeeds. Without the +1 bound correction in
+    # next_transactions_attempt, the 30-day rung would never be reached.
+    Provider::EnableBanking.expects(:get).times(5).with do |_url, options|
+      requested_queries << options[:query].dup
+      true
+    end.returns(validation_response, validation_response, validation_response, validation_response, success_response)
+
+    result = @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: 6.months.ago.to_date,
+      transaction_status: "BOOK",
+      allow_longest_retry: true
+    )
+
+    assert_equal [], result[:transactions]
+    assert_equal "longest", requested_queries[1][:strategy]
+    assert_equal 89.days.ago.to_date.iso8601, requested_queries[2][:date_from]
+    assert_nil requested_queries[2][:strategy]
+    assert_equal 60.days.ago.to_date.iso8601, requested_queries[3][:date_from]
+    assert_equal 30.days.ago.to_date.iso8601, requested_queries[4][:date_from]
+  end
+
+  test "get_account_transactions never offers strategy: longest when allow_longest_retry is false" do
+    requested_queries = []
+
+    validation_response = OpenStruct.new(
+      code: 422,
+      body: { error: "WRONG_TRANSACTIONS_PERIOD", detail: { message: "out of bound" } }.to_json
+    )
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+
+    Provider::EnableBanking.expects(:get).twice.with do |_url, options|
+      requested_queries << options[:query].dup
+      true
+    end.returns(validation_response, success_response)
+
+    @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: 6.months.ago.to_date,
+      transaction_status: "BOOK"
+    )
+
+    assert requested_queries.none? { |q| q.key?(:strategy) }
+  end
+
+  test "get_account_transactions does not re-offer strategy: longest when already retrying with longest" do
+    requested_queries = []
+
+    validation_response = OpenStruct.new(
+      code: 422,
+      body: { error: "WRONG_TRANSACTIONS_PERIOD", detail: { message: "out of bound" } }.to_json
+    )
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+
+    Provider::EnableBanking.expects(:get).twice.with do |_url, options|
+      requested_queries << options[:query].dup
+      true
+    end.returns(validation_response, success_response)
+
+    result = @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: 6.months.ago.to_date,
+      transaction_status: "BOOK",
+      strategy: "longest",
+      allow_longest_retry: true
+    )
+
+    assert_equal [], result[:transactions]
+    assert_equal "longest", requested_queries.first[:strategy]
+    assert_equal 89.days.ago.to_date.iso8601, requested_queries.second[:date_from]
+    assert_nil requested_queries.second[:strategy]
+  end
+
+  test "get_account_transactions reports the effective date_from and strategy of the attempt that succeeded" do
+    validation_response = OpenStruct.new(
+      code: 422,
+      body: { error: "WRONG_TRANSACTIONS_PERIOD", detail: { message: "out of bound" } }.to_json
+    )
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+
+    Provider::EnableBanking.expects(:get).twice.returns(validation_response, success_response)
+
+    result = @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: 6.months.ago.to_date,
+      transaction_status: "BOOK",
+      allow_longest_retry: true
+    )
+
+    # The retry succeeded via the strategy: "longest" rung (date_from omitted
+    # so Enable Banking selects the earliest available point), so callers
+    # must repeat exactly these parameters on continuation requests.
+    assert_nil result[:effective_date_from]
+    assert_equal "longest", result[:effective_strategy]
+  end
+
+  test "get_account_transactions reports the original parameters when no retry happened" do
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+    Provider::EnableBanking.expects(:get).returns(success_response)
+
+    result = @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: 6.months.ago.to_date,
+      transaction_status: "BOOK"
+    )
+
+    assert_equal 6.months.ago.to_date, result[:effective_date_from]
+    assert_nil result[:effective_strategy]
+  end
+
   test "validation errors expose parsed response data" do
     response = OpenStruct.new(
       code: 422,

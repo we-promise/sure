@@ -9,7 +9,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       name: "Test Enable Banking",
       country_code: "AT",
       application_id: "test_app_id",
-      client_certificate: "test_cert",
+      client_certificate: "test_cert", sync_start_date: 3.months.ago.to_date,
       session_id: "test_session",
       session_expires_at: 1.day.from_now,
       status: :good
