@@ -87,6 +87,17 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert @holding.cost_basis_locked?
   end
 
+  test "an empty cost basis is not saved as zero" do
+    @holding.update!(qty: 10, cost_basis: nil, cost_basis_source: nil, cost_basis_locked: false)
+
+    patch holding_path(@holding), params: { holding: { per_share_cost_basis: "" } }
+
+    @holding.reload
+    assert_nil @holding.cost_basis
+    assert_not @holding.cost_basis_locked?
+    assert_equal I18n.t("holdings.update.error"), flash[:alert]
+  end
+
   test "cost basis editor shows the stored decimals of a per-share cost below a cent" do
     @holding.update!(qty: 10, cost_basis: 0.0049, cost_basis_locked: true)
 

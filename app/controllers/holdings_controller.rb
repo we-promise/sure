@@ -17,11 +17,12 @@ class HoldingsController < ApplicationController
   def update
     # The editor sends the per-share cost, which is what cost_basis stores, so a
     # price below a cent is not lost to a total rounded to cents. A total is still
-    # accepted and divided by the quantity. Zero is valid for gifted/inherited shares.
+    # accepted and divided by the quantity. Zero is valid for gifted/inherited shares,
+    # an empty field is not: it would lock an unknown basis as 0.
     per_share_cost = if holding_params.key?(:per_share_cost_basis)
-      holding_params[:per_share_cost_basis].to_d
-    elsif @holding.qty.positive?
-      holding_params[:cost_basis].to_d / @holding.qty
+      holding_params[:per_share_cost_basis].presence&.to_d
+    elsif @holding.qty.positive? && (total_cost_basis = holding_params[:cost_basis].presence)
+      total_cost_basis.to_d / @holding.qty
     end
 
     if per_share_cost && per_share_cost >= 0 && @holding.qty.positive?
