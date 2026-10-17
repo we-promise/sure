@@ -24,7 +24,7 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     assert User.exists?(@user.id)
   end
 
-  test "provider item associations are limited to explicit syncable family associations" do
+  test "provider item associations are limited to explicit syncable or owned credential associations" do
     associations = Family::FinancialDataReset.provider_item_associations
 
     assert_not_empty associations
@@ -36,7 +36,8 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
 
       assert reflection
       assert_equal :has_many, reflection.macro
-      assert_includes reflection.klass.included_modules, Syncable
+      modules = reflection.klass.included_modules
+      assert modules.include?(Syncable) || modules.include?(ProviderItemOwnable)
     end
   end
 
@@ -111,6 +112,29 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     assert User.exists?(@user.id)
     assert_equal @family.id, User.find(@user.id).family_id
     assert Category.exists?(@other_category.id)
+  end
+
+  test "destructive reset clears Fineco credentials and removes the item from syncable scope" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    item = @family.fineco_items.create!(
+      owner: @user,
+      gsessionid: "fineco-reset-cookie",
+      account_index: "2",
+      dossier_index: "4",
+      bank_account_number: "SYNTHETIC-RESET-ACCOUNT",
+      dossier_identity: Digest::SHA256.hexdigest("synthetic-reset-dossier"),
+      captured_at: Time.current
+    )
+
+    result = Family::FinancialDataReset.new(
+      family: @family,
+      dry_run: false,
+      confirmed: true
+    ).call
+
+    assert_not FinecoItem.exists?(item.id)
+    assert_operator result.deleted_counts.fetch(:provider_items), :>=, 1
+    assert_not FinecoItem.syncable.exists?
   end
 
   test "destructive reset revokes provider item and clears provider account attachments" do

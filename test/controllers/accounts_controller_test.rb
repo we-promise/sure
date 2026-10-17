@@ -80,6 +80,106 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     unregister_fake_chain!
   end
 
+  test "shared Fineco Investment data remains visible without exposing connection controls" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    item = FinecoItem.create!(
+      family: @user.family,
+      owner: @user,
+      gsessionid: "fineco-session-cookie",
+      account_index: "2",
+      dossier_index: "4",
+      captured_at: Time.current,
+      bank_account_number: "FINECO-TEST-ACCOUNT",
+      dossier_identity: Digest::SHA256.hexdigest("fineco-test-dossier"),
+      status: "good"
+    )
+    fineco_account = item.fineco_accounts.create!(
+      external_id: FinecoAccount::EXTERNAL_ID,
+      name: "Fineco investments",
+      currency: "EUR"
+    )
+    investment_account = @user.family.accounts.create!(
+      owner: @user,
+      name: "Fineco shared portfolio",
+      balance: 250,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Investment.new
+    )
+    AccountProvider.create!(account: investment_account, provider: fineco_account)
+    member = users(:family_member)
+    investment_account.account_shares.create!(user: member, permission: "read_only")
+
+    sign_in member
+    existing_sync_count = item.syncs.count
+    post sync_account_path(investment_account)
+
+    assert_redirected_to account_path(investment_account)
+    assert_equal existing_sync_count, item.syncs.count
+
+    with_self_hosting do
+      get account_path(investment_account)
+    end
+
+    assert_response :success
+    assert_select "header a[href=?]", sync_account_path(investment_account), count: 0
+    assert_select "header form[action=?]", sync_account_path(investment_account), count: 0
+
+    get accounts_path
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_includes response.body, investment_account.name
+    assert_select "form[action=?]", sync_fineco_item_path(item), count: 0
+    assert_select "form[action=?]", fineco_item_path(item), count: 0
+    assert_select "a[href=?]", fineco_login_path, count: 0
+    refute_includes response.body, "FINECO-TEST-ACCOUNT"
+
+    member.update!(role: "admin", preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
+    sync_count = item.syncs.count
+    post sync_account_path(investment_account)
+
+    assert_redirected_to account_path(investment_account)
+    assert_equal sync_count, item.syncs.count
+
+    get accounts_path
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_includes response.body, investment_account.name
+    assert_select "form[action=?]", sync_fineco_item_path(item), count: 0
+    assert_select "form[action=?]", fineco_item_path(item), count: 0
+    assert_select "a[href=?]", fineco_login_path, count: 0
+  end
+
+  test "paused Fineco card keeps Investment data and offers reconnection" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    item = FinecoItem.create!(
+      family: @user.family,
+      owner: @user,
+      gsessionid: "fineco-session-cookie",
+      account_index: "2",
+      dossier_index: "4",
+      captured_at: Time.current,
+      bank_account_number: "FINECO-TEST-ACCOUNT",
+      dossier_identity: Digest::SHA256.hexdigest("fineco-test-dossier"),
+      status: "good"
+    )
+    item.disconnect!
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    with_self_hosting do
+      get accounts_path
+    end
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_select "a[href=?]", fineco_login_path, text: I18n.t("fineco_items.card.reconnect")
+    assert_select "form[action=?]", fineco_item_path(item), count: 0
+    assert_includes response.body, I18n.t("fineco_items.card.reauthentication_required")
+  end
+
   test "index does not leak wallet accounts a member was never given" do
     register_fake_chain!
     admin = users(:family_admin)

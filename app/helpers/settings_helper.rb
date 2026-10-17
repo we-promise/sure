@@ -131,6 +131,18 @@ module SettingsHelper
     when "questrade"
       return { status: :off } unless @questrade_items&.any?
       sync_based_summary(key)
+    when "fineco"
+      item = @fineco_item || @fineco_items&.first
+      return { status: :off } unless item
+
+      last_synced_at = item.last_synced_at
+      if item.requires_update?
+        { status: :warn, meta: t("settings.providers.fineco_panel.requires_update"), last_synced_at: last_synced_at }
+      elsif item.last_sync_error.present?
+        { status: :err, meta: t("settings.providers.fineco_panel.sync_error"), last_synced_at: last_synced_at }
+      else
+        { status: :ok, meta: t("settings.providers.fineco_panel.preview_connection"), last_synced_at: last_synced_at }
+      end
     else
       { status: :off }
     end

@@ -1,0 +1,17 @@
+# Fineco investment preview
+
+Fineco is a self-hosted preview for family administrators. First enable **Settings → Preferences → Preview features**; opening the Fineco login URL without that preference redirects home. Then use **Settings → Providers → Fineco** or choose Fineco when adding an **Investment** account.
+
+The current login page is diagnostic-only. The Fineco account and dossier identity contract is still default-closed, so the browser can open for a manual login and MFA check, but Sure does not enable browser network inspection, read Fineco cookies or portfolio responses, copy the bank session into Sure's encrypted database, or import investments. The UI reports that import is not ready. No real customer login or portfolio has been used to verify the identity contract.
+
+After the identity contract is verified and capture is enabled, the intended flow is to sign in to Fineco in the temporary browser, complete any bank challenge, and open **Portafoglio Sintesi**. Sure will verify the selected bank account and dossier before encrypting the session credential and importing a complete snapshot. The browser session cookie is a full Fineco web-session credential, not a bank-issued read-only token; the connector's fixed GET behavior does not narrow the cookie's authority. Fineco sessions can expire or require SCA again, so a manual reconnect may be needed. Sure does not promise an indefinitely renewable session.
+
+The intended import creates a separate EUR Investment account for securities. Existing Enable Banking cash and deposit accounts stay separate and unchanged; Fineco's securities account reports zero cash. Snapshot history is not trade history: Sure does not invent purchases or sales to fill gaps between snapshots.
+
+Once capture is enabled, the importer will accept only a complete, unfiltered portfolio summary with EUR totals. Every position must have a valid ISIN, a supported position type (`stock`, `equity`, `etf`, or `bond`), and a supported exchange venue (`XETR`/`XETRA` or `ETLX`). A position's quote currency may differ from EUR, but the imported Investment account and total remain in EUR. Missing or inconsistent totals, filters, unsupported positions, identity conflicts, and incomplete responses reject the whole snapshot and keep prior holdings and balance in place.
+
+Sure calculates each holding's EUR unit price and cost basis from the reported EUR market/book value divided by the reported quantity, including nominal-unit bonds. Fineco's original quote and quote currency remain provider metadata, so a per-unit EUR value in Sure may differ from Fineco's clean or percentage-based quote.
+
+The current candidate dossier fingerprint hashes the selected dossier object, but it has not been shown to distinguish customer dossiers reliably and remains disabled. It is not considered sufficient reconnect protection. Capture stays default-closed until a stable, client-verified account and dossier identity contract is demonstrated; Sure will not treat request indexes alone as identity or silently move snapshot history to another account or dossier.
+
+**Stop syncing** clears the stored Fineco session while retaining the Fineco item, Investment account, holdings, and snapshot history. Reconnect to resume updates. For the self-hosted browser runtime's operator requirements and hardening, see [Fineco browser login runtime](fineco-browser-runtime.md).

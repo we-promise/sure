@@ -1,0 +1,8 @@
+Fineco seccomp profile provenance
+
+config/docker/fineco-seccomp.json is derived from the Moby profiles seccomp default profile at commit 4b8214fc4971e06172938a1f1554ccff6647ee80:
+https://github.com/moby/profiles/blob/4b8214fc4971e06172938a1f1554ccff6647ee80/seccomp/default.json
+
+The unmodified upstream profile has SHA-256 6416b47770785a41ac59073cdc77d9fe98517df2799dc83ef207e622de3053f6. The Sure profile retains that base and modifies only the measured namespace argument rules described in docs/hosting/fineco-browser-runtime.md. These modifications are maintained by the Sure project.
+
+The upstream profile is licensed under Apache License 2.0. The license text is retained in LICENSE-MOBY-PROFILES.txt.

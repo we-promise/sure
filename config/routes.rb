@@ -214,6 +214,43 @@ Rails.application.routes.draw do
     end
   end
 
+  mount lambda { |env|
+    unless FinecoLoginAuthorization.runtime_enabled?
+      next [ 404, { "Cache-Control" => "no-store", "Content-Length" => "0" }, [] ]
+    end
+
+    Fineco::BrowserLoginRuntime::AssetEndpoint.new(
+      root: Rails.root.join("public/fineco-novnc")
+    ).call(env)
+  }, at: "/fineco-novnc"
+
+  mount lambda { |env|
+    unless FinecoLoginAuthorization.runtime_enabled?
+      next [ 404, { "Cache-Control" => "no-store", "Content-Length" => "0" }, [] ]
+    end
+
+    Fineco::BrowserLoginRuntime::WebSocketEndpoint.new(
+      runtime: Fineco::BrowserLoginRuntime,
+      identity_resolver: FinecoLoginAuthorization.method(:identity_from_rack_env),
+      authorized: FinecoLoginAuthorization.method(:authorized?),
+      expected_origin: FinecoLoginAuthorization.method(:expected_origin)
+    ).call(env)
+  }, at: "/fineco_login/stream"
+
+  resource :fineco_login, controller: "fineco_logins", only: :show do
+    collection do
+      post :start
+      get :status
+      delete :stop
+    end
+  end
+
+  resources :fineco_items, only: :destroy do
+    member do
+      post :sync
+    end
+  end
+
   # Trade Republic routes (login steps are TR-specific: web login needs a
   # two-phase initiate/confirm handshake with the Trade Republic app)
   resources :trade_republic_items, only: [ :show, :create, :update, :destroy ] do

@@ -1,0 +1,28 @@
+en:
+  fineco_logins:
+    show:
+      title: Fineco login preview
+      preview: Preview
+      description: "Sign in to Fineco in the browser below and complete any bank challenge there. This preview is diagnostic-only; Sure does not copy your bank session or portfolio into the app."
+      bank_session_authority: "The Fineco browser session has the permissions Fineco grants to it. Sure uses fixed portfolio GET requests only; this does not make the bank session read-only."
+      read_only: "After verification, Sure imports a securities snapshot into a native Investment account. Cash stays in your linked EB account. Sure does not place trades or create trade history."
+      session_expiry: "Fineco sessions may expire and require you to reconnect."
+      setup_verification_required: "Fineco investment import is not available yet. You can open the diagnostic login browser, but Sure will not copy your bank session or portfolio out of it until account and dossier checks are complete."
+      status_ready: Ready to start a Fineco login.
+      status_setup_verification_required: Fineco account identity checks are not ready for investment import. The login browser is in diagnostic mode.
+      encryption_unavailable: "Fineco session storage is unavailable until explicit Active Record encryption keys are configured."
+      runtime_unavailable: "Fineco browser login is currently unavailable."
+      start: Start Fineco login
+      reconnect: Reconnect Fineco
+      cancel: Cancel login
+      status_waiting: Waiting for Fineco login.
+      status_verifying: Verifying Fineco investment access.
+      status_stopping: Stopping the Fineco login session.
+      status_connected: Fineco login verified and the investment snapshot is ready.
+      status_expired: This Fineco login session expired. Start again to reconnect.
+      status_stopped: Fineco login cancelled.
+      status_failed: Fineco login could not be verified. Start again to retry.
+      status_unknown: Fineco login status is unavailable.
+      viewer_label: Fineco login browser
+      view_investments: View Fineco investments
+      manual_login_hint: "The Fineco page runs in a separate browser, so your local password-manager autofill cannot reach it. Click the bank page and type your login and MFA there."

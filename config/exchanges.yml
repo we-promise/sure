@@ -107,6 +107,9 @@ XLME:
 XETR:
   name: Xetra
   country: DE
+ETLX:
+  name: EuroTLX
+  country: IT
 XFRA:
   name: Frankfurt
   country: DE

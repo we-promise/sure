@@ -416,6 +416,23 @@ en:
       maturity:
         beta: Beta
         alpha: Alpha
+      fineco_panel:
+        preview: Preview
+        preview_connection: Fineco preview
+        description: "Fineco is an unofficial portfolio connector. Its browser session keeps the permissions Fineco grants to your login; Sure uses it only for a fixed portfolio read. Copied login values are sent to the remote browser, cleared from the paste helper, and never stored by Sure."
+        read_only: "Sure imports security snapshots into a native Investment account. Cash stays in your linked EB account. Sure does not place trades or create trade history."
+        session_expiry: "Fineco sessions may expire and require you to reconnect."
+        syncing: A Fineco portfolio sync is running.
+        requires_update: Reconnect to Fineco to refresh the session.
+        sync_error: The latest Fineco snapshot could not be imported.
+        last_synced: "Last snapshot %{time} ago."
+        never_synced: "Fineco investment snapshot not imported yet."
+        sync: Sync Fineco investments
+        stop_syncing: Stop Fineco syncing
+        stop_syncing_confirmation: Stop Fineco syncing? Sure will clear the stored bank session and retain your existing Investment account, holdings, and snapshot history.
+        connect: Connect Fineco
+        reconnect: Reconnect Fineco
+        drawer_trust_statement: "Fineco browser sessions carry the permissions of your Fineco login. Sure uses the session only for a fixed read-only portfolio request, stores the session cookie encrypted, and does not submit trading or payment actions."
       drawer_trust_statement: "Read-only access. Sure can never move money, and your credentials are stored encrypted."
       drawer_trust_statement_encryption_unconfigured: "Read-only access. Sure can never move money. Configure explicit encryption keys before storing provider credentials in production."
       provider_setup_encryption_warning:
@@ -467,6 +484,7 @@ en:
       recently_synced: Synced recently. Try again in a moment.
       taglines:
         financekit: Sync (some) FinanceKit accounts through the Sure iOS app.
+        fineco: Import Fineco security snapshots into a native Investment account.
         akahu: Sync New Zealand financial institutions via Akahu.
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)

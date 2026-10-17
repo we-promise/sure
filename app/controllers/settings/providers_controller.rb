@@ -115,6 +115,8 @@ class Settings::ProvidersController < ApplicationController
     # choosing the partial to render.
     panel = FAMILY_PANELS.find { |p| p[:key] == provider_key }
     if panel
+      return redirect_to settings_providers_path unless panel_visible?(panel)
+
       @panel_key     = panel[:key]
       @panel_partial = panel[:partial]
       @panel_title   = panel[:title]
@@ -211,6 +213,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
       { key: "trading212",     title: "Trading 212",     turbo_id: "trading212", partial: "trading212_panel" },
       { key: "trade_republic", title: "Trade Republic",  turbo_id: "trade-republic", partial: "trade_republic_panel" },
+      { key: "fineco",         title: "Fineco",          turbo_id: "fineco",         partial: "fineco_panel", sync_supported: false },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
       { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" }
@@ -291,6 +294,9 @@ class Settings::ProvidersController < ApplicationController
         @trading212_items = Current.family.trading212_items.ordered
       when "trade_republic"
         @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
+      when "fineco"
+        @fineco_items = Current.family.fineco_items.owned_by(Current.user).ordered
+        @fineco_item = @fineco_items.find_by(owner_id: Current.user.id)
       when "indexa_capital"
         @indexa_capital_items = Current.family.indexa_capital_items.ordered
       when "sophtron"
@@ -327,6 +333,8 @@ class Settings::ProvidersController < ApplicationController
       @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
       @trading212_items = Current.family.trading212_items.ordered
       @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
+      @fineco_items = Current.family.fineco_items.owned_by(Current.user).ordered
+      @fineco_item = @fineco_items.find_by(owner_id: Current.user.id)
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
@@ -383,6 +391,7 @@ class Settings::ProvidersController < ApplicationController
         "ibkr"           => @ibkr_items,
         "trading212"     => @trading212_items,
         "trade_republic" => @trade_republic_items,
+        "fineco"         => @fineco_items,
         "indexa_capital" => @indexa_capital_items,
         "sophtron"       => @sophtron_items
       }
@@ -435,13 +444,16 @@ class Settings::ProvidersController < ApplicationController
         }
       end
 
-      family_entries = FAMILY_PANELS.map do |panel|
+      family_entries = FAMILY_PANELS.filter_map do |panel|
+        next unless panel_visible?(panel)
+
         {
           provider_key: panel[:key],
           title: panel[:title],
           turbo_id: panel[:turbo_id],
           partial: panel[:partial],
           auto_open_param: panel[:auto_open],
+          sync_supported: panel[:sync_supported],
           maturity: Provider::Metadata.for(panel[:key])[:maturity],
           summary: view_context.provider_summary(panel[:key])
         }
@@ -459,5 +471,13 @@ class Settings::ProvidersController < ApplicationController
       }
 
       (configuration_entries + family_entries + [ wallet_entry ]).sort_by { |entry| entry[:title].downcase }
+    end
+
+    def panel_visible?(panel)
+      return true unless panel[:key] == "fineco"
+
+      Rails.application.config.app_mode.self_hosted? &&
+        Current.user&.admin? &&
+        Current.user.preview_features_enabled?
     end
 end

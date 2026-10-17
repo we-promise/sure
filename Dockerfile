@@ -44,17 +44,66 @@ RUN bundle exec bootsnap precompile -j 0 app/ lib/
 # Precompiling assets for production without requiring secret RAILS_MASTER_KEY
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
-# Final stage for app image
-FROM base
+# package noVNC's browser modules separately from the application runtime.
+FROM base AS novnc-assets
 
-# Run and own only the runtime files as a non-root user for security
+RUN apt-get update -qq \
+    && apt-get install --no-install-recommends -y novnc \
+    && mkdir -p /usr/local/share/fineco-novnc \
+    && cp -a /usr/share/novnc/core /usr/local/share/fineco-novnc/core \
+    && cp -a /usr/share/novnc/vendor /usr/local/share/fineco-novnc/vendor \
+    && install -m 0644 /usr/share/doc/novnc/copyright /usr/local/share/fineco-novnc/LICENSE.txt \
+    && rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+FROM base AS browser-helper-build
+
+RUN apt-get update -qq \
+    && apt-get install --no-install-recommends -y gcc libc6-dev \
+    && rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+COPY lib/fineco/browser_login_runtime/supervisor.c /tmp/fineco-browser-supervisor.c
+RUN mkdir -p /out \
+    && gcc -std=c11 -O2 -Wall -Wextra -Werror -Wformat=2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
+      -o /out/fineco-browser-supervisor /tmp/fineco-browser-supervisor.c \
+    && strip /out/fineco-browser-supervisor
+
+# install the isolated browser runtime only into the final application image.
+FROM base AS browser
+
+RUN apt-get update -qq \
+    && apt-get install --no-install-recommends -y chromium chromium-sandbox xvfb x11vnc util-linux \
+    && mkdir -p /etc/chromium/policies/managed /usr/local/libexec \
+    && groupadd --system --gid 1001 fineco-browser \
+    && useradd --system --uid 1001 --gid 1001 --no-create-home --shell /usr/sbin/nologin fineco-browser \
+    && mkdir -p /run/sure-fineco /tmp/.X11-unix \
+    && chown root:root /run/sure-fineco /tmp/.X11-unix \
+    && chmod 0711 /run/sure-fineco \
+    && chmod 1777 /tmp/.X11-unix \
+    && rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+COPY config/docker/chromium-fineco-policy.json /etc/chromium/policies/managed/sure-fineco.json
+RUN chown root:root /etc/chromium/policies/managed/sure-fineco.json \
+    && chmod 0444 /etc/chromium/policies/managed/sure-fineco.json
+
+COPY --from=novnc-assets /usr/local/share/fineco-novnc /usr/local/share/fineco-novnc
+
+# Final stage for app image
+FROM browser
+
+# run Rails as a non-root user while the browser remains in its separate UID.
 RUN groupadd --system --gid 1000 rails && \
-    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash
+    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
+    chmod 0750 /rails
 USER 1000:1000
 
 # Copy built artifacts: gems, application
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
+COPY --chown=rails:rails --from=browser /usr/local/share/fineco-novnc /rails/public/fineco-novnc
+COPY --from=browser-helper-build --chown=root:1000 --chmod=4750 /out/fineco-browser-supervisor /usr/local/libexec/fineco-browser-supervisor
+USER 0:0
+RUN chown rails:rails /rails && chmod 0750 /rails
+USER 1000:1000
 
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]

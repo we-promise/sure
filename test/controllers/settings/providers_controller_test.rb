@@ -218,9 +218,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Saves and errors from a row or the drawer re-render the panel by replacing
-  # "<turbo_id>-providers-panel". SnapTrade never streams to it.
+  # "<turbo_id>-providers-panel". SnapTrade and gated Fineco never stream to it.
   test "every streamed panel renders the root its streams replace" do
-    Settings::ProvidersController::FAMILY_PANELS.reject { |panel| panel[:key] == "snaptrade" }.each do |panel|
+    Settings::ProvidersController::FAMILY_PANELS.reject { |panel| %w[snaptrade fineco].include?(panel[:key]) }.each do |panel|
       get connect_form_settings_providers_url(provider_key: panel[:key])
 
       assert_response :success
@@ -238,6 +238,129 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_select "details##{key}-connection", count: 0
       assert_select "a[href=?]", connect_form_settings_providers_path(provider_key: key)
     end
+  end
+
+  test "Fineco is limited to self-hosted admins with preview features enabled" do
+    admin = users(:family_admin)
+    admin.update!(preferences: (admin.preferences || {}).merge("preview_features_enabled" => false))
+
+    get settings_providers_url
+    assert_response :success
+    assert_select "[data-provider-name='fineco']", count: 0
+
+    with_self_hosting do
+      get settings_providers_url
+      assert_response :success
+      assert_select "[data-provider-name='fineco']", count: 0
+
+      admin.update!(preferences: (admin.preferences || {}).merge("preview_features_enabled" => true))
+      get settings_providers_url
+      assert_response :success
+      assert_select "[data-provider-name='fineco']"
+
+      get connect_form_settings_providers_url(provider_key: "fineco")
+      assert_response :success
+      assert_select "turbo-frame#fineco-connect-form #fineco-providers-panel" do
+        assert_select "a[href=?]", fineco_login_path
+        assert_select "a", text: I18n.t("settings.providers.fineco_panel.connect")
+        assert_select "form", count: 0
+      end
+      assert_includes response.body, "Fineco is an unofficial portfolio connector."
+      assert_includes response.body, "the permissions Fineco grants to your login"
+      refute_includes response.body, I18n.t("settings.providers.sync_provider")
+    end
+  end
+
+  test "Fineco settings show owner actions and sanitized portfolio status" do
+    admin = users(:family_admin)
+    admin.update!(preferences: (admin.preferences || {}).merge("preview_features_enabled" => true))
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    Provider::Fineco.stubs(:verified_identity_contract?).returns(true)
+    item = FinecoItem.create!(
+      family: admin.family,
+      owner: admin,
+      gsessionid: "fineco-session-cookie",
+      account_index: "2",
+      dossier_index: "4",
+      captured_at: Time.current,
+      bank_account_number: "FINECO-TEST-ACCOUNT",
+      dossier_identity: Digest::SHA256.hexdigest("fineco-test-dossier"),
+      status: "good",
+      portfolio_snapshot_at: 1.hour.ago
+    )
+    fineco_account = item.fineco_accounts.create!(
+      external_id: FinecoAccount::EXTERNAL_ID,
+      name: "Fineco investments",
+      currency: "EUR"
+    )
+    investment_account = admin.family.accounts.create!(
+      owner: admin,
+      name: "Fineco portfolio",
+      balance: 100,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Investment.new
+    )
+    AccountProvider.create!(account: investment_account, provider: fineco_account)
+
+    with_self_hosting do
+      get connect_form_settings_providers_url(provider_key: "fineco")
+    end
+
+    assert_response :success
+    assert_select "#fineco-providers-panel" do
+      assert_select "form[action=?] button", sync_fineco_item_path(item), text: I18n.t("settings.providers.fineco_panel.sync")
+      assert_select "form[action=?]", fineco_item_path(item)
+      assert_select "a[href=?]", fineco_login_path, text: I18n.t("settings.providers.fineco_panel.reconnect")
+    end
+    assert_match(/Last snapshot/, response.body)
+    refute_includes response.body, "FINECO-TEST-ACCOUNT"
+  end
+
+  test "paused Fineco settings keep the investment connection and offer reconnection only" do
+    admin = users(:family_admin)
+    admin.update!(preferences: (admin.preferences || {}).merge("preview_features_enabled" => true))
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    item = FinecoItem.create!(
+      family: admin.family,
+      owner: admin,
+      gsessionid: "fineco-session-cookie",
+      account_index: "2",
+      dossier_index: "4",
+      captured_at: Time.current,
+      bank_account_number: "fineco-test-account",
+      dossier_identity: Digest::SHA256.hexdigest("fineco-test-dossier"),
+      status: "good"
+    )
+    fineco_account = item.fineco_accounts.create!(
+      external_id: FinecoAccount::EXTERNAL_ID,
+      name: "Fineco investments",
+      currency: "EUR"
+    )
+    investment_account = admin.family.accounts.create!(
+      owner: admin,
+      name: "Fineco portfolio",
+      balance: 100,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Investment.new
+    )
+    AccountProvider.create!(account: investment_account, provider: fineco_account)
+    item.disconnect!
+
+    with_self_hosting do
+      get connect_form_settings_providers_url(provider_key: "fineco")
+    end
+
+    assert_response :success
+    assert_select "#fineco-providers-panel" do
+      assert_select "a[href=?]", fineco_login_path, text: I18n.t("settings.providers.fineco_panel.reconnect")
+      assert_select "form[action=?]", sync_fineco_item_path(item), count: 0
+      assert_select "form[action=?]", fineco_item_path(item), count: 0
+      assert_select "p", text: I18n.t("settings.providers.fineco_panel.requires_update")
+    end
+    assert FinecoItem.exists?(item.id)
+    assert investment_account.reload.investment?
   end
 
   # The provider card reads its tagline with `default: nil`, so a missing key

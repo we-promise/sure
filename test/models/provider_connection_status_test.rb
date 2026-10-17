@@ -19,6 +19,30 @@ class ProviderConnectionStatusTest < ActiveSupport::TestCase
                  registered_registry.sort_by { |entry| entry[:association].to_s }
   end
 
+  test "Fineco status reports a configured session without exposing credential fields" do
+    provider = ProviderConnectionStatus::PROVIDERS.find { |entry| entry[:association] == :fineco_items }
+    item = FinecoItem.new(
+      family: families(:dylan_family),
+      owner: users(:family_admin),
+      gsessionid: "synthetic-session",
+      account_index: "2",
+      dossier_index: "11",
+      bank_account_number: "SYNTHETIC-ACCOUNT",
+      dossier_identity: Digest::SHA256.hexdigest("synthetic-dossier"),
+      captured_at: Time.current
+    )
+
+    status = ProviderConnectionStatus.new(provider, item).to_h
+
+    assert_equal "fineco", status[:provider]
+    assert_equal true, status[:credentials_configured]
+    refute_includes status.keys, :gsessionid
+    refute_includes status.keys, :account_index
+    refute_includes status.keys, :dossier_index
+    refute_includes status.keys, :bank_account_number
+    refute_includes status.keys, :dossier_identity
+  end
+
   test "status summary is computed without calling provider item summary" do
     provider = ProviderConnectionStatus::PROVIDERS.find { |entry| entry[:association] == :mercury_items }
     item = mercury_items(:one)

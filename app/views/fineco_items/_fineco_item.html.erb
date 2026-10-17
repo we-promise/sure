@@ -1,0 +1,77 @@
+<%# locals: (fineco_item:, visible_accounts:) %>
+
+<%= tag.div id: dom_id(fineco_item) do %>
+  <% can_manage_fineco = Current.user&.admin? && fineco_item.owned_by?(Current.user) &&
+    Current.user.preview_features_enabled? && Rails.application.config.app_mode.self_hosted? %>
+
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 min-w-0">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+          <%= render ProviderLogo.new(provider_key: :fineco) %>
+          <div class="min-w-0 pl-1 text-sm">
+            <p class="font-medium text-primary"><%= Provider::Metadata.for(:fineco)[:name] %></p>
+            <% if fineco_item.syncing? %>
+              <div class="flex items-center gap-1 text-secondary">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <span><%= t("fineco_items.card.syncing") %></span>
+              </div>
+            <% elsif fineco_item.requires_update? %>
+              <p class="text-warning"><%= t("fineco_items.card.reauthentication_required") %></p>
+            <% elsif fineco_item.last_sync_error.present? %>
+              <p class="text-warning"><%= t("fineco_items.card.sync_error") %></p>
+            <% elsif fineco_item.last_synced_at.present? %>
+              <p class="text-secondary">
+                <%= t("fineco_items.card.last_synced", time: time_ago_in_words(fineco_item.last_synced_at)) %>
+              </p>
+            <% else %>
+              <p class="text-secondary"><%= t("fineco_items.card.not_synced") %></p>
+            <% end %>
+          </div>
+        </div>
+
+        <% if can_manage_fineco %>
+          <div class="flex items-center gap-2">
+            <% if fineco_item.syncable? %>
+              <%= render DS::Button.new(
+                    text: t("fineco_items.card.sync"),
+                    icon: "refresh-cw",
+                    variant: :secondary,
+                    size: :sm,
+                    href: sync_fineco_item_path(fineco_item),
+                    disabled: fineco_item.syncing?
+                  ) %>
+            <% end %>
+
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(
+                variant: "link",
+                text: t("fineco_items.card.reconnect"),
+                icon: "refresh-cw",
+                href: fineco_login_path
+              ) %>
+              <% if fineco_item.good? %>
+                <% menu.with_item(
+                  variant: "button",
+                  text: t("fineco_items.card.stop_syncing"),
+                  icon: "pause",
+                  href: fineco_item_path(fineco_item),
+                  method: :delete,
+                  confirm: t("fineco_items.card.stop_syncing_confirmation")
+                ) %>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="mt-4 space-y-3">
+      <% if visible_accounts.any? %>
+        <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+      <% end %>
+      <p class="text-xs text-secondary"><%= t("fineco_items.card.snapshot_scope") %></p>
+    </div>
+  <% end %>
+<% end %>

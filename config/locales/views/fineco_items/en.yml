@@ -1,0 +1,19 @@
+en:
+  fineco_items:
+    sync:
+      unavailable: Fineco is not ready to sync. Reconnect the bank session and try again.
+      already_running: A Fineco portfolio sync is already running.
+      queued: Fineco portfolio sync started.
+    destroy:
+      success: Fineco syncing has stopped. The bank session was cleared and your Investment account, holdings, and snapshot history were retained.
+    card:
+      syncing: Syncing Fineco portfolio.
+      reauthentication_required: Reconnect Fineco to restore portfolio access.
+      sync_error: The last Fineco portfolio sync could not be completed.
+      last_synced: Snapshot updated %{time} ago.
+      not_synced: No portfolio snapshot has been imported yet.
+      snapshot_scope: Securities are imported as current snapshots. Cash stays in your linked EB account, and Sure does not create trade history.
+      sync: Sync now
+      reconnect: Reconnect Fineco
+      stop_syncing: Stop Fineco syncing
+      stop_syncing_confirmation: Stop Fineco syncing? Sure will clear the stored bank session and retain your existing Investment account, holdings, and snapshot history.

@@ -1073,6 +1073,42 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.index ["financekit_account_lineage_id"], name: "index_financekit_transactions_on_lineage_id"
   end
 
+  create_table "fineco_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "currency", limit: 3, null: false
+    t.string "external_id", null: false
+    t.uuid "fineco_item_id", null: false
+    t.datetime "last_snapshot_at"
+    t.date "last_snapshot_date"
+    t.string "name", null: false
+    t.jsonb "raw_position_metadata", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["fineco_item_id", "external_id"], name: "index_fineco_accounts_on_fineco_item_id_and_external_id", unique: true
+    t.index ["fineco_item_id"], name: "index_fineco_accounts_on_fineco_item_id"
+    t.check_constraint "currency::text = 'EUR'::text", name: "chk_fineco_accounts_currency_eur"
+  end
+
+  create_table "fineco_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "account_index", null: false
+    t.text "bank_account_number"
+    t.datetime "captured_at", null: false
+    t.integer "connection_generation", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.text "dossier_identity"
+    t.text "dossier_index", null: false
+    t.uuid "family_id", null: false
+    t.text "gsessionid"
+    t.string "last_sync_error_code"
+    t.uuid "owner_id"
+    t.datetime "portfolio_snapshot_at"
+    t.string "status", default: "good", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "owner_id"], name: "index_fineco_items_on_family_id_and_owner_id", unique: true
+    t.index ["family_id"], name: "index_fineco_items_on_family_id"
+    t.index ["owner_id"], name: "index_fineco_items_on_owner_id"
+    t.check_constraint "status::text = ANY (ARRAY['good'::character varying::text, 'requires_update'::character varying::text])", name: "chk_fineco_items_status"
+  end
+
   create_table "fio_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "bank_id"
     t.string "bic"
@@ -1965,7 +2001,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text, 'chimnie'::character varying::text]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3030,6 +3066,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
   add_foreign_key "financekit_transactions", "entries", on_delete: :nullify
   add_foreign_key "financekit_transactions", "financekit_account_lineages"
   add_foreign_key "financekit_transactions", "financekit_accounts", on_delete: :nullify
+  add_foreign_key "fineco_accounts", "fineco_items", on_delete: :cascade
+  add_foreign_key "fineco_items", "families", on_delete: :cascade
+  add_foreign_key "fineco_items", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "fio_accounts", "fio_items"
   add_foreign_key "fio_items", "families"
   add_foreign_key "goal_accounts", "accounts", on_delete: :restrict

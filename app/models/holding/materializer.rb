@@ -32,6 +32,7 @@ class Holding::Materializer
     # those securities on that day, even when it is denominated in a different currency
     # than the account or the reverse-calculated holdings.
     cleanup_stale_calculated_rows_on_latest_provider_snapshot
+    cleanup_pre_snapshot_fineco_calculated_holdings
 
     # Clear the holdings association cache (without eagerly reloading) so subsequent
     # Balance calculations rebuild from the freshly-persisted rows on demand. Using
@@ -46,7 +47,15 @@ class Holding::Materializer
     attr_reader :account, :strategy, :security_ids
 
     def calculate_holdings
-      @holdings = calculator.calculate
+      @holdings = if fineco_account_provider
+        Holding::FinecoSnapshotCalculator.new(
+          account,
+          account_provider_id: fineco_account_provider.id,
+          security_ids: security_ids
+        ).calculate
+      else
+        calculator.calculate
+      end
     end
 
     def persist_holdings
@@ -219,6 +228,29 @@ class Holding::Materializer
         .delete_all
 
       Rails.logger.info("Cleaned up #{deleted_count} stale calculated holdings on latest provider snapshot date") if deleted_count > 0
+    end
+
+    def cleanup_pre_snapshot_fineco_calculated_holdings
+      provider = fineco_account_provider
+      return unless provider
+
+      provider_holdings = account.holdings.where(account_provider_id: provider.id)
+      first_snapshot_date = provider_holdings.minimum(:date)
+      security_ids = provider_holdings.distinct.pluck(:security_id)
+      return if first_snapshot_date.nil? || security_ids.empty?
+
+      deleted_count = account.holdings
+        .where(account_provider_id: nil, external_id: nil, security_id: security_ids)
+        .where("holdings.date < ?", first_snapshot_date)
+        .where(security_locked: false, cost_basis_locked: false, cost_basis_source: "calculated")
+        .delete_all
+      Rails.logger.info("Cleaned up #{deleted_count} pre-snapshot Fineco calculated holdings") if deleted_count > 0
+    end
+
+    def fineco_account_provider
+      return @fineco_account_provider if defined?(@fineco_account_provider)
+
+      @fineco_account_provider = account.account_providers.find_by(provider_type: "FinecoAccount")
     end
 
     def holding_key(holding)

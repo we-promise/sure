@@ -1,0 +1,80 @@
+<%= content_for :page_title, t(".title") %>
+
+<main class="mx-auto max-w-4xl space-y-6">
+  <header class="space-y-3">
+    <%= render DS::Pill.new(label: t(".preview"), tone: :violet, marker: false) %>
+    <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
+    <p class="text-sm text-secondary"><%= t(".description") %></p>
+    <p class="text-sm text-secondary"><%= t(".bank_session_authority") %></p>
+    <p class="text-sm text-secondary"><%= t(".read_only") %></p>
+    <p class="text-sm text-secondary"><%= t(".session_expiry") %></p>
+  </header>
+
+  <%= render DS::Alert.new(
+        variant: :warning,
+        message: t(".encryption_unavailable")
+      ) unless @encryption_ready %>
+  <%= render DS::Alert.new(
+        variant: :warning,
+        message: t(".runtime_unavailable")
+      ) unless @browser_runtime_enabled %>
+  <%= render DS::Alert.new(
+        variant: :warning,
+        message: t(".setup_verification_required")
+      ) unless @capture_enabled %>
+
+  <section
+    class="space-y-4"
+    data-controller="fineco-login"
+    data-fineco-login-start-url-value="<%= start_fineco_login_path %>"
+    data-fineco-login-status-url-value="<%= status_fineco_login_path %>"
+    data-fineco-login-stop-url-value="<%= stop_fineco_login_path %>"
+    data-fineco-login-stream-path-value="/fineco_login/stream"
+    data-fineco-login-novnc-base-value="/fineco-novnc/"
+    data-fineco-login-enabled-value="<%= @encryption_ready && @browser_runtime_enabled %>"
+    data-fineco-login-status-waiting-value="<%= t(".status_waiting") %>"
+    data-fineco-login-status-verifying-value="<%= t(".status_verifying") %>"
+    data-fineco-login-status-stopping-value="<%= t(".status_stopping") %>"
+    data-fineco-login-status-setup-verification-required-value="<%= t(".status_setup_verification_required") %>"
+    data-fineco-login-status-connected-value="<%= t(".status_connected") %>"
+    data-fineco-login-status-expired-value="<%= t(".status_expired") %>"
+    data-fineco-login-status-stopped-value="<%= t(".status_stopped") %>"
+    data-fineco-login-status-failed-value="<%= t(".status_failed") %>"
+    data-fineco-login-status-unknown-value="<%= t(".status_unknown") %>">
+    <div class="flex flex-wrap items-center gap-3">
+      <%= render DS::Button.new(
+            text: t(@fineco_item ? ".reconnect" : ".start"),
+            variant: :primary,
+            disabled: !(@encryption_ready && @browser_runtime_enabled),
+            data: { action: "fineco-login#start" }
+          ) %>
+      <%= render DS::Button.new(
+            text: t(".cancel"),
+            variant: :outline,
+            hidden: true,
+            data: { "fineco-login-target": "cancelButton", action: "fineco-login#stop" }
+          ) %>
+    </div>
+
+    <p class="text-sm text-secondary" role="status" aria-live="polite" data-fineco-login-target="status">
+      <%= t(@initial_status_key) %>
+    </p>
+
+    <div
+      class="hidden h-[70dvh] min-h-96 overflow-hidden rounded-xl border border-primary bg-surface-inset"
+      data-fineco-login-target="viewer"
+      role="region"
+      aria-label="<%= t(".viewer_label") %>"></div>
+    <p class="text-sm text-secondary"><%= t(".manual_login_hint") %></p>
+
+    <%= render DS::Link.new(
+          text: t(".view_investments"),
+          href: accounts_path,
+          variant: :primary,
+          hidden: true,
+          data: { "fineco-login-target": "investmentsLink" }
+        ) %>
+
+    <p class="hidden text-sm text-destructive" role="alert" data-fineco-login-target="error"></p>
+  </section>
+</main>

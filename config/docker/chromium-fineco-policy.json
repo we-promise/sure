@@ -1,0 +1,35 @@
+{
+  "URLBlocklist": [
+    "*",
+    "chrome://*",
+    "chrome-untrusted://*",
+    "devtools://*",
+    "file://*",
+    "chrome-extension://*",
+    "chrome-search://*",
+    "isolated-app://*"
+  ],
+  "URLAllowlist": [
+    "https://finecobank.com"
+  ],
+  "DeveloperToolsAvailability": 2,
+  "DeveloperToolsAvailabilityAllowlist": [
+    "finecobank.com"
+  ],
+  "DeveloperToolsAvailabilityBlocklist": [
+    "*"
+  ],
+  "RemoteDebuggingAllowed": true,
+  "AllowFileSelectionDialogs": false,
+  "DownloadRestrictions": 3,
+  "PrintingEnabled": false,
+  "PasswordManagerEnabled": false,
+  "AutofillAddressEnabled": false,
+  "AutofillCreditCardEnabled": false,
+  "BrowserSignin": 0,
+  "SyncDisabled": true,
+  "IncognitoModeAvailability": 1,
+  "ExtensionInstallBlocklist": [
+    "*"
+  ]
+}

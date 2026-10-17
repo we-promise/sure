@@ -1,0 +1,58 @@
+<div id="fineco-providers-panel" class="space-y-4">
+  <%= render DS::Pill.new(label: t("settings.providers.fineco_panel.preview"), tone: :violet, marker: false) %>
+
+  <div class="space-y-2 text-sm text-secondary">
+    <p><%= t("settings.providers.fineco_panel.description") %></p>
+    <p><%= t("settings.providers.fineco_panel.read_only") %></p>
+    <p><%= t("settings.providers.fineco_panel.session_expiry") %></p>
+  </div>
+
+  <% if @fineco_item %>
+    <div class="space-y-3 rounded-lg bg-container-inset p-3 text-sm">
+      <% if @fineco_item.syncing? %>
+        <p class="text-secondary"><%= t("settings.providers.fineco_panel.syncing") %></p>
+      <% elsif @fineco_item.requires_update? %>
+        <p class="text-warning"><%= t("settings.providers.fineco_panel.requires_update") %></p>
+      <% elsif @fineco_item.last_sync_error.present? %>
+        <p class="text-warning"><%= t("settings.providers.fineco_panel.sync_error") %></p>
+      <% elsif @fineco_item.last_synced_at.present? %>
+        <p class="text-secondary">
+          <%= t("settings.providers.fineco_panel.last_synced", time: time_ago_in_words(@fineco_item.last_synced_at)) %>
+        </p>
+      <% else %>
+        <p class="text-secondary"><%= t("settings.providers.fineco_panel.never_synced") %></p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="flex flex-wrap justify-end gap-2">
+    <% if @fineco_item&.syncable? %>
+      <%= render DS::Button.new(
+            text: t("settings.providers.fineco_panel.sync"),
+            icon: "refresh-cw",
+            variant: :secondary,
+            href: sync_fineco_item_path(@fineco_item),
+            disabled: @fineco_item.syncing?
+          ) %>
+    <% end %>
+
+    <%= render DS::Link.new(
+          text: t(@fineco_item ? "settings.providers.fineco_panel.reconnect" : "settings.providers.fineco_panel.connect"),
+          href: fineco_login_path,
+          variant: @fineco_item ? :secondary : :primary
+        ) %>
+
+    <% if @fineco_item&.good? %>
+      <%= render DS::Menu.new do |menu| %>
+        <% menu.with_item(
+          variant: "button",
+          text: t("settings.providers.fineco_panel.stop_syncing"),
+          icon: "pause",
+          href: fineco_item_path(@fineco_item),
+          method: :delete,
+          confirm: t("settings.providers.fineco_panel.stop_syncing_confirmation")
+        ) %>
+      <% end %>
+    <% end %>
+  </div>
+</div>

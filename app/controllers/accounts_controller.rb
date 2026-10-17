@@ -49,6 +49,9 @@ class AccountsController < ApplicationController
     @trade_republic_items = visible_provider_items(
       family.trade_republic_items.ordered.includes(trade_republic_accounts: { account_provider: :account })
     )
+    @fineco_items = visible_provider_items(
+      family.fineco_items.ordered.includes(fineco_accounts: { account_provider: :account })
+    )
 
     # An on-chain item is admitted as soon as ONE of its accounts is accessible,
     # so the card is told which of them this viewer may actually see. nil is the
@@ -181,7 +184,7 @@ class AccountsController < ApplicationController
         # Each provider item will trigger an account sync when complete
         @account.account_providers.each do |account_provider|
           item = account_provider.adapter&.item
-          next unless item && !item.syncing?
+          next unless item && provider_item_sync_authorized?(item) && !item.syncing?
 
           if item.is_a?(PlaidItem)
             item.sync_later_with_provider_refresh
@@ -403,6 +406,14 @@ class AccountsController < ApplicationController
       @account = Current.user.accessible_accounts.find(params[:id])
     end
 
+    def provider_item_sync_authorized?(item)
+      return true unless item.is_a?(FinecoItem)
+
+      user = Current.user
+      user&.admin? && item.owned_by?(user) && user.preview_features_enabled? &&
+        Rails.application.config.app_mode.self_hosted? && item.syncable?
+    end
+
     def set_manageable_account
       @account = Current.user.accessible_accounts.find(params[:id])
       permission = @account.permission_for(Current.user)
@@ -471,6 +482,7 @@ class AccountsController < ApplicationController
         @questrade_items,
         @wise_items,
         @trade_republic_items,
+        @fineco_items,
         @onchain_wallet_items
       ].flatten.compact
 

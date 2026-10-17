@@ -25,7 +25,12 @@
     <% end %>
 
     <p class="text-xs text-secondary mt-6 pt-3 border-t border-tertiary">
-      <%= t(@provider_setup_encryption_warning ? "settings.providers.drawer_trust_statement_encryption_unconfigured" : "settings.providers.drawer_trust_statement") %>
+      <% trust_statement = if provider_key == "fineco"
+        "settings.providers.fineco_panel.drawer_trust_statement"
+      else
+        @provider_setup_encryption_warning ? "settings.providers.drawer_trust_statement_encryption_unconfigured" : "settings.providers.drawer_trust_statement"
+      end %>
+      <%= t(trust_statement) %>
     </p>
   <% end %>
 <% end %>

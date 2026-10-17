@@ -9,6 +9,16 @@ module AccountsHelper
     sync_account_path(account)
   end
 
+  def account_sync_authorized?(account)
+    fineco_link = account.account_providers.detect { |provider| provider.provider_type == "FinecoAccount" }
+    return true unless fineco_link
+
+    item = fineco_link.provider&.fineco_item
+    user = Current.user
+    item.present? && user&.admin? && item.owned_by?(user) && user.preview_features_enabled? &&
+      Rails.application.config.app_mode.self_hosted? && item.syncable?
+  end
+
   def account_sidebar_description(account)
     [ account.short_subtype_label, account.currency ].compact_blank.join(" · ")
   end
