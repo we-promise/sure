@@ -22,7 +22,10 @@ class Holding::PortfolioCache
     end
   end
 
-  def get_price(security_id, date, source: nil)
+  # In the account's currency. Without an exchange rate the price is returned
+  # as it is, still labelled with the account's currency, or nil with
+  # `converted_only`.
+  def get_price(security_id, date, source: nil, converted_only: false)
     security = @security_cache[security_id]
     raise SecurityNotFound.new(security_id, account.id) unless security
 
@@ -42,6 +45,8 @@ class Holding::PortfolioCache
     begin
       converted_amount = price_money.exchange_to(account.currency, date: date).amount
     rescue Money::ConversionError
+      return nil if converted_only
+
       converted_amount = price.price
     end
 
@@ -192,8 +197,17 @@ class Holding::PortfolioCache
           end
 
         # Low priority prices from holdings (if applicable)
+        #
+        # For a security with no market data, holdings are its only price
+        # history past its trades, and a row without a provider is one the
+        # reverse calculator wrote on an earlier run, often with a price it
+        # carried across a gap. Read back, that price would outlast the
+        # provider price that later covered the same days, so only provider
+        # rows count as prices for it.
         holding_prices = if use_holdings
-          (holdings_by_security_id[security.id] || []).map do |holding|
+          (holdings_by_security_id[security.id] || []).filter_map do |holding|
+            next if security.offline? && holding.account_provider_id.nil?
+
             PriceWithPriority.new(
               price: Security::Price.new(
                 security: security,
