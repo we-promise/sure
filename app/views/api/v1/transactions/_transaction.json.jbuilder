@@ -22,6 +22,13 @@ json.source transaction.entry.source
 json.user_modified transaction.entry.user_modified
 json.classification transaction.entry.classification
 
+# Transaction kind (standard, funds_movement, cc_payment, loan_payment, one_time,
+# investment_contribution). Lets API consumers recognize transfer-like transactions
+# (e.g. funds_movement) even when there's no paired counterparty transaction, which
+# `transfer` alone can't express — a transfer to an account outside this instance is
+# one-sided and `transfer` stays nil for it.
+json.kind transaction.kind
+
 # Account information
 json.account do
   json.id transaction.entry.account.id
