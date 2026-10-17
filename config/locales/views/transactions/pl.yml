@@ -399,3 +399,15 @@ pl:
     unknown_name: Nieznana transakcja
     update:
       updated: Transakcja zaktualizowana
+    bulk_deletions:
+      destroy:
+        deleted:
+          one: "Usunięto %{count} transakcję"
+          few: "Usunięto %{count} transakcje"
+          many: "Usunięto %{count} transakcji"
+          other: "Usunięto %{count} transakcji"
+        skipped:
+          one: "%{count} transakcja nie mogła zostać usunięta"
+          few: "%{count} transakcje nie mogły zostać usunięte"
+          many: "%{count} transakcji nie mogło zostać usuniętych"
+          other: "%{count} transakcji nie mogło zostać usuniętych"
