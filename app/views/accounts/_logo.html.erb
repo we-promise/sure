@@ -23,21 +23,40 @@
   <% end %>
 
   <% if reconciliation_indicator.present? %>
-    <% if reconciliation_indicator == :matched %>
+    <%#
+      Status only, never an action — the account itself offers no
+      reconciliation control, so the tooltip explains the colour on hover and
+      is exposed to AT via aria-describedby.
+
+      The corner offset lives on the tooltip wrapper (`html_class:`), not on
+      the dot. The wrapper is inline-level, so in flow it opens a line box
+      inside the logo's `relative` container and grows that container — which
+      pushed the `absolute` dot clear of the corner. Out of flow, the wrapper
+      sizes to the dot and anchors to the container as intended.
+
+      The dot carries `data-row-click-ignore` so a click on it doesn't open the
+      account row (ClickableRowController#open).
+    %>
+    <% matched = reconciliation_indicator == :matched %>
+    <% if matched %>
       <%= render DS::Tooltip.new(
             text: t("accounts.reconciliation_indicator.matched"),
             as: :span,
+            html_class: "absolute -bottom-0.5 -right-0.5",
             trigger_content: tag.span(
               icon("check", class: "w-2 h-2 text-inverse"),
-              class: "absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full border border-container bg-success"
+              class: "flex h-3 w-3 items-center justify-center rounded-full border border-container bg-success",
+              data: { row_click_ignore: true }
             )
           ) %>
     <% else %>
       <%= render DS::Tooltip.new(
             text: t("accounts.reconciliation_indicator.needs_attention"),
             as: :span,
+            html_class: "absolute -bottom-0.5 -right-0.5",
             trigger_content: tag.span(
-              class: "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-container bg-warning"
+              class: "h-2.5 w-2.5 rounded-full border border-container bg-warning",
+              data: { row_click_ignore: true }
             )
           ) %>
     <% end %>
