@@ -3,6 +3,7 @@ en:
   enable_banking_items:
     errors:
       api_error: "A communication error occurred with the bank."
+      history_truncated: "Only part of the transaction history could be imported because the bank returned more pages than one sync can load. Older transactions are missing."
       network_unreachable: "The banking service is temporarily unreachable. Please try again later."
       session_invalid: "Session expired. Please reconnect your bank."
       unexpected: "An unexpected error occurred during synchronization."

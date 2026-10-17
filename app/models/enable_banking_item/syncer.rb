@@ -22,7 +22,15 @@ class EnableBankingItem::Syncer
     sync.update!(status_text: "Importing accounts from Enable Banking...") if sync.respond_to?(:status_text)
     import_result = enable_banking_item.import_latest_enable_banking_data
 
-    unless import_result[:success]
+    # A truncated initial history (see Importer#fetch_and_store_transactions)
+    # is the only failure that still stored data: process it first and raise
+    # the sync error at the end, so the kept pages show up right away.
+    history_truncated_only = !import_result[:success] &&
+      import_result[:history_truncated].to_i > 0 &&
+      import_result[:accounts_failed].to_i == 0 &&
+      import_result[:transactions_failed].to_i == 0
+
+    unless import_result[:success] || history_truncated_only
       # A session-level auth failure detected mid-import flips the item to
       # requires_update — surface that as a graceful reconnect state, not a red
       # error. Transient/per-account failures leave status good and fall through
@@ -78,6 +86,8 @@ class EnableBankingItem::Syncer
         window_end_date: sync.window_end_date
       )
     end
+
+    raise StandardError.new(import_result[:error]) if history_truncated_only
 
     collect_health_stats(sync, errors: nil)
   rescue => e

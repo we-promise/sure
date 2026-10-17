@@ -3,6 +3,7 @@ it:
   enable_banking_items:
     errors:
       api_error: "Si è verificato un errore di comunicazione con la banca."
+      history_truncated: "È stato possibile importare solo una parte dello storico delle transazioni, perché la banca ha restituito più pagine di quante una sincronizzazione possa caricarne. Mancano le transazioni più vecchie."
       network_unreachable: "Il servizio bancario è temporaneamente irraggiungibile. Riprova più tardi."
       session_invalid: "Sessione scaduta. Riconnetti la tua banca."
       unexpected: "Si è verificato un errore imprevisto durante la sincronizzazione."
