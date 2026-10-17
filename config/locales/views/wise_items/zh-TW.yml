@@ -72,7 +72,7 @@ zh-TW:
       disconnect: 中斷連線
       disconnect_label: 中斷 %{name}
       disconnect_confirm: 確定要中斷 %{name} 的連線嗎？這會移除所有已同步的帳戶資料。
-      sandbox_note_html: 測試時請使用 <strong>sandbox</strong> 基礎網址（<code>https://api.sandbox.transferwise.tech</code>）。在環境變數中設定 <code>WISE_BASE_URL</code>。
+      sandbox_note_html: 測試時請使用 <strong>sandbox</strong> 基礎網址（<code>https://api.wise-sandbox.com</code>）。在環境變數中設定 <code>WISE_BASE_URL</code>。
       encryption_warning:
         title: 資料庫加密未設定
         message: 在正式環境加入 Wise Token 之前，請先設定 Active Record 加密金鑰。未加密時 Token 會以明文儲存。

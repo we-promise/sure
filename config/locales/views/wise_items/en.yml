@@ -76,7 +76,7 @@ en:
       disconnect: Disconnect
       disconnect_label: "Disconnect %{name}"
       disconnect_confirm: "Are you sure you want to disconnect %{name}? This will remove all synced account data."
-      sandbox_note_html: "Use the <strong>sandbox</strong> base URL (<code>https://api.sandbox.transferwise.tech</code>) for testing. Set <code>WISE_BASE_URL</code> in your environment."
+      sandbox_note_html: "Use the <strong>sandbox</strong> base URL (<code>https://api.wise-sandbox.com</code>) for testing. Set <code>WISE_BASE_URL</code> in your environment."
       encryption_warning:
         title: Database encryption is not configured
         message: Configure Active Record encryption keys before adding Wise tokens in production. Without encryption, tokens are stored in plaintext.

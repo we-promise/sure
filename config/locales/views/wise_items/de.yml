@@ -84,7 +84,7 @@ de:
       import_all_history_label: Vollständige Transaktionshistorie importieren
       keep_token_placeholder: Leer lassen, um den bisherigen Token zu behalten
       not_configured: Nicht eingerichtet
-      sandbox_note_html: Nutz zum Testen die <strong>Sandbox</strong>-Basis-URL (<code>https://api.sandbox.transferwise.tech</code>). Setz dafür <code>WISE_BASE_URL</code> in deiner Umgebung.
+      sandbox_note_html: Nutz zum Testen die <strong>Sandbox</strong>-Basis-URL (<code>https://api.wise-sandbox.com</code>). Setz dafür <code>WISE_BASE_URL</code> in deiner Umgebung.
       setup_accounts: Konten einrichten
       setup_title: 'So richtest du es ein:'
       sync: Sync

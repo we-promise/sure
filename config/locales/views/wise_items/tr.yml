@@ -73,7 +73,7 @@ tr:
         open_tokens: Settings → Connect and manage apps → Developer tools → API tokens bölümüne gidin
         sign_in_html: "%{link} adresini ziyaret edin ve hesabınıza giriş yapın"
       keep_token_placeholder: Mevcut token'ı korumak için boş bırakın
-      sandbox_note_html: Test için <strong>sandbox</strong> temel URL'sini (<code>https://api.sandbox.transferwise.tech</code>)
+      sandbox_note_html: Test için <strong>sandbox</strong> temel URL'sini (<code>https://api.wise-sandbox.com</code>)
         kullanın. Ortamınızda <code>WISE_BASE_URL</code> değerini ayarlayın.
       setup_accounts: Hesapları kur
       sync: Eşitle

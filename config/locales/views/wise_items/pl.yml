@@ -81,7 +81,7 @@ pl:
           → API tokens
         sign_in_html: Odwiedź %{link} i zaloguj się na swoje konto
       keep_token_placeholder: Pozostaw puste, aby zachować bieżący token
-      sandbox_note_html: Użyj <strong>sandbox</strong> base URL (<code>https://api.sandbox.transferwise.tech</code>)
+      sandbox_note_html: Użyj <strong>sandbox</strong> base URL (<code>https://api.wise-sandbox.com</code>)
         do testowania. Ustaw <code>WISE_BASE_URL</code> w swoim środowisku.
       sca:
         copied: Skopiowano!

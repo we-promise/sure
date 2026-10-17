@@ -85,7 +85,7 @@ uk:
       disconnect: Відключити
       disconnect_label: "Відключити %{name}"
       disconnect_confirm: "Ви впевнені, що хочете відключити %{name}? Це видалить усі синхронізовані дані рахунку."
-      sandbox_note_html: "Використовуйте базову URL-адресу <strong>пісочниці</strong> (<code>https://api.sandbox.transferwise.tech</code>) для тестування. Встановіть <code>WISE_BASE_URL</code> у вашому середовищі."
+      sandbox_note_html: "Використовуйте базову URL-адресу <strong>пісочниці</strong> (<code>https://api.wise-sandbox.com</code>) для тестування. Встановіть <code>WISE_BASE_URL</code> у вашому середовищі."
       encryption_warning:
         title: Шифрування бази даних не налаштовано
         message: Налаштуйте ключі шифрування Active Record перед додаванням токенів Wise у виробництві. Без шифрування токени зберігаються у вигляді звичайного тексту.

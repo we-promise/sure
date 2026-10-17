@@ -76,7 +76,7 @@ pt-PT:
       disconnect: Desligar
       disconnect_label: "Desligar %{name}"
       disconnect_confirm: "Tem a certeza de que pretende desligar %{name}? Isto irá remover todos os dados de contas sincronizados."
-      sandbox_note_html: "Utilize o URL base <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>) para testes. Defina <code>WISE_BASE_URL</code> no seu ambiente."
+      sandbox_note_html: "Utilize o URL base <strong>sandbox</strong> (<code>https://api.wise-sandbox.com</code>) para testes. Defina <code>WISE_BASE_URL</code> no seu ambiente."
       encryption_warning:
         title: A encriptação da base de dados não está configurada
         message: Configure as chaves de encriptação do Active Record antes de adicionar tokens da Wise em produção. Sem encriptação, os tokens são armazenados em texto simples.
