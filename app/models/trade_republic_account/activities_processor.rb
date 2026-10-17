@@ -545,8 +545,11 @@ class TradeRepublicAccount::ActivitiesProcessor
       end
     end
 
+    # Either leg in any role, like the transfer pre-check: the model also rejects
+    # a leg that is already in another transfer in the opposite role.
     def settlement_side_linked?(inflow, outflow)
-      Transfer.where(inflow_transaction_id: inflow.id).or(Transfer.where(outflow_transaction_id: outflow.id)).exists?
+      ids = [ inflow.id, outflow.id ]
+      Transfer.where(inflow_transaction_id: ids).or(Transfer.where(outflow_transaction_id: ids)).exists?
     end
 
     # Trade Republic settles in the currency of the portfolio and Crypto

@@ -858,6 +858,32 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 1, cash_sure.entries.where(external_id: "trade_republic_event_evt_round_up").count
   end
 
+  test "a settlement leg linked by a concurrent sync in the other role does not fail the event" do
+    cash_account, cash_sure = create_linked_cash_account!
+    @tr_account.update!(raw_timeline_payload: [ round_up_event ])
+    cash_account.update!(raw_timeline_payload: [ round_up_event ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    cash_entry = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_round_up")
+    transfer = cash_entry.transaction.transfer
+
+    # The competitor linked the same legs in swapped roles, so only the
+    # cross-role check in the transfer validation rejects the replay.
+    transfer.update_columns(
+      inflow_transaction_id: transfer.outflow_transaction_id,
+      outflow_transaction_id: transfer.inflow_transaction_id
+    )
+    Transaction.any_instance.stubs(:transfer).returns(nil)
+    cash_account.update!(raw_timeline_payload: [ round_up_event, saveback_event ])
+
+    assert_no_difference -> { Transfer.count } do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+
+    assert_not DebugLogEntry.where(source: "trade_republic", level: "error").exists?
+    assert_equal 1, cash_sure.entries.where(external_id: "trade_republic_event_evt_round_up").count
+  end
+
   test "incomplete saveback details are skipped on portfolio and never become cash" do
     cash_account, cash_sure = create_linked_cash_account!
     incomplete = saveback_event.deep_merge(detail: { isin: nil, quantity: nil })
