@@ -1,8 +1,14 @@
 class Provider::Lunchflow
   include HTTParty
   extend SslConfigurable
+  extend BaseUrlAllowlistable
 
   headers "User-Agent" => "Sure Finance Lunch Flow Client"
+  # The credential travels in a custom header, and HTTParty resends custom
+  # headers on a redirect; its host-change protection covers basic_auth only.
+  # A redirect off the allow-listed host would carry the token with it, so
+  # redirects are not followed at all.
+  no_follow true
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
   MAX_RETRIES = 2
@@ -12,11 +18,15 @@ class Provider::Lunchflow
   DEFAULT_RATE_LIMIT_DELAY = 60
   NETWORK_ERRORS = Provider::HttpTransport::TRANSPORT_ERRORS
 
+  DEFAULT_BASE_URL = "https://lunchflow.app/api/v1"
+  ALLOWED_BASE_URLS = [ DEFAULT_BASE_URL ].freeze
+
   attr_reader :api_key, :base_url
 
-  def initialize(api_key, base_url: "https://lunchflow.app/api/v1")
+  def initialize(api_key, base_url: DEFAULT_BASE_URL)
     @api_key = api_key
-    @base_url = base_url
+    @base_url = self.class.normalize_base_url(base_url)
+    raise ArgumentError, "Lunchflow base URL must be blank or one of: #{ALLOWED_BASE_URLS.join(', ')}" if @base_url.blank?
   end
 
   # Get all accounts
