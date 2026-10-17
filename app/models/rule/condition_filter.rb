@@ -3,6 +3,10 @@ class Rule::ConditionFilter
 
   TYPES = [ "text", "number", "select" ]
 
+  # Operators whose value is a pattern, not text. The pattern is bound as given:
+  # collapsing its whitespace would change what it matches.
+  REGEX_OPERATORS = [ "matches_regex" ].freeze
+
   # Operators that don't require a value (and that the form hides the value field for)
   VALUELESS_OPERATORS = [ "is_null", "is_not_null" ].freeze
 
@@ -10,6 +14,9 @@ class Rule::ConditionFilter
     "text" => [
       [ :contains, "like" ],
       [ :does_not_contain, "not_like" ],
+      [ :starts_with, "starts_with" ],
+      [ :ends_with, "ends_with" ],
+      [ :matches_regex, "matches_regex" ],
       [ :equal_to, "=" ],
       [ :not_equal_to, "!=" ],
       [ :is_empty, "is_null" ],
@@ -102,10 +109,19 @@ class Rule::ConditionFilter
           "#{field} #{sanitize_operator(operator)}"
         )
       else
-        normalized_value = normalize_value(value)
+        normalized_value = REGEX_OPERATORS.include?(operator) ? value.to_s : normalize_value(value)
         normalized_field = normalize_field(field)
 
-        if operator == "like" || operator == "not_like"
+        if operator == "starts_with" || operator == "ends_with"
+          sanitize_operator(operator)
+          like_value = ActiveRecord::Base.sanitize_sql_like(normalized_value)
+          like_value = operator == "starts_with" ? "#{like_value}%" : "%#{like_value}"
+
+          ActiveRecord::Base.sanitize_sql_for_conditions([
+            "#{normalized_field} ILIKE ?",
+            like_value
+          ])
+        elsif operator == "like" || operator == "not_like"
           sanitized_value = "%#{ActiveRecord::Base.sanitize_sql_like(normalized_value)}%"
           expression = ActiveRecord::Base.sanitize_sql_for_conditions([
             "#{normalized_field} #{sanitize_operator(operator)} ?",
@@ -132,6 +148,8 @@ class Rule::ConditionFilter
         "ILIKE"
       when "not_like"
         "NOT ILIKE"
+      when "matches_regex"
+        "~*"
       when "is_null"
         "IS NULL"
       when "is_not_null"

@@ -176,7 +176,9 @@ module Assistant::Function::RuleSupport
       if Rule::ConditionFilter::VALUELESS_OPERATORS.include?(operator)
         value = nil
       else
-        value = value.to_s.strip
+        # A pattern is kept as written, as the rule form keeps it: its spaces are
+        # part of what it matches.
+        value = Rule::ConditionFilter::REGEX_OPERATORS.include?(operator) ? value.to_s : value.to_s.strip
         return [ "#{path}: value is required for operator '#{operator}'." ] if value.blank?
         return [ "#{path}: value must be a number." ] if filter.type == "number" && !numeric?(value)
 
