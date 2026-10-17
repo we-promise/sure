@@ -24,7 +24,7 @@ pt-PT:
               blank: Indique quantos meses de despesas esta reserva deve cobrir.
               only_with_months_mode: Os meses de despesas só se aplicam quando o objetivo é definido dessa forma.
             linked_accounts:
-              must_be_fundable: Todas as contas associadas têm de ser contas de dinheiro ou de investimento.
+              must_be_fundable: Todas as contas associadas têm de ser contas de dinheiro, de investimento ou de criptomoedas.
               currency_mismatch: Todas as contas associadas têm de partilhar a mesma moeda.
               must_belong_to_family: As contas associadas têm de pertencer à mesma família que o objetivo.
             kind:

@@ -153,12 +153,81 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal "contributions", new_goal.progress_basis
   end
 
+  # A crypto wallet or exchange can back a goal, counted at what it is
+  # worth today.
+  test "a crypto account can fund a goal" do
+    new_goal = @family.goals.new(name: "BTC reserve", target_amount: 20_000, currency: "USD")
+    new_goal.goal_accounts.build(account: accounts(:crypto))
+    assert new_goal.valid?, new_goal.errors.full_messages.to_sentence
+  end
+
+  test "a crypto-backed goal counts the wallet's value today, not what was put in" do
+    wallet = Account.create!(family: @family, accountable: Crypto.new, name: "Cold wallet", currency: "USD", balance: 10_000)
+    wallet.balances.create!(date: 10.days.ago.to_date, balance: 10_000, currency: "USD", net_market_flows: 3_000)
+    goal = @family.goals.create!(name: "BTC reserve", target_amount: 20_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: wallet)
+    end
+
+    # A contributions reading would be 7,000 (10,000 less the 3,000 gain).
+    assert_equal "balance", goal.progress_basis
+    assert_equal BigDecimal("10000"), Goal.find(goal.id).current_balance.to_d
+  end
+
+  # The default to contributions is for investment-backed goals. A wallet beside
+  # a brokerage must not be pulled onto it: a contributions reading would take
+  # the wallet's market gain out as well, and a crypto-backed goal counts the
+  # wallet at its value today.
+  test "a goal with a crypto account beside an investment account stays on market value" do
+    brokerage = Account.create!(family: @family, accountable: Investment.new, name: "Brokerage M", currency: "USD", balance: 10_000)
+    brokerage.balances.create!(date: 10.days.ago.to_date, balance: 10_000, currency: "USD", net_market_flows: 3_000)
+    wallet = Account.create!(family: @family, accountable: Crypto.new, name: "Wallet M", currency: "USD", balance: 5_000)
+    wallet.balances.create!(date: 10.days.ago.to_date, balance: 5_000, currency: "USD", net_market_flows: 2_000)
+    goal = @family.goals.create!(name: "Mixed", target_amount: 50_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: brokerage)
+      g.goal_accounts.build(account: wallet)
+    end
+
+    # On contributions this would read 10,000 (15,000 less both gains).
+    assert_equal "balance", goal.progress_basis
+    assert_equal BigDecimal("15000"), Goal.find(goal.id).current_balance.to_d
+  end
+
+  test "adding a crypto account to a cash goal with an investment does not move it to contributions" do
+    goal = goals(:emergency_fund)
+    assert_equal "balance", goal.progress_basis, "precondition"
+    goal.goal_accounts.build(account: accounts(:crypto))
+    goal.goal_accounts.build(account: accounts(:investment))
+    goal.save!
+
+    assert_equal "balance", goal.reload.progress_basis
+  end
+
+  test "a crypto account in another currency is still rejected" do
+    wallet = Account.create!(family: @family, accountable: Crypto.new, name: "Euro wallet", currency: "EUR", balance: 1_000)
+    new_goal = @family.goals.new(name: "BTC reserve", target_amount: 20_000, currency: "USD")
+    new_goal.goal_accounts.build(account: wallet)
+    assert_not new_goal.valid?
+  end
+
+  test "a crypto account in another family is still rejected" do
+    wallet = Account.create!(family: families(:empty), accountable: Crypto.new, name: "Their wallet", currency: "USD", balance: 1_000)
+    new_goal = @family.goals.new(name: "BTC reserve", target_amount: 20_000, currency: "USD")
+    new_goal.goal_accounts.build(account: wallet)
+    assert_not new_goal.valid?
+  end
+
+  test "a manual crypto account resolves pledges by transfer, never manual_save" do
+    wallet = Account.create!(family: @family, accountable: Crypto.new, name: "Manual wallet", currency: "USD", balance: 1_000)
+    assert wallet.manual?
+    assert_equal "transfer", wallet.default_pledge_kind
+  end
+
   test "non-fundable account types are rejected" do
     credit = accounts(:credit_card)
     new_goal = @family.goals.new(name: "Test", target_amount: 100, currency: "USD")
     new_goal.goal_accounts.build(account: credit)
     assert_not new_goal.valid?
-    assert_includes new_goal.errors[:linked_accounts], "All linked accounts must be cash or investment accounts."
+    assert_includes new_goal.errors[:linked_accounts], "All linked accounts must be cash, investment or crypto accounts."
   end
 
   test "linked accounts must belong to family" do

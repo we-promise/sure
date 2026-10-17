@@ -18,7 +18,7 @@ it:
             base:
               at_least_one_linked_account_required: Scegli almeno un conto per finanziare questo obiettivo.
             linked_accounts:
-              must_be_fundable: Tutti i conti collegati devono essere conti correnti o conti di investimento.
+              must_be_fundable: Tutti i conti collegati devono essere conti correnti, conti di investimento o conti di criptovalute.
               currency_mismatch: Tutti i conti collegati devono avere la stessa valuta.
               must_belong_to_family: I conti collegati devono appartenere alla stessa famiglia dell'obiettivo.
             currency:

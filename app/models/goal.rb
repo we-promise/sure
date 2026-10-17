@@ -98,7 +98,7 @@ class Goal < ApplicationRecord
   monetize :target_amount
 
   # Account types that can back a goal (see linked_accounts_must_be_fundable).
-  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment].freeze
+  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment Crypto].freeze
 
   # States in which a goal has let go of the money it was holding, and so
   # drops out of the shared pool. `completed` belongs here: reaching a goal
@@ -894,10 +894,11 @@ class Goal < ApplicationRecord
   end
 
   # "I just transferred" when any linked account resolves pledges via a transfer
-  # (synced accounts AND investment accounts, per default_pledge_kind); "I just
-  # saved" only for manual cash accounts. Keyed off default_pledge_kind so the
-  # copy matches the kind actually saved — a manual brokerage uses transfer, not
-  # manual_save, so it must not show the "update your manual balance" path.
+  # (synced accounts AND investment or crypto accounts, per default_pledge_kind);
+  # "I just saved" only for manual cash accounts. Keyed off default_pledge_kind so
+  # the copy matches the kind actually saved — a manual brokerage or wallet uses
+  # transfer, not manual_save, so it must not show the "update your manual
+  # balance" path.
   def pledge_action_label_key
     pledges_use_transfer? ? "goals.show.pledge_just_transferred" : "goals.show.pledge_just_saved"
   end
@@ -1292,7 +1293,7 @@ class Goal < ApplicationRecord
 
     def linked_accounts_must_be_fundable
       offending = goal_accounts.reject(&:marked_for_destruction?).reject do |sga|
-        sga.account&.depository? || sga.account&.investment?
+        FUNDABLE_ACCOUNT_TYPES.include?(sga.account&.accountable_type)
       end
       return if offending.empty?
 
@@ -1302,8 +1303,14 @@ class Goal < ApplicationRecord
     # Goals funded by an investment account default to the contributions basis
     # (so a market swing doesn't move them); depository-only goals stay on the
     # balance basis. Only auto-set when the basis is still the default.
+    # A goal that also holds a crypto account is left on the balance basis:
+    # contributions would take the wallet's market gain out along with the
+    # brokerage's, and a crypto-backed goal counts the wallet at its value
+    # today (#3965).
     def default_progress_basis_for_investment
-      return unless goal_accounts.any? { |ga| ga.account&.investment? }
+      accounts = goal_accounts.map(&:account).compact
+      return unless accounts.any?(&:investment?)
+      return if accounts.any?(&:crypto?)
       return unless progress_basis.blank? || progress_basis == "balance"
 
       self.progress_basis = "contributions"

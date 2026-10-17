@@ -30,8 +30,8 @@ pl:
                 rezerwę.
             linked_accounts:
               currency_mismatch: Wszystkie połączone konta muszą mieć tę samą walutę.
-              must_be_fundable: Wszystkie połączone konta muszą być kontami gotówkowymi
-                lub inwestycyjnymi.
+              must_be_fundable: Wszystkie połączone konta muszą być kontami gotówkowymi,
+                inwestycyjnymi lub kryptowalutowymi.
               must_belong_to_family: Połączone konta muszą należeć do tej samej rodziny
                 co cel.
             target_amount:

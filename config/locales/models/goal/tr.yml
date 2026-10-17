@@ -24,7 +24,7 @@ tr:
                 değiştirilemez.
             linked_accounts:
               currency_mismatch: Bağlı tüm hesaplar aynı para birimini kullanmalıdır.
-              must_be_fundable: Bağlı tüm hesaplar nakit veya yatırım hesabı olmalıdır.
+              must_be_fundable: Bağlı tüm hesaplar nakit, yatırım veya kripto hesabı olmalıdır.
               must_belong_to_family: Bağlı hesaplar, hedefle aynı aileye ait olmalıdır.
             target_mode:
               months_requires_maintained: Yalnızca sürdürdüğünüz bir rezervin hedefi aylık gider cinsinden belirlenebilir.

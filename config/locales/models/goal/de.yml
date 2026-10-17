@@ -21,5 +21,5 @@ de:
               locked_after_linked: Die Währung lässt sich nicht mehr ändern, sobald das Ziel mit Konten verknüpft ist.
             linked_accounts:
               currency_mismatch: Alle verknüpften Konten müssen dieselbe Währung haben.
-              must_be_fundable: Alle verknüpften Konten müssen Bank- oder Investmentkonten sein.
+              must_be_fundable: Alle verknüpften Konten müssen Bank-, Investment- oder Kryptokonten sein.
               must_belong_to_family: Verknüpfte Konten müssen zur selben Familie gehören wie das Ziel.
