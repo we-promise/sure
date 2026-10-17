@@ -31,9 +31,12 @@ de:
       not_found: Wise-Guthaben nicht gefunden.
       success: Wise-Guthaben mit dem Konto verknüpft.
     link_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft.
+      currency_mismatch: "Dieses Wise-Guthaben lautet auf %{balance_currency}, das Konto auf %{account_currency}. Wähl ein Guthaben in der Währung des Kontos."
       failed: Das Konto ließ sich nicht verknüpfen. Versuch es noch einmal.
       not_found: Konto oder Wise-Guthaben nicht gefunden.
       success: "%{account_name} mit Wise verknüpft"
+      unsupported_account_type: Wise-Guthaben lassen sich nur mit Bankkonten verknüpfen.
     link_profiles:
       already_connected: Alle gewählten Profile sind bereits verbunden.
       no_profiles_selected: Wähl mindestens ein Profil.

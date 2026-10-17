@@ -28,9 +28,12 @@ tr:
       not_found: Wise bakiyesi bulunamadı.
       success: Wise bakiyesi hesaba başarıyla bağlandı.
     link_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
+      currency_mismatch: "Bu Wise bakiyesi %{balance_currency}, hesap ise %{account_currency} cinsinden. Hesabın para biriminde bir bakiye seçin."
       failed: Hesap bağlanamadı. Lütfen tekrar deneyin.
       not_found: Hesap veya Wise bakiyesi bulunamadı.
       success: "%{account_name} Wise ile başarıyla bağlandı"
+      unsupported_account_type: Wise bakiyeleri yalnızca nakit hesaplarına bağlanabilir.
     link_profiles:
       already_connected: Seçilen tüm profiller zaten bağlı.
       no_profiles_selected: Lütfen en az bir profil seçin.

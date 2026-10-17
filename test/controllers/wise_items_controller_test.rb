@@ -31,6 +31,126 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_url
   end
 
+  # Linking a balance to a Sure account
+
+  # A sync in flight has already picked the accounts it processes, and
+  # sync_later only reuses it, so the new account used to stay empty until the
+  # next sync.
+  test "a balance set up while the connection syncs is processed straight away" do
+    wise_account = wise_accounts(:checking)
+    wise_account.update!(raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },
+                         raw_transactions_payload: [
+                           { "id" => 4711, "targetAccount" => 1234, "sourceCurrency" => "EUR", "targetCurrency" => "EUR",
+                             "sourceValue" => 25.0, "targetValue" => 25.0, "status" => "outgoing_payment_sent",
+                             "created" => 2.days.ago.utc.strftime("%Y-%m-%d %H:%M:%S") }
+                         ])
+    running = @wise_item.syncs.create!
+    running.start!
+    @wise_item.process_accounts # the balances linked when the running sync began (none)
+
+    perform_enqueued_jobs(only: WiseItem::ProcessLinkedAccountJob) do
+      post complete_account_setup_wise_item_url(@wise_item), params: { wise_account_id: wise_account.id }
+    end
+
+    account = wise_account.reload.account
+    assert_equal [ "wise_transfer_4711" ], account.entries.where(source: "wise").pluck(:external_id)
+    assert_equal [ running.id ], @wise_item.syncs.pluck(:id)
+    assert account.syncs.exists?, "the account's balances are recalculated"
+  end
+
+  test "a balance linked from the account form while the connection syncs gets its own processing" do
+    @wise_item.syncs.create!.start!
+    wise_account = wise_accounts(:checking)
+
+    assert_no_difference "@wise_item.syncs.count" do
+      assert_enqueued_with(job: WiseItem::ProcessLinkedAccountJob, args: [ wise_account ]) do
+        post link_accounts_wise_items_url, params: { wise_account_id: wise_account.id }
+      end
+    end
+    assert wise_account.reload.account.present?
+  end
+
+  test "link_existing_account links a cash account in the balance's currency and syncs the connection" do
+    account = manual_account(currency: "EUR")
+    wise_account = wise_accounts(:checking)
+
+    assert_difference "@wise_item.syncs.count", 1 do
+      post link_existing_account_wise_items_url, params: { account_id: account.id, wise_account_id: wise_account.id }
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal wise_account, account.reload.provider_account_for("WiseAccount")
+    assert_no_enqueued_jobs only: WiseItem::ProcessLinkedAccountJob
+  end
+
+  test "link_existing_account while the connection syncs gets the balance its own processing" do
+    @wise_item.syncs.create!.start!
+    account = manual_account(currency: "EUR")
+    wise_account = wise_accounts(:checking)
+
+    assert_no_difference "@wise_item.syncs.count" do
+      assert_enqueued_with(job: WiseItem::ProcessLinkedAccountJob, args: [ wise_account ]) do
+        post link_existing_account_wise_items_url, params: { account_id: account.id, wise_account_id: wise_account.id }
+      end
+    end
+    assert_equal wise_account, account.reload.provider_account_for("WiseAccount")
+  end
+
+  # The rule is meant for an account another provider feeds; for another Wise
+  # balance AccountProvider's own one-link-per-provider validation already
+  # refuses it (with another message).
+  test "link_existing_account refuses an account already linked to a provider" do
+    fed_by_lunch_flow = manual_account(currency: "EUR")
+    AccountProvider.create!(account: fed_by_lunch_flow, provider: lunchflow_accounts(:investment_account))
+    linked_to_jar = Account.create!(family: @family, name: "Manual Jar", accountable: Depository.new(subtype: "savings"),
+                                    balance: 0, currency: "EUR")
+    AccountProvider.create!(account: linked_to_jar, provider: wise_accounts(:jar))
+
+    [ fed_by_lunch_flow, linked_to_jar ].each do |account|
+      assert_link_existing_account_refused account, I18n.t("wise_items.link_existing_account.account_already_linked")
+    end
+    assert_nil fed_by_lunch_flow.reload.provider_account_for("WiseAccount")
+  end
+
+  test "link_existing_account refuses an account that is not a cash account" do
+    card = Account.create!(family: @family, name: "EUR card", accountable: CreditCard.new, balance: 0, currency: "EUR")
+
+    assert_link_existing_account_refused card, I18n.t("wise_items.link_existing_account.unsupported_account_type")
+  end
+
+  # A sync overwrites the account's currency with the balance's, which would
+  # leave the account's own entries in another currency.
+  test "link_existing_account refuses an account in another currency than the balance" do
+    account = manual_account(currency: "USD")
+
+    assert_link_existing_account_refused account, I18n.t("wise_items.link_existing_account.currency_mismatch",
+                                                         account_currency: "USD", balance_currency: "EUR")
+  end
+
+  # Every balance in another currency would be refused, so the dialog offers
+  # only those in the account's, and none here.
+  test "select_existing_account offers only the balances in the account's currency" do
+    { "EUR" => [ "Jar", "Wise EUR" ], "USD" => [] }.each do |currency, offered|
+      account = manual_account(currency: currency)
+
+      get select_existing_account_wise_items_url(account_id: account.id, wise_item_id: @wise_item.id)
+
+      assert_response :success
+      assert_equal offered, wise_items(:one).wise_accounts.unlinked.where(id: css_select("input[name='wise_account_id']").map { |input| input["value"] })
+                                                            .pluck(:name).sort
+      assert_includes response.body, I18n.t("wise_items.select_existing_account.no_accounts_found") if offered.empty?
+    end
+  end
+
+  test "link_existing_account goes back where it came from when it refuses a balance" do
+    account = manual_account(currency: "USD")
+
+    post link_existing_account_wise_items_url, params: { account_id: account.id, wise_account_id: wise_accounts(:checking).id,
+                                                         return_to: "/accounts/#{account.id}" }
+
+    assert_redirected_to "/accounts/#{account.id}"
+  end
+
   # create redirects to select_profiles (Turbo requires a redirect from a standard
   # form submission) — the encrypted token travels via the session, not the response body.
 
@@ -227,4 +347,22 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_providers_path
     assert_equal I18n.t("wise_items.select_accounts.no_connection"), flash[:alert]
   end
+
+  private
+
+    def manual_account(currency:)
+      Account.create!(family: @family, name: "Manual #{currency}", accountable: Depository.new(subtype: "checking"),
+                      balance: 0, currency: currency)
+    end
+
+    def assert_link_existing_account_refused(account, message)
+      assert_no_difference [ "AccountProvider.count", "@wise_item.syncs.count" ] do
+        assert_no_enqueued_jobs only: WiseItem::ProcessLinkedAccountJob do
+          post link_existing_account_wise_items_url, params: { account_id: account.id, wise_account_id: wise_accounts(:checking).id }
+        end
+      end
+
+      assert_redirected_to accounts_path
+      assert_equal message, flash[:alert]
+    end
 end
