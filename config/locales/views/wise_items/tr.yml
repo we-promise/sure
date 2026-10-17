@@ -147,6 +147,9 @@ tr:
       credentials_invalid: Geçersiz Wise API token'ı veya yetersiz izinler
       failed: Eşitleme başarısız oldu. Lütfen tekrar deneyin veya destek ile iletişime
         geçin.
+      fetch_failed:
+        one: "%{count} Wise isteği başarısız oldu. Sonraki eşitleme yeniden deneyecek."
+        other: "%{count} Wise isteği başarısız oldu. Sonraki eşitleme yeniden deneyecek."
       import_failed: Wise içe aktarma başarısız oldu.
       importing_accounts: Wise'dan hesaplar içe aktarılıyor...
       processing_transactions: İşlemler işleniyor...

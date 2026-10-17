@@ -54,6 +54,9 @@ pt-PT:
       account_sync_failed:
         one: "%{count} sincronização de conta da Wise não pôde ser agendada."
         other: "%{count} sincronizações de contas da Wise não puderam ser agendadas."
+      fetch_failed:
+        one: "%{count} pedido à Wise falhou. A próxima sincronização volta a tentar."
+        other: "%{count} pedidos à Wise falharam. A próxima sincronização volta a tentar."
     provider_panel:
       add_connection: Adicionar ligação à Wise
       token_label: Token de API

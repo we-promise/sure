@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
 class WiseAccount::Transactions::Processor
-  attr_reader :wise_account
+  attr_reader :wise_account, :import_complete
 
-  def initialize(wise_account)
+  # import_complete: see WiseItem#process_accounts.
+  def initialize(wise_account, import_complete: false)
     @wise_account = wise_account
+    @import_complete = import_complete
   end
 
   def process

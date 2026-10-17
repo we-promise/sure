@@ -154,6 +154,9 @@ fr:
       checking_account_configuration: Vérification de la configuration du compte…
       credentials_invalid: Jeton API Wise invalide ou autorisations insuffisantes
       failed: Échec de la synchronisation. Veuillez réessayer ou contacter le support.
+      fetch_failed:
+        one: "%{count} requête Wise a échoué. La prochaine synchronisation la relancera."
+        other: "%{count} requêtes Wise ont échoué. La prochaine synchronisation les relancera."
       import_failed: Échec de l'importation Wise.
       importing_accounts: Importation des comptes depuis Wise…
       processing_transactions: Traitement des transactions…

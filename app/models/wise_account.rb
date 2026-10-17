@@ -3,6 +3,13 @@
 class WiseAccount < ApplicationRecord
   include Encryptable
 
+  # Kept from the stored snapshot when a new one lacks them: the recipient
+  # ids that decide transfer direction (a failed lookup must not flip it)
+  # and Sure's own markers on the balance.
+  PRESERVED_KEYS = %w[
+    recipient_id borderless_account_id recipientId closed_at absent_count statements_coverage name_history
+  ].freeze
+
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
@@ -35,6 +42,10 @@ class WiseAccount < ApplicationRecord
     payload = balance_data.is_a?(Hash) ? balance_data.dup : balance_data
     payload = payload.merge("borderless_account_id" => borderless_account_id) if borderless_account_id
     payload = payload.merge("recipient_id" => recipient_id) if recipient_id
+    previous = raw_payload.is_a?(Hash) ? raw_payload : {}
+    PRESERVED_KEYS.each do |key|
+      payload = payload.merge(key => previous[key]) if previous.key?(key) && !payload.key?(key)
+    end
 
     currency_code = data.dig(:amount, :currency).presence || data[:currency].presence || currency
     savings = data[:type] == "SAVINGS"

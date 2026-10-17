@@ -54,6 +54,9 @@ en:
       account_sync_failed:
         one: "%{count} Wise account sync could not be scheduled."
         other: "%{count} Wise account syncs could not be scheduled."
+      fetch_failed:
+        one: "%{count} Wise request failed. The next sync will retry it."
+        other: "%{count} Wise requests failed. The next sync will retry them."
     provider_panel:
       add_connection: Add Wise connection
       token_label: API token
