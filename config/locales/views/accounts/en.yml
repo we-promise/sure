@@ -46,6 +46,7 @@ en:
       additional_details: Additional details
       institution_name_label: Institution name
       institution_name_placeholder: e.g., Chase Bank
+      custom_group_placeholder: e.g., Business, Kids, Vacation
       institution_domain_label: Institution domain
       institution_domain_placeholder: e.g., chase.com
       notes_label: Notes

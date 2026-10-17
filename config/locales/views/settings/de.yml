@@ -87,6 +87,15 @@ de:
       show:
         modals_title: Modale Fenster
         modals_subtitle: Verhalten der modalen Fenster anpassen
+        account_lists_title: Kontolisten
+        account_lists_subtitle: Lege fest, wie Konten in der Seitenleiste und im Dashboard gruppiert werden
+        account_grouping_primary_sidebar_label: Erste Ebene in der Seitenleiste
+        account_grouping_primary_dashboard_label: Erste Ebene im Dashboard
+        account_grouping_sidebar_label: Zweite Ebene in der Seitenleiste
+        account_grouping_dashboard_label: Zweite Ebene im Dashboard
+        account_grouping_none: Keine
+        custom_account_group_label_label: Name des Felds „Eigene Gruppe“
+        account_lists_hint: Vermögen und Schulden bleiben immer getrennt. Darin werden Konten nach dem ersten Feld gruppiert und optional nach dem zweiten weiter aufgeteilt; die Summen gelten über Kontotypen hinweg. Konten ohne Wert stehen unter „Ohne Angabe“. Die eigene Gruppe ist ein Freitextfeld in den Kontodetails.
         disable_modal_click_outside_title: Modale Fenster bei Klick außerhalb geöffnet lassen
         disable_modal_click_outside_description: Verhindert das Schließen modaler Fenster beim Klicken außerhalb. Nützlich, um ungespeicherte Änderungen nicht versehentlich zu verlieren.
         dashboard_subtitle: Lege fest, wie das Dashboard angezeigt wird

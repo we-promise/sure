@@ -49,6 +49,20 @@
             label: t(".institution_domain_label"),
             placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
 
+        <% if preview_features_enabled? %>
+          <%= form.text_field :custom_group,
+              label: Current.user.custom_account_group_label,
+              placeholder: t(".custom_group_placeholder"),
+              maxlength: AccountGrouping::CUSTOM_GROUP_MAX_LENGTH,
+              list: "account_custom_group_suggestions",
+              autocomplete: "off" %>
+          <datalist id="account_custom_group_suggestions">
+            <% account_custom_group_suggestions.each do |suggestion| %>
+              <option value="<%= suggestion %>"></option>
+            <% end %>
+          </datalist>
+        <% end %>
+
         <%= form.text_area :notes,
             label: t(".notes_label"),
             placeholder: t(".notes_placeholder"),
