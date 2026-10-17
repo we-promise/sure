@@ -2486,6 +2486,10 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
                    "EUR" => [ [ "wise_interbalance_9001_inflow", BigDecimal("-117.50") ] ] }, legs)
     transfer = Transfer.find_by!(inflow_transaction_id: Entry.find_by!(external_id: "wise_interbalance_9001_inflow").entryable_id)
     assert_equal "wise_interbalance_9001_outflow", transfer.outflow_transaction.entry.external_id
+    # Linked by WiseItem::InterbalanceLinker like any conversion: confirmed,
+    # with transfer kinds on both legs.
+    assert transfer.confirmed?
+    assert_equal %w[funds_movement funds_movement], [ transfer.inflow_transaction, transfer.outflow_transaction ].map { |txn| txn.reload.kind }
   end
 
   # A balance's statement rows already carry its card payments, so the

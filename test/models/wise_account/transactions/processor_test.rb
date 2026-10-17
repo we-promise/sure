@@ -125,6 +125,40 @@ class WiseAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     assert Entry.exists?(credit.id)
   end
 
+  # A link is Wise's own only when the linker made it, the two legs of one
+  # conversion or jar move on this item, and nobody added to it. The clean-up
+  # deleted a stale leg's transfer with the fee entry a person had added in
+  # the transfer drawer (a transfer's fee transactions go with it), and a
+  # transfer a person matched between two Wise balances.
+  test "keeps the stale legs of transfers a person made or added to" do
+    gbp_account = link(@wise_item.wise_accounts.create!(balance_id: "10000002", name: "Wise GBP", currency: "GBP",
+                                                        raw_payload: { "type" => "STANDARD" }))
+    linked_conversion = lambda do |resource_id, **attributes|
+      eur_leg = stale_entry("wise_interbalance_#{resource_id}_outflow")
+      gbp_leg = gbp_account.entries.create!(external_id: "wise_interbalance_#{resource_id}_inflow", source: "wise", amount: -8.6,
+                                            currency: "GBP", date: eur_leg.date, name: "Moved", entryable: Transaction.new)
+      Transfer.create!(inflow_transaction: gbp_leg.entryable, outflow_transaction: eur_leg.entryable, status: "confirmed", **attributes)
+              .tap(&:confirm!)
+    end
+    with_fee = linked_conversion.call("78")
+    fee = gbp_account.entries.create!(amount: 1.5, currency: "GBP", date: Date.new(2026, 10, 12), name: "Conversion fee",
+                                      entryable: Transaction.new(transfer_id: with_fee.id))
+    with_notes = linked_conversion.call("79", notes: "Holiday money")
+    pay_in = gbp_account.entries.create!(external_id: "wise_transfer_9000000101", source: "wise", amount: -8.6, currency: "GBP",
+                                         date: Date.new(2026, 10, 12), name: "Top-up", entryable: Transaction.new)
+    matched = Transfer.create!(inflow_transaction: pay_in.entryable, outflow_transaction: stale_entry("wise_transfer_9000000101").entryable,
+                               status: "confirmed")
+    store(payout(702))
+
+    result = process
+
+    assert_equal [ 0, 3 ], result.values_at(:pruned, :prune_kept)
+    assert [ with_fee, with_notes, matched ].all? { |transfer| Transfer.exists?(transfer.id) }
+    assert Entry.exists?(fee.id)
+    assert_equal %w[wise_interbalance_78_outflow wise_interbalance_79_outflow wise_transfer_9000000101],
+                 prune_notes.sole.metadata["kept_external_ids"].sort
+  end
+
   test "deletes nothing after an incomplete import, without a payload, on a closed balance or when a row fails" do
     entry = stale_entry("wise_transfer_701")
     {

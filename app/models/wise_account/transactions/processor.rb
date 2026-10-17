@@ -332,9 +332,8 @@ class WiseAccount::Transactions::Processor
     # take away: an edit or lock, notes, tags, receipts, a reconciliation, a
     # split, or a transfer they confirmed. Exclusion alone does not count,
     # since an excluded entry still moves the balance. Wise's own transfer
-    # links do not count either (a pending suggestion, or a confirmed link
-    # between two Wise entries of this item): they go with the entry, and the
-    # next link run restores what still applies.
+    # links do not count either (#wise_link?): they go with the entry, and
+    # the next link run restores what still applies.
     def protected_entry?(entry)
       transaction = entry.entryable
       entry.user_modified? || entry.import_locked? || entry.reconciled_at.present? ||
@@ -350,13 +349,13 @@ class WiseAccount::Transactions::Processor
       [ transaction.transfer_as_inflow, transaction.transfer_as_outflow ].compact.any? { |transfer| !wise_link?(transfer) }
     end
 
+    # A pending suggestion, or a link the linker confirmed: the two legs of
+    # one conversion or jar move on this item, with nothing a person added
+    # (WiseItem::InterbalanceLinker.system_link?; a fee entry a person added
+    # would go with the transfer). A transfer a person matched between two
+    # Wise entries, or noted, is theirs.
     def wise_link?(transfer)
-      return true if transfer.pending?
-
-      [ transfer.inflow_transaction, transfer.outflow_transaction ].all? do |leg|
-        entry = leg&.entry
-        entry.present? && entry.source == "wise" && item_account_ids.include?(entry.account_id)
-      end
+      transfer.pending? || WiseItem::InterbalanceLinker.system_link?(transfer, item_account_ids)
     end
 
     def item_account_ids

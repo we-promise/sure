@@ -85,35 +85,10 @@ class WiseItem < ApplicationRecord
     results
   end
 
-  # Finds interbalance entry pairs (JAR inflow ↔ STANDARD outflow) and links them as Transfers.
+  # Links each conversion and Jar move between this item's balances as a
+  # confirmed Transfer with transfer kinds (see WiseItem::InterbalanceLinker).
   def link_jar_transfers!
-    account_ids = accounts.pluck(:id)
-    return if account_ids.empty?
-
-    inflow_entries = Entry.where(source: "wise", account_id: account_ids)
-                         .where("external_id LIKE 'wise_interbalance_%_inflow'")
-
-    inflow_entries.each do |inflow_entry|
-      resource_id = inflow_entry.external_id.sub("wise_interbalance_", "").sub("_inflow", "")
-      outflow_entry = Entry.where(source: "wise", account_id: account_ids,
-                                  external_id: "wise_interbalance_#{resource_id}_outflow").first
-
-      next unless outflow_entry
-      next unless inflow_entry.entryable.is_a?(Transaction) && outflow_entry.entryable.is_a?(Transaction)
-
-      inflow_txn  = inflow_entry.entryable
-      outflow_txn = outflow_entry.entryable
-
-      next if Transfer.exists?(inflow_transaction_id: inflow_txn.id)
-      next if Transfer.exists?(outflow_transaction_id: outflow_txn.id)
-
-      transfer = Transfer.new(inflow_transaction: inflow_txn, outflow_transaction: outflow_txn, status: "confirmed")
-      unless transfer.save
-        Rails.logger.warn "WiseItem #{id} - Could not link interbalance #{resource_id}: #{transfer.errors.full_messages.join(", ")}"
-      end
-    rescue => e
-      Rails.logger.error "WiseItem #{id} - Error linking interbalance #{resource_id}: #{e.message}"
-    end
+    WiseItem::InterbalanceLinker.new(self).link!
   end
 
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
