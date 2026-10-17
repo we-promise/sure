@@ -93,12 +93,20 @@ class Property < ApplicationRecord
     registry.provider_keys.select { |key| avm_linkable?(key) && registry.get_provider(key).present? }
   end
 
-  # Links the property to an AVM provider; the caller queues the first
-  # refresh. Clearing the sync date makes that refresh run immediately.
+  # Links the property to an AVM provider and runs its first valuation right
+  # away. The link is kept only if that valuation succeeds; a failure (an
+  # address the provider can't value, an exhausted monthly budget) reverts
+  # it, so the property can still be linked to another provider instead of
+  # being stuck on one that never worked. Returns whether the link was kept.
   def link_avm_provider!(provider_key)
     raise ArgumentError, "#{provider_key} can't be linked to this property" unless avm_linkable?(provider_key)
 
     update!(avm_provider: provider_key.to_s, avm_last_synced_on: nil)
+    SyncPropertyValuationsJob.perform_now(property_id: id, force: true)
+    return true if reload.avm_last_synced_on.present?
+
+    update!(avm_provider: nil)
+    false
   end
 
   private

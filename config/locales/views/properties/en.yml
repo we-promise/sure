@@ -110,7 +110,8 @@ en:
       not_linked: "This property isn't linked to a valuation provider."
       not_configured: "%{provider} isn't configured. Add its API key in Settings → Self-Hosting to refresh this valuation."
     link_valuation:
-      linked: "Linked to %{provider}. The first valuation will appear shortly."
+      linked: "Linked to %{provider} and updated the property's value."
+      link_failed: "%{provider} couldn't value this property, so it wasn't linked. Check that the address is correct, then try again."
       not_linkable: "This property can't be linked to that provider. Check that its address is complete and in a supported country, and that the account currency matches the provider."
     subtypes:
       apartment:

@@ -87,7 +87,8 @@ class PropertiesController < ApplicationController
   end
 
   # Links a manually created property to an AVM provider so its value is
-  # refreshed automatically, and queues the first refresh right away.
+  # refreshed automatically. The first valuation runs during the request and
+  # the link is only kept if it succeeds.
   def link_valuation
     provider_key = params[:avm_provider].to_s
 
@@ -95,10 +96,12 @@ class PropertiesController < ApplicationController
       redirect_back_or_to account_path(@account), alert: t(".not_linkable") and return
     end
 
-    @property.link_avm_provider!(provider_key)
-    SyncPropertyValuationsJob.perform_later(property_id: @property.id, force: true)
-    redirect_back_or_to account_path(@account),
-                        notice: t(".linked", provider: t("properties.avm_providers.#{provider_key}"))
+    provider_name = t("properties.avm_providers.#{provider_key}")
+    if @property.link_avm_provider!(provider_key)
+      redirect_back_or_to account_path(@account), notice: t(".linked", provider: provider_name)
+    else
+      redirect_back_or_to account_path(@account), alert: t(".link_failed", provider: provider_name)
+    end
   end
 
   def address

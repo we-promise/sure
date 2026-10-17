@@ -710,19 +710,44 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{refresh_valuation_property_path(@account)}']"
   end
 
-  test "link_valuation links a manual property and queues its first refresh" do
+  test "link_valuation links a manual property after its first valuation succeeds" do
     @account.property.update!(avm_provider: nil, avm_last_synced_on: 1.year.ago.to_date)
     @account.property.address.update!(country: "United States")
-    Provider::Registry.stubs(:rentcast).returns(mock)
+    Provider::Registry.stubs(:rentcast).returns(rentcast_provider_returning(Provider::Response.new(success?: true, data: valuation_data(612_000), error: nil)))
 
-    assert_enqueued_with(job: SyncPropertyValuationsJob, args: [ { property_id: @account.property.id, force: true } ]) do
-      post link_valuation_property_path(@account, avm_provider: "rentcast")
-    end
+    post link_valuation_property_path(@account, avm_provider: "rentcast")
 
     assert_redirected_to account_path(@account)
-    assert_equal "Linked to RentCast. The first valuation will appear shortly.", flash[:notice]
+    assert_equal "Linked to RentCast and updated the property's value.", flash[:notice]
     assert_equal "rentcast", @account.property.reload.avm_provider
-    assert_nil @account.property.avm_last_synced_on
+    assert_equal Date.current, @account.property.avm_last_synced_on
+    assert_equal 612_000, @account.reload.balance
+  end
+
+  test "link_valuation keeps the property unlinked when the first valuation fails" do
+    @account.property.update!(avm_provider: nil)
+    error = Provider::Rentcast::Error.new("No property found")
+    Provider::Registry.stubs(:rentcast).returns(rentcast_provider_returning(Provider::Response.new(success?: false, data: nil, error: error)))
+
+    post link_valuation_property_path(@account, avm_provider: "rentcast")
+
+    assert_redirected_to account_path(@account)
+    assert_equal "RentCast couldn't value this property, so it wasn't linked. Check that the address is correct, then try again.", flash[:alert]
+    assert_nil @account.property.reload.avm_provider
+    assert_equal 550_000, @account.reload.balance
+  end
+
+  test "link_valuation keeps the property unlinked when the provider budget is spent" do
+    @account.property.update!(avm_provider: nil)
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(false)
+    provider.expects(:fetch_property_valuation).never
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    post link_valuation_property_path(@account, avm_provider: "rentcast")
+
+    assert_nil @account.property.reload.avm_provider
+    assert flash[:alert].present?
   end
 
   test "link_valuation refuses an unconfigured provider" do
@@ -806,4 +831,20 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{link_valuation_property_path(@account, avm_provider: "rentcast")}']"
     assert_select "form[action*='avm_provider=chimnie']", count: 0
   end
+
+  private
+    def valuation_data(valuation)
+      Provider::PropertyValuationConcept::PropertyValuation.new(
+        valuation: valuation, currency: "USD", property_type: "single_family_home",
+        year_built: 2002, area_value: 1000, area_unit: "sqft"
+      )
+    end
+
+    def rentcast_provider_returning(response)
+      provider = mock
+      provider.stubs(:requests_remaining?).returns(true)
+      provider.stubs(:valuation_currency).returns("USD")
+      provider.stubs(:fetch_property_valuation).returns(response)
+      provider
+    end
 end
