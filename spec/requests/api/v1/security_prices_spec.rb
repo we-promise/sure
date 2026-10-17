@@ -26,7 +26,6 @@ RSpec.describe 'API V1 Security Prices', type: :request do
       user: user,
       name: 'API Docs Key',
       key: key,
-      display_key: key,
       scopes: %w[read_write],
       source: 'web'
     )
@@ -39,7 +38,6 @@ RSpec.describe 'API V1 Security Prices', type: :request do
       user: user,
       name: 'No Read Docs Key',
       key: key,
-      display_key: key,
       scopes: [],
       source: 'web'
     ).tap { |api_key| api_key.save!(validate: false) }

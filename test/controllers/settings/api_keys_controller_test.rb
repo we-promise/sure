@@ -11,7 +11,7 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     ApiKey.create!(
       user: @user,
       name: "Listed Key",
-      display_key: "listed_key_123",
+      key: "listed_key_123",
       scopes: [ "read" ]
     )
 
@@ -24,7 +24,7 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     ApiKey.create!(
       user: @user,
       name: "Existing API Key",
-      display_key: "existing_key_123",
+      key: "existing_key_123",
       scopes: [ "read" ]
     )
 
@@ -45,7 +45,7 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     existing = ApiKey.create!(
       user: @user,
       name: "Existing API Key",
-      display_key: "existing_key_123",
+      key: "existing_key_123",
       scopes: [ "read" ]
     )
 
@@ -60,7 +60,7 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
 
     new_key = @user.api_keys.active.visible.find_by(name: "Brand New Key")
     assert new_key.present?
-    assert_redirected_to settings_api_key_path(new_key, newly_created: true)
+    assert_redirected_to settings_api_key_path(new_key)
 
     existing.reload
     refute existing.revoked?
@@ -97,7 +97,7 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     ApiKey.create!(
       user: @user,
       name: "Dup",
-      display_key: "dup_key_123",
+      key: "dup_key_123",
       scopes: [ "read" ]
     )
 
@@ -113,31 +113,49 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "show renders a key" do
+  test "show renders a key without revealing its secret" do
     created_key = ApiKey.create!(
       user: @user,
       name: "Test API Key",
-      display_key: "test_key_123",
+      key: "test_key_123",
       scopes: [ "read" ]
     )
 
     get settings_api_key_path(created_key)
     assert_response :success
     assert_includes response.body, "Test API Key"
+    assert_not_includes response.body, "test_key_123"
+    assert_includes response.body, "Starts with test_key"
+    assert_includes response.body, "YOUR_API_KEY"
   end
 
-  test "show renders the newly created confirmation" do
-    created_key = ApiKey.create!(
-      user: @user,
-      name: "Fresh Key",
-      display_key: "fresh_key_123",
-      scopes: [ "read" ]
-    )
+  test "the full key is shown once after creation and never again" do
+    post settings_api_keys_path, params: { api_key: { name: "Fresh Key", scopes: "read" } }
 
-    get settings_api_key_path(created_key, newly_created: true)
+    created_key = @user.api_keys.active.visible.find_by!(name: "Fresh Key")
+    follow_redirect!
     assert_response :success
-    assert_includes response.body, created_key.plain_key
+
+    plain_key = revealed_key
+    assert_equal 64, plain_key.length
+    assert_equal ApiKey.digest(plain_key), created_key.key_digest
     assert_select "h3", text: I18n.t("settings.api_keys.show.newly_created.heading")
+    assert_select "div#newly_created_api_key_reveal[data-turbo-permanent]"
+
+    # Reloading the same URL (or visiting it later) must not reveal the key.
+    get settings_api_key_path(created_key)
+    assert_response :success
+    assert_not_includes response.body, plain_key
+    assert_includes response.body, "Starts with #{plain_key.first(ApiKey::KEY_PREFIX_LENGTH)}"
+    assert_select "h3", text: I18n.t("settings.api_keys.show.newly_created.heading"), count: 0
+  end
+
+  test "a newly created key authenticates API requests" do
+    post settings_api_keys_path, params: { api_key: { name: "Usable Key", scopes: "read" } }
+    follow_redirect!
+
+    plain_key = revealed_key
+    assert_equal @user.api_keys.find_by!(name: "Usable Key"), ApiKey.find_by_value(plain_key)
   end
 
   test "show 404s on another user's key" do
@@ -146,7 +164,7 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     other_key = ApiKey.create!(
       user: other_user,
       name: "Other User Key",
-      display_key: "other_user_key_123",
+      key: "other_user_key_123",
       scopes: [ "read" ]
     )
 
@@ -158,13 +176,13 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     key1 = ApiKey.create!(
       user: @user,
       name: "Key One",
-      display_key: "key_one_123",
+      key: "key_one_123",
       scopes: [ "read" ]
     )
     key2 = ApiKey.create!(
       user: @user,
       name: "Key Two",
-      display_key: "key_two_123",
+      key: "key_two_123",
       scopes: [ "read_write" ]
     )
 
@@ -184,7 +202,7 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     demo_key = ApiKey.create!(
       user: @user,
       name: "Demo Monitoring Key",
-      display_key: ApiKey::DEMO_MONITORING_KEY,
+      key: ApiKey::DEMO_MONITORING_KEY,
       scopes: [ "read" ]
     )
 
@@ -205,9 +223,10 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
 
     created_key = @user.api_keys.active.visible.find_by(name: "Random Key Test")
     assert created_key.present?
-    assert_redirected_to settings_api_key_path(created_key, newly_created: true)
+    assert_redirected_to settings_api_key_path(created_key)
     assert_includes created_key.scopes, "read"
-    assert_equal 64, created_key.plain_key.length
+    assert_equal ApiKey::KEY_PREFIX_LENGTH, created_key.key_prefix.length
+    assert_nil created_key.display_key
   end
 
   # API keys are user-scoped self-management: a member manages their own keys
@@ -232,6 +251,52 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
 
     new_key = member.api_keys.active.visible.find_by(name: "Member Key")
     assert new_key.present?
-    assert_redirected_to settings_api_key_path(new_key, newly_created: true)
+    assert_redirected_to settings_api_key_path(new_key)
   end
+
+  test "visiting another key does not leak or consume pending secret for created key" do
+    other_key = ApiKey.create!(
+      user: @user,
+      name: "Other Key",
+      key: "other_key_secret_123",
+      scopes: [ "read" ]
+    )
+
+    post settings_api_keys_path, params: { api_key: { name: "New Secret Key", scopes: "read" } }
+    created_key = @user.api_keys.active.visible.find_by!(name: "New Secret Key")
+
+    # Visiting another key must not display the newly created secret or consume it
+    get settings_api_key_path(other_key)
+    assert_response :success
+    assert_not_includes response.body, "other_key_secret_123"
+    assert_select "code[data-clipboard-target='source']", count: 0
+
+    # Visiting the actual created key still reveals its secret
+    get settings_api_key_path(created_key)
+    assert_response :success
+    plain_key = revealed_key
+    assert_equal 64, plain_key.length
+    assert_equal ApiKey.digest(plain_key), created_key.key_digest
+  end
+
+  test "newly created key view specifies turbo-cache-control no-cache" do
+    post settings_api_keys_path, params: { api_key: { name: "Cache Control Key", scopes: "read" } }
+    created_key = @user.api_keys.active.visible.find_by!(name: "Cache Control Key")
+
+    follow_redirect!
+    assert_response :success
+    assert_select "meta[name='turbo-cache-control'][content='no-cache']"
+
+    # Subsequent visit without the secret does not set turbo-cache-control no-cache
+    get settings_api_key_path(created_key)
+    assert_response :success
+    assert_select "meta[name='turbo-cache-control'][content='no-cache']", count: 0
+  end
+
+  private
+
+    # The key shown on the "created" page, read from the clipboard source element.
+    def revealed_key
+      css_select("code[data-clipboard-target='source']").first&.text.to_s.strip
+    end
 end
