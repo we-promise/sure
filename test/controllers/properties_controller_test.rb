@@ -760,6 +760,18 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_nil @account.property.reload.avm_provider
   end
 
+  test "link_valuation requires a known country" do
+    @account.property.update!(avm_provider: nil)
+    @account.property.address.update!(country: "")
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_nil @account.property.reload.avm_provider
+  end
+
   test "link_valuation does not replace an existing provider" do
     @account.property.update!(avm_provider: "realie")
     Provider::Registry.stubs(:rentcast).returns(mock)

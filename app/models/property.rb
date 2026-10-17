@@ -72,9 +72,12 @@ class Property < ApplicationRecord
   # automatic refreshes. Only address-based providers qualify: ID-based
   # providers (Chimnie) need an identifier that only the create-time lookup
   # supplies. The account must already be in the provider's currency so a
-  # refresh can't write a valuation in the wrong currency.
+  # refresh can't write a valuation in the wrong currency. Unlike the
+  # create-time lookup, which always sets the country, a manual address may
+  # omit it, so require one to confirm the property is in the provider's
+  # country.
   def avm_linkable?(provider_key)
-    return false if avm_provider.present?
+    return false if avm_provider.present? || address&.country.blank?
 
     provider_class = Provider::PropertyValuationConcept.provider_class(provider_key)
     return false if provider_class.nil? || provider_class.requires_external_id?
