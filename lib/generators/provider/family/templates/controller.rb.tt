@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class <%= class_name %>ItemsController < ApplicationController
+  include StreamExtensions
+
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_<%= file_name %>_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
@@ -60,7 +62,7 @@ class <%= class_name %>ItemsController < ApplicationController
     # Trigger a sync to fetch accounts from the provider
     <%= file_name %>_item = Current.family.<%= file_name %>_items.first
     unless <%= file_name %>_item&.credentials_configured?
-      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
+      frame_redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
 
@@ -74,7 +76,7 @@ class <%= class_name %>ItemsController < ApplicationController
 
     <%= file_name %>_item = Current.family.<%= file_name %>_items.first
     unless <%= file_name %>_item&.credentials_configured?
-      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
+      frame_redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
 
@@ -135,7 +137,7 @@ class <%= class_name %>ItemsController < ApplicationController
     @<%= file_name %>_item = Current.family.<%= file_name %>_items.first
 
     unless @<%= file_name %>_item&.credentials_configured?
-      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
+      frame_redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
 
