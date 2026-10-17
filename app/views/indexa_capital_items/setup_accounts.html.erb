@@ -57,7 +57,7 @@
                     <% end %>
                   </label>
                 </div>
-                <div class="mt-3 pl-7" onclick="event.stopPropagation();">
+                <div class="mt-3 pl-7" data-controller="stop-propagation" data-action="click->stop-propagation#stop">
                   <label for="sync_start_<%= indexa_capital_account.id %>" class="block text-xs text-secondary mb-1">
                     <%= t("indexa_capital_items.setup_accounts.sync_start_date_label") %>
                   </label>
@@ -65,7 +65,7 @@
                          id="sync_start_<%= indexa_capital_account.id %>"
                          name="sync_start_dates[<%= indexa_capital_account.id %>]"
                          value="<%= indexa_capital_account.sync_start_date %>"
-                         onclick="event.stopPropagation();"
+                         data-action="click->stop-propagation#stop"
                          autocomplete="off"
                          class="bg-container border border-primary rounded px-2 py-1 text-sm text-primary">
                   <p class="text-xs text-secondary mt-1">
