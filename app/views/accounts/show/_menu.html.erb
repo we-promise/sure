@@ -2,6 +2,7 @@
 
 <% permission = account.permission_for(Current.user) %>
 <%= render DS::Menu.new(testid: "account-menu") do |menu| %>
+  <%= render "bitcoin_wallets/menu_item", menu: menu, account: account, permission: permission %>
   <% if permission.in?([ :owner, :full_control ]) %>
     <% menu.with_item(variant: "link", text: t(".edit"), href: edit_account_path(account), icon: "pencil-line", data: { turbo_frame: :modal }) %>
   <% end %>

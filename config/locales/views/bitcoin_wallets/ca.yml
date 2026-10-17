@@ -1,0 +1,77 @@
+---
+ca:
+  bitcoin_wallets:
+    title: Cartera de Bitcoin
+    security: Posició de Bitcoin existent
+    manual_address: Adreça pública
+    bip84: Compte Native SegWit (xpub / zpub)
+    gap_limit: Límit d'adreces consecutives sense ús
+    discover: Descobreix les adreces
+    failed: "No s'ha pogut llegir completament la cartera. Es conserva l'últim saldo complet; torna a sincronitzar o comprova la clau i el límit d'adreces sense ús."
+    address_mismatch: "L'adreça de recepció no correspon a la clau d'aquest compte dins del límit seleccionat. Comprova la clau del compte, l'adreça i el límit d'adreces sense ús."
+    address_conflict: "Un altre compte connectat d'aquesta llar ja segueix una de les adreces. Desconnecta primer la connexió que se superposa."
+    missing_price: "La quantitat de Bitcoin està actualitzada, però no se n'ha pogut establir el valor de mercat. El compte conserva la valoració anterior. Comprova els proveïdors de preus i de tipus de canvi."
+    pricing_warning: "No hi ha cap proveïdor de dades de mercat de criptomonedes activat. Encara es poden fer servir els preus manuals coneguts; si no, el compte conserva la valoració anterior fins que hi hagi una cotització disponible."
+    exchange_rate_warning: "No hi ha cap proveïdor de tipus de canvi configurat per a %{currency}. Quan la conversió no està disponible, el compte conserva la valoració anterior. Configura un proveïdor de tipus de canvi a la configuració d'autoallotjament."
+    stale: "Aquesta lectura de la cartera té més de dues hores. Sincronitza la cartera per tornar-la a llegir."
+    quantity: "%{quantity} BTC"
+    address_count:
+      one: "Se segueix %{count} adreça única"
+      other: "Se segueixen %{count} adreces úniques"
+    connected: S'ha connectat la cartera de Bitcoin.
+    not_ready: Completa el descobriment de la cartera abans de connectar-la.
+    history_truncated: No s'ha retornat part de l'historial de transferències. Això no canvia el saldo actual observat.
+    add_source: Afegeix una altra font
+    remove_source: Elimina la font
+    remove_source_confirm: Vols deixar de seguir aquesta font? Les fonts restants es tornaran a conciliar sense eliminar l'historial del compte.
+    disconnected: S'ha desconnectat la cartera de Bitcoin; el compte i l'historial es mantenen.
+    setup_cancelled: S'ha cancel·lat la configuració de la cartera de Bitcoin.
+    source_removed: S'ha eliminat la font. Les fonts restants s'estan tornant a llegir.
+    manage: Gestiona la cartera de Bitcoin
+    connect_action: Connecta una cartera de Bitcoin
+    movements:
+      received: "Recepció de %{quantity} BTC"
+      sent: "Enviament de %{quantity} BTC"
+    discovery_progress:
+      one: "De moment s'ha comprovat %{count} adreça"
+      other: "De moment s'han comprovat %{count} adreces"
+    reconciliation: "Ajust de la cartera"
+    disconnect_confirm: "Vols deixar de seguir aquesta cartera? La posició BTC i l'historial es queden al compte i tornen a ser manuals."
+    new_title: "Segueix una cartera Bitcoin"
+    read_only_short: "Només lectura: Sure llegeix saldos públics i mai no pot gastar. No enganxis mai una frase de recuperació ni una clau privada."
+    key_label: "Adreça Bitcoin o xpub / zpub"
+    key_placeholder: "bc1q… o zpub6r…"
+    key_hint: "Enganxa una adreça, o la xpub/zpub de compte de la teva cartera per seguir totes les adreces que fa servir."
+    verification_address: "Una adreça de recepció d'aquesta cartera"
+    verification_hint: "Copia-la de l'aplicació de la cartera. Sure comprova que pertany a la clau abans de llegir res."
+    advanced: "Avançat"
+    gap_limit_hint: "Quantes adreces sense ús cal comprovar per endavant. Augmenta-ho només si falta un saldo."
+    status:
+      tracking: "En seguiment"
+      reading: "Llegint la cartera"
+      ready: "A punt per seguir"
+      needs_attention: "Cal revisar-la"
+      retrying: "Reintentant"
+    read_ago: "Llegit fa %{time}"
+    temporary_failure: "La cadena de blocs ha avançat mentre llegíem la cartera. Ho tornarem a provar automàticament; el saldo no canvia."
+    discovering_title: "Llegint la cartera…"
+    discovering_address: "Obtenint el saldo d'aquesta adreça."
+    wallet_value: "Valor de la cartera"
+    pending_amount: "%{amount} BTC sense confirmar"
+    connect_explainer_new: "El seguiment afegeix aquesta posició BTC al compte i l'actualitza cada hora."
+    connect_explainer_balance: "El saldo d'aquest compte, %{balance}, es va introduir a mà. El seguiment el substitueix pel valor de la cartera; els saldos anteriors es conserven."
+    connect_explainer_replace: "Aquest compte registra ara %{previous} BTC. El seguiment ho substitueix pel saldo de la cartera (%{difference} BTC); l'activitat anterior es conserva."
+    start_tracking: "Comença el seguiment"
+    sync_now: "Llegeix ara"
+    read_again: "Torna a llegir"
+    stop_tracking: "Atura el seguiment"
+    cancel: "Cancel·la"
+    details: "Adreces i fonts"
+    add_source_submit: "Afegeix"
+    header_badge: "Cartera Bitcoin"
+    holding_managed: "S'actualitza automàticament des de la teva cartera Bitcoin"
+    manage_short: "Gestiona"
+    errors:
+      invalid_address: "No sembla una adreça Bitcoin vàlida. Comprova si falta o sobra algun caràcter."
+      invalid_key: "No és una xpub o zpub de compte vàlida. Exporta-la des de la configuració del compte de la cartera."
+      invalid_verification_address: "Aquesta adreça no és una adreça Bitcoin vàlida."

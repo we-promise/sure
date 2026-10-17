@@ -1,0 +1,77 @@
+---
+fr:
+  bitcoin_wallets:
+    title: Portefeuille Bitcoin
+    security: Position Bitcoin existante
+    manual_address: Adresse publique
+    bip84: Compte Native SegWit (xpub / zpub)
+    gap_limit: Limite d'écart des adresses inutilisées
+    discover: Découvrir les adresses
+    failed: "Le portefeuille n'a pas pu être lu entièrement. Le dernier solde complet est conservé ; relancez la synchronisation ou vérifiez la clé et la limite d'écart."
+    address_mismatch: "L'adresse de réception ne correspond pas à cette clé de compte dans la limite d'écart choisie. Vérifiez la clé de compte, l'adresse et la limite d'écart."
+    address_conflict: "Une adresse est déjà suivie par un autre compte connecté de ce foyer. Déconnectez d'abord la connexion qui fait doublon."
+    missing_price: "La quantité de bitcoins est à jour, mais sa valeur de marché n'a pas pu être établie. Le compte conserve sa valorisation précédente. Vérifiez les fournisseurs de cours et de taux de change."
+    pricing_warning: "Aucun fournisseur de données de marché pour les cryptomonnaies n'est activé. Les cours saisis manuellement restent utilisables ; sinon, le compte conserve sa valorisation précédente jusqu'à ce qu'une cotation soit disponible."
+    exchange_rate_warning: "Aucun fournisseur de taux de change n'est configuré pour %{currency}. Le compte conserve sa valorisation précédente lorsque la conversion est impossible. Configurez un fournisseur de taux de change dans les paramètres d'auto-hébergement."
+    stale: "Cette lecture du portefeuille date de plus de deux heures. Synchronisez le portefeuille pour le relire."
+    quantity: "%{quantity} BTC"
+    address_count:
+      one: "%{count} adresse unique suivie"
+      other: "%{count} adresses uniques suivies"
+    connected: Portefeuille Bitcoin connecté.
+    not_ready: Terminez la découverte des adresses du portefeuille avant de le connecter.
+    history_truncated: Une partie de l'historique des transferts n'a pas été renvoyée. Cela ne modifie pas le solde actuel observé.
+    add_source: Ajouter une autre source
+    remove_source: Retirer la source
+    remove_source_confirm: Arrêter le suivi de cette source ? Les sources restantes seront rapprochées sans supprimer l'historique du compte.
+    disconnected: Portefeuille Bitcoin déconnecté ; le compte et l'historique sont conservés.
+    setup_cancelled: Configuration du portefeuille Bitcoin annulée.
+    source_removed: Source retirée. Les sources restantes sont relues.
+    manage: Gérer le portefeuille Bitcoin
+    connect_action: Connecter un portefeuille Bitcoin
+    movements:
+      received: "Réception de %{quantity} BTC"
+      sent: "Envoi de %{quantity} BTC"
+    discovery_progress:
+      one: "%{count} adresse vérifiée pour l'instant"
+      other: "%{count} adresses vérifiées pour l'instant"
+    reconciliation: "Ajustement du portefeuille"
+    disconnect_confirm: "Arrêter le suivi de ce portefeuille ? Votre position BTC et l'historique restent dans le compte et redeviennent manuels."
+    new_title: "Suivre un portefeuille Bitcoin"
+    read_only_short: "Lecture seule : Sure lit les soldes publics et ne peut jamais dépenser. Ne collez jamais de phrase de récupération ni de clé privée."
+    key_label: "Adresse Bitcoin ou xpub / zpub"
+    key_placeholder: "bc1q… ou zpub6r…"
+    key_hint: "Collez une adresse, ou la xpub/zpub de compte de votre portefeuille pour suivre toutes les adresses qu'il utilise."
+    verification_address: "Une adresse de réception de ce portefeuille"
+    verification_hint: "Copiez-la depuis votre application de portefeuille. Sure vérifie qu'elle appartient à la clé avant toute lecture."
+    advanced: "Avancé"
+    gap_limit_hint: "Nombre d'adresses inutilisées à examiner à l'avance. Augmentez-le seulement si un solde manque."
+    status:
+      tracking: "Suivi actif"
+      reading: "Lecture en cours"
+      ready: "Prêt à suivre"
+      needs_attention: "Action requise"
+      retrying: "Nouvel essai"
+    read_ago: "Lu il y a %{time}"
+    temporary_failure: "La blockchain a avancé pendant la lecture de votre portefeuille. Nous réessaierons automatiquement ; votre solde ne change pas."
+    discovering_title: "Lecture de votre portefeuille…"
+    discovering_address: "Récupération du solde de cette adresse."
+    wallet_value: "Valeur du portefeuille"
+    pending_amount: "%{amount} BTC non confirmés"
+    connect_explainer_new: "Le suivi ajoute cette position BTC au compte et la met à jour toutes les heures."
+    connect_explainer_balance: "Le solde de ce compte, %{balance}, a été saisi à la main. Le suivi le remplace par la valeur du portefeuille ; les soldes passés sont conservés."
+    connect_explainer_replace: "Ce compte enregistre actuellement %{previous} BTC. Le suivi le remplace par le solde du portefeuille (%{difference} BTC) ; l'historique est conservé."
+    start_tracking: "Commencer le suivi"
+    sync_now: "Lire maintenant"
+    read_again: "Relire"
+    stop_tracking: "Arrêter le suivi"
+    cancel: "Annuler"
+    details: "Adresses et sources"
+    add_source_submit: "Ajouter"
+    header_badge: "Portefeuille Bitcoin"
+    holding_managed: "Mis à jour automatiquement depuis votre portefeuille Bitcoin"
+    manage_short: "Gérer"
+    errors:
+      invalid_address: "Cette adresse Bitcoin ne semble pas valide. Vérifiez qu'il ne manque pas de caractère et qu'il n'y en a pas en trop."
+      invalid_key: "Ce n'est pas une xpub ou zpub de compte valide. Exportez-la depuis les paramètres de compte de votre portefeuille."
+      invalid_verification_address: "Cette adresse n'est pas une adresse Bitcoin valide."

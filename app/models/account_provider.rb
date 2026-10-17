@@ -8,6 +8,7 @@ class AccountProvider < ApplicationRecord
   validates :provider_id, uniqueness: { scope: :provider_type }
 
   validate :financekit_has_exclusive_writer, if: -> { new_record? || will_save_change_to_account_id? || will_save_change_to_provider_id? || will_save_change_to_provider_type? }
+  validate :bitcoin_wallet_account_stays_manual, if: -> { new_record? || will_save_change_to_account_id? }
 
   # When unlinking a CoinStats account, also destroy the CoinstatsAccount record
   # so it doesn't remain orphaned and count as "needs setup".
@@ -21,6 +22,7 @@ class AccountProvider < ApplicationRecord
   # — so linking that same asset again would collide with a row nothing shows.
   # The Sure account and its holdings are untouched and carry on as manual.
   after_destroy :destroy_onchain_provider_account, if: :onchain_provider?
+  after_destroy :destroy_bitcoin_provider_account, if: -> { provider_type == "BitcoinWalletAccount" }
 
   # Returns the provider adapter for this connection
   def adapter
@@ -34,6 +36,22 @@ class AccountProvider < ApplicationRecord
   end
 
   private
+
+    # Remove tracking after generic unlinking, avoiding recursive destruction
+    # when the wallet itself is already destroying its provider association.
+    def destroy_bitcoin_provider_account
+      return if destroyed_by_association&.active_record == BitcoinWalletAccount
+
+      provider&.destroy
+    end
+
+    # A Bitcoin wallet is the only provider its account may have, and the cash
+    # anchors it leaves keep the account on that accounting after disconnecting.
+    def bitcoin_wallet_account_stays_manual
+      return if account.nil? || provider_type == "BitcoinWalletAccount"
+
+      errors.add(:account, :bitcoin_wallet) if account.bitcoin_wallet_account || account.accounting_start_date
+    end
 
     def financekit_has_exclusive_writer
       # belongs_to :account already reports a missing account; bail out rather

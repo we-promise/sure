@@ -1,0 +1,29 @@
+en:
+  valuations:
+    cash_anchor: Cash balance reconciliation
+  entries:
+    errors:
+      position_managed: This position is managed by a provider. Disconnect it before changing its quantity.
+  holdings:
+    quantity_reconciliation: Position quantity reconciliation
+    remap_security:
+      managed_position: Disconnect the provider before changing the tracked Bitcoin security.
+  activerecord:
+    errors:
+      models:
+        trade:
+          attributes:
+            security:
+              managed_position: is managed by a provider. Disconnect it before changing this position.
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: "is linked to another provider. Bitcoin wallets can be tracked only on manual crypto accounts."
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: "has or had a Bitcoin wallet, so it cannot be linked to another provider."
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: requires configured Active Record encryption

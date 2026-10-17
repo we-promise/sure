@@ -1,6 +1,9 @@
 ---
 ca:
   trades:
+    trade:
+      pending: Pendent
+      quantity_change: "%{qty} %{ticker}"
     form:
       account: Compte de transferència (opcional)
       account_prompt: Cerca compte

@@ -2,6 +2,15 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :accounts, only: [] do
+    resource :bitcoin_wallet, only: %i[new create show destroy] do
+      post :connect
+      post :sync
+      post :add_source
+      delete :remove_source
+    end
+  end
+
   resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts

@@ -89,8 +89,9 @@ class ProviderConnectionStatus
     @sync_context = sync_context
   end
 
+  # Expose safe connection counts and sync metadata without wallet keys or address lists.
   def to_h
-    {
+    payload = {
       id: item.id,
       provider: provider[:key],
       provider_type: provider[:type],
@@ -106,6 +107,8 @@ class ProviderConnectionStatus
       created_at: item.created_at,
       updated_at: item.updated_at
     }
+    payload[:bitcoin_wallets] = bitcoin_wallet_payload if provider[:key] == "onchain_wallet"
+    payload
   end
 
   private
@@ -175,10 +178,36 @@ class ProviderConnectionStatus
       0
     end
 
+    # Preload provider records without loading unbounded grouped-wallet address collections.
     def provider_account_records
       return unless item.respond_to?(provider[:accounts])
 
-      @provider_account_records ||= item.public_send(provider[:accounts]).to_a
+      @provider_account_records ||= begin
+        records = item.public_send(provider[:accounts]).to_a
+        if item.is_a?(OnchainWalletItem)
+          wallets = item.bitcoin_wallet_accounts
+          wallets = wallets.where(account_id: Current.user.accessible_accounts.select(:id)) if Current.user
+          records += wallets.to_a
+        end
+        records
+      end
+    end
+
+    # Return freshness and counts for accessible wallet accounts only. Neither
+    # extended public keys nor the underlying address lists enter the status API.
+    def bitcoin_wallet_payload
+      wallets = item.bitcoin_wallet_accounts
+      wallets = wallets.where(account_id: Current.user.accessible_accounts.select(:id)) if Current.user
+      wallets = wallets.to_a
+      address_counts = BitcoinWalletAddress.where(bitcoin_wallet_account_id: wallets.map(&:id)).group(:bitcoin_wallet_account_id).count
+      source_counts = BitcoinWalletSource.where(bitcoin_wallet_account_id: wallets.map(&:id)).group(:bitcoin_wallet_account_id).count
+      wallets.map do |wallet|
+        {
+          account_id: wallet.account_id, provider_type: "BitcoinWalletAccount", status: wallet.status,
+          address_count: address_counts.fetch(wallet.id, 0), source_count: source_counts.fetch(wallet.id, 0),
+          last_synced_at: wallet.last_synced_at, stale: wallet.stale?, history_truncated: wallet.history_truncated?
+        }
+      end
     end
 
     def linked_provider_account?(provider_account)

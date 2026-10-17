@@ -1,0 +1,81 @@
+---
+pl:
+  bitcoin_wallets:
+    title: Portfel Bitcoin
+    security: Istniejąca pozycja Bitcoin
+    manual_address: Adres publiczny
+    bip84: Konto Native SegWit (xpub / zpub)
+    gap_limit: Limit luki nieużywanych adresów
+    discover: Wykryj adresy
+    failed: "Nie udało się w pełni odczytać portfela. Ostatnie pełne saldo zostało zachowane; ponów synchronizację albo sprawdź klucz i limit luki."
+    address_mismatch: "Adres odbiorczy nie pasuje do klucza tego konta w wybranym limicie luki. Sprawdź klucz konta, adres i limit luki."
+    address_conflict: "Jeden z adresów jest już śledzony przez inne połączone konto w tym gospodarstwie domowym. Najpierw odłącz pokrywające się połączenie."
+    missing_price: "Ilość bitcoinów jest aktualna, ale nie udało się ustalić jej wartości rynkowej. Konto zachowuje poprzednią wycenę. Sprawdź dostawców cen i kursów wymiany."
+    pricing_warning: "Nie włączono żadnego dostawcy danych rynkowych dla kryptowalut. Znane ceny wprowadzone ręcznie nadal mogą być używane; w przeciwnym razie konto zachowuje poprzednią wycenę, dopóki nie pojawi się notowanie."
+    exchange_rate_warning: "Nie skonfigurowano dostawcy kursów wymiany dla %{currency}. Gdy przeliczenie jest niedostępne, konto zachowuje poprzednią wycenę. Skonfiguruj dostawcę kursów wymiany w ustawieniach hostingu własnego."
+    stale: "Ten odczyt portfela ma ponad dwie godziny. Zsynchronizuj portfel, aby odczytać go ponownie."
+    quantity: "%{quantity} BTC"
+    address_count:
+      one: Śledzenie 1 unikalnego adresu
+      few: "Śledzenie %{count} unikalnych adresów"
+      many: "Śledzenie %{count} unikalnych adresów"
+      other: "Śledzenie %{count} unikalnych adresów"
+    connected: Połączono portfel Bitcoin.
+    not_ready: Przed połączeniem dokończ wykrywanie adresów portfela.
+    history_truncated: Część historii przelewów nie została zwrócona. Nie zmienia to zaobserwowanego bieżącego salda.
+    add_source: Dodaj kolejne źródło
+    remove_source: Usuń źródło
+    remove_source_confirm: Zatrzymać śledzenie tego źródła? Pozostałe źródła zostaną ponownie uzgodnione bez usuwania historii konta.
+    disconnected: Odłączono portfel Bitcoin; konto i historia pozostały.
+    setup_cancelled: Anulowano konfigurację portfela Bitcoin.
+    source_removed: Usunięto źródło. Pozostałe źródła są odczytywane ponownie.
+    manage: Zarządzaj portfelem Bitcoin
+    connect_action: Połącz portfel Bitcoin
+    movements:
+      received: "Otrzymano %{quantity} BTC"
+      sent: "Wysłano %{quantity} BTC"
+    discovery_progress:
+      one: "Sprawdzono dotąd 1 adres"
+      few: "Sprawdzono dotąd %{count} adresy"
+      many: "Sprawdzono dotąd %{count} adresów"
+      other: "Sprawdzono dotąd %{count} adresów"
+    reconciliation: "Korekta portfela"
+    disconnect_confirm: "Przestać śledzić ten portfel? Pozycja BTC i historia pozostaną na koncie i znów będą prowadzone ręcznie."
+    new_title: "Śledź portfel Bitcoin"
+    read_only_short: "Tylko do odczytu: Sure odczytuje publiczne salda i nigdy nie może wydawać środków. Nigdy nie wklejaj frazy odzyskiwania ani klucza prywatnego."
+    key_label: "Adres Bitcoin lub xpub / zpub"
+    key_placeholder: "bc1q… lub zpub6r…"
+    key_hint: "Wklej jeden adres albo xpub/zpub konta portfela, aby śledzić wszystkie używane przez niego adresy."
+    verification_address: "Jeden adres odbiorczy z tego portfela"
+    verification_hint: "Skopiuj go z aplikacji portfela. Sure sprawdza, czy należy do klucza, zanim cokolwiek odczyta."
+    advanced: "Zaawansowane"
+    gap_limit_hint: "Ile nieużywanych adresów sprawdzać z wyprzedzeniem. Zwiększ tylko, jeśli brakuje salda."
+    status:
+      tracking: "Śledzony"
+      reading: "Odczyt portfela"
+      ready: "Gotowy do śledzenia"
+      needs_attention: "Wymaga uwagi"
+      retrying: "Ponawianie"
+    read_ago: "Odczytano %{time} temu"
+    temporary_failure: "Blockchain zmienił się podczas odczytu portfela. Spróbujemy ponownie automatycznie; saldo się nie zmienia."
+    discovering_title: "Odczytywanie portfela…"
+    discovering_address: "Pobieranie salda tego adresu."
+    wallet_value: "Wartość portfela"
+    pending_amount: "%{amount} BTC niepotwierdzone"
+    connect_explainer_new: "Śledzenie dodaje tę pozycję BTC do konta i aktualizuje ją co godzinę."
+    connect_explainer_balance: "Saldo tego konta, %{balance}, zostało wpisane ręcznie. Śledzenie zastąpi je wartością portfela; wcześniejsze salda zostaną zachowane."
+    connect_explainer_replace: "To konto obecnie zapisuje %{previous} BTC. Śledzenie zastąpi to saldem portfela (%{difference} BTC); wcześniejsza aktywność zostanie zachowana."
+    start_tracking: "Zacznij śledzić"
+    sync_now: "Odczytaj teraz"
+    read_again: "Odczytaj ponownie"
+    stop_tracking: "Przestań śledzić"
+    cancel: "Anuluj"
+    details: "Adresy i źródła"
+    add_source_submit: "Dodaj"
+    header_badge: "Portfel Bitcoin"
+    holding_managed: "Aktualizowane automatycznie z portfela Bitcoin"
+    manage_short: "Zarządzaj"
+    errors:
+      invalid_address: "To nie wygląda na prawidłowy adres Bitcoin. Sprawdź, czy nie brakuje znaku albo nie ma zbędnego."
+      invalid_key: "To nie jest prawidłowy xpub ani zpub na poziomie konta. Wyeksportuj go z ustawień konta w portfelu."
+      invalid_verification_address: "Ten adres nie jest prawidłowym adresem Bitcoin."
