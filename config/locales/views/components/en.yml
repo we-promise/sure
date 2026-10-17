@@ -80,6 +80,7 @@ en:
           legend: Chart series
           since_start: since the loan started
         no_data_available: "No data available"
+        ownership_share: "Your share: %{percentage} (%{amount})"
         title:
           balance: Balance
           cash_value: Cash value
