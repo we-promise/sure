@@ -52,7 +52,6 @@ class BitcoinWalletAccount < ApplicationRecord
       create_account_provider!(account: account)
       account.account_providers.reset
       account.create_cash_anchor!
-      account.reconcile_position_journals!
       bitcoin_wallet_transactions.update_all(baseline: true)
       update!(baseline_at: Time.current, status: :active)
       record_reconciliation!
@@ -152,15 +151,14 @@ class BitcoinWalletAccount < ApplicationRecord
       parent_sync ? scope.where(parent_id: [ nil, parent_sync.id ]) : scope
     end
 
-    # Restrict the publisher to a same-family Crypto account and BTC security
-    # without another provider already owning that position.
+    # Restrict the publisher to a manual same-family Crypto account and a BTC
+    # security: the wallet must be the account's only provider.
     def eligible_account
       return if account.nil? || onchain_wallet_item.nil?
       errors.add(:account, :invalid) unless account.family_id == onchain_wallet_item.family_id && account.accountable_type == "Crypto"
+      other_links = account.account_providers.where.not(provider_type: self.class.name)
+      errors.add(:account, :linked) if other_links.exists? || account.plaid_account_id || account.simplefin_account_id
       return if security.nil?
       errors.add(:security, :invalid) unless security.ticker.to_s.upcase.match?(/\A(?:CRYPTO:)?(?:BTC|XBT)(?:-?USD)?\z/)
-      competing = account.holdings.where(security: security).where.not(account_provider_id: nil)
-      competing = competing.where.not(account_provider_id: account_provider.id) if account_provider
-      errors.add(:security, :provider_managed) if competing.exists?
     end
 end

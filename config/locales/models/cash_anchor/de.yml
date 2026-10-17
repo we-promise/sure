@@ -18,8 +18,12 @@ de:
               managed_position: wird von einem Anbieter verwaltet. Trenne die Verbindung, bevor du diese Position änderst.
         bitcoin_wallet_account:
           attributes:
-            security:
-              provider_managed: hat bereits einen Anbieter
+            account:
+              linked: "ist mit einem anderen Anbieter verbunden. Bitcoin-Wallets können nur auf manuellen Krypto-Konten verfolgt werden."
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: "hat oder hatte eine Bitcoin-Wallet und kann daher nicht mit einem anderen Anbieter verbunden werden."
         bitcoin_wallet_source:
           attributes:
             extended_public_key:

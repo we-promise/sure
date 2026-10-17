@@ -19,7 +19,6 @@ class Balance::Materializer
     Balance.transaction do
       account.lock! if account.accounting_start_date
       materialize_holdings
-      capture_provider_cash
       calculate_balances
 
       Rails.logger.info("Persisting #{@balances.size} balances")
@@ -34,50 +33,6 @@ class Balance::Materializer
   end
 
   private
-    # Convert full-provider totals to cash after their holdings are imported,
-    # excluding positions managed by separate publishers from the subtraction.
-    def capture_provider_cash
-      return unless (start_date = account.accounting_start_date)
-
-      full_ids = account.account_providers.reject { |link| link.adapter&.position_only? }.map(&:id)
-      cache = Balance::SyncCache.new(account)
-      reported = account.entries.valuations.where(source: "provider_balance", date: start_date..Date.current).includes(:entryable)
-      reported.each do |entry|
-        begin
-          amount = entry.amount_money.exchange_to(account.currency, date: entry.date).amount
-          holdings_value = account.holdings.where(account_provider_id: full_ids, date: entry.date).sum do |holding|
-            holding.amount_money.exchange_to(account.currency, date: entry.date).amount
-          end
-        rescue Money::ConversionError => error
-          # Keep the previous cash anchor and retry on the next sync. SyncCache
-          # leaves the unconverted total out of the balances meanwhile.
-          report_unconverted_provider_balance(entry, error)
-          next
-        end
-        existing = account.entries.valuations.find_by(date: entry.date, entryable_id: Valuation.cash_anchor.select(:id))
-        if existing
-          existing.update!(amount: amount - holdings_value, currency: account.currency, source: "provider_cash")
-          existing.entryable.update!(cash_entry_total: nil)
-          entry.destroy!
-        else
-          entry.entryable.update!(kind: :cash_anchor, cash_entry_total: nil)
-          entry.update!(amount: amount - holdings_value, currency: account.currency, source: "provider_cash",
-            name: I18n.t("valuations.cash_anchor", locale: account.family.locale))
-        end
-      end
-      account.valuations.cash_anchor.where(cash_entry_total: nil).includes(:entry).each do |anchor|
-        anchor.update!(cash_entry_total: cache.cash_entry_total(anchor.entry.date))
-      end
-      account.reset_current_anchor_cache!
-    end
-
-    def report_unconverted_provider_balance(entry, error)
-      DebugLogEntry.capture(category: "sync", level: "warn", source: self.class.name,
-        message: "Provider balance kept unconverted: no exchange rate available",
-        account: account, family: account.family,
-        metadata: { date: entry.date.to_s, missing_rate_pair: "#{error.from_currency}->#{error.to_currency}" })
-    end
-
     # Pass the security filter to the holding materializer. Only cash-anchored
     # accounts keep history before the window; every other account rebuilds
     # all holdings, so late rates and backfilled prices still reach old days.

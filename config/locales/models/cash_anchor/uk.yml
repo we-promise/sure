@@ -18,8 +18,12 @@ uk:
               managed_position: керується постачальником. Від'єднайте його, перш ніж змінювати цю позицію.
         bitcoin_wallet_account:
           attributes:
-            security:
-              provider_managed: вже має постачальника
+            account:
+              linked: "пов'язаний з іншим постачальником. Гаманці Bitcoin можна відстежувати лише на ручних криптовалютних рахунках."
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: "відстежує або відстежував гаманець Bitcoin, тому його не можна пов'язати з іншим постачальником."
         bitcoin_wallet_source:
           attributes:
             extended_public_key:

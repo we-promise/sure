@@ -223,14 +223,8 @@ class OnchainWalletAccount::Processor
       )
     end
 
-    # Publish legacy units into shared accounting or retain standalone balance updates.
     def update_balances(amount)
-      if account.accounting_start_date
-        account.holdings.where(account_provider_id: onchain_wallet_account.account_provider.id, date: Date.current)
-          .each(&:reconcile_trade_quantity!)
-      else
-        account.update!(balance: amount, cash_balance: 0, currency: currency)
-      end
+      account.update!(balance: amount, cash_balance: 0, currency: currency)
       onchain_wallet_account.update!(current_balance: amount)
     end
 

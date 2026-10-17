@@ -30,7 +30,6 @@ class PlaidAccount::Processor
       @security_resolver ||= PlaidAccount::Investments::SecurityResolver.new(plaid_account)
     end
 
-    # Persist provider account metadata and mark imported totals for shared cash capture.
     def process_account!
       PlaidAccount.transaction do
         # Find existing account through account_provider or legacy plaid_account_id
@@ -127,7 +126,7 @@ class PlaidAccount::Processor
             account.update!(currency: plaid_account.currency)
           end
 
-          result = manager.set_current_balance(balance, date: balance_date, provider_balance: true)
+          result = manager.set_current_balance(balance, date: balance_date)
           raise BalanceError, "Failed to set current balance: #{result.error}" unless result.success?
 
           account.update!(cash_balance: cash_balance) unless result.historical?

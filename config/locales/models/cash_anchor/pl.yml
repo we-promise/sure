@@ -18,8 +18,12 @@ pl:
               managed_position: jest zarządzany przez dostawcę. Odłącz go przed zmianą tej pozycji.
         bitcoin_wallet_account:
           attributes:
-            security:
-              provider_managed: ma już dostawcę
+            account:
+              linked: "jest połączone z innym dostawcą. Portfele Bitcoin można śledzić tylko na ręcznych kontach kryptowalut."
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: "ma lub miało portfel Bitcoin, więc nie można go połączyć z innym dostawcą."
         bitcoin_wallet_source:
           attributes:
             extended_public_key:

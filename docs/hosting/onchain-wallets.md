@@ -242,24 +242,29 @@ can still be tracked through manually supplied public addresses.
 ## Multi-address Bitcoin accounts
 
 An administrator with **Settings → Preferences → Preview features** enabled can
-open an existing Crypto account's menu and choose **Connect Bitcoin wallet**.
+open a manual Crypto account's menu and choose **Connect Bitcoin wallet**.
 This preserves the existing account, its other assets and its cash balance.
 
-1. Choose the existing BTC position, if the account has one.
-2. Add a public address, or select **Native SegWit account (xpub / zpub)**.
-3. For an extended key, supply its account-level public key and a receive address
-   independently verified on the hardware wallet. On Ledger Wallet, the public
-   key is available in the Bitcoin account's advanced details. Never enter a
-   recovery phrase, xprv, zprv or private key.
-4. Wait for background discovery and review the aggregate BTC quantity.
-5. Connect the position. The observed quantity replaces the existing quantity;
-   it is not added to it a second time.
+The wallet must be the account's only provider. An account linked to an
+exchange or another provider cannot track a Bitcoin wallet, and an account that
+has tracked one cannot later be linked to another provider: its cash stays
+anchored to the date the wallet was connected, even after disconnecting.
+
+1. Choose the existing BTC position, if the account has more than one.
+2. Paste a public address, or the account-level public key (xpub / zpub).
+3. For a key, also supply a receive address independently verified on the
+   hardware wallet. On Ledger Wallet, the public key is available in the Bitcoin
+   account's advanced details. Never enter a recovery phrase, xprv, zprv or
+   private key.
+4. Wait for background discovery and review the wallet's value and BTC quantity.
+5. Choose **Start tracking**. The observed quantity replaces the existing
+   quantity; it is not added to it a second time.
 
 ![Bitcoin quantity preview](images/bitcoin-wallet-preview.png)
 
 Each key covers one Bitcoin account, not every account on a physical Ledger.
-Add additional account keys or addresses under **Manage Bitcoin wallet → Add
-another source**. Duplicate addresses within the aggregate are counted once.
+Add additional account keys or addresses under **Manage Bitcoin wallet →
+Addresses and sources**. Duplicate addresses within the aggregate are counted once.
 The same address cannot be counted by another wallet in the household.
 
 The key is stored using Active Record encryption. Configure all three encryption
@@ -304,20 +309,20 @@ observed quantity intact. If no market quote or FX rate is available, the wallet
 quantity remains visible and the previous account valuation is retained with a
 warning instead of publishing a zero-valued BTC position.
 
-Connected wallets update hourly, on a family sync and through **Sync wallet**.
+Connected wallets update hourly, on a family sync and through **Read now**.
 An incomplete address read, changed chain tip or inconsistent mempool preserves
 the last complete balance. The status API reports freshness, source/address
 counts and history completeness without revealing keys or address lists.
 Wallet reads, discovery checkpoints and account materialization are linked in
 the normal Sync tree, including retries, cancellation and the family timezone.
-The dialog refreshes while work is pending, separates confirmed quantity from
-pending change, and shows a bounded address list. A preview older than two hours
+The dialog refreshes while work is pending, shows unconfirmed BTC separately,
+and shows a bounded address list. A preview older than two hours
 must be refreshed before connection.
 
 ![Connected Bitcoin wallet](images/bitcoin-wallet-connected.png)
 
-Disconnecting retains the account, its current positions and all imported
-entries; tracking becomes manual. Turning Preview off hides the management UI
+Disconnecting (**Stop tracking**) retains the account, its current positions and
+all imported entries; tracking becomes manual and the cash anchor stays. Turning Preview off hides the management UI
 but does not disconnect an existing wallet or stop its background sync.
 The normal account sync action remains available after Preview is disabled.
 
@@ -325,7 +330,7 @@ The normal account sync action remains available after Preview is disabled.
 
 The additive Rails 8.1 migrations add `cash_entry_total` and `superseded_at` to
 valuations. Existing accounts and credentials are not rewritten; cash anchors
-are established only when an administrator connects a position publisher.
+are established only when an administrator connects a Bitcoin wallet.
 
 **Solana token names depend on a token list.** RPC returns mints, not names, so
 names come from Jupiter's token search — and only for mints it reports as

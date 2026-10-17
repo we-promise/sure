@@ -18,8 +18,12 @@ tr:
               managed_position: bir sağlayıcı tarafından yönetiliyor. Bu pozisyonu değiştirmeden önce sağlayıcının bağlantısını kesin.
         bitcoin_wallet_account:
           attributes:
-            security:
-              provider_managed: zaten bir sağlayıcıya bağlı
+            account:
+              linked: "başka bir sağlayıcıya bağlı. Bitcoin cüzdanları yalnızca manuel kripto hesaplarında takip edilebilir."
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: "bir Bitcoin cüzdanını takip ediyor veya etti; bu yüzden başka bir sağlayıcıya bağlanamaz."
         bitcoin_wallet_source:
           attributes:
             extended_public_key:

@@ -2,7 +2,7 @@
 <% if preview_features_enabled? && Current.user&.admin? && account.accountable_type == "Crypto" && permission.in?([ :owner, :full_control ]) %>
   <% if account.bitcoin_wallet_account %>
     <% menu.with_item(variant: "link", text: t("bitcoin_wallets.manage"), href: account_bitcoin_wallet_path(account), icon: "bitcoin", data: { turbo_frame: :modal }) %>
-  <% else %>
+  <% elsif account.unlinked? %>
     <% menu.with_item(variant: "link", text: t("bitcoin_wallets.connect_action"), href: new_account_bitcoin_wallet_path(account), icon: "bitcoin", data: { turbo_frame: :modal }) %>
   <% end %>
 <% end %>

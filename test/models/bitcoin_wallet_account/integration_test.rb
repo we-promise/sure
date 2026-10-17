@@ -196,73 +196,20 @@ class BitcoinWalletAccount::IntegrationTest < ActiveSupport::TestCase
     assert_equal 2500, @account.reload.balance
   end
 
-  test "a full provider cash snapshot preserves the Bitcoin position" do
-    @wallet.connect!
-    @account.apply_provider_balance!(balance: 300, cash_balance: 50)
-    cash_entry(amount: -25)
-    materialize
-    assert_equal 50, @account.reload.cash_balance
-    assert_equal 2050, @account.balance
-    cash_entry(amount: 10)
-    materialize
-    assert_equal 40, @account.reload.cash_balance
+  test "a wallet can only track a manual account" do
+    linked = accounts(:crypto).dup.tap { |account| account.update!(name: "Linked crypto") }
+    linked.account_providers.create!(provider: kraken_accounts(:one))
+    wallet = BitcoinWalletAccount.new(account: linked, security: @wallet.security, onchain_wallet_item: @wallet.onchain_wallet_item)
+    refute wallet.valid?
+    assert_includes wallet.errors.details[:account], { error: :linked }
   end
 
-  test "full provider totals are scoped and do not freeze Bitcoin market value" do
-    link = @account.account_providers.create!(provider: kraken_accounts(:one))
-    @account.holdings.create!(security: @other, date: Date.current, qty: 2, price: 100, amount: 200,
-      currency: "USD", account_provider: link)
+  test "no other provider can link to a wallet's account, even after it disconnects" do
+    assert_raises(ActiveRecord::RecordInvalid) { @account.account_providers.create!(provider: kraken_accounts(:one)) }
     @wallet.connect!
-    result = @account.set_current_balance(300, provider_balance: true)
-    assert result.success?, result.error
-    materialize
-    assert_equal 100, @account.reload.cash_balance
-    assert_equal 2300, @account.balance
-    @wallet.security.prices.find_by!(date: Date.current).update!(price: 12_000)
-    materialize
-    assert_equal 2700, @account.reload.balance
-  end
-
-  test "a provider total that cannot be converted keeps the previous cash" do
-    link = @account.account_providers.create!(provider: kraken_accounts(:one))
-    @account.holdings.create!(security: @other, date: Date.current, qty: 2, price: 100, amount: 200,
-      currency: "EUR", account_provider: link)
-    @wallet.connect!
-    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
-    assert @account.set_current_balance(300, provider_balance: true).success?
-
-    assert_difference -> { DebugLogEntry.where(source: "Balance::Materializer").count }, 1 do
-      materialize
-    end
-    assert_equal 100, @account.reload.cash_balance
-  end
-
-  test "a complete provider snapshot omitting an asset does not resurrect it" do
-    link = @account.account_providers.create!(provider: kraken_accounts(:one))
-    @account.holdings.create!(security: @other, date: Date.current.prev_day, qty: 2, price: 100, amount: 200,
-      currency: "USD", account_provider: link)
-    remaining = Security.create!(ticker: "TEST:REMAINING", name: "Remaining asset", offline: true)
-    remaining.prices.create!(date: Date.current, price: 50, currency: "USD")
-    @account.holdings.create!(security: remaining, date: Date.current, qty: 1, price: 50, amount: 50,
-      currency: "USD", account_provider: link)
-    @wallet.connect!
-    refute @account.current_holdings.exists?(security: @other)
-    assert @account.current_holdings.exists?(security: remaining)
-  end
-
-  test "a managed position takes precedence over a newer complete provider row" do
-    @wallet.connect!
-    managed = @account.current_holdings.find_by!(security: @wallet.security)
-    link = @account.account_providers.create!(provider: kraken_accounts(:one))
-    travel 1.day do
-      @account.holdings.create!(security: @wallet.security, date: Date.current, qty: "0.9",
-        price: 10_000, amount: 9000, currency: "USD", account_provider: link)
-      other = @account.holdings.create!(security: @other, date: Date.current, qty: 1,
-        price: 100, amount: 100, currency: "USD", account_provider: link)
-      assert_equal managed.id, @account.current_holdings.find_by!(security: @wallet.security).id
-      assert_equal BigDecimal("0.2"), @account.current_holdings.find_by!(security: @wallet.security).qty
-      assert @account.current_holdings.exists?(id: other.id)
-    end
+    @wallet.disconnect!
+    error = assert_raises(ActiveRecord::RecordInvalid) { @account.reload.account_providers.create!(provider: kraken_accounts(:one)) }
+    assert_includes error.record.errors.details[:account], { error: :bitcoin_wallet }
   end
 
   test "notes on a superseded valuation do not restore its old total" do

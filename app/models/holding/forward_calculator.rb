@@ -48,13 +48,12 @@ class Holding::ForwardCalculator
     end
 
     # Carry only snapshots already established on this date, preserving their
-    # basis metadata while repricing; complete-provider omissions stay omitted.
+    # basis metadata while repricing.
     def untraded_holdings(date)
       @untraded_snapshots ||= begin
         traded_ids = account.trades.distinct.pluck(:security_id)
         scope = account.holdings.where.not(security_id: traded_ids).order(:date)
         scope = scope.where(security_id: @security_ids) if @security_ids
-        @active_provider_security_ids = account.current_holdings.pluck(:security_id).to_set
         scope.to_a.group_by(&:security_id)
       end
 
@@ -62,7 +61,6 @@ class Holding::ForwardCalculator
         index = snapshots.bsearch_index { |holding| holding.date > date }
         snapshot = index ? (snapshots[index - 1] if index.positive?) : snapshots.last
         next unless snapshot
-        next if snapshot.account_provider_id && !@active_provider_security_ids.include?(security_id)
 
         price = portfolio_cache.get_price(security_id, date, currency: snapshot.currency)
         next unless price

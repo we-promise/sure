@@ -132,12 +132,4 @@ module Account::Linkable
   def balance_calculation_strategy
     manual_accounting? || position_tracking? || accounting_start_date ? :forward : :reverse
   end
-
-  # Preserve existing dated snapshots before moving their publishers to a ledger.
-  def reconcile_position_journals!
-    ids = providers.select(&:position_only?).flat_map(&:managed_security_ids).uniq
-    holdings.where(security_id: ids, date: ..Date.current)
-      .select("DISTINCT ON (security_id) holdings.*").order(:security_id, date: :desc)
-      .each(&:reconcile_trade_quantity!)
-  end
 end

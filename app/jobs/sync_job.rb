@@ -10,8 +10,13 @@ class SyncJob < ApplicationJob
       Rails.logger.warn("SyncJob: failed to attach balances_only? flag: #{e.class} - #{e.message}")
     end
 
-    syncable = sync.syncable
-    family = syncable.is_a?(Family) ? syncable : syncable&.try(:family)
-    Time.use_zone(Time.find_zone(family&.timezone) || Time.zone) { sync.perform }
+    Time.use_zone(family_zone(sync.syncable) || Time.zone) { sync.perform }
   end
+
+  private
+    # A cash-anchored account dates its ledger in the family's zone, like the
+    # Bitcoin wallet read that anchored it. Other syncs keep the app zone.
+    def family_zone(syncable)
+      Time.find_zone(syncable.family.timezone) if syncable.is_a?(Account) && syncable.accounting_start_date
+    end
 end

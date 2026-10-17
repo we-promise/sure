@@ -100,10 +100,7 @@ class Account::Syncer
       )
     end
 
-    # Retain legacy IBKR overrides only outside cash-anchor accounting.
     def apply_provider_balance_overrides
-      return if account.accounting_start_date
-
       return unless account.linked_to?("IbkrAccount")
 
       ibkr_account = account.account_providers.find_by(provider_type: "IbkrAccount")&.provider

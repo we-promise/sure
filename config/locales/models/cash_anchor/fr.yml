@@ -18,8 +18,12 @@ fr:
               managed_position: est géré par un fournisseur. Déconnectez-le avant de modifier cette position.
         bitcoin_wallet_account:
           attributes:
-            security:
-              provider_managed: a déjà un fournisseur
+            account:
+              linked: "est lié à un autre fournisseur. Les portefeuilles Bitcoin ne peuvent être suivis que sur des comptes crypto manuels."
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: "suit ou a suivi un portefeuille Bitcoin et ne peut donc pas être lié à un autre fournisseur."
         bitcoin_wallet_source:
           attributes:
             extended_public_key:

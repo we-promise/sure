@@ -44,12 +44,7 @@ class Holding::PortfolioSnapshot
       end
     end
 
-    # Use scoped current composition for mixed accounts instead of one provider snapshot.
     def latest_holdings_scope
-      if account.accounting_start_date
-        return account.current_holdings
-      end
-
       if (provider_snapshot_date = account.latest_provider_holdings_snapshot_date)
         account.holdings
           .where.not(account_provider_id: nil)

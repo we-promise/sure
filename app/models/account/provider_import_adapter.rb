@@ -405,9 +405,7 @@ class Account::ProviderImportAdapter
   # @param cash_balance [BigDecimal, Numeric] Cash balance (for investment accounts)
   # @param source [String] Provider name (for logging/debugging)
   def update_balance(balance:, cash_balance: nil, source: nil)
-    return if account.accounting_start_date && account.balance_type == :investment && cash_balance.nil?
-
-    account.apply_provider_balance!(
+    account.update!(
       balance: balance,
       cash_balance: cash_balance || balance
     )

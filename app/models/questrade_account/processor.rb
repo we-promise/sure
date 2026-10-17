@@ -38,7 +38,6 @@ class QuestradeAccount::Processor
 
   private
 
-    # Keep the last balance when absent; otherwise tag the provider's reported total.
     def update_account_balance(account)
       total = questrade_account.current_balance
       return if total.blank?
@@ -53,6 +52,6 @@ class QuestradeAccount::Processor
 
       # Current-balance anchor = the reported total (cash + holdings). The value
       # is composed from the holdings + per-currency cash, not a made-up figure.
-      account.set_current_balance(total, provider_balance: true)
+      account.set_current_balance(total)
     end
 end
