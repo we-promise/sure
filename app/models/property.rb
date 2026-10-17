@@ -68,6 +68,36 @@ class Property < ApplicationRecord
     entry.update!(name: I18n.t("providers.property_valuation.entry_name", provider: provider_name))
   end
 
+  # Whether an unlinked property can be linked to the given AVM provider for
+  # automatic refreshes. Only address-based providers qualify: ID-based
+  # providers (Chimnie) need an identifier that only the create-time lookup
+  # supplies. The account must already be in the provider's currency so a
+  # refresh can't write a valuation in the wrong currency.
+  def avm_linkable?(provider_key)
+    return false if avm_provider.present?
+
+    provider_class = Provider::PropertyValuationConcept.provider_class(provider_key)
+    return false if provider_class.nil? || provider_class.requires_external_id?
+
+    account.currency == provider_class.valuation_currency && provider_class.lookup_ready?(address)
+  end
+
+  # Configured providers this property can be linked to.
+  def linkable_avm_providers
+    return [] if avm_provider.present?
+
+    registry = Provider::Registry.for_concept(:property_valuations)
+    registry.provider_keys.select { |key| avm_linkable?(key) && registry.get_provider(key).present? }
+  end
+
+  # Links the property to an AVM provider; the caller queues the first
+  # refresh. Clearing the sync date makes that refresh run immediately.
+  def link_avm_provider!(provider_key)
+    raise ArgumentError, "#{provider_key} can't be linked to this property" unless avm_linkable?(provider_key)
+
+    update!(avm_provider: provider_key.to_s, avm_last_synced_on: nil)
+  end
+
   private
     def first_valuation_amount
       account.entries.valuations.order(:date).first&.amount_money || account.balance_money

@@ -709,4 +709,89 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "form[action='#{refresh_valuation_property_path(@account)}']"
   end
+
+  test "link_valuation links a manual property and queues its first refresh" do
+    @account.property.update!(avm_provider: nil, avm_last_synced_on: 1.year.ago.to_date)
+    @account.property.address.update!(country: "United States")
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    assert_enqueued_with(job: SyncPropertyValuationsJob, args: [ { property_id: @account.property.id, force: true } ]) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_redirected_to account_path(@account)
+    assert_equal "Linked to RentCast. The first valuation will appear shortly.", flash[:notice]
+    assert_equal "rentcast", @account.property.reload.avm_provider
+    assert_nil @account.property.avm_last_synced_on
+  end
+
+  test "link_valuation refuses an unconfigured provider" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:rentcast).returns(nil)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_redirected_to account_path(@account)
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "link_valuation refuses providers that need a property identifier" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:chimnie).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "chimnie")
+    end
+
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "link_valuation refuses addresses outside the provider's country" do
+    @account.property.update!(avm_provider: nil)
+    @account.property.address.update!(country: "Canada")
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "link_valuation does not replace an existing provider" do
+    @account.property.update!(avm_provider: "realie")
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_equal "realie", @account.property.reload.avm_provider
+  end
+
+  test "link_valuation is scoped to the current family" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:rentcast).returns(mock)
+    sign_in users(:empty)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_response :not_found
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "overview offers linking a manual property to a configured provider" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "form[action='#{link_valuation_property_path(@account, avm_provider: "rentcast")}']"
+    assert_select "form[action*='avm_provider=chimnie']", count: 0
+  end
 end
