@@ -95,9 +95,24 @@ icon, optional notes, currency, and an AASM `state` (`active` / `paused` /
 `completed` / `archived`). It links to depository accounts via the join
 table `goal_accounts`.
 
-The goal's *progress* is the live balance of every linked account. There
-is no ledger of contributions. `Goal#current_balance` reads
-`linked_accounts.sum(:balance)` at request time.
+The goal's *progress* is computed live from its linked accounts. There is
+no ledger of contributions. `Goal#current_balance` sums, over the linked
+accounts in the goal's currency, this goal's share of each one: its
+earmark (`goal_accounts.allocated_amount`, scaled down pro rata when the
+earmarks on an account exceed its figure), or for an unallocated link the
+remainder after other goals' earmarks (`Goal#backing_share_for`).
+
+`progress_basis` says what each account's figure counts before that share
+is taken, and the user chooses it on the form: `balance` (the default) is
+the account's balance, what it is worth today; `contributions` is the
+balance minus the account's cumulative market gain (the sum of its
+`balances.net_market_flows`), floored at zero. Nothing re-bases a goal on
+save or when an account is linked, so an explicit choice is kept (#3964).
+
+A goal that has completed reports `completed_amount`, frozen on the basis
+it had when it closed, instead of the live figure; its basis is locked
+until it is reopened. An archived goal that never completed has no
+snapshot and keeps the live calculation.
 
 A `GoalPledge` is an intent: amount, account, kind, status, expires_at.
 The status enum is `open` / `matched` / `cancelled` / `expired`. The kind
