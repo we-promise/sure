@@ -132,16 +132,29 @@ class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
     other&.close
   end
 
-  test "run! preloads recurrence rules instead of querying them per series" do
-    3.times { |i| create_series(name: "SERIES #{i}", amount: 10 + i, day_offset: i) }
+  test "run! preloads recurrence rules for occurrence generation instead of querying per series" do
+    travel_to Date.new(2026, 8, 10) do
+      series = 3.times.map { |i| create_series(name: "PRELOAD SERIES #{i}", amount: 10 + i, day_offset: i + 1) }
+      RecurringOccurrence.where(recurring_transaction: series).delete_all
 
-    statements = capture_sql { Pipeline.new(@family).run! }
+      # Isolate the occurrence-generation stage: the other stages have their
+      # own query profiles and are covered by their own tests.
+      RecurringTransaction::Identifier.any_instance.stubs(:identify_recurring_patterns).returns(0)
+      RecurringTransaction::Matcher.any_instance.stubs(:repair_orphans!)
+      RecurringTransaction::Matcher.any_instance.stubs(:run!)
+      RecurringTransaction::PriceChangeDetector.any_instance.stubs(:detect!)
 
-    per_series_rule_loads = statements.grep(
-      /FROM "recurrence_rules" WHERE "recurrence_rules"\."recurring_transaction_id" = /
-    )
-    assert_empty per_series_rule_loads,
-      "occurrence generation must not load recurrence_rules one series at a time"
+      statements = capture_sql { Pipeline.new(@family).run! }
+
+      rule_loads = statements.grep(/FROM "recurrence_rules"/)
+      assert_equal 1, rule_loads.size,
+        "occurrence generation must load recurrence_rules in one batch, not once per series:\n#{rule_loads.join("
+")}"
+
+      series.each do |s|
+        assert s.recurring_occurrences.exists?, "generation still materializes occurrences for #{s.name}"
+      end
+    end
   end
 
   private
