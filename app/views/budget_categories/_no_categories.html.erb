@@ -5,19 +5,21 @@
       <%= t(".no_categories_message") %>
     </p>
 
-    <div class="flex items-center gap-2">
-      <%= render DS::Button.new(
-        text: t(".use_defaults"),
-        href: bootstrap_categories_path,
-      ) %>
+    <% unless Current.family.categories_locked? %>
+      <div class="flex items-center gap-2">
+        <%= render DS::Button.new(
+          text: t(".use_defaults"),
+          href: bootstrap_categories_path,
+        ) %>
 
-      <%= render DS::Link.new(
-        text: t(".new_category"),
-        variant: "outline",
-        icon: "plus",
-        href: new_category_path,
-        frame: :modal,
-      ) %>
-    </div>
+        <%= render DS::Link.new(
+          text: t(".new_category"),
+          variant: "outline",
+          icon: "plus",
+          href: new_category_path,
+          frame: :modal,
+        ) %>
+      </div>
+    <% end %>
   </div>
 </div>
