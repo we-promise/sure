@@ -229,6 +229,15 @@ class Balance::ChartSeriesBuilder
     # holding snapshot per (account, security) on or before that date (LOCF), convert to
     # the target currency, and aggregate unrealized gains (amount - cost_basis * qty).
     # Holdings only exist on asset accounts, so no liability sign handling is needed.
+    #
+    # Which securities count on a date follows the Holdings tab (Account#current_holdings).
+    # Once an account has a provider holdings snapshot on or before the date, a security
+    # counts only if that snapshot holds it at a nonzero quantity: a security the provider
+    # moved to another record, stopped reporting without a closing row, or reports at
+    # zero, is no longer held, and a calculated row after the snapshot (the reverse
+    # calculator gap-fills to today, and stale calculated rows are not purged) does not
+    # bring it back. An account with no provider snapshot yet keeps every security's
+    # latest row, carried forward.
     def gains_query
       <<~SQL
         WITH dates AS (
@@ -254,12 +263,47 @@ class Balance::ChartSeriesBuilder
           FROM holdings h
           WHERE h.account_id = ANY(array[:account_ids]::uuid[])
         ),
+        -- Each account's provider snapshot dates, and the date the next one starts.
+        provider_dates AS MATERIALIZED (
+          SELECT
+            snapshot.account_id,
+            snapshot.date,
+            LEAD(snapshot.date) OVER (PARTITION BY snapshot.account_id ORDER BY snapshot.date) AS next_date
+          FROM (
+            SELECT DISTINCT h.account_id, h.date
+            FROM holdings h
+            WHERE h.account_id = ANY(array[:account_ids]::uuid[])
+              AND h.account_provider_id IS NOT NULL
+          ) snapshot
+        ),
+        -- The account's latest provider snapshot on or before each series date. Resolved
+        -- once per (date, account) here: as a lateral beside the security join, Postgres
+        -- re-scanned the account's holdings for every (date, security).
+        provider_snapshots AS MATERIALIZED (
+          SELECT d.date, pd.account_id, pd.date AS snapshot_date
+          FROM dates d
+          JOIN provider_dates pd
+            ON pd.date <= d.date
+           AND (pd.next_date IS NULL OR d.date < pd.next_date)
+        ),
         daily_gains AS (
           SELECT
             d.date,
             COALESCE(SUM(
               CASE
                 WHEN last_basis.cost_basis IS NOT NULL
+                  AND (
+                    provider_snapshot.snapshot_date IS NULL
+                    OR EXISTS (
+                      SELECT 1
+                      FROM holdings ph
+                      WHERE ph.account_id = accounts.id
+                        AND ph.security_id = sec.security_id
+                        AND ph.account_provider_id IS NOT NULL
+                        AND ph.date = provider_snapshot.snapshot_date
+                        AND ph.qty <> 0
+                    )
+                  )
                 THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
                 ELSE 0
               END
@@ -267,9 +311,12 @@ class Balance::ChartSeriesBuilder
           FROM dates d
           LEFT JOIN selected_accounts accounts
             ON accounts.active_until_date IS NULL OR d.date <= accounts.active_until_date
+          LEFT JOIN provider_snapshots provider_snapshot
+            ON provider_snapshot.date = d.date
+           AND provider_snapshot.account_id = accounts.id
           LEFT JOIN account_securities sec ON sec.account_id = accounts.id
           LEFT JOIN LATERAL (
-            SELECT h.amount, h.qty, h.currency
+            SELECT h.date, h.amount, h.qty, h.currency
             FROM holdings h
             WHERE h.account_id = accounts.id
               AND h.security_id = sec.security_id
