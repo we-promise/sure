@@ -476,6 +476,21 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(transaction.entry.account)
 
+    # An EMI purchase, one of its installments, or its processing fee is
+    # already a scheduled, self-describing series: the plan generates the
+    # monthly entries itself, and each one is named for its own position
+    # ("Installment 3/12"), so a recurring series declared from one of them
+    # could never match the others by name or amount. It would sit on the Bills
+    # page as a bill that is permanently overdue while the real installments
+    # land as ordinary transactions. Hide the action in the view (see
+    # assign_mark_recurring_state); this is the authoritative check for a stale
+    # page or a direct POST.
+    if transaction.entry.emi_linked?
+      flash[:alert] = t("transactions.mark_recurring_emi_unsupported")
+      redirect_back_or_to transactions_path
+      return
+    end
+
     # Check if a recurring transaction already exists for this pattern.
     # The UI disables the button ahead of time using the same lookup, but this
     # guard remains as the authoritative check (e.g. stale page, direct POST).
@@ -578,8 +593,10 @@ class TransactionsController < ApplicationController
     # conditions (see transactions/show.html.erb), so skip the extra query
     # entirely when it won't be used — this runs on every show/failed-update
     # render, including read-only viewers and split-child transactions.
+    # EMI-linked entries are excluded for the same reason (see
+    # #mark_as_recurring): the block isn't rendered for them either.
     def assign_mark_recurring_state
-      return unless can_edit_entry? && !@entry.split_child?
+      return unless can_edit_entry? && !@entry.split_child? && !@entry.emi_linked?
 
       existing = @entry.transaction.existing_manual_recurring_transaction
 

@@ -160,6 +160,7 @@ en:
     mark_recurring: Mark as Recurring
     mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
     mark_recurring_title: Recurring Transaction
+    mark_recurring_emi_unsupported: EMI purchases and installments are already scheduled, so they can't be tracked as a recurring transaction.
     potential_duplicate_title: Possible duplicate detected
     potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
     keep_both: No, keep both

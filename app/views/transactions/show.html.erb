@@ -502,8 +502,11 @@
             </div>
           <% end %>
 
-          <!-- Mark as Recurring Form -->
-          <%= render "transactions/mark_recurring", entry: @entry %>
+          <%# Mark as Recurring Form - hidden for EMI-linked entries, whose monthly
+              entries the plan already schedules (see TransactionsController#mark_as_recurring) %>
+          <% unless @entry.emi_linked? %>
+            <%= render "transactions/mark_recurring", entry: @entry %>
+          <% end %>
         <% end %>
         <%# Delete Transaction Form - hidden for split children and EMI purchase/installment entries
             (deleting those directly is blocked by Entry's before_destroy guards; foreclose the plan instead) %>

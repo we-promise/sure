@@ -870,6 +870,30 @@ end
     assert_equal entry.date.day, recurring.expected_day_of_month
   end
 
+  # An EMI purchase and each of its installments already form a monthly
+  # series, named per position ("Installment 3/12"). Declaring a recurring
+  # transaction from one of them produces a bill that can never match the
+  # others, so the action is refused outright.
+  test "mark_as_recurring refuses an EMI-linked transaction" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    entry = create_transaction(account: account, amount: 1200)
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 12, processing_fee: 0)
+
+    [ entry.transaction, plan.installment_entries.first.transaction ].each do |transaction|
+      assert_no_difference "RecurringTransaction.count" do
+        post mark_as_recurring_transaction_path(transaction)
+      end
+
+      assert_redirected_to transactions_path
+      assert_equal(
+        "EMI purchases and installments are already scheduled, so they can't be tracked as a recurring transaction.",
+        flash[:alert]
+      )
+    end
+  end
+
   test "mark_as_recurring shows alert if recurring transaction already exists" do
     family = families(:empty)
     sign_in users(:empty)

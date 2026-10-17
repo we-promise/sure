@@ -267,6 +267,40 @@ class TransactionTest < ActiveSupport::TestCase
     end
   end
 
+  # The installments and the fee copy the purchase's category once, in
+  # EmiPlan#build!. Recategorising the purchase afterwards has to re-sync them,
+  # because the purchase itself is excluded from budget analytics for as long
+  # as the plan is live -- the series would otherwise report under two
+  # categories, with the full principal still sitting on the old one.
+  test "recategorising a converted purchase re-categorises its installments and fee" do
+    family = families(:dylan_family)
+    account = accounts(:depository)
+    entry = create_transaction(account: account, amount: 600, name: "Demo Laptop", category: categories(:food_and_drink))
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 3, processing_fee: 25)
+
+    assert_equal categories(:food_and_drink), plan.installment_entries.first.transaction.category
+
+    entry.transaction.update!(category: categories(:one))
+
+    assert_equal categories(:one), entry.reload.transaction.category
+    plan.installment_entries.each do |installment|
+      assert_equal categories(:one), installment.transaction.reload.category
+    end
+    assert_equal categories(:one), plan.processing_fee_entry.transaction.reload.category
+  end
+
+  # A foreclosed plan with no installments left still has a plan record whose
+  # fee entry may need re-categorising, and no plan at all (nothing converted)
+  # must leave the callback a no-op rather than raising.
+  test "recategorising a purchase that was never converted is a no-op" do
+    account = accounts(:depository)
+    entry = create_transaction(account: account, amount: 600, name: "Demo Laptop", category: categories(:food_and_drink))
+
+    assert_nothing_raised do
+      entry.transaction.update!(category: categories(:one))
+    end
+  end
+
   test "category_editable? is true for non-transfer kinds" do
     assert Transaction.new(kind: "standard").category_editable?
     assert Transaction.new(kind: "one_time").category_editable?

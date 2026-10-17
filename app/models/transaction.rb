@@ -34,6 +34,7 @@ class Transaction < ApplicationRecord
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
+  after_update_commit :propagate_category_to_emi_entries
 
   # Accessors for exchange_rate stored in extra jsonb field
   def exchange_rate
@@ -635,6 +636,37 @@ class Transaction < ApplicationRecord
       return unless plan.active? || plan.posted_installments.exists?
 
       errors.add(:kind, "can't be changed while its EMI plan is active. Foreclose the plan first.")
+    end
+
+    # A converted purchase is the plan's source of truth for what the money was
+    # spent on. Copying its category onto the generated entries only happens once,
+    # in EmiPlan#build!, so recategorising the purchase afterwards would leave the
+    # installments (and the fee) reporting under the old category -- while the
+    # purchase itself is excluded from budget analytics for as long as the plan is
+    # live, so the old category would still show the full principal against it.
+    # Re-sync them so the series reports under one category.
+    def propagate_category_to_emi_entries
+      return unless saved_change_to_category_id?
+
+      new_category_id = category_id
+
+      # find_by, not entry.originated_emi_plan: EmiPlan#build! reads
+      # emi_convertible? (via Entry#emi_purchase?) *before* it saves the plan,
+      # which loads and caches that association as nil on the entry it was
+      # called on. The plan row is the only reliable source here.
+      plan = entry && EmiPlan.find_by(entry_id: entry.id)
+      return if plan.nil?
+
+      plan.installment_entries.includes(:entryable).each do |installment|
+        next if installment.entryable.category_id == new_category_id
+
+        installment.entryable.update_column(:category_id, new_category_id)
+      end
+
+      fee_entry = plan.processing_fee_entry
+      return if fee_entry.nil? || fee_entry.entryable.category_id == new_category_id
+
+      fee_entry.entryable.update_column(:category_id, new_category_id)
     end
 
     def validate_attachments

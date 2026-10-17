@@ -381,6 +381,9 @@ class Demo::Generator
       puts "   🏦 Generating loan payments..."
       generate_loan_payments!
 
+      puts "   🧾 Generating EMI installment plans..."
+      generate_emi_plans!
+
       puts "   🧾 Generating regular expense baseline..."
       generate_regular_expenses!
 
@@ -782,6 +785,57 @@ class Demo::Generator
       create_transaction!(@chase_checking, 12_000, "Roof Replacement", @utilities_cat, 3.years.ago.to_date)
       create_transaction!(@chase_checking, 8_000, "Family Emergency", @healthcare_cat, 4.years.ago.to_date)
       create_transaction!(@chase_checking, 15_000, "Wedding Expenses", @entertainment_cat, 9.years.ago.to_date)
+    end
+
+    # EMI (installment) plans, so a fresh dataset exercises every plan state
+    # without anyone building one by hand:
+    #
+    # - An active 0% plan several installments into its term (posted + upcoming).
+    # - An active interest-bearing plan with a processing fee, to show the
+    #   total-interest / total-payable math on the plan drawer.
+    # - A foreclosed plan, which keeps its posted installments and adds the
+    #   principal-only settlement entry, so the foreclosed branch is populated.
+    #
+    # Generated through EmiPlan.build! rather than by hand-writing entries so
+    # the demo data stays consistent with what the feature actually produces
+    # (kinds, names, emi_plan_id / emi_installment_number tagging, and the
+    # purchase being switched to emi_purchase).
+    def generate_emi_plans!
+      # Start dates are relative months, not fixed days, so each plan always
+      # has the same number of posted installments no matter when the demo
+      # data is generated.
+      laptop = create_transaction!(@amex_gold, 2_400, "Apple Store — MacBook Pro", @shopping_cat, 5.months.ago.to_date)
+      plans = [
+        EmiPlan.build!(
+          entry: laptop,
+          interest_rate: 0,
+          tenure_months: 12,
+          start_date: 4.months.ago.to_date
+        )
+      ]
+
+      sofa = create_transaction!(@chase_sapphire, 3_600, "West Elm — Sectional Sofa", @housing_cat, 3.months.ago.to_date)
+      plans << EmiPlan.build!(
+        entry: sofa,
+        interest_rate: 18.0,
+        tenure_months: 9,
+        processing_fee: 95,
+        start_date: 2.months.ago.to_date
+      )
+
+      dental = create_transaction!(@amex_gold, 1_850, "Bright Smile Dental — Crowns", @healthcare_cat, 7.months.ago.to_date)
+      dental_plan = EmiPlan.build!(
+        entry: dental,
+        interest_rate: 0,
+        tenure_months: 12,
+        start_date: 6.months.ago.to_date
+      )
+      # foreclose! returns whatever its last statement evaluated to, not the
+      # plan, so keep the record rather than chaining off it.
+      dental_plan.foreclose!
+      plans << dental_plan
+
+      puts "   🧾 EMI plans: #{plans.count(&:active?)} active | #{plans.count { |plan| !plan.active? }} foreclosed"
     end
 
     # The opening anchor valuation a loan account created through the form
