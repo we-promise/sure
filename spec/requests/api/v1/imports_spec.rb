@@ -47,6 +47,7 @@ RSpec.describe 'API V1 Imports', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Test Checking',
       balance: 1000,
       currency: 'USD',
