@@ -16,6 +16,25 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
     assert @insight.reload.read?
   end
 
+  test "insight cards offer Dig in with AI, which starts a chat about the insight" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(mock)
+
+    get insights_url
+
+    assert_select "##{ActionView::RecordIdentifier.dom_id(@insight)} form[action='#{chats_path}']" do
+      assert_select "input[name='chat[content]'][value*=?]", @insight.title
+      assert_select "button", text: I18n.t("insights.card.dig_in")
+    end
+  end
+
+  test "insight cards hide Dig in with AI without an LLM provider" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    get insights_url
+
+    assert_select "form[action='#{chats_path}']", count: 0
+  end
+
   test "turbo prefetch requests do not mark insights read" do
     get insights_url, headers: { "X-Sec-Purpose" => "prefetch" }
 
