@@ -155,6 +155,13 @@ class WiseActivity::Processor
     CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(html.to_s)).strip
   end
 
+  # Whether a move between a balance and a jar went into the jar, which
+  # only its title tells ("To <strong>Holiday</strong>").
+  def self.jar_deposit?(activity)
+    title = ActionController::Base.helpers.strip_tags(activity["title"].to_s).downcase
+    title.start_with?("to") || title.include?("received") || title.include?("added")
+  end
+
   def self.split_funding?(parsed)
     parsed[:value].nil? && parsed[:currencies].size >= 2
   end
@@ -349,8 +356,7 @@ class WiseActivity::Processor
 
     # True when the activity title indicates money flowing INTO the JAR.
     def deposit_direction?
-      title = strip_html(activity[:title]).downcase
-      title.start_with?("to") || title.include?("received") || title.include?("added")
+      self.class.jar_deposit?(activity)
     end
 
     def currency
@@ -430,9 +436,5 @@ class WiseActivity::Processor
     #   "0.83 EUR"                           → 0.83
     def amount_value(raw)
       self.class.parse_amount(raw)[:value] || 0.to_d
-    end
-
-    def strip_html(str)
-      ActionController::Base.helpers.strip_tags(str.to_s)
     end
 end
