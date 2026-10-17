@@ -84,6 +84,24 @@ class WiseAccountTest < ActiveSupport::TestCase
     assert_equal 99999001, @checking.raw_payload["recipient_id"]
   end
 
+  # A failed borderless/multi-currency-account lookup must not drop the ids
+  # that decide transfer direction, nor Sure's own markers on the payload.
+  test "upsert_wise_snapshot! keeps stored ids and markers the new payload lacks" do
+    @checking.update!(raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001, "borderless_account_id" => 88888001,
+                                     "recipientId" => 77777001, "absent_count" => 1, "amount" => { "value" => 1.0 } })
+    balance_data = {
+      "id" => "10000001",
+      "amount" => { "value" => 2.0, "currency" => "EUR" },
+      "recipientId" => 77777002
+    }
+
+    @checking.upsert_wise_snapshot!(balance_data)
+
+    payload = @checking.reload.raw_payload
+    assert_equal [ 99999001, 88888001, 77777002, 1 ], payload.values_at("recipient_id", "borderless_account_id", "recipientId", "absent_count")
+    assert_equal 2.0, payload.dig("amount", "value")
+  end
+
   test "upsert_wise_snapshot! preserves existing name" do
     @checking.update!(name: "My Wise EUR")
     balance_data = {

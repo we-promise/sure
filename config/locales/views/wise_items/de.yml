@@ -145,6 +145,9 @@ de:
       checking_account_configuration: Kontokonfiguration wird geprüft …
       credentials_invalid: Ungültiger Wise-API-Token oder fehlende Berechtigungen
       failed: Der Sync ist fehlgeschlagen. Versuch es noch einmal oder wende dich an den Support.
+      fetch_failed:
+        one: "%{count} Wise-Anfrage ist fehlgeschlagen. Der nächste Sync versucht es erneut."
+        other: "%{count} Wise-Anfragen sind fehlgeschlagen. Der nächste Sync versucht es erneut."
       import_failed: Der Wise-Import ist fehlgeschlagen.
       importing_accounts: Konten werden aus Wise importiert …
       processing_transactions: Transaktionen werden verarbeitet …

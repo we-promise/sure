@@ -174,6 +174,11 @@ pl:
       credentials_invalid: Nieprawidłowy token API Wise lub niewystarczające uprawnienia
       failed: Synchronizacja nie powiodła się. Spróbuj ponownie lub skontaktuj się
         z pomocą techniczną.
+      fetch_failed:
+        few: "%{count} żądania do Wise nie powiodły się. Następna synchronizacja ponowi próbę."
+        many: "%{count} żądań do Wise nie powiodło się. Następna synchronizacja ponowi próbę."
+        one: "%{count} żądanie do Wise nie powiodło się. Następna synchronizacja ponowi próbę."
+        other: "%{count} żądań do Wise nie powiodło się. Następna synchronizacja ponowi próbę."
       import_failed: Import Wise nie powiódł się.
       importing_accounts: Importowanie kont z Wise...
       processing_transactions: Przetwarzanie transakcji...
