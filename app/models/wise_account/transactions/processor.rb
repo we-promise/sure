@@ -53,11 +53,14 @@ class WiseAccount::Transactions::Processor
 
   private
 
+    # The row's kind, not its type, picks the processor: a statement row,
+    # an activity row (any activity type the importer stored, see
+    # WiseActivity::Processor.activity_row?), else a /v1/transfers row.
     def processor_for(tx_data)
-      if WiseActivity::Processor::JAR_ACTIVITY_TYPES.include?(tx_data["type"])
-        WiseActivity::Processor.new(tx_data, wise_account: wise_account)
-      elsif tx_data["wise_statement"].present?
+      if tx_data["wise_statement"].present?
         WiseStatement::Processor.new(tx_data, wise_account: wise_account)
+      elsif WiseActivity::Processor.activity_row?(tx_data)
+        WiseActivity::Processor.new(tx_data, wise_account: wise_account)
       else
         WiseEntry::Processor.new(tx_data, wise_account: wise_account, own_recipient_ids: own_recipient_ids,
                                           recipient_owners: recipient_owners)

@@ -33,6 +33,12 @@ class WiseAccount < ApplicationRecord
     raw_payload&.dig("type") == "SAVINGS"
   end
 
+  # Wise no longer lists the balance (raw_payload "closed_at", one of
+  # PRESERVED_KEYS).
+  def closed?
+    raw_payload.is_a?(Hash) && raw_payload["closed_at"].present?
+  end
+
   def account_subtype
     jar? ? "savings" : Depository::DEFAULT_SUBTYPE
   end

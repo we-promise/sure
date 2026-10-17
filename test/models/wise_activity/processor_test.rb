@@ -290,6 +290,166 @@ class WiseActivity::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.10"), entry.amount
   end
 
+  # Status: only a completed activity moved money
+
+  test "books an activity only once Wise has completed it" do
+    gbp_account = create_standard_account(currency: "GBP", balance_id: "10000003")
+
+    %w[IN_PROGRESS UPCOMING REQUIRES_ATTENTION CANCELLED].each do |status|
+      payment = build_activity("CARD_PAYMENT", "7.40 EUR", "6.42 GBP", id: "card_#{status.downcase}").merge("status" => status)
+      processor = WiseActivity::Processor.new(payment, wise_account: gbp_account)
+
+      assert_equal [], processor.expected_external_ids, status
+      assert_equal :skipped, processor.process, status
+    end
+    assert_equal 0, gbp_account.current_account.entries.count
+
+    completed = WiseActivity::Processor.new(build_activity("CARD_PAYMENT", "7.40 EUR", "6.42 GBP", id: "card_done"),
+                                            wise_account: gbp_account)
+    assert_equal [ "wise_activity_card_done" ], completed.expected_external_ids
+    assert_equal "wise_activity_card_done", completed.process.external_id
+  end
+
+  # A cancelled activity is not booked.
+  test "a cancelled conversion books neither leg" do
+    activity = build_interbalance("To <strong>EUR</strong>", amount: "22.91 EUR", resource_id: "778", secondary: "20 GBP")
+                 .merge("status" => "CANCELLED")
+    processor = WiseActivity::Processor.new(activity, wise_account: @standard_account)
+
+    assert_equal [], processor.expected_external_ids
+    assert_equal :skipped, processor.process
+    assert_nil Entry.find_by(external_id: "wise_interbalance_778_inflow")
+  end
+
+  # Split funding: Wise names the balances ("GBP, EUR"), not what each paid
+
+  test "books the balance replay's part of a split payment on each balance that paid" do
+    gbp_account = create_standard_account(currency: "GBP", balance_id: "10000003")
+    payment = build_activity("CARD_PAYMENT", "26.80 EUR", "GBP, EUR", id: "split_card")
+                .merge("wise_split_parts" => { "EUR" => "12.35", "GBP" => "12.42" }, "wise_split_estimated" => [ "GBP" ])
+
+    eur_entry = WiseActivity::Processor.new(payment, wise_account: @standard_account).process
+    gbp_entry = WiseActivity::Processor.new(payment, wise_account: gbp_account).process
+
+    assert_equal [ "wise_activity_split_card", BigDecimal("12.35"), "EUR" ], [ eur_entry.external_id, eur_entry.amount, eur_entry.currency ]
+    assert_equal [ "wise_activity_split_card", BigDecimal("12.42"), "GBP" ], [ gbp_entry.external_id, gbp_entry.amount, gbp_entry.currency ]
+    assert_equal({ "split_part" => true }, split_flags(eur_entry))
+    assert_equal({ "split_part" => true, "split_estimated" => true }, split_flags(gbp_entry))
+  end
+
+  # Documented limitation: without a replay (no full history) Sure cannot tell
+  # the parts, so the merchant-currency balance books the whole amount.
+  test "without replayed parts a split payment books its full amount on the merchant-currency balance only" do
+    gbp_account = create_standard_account(currency: "GBP", balance_id: "10000003")
+    atm = build_activity("CASH_WITHDRAWAL", "150 EUR", "GBP, EUR", id: "split_atm")
+    eur_processor = WiseActivity::Processor.new(atm, wise_account: @standard_account)
+    gbp_processor = WiseActivity::Processor.new(atm, wise_account: gbp_account)
+
+    assert_equal [ "wise_activity_split_atm" ], eur_processor.expected_external_ids
+    assert_equal [], gbp_processor.expected_external_ids
+
+    entry = eur_processor.process
+    assert_equal [ BigDecimal("150"), "EUR" ], [ entry.amount, entry.currency ]
+    assert_equal({ "split_unresolved" => true }, split_flags(entry))
+    assert_equal :skipped, gbp_processor.process
+    assert_equal 0, gbp_account.current_account.entries.count
+  end
+
+  # Wise drew on GBP and EUR for a payment in a currency the profile does not
+  # hold, so no balance the payment lists is in the merchant's currency: the
+  # first one books it in full rather than none of them.
+  test "without replayed parts a split payment in another currency books in full on the first balance it lists" do
+    gbp_account = create_standard_account(currency: "GBP", balance_id: "10000003")
+    payment = build_activity("CARD_PAYMENT", "100 USD", "GBP, EUR", id: "split_usd")
+    gbp_processor = WiseActivity::Processor.new(payment, wise_account: gbp_account)
+    eur_processor = WiseActivity::Processor.new(payment, wise_account: @standard_account)
+
+    assert_equal [ [ "wise_activity_split_usd" ], [] ], [ gbp_processor.expected_external_ids, eur_processor.expected_external_ids ]
+    entry = gbp_processor.process
+    assert_equal [ BigDecimal("100"), "USD" ], [ entry.amount, entry.currency ]
+    assert_equal({ "split_unresolved" => true }, split_flags(entry))
+    assert_equal :skipped, eur_processor.process
+
+    parts = WiseActivity::Processor.new(payment.merge("wise_split_parts" => { "GBP" => "40.10", "EUR" => "45.60" }), wise_account: gbp_account).process
+    assert_equal [ entry.id, BigDecimal("40.10"), "GBP" ], [ parts.id, parts.amount, parts.currency ]
+  end
+
+  # A person's share of a split entry is not a copy of a new Wise row of the
+  # same amount and day, so it is never claimed for it.
+  test "books a card payment of a split part's amount and day as its own entry" do
+    parent = @standard_sure_account.entries.create!(date: Date.new(2025, 9, 17), amount: 37.5, currency: "EUR", name: "Market",
+                                                    entryable: Transaction.new)
+    parent.split!([ { name: "Groceries", amount: 25, category_id: nil }, { name: "Household", amount: 12.5, category_id: nil } ])
+    household = parent.child_entries.find_by!(name: "Household")
+
+    entry = WiseActivity::Processor.new(build_activity("CARD_PAYMENT", "12.50 EUR", id: "card_b"), wise_account: @standard_account).process
+
+    assert_not_equal household.id, entry.id
+    assert_equal [ nil, nil, "Household" ], household.reload.values_at(:external_id, :source, :name)
+  end
+
+  # The extra.wise namespace is replaced on every import, not merged, so the
+  # flag a split payment had before the balance replay found its parts does
+  # not stay on the entry.
+  test "re-importing a split payment drops the flag its earlier booking had" do
+    atm = build_activity("CASH_WITHDRAWAL", "150 EUR", "GBP, EUR", id: "split_atm")
+    WiseActivity::Processor.new(atm, wise_account: @standard_account).process
+
+    entry = WiseActivity::Processor.new(atm.merge("wise_split_parts" => { "EUR" => "145.18", "GBP" => "4.50" }),
+                                        wise_account: @standard_account).process
+
+    assert_equal [ BigDecimal("145.18"), { "split_part" => true } ], [ entry.amount, split_flags(entry.reload) ]
+  end
+
+  test "a split part of zero books nothing on that balance" do
+    gbp_account = create_standard_account(currency: "GBP", balance_id: "10000003")
+    atm = build_activity("CASH_WITHDRAWAL", "150 EUR", "GBP, EUR", id: "split_atm")
+            .merge("wise_split_parts" => { "EUR" => "150.00", "GBP" => "0.00" })
+    processor = WiseActivity::Processor.new(atm, wise_account: gbp_account)
+
+    assert_equal [], processor.expected_external_ids
+    assert_equal :skipped, processor.process
+  end
+
+  # AUTO_CONVERSION moves money between two balances like a conversion
+
+  test "an auto-conversion books both legs the way a conversion does" do
+    gbp_account = create_standard_account(currency: "GBP", balance_id: "10000003")
+    conversion = build_interbalance("To <strong>EUR</strong>", amount: "117.50 EUR", resource_id: "9001", secondary: "100 GBP")
+                   .merge("type" => "AUTO_CONVERSION", "id" => "auto_conversion_9001")
+
+    outflow = WiseActivity::Processor.new(conversion, wise_account: gbp_account).process
+    inflow = WiseActivity::Processor.new(conversion, wise_account: @standard_account).process
+
+    assert_equal [ "wise_interbalance_9001_outflow", BigDecimal("100"), "GBP" ], [ outflow.external_id, outflow.amount, outflow.currency ]
+    assert_equal [ "wise_interbalance_9001_inflow", BigDecimal("-117.50"), "EUR" ], [ inflow.external_id, inflow.amount, inflow.currency ]
+    assert_equal I18n.t("wise_items.activities.transfer_to_jar", jar: "EUR"), outflow.name
+    assert_equal I18n.t("wise_items.activities.transfer_from_jar", jar: "GBP"), inflow.name
+  end
+
+  # Names and metadata
+
+  test "names a single-leg activity after its title and keeps Wise's amounts in extra" do
+    gbp_account = create_standard_account(currency: "GBP", balance_id: "10000003")
+    payment = build_activity("CARD_PAYMENT", "7.40 EUR", "6.42 GBP", id: "named_card")
+                .merge("title" => "<strong>Tom &amp; Jerry</strong>", "description" => "Spent")
+
+    entry = WiseActivity::Processor.new(payment, wise_account: gbp_account).process
+
+    assert_equal "Tom & Jerry", entry.name
+    assert_equal({ "activity_id" => "named_card", "activity_type" => "CARD_PAYMENT", "resource_type" => "CARD_TRANSACTION",
+                   "resource_id" => "3000001", "description" => "Spent", "primary_amount" => "7.40 EUR",
+                   "secondary_amount" => "6.42 GBP" }, entry.entryable.extra["wise"])
+  end
+
+  test "names balance interest like cashback" do
+    interest = build_activity("BALANCE_INTEREST", "0.42 EUR", id: "interest_1")
+
+    entry = WiseActivity::Processor.new(interest, wise_account: @standard_account).process
+
+    assert_equal [ BigDecimal("-0.42"), I18n.t("wise_items.activities.interest") ], [ entry.amount, entry.name ]
+  end
+
   # Dates
 
   test "dates an activity in the family time zone, like transfers and statements" do
@@ -432,6 +592,10 @@ class WiseActivity::ProcessorTest < ActiveSupport::TestCase
 
     def booked(type, primary, secondary = nil)
       WiseActivity::Processor.balance_amount(build_activity(type, primary, secondary)).values_at(:value, :currency)
+    end
+
+    def split_flags(entry)
+      entry.entryable.extra["wise"].slice("split_part", "split_estimated", "split_unresolved")
     end
 
     def build_cashback(amount:, resource_id:)
