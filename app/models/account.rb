@@ -384,7 +384,7 @@ class Account < ApplicationRecord
     def create_from_wise_account(wise_account)
       family = wise_account.wise_item.family
 
-      create_and_sync(
+      account = create_and_sync(
         {
           family: family,
           name: wise_account.name || "Wise #{wise_account.currency}",
@@ -396,6 +396,21 @@ class Account < ApplicationRecord
         },
         skip_initial_sync: true
       )
+
+      # When Sure imports a balance's whole history, it opens at 0 the day
+      # before Wise opened it, not at today's balance two years back.
+      if (opening_date = wise_account.opening_date)
+        manager = Account::OpeningBalanceManager.new(account)
+        date = [ opening_date, manager.oldest_entry_date&.prev_day ].compact.min
+        result = manager.set_opening_balance(balance: 0, date: date)
+        Rails.logger.warn "Account.create_from_wise_account - Opening balance kept for account #{account.id}: #{result.error}" if result.error
+        # So later syncs may move it again (WiseAccount::Processor).
+        if result.changes_made?
+          wise_account.remember_opening_anchor!(account.valuations.opening_anchor.includes(:entry).first.entry)
+        end
+      end
+
+      account
     end
 
     def create_from_coinbase_account(coinbase_account)

@@ -66,8 +66,9 @@ pl:
           Wise w produkcji. Bez szyfrowania tokeny są przechowywane w postaci zwykłego
           tekstu.
         title: Szyfrowanie bazy danych nie jest skonfigurowane
-      import_all_history_help: Pobiera wszystkie historyczne wyciągi Wise zamiast
-        tylko ostatniego roku.
+      import_all_history_help: Importuje całą historię Wise (przelewy, aktywności i wyciągi)
+        zamiast tylko ostatniego roku. Każde saldo zaczyna się wtedy od 0 w dniu,
+        w którym Wise je otworzył.
       import_all_history_label: Importuj pełną historię transakcji
       instructions:
         copy_token_html: Skopiuj token i wklej go poniżej. Sure używa go tylko do

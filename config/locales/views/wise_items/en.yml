@@ -68,7 +68,7 @@ en:
       sync_start_date_label: Import transactions from
       sync_start_date_help: Wise statements are imported from this date onward. Leave the default for up to one year of history.
       import_all_history_label: Import full transaction history
-      import_all_history_help: Fetch all historical Wise statements instead of only the last year.
+      import_all_history_help: Import the whole Wise history (transfers, activities and statements) instead of only the last year. Each balance then starts at 0 on the day Wise opened it.
       connect: Connect Wise
       update_connection: Update connection
       setup_accounts: Set up accounts

@@ -210,6 +210,14 @@ class WiseActivity::Processor
     skip_reason ? [] : [ external_id ]
   end
 
+  # The day the activity books on, whether it books here or not; nil when
+  # it has no readable date.
+  def booking_date
+    date if account.present?
+  rescue ArgumentError
+    nil
+  end
+
   private
 
     attr_reader :activity, :wise_account
