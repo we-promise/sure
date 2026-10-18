@@ -160,6 +160,7 @@ class Provider::DirectaTest < ActiveSupport::TestCase
             Divisa: "USD",
             Descriz: "Apple",
             MercNeg: "NASDAQ",
+            MercAbilitazioni: [ "Q" ],
             Moltip: 1.0,
             PrzRif: 211.25
           }
@@ -196,6 +197,7 @@ class Provider::DirectaTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1.0"), position.instrument_metadata.multiplier
     assert_equal "1.0", position.instrument_metadata.raw_multiplier
     assert_equal BigDecimal("211.25"), position.instrument_metadata.reference_price
+    assert_equal [ "Q" ], position.instrument_metadata.authorization_markets
     assert_nil position.instrument_metadata.mic
     assert_equal :partial, position.identity_status
     assert_equal :unavailable, position.valuation_status
@@ -276,6 +278,125 @@ class Provider::DirectaTest < ActiveSupport::TestCase
 
       assert_nil parsed.instrument_type
     end
+  end
+
+  test "accepts only bounded arrays of unique single-letter authorization markets" do
+    [
+      [ [ "P" ], [ "P" ] ],
+      [ "P", [] ],
+      [ [ "P", "P" ], [] ],
+      [ [ "P", "market" ], [] ],
+      [ [ "P", 3 ], [] ],
+      [ nil, [] ]
+    ].each do |authorization_markets, expected|
+      record = { "CodiceRichiesto" => "UNIV-1" }
+      record["MercAbilitazioni"] = authorization_markets unless authorization_markets.nil?
+      http = FakeHttpTransport.new(
+        response(:instrument_metadata, { titoli: [ record ] }.to_json)
+      )
+
+      parsed = Provider::Directa.new(session: verified_session, http_transport: http)
+        .fetch_instrument_metadata(codes: [ "UNIV-1" ])
+        .instruments.fetch("UNIV-1")
+
+      assert_equal expected, parsed.authorization_markets
+    end
+  end
+
+  test "normalizes one complete mixed portfolio from array-shaped Directa metadata" do
+    session = verified_session
+    stream = FakeTradingTransport.new([
+      "1;0;0;0;#{session.multi_token};\r\n",
+      "2;7;0;;;UNIV-EUR;;;0;2;0\r\n",
+      "3;7;0;;;UNIV-BOND;;;0;5;0\r\n",
+      "4;7;0;;;UNIV-USD;;;0;7;0\r\n",
+      "5;6;0;10;;20;;100,00;99;30\r\n",
+      "6;7;9\r\n"
+    ])
+    http = FakeHttpTransport.new(
+      response(:instrument_metadata, {
+        titoli: [
+          {
+            CodiceRichiesto: "UNIV-EUR",
+            Codice: "IM.ETF-A",
+            Isin: "ZZ0000000016",
+            Divisa: "EUR",
+            Descriz: "Synthetic EUR fund",
+            MercNeg: "M",
+            TFase: "P",
+            TTipo: "3",
+            MercAbilitazioni: [ "P" ],
+            Moltip: 1.5,
+            PrzRif: 100.0
+          },
+          {
+            CodiceRichiesto: "UNIV-BOND",
+            Codice: "IM.BOND-A",
+            Isin: "ZZ0000000024",
+            Divisa: "EUR",
+            Descriz: "Synthetic MOT bond",
+            MercNeg: "B",
+            TFase: "B",
+            TTipo: "e",
+            MercAbilitazioni: [ "B" ],
+            Moltip: 1.25,
+            PrzRif: 96.0
+          },
+          {
+            CodiceRichiesto: "UNIV-USD",
+            Codice: "NQ.STOCK-A",
+            Isin: "ZZ0000000032",
+            Divisa: "USD",
+            Descriz: "Synthetic Nasdaq stock",
+            MercNeg: "O",
+            TFase: "A",
+            TTipo: "",
+            MercAbilitazioni: [ "Q" ],
+            Moltip: 1.0,
+            PrzRif: 101.25
+          }
+        ]
+      }.to_json),
+      response(:startup_metadata, {
+        userInfo: { conto: "123" },
+        dataStruct: {
+          mercati: [
+            { serv: "P", internalDescr: "MTA", codAbilPrz: "R" },
+            { serv: "B", internalDescr: "MOT", codAbilPrz: "R" },
+            { serv: "Q", internalDescr: "NASDAQ", codAbilPrz: "R" }
+          ],
+          cambi: [
+            { currency: "USDEUR", euroBid: 0.89, euroAsk: 0.90, cambioBCEdef: 1.1236 }
+          ]
+        }
+      }.to_json)
+    )
+    client = Provider::Directa.new(
+      session: session,
+      http_transport: http,
+      trading_connection_factory: lambda { |verified_session:|
+        Provider::Directa::TradingConnection.new(
+          session: verified_session,
+          transport_factory: ->(deadline:) { stream }
+        )
+      }
+    )
+
+    snapshot = client.fetch_portfolio_snapshot
+    item = Struct.new(:broker_account, :account_identity, :connection_generation).new(
+      session.account_number,
+      session.account_identity,
+      session.connection_generation
+    )
+    normalized = DirectaItem::PortfolioNormalizer.new(item).normalize(snapshot)
+    usd_value = BigDecimal("7") * BigDecimal("1") * BigDecimal("101.25") / BigDecimal("1.1236")
+
+    assert_equal 3, normalized.positions.length
+    assert_equal BigDecimal("100") + BigDecimal("300") + BigDecimal("6") + usd_value, normalized.current_balance
+    usd_metadata = normalized.raw_position_metadata.flatten.find { |position| position.fetch("quote_currency") == "USD" }
+    assert_equal "1.1236", usd_metadata.dig("valuation_details", "fx_rate")
+    assert_equal "unknown", usd_metadata.dig("valuation_details", "quote_trade_date")
+    assert_equal "1.0", usd_metadata.fetch("multiplier")
   end
 
   test "rejects a sequence gap and never sends a trading command" do

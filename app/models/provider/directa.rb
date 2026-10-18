@@ -751,10 +751,11 @@ class Provider::Directa
     end
 
     def authorization_markets(value)
-      raw = bounded_string(value, 32)
-      return [] unless raw && raw.match?(/\A[A-Za-z]+\z/)
+      return [] unless value.is_a?(Array) && value.length.between?(1, 16)
+      return [] unless value.all? { |market| market.is_a?(String) && market.bytesize == 1 && market.match?(/\A[A-Za-z]\z/) }
+      return [] unless value.uniq.length == value.length
 
-      raw.chars
+      value
     end
 
     def ensure_success_response!(response, failure_code)
