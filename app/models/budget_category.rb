@@ -18,7 +18,7 @@ class BudgetCategory < ApplicationRecord
 
   include Monetizable
 
-  belongs_to :budget
+  belongs_to :budget, inverse_of: :budget_categories
   belongs_to :category
 
   validates :budget_id, uniqueness: { scope: :category_id }
@@ -407,12 +407,10 @@ class BudgetCategory < ApplicationRecord
   end
 
   def subcategories
-    return BudgetCategory.none unless category.parent_id.nil?
-    return BudgetCategory.none if category.id.nil?
+    return [] unless category.parent_id.nil?
+    return [] if category.id.nil?
 
-    budget.budget_categories
-      .joins(:category)
-      .where(categories: { parent_id: category.id })
+    budget.budget_categories.select { |bc| bc.category.parent_id == category.id }
   end
 
   private

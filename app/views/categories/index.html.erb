@@ -1,28 +1,30 @@
 <%= content_for :page_title, t(".categories") %>
 <%= content_for :page_actions do %>
-  <%= render DS::Menu.new do |menu| %>
-    <% menu.with_item(
-        variant: "link",
-        text: t(".merge"),
-        href: merge_categories_path,
-        frame: :modal,
-        icon: "combine") %>
-    <% menu.with_item(
-        variant: "button",
-        text: t(".delete_all"),
-        href: destroy_all_categories_path,
-        method: :delete,
-        icon: "trash-2",
-        confirm: CustomConfirm.for_resource_deletion("all categories", high_severity: true)) %>
-  <% end %>
+  <% unless Current.user&.guest? %>
+    <%= render DS::Menu.new do |menu| %>
+      <% menu.with_item(
+          variant: "link",
+          text: t(".merge"),
+          href: merge_categories_path,
+          frame: :modal,
+          icon: "combine") %>
+      <% menu.with_item(
+          variant: "button",
+          text: t(".delete_all"),
+          href: destroy_all_categories_path,
+          method: :delete,
+          icon: "trash-2",
+          confirm: CustomConfirm.for_resource_deletion("all categories", high_severity: true)) %>
+    <% end %>
 
-  <%= render DS::Link.new(
-    text: t(".new"),
-    variant: "primary",
-    icon: "plus",
-    href: new_category_path,
-    frame: :modal
-  ) %>
+    <%= render DS::Link.new(
+      text: t(".new"),
+      variant: "primary",
+      icon: "plus",
+      href: new_category_path,
+      frame: :modal
+    ) %>
+  <% end %>
 <% end %>
 
 <div class="bg-container rounded-xl shadow-border-xs p-4">
@@ -39,20 +41,22 @@
     <div class="flex justify-center items-center py-20">
       <div class="text-center flex flex-col items-center max-w-[500px]">
         <p class="text-sm text-secondary mb-4"><%= t(".empty") %></p>
-        <div class="flex items-center gap-2">
-          <%= render DS::Button.new(
-            text: t(".bootstrap"),
-            href: bootstrap_categories_path,
-          ) %>
+        <% unless Current.user&.guest? %>
+          <div class="flex items-center gap-2">
+            <%= render DS::Button.new(
+              text: t(".bootstrap"),
+              href: bootstrap_categories_path,
+            ) %>
 
-          <%= render DS::Link.new(
-            text: t(".new"),
-            variant: "outline",
-            icon: "plus",
-            href: new_category_path,
-            frame: :modal
-          ) %>
-        </div>
+            <%= render DS::Link.new(
+              text: t(".new"),
+              variant: "outline",
+              icon: "plus",
+              href: new_category_path,
+              frame: :modal
+            ) %>
+          </div>
+        <% end %>
       </div>
     </div>
   <% end %>

@@ -109,6 +109,8 @@ es:
         not_configured_hint: Añade abajo una clave API de %{provider} para activarlo.
         data_retention_heading: Tratamiento de los datos
         data_retention: Por defecto, las entradas a la API no se usan para entrenar modelos; las API alojadas de los proveedores conservan los datos ~30 días por motivos de confianza y seguridad. Los endpoints personalizados o autoalojados siguen tu propia política.
+        max_items_per_call_label: Elementos máximos por lote (opcional)
+        max_items_per_call_help: "Límite superior para los lotes de categorización automática / detección de comercios. Predeterminado: 25. Con proveedores compatibles con OpenAI, los lotes más grandes se dividen automáticamente para caber en la ventana de contexto."
       anthropic_settings:
         title: Anthropic (Claude)
         description: Introduce tu clave API de Anthropic. Opcionalmente, apunta la URL base a AWS Bedrock o GCP Vertex.
@@ -141,8 +143,6 @@ es:
         context_window_help: 'Total de tokens que aceptará el modelo. Predeterminado: 2048 — súbelo a 8192 o más para OpenAI en la nube o modelos locales de contexto grande.'
         max_response_tokens_label: Tokens máximos de respuesta (opcional)
         max_response_tokens_help: 'Tokens reservados para la respuesta del modelo. Predeterminado: 512. Bájalo para dejar sitio a un historial más largo.'
-        max_items_per_call_label: Elementos máximos por lote (opcional)
-        max_items_per_call_help: 'Límite superior para los lotes de categorización automática / detección de comercios. Predeterminado: 25. Los lotes más grandes se dividen automáticamente para caber en la ventana de contexto.'
         timeout_heading: Tiempos de espera
         timeout_description: Controla cuánto tiempo pueden ejecutarse las llamadas a modelos compatibles con OpenAI antes de que Sure las cancele. Auméntalos si ejecutas un modelo local en hardware lento.
         openai_request_timeout_label: Tiempo de espera de solicitud en segundos (opcional)

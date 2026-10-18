@@ -1951,6 +1951,27 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal category.id, action.value
   end
 
+  test "rejects a rule with an unknown resource type or action type" do
+    [
+      [ "account", "exclude_transaction" ],
+      [ "transaction", "garbage" ]
+    ].each do |resource_type, action_type|
+      ndjson = build_ndjson([ {
+        type: "Rule", version: 1,
+        data: { id: "unknown-type-rule", name: "Unknown type", resource_type: resource_type,
+                conditions: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ],
+                actions: [ { action_type: action_type } ] }
+      } ])
+
+      error = assert_raises(ActiveRecord::RecordInvalid, action_type) do
+        Family::DataImporter.new(@family, ndjson).import!
+      end
+
+      assert_match(/is not included in the list/, error.message)
+      assert_nil @family.rules.find_by(name: "Unknown type")
+    end
+  end
+
   test "rejects invalid rule references before creating related records" do
     valid_condition = { condition_type: "transaction_name", operator: "like", value: "coffee" }
     cases = [
