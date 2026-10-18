@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 class <%= class_name %>ItemsController < ApplicationController
-  include StreamExtensions
-
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
   before_action :set_<%= file_name %>_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
