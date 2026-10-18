@@ -50,6 +50,9 @@ class RecurringTransaction::OccurrenceGeneratorTest < ActiveSupport::TestCase
       assert_includes remaining.map(&:id), paid.id, "allocated rows survive schedule edits"
       assert_not_includes remaining.map(&:id), future.id, "unallocated future rows are rebuilt"
       assert_includes remaining.map(&:due_on), Date.new(2026, 8, 20)
+      # 15 days from the paid Sep 5 row is outside the monthly half cycle, so a
+      # deliberate move to another week still gets its own occurrence.
+      assert_includes remaining.map(&:due_on), Date.new(2026, 9, 20)
     end
   end
 
@@ -97,6 +100,77 @@ class RecurringTransaction::OccurrenceGeneratorTest < ActiveSupport::TestCase
       assert_equal Date.new(2026, 8, 14), occurrence.due_on
 
       assert_equal 0, Generator.new(@series).generate!, "adjusted occurrence does not re-insert"
+    end
+  end
+
+  # #4300: detection moving a bill's due day by a day regenerates the schedule.
+  # The old cycle's row survives (paid or past due), and it already is this
+  # cycle, so no second occurrence may appear beside it.
+  test "a due-day shift does not add a second occurrence to a paid cycle" do
+    travel_to Date.new(2026, 10, 16) do
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "monthly", day_of_month: "6")
+      @series.save!
+      paid = @series.recurring_occurrences.reload.find_by!(due_on: Date.new(2026, 10, 6))
+      paid.allocations.create!(allocated_amount: 5, currency: "USD", source: "user_created")
+
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "monthly", day_of_month: "5")
+      @series.save!
+
+      dues = @series.recurring_occurrences.reload.pluck(:due_on)
+      assert_not_includes dues, Date.new(2026, 10, 5)
+      assert_includes dues, Date.new(2026, 11, 5)
+    end
+  end
+
+  test "a due-day shift does not add a second occurrence beside an unpaid past-due one" do
+    travel_to Date.new(2026, 10, 16) do
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "monthly", day_of_month: "6")
+      @series.save!
+
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "monthly", day_of_month: "5")
+      @series.save!
+
+      october = @series.recurring_occurrences.reload.where(due_on: Date.new(2026, 10, 1)..Date.new(2026, 10, 31))
+      assert_equal [ Date.new(2026, 10, 6) ], october.pluck(:due_on)
+    end
+  end
+
+  test "a later due-day shift does not duplicate the cycle either" do
+    travel_to Date.new(2026, 10, 16) do
+      # The fixture is already monthly on the 5th, so saving regenerates nothing.
+      Generator.new(@series).generate!
+      paid = @series.recurring_occurrences.reload.find_by!(due_on: Date.new(2026, 10, 5))
+      paid.allocations.create!(allocated_amount: 5, currency: "USD", source: "user_created")
+
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "monthly", day_of_month: "6")
+      @series.save!
+
+      dues = @series.recurring_occurrences.reload.pluck(:due_on)
+      assert_not_includes dues, Date.new(2026, 10, 6)
+      assert_includes dues, Date.new(2026, 11, 6)
+    end
+  end
+
+  # Two days of one schedule a few days apart are both real occurrences: only
+  # a row the current schedule no longer produces stands in for a cycle.
+  test "a semimonthly bill on close days keeps both occurrences" do
+    # On Aug 3 the 90-day horizon ends on Nov 1, between the two days, so the
+    # Nov 5 occurrence is added by a later run, with Nov 1 already there.
+    travel_to Date.new(2026, 8, 3) do
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "semimonthly", day_of_month: "1", second_day_of_month: "5")
+      @series.save!
+      assert_includes @series.recurring_occurrences.reload.pluck(:due_on), Date.new(2026, 11, 1)
+      assert_not_includes @series.recurring_occurrences.pluck(:due_on), Date.new(2026, 11, 5)
+    end
+
+    travel_to Date.new(2026, 8, 8) do
+      Generator.new(@series).generate!
+
+      dues = @series.recurring_occurrences.reload.pluck(:due_on)
+      [ Date.new(2026, 9, 1), Date.new(2026, 9, 5), Date.new(2026, 11, 1), Date.new(2026, 11, 5) ].each do |date|
+        assert_includes dues, date
+      end
+      assert_equal 0, Generator.new(@series).generate!, "steady state inserts nothing"
     end
   end
 end

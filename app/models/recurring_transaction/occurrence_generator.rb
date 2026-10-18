@@ -70,7 +70,11 @@ class RecurringTransaction
       end
 
       def upsert_window(from, through)
-        pairs = series.schedule.occurrence_pairs_between(from, through)
+        schedule = series.schedule
+        pairs = schedule.occurrence_pairs_between(from, through)
+        leftover_due_ons = leftover_due_ons(schedule, from, through)
+        half_cycle = half_cycle(schedule)
+        pairs = pairs.reject { |pair| leftover_due_ons.any? { |due_on| (due_on - pair.due_on).abs <= half_cycle } }
         return 0 if pairs.empty?
 
         now = Time.current
@@ -89,6 +93,30 @@ class RecurringTransaction
 
         result = RecurringOccurrence.insert_all(rows, unique_by: "idx_recurring_occurrences_identity")
         result.rows.size
+      end
+
+      # Rows a schedule edit kept from the previous rule: paid or past-due
+      # occurrences the current schedule no longer produces. Each already is
+      # its cycle, so a new occurrence within half a cycle of one (a due day
+      # moved by detection) would be a second row for the same cycle. A row
+      # the current schedule produces never counts, so two close days of one
+      # schedule (a semimonthly 1st and 5th) both stay.
+      def leftover_due_ons(schedule, from, through)
+        reach = half_cycle(schedule)
+        current = schedule.occurrence_pairs_between(from - reach, through + reach).map(&:original_due_on).to_set
+
+        series.recurring_occurrences
+              .where(due_on: (from - reach)..(through + reach))
+              .pluck(:original_due_on, :due_on)
+              .reject { |original_due_on, _due_on| current.include?(original_due_on) }
+              .map(&:last)
+      end
+
+      # Just under half the cycle length, as RecurringTransaction::Matcher's
+      # window_for, so generation and matching agree on a cycle's reach.
+      def half_cycle(schedule)
+        cycle_days = (365.25 / schedule.occurrences_per_year).floor
+        [ (cycle_days - 1) / 2, 1 ].max
       end
   end
 end

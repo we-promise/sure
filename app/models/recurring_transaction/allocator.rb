@@ -16,6 +16,9 @@ class RecurringTransaction
   #     they sum to the full expected amount.
   class Allocator
     class OverAllocationError < StandardError; end
+    # Linking a transaction with nothing left of it. A subclass, so every
+    # existing rescue of OverAllocationError still catches it.
+    class FullyAllocatedError < OverAllocationError; end
     class MissingRateError < StandardError; end
 
     # Postgres keeps single-key and two-key advisory locks in separate spaces,
@@ -36,6 +39,12 @@ class RecurringTransaction
       occurrence.with_lock do
         with_entry_lock(entry) do
           allocated, source_amount, source_currency = resolve_amounts(amount, entry)
+          # A defaulted amount is bounded by what the entry has left, so an
+          # exhausted entry resolves to zero. Say so, rather than fail the
+          # allocation's own positive-amount validation.
+          if entry && amount.blank? && !allocated.positive?
+            raise FullyAllocatedError, I18n.t("recurring_transactions.allocator.fully_allocated")
+          end
           guard_entry_capacity!(entry, source_amount) if entry
           freeze_expected_amount!
 

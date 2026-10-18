@@ -113,6 +113,7 @@ class RecurringAllocationsController < ApplicationController
 
     def allocation_error_message(error)
       case error
+      when RecurringTransaction::Allocator::FullyAllocatedError then t("recurring_allocations.fully_allocated")
       when RecurringTransaction::Allocator::OverAllocationError then t("recurring_allocations.over_allocation")
       when RecurringTransaction::Allocator::MissingRateError then t("recurring_allocations.missing_rate")
       when ActiveRecord::RecordNotUnique then t("recurring_allocations.already_allocated")

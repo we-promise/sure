@@ -325,6 +325,50 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_equal 95, occurrence.reload.allocations.sum(:allocated_amount)
   end
 
+
+  # #4300: linking a transaction with nothing left of it used to try a zero
+  # allocation and fail as a generic invalid record.
+  test "allocating a fully used transaction raises and records nothing" do
+    payment = entry_for(2000)
+    @allocator.allocate!(entry: payment)
+    other = second_occurrence
+
+    assert_no_difference "RecurringAllocation.count" do
+      assert_raises(Allocator::FullyAllocatedError) { Allocator.new(other).allocate!(entry: payment) }
+    end
+  end
+
+  test "a fully used cross-currency transaction raises the same error" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.1, date: Date.current)
+    foreign = @account.entries.create!(
+      date: Date.current, amount: 100, currency: "EUR", name: "EU charge", entryable: Transaction.new
+    )
+    @allocator.allocate!(entry: foreign, amount: 110)
+
+    assert_no_difference "RecurringAllocation.count" do
+      assert_raises(Allocator::FullyAllocatedError) { Allocator.new(second_occurrence).allocate!(entry: foreign) }
+    end
+  end
+
+  test "a partly used transaction still allocates its remainder" do
+    payment = entry_for(2500)
+    @allocator.allocate!(entry: payment)
+
+    allocation = Allocator.new(second_occurrence).allocate!(entry: payment)
+
+    assert_equal 500, allocation.allocated_amount
+  end
+
+  test "an explicit amount on a fully used transaction still reports over-allocation" do
+    payment = entry_for(2000)
+    @allocator.allocate!(entry: payment)
+
+    error = assert_raises(Allocator::OverAllocationError) do
+      Allocator.new(second_occurrence).allocate!(entry: payment, amount: 100)
+    end
+    assert_not_kind_of Allocator::FullyAllocatedError, error
+  end
+
   private
 
     def foreign_entry(amount:, currency:)
@@ -357,5 +401,11 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
         name: "Watson Property",
         entryable: Transaction.new
       )
+    end
+
+    # A mid-month date the day-29 series never generates.
+    def second_occurrence
+      free_date = (Date.current + 2.months).beginning_of_month + 9
+      @rent.recurring_occurrences.create!(family: @family, original_due_on: free_date, due_on: free_date, currency: "USD")
     end
 end
