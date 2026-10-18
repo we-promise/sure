@@ -17,6 +17,7 @@ de:
     trade_republic_item:
       syncing: "Wird synchronisiert"
       requires_update: "Erneute Authentifizierung erforderlich"
+      session_expires_in: "Anmeldung läuft in %{time} ab (%{at})."
       error: "Fehler"
       synced: "Vor %{time} synchronisiert. %{summary}."
       setup_accounts: "Konten einrichten"

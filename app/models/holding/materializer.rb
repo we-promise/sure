@@ -210,7 +210,9 @@ class Holding::Materializer
     end
 
     # Remove only calculated holdings that collide with an authoritative provider snapshot
-    # on the exact same key. This preserves reverse-calculated history for linked accounts.
+    # for the same security and date. This preserves reverse-calculated history for linked accounts.
+    # Currency is not part of the match: providers can report a position in its own currency while
+    # calculated rows are always in the account currency, and keeping both counts the position twice.
     def cleanup_shadowed_calculated_holdings
       deleted_count = account.holdings
         .where(account_provider_id: nil)
@@ -221,7 +223,6 @@ class Holding::Materializer
             WHERE provider_holdings.account_id = holdings.account_id
               AND provider_holdings.security_id = holdings.security_id
               AND provider_holdings.date = holdings.date
-              AND provider_holdings.currency = holdings.currency
               AND provider_holdings.account_provider_id IS NOT NULL
           )
         SQL

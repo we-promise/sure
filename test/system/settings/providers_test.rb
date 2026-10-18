@@ -143,6 +143,9 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
   test "connected providers are grouped under Your connections in alphabetical title order" do
     SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
+    # A connection that needs attention is listed first, so keep the Trade
+    # Republic one logged in and let only the alphabetical order count.
+    trade_republic_items(:requires_update_item).update!(status: :good)
 
     visit settings_providers_path
 
