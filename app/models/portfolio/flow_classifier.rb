@@ -153,9 +153,7 @@ class Portfolio::FlowClassifier
   # the entry two rows and a SUM over it would count the entry twice. The
   # lateral reads one transfer per transaction, preferring one the
   # transaction is the inflow of, as #transfer_counterpart_account_id does,
-  # then the earliest by created_at and id. #classify reads whichever row
-  # `has_one` returns, so only a transaction that is the inflow (or, with no
-  # inflow, the outflow) of two transfers may still read differently.
+  # then the earliest by created_at and id, which #classify reads too.
   def sql_joins
     <<~SQL.squish
       LEFT JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id
@@ -257,12 +255,22 @@ class Portfolio::FlowClassifier
     # The account on the other leg of a linked Transfer, by id only; the
     # counterpart account itself is never loaded, so a scope check cannot
     # leak an account the user is not allowed to see.
+    #
+    # The transfer is chosen as #sql_joins chooses it: one the transaction is
+    # the inflow of first, then the earliest by created_at and id. Not through
+    # transfer_as_inflow / transfer_as_outflow: has_one is unordered, so of two
+    # transfers on one leg it can return either.
     def transfer_counterpart_account_id(transaction)
-      transfer = transaction.transfer_as_inflow || transaction.transfer_as_outflow
+      transfer = earliest_transfer(inflow_transaction_id: transaction.id) ||
+        earliest_transfer(outflow_transaction_id: transaction.id)
       return nil unless transfer
 
       counterpart_id = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction_id : transfer.inflow_transaction_id
       Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id)&.to_s
+    end
+
+    def earliest_transfer(leg)
+      Transfer.where(leg).order(:created_at, :id).first
     end
 
     # A security moved between accounts has no Transfer row; its other leg is
