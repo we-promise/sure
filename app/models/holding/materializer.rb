@@ -97,12 +97,6 @@ class Holding::Materializer
           next
         end
 
-        reconciled = Holding::CostBasisReconciler.reconcile(
-          existing_holding: existing,
-          incoming_cost_basis: holding.cost_basis,
-          incoming_source: "calculated"
-        )
-
         base_attrs = {
           "date" => holding.date,
           "currency" => holding.currency,
@@ -113,6 +107,24 @@ class Holding::Materializer
           "account_id" => account.id,
           "updated_at" => current_time
         }
+
+        if directa_account_provider
+          persist_directa_projection(
+            holding,
+            existing,
+            base_attrs: base_attrs,
+            with_cost: holdings_buffer_to_upsert_with_cost,
+            without_cost: holdings_buffer_to_upsert_without_cost,
+            flush: flush
+          )
+          next
+        end
+
+        reconciled = Holding::CostBasisReconciler.reconcile(
+          existing_holding: existing,
+          incoming_cost_basis: holding.cost_basis,
+          incoming_source: "calculated"
+        )
 
         if existing&.cost_basis_locked?
           # For locked holdings, preserve ALL cost_basis fields
@@ -169,6 +181,44 @@ class Holding::Materializer
       # Flush remaining items in each buffer
       flush.call(holdings_buffer_to_upsert_with_cost) unless holdings_buffer_to_upsert_with_cost.empty?
       flush.call(holdings_buffer_to_upsert_without_cost) unless holdings_buffer_to_upsert_without_cost.empty?
+    end
+
+    def persist_directa_projection(holding, existing, base_attrs:, with_cost:, without_cost:, flush:)
+      if existing&.cost_basis_locked?
+        without_cost << base_attrs
+        flush.call(without_cost) if without_cost.size >= PERSIST_BATCH_SIZE
+      elsif holding.cost_basis_locked && holding.cost_basis_source == "manual" && !holding.cost_basis.nil?
+        with_cost << base_attrs.merge(
+          "cost_basis" => holding.cost_basis,
+          "cost_basis_source" => "manual",
+          "cost_basis_locked" => true
+        )
+        flush.call(with_cost) if with_cost.size >= PERSIST_BATCH_SIZE
+      elsif holding.cost_basis.present? && holding.cost_basis.positive?
+        with_cost << base_attrs.merge(
+          "cost_basis" => holding.cost_basis,
+          "cost_basis_source" => "provider",
+          "cost_basis_locked" => false
+        )
+        flush.call(with_cost) if with_cost.size >= PERSIST_BATCH_SIZE
+      elsif clearable_directa_projection_basis?(existing)
+        with_cost << base_attrs.merge(
+          "cost_basis" => nil,
+          "cost_basis_source" => nil,
+          "cost_basis_locked" => false
+        )
+        flush.call(with_cost) if with_cost.size >= PERSIST_BATCH_SIZE
+      else
+        without_cost << base_attrs
+        flush.call(without_cost) if without_cost.size >= PERSIST_BATCH_SIZE
+      end
+    end
+
+    def clearable_directa_projection_basis?(existing)
+      return false unless existing && !existing.cost_basis_locked?
+      return false unless [ nil, "calculated", "provider" ].include?(existing.cost_basis_source)
+
+      existing.cost_basis.present? || existing.cost_basis_source.present?
     end
 
     # Nothing to clear, or a figure somebody asserted rather than one this app

@@ -13,14 +13,20 @@
         </p>
 
         <% trend = investment_statement.unrealized_gains_trend %>
+        <% cost_basis_coverage = investment_statement.cost_basis_coverage %>
         <% if trend %>
           <div class="flex items-center gap-2 text-sm">
-            <span class="text-secondary"><%= t(".total_return") %>:</span>
+            <span class="text-secondary"><%= t(".unrealized_return") %>:</span>
             <span class="font-medium privacy-sensitive" style="color: <%= trend.color %>">
               <%= format_money(Money.new(trend.value, Current.family.currency)) %>
               (<%= trend.percent_formatted %>)
             </span>
           </div>
+        <% end %>
+        <% if cost_basis_coverage[:unknown_count].positive? %>
+          <p class="text-xs text-secondary">
+            <%= t(".partial_cost_basis_coverage", known: cost_basis_coverage[:known_count], total: cost_basis_coverage[:total_count]) %>
+          </p>
         <% end %>
       </div>
     </div>
@@ -35,7 +41,7 @@
               <th class="px-4 py-2 text-left font-medium"><%= t(".holding") %></th>
               <th class="px-4 py-2 text-right font-medium"><%= t(".weight") %></th>
               <th class="px-4 py-2 text-right font-medium"><%= t(".value") %></th>
-              <th class="px-4 py-2 text-right font-medium"><%= t(".return") %></th>
+              <th class="px-4 py-2 text-right font-medium"><%= t(".unrealized_return") %></th>
             </tr>
           </thead>
           <tbody class="font-medium text-sm">

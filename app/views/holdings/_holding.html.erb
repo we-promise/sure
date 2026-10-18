@@ -43,7 +43,7 @@
     </div>
 
     <div class="col-span-2 text-right">
-      <%# Show Total Return (unrealized G/L) when cost basis exists (from trades or manual) %>
+      <%# show unrealized return when cost basis exists %>
       <% if holding.trend %>
         <%= tag.p format_money(holding.trend.value), class: "privacy-sensitive", style: "color: #{holding.trend.color};" %>
         <%= tag.p "(#{holding.trend.percent_formatted})", class: "privacy-sensitive", style: "color: #{holding.trend.color};" %>

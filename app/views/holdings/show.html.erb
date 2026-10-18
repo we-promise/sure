@@ -139,7 +139,7 @@
             <dd class="text-primary"><%= format_money(@holding.amount_money) %></dd>
           </div>
           <div id="<%= dom_id(@holding, :total_return) %>" class="flex items-center justify-between text-sm">
-            <dt class="text-secondary"><%= t(".total_return_label") %></dt>
+            <dt class="text-secondary"><%= t(".unrealized_return_label") %></dt>
             <% if @holding.trend %>
               <dd style="color: <%= @holding.trend.color %>;">
                 <%= render("shared/trend_change", trend: @holding.trend) %>
@@ -149,6 +149,9 @@
             <% end %>
           </div>
         </dl>
+        <% if directa_backed_account?(@holding.account) %>
+          <%= render "shared/directa_unrealized_return_note" %>
+        <% end %>
       </div>
     <% end %>
     <% dialog.with_section(title: t(".history"), open: true) do %>

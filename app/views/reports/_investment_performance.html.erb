@@ -2,6 +2,8 @@
 
 <% if investment_metrics[:has_investments] %>
   <div class="space-y-6">
+    <% cost_basis_coverage = investment_cost_basis_coverage %>
+
     <%# Investment Summary Cards %>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <%# Portfolio Value Card %>
@@ -15,11 +17,11 @@
         </p>
       </div>
 
-      <%# Total Return Card %>
+      <%# unrealized return card %>
       <div class="bg-container-inset rounded-lg p-4">
         <div class="flex items-center gap-2 mb-3">
           <%= icon("trending-up", size: "sm") %>
-          <span class="text-sm text-secondary"><%= t("reports.investment_performance.total_return") %></span>
+          <span class="text-sm text-secondary"><%= t("reports.investment_performance.unrealized_return") %></span>
         </div>
         <% if investment_metrics[:unrealized_trend] %>
           <p class="text-xl font-semibold privacy-sensitive" style="color: <%= investment_metrics[:unrealized_trend].color %>">
@@ -70,6 +72,12 @@
       </div>
     </div>
 
+    <% if cost_basis_coverage[:unknown_count].positive? %>
+      <p class="text-xs text-secondary">
+        <%= t("reports.investment_performance.partial_cost_basis_coverage", known: cost_basis_coverage[:known_count], total: cost_basis_coverage[:total_count]) %>
+      </p>
+    <% end %>
+
     <%# Top Holdings Table %>
     <% if investment_metrics[:top_holdings].any? %>
       <div class="space-y-3">
@@ -83,7 +91,7 @@
                 <th class="px-4 py-2 text-left font-medium"><%= t("reports.investment_performance.holding") %></th>
                 <th class="px-4 py-2 text-right font-medium"><%= t("reports.investment_performance.weight") %></th>
                 <th class="px-4 py-2 text-right font-medium"><%= t("reports.investment_performance.value") %></th>
-                <th class="px-4 py-2 text-right font-medium"><%= t("reports.investment_performance.return") %></th>
+                <th class="px-4 py-2 text-right font-medium"><%= t("reports.investment_performance.unrealized_return") %></th>
               </tr>
             </thead>
             <tbody class="text-secondary text-sm">

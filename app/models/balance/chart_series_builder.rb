@@ -303,6 +303,26 @@ class Balance::ChartSeriesBuilder
               AND h2.date <= d.date
               AND h2.cost_basis IS NOT NULL
               AND (h2.cost_basis_locked OR h2.cost_basis > 0)
+              AND (
+                NOT EXISTS (
+                  SELECT 1
+                  FROM account_providers direct_link
+                  WHERE direct_link.account_id = accounts.id
+                    AND direct_link.provider_type = 'DirectaAccount'
+                )
+                OR (
+                  h2.id = (
+                    SELECT h3.id
+                    FROM holdings h3
+                    WHERE h3.account_id = accounts.id
+                      AND h3.security_id = sec.security_id
+                      AND h3.date <= d.date
+                    ORDER BY h3.date DESC
+                    LIMIT 1
+                  )
+                  AND (h2.cost_basis_source = 'provider' OR h2.cost_basis_locked)
+                )
+              )
             ORDER BY h2.date DESC
             LIMIT 1
           ) last_basis ON TRUE

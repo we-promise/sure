@@ -22,8 +22,9 @@ verified session until the replacement passes account identity checks.
 
 No additional browser or container is needed. Requests use fixed Directa HTTPS
 routes and a certificate-verified TLS trading connection. The client only
-implements authentication, account and instrument metadata, portfolio reads and
-heartbeats; it has no order submission or cancellation commands. This is an
+implements authentication, account and instrument metadata, portfolio and
+executed-order history reads, statement exports and heartbeats; it has no order
+submission or cancellation commands. This is an
 application restriction, not a bank-issued read-only permission on the session.
 
 ## Snapshot behavior
@@ -74,6 +75,48 @@ the standard provider flow. Stopping syncing clears its session and pending
 login challenge while retaining saved financial records. Expired bank sessions
 require another attended login; automatic renewal has not been established.
 
+## Unrealized return
+
+For supported products with unit multiplier one, Sure imports the bank's
+average purchase price as per-unit cost basis. Percent-quoted MOT bond averages
+divide by 100. Foreign-currency basis uses the same current bank conversion as
+the observed market value. The encrypted snapshot records that methodology;
+acquisition-date FX and tax basis are not inferred.
+
+The UI calls the result **Unrealized return**. It compares current reference
+value with the average price of the positions still held. It excludes realized
+results, income, charges and historical FX performance. Missing or unsupported
+bank averages remain unknown, including after Activity is imported. A partial
+history of buys must not manufacture a cost basis. Aggregate views disclose
+when some holdings have unknown basis and are excluded.
+
+## Activity
+
+After a successful portfolio sync, a separate bounded job reads executed orders
+and the corresponding monthly statement exports using the saved verified
+session. The initial request covers 2018-01-01 through the last completed bank
+day; later syncs recheck overlapping recent months and any coverage gap. This
+is a requested range, not a guarantee that Directa retains all historical data.
+
+Sure matches statement executions to fully executed buy/sell orders, reconciles
+quantities and groups fills by order and transaction day. Activity records use
+the statement's actual EUR gross amount and separately reported commission,
+including when the original quote is USD or a percent-quoted bond. An empty
+commission cell means no separately allocated commission, not proof that every
+charge is included. Other cash movements, dividends, coupons and taxes are not
+part of this executed-order import.
+
+Pagination requires an explicit empty final page. Identity and connection
+generation are checked, and two complete normalized reads must agree before
+anything is saved. An encrypted account ledger preserves stable identities and
+detects changed or disappearing bank data. Repeated syncs preserve existing
+entries, including user edits and deletions. History failures are reported
+separately and retain the last successful portfolio and Activity.
+
+Directa trades belong to the brokerage account and retain their cash impact.
+Older Activity does not extend the portfolio chart before its first observed
+snapshot, reconstruct earlier positions, or publish shared historical prices.
+
 ## Current verification boundary
 
 Authentication responses, stream semantics and valuation formulas were
@@ -81,5 +124,7 @@ recovered from Directa's distributed clients. An attended account login and
 subsequent saved-session reads established complete position and cash responses.
 The supported valuation rules are intentionally limited to the evidenced
 instrument combinations; they do not establish support for every Directa
-product. Investment activity history, cash movements, intraday price feeds and
-paid market-data activation are outside this preview.
+product. Executed-order and statement reads were verified against a saved
+session, including multiple fills, EUR and USD quotes, bonds and commissions.
+General cash-ledger imports, intraday price feeds and paid market-data activation
+are outside this preview.

@@ -76,7 +76,7 @@
 
           <% if trade.qty.positive? && trade.unrealized_gain_loss.present? %>
             <div class="flex items-center justify-between text-sm">
-              <dt class="text-secondary"><%= t(".total_return_label") %></dt>
+              <dt class="text-secondary"><%= t(".unrealized_return_label") %></dt>
               <dd style="color: <%= trade.unrealized_gain_loss.color %>;">
                 <%= render "shared/trend_change", trend: trade.unrealized_gain_loss %>
               </dd>

@@ -32,6 +32,29 @@
     <p class="text-sm text-secondary" role="status" aria-live="polite">
       <%= t(@directa_waiting_for_first_snapshot ? ".status_waiting_for_snapshot" : ".status_connected") %>
     </p>
+    <% if @directa_item.present? %>
+      <% history_synced_at = @directa_item.directa_account&.history_synced_at %>
+      <section class="space-y-2 rounded-xl border border-primary bg-container p-4" aria-labelledby="directa-history-heading">
+        <h2 id="directa-history-heading" class="text-sm font-medium text-primary"><%= t(".history_status_heading") %></h2>
+        <% if @directa_item.history_sync_error_code.present? %>
+          <p class="text-sm text-warning" role="status" aria-live="polite">
+            <%= t(".history_status_failed", error: @directa_item.last_history_sync_error) %>
+          </p>
+          <% if history_synced_at.present? %>
+            <p class="text-sm text-secondary">
+              <%= t(".history_status_last_success", date: I18n.l(history_synced_at.to_date, format: :long)) %>
+            </p>
+          <% end %>
+        <% elsif history_synced_at.present? %>
+          <p class="text-sm text-secondary" role="status" aria-live="polite">
+            <%= t(".history_status_synced", date: I18n.l(history_synced_at.to_date, format: :long)) %>
+          </p>
+        <% else %>
+          <p class="text-sm text-secondary" role="status" aria-live="polite"><%= t(".history_status_waiting") %></p>
+        <% end %>
+        <p class="text-sm text-secondary"><%= t(".history_scope") %></p>
+      </section>
+    <% end %>
   <% elsif @directa_requires_update %>
     <p class="text-sm text-warning" role="status" aria-live="polite"><%= t(".status_requires_update") %></p>
   <% end %>

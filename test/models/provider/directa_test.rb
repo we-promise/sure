@@ -307,9 +307,9 @@ class Provider::DirectaTest < ActiveSupport::TestCase
     session = verified_session
     stream = FakeTradingTransport.new([
       "1;0;0;0;#{session.multi_token};\r\n",
-      "2;7;0;;;UNIV-EUR;;;0;2;0\r\n",
-      "3;7;0;;;UNIV-BOND;;;0;5;0\r\n",
-      "4;7;0;;;UNIV-USD;;;0;7;0\r\n",
+      "2;7;0;;;UNIV-EUR;;;0;2;89\r\n",
+      "3;7;0;;;UNIV-BOND;;;0;5;96\r\n",
+      "4;7;0;;;UNIV-USD;;;0;7;55\r\n",
       "5;6;0;10;;20;;100,00;99;30\r\n",
       "6;7;9\r\n"
     ])
@@ -326,7 +326,7 @@ class Provider::DirectaTest < ActiveSupport::TestCase
             TFase: "P",
             TTipo: "3",
             MercAbilitazioni: [ "P" ],
-            Moltip: 1.5,
+            Moltip: 1.0,
             PrzRif: 100.0
           },
           {
@@ -339,7 +339,7 @@ class Provider::DirectaTest < ActiveSupport::TestCase
             TFase: "B",
             TTipo: "e",
             MercAbilitazioni: [ "B" ],
-            Moltip: 1.25,
+            Moltip: 1.0,
             PrzRif: 96.0
           },
           {
@@ -392,11 +392,19 @@ class Provider::DirectaTest < ActiveSupport::TestCase
     usd_value = BigDecimal("7") * BigDecimal("1") * BigDecimal("101.25") / BigDecimal("1.1236")
 
     assert_equal 3, normalized.positions.length
-    assert_equal BigDecimal("100") + BigDecimal("300") + BigDecimal("6") + usd_value, normalized.current_balance
+    assert_equal BigDecimal("100") + BigDecimal("200") + BigDecimal("4.8") + usd_value, normalized.current_balance
+    assert_equal [ BigDecimal("89"), BigDecimal("0.96"), BigDecimal("55") / BigDecimal("1.1236") ],
+      normalized.positions.map(&:cost_basis)
+    assert_equal BigDecimal("89"), normalized.positions.first.cost_basis
+    assert_equal BigDecimal("0.96"), normalized.positions.second.cost_basis
+    assert_equal BigDecimal("55") / BigDecimal("1.1236"), normalized.positions.third.cost_basis
     usd_metadata = normalized.raw_position_metadata.flatten.find { |position| position.fetch("quote_currency") == "USD" }
     assert_equal "1.1236", usd_metadata.dig("valuation_details", "fx_rate")
     assert_equal "unknown", usd_metadata.dig("valuation_details", "quote_trade_date")
     assert_equal "1.0", usd_metadata.fetch("multiplier")
+    assert_equal "55.0", usd_metadata.dig("cost_basis_details", "bank_average_price")
+    assert_equal "current_fx", usd_metadata.dig("cost_basis_details", "cost_basis_fx_source")
+    assert_equal "unknown", usd_metadata.dig("cost_basis_details", "acquisition_fx_date")
   end
 
   test "rejects a sequence gap and never sends a trading command" do

@@ -33,6 +33,13 @@ class Trade < ApplicationRecord
   FINECO_HISTORY_EXTERNAL_ID_PREFIX = "fineco-history-v1:".freeze
   FINECO_HISTORY_SCHEMA_VERSION = 1
   FINECO_HISTORY_PROVIDER_ACCOUNT_ID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i.freeze
+  DIRECTA_HISTORY_EXTERNAL_ID_PREFIX = "directa-history-v1:".freeze
+  DIRECTA_HISTORY_EXTERNAL_ID_PATTERN = /\Adirecta-history-v1:[0-9a-f]{64}\z/.freeze
+  DIRECTA_HISTORY_SCHEMA_VERSION = 1
+  DIRECTA_HISTORY_PROVIDER_ACCOUNT_ID_PATTERN = FINECO_HISTORY_PROVIDER_ACCOUNT_ID_PATTERN
+  DIRECTA_HISTORY_FINGERPRINT_PATTERN = /\A[0-9a-f]{64}\z/.freeze
+  DIRECTA_HISTORY_BANK_SCOPE_PATTERN = DIRECTA_HISTORY_FINGERPRINT_PATTERN
+  DIRECTA_HISTORY_AGGREGATION = "executed_order_day".freeze
 
   scope :fineco_history, -> {
     joins(:entry)
@@ -44,6 +51,21 @@ class Trade < ApplicationRecord
       .where("trades.extra #>> '{fineco,provider_account_id}' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'")
       .where("jsonb_typeof(trades.extra #> '{fineco,cash_account_external}') = 'boolean'")
       .where("trades.extra #>> '{fineco,cash_account_external}' = 'true'")
+  }
+
+  scope :directa_history, -> {
+    joins(:entry)
+      .where(entries: { source: "directa" })
+      .where("entries.external_id ~ ?", "^directa-history-v1:[0-9a-f]{64}$")
+      .where("jsonb_typeof(trades.extra #> '{directa,history_schema_version}') = 'number'")
+      .where("trades.extra #>> '{directa,history_schema_version}' = ?", DIRECTA_HISTORY_SCHEMA_VERSION.to_s)
+      .where("jsonb_typeof(trades.extra #> '{directa,provider_account_id}') = 'string'")
+      .where("trades.extra #>> '{directa,provider_account_id}' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'")
+      .where("jsonb_typeof(trades.extra #> '{directa,fingerprint}') = 'string'")
+      .where("trades.extra #>> '{directa,fingerprint}' ~ '^[0-9a-f]{64}$'")
+      .where("jsonb_typeof(trades.extra #> '{directa,bank_scope}') = 'string'")
+      .where("trades.extra #>> '{directa,bank_scope}' ~ '^[0-9a-f]{64}$'")
+      .where("trades.extra #>> '{directa,aggregation}' = ?", DIRECTA_HISTORY_AGGREGATION)
   }
 
   validates :qty, presence: true
@@ -102,11 +124,36 @@ class Trade < ApplicationRecord
       metadata["cash_account_external"] == true
   end
 
-  def current_market_price
-    return security.current_price unless fineco_history_entry?
-    return @fineco_current_market_price if defined?(@fineco_current_market_price)
+  def directa_history_entry?(entry_record = entry)
+    return false unless entry_record&.source == "directa" && entry_record.entryable_type == "Trade"
+    return false unless entry_record.external_id.to_s.match?(DIRECTA_HISTORY_EXTERNAL_ID_PATTERN)
+    return false unless extra.is_a?(Hash)
 
-    @fineco_current_market_price = fineco_effective_snapshot_price
+    metadata = extra["directa"]
+    metadata.is_a?(Hash) &&
+      metadata["history_schema_version"].instance_of?(Integer) &&
+      metadata["history_schema_version"] == DIRECTA_HISTORY_SCHEMA_VERSION &&
+      metadata["provider_account_id"].is_a?(String) &&
+      metadata["provider_account_id"].match?(DIRECTA_HISTORY_PROVIDER_ACCOUNT_ID_PATTERN) &&
+      metadata["fingerprint"].is_a?(String) &&
+      metadata["fingerprint"].match?(DIRECTA_HISTORY_FINGERPRINT_PATTERN) &&
+      metadata["bank_scope"].is_a?(String) &&
+      metadata["bank_scope"].match?(DIRECTA_HISTORY_BANK_SCOPE_PATTERN) &&
+      metadata["aggregation"] == DIRECTA_HISTORY_AGGREGATION
+  end
+
+  def current_market_price
+    if fineco_history_entry?
+      return @fineco_current_market_price if defined?(@fineco_current_market_price)
+
+      @fineco_current_market_price = fineco_effective_snapshot_price
+    elsif directa_history_entry?
+      return @directa_current_market_price if defined?(@directa_current_market_price)
+
+      @directa_current_market_price = directa_effective_snapshot_price
+    else
+      security.current_price
+    end
   end
 
   class << self
@@ -120,7 +167,7 @@ class Trade < ApplicationRecord
     return nil unless qty.positive?
     current_price = current_market_price
     return nil if current_price.nil?
-    return nil if fineco_history_entry? && current_price.currency.iso_code != currency
+    return nil if (fineco_history_entry? || directa_history_entry?) && current_price.currency.iso_code != currency
 
     current_value = current_price * qty.abs
     cost_basis = price_money * qty.abs + fee_money
@@ -225,6 +272,30 @@ class Trade < ApplicationRecord
       return unless account_provider&.account_id == trade_entry.account_id && snapshot_date
 
       snapshot_holdings = account_provider.holdings
+        .where(date: snapshot_date, security_id: security_id, currency: "EUR")
+        .where("qty > 0")
+        .limit(2)
+        .to_a
+      return unless snapshot_holdings.one?
+
+      holding = snapshot_holdings.first
+      Money.new(holding.amount.to_d / holding.qty.to_d, "EUR")
+    end
+
+    def directa_effective_snapshot_price
+      trade_entry = entry
+      metadata = extra&.dig("directa")
+      directa_account_id = metadata.is_a?(Hash) ? metadata["provider_account_id"] : nil
+      return unless directa_account_id.to_s.match?(DIRECTA_HISTORY_PROVIDER_ACCOUNT_ID_PATTERN)
+
+      directa_account = DirectaAccount.find_by(id: directa_account_id)
+      return unless directa_account && DirectaAccount::ContentValidator.new(directa_account).owned_history_entry?(trade_entry)
+
+      provider_link = directa_account.account_provider
+      snapshot_date = directa_account.directa_item&.portfolio_snapshot_at&.to_date
+      return unless provider_link&.account_id == trade_entry.account_id && snapshot_date
+
+      snapshot_holdings = provider_link.holdings
         .where(date: snapshot_date, security_id: security_id, currency: "EUR")
         .where("qty > 0")
         .limit(2)

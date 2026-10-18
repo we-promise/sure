@@ -10,12 +10,14 @@ class DirectaItem::Syncer
     end
 
     snapshot = @item.provider.fetch_portfolio_snapshot
-    DirectaItem::Importer.new(@item).import(
+    result = DirectaItem::Importer.new(@item).import(
       snapshot: snapshot,
       parent_sync: sync,
       window_start_date: sync.window_start_date,
       window_end_date: sync.window_end_date
     )
+    @item.sync_history_later
+    result
   rescue DirectaItem::PortfolioNormalizer::Error => error
     expected_generation = snapshot&.connection_generation || generation
     record_sync_failure(error.code, expected_generation: expected_generation)

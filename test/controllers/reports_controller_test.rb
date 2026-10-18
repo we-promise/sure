@@ -43,6 +43,42 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/\$100\.00/, line, "$100.00 is the EUR figure printed with a dollar sign")
   end
 
+  test "investment reports label unrealized return and disclose partial cost-basis coverage" do
+    known_holding = holdings(:one)
+    known_holding.update!(cost_basis: BigDecimal("180"))
+    security = Security.create!(ticker: "BASIS#{SecureRandom.hex(3)}", name: "Unknown basis holding", offline: true)
+    accounts(:investment).holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 2,
+      price: 100,
+      amount: 200,
+      currency: "USD"
+    )
+
+    coverage = @family.investment_statement.cost_basis_coverage
+    get reports_path
+
+    assert_response :ok
+    assert_includes response.body, I18n.t("reports.investment_performance.unrealized_return")
+    assert_includes response.body, I18n.t("reports.investment_performance.period_return")
+    assert_includes response.body, I18n.t(
+      "reports.investment_performance.partial_cost_basis_coverage",
+      known: coverage[:known_count],
+      total: coverage[:total_count]
+    )
+
+    get print_reports_path
+
+    assert_response :ok
+    assert_includes response.body, I18n.t("reports.print.investments.unrealized_return")
+    assert_includes response.body, I18n.t(
+      "reports.investment_performance.partial_cost_basis_coverage",
+      known: coverage[:known_count],
+      total: coverage[:total_count]
+    )
+  end
+
   # A position carried in a THIRD currency -- not the disposal's, not the
   # account's. 300 EUR of proceeds at 0.8 is 240 GBP, less 200 GBP of basis, so
   # 40 GBP and $50.00 at 1.25. GBP is in neither currency set the card used to

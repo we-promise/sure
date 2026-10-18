@@ -1,4 +1,8 @@
 module ReportsHelper
+  def investment_cost_basis_coverage
+    @investment_cost_basis_coverage ||= Current.family.investment_statement.cost_basis_coverage
+  end
+
   # Returns the DS::Pill tone for a given tax treatment. Mirrors the
   # mapping used by `accounts/_tax_treatment_badge.html.erb` so the
   # report and the per-account badge stay visually aligned.

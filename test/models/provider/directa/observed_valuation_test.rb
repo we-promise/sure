@@ -131,6 +131,108 @@ class Provider::Directa::ObservedValuationTest < ActiveSupport::TestCase
     assert_equal :verified, valued.valuation_status
   end
 
+  test "converts field ten averages to per-unit EUR basis for evidenced unit multipliers" do
+    positions = [
+      position(
+        code: "IM.ETF",
+        currency: "EUR",
+        market: "M",
+        phase: "P",
+        instrument_type: "3",
+        authorization: "P",
+        quantity: 2,
+        multiplier: "1",
+        reference_price: "100",
+        average_price: "89"
+      ),
+      position(
+        code: "IM.BOND",
+        currency: "EUR",
+        market: "B",
+        phase: "B",
+        instrument_type: "e",
+        authorization: "B",
+        quantity: 5,
+        multiplier: "1",
+        reference_price: "96",
+        average_price: "96"
+      ),
+      position(
+        code: "NQ.STOCK",
+        currency: "USD",
+        market: "O",
+        phase: "A",
+        instrument_type: "",
+        authorization: "Q",
+        quantity: 7,
+        multiplier: "1",
+        reference_price: "101.25",
+        average_price: "55"
+      )
+    ]
+
+    valued = valuer(fx_rates: { "USDEUR" => BigDecimal("1.1236") }).apply(snapshot(positions))
+
+    assert_equal [ BigDecimal("89"), BigDecimal("0.96"), BigDecimal("55") / BigDecimal("1.1236") ],
+      valued.positions.map(&:cost_basis)
+    assert_equal BigDecimal("200") + BigDecimal("4.8") + BigDecimal("7") * BigDecimal("101.25") / BigDecimal("1.1236"),
+      valued.positions.sum(BigDecimal("0"), &:market_value)
+    assert_equal "bank_average_price", valued.positions.last.cost_basis_details.fetch("cost_basis_source")
+    assert_equal "55.0", valued.positions.last.cost_basis_details.fetch("bank_average_price")
+    assert_equal "current_fx", valued.positions.last.cost_basis_details.fetch("cost_basis_fx_source")
+    assert_equal "USDEUR", valued.positions.last.cost_basis_details.fetch("cost_basis_fx_pair")
+    assert_equal "1.1236", valued.positions.last.cost_basis_details.fetch("cost_basis_fx_rate")
+    assert_equal "unknown", valued.positions.last.cost_basis_details.fetch("acquisition_fx_date")
+  end
+
+  test "does not infer cost basis from non-unit multipliers or invalid averages" do
+    positions = [
+      position(
+        code: "IM.ETF",
+        currency: "EUR",
+        market: "M",
+        phase: "P",
+        instrument_type: "3",
+        authorization: "P",
+        quantity: 2,
+        multiplier: "1.5",
+        reference_price: "100",
+        average_price: "42.5"
+      ),
+      position(
+        code: "IM.BOND",
+        currency: "EUR",
+        market: "B",
+        phase: "B",
+        instrument_type: "e",
+        authorization: "B",
+        quantity: 5,
+        multiplier: "1",
+        reference_price: "96",
+        average_price: "1e1000000000"
+      ),
+      position(
+        code: "NQ.STOCK",
+        currency: "USD",
+        market: "O",
+        phase: "A",
+        instrument_type: "",
+        authorization: "Q",
+        quantity: 1,
+        multiplier: "1",
+        reference_price: "50",
+        average_price: nil
+      )
+    ]
+
+    valued = valuer(fx_rates: { "USDEUR" => BigDecimal("1.1236") }).apply(snapshot(positions))
+
+    assert_equal [ nil, nil, nil ], valued.positions.map(&:cost_basis)
+    assert_equal "unsupported_multiplier", valued.positions.first.cost_basis_details.fetch("cost_basis_unavailable_reason")
+    assert_equal "missing_or_invalid_bank_average_price", valued.positions.second.cost_basis_details.fetch("cost_basis_unavailable_reason")
+    assert_equal "missing_or_invalid_bank_average_price", valued.positions.third.cost_basis_details.fetch("cost_basis_unavailable_reason")
+  end
+
   test "rejects unsupported tuples and invalid nonpositive price inputs" do
     unsupported = position(
       code: "NQ.STOCK",
@@ -280,7 +382,7 @@ class Provider::Directa::ObservedValuationTest < ActiveSupport::TestCase
       )
     end
 
-    def position(code:, currency:, market:, phase:, instrument_type:, authorization:, quantity:, multiplier:, reference_price:)
+    def position(code:, currency:, market:, phase:, instrument_type:, authorization:, quantity:, multiplier:, reference_price:, average_price: "42.5")
       metadata = Provider::Directa::InstrumentMetadata.new(
         requested_code: code,
         canonical_code: code,
@@ -306,7 +408,7 @@ class Provider::Directa::ObservedValuationTest < ActiveSupport::TestCase
         univoco: code,
         quantity: quantity,
         raw_quantity: quantity.to_s,
-        raw_average_price: "42.5",
+        raw_average_price: average_price,
         raw_fields: [],
         instrument_metadata: metadata
       )

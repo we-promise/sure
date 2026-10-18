@@ -45,7 +45,7 @@ en:
       purchase_price_label: Purchase Price
       purchase_qty_label: Purchase Quantity
       symbol_label: Symbol
-      total_return_label: Unrealized gain/loss
+      unrealized_return_label: Unrealized return
     new:
       title: New transaction
     show:

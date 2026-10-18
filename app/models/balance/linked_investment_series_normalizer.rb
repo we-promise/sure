@@ -7,6 +7,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
         .where.not(source: nil)
         .where.not(entryable_type: "Valuation")
         .where.not(id: Trade.fineco_history.select("entries.id"))
+        .where.not(id: Trade.directa_history.select("entries.id"))
     end
 
     def aggregate_accounts(accounts:, currency:, period:, favorable_direction:, interval: "1 day")
@@ -58,6 +59,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
           .minimum(:date)
 
         stable_holding_dates = stable_provider_holding_start_dates(account_ids)
+          .merge(directa_snapshot_start_dates(account_ids))
 
         account_ids.filter_map do |account_id|
           [ activity_dates[account_id], stable_holding_dates[account_id] ].compact.min
@@ -82,6 +84,16 @@ class Balance::LinkedInvestmentSeriesNormalizer
 
           stable_dates.last || latest_snapshot_date
         end
+      end
+
+      def directa_snapshot_start_dates(account_ids)
+        AccountProvider.where(account_id: account_ids, provider_type: "DirectaAccount")
+          .includes(:provider)
+          .each_with_object({}) do |provider_link, dates|
+            date = Holding.where(account_provider_id: provider_link.id).minimum(:date) ||
+              provider_link.provider&.directa_item&.portfolio_snapshot_at&.to_date
+            dates[provider_link.account_id] = date if date
+          end
       end
   end
 
@@ -194,6 +206,8 @@ class Balance::LinkedInvestmentSeriesNormalizer
     end
 
     def stable_provider_holding_start_date
+      return directa_snapshot_start_date if direct_provider_link
+
       date_security_pairs = provider_holdings_scope
         .group(:date)
         .order(date: :desc)
@@ -207,5 +221,20 @@ class Balance::LinkedInvestmentSeriesNormalizer
         .map(&:first)
 
       stable_dates.last || latest_snapshot_date
+    end
+
+    def direct_provider_link
+      return @direct_provider_link if defined?(@direct_provider_link)
+
+      @direct_provider_link = account.account_providers.find_by(provider_type: "DirectaAccount")
+    end
+
+    def directa_snapshot_start_date
+      return @directa_snapshot_start_date if defined?(@directa_snapshot_start_date)
+
+      @directa_snapshot_start_date = if direct_provider_link
+        account.holdings.where(account_provider_id: direct_provider_link.id).minimum(:date) ||
+          direct_provider_link.provider&.directa_item&.portfolio_snapshot_at&.to_date
+      end
     end
 end

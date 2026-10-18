@@ -21,10 +21,12 @@ class DirectaItem::SyncerTest < ActiveSupport::TestCase
     client = mock("Directa reader")
     client.expects(:fetch_portfolio_snapshot).returns(provider_snapshot(cash_amount: BigDecimal("35")))
     @item.stubs(:provider).returns(client)
+    DirectaHistorySyncJob.expects(:perform_later).with(@item.id).returns(stub)
     sync = Sync.create!(syncable: @item)
 
-    DirectaItem::Syncer.new(@item).perform_sync(sync)
+    result = DirectaItem::Syncer.new(@item).perform_sync(sync)
 
+    assert_instance_of DirectaItem::Importer::Result, result
     assert_equal BigDecimal("35"), @item.accounts.sole.reload.balance
     assert_equal BigDecimal("35"), @item.accounts.sole.cash_balance
     assert_nil @item.reload.last_sync_error_code
@@ -38,6 +40,7 @@ class DirectaItem::SyncerTest < ActiveSupport::TestCase
       Provider::Directa::AuthenticationError.new("private response", failure_code: :authentication_failed)
     )
     @item.stubs(:provider).returns(client)
+    DirectaHistorySyncJob.expects(:perform_later).never
     sync = Sync.create!(syncable: @item)
 
     error = assert_raises(DirectaItem::PortfolioNormalizer::Error) do
@@ -87,6 +90,21 @@ class DirectaItem::SyncerTest < ActiveSupport::TestCase
 
     assert_equal "sync_failed", error.code
     assert_empty @item.directa_accounts
+  end
+
+  test "a history enqueue failure preserves a successful portfolio import" do
+    client = mock("Directa reader")
+    client.expects(:fetch_portfolio_snapshot).returns(provider_snapshot(cash_amount: BigDecimal("47")))
+    @item.stubs(:provider).returns(client)
+    DirectaHistorySyncJob.expects(:perform_later).with(@item.id).raises(StandardError, "private queue detail")
+    sync = Sync.create!(syncable: @item)
+
+    result = DirectaItem::Syncer.new(@item).perform_sync(sync)
+
+    assert_instance_of DirectaItem::Importer::Result, result
+    assert_equal BigDecimal("47"), @item.accounts.sole.reload.balance
+    assert_equal "history_sync_failed", @item.reload.history_sync_error_code
+    refute_includes @item.last_history_sync_error, "private queue detail"
   end
 
   private

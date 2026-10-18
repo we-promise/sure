@@ -223,12 +223,14 @@ class Provider::Directa
     attr_reader :univoco, :quantity, :raw_quantity, :raw_average_price,
       :instrument_metadata, :identity_status, :valuation_status, :valuation_date,
       :valuation_currency, :current_price, :market_value, :unrealized_gain,
-      :valuation_source, :valuation_details, :raw_fields, :field_sources
+      :valuation_source, :valuation_details, :cost_basis, :cost_basis_details,
+      :raw_fields, :field_sources
 
     def initialize(univoco:, quantity:, raw_quantity:, raw_average_price:, raw_fields:,
       instrument_metadata: nil, field_sources: FIELD_SOURCES, valuation_status: :unavailable,
       valuation_date: nil, valuation_currency: nil, current_price: nil, market_value: nil,
-      unrealized_gain: nil, valuation_source: nil, valuation_details: nil)
+      unrealized_gain: nil, valuation_source: nil, valuation_details: nil,
+      cost_basis: nil, cost_basis_details: nil)
       @univoco = univoco.to_s.dup.freeze
       @quantity = quantity
       @raw_quantity = raw_quantity&.to_s&.dup&.freeze
@@ -243,6 +245,8 @@ class Provider::Directa
       @unrealized_gain = unrealized_gain
       @valuation_source = valuation_source&.to_s&.dup&.freeze
       @valuation_details = valuation_details&.to_h&.transform_keys(&:to_s)&.transform_values { |value| value&.to_s&.dup&.freeze }&.freeze
+      @cost_basis = cost_basis
+      @cost_basis_details = cost_basis_details&.to_h&.transform_keys(&:to_s)&.transform_values { |value| value&.to_s&.dup&.freeze }&.freeze
       @raw_fields = raw_fields.map { |field| field&.to_s&.dup&.freeze }.freeze
       @field_sources = field_sources.freeze
       freeze
@@ -796,7 +800,9 @@ class Provider::Directa
           raw_average_price: position.raw_average_price,
           raw_fields: position.raw_fields,
           instrument_metadata: instrument,
-          field_sources: position.field_sources
+          field_sources: position.field_sources,
+          cost_basis: position.cost_basis,
+          cost_basis_details: position.cost_basis_details
         )
       end
 

@@ -20,7 +20,7 @@
   <% end %>
   <%= turbo_stream.replace dom_id(@holding, :total_return) do %>
     <div id="<%= dom_id(@holding, :total_return) %>" class="flex items-center justify-between text-sm">
-      <dt class="text-secondary"><%= t("holdings.show.total_return_label") %></dt>
+      <dt class="text-secondary"><%= t("holdings.show.unrealized_return_label") %></dt>
       <% if @holding.trend %>
         <dd style="color: <%= @holding.trend.color %>;">
           <%= render("shared/trend_change", trend: @holding.trend) %>

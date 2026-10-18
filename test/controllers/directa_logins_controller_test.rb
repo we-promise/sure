@@ -50,6 +50,8 @@ class DirectaLoginsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h1", text: I18n.t("directa_logins.show.connected_title")
     assert_select "p[role=status]", text: I18n.t("directa_logins.show.status_connected")
+    assert_select "p[role=status]", text: I18n.t("directa_logins.show.history_status_waiting")
+    assert_includes response.body, I18n.t("directa_logins.show.history_scope")
     assert_select "form[action=?][method=post]", sync_directa_item_path(item)
     assert_select "details:not([open]) summary", text: I18n.t("directa_logins.show.reconnect_disclosure_title")
     assert_select "details:not([open]) input#current-password[type=password][autocomplete='current-password']"
@@ -61,6 +63,40 @@ class DirectaLoginsControllerTest < ActionDispatch::IntegrationTest
     end
     assert reconnect_disclosure
     assert_includes reconnect_disclosure.text, I18n.t("directa_logins.show.reconnect_disclosure_description")
+  end
+
+  test "history failure is separate from the last successful activity sync" do
+    last_history_sync = 2.days.ago
+    item = DirectaItem.create!(
+      family: @user.family,
+      owner: @user,
+      broker_account: "00123",
+      account_identity: "verified-account-123",
+      multi_token: "synthetic-multi-token",
+      mono_token: "synthetic-mono-token",
+      status: :connected,
+      connection_generation: 1,
+      history_sync_error_code: "history_incomplete"
+    )
+    item.directa_accounts.create!(
+      currency: "EUR",
+      current_balance: 0,
+      cash_balance: 0,
+      history_synced_at: last_history_sync
+    )
+
+    with_directa_access { get directa_login_path }
+
+    assert_response :success
+    assert_includes response.body, I18n.t(
+      "directa_logins.show.history_status_failed",
+      error: "Directa activity history is incomplete. Existing entries were kept."
+    )
+    assert_includes response.body, I18n.t(
+      "directa_logins.show.history_status_last_success",
+      date: I18n.l(last_history_sync.to_date, format: :long)
+    )
+    assert_includes response.body, I18n.t("directa_logins.show.history_scope")
   end
 
   test "a first-snapshot wait is not repeated as an awaiting-valuation error" do

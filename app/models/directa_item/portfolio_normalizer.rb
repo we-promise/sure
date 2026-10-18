@@ -12,6 +12,7 @@ class DirectaItem::PortfolioNormalizer
     :quantity,
     :market_value,
     :price,
+    :cost_basis,
     :external_id,
     :metadata
   )
@@ -170,6 +171,10 @@ class DirectaItem::PortfolioNormalizer
       raise Error.new(:awaiting_valuation) if market_value.negative?
 
       unit_value = market_value / quantity
+      cost_basis = position.cost_basis
+      unless cost_basis.nil? || (cost_basis.is_a?(BigDecimal) && cost_basis.finite? && cost_basis.positive?)
+        cost_basis = nil
+      end
       Position.new(
         isin: isin,
         mic: mic,
@@ -177,6 +182,7 @@ class DirectaItem::PortfolioNormalizer
         quantity: quantity,
         market_value: market_value,
         price: unit_value,
+        cost_basis: cost_basis,
         external_id: external_id(isin, mic, date),
         metadata: safe_position_metadata(position, metadata, isin, mic, date)
       )
@@ -185,6 +191,7 @@ class DirectaItem::PortfolioNormalizer
     def aggregate_positions(identity, rows)
       quantity = rows.sum(BigDecimal("0"), &:quantity)
       market_value = rows.sum(BigDecimal("0"), &:market_value)
+      cost_basis = aggregate_cost_basis(rows, quantity)
       first = rows.first
 
       Position.new(
@@ -194,6 +201,7 @@ class DirectaItem::PortfolioNormalizer
         quantity: quantity,
         market_value: market_value,
         price: market_value / quantity,
+        cost_basis: cost_basis,
         external_id: first.external_id,
         metadata: rows.map(&:metadata).sort_by { |metadata| metadata.fetch("univoco") }
       )
@@ -210,12 +218,38 @@ class DirectaItem::PortfolioNormalizer
         "multiplier" => instrument_metadata.multiplier&.to_s("F"),
         "raw_multiplier" => instrument_metadata.raw_multiplier,
         "market_value" => position.market_value&.to_s("F"),
+        "bank_average_price_raw" => bounded_raw_average_price(position.raw_average_price),
+        "cost_basis" => position.cost_basis&.to_s("F"),
+        "cost_basis_details" => position.cost_basis_details,
         "valuation_currency" => position.valuation_currency,
         "valuation_date" => position.valuation_date.iso8601,
         "snapshot_date" => snapshot_date.iso8601,
         "valuation_source" => position.valuation_source.to_s,
         "valuation_details" => position.valuation_details
       }.compact
+    end
+
+    def aggregate_cost_basis(rows, quantity)
+      return unless rows.all? { |row| row.cost_basis.is_a?(BigDecimal) && row.cost_basis.finite? && row.cost_basis.positive? }
+
+      products = rows.map do |row|
+        Provider::Directa.bounded_decimal_result(row.quantity * row.cost_basis)
+      end
+      return if products.any?(&:nil?)
+
+      total = products.sum(BigDecimal("0"))
+      return unless total.finite? && total.positive?
+
+      Provider::Directa.bounded_decimal_result(total / quantity)
+    end
+
+    def bounded_raw_average_price(value)
+      return unless value.is_a?(String) && value.bytesize <= Provider::Directa::DECIMAL_MAX_INPUT_BYTES
+
+      raw = value.strip
+      return unless raw.ascii_only? && Provider::Directa::DECIMAL_PATTERN.match?(raw)
+
+      raw
     end
 
     def zero_valued?(position)

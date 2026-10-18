@@ -15,6 +15,50 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 900, @statement.holdings_value
   end
 
+  test "cost_basis_coverage counts holdings with usable basis without changing aggregate trend behavior" do
+    account = create_investment_account(balance: 400, currency: "USD")
+    owner = account.owner
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    item = DirectaItem.create!(
+      family: @family,
+      owner: owner,
+      broker_account: "00123",
+      account_identity: "00123",
+      multi_token: "synthetic-multi-token",
+      mono_token: "synthetic-mono-token",
+      connection_generation: 1,
+      status: :connected
+    )
+    provider_account = item.directa_accounts.create!(currency: account.currency)
+    provider_link = AccountProvider.create!(account: account, provider: provider_account)
+    known_security = Security.create!(ticker: "KNOWN", name: "Known basis")
+    unknown_security = Security.create!(ticker: "UNKNOWN", name: "Unknown basis")
+
+    account.holdings.create!(
+      security: known_security,
+      account_provider: provider_link,
+      date: Date.current,
+      qty: 2,
+      price: 100,
+      amount: 200,
+      currency: "USD",
+      cost_basis: 80,
+      cost_basis_source: "provider"
+    )
+    account.holdings.create!(
+      security: unknown_security,
+      account_provider: provider_link,
+      date: Date.current,
+      qty: 2,
+      price: 100,
+      amount: 200,
+      currency: "USD"
+    )
+
+    assert_equal({ known_count: 1, unknown_count: 1, total_count: 2 }, @statement.cost_basis_coverage)
+    assert_equal Money.new(40, "USD"), @statement.unrealized_gains_trend.value
+  end
+
   test "portfolio_value converts foreign-currency accounts to family currency" do
     create_investment_account(balance: 1921.92, cash_balance: -162, currency: "USD")
     create_investment_account(balance: 1000, cash_balance: 1000, currency: "EUR")

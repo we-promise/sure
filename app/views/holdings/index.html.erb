@@ -25,6 +25,10 @@
       </div>
     <% end %>
 
+    <% if directa_backed_account?(@account) %>
+      <%= render "shared/directa_unrealized_return_note" %>
+    <% end %>
+
     <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
       <div class="w-max lg:w-full">
         <div class="grid grid-cols-12 items-center uppercase text-xs font-medium text-secondary px-4 py-2">
@@ -32,7 +36,7 @@
           <%= tag.p t(".weight"), class: "col-span-2 justify-self-end" %>
           <%= tag.p t(".average_cost"), class: "col-span-2 justify-self-end" %>
           <%= tag.p t(".holdings"), class: "col-span-2 justify-self-end" %>
-          <%= tag.p t(".return"), class: "col-span-2 justify-self-end" %>
+          <%= tag.p t(".unrealized_return"), class: "col-span-2 justify-self-end" %>
         </div>
 
         <div class="bg-container rounded-lg shadow-border-xs">

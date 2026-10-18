@@ -61,6 +61,19 @@ class DirectaAccount::HoldingsProcessor
     end
 
     def import_position!(position, security:, account_provider:, snapshot:)
+      adopt_verified_generated_projection!(security: security, snapshot: snapshot)
+      existing_for_date = account_provider.account.holdings.find_by(
+        security_id: security.id,
+        date: snapshot.date,
+        currency: snapshot.currency
+      )
+      same_date_manual_lock = locked_manual_basis?(existing_for_date)
+      manual_basis = prior_locked_manual_basis(
+        security: security,
+        snapshot: snapshot,
+        account_provider: account_provider
+      ) if position.quantity.to_d.positive?
+
       holding = import_adapter.import_holding(
         security: security,
         quantity: position.quantity,
@@ -68,7 +81,7 @@ class DirectaAccount::HoldingsProcessor
         currency: snapshot.currency,
         date: snapshot.date,
         price: position.price,
-        cost_basis: nil,
+        cost_basis: position.cost_basis,
         external_id: position.external_id,
         source: "directa",
         account_provider_id: account_provider.id,
@@ -79,11 +92,71 @@ class DirectaAccount::HoldingsProcessor
         raise DirectaItem::PortfolioNormalizer::Error.new(:holding_conflict)
       end
 
+      clear_stale_provider_basis!(holding) if position.cost_basis.nil?
+      if same_date_manual_lock
+        # a same-date manual edit is the user's latest correction for this snapshot.
+      elsif !manual_basis.nil?
+        preserve_manual_basis!(holding, manual_basis)
+      else
+        clear_carried_manual_basis!(holding)
+      end
+
       if holding.provider_security_id.blank?
         holding.update!(provider_security_id: security.id)
       end
 
       holding
+    end
+
+    def prior_locked_manual_basis(security:, snapshot:, account_provider:)
+      candidate = account_provider.account.holdings
+        .where(security_id: security.id, currency: snapshot.currency)
+        .where("date < ?", snapshot.date)
+        .order(date: :desc)
+        .first
+      return unless candidate&.qty&.positive? && locked_manual_basis?(candidate)
+
+      own_provider_row = candidate.account_id == account_provider.account_id &&
+        candidate.account_provider_id == account_provider.id &&
+        candidate.provider_security_id == security.id
+      validated_projection = @content_validator.generated_snapshot_holding?(candidate)
+      return unless own_provider_row || validated_projection
+
+      candidate.cost_basis
+    end
+
+    def locked_manual_basis?(holding)
+      holding&.cost_basis_locked? && holding.cost_basis_source == "manual" && !holding.cost_basis.nil?
+    end
+
+    def preserve_manual_basis!(holding, cost_basis)
+      holding.update!(cost_basis: cost_basis, cost_basis_source: "manual", cost_basis_locked: true)
+    end
+
+    def clear_carried_manual_basis!(holding)
+      return unless locked_manual_basis?(holding)
+
+      holding.update!(cost_basis: nil, cost_basis_source: nil, cost_basis_locked: false)
+    end
+
+    def adopt_verified_generated_projection!(security:, snapshot:)
+      projection = directa_account.current_account.holdings.find_by(
+        security_id: security.id,
+        date: snapshot.date,
+        currency: snapshot.currency,
+        account_provider_id: nil,
+        external_id: nil
+      )
+      return unless projection && @content_validator.generated_snapshot_holding?(projection)
+      return unless projection.cost_basis_source == "calculated"
+
+      projection.update!(cost_basis_source: "provider")
+    end
+
+    def clear_stale_provider_basis!(holding)
+      return if holding.cost_basis_locked? || holding.cost_basis_source != "provider"
+
+      holding.update!(cost_basis: nil, cost_basis_source: nil)
     end
 
     def latest_provider_rows(account_provider)
@@ -136,6 +209,8 @@ class DirectaAccount::HoldingsProcessor
             imported.external_id == tombstone_external_id
           raise DirectaItem::PortfolioNormalizer::Error.new(:holding_conflict)
         end
+
+        clear_carried_manual_basis!(imported)
       end
     end
 

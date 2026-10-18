@@ -13,7 +13,9 @@ class Provider::Directa
       login: [ :post, LOGIN_PATH ],
       account_identity: [ :get, ACCOUNT_IDENTITY_PATH ],
       startup_metadata: [ :get, STARTUP_METADATA_PATH ],
-      instrument_metadata: [ :get, INSTRUMENT_METADATA_PATH ]
+      instrument_metadata: [ :get, INSTRUMENT_METADATA_PATH ],
+      executed_orders: [ :get, "/trading/zordj" ],
+      account_statement: [ :get, "/trading/estconc8" ]
     }.freeze
     OPEN_TIMEOUT_SECONDS = 5
     READ_TIMEOUT_SECONDS = 10

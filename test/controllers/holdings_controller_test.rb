@@ -10,12 +10,46 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
   test "gets holdings" do
     get holdings_url(account_id: @account.id)
     assert_response :success
+    refute_includes response.body, I18n.t("holdings.show.directa_unrealized_return_note")
   end
 
   test "gets holding" do
     get holding_path(@holding)
 
     assert_response :success
+  end
+
+  test "Directa holdings explain the bank-reported unrealized return basis" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    owner = users(:family_admin)
+    item = DirectaItem.create!(
+      family: @account.family,
+      owner: owner,
+      broker_account: "00123",
+      account_identity: "00123",
+      multi_token: "synthetic-multi-token",
+      mono_token: "synthetic-mono-token",
+      status: :connected,
+      connection_generation: 1
+    )
+    provider_account = DirectaAccount.create!(
+      directa_item: item,
+      currency: @account.currency,
+      current_balance: 10_000,
+      cash_balance: 5_000
+    )
+    AccountProvider.create!(account: @account, provider: provider_account)
+    note = I18n.t("holdings.show.directa_unrealized_return_note")
+
+    get holdings_path(account_id: @account.id)
+
+    assert_response :success
+    assert_select "p", text: note
+
+    get holding_path(@holding)
+
+    assert_response :success
+    assert_select "p", text: note
   end
 
   test "shows brokerage cash debits without hiding them from the holdings total" do

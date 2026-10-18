@@ -143,7 +143,8 @@ en:
     investment_performance:
       title: Investment Performance
       portfolio_value: Portfolio Value
-      total_return: Total Return
+      unrealized_return: Unrealized return
+      partial_cost_basis_coverage: "Includes %{known} of %{total} holdings with known cost basis; the others are excluded."
       period_return: Period Return
       contributions: Period Contributions
       withdrawals: Period Withdrawals
@@ -151,7 +152,7 @@ en:
       holding: Holding
       weight: Weight
       value: Value
-      return: Return
+      unrealized_return: Unrealized return
       accounts: Investment Accounts
       gains_by_tax_treatment: Gains by Tax Treatment
       unrealized_gains: Unrealized Gains
@@ -230,7 +231,7 @@ en:
       investments:
         title: Investments
         portfolio_value: Portfolio Value
-        total_return: Total Return
+        unrealized_return: Unrealized return
         period_return: Period Return
         contributions: Contributions
         withdrawals: Withdrawals
@@ -239,7 +240,7 @@ en:
         holding: Holding
         weight: Weight
         value: Value
-        return: Return
+        unrealized_return: Unrealized return
       # Spending by Category section
       spending:
         title: Spending by Category

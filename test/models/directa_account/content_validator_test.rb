@@ -71,6 +71,182 @@ class DirectaAccount::ContentValidatorTest < ActiveSupport::TestCase
     assert_equal "holding_conflict", error.code
   end
 
+  test "provider provenance does not admit a holding whose projected position differs" do
+    first_date = Date.current - 1.day
+    first_observation = first_date.in_time_zone.end_of_day - 10.minutes
+
+    travel_to(first_observation) do
+      @account = DirectaItem::Importer.new(@item).import(
+        snapshot: provider_snapshot(observed_at: first_observation)
+      ).account
+    end
+
+    travel_to(first_date.next_day.in_time_zone + 20.minutes) do
+      Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+    end
+
+    projection = @account.holdings.where(account_provider_id: nil).sole
+    validator = DirectaAccount::ContentValidator.new(@item.directa_account)
+    assert_equal "provider", projection.cost_basis_source
+    assert validator.generated_snapshot_holding?(projection)
+
+    projection.update!(amount: projection.amount + 1)
+
+    assert_not validator.generated_snapshot_holding?(projection)
+    error = assert_raises(DirectaItem::PortfolioNormalizer::Error) { validator.validate! }
+    assert_equal "holding_conflict", error.code
+  end
+
+  test "allows only history trades owned by its encrypted ledger and preserves user financial edits" do
+    first_date = Date.current - 1.day
+    first_observation = first_date.in_time_zone.end_of_day - 10.minutes
+
+    travel_to(first_observation) do
+      @account = DirectaItem::Importer.new(@item).import(
+        snapshot: provider_snapshot(observed_at: first_observation)
+      ).account
+    end
+
+    provider_account = @item.directa_account
+    event_date = Date.new(2021, 3, 15)
+    bank_scope = "b" * 64
+    fingerprint = "a" * 64
+    external_id = "#{Trade::DIRECTA_HISTORY_EXTERNAL_ID_PREFIX}#{'c' * 64}"
+    provider_account.update!(
+      history_ledger: {
+        "schema_version" => 1,
+        "bank_scope" => bank_scope,
+        "coverage_start" => event_date.iso8601,
+        "coverage_end" => event_date.iso8601,
+        "cohorts" => { event_date.iso8601 => { fingerprint => 1 } },
+        "entries" => { external_id => { "fingerprint" => fingerprint, "date" => event_date.iso8601 } }
+      }
+    )
+    entry = @account.entries.create!(
+      name: "Directa purchase",
+      date: event_date,
+      amount: 100,
+      currency: "EUR",
+      source: "directa",
+      external_id: external_id,
+      entryable: Trade.new(
+        security: @account.holdings.sole.security,
+        qty: 2,
+        price: 50,
+        currency: "EUR",
+        investment_activity_label: "Buy",
+        extra: {
+          "directa" => {
+            "history_schema_version" => Trade::DIRECTA_HISTORY_SCHEMA_VERSION,
+            "provider_account_id" => provider_account.id,
+            "fingerprint" => fingerprint,
+            "bank_scope" => bank_scope,
+            "aggregation" => Trade::DIRECTA_HISTORY_AGGREGATION
+          }
+        }
+      )
+    )
+
+    validator = DirectaAccount::ContentValidator.new(provider_account)
+    assert validator.owned_history_entry?(entry)
+
+    entry.update!(date: event_date + 1.day, amount: 125, user_modified: true)
+    entry.entryable.update!(qty: 1, price: 62.5)
+
+    assert validator.validate!
+
+    manual_entry = @account.entries.create!(
+      name: "Manual transaction",
+      date: first_date,
+      amount: 10,
+      currency: "EUR",
+      entryable: Transaction.new
+    )
+
+    error = assert_raises(DirectaItem::PortfolioNormalizer::Error) { validator.validate! }
+    assert_equal "holding_conflict", error.code
+
+    manual_entry.destroy!
+    foreign_entry = @account.entries.create!(
+      name: "Foreign provider trade",
+      date: first_date,
+      amount: 10,
+      currency: "EUR",
+      source: "plaid",
+      external_id: "foreign-trade-1",
+      entryable: Trade.new(
+        security: @account.holdings.sole.security,
+        qty: 1,
+        price: 10,
+        currency: "EUR",
+        investment_activity_label: "Buy"
+      )
+    )
+
+    assert_not validator.owned_history_entry?(foreign_entry)
+    error = assert_raises(DirectaItem::PortfolioNormalizer::Error) { validator.validate! }
+    assert_equal "holding_conflict", error.code
+  end
+
+  test "rejects direct history metadata without a matching encrypted ledger record" do
+    first_date = Date.current - 1.day
+    first_observation = first_date.in_time_zone.end_of_day - 10.minutes
+
+    travel_to(first_observation) do
+      @account = DirectaItem::Importer.new(@item).import(
+        snapshot: provider_snapshot(observed_at: first_observation)
+      ).account
+    end
+
+    event_date = Date.new(2022, 6, 1)
+    bank_scope = "b" * 64
+    fingerprint = "a" * 64
+    external_id = "#{Trade::DIRECTA_HISTORY_EXTERNAL_ID_PREFIX}#{'c' * 64}"
+    entry = @account.entries.create!(
+      name: "Unowned Directa purchase",
+      date: event_date,
+      amount: 100,
+      currency: "EUR",
+      source: "directa",
+      external_id: external_id,
+      entryable: Trade.new(
+        security: @account.holdings.sole.security,
+        qty: 2,
+        price: 50,
+        currency: "EUR",
+        investment_activity_label: "Buy",
+        extra: {
+          "directa" => {
+            "history_schema_version" => Trade::DIRECTA_HISTORY_SCHEMA_VERSION,
+            "provider_account_id" => @item.directa_account.id,
+            "fingerprint" => fingerprint,
+            "bank_scope" => bank_scope,
+            "aggregation" => Trade::DIRECTA_HISTORY_AGGREGATION
+          }
+        }
+      )
+    )
+
+    validator = DirectaAccount::ContentValidator.new(@item.directa_account)
+    assert_not validator.owned_history_entry?(entry)
+    error = assert_raises(DirectaItem::PortfolioNormalizer::Error) { validator.validate! }
+    assert_equal "holding_conflict", error.code
+
+    wrong_fingerprint = "d" * 64
+    @item.directa_account.update!(
+      history_ledger: {
+        "schema_version" => 1,
+        "bank_scope" => bank_scope,
+        "coverage_start" => event_date.iso8601,
+        "coverage_end" => event_date.iso8601,
+        "cohorts" => { event_date.iso8601 => { wrong_fingerprint => 1 } },
+        "entries" => { external_id => { "fingerprint" => wrong_fingerprint, "date" => event_date.iso8601 } }
+      }
+    )
+
+    assert_not validator.owned_history_entry?(entry)
+  end
+
   private
 
     def provider_snapshot(observed_at:)
@@ -104,7 +280,8 @@ class DirectaAccount::ContentValidatorTest < ActiveSupport::TestCase
         valuation_currency: "EUR",
         current_price: BigDecimal("50"),
         market_value: BigDecimal("100"),
-        valuation_source: "synthetic_verified_snapshot"
+        valuation_source: "synthetic_verified_snapshot",
+        cost_basis: BigDecimal("45")
       )
       cash = Provider::Directa::Cash.new(
         amount: BigDecimal("25"),

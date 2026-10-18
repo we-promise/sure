@@ -5,5 +5,6 @@
 Holding::HoldingData = Struct.new(
   :account_id, :security_id, :date,
   :qty, :price, :currency, :amount, :cost_basis, :cost_basis_unknown,
+  :cost_basis_source, :cost_basis_locked,
   keyword_init: true
 )

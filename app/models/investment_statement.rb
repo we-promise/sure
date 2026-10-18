@@ -167,6 +167,17 @@ class InvestmentStatement
     )
   end
 
+  def cost_basis_coverage
+    holdings = current_holdings.to_a
+    known_count = holdings.count { |holding| holding.avg_cost.present? }
+
+    {
+      known_count: known_count,
+      unknown_count: holdings.size - known_count,
+      total_count: holdings.size
+    }
+  end
+
   def period_return_trend(period: Period.current_month)
     currency = family.currency
     account_ids = investment_account_ids

@@ -50,7 +50,7 @@ en:
       positions:
         one: "%{count} position"
         other: "%{count} positions"
-      return: Total return
+      unrealized_return: Unrealized return
       weight: Weight
     missing_price_tooltip:
       description: This investment has missing values and we could not calculate
@@ -88,7 +88,8 @@ en:
       reset_confirm_body: "This will change the security from %{current} back to %{original} and move all associated trades."
       ticker_label: Ticker
       trade_history_entry: "%{qty} shares of %{security} at %{price}"
-      total_return_label: Total Return
+      unrealized_return_label: Unrealized return
+      directa_unrealized_return_note: "Return compares the reference-price value with the stored cost basis. When no manual basis override is set, Directa's average-price field supplies the basis. Foreign-currency basis and value use current bank exchange rates. It excludes realized results, income, charges, and historical FX performance; it is not tax basis or all-time return."
       unknown: Unknown
       cost_basis_locked_label: Cost basis is locked
       cost_basis_locked_description: Your manually set cost basis won't be changed by syncs.

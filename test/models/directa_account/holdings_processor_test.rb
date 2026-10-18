@@ -39,6 +39,189 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "directa", holding.account_provider.provider_name
   end
 
+  test "imports provider basis per unit without multiplying quantity or market value" do
+    normalized = normalized_snapshot(
+      date: Date.current,
+      positions: [ normalized_position(quantity: BigDecimal("1.25"), amount: BigDecimal("250"), cost_basis: BigDecimal("42.5")) ]
+    )
+
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(normalized)
+
+    holding = @provider_account.account.holdings.sole
+    assert_equal BigDecimal("1.25"), holding.qty
+    assert_equal BigDecimal("250"), holding.amount
+    assert_equal BigDecimal("200"), holding.price
+    assert_equal BigDecimal("42.5"), holding.cost_basis
+    assert_equal "provider", holding.cost_basis_source
+  end
+
+  test "preserves a locked manual basis when Directa refreshes it" do
+    first = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"))
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: Date.current, positions: [ first ])
+    )
+    holding = @provider_account.account.holdings.sole
+    holding.set_manual_cost_basis!(BigDecimal("35"))
+
+    refreshed = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("110"), cost_basis: BigDecimal("44"))
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: Date.current, positions: [ refreshed ])
+    )
+
+    assert_equal BigDecimal("35"), holding.reload.cost_basis
+    assert_equal "manual", holding.cost_basis_source
+    assert holding.cost_basis_locked?
+  end
+
+  test "carries a locked manual basis into a new positive Directa snapshot without materialization" do
+    first_date = Date.current - 1.day
+    first = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"), date: first_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: first_date, positions: [ first ])
+    )
+    first_holding = @provider_account.account.holdings.sole
+    first_holding.set_manual_cost_basis!(BigDecimal("35"))
+
+    next_date = first_date.next_day
+    refreshed = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("110"), cost_basis: BigDecimal("44"), date: next_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: next_date, positions: [ refreshed ])
+    )
+
+    next_holding = @provider_account.account.holdings.find_by!(date: next_date)
+    assert_equal BigDecimal("35"), next_holding.cost_basis
+    assert_equal "manual", next_holding.cost_basis_source
+    assert next_holding.cost_basis_locked?
+  end
+
+  test "carries a locked basis from an exact generated projection into the next provider snapshot" do
+    first_date = Date.current - 2.days
+    first = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"), date: first_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: first_date, positions: [ first ])
+    )
+    security = @provider_account.account.holdings.sole.security
+    projected_date = first_date.next_day
+    projection = travel_to(projected_date.in_time_zone + 12.hours) do
+      Holding::DirectaSnapshotCalculator.new(
+        @provider_account.account,
+        account_provider_id: @provider_account.account_provider.id
+      ).projected_rows.find { |row| row.date == projected_date }
+    end
+    generated = @provider_account.account.holdings.create!(
+      security: security,
+      qty: projection.qty,
+      price: projection.price,
+      amount: projection.amount,
+      currency: projection.currency,
+      date: projection.date,
+      cost_basis: BigDecimal("37"),
+      cost_basis_source: "manual",
+      cost_basis_locked: true
+    )
+    assert DirectaAccount::ContentValidator.new(@provider_account).generated_snapshot_holding?(generated)
+
+    next_date = projected_date.next_day
+    refreshed = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("120"), cost_basis: BigDecimal("52"), date: next_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: next_date, positions: [ refreshed ])
+    )
+
+    next_holding = @provider_account.account.holdings.find_by!(date: next_date)
+    assert_equal BigDecimal("37"), next_holding.cost_basis
+    assert_equal "manual", next_holding.cost_basis_source
+    assert next_holding.cost_basis_locked?
+  end
+
+  test "a zero quantity tombstone resets a locked manual basis before the position reopens" do
+    first_date = Date.current - 2.days
+    first = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"), date: first_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: first_date, positions: [ first ])
+    )
+    @provider_account.account.holdings.find_by!(date: first_date).set_manual_cost_basis!(BigDecimal("35"))
+
+    tombstone_date = first_date.next_day
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: tombstone_date, positions: [])
+    )
+    tombstone = @provider_account.account.holdings.find_by!(date: tombstone_date)
+    assert_equal BigDecimal("0"), tombstone.qty
+    assert_nil tombstone.cost_basis
+    assert_not tombstone.cost_basis_locked?
+
+    reopen_date = tombstone_date.next_day
+    reopened = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("120"), cost_basis: BigDecimal("52"), date: reopen_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: reopen_date, positions: [ reopened ])
+    )
+
+    reopened_holding = @provider_account.account.holdings.find_by!(date: reopen_date)
+    assert_equal BigDecimal("52"), reopened_holding.cost_basis
+    assert_equal "provider", reopened_holding.cost_basis_source
+    assert_not reopened_holding.cost_basis_locked?
+  end
+
+  test "clears an unlocked stale provider basis when the bank average is unavailable" do
+    first = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"))
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: Date.current, positions: [ first ])
+    )
+    holding = @provider_account.account.holdings.sole
+    assert_equal "provider", holding.cost_basis_source
+
+    refreshed = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("110"), cost_basis: nil)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: Date.current, positions: [ refreshed ])
+    )
+
+    assert_nil holding.reload.cost_basis
+    assert_nil holding.cost_basis_source
+  end
+
+  test "refreshes the provider basis of an exactly validated generated projection" do
+    previous_date = Date.current - 1.day
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(
+        date: previous_date,
+        positions: [ normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"), date: previous_date) ]
+      )
+    )
+    security = @provider_account.account.holdings.sole.security
+    provider_id = @provider_account.account_provider.id
+    projected = Holding::DirectaSnapshotCalculator.new(
+      @provider_account.account,
+      account_provider_id: provider_id
+    ).projected_rows.find { |row| row.date == Date.current }
+    assert projected
+
+    generated = @provider_account.account.holdings.create!(
+      security: security,
+      qty: projected.qty,
+      price: projected.price,
+      amount: projected.amount,
+      currency: projected.currency,
+      date: projected.date,
+      cost_basis: projected.cost_basis,
+      cost_basis_source: "calculated"
+    )
+    validator = DirectaAccount::ContentValidator.new(@provider_account)
+    assert validator.generated_snapshot_holding?(generated)
+
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(
+        date: Date.current,
+        positions: [ normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("110"), cost_basis: BigDecimal("44")) ]
+      )
+    )
+
+    imported = generated.reload
+    assert_equal BigDecimal("44"), imported.cost_basis
+    assert_equal "provider", imported.cost_basis_source
+    assert_equal provider_id, imported.account_provider_id
+    assert_equal "directa-position-US0378331005-XNAS-#{Date.current.iso8601}", imported.external_id
+  end
+
   test "a complete empty normalized snapshot tombstones only Directa holdings" do
     first_snapshot = normalized_snapshot(
       date: Date.current,
@@ -122,7 +305,7 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
       )
     end
 
-    def normalized_position(quantity:, amount:)
+    def normalized_position(quantity:, amount:, cost_basis: nil, date: Date.current)
       DirectaItem::PortfolioNormalizer::Position.new(
         isin: "US0378331005",
         mic: "XNAS",
@@ -130,7 +313,8 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
         quantity: quantity,
         market_value: amount,
         price: amount / quantity,
-        external_id: "directa-position-US0378331005-XNAS-#{Date.current.iso8601}",
+        cost_basis: cost_basis,
+        external_id: "directa-position-US0378331005-XNAS-#{date.iso8601}",
         metadata: [ { "univoco" => "synthetic-position" } ]
       )
     end

@@ -14,6 +14,31 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "dashboard labels the current investment gain as unrealized and shows basis coverage" do
+    known_holding = holdings(:one)
+    known_holding.update!(cost_basis: BigDecimal("180"))
+    security = Security.create!(ticker: "BASIS#{SecureRandom.hex(3)}", name: "Unknown basis holding", offline: true)
+    accounts(:investment).holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 2,
+      price: 100,
+      amount: 200,
+      currency: "USD"
+    )
+
+    coverage = @family.investment_statement.cost_basis_coverage
+    get root_path
+
+    assert_response :ok
+    assert_includes response.body, I18n.t("pages.dashboard.investment_summary.unrealized_return")
+    assert_includes response.body, I18n.t(
+      "pages.dashboard.investment_summary.partial_cost_basis_coverage",
+      known: coverage[:known_count],
+      total: coverage[:total_count]
+    )
+  end
+
   test "dashboard renders the net worth chart as drag-selectable, opting it out of card drag-and-drop" do
     get root_path
 

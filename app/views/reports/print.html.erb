@@ -194,6 +194,7 @@
 
   <%# Investments %>
   <% if @investment_metrics[:has_investments] %>
+    <% cost_basis_coverage = investment_cost_basis_coverage %>
     <section class="tufte-section">
       <h2 class="tufte-section-title"><%= t("reports.print.investments.title") %></h2>
       <div class="tufte-metric-row">
@@ -208,7 +209,7 @@
         </div>
         <% if @investment_metrics[:unrealized_trend] %>
           <div class="tufte-metric-card tufte-metric-card-sm">
-            <span class="tufte-metric-card-label"><%= t("reports.print.investments.total_return") %></span>
+            <span class="tufte-metric-card-label"><%= t("reports.print.investments.unrealized_return") %></span>
             <span class="tufte-metric-card-value" style="color: <%= @investment_metrics[:unrealized_trend].color %>">
               <%= @investment_metrics[:unrealized_trend].value >= 0 ? "+" : "" %><%= format_money(Money.new(@investment_metrics[:unrealized_trend].value, Current.family.currency)) %>
             </span>
@@ -240,6 +241,12 @@
         </div>
       </div>
 
+      <% if cost_basis_coverage[:unknown_count].positive? %>
+        <p class="tufte-muted">
+          <%= t("reports.investment_performance.partial_cost_basis_coverage", known: cost_basis_coverage[:known_count], total: cost_basis_coverage[:total_count]) %>
+        </p>
+      <% end %>
+
       <% if @investment_metrics[:top_holdings].any? %>
         <h3 class="tufte-subsection"><%= t("reports.print.investments.top_holdings") %></h3>
         <table class="tufte-table tufte-compact">
@@ -248,7 +255,7 @@
               <th><%= t("reports.print.investments.holding") %></th>
               <th class="tufte-right"><%= t("reports.print.investments.weight") %></th>
               <th class="tufte-right"><%= t("reports.print.investments.value") %></th>
-              <th class="tufte-right"><%= t("reports.print.investments.return") %></th>
+              <th class="tufte-right"><%= t("reports.print.investments.unrealized_return") %></th>
             </tr>
           </thead>
           <tbody>

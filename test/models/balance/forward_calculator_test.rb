@@ -104,6 +104,82 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal 3.days.ago.to_date, calculator.calculation_start_date
   end
 
+  test "Directa historical activity does not move balances before the first brokerage snapshot" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    owner = users(:family_admin)
+    snapshot_date = 6.months.ago.to_date
+    history_date = Date.new(2021, 4, 5)
+    account = owner.family.accounts.create!(
+      name: "Directa history boundary",
+      balance: 100,
+      cash_balance: 100,
+      currency: "EUR",
+      accountable: Investment.new,
+      owner: owner
+    )
+    item = DirectaItem.create!(
+      family: owner.family,
+      owner: owner,
+      broker_account: "00123",
+      account_identity: "00123",
+      multi_token: "synthetic-multi-token",
+      mono_token: "synthetic-mono-token",
+      connection_generation: 1,
+      status: :connected,
+      portfolio_snapshot_at: snapshot_date.in_time_zone + 12.hours
+    )
+    provider_account = item.directa_accounts.create!(currency: "EUR")
+    AccountProvider.create!(account: account, provider: provider_account)
+    security = Security.create!(ticker: "DIRECTA-BOUNDARY", name: "Directa boundary")
+    external_id = "#{Trade::DIRECTA_HISTORY_EXTERNAL_ID_PREFIX}#{'c' * 64}"
+    fingerprint = "a" * 64
+    bank_scope = "b" * 64
+    provider_account.update!(
+      history_ledger: {
+        "schema_version" => 1,
+        "bank_scope" => bank_scope,
+        "coverage_start" => history_date.iso8601,
+        "coverage_end" => history_date.iso8601,
+        "cohorts" => { history_date.iso8601 => { fingerprint => 1 } },
+        "entries" => { external_id => { "fingerprint" => fingerprint, "date" => history_date.iso8601 } }
+      }
+    )
+    account.entries.create!(
+      name: "Old Directa purchase",
+      date: history_date,
+      amount: 100,
+      currency: "EUR",
+      source: "directa",
+      external_id: external_id,
+      entryable: Trade.new(
+        security: security,
+        qty: 2,
+        price: 50,
+        currency: "EUR",
+        investment_activity_label: "Buy",
+        extra: {
+          "directa" => {
+            "history_schema_version" => Trade::DIRECTA_HISTORY_SCHEMA_VERSION,
+            "provider_account_id" => provider_account.id,
+            "fingerprint" => fingerprint,
+            "bank_scope" => bank_scope,
+            "aggregation" => Trade::DIRECTA_HISTORY_AGGREGATION
+          }
+        }
+      )
+    )
+    assert account.set_current_balance(100, date: snapshot_date, schedule_sync: false).success?
+
+    calculator = Balance::ForwardCalculator.new(account)
+    calculated = calculator.calculate
+
+    assert_equal snapshot_date, calculator.calculation_start_date
+    assert_equal [ snapshot_date ], calculated.map(&:date)
+    assert_equal BigDecimal("0"), calculated.first.net_market_flows
+    assert_equal BigDecimal("100"), calculated.first.cash_balance
+    assert_equal BigDecimal("100"), account.reload.balance
+  end
+
   test "reconciliation valuation sets absolute balance before applying subsequent transactions" do
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },

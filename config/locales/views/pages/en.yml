@@ -133,11 +133,11 @@ en:
         weight: "Weight"
       investment_summary:
         title: "Investments"
-        total_return: "Total Return"
+        unrealized_return: "Unrealized return"
+        partial_cost_basis_coverage: "Includes %{known} of %{total} holdings with known cost basis; the others are excluded."
         holding: "Holding"
         weight: "Weight"
         value: "Value"
-        return: "Return"
         period_activity: "%{period} Activity"
         contributions: "Contributions"
         withdrawals: "Withdrawals"

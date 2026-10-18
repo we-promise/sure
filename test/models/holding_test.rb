@@ -56,6 +56,12 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(expected_nvda), @nvda.avg_cost
   end
 
+  test "uses stored average cost for an unsaved holding without an account" do
+    holding = Holding.new(currency: "USD", cost_basis: BigDecimal("205"), cost_basis_source: "calculated")
+
+    assert_equal Money.new(BigDecimal("205"), "USD"), holding.avg_cost
+  end
+
   test "calculates average cost basis from another currency" do
     [ 1.day.ago.to_date, Date.current ].each do |date|
       ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: date, rate: 1)
@@ -186,6 +192,23 @@ class HoldingTest < ActiveSupport::TestCase
     # User-set $0 cost basis is valid for airdrops and should be honored
     @amzn.update!(cost_basis: 0, cost_basis_source: "manual", cost_basis_locked: true)
 
+    assert_equal Money.new(0, "USD"), @amzn.avg_cost
+  end
+
+  test "Directa does not infer unknown cost basis from partial trades and preserves stored or locked basis" do
+    link_directa_account(@account)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212, date: 1.day.ago.to_date)
+
+    @amzn.update!(cost_basis: 205, cost_basis_source: "calculated", cost_basis_locked: false)
+    assert_nil @amzn.avg_cost
+
+    @amzn.update!(cost_basis: nil, cost_basis_source: nil, cost_basis_locked: false)
+    assert_nil @amzn.avg_cost
+
+    @amzn.update!(cost_basis: 205, cost_basis_source: "provider", cost_basis_locked: false)
+    assert_equal Money.new(205, "USD"), @amzn.avg_cost
+
+    @amzn.update!(cost_basis: 0, cost_basis_source: "manual", cost_basis_locked: true)
     assert_equal Money.new(0, "USD"), @amzn.avg_cost
   end
 
@@ -490,6 +513,22 @@ class HoldingTest < ActiveSupport::TestCase
   end
 
   private
+
+    def link_directa_account(account)
+      ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+      item = DirectaItem.create!(
+        family: account.family,
+        owner: account.owner,
+        broker_account: "00123",
+        account_identity: "00123",
+        multi_token: "synthetic-multi-token",
+        mono_token: "synthetic-mono-token",
+        connection_generation: 1,
+        status: :connected
+      )
+      provider_account = item.directa_accounts.create!(currency: account.currency)
+      AccountProvider.create!(account: account, provider: provider_account)
+    end
 
     def load_holdings
       security1 = create_security("AMZN", prices: [

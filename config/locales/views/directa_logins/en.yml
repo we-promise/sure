@@ -7,6 +7,12 @@ en:
       connected_title: Directa connection
       connected_description: Sure is connected to Directa. Reconnecting is optional unless Directa asks you to sign in again.
       read_only: Sure reads your cash balance and securities. It cannot place, change, or cancel orders.
+      history_status_heading: Executed activity
+      history_status_waiting: No completed Directa activity sync is available yet.
+      history_status_synced: "Last successful activity sync: %{date}."
+      history_status_last_success: "Last successful activity sync: %{date}."
+      history_status_failed: The latest activity sync failed. %{error}
+      history_scope: Sure imports executed buys and sells through the previous completed bank day. Cash movements and dividends are not imported.
       encryption_warning:
         title: Encryption is not configured
         message: Configure application encryption before connecting Directa. Sure will not send your broker credentials without a secure place for the resulting session.

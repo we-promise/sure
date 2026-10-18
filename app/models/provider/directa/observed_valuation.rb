@@ -113,6 +113,7 @@ class Provider::Directa
         else
           instrument
         end
+        basis = cost_basis_for(position, instrument, identity, observed_at: observed_at)
 
         Position.new(
           univoco: position.univoco,
@@ -129,7 +130,9 @@ class Provider::Directa
           market_value: valued && valued.fetch(:market_value),
           unrealized_gain: nil,
           valuation_source: valued && VALUE_SOURCE,
-          valuation_details: valued && valued.fetch(:details)
+          valuation_details: valued && valued.fetch(:details),
+          cost_basis: basis.fetch(:cost_basis),
+          cost_basis_details: basis.fetch(:details)
         )
       end
 
@@ -189,6 +192,61 @@ class Provider::Directa
             fx_rate: fx_rate,
             observed_at: observed_at
           )
+        }
+      end
+
+      def cost_basis_for(position, instrument, identity, observed_at:)
+        return unavailable_cost_basis("unsupported_instrument_tuple") unless identity
+
+        average_price = decimal(position.raw_average_price)
+        return unavailable_cost_basis("missing_or_invalid_bank_average_price") unless average_price&.positive?
+        return unavailable_cost_basis("unsupported_multiplier") unless instrument.multiplier == BigDecimal("1")
+
+        denominator = identity.last == :bond ? BigDecimal("100") : BigDecimal("1")
+        quote_basis = Provider::Directa.bounded_decimal_result(average_price / denominator)
+        return unavailable_cost_basis("invalid_bank_average_price") unless quote_basis&.positive?
+
+        details = {
+          "cost_basis_source" => "bank_average_price",
+          "bank_average_price" => average_price.to_s("F"),
+          "bank_average_price_field" => Provider::Directa::FIELD_SOURCES.fetch(:position_average_price),
+          "cost_basis_quote_currency" => instrument.currency,
+          "cost_basis_multiplier" => instrument.multiplier.to_s("F"),
+          "cost_basis_price_denominator" => denominator.to_s("F"),
+          "cost_basis_observed_at" => observed_at.iso8601(6)
+        }
+
+        if instrument.currency == ACCOUNT_CURRENCY
+          return { cost_basis: quote_basis, details: details.freeze }
+        end
+
+        fx_pair = "#{instrument.currency}EUR"
+        fx_rate = @tables.fx_rates[fx_pair]
+        return unavailable_cost_basis("missing_current_fx") unless fx_rate.is_a?(BigDecimal) && fx_rate.finite? && fx_rate.positive?
+
+        basis = Provider::Directa.bounded_decimal_result(quote_basis / fx_rate)
+        return unavailable_cost_basis("invalid_current_fx_basis") unless basis&.positive?
+
+        details.merge!(
+          "cost_basis_fx_source" => "current_fx",
+          "cost_basis_fx_pair" => fx_pair,
+          "cost_basis_fx_operation" => "divide",
+          "cost_basis_fx_rate_source" => "cambioBCEdef",
+          "cost_basis_fx_rate" => fx_rate.to_s("F"),
+          "cost_basis_fx_observed_at" => @tables.fx_observed_at&.iso8601(6),
+          "acquisition_fx_date" => "unknown"
+        )
+        { cost_basis: basis, details: details.freeze }
+      end
+
+      def unavailable_cost_basis(reason)
+        {
+          cost_basis: nil,
+          details: {
+            "cost_basis_source" => "bank_average_price",
+            "cost_basis_status" => "unavailable",
+            "cost_basis_unavailable_reason" => reason
+          }.freeze
         }
       end
 

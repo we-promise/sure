@@ -19,10 +19,20 @@ class DirectaItem < ApplicationRecord
     "security_conflict" => "A Directa security identity conflicts with existing data. Your previous data was kept.",
     "holding_conflict" => "A Directa position conflicts with existing account data. Your previous data was kept.",
     "stale_snapshot" => "Directa returned an older portfolio snapshot. Your previous data was kept.",
-    "sync_failed" => "Directa portfolio syncing failed. Your previous data was kept. Retry or reconnect."
+    "sync_failed" => "Directa portfolio syncing failed. Your previous data was kept. Retry or reconnect.",
+    "history_incomplete" => "Directa activity history is incomplete. Existing entries were kept.",
+    "history_invalid_data" => "Directa returned invalid activity history. Existing entries were kept.",
+    "history_unsupported_activity" => "Directa returned an unsupported activity. Existing entries were kept.",
+    "history_changed" => "Directa activity history changed within saved coverage. Existing entries were kept for review.",
+    "history_identity_changed" => "The Directa account identity changed during activity history sync. Existing entries were kept.",
+    "history_sync_failed" => "Directa activity history could not be synchronized. Your portfolio snapshot remains available."
   }.freeze
 
   SYNC_ERROR_CODES = SYNC_ERROR_MESSAGES.keys.freeze
+  HISTORY_SYNC_ERROR_CODES = %w[
+    history_incomplete history_invalid_data history_unsupported_activity history_changed
+    history_identity_changed history_sync_failed
+  ].freeze
 
   enum :status, { pending: "pending", connected: "connected", requires_update: "requires_update" }, default: :requires_update
 
@@ -33,6 +43,7 @@ class DirectaItem < ApplicationRecord
 
   validates :owner_id, uniqueness: { scope: :family_id }
   validates :status, inclusion: { in: statuses.keys }
+  validates :history_sync_error_code, inclusion: { in: HISTORY_SYNC_ERROR_CODES }, allow_nil: true
   validate :owner_belongs_to_family
   validate :require_explicit_encryption_for_credentials
 
@@ -113,6 +124,42 @@ class DirectaItem < ApplicationRecord
 
   def clear_sync_failure!
     update!(last_sync_error_code: nil) if persisted? && last_sync_error_code.present?
+  end
+
+  def record_history_sync_failure!(code)
+    safe_code = HISTORY_SYNC_ERROR_CODES.include?(code.to_s) ? code.to_s : "history_sync_failed"
+    update!(history_sync_error_code: safe_code) if persisted?
+  end
+
+  def clear_history_sync_failure!
+    update!(history_sync_error_code: nil) if persisted? && history_sync_error_code.present?
+  end
+
+  def last_history_sync_error
+    SYNC_ERROR_MESSAGES[history_sync_error_code]
+  end
+
+  def sync_history_later
+    return unless persisted? && ready_for_sync? && directa_account&.usable_account.present?
+
+    DirectaHistorySyncJob.perform_later(id)
+  rescue StandardError
+    begin
+      record_history_sync_failure!("history_sync_failed")
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Directa activity history could not be scheduled.",
+        source: "directa",
+        family: family,
+        account_provider: directa_account&.account_provider,
+        provider_key: "directa",
+        metadata: { item_id: id, error_code: "history_sync_failed" }
+      )
+    rescue StandardError
+      nil
+    end
+    nil
   end
 
   def last_sync_error

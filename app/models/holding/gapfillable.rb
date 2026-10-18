@@ -40,7 +40,9 @@ module Holding::Gapfillable
               currency: previous_holding.currency,
               amount: previous_holding.amount,
               cost_basis: previous_holding.cost_basis,
-              cost_basis_unknown: previous_holding.cost_basis_unknown
+              cost_basis_unknown: previous_holding.cost_basis_unknown,
+              cost_basis_source: previous_holding.cost_basis_source,
+              cost_basis_locked: previous_holding.cost_basis_locked
             )
           end
         end
@@ -77,7 +79,9 @@ module Holding::Gapfillable
           currency: holding.currency,
           amount: qty * price,
           cost_basis: holding.cost_basis && Security::Split.unscale(holding.cost_basis, ratio),
-          cost_basis_unknown: holding.cost_basis_unknown
+          cost_basis_unknown: holding.cost_basis_unknown,
+          cost_basis_source: holding.cost_basis_source,
+          cost_basis_locked: holding.cost_basis_locked
         )
       end
   end

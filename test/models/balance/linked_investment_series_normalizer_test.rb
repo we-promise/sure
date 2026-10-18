@@ -187,6 +187,126 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal snapshot_date, common_start_date
   end
 
+  test "Directa history activity is excluded from supported history before its first snapshot" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    owner = users(:family_admin)
+    account = owner.family.accounts.create!(
+      name: "Directa history chart boundary",
+      balance: 200,
+      currency: "EUR",
+      accountable: Investment.new,
+      owner: owner
+    )
+    history_date = Date.new(2021, 4, 5)
+    snapshot_date = 6.months.ago.to_date
+    item = DirectaItem.create!(
+      family: owner.family,
+      owner: owner,
+      broker_account: "00123",
+      account_identity: "00123",
+      multi_token: "synthetic-multi-token",
+      mono_token: "synthetic-mono-token",
+      connection_generation: 1,
+      status: :connected,
+      portfolio_snapshot_at: snapshot_date.in_time_zone + 12.hours
+    )
+    provider_account = item.directa_accounts.create!(currency: "EUR")
+    provider_link = account.account_providers.create!(provider: provider_account)
+    security = Security.create!(ticker: "DIRECTA-CHART-BOUNDARY", name: "Directa chart boundary")
+    Holding.create!(
+      account: account,
+      account_provider: provider_link,
+      security: security,
+      date: snapshot_date,
+      qty: 2,
+      price: 100,
+      amount: 200,
+      currency: "EUR"
+    )
+    external_id = "#{Trade::DIRECTA_HISTORY_EXTERNAL_ID_PREFIX}#{'c' * 64}"
+    fingerprint = "a" * 64
+    bank_scope = "b" * 64
+    provider_account.update!(
+      history_ledger: {
+        "schema_version" => 1,
+        "bank_scope" => bank_scope,
+        "coverage_start" => history_date.iso8601,
+        "coverage_end" => history_date.iso8601,
+        "cohorts" => { history_date.iso8601 => { fingerprint => 1 } },
+        "entries" => { external_id => { "fingerprint" => fingerprint, "date" => history_date.iso8601 } }
+      }
+    )
+    entry = account.entries.create!(
+      name: "Old Directa purchase",
+      date: history_date,
+      amount: 100,
+      currency: "EUR",
+      source: "directa",
+      external_id: external_id,
+      entryable: Trade.new(
+        security: security,
+        qty: 2,
+        price: 50,
+        currency: "EUR",
+        investment_activity_label: "Buy",
+        extra: {
+          "directa" => {
+            "history_schema_version" => Trade::DIRECTA_HISTORY_SCHEMA_VERSION,
+            "provider_account_id" => provider_account.id,
+            "fingerprint" => fingerprint,
+            "bank_scope" => bank_scope,
+            "aggregation" => Trade::DIRECTA_HISTORY_AGGREGATION
+          }
+        }
+      )
+    )
+
+    assert entry.entryable.directa_history_entry?(entry)
+    assert_empty Balance::LinkedInvestmentSeriesNormalizer.provider_activity_entries(account.entries).to_a
+    assert_equal snapshot_date, Balance::LinkedInvestmentSeriesNormalizer
+      .new(account: account, series: nil)
+      .supported_history_start_date
+  end
+
+  test "cash-only Directa snapshot supplies chart inception without any holdings" do
+    owner = users(:family_admin)
+    account = owner.family.accounts.create!(
+      name: "Directa cash-only chart boundary",
+      balance: 250,
+      cash_balance: 250,
+      currency: "EUR",
+      accountable: Investment.new,
+      owner: owner
+    )
+    snapshot_date = 6.months.ago.to_date
+    item = DirectaItem.create!(
+      family: owner.family,
+      owner: owner,
+      portfolio_snapshot_at: snapshot_date.in_time_zone + 12.hours
+    )
+    provider_account = item.directa_accounts.create!(currency: "EUR")
+    account.account_providers.create!(provider: provider_account)
+    old_date = Date.new(2021, 4, 5)
+    raw_series = Series.new(
+      start_date: old_date,
+      end_date: Date.current,
+      interval: "1 day",
+      values: [
+        Series::Value.new(date: old_date, date_formatted: "", value: Money.new(0, "EUR")),
+        Series::Value.new(date: snapshot_date, date_formatted: "", value: Money.new(250, "EUR")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(250, "EUR"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalized = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series).normalize
+
+    assert_equal snapshot_date, normalized.start_date
+    assert_equal [ snapshot_date, Date.current ], normalized.values.map(&:date)
+    assert_equal snapshot_date, Balance::LinkedInvestmentSeriesNormalizer
+      .send(:common_supported_history_start_date, [ account.id ])
+  end
+
   test "normalizer leaves series untouched for unlinked accounts" do
     account = families(:empty).accounts.create!(
       name: "Unlinked Account",

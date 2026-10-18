@@ -55,7 +55,22 @@ class Holding < ApplicationRecord
   # basis cannot be determined (no trades and no provider cost_basis).
   def avg_cost
     # Use stored cost_basis if available (eliminates N+1 queries)
-    return Money.new(known_cost_basis, currency) if known_cost_basis
+    # - If locked (user-set), trust the value even if 0 (valid for airdrops)
+    # - Otherwise require positive since providers sometimes return 0 when unknown
+    if cost_basis.present?
+      return Money.new(cost_basis, currency) if cost_basis_locked?
+
+      if cost_basis.positive?
+        return Money.new(cost_basis, currency) if cost_basis_source == "provider"
+        return nil if directa_linked?
+
+        return Money.new(cost_basis, currency)
+      end
+    end
+
+    # directa's order history is incomplete, so an unknown broker basis cannot
+    # be reconstructed from the trades currently stored in this account.
+    return nil if directa_linked?
 
     # Fallback to calculation for holdings without pre-computed cost_basis
     calculate_avg_cost
@@ -263,6 +278,12 @@ class Holding < ApplicationRecord
       Money.new(amount, currency).exchange_to(account.currency, date: date).amount
     rescue Money::ConversionError
       amount
+    end
+
+    def directa_linked?
+      return false unless account
+
+      account.account_providers.load.any? { |provider| provider.provider_type == "DirectaAccount" }
     end
 
     def calculate_trend

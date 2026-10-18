@@ -32,7 +32,11 @@ class Balance::BaseCalculator
   # with large entry histories. Calculator instances are per-sync, so there is
   # no staleness concern.
   def calculation_start_date
-    @calculation_start_date ||= [ account.opening_anchor_date, account.entries.excluding_pending.minimum(:date) ].compact.min
+    @calculation_start_date ||= if directa_account_provider
+      directa_first_snapshot_date || account.opening_anchor_date || account.created_at&.to_date
+    else
+      [ account.opening_anchor_date, account.entries.excluding_pending.minimum(:date) ].compact.min
+    end
   end
 
   private
@@ -77,6 +81,7 @@ class Balance::BaseCalculator
     def market_value_change_on_date(date, flows)
       return 0 unless account.balance_type == :investment
       return 0 if fineco_first_snapshot_date && date <= fineco_first_snapshot_date
+      return 0 if directa_first_snapshot_date && date <= directa_first_snapshot_date
 
       start_of_day_holdings_value = holdings_value_for_date(date.prev_day)
       end_of_day_holdings_value = holdings_value_for_date(date)
@@ -94,6 +99,22 @@ class Balance::BaseCalculator
       @fineco_first_snapshot_date = if provider_link
         account.holdings.where(account_provider_id: provider_link.id).minimum(:date) || provider_link.provider&.last_snapshot_date
       end
+    end
+
+    def directa_first_snapshot_date
+      return @directa_first_snapshot_date if defined?(@directa_first_snapshot_date)
+
+      provider_link = directa_account_provider
+      @directa_first_snapshot_date = if provider_link
+        account.holdings.where(account_provider_id: provider_link.id).minimum(:date) ||
+          provider_link.provider&.directa_item&.portfolio_snapshot_at&.to_date
+      end
+    end
+
+    def directa_account_provider
+      return @directa_account_provider if defined?(@directa_account_provider)
+
+      @directa_account_provider = account.account_providers.find_by(provider_type: "DirectaAccount")
     end
 
     def flows_for_date(date)

@@ -642,6 +642,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.string "currency", limit: 3
     t.decimal "current_balance", precision: 19, scale: 4
     t.uuid "directa_item_id", null: false
+    t.jsonb "history_ledger"
+    t.datetime "history_synced_at"
     t.jsonb "raw_position_metadata"
     t.datetime "updated_at", null: false
     t.index ["directa_item_id"], name: "index_directa_accounts_on_directa_item_id", unique: true
@@ -653,6 +655,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.integer "connection_generation", default: 0, null: false
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
+    t.string "history_sync_error_code"
     t.string "last_sync_error_code"
     t.text "mono_token"
     t.text "multi_token"

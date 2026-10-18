@@ -511,6 +511,54 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal expected, builder.gains_series.map { |v| v.value.amount }
   end
 
+  test "gains series does not carry an older Directa basis past a later unknown snapshot" do
+    owner = users(:family_admin)
+    account = owner.family.accounts.create!(
+      name: "Directa basis chart",
+      balance: 300,
+      currency: "EUR",
+      accountable: Investment.new,
+      owner: owner
+    )
+    item = DirectaItem.create!(family: owner.family, owner: owner)
+    provider_account = item.directa_accounts.create!(currency: "EUR")
+    provider_link = AccountProvider.create!(account: account, provider: provider_account)
+    security = Security.create!(ticker: "DIRECTA-BASIS-CHART", name: "Directa basis chart")
+    first_date = 1.day.ago.to_date
+
+    Holding.create!(
+      account: account,
+      account_provider: provider_link,
+      security: security,
+      date: first_date,
+      qty: 2,
+      price: 75,
+      amount: 150,
+      currency: "EUR",
+      cost_basis: 20,
+      cost_basis_source: "provider"
+    )
+    Holding.create!(
+      account: account,
+      account_provider: provider_link,
+      security: security,
+      date: Date.current,
+      qty: 2,
+      price: 100,
+      amount: 200,
+      currency: "EUR"
+    )
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "EUR",
+      period: Period.custom(start_date: first_date, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    assert_equal [ BigDecimal("110"), BigDecimal("0") ], builder.gains_series.map { |value| value.value.amount }
+  end
+
   test "gains series values carry trend vs previous point" do
     account = accounts(:investment)
     account.holdings.destroy_all

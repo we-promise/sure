@@ -133,6 +133,25 @@ class TradeTest < ActiveSupport::TestCase
     assert_nil trade.unrealized_gain_loss
   end
 
+  test "Directa history buys use their own latest EUR snapshot and still affect brokerage cash" do
+    trade, security = directa_history_trade(snapshot_price: BigDecimal("50.25"))
+    security.stubs(:current_price).returns(Money.new(BigDecimal("98.5"), "USD"))
+
+    assert trade.directa_history_entry?
+    assert_includes Trade.directa_history.ids, trade.id
+    assert_equal Money.new(BigDecimal("50.25"), "EUR"), trade.current_market_price
+    assert_equal Money.new(BigDecimal("20.5"), "EUR"), trade.unrealized_gain_loss.value
+    assert trade.affects_cash_balance?(trade.entry)
+  end
+
+  test "Directa history trades have no global quote fallback without a matching own snapshot position" do
+    trade, security = directa_history_trade(include_holding: false)
+    security.stubs(:current_price).returns(Money.new(BigDecimal("98.5"), "EUR"))
+
+    assert_nil trade.current_market_price
+    assert_nil trade.unrealized_gain_loss
+  end
+
   # No rate for that date means the gain is unknown, not zero and not the
   # figure a rate of 1.0 would produce.
   test "a cross-currency disposal with no rate for its date has no figure" do
@@ -489,6 +508,92 @@ class TradeTest < ActiveSupport::TestCase
           currency: "EUR",
           investment_activity_label: "Buy",
           extra: extra
+        )
+      )
+
+      [ entry.entryable, security, holding ]
+    end
+
+    def directa_history_trade(snapshot_price: BigDecimal("50"), include_holding: true)
+      ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+      owner = users(:family_admin)
+      account = owner.family.accounts.create!(
+        name: "Directa history prices",
+        balance: 100,
+        cash_balance: 0,
+        currency: "EUR",
+        accountable: Investment.new,
+        owner: owner
+      )
+      item = DirectaItem.create!(
+        family: owner.family,
+        owner: owner,
+        broker_account: "00123",
+        account_identity: "00123",
+        multi_token: "synthetic-multi-token",
+        mono_token: "synthetic-mono-token",
+        connection_generation: 1,
+        status: :connected,
+        portfolio_snapshot_at: Time.current
+      )
+      provider_account = item.directa_accounts.create!(currency: "EUR")
+      provider_link = AccountProvider.create!(account: account, provider: provider_account)
+      security = Security.create!(
+        ticker: "DIRECTA-#{SecureRandom.hex(3)}",
+        exchange_operating_mic: "XETR",
+        name: "Offline Directa holding",
+        offline: true
+      )
+      holding = if include_holding
+        Holding.create!(
+          account: account,
+          account_provider: provider_link,
+          security: security,
+          date: item.portfolio_snapshot_at.to_date,
+          qty: 2,
+          price: snapshot_price,
+          amount: snapshot_price * 2,
+          currency: "EUR"
+        )
+      end
+
+      activity_date = Date.current - 1.year
+      bank_scope = "b" * 64
+      fingerprint = "a" * 64
+      external_id = "#{Trade::DIRECTA_HISTORY_EXTERNAL_ID_PREFIX}#{'c' * 64}"
+      provider_account.update!(
+        history_ledger: {
+          "schema_version" => 1,
+          "bank_scope" => bank_scope,
+          "coverage_start" => activity_date.iso8601,
+          "coverage_end" => activity_date.iso8601,
+          "cohorts" => { activity_date.iso8601 => { fingerprint => 1 } },
+          "entries" => { external_id => { "fingerprint" => fingerprint, "date" => activity_date.iso8601 } }
+        }
+      )
+
+      entry = account.entries.create!(
+        name: "Directa historical purchase",
+        date: activity_date,
+        amount: 80,
+        currency: "EUR",
+        source: "directa",
+        external_id: external_id,
+        entryable: Trade.new(
+          security: security,
+          qty: 2,
+          price: 40,
+          currency: "EUR",
+          investment_activity_label: "Buy",
+          extra: {
+            "directa" => {
+              "history_schema_version" => Trade::DIRECTA_HISTORY_SCHEMA_VERSION,
+              "provider_account_id" => provider_account.id,
+              "fingerprint" => fingerprint,
+              "bank_scope" => bank_scope,
+              "aggregation" => Trade::DIRECTA_HISTORY_AGGREGATION
+            }
+          }
         )
       )
 
