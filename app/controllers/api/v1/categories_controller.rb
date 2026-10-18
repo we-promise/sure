@@ -5,6 +5,7 @@ class Api::V1::CategoriesController < Api::V1::BaseController
 
   before_action :ensure_read_scope, only: %i[index show]
   before_action :ensure_write_scope, only: :create
+  before_action :reject_guest_writes!, only: :create
   before_action :set_category, only: :show
 
   def index
