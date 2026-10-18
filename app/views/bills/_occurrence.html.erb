@@ -11,10 +11,11 @@
     but it recedes so the rows that want something from you carry the weight.
     It recedes through lead_tone, on the name and the amount: opacity on the
     whole row took the secondary text below 3:1 in light mode. %>
-<%# Same recipe as a transaction row: p-3 growing to p-4, no hover tint, the
+<%# Same recipe as a transaction row: py-3 growing to py-4, no hover tint, the
     name underlining under the pointer, and clickable-row sending a click on any
-    bare part of the row (padding, the empty verb slot) to the drawer link. %>
-<div class="flex items-center gap-3 @lg:gap-4 p-3 @lg:p-4"
+    bare part of the row (padding, the empty verb slot) to the drawer link.
+    Keep px-4 at every width to align with the DS::Section heading. %>
+<div class="flex items-center gap-3 @lg:gap-4 px-4 py-3 @lg:py-4"
      data-controller="clickable-row"
      data-action="click->clickable-row#open">
   <%# The bulk of the row is the inspect control. Only the trailing verb sits
