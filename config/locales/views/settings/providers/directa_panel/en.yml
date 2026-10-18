@@ -1,0 +1,26 @@
+en:
+  settings:
+    providers:
+      directa_panel:
+        preview: Preview
+        description: Connect Directa cash and securities to your Sure family.
+        read_only: Sure only reads account data. It cannot place, change, or cancel orders.
+        syncing: Syncing Directa…
+        waiting_for_snapshot: Directa is authenticated. The first verified portfolio snapshot is still pending.
+        last_synced: Last synced %{time} ago
+        never_synced: Connected. No portfolio snapshot has completed yet.
+        sync: Sync now
+        connect: Connect
+        reconnect: Reconnect
+        disconnect: Disconnect
+        disconnect_confirmation: Stop syncing Directa? Saved balances and holdings will remain in Sure.
+        errors:
+          awaiting_valuation: Directa is authenticated. Sure is waiting for verified portfolio details before recording a snapshot.
+          partial_snapshot: Directa returned incomplete account data. Saved balances and holdings were kept.
+          account_identity_changed: Directa returned a different account identity. Saved data was kept.
+          invalid_snapshot: Directa returned invalid account data. Saved balances and holdings were kept.
+          duplicate_position: Directa returned duplicate position identities. Saved holdings were kept.
+          security_conflict: A Directa security conflicts with existing data. Saved holdings were kept.
+          holding_conflict: A Directa position conflicts with existing account data. Saved holdings were kept.
+          stale_snapshot: Directa returned an older snapshot. Saved balances and holdings were kept.
+          sync_failed: Directa syncing failed. Saved balances and holdings were kept. Reconnect or try again.

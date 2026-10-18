@@ -18,6 +18,7 @@ Rails.application.config.filter_parameters += [
   # transit; verification_uri_complete embeds the user code, hence all three.
   :device_code, :user_code, :verification_uri_complete,
   :bank_username, :bank_password, :security_answers, :captcha_input,
+  :broker_account, :directa_account_code, :fill6,
   # FinanceKit publisher bodies. Anchored: an unanchored :credential also hides
   # credential_id and has_*_credentials, and :events any key containing "events".
   /\A(publisher_)?credential\z/i, /\Aevents\z/i, /\Aconsent\z/i, /\Abooked_balance\z/i

@@ -485,6 +485,7 @@ en:
       taglines:
         financekit: Sync (some) FinanceKit accounts through the Sure iOS app.
         fineco: Import Fineco security snapshots into a native Investment account.
+        directa: Track brokerage cash and securities together in one Investment account.
         akahu: Sync New Zealand financial institutions via Akahu.
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)

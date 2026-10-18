@@ -1,0 +1,9 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        directa_item:
+          attributes:
+            base:
+              encryption_unavailable: cannot be stored because Active Record encryption is not configured on this install

@@ -184,6 +184,20 @@ class Rack::Attack
     password_change_user.call(request) if password_change_request.call(request)
   end
 
+  directa_login_request = ->(request) do
+    request.post? && %w[/directa_login/start /directa_login/complete].any? do |path|
+      credential_guess_path.call(request, path)
+    end
+  end
+
+  throttle("directa_login/ip", limit: 8, period: 5.minutes) do |request|
+    request.ip if directa_login_request.call(request) && password_change_user.call(request)
+  end
+
+  throttle("directa_login/user", limit: 8, period: 5.minutes) do |request|
+    password_change_user.call(request) if directa_login_request.call(request)
+  end
+
   # FinanceKit publisher endpoints belong to this section: both the upload and
   # the receipt read authenticate a bearer token against a stored SHA-256
   # digest (FinancekitItem#authenticate_credential?), the same

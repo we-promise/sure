@@ -36,7 +36,7 @@
         </div>
 
         <div class="bg-container rounded-lg shadow-border-xs">
-          <% if @account.cash_balance.to_d > 0 %>
+          <% unless @account.cash_balance.to_d.zero? %>
             <%= render "holdings/cash", account: @account %>
             <%= render "shared/ruler" %>
           <% end %>

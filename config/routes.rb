@@ -251,6 +251,20 @@ Rails.application.routes.draw do
     end
   end
 
+  resource :directa_login, controller: "directa_logins", only: :show do
+    collection do
+      post :start
+      post :complete
+      delete :cancel
+    end
+  end
+
+  resources :directa_items, only: :destroy do
+    member do
+      post :sync
+    end
+  end
+
   # Trade Republic routes (login steps are TR-specific: web login needs a
   # two-phase initiate/confirm handshake with the Trade Republic app)
   resources :trade_republic_items, only: [ :show, :create, :update, :destroy ] do

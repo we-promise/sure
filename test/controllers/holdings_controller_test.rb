@@ -18,6 +18,15 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "shows brokerage cash debits without hiding them from the holdings total" do
+    @account.update!(cash_balance: BigDecimal("-12.50"))
+
+    get holdings_url(account_id: @account.id)
+
+    assert_response :success
+    assert_select "p", text: I18n.t("holdings.cash.brokerage_cash"), count: 1
+  end
+
   test "shows exact share count without rounding" do
     @holding.update!(qty: 10.374)
 

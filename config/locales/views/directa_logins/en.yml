@@ -1,0 +1,46 @@
+en:
+  directa_logins:
+    show:
+      title: Connect Directa
+      preview: Preview
+      description: Sign in to Directa to connect your brokerage account to Sure.
+      read_only: Sure reads your cash balance and securities. It cannot place, change, or cancel orders.
+      encryption_warning:
+        title: Encryption is not configured
+        message: Configure application encryption before connecting Directa. Sure will not send your broker credentials without a secure place for the resulting session.
+      connect_title: Connect your account
+      reconnect_title: Reconnect your account
+      broker_account_label: Directa account number
+      password_label: Directa password
+      connect: Connect Directa
+      reconnect: Reconnect Directa
+      otp_title: Verify your sign-in
+      otp_description: Enter the code Directa requested. This Sure sign-in attempt expires in five minutes. You have %{attempts} attempts remaining.
+      otp_label: One-time code
+      verify_otp: Verify code
+      cancel_login: Cancel sign-in
+      back_to_providers: Back to providers
+      status_connected: Directa is connected and has a verified portfolio snapshot.
+      status_waiting_for_snapshot: Directa is authenticated. Sure is waiting for the first verified portfolio snapshot.
+      status_other_session: A Directa sign-in is already in progress in another Sure session. Wait for it to finish or expire.
+      status_checking_code: Directa is checking the one-time code. This page will update when the response arrives.
+      otp_requested: Directa requested a one-time code.
+      authenticated_waiting_for_sync: Directa authenticated successfully. The first portfolio sync has been queued.
+      login_cancelled: The Directa sign-in attempt was cancelled.
+      invalid_otp: The code was not accepted. %{attempts} attempts remain.
+      errors:
+        account_identity_changed: The account identity changed. Your previous Directa connection and saved data were kept.
+        account_mismatch: Directa returned a different account identity. Your previous connection and saved data were kept.
+        account_conflict: The Directa account is not linked safely. Your previous connection and saved data were kept.
+        attempts_exhausted: The Directa sign-in attempt reached its three-code limit. Start again to request a new code.
+        authentication_failed: Directa could not complete sign-in. Check the account details or start again.
+        challenge_expired: This Directa sign-in attempt expired. Start again to request a new code.
+        challenge_not_available: There is no active Directa sign-in attempt for this Sure session. Start again.
+        encryption_unavailable: Configure application encryption before connecting Directa.
+        invalid_account: Enter a valid Directa account number.
+        invalid_code: Enter the one-time code Directa sent.
+        invalid_credentials: Directa did not accept those sign-in details.
+        login_authorization_changed: This Sure session can no longer finish the Directa sign-in. Start again from an authorized administrator session.
+        login_in_progress: A Directa sign-in is already in progress. Finish it or wait for it to expire.
+        provider_unavailable: Directa could not be reached. Start a new sign-in attempt.
+        rate_limited: Directa is temporarily limiting sign-in attempts. Wait before trying again.

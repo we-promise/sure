@@ -1,0 +1,17 @@
+en:
+  directa_items:
+    card:
+      syncing: Reading cash and investments…
+      last_synced: "Last synced %{time} ago"
+      not_synced: Waiting for the first complete portfolio snapshot.
+      sync: Sync
+      reconnect: Sign in to Directa
+      stop_syncing: Stop syncing
+      stop_syncing_confirmation: Stop Directa syncing? Your saved cash and holdings will be kept.
+      snapshot_scope: Brokerage cash and securities share one account total. Buying power is not counted as cash.
+    sync:
+      unavailable: Directa is not ready to sync. Reconnect to continue.
+      already_running: A Directa sync is already running.
+      queued: Directa sync has been queued.
+    destroy:
+      success: Directa syncing has been disconnected. Saved data remains in Sure.

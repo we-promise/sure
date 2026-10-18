@@ -1,0 +1,59 @@
+<div id="directa-providers-panel" class="space-y-4">
+  <%= render DS::Pill.new(label: t(".preview"), tone: :violet, marker: false) %>
+
+  <div class="space-y-2 text-sm text-secondary">
+    <p><%= t(".description") %></p>
+    <p><%= t(".read_only") %></p>
+  </div>
+
+  <% if @directa_item&.session_configured? %>
+    <div class="space-y-3 rounded-lg bg-container-inset p-3 text-sm">
+      <% if @directa_item.syncing? %>
+        <p class="text-secondary"><%= t(".syncing") %></p>
+      <% elsif @directa_item.waiting_for_first_snapshot? %>
+        <p class="text-secondary"><%= t(".waiting_for_snapshot") %></p>
+      <% elsif @directa_item.last_sync_error_code.present? %>
+        <% error_code = DirectaItem::SYNC_ERROR_CODES.include?(@directa_item.last_sync_error_code) ? @directa_item.last_sync_error_code : "sync_failed" %>
+        <p class="text-warning"><%= t(".errors.#{error_code}") %></p>
+      <% elsif @directa_item.portfolio_snapshot_at.present? %>
+        <p class="text-secondary">
+          <%= t(".last_synced", time: time_ago_in_words(@directa_item.portfolio_snapshot_at)) %>
+        </p>
+      <% else %>
+        <p class="text-secondary"><%= t(".never_synced") %></p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="flex flex-wrap justify-end gap-2">
+    <% if @directa_item&.syncable? %>
+      <%= render DS::Button.new(
+            text: t(".sync"),
+            icon: "refresh-cw",
+            variant: :secondary,
+            href: sync_directa_item_path(@directa_item),
+            disabled: @directa_item.syncing?
+          ) %>
+    <% end %>
+
+    <%= render DS::Link.new(
+          text: t(@directa_item&.session_configured? ? ".reconnect" : ".connect"),
+          href: directa_login_path,
+          variant: @directa_item&.session_configured? ? :secondary : :primary,
+          frame: :_top
+        ) %>
+
+    <% if @directa_item&.session_configured? %>
+      <%= render DS::Menu.new do |menu| %>
+        <% menu.with_item(
+          variant: "button",
+          text: t(".disconnect"),
+          icon: "pause",
+          href: directa_item_path(@directa_item),
+          method: :delete,
+          confirm: t(".disconnect_confirmation")
+        ) %>
+      <% end %>
+    <% end %>
+  </div>
+</div>

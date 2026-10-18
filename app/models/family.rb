@@ -13,6 +13,7 @@ class Family < ApplicationRecord
   include Trading212Connectable
   include TradeRepublicConnectable
   include FinecoConnectable
+  include DirectaConnectable
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable

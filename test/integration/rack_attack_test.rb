@@ -40,6 +40,7 @@ class RackAttackTest < ActionDispatch::IntegrationTest
       api_login/ip api_login/email
       api_sso_link/ip api_sso_link/email
       password_change/ip password_change/user
+      directa_login/ip directa_login/user
     ].each do |name|
       assert_includes throttles, name, "#{name} should have rate limiting configured"
     end
@@ -243,6 +244,32 @@ class RackAttackTest < ActionDispatch::IntegrationTest
 
       second.patch password_path, params: params, env: { "REMOTE_ADDR" => "198.51.100.250" }
       assert_equal 429, second.response.status
+    end
+  end
+
+  test "Directa login shares one budget across sign-in steps and rotating ips" do
+    user = users(:family_admin)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in user
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    freeze_time
+
+    with_self_hosting do
+      with_rack_attack_enabled do
+        4.times do |index|
+          post start_directa_login_path, params: { directa_login: { broker_account: "invalid", password: "unused" } },
+            env: { "REMOTE_ADDR" => "198.51.100.#{index + 1}" }
+          assert_response :unprocessable_entity
+
+          post complete_directa_login_path, params: { directa_login: { otp_code: "123456", attempt_id: "missing" } },
+            env: { "REMOTE_ADDR" => "198.51.100.#{index + 101}" }
+          assert_response :unprocessable_entity
+        end
+
+        post "#{start_directa_login_path}.html", params: { directa_login: { broker_account: "invalid", password: "unused" } },
+          env: { "REMOTE_ADDR" => "198.51.100.250" }
+        assert_response :too_many_requests
+      end
     end
   end
 

@@ -1,0 +1,111 @@
+<%= content_for :page_title, t(".title") %>
+
+<main class="mx-auto max-w-3xl space-y-6">
+  <header class="space-y-3">
+    <%= render DS::Pill.new(label: t(".preview"), tone: :violet, marker: false) %>
+    <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
+    <p class="text-sm text-secondary"><%= t(".description") %></p>
+    <p class="text-sm text-secondary"><%= t(".read_only") %></p>
+  </header>
+
+  <% unless @encryption_ready %>
+    <%= render DS::Alert.new(
+          variant: :warning,
+          title: t(".encryption_warning.title"),
+          message: t(".encryption_warning.message")
+        ) %>
+  <% end %>
+
+  <% if @login_error_key.present? %>
+    <%= render DS::Alert.new(message: t(@login_error_key), variant: :error) %>
+  <% end %>
+
+  <% if flash[:notice].present? %>
+    <%= render DS::Alert.new(message: flash[:notice], variant: :info) %>
+  <% end %>
+  <% if flash[:alert].present? %>
+    <%= render DS::Alert.new(message: flash[:alert], variant: :error) %>
+  <% end %>
+
+  <% if @directa_item&.session_configured? %>
+    <p class="text-sm text-secondary" role="status" aria-live="polite">
+      <%= t(@directa_item.waiting_for_first_snapshot? ? ".status_waiting_for_snapshot" : ".status_connected") %>
+    </p>
+    <% if @directa_item.last_sync_error_code.present? %>
+      <% error_code = DirectaItem::SYNC_ERROR_CODES.include?(@directa_item.last_sync_error_code) ? @directa_item.last_sync_error_code : "sync_failed" %>
+      <p class="text-sm text-secondary"><%= t("settings.providers.directa_panel.errors.#{error_code}") %></p>
+    <% end %>
+  <% end %>
+
+  <% if @pending_login&.fetch(:stage, nil) == "otp_required" %>
+    <section class="space-y-4 rounded-xl border border-primary bg-container p-4">
+      <h2 class="text-lg font-semibold text-primary"><%= t(".otp_title") %></h2>
+      <p class="text-sm text-secondary"><%= t(".otp_description", attempts: @pending_login.fetch(:attempts_remaining)) %></p>
+
+      <%= styled_form_with url: complete_directa_login_path,
+                           method: :post,
+                           scope: :directa_login,
+                           class: "space-y-3" do |form| %>
+        <%= form.text_field :otp_code,
+                            id: "directa-otp-code",
+                            label: t(".otp_label"),
+                            autocomplete: "one-time-code",
+                            inputmode: "numeric",
+                            enterkeyhint: "done",
+                            autocorrect: "off",
+                            autocapitalize: "off",
+                            spellcheck: false,
+                            maxlength: 12,
+                            pattern: "[0-9]{1,12}",
+                            required: true,
+                            value: nil %>
+        <%= form.hidden_field :attempt_id, value: @pending_login.fetch(:attempt_id) %>
+        <div class="flex flex-wrap gap-2">
+          <%= form.submit t(".verify_otp"), disabled: !@encryption_ready %>
+        </div>
+      <% end %>
+
+      <%= styled_form_with url: cancel_directa_login_path,
+                           method: :delete,
+                           scope: :directa_login do |form| %>
+        <%= form.hidden_field :attempt_id, value: @pending_login.fetch(:attempt_id) %>
+        <%= form.submit t(".cancel_login"), class: "text-sm text-secondary" %>
+      <% end %>
+    </section>
+  <% elsif @pending_login&.fetch(:stage, nil) == "otp_submitting" %>
+    <p class="text-sm text-secondary" role="status" aria-live="polite"><%= t(".status_checking_code") %></p>
+  <% elsif @login_in_progress %>
+    <p class="text-sm text-secondary" role="status" aria-live="polite"><%= t(".status_other_session") %></p>
+  <% else %>
+    <section class="space-y-4 rounded-xl border border-primary bg-container p-4">
+      <h2 class="text-lg font-semibold text-primary"><%= t(@directa_item&.session_configured? ? ".reconnect_title" : ".connect_title") %></h2>
+
+      <%= styled_form_with url: start_directa_login_path,
+                           method: :post,
+                           scope: :directa_login,
+                           class: "space-y-3" do |form| %>
+        <%= form.text_field :broker_account,
+                            id: "broker_account",
+                            label: t(".broker_account_label"),
+                            autocomplete: "username",
+                            autocorrect: "off",
+                            autocapitalize: "off",
+                            spellcheck: false,
+                            required: true,
+                            value: @directa_item&.broker_account %>
+        <%= form.password_field :password,
+                                id: "current-password",
+                                label: t(".password_label"),
+                                autocomplete: "current-password",
+                                required: true,
+                                value: nil %>
+        <div class="flex flex-wrap justify-end gap-2">
+          <%= form.submit t(@directa_item&.session_configured? ? ".reconnect" : ".connect"),
+                          disabled: !@encryption_ready %>
+        </div>
+      <% end %>
+    </section>
+  <% end %>
+
+  <%= render DS::Link.new(text: t(".back_to_providers"), href: settings_providers_path, variant: :secondary) %>
+</main>

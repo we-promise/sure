@@ -17,6 +17,22 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "investment provider selector uses a top-level frame only for Directa" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    with_self_hosting do
+      get new_investment_path(step: "method_select")
+    end
+
+    assert_response :success
+    assert_select "a[href=?][data-turbo-frame='_top']",
+                  directa_login_path,
+                  text: I18n.t("accounts.new.method_selector.link_with_provider", provider: "Directa")
+    assert_select "a[href=?][data-turbo-frame='modal']",
+                  fineco_login_path,
+                  text: I18n.t("accounts.new.method_selector.link_with_provider", provider: "Fineco")
+  end
+
   test "show filters account activity to uncategorized transactions" do
     uncategorized = create_transaction(account: @account, name: "Uncategorized Filter Target", category: nil)
     categorized = create_transaction(account: @account, name: "Categorized Filter Decoy", category: categories(:food_and_drink))

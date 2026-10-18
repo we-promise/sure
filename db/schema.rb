@@ -636,6 +636,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "directa_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "cash_balance", precision: 19, scale: 4
+    t.datetime "created_at", null: false
+    t.string "currency", limit: 3
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.uuid "directa_item_id", null: false
+    t.jsonb "raw_position_metadata"
+    t.datetime "updated_at", null: false
+    t.index ["directa_item_id"], name: "index_directa_accounts_on_directa_item_id", unique: true
+  end
+
+  create_table "directa_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "account_identity"
+    t.text "broker_account"
+    t.integer "connection_generation", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "last_sync_error_code"
+    t.text "mono_token"
+    t.text "multi_token"
+    t.uuid "owner_id", null: false
+    t.text "pending_login_state"
+    t.datetime "portfolio_snapshot_at"
+    t.string "status", default: "requires_update", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "owner_id"], name: "index_directa_items_on_family_id_and_owner_id", unique: true
+    t.index ["family_id"], name: "index_directa_items_on_family_id"
+    t.index ["owner_id"], name: "index_directa_items_on_owner_id"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'connected'::character varying, 'requires_update'::character varying]::text[])", name: "chk_directa_items_status"
+  end
+
   create_table "enable_banking_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "account_id"
     t.string "account_status"
@@ -3036,6 +3067,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
   add_foreign_key "debug_log_entries", "accounts", on_delete: :nullify
   add_foreign_key "debug_log_entries", "families", on_delete: :nullify
   add_foreign_key "debug_log_entries", "users", on_delete: :nullify
+  add_foreign_key "directa_accounts", "directa_items", on_delete: :cascade
+  add_foreign_key "directa_items", "families", on_delete: :cascade
+  add_foreign_key "directa_items", "users", column: "owner_id", on_delete: :cascade
   add_foreign_key "enable_banking_accounts", "enable_banking_items"
   add_foreign_key "enable_banking_items", "families"
   add_foreign_key "entries", "account_statements", column: "reconciled_by_statement_id", on_delete: :nullify

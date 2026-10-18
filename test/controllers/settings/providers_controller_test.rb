@@ -218,9 +218,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Saves and errors from a row or the drawer re-render the panel by replacing
-  # "<turbo_id>-providers-panel". SnapTrade and gated Fineco never stream to it.
+  # "<turbo_id>-providers-panel". SnapTrade and gated connectors never stream to it.
   test "every streamed panel renders the root its streams replace" do
-    Settings::ProvidersController::FAMILY_PANELS.reject { |panel| %w[snaptrade fineco].include?(panel[:key]) }.each do |panel|
+    Settings::ProvidersController::FAMILY_PANELS.reject { |panel| %w[snaptrade fineco directa].include?(panel[:key]) }.each do |panel|
       get connect_form_settings_providers_url(provider_key: panel[:key])
 
       assert_response :success
@@ -268,6 +268,31 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_includes response.body, "Fineco is an unofficial portfolio connector."
       assert_includes response.body, "the permissions Fineco grants to your login"
       refute_includes response.body, I18n.t("settings.providers.sync_provider")
+    end
+  end
+
+  test "Directa is limited to self-hosted admins with preview features enabled" do
+    admin = users(:family_admin)
+    admin.update!(preferences: (admin.preferences || {}).merge("preview_features_enabled" => false))
+
+    get settings_providers_url
+    assert_response :success
+    assert_select "[data-provider-name='directa']", count: 0
+
+    with_self_hosting do
+      get connect_form_settings_providers_url(provider_key: "directa")
+      assert_redirected_to settings_providers_path
+
+      admin.update!(preferences: (admin.preferences || {}).merge("preview_features_enabled" => true))
+      get settings_providers_url
+      assert_response :success
+      assert_select "[data-provider-name='directa']"
+
+      get connect_form_settings_providers_url(provider_key: "directa")
+      assert_response :success
+      assert_select "turbo-frame#directa-connect-form #directa-providers-panel" do
+        assert_select "a[href=?]", directa_login_path
+      end
     end
   end
 
