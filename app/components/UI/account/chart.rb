@@ -38,6 +38,17 @@ class UI::Account::Chart < ApplicationComponent
     LOAN_SERIES_STYLES.select { |key, _| loan_chart[:visible].map(&:to_s).include?(key) }
   end
 
+  # The shading under the scheduled line, by each repayment's share. Interest
+  # is hatched as well as tinted, so the two are told apart without colour.
+  LOAN_SHARE_STYLES = {
+    "interest_share" => { token: "--color-warning", hatched: true },
+    "principal_share" => { token: "--color-info", hatched: false }
+  }.freeze
+
+  def loan_share_legend
+    loan_chart[:visible].map(&:to_s).include?("scheduled") ? LOAN_SHARE_STYLES : {}
+  end
+
   def loan_projected_payoff_date
     loan_chart[:projected_payoff_date] && Date.iso8601(loan_chart[:projected_payoff_date])
   end

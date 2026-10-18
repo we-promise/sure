@@ -100,10 +100,28 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: windowed))
 
     legend = "ul[aria-label='#{I18n.t("UI.account.chart.loan.legend")}'] li"
-    assert_selector legend, count: 2
+    # The two lines, and the two shares shaded under the scheduled one.
+    assert_selector legend, count: 4
     assert_selector legend, text: payload[:labels][:actual]
     assert_selector legend, text: payload[:labels][:scheduled]
     assert_no_selector legend, text: payload[:labels][:projected]
+    assert_selector legend, text: payload[:labels][:interest_share]
+    assert_selector legend, text: payload[:labels][:principal_share]
+  end
+
+  # jaysbeekay/sure#479: the shares are shaded under the scheduled line, so
+  # without that line the legend must not name them.
+  test "the legend names the interest and principal shares only with the scheduled line" do
+    loan_account = accounts(:loan)
+    payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload
+    assert_not_nil payload, "the loan fixture must have a schedule, or this test asserts nothing"
+    legend = "ul[aria-label='#{I18n.t("UI.account.chart.loan.legend")}'] li"
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: payload.merge(visible: %w[actual projected])))
+
+    assert_selector legend, count: 2
+    assert_no_selector legend, text: payload[:labels][:interest_share]
+    assert_no_selector legend, text: payload[:labels][:principal_share]
   end
 
   # A projection that ran but never clears the balance has a line and no

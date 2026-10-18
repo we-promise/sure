@@ -25,6 +25,10 @@ class Loan
   class PayoffChart
     SERIES = %i[actual scheduled projected].freeze
 
+    # The accessible description quotes interest's share of the first and the
+    # final year's repayments; a shorter schedule would overlap the two.
+    FIRST_AND_FINAL_YEAR_MINIMUM = 24
+
     # The periods a loan's chart offers, a subset of the shared Period keys the
     # picker saves as the user's default. The short ones a loan has no use for
     # (7D, 30D, a custom range) are left out; any other Period key, including
@@ -93,7 +97,7 @@ class Loan
         # the not-converged notice can quote.
         balloon: projection.applicable? && !projection.converged? ? projection.balloon_amount.amount.to_f : nil,
         labels: labels,
-        aria_description: aria_description(actual: series[:actual])
+        aria_description: aria_description(actual: series[:actual], scheduled_visible: visible?(series[:scheduled]))
       }
     end
 
@@ -214,13 +218,18 @@ class Loan
             # name the same figures the same way.
             principal: I18n.t("loans.tabs.schedule.principal"),
             interest: I18n.t("loans.tabs.schedule.interest"),
+            # The legend's names for the shading under the scheduled line.
+            # Shares, because the heights are shares of each repayment.
+            interest_share: I18n.t("UI.account.chart.loan.interest_share"),
+            principal_share: I18n.t("UI.account.chart.loan.principal_share"),
             today: I18n.t("UI.account.chart.loan.today"),
             interactive_chart: I18n.t("UI.account.chart.loan.interactive_chart")
           )
       end
 
-      # Every series the chart draws is named here, with its payoff date.
-      def aria_description(actual:)
+      # Every series the chart draws is named here, with its payoff date, and
+      # the shading under the scheduled line in words when that line is drawn.
+      def aria_description(actual:, scheduled_visible:)
         description = I18n.t(
           "UI.account.chart.loan.aria_description",
           current_balance: projection.current_balance.format,
@@ -236,7 +245,28 @@ class Loan
           ) ].join(" ")
         end
 
+        description = [ description, interest_share_sentence ].join(" ") if scheduled_visible
+
         description
+      end
+
+      # Interest over what was paid, across the first twelve payments and the
+      # last twelve. Under FIRST_AND_FINAL_YEAR_MINIMUM payments those windows
+      # overlap, so one clause covers them all.
+      def interest_share_sentence
+        rows = schedule.payments
+        if rows.size < FIRST_AND_FINAL_YEAR_MINIMUM
+          I18n.t("UI.account.chart.loan.aria_interest_share_overall", share: interest_percent(rows))
+        else
+          I18n.t("UI.account.chart.loan.aria_interest_share",
+                 first: interest_percent(rows.first(12)), last: interest_percent(rows.last(12)))
+        end
+      end
+
+      def interest_percent(rows)
+        interest = rows.sum { |row| row.interest.amount }
+        paid = interest + rows.sum { |row| row.principal.amount }
+        paid.zero? ? 0 : (interest / paid * 100).round
       end
 
       def long_date(date, fallback)

@@ -400,7 +400,64 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
     assert_equal I18n.t("loans.tabs.schedule.interest"), payload[:labels][:interest]
   end
 
+  # jaysbeekay/sure#479: the shading under the scheduled line splits it by each
+  # repayment's interest and principal share. The description says the same in
+  # words, from the schedule's own rows: interest over what was paid, across
+  # the first twelve payments and the last twelve.
+  test "the accessible description names the interest share of the first and final year's repayments" do
+    loan = older_loan
+    rows = loan.amortization_schedule.payments
+    first = interest_percent(rows.first(12))
+    last = interest_percent(rows.last(12))
+    assert_operator first, :>, last, "a long loan front-loads interest, or this cannot tell first from last"
+
+    description = Loan::PayoffChart.new(loan, as_of: @today, period: @all_time).payload[:aria_description]
+
+    assert_includes description, I18n.t("UI.account.chart.loan.aria_interest_share", first: first, last: last)
+  end
+
+  # Under 24 payments the first and final years would overlap, so one clause
+  # covers every payment. Both sides of the boundary.
+  test "a schedule of 23 payments quotes one interest share, and one of 24 quotes two" do
+    short = build_loan(term_months: 23)
+    long = build_loan(term_months: 24)
+    short_rows = short.amortization_schedule.payments
+    long_rows = long.amortization_schedule.payments
+    assert_equal [ 23, 24 ], [ short_rows.size, long_rows.size ]
+
+    short_description = Loan::PayoffChart.new(short, as_of: @today, period: @all_time).payload[:aria_description]
+    long_description = Loan::PayoffChart.new(long, as_of: @today, period: @all_time).payload[:aria_description]
+
+    assert_includes short_description, I18n.t("UI.account.chart.loan.aria_interest_share_overall", share: interest_percent(short_rows))
+    assert_not_includes short_description, I18n.t("UI.account.chart.loan.aria_interest_share", first: interest_percent(short_rows.first(12)), last: interest_percent(short_rows.last(12)))
+    assert_includes long_description, I18n.t("UI.account.chart.loan.aria_interest_share", first: interest_percent(long_rows.first(12)), last: interest_percent(long_rows.last(12)))
+    assert_not_includes long_description, I18n.t("UI.account.chart.loan.aria_interest_share_overall", share: interest_percent(long_rows))
+  end
+
+  # The shading reads the scheduled points the payload already carries; it
+  # adds no series and no key.
+  test "the payload's keys and series are unchanged by the shading" do
+    payload = Loan::PayoffChart.new(on_contract_loan, as_of: @today, period: @all_time).payload
+
+    assert_equal %i[today locale currency currency_precision domain_start domain_end actual scheduled projected visible
+                    scheduled_payoff_date projected_payoff_date months_saved interest_saved balloon labels aria_description],
+                 payload.keys
+    assert_equal %i[actual scheduled projected], Loan::PayoffChart::SERIES
+  end
+
+  test "the payload labels the two shares for the legend" do
+    payload = Loan::PayoffChart.new(on_contract_loan, as_of: @today).payload
+
+    assert_equal I18n.t("UI.account.chart.loan.interest_share"), payload[:labels][:interest_share]
+    assert_equal I18n.t("UI.account.chart.loan.principal_share"), payload[:labels][:principal_share]
+  end
+
   private
+    def interest_percent(rows)
+      interest = rows.sum { |row| row.interest.amount }
+      (interest / (interest + rows.sum { |row| row.principal.amount }) * 100).round
+    end
+
     # Each bounded window the loan chart offers, with the start date the
     # shared Period gives it on @today. All is handled by @all_time.
     def window_starts
@@ -439,11 +496,11 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
       account.loan
     end
 
-    def build_loan(rate_type: "fixed")
+    def build_loan(rate_type: "fixed", term_months: 24)
       account = Account.create!(
         family: @family, name: "Loan #{SecureRandom.hex(4)}",
         balance: 500_000, currency: "USD",
-        accountable: Loan.new(subtype: "mortgage", interest_rate: 6, term_months: 24,
+        accountable: Loan.new(subtype: "mortgage", interest_rate: 6, term_months: term_months,
                               rate_type: rate_type, start_date: Date.new(2026, 1, 1))
       )
       # The opening valuation the account form records: Loan#original_balance
