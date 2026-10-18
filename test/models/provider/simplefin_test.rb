@@ -316,7 +316,7 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
   end
 
   test "get_accounts does not follow redirects" do
-    Provider::Simplefin.expects(:get).with("#{@access_url}/accounts", has_entry(follow_redirects: false))
+    Provider::Simplefin.expects(:get).with("#{@access_url}/accounts?version=2", has_entry(follow_redirects: false))
       .returns(OpenStruct.new(code: 200, body: '{"accounts": []}'))
 
     @provider.get_accounts(@access_url)
@@ -396,7 +396,7 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
   test "connects to the checked address, preferring IPv4" do
     @provider.stubs(:resolve_addresses).with("example.com").returns([ "2606:2800:220:1::1", "93.184.216.34" ])
     Provider::Simplefin.expects(:get).with(
-      "#{@access_url}/accounts",
+      "#{@access_url}/accounts?version=2",
       has_entries(
         connection_adapter: Provider::Simplefin::PinnedConnectionAdapter,
         connection_adapter_options: { ipaddr: "93.184.216.34" }
@@ -432,7 +432,7 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
   test "connects to an IPv4-mapped address as plain IPv4" do
     @provider.stubs(:resolve_addresses).with("example.com").returns([ "::ffff:93.184.216.34" ])
     Provider::Simplefin.expects(:get).with(
-      "#{@access_url}/accounts", has_entry(connection_adapter_options: { ipaddr: "93.184.216.34" })
+      "#{@access_url}/accounts?version=2", has_entry(connection_adapter_options: { ipaddr: "93.184.216.34" })
     ).returns(OpenStruct.new(code: 200, body: '{"accounts": []}'))
 
     @provider.get_accounts(@access_url)
