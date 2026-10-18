@@ -6086,8 +6086,13 @@ paths:
       security:
       - apiKeyAuth: []
       responses:
-        '302':
-          description: family export download redirected
+        '200':
+          description: family export zip file
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
         '401':
           description: unauthorized
           content:
