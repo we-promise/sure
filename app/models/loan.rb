@@ -425,10 +425,10 @@ class Loan < ApplicationRecord
   end
 
   # Where the loan is heading from today's balance, optionally with an extra
-  # amount on top of every repayment. Not memoised: `as_of` and `extra` make
-  # each call a different question.
-  def payoff_projection(as_of: Date.current, extra: nil)
-    PayoffProjection.new(self, as_of: as_of, extra: extra)
+  # amount paid weekly, fortnightly or with every repayment. Not memoised:
+  # each argument makes each call a different question.
+  def payoff_projection(as_of: Date.current, extra: nil, extra_frequency: "monthly")
+    PayoffProjection.new(self, as_of: as_of, extra: extra, extra_frequency: extra_frequency)
   end
 
   # The date the loan was drawn down. Recorded explicitly when the borrower

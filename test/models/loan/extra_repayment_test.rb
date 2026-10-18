@@ -47,4 +47,33 @@ class Loan::ExtraRepaymentTest < ActiveSupport::TestCase
     assert_not Loan::ExtraRepayment.new(amount: "0.004", currency: "USD").applied?
     assert_equal BigDecimal("10"), Loan::ExtraRepayment.new(amount: "10.4", currency: "JPY").amount
   end
+
+  # How often the extra is paid. Blank is monthly, the tab's default, so a form
+  # submitted before the choice existed models what it always did.
+  test "blank frequency is monthly, and each offered frequency is accepted" do
+    assert_equal "monthly", Loan::ExtraRepayment.new(amount: "100", currency: "USD").frequency
+    assert_equal "monthly", Loan::ExtraRepayment.new(amount: "100", frequency: "", currency: "USD").frequency
+
+    %w[weekly fortnightly monthly].each do |frequency|
+      extra = Loan::ExtraRepayment.new(amount: "100", frequency: frequency, currency: "USD")
+
+      assert extra.valid?, frequency
+      assert extra.applied?, frequency
+      assert_equal frequency, extra.frequency
+    end
+  end
+
+  # Like the amount, the frequency arrives over GET. Anything the select does
+  # not offer is refused, not read as monthly: that would quote a figure for a
+  # schedule nobody chose.
+  test "a frequency the form does not offer is refused, not coerced" do
+    [ "daily", "Weekly", "weekly ", "yearly" ].each do |input|
+      extra = Loan::ExtraRepayment.new(amount: "100", frequency: input, currency: "USD")
+
+      assert_not extra.valid?, "#{input.inspect} must be refused"
+      assert_not extra.applied?
+      assert_equal [ I18n.t("loans.tabs.extra_repayments.invalid_frequency") ], extra.errors[:frequency]
+    end
+  end
+
 end

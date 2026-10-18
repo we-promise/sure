@@ -19,15 +19,26 @@ class Loan
   # named: they are why today's balance is what it is.
   #
   # `extra` is a hypothetical: an amount paid on top of the contract's
-  # repayment in every period from here on, for the Extra repayments tab's
-  # "what if I pay more?". nil, the default, is the projection above.
+  # repayment from here on, for the Extra repayments tab's "what if I pay
+  # more?". nil, the default, is the projection above. `extra_frequency` says
+  # how often: monthly puts one extra in every repayment period; weekly and
+  # fortnightly extras fall on their own dates (see #extra_for).
   class PayoffProjection
-    attr_reader :loan, :as_of, :extra
+    EXTRA_FREQUENCIES = %w[weekly fortnightly monthly].freeze
 
-    def initialize(loan, as_of: Date.current, extra: nil)
+    # Days between dated extras. Monthly is not dated: it rides on every
+    # repayment, as the schedule's own payments do.
+    EXTRA_INTERVAL_DAYS = { "weekly" => 7, "fortnightly" => 14 }.freeze
+
+    attr_reader :loan, :as_of, :extra, :extra_frequency
+
+    def initialize(loan, as_of: Date.current, extra: nil, extra_frequency: "monthly")
+      raise ArgumentError, "Unknown extra frequency: #{extra_frequency.inspect}" unless EXTRA_FREQUENCIES.include?(extra_frequency)
+
       @loan = loan
       @as_of = as_of
       @extra = extra.nil? ? nil : BigDecimal(extra.to_s)
+      @extra_frequency = extra_frequency
     end
 
     # False when there is nothing to project: no schedule, nothing left to owe,
@@ -155,9 +166,28 @@ class Loan
         row.payment.amount + extra_for(index)
       end
 
-      # Every period carries the same extra.
-      def extra_for(_index)
-        extra || 0
+      # The extra paid in period `index`. Monthly: one extra, every period.
+      # Weekly and fortnightly: the extras dated inside the period, which runs
+      # from the previous payment date (exclusive) to its own (inclusive). The
+      # first extra falls the day after as_of, so the first period runs from
+      # as_of. The simulator charges interest once a period on the balance it
+      # opened with, so an extra paid mid-period starts saving from the next.
+      def extra_for(index)
+        return 0 unless extra
+        return extra unless (interval = EXTRA_INTERVAL_DAYS[extra_frequency])
+
+        opens = index.zero? ? as_of : remaining_payment_dates[index - 1]
+        closes = remaining_payment_dates[index]
+        return 0 unless closes
+
+        extra * (dated_extras_through(closes, interval) - dated_extras_through(opens, interval))
+      end
+
+      # How many dated extras fall on or before `date`: the first is the day
+      # after as_of, then one every `interval` days.
+      def dated_extras_through(date, interval)
+        first = as_of + 1
+        date < first ? 0 : ((date - first).to_i / interval) + 1
       end
 
       def remaining_contracted_interest

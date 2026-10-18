@@ -284,6 +284,53 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_nil too_small.interest_saved_versus(baseline)
   end
 
+  # Weekly extras are dated, starting the day after as_of, and each period is
+  # credited with the extras falling in (previous payment date, payment date].
+  # Payments land on the 1st and as_of is Friday 15 January 2027, so the
+  # extras fall on Saturdays from the 16th: three before 1 February, then four,
+  # four, and five before 1 May. The fifth is on 1 May itself, so a payment
+  # date belongs to the period it closes.
+  test "a weekly extra credits each date in its period" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    baseline = loan.payoff_projection(as_of: @today)
+    weekly = loan.payoff_projection(as_of: @today, extra: 100, extra_frequency: "weekly")
+
+    assert_equal [ 3, 4, 4, 5, 4 ], extra_counts(weekly, baseline, 100).first(5)
+  end
+
+  # Every fourteen days from the 16th: two in most periods, three in the
+  # period that closes on 1 August (3, 17 and 31 July).
+  test "a fortnightly extra credits two or three times a period" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    baseline = loan.payoff_projection(as_of: @today)
+    fortnightly = loan.payoff_projection(as_of: @today, extra: 100, extra_frequency: "fortnightly")
+
+    assert_equal [ 2, 2, 2, 2, 2, 2, 3 ], extra_counts(fortnightly, baseline, 100).first(7)
+  end
+
+  test "monthly is the default, one extra in every period" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    default = loan.payoff_projection(as_of: @today, extra: 100)
+    monthly = loan.payoff_projection(as_of: @today, extra: 100, extra_frequency: "monthly")
+
+    assert_equal default.payments, monthly.payments
+  end
+
+  # A programming error, not user input: Loan::ExtraRepayment refuses an
+  # unknown frequency before it reaches the projection.
+  test "an unknown frequency is refused" do
+    loan = build_loan(term_months: 24)
+
+    error = assert_raises(ArgumentError) { loan.payoff_projection(as_of: @today, extra: 100, extra_frequency: "daily") }
+    assert_equal "Unknown extra frequency: \"daily\"", error.message
+  end
+
   test "no extra leaves the projection identical" do
     loan = build_loan(term_months: 24)
     loan.account.update!(balance: scheduled_balance_at(loan, @today) - 10_000)
@@ -316,6 +363,15 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
         entryable: Valuation.new(kind: "opening_anchor")
       )
       account.loan
+    end
+
+    # How many extras each period carried: its payment above the same loan's
+    # without the extra, in units of the extra. The last row settles the
+    # balance and is left out.
+    def extra_counts(projection, baseline, extra)
+      projection.payments[0..-2].each_with_index.map do |payment, index|
+        ((payment[:payment_amount] - baseline.payments[index][:payment_amount]) / extra).to_i
+      end
     end
 
     def scheduled_balance_at(loan, date)

@@ -39,16 +39,23 @@ de:
       unknown: Unbekannt
     tabs:
       extra_repayments:
-        amount_label: Zusätzlich pro Monat
+        amount_label: Sondertilgung
         amount_placeholder: "0,00"
         apply: Anwenden
         baseline_not_cleared: "Mit der aktuellen Rate ist dieser Kredit bis zum ursprünglichen Laufzeitende nicht getilgt, und %{balloon} blieben offen. Es gibt daher kein früheres Datum und keine Zinsersparnis zum Vergleich. Mit diesem Zusatzbetrag ist er zum oben genannten Datum getilgt."
         clear: Zurücksetzen
         comparison_basis: Verglichen mit der aktuellen Rate ohne Zusatzbetrag, ab dem heutigen Saldo.
+        dated_note: Wöchentliche und zweiwöchentliche Zusatzbeträge werden jeweils bei der nächsten Rate nach ihrer Zahlung angerechnet; die Zinsersparnis ist daher eher zu niedrig angegeben.
         extra_not_cleared: Auch mit diesem Zusatzbetrag ist der Kredit bis zum ursprünglichen Laufzeitende nicht getilgt. Versuchen Sie einen höheren Betrag.
+        frequencies:
+          fortnightly: Alle zwei Wochen
+          monthly: Monatlich
+          weekly: Wöchentlich
+        frequency_label: Wie oft
         interest_saved: Gesparte Zinsen
-        intro: Sehen Sie, wie viel früher der Kredit getilgt ist und wie viel Zinsen Sie sparen, wenn Sie mit jeder Monatsrate einen Zusatzbetrag zahlen.
+        intro: Sehen Sie, wie viel früher der Kredit getilgt ist und wie viel Zinsen Sie sparen, wenn Sie zusätzlich zu Ihren Raten wöchentlich, alle zwei Wochen oder monatlich einen Zusatzbetrag zahlen.
         invalid_amount: Geben Sie einen Betrag von null oder mehr in Ziffern ein.
+        invalid_frequency: Wählen Sie wöchentlich, alle zwei Wochen oder monatlich.
         months_sooner:
           zero: Im selben Monat getilgt
           one: "%{count} Monat früher"
