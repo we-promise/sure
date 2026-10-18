@@ -31,7 +31,7 @@ fr:
       delete_chat: Supprimer le chat
       edit_chat_title: Modifier le titre du chat
       start_new_chat: Démarrer une nouvelle discussion
-    demo_banner_message: Vous utilisez un LLM Qwen3 open-weights avec des crédits fournis par Cloudflare Workers AI. Les résultats peuvent varier car le code a été principalement testé sur `gpt-4.1` mais vos tokens ne sont envoyés nulle part ailleurs pour être entraînés !
+    demo_banner_message: Vous utilisez un LLM Qwen3 open-weights avec des crédits fournis par Vercel AI Gateway. Les résultats peuvent varier car le code a été principalement testé sur `gpt-4.1` mais vos tokens ne sont envoyés nulle part ailleurs pour être entraînés !
     demo_banner_title: Mode Démo Actif
     destroy:
       notice: Le chat a été supprimé avec succès
