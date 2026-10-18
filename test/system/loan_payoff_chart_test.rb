@@ -55,16 +55,25 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
       visit account_path(account, period: "all_time", tab: "extra_repayments")
       assert_no_selector "[data-controller='loan-payoff-chart'] svg path[data-series='extra']"
 
-      # The amount field and Apply share one row (#469's layout): a full-width
-      # field would push the button onto a line of its own.
+      # Laid out as the Bills form is: the amount and how often side by side,
+      # Apply on its own row below them at the form's left edge, and nothing
+      # wider than the tab.
       field = find_field(I18n.t("loans.tabs.extra_repayments.amount_label"))
-      field_box = bounding_box(field.find(:xpath, "ancestor::div[contains(@class, 'form-field')][1]"))
+      field_box = bounding_box(field.find(:xpath, "ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' form-field ')][1]"))
+      select = find_field(I18n.t("loans.tabs.extra_repayments.frequency_label"))
+      select_box = bounding_box(select.find(:xpath, "ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' form-field ')][1]"))
       apply_box = bounding_box(find_button(I18n.t("loans.tabs.extra_repayments.apply")))
-      assert_operator apply_box["top"], :<, field_box["bottom"], "Apply must sit on the field's row, not below it"
-      assert_operator apply_box["left"], :>=, field_box["right"], "and to the field's right"
+      form_box = bounding_box(field.find(:xpath, "ancestor::form[1]"))
+      assert_in_delta field_box["top"], select_box["top"], 2, "the amount and how often must share a row"
+      assert_operator select_box["left"], :>=, field_box["right"], "how often sits to the amount's right"
+      assert_operator apply_box["top"], :>=, field_box["bottom"], "Apply sits below the fields"
+      assert_in_delta field_box["left"], apply_box["left"], 2, "at the form's left edge"
+      assert_operator select_box["right"], :<=, form_box["right"] + 1, "and nothing overflows the form"
 
-      field.fill_in with: "5000"
+      field.fill_in with: "1000"
+      select I18n.t("loans.tabs.extra_repayments.frequencies.weekly"), from: I18n.t("loans.tabs.extra_repayments.frequency_label")
       click_button I18n.t("loans.tabs.extra_repayments.apply")
+      assert_field I18n.t("loans.tabs.extra_repayments.frequency_label"), with: "weekly"
 
       extra = find("[data-controller='loan-payoff-chart'] svg path[data-series='extra']")
       assert extra["d"].to_s.start_with?("M"), "the extra line has no geometry"
