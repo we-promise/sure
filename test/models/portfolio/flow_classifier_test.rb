@@ -187,6 +187,45 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
                  "the transfer the leg is the inflow of, from the IRA, is the one read")
   end
 
+  # Of two transfers a leg is the inflow of, both forms read the earliest. The
+  # stray one here is inserted second but dated first, so a lookup that takes
+  # whichever row the index returns reads the IRA transfer instead.
+  test "classify reads the earliest of two transfers a leg is the inflow of, as sql_joins does" do
+    transfer = create_linked_transfer(family: @family, from: @ira, to: @brokerage, amount: 400)
+    inflow = transfer.inflow_transaction.entry
+    stray_outflow = create_labelled_transaction(account: @checking, label: nil, amount: 400)
+    Transfer.insert_all([ {
+      inflow_transaction_id: transfer.inflow_transaction_id,
+      outflow_transaction_id: stray_outflow.entryable_id,
+      amount: 400, status: "confirmed",
+      created_at: transfer.created_at - 1.minute, updated_at: transfer.created_at - 1.minute
+    } ])
+
+    assert_equal 2, Transfer.where(inflow_transaction_id: transfer.inflow_transaction_id).count,
+                 "precondition: the inflow leg is the inflow of two transfers"
+    assert_equal({ inflow.id => :external_inflow }, @family_scope.classify_ids([ inflow.id ]),
+                 "the earlier transfer, from Checking outside the scope, is the one read")
+    assert_equal :external_inflow, @family_scope.classify(inflow.reload)
+  end
+
+  test "classify reads the earliest of two transfers a leg is the outflow of, as sql_joins does" do
+    transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400)
+    outflow = transfer.outflow_transaction.entry
+    stray_inflow = create_labelled_transaction(account: @checking, label: nil, amount: -400)
+    Transfer.insert_all([ {
+      inflow_transaction_id: stray_inflow.entryable_id,
+      outflow_transaction_id: transfer.outflow_transaction_id,
+      amount: 400, status: "confirmed",
+      created_at: transfer.created_at - 1.minute, updated_at: transfer.created_at - 1.minute
+    } ])
+
+    assert_equal 2, Transfer.where(outflow_transaction_id: transfer.outflow_transaction_id).count,
+                 "precondition: the outflow leg is the outflow of two transfers"
+    assert_equal({ outflow.id => :external_outflow }, @family_scope.classify_ids([ outflow.id ]),
+                 "the earlier transfer, to Checking outside the scope, is the one read")
+    assert_equal :external_outflow, @family_scope.classify(outflow.reload)
+  end
+
   test "a Contribution or Withdrawal label does not outrank a linked transfer in scope" do
     transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 100)
     transfer.outflow_transaction.update!(investment_activity_label: "Withdrawal")
