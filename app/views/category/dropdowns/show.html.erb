@@ -1,7 +1,7 @@
 <%= turbo_frame_tag "category_dropdown" do %>
   <%# Creating is only offered where the category can then be assigned: a user who %>
   <%# can't annotate this account would get a new category the assignment then rejects. %>
-  <% can_create = can_annotate_account?(@transaction.entry.account) %>
+  <% can_create = can_annotate_account?(@transaction.entry.account) && !Current.user&.guest? %>
   <div class="flex flex-col relative"
        data-controller="list-filter category-quick-create"
        data-category-quick-create-create-url-value="<%= categories_path(format: :json) %>"
@@ -84,12 +84,14 @@
             <div class="text-center flex flex-col items-center max-w-[500px]">
               <p class="text-sm text-secondary font-normal mb-4"><%= t(".empty") %></p>
 
-              <%= render DS::Button.new(
-              text: t(".bootstrap"),
-              variant: "outline",
-              href: bootstrap_categories_path,
-              method: :post,
-              data: { turbo_frame: :_top }) %>
+              <% unless Current.user&.guest? %>
+                <%= render DS::Button.new(
+                text: t(".bootstrap"),
+                variant: "outline",
+                href: bootstrap_categories_path,
+                method: :post,
+                data: { turbo_frame: :_top }) %>
+              <% end %>
             </div>
           </div>
         <% end %>

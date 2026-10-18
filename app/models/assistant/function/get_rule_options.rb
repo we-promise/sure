@@ -49,15 +49,9 @@ class Assistant::Function::GetRuleOptions < Assistant::Function
         condition_type: filter.key,
         label: filter.label,
         value_type: filter.type,
-        operators: filter_operators(filter).map { |label, value| { value: value, label: label } },
+        operators: filter.operators.map { |label, value| { value: value, label: label } },
         values: value_spec(filter.key)
       }.compact
-    end
-
-    # The tag filter lists the generic select operators but only applies these.
-    def filter_operators(filter)
-      ops = filter.operators
-      filter.key == "transaction_tag" ? ops.select { |_, v| %w[= is_null].include?(v) } : ops
     end
 
     def compound_option

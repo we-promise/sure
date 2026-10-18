@@ -4,6 +4,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
   include OnchainTestHelper
   include EntriesTestHelper
+  include TradeRepublicSessionTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -375,6 +376,31 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     get accounts_url
     assert_includes response.body, title
+  end
+
+  test "index offers a QR login on a Trade Republic connection that needs one" do
+    item = trade_republic_items(:configured_item)
+    item.update!(session_blob: trade_republic_session_blob(expires_at: 1.minute.ago))
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)} [data-trade-republic-qr-initiate-url-value='#{initiate_qr_login_trade_republic_item_path(item)}']"
+    assert_select "##{dom_id(item)} [data-trade-republic-qr-return-url-value='#{accounts_path}']"
+    # Until then a sync can only fail.
+    assert_select "##{dom_id(item)} form[action='#{sync_trade_republic_item_path(item)}'] button[disabled]"
+  end
+
+  test "index shows when a Trade Republic login expires" do
+    item = trade_republic_items(:configured_item)
+    item.update!(session_blob: trade_republic_session_blob(expires_at: 5.hours.from_now))
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("trade_republic_items.trade_republic_item.session_expires_in",
+                                          time: "about 5 hours", at: I18n.l(item.reload.session_expires_at, format: :short))
+    assert_select "##{dom_id(item)} [data-controller='trade-republic-qr']", count: 0
   end
 
   test "index renders trading212 items" do
