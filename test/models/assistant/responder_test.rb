@@ -26,6 +26,12 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
     )
   end
 
+  test "an actual provider attempt captures daily use even when the provider fails" do
+    DailyInstallationUsage.expects(:capture).with("ai_assistant_served_daily").once
+    @llm.expects(:chat_response).raises(IOError)
+    assert_raises(IOError) { @responder.respond }
+  end
+
   test "group_by_round splits consecutive results by round and keeps untagged results together" do
     a = { call_id: "a", round: 1 }
     b = { call_id: "b", round: 2 }

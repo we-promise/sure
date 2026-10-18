@@ -119,6 +119,7 @@ class Assistant::Responder
     end
 
     def get_llm_response(streamer:, function_results: [], previous_response_id: nil, tool_choice: nil)
+      DailyInstallationUsage.capture("ai_assistant_served_daily")
       response = llm.chat_response(
         message.content,
         model: message.ai_model,

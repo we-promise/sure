@@ -8,6 +8,7 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "gets index" do
+    DailyInstallationUsage.expects(:capture).never
     get chats_url
     assert_response :success
   end
@@ -56,6 +57,7 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "creates chat" do
+    DailyInstallationUsage.expects(:capture).never
     assert_difference("Chat.count") do
       post chats_url, params: { chat: { content: "Hello", ai_model: "gpt-4.1" } }
     end
