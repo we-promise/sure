@@ -22,9 +22,9 @@ class SimplefinItemsController < ApplicationController
     return render_error(t(".errors.blank_token"), context: :edit) if setup_token.blank?
 
     begin
-      # Validate token shape early so the user gets immediate feedback.
-      claim_url = Base64.decode64(setup_token)
-      URI.parse(claim_url)
+      # Validate the token's claim URL (shape and address) early so the user
+      # gets immediate feedback; the job claims it later.
+      Provider::Simplefin.new.validate_setup_token!(setup_token)
 
       # Updating a SimpleFin connection can involve network retries/backoff and account import.
       # Do it asynchronously so web requests aren't blocked by retry sleeps.
@@ -46,6 +46,8 @@ class SimplefinItemsController < ApplicationController
       error_message = case e.error_type
       when :token_compromised
         t(".errors.token_compromised")
+      when :invalid_url
+        t(".errors.invalid_token")
       else
         t(".errors.update_failed", message: e.message)
       end
@@ -78,6 +80,8 @@ class SimplefinItemsController < ApplicationController
       error_message = case e.error_type
       when :token_compromised
         t(".errors.token_compromised")
+      when :invalid_url
+        t(".errors.invalid_token")
       else
         t(".errors.create_failed", message: e.message)
       end
@@ -318,7 +322,7 @@ class SimplefinItemsController < ApplicationController
       # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
         Current.family.accounts
-          .visible_manual
+          .visible_manual_for(Current.user)
           .order(:name)
           .to_a
       }
@@ -413,6 +417,8 @@ class SimplefinItemsController < ApplicationController
     # the AccountProvider off its account and may queue that account for deletion.
     return unless require_relinkable_provider_account!(simplefin_account, @account)
 
+    orphaned_account = nil
+
     # Relink behavior: detach any legacy link and point provider link at the chosen account
     relinked = relinking(simplefin_account, @account) do
       # Detach @account's EXISTING SimpleFIN link (if any) before attaching the
@@ -451,7 +457,7 @@ class SimplefinItemsController < ApplicationController
             # consolidation we want the duplicate to disappear from the UI.
             # Use the app's standard deletion path (async) so the "pending_deletion" state
             # remains truthful in the UI.
-            previous_account.destroy_later if previous_account.may_mark_for_deletion?
+            orphaned_account = previous_account if previous_account.may_mark_for_deletion?
           else
             Rails.logger.info("Skipped disabling account ##{previous_account.id} after relink because it still has active provider links")
           end
@@ -462,6 +468,16 @@ class SimplefinItemsController < ApplicationController
     end
     return unless relinked
 
+    # Queue the orphan for deletion only after the relink commits. destroy_later
+    # pushes DestroyJob only once every open transaction commits, so called in
+    # the block above, an enqueue error would leave it from the commit, past
+    # the rescue inside it.
+    begin
+      orphaned_account&.destroy_later
+    rescue => e
+      Rails.logger.warn("Failed disabling-orphan check for account ##{orphaned_account.id}: #{e.class} - #{e.message}")
+    end
+
     if turbo_frame_request?
       # Reload the item to ensure associations are fresh
       simplefin_account.reload
@@ -471,7 +487,7 @@ class SimplefinItemsController < ApplicationController
       # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
         Current.family.accounts
-          .visible_manual
+          .visible_manual_for(Current.user)
           .order(:name)
           .to_a
       }

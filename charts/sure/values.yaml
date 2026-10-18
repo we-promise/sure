@@ -68,6 +68,19 @@ rails:
     #   name: external-assistant-secret
     #   key: token
 
+# Email delivery configuration.
+# SMTP_PASSWORD is sensitive. If the chart creates the app Secret, a non-empty
+# rails.secret.values.SMTP_PASSWORD is injected automatically; otherwise provide
+# SMTP_PASSWORD through rails.extraEnvVars with valueFrom.secretKeyRef.
+email:
+  sender: ""
+  appDomain: ""
+  smtpAddress: ""
+  smtpPort: ""
+  smtpUsername: ""
+  smtpTlsEnabled: ""
+  smtpTlsSkipVerify: ""
+
 # Database: CloudNativePG (operator chart dependency) and a Cluster CR (optional)
 cloudnative-pg:
   config:

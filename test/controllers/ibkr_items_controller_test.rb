@@ -148,4 +148,15 @@ class IbkrItemsControllerTest < ActionDispatch::IntegrationTest
     provider_param: :ibkr_account_id,
     setup_url: ->(record) { setup_accounts_ibkr_item_url(record.ibkr_item) }
   )
+
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    families(:dylan_family).ibkr_items.update_all(scheduled_for_deletion: true)
+
+    get select_accounts_ibkr_items_url, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("ibkr_items.select_accounts.not_configured"), flash[:alert]
+  end
 end

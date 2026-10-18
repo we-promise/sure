@@ -447,6 +447,8 @@ class EnableBankingItemsController < ApplicationController
     # that account for deletion.
     return unless require_relinkable_provider_account!(enable_banking_account, @account)
 
+    orphaned_account = nil
+
     # Relink behavior: detach any legacy link and point provider link at the chosen account
     relinked = relinking(enable_banking_account, @account) do
       # Upsert the AccountProvider mapping deterministically
@@ -464,13 +466,23 @@ class EnableBankingItemsController < ApplicationController
           # Disabled accounts still appear (greyed-out) in the manual list after a full refresh.
           # Use the app's standard deletion path (async) so the duplicate disappears and the
           # "pending_deletion" state remains truthful in the UI.
-          previous_account.destroy_later if previous_account.may_mark_for_deletion?
+          orphaned_account = previous_account if previous_account.may_mark_for_deletion?
         rescue => e
           Rails.logger.warn("Failed to cleanup orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
         end
       end
     end
     return unless relinked
+
+    # Queue the orphan for deletion only after the relink commits. destroy_later
+    # pushes DestroyJob only once every open transaction commits, so called in
+    # the block above, an enqueue error would leave it from the commit, past
+    # the rescue inside it.
+    begin
+      orphaned_account&.destroy_later
+    rescue => e
+      Rails.logger.warn("Failed to cleanup orphaned account #{orphaned_account.id}: #{e.class} - #{e.message}")
+    end
 
     if turbo_frame_request?
       # Reload the item to ensure associations are fresh
@@ -481,7 +493,7 @@ class EnableBankingItemsController < ApplicationController
       # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
         Current.family.accounts
-          .visible_manual
+          .visible_manual_for(Current.user)
           .order(:name)
           .to_a
       }
