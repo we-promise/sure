@@ -270,7 +270,8 @@
                         min: step %>
                   <%= form.date_field :paid_on, label: t(".manual_date_label"), value: Date.current %>
                 </div>
-                <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary", full_width: true) %>
+                <%# DS::Button defaults to type="button"; this one has to submit the form. %>
+                <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary", full_width: true, type: "submit") %>
               <% end %>
             </div>
           <% end %>
