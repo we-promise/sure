@@ -107,6 +107,14 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_no_selector legend, text: payload[:labels][:projected]
     assert_selector legend, text: payload[:labels][:interest_share]
     assert_selector legend, text: payload[:labels][:principal_share]
+
+    # Interest is told apart by its hatching as well as its colour.
+    interest = page.find(legend, text: payload[:labels][:interest_share]).find("span")[:style]
+    principal = page.find(legend, text: payload[:labels][:principal_share]).find("span")[:style]
+    assert_includes interest, "repeating-linear-gradient"
+    assert_includes interest, "var(--color-warning)"
+    assert_not_includes principal, "repeating-linear-gradient"
+    assert_includes principal, "var(--color-info)"
   end
 
   # jaysbeekay/sure#479: the shares are shaded under the scheduled line, so

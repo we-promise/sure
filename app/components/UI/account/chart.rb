@@ -49,6 +49,18 @@ class UI::Account::Chart < ApplicationComponent
     loan_chart[:visible].map(&:to_s).include?("scheduled") ? LOAN_SHARE_STYLES : {}
   end
 
+  # The legend swatch matches the chart: hatched for interest, a solid tint
+  # for principal, each bordered in its own colour.
+  def loan_share_swatch_style(style)
+    colour = "var(#{style[:token]})"
+    fill = if style[:hatched]
+      "background: repeating-linear-gradient(45deg, #{colour} 0 1.5px, transparent 1.5px 4px);"
+    else
+      "background: #{colour}; opacity: 0.4;"
+    end
+    "border-color: #{colour}; #{fill}"
+  end
+
   def loan_projected_payoff_date
     loan_chart[:projected_payoff_date] && Date.iso8601(loan_chart[:projected_payoff_date])
   end

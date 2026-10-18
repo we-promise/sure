@@ -86,8 +86,7 @@
         <% end %>
         <% loan_share_legend.each do |key, style| %>
           <li class="flex items-center gap-1.5">
-            <% swatch = style[:hatched] ? "background: repeating-linear-gradient(45deg, var(#{style[:token]}) 0 1.5px, transparent 1.5px 4px);" : "background: var(#{style[:token]}); opacity: 0.4;" %>
-            <span class="inline-block w-3 h-3 rounded-sm border" style="border-color: var(<%= style[:token] %>); <%= swatch %>" aria-hidden="true"></span>
+            <span class="inline-block w-3 h-3 rounded-sm border" style="<%= loan_share_swatch_style(style) %>" aria-hidden="true"></span>
             <%= loan_chart[:labels][key.to_sym] %>
           </li>
         <% end %>
