@@ -93,6 +93,7 @@ class Rule::Action < ApplicationRecord
 
     def seed_notification_baseline
       return unless action_type == "send_email_notification"
+      return if rule.notification_baseline_taken_in_this_save?
 
       NotificationDelivery.record_for(
         rule_id: rule_id,
