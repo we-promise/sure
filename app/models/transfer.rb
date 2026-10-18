@@ -145,16 +145,20 @@ class Transfer < ApplicationRecord
   def update_investment_contribution!(enabled)
     return false unless investment_contribution_switchable?
 
-    outflow_attrs = { kind: enabled ? "investment_contribution" : "funds_movement" }
-    category = outflow_transaction.category
-
-    if enabled && category.nil?
-      outflow_attrs[:category] = to_account.family.investment_contributions_category
-    elsif !enabled && category && Category.all_investment_contributions_names.include?(category.name)
-      outflow_attrs[:category] = nil
-    end
-
     Transfer.transaction do
+      # Lock before reading the category, so a concurrent category change is
+      # not overwritten by a value derived from a stale read.
+      outflow_transaction.lock!
+
+      outflow_attrs = { kind: enabled ? "investment_contribution" : "funds_movement" }
+      category = outflow_transaction.category
+
+      if enabled && category.nil?
+        outflow_attrs[:category] = to_account.family.investment_contributions_category
+      elsif !enabled && category && Category.all_investment_contributions_names.include?(category.name)
+        outflow_attrs[:category] = nil
+      end
+
       outflow_transaction.update!(outflow_attrs)
       outflow_transaction.lock_attr!(:kind)
     end
