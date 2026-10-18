@@ -833,6 +833,15 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/#{Regexp.escape(I18n.t("reports.investment_performance.sells_count", count: 2))}/, response.body)
   end
 
+  # POSTing to settings_api_keys_path is create, which needs api_key params.
+  test "google sheets instructions link to the API keys page" do
+    get google_sheets_instructions_reports_url
+
+    assert_response :success
+    assert_select "a[href=?][data-turbo-frame=_top]", settings_api_keys_path, text: I18n.t("reports.google_sheets_instructions.go_to_api_keys")
+    assert_select "form[action=?]", settings_api_keys_path, count: 0
+  end
+
   private
     # n EUR-priced disposals in a USD account, each on its own date with its
     # own rate row, so every one needs a distinct lookup.
