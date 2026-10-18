@@ -119,10 +119,18 @@ class Assistant::Function::PreviewRuleTest < ActiveSupport::TestCase
     assert_match "must be a number", amount[:problems].first
   end
 
-  test "rejects operators a filter lists but cannot apply" do
-    result = @fn.call(definition(conditions: [ { "condition_type" => "transaction_tag", "operator" => "!=", "value" => tags(:one).id } ]))
+  test "rejects operators a filter does not list" do
+    result = @fn.call(definition(conditions: [ { "condition_type" => "transaction_tag", "operator" => ">", "value" => tags(:one).id } ]))
 
     assert_equal "invalid_rule", result[:error]
+  end
+
+  test "accepts every operator the tag filter lists" do
+    %w[!= is_not_null].each do |operator|
+      result = @fn.call(definition(conditions: [ { "condition_type" => "transaction_tag", "operator" => operator, "value" => tags(:one).id } ]))
+
+      assert_nil result[:error], "#{operator}: #{result.inspect}"
+    end
   end
 
   test "requires exactly one of rule_id or a definition" do

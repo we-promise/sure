@@ -4,7 +4,8 @@ class Holding::CurrentForInvestmentAccounts
   # Correlated, it rescans the account's provider holdings per row, which is
   # quadratic in the number of provider rows an account keeps. The grouped
   # subquery is limited to the requested accounts so its cost follows them,
-  # not the whole table.
+  # not the whole table. Accounts without provider holdings likewise take each
+  # security's latest row in one DISTINCT ON pass, not one lookup per row.
   CURRENT_HOLDINGS_SQL = <<~SQL.squish.freeze
     (
       holdings.account_provider_id IS NOT NULL
@@ -15,27 +16,20 @@ class Holding::CurrentForInvestmentAccounts
           AND provider_holdings.account_provider_id IS NOT NULL
         GROUP BY provider_holdings.account_id
       )
-    ) OR (
-      NOT EXISTS (
-        SELECT 1
-        FROM holdings provider_holdings
-        WHERE provider_holdings.account_id = holdings.account_id
-          AND provider_holdings.account_provider_id IS NOT NULL
-      )
-      AND holdings.currency = (
-        SELECT accounts.currency
-        FROM accounts
-        WHERE accounts.id = holdings.account_id
-      )
-      AND holdings.id = (
-        SELECT latest_holdings.id
-        FROM holdings latest_holdings
-        WHERE latest_holdings.account_id = holdings.account_id
-          AND latest_holdings.security_id = holdings.security_id
-          AND latest_holdings.currency = holdings.currency
-        ORDER BY latest_holdings.date DESC
-        LIMIT 1
-      )
+    ) OR holdings.id IN (
+      SELECT DISTINCT ON (latest_holdings.account_id, latest_holdings.security_id) latest_holdings.id
+      FROM holdings latest_holdings
+      INNER JOIN accounts ON accounts.id = latest_holdings.account_id
+      WHERE latest_holdings.account_id IN (:account_ids)
+        AND accounts.id IN (:account_ids)
+        AND latest_holdings.currency = accounts.currency
+        AND latest_holdings.account_id NOT IN (
+          SELECT provider_holdings.account_id
+          FROM holdings provider_holdings
+          WHERE provider_holdings.account_id IN (:account_ids)
+            AND provider_holdings.account_provider_id IS NOT NULL
+        )
+      ORDER BY latest_holdings.account_id, latest_holdings.security_id, latest_holdings.date DESC
     )
   SQL
 
