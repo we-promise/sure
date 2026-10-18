@@ -300,6 +300,20 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_equal [ 3, 4, 4, 5, 4 ], extra_counts(weekly, baseline, 100).first(5)
   end
 
+  # The first dated extra is the day after as_of, never as_of itself: that
+  # day's period is already open. With as_of the day before a payment, the
+  # first extra lands on the payment date, so that period carries exactly one.
+  test "the first weekly extra falls the day after as_of" do
+    as_of = Date.new(2027, 1, 31)
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, as_of))
+
+    baseline = loan.payoff_projection(as_of: as_of)
+    weekly = loan.payoff_projection(as_of: as_of, extra: 100, extra_frequency: "weekly")
+
+    assert_equal 1, extra_counts(weekly, baseline, 100).first, "1 February, the day after as_of, is in the first period"
+  end
+
   # Every fourteen days from the 16th: two in most periods, three in the
   # period that closes on 1 August (3, 17 and 31 July).
   test "a fortnightly extra credits two or three times a period" do

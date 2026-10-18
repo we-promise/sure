@@ -75,5 +75,4 @@ class Loan::ExtraRepaymentTest < ActiveSupport::TestCase
       assert_equal [ I18n.t("loans.tabs.extra_repayments.invalid_frequency") ], extra.errors[:frequency]
     end
   end
-
 end
