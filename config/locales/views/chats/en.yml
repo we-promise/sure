@@ -2,7 +2,7 @@
 en:
   chats:
     demo_banner_title: "Demo Mode Active"
-    demo_banner_message: "You are using LLMs via credits provided by Vercel's AI Gateway.  Results may vary since the codebase was tested on `gpt-4.1` but your tokens don't go anywhere else to be trained with! 🤖"
+    demo_banner_message: "Free LLM tokens courtesy of Vercel AI Gateway. Results may vary since we change model weights often for testing purposes. Refer to Vercel's documentation to see where your conversations go!   🤖"
     thinking: "Thinking ..."
     ai_busy: "Just finishing off a background task, then I'll get straight onto your message."
     reservation:
