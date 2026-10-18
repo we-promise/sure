@@ -78,7 +78,9 @@ class Assistant::Function::ApplyRule < Assistant::Function
     current = nil
     unchanged = false
     rule.with_lock do
-      current = rule.affected_resource_count
+      # Not affected_resource_count, which reads a timeout as 0: a rule
+      # previewed with no matches would then compare equal and be activated.
+      current = rule.matching_scope.count
       unchanged = definition_digest(rule) == token["definition"] && current == token["match_count"]
       rule.update!(active: true) if unchanged
     end

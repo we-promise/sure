@@ -189,6 +189,22 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_not @rule.reload.active
   end
 
+  # A rule matching nothing is previewed with a match count of 0. A timeout at
+  # apply time must not read as that same 0 and activate the rule.
+  test "a rule previewed with no matches that times out at apply time is not activated" do
+    preview = Assistant::Function::PreviewRule.new(@user).call("rule_id" => @rule.id)[:preview]
+    assert_equal 0, preview[:match_count]
+    Rule.any_instance.stubs(:matching_scope).raises(Rule::SafeRegex::TimeoutError)
+
+    result = nil
+    assert_no_enqueued_jobs only: RuleJob do
+      result = @fn.call("rule_id" => @rule.id, "preview_token" => preview[:preview_token])
+    end
+
+    assert_equal "regex_timeout", result[:error]
+    assert_not @rule.reload.active
+  end
+
   private
     def preview_token
       token = Assistant::Function::PreviewRule.new(@user).call("rule_id" => @rule.id)[:preview][:preview_token]
