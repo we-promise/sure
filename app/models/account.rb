@@ -812,7 +812,7 @@ class Account < ApplicationRecord
   # "Investment" = A mix of both, including brokerage cash (liquid) and holdings (illiquid)
   def balance_type
     case accountable_type
-    when "Depository", "CreditCard"
+    when "Depository", "CreditCard", "GiftCard"
       :cash
     when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
       :non_cash

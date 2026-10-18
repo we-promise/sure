@@ -9,10 +9,13 @@ nl:
         family_id: Familie
         name: Naam
         subtype: Subtype
+      account/accountable:
+        face_value: Beginbedrag
     models:
       account: Account
       account/credit: Creditcard
       account/depository: Bankrekening
+      account/gift_card: Cadeaukaart
       account/investment: Belegging
       account/loan: Lening
       account/other_asset: Overige Activa

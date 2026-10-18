@@ -710,6 +710,7 @@ Rails.application.routes.draw do
     end
   end
   resources :vehicles, only: %i[new create edit update]
+  resources :gift_cards, only: %i[new create edit update]
   resources :credit_cards, only: %i[new create edit update]
   resources :loans, only: %i[new create edit update]
   resources :cryptos, only: %i[new create edit update]

@@ -19,7 +19,8 @@ class PropertiesController < ApplicationController
         balance: 0,
         status: "draft",
         owner: Current.user,
-        currency: property_params[:currency].presence || Current.family.currency
+        currency: property_params[:currency].presence || Current.family.currency,
+        accountable_type: "Property"
       )
     )
     @account.auto_share_with_family! if Current.family.share_all_by_default?
@@ -28,7 +29,7 @@ class PropertiesController < ApplicationController
   end
 
   def update
-    if @account.update(property_params)
+    if @account.update(property_params.except(:accountable_type))
       @success_message = "Property details updated successfully."
 
       if @account.active?

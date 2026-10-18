@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_16_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1110,6 +1110,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_fio_items_on_family_id"
     t.index ["status"], name: "index_fio_items_on_status"
+  end
+
+  create_table "gift_cards", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "card_format", default: "physical", null: false
+    t.text "card_number"
+    t.datetime "created_at", null: false
+    t.date "expires_on"
+    t.decimal "face_value", precision: 19, scale: 4
+    t.string "face_value_currency"
+    t.jsonb "locked_attributes", default: {}
+    t.text "pin"
+    t.text "redeem_url"
+    t.string "subtype"
+    t.datetime "updated_at", null: false
+    t.check_constraint "card_format::text = ANY (ARRAY['physical'::character varying::text, 'digital'::character varying::text])", name: "chk_gift_cards_card_format"
   end
 
   create_table "goal_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

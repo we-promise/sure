@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) %>
+  <% dialog.with_body do %>
+    <%= render "gift_cards/form", account: @account, url: gift_cards_path(return_to: params[:return_to]) %>
+  <% end %>
+<% end %>

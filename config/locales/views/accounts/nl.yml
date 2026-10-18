@@ -95,6 +95,7 @@ nl:
       crypto: Crypto
       property: Eigendom
       vehicle: Voertuig
+      gift_card: Cadeaukaart
       other_asset: Overige activa
       credit_card: Creditcard
       loan: Lening
