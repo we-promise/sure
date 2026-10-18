@@ -25,13 +25,43 @@ class Balance::Materializer
 
       if strategy == :forward
         update_account_info
+      elsif holdings_from_trades?
+        update_cash_balance
       end
     end
   end
 
   private
     def materialize_holdings
-      @holdings = Holding::Materializer.new(account, strategy: strategy, security_ids: security_ids).materialize_holdings
+      @holdings = Holding::Materializer.new(account, strategy: holdings_strategy, security_ids: security_ids).materialize_holdings
+    end
+
+    # The reverse holdings calculator works back from a provider's holdings
+    # snapshot. A linked account whose provider sends balances but no positions
+    # has none, so its recorded trades would never become holdings. Those come
+    # from the trades instead, as for a manual account, while the balance stays
+    # anchored on the provider's figure.
+    def holdings_strategy
+      holdings_from_trades? ? :forward : strategy
+    end
+
+    def holdings_from_trades?
+      return @holdings_from_trades if defined?(@holdings_from_trades)
+
+      @holdings_from_trades = strategy == :reverse && account.latest_provider_holdings_snapshot_date.nil?
+    end
+
+    # The provider set cash_balance to the whole balance, as it sent no
+    # holdings. Once holdings come from trades, cash is what they leave of the
+    # provider's balance. Only cash is written: the balance stays the provider's.
+    def update_cash_balance
+      return unless account.trades.exists?
+
+      current_balance = account.balances.where(currency: account.currency).order(date: :desc).first
+      return unless current_balance
+
+      Rails.logger.info("Cash balance from trade-derived holdings: cash=#{current_balance.end_cash_balance}")
+      account.update!(cash_balance: current_balance.end_cash_balance)
     end
 
     def update_account_info

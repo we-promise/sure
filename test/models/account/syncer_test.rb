@@ -135,6 +135,18 @@ class Account::SyncerTest < ActiveSupport::TestCase
     end
   end
 
+
+  # End to end through the syncer: a linked account whose provider sends no
+  # holdings gets its positions from its trades (#4302).
+  test "perform_sync on a linked account without a provider snapshot materializes trades" do
+    account, security = linked_account_with_trade(families(:empty))
+    Account::MarketDataImporter.any_instance.stubs(:import_all)
+
+    Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
+
+    assert_equal 2, account.reload.current_holdings.find_by!(security: security).qty
+  end
+
   private
     def linked_investment_account
       family = families(:empty)
@@ -163,5 +175,27 @@ class Account::SyncerTest < ActiveSupport::TestCase
       Balance::Materializer.any_instance.stubs(:materialize_balances)
       IbkrAccount::HistoricalBalancesSync.any_instance.stubs(:sync!)
       Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
+    end
+
+    # A linked account whose provider sends no holdings, holding 2 shares
+    # bought five days ago at 200.
+    def linked_account_with_trade(family)
+      account = family.accounts.create!(
+        name: "Linked brokerage", balance: 10_000, cash_balance: 10_000, currency: "USD", accountable: Investment.new
+      )
+      item = family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+      account.account_providers.create!(provider: item.coinstats_accounts.create!(name: "Provider", currency: "USD"))
+      security = Security.create!(ticker: "TRDX", name: "Traded")
+      (5.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: security, date: date, price: 200) }
+      account.entries.create!(
+        name: "Buy", date: 5.days.ago.to_date, amount: 400, currency: "USD",
+        entryable: Trade.new(qty: 2, price: 200, security: security, currency: "USD", investment_activity_label: "Buy")
+      )
+      account.entries.create!(
+        name: "Balance", date: 1.day.ago.to_date, amount: 10_000, currency: "USD",
+        entryable: Valuation.new(kind: "current_anchor")
+      )
+      account.auto_share_with_family!
+      [ account, security ]
     end
 end

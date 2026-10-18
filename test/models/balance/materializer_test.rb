@@ -262,6 +262,84 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_equal 1000, transaction_balance.end_balance
   end
 
+
+  # A linked account whose provider sends balances but no positions (SimpleFIN,
+  # LunchFlow and similar) had no holdings at all: the reverse holdings
+  # calculator needs a provider snapshot, so recorded trades never became
+  # positions and the whole balance showed as cash (#4302).
+  test "a linked account with trades and no provider snapshot materializes positions from trades" do
+    account, security = linked_account_with_trade
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    account.reload
+    holding = account.current_holdings.find_by(security: security)
+    assert_not_nil holding, "the trade should produce a position"
+    assert_equal 2, holding.qty
+    # Cash is what the holdings leave of the provider's balance on its anchor
+    # date (yesterday, price 200), the newest balance row.
+    assert_equal 10_000 - 2 * 200, account.cash_balance
+    assert_equal 10_000 - 2 * 200, account.balances.order(date: :desc).first.end_cash_balance
+    # The provider's balance stays the total. A forward run would recompute it
+    # from today's price, which moved after the anchor.
+    assert_equal 10_000, account.balance
+  end
+
+  test "a linked account with a provider snapshot keeps the provider's holdings and cash" do
+    account, security = linked_account_with_trade
+    account.update_columns(cash_balance: 3_000)
+    account.holdings.create!(
+      security: security, date: Date.current, qty: 5, price: 210, amount: 1_050, currency: "USD",
+      account_provider: account.account_providers.first
+    )
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    account.reload
+    assert_equal 5, account.current_holdings.find_by(security: security).qty
+    assert_equal 3_000, account.cash_balance
+  end
+
+  test "a linked account with no provider snapshot and no trades gets no holdings and no cash write" do
+    account = linked_investment_account
+    # A provider figure that differs from the balance, so a write would show.
+    account.update_columns(cash_balance: 7_000)
+    create_valuation(account: account, amount: 10_000, date: 1.day.ago.to_date, kind: "current_anchor")
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    account.reload
+    assert_empty account.holdings
+    assert_equal 7_000, account.cash_balance
+  end
+
+  test "a provider snapshot arriving after trade-derived positions replaces them without double counting" do
+    account, security = linked_account_with_trade
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    account.reload.update_columns(cash_balance: 4_000)
+
+    # As the provider import does: it writes onto today's row for the security.
+    account.holdings.find_or_initialize_by(security: security, date: Date.current, currency: "USD").update!(
+      qty: 3, price: 210, amount: 630, account_provider: account.account_providers.first
+    )
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    account.reload
+    rows = account.current_holdings.where(security: security).to_a
+    assert_equal [ 3 ], rows.map(&:qty)
+    assert_equal 4_000, account.cash_balance
+  end
+
+  test "the trade fallback purges a leftover calculated row for a security with no trades" do
+    account, _security = linked_account_with_trade
+    stale = Security.create!(ticker: "STALEX", name: "Stale")
+    account.holdings.create!(security: stale, date: 3.days.ago.to_date, qty: 0, price: 10, amount: 0, currency: "USD")
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    assert_not account.holdings.exists?(security: stale)
+  end
+
   private
 
     def assert_balance_fields_persisted(expected_balances)
@@ -283,5 +361,26 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
         assert_equal expected.non_cash_adjustments, persisted.non_cash_adjustments
         assert_equal expected.flows_factor, persisted.flows_factor
       end
+    end
+
+    def linked_investment_account
+      account = families(:empty).accounts.create!(
+        name: "Linked brokerage", balance: 10_000, cash_balance: 10_000, currency: "USD", accountable: Investment.new
+      )
+      item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+      account.account_providers.create!(provider: item.coinstats_accounts.create!(name: "Provider", currency: "USD"))
+      account
+    end
+
+    # Bought 2 at 200 five days ago; the price is 200 until yesterday's
+    # balance anchor and 210 today.
+    def linked_account_with_trade
+      account = linked_investment_account
+      security = Security.create!(ticker: "TRDX", name: "Traded")
+      (5.days.ago.to_date..1.day.ago.to_date).each { |date| Security::Price.create!(security: security, date: date, price: 200) }
+      Security::Price.create!(security: security, date: Date.current, price: 210)
+      create_trade(security, account: account, qty: 2, date: 5.days.ago.to_date, price: 200)
+      create_valuation(account: account, amount: 10_000, date: 1.day.ago.to_date, kind: "current_anchor")
+      [ account, security ]
     end
 end
