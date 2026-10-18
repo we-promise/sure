@@ -166,6 +166,8 @@ class TransactionsTest < ApplicationSystemTestCase
     summary = "##{dom_id(transaction, "tag_summary_desktop")}"
     cell = "document.querySelector('#{summary}').closest('[data-tag-fit-bounds]')"
 
+    # Control the actual available width even when the tag cell is a flex item.
+    page.execute_script("#{cell}.style.flex = 'none'")
     page.execute_script("#{cell}.style.width = '400px'")
     assert_selector "#{summary} [data-tag-fit-target=full]", text: "Ab"
     assert_no_selector "#{summary} [data-tag-fit-target=compact]"
