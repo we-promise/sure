@@ -3,8 +3,9 @@ class Rule::ConditionFilter
 
   TYPES = [ "text", "number", "select" ]
 
-  # Operators whose value is a pattern, not text. The pattern is bound as given:
-  # collapsing its whitespace would change what it matches.
+  # Operators whose value is a pattern, not text. The pattern is bound as given,
+  # and matched against the column as stored: collapsing whitespace on either
+  # side would change what it matches (a run of spaces, a tab, `^\s`).
   REGEX_OPERATORS = [ "matches_regex" ].freeze
 
   # Operators that don't require a value (and that the form hides the value field for)
@@ -109,8 +110,9 @@ class Rule::ConditionFilter
           "#{field} #{sanitize_operator(operator)}"
         )
       else
-        normalized_value = REGEX_OPERATORS.include?(operator) ? value.to_s : normalize_value(value)
-        normalized_field = normalize_field(field)
+        regex = REGEX_OPERATORS.include?(operator)
+        normalized_value = regex ? value.to_s : normalize_value(value)
+        normalized_field = regex ? field : normalize_field(field)
 
         if operator == "starts_with" || operator == "ends_with"
           sanitize_operator(operator)

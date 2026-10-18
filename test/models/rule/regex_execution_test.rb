@@ -23,6 +23,25 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
     assert_nil @miss.reload.transaction.category
   end
 
+  # A pattern is bound as written, so it is matched against the name as stored:
+  # collapsing the name's whitespace would leave a pattern that spells out a
+  # run of spaces, a tab or an edge with nothing to match.
+  test "a regex matches the name as stored, whitespace included" do
+    spaced = create_transaction(date: Date.current, account: @account, name: "POS  PURCHASE 4411")
+    edged = create_transaction(date: Date.current, account: @account, name: " Leading space")
+
+    assert_equal [ spaced.entryable_id ], regex_rule("POS  PURCHASE").matching_scope.pluck(:id)
+    assert_equal [ spaced.entryable_id ], regex_rule('POS\s{2}PURCHASE').matching_scope.pluck(:id)
+    assert_equal [ edged.entryable_id ], regex_rule('^\sleading').matching_scope.pluck(:id)
+  end
+
+  test "a regex with one space does not match a name holding two" do
+    create_transaction(date: Date.current, account: @account, name: "POS  PURCHASE 4411")
+
+    assert_empty regex_rule("POS PURCHASE").matching_scope.pluck(:id)
+    assert_equal 1, regex_rule('POS\s+PURCHASE').matching_scope.count
+  end
+
   test "a regex rule resolves its matches under the timeout" do
     rule = regex_rule("amzn")
 
