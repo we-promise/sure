@@ -17,16 +17,16 @@ class Provider::DirectaTest < ActiveSupport::TestCase
     client = Provider::Directa.new(http_transport: http)
     password = "correct horse battery staple".freeze
 
-    result = client.begin_login(account_number: "123", password: password, connection_generation: 3)
+    result = client.begin_login(account_number: "X12", password: password, connection_generation: 3)
 
     assert_instance_of Provider::Directa::LoginChallenge, result
-    assert_equal "123", result.account_number
+    assert_equal "X12", result.account_number
     assert_equal 3, result.connection_generation
     assert_equal "challenge-secret", result.challenge_token
     assert_equal "correct horse battery staple", password
     request = http.calls.fetch(0).fetch(:options)
     assert_equal :login, http.calls.fetch(0).fetch(:operation)
-    assert_equal [ [ "USER", "00123" ], [ "PASSW", "correct horse battery staple" ], [ "FUNZI", "JHTJ" ] ], request.fetch(:form)
+    assert_equal [ [ "USER", "00X12" ], [ "PASSW", "correct horse battery staple" ], [ "FUNZI", "JHTJ" ] ], request.fetch(:form)
     refute_includes result.inspect, "challenge-secret"
     refute_includes result.as_json.to_s, "challenge-secret"
   end
@@ -35,14 +35,14 @@ class Provider::DirectaTest < ActiveSupport::TestCase
     initial_token = "abcdefgh12345678abcdefgh12345678"
     http = FakeHttpTransport.new(
       response(:login, "status\r\nUSER__#{initial_token}\r\n"),
-      response(:account_identity, "123\r\n"),
-      response(:startup_metadata, "{\"userInfo\":{\"conto\":\"00123\"}}")
+      response(:account_identity, "X12\r\n"),
+      response(:startup_metadata, "{\"userInfo\":{\"conto\":\"00X12\"}}")
     )
     client = Provider::Directa.new(http_transport: http)
     otp_code = "104233".freeze
 
     result = client.complete_login(
-      account_number: "00123",
+      account_number: "00X12",
       challenge_token: "original-challenge",
       otp_code: otp_code,
       connection_generation: 4
@@ -50,8 +50,8 @@ class Provider::DirectaTest < ActiveSupport::TestCase
 
     multi_token = "8#{initial_token[1]}9#{initial_token[3..]}"
     assert_instance_of Provider::Directa::VerifiedSession, result
-    assert_equal "00123", result.account_number
-    assert_equal "00123", result.account_identity
+    assert_equal "00X12", result.account_number
+    assert_equal "00X12", result.account_identity
     assert_equal multi_token, result.multi_token
     assert_equal "4#{multi_token[1..]}", result.mono_token
     assert_equal Provider::Directa::HOST, result.host
@@ -99,6 +99,38 @@ class Provider::DirectaTest < ActiveSupport::TestCase
     assert_nil error.cause
     refute_includes error.message, "99999"
     refute_includes error.inspect, "not-persisted"
+  end
+
+  test "rejects unsafe account codes before making HTTP requests" do
+    http = FakeHttpTransport.new
+    client = Provider::Directa.new(http_transport: http)
+
+    [ "X12&USER=9", "X12\r\n", "Xé123", "X" * 33 ].each do |account|
+      assert_raises(Provider::Directa::ConfigurationError) do
+        client.begin_login(account_number: account, password: "synthetic-password", connection_generation: 1)
+      end
+    end
+
+    assert_empty http.calls
+  end
+
+  test "alphanumeric identities keep letters and embedded zeros significant in both bootstrap responses" do
+    token = "abcdefgh12345678abcdefgh12345678"
+    [ "Y0123", "X123", "x0123", "0X0123" ].each do |other_account|
+      [ :account_identity, :startup_metadata ].each do |mismatched_operation|
+        http = FakeHttpTransport.new(
+          response(:login, "USER__#{token}"),
+          response(:account_identity, mismatched_operation == :account_identity ? other_account : "X0123"),
+          response(:startup_metadata, { userInfo: { conto: mismatched_operation == :startup_metadata ? other_account : "X0123" } }.to_json)
+        )
+
+        assert_raises(Provider::Directa::AccountIdentityMismatch) do
+          Provider::Directa.new(http_transport: http).begin_login(
+            account_number: "X0123", password: "synthetic-password", connection_generation: 1
+          )
+        end
+      end
+    end
   end
 
   test "reads only cash and the completed positions photo before optionally enriching instruments" do

@@ -527,7 +527,7 @@ class Provider::Directa
 
     def validate_account_number!(value)
       account = value.to_s
-      unless account.bytesize.between?(1, MAX_ACCOUNT_NUMBER_BYTES) && /\A[0-9]+\z/.match?(account)
+      unless account.bytesize.between?(1, MAX_ACCOUNT_NUMBER_BYTES) && /\A[A-Za-z0-9]+\z/.match?(account)
         raise_error(ConfigurationError, :invalid_account, "Directa account number is invalid.")
       end
 
@@ -551,9 +551,9 @@ class Provider::Directa
 
     def canonical_account_identity(value)
       raw = identity_string(value)
-      return unless raw && /\A[0-9]{1,#{MAX_ACCOUNT_NUMBER_BYTES}}\z/.match?(raw)
+      return unless raw && /\A[A-Za-z0-9]{1,#{MAX_ACCOUNT_NUMBER_BYTES}}\z/.match?(raw)
 
-      raw.sub(/\A0+(?=\d)/, "")
+      raw.match?(/\A[0-9]+\z/) ? raw.sub(/\A0+(?=\d)/, "") : raw.rjust(5, "0")
     end
 
     def identity_string(value)

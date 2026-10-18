@@ -5,7 +5,7 @@ class DirectaItem
     CHALLENGE_TTL = 5.minutes
     OTP_SUBMISSION_TTL = 30.seconds
     MAX_OTP_ATTEMPTS = 3
-    ACCOUNT_NUMBER_PATTERN = /\A[0-9]{1,32}\z/
+    ACCOUNT_NUMBER_PATTERN = /\A[A-Za-z0-9]{1,32}\z/
     OTP_CODE_PATTERN = /\A[0-9]{1,12}\z/
     LOGIN_ERROR_CODES = %w[
       account_conflict account_identity_changed account_mismatch attempts_exhausted

@@ -14,20 +14,20 @@ class DirectaItem::LoginTest < ActiveSupport::TestCase
 
   test "stores the OTP challenge encrypted and binds it to the Sure session" do
     challenge = login_challenge(
-      account_number: "00123",
+      account_number: "00X12",
       challenge_token: "directa-challenge-secret",
       connection_generation: 1
     )
     client = mock("Directa login client")
     client.expects(:begin_login).with(
-      account_number: "00123",
+      account_number: "00X12",
       password: "broker-password-secret",
       connection_generation: 1
     ).returns(challenge)
     password = "broker-password-secret"
 
     assert_equal :otp_required, DirectaItem::Login.new(@item, provider: client).start(
-      broker_account: "123",
+      broker_account: "X12",
       password: password,
       session_id: @session_id
     )
@@ -45,7 +45,7 @@ class DirectaItem::LoginTest < ActiveSupport::TestCase
     )
     refute_includes stored_state, "directa-challenge-secret"
     refute_includes stored_state, "broker-password-secret"
-    refute_includes stored_state, "00123"
+    refute_includes stored_state, "00X12"
     refute @item.has_attribute?(:password)
   end
 
