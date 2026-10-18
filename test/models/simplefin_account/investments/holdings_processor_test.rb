@@ -194,6 +194,120 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_nil cost_basis
   end
 
+  test "a zero cost_basis with no purchase_price is kept as reported" do
+    # Holding::CostBasisReconciler stores a provider zero as unknown.
+    payload = { "shares" => "10", "market_value" => "1200.00", "cost_basis" => "0", "purchase_price" => "0" }
+
+    raw_cost_basis, source_key = @processor.send(:cost_basis_from, payload)
+
+    assert_equal "cost_basis", source_key
+    assert_equal BigDecimal("0"), raw_cost_basis
+  end
+
+  test "a reported cost_basis wins over purchase_price" do
+    payload = { "shares" => "10", "market_value" => "1200.00", "cost_basis" => "90.00", "purchase_price" => "100.00" }
+
+    raw_cost_basis, source_key = @processor.send(:cost_basis_from, payload)
+    cost_basis = @processor.send(:normalize_cost_basis, raw_cost_basis, BigDecimal("10"), source_key)
+
+    assert_equal "cost_basis", source_key
+    assert_equal BigDecimal("90.00"), cost_basis
+  end
+
+  test "a zero cost_basis still ends the chain before value" do
+    # Some brokerages put market value in `value`; it must not become the basis.
+    payload = { "shares" => "10", "market_value" => "1200.00", "cost_basis" => "0", "value" => "1200.00", "purchase_price" => "100.00" }
+
+    raw_cost_basis, source_key = @processor.send(:cost_basis_from, payload)
+
+    assert_equal "purchase_price", source_key
+    assert_equal BigDecimal("100.00"), raw_cost_basis
+  end
+
+  test "a zero cost_basis falls back to purchase_price" do
+    # Some brokerages, and some Fidelity accounts, send cost_basis: 0 and
+    # report the average cost per share in purchase_price. Fidelity is on the
+    # total-basis allowlist, which must not divide purchase_price by shares.
+    account = accounts(:investment)
+    security = Security.create!(ticker: "PPBASIS", name: "Purchase Price Fund")
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:account).returns(account)
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(true)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, balance_as_of: Date.current)
+    )
+    processor.stubs(:holdings_data).returns([
+      { "id" => "lot-a", "symbol" => "PPBASIS", "shares" => "10", "market_value" => "1200.00", "cost_basis" => "0", "purchase_price" => "100.00" }
+    ])
+
+    processor.process
+
+    holding = account.holdings.find_by!(security: security, date: Date.current)
+    assert_equal BigDecimal("100.00"), holding.cost_basis
+    assert_equal "provider", holding.cost_basis_source
+  end
+
+  test "purchase_price is not used as basis when it also prices the holding" do
+    # With no market_value the price falls back to purchase_price, so a basis
+    # taken from it would report an exact 0% return as if it were known.
+    account = accounts(:investment)
+    security = Security.create!(ticker: "PPPRICE", name: "Purchase Price Only Fund")
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:account).returns(account)
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, balance_as_of: Date.current)
+    )
+    processor.stubs(:holdings_data).returns([
+      { "id" => "lot-a", "symbol" => "PPPRICE", "shares" => "10", "cost_basis" => "0", "purchase_price" => "100.00" }
+    ])
+
+    processor.process
+
+    holding = account.holdings.find_by!(security: security, date: Date.current)
+    assert_equal BigDecimal("1000"), holding.amount
+    assert_nil holding.cost_basis
+  end
+
+  test "lots reporting only purchase_price combine into a share-weighted basis" do
+    security = securities(:aapl)
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+
+    processor.stubs(:holdings_data).returns([
+      { "id" => "lot-a", "symbol" => "AAPL", "shares" => "10", "market_value" => "1500.00", "cost_basis" => "0", "purchase_price" => "100.00" },
+      { "id" => "lot-b", "symbol" => "AAPL", "shares" => "30", "market_value" => "4500.00", "cost_basis" => "0", "purchase_price" => "140.00" }
+    ])
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil, balance_as_of: Date.current)
+    )
+
+    recorder = Class.new do
+      attr_reader :calls
+
+      def initialize = @calls = []
+
+      def import_holding(**kwargs)
+        @calls << kwargs
+        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
+              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
+                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
+      end
+    end.new
+
+    processor.stubs(:import_adapter).returns(recorder)
+
+    processor.process
+
+    assert_equal 1, recorder.calls.size
+    # (10*100 + 30*140) / 40
+    assert_equal BigDecimal("130"), recorder.calls.first[:cost_basis]
+  end
+
   test "lots of the same security combine into one position" do
     # SimpleFIN reports one record per lot. A 401k splitting employee deferral
     # from employer match sends two records for the same fund, and `holdings` is
