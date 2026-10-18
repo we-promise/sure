@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 import { Turbo } from "@hotwired/turbo-rails";
 
 export default class extends Controller {
-  static targets = ["status", "error"];
+  static targets = ["status", "error", "manualCheck"];
   static values = {
     url: String,
     attempt: String,
@@ -13,6 +13,7 @@ export default class extends Controller {
   connect() {
     this.stopped = false;
     this.pollCount = 0;
+    this.manualCheckTarget.hidden = true;
     this.timer = setTimeout(() => this.poll(), 10000);
   }
 
@@ -71,5 +72,6 @@ export default class extends Controller {
     this.errorTarget.textContent = message;
     this.errorTarget.hidden = false;
     this.statusTarget.hidden = true;
+    this.manualCheckTarget.hidden = false;
   }
 }

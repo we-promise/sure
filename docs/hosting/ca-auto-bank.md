@@ -10,8 +10,9 @@ account. Active Record encryption must be configured before credentials are sent
 
 Enter the bank email and password in Sure, then approve access in the My CA Auto
 Bank mobile app. Sure checks the existing approval every ten seconds, for at most
-five minutes and thirty checks, then queues the first deposit snapshot. A manual
-**Check approval** action is also available. The password is never persisted.
+five minutes and thirty checks, then queues the first deposit snapshot. The manual
+**Check approval** fallback is hidden while automatic checking is running and
+remains available if JavaScript cannot run or checking fails. The password is never persisted.
 Only the encrypted approval state and accepted bank session are retained.
 Transient bank or malformed-response errors retry within the same bounded
 approval window. After approval yields a token, Sure retains it only in encrypted

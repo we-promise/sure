@@ -13,8 +13,9 @@ class CaAutoBankLoginTest < ApplicationSystemTestCase
     auth_root = "#{Provider::CaAutoBank::ORIGIN}#{Provider::CaAutoBank::AUTH_ROOT}"
     stub_request(:post, "#{auth_root}/login").to_return(status: 511,
       body: { errorCode: 5110000, appAuthorizationRequired: true, verificationToken: "private-bank-approval" }.to_json)
-    @poll_request = stub_request(:post, "#{auth_root}/login/tfa").to_return(status: 200,
-      body: { authenticationToken: ca_token }.to_json)
+    @poll_request = stub_request(:post, "#{auth_root}/login/tfa").to_return(status: 511,
+      body: { errorCode: 5110003, appAuthorizationRequired: true }.to_json)
+      .then.to_return(status: 200, body: { authenticationToken: ca_token }.to_json)
     stub_request(:get, "#{auth_root}/user").to_return(status: 200, body: { partnerId: "synthetic-partner" }.to_json)
   end
 
@@ -30,8 +31,9 @@ class CaAutoBankLoginTest < ApplicationSystemTestCase
       assert_text I18n.t("ca_auto_bank.approval_title")
       assert_no_text "private-bank-approval"
       assert_no_text "synthetic-password"
-      assert_current_path accounts_path, wait: 20
-      assert_requested @poll_request, times: 1
+      assert_no_button I18n.t("ca_auto_bank.check_approval")
+      assert_current_path accounts_path, wait: 30
+      assert_requested @poll_request, times: 2
 
       item = CaAutoBankItem.find_by!(owner: @user)
       CaAutoBankItem::Importer.new(item).import(snapshot: ca_snapshot(item))

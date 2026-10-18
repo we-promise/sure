@@ -26,7 +26,8 @@
       <p class="text-sm text-secondary" role="status" aria-live="polite" data-ca-auto-bank-login-target="status"><%= t("ca_auto_bank.approval_description") %></p>
       <p class="text-sm text-destructive" role="alert" data-ca-auto-bank-login-target="error" hidden></p>
       <noscript><p class="text-sm text-secondary"><%= t("ca_auto_bank.javascript_required") %></p></noscript>
-      <%= styled_form_with url: poll_ca_auto_bank_login_path, method: :post, scope: :ca_auto_bank_login do |form| %>
+      <%= styled_form_with url: poll_ca_auto_bank_login_path, method: :post, scope: :ca_auto_bank_login,
+                           data: { ca_auto_bank_login_target: "manualCheck" } do |form| %>
         <%= form.hidden_field :attempt_id, value: @pending_login.fetch(:attempt_id) %>
         <%= form.submit t("ca_auto_bank.check_approval") %>
       <% end %>
