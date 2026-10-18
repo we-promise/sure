@@ -143,6 +143,11 @@ module SettingsHelper
       else
         { status: :ok, meta: t("settings.providers.fineco_panel.preview_connection"), last_synced_at: last_synced_at }
       end
+    when "directa"
+      item = @directa_item || @directa_items&.first
+      return { status: :off } unless item
+
+      directa_provider_summary(item)
     else
       { status: :off }
     end
@@ -258,6 +263,44 @@ module SettingsHelper
       end
 
       base.merge(last_synced_at: last_synced_at)
+    end
+
+    def directa_provider_summary(item)
+      unless item.respond_to?(:status)
+        return { status: :warn, meta: t("settings.providers.directa_panel.status_unavailable") }
+      end
+
+      last_synced_at = item.last_synced_at if item.respond_to?(:last_synced_at)
+      case item.status
+      when "pending", "requires_update"
+        { status: :warn, meta: t("settings.providers.directa_panel.sign_in_required"), last_synced_at: last_synced_at }
+      when "connected"
+        if item.respond_to?(:waiting_for_first_snapshot?) && item.waiting_for_first_snapshot?
+          if directa_sync_error?(item) && !directa_awaiting_valuation?(item)
+            { status: :err, meta: t("settings.providers.directa_panel.sync_error"), last_synced_at: last_synced_at }
+          else
+            { status: :warn, meta: t("settings.providers.directa_panel.waiting_for_snapshot"), last_synced_at: last_synced_at }
+          end
+        elsif directa_sync_error?(item)
+          { status: :err, meta: t("settings.providers.directa_panel.sync_error"), last_synced_at: last_synced_at }
+        elsif item.respond_to?(:session_configured?) && item.session_configured? &&
+            item.respond_to?(:portfolio_snapshot_at) && item.portfolio_snapshot_at.present?
+          { status: :ok, meta: t("settings.providers.directa_panel.preview_connection"), last_synced_at: last_synced_at }
+        else
+          { status: :warn, meta: t("settings.providers.directa_panel.status_unavailable"), last_synced_at: last_synced_at }
+        end
+      else
+        { status: :warn, meta: t("settings.providers.directa_panel.status_unavailable"), last_synced_at: last_synced_at }
+      end
+    end
+
+    def directa_sync_error?(item)
+      (item.respond_to?(:last_sync_error_code) && item.last_sync_error_code.present?) ||
+        (item.respond_to?(:last_sync_error) && item.last_sync_error.present?)
+    end
+
+    def directa_awaiting_valuation?(item)
+      item.respond_to?(:last_sync_error_code) && item.last_sync_error_code == "awaiting_valuation"
     end
 
     def enable_banking_summary

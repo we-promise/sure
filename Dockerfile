@@ -14,12 +14,10 @@ RUN apt-get update -qq \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment
-ARG BUILD_COMMIT_SHA
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development" \
-    BUILD_COMMIT_SHA=${BUILD_COMMIT_SHA}
+    BUNDLE_WITHOUT="development"
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
@@ -104,6 +102,10 @@ COPY --from=browser-helper-build --chown=root:1000 --chmod=4750 /out/fineco-brow
 USER 0:0
 RUN chown rails:rails /rails && chmod 0750 /rails
 USER 1000:1000
+
+# runtime-only version metadata stays after cached dependency and asset layers.
+ARG BUILD_COMMIT_SHA
+ENV BUILD_COMMIT_SHA=${BUILD_COMMIT_SHA}
 
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]

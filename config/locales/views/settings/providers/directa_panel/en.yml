@@ -7,6 +7,10 @@ en:
         read_only: Sure only reads account data. It cannot place, change, or cancel orders.
         syncing: Syncing Directa…
         waiting_for_snapshot: Directa is authenticated. The first verified portfolio snapshot is still pending.
+        sign_in_required: Sign in to Directa to start or resume syncing. Saved data remains available.
+        status_unavailable: Directa's connection status could not be confirmed. Check the connection before relying on saved data.
+        preview_connection: Connected. The latest verified Directa portfolio snapshot is available.
+        sync_error: Directa could not refresh the saved portfolio. Previous data was kept.
         last_synced: Last synced %{time} ago
         never_synced: Connected. No portfolio snapshot has completed yet.
         sync: Sync now

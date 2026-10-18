@@ -49,6 +49,45 @@ class SettingsHelperTest < ActionView::TestCase
     assert_equal I18n.t("settings.providers.meta.reconsent_required"), summary[:meta]
   end
 
+  test "provider_summary follows Directa authentication, first snapshot, health, error, and reconnect states" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    item = DirectaItem.new(status: :pending)
+    @directa_items = []
+
+    assert_equal :off, provider_summary("directa")[:status]
+
+    @directa_item = item
+
+    assert_equal :warn, provider_summary("directa")[:status]
+    assert_equal I18n.t("settings.providers.directa_panel.sign_in_required"), provider_summary("directa")[:meta]
+
+    item.assign_attributes(
+      status: :connected,
+      broker_account: "00123",
+      account_identity: "00123",
+      multi_token: "synthetic-multi-token",
+      mono_token: "synthetic-mono-token",
+      last_sync_error_code: "awaiting_valuation"
+    )
+    awaiting_snapshot = provider_summary("directa")
+    assert_equal :warn, awaiting_snapshot[:status]
+    assert_equal I18n.t("settings.providers.directa_panel.waiting_for_snapshot"), awaiting_snapshot[:meta]
+
+    item.last_sync_error_code = "partial_snapshot"
+    assert_equal :err, provider_summary("directa")[:status]
+
+    item.assign_attributes(portfolio_snapshot_at: Time.current, last_sync_error_code: nil)
+    assert_equal :ok, provider_summary("directa")[:status]
+
+    item.last_sync_error_code = "partial_snapshot"
+    assert_equal :err, provider_summary("directa")[:status]
+
+    item.status = :requires_update
+    reconnect = provider_summary("directa")
+    assert_equal :warn, reconnect[:status]
+    assert_equal I18n.t("settings.providers.directa_panel.sign_in_required"), reconnect[:meta]
+  end
+
   # A key provider_summary doesn't handle falls through to { status: :off },
   # which lists a connected provider under Available. Wise and CoinSpot
   # shipped that way. One key at a time, so a branch that reads another

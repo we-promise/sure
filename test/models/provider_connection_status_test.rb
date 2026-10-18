@@ -43,6 +43,32 @@ class ProviderConnectionStatusTest < ActiveSupport::TestCase
     refute_includes status.keys, :dossier_identity
   end
 
+  test "Directa status reports its session without exposing credential fields" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    provider = ProviderConnectionStatus::PROVIDERS.find { |entry| entry[:association] == :directa_items }
+    item = DirectaItem.new(
+      family: families(:dylan_family),
+      owner: users(:family_admin),
+      broker_account: "00123",
+      account_identity: "00123",
+      multi_token: "synthetic-multi-token",
+      mono_token: "synthetic-mono-token",
+      pending_login_state: "synthetic-pending-state",
+      connection_generation: 1,
+      status: :connected
+    )
+
+    status = ProviderConnectionStatus.new(provider, item).to_h
+
+    assert_equal "directa", status[:provider]
+    assert_equal "DirectaItem", status[:provider_type]
+    assert_equal true, status[:credentials_configured]
+    assert_equal 0, status.dig(:accounts, :total_count)
+    %i[broker_account account_identity multi_token mono_token pending_login_state].each do |field|
+      refute_includes status.keys, field
+    end
+  end
+
   test "status summary is computed without calling provider item summary" do
     provider = ProviderConnectionStatus::PROVIDERS.find { |entry| entry[:association] == :mercury_items }
     item = mercury_items(:one)

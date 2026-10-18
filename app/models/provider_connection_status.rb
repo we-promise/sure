@@ -28,7 +28,8 @@ class ProviderConnectionStatus
     { key: "questrade", type: "QuestradeItem", association: :questrade_items, accounts: :questrade_accounts },
     { key: "redbark", type: "RedbarkItem", association: :redbark_items, accounts: :redbark_accounts },
     { key: "wise", type: "WiseItem", association: :wise_items, accounts: :wise_accounts },
-    { key: "fineco", type: "FinecoItem", association: :fineco_items, accounts: :fineco_accounts }
+    { key: "fineco", type: "FinecoItem", association: :fineco_items, accounts: :fineco_accounts },
+    { key: "directa", type: "DirectaItem", association: :directa_items, accounts: :directa_accounts }
   ].freeze
 
   class << self
