@@ -569,6 +569,23 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal 1, result[:balances_failed]
   end
 
+  test "rate limiting on balances stops all transaction requests and preserves the snapshot" do
+    account = Account.create!(family: @family, name: "Bank", currency: "EUR", balance: 123.45,
+                              cash_balance: 123.45, accountable: Depository.create!)
+    AccountProvider.create!(account: account, provider: @enable_banking_account)
+    @importer.stubs(:fetch_session_data).returns(accounts: [
+      { uid: @enable_banking_account.account_id, identification_hash: @enable_banking_account.uid, currency: "EUR" }
+    ])
+    @enable_banking_item.stubs(:upsert_enable_banking_snapshot!)
+    error = Provider::EnableBanking::EnableBankingError.new("limited", :rate_limited)
+    @mock_provider.expects(:get_account_balances).once.raises(error)
+    @importer.expects(:fetch_and_store_transactions).never
+
+    assert_raises(Provider::EnableBanking::EnableBankingError) { @importer.import }
+    assert_equal 123.45.to_d, @enable_banking_account.reload.current_balance
+    assert_equal 123.45.to_d, account.reload.balance
+  end
+
   test "balance endpoint failure marks unsaved provider balance unavailable" do
     unsaved_account = EnableBankingAccount.new(
       enable_banking_item: @enable_banking_item,

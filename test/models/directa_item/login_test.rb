@@ -133,6 +133,7 @@ class DirectaItem::LoginTest < ActiveSupport::TestCase
   end
 
   test "a failed reconnect with a changed Directa identity preserves the old session and generation" do
+    snapshot_at = 1.day.ago.change(usec: 0)
     @item.update!(
       broker_account: "00123",
       account_identity: "original-directa-account",
@@ -140,7 +141,7 @@ class DirectaItem::LoginTest < ActiveSupport::TestCase
       mono_token: "old-mono-token",
       status: :connected,
       connection_generation: 7,
-      portfolio_snapshot_at: 1.day.ago
+      portfolio_snapshot_at: snapshot_at
     )
     session = verified_session(account_number: "00123", account_identity: "different-account", connection_generation: 8)
     client = mock("Directa login client")
@@ -157,7 +158,7 @@ class DirectaItem::LoginTest < ActiveSupport::TestCase
     assert_equal "old-multi-token", @item.multi_token
     assert_equal "old-mono-token", @item.mono_token
     assert_equal 7, @item.connection_generation
-    assert_equal 1.day.ago.to_i, @item.portfolio_snapshot_at.to_i
+    assert_equal snapshot_at, @item.portfolio_snapshot_at
     assert_nil @item.pending_login_state
   end
 

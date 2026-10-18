@@ -8,6 +8,38 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     @provider = Provider::EnableBanking.new(application_id: "test_app_id", client_certificate: key.to_pem)
   end
 
+  test "HTTP 429 preserves provider diagnostics and Retry-After seconds" do
+    response = OpenStruct.new(code: 429, body: { error: "ASPSP_RATE_LIMIT_EXCEEDED" }.to_json,
+                              headers: { "retry-after" => "3600" })
+    Provider::EnableBanking.expects(:get).once.returns(response)
+    error = assert_raises(Provider::EnableBanking::EnableBankingError) do
+      @provider.get_account_balances(account_id: "account")
+    end
+    assert error.rate_limited?
+    assert error.retryable?
+    assert_equal 429, error.http_status
+    assert_equal 3600, error.retry_after
+    assert_equal "ASPSP_RATE_LIMIT_EXCEEDED", error.response_data[:error]
+  end
+
+  test "ASPSP rate limits on other statuses accept HTTP date deadlines" do
+    response = OpenStruct.new(code: 400, body: { error: "ASPSP_RATE_LIMIT_EXCEEDED" }.to_json,
+                              headers: { "retry-after" => 2.hours.from_now.httpdate })
+    error = assert_raises(Provider::EnableBanking::EnableBankingError) { @provider.send(:handle_response, response) }
+    assert error.rate_limited?
+    assert_in_delta 2.hours, error.retry_after, 2
+  end
+
+  test "malformed Retry-After falls back and ordinary validation errors are not retryable" do
+    response = OpenStruct.new(code: 429, body: "busy", headers: { "retry-after" => "invalid" })
+    error = assert_raises(Provider::EnableBanking::EnableBankingError) { @provider.send(:handle_response, response) }
+    assert_nil error.retry_after
+    response.headers["retry-after"] = "999999999999999999999999999999999999"
+    error = assert_raises(Provider::EnableBanking::EnableBankingError) { @provider.send(:handle_response, response) }
+    assert_nil error.retry_after
+    assert_not Provider::EnableBanking::EnableBankingError.new("bad input", :validation_error).retryable?
+  end
+
   test "get_account_transactions retries with corrected date_from from WRONG_TRANSACTIONS_PERIOD" do
     requested_queries = []
 

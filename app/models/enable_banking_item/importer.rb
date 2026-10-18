@@ -199,6 +199,8 @@ class EnableBankingItem::Importer
       exceptions = [ exception.cause, exception ].compact
 
       provider_error = exceptions.find { |ex| ex.is_a?(Provider::EnableBanking::EnableBankingError) }
+      # stop this import immediately; the syncer schedules a delayed retry
+      raise provider_error if provider_error&.retryable?
 
       # Handle session expiration status update (session-level failures only)
       if session_level && provider_error && [ :unauthorized, :not_found ].include?(provider_error.error_type)
@@ -243,7 +245,7 @@ class EnableBankingItem::Importer
       enable_banking_account = find_enable_banking_account_by_hash(uid)
       return unless enable_banking_account
 
-      enable_banking_account.upsert_enable_banking_snapshot!(account_data)
+      enable_banking_account.upsert_enable_banking_snapshot!(account_data, preserve_balance: true)
       enable_banking_account.save!
     end
 

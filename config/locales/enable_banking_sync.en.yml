@@ -1,0 +1,7 @@
+en:
+  enable_banking_items:
+    sync:
+      in_progress: "A bank refresh is already in progress."
+      rate_limited: "Bank refresh limit reached. Automatic retry: %{time}. Saved data is available."
+      retrying: "Bank temporarily unavailable. Automatic retry: %{time}. Saved data is available."
+      cooldown: "Next refresh available: %{time}. Saved data is available."

@@ -22,6 +22,8 @@
                 <%= icon "loader", size: "sm", class: "animate-spin" %>
                 <%= tag.span t(".syncing") %>
               </div>
+            <% elsif enable_banking_item.sync_retry_pending? %>
+              <p class="text-xs text-warning" role="status"><%= enable_banking_item.sync_cooldown_message %></p>
             <% elsif enable_banking_item.requires_update? %>
               <div class="text-warning flex items-center gap-1">
                 <%= icon "alert-triangle", size: "sm", color: "warning" %>

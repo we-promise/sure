@@ -1,5 +1,6 @@
 class EnableBankingItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
+  include SyncScheduling
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -170,6 +171,9 @@ class EnableBankingItem < ApplicationRecord
       session_expires_at: parse_session_expiry(result),
       authorization_id: nil,  # Clear the authorization ID
       requested_consent_valid_until: nil,  # Only needed as a fallback until the session is established
+      next_sync_at: nil,
+      sync_retry_reason: nil,
+      sync_retry_count: 0,
       status: :good
     )
 

@@ -6,6 +6,21 @@ class SettingsHelperTest < ActionView::TestCase
   # Views get every helper; the Trade Republic summary uses its expiry helper.
   include TradeRepublicHelper
 
+  test "Enable Banking cooldown is a warning while unrelated failures remain errors" do
+    waiting = EnableBankingItem.new(session_id: "session", session_expires_at: 30.days.from_now,
+                                   next_sync_at: 6.hours.from_now, sync_retry_reason: "rate_limited")
+    waiting.stubs(:sync_error).returns("throttled")
+    @enable_banking_items = [ waiting ]
+    @provider_sync_health = { "enable_banking" => { error: true } }
+    assert_equal :warn, provider_summary("enable_banking")[:status]
+    assert_includes provider_summary("enable_banking")[:meta], "Automatic retry"
+
+    broken = EnableBankingItem.new
+    broken.stubs(:sync_error).returns("bad credentials")
+    @enable_banking_items << broken
+    assert_equal :err, provider_summary("enable_banking")[:status]
+  end
+
   test "provider_summary for snaptrade is off when family has no snaptrade items" do
     @snaptrade_items = []
 

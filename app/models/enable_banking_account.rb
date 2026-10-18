@@ -89,7 +89,7 @@ class EnableBankingAccount < ApplicationRecord
     CASH_ACCOUNT_TYPE_MAP[account_type&.upcase]&.dig(:subtype)
   end
 
-  def upsert_enable_banking_snapshot!(account_snapshot)
+  def upsert_enable_banking_snapshot!(account_snapshot, preserve_balance: false)
     snapshot = account_snapshot.with_indifferent_access
 
     raw_account_id = snapshot[:account_id]
@@ -104,7 +104,7 @@ class EnableBankingAccount < ApplicationRecord
     credit_limit_amount = snapshot.dig(:credit_limit, :amount)
 
     update!(
-      current_balance: nil,
+      current_balance: preserve_balance ? current_balance : nil,
       # Preserve an established currency when the snapshot omits or mangles it
       # (normalized, so blank/invalid stored values still fall through) —
       # EUR only for records that never had a valid currency. Mirrors the

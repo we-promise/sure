@@ -320,6 +320,18 @@ module SettingsHelper
       health = @provider_sync_health&.dig("enable_banking") || {}
       last_synced_at = health[:last_synced_at]
 
+      items = Array(@enable_banking_items)
+      waiting = items.find(&:sync_retry_pending?)
+      unhandled_error = items.any? do |item|
+        next false if item.sync_retry_pending?
+
+        latest = item.latest_sync_record
+        item.sync_error.present? || latest&.failed? || latest&.stale?
+      end
+      if waiting && !unhandled_error
+        return { status: :warn, meta: waiting.sync_cooldown_message, last_synced_at: last_synced_at }
+      end
+
       return { status: :err, meta: t("settings.providers.meta.sync_error"), last_synced_at: nil } if health[:error]
 
       valid_items = @enable_banking_items&.reject(&:needs_authorization?) || []

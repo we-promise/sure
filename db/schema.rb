@@ -756,6 +756,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.string "institution_url"
     t.string "last_psu_ip"
     t.string "name"
+    t.datetime "next_sync_at"
     t.boolean "pending_account_setup", default: false
     t.string "psu_type"
     t.jsonb "raw_institution_payload"
@@ -765,6 +766,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.datetime "session_expires_at"
     t.string "session_id"
     t.string "status", default: "good"
+    t.integer "sync_retry_count", default: 0, null: false
+    t.string "sync_retry_reason"
     t.date "sync_start_date"
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_enable_banking_items_on_family_id"

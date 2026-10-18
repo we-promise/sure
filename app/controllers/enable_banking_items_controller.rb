@@ -47,7 +47,8 @@ class EnableBankingItemsController < ApplicationController
       @enable_banking_item.sync_later
     end
     if provider_panel_form?
-      return render_provider_panel("enable_banking", notice: t("settings.providers.sync_provider_in_progress"),
+      notice = @enable_banking_item.sync_cooldown? ? @enable_banking_item.sync_cooldown_message : t("settings.providers.sync_provider_in_progress")
+      return render_provider_panel("enable_banking", notice: notice,
                                    enable_banking_items: Current.family.enable_banking_items.ordered)
     end
 

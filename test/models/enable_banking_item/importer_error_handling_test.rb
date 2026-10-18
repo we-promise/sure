@@ -174,9 +174,9 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
     @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(rate_limit_error)
 
-    result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
-
-    assert_not result[:success]
+    assert_raises(Provider::EnableBanking::EnableBankingError) do
+      @importer.send(:fetch_and_store_transactions, enable_banking_account)
+    end
   end
 
   # Regression for #392: Trade Republic (via Enable Banking) issues a continuation_key

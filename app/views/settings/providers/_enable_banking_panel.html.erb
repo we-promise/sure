@@ -115,6 +115,12 @@
                 <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.syncing", default: "Syncing") %></p>
                 <p class="text-xs text-secondary"><%= t("settings.providers.enable_banking_panel.syncing", default: "Syncing") %></p>
               </div>
+            <% elsif item.sync_retry_pending? %>
+              <div class="w-2 h-2 bg-warning rounded-full"></div>
+              <div>
+                <p class="text-sm font-medium text-primary"><%= item.institution_display_name %></p>
+                <p class="text-xs text-warning" role="status"><%= item.sync_cooldown_message %></p>
+              </div>
             <% elsif item.sync_error.present? %>
               <div class="w-2 h-2 bg-destructive rounded-full"></div>
               <div>
@@ -153,7 +159,8 @@
                 size: :sm,
                 href: sync_enable_banking_item_path(item, source: "panel"),
                 method: :post,
-                disabled: item.syncing?
+                disabled: item.syncing? || item.sync_cooldown?,
+                title: item.sync_cooldown? ? item.sync_cooldown_message : nil
               ) %>
             <% elsif item.session_expired? %>
               <%= render DS::Button.new(

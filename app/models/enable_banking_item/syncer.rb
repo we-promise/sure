@@ -8,6 +8,10 @@ class EnableBankingItem::Syncer
   end
 
   def perform_sync(sync)
+    enable_banking_item.with_sync_lock { perform_import(sync) }
+  end
+
+  def perform_import(sync)
     # An expired/missing session is an expected state that needs user action, not a
     # hard failure. Mark the connection requires_update and finish the sync
     # gracefully so the UI surfaces the "Reconnect" CTA instead of a red sync error.
@@ -17,6 +21,8 @@ class EnableBankingItem::Syncer
       collect_health_stats(sync, errors: nil)
       return
     end
+
+    enable_banking_item.reserve_sync_slot!
 
     # Phase 1: Import data from Enable Banking API
     sync.update!(status_text: "Importing accounts from Enable Banking...") if sync.respond_to?(:status_text)
@@ -79,8 +85,22 @@ class EnableBankingItem::Syncer
       )
     end
 
+    enable_banking_item.update!(sync_retry_count: 0, sync_retry_reason: nil)
     collect_health_stats(sync, errors: nil)
+  rescue Provider::EnableBanking::EnableBankingError => e
+    if e.retryable? && enable_banking_item.schedule_sync_retry!(e)
+      message = enable_banking_item.sync_cooldown_message
+      collect_health_stats(sync, errors: [ { message: message, category: "sync_deferred" } ])
+      raise EnableBankingItem::SyncScheduling::SyncDeferredError, message
+    end
+
+    enable_banking_item.update!(sync_retry_count: 0, sync_retry_reason: nil)
+    collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ])
+    raise
   rescue => e
+    unless e.is_a?(EnableBankingItem::SyncScheduling::SyncDeferredError)
+      enable_banking_item.update!(sync_retry_count: 0, sync_retry_reason: nil)
+    end
     collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ])
     raise
   end

@@ -328,6 +328,13 @@ class Provider::EnableBanking
     end
 
     def handle_response(response)
+      response_data = parse_error_response_body(response) unless [ 200, 201, 204 ].include?(response.code)
+      if response.code == 429 || (response_data.is_a?(Hash) && response_data[:error] == "ASPSP_RATE_LIMIT_EXCEEDED")
+        raise EnableBankingError.new("The bank has limited refresh requests", :rate_limited,
+                                    response_data: response_data, http_status: response.code,
+                                    retry_after: parse_retry_after(response))
+      end
+
       case response.code
       when 200, 201
         parse_response_body(response)
@@ -347,12 +354,20 @@ class Provider::EnableBanking
       when 422
         response_data = parse_response_body(response)
         raise EnableBankingError.new("Validation error from Enable Banking API: #{response.body}", :validation_error, response_data: response_data)
-      when 429
-        raise EnableBankingError.new("Rate limit exceeded. Please try again later.", :rate_limited)
       else
         response_data = parse_error_response_body(response)
-        raise EnableBankingError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed, response_data: response_data)
+        raise EnableBankingError.new("Failed to fetch data: #{response.code} #{response.message} - #{response.body}", :fetch_failed, response_data: response_data, http_status: response.code)
       end
+    end
+
+    def parse_retry_after(response)
+      value = response.headers&.[]("retry-after") if response.respond_to?(:headers)
+      return if value.blank?
+
+      seconds = value.to_s.match?(/\A\d+\z/) ? value.to_i : Time.httpdate(value.to_s) - Time.current
+      seconds if seconds.positive? && seconds <= 7.days
+    rescue ArgumentError
+      nil
     end
 
     def parse_error_response_body(response)
@@ -373,12 +388,23 @@ class Provider::EnableBanking
     end
 
     class EnableBankingError < StandardError
-      attr_reader :error_type, :response_data
+      attr_reader :error_type, :response_data, :http_status, :retry_after
 
-      def initialize(message, error_type = :unknown, response_data: nil)
+      def initialize(message, error_type = :unknown, response_data: nil, http_status: nil, retry_after: nil)
         super(message)
         @error_type = error_type
         @response_data = response_data
+        @http_status = http_status
+        @retry_after = retry_after
+      end
+
+      def rate_limited?
+        error_type == :rate_limited || (response_data.is_a?(Hash) &&
+          (response_data[:error] || response_data["error"]) == "ASPSP_RATE_LIMIT_EXCEEDED")
+      end
+
+      def retryable?
+        rate_limited? || [ :request_failed, :timeout ].include?(error_type) || http_status.to_i >= 500
       end
 
       # Different ASPSPs signal the same "requested date range exceeds the
