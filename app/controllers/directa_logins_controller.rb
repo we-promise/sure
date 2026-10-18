@@ -89,6 +89,19 @@ class DirectaLoginsController < ApplicationController
       @encryption_ready = ActiveRecordEncryptionConfig.explicitly_configured?
       @pending_login = @directa_item&.pending_login_summary(session_id: current_session_id)
       @login_in_progress = @directa_item&.pending_login_state.present? && @pending_login.blank?
+      @directa_session_configured = @directa_item&.session_configured? || false
+      @directa_waiting_for_first_snapshot = @directa_item&.waiting_for_first_snapshot? || false
+      @directa_requires_update = @directa_item&.requires_update? || false
+      @directa_syncable = @directa_item&.syncable? || false
+      @directa_syncing = @directa_item&.syncing? || false
+      sync_error_code = @directa_item&.last_sync_error_code
+      @directa_error_code = if DirectaItem::SYNC_ERROR_CODES.include?(sync_error_code)
+        sync_error_code
+      elsif sync_error_code.present?
+        "sync_failed"
+      end
+      @suppress_first_snapshot_valuation_error = @directa_waiting_for_first_snapshot &&
+        @directa_error_code == "awaiting_valuation"
     end
 
     def owned_directa_item

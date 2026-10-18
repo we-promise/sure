@@ -207,11 +207,14 @@ class DirectaItem::PortfolioNormalizer
         "description" => instrument_metadata.description.to_s,
         "quote_currency" => instrument_metadata.currency.to_s,
         "quote_price" => position.current_price&.to_s("F"),
+        "multiplier" => instrument_metadata.multiplier&.to_s("F"),
+        "raw_multiplier" => instrument_metadata.raw_multiplier,
         "market_value" => position.market_value&.to_s("F"),
         "valuation_currency" => position.valuation_currency,
         "valuation_date" => position.valuation_date.iso8601,
         "snapshot_date" => snapshot_date.iso8601,
-        "valuation_source" => position.valuation_source.to_s
+        "valuation_source" => position.valuation_source.to_s,
+        "valuation_details" => position.valuation_details
       }.compact
     end
 

@@ -9,6 +9,7 @@ class DirectaAccount::HoldingsProcessor
     raise DirectaItem::PortfolioNormalizer::Error.new(:holding_conflict) unless linked_account && provider_link
 
     previous_rows = latest_provider_rows(provider_link)
+    @content_validator = DirectaAccount::ContentValidator.new(directa_account)
     securities = snapshot.positions.index_with { |position| security_resolver.resolve(position) }
     preflight_collisions!(snapshot, securities, provider_link)
 
@@ -52,9 +53,11 @@ class DirectaAccount::HoldingsProcessor
     end
 
     def compatible_provider_holding?(holding, security, account_provider)
-      holding.account_provider_id == account_provider.id &&
+      provider_holding = holding.account_provider_id == account_provider.id &&
         [ nil, security.id ].include?(holding.provider_security_id) &&
         (holding.security_id == security.id || (holding.security_locked? && holding.provider_security_id == security.id))
+
+      provider_holding || @content_validator.generated_snapshot_holding?(holding)
     end
 
     def import_position!(position, security:, account_provider:, snapshot:)
@@ -74,6 +77,10 @@ class DirectaAccount::HoldingsProcessor
 
       unless compatible_provider_holding?(holding, security, account_provider) && holding.external_id == position.external_id
         raise DirectaItem::PortfolioNormalizer::Error.new(:holding_conflict)
+      end
+
+      if holding.provider_security_id.blank?
+        holding.update!(provider_security_id: security.id)
       end
 
       holding

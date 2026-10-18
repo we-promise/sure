@@ -10,6 +10,15 @@ class Provider::DirectaTest < ActiveSupport::TestCase
     assert_nil Provider::Directa.parse_cash_amount("-12,50-")
   end
 
+  test "bounds decimal magnitude and rejects extreme scientific exponents" do
+    assert_nil Provider::Directa.parse_decimal("1e1000000000")
+    assert_nil Provider::Directa.parse_decimal("1e-1000000000")
+    assert_nil Provider::Directa.parse_decimal("1e33")
+    assert_nil Provider::Directa.parse_decimal("1e-33")
+    assert_equal BigDecimal("1e-32"), Provider::Directa.parse_decimal("1e-32")
+    assert_equal BigDecimal("0"), Provider::Directa.parse_decimal("0")
+  end
+
   test "returns an OTP challenge without retaining the caller password" do
     http = FakeHttpTransport.new(
       response(:login, "{\"USER\":\"OTP_challenge-secret\"}")
@@ -151,9 +160,14 @@ class Provider::DirectaTest < ActiveSupport::TestCase
             Divisa: "USD",
             Descriz: "Apple",
             MercNeg: "NASDAQ",
-            Moltip: "1"
+            Moltip: 1.0,
+            PrzRif: 211.25
           }
         ]
+      }.to_json),
+      response(:startup_metadata, {
+        userInfo: { conto: "123" },
+        dataStruct: { mercati: [], cambi: [] }
       }.to_json)
     )
     client = Provider::Directa.new(
@@ -179,6 +193,9 @@ class Provider::DirectaTest < ActiveSupport::TestCase
     assert_equal :verified, snapshot.cash.currency_status
     assert_equal "US0378331005", position.instrument_metadata.isin
     assert_equal "USD", position.instrument_metadata.currency
+    assert_equal BigDecimal("1.0"), position.instrument_metadata.multiplier
+    assert_equal "1.0", position.instrument_metadata.raw_multiplier
+    assert_equal BigDecimal("211.25"), position.instrument_metadata.reference_price
     assert_nil position.instrument_metadata.mic
     assert_equal :partial, position.identity_status
     assert_equal :unavailable, position.valuation_status
@@ -192,6 +209,73 @@ class Provider::DirectaTest < ActiveSupport::TestCase
     assert_equal session.multi_token, query.fetch("TOKEN")
     assert_equal "UNIV-1", query.fetch("TITOLI")
     assert_equal "*ALL", query.fetch("ATTRIBUTI")
+    startup = http.calls.fetch(1)
+    assert_equal :startup_metadata, startup.fetch(:operation)
+    assert_equal({ "REQUEST" => "*", "TOKEN" => session.multi_token }, startup.fetch(:options).fetch(:query))
+  end
+
+  test "rechecks the startup account identity before using Directa tables" do
+    session = verified_session
+    stream = FakeTradingTransport.new([
+      "1;0;0;0;#{session.multi_token};\r\n",
+      "2;7;0;;;UNIV-1;;;0;5;12.5\r\n",
+      "3;6;0;10;;20;;1.234,56;99;30\r\n",
+      "4;7;9\r\n"
+    ])
+    http = FakeHttpTransport.new(
+      response(:instrument_metadata, { titoli: [ { CodiceRichiesto: "UNIV-1" } ] }.to_json),
+      response(:startup_metadata, {
+        userInfo: { conto: "99999" },
+        dataStruct: { mercati: [], cambi: [] }
+      }.to_json)
+    )
+    client = Provider::Directa.new(
+      session: session,
+      http_transport: http,
+      trading_connection_factory: lambda { |verified_session:|
+        Provider::Directa::TradingConnection.new(
+          session: verified_session,
+          transport_factory: ->(deadline:) { stream }
+        )
+      }
+    )
+
+    error = assert_raises(Provider::Directa::AccountIdentityMismatch) do
+      client.fetch_portfolio_snapshot
+    end
+
+    assert_equal :account_identity_changed, error.failure_code
+    assert_nil error.cause
+    assert_equal 2, http.calls.length
+  end
+
+  test "rejects duplicate metadata for one requested Directa code" do
+    session = verified_session
+    record = { CodiceRichiesto: "UNIV-1", Moltip: 1.0 }
+    http = FakeHttpTransport.new(
+      response(:instrument_metadata, { titoli: [ record, record ] }.to_json)
+    )
+
+    error = assert_raises(Provider::Directa::InvalidResponse) do
+      Provider::Directa.new(session: session, http_transport: http).fetch_instrument_metadata(codes: [ "UNIV-1" ])
+    end
+
+    assert_equal :duplicate_instrument_metadata, error.failure_code
+  end
+
+  test "does not coerce a missing or malformed instrument type to an empty type" do
+    [ nil, "x" * 9, 3 ].each do |instrument_type|
+      record = { "CodiceRichiesto" => "UNIV-1", "TTipo" => instrument_type }
+      http = FakeHttpTransport.new(
+        response(:instrument_metadata, { titoli: [ record ] }.to_json)
+      )
+
+      parsed = Provider::Directa.new(session: verified_session, http_transport: http)
+        .fetch_instrument_metadata(codes: [ "UNIV-1" ])
+        .instruments.fetch("UNIV-1")
+
+      assert_nil parsed.instrument_type
+    end
   end
 
   test "rejects a sequence gap and never sends a trading command" do

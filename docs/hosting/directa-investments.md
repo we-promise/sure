@@ -31,6 +31,9 @@ application restriction, not a bank-issued read-only permission on the session.
 Authentication and a completed portfolio import are separate states. A newly
 authenticated connection stays pending its first complete, verified snapshot;
 authentication alone does not create a successful holdings import.
+Once the import completes, **Directa** appears under Investments. Manual sync
+is separate from the optional **Sign in again** form; a connected session does
+not need another login merely because its first snapshot is pending.
 
 Cash comes from Directa's Liquidità field in EUR, as defined in its
 [availability documentation](https://www.directa.it/help-supporto/marginazione-shortselling/disponibilita-real-time-come-funziona).
@@ -43,10 +46,28 @@ market quote. Missing valuation, unsupported instruments, sequence gaps,
 identity changes or partial responses preserve the previous portfolio rather
 than publishing a partial total or deleting holdings.
 
-The current recovered transport resolves instrument metadata but does not yet
-supply verified exchange MICs and dated market values. Non-empty portfolios
-therefore remain awaiting valuation until that source is validated and wired.
-Cash-only complete snapshots can use the same native account model.
+The supported reference-price path uses Directa's instrument metadata and a
+fresh account-verified bootstrap. It recognizes the evidenced ordinary Milan
+ETF/ETC, Xetra ETF, Milan MOT bond and Nasdaq share combinations. Unknown
+instrument combinations stop the whole import instead of assuming stock
+pricing. Quantities, multipliers and reference prices determine the value;
+supported bonds use a quotation divisor of 100. Ordinary foreign-currency
+positions use Directa's bootstrap `cambioBCEdef` conversion, with no fallback
+when the required rate is missing or invalid.
+
+These are observed valuations using bank reference prices, not a live quote
+feed. The encrypted position metadata preserves the reference-price source,
+original quote currency and price, multiplier, quotation divisor, observation
+time and any conversion used. The quote's trade date and the FX effective date
+remain unknown. The observation date is not promoted to either date, and this
+path does not write historical prices or exchange rates to shared tables.
+Cash-only complete snapshots use the same native account model.
+
+Holdings charts start with the first observed Directa snapshot and carry its
+values forward until a later snapshot replaces them. They do not reconstruct
+earlier holdings or substitute shared market prices for the observed values.
+Generated chart rows are checked against their provider-owned source before a
+later import can reuse them; manual or foreign-provider holdings remain conflicts.
 
 Existing family synchronization discovers eligible Directa connections through
 the standard provider flow. Stopping syncing clears its session and pending
@@ -55,8 +76,10 @@ require another attended login; automatic renewal has not been established.
 
 ## Current verification boundary
 
-Authentication responses, stream semantics and instrument schemas were
-recovered from Directa's distributed clients. A public TLS handshake and local
-behavioral tests do not prove a real account login or portfolio import. The
-first attended account validation remains required. Investment activity history,
-cash movements and paid market-data activation are outside this preview.
+Authentication responses, stream semantics and valuation formulas were
+recovered from Directa's distributed clients. An attended account login and
+subsequent saved-session reads established complete position and cash responses.
+The supported valuation rules are intentionally limited to the evidenced
+instrument combinations; they do not establish support for every Directa
+product. Investment activity history, cash movements, intraday price feeds and
+paid market-data activation are outside this preview.

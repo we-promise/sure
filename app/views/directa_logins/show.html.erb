@@ -1,10 +1,11 @@
-<%= content_for :page_title, t(".title") %>
+<% page_title_key = @directa_session_configured ? ".connected_title" : ".title" %>
+<%= content_for :page_title, t(page_title_key) %>
 
 <main class="mx-auto max-w-3xl space-y-6">
   <header class="space-y-3">
     <%= render DS::Pill.new(label: t(".preview"), tone: :violet, marker: false) %>
-    <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
-    <p class="text-sm text-secondary"><%= t(".description") %></p>
+    <h1 class="text-2xl font-semibold text-primary"><%= t(page_title_key) %></h1>
+    <p class="text-sm text-secondary"><%= t(@directa_session_configured ? ".connected_description" : ".description") %></p>
     <p class="text-sm text-secondary"><%= t(".read_only") %></p>
   </header>
 
@@ -27,13 +28,47 @@
     <%= render DS::Alert.new(message: flash[:alert], variant: :error) %>
   <% end %>
 
-  <% if @directa_item&.session_configured? %>
+  <% if @directa_session_configured %>
     <p class="text-sm text-secondary" role="status" aria-live="polite">
-      <%= t(@directa_item.waiting_for_first_snapshot? ? ".status_waiting_for_snapshot" : ".status_connected") %>
+      <%= t(@directa_waiting_for_first_snapshot ? ".status_waiting_for_snapshot" : ".status_connected") %>
     </p>
-    <% if @directa_item.last_sync_error_code.present? %>
-      <% error_code = DirectaItem::SYNC_ERROR_CODES.include?(@directa_item.last_sync_error_code) ? @directa_item.last_sync_error_code : "sync_failed" %>
-      <p class="text-sm text-secondary"><%= t("settings.providers.directa_panel.errors.#{error_code}") %></p>
+  <% elsif @directa_requires_update %>
+    <p class="text-sm text-warning" role="status" aria-live="polite"><%= t(".status_requires_update") %></p>
+  <% end %>
+
+  <% if @directa_error_code.present? && !@suppress_first_snapshot_valuation_error %>
+    <p class="text-sm text-secondary"><%= t("settings.providers.directa_panel.errors.#{@directa_error_code}") %></p>
+  <% end %>
+
+  <% if @directa_session_configured && @pending_login.blank? && !@login_in_progress %>
+    <% if @directa_syncable %>
+      <div class="flex justify-end">
+        <%= render DS::Button.new(
+              text: t(".sync_now"),
+              icon: "refresh-cw",
+              variant: :secondary,
+              href: sync_directa_item_path(@directa_item),
+              disabled: @directa_syncing
+            ) %>
+      </div>
+    <% end %>
+
+    <%= render DS::Disclosure.new(variant: :inline, open: @login_error_key.present?) do |disclosure| %>
+      <% disclosure.with_summary_content do %>
+        <span class="flex items-center gap-2 py-2 text-sm text-secondary hover:text-primary">
+          <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+          <%= t(".reconnect_disclosure_title") %>
+        </span>
+      <% end %>
+
+      <div class="space-y-4">
+        <p class="text-sm text-secondary"><%= t(".reconnect_disclosure_description") %></p>
+        <%= render "directa_logins/credentials_form",
+                   title: t(".reconnect_title"),
+                   submit_label: t(".reconnect"),
+                   broker_account: @directa_item.broker_account,
+                   encryption_ready: @encryption_ready %>
+      </div>
     <% end %>
   <% end %>
 
@@ -76,35 +111,14 @@
     <p class="text-sm text-secondary" role="status" aria-live="polite"><%= t(".status_checking_code") %></p>
   <% elsif @login_in_progress %>
     <p class="text-sm text-secondary" role="status" aria-live="polite"><%= t(".status_other_session") %></p>
-  <% else %>
-    <section class="space-y-4 rounded-xl border border-primary bg-container p-4">
-      <h2 class="text-lg font-semibold text-primary"><%= t(@directa_item&.session_configured? ? ".reconnect_title" : ".connect_title") %></h2>
-
-      <%= styled_form_with url: start_directa_login_path,
-                           method: :post,
-                           scope: :directa_login,
-                           class: "space-y-3" do |form| %>
-        <%= form.text_field :broker_account,
-                            id: "broker_account",
-                            label: t(".broker_account_label"),
-                            autocomplete: "username",
-                            autocorrect: "off",
-                            autocapitalize: "off",
-                            spellcheck: false,
-                            required: true,
-                            value: @directa_item&.broker_account %>
-        <%= form.password_field :password,
-                                id: "current-password",
-                                label: t(".password_label"),
-                                autocomplete: "current-password",
-                                required: true,
-                                value: nil %>
-        <div class="flex flex-wrap justify-end gap-2">
-          <%= form.submit t(@directa_item&.session_configured? ? ".reconnect" : ".connect"),
-                          disabled: !@encryption_ready %>
-        </div>
-      <% end %>
-    </section>
+  <% elsif !@directa_session_configured %>
+    <% login_title = @directa_requires_update ? ".reconnect_title" : ".connect_title" %>
+    <% login_action = @directa_requires_update ? ".reconnect" : ".connect" %>
+    <%= render "directa_logins/credentials_form",
+               title: t(login_title),
+               submit_label: t(login_action),
+               broker_account: @directa_item&.broker_account,
+               encryption_ready: @encryption_ready %>
   <% end %>
 
   <%= render DS::Link.new(text: t(".back_to_providers"), href: settings_providers_path, variant: :secondary) %>

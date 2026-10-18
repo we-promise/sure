@@ -4,6 +4,8 @@ en:
       title: Connect Directa
       preview: Preview
       description: Sign in to Directa to connect your brokerage account to Sure.
+      connected_title: Directa connection
+      connected_description: Sure is connected to Directa. Reconnecting is optional unless Directa asks you to sign in again.
       read_only: Sure reads your cash balance and securities. It cannot place, change, or cancel orders.
       encryption_warning:
         title: Encryption is not configured
@@ -14,6 +16,9 @@ en:
       password_label: Directa password
       connect: Connect Directa
       reconnect: Reconnect Directa
+      reconnect_disclosure_title: Sign in again
+      reconnect_disclosure_description: Sign in again with the same Directa account. This connection cannot be switched to a different Directa account.
+      sync_now: Sync now
       otp_title: Verify your sign-in
       otp_description: Enter the code Directa requested. This Sure sign-in attempt expires in five minutes. You have %{attempts} attempts remaining.
       otp_label: One-time code
@@ -22,6 +27,7 @@ en:
       back_to_providers: Back to providers
       status_connected: Directa is connected and has a verified portfolio snapshot.
       status_waiting_for_snapshot: Directa is authenticated. Sure is waiting for the first verified portfolio snapshot.
+      status_requires_update: Sign in to Directa again to resume syncing. Your saved portfolio remains available.
       status_other_session: A Directa sign-in is already in progress in another Sure session. Wait for it to finish or expire.
       status_checking_code: Directa is checking the one-time code. This page will update when the response arrives.
       otp_requested: Directa requested a one-time code.

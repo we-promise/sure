@@ -30,8 +30,8 @@ class DirectaLoginsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("directa_logins.show.read_only")
   end
 
-  test "a connected session keeps the reconnect form visible alongside its status" do
-    DirectaItem.create!(
+  test "a connected session shows manual sync and keeps reconnect credentials collapsed" do
+    item = DirectaItem.create!(
       family: @user.family,
       owner: @user,
       broker_account: "00123",
@@ -48,10 +48,78 @@ class DirectaLoginsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
+    assert_select "h1", text: I18n.t("directa_logins.show.connected_title")
     assert_select "p[role=status]", text: I18n.t("directa_logins.show.status_connected")
-    assert_select "input#current-password[type=password][autocomplete='current-password']"
-    assert_select "input#broker_account[value='00123']"
-    assert_includes response.body, I18n.t("directa_logins.show.reconnect_title")
+    assert_select "form[action=?][method=post]", sync_directa_item_path(item)
+    assert_select "details:not([open]) summary", text: I18n.t("directa_logins.show.reconnect_disclosure_title")
+    assert_select "details:not([open]) input#current-password[type=password][autocomplete='current-password']"
+    assert_select "details:not([open]) input#broker_account[value='00123']"
+    assert_select "details[open]", count: 0
+
+    reconnect_disclosure = Nokogiri::HTML(response.body).css("details:not([open])").find do |details|
+      details.at_css("summary")&.text&.include?(I18n.t("directa_logins.show.reconnect_disclosure_title"))
+    end
+    assert reconnect_disclosure
+    assert_includes reconnect_disclosure.text, I18n.t("directa_logins.show.reconnect_disclosure_description")
+  end
+
+  test "a first-snapshot wait is not repeated as an awaiting-valuation error" do
+    DirectaItem.create!(
+      family: @user.family,
+      owner: @user,
+      broker_account: "00123",
+      account_identity: "verified-account-123",
+      multi_token: "synthetic-multi-token",
+      mono_token: "synthetic-mono-token",
+      status: :connected,
+      connection_generation: 1,
+      last_sync_error_code: "awaiting_valuation"
+    )
+
+    with_directa_access do
+      get directa_login_path
+    end
+
+    assert_response :success
+    assert_select "h1", text: I18n.t("directa_logins.show.connected_title")
+    assert_select "p[role=status]", text: I18n.t("directa_logins.show.status_waiting_for_snapshot"), count: 1
+    refute_includes response.body, I18n.t("settings.providers.directa_panel.errors.awaiting_valuation")
+    refute_includes response.body, I18n.t("directa_logins.show.description")
+  end
+
+  test "a failed explicit reconnect leaves the error visible and the correction form open" do
+    DirectaItem.create!(
+      family: @user.family,
+      owner: @user,
+      broker_account: "00123",
+      account_identity: "verified-account-123",
+      multi_token: "synthetic-multi-token",
+      mono_token: "synthetic-mono-token",
+      status: :connected,
+      connection_generation: 1,
+      portfolio_snapshot_at: 1.day.ago
+    )
+    client = mock("Directa login client")
+    client.expects(:begin_login).with(
+      account_number: "00123",
+      password: "incorrect-password",
+      connection_generation: 2
+    ).raises(Provider::Directa::AuthenticationError.new("private provider detail", failure_code: :authentication_failed))
+    Provider::Directa.expects(:new).returns(client)
+
+    with_directa_access do
+      post start_directa_login_path, params: {
+        directa_login: { broker_account: "123", password: "incorrect-password" }
+      }
+    end
+
+    error_message = I18n.t("directa_logins.show.errors.authentication_failed")
+    assert_response :unprocessable_entity
+    assert_includes response.body, error_message
+    assert_select "details[open] input#broker_account[value='00123']"
+    assert_select "details[open] input#current-password[autocomplete='current-password']"
+    assert_select "input#current-password[value='incorrect-password']", count: 0
+    refute_includes response.body, "private provider detail"
   end
 
   test "start stores an encrypted challenge and returns no challenge token or password" do
@@ -115,7 +183,7 @@ class DirectaLoginsControllerTest < ActionDispatch::IntegrationTest
       connection_generation: 1
     ).returns(verified_session)
     Provider::Directa.expects(:new).twice.returns(client)
-    DirectaItem.any_instance.expects(:syncing?).returns(false)
+    DirectaItem.any_instance.expects(:syncing?).twice.returns(false)
     DirectaItem.any_instance.expects(:sync_later).once
 
     with_directa_access do

@@ -29,6 +29,12 @@ class Provider::Directa
   MAX_SNAPSHOT_POSITIONS = 2_000
   REQUEST_TIMEOUT_SECONDS = 25
   HTTP_BODY_LIMIT_BYTES = 2 * 1024 * 1024
+  DECIMAL_MAX_INPUT_BYTES = 64
+  DECIMAL_MAX_SIGNIFICANT_DIGITS = 32
+  DECIMAL_MAX_SCIENTIFIC_EXPONENT = 32
+  DECIMAL_MIN_NONZERO_VALUE = BigDecimal("1e-32")
+  DECIMAL_MAX_VALUE = BigDecimal("1e32")
+  DECIMAL_PATTERN = /\A[+-]?(?<mantissa>\d+(?:[.,]\d+)?)(?:[eE](?<exponent>[+-]?\d+))?\z/
   CURRENCY_SOURCE = "Directa documented liquidity semantics; type 60 field 7".freeze
   FIELD_SOURCES = {
     cash_amount: "trading type 60 field 7",
@@ -46,7 +52,11 @@ class Provider::Directa
     instrument_description: "listtit titoli[].Descriz",
     instrument_market: "listtit titoli[].MercNeg",
     instrument_segment: "listtit titoli[].Segmento",
+    instrument_phase: "listtit titoli[].TFase",
+    instrument_type: "listtit titoli[].TTipo",
+    instrument_authorization_markets: "listtit titoli[].MercAbilitazioni",
     instrument_multiplier: "listtit titoli[].Moltip",
+    instrument_reference_price: "listtit titoli[].PrzRif",
     instrument_price_codes: "listtit titoli[].CodPrezzi",
     instrument_tick_table: "listtit titoli[].TabTick",
     instrument_tick_size: "listtit titoli[].TickFisso"
@@ -149,11 +159,12 @@ class Provider::Directa
     attr_reader :requested_code, :canonical_code, :isin, :currency, :description,
       :directa_market, :directa_segment, :mic, :multiplier, :raw_multiplier,
       :price_codes, :tick_table, :tick_size, :raw_tick_size, :identity_status,
-      :field_sources
+      :phase, :instrument_type, :authorization_markets, :reference_price, :field_sources
 
     def initialize(requested_code:, canonical_code:, isin:, currency:, description:,
       directa_market:, directa_segment:, multiplier:, raw_multiplier:, price_codes:,
-      tick_table:, tick_size:, raw_tick_size:, identity_status:, field_sources:)
+      tick_table:, tick_size:, raw_tick_size:, identity_status:, field_sources:,
+      phase: nil, instrument_type: nil, authorization_markets: [], reference_price: nil, mic: nil)
       @requested_code = requested_code&.to_s&.dup&.freeze
       @canonical_code = canonical_code&.to_s&.dup&.freeze
       @isin = isin&.to_s&.dup&.freeze
@@ -161,7 +172,7 @@ class Provider::Directa
       @description = description&.to_s&.dup&.freeze
       @directa_market = directa_market&.to_s&.dup&.freeze
       @directa_segment = directa_segment&.to_s&.dup&.freeze
-      @mic = nil
+      @mic = mic&.to_s&.dup&.freeze
       @multiplier = multiplier
       @raw_multiplier = raw_multiplier&.to_s&.dup&.freeze
       @price_codes = Array(price_codes).map { |code| code.to_s.dup.freeze }.freeze
@@ -169,8 +180,37 @@ class Provider::Directa
       @tick_size = tick_size
       @raw_tick_size = raw_tick_size&.to_s&.dup&.freeze
       @identity_status = identity_status
+      @phase = phase&.to_s&.dup&.freeze
+      @instrument_type = instrument_type&.to_s&.dup&.freeze
+      @authorization_markets = Array(authorization_markets).map { |market| market.to_s.dup.freeze }.freeze
+      @reference_price = reference_price
       @field_sources = field_sources.freeze
       freeze
+    end
+
+    def with_identity(mic:, identity_status:)
+      self.class.new(
+        requested_code: requested_code,
+        canonical_code: canonical_code,
+        isin: isin,
+        currency: currency,
+        description: description,
+        directa_market: directa_market,
+        directa_segment: directa_segment,
+        multiplier: multiplier,
+        raw_multiplier: raw_multiplier,
+        price_codes: price_codes,
+        tick_table: tick_table,
+        tick_size: tick_size,
+        raw_tick_size: raw_tick_size,
+        identity_status: identity_status,
+        field_sources: field_sources,
+        phase: phase,
+        instrument_type: instrument_type,
+        authorization_markets: authorization_markets,
+        reference_price: reference_price,
+        mic: mic
+      )
     end
 
     def inspect
@@ -183,23 +223,26 @@ class Provider::Directa
     attr_reader :univoco, :quantity, :raw_quantity, :raw_average_price,
       :instrument_metadata, :identity_status, :valuation_status, :valuation_date,
       :valuation_currency, :current_price, :market_value, :unrealized_gain,
-      :valuation_source, :raw_fields, :field_sources
+      :valuation_source, :valuation_details, :raw_fields, :field_sources
 
     def initialize(univoco:, quantity:, raw_quantity:, raw_average_price:, raw_fields:,
-      instrument_metadata: nil, field_sources: FIELD_SOURCES)
+      instrument_metadata: nil, field_sources: FIELD_SOURCES, valuation_status: :unavailable,
+      valuation_date: nil, valuation_currency: nil, current_price: nil, market_value: nil,
+      unrealized_gain: nil, valuation_source: nil, valuation_details: nil)
       @univoco = univoco.to_s.dup.freeze
       @quantity = quantity
       @raw_quantity = raw_quantity&.to_s&.dup&.freeze
       @raw_average_price = raw_average_price&.to_s&.dup&.freeze
       @instrument_metadata = instrument_metadata
       @identity_status = instrument_metadata&.identity_status || :unresolved
-      @valuation_status = :unavailable
-      @valuation_date = nil
-      @valuation_currency = nil
-      @current_price = nil
-      @market_value = nil
-      @unrealized_gain = nil
-      @valuation_source = nil
+      @valuation_status = valuation_status
+      @valuation_date = valuation_date
+      @valuation_currency = valuation_currency&.to_s&.dup&.freeze
+      @current_price = current_price
+      @market_value = market_value
+      @unrealized_gain = unrealized_gain
+      @valuation_source = valuation_source&.to_s&.dup&.freeze
+      @valuation_details = valuation_details&.to_h&.transform_keys(&:to_s)&.transform_values { |value| value&.to_s&.dup&.freeze }&.freeze
       @raw_fields = raw_fields.map { |field| field&.to_s&.dup&.freeze }.freeze
       @field_sources = field_sources.freeze
       freeze
@@ -377,12 +420,31 @@ class Provider::Directa
 
     def parse_decimal(value)
       raw = value.to_s.strip
-      return if raw.empty?
-      return unless /\A[+-]?[0-9]+(?:[.,][0-9]+)?\z/.match?(raw)
+      return if raw.empty? || raw.bytesize > DECIMAL_MAX_INPUT_BYTES
 
-      BigDecimal(raw.tr(",", "."))
+      match = DECIMAL_PATTERN.match(raw)
+      return unless match
+
+      exponent = match[:exponent]
+      if exponent
+        exponent_digits = exponent.delete("+-")
+        return if exponent_digits.bytesize > 2 || exponent.to_i.abs > DECIMAL_MAX_SCIENTIFIC_EXPONENT
+      end
+
+      significant_digits = match[:mantissa].delete(".,").sub(/\A0+/, "").sub(/0+\z/, "")
+      return if significant_digits.bytesize > DECIMAL_MAX_SIGNIFICANT_DIGITS
+
+      bounded_decimal_result(BigDecimal(raw.tr(",", ".")))
     rescue ArgumentError
       nil
+    end
+
+    def bounded_decimal_result(value)
+      return unless value.is_a?(BigDecimal) && value.finite?
+      return if value.nonzero? && value.abs < DECIMAL_MIN_NONZERO_VALUE
+      return if value.abs >= DECIMAL_MAX_VALUE
+
+      value
     end
 
     def valid_isin?(value)
@@ -624,8 +686,9 @@ class Provider::Directa
         isin = nil unless self.class.valid_isin?(isin)
         currency = bounded_string(record["Divisa"], 3)&.upcase
         currency = nil unless currency && /\A[A-Z]{3}\z/.match?(currency)
-        raw_multiplier = bounded_string(record["Moltip"], 32)
-        raw_tick_size = bounded_string(record["TickFisso"], 32)
+        raw_multiplier = bounded_numeric_text(record["Moltip"], 32)
+        raw_tick_size = bounded_numeric_text(record["TickFisso"], 32)
+        raw_reference_price = bounded_numeric_text(record["PrzRif"], 32)
         instruments[requested_code] = InstrumentMetadata.new(
           requested_code: requested_code,
           canonical_code: bounded_string(record["Codice"], MAX_INSTRUMENT_CODE_BYTES),
@@ -641,7 +704,11 @@ class Provider::Directa
           tick_size: self.class.parse_decimal(raw_tick_size),
           raw_tick_size: raw_tick_size,
           identity_status: isin ? :partial : :unresolved,
-          field_sources: FIELD_SOURCES
+          field_sources: FIELD_SOURCES,
+          phase: bounded_string(record["TFase"], 8),
+          instrument_type: bounded_instrument_type(record["TTipo"]),
+          authorization_markets: authorization_markets(record["MercAbilitazioni"]),
+          reference_price: self.class.parse_decimal(raw_reference_price)
         )
       end
 
@@ -664,6 +731,30 @@ class Provider::Directa
       return [] unless value.is_a?(Array) && value.length <= 64
 
       value.filter_map { |item| bounded_string(item, max_item_bytes) }
+    end
+
+    def bounded_numeric_text(value, max_bytes)
+      return unless value.is_a?(String) || value.is_a?(Integer) || value.is_a?(Float) || value.is_a?(BigDecimal)
+      return if value.is_a?(Float) && !value.finite?
+
+      raw = value.to_s.strip
+      return if raw.empty? || raw.bytesize > max_bytes
+
+      raw
+    end
+
+    def bounded_instrument_type(value)
+      return unless value.is_a?(String)
+      return "" if value.empty?
+
+      bounded_string(value, 8)
+    end
+
+    def authorization_markets(value)
+      raw = bounded_string(value, 32)
+      return [] unless raw && raw.match?(/\A[A-Za-z]+\z/)
+
+      raw.chars
     end
 
     def ensure_success_response!(response, failure_code)
@@ -694,6 +785,7 @@ class Provider::Directa
       )
       ensure_success_response!(response, :metadata_request_failed)
       metadata = parse_instrument_metadata(parse_json!(response.body, :metadata_response_invalid), codes)
+      startup_tables = fetch_startup_tables(verified_session, deadline: deadline)
       enriched_positions = snapshot.positions.map do |position|
         instrument = metadata.instruments[position.univoco]
         Position.new(
@@ -707,7 +799,7 @@ class Provider::Directa
         )
       end
 
-      Snapshot.new(
+      enriched_snapshot = Snapshot.new(
         account_number: snapshot.account_number,
         account_identity: snapshot.account_identity,
         connection_generation: snapshot.connection_generation,
@@ -719,6 +811,35 @@ class Provider::Directa
         positions: enriched_positions,
         unknown_message_types: snapshot.unknown_message_types,
         field_sources: snapshot.field_sources
+      )
+      ObservedValuation.new(tables: startup_tables).apply(enriched_snapshot)
+    end
+
+    def fetch_startup_tables(verified_session, deadline:)
+      response = @http_transport.request(
+        :startup_metadata,
+        query: { "REQUEST" => "*", "TOKEN" => verified_session.multi_token },
+        deadline: deadline,
+        body_limit: HTTP_BODY_LIMIT_BYTES
+      )
+      ensure_success_response!(response, :startup_metadata_unavailable)
+      payload = parse_json!(response.body, :startup_metadata_invalid)
+      unless payload.is_a?(Hash) && payload["userInfo"].is_a?(Hash)
+        raise_error(InvalidResponse, :startup_metadata_invalid, "Directa startup metadata is invalid.")
+      end
+
+      metadata_account = identity_string(payload.dig("userInfo", "conto"))
+      unless account_identity_matches?(verified_session.account_number, metadata_account) &&
+          account_identity_matches?(verified_session.account_identity, metadata_account)
+        raise_error(AccountIdentityMismatch, :account_identity_changed, "Directa startup account identity could not be verified.")
+      end
+
+      observed_at = Time.current
+      data = payload["dataStruct"].is_a?(Hash) ? payload["dataStruct"] : {}
+      ObservedValuation::ValuationTables.new(
+        market_authorizations: ObservedValuation.market_authorizations(data["mercati"]),
+        fx_rates: ObservedValuation.fx_rates(data["cambi"]),
+        fx_observed_at: observed_at
       )
     end
 
@@ -742,3 +863,4 @@ end
 
 require_relative "directa/http_transport"
 require_relative "directa/trading_connection"
+require_relative "directa/observed_valuation"

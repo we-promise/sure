@@ -75,12 +75,7 @@ class DirectaAccount < ApplicationRecord
   end
 
   def content_compatible_for_import?(linked_account = account)
-    return false unless linked_account && account_provider
-
-    linked_holdings_only = linked_account.holdings.where(account_provider_id: nil).none? &&
-      linked_account.holdings.where.not(account_provider_id: account_provider.id).none?
-    linked_entries_only = linked_account.entries.where.not(entryable_type: "Valuation").none?
-    linked_holdings_only && linked_entries_only
+    DirectaAccount::ContentValidator.new(self).compatible?(linked_account)
   end
 
   def store_snapshot!(currency:, current_balance:, cash_balance:, raw_position_metadata:)
