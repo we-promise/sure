@@ -96,8 +96,9 @@ class Rule::Action < ApplicationRecord
     rescue Rule::SafeRegex::TimeoutError => e
       # The action is already committed. With no baseline, leaving the rule on would
       # email every past match on its next run, so it is switched off instead; the
-      # user can turn it back on after changing the pattern.
+      # user can turn it back on after changing the pattern. Through the rule, so
+      # an update that saved this action reports the switch-off, not success.
       Rails.logger.warn("Notification baseline for rule #{rule_id} timed out, rule switched off: #{e.message}")
-      rule.update_columns(active: false)
+      rule.notification_baseline_timed_out!
     end
 end

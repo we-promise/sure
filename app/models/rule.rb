@@ -42,10 +42,18 @@ class Rule < ApplicationRecord
   # creating its email action seeds the baseline.
   after_update :seed_notification_baseline, if: :switched_on?
 
-  # True when the last save asked to switch the rule on but the baseline query
-  # timed out, so the rule was left off.
+  # True when the last save asked to switch the rule on, or gave it an email
+  # action, but the baseline query timed out, so the rule was left off.
   def notification_baseline_timed_out?
     @notification_baseline_timed_out == true
+  end
+
+  # Without a baseline the next run would email every past match, so the rule
+  # is switched off. Rule::Action calls this from its commit callback, on the
+  # rule the save went through (the controller's), so the response can say so.
+  def notification_baseline_timed_out!
+    @notification_baseline_timed_out = true
+    update_columns(active: false)
   end
 
   def action_executors
@@ -309,8 +317,7 @@ class Rule < ApplicationRecord
       # run would email every past match, so the rule stays off. The timed-out query
       # ran in its own savepoint, so the rest of the save still commits.
       Rails.logger.warn("Notification baseline for rule #{id} timed out, rule left off: #{e.message}")
-      @notification_baseline_timed_out = true
-      update_columns(active: false)
+      notification_baseline_timed_out!
     end
 
     def normalize_name
