@@ -234,4 +234,45 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     assert_nil item.authorization_id
     assert_nil item.last_psu_ip
   end
+
+  test "build_psu_headers sends a public PSU IP to a bank that requires it" do
+    @item.aspsp_required_psu_headers = [ "Psu-Ip-Address" ]
+
+    %w[81.2.3.4 2a00:1450:4001::1].each do |ip|
+      @item.last_psu_ip = ip
+      assert_equal({ "Psu-Ip-Address" => ip }, @item.build_psu_headers, ip)
+    end
+  end
+
+  # A self-hosted instance reached over a LAN or VPN records the browser's own
+  # address, which a bank rejects as an invalid PSU IP. Leaving the header out
+  # is what the bank accepts.
+  test "build_psu_headers leaves out a PSU IP that is not a public address" do
+    @item.aspsp_required_psu_headers = [ "Psu-Ip-Address" ]
+
+    {
+      "192.168.1.20" => "a home LAN",
+      "10.0.0.5" => "a private network",
+      "172.17.0.1" => "the Docker bridge",
+      "100.101.1.2" => "a carrier-grade NAT or Tailscale address",
+      "127.0.0.1" => "loopback",
+      "::1" => "IPv6 loopback",
+      "fd12:3456::1" => "an IPv6 unique local address",
+      "fe80::1" => "an IPv6 link-local address",
+      "169.254.1.1" => "an IPv4 link-local address",
+      "::ffff:100.64.0.1" => "a carrier-grade NAT address written as IPv6",
+      "0.0.0.0" => "the unspecified address",
+      "not-an-ip" => "an unparseable value"
+    }.each do |ip, kind|
+      @item.last_psu_ip = ip
+      assert_equal({}, @item.build_psu_headers, kind)
+    end
+  end
+
+  test "build_psu_headers sends nothing when the bank also requires a header it can't supply" do
+    @item.aspsp_required_psu_headers = [ "Psu-Ip-Address", "Psu-User-Agent" ]
+    @item.last_psu_ip = "81.2.3.4"
+
+    assert_equal({}, @item.build_psu_headers)
+  end
 end
