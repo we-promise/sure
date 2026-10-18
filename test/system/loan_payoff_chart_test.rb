@@ -75,6 +75,17 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
       click_button I18n.t("loans.tabs.extra_repayments.apply")
       assert_field I18n.t("loans.tabs.extra_repayments.frequency_label"), with: "weekly"
 
+      # Each card's figure fits inside its card, at the width the page has with
+      # both side panels open. Three across only when the tab has room.
+      page.driver.browser.manage.window.resize_to(1280, 1400)
+      assert_selector "[data-testid='total-cost']"
+      overflowing = page.evaluate_script(<<~JS)
+        Array.from(document.querySelectorAll("[data-testid='extra-cards'] > div p"))
+          .filter((p) => p.scrollWidth > p.clientWidth + 1)
+          .map((p) => p.textContent.trim())
+      JS
+      assert_empty overflowing, "a card's figure runs past its card"
+
       extra = find("[data-controller='loan-payoff-chart'] svg path[data-series='extra']")
       assert extra["d"].to_s.start_with?("M"), "the extra line has no geometry"
       assert_not_equal "none", stroke_of("extra"), "the extra line has geometry but no resolved stroke"

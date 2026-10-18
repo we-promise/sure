@@ -11,7 +11,10 @@
 <% amount_invalid = extra_repayment.errors[:amount].any? %>
 <% frequency_invalid = extra_repayment.errors[:frequency].any? %>
 
-<div class="space-y-4">
+<%# @container: the cards go three across only when the tab itself has room,
+    not when the window does. With both side panels open the tab is narrow
+    on a wide screen, and three figures side by side ran past their cards. %>
+<div class="@container space-y-4">
   <p class="text-sm text-secondary"><%= t(".intro") %></p>
 
   <% if projection.applicable? %>
@@ -52,7 +55,7 @@
       </div>
     <% end %>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+    <div class="grid grid-cols-1 @lg:grid-cols-3 gap-2" data-testid="extra-cards">
       <% if extra_projection&.payoff_date %>
         <%= summary_card title: t(".payoff_with_extra") do %>
           <span data-testid="extra-payoff-date"><%= l extra_projection.payoff_date, format: :long %></span>
