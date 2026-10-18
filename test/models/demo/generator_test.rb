@@ -100,6 +100,26 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  test "demo gift cards show their spending and an expiry warning" do
+    @family.update!(currency: "USD")
+    generator = Demo::Generator.new(seed: 42)
+    generator.send(:create_realistic_categories!, @family)
+    generator.send(:create_realistic_accounts!, @family)
+    generator.send(:generate_gift_card_spending!)
+
+    { "Amazon Gift Card" => [ 100, 37.51 ], "Bookstore Gift Card" => [ 50, 18 ] }.each do |name, (face_value, remaining)|
+      account = @family.accounts.find_by!(name: name)
+      Sync.create!(syncable: account).perform
+      gift_card = account.reload.gift_card
+
+      assert_in_delta remaining, account.balance, 0.001, "#{name} balance"
+      assert_equal Money.new(face_value, "USD"), gift_card.initial_amount
+      assert_equal Money.new(face_value - remaining, "USD"), gift_card.spent_amount
+    end
+
+    assert @family.accounts.find_by!(name: "Bookstore Gift Card").gift_card.expiring_soon?
+  end
+
   # The demo family's loans were bare Loan.new records -- no rate, no term, and
   # the mortgage's principal a transaction rather than an opening valuation --
   # so none of them had a schedule to show. The mortgage is adjustable with
