@@ -1910,6 +1910,138 @@ abstract class AppLocalizations {
   /// **'{days}d ago'**
   String chatListDaysAgo(int days);
 
+  /// No description provided for @budgetsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgets'**
+  String get budgetsTitle;
+
+  /// No description provided for @budgetsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending and category progress'**
+  String get budgetsSubtitle;
+
+  /// No description provided for @budgetsReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'View your budgets here. Create and edit budgets in the web app.'**
+  String get budgetsReadOnly;
+
+  /// No description provided for @budgetsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No budgets yet. Create a budget in the web app to see it here.'**
+  String get budgetsEmpty;
+
+  /// No description provided for @budgetsNotInitialized.
+  ///
+  /// In en, this message translates to:
+  /// **'This budget is not set up yet. Finish setting it up in the web app.'**
+  String get budgetsNotInitialized;
+
+  /// No description provided for @budgetsCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get budgetsCategories;
+
+  /// No description provided for @budgetsCategoryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a category to load its spending and remaining budget.'**
+  String get budgetsCategoryHint;
+
+  /// No description provided for @budgetsNoCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'No categories in this budget.'**
+  String get budgetsNoCategories;
+
+  /// No description provided for @budgetsPlanned.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgeted'**
+  String get budgetsPlanned;
+
+  /// No description provided for @budgetsSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'Spent'**
+  String get budgetsSpent;
+
+  /// No description provided for @budgetsRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get budgetsRemaining;
+
+  /// No description provided for @budgetsRollover.
+  ///
+  /// In en, this message translates to:
+  /// **'Carried over'**
+  String get budgetsRollover;
+
+  /// No description provided for @budgetsOverBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Over budget'**
+  String get budgetsOverBudget;
+
+  /// No description provided for @budgetsProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget used'**
+  String get budgetsProgress;
+
+  /// No description provided for @budgetsSharedLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Shares its parent\'s budget. Remaining is the shared amount available, not an individual limit.'**
+  String get budgetsSharedLimit;
+
+  /// No description provided for @budgetsPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get budgetsPrevious;
+
+  /// No description provided for @budgetsNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get budgetsNext;
+
+  /// No description provided for @budgetsPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page} of {total}'**
+  String budgetsPage(int page, int total);
+
+  /// No description provided for @budgetsSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Sign in again to view budgets.'**
+  String get budgetsSessionExpired;
+
+  /// No description provided for @budgetsForbidden.
+  ///
+  /// In en, this message translates to:
+  /// **'You do not have permission to view these budgets.'**
+  String get budgetsForbidden;
+
+  /// No description provided for @budgetsNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This budget is unavailable, or your server does not support budget viewing yet.'**
+  String get budgetsNotFound;
+
+  /// No description provided for @budgetsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load budgets. Check your connection and try again.'**
+  String get budgetsUnavailable;
+
   /// Fallback snackbar shown when creating a new conversation from the first message fails.
   ///
   /// In en, this message translates to:
