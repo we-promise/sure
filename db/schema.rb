@@ -2683,6 +2683,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_120000) do
     t.string "brokerage_account_id"
     t.datetime "created_at", null: false
     t.string "currency"
+    t.uuid "device_id", default: -> { "gen_random_uuid()" }, null: false
     t.uuid "family_id", null: false
     t.string "name"
     t.string "newest_event_id"
@@ -2691,6 +2692,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_16_120000) do
     t.string "phone_number"
     t.boolean "scheduled_for_deletion", default: false, null: false
     t.text "session_blob"
+    t.datetime "session_expires_at"
     t.string "status", default: "good", null: false
     t.jsonb "timeline_cursors", default: {}, null: false
     t.datetime "updated_at", null: false
