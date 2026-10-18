@@ -100,11 +100,14 @@ class CreditCard < ApplicationRecord
   # falls before the close day wraps forward a month rather than reporting a
   # payment that was already overdue when the statement issued. A due day
   # landing exactly on the close day is left alone: a charge card can be both.
+  #
+  # Wrap on the configured days, not the clamped dates: a card closing on the
+  # 31st and due on the 28th has both clamp to February 28th.
   def payment_due_date_for(close_date)
     return nil if close_date.nil? || due_day.blank?
 
     due = day_of_month_in(close_date, due_day)
-    due = day_of_month_in(close_date.next_month, due_day) if due < close_date
+    due = day_of_month_in(close_date.next_month, due_day) if statement_close_day.present? && due_day < statement_close_day
 
     due
   end
@@ -118,8 +121,8 @@ class CreditCard < ApplicationRecord
   # building and not yet a bill anyone owes.
   #
   # When that due date has itself gone by -- a card closing on the 25th and due
-  # on the 5th, read on the 16th -- the payment already made, or missed, gives
-  # way to the one it is now building toward.
+  # on the 5th, read on the 16th -- a payment that has been MADE gives way to
+  # the one the card is now building toward.
   def next_payment_due_date(as_of: Date.current)
     last_close = last_statement_close_date(as_of: as_of)
     return nil if last_close.nil?
@@ -127,7 +130,8 @@ class CreditCard < ApplicationRecord
     due = payment_due_date_for(last_close)
     return nil if due.nil?
 
-    due = payment_due_date_for(next_statement_close_date(as_of: as_of)) if due < as_of
+    # Give way only once the statement is paid; an unpaid bill stays overdue.
+    due = payment_due_date_for(next_statement_close_date(as_of: as_of)) if due < as_of && statement_settled?(as_of: as_of)
 
     due
   end
@@ -139,15 +143,14 @@ class CreditCard < ApplicationRecord
     (due - as_of).to_i
   end
 
-  # What the last statement came to: everything charged, less everything paid,
-  # between the two closes. Negative on an overpaid card, which is a credit
-  # balance rather than a negative bill, so the view reads the sign rather than
-  # implying a debt that does not exist.
+  # What the last statement came to: everything charged less everything paid
+  # through its close -- carried debt plus this cycle. Negative is a credit,
+  # not a negative bill.
   def last_statement_balance_money(as_of: Date.current)
-    window = statement_window(as_of: as_of)
-    return nil if window.nil?
+    last_close = last_statement_close_date(as_of: as_of)
+    return nil if last_close.nil?
 
-    sum_entries_in(window)
+    sum_entries_in(..last_close)
   end
 
   # Everything charged since that statement closed: the in-progress statement.
@@ -171,18 +174,7 @@ class CreditCard < ApplicationRecord
   end
 
   private
-    # The window a statement covers: everything after the close before it, up to
-    # and including its own close. The opening edge is exclusive because the
-    # previous statement already owns its close day.
-    def statement_window(as_of: Date.current)
-      last_close = last_statement_close_date(as_of: as_of)
-      previous_close = previous_statement_close_date(as_of: as_of)
-      return nil if last_close.nil? || previous_close.nil?
-
-      (previous_close + 1)..last_close
-    end
-
-    # Totals a statement window in the card's own currency, or refuses.
+    # Totals a span of entries in the card's own currency, or refuses.
     #
     # Same entry selection as the balance engine
     # (Balance::SyncCache#converted_entries), so a statement balance and the
@@ -197,9 +189,28 @@ class CreditCard < ApplicationRecord
     # than silently counting only the entries that happened to match.
     def sum_entries_in(window)
       scoped = account.entries.excluding_pending.excluding_split_parents.where(date: window)
-      return nil if scoped.where.not(currency: account.currency).exists?
+      # where.not(currency:) matches no NULLs, so an entry with no currency
+      # refuses the total like a foreign one instead of dropping out quietly.
+      return nil if scoped.where.not(currency: [ account.currency, nil ]).exists?
 
       Money.new(scoped.where(currency: account.currency).sum(:amount), account.currency)
+    end
+
+    # Whether the last statement has been paid: payments since its close add
+    # up to at least what it came to. One that cannot be totalled counts as
+    # unpaid.
+    def statement_settled?(as_of: Date.current)
+      balance = last_statement_balance_money(as_of: as_of)
+      return false if balance.nil?
+      return true unless balance.positive?
+
+      last_close = last_statement_close_date(as_of: as_of)
+      payments = account.entries.excluding_pending.excluding_split_parents
+        .where(date: (last_close + 1)..as_of, currency: account.currency)
+        .where("amount < 0")
+        .sum(:amount).abs
+
+      payments >= balance.amount
     end
 
     # `statement_close_day` and `due_day` are days of the month, not dates, so a

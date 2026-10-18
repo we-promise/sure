@@ -158,12 +158,63 @@ class CreditCardTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 11, 15), card.next_payment_due_date(as_of: Date.new(2026, 10, 16))
   end
 
-  test "the last statement balance totals the entries between the two closes" do
+  test "a due day earlier than the close day wraps even when clamping collapses both onto one day" do
+    card = statement_card(close_day: 31, due_day: 28)
+
+    # February collapses the 31st and the 28th onto the same day. The cardholder
+    # configured the due day BEFORE the close day, so the statement that closed
+    # on 28 February is due on 28 March -- not due the day it closes, and not
+    # skipped over for 28 April once March arrives.
+    travel_to Date.new(2026, 3, 1) do
+      assert_equal Date.new(2026, 2, 28), card.last_statement_close_date
+      assert_equal Date.new(2026, 3, 28), card.payment_due_date_for(Date.new(2026, 2, 28))
+      assert_equal Date.new(2026, 3, 28), card.next_payment_due_date
+    end
+  end
+
+  test "an unpaid passed due date stays overdue rather than giving way" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), 300)
+
+    # The statement that closed on 10 October came to $300 and nothing has paid
+    # it: the 26th passing does not make the debt go away.
+    travel_to Date.new(2026, 10, 27) do
+      assert_equal Date.new(2026, 10, 26), card.next_payment_due_date
+      assert_equal(-1, card.days_until_due)
+    end
+  end
+
+  test "a settled statement gives way to the following one once its due date passes" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), 300)
+    # Paid after the statement closed but before it fell due.
+    charge(card.account, Date.new(2026, 10, 20), -300)
+
+    travel_to Date.new(2026, 10, 27) do
+      assert_equal Date.new(2026, 11, 26), card.next_payment_due_date
+      assert_equal 30, card.days_until_due
+    end
+  end
+
+  test "a partly paid statement keeps its due date until it is paid in full" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), 300)
+    charge(card.account, Date.new(2026, 10, 20), -100)
+
+    travel_to Date.new(2026, 10, 27) do
+      assert_equal Date.new(2026, 10, 26), card.next_payment_due_date
+      assert_equal(-1, card.days_until_due)
+    end
+  end
+
+  test "the last statement balance is everything owed through the close" do
     card = statement_card(close_day: 25, due_day: 5)
     account = card.account
     as_of = Date.new(2026, 10, 16)
 
-    # The statement that closed on 25 September covers 26 August to 25 September.
+    # The statement that closed on 25 September bills the debt carried in plus
+    # this cycle's activity: $1,999 from before the window, $100 charged in it,
+    # less the $40 paid in it -- not merely the $60 the window sums to.
     charge_in_window = charge(account, Date.new(2026, 9, 10), 100)
     charge_before_window = charge(account, Date.new(2026, 8, 20), 999)
     charge_on_previous_close = charge(account, Date.new(2026, 8, 25), 1_000)
@@ -172,7 +223,7 @@ class CreditCardTest < ActiveSupport::TestCase
     # Charges after the close belong to the statement still building, not this one.
     charge_after_close = charge(account, Date.new(2026, 9, 26), 500)
 
-    assert_equal 60, card.last_statement_balance_money(as_of: as_of).amount
+    assert_equal 2_059, card.last_statement_balance_money(as_of: as_of).amount
     assert_equal "USD", card.last_statement_balance_money(as_of: as_of).currency.iso_code
 
     assert charge_in_window.persisted?
@@ -258,6 +309,23 @@ class CreditCardTest < ActiveSupport::TestCase
 
     foreign.destroy!
     assert_equal 100, card.last_statement_balance_money(as_of: Date.new(2026, 10, 16)).amount
+  end
+
+  test "an entry with no currency reports no statement rather than a partial one" do
+    card = statement_card(close_day: 25, due_day: 5)
+    account = card.account
+
+    charge(account, Date.new(2026, 9, 10), 100)
+    before_close = charge(account, Date.new(2026, 9, 11), 500)
+    after_close = charge(account, Date.new(2026, 9, 26), 250)
+    before_close.update_column(:currency, nil)
+    after_close.update_column(:currency, nil)
+
+    # An entry with no currency is one we cannot add up. where.not(currency:)
+    # would not match it, so without the refusal it would drop out of the sum
+    # and the Overview would quote a partial total as the whole statement.
+    assert_nil card.last_statement_balance_money(as_of: Date.new(2026, 10, 16))
+    assert_nil card.accrued_since_last_close_money(as_of: Date.new(2026, 10, 16))
   end
 
   test "the minimum payment shortfall reads against the last statement" do
