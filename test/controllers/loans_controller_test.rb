@@ -913,7 +913,9 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
       text: I18n.t("loans.tabs.extra_repayments.months_sooner", count: extra.months_sooner_than(baseline))
     assert_select "[data-testid='extra-interest-saved']", text: format_money(extra.interest_saved_versus(baseline))
     assert_select "[data-testid='baseline-payoff-date']", text: I18n.l(baseline.payoff_date, format: :long)
-    assert_select "input[name='extra_payment[amount]'][value='500']", count: 1
+    assert_select "input[name='extra_payment[amount]'][value='500.00']", count: 1
+    assert_select "select[name='extra_payment[frequency]'] option[selected][value='monthly']", count: 1
+    assert_select "[data-testid='extra-dated-note']", count: 0
     assert_includes chart_payload["visible"], "extra"
     assert_equal extra.payoff_date.iso8601, chart_payload["extra_payoff_date"]
   end
@@ -927,7 +929,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
       baseline = loan.payoff_projection(as_of: as_of)
       extra = loan.payoff_projection(as_of: as_of, extra: BigDecimal("500"))
       Loan.any_instance.expects(:payoff_projection).with(as_of: as_of).once.returns(baseline)
-      Loan.any_instance.expects(:payoff_projection).with(as_of: as_of, extra: BigDecimal("500")).once.returns(extra)
+      Loan.any_instance.expects(:payoff_projection).with(as_of: as_of, extra: BigDecimal("500"), extra_frequency: "monthly").once.returns(extra)
 
       get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "500" })
 
@@ -937,16 +939,60 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "a refused amount shows a message and no extra, keeping what was typed" do
-    [ "-1", "abc" ].each do |input|
+  # The amount field is a number field, which can hold "-1" but not "abc": the
+  # first comes back as typed, the second as an empty field beside the message.
+  test "a refused amount shows a message and no extra, keeping what a number field can hold" do
+    { "-1" => "input[value='-1.00']", "abc" => "input:not([value])" }.each do |input, kept|
       get account_path(@account, tab: "extra_repayments", extra_payment: { amount: input })
 
       assert_response :success
       assert_select "[data-testid='extra-amount-error']", text: I18n.t("loans.tabs.extra_repayments.invalid_amount")
-      assert_select "input[name='extra_payment[amount]'][value='#{input}'][aria-invalid='true']", count: 1
+      assert_select "#{kept}[name='extra_payment[amount]'][aria-invalid='true']", count: 1
       assert_select "[data-testid='extra-payoff-date']", count: 0
       assert_not_includes chart_payload["visible"], "extra"
     end
+  end
+
+  # Weekly extras fall on their own dates, so the figures are the weekly
+  # projection's, not the monthly one's, and the tab says how a mid-period
+  # extra is counted.
+  test "a weekly extra shows the weekly projection's figures, with the choice kept" do
+    get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "100", frequency: "weekly" })
+
+    assert_response :success
+    loan = @account.loan.reload
+    baseline = loan.payoff_projection(as_of: Date.current)
+    weekly = loan.payoff_projection(as_of: Date.current, extra: 100, extra_frequency: "weekly")
+    monthly = loan.payoff_projection(as_of: Date.current, extra: 100)
+    assert_not_equal monthly.total_interest, weekly.total_interest, "the fixture must tell weekly from monthly"
+    assert_select "[data-testid='extra-interest-saved']", text: format_money(weekly.interest_saved_versus(baseline))
+    assert_select "[data-testid='extra-payoff-date']", text: I18n.l(weekly.payoff_date, format: :long)
+    assert_select "select[name='extra_payment[frequency]'] option[selected][value='weekly']", count: 1
+    assert_select "[data-testid='extra-dated-note']", text: I18n.t("loans.tabs.extra_repayments.dated_note")
+  end
+
+  test "a frequency the form does not offer shows a message and no extra" do
+    get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "100", frequency: "daily" })
+
+    assert_response :success
+    assert_select "[data-testid='extra-frequency-error']", text: I18n.t("loans.tabs.extra_repayments.invalid_frequency")
+    assert_select "select[name='extra_payment[frequency]'][aria-invalid='true']", count: 1
+    assert_select "[data-testid='extra-payoff-date']", count: 0
+    assert_not_includes chart_payload["visible"], "extra"
+  end
+
+  # The form is built as Sure's other forms are: the shared money field shows
+  # the loan's currency, which cannot be changed here (and so is not
+  # submitted), and how often is a select of the three choices.
+  test "the extra repayments form uses the money field and a frequency select" do
+    get account_path(@account, tab: "extra_repayments")
+
+    assert_select "form[method='get'] [data-controller='money-field']" do
+      assert_select "[data-money-field-target='symbol']", text: Money::Currency.new(@account.currency).symbol
+      assert_select "select[name='extra_payment[currency]'][disabled]", count: 1
+    end
+    assert_select "select[name='extra_payment[frequency]'] option",
+      count: 3, text: /#{%w[weekly fortnightly monthly].map { |f| I18n.t("loans.tabs.extra_repayments.frequencies.#{f}") }.join("|")}/
   end
 
   test "a zero or blank amount shows no extra and no message" do

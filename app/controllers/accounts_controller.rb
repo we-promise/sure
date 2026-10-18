@@ -112,7 +112,8 @@ class AccountsController < ApplicationController
       @loan_projection = @account.loan.payoff_projection(as_of: @as_of)
       @extra_repayment = loan_extra_repayment
       if @extra_repayment.applied?
-        @loan_extra_projection = @account.loan.payoff_projection(as_of: @as_of, extra: @extra_repayment.amount)
+        @loan_extra_projection = @account.loan.payoff_projection(as_of: @as_of, extra: @extra_repayment.amount,
+                                                                 extra_frequency: @extra_repayment.frequency)
       end
     end
     @loan_chart = loan_payoff_chart(@account, as_of: @as_of, period: @period, projection: @loan_projection,
@@ -362,13 +363,14 @@ class AccountsController < ApplicationController
       nil
     end
 
-    # The Extra repayments tab's form submits `extra_payment[amount]` over GET.
-    # Params of any other shape -- a scalar for the hash, an array for the
-    # amount -- are no extra rather than an error.
+    # The Extra repayments tab's form submits `extra_payment[amount]` and
+    # `extra_payment[frequency]` over GET. Params of any other shape -- a scalar
+    # for the hash, an array for either field -- are no extra rather than an
+    # error.
     def loan_extra_repayment
       extra_payment = params[:extra_payment]
-      amount = extra_payment.permit(:amount)[:amount] if extra_payment.is_a?(ActionController::Parameters)
-      Loan::ExtraRepayment.new(amount: amount, currency: @account.currency)
+      permitted = extra_payment.permit(:amount, :frequency) if extra_payment.is_a?(ActionController::Parameters)
+      Loan::ExtraRepayment.new(amount: permitted&.[](:amount), frequency: permitted&.[](:frequency), currency: @account.currency)
     end
 
     # A plain visit, or a frame request for one of the two frames the chart

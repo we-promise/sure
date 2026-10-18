@@ -7,33 +7,49 @@
     quote one date. Each comparison is against paying no extra, not against
     the contract: the Schedule tab and the chart already say how far ahead or
     behind the loan is. %>
-<% invalid = extra_repayment.invalid? %>
+<% extra_repayment.validate %>
+<% amount_invalid = extra_repayment.errors[:amount].any? %>
+<% frequency_invalid = extra_repayment.errors[:frequency].any? %>
 
 <div class="space-y-4">
   <p class="text-sm text-secondary"><%= t(".intro") %></p>
 
   <% if projection.applicable? %>
-    <%= form_with url: account_path(account), method: :get, scope: :extra_payment,
-                  data: { turbo_action: "advance" } do |f| %>
+    <%# Built as the Bills form is: the shared money field, with the loan's
+        currency shown and fixed, and a select for how often. GET, so the
+        figures below are a link that can be shared or reloaded. %>
+    <%= styled_form_with url: account_path(account), method: :get, scope: :extra_payment,
+                         data: { turbo_action: "advance" }, class: "space-y-2" do |f| %>
       <%= hidden_field_tag :tab, "extra_repayments", id: nil %>
-      <div class="flex flex-wrap items-end gap-2">
-        <%# A bounded width: `.form-field` is full width, which pushes Apply
-            onto a line of its own. %>
-        <div class="form-field w-48">
-          <%= f.label :amount, t(".amount_label"), class: "form-field__label" %>
-          <%= f.number_field :amount, value: extra_repayment.input.presence, min: 0, step: "any",
-                class: "form-field__input", placeholder: t(".amount_placeholder"),
-                "aria-invalid": (invalid ? "true" : nil),
-                "aria-describedby": (dom_id(account, :extra_amount_error) if invalid) %>
-        </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <%= f.money_field :amount,
+              label: t(".amount_label"),
+              currency_value_override: account.currency,
+              disable_currency: true,
+              value: extra_repayment.field_value,
+              placeholder: t(".amount_placeholder"),
+              min: 0,
+              input_class: "privacy-sensitive privacy-sensitive-interactive",
+              aria: { invalid: (amount_invalid ? "true" : nil),
+                      describedby: (dom_id(account, :extra_amount_error) if amount_invalid) }.compact.presence %>
+        <%= f.select :frequency,
+              Loan::ExtraRepayment::FREQUENCIES.map { |frequency| [ t(".frequencies.#{frequency}"), frequency ] },
+              { label: t(".frequency_label"), selected: extra_repayment.frequency },
+              { "aria-invalid": (frequency_invalid ? "true" : nil),
+                "aria-describedby": (dom_id(account, :extra_frequency_error) if frequency_invalid) }.compact %>
+      </div>
+      <% if amount_invalid %>
+        <p id="<%= dom_id(account, :extra_amount_error) %>" class="text-xs text-destructive" data-testid="extra-amount-error"><%= extra_repayment.errors[:amount].first %></p>
+      <% end %>
+      <% if frequency_invalid %>
+        <p id="<%= dom_id(account, :extra_frequency_error) %>" class="text-xs text-destructive" data-testid="extra-frequency-error"><%= extra_repayment.errors[:frequency].first %></p>
+      <% end %>
+      <div class="flex items-center gap-2">
         <%= render DS::Button.new(text: t(".apply"), type: "submit", variant: "outline") %>
         <% if extra_repayment.input.present? %>
           <%= render DS::Link.new(text: t(".clear"), href: account_path(account, tab: "extra_repayments"), variant: "ghost") %>
         <% end %>
       </div>
-      <% if invalid %>
-        <p id="<%= dom_id(account, :extra_amount_error) %>" class="text-xs text-destructive mt-1" data-testid="extra-amount-error"><%= extra_repayment.errors[:amount].first %></p>
-      <% end %>
     <% end %>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -68,6 +84,9 @@
         <p class="text-sm text-secondary privacy-sensitive" data-testid="baseline-not-cleared"><%= t(".baseline_not_cleared", balloon: format_money(projection.balloon_amount)) %></p>
       <% else %>
         <p class="text-xs text-secondary"><%= t(".comparison_basis") %></p>
+        <% unless extra_repayment.frequency == "monthly" %>
+          <p class="text-xs text-secondary" data-testid="extra-dated-note"><%= t(".dated_note") %></p>
+        <% end %>
       <% end %>
     <% end %>
 
