@@ -1,38 +1,40 @@
 <%= content_for :page_title, t(".categories") %>
 <%= content_for :page_actions do %>
-  <%= render DS::Menu.new do |menu| %>
-    <% if Current.user.admin? %>
-      <% locked = Current.family.categories_locked? %>
+  <% unless Current.user&.guest? %>
+    <%= render DS::Menu.new do |menu| %>
+      <% if Current.user.admin? %>
+        <% locked = Current.family.categories_locked? %>
+        <% menu.with_item(
+            variant: "button",
+            text: locked ? t(".unlock_categories") : t(".lock_categories"),
+            href: toggle_lock_categories_path(locked: !locked),
+            method: :patch,
+            icon: locked ? "lock-open" : "lock") %>
+      <% end %>
+      <% menu.with_item(
+          variant: "link",
+          text: t(".merge"),
+          href: merge_categories_path,
+          frame: :modal,
+          icon: "combine") %>
       <% menu.with_item(
           variant: "button",
-          text: locked ? t(".unlock_categories") : t(".lock_categories"),
-          href: toggle_lock_categories_path(locked: !locked),
-          method: :patch,
-          icon: locked ? "lock-open" : "lock") %>
+          text: t(".delete_all"),
+          href: destroy_all_categories_path,
+          method: :delete,
+          icon: "trash-2",
+          confirm: CustomConfirm.for_resource_deletion("all categories", high_severity: true)) %>
     <% end %>
-    <% menu.with_item(
-        variant: "link",
-        text: t(".merge"),
-        href: merge_categories_path,
-        frame: :modal,
-        icon: "combine") %>
-    <% menu.with_item(
-        variant: "button",
-        text: t(".delete_all"),
-        href: destroy_all_categories_path,
-        method: :delete,
-        icon: "trash-2",
-        confirm: CustomConfirm.for_resource_deletion("all categories", high_severity: true)) %>
-  <% end %>
 
-  <% unless Current.family.categories_locked? %>
-    <%= render DS::Link.new(
-      text: t(".new"),
-      variant: "primary",
-      icon: "plus",
-      href: new_category_path,
-      frame: :modal
-    ) %>
+    <% unless Current.family.categories_locked? %>
+      <%= render DS::Link.new(
+        text: t(".new"),
+        variant: "primary",
+        icon: "plus",
+        href: new_category_path,
+        frame: :modal
+      ) %>
+    <% end %>
   <% end %>
 <% end %>
 
@@ -56,7 +58,7 @@
     <div class="flex justify-center items-center py-20">
       <div class="text-center flex flex-col items-center max-w-[500px]">
         <p class="text-sm text-secondary mb-4"><%= t(".empty") %></p>
-        <% unless Current.family.categories_locked? %>
+        <% unless Current.family.categories_locked? || Current.user&.guest? %>
           <div class="flex items-center gap-2">
             <%= render DS::Button.new(
               text: t(".bootstrap"),

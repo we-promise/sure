@@ -14,7 +14,7 @@ class Budget < ApplicationRecord
   belongs_to :family
   belongs_to :user, optional: true
 
-  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
+  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy, inverse_of: :budget
 
   validates :start_date, :end_date, presence: true
   validates :start_date, :end_date, uniqueness: { scope: [ :family_id, :user_id ] }
