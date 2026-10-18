@@ -337,4 +337,71 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_equal [ tag.id ], transfer.outflow_transaction.tag_ids
     assert_equal [ tag.id ], transfer.inflow_transaction.tag_ids
   end
+
+  # we-promise/sure#4226: a transfer pledge resolved only from provider
+  # imports, so a deposit booked in the app never matched it.
+  test "a transfer into an account with an open transfer pledge resolves it" do
+    pledge = goal_pledges(:open_transfer)
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+
+    transfer = Transfer::Creator.new(
+      family: @family, source_account_id: source.id, destination_account_id: pledge.account_id,
+      date: Date.current, amount: 200
+    ).create
+
+    pledge.reload
+    assert_equal "matched", pledge.status
+    assert_equal transfer.inflow_transaction.id, pledge.matched_transaction_id
+    assert_equal pledge.id, transfer.inflow_transaction.reload.extra.dig("goal", "pledge_id")
+  end
+
+  test "a transfer into a goal-linked investment account resolves its pledge" do
+    pledge = open_transfer_pledge(@destination_account, amount: 150)
+
+    transfer = Transfer::Creator.new(
+      family: @family, source_account_id: @source_account.id, destination_account_id: @destination_account.id,
+      date: Date.current, amount: 150
+    ).create
+
+    assert_equal transfer.inflow_transaction.id, pledge.reload.matched_transaction_id
+  end
+
+  test "a transfer out of the pledged account does not resolve it" do
+    pledge = goal_pledges(:open_transfer)
+
+    transfer = Transfer::Creator.new(
+      family: @family, source_account_id: pledge.account_id, destination_account_id: @destination_account.id,
+      date: Date.current, amount: 200
+    ).create
+
+    assert_equal "open", pledge.reload.status
+    assert_nil transfer.outflow_transaction.reload.extra.dig("goal", "pledge_id")
+  end
+
+  test "a reconcile failure does not undo the transfer" do
+    pledge = goal_pledges(:open_transfer)
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+    GoalPledge.any_instance.stubs(:resolve_with!).raises(StandardError, "boom")
+
+    transfer = nil
+    assert_difference "Transfer.count", 1 do
+      transfer = Transfer::Creator.new(
+        family: @family, source_account_id: source.id, destination_account_id: pledge.account_id,
+        date: Date.current, amount: 200
+      ).create
+    end
+
+    assert transfer.persisted?
+    assert_equal "open", pledge.reload.status
+  end
+
+
+  private
+    # An open transfer pledge on an account linked to a goal.
+    def open_transfer_pledge(account, amount:)
+      goal = goals(:vacation_italy)
+      goal.goal_accounts.find_or_create_by!(account: account)
+      GoalPledge.create!(goal: goal, account: account, amount: amount, currency: "USD", kind: "transfer",
+                         status: "open", expires_at: 7.days.from_now)
+    end
 end

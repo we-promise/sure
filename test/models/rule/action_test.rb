@@ -292,4 +292,36 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal 0, result
     assert_nil @txn1.reload.investment_activity_label
   end
+
+  test "set as transfer into a pledged account resolves the pledge" do
+    investment = accounts(:investment)
+    pledge = open_transfer_pledge(investment, amount: 100)
+
+    Rule::Action.new(rule: @transaction_rule, action_type: "set_as_transfer_or_payment", value: investment.id)
+                .apply(Transaction.where(id: @txn1.id))
+
+    transfer = Transfer.find_by!(outflow_transaction_id: @txn1.id)
+    assert_equal transfer.inflow_transaction.id, pledge.reload.matched_transaction_id
+  end
+
+  # The goal check is made once per run, not once per transaction.
+  test "set as transfer into an account with no goal reads no pledges" do
+    target = @family.accounts.create!(name: "No goal", balance: 0, currency: "USD", accountable: Depository.new)
+
+    assert_queries_match(/FROM "goal_pledges"/, count: 0) do
+      Rule::Action.new(rule: @transaction_rule, action_type: "set_as_transfer_or_payment", value: target.id)
+                  .apply(Transaction.where(id: [ @txn1.id, @txn3.id ]))
+    end
+    assert_equal 2, Transfer.where(outflow_transaction_id: [ @txn1.id, @txn3.id ]).count
+  end
+
+
+  private
+    # An open transfer pledge on an account linked to a goal.
+    def open_transfer_pledge(account, amount:)
+      goal = goals(:vacation_italy)
+      goal.goal_accounts.find_or_create_by!(account: account)
+      GoalPledge.create!(goal: goal, account: account, amount: amount, currency: "USD", kind: "transfer",
+                         status: "open", expires_at: 7.days.from_now)
+    end
 end

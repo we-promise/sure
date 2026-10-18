@@ -102,6 +102,25 @@ class GoalPledge::ReconcilerTest < ActiveSupport::TestCase
     assert_not manual_pledge.reload.status_matched?
   end
 
+
+  # A trade moves money within an investment account, so it is not a deposit
+  # and never resolves a transfer pledge. Pins the decision on
+  # we-promise/sure#4226 to leave trades out.
+  test "an imported buy on a goal-linked investment account leaves its transfer pledge open" do
+    investment = accounts(:investment)
+    goals(:vacation_italy).goal_accounts.find_or_create_by!(account: investment)
+    pledge = GoalPledge.create!(goal: goals(:vacation_italy), account: investment, amount: 200, currency: "USD",
+                                kind: "transfer", status: "open", expires_at: 7.days.from_now)
+    trade = investment.entries.create!(
+      name: "Buy", date: Date.current, amount: -200, currency: "USD",
+      entryable: Trade.new(qty: 1, price: 200, security: securities(:aapl), currency: "USD", investment_activity_label: "Buy")
+    )
+
+    GoalPledge::Reconciler.new(trade).run
+
+    assert_equal "open", pledge.reload.status
+  end
+
   private
     def create_transaction_entry(amount:, date:, account: @account, excluded: false)
       Entry.create!(
