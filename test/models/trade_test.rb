@@ -86,7 +86,32 @@ class TradeTest < ActiveSupport::TestCase
     buy = create_trade(security, account: account, qty: 10, date: Date.current, price: 100, fee: 20, currency: "USD").entryable
     buy.security.stubs(:current_price).returns(Money.new(120, "USD"))
 
+    assert_equal BigDecimal(120), buy.current_market_price.amount
     assert_equal BigDecimal(180), buy.unrealized_gain_loss.value.amount
+  end
+
+  test "Fineco history buys use the linked EUR snapshot quote instead of GBP or percentage prices" do
+    trade, security = fineco_history_trade(snapshot_price: BigDecimal("50.25"))
+
+    [ Money.new(BigDecimal("98.5"), "GBP"), Money.new(BigDecimal("98.5"), "EUR") ].each do |global_price|
+      security.stubs(:current_price).returns(global_price)
+
+      current_price = trade.current_market_price
+      return_value = trade.unrealized_gain_loss.value
+
+      assert_equal BigDecimal("50.25"), current_price.amount
+      assert_equal "EUR", current_price.currency.iso_code
+      assert_equal BigDecimal("20.5"), return_value.amount
+      assert_equal "EUR", return_value.currency.iso_code
+    end
+  end
+
+  test "Fineco history buys have no quote when their linked snapshot has no matching effective holding" do
+    trade, security = fineco_history_trade(include_holding: false)
+    security.stubs(:current_price).returns(Money.new(BigDecimal("98.5"), "EUR"))
+
+    assert_nil trade.current_market_price
+    assert_nil trade.unrealized_gain_loss
   end
 
   # No rate for that date means the gain is unknown, not zero and not the
@@ -366,5 +391,87 @@ class TradeTest < ActiveSupport::TestCase
       security = Security.create!(ticker: "EUX#{SecureRandom.hex(3)}", name: "Euro Listed")
 
       [ account, security ]
+    end
+
+    def fineco_history_trade(snapshot_price: BigDecimal("50"), include_holding: true)
+      ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+      owner = users(:family_admin)
+      account = owner.family.accounts.create!(
+        name: "Fineco history prices",
+        balance: 100,
+        cash_balance: 0,
+        currency: "EUR",
+        accountable: Investment.new,
+        owner: owner
+      )
+      item = FinecoItem.create!(
+        family: owner.family,
+        owner: owner,
+        gsessionid: "synthetic-session",
+        account_index: "2",
+        dossier_index: "11",
+        bank_account_number: "FINECO-PRICE-#{SecureRandom.hex(4)}",
+        dossier_identity: Digest::SHA256.hexdigest(SecureRandom.uuid),
+        captured_at: Time.current
+      )
+      fineco_account = item.fineco_accounts.create!(
+        external_id: FinecoAccount::EXTERNAL_ID,
+        name: "Fineco investments",
+        currency: "EUR",
+        last_snapshot_date: Date.current
+      )
+      account_provider = AccountProvider.create!(account: account, provider: fineco_account)
+      security = Security.create!(
+        ticker: "USER-MAPPED-#{SecureRandom.hex(3)}",
+        exchange_operating_mic: "XETR",
+        name: "User-selected bond",
+        offline: true
+      )
+      provider_security = Security.create!(
+        ticker: "US0000000010",
+        exchange_operating_mic: "XLON",
+        name: "Synthetic bond",
+        offline: true
+      )
+
+      if include_holding
+        Holding.create!(
+          account: account,
+          account_provider: account_provider,
+          security: security,
+          provider_security: provider_security,
+          date: Date.current,
+          qty: 2,
+          price: snapshot_price,
+          amount: snapshot_price * 2,
+          currency: "EUR"
+        )
+      end
+
+      extra = {
+        "fineco" => {
+          "history_schema_version" => Trade::FINECO_HISTORY_SCHEMA_VERSION,
+          "provider_account_id" => fineco_account.id,
+          "cash_account_external" => true
+        }
+      }
+      entry = account.entries.create!(
+        name: "Synthetic Fineco buy",
+        date: Date.current,
+        amount: 80,
+        currency: "EUR",
+        source: "fineco",
+        external_id: "#{Trade::FINECO_HISTORY_EXTERNAL_ID_PREFIX}#{SecureRandom.hex(16)}",
+        entryable: Trade.new(
+          security: security,
+          qty: 2,
+          price: 40,
+          currency: "EUR",
+          investment_activity_label: "Buy",
+          extra: extra
+        )
+      )
+
+      [ entry.entryable, security ]
     end
 end

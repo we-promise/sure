@@ -10,7 +10,7 @@ class FinecoItem::HistoryNormalizer
   ISIN_PATTERN = /\A[A-Z]{2}[A-Z0-9]{9}[0-9]\z/
   ISO_DATE_PATTERN = /\A\d{4}-\d{2}-\d{2}\z/
   ISO_LOCAL_TIMESTAMP_PATTERN = /\A(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?\z/
-  ISO_TIMESTAMP_PATTERN = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/
+  ISO_TIMESTAMP_PATTERN = /\A(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})T(?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(?<fraction>\.\d+)?(?<offset>Z|[+-]\d{2}:\d{2})\z/
   SIGNS = %w[A V].freeze
 
   Activity = Data.define(
@@ -159,13 +159,29 @@ class FinecoItem::HistoryNormalizer
         local_time = zone.local(date.year, date.month, date.day, hour, minute, second, microseconds)
         invalid_data! unless [ year, month, day, hour, minute, second ] ==
           [ local_time.year, local_time.month, local_time.day, local_time.hour, local_time.min, local_time.sec ]
-      elsif value.is_a?(String) && value.match?(ISO_TIMESTAMP_PATTERN)
+      elsif value.is_a?(String) && (match = ISO_TIMESTAMP_PATTERN.match(value))
+        year, month, day, hour, minute, second = timestamp_components(match)
+        Date.new(year, month, day)
+        invalid_data! unless hour.between?(0, 23) && minute.between?(0, 59) && second.between?(0, 59)
+        invalid_data! if match[:fraction].to_s.length > 7
+        validate_offset!(match[:offset])
         local_time = Time.iso8601(value).in_time_zone(zone)
       else
         invalid_data!
       end
 
       [ local_time.to_date, local_time.iso8601(6) ]
+    end
+
+    def timestamp_components(match)
+      %i[year month day hour minute second].map { |component| match[component].to_i }
+    end
+
+    def validate_offset!(offset)
+      return if offset == "Z"
+
+      hours, minutes = offset[1..].split(":").map(&:to_i)
+      invalid_data! unless hours.between?(0, 23) && minutes.between?(0, 59)
     end
 
     def decimal(value)

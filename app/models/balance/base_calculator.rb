@@ -76,6 +76,7 @@ class Balance::BaseCalculator
     # That means value increased by $100, where $50 of that is due to the change in holdings value, and $50 is due to the buy/sell
     def market_value_change_on_date(date, flows)
       return 0 unless account.balance_type == :investment
+      return 0 if fineco_first_snapshot_date && date <= fineco_first_snapshot_date
 
       start_of_day_holdings_value = holdings_value_for_date(date.prev_day)
       end_of_day_holdings_value = holdings_value_for_date(date)
@@ -84,6 +85,15 @@ class Balance::BaseCalculator
       net_buy_sell_value = flows[:non_cash_inflows] - flows[:non_cash_outflows]
 
       change_holdings_value - net_buy_sell_value
+    end
+
+    def fineco_first_snapshot_date
+      return @fineco_first_snapshot_date if defined?(@fineco_first_snapshot_date)
+
+      provider_link = account.account_providers.find_by(provider_type: "FinecoAccount")
+      @fineco_first_snapshot_date = if provider_link
+        account.holdings.where(account_provider_id: provider_link.id).minimum(:date) || provider_link.provider&.last_snapshot_date
+      end
     end
 
     def flows_for_date(date)

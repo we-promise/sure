@@ -43,6 +43,7 @@
   <% end %>
 
   <% trade = entry.trade %>
+  <% current_market_price = trade.current_market_price if trade.qty.positive? && !trade.security.cash? %>
 
   <% unless trade.security.cash? %>
   <div class="mb-2">
@@ -66,10 +67,10 @@
             </div>
           <% end %>
 
-          <% if trade.qty.positive? && trade.security.current_price.present? %>
+          <% if current_market_price.present? %>
             <div class="flex items-center justify-between text-sm">
               <dt class="text-secondary"><%= t(".current_market_price_label") %></dt>
-              <dd class="text-primary privacy-sensitive"><%= format_money trade.security.current_price %></dd>
+              <dd class="text-primary privacy-sensitive"><%= format_money current_market_price %></dd>
             </div>
           <% end %>
 

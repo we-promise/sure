@@ -14,6 +14,16 @@ class FinecoItem::HistoryNormalizerTest < ActiveSupport::TestCase
     Time.zone = prior_zone
   end
 
+  test "normalizes valid Z and offset timestamps to the Fineco bank time zone" do
+    activity = normalize(
+      [ row("transactionDate" => "2026-10-17T23:00:00Z", "valueDate" => "2026-10-17T23:00:00+00:00") ]
+    ).activities.sole
+
+    assert_equal Date.new(2026, 10, 18), activity.date
+    assert_equal "2026-10-18T01:00:00.000000+02:00", activity.metadata.fetch("transaction_timestamp")
+    assert_equal "2026-10-18", activity.metadata.fetch("value_date")
+  end
+
   test "keeps duplicate trade occurrences while expressing the EUR gross as unit price" do
     bond = row(
       "isin" => "US0000000010",
@@ -47,6 +57,16 @@ class FinecoItem::HistoryNormalizerTest < ActiveSupport::TestCase
   test "rejects unsupported signs and malformed dates" do
     assert_equal "history_unsupported_activity", import_error(row("sign" => "D")).code
     assert_equal "history_invalid_data", import_error(row("transactionDate" => "2026-02-30T12:00:00")).code
+
+    [
+      "2026-02-30T12:00:00+01:00",
+      "2026-10-17T24:00:00+01:00",
+      "2026-10-17T12:00:60+01:00",
+      "2026-10-17T12:00:00.1234567+01:00",
+      "2026-10-17T12:00:00+01:60"
+    ].each do |timestamp|
+      assert_equal "history_invalid_data", import_error(row("transactionDate" => timestamp)).code
+    end
   end
 
   private

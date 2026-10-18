@@ -36,6 +36,8 @@ class Provider::Fineco
     type transactionDate valueDate description name isin sign amount currency price exchange equivalentValue
   ].freeze
   MOVEMENT_DATE_PATTERN = /\A\d{4}-\d{2}-\d{2}\z/
+  MOVEMENT_LOCAL_TIMESTAMP_PATTERN = /\A(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})T(?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(?<fraction>\.\d+)?\z/
+  MOVEMENT_OFFSET_TIMESTAMP_PATTERN = /\A(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})T(?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(?<fraction>\.\d+)?(?<offset>Z|[+-]\d{2}:\d{2})\z/
   MOVEMENT_SHORT_STRING_LIMIT = 64
   MAX_FILTER_VALUE_COUNT = 256
   MAX_SAFE_BUSINESS_NUMBER = (2**53) - 1
@@ -678,9 +680,26 @@ class Provider::Fineco
     end
 
     def iso_datetime?(value)
+      return false unless value.is_a?(String)
+
+      match = MOVEMENT_OFFSET_TIMESTAMP_PATTERN.match(value) || MOVEMENT_LOCAL_TIMESTAMP_PATTERN.match(value)
+      return false unless match
+
+      year, month, day, hour, minute, second = %i[year month day hour minute second].map do |component|
+        match[component].to_i
+      end
+      Date.new(year, month, day)
+      return false unless hour.between?(0, 23) && minute.between?(0, 59) && second.between?(0, 59)
+      return false if match[:fraction].to_s.length > 7
+
+      if match.names.include?("offset") && match[:offset] != "Z"
+        offset_hours, offset_minutes = match[:offset][1..].split(":").map(&:to_i)
+        return false unless offset_hours.between?(0, 23) && offset_minutes.between?(0, 59)
+      end
+
       Time.iso8601(value)
       true
-    rescue ArgumentError
+    rescue ArgumentError, Date::Error
       false
     end
 

@@ -102,6 +102,13 @@ class Trade < ApplicationRecord
       metadata["cash_account_external"] == true
   end
 
+  def current_market_price
+    return security.current_price unless fineco_history_entry?
+    return @fineco_current_market_price if defined?(@fineco_current_market_price)
+
+    @fineco_current_market_price = fineco_effective_snapshot_price
+  end
+
   class << self
     def build_name(type, qty, ticker)
       prefix = type == "buy" ? "Buy" : "Sell"
@@ -111,8 +118,9 @@ class Trade < ApplicationRecord
 
   def unrealized_gain_loss
     return nil unless qty.positive?
-    current_price = security.current_price
+    current_price = current_market_price
     return nil if current_price.nil?
+    return nil if fineco_history_entry? && current_price.currency.iso_code != currency
 
     current_value = current_price * qty.abs
     cost_basis = price_money * qty.abs + fee_money
@@ -203,6 +211,28 @@ class Trade < ApplicationRecord
   end
 
   private
+
+    def fineco_effective_snapshot_price
+      trade_entry = entry
+      fineco_account_id = extra&.dig("fineco", "provider_account_id")
+      return unless trade_entry && fineco_account_id.to_s.match?(FINECO_HISTORY_PROVIDER_ACCOUNT_ID_PATTERN)
+
+      fineco_account = FinecoAccount.find_by(id: fineco_account_id)
+      return unless fineco_account&.usable_account&.id == trade_entry.account_id
+
+      account_provider = fineco_account.account_provider
+      snapshot_date = fineco_account.last_snapshot_date
+      return unless account_provider&.account_id == trade_entry.account_id && snapshot_date
+
+      snapshot_holdings = account_provider.holdings
+        .where(date: snapshot_date, security_id: security_id, currency: "EUR")
+        .where("qty > 0")
+        .limit(2)
+        .to_a
+      return unless snapshot_holdings.one?
+
+      Money.new(snapshot_holdings.first.price, "EUR")
+    end
 
     def exchange_rate_must_be_valid
       if extra&.dig("exchange_rate_invalid")

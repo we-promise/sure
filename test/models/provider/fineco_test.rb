@@ -255,6 +255,24 @@ class Provider::FinecoTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects invalid offset timestamp components before retaining movement data" do
+    [
+      "2025-02-30T09:30:00+01:00",
+      "2025-01-15T24:00:00+01:00",
+      "2025-01-15T09:30:60+01:00",
+      "2025-01-15T09:30:00.1234567+01:00",
+      "2025-01-15T09:30:00+01:60"
+    ].each do |timestamp|
+      movement = MOVEMENT.merge("transactionDate" => timestamp)
+
+      assert_raises Provider::Fineco::InvalidResponse do
+        with_http(stub_http(json_response(movements_payload(movements: [ movement ])))) do
+          fineco.fetch_movements_window(date_from: "2025-01-01", date_to: bank_today)
+        end
+      end
+    end
+  end
+
   test "recognizes only the bank's structured minimum-date response" do
     body = { "issues" => [ { "reason" => "Sono accettate solo date dal 19 Oct 2022 fino ad oggi." } ] }.to_json
     response = StubResponse.new(
