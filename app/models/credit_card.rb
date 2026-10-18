@@ -189,11 +189,18 @@ class CreditCard < ApplicationRecord
     # than silently counting only the entries that happened to match.
     def sum_entries_in(window)
       scoped = account.entries.excluding_pending.excluding_split_parents.where(date: window)
-      # where.not(currency:) matches no NULLs, so an entry with no currency
-      # refuses the total like a foreign one instead of dropping out quietly.
-      return nil if scoped.where.not(currency: [ account.currency, nil ]).exists?
 
-      Money.new(scoped.where(currency: account.currency).sum(:amount), account.currency)
+      # An entry we cannot add up -- booked in another currency, or in none at
+      # all -- makes the total unknown rather than smaller. `where.not(currency:)`
+      # compiles to `!= AND IS NOT NULL`, so it never matches a NULL and the
+      # guard would sit there dead for the exact case it was written for. Compare
+      # the counts instead: anything outside the account's own currency refuses
+      # the whole statement, because quoting only the part that did match would
+      # report a partial figure as if it were the whole.
+      summable = scoped.where(currency: account.currency)
+      return nil if summable.count != scoped.count
+
+      Money.new(summable.sum(:amount), account.currency)
     end
 
     # Whether the last statement has been paid: payments since its close add
