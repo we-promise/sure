@@ -209,3 +209,48 @@ next preview. Follow [Adding feature feedback surveys](../llm-guides/feedback-su
 for implementation and tests. Reuse project routing, while giving the new feature
 its own questions and explicit event contract. Extending the browser client must
 preserve the same routing, privacy, and opt-out behavior for both features.
+
+## Daily installation activity
+
+`ai_assistant_served_daily` records an attempted LLM chat request through the
+built-in assistant or the external assistant client. Web and mobile/API chat
+entry points share these paths. Viewing a chat page, enqueueing a response, and
+non-chat AI features do not trigger it. Tool-call rounds and provider retries
+share the same daily claim. A failed LLM request still counts as an attempt.
+Externally initiated MCP clients that do not call Sure's chat backend are not
+observable through this event.
+
+`job_served_daily` records entry into Sidekiq server job execution, including
+Active Job wrappers, scheduled jobs and retries. It does not count enqueueing or
+web requests; failing jobs still count. Capture uses the feedback SDK directly,
+not another Sidekiq job, so it cannot create a telemetry-job loop.
+
+Each event has an independent atomic Redis claim per installation per UTC
+calendar day. Unlike the existing per-user, family-local web event, these events
+have no user or family context. The daily pseudonymous installation ID is an HMAC
+derived from the shared Rails deployment secret and UTC date. All web/worker
+processes must share that secret and Sidekiq Redis (including the existing
+Sentinel configuration). Separate installations must not share deployment
+secrets. Rotating the secret or losing/evicting Redis claims can permit another
+capture that day. Claims expire after two days; deployment timezone does not
+change the midnight UTC boundary.
+
+These events reuse the bundled feedback destination, production/development
+opt-in rules and `POSTHOG_FEEDBACK_ENABLED` opt-out above. Tests are disabled
+unless a test explicitly replaces the collector and environment gates. Browser
+opt-outs cannot control server capture. The only event properties are Sure's
+version, disabled person-profile processing and disabled GeoIP: no prompt,
+response, user/account ID, IP, job class, queue or job arguments are sent.
+
+The guarantee is best-effort at-most-one capture attempt while a Redis claim is
+retained, not distributed exactly-once delivery. A Redis failure skips capture
+without blocking chat/job execution; a collector failure or process exit after
+claiming can omit the day's event. Claims are not released or retried on delivery
+failure. SDK acceptance and retries do not guarantee collector delivery or
+collector-side deduplication. A quiet installation without qualifying activity
+emits nothing.
+
+Run the shared-store concurrency regression against disposable Redis with
+`DAILY_USAGE_REDIS_TESTS=1 REDIS_URL=redis://localhost:6379/15 bin/rails test test/integration/daily_installation_usage_redis_test.rb`.
+It forks eight workers and replaces the collector with a Redis-backed fake;
+it sends no live telemetry and deletes only its own randomly scoped keys.
