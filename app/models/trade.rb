@@ -231,7 +231,8 @@ class Trade < ApplicationRecord
         .to_a
       return unless snapshot_holdings.one?
 
-      Money.new(snapshot_holdings.first.price, "EUR")
+      holding = snapshot_holdings.first
+      Money.new(holding.amount.to_d / holding.qty.to_d, "EUR")
     end
 
     def exchange_rate_must_be_valid

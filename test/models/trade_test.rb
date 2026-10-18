@@ -106,6 +106,25 @@ class TradeTest < ActiveSupport::TestCase
     end
   end
 
+  test "Fineco history quote keeps effective-value precision beyond holding unit-price scale" do
+    trade, _security, holding = fineco_history_trade(
+      snapshot_price: BigDecimal("100"),
+      snapshot_qty: BigDecimal("150000"),
+      snapshot_amount: BigDecimal("15000005"),
+      trade_qty: BigDecimal("150000"),
+      trade_price: BigDecimal("99")
+    )
+
+    quote = trade.current_market_price
+
+    assert_equal BigDecimal("100.0000"), holding.price
+    assert_equal BigDecimal("15000005.0000"), holding.amount
+    assert_equal "EUR", quote.currency.iso_code
+    assert_equal holding.amount / holding.qty, quote.amount
+    assert_in_delta holding.amount, quote.amount * holding.qty, BigDecimal("0.000000001")
+    assert_in_delta BigDecimal("150005"), trade.unrealized_gain_loss.value.amount, BigDecimal("0.000000001")
+  end
+
   test "Fineco history buys have no quote when their linked snapshot has no matching effective holding" do
     trade, security = fineco_history_trade(include_holding: false)
     security.stubs(:current_price).returns(Money.new(BigDecimal("98.5"), "EUR"))
@@ -393,7 +412,8 @@ class TradeTest < ActiveSupport::TestCase
       [ account, security ]
     end
 
-    def fineco_history_trade(snapshot_price: BigDecimal("50"), include_holding: true)
+    def fineco_history_trade(snapshot_price: BigDecimal("50"), include_holding: true, snapshot_qty: 2,
+                             snapshot_amount: nil, trade_qty: 2, trade_price: 40)
       ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
       owner = users(:family_admin)
       account = owner.family.accounts.create!(
@@ -434,16 +454,16 @@ class TradeTest < ActiveSupport::TestCase
         offline: true
       )
 
-      if include_holding
+      holding = if include_holding
         Holding.create!(
           account: account,
           account_provider: account_provider,
           security: security,
           provider_security: provider_security,
           date: Date.current,
-          qty: 2,
+          qty: snapshot_qty,
           price: snapshot_price,
-          amount: snapshot_price * 2,
+          amount: snapshot_amount || snapshot_price * snapshot_qty,
           currency: "EUR"
         )
       end
@@ -458,20 +478,20 @@ class TradeTest < ActiveSupport::TestCase
       entry = account.entries.create!(
         name: "Synthetic Fineco buy",
         date: Date.current,
-        amount: 80,
+        amount: trade_price * trade_qty,
         currency: "EUR",
         source: "fineco",
         external_id: "#{Trade::FINECO_HISTORY_EXTERNAL_ID_PREFIX}#{SecureRandom.hex(16)}",
         entryable: Trade.new(
           security: security,
-          qty: 2,
-          price: 40,
+          qty: trade_qty,
+          price: trade_price,
           currency: "EUR",
           investment_activity_label: "Buy",
           extra: extra
         )
       )
 
-      [ entry.entryable, security ]
+      [ entry.entryable, security, holding ]
     end
 end
