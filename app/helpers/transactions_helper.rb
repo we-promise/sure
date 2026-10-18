@@ -53,6 +53,20 @@ module TransactionsHelper
     @annotatable_account_ids.include?(account.id)
   end
 
+  # The label on an account filter chip. `accounts` already holds names;
+  # `account_ids` (from the dashboard money-flow drill-down) holds ids, which
+  # are resolved once per request among `filter_account_ids`, and only within
+  # the user's accessible accounts.
+  def account_filter_label(param_key, param_value, filter_account_ids: [])
+    return param_value unless param_key == "account_ids"
+
+    @filter_account_names ||= Current.user.accessible_accounts
+      .where(id: Array(filter_account_ids))
+      .pluck(:id, :name)
+      .to_h { |id, name| [ id.to_s, name ] }
+    @filter_account_names[param_value.to_s] || t("transactions.searches.filters.badge.unknown_account")
+  end
+
   # ---- Transaction extra details helpers ----
   # Returns a structured hash describing extra details for a transaction.
   # Input can be a Transaction or an Entry (responds_to :transaction).
