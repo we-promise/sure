@@ -3,6 +3,8 @@ require "test_helper"
 # The panel choice was five predicates deep in ERB where the ordering between
 # them mattered and nothing said so. These pin the order, not the markup.
 class Goals::LifecyclePanelComponentTest < ViewComponent::TestCase
+  include EntriesTestHelper
+
   setup do
     @family = families(:dylan_family)
     # The panel scopes what it offers to the reader's accessible accounts, so
@@ -128,10 +130,31 @@ class Goals::LifecyclePanelComponentTest < ViewComponent::TestCase
     assert_no_selector "#goal-celebration-actions"
   end
 
+  # The chart draws no projection line when pace cannot be measured, so the
+  # legend must not offer a swatch for one.
+  test "the projection legend is shown only for a pace that can be measured" do
+    anchored = pot(balance: 1_000)
+    create_valuation(account: anchored, amount: 1_000, date: 30.days.ago.to_date, kind: "opening_anchor")
+    unmeasurable = dated_goal(anchored)
+
+    paid = pot(balance: 1_000)
+    create_transaction(account: paid, amount: -300, date: 10.days.ago.to_date)
+    measured = dated_goal(paid)
+
+    assert_not component_for(unmeasurable).show_projection_legend?
+    assert component_for(measured).show_projection_legend?
+  end
+
   private
     def pot(balance:, name: "Pot #{SecureRandom.hex(3)}")
       Account.create!(family: @family, accountable: Depository.new, name: name,
                       currency: @family.currency, balance: balance)
+    end
+
+    def dated_goal(account)
+      @family.goals.create!(
+        name: "Dated", target_amount: 10_000, target_date: 300.days.from_now.to_date, currency: @family.currency
+      ) { |g| g.goal_accounts.build(account: account) }
     end
 
     def funded_goal(name: "Trip", kind: "one_off")

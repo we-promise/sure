@@ -390,7 +390,11 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     # One trackable goal (has target_date) + one open-ended (no target_date).
     # The trackable one should be the only thing in the denominator;
     # open-ended goals can't be off pace because they have no required pace.
-    build_goal(family, "House", target_amount: 1_000_000, target_date: 1.year.from_now)
+    house = build_goal(family, "House", target_amount: 1_000_000, target_date: 1.year.from_now)
+    # An account with no history at all has no measurable pace, and a goal
+    # without one leaves the fraction too. A deposit long ago gives it a
+    # measured pace of zero, which keeps it trackable (and behind).
+    create_transaction(account: house.linked_accounts.first, amount: -100, date: 200.days.ago.to_date)
     build_goal(family, "Emergency", target_amount: 1_000_000, target_date: nil)
 
     get goals_url
@@ -910,6 +914,33 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert goal.current_balance.to_d.positive?, "the goal is backed, just not for this reader"
     assert_empty css_select("a[href='#{consume_goal_path(goal)}']"),
       "a spend was still offered against money the reader cannot see"
+  end
+
+  # A goal whose pace cannot be measured has no benchmark to be on track or
+  # behind against, so it belongs in neither the fraction nor the behind count
+  # -- the same treatment an open-ended goal gets.
+  test "an unmeasurable goal is not counted against the on-track tile" do
+    @goal.pause! # the fixture goal links an account with no history at all
+
+    paid = unclaimed_account("Paid Pot")
+    create_transaction(account: paid, amount: -3_000, date: 10.days.ago.to_date) # 1,000/mo
+    @user.family.goals.create!(
+      name: "On track", target_amount: 1_500, target_date: 300.days.from_now.to_date, currency: "USD"
+    ) { |g| g.goal_accounts.build(account: paid) }
+
+    anchored = unclaimed_account("Anchored Pot")
+    create_valuation(account: anchored, amount: 1_000, date: 30.days.ago.to_date, kind: "opening_anchor")
+    unknown = @user.family.goals.create!(
+      name: "Unknown", target_amount: 5_000, target_date: 300.days.from_now.to_date, currency: "USD"
+    ) { |g| g.goal_accounts.build(account: anchored) }
+
+    get goals_url
+
+    assert_response :success
+    assert_select "p", text: I18n.t("goals.index.kpi.on_track_value", on_track: 1, total: 1)
+    assert_select "p", text: I18n.t("goals.index.kpi.needs_this_month_zero_sub")
+    assert_no_match I18n.t("goals.index.kpi.on_track_sub_parts.behind", count: 1), response.body
+    assert_equal :pace_unknown, unknown.status
   end
 
   private

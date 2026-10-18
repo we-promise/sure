@@ -155,7 +155,10 @@ class Goal < ApplicationRecord
   # falls back to 4 for anything unranked, so omitting these two would bury a
   # drained emergency fund at the very bottom of the list — the exact opposite
   # of what it means.
-  ACTIVE_DISPLAY_STATUS_RANK = { behind: 0, depleted: 0, on_track: 1, no_target_date: 2, funded: 3 }.freeze
+  #
+  # `pace_unknown` shares rank 2 with `no_target_date`: neither has a pace to
+  # compare against, so neither is ahead of or behind anything.
+  ACTIVE_DISPLAY_STATUS_RANK = { behind: 0, depleted: 0, on_track: 1, no_target_date: 2, pace_unknown: 2, funded: 3 }.freeze
 
   scope :alphabetically, -> { order(Arel.sql("LOWER(name) ASC")) }
   scope :active_first, lambda {
@@ -277,6 +280,73 @@ class Goal < ApplicationRecord
 
   attr_writer :pooled_pace
 
+  BALANCE_PACE_DAYS = 365
+  BALANCE_PACE_VALUATION_KINDS = %w[reconciliation current_anchor].freeze
+
+  # Accounts are tracked by transactions or by balance updates. An account with
+  # no counted transaction in the pace window (see pace_for) is measured from
+  # its balance instead, provided someone has actually recorded a value for it
+  # in the last year:
+  #
+  #   { balance: { account_id => { start: year-old end_balance, market_flows: window sum } },
+  #     dormant: [account_id, ...] }
+  #
+  # `balance` holds accounts with a reconciliation or current-anchor valuation
+  # in the trailing year AND a balance row a year back to measure from. History
+  # shorter than a year is not measured: there is no year-old row, and reading
+  # its absence as zero would call the whole balance growth. `dormant` holds
+  # accounts with transactions, just none lately: their pace is a measured zero.
+  # Any linked account in neither map (an opening balance and nothing since, a
+  # recent valuation on under a year of history, or updates all older than a
+  # year) has no measurable pace.
+  #
+  # Four family-wide queries, none per goal, for the same N+1 reason as
+  # pace_for. `transaction_pace` is pace_for's result, so accounts it already
+  # covers are not read again.
+  def self.balance_pace_for(family, transaction_pace = pace_for(family))
+    account_ids = GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
+    account_ids -= transaction_pace.keys
+    return { balance: {}, dormant: [] } if account_ids.empty?
+
+    cutoff = Date.current - BALANCE_PACE_DAYS
+
+    valued_ids = Entry
+      .joins("INNER JOIN valuations ON valuations.id = entries.entryable_id AND entries.entryable_type = 'Valuation'")
+      .where(account_id: account_ids, date: cutoff..Date.current)
+      .where(valuations: { kind: BALANCE_PACE_VALUATION_KINDS })
+      .distinct
+      .pluck(:account_id)
+
+    balance = {}
+    if valued_ids.any?
+      in_account_currency = Balance.joins(:account).where(account_id: valued_ids).where("balances.currency = accounts.currency")
+
+      starts = in_account_currency
+        .where("balances.date <= ?", cutoff)
+        .select("DISTINCT ON (balances.account_id) balances.account_id, balances.end_balance")
+        .order("balances.account_id, balances.date DESC")
+        .to_h { |row| [ row.account_id, row.end_balance ] }
+
+      flows = in_account_currency
+        .where("balances.date > ?", cutoff)
+        .group(:account_id)
+        .sum(:net_market_flows)
+
+      starts.each do |account_id, start|
+        balance[account_id] = { start: start.to_d, market_flows: (flows[account_id] || 0).to_d }
+      end
+    end
+
+    dormant = Entry
+      .where(account_id: account_ids - valued_ids, entryable_type: "Transaction")
+      .distinct
+      .pluck(:account_id)
+
+    { balance: balance, dormant: dormant }
+  end
+
+  attr_writer :pooled_balance_pace
+
   # Goals loaded ready to render: association preloads for the card/row
   # partials plus the family-wide pooled-allocations + market-flows injection
   # so the per-goal backing math doesn't fire a query per row (N+1). Pass a
@@ -296,10 +366,12 @@ class Goal < ApplicationRecord
     pooled = pooled_allocations_for(family)
     flows = market_flows_for(family)
     pace_map = pace_for(family)
+    balance_pace_map = balance_pace_for(family, pace_map)
     goals.each do |goal|
       goal.pooled_allocations = pooled
       goal.market_flows = flows
       goal.pooled_pace = pace_map
+      goal.pooled_balance_pace = balance_pace_map
     end
   end
 
@@ -710,6 +782,12 @@ class Goal < ApplicationRecord
   # goes up, status flips off "behind". Excludes user-flagged-excluded
   # entries. Entry amount sign convention in Sure: inflow is negative.
   #
+  # An account with no counted transaction in that window is measured from its
+  # balance instead: the change over the last year, divided by twelve (see
+  # Goal.balance_pace_for). On the contributions basis the year's market movement is
+  # taken out, so pace measures the same thing progress does. An account with
+  # no evidence either way contributes 0 here, and makes pace_measurable? false.
+  #
   # NOTE: pace is whole-account inflow by design in this phase, even for an
   # earmarked goal whose current_balance is only a slice — so runway/status
   # mix a whole-account numerator with an earmark-scoped balance. Earmark-aware
@@ -721,7 +799,22 @@ class Goal < ApplicationRecord
       0
     else
       net = linked_accounts.sum { |account| pooled_pace.fetch(account.id, 0).to_d }
-      (-net.to_d / 3).round(2)
+      from_balances = linked_accounts.sum { |account| account_balance_pace(account) || 0.to_d }
+      (-net.to_d / 3 + from_balances).round(2)
+    end
+  end
+
+  # False when any linked account has no evidence of how its balance moves: no
+  # recent transactions, no transactions ever, and no balance updates over a
+  # year of history to measure from. All or nothing, because a goal with part
+  # of its money unmeasured cannot honestly be called on track or behind.
+  def pace_measurable?
+    return @pace_measurable if defined?(@pace_measurable)
+
+    @pace_measurable = linked_accounts.all? do |account|
+      pooled_pace.key?(account.id) ||
+        pooled_balance_pace[:balance].key?(account.id) ||
+        pooled_balance_pace[:dormant].include?(account.id)
     end
   end
 
@@ -794,13 +887,15 @@ class Goal < ApplicationRecord
       target_amount_short_label: short_money(target_amt, currency),
       currency_symbol: Money.new(0, currency).currency.symbol,
       current_amount: current_balance.to_f,
-      avg_monthly: pace.to_f,
+      # nil, not 0, when there is no pace to measure: the chart then draws no
+      # projection line rather than a flat one.
+      avg_monthly: (pace.to_f if pace_measurable?),
       required_monthly: monthly_target_amount&.to_f,
       currency: currency,
       status: status.to_s,
       projection_end_value: proj_end.to_f,
       projection_end_label: Money.new(proj_end, currency).format(precision: 0),
-      projection_shortfall_label: (target_amt > proj_end ? Money.new(target_amt - proj_end, currency).format(precision: 0) : nil)
+      projection_shortfall_label: (pace_measurable? && target_amt > proj_end ? Money.new(target_amt - proj_end, currency).format(precision: 0) : nil)
     }
   end
 
@@ -808,7 +903,7 @@ class Goal < ApplicationRecord
   # the JS calculation so the server can pre-format the chart annotation
   # without re-rendering after each Stimulus draw.
   def projection_end_amount
-    return current_balance.to_d if target_date.nil?
+    return current_balance.to_d if target_date.nil? || !pace_measurable?
     months = ((target_date - Date.current).to_f / 30.44).clamp(0.0, Float::INFINITY)
     projected = current_balance.to_d + (pace.to_d * months)
     [ current_balance.to_d, projected ].max
@@ -832,6 +927,7 @@ class Goal < ApplicationRecord
   # :on_track        → has target_date and pace >= required monthly
   # :behind          → has target_date and pace < required monthly
   # :no_target_date  → open-ended
+  # :pace_unknown    → has target_date, but no measurable pace to compare
   def status
     return @status if defined?(@status)
 
@@ -843,6 +939,8 @@ class Goal < ApplicationRecord
       :reached
     elsif target_date.nil?
       :no_target_date
+    elsif !pace_measurable?
+      :pace_unknown
     elsif monthly_target_amount.to_d <= pace.to_d
       :on_track
     else
@@ -962,6 +1060,8 @@ class Goal < ApplicationRecord
       end
     when :no_target_date
       I18n.t("goals.show.status_callout.no_target_date")
+    when :pace_unknown
+      I18n.t("goals.show.status_callout.pace_unknown")
     when :depleted
       # A drained reserve had no callout at all: the one status that most
       # deserves a line of explanation was the one that said nothing.
@@ -1026,6 +1126,9 @@ class Goal < ApplicationRecord
         I18n.t("goals.show.projection.reached")
       elsif target_date.nil?
         I18n.t("goals.show.projection.no_target_date")
+      elsif !pace_measurable?
+        # Ahead of `behind`: an unmeasured pace is not a pace of zero.
+        I18n.t("goals.show.projection.pace_unknown")
       elsif monthly_target_amount && pace.to_d < monthly_target_amount.to_d
         I18n.t("goals.show.projection.behind")
       elsif pace.positive?
@@ -1122,6 +1225,21 @@ class Goal < ApplicationRecord
 
     def pooled_pace
       @pooled_pace ||= self.class.pace_for(family)
+    end
+
+    def pooled_balance_pace
+      @pooled_balance_pace ||= self.class.balance_pace_for(family, pooled_pace)
+    end
+
+    # Monthly pace of one account measured from its balance, or nil when the
+    # account is not on the balance path.
+    def account_balance_pace(account)
+      evidence = pooled_balance_pace[:balance][account.id]
+      return nil if evidence.nil?
+
+      change = account.balance.to_d - evidence[:start]
+      change -= evidence[:market_flows] if contributions_basis?
+      change / 12
     end
 
     def apply_state_change_side_effects
@@ -1244,7 +1362,7 @@ class Goal < ApplicationRecord
         @remaining_amount @remaining_amount_money
         @progress_percent @monthly_target_amount
         @progress_amount_money @consumed_amount_money
-        @pace @pace_money @status @pooled_allocations
+        @pace @pace_money @pace_measurable @status @pooled_allocations
       ].each do |ivar|
         remove_instance_variable(ivar) if instance_variable_defined?(ivar)
       end

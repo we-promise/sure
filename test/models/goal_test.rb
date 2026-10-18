@@ -1294,7 +1294,204 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal Goals::AvatarComponent.new(goal: goal).color, saved[:color]
   end
 
+  # --- pace on accounts whose value moves through valuations ---
+  #
+  # Pace used to read only transaction entries, so an account maintained by
+  # balance updates (a manually tracked superannuation fund) always reported 0
+  # and every dated goal on it read "behind". Balance rows are created by hand
+  # with known dates and values rather than by running a sync, so each
+  # precondition is set rather than assumed.
+
+  test "pace on a valuation-tracked account is its balance change over the last year" do
+    account = valuation_tracked_account(balance: 112_000, year_ago: 100_000)
+    goal = goal_on(account, target_amount: 200_000)
+
+    assert goal.pace_measurable?
+    assert_equal 1000, goal.pace.to_d
+
+    # The delta: without a recent balance update there is nothing to measure.
+    account.entries.where(entryable_type: "Valuation").destroy_all
+    assert_not Goal.find(goal.id).pace_measurable?
+  end
+
+  test "a valuation-tracked goal whose required pace is below its balance pace is on track" do
+    account = valuation_tracked_account(balance: 112_000, year_ago: 100_000)
+    # 9,600 to find over 12 months: 800/mo required against a 1,000/mo pace.
+    goal = goal_on(account, target_amount: 121_600, target_date: 360.days.from_now.to_date)
+
+    assert_equal 800, goal.monthly_target_amount.to_d
+    assert_equal :on_track, goal.status
+  end
+
+  test "on the contributions basis a valuation-tracked pace leaves out market movement" do
+    account = valuation_tracked_account(balance: 112_000, year_ago: 100_000)
+    account.balances.create!(date: 100.days.ago.to_date, balance: 105_000, currency: "USD", net_market_flows: 2_400)
+
+    # Fixed slices, so the two goals can share the account. Pace is whole-account
+    # by design, so the slice does not change it.
+    balance_goal = goal_on(account, target_amount: 200_000, basis: "balance", name: "Balance basis", allocated: 1_000)
+    contributions_goal = goal_on(account, target_amount: 200_000, basis: "contributions",
+                                          name: "Contributions basis", allocated: 1_000)
+
+    assert_equal 1000, balance_goal.pace.to_d
+    # (12,000 change − 2,400 market gain) / 12.
+    assert_equal 800, contributions_goal.pace.to_d
+  end
+
+  test "a shrinking valuation-tracked account is measured and behind" do
+    account = valuation_tracked_account(balance: 88_000, year_ago: 100_000)
+    goal = goal_on(account, target_amount: 120_000, target_date: 360.days.from_now.to_date)
+
+    assert goal.pace_measurable?
+    assert_equal(-1000, goal.pace.to_d)
+    assert_equal :behind, goal.status
+  end
+
+  test "an account with only an opening anchor has no measurable pace" do
+    account = Account.create!(family: @family, accountable: Investment.new, name: "Second super",
+                              currency: "USD", balance: 94_000)
+    create_valuation(account: account, amount: 94_000, date: 30.days.ago.to_date, kind: "opening_anchor")
+    # A year of balance history, so only the anchor's kind decides: an opening
+    # balance is where tracking started, not a recorded update.
+    account.balances.create!(date: 400.days.ago.to_date, balance: 80_000, start_cash_balance: 80_000, currency: "USD")
+    goal = goal_on(account, target_amount: 200_000, target_date: 2.years.from_now.to_date)
+
+    assert_not goal.pace_measurable?
+    assert_equal :pace_unknown, goal.status
+    assert_not goal.behind_pace?
+    assert_equal I18n.t("goals.show.projection.pace_unknown"), goal.projection_summary
+    assert_equal I18n.t("goals.show.status_callout.pace_unknown"), goal.status_callout_context
+
+    payload = goal.projection_payload
+    assert_nil payload[:avg_monthly]
+    assert_nil payload[:projection_shortfall_label]
+    assert_equal goal.current_balance.to_d, goal.projection_end_amount
+  end
+
+  test "under a year of balance history is not read as growth from zero" do
+    account = valuation_tracked_account(balance: 112_000, year_ago: 100_000, history_from: 200.days.ago.to_date)
+    goal = goal_on(account, target_amount: 121_600, target_date: 360.days.from_now.to_date)
+
+    assert_equal :pace_unknown, goal.status
+    assert_equal 0, goal.pace.to_d
+  end
+
+  test "a balance update exactly a year old still counts, one a day older does not" do
+    on_edge = valuation_tracked_account(balance: 112_000, year_ago: 100_000, valuation_on: Date.current - 365)
+    past_edge = valuation_tracked_account(balance: 112_000, year_ago: 100_000, valuation_on: Date.current - 366)
+
+    assert goal_on(on_edge, target_amount: 200_000, name: "Edge").pace_measurable?
+    assert_not goal_on(past_edge, target_amount: 200_000, name: "Past edge").pace_measurable?
+  end
+
+  test "a counted transaction in the window keeps the account on transaction pace" do
+    account = valuation_tracked_account(balance: 112_000, year_ago: 100_000)
+    create_transaction(account: account, amount: -300, date: 10.days.ago.to_date)
+    goal = goal_on(account, target_amount: 200_000)
+
+    # 300 inflow / 3, the 12,000 balance change ignored.
+    assert_equal 100, goal.pace.to_d
+
+    account.entries.where(entryable_type: "Transaction").destroy_all
+    assert_equal 1000, Goal.find(goal.id).pace.to_d
+  end
+
+  test "a cash account nobody has paid into lately is still measured and behind" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Dormant savings",
+                              currency: "USD", balance: 1_000)
+    create_transaction(account: account, amount: -1_000, date: 200.days.ago.to_date)
+    goal = goal_on(account, target_amount: 5_000, target_date: 360.days.from_now.to_date)
+
+    assert goal.pace_measurable?
+    assert_equal 0, goal.pace.to_d
+    assert_equal :behind, goal.status
+  end
+
+  test "one unmeasurable account makes the goal unmeasurable, two measured accounts sum" do
+    cash = Account.create!(family: @family, accountable: Depository.new, name: "Paid savings",
+                           currency: "USD", balance: 900)
+    create_transaction(account: cash, amount: -900, date: 10.days.ago.to_date)
+    anchored = Account.create!(family: @family, accountable: Depository.new, name: "Anchored savings",
+                               currency: "USD", balance: 500)
+    create_valuation(account: anchored, amount: 500, date: 30.days.ago.to_date, kind: "opening_anchor")
+    valued = valuation_tracked_account(balance: 112_000, year_ago: 100_000, accountable: Depository.new)
+
+    mixed = goal_on([ cash, anchored ], target_amount: 50_000, target_date: 360.days.from_now.to_date, name: "Mixed")
+    assert_equal :pace_unknown, mixed.status
+    # The measured half has a pace of its own (300/mo); the projection still
+    # claims nothing beyond today's balance.
+    assert_equal 300, mixed.pace.to_d
+    assert_equal mixed.current_balance.to_d, mixed.projection_end_amount
+
+    # Fixed slices: `cash` is already claimed in full by the goal above.
+    measured = goal_on([ cash, valued ], target_amount: 500_000, name: "Measured", allocated: 100)
+    assert measured.pace_measurable?
+    assert_equal 1300, measured.pace.to_d
+  end
+
+  test "a goal whose pace cannot be measured sorts beside open-ended goals" do
+    on_track = goal_on(valuation_tracked_account(balance: 112_000, year_ago: 100_000),
+                       target_amount: 121_600, target_date: 360.days.from_now.to_date, name: "Zeta on track")
+    anchored = Account.create!(family: @family, accountable: Depository.new, name: "Anchored pot",
+                               currency: "USD", balance: 500)
+    create_valuation(account: anchored, amount: 500, date: 30.days.ago.to_date, kind: "opening_anchor")
+    unknown = goal_on(anchored, target_amount: 5_000, target_date: 360.days.from_now.to_date, name: "Middle unknown")
+    reserve = reserve_goal(balance: 2_000, target: 1_000, allocated: 1_000, name: "Alpha reserve")
+
+    assert_equal :on_track, on_track.status
+    assert_equal :pace_unknown, unknown.status
+    assert_equal :funded, reserve.status
+    assert_equal [ on_track.id, unknown.id, reserve.id ], Goal.active_display_sort([ reserve, unknown, on_track ]).map(&:id)
+  end
+
+  test "an open-ended valuation-tracked goal gets a runway from its balance pace" do
+    goal = goal_on(valuation_tracked_account(balance: 112_000, year_ago: 100_000), target_amount: 500_000)
+
+    assert_equal :no_target_date, goal.status
+    assert_equal BigDecimal("112.0"), goal.months_of_runway
+  end
+
+  test "the evidence behind pace is read once for the family, not once per goal" do
+    goal_on(valuation_tracked_account(balance: 112_000, year_ago: 100_000), target_amount: 500_000, name: "Super A")
+    goal_on(valuation_tracked_account(balance: 50_000, year_ago: 40_000), target_amount: 500_000, name: "Super B")
+
+    goals = Goal.prepared_for(@family)
+    assert_operator goals.size, :>=, 5
+
+    # Uncached: the query cache would otherwise answer a per-goal fallback
+    # read, and assert_no_queries does not count cached queries.
+    ActiveRecord::Base.uncached do
+      assert_no_queries do
+        goals.each do |goal|
+          goal.pace
+          goal.pace_measurable?
+        end
+      end
+    end
+  end
+
   private
+    # A manual account whose value moves only through balance updates: a
+    # balance row at `history_from`, a reconciliation valuation on
+    # `valuation_on`, today's value on the account itself, no transactions.
+    def valuation_tracked_account(balance:, year_ago:, history_from: 400.days.ago.to_date,
+                                  valuation_on: 30.days.ago.to_date, accountable: Investment.new)
+      account = Account.create!(family: @family, accountable: accountable,
+                                name: "Super #{SecureRandom.hex(3)}", currency: "USD", balance: balance)
+      account.balances.create!(date: history_from, balance: year_ago, start_cash_balance: year_ago, currency: "USD")
+      create_valuation(account: account, amount: balance, date: valuation_on)
+      account
+    end
+
+    # Reloaded, so every figure is read fresh rather than from a memo.
+    def goal_on(accounts, target_amount:, target_date: nil, basis: "balance", name: "Pace goal #{SecureRandom.hex(3)}", allocated: nil)
+      goal = @family.goals.create!(name: name, target_amount: target_amount, target_date: target_date, currency: "USD") do |g|
+        Array(accounts).each { |account| g.goal_accounts.build(account: account, allocated_amount: allocated) }
+      end
+      goal.update_column(:progress_basis, basis)
+      Goal.find(goal.id)
+    end
+
     # A goal with something saved and something left, so both segments exist.
     def ring_goal(color:)
       account = Account.create!(family: @family, accountable: Depository.new, name: "Ring savings", currency: "USD", balance: 2_000)

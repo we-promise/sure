@@ -151,6 +151,7 @@ en:
         behind_covered: "pending pledges close the gap"
         on_track: "reaches goal around %{date}"
         no_target_date: "set a target date to project a finish line"
+        pace_unknown: "can't measure a pace from these accounts yet; that needs a balance update in the last year and a year of balance history"
       pending_pledge:
         title:
           zero: "Pending: %{amount} into %{account} · expires today"
@@ -186,6 +187,7 @@ en:
         reached: You've hit the target. No projection needed.
         no_target_date: No target date set. Set one to project a finish line.
         no_pace: No deposits yet. Add money to a linked account to start a projection.
+        pace_unknown: Not enough history on these accounts to measure a pace yet, so there is no projection.
         behind: Falling short at current pace.
         on_track_html: At your current pace, you'll reach this goal around <strong class="text-primary whitespace-nowrap">%{date}</strong>.
         aria_label: "Projection chart for %{name}"
@@ -251,6 +253,7 @@ en:
       reached: Reached
       completed: Completed
       no_target_date: Open
+      pace_unknown: Pace unknown
       paused: Paused
       archived: Archived
     empty_state:
@@ -277,6 +280,8 @@ en:
         other: "%{count} days left"
       pace_with_target: "%{avg}/mo · target %{target}/mo"
       pace_no_target: "%{avg}/mo avg"
+      pace_unknown_with_target: "Pace unknown · target %{target}/mo"
+      pace_unknown: Pace unknown
       footer_paused: Paused
       footer_archived: Archived
       footer_reserve_intact: Reserve intact

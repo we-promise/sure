@@ -314,10 +314,13 @@ class GoalsController < ApplicationController
       #   exclusions above, so without this it would land in the denominator
       #   and never in the numerator: a family with one reserve read
       #   "0 of 1 on track" for a goal that is working exactly as intended.
+      # - pace_unknown → its accounts give no measurable pace, so there is
+      #   nothing to compare the required pace against. Like no_target_date,
+      #   it can be neither on track nor behind.
       # When this hits zero the tile swaps to a celebration / empty
       # state in the view.
       tracked_total = active_goals.count do |g|
-        !g.paused? && !g.maintained? && g.status != :reached && g.status != :no_target_date
+        !g.paused? && !g.maintained? && !g.status.in?(%i[reached no_target_date pace_unknown])
       end
 
       {
