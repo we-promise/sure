@@ -316,7 +316,7 @@ class SimplefinItemsController < ApplicationController
       # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
         Current.family.accounts
-          .visible_manual
+          .visible_manual_for(Current.user)
           .order(:name)
           .to_a
       }
@@ -473,7 +473,7 @@ class SimplefinItemsController < ApplicationController
       # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
         Current.family.accounts
-          .visible_manual
+          .visible_manual_for(Current.user)
           .order(:name)
           .to_a
       }
