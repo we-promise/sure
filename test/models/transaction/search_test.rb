@@ -476,6 +476,22 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal "EUR", totals_eur.expense_money.currency.iso_code
   end
 
+  test "totals is served from cache when nothing has changed" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+
+    search1 = Transaction::Search.new(@family)
+    key1 = search1.cache_key_base
+    result1 = search1.totals
+
+    search2 = Transaction::Search.new(@family.reload)
+    key2 = search2.cache_key_base
+
+    assert_equal key1, key2
+    assert_not_nil cache.read("transaction_search_totals/v3/#{key2}")
+    assert_equal result1, search2.totals
+  end
+
   test "category filter includes subcategories" do
     # Create a transaction with the parent category
     parent_entry = create_transaction(

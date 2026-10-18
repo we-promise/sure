@@ -724,7 +724,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
   end
 
   test "totals cache invalidates when family currency changes" do
-    account = create_investment_account(balance: 500)
+    create_investment_account(balance: 500)
     period = Period.last_30_days
 
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)

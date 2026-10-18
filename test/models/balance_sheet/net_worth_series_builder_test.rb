@@ -36,6 +36,7 @@ class BalanceSheet::NetWorthSeriesBuilderTest < ActiveSupport::TestCase
 
     assert_not_equal k0, k1
     assert_not_equal k1, k2
+    # Regression assertion for #4200: ensure key does not revert to pre-deletion state (k0)
     assert_not_equal k0, k2
   end
 

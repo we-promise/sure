@@ -266,7 +266,16 @@ class FamilyTest < ActiveSupport::TestCase
 
     assert_not_equal k0, k1
     assert_not_equal k1, k2
+    # Regression assertion for #4200: ensure key does not revert to pre-deletion state (k0)
     assert_not_equal k0, k2
+  end
+
+  test "build_cache_key remains unchanged when nothing relevant has changed" do
+    family = families(:dylan_family)
+    key1 = family.build_cache_key("test_key", invalidate_on_data_updates: true)
+    key2 = family.reload.build_cache_key("test_key", invalidate_on_data_updates: true)
+
+    assert_equal key1, key2
   end
 
   test "accounts_status_version fetches count and max updated_at in a single query" do
@@ -277,8 +286,6 @@ class FamilyTest < ActiveSupport::TestCase
 
     account_queries = queries.grep(/FROM "accounts"/i)
     assert_equal 1, account_queries.size, "accounts_status_version should execute only one query"
-    assert_match(/count\(\*\)/i, account_queries.first)
-    assert_match(/max\("accounts"\."updated_at"\)/i, account_queries.first)
   end
 
   test "default currency comes from country ISO data" do

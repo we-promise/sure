@@ -54,6 +54,20 @@ class IncomeStatementTest < ActiveSupport::TestCase
     IncomeStatement.new(@family).send(:category_stats)
   end
 
+  test "family_stats and category_stats are served from cache when nothing has changed" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::FamilyStats.expects(:new).once.returns(stub(call: []))
+    IncomeStatement::CategoryStats.expects(:new).once.returns(stub(call: []))
+
+    statement1 = IncomeStatement.new(@family)
+    statement1.send(:family_stats)
+    statement1.send(:category_stats)
+
+    statement2 = IncomeStatement.new(@family.reload)
+    statement2.send(:family_stats)
+    statement2.send(:category_stats)
+  end
+
   test "cache freshness key changes through account deletion lifecycle and does not revert" do
     empty_account = @family.accounts.create!(
       name: "Empty Account",
@@ -73,7 +87,41 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     assert_not_equal k0, k1
     assert_not_equal k1, k2
+    # Regression assertion for #4200: ensure key does not revert to pre-deletion state (k0)
     assert_not_equal k0, k2
+  end
+
+  test "family_stats and category_stats caches invalidate across empty account deletion lifecycle without reverting" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    travel_to Time.current do
+      @family.accounts.update_all(updated_at: 2.days.ago)
+      empty_account = @family.accounts.create!(
+        name: "Empty Account",
+        balance: 0,
+        currency: @family.currency,
+        accountable: Depository.new
+      )
+      empty_account.update_columns(updated_at: 2.days.ago)
+
+      # K0 (Initial) -> K1 (Pending Deletion) -> K2 (Destroyed): all 3 states must miss cache and recompute
+      IncomeStatement::FamilyStats.expects(:new).times(3).returns(stub(call: []))
+      IncomeStatement::CategoryStats.expects(:new).times(3).returns(stub(call: []))
+
+      # 1. Initial state (K0)
+      IncomeStatement.new(@family.reload).send(:family_stats)
+      IncomeStatement.new(@family.reload).send(:category_stats)
+
+      # 2. Marked for deletion (K1)
+      empty_account.update!(status: "pending_deletion")
+      IncomeStatement.new(@family.reload).send(:family_stats)
+      IncomeStatement.new(@family.reload).send(:category_stats)
+
+      # 3. Destroyed (K2) - must not revert back to K0's cached value
+      empty_account.destroy!
+      IncomeStatement.new(@family.reload).send(:family_stats)
+      IncomeStatement.new(@family.reload).send(:category_stats)
+    end
   end
 
   test "a new statement invalidates daily series when exchange rates change" do
