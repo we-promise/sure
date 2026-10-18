@@ -99,7 +99,7 @@ class DirectaAccount::HoldingsProcessor
     def projected_manual_basis(security:, snapshot:, account_provider:)
       latest_provider_holding = provider_identity_holdings(account_provider, security)
         .where(currency: snapshot.currency)
-        .where("date < ?", snapshot.date)
+        .where("date <= ?", snapshot.date)
         .order(date: :desc, id: :desc)
         .first
       return unless latest_provider_holding&.qty&.positive?
@@ -114,7 +114,7 @@ class DirectaAccount::HoldingsProcessor
           cost_basis_locked: true,
           cost_basis_source: "manual"
         )
-        .where("date > ? AND date < ?", latest_provider_holding.date, snapshot.date)
+        .where("date > ? AND date <= ?", latest_provider_holding.date, snapshot.date)
         .order(date: :desc, id: :desc)
         .detect do |holding|
           holding.qty.to_d.positive? && !holding.cost_basis.nil? &&

@@ -172,6 +172,56 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal provider_security.id, next_holding.provider_security_id
   end
 
+  test "same-day tombstone prevents an older generated manual projection from returning on reopen" do
+    first_date = Date.current - 2.days
+    first = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"), date: first_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: first_date, positions: [ first ])
+    )
+    generated = create_manual_projection(date: first_date.next_day, cost_basis: BigDecimal("37"))
+    assert DirectaAccount::ContentValidator.new(@provider_account).generated_snapshot_holding?(generated)
+
+    reopen_date = Date.current
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: reopen_date, positions: [])
+    )
+    tombstone = @provider_account.account.holdings.find_by!(date: reopen_date)
+    assert_equal BigDecimal("0"), tombstone.qty
+    assert_nil tombstone.cost_basis
+
+    reopened = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("120"), cost_basis: BigDecimal("52"), date: reopen_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: reopen_date, positions: [ reopened ])
+    )
+
+    reopened_holding = @provider_account.account.holdings.find_by!(date: reopen_date)
+    assert_equal BigDecimal("52"), reopened_holding.cost_basis
+    assert_equal "provider", reopened_holding.cost_basis_source
+    assert_not reopened_holding.cost_basis_locked?
+  end
+
+  test "same-day generated manual correction takes precedence over an older projection" do
+    first_date = Date.current - 2.days
+    first = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"), date: first_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: first_date, positions: [ first ])
+    )
+    create_manual_projection(date: first_date.next_day, cost_basis: BigDecimal("37"))
+    current_projection = create_manual_projection(date: Date.current, cost_basis: BigDecimal("38"))
+    assert DirectaAccount::ContentValidator.new(@provider_account).generated_snapshot_holding?(current_projection)
+
+    refreshed = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("120"), cost_basis: BigDecimal("52"))
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: Date.current, positions: [ refreshed ])
+    )
+
+    imported = current_projection.reload
+    assert_equal BigDecimal("38"), imported.cost_basis
+    assert_equal "manual", imported.cost_basis_source
+    assert imported.cost_basis_locked?
+    assert_equal @provider_account.account_provider.id, imported.account_provider_id
+  end
+
   test "a zero quantity tombstone resets a locked manual basis before the position reopens" do
     first_date = Date.current - 2.days
     first = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"), date: first_date)
@@ -345,6 +395,28 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
   end
 
   private
+
+    def create_manual_projection(date:, cost_basis:)
+      projection = travel_to(date.in_time_zone + 12.hours) do
+        Holding::DirectaSnapshotCalculator.new(
+          @provider_account.account,
+          account_provider_id: @provider_account.account_provider.id
+        ).projected_rows.find { |row| row.date == date }
+      end
+      security = Security.find(projection.security_id)
+
+      @provider_account.account.holdings.create!(
+        security: security,
+        qty: projection.qty,
+        price: projection.price,
+        amount: projection.amount,
+        currency: projection.currency,
+        date: projection.date,
+        cost_basis: cost_basis,
+        cost_basis_source: "manual",
+        cost_basis_locked: true
+      )
+    end
 
     def cash_snapshot
       Provider::Directa::Snapshot.new(
