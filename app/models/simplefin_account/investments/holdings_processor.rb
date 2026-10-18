@@ -62,8 +62,9 @@ class SimplefinAccount::Investments::HoldingsProcessor
         # which would cause the system to display average cost as current price. (GH #1182)
         qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
         market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
-        raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding)
-        cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, institution_reports_total_basis?)
+        total_basis_institution = institution_reports_total_basis?
+        raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding, market_value, total_basis_institution)
+        cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, total_basis_institution)
 
         # Derive price from market_value when possible; otherwise fall back to any price field
         fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
@@ -113,14 +114,15 @@ class SimplefinAccount::Investments::HoldingsProcessor
         position[:fallback_price] ||= price if price.to_d.positive?
 
         if qty.to_d.positive?
-          if cost_basis.present?
+          if cost_basis.present? && !cost_basis.to_d.zero?
             position[:basis_value] += cost_basis.to_d * qty.to_d
             position[:basis_qty] += qty.to_d
           else
             # Averaging over only the lots that reported a basis would apply
             # that figure to shares whose cost is genuinely unknown, inventing
             # cost and therefore inventing gain/loss. Unknown has to stay
-            # unknown for the whole position.
+            # unknown for the whole position. A zero basis is unknown too, as
+            # in Holding::CostBasisReconciler.
             position[:basis_complete] = false
           end
         end
@@ -225,15 +227,37 @@ class SimplefinAccount::Investments::HoldingsProcessor
       simplefin_account.raw_holdings_payload || []
     end
 
-    def cost_basis_from(simplefin_holding)
+    def cost_basis_from(simplefin_holding, market_value = nil, total_basis_institution = false)
       %w[cost_basis basis total_cost value].each do |key|
         raw = simplefin_holding[key]
         next if raw.nil? || raw.to_s.strip.empty?
 
-        return [ parse_decimal(raw), key ]
+        value = parse_decimal(raw)
+        return [ value, key ] unless value&.zero?
+
+        return purchase_price_basis(simplefin_holding, market_value, total_basis_institution) || [ value, key ]
       end
 
-      [ nil, nil ]
+      purchase_price_basis(simplefin_holding, market_value, total_basis_institution) || [ nil, nil ]
+    end
+
+    # SimpleFIN's purchase_price is the per-share average cost. Some
+    # Fidelity accounts send cost_basis: 0 and carry the cost only there, so
+    # it stands in when the basis is zero or missing. Only for the
+    # allowlisted brokerages below, where that meaning of the field has been
+    # seen. Elsewhere a zero basis can also mean the broker never had the
+    # cost, as after a transfer in, and a figure derived from purchase_price
+    # could be wrong. Nor when market_value is missing: the holding is then
+    # priced from
+    # purchase_price too, and the basis would show an invented 0% return.
+    # Being per share, it is never divided by qty; lot combining weights it
+    # by each lot's shares.
+    def purchase_price_basis(simplefin_holding, market_value, total_basis_institution)
+      return unless total_basis_institution
+      return unless market_value&.positive?
+
+      purchase_price = parse_decimal(simplefin_holding["purchase_price"])
+      [ purchase_price, "purchase_price" ] if purchase_price&.positive?
     end
 
     # Sure stores holding cost_basis as per-share average cost. SimpleFIN
@@ -243,6 +267,8 @@ class SimplefinAccount::Investments::HoldingsProcessor
     #     spec and observed payloads; divide by qty unconditionally.
     #   - cost_basis / basis: the spec calls this per-share, and most
     #     brokerages comply. Keep these values unchanged by default.
+    #   - purchase_price: per-share in every observed payload, including
+    #     those of the allowlisted brokerages below; never divided.
     #
     # Exception: a small allowlist of brokerages (Vanguard, Fidelity, Schwab)
     # is known to populate cost_basis with the total position cost in
@@ -269,7 +295,8 @@ class SimplefinAccount::Investments::HoldingsProcessor
 
     # Institutions known to populate the SimpleFIN `cost_basis` / `basis`
     # field with the total position cost rather than the per-share value the
-    # spec requires. Matched as case-insensitive substrings against the
+    # spec requires. Also the only ones whose `purchase_price` stands in for
+    # a zero basis. Matched as case-insensitive substrings against the
     # account's stored org name and domain.
     TOTAL_BASIS_INSTITUTIONS = %w[vanguard fidelity schwab etrade e*trade].freeze
 
