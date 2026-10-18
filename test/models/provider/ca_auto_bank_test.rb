@@ -15,6 +15,7 @@ class Provider::CaAutoBankTest < ActiveSupport::TestCase
       .then.to_return(status: 200, body: { authenticationToken: token }.to_json)
 
     client = Provider::CaAutoBank.new
+    assert_match(/\A[A-Za-z0-9]{26}\z/, client.request_session_id)
     challenge = client.begin_login(email: "owner@example.com", password: "synthetic-password")
     refute challenge.authenticated?
     refute_includes challenge.inspect, "private-verification"
@@ -50,6 +51,25 @@ class Provider::CaAutoBankTest < ActiveSupport::TestCase
     [ "not-a-token", "a.b.c", ca_token.sub("synthetic-signature", "") ].each do |token|
       assert_raises(Provider::CaAutoBank::Error) { Provider::CaAutoBank.token_expires_at(token) }
     end
+  end
+
+  test "approval failures expose only fixed operation and numeric response diagnostics" do
+    stub_request(:post, /\/login\/tfa\z/).to_return(status: 503,
+      body: { errorCode: 5030001, message: "private backend response", verificationToken: "private-verification" }.to_json)
+    error = assert_raises(Provider::CaAutoBank::Error) do
+      Provider::CaAutoBank.new.poll_login(verification_token: "private-verification")
+    end
+    assert_equal "provider_unavailable", error.code
+    assert_equal({ operation: "approval_check", http_status: 503, bank_error_code: 5030001 }, error.diagnostics)
+    refute_includes error.inspect, "private"
+    refute_includes error.diagnostics.to_json, "private"
+
+    stub_request(:post, /\/login\/tfa\z/).to_return(status: 200, body: "private invalid JSON")
+    error = assert_raises(Provider::CaAutoBank::Error) do
+      Provider::CaAutoBank.new.poll_login(verification_token: "private-verification")
+    end
+    assert_equal "invalid_response", error.code
+    assert_equal({ operation: "approval_check", http_status: 200 }, error.diagnostics)
   end
 
   test "snapshot retrieval matches contracts and requests only active deposit read queries" do

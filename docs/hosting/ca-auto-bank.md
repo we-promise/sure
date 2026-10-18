@@ -13,6 +13,16 @@ Bank mobile app. Sure checks the existing approval every ten seconds, for at mos
 five minutes and thirty checks, then queues the first deposit snapshot. A manual
 **Check approval** action is also available. The password is never persisted.
 Only the encrypted approval state and accepted bank session are retained.
+Transient bank or malformed-response errors retry within the same bounded
+approval window. After approval yields a token, Sure retains it only in encrypted
+pending state until the bank identity has been verified; a retry does not redeem
+the approval again. Cancellation, expiry and terminal authentication errors clear
+that pending credential. The prior accepted connection is unchanged until identity
+verification succeeds.
+
+Failed login steps produce a support diagnostic with a fixed operation name,
+HTTP status, numeric bank error code when available, and transport exception
+class. Passwords, tokens, cookies, response bodies and profile data are excluded.
 
 This release supports SmartCode/app approval. SMS authentication and additional
 partner-selection login branches are not implemented. It needs no browser,

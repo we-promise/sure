@@ -13,10 +13,11 @@ class Provider::CaAutoBank
   MAX_DEPOSITS = 200
 
   class Error < StandardError
-    attr_reader :code
+    attr_reader :code, :diagnostics
 
-    def initialize(code)
+    def initialize(code, diagnostics: {})
       @code = code.to_s
+      @diagnostics = diagnostics.slice(:operation, :http_status, :bank_error_code, :transport_error).freeze
       super(@code)
     end
   end
@@ -39,7 +40,7 @@ class Provider::CaAutoBank
 
   attr_reader :request_session_id
 
-  def initialize(authentication_token: nil, request_session_id: SecureRandom.uuid)
+  def initialize(authentication_token: nil, request_session_id: SecureRandom.alphanumeric(26))
     @authentication_token = authentication_token
     @request_session_id = request_session_id
   end
@@ -60,7 +61,7 @@ class Provider::CaAutoBank
   def account_identity
     body = get("#{AUTH_ROOT}/user")
     value = body["partnerId"]
-    raise Error.new(:invalid_session) unless value.is_a?(String) && value.present? && value.bytesize <= 256
+    raise Error.new(:invalid_session, diagnostics: @last_response_diagnostics) unless value.is_a?(String) && value.present? && value.bytesize <= 256
 
     value
   end
@@ -189,6 +190,7 @@ class Provider::CaAutoBank
           end
         end
       end
+      @last_response_diagnostics = response_diagnostics(path, status, response_body)
       raise Error.new(:session_expired) if authentication && [ 401, 403 ].include?(status)
       raise Error.new(:authentication_failed) if !authentication && [ 400, 401, 403 ].include?(status)
       raise Error.new(:rate_limited) if status == 429
@@ -198,9 +200,28 @@ class Provider::CaAutoBank
       raise Error.new(:invalid_response) unless parsed.is_a?(Hash)
 
       [ status, parsed ]
+    rescue Error => error
+      raise Error.new(error.code, diagnostics: response_diagnostics(path, status, response_body)), cause: nil
     rescue JSON::ParserError, Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError
-      raise Error.new(:invalid_response), cause: nil
-    rescue IOError, SystemCallError, OpenSSL::SSL::SSLError, Timeout::Error, SocketError
-      raise Error.new(:provider_unavailable), cause: nil
+      raise Error.new(:invalid_response, diagnostics: response_diagnostics(path, status, response_body)), cause: nil
+    rescue IOError, SystemCallError, OpenSSL::SSL::SSLError, Timeout::Error, SocketError => error
+      details = response_diagnostics(path, status, response_body).merge(transport_error: error.class.name)
+      raise Error.new(:provider_unavailable, diagnostics: details), cause: nil
+    end
+
+    def response_diagnostics(path, status, response_body)
+      operation = {
+        "#{AUTH_ROOT}/login" => "login_start", "#{AUTH_ROOT}/login/tfa" => "approval_check",
+        "#{AUTH_ROOT}/user" => "identity_verification", DEPOSIT_ROOT => "deposit_accounts",
+        "#{DEPOSIT_ROOT}/contracts" => "deposit_contracts", "#{DEPOSIT_ROOT}/overview" => "deposit_overview",
+        "#{DEPOSIT_ROOT}/time-deposits/processed" => "active_deposits", "#{DEPOSIT_ROOT}/time-deposits/details" => "deposit_details"
+      }.fetch(path, "unknown")
+      details = { operation: operation, http_status: status }.compact
+      parsed = JSON.parse(response_body.to_s)
+      code = parsed["errorCode"] if parsed.is_a?(Hash)
+      details[:bank_error_code] = code if code.is_a?(Integer) && code.between?(0, 999_999_999)
+      details
+    rescue JSON::ParserError
+      details
     end
 end

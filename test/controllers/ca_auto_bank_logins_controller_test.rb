@@ -74,6 +74,74 @@ class CaAutoBankLoginsControllerTest < ActionDispatch::IntegrationTest
     assert_requested poll_request, times: 1
   end
 
+  test "a temporary approval failure retains the challenge and retries without another login" do
+    start_challenge
+    item = CaAutoBankItem.find_by!(owner: @user)
+    attempt = JSON.parse(item.pending_login_state).fetch("attempt_id")
+    bank_poll = stub_request(:post, "#{@bank_root}/login/tfa")
+      .to_return(status: 503, body: { errorCode: 5030001, message: "private backend detail" }.to_json)
+      .then.to_return(status: 200, body: { authenticationToken: ca_token }.to_json)
+    stub_request(:get, "#{@bank_root}/user").to_return(status: 200, body: { partnerId: "synthetic-partner" }.to_json)
+
+    post poll_ca_auto_bank_login_path, params: { ca_auto_bank_login: { attempt_id: attempt } }, as: :json
+    assert_response :success
+    assert_equal "pending", response.parsed_body.fetch("state")
+    assert_equal 1, JSON.parse(item.reload.pending_login_state).fetch("polls")
+    entry = DebugLogEntry.where(provider_key: "ca_auto_bank").last
+    assert_equal "approval_check", entry.metadata.fetch("operation")
+    assert_equal 503, entry.metadata.fetch("http_status")
+    refute_includes entry.metadata.to_json, "private"
+    refute item.connected?
+
+    travel 11.seconds do
+      post poll_ca_auto_bank_login_path, params: { ca_auto_bank_login: { attempt_id: attempt } }, as: :json
+      assert_response :success
+      assert_equal "connected", response.parsed_body.fetch("state")
+    end
+    assert_requested bank_poll, times: 2
+    assert_requested(:post, "#{@bank_root}/login", times: 1)
+  end
+
+  test "identity verification retries the encrypted approved token without redeeming approval again" do
+    start_challenge
+    item = CaAutoBankItem.find_by!(owner: @user)
+    attempt = JSON.parse(item.pending_login_state).fetch("attempt_id")
+    token = ca_token
+    bank_poll = stub_request(:post, "#{@bank_root}/login/tfa")
+      .to_return(status: 200, body: { authenticationToken: token }.to_json)
+    profile = stub_request(:get, "#{@bank_root}/user")
+      .to_return(status: 503, body: { errorCode: 5030001, message: "private backend detail" }.to_json)
+      .then.to_return(status: 200, body: { partnerId: "synthetic-partner" }.to_json)
+
+    post poll_ca_auto_bank_login_path, params: { ca_auto_bank_login: { attempt_id: attempt } }, as: :json
+    assert_response :success
+    assert_equal "pending", response.parsed_body.fetch("state")
+    assert_nil item.reload.authentication_token
+    state = JSON.parse(item.pending_login_state)
+    assert_equal token, state.fetch("authentication_token")
+    refute state.key?("verification_token")
+    raw = ActiveRecord::Base.connection.select_value("SELECT pending_login_state FROM ca_auto_bank_items WHERE id = #{ActiveRecord::Base.connection.quote(item.id)}")
+    refute_includes raw, token
+    refute_includes response.body, token
+    refute item.connected?
+    entry = DebugLogEntry.where(provider_key: "ca_auto_bank").last
+    assert_equal "identity_verification", entry.metadata.fetch("operation")
+    assert_equal true, entry.metadata.fetch("approval_received")
+    refute_includes entry.metadata.to_json, "private"
+    refute_includes entry.metadata.to_json, token
+
+    travel 11.seconds do
+      post poll_ca_auto_bank_login_path, params: { ca_auto_bank_login: { attempt_id: attempt } }, as: :json
+      assert_response :success
+      assert_equal "connected", response.parsed_body.fetch("state")
+    end
+    assert item.reload.connected?
+    assert_nil item.pending_login_state
+    assert_requested bank_poll, times: 1
+    assert_requested profile, times: 2
+    assert_requested(:post, "#{@bank_root}/login", times: 1)
+  end
+
   test "a second Sure session cannot complete the first session's bank approval" do
     start_challenge
     item = CaAutoBankItem.find_by!(owner: @user)

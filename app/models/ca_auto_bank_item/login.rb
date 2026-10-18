@@ -3,7 +3,7 @@ class CaAutoBankItem::Login
   POLL_INTERVAL = 10.seconds
   MAX_POLLS = 30
   ERROR_CODES = %w[
-    invalid_credentials authentication_failed unsupported_login invalid_session session_expired
+    invalid_credentials authentication_failed unsupported_login invalid_session invalid_response session_expired
     provider_unavailable rate_limited encryption_unavailable login_in_progress challenge_expired
     challenge_not_available login_authorization_changed account_identity_changed
   ].freeze
@@ -38,8 +38,13 @@ class CaAutoBankItem::Login
           response = client.begin_login(email: email_address, password: secret)
           result = apply_response!(response, state)
         rescue Provider::CaAutoBank::Error => error
-          clear_pending! unless error.code == "login_in_progress"
-          failure = safe_error(error)
+          record_failure(error, state)
+          if retryable?(error, state)
+            result = :pending
+          else
+            clear_pending! unless error.code == "login_in_progress"
+            failure = safe_error(error)
+          end
         end
       end
     end
@@ -69,12 +74,22 @@ class CaAutoBankItem::Login
           end
           state["polls"] = state.fetch("polls", 0) + 1
           state["last_poll_at"] = Time.current.utc.iso8601(6)
+          persist_pending!(state)
           client = @provider || Provider::CaAutoBank.new(request_session_id: state.fetch("request_session_id"))
-          response = client.poll_login(verification_token: state.fetch("verification_token"))
+          response = if state["authentication_token"].present?
+            Provider::CaAutoBank::AuthResult.new(authentication_token: state.fetch("authentication_token"), verification_token: nil)
+          else
+            client.poll_login(verification_token: state.fetch("verification_token"))
+          end
           result = apply_response!(response, state)
         rescue Provider::CaAutoBank::Error => error
-          clear_pending! unless error.code == "challenge_not_available"
-          failure = safe_error(error)
+          record_failure(error, state)
+          if retryable?(error, state)
+            result = :pending
+          else
+            clear_pending! unless error.code == "challenge_not_available"
+            failure = safe_error(error)
+          end
         rescue ArgumentError, KeyError, TypeError
           clear_pending!
           failure = Provider::CaAutoBank::Error.new(:challenge_expired)
@@ -119,6 +134,9 @@ class CaAutoBankItem::Login
         token = response.authentication_token
         expires_at = Provider::CaAutoBank.token_expires_at(token)
         fail!(:session_expired) unless expires_at > Time.current
+        state["authentication_token"] = token
+        state.delete("verification_token")
+        persist_pending!(state)
         client = Provider::CaAutoBank.new(authentication_token: token, request_session_id: state.fetch("request_session_id"))
         identity = client.account_identity
         if @item.account_identity.present? && @item.account_identity != identity
@@ -130,9 +148,27 @@ class CaAutoBankItem::Login
         :authenticated
       else
         state["verification_token"] = response.verification_token
-        @item.update!(pending_login_state: JSON.generate(state), status: @item.session_configured? ? :connected : :pending)
+        persist_pending!(state)
         :pending
       end
+    end
+
+    def persist_pending!(state)
+      @item.update!(pending_login_state: JSON.generate(state), status: @item.session_configured? ? :connected : :pending)
+    end
+
+    def retryable?(error, state)
+      %w[provider_unavailable invalid_response].include?(error.code) && state.is_a?(Hash) &&
+        !expired?(state) && state.fetch("polls", 0) < MAX_POLLS &&
+        (state["verification_token"].present? || state["authentication_token"].present?)
+    end
+
+    def record_failure(error, state)
+      DebugLogEntry.capture(category: "provider_auth", level: "warn", source: "ca_auto_bank",
+        provider_key: "ca_auto_bank", family: @item.family,
+        message: "CA Auto Bank login step could not be completed.",
+        metadata: error.diagnostics.merge(error_code: safe_error(error).code,
+          approval_received: state.is_a?(Hash) && state["authentication_token"].present?))
     end
 
     def authorize!(session_id)
