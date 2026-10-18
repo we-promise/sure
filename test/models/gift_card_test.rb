@@ -10,7 +10,7 @@ class GiftCardTest < ActiveSupport::TestCase
         currency: "USD",
         owner: users(:family_admin),
         accountable_type: "GiftCard",
-        accountable_attributes: { card_format: "digital", face_value: 50, face_value_currency: "USD", card_number: "ABCD-1234", pin: "9876", redeem_url: "https://books.example/redeem?token=SECRET" }
+        accountable_attributes: { card_format: "digital", face_value: 50, face_value_currency: "USD", card_number: "ABCD-1234", pin: "9876", redeem_url: "https://books.example/redeem/SECRET" }
       },
       skip_initial_sync: true,
       opening_balance_date: Date.new(2026, 9, 1)
@@ -140,7 +140,7 @@ class GiftCardTest < ActiveSupport::TestCase
     @gift_card.reload
     assert_equal "ABCD-1234", @gift_card.card_number
     assert_equal "9876", @gift_card.pin
-    assert_equal "https://books.example/redeem?token=SECRET", @gift_card.redeem_url
+    assert_equal "https://books.example/redeem/SECRET", @gift_card.redeem_url
   end
 
   test "credentials stay out of serialized output" do
@@ -158,7 +158,7 @@ class GiftCardTest < ActiveSupport::TestCase
   test "credentials are shown to the owner and full control shares only" do
     member = users(:family_member)
     assert_equal({ card_number: "ABCD-1234", pin: "9876" }, @gift_card.visible_codes_for(users(:family_admin)))
-    assert_equal "https://books.example/redeem?token=SECRET", @gift_card.visible_redeem_url_for(users(:family_admin))
+    assert_equal "https://books.example/redeem/SECRET", @gift_card.visible_redeem_url_for(users(:family_admin))
 
     share = @account.account_shares.find_or_initialize_by(user: member)
     %w[read_only read_write].each do |permission|

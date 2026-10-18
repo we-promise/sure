@@ -222,7 +222,7 @@ class GiftCardsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "shares that cannot act on the card see the balance but not its credentials" do
-    @account.gift_card.update!(card_number: "SECRET-CODE", pin: "PIN-SECRET", redeem_url: "https://shop.example/r?token=URL-SECRET")
+    @account.gift_card.update!(card_number: "SECRET-CODE", pin: "PIN-SECRET", redeem_url: "https://shop.example/r/URL-SECRET")
     member = users(:family_member)
     share = @account.account_shares.find_or_initialize_by(user: member)
     sign_in member
