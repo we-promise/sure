@@ -92,9 +92,15 @@ class Rule::NotificationBaselineOnEnableTest < ActiveSupport::TestCase
     rule = email_rule(condition: Rule::Condition.new(condition_type: "transaction_name", operator: "matches_regex", value: "amzn"))
     Rule::SafeRegex.stubs(:with_timeout).raises(Rule::SafeRegex::TimeoutError)
 
-    assert_nothing_raised { rule.update!(active: true, name: "Renamed") }
+    assert_difference -> { DebugLogEntry.where(category: "rule_notification").count }, 1 do
+      assert_nothing_raised { rule.update!(active: true, name: "Renamed") }
+    end
 
     assert rule.notification_baseline_timed_out?
+    entry = DebugLogEntry.where(category: "rule_notification").last
+    assert_equal "warn", entry.level
+    assert_equal @family, entry.family
+    assert_equal rule.id, entry.metadata["rule_id"]
     rule.reload
     assert_not rule.active?, "a rule without a baseline would email every past match"
     assert_equal "Renamed", rule.name
@@ -103,7 +109,10 @@ class Rule::NotificationBaselineOnEnableTest < ActiveSupport::TestCase
 
   test "a baseline that is recorded does not report a timeout" do
     rule = email_rule
-    rule.update!(active: true)
+
+    assert_no_difference -> { DebugLogEntry.where(category: "rule_notification").count } do
+      rule.update!(active: true)
+    end
 
     assert_not rule.notification_baseline_timed_out?
     assert rule.reload.active?

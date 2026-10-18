@@ -223,7 +223,10 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
     # after_create_commit does not fire under transactional tests, so the seeding
     # path is invoked directly (as send_email_notification_test.rb does).
     action = rule.actions.create!(action_type: "send_email_notification")
-    assert_nothing_raised { action.send(:seed_notification_baseline) }
+    assert_difference -> { DebugLogEntry.where(category: "rule_notification").count }, 1 do
+      assert_nothing_raised { action.send(:seed_notification_baseline) }
+    end
+    assert_equal rule.id, DebugLogEntry.where(category: "rule_notification").last.metadata["rule_id"]
 
     # No baseline was recorded, so leaving the rule on would email every past match.
     assert_not rule.reload.active?
@@ -257,10 +260,16 @@ class Rule::RegexExecutionTest < ActiveSupport::TestCase
 
     assert_no_difference -> { NotificationDelivery.where(rule: timed_out).count } do
       assert_no_enqueued_jobs(only: RuleEmailNotificationJob) do
-        assert_nothing_raised { ApplyRulesJob.perform_now(@family) }
+        # One debug-log entry, for the one rule that failed.
+        assert_difference -> { DebugLogEntry.where(category: "rule_run").count }, 1 do
+          assert_nothing_raised { ApplyRulesJob.perform_now(@family) }
+        end
       end
     end
 
+    entry = DebugLogEntry.where(category: "rule_run").last
+    assert_equal timed_out.id, entry.metadata["rule_id"]
+    assert_equal @family, entry.family
     assert_equal [ "failed" ], timed_out.rule_runs.pluck(:status)
     assert_match "TimeoutError", timed_out.rule_runs.first.error_message
     assert_equal [ "success" ], stopper.rule_runs.pluck(:status)

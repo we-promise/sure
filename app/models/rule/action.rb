@@ -103,7 +103,6 @@ class Rule::Action < ApplicationRecord
       # email every past match on its next run, so it is switched off instead; the
       # user can turn it back on after changing the pattern. Through the rule, so
       # an update that saved this action reports the switch-off, not success.
-      Rails.logger.warn("Notification baseline for rule #{rule_id} timed out, rule switched off: #{e.message}")
-      rule.notification_baseline_timed_out!
+      rule.notification_baseline_timed_out!(e, source: self.class.name)
     end
 end
