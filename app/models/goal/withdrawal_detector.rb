@@ -64,6 +64,12 @@ class Goal::WithdrawalDetector
         # positive side. Reading this the other way round would offer to
         # attribute the user's deposits as spending.
         .where("entries.amount >= ?", MIN_AMOUNT)
+        # A transfer out of a goal-backed account — moving the money to
+        # checking before spending it there — is a reallocation, not a spend.
+        # Offering it reads as "was this spent on X?" for money that has not
+        # left the household yet; attributing it and then the real purchase
+        # that follows counts the same money against the goal twice.
+        .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
         .where("transactions.extra -> 'goal' ->> 'consumed_goal_id' IS NULL")
         # A provisional charge can still be reversed or replaced by its posted
         # form. Attributing one leaves the goal consumed for a transaction that

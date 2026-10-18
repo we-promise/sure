@@ -32,6 +32,22 @@ class Goal::WithdrawalDetectorTest < ActiveSupport::TestCase
     assert_empty detect
   end
 
+  # Moving money out of a goal-backed account toward checking is a
+  # reallocation, not a spend on the goal — offering it, and then also
+  # offering the real purchase that follows, would count the same money twice.
+  test "ignores a transfer" do
+    create_outflow(@account, 1_200, Date.current).entryable.update!(kind: "funds_movement")
+
+    assert_empty detect
+  end
+
+  test "still surfaces an ordinary spend alongside an ignored transfer" do
+    create_outflow(@account, 1_200, Date.current).entryable.update!(kind: "funds_movement")
+    spend = outflow(300)
+
+    assert_equal [ spend.id ], detect.map(&:id)
+  end
+
   test "ignores an outflow the user excluded" do
     outflow(1_200).update!(excluded: true)
 
