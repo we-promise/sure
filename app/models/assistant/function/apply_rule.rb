@@ -111,5 +111,7 @@ class Assistant::Function::ApplyRule < Assistant::Function
       override_locked: override_locked,
       message: "Rule activated and queued to apply to #{current} transactions. It will also run on future syncs."
     }
+  rescue Rule::SafeRegex::TimeoutError
+    regex_timeout_error(rule, "Nothing was applied.")
   end
 end

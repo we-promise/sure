@@ -170,6 +170,25 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_equal "ai_action", @fn.call("rule_id" => @rule.id, "preview_token" => "x")[:error]
   end
 
+  # The match count reads as zero when the pattern times out, so the token no
+  # longer agrees and the stale branch previews the rule again. That preview
+  # times out too: nothing is applied, and the error says why.
+  test "a pattern that times out at apply time applies nothing and reports a regex_timeout error" do
+    create_transaction(name: "ZXQ Coffee Shop")
+    token = preview_token
+    Rule.any_instance.stubs(:matching_scope).raises(Rule::SafeRegex::TimeoutError)
+
+    result = nil
+    assert_no_enqueued_jobs only: RuleJob do
+      result = @fn.call("rule_id" => @rule.id, "preview_token" => token)
+    end
+
+    assert_not result[:success]
+    assert_equal "regex_timeout", result[:error]
+    assert_match "Nothing was applied", result[:message]
+    assert_not @rule.reload.active
+  end
+
   private
     def preview_token
       token = Assistant::Function::PreviewRule.new(@user).call("rule_id" => @rule.id)[:preview][:preview_token]

@@ -462,4 +462,17 @@ module Assistant::Function::RuleSupport
     def error(key, message, **extra)
       { success: false, error: key, message: message }.merge(extra)
     end
+
+    # A pattern can outlive the statement timeout (Rule::SafeRegex), which
+    # raises out of the rule's scope. Reported as a rule error the assistant can
+    # explain; the tool wrapper would otherwise call it an unexpected failure.
+    # `outcome` says what did happen to the rule first.
+    def regex_timeout_error(rule, outcome)
+      error(
+        "regex_timeout",
+        "#{outcome} Checking which transactions it matches took too long, so there is no preview and it can't be applied. " \
+        "Simplify its pattern, or add a condition that narrows it, then preview it again.",
+        rule: serialize_rule(rule)
+      )
+    end
 end

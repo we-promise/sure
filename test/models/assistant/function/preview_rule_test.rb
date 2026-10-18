@@ -151,6 +151,21 @@ class Assistant::Function::PreviewRuleTest < ActiveSupport::TestCase
     assert_equal [ visible.entryable.id ], result[:preview][:sample].map { |t| t[:id] }
   end
 
+  # A pattern that outlives the statement timeout raises out of the rule's
+  # scope. The assistant gets a rule error it can explain, not "failed
+  # unexpectedly" from the tool wrapper.
+  test "a pattern that times out is reported as a regex_timeout error" do
+    rule = @family.rules.create!(resource_type: "transaction", **rule_attributes)
+    Rule.any_instance.stubs(:matching_scope).raises(Rule::SafeRegex::TimeoutError)
+
+    result = @fn.call("rule_id" => rule.id)
+
+    assert_not result[:success]
+    assert_equal "regex_timeout", result[:error]
+    assert_equal rule.id, result[:rule][:id]
+    assert_nil result[:preview]
+  end
+
   private
     def rule_attributes
       {
