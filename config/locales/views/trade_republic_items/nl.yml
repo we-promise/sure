@@ -15,6 +15,7 @@ nl:
     trade_republic_item:
       syncing: "Bezig met synchroniseren"
       requires_update: "Opnieuw authenticeren vereist"
+      session_expires_in: "Login verloopt over %{time} (%{at})."
       error: "Fout"
       synced: "Gesynchroniseerd %{time} geleden. %{summary}."
       setup_accounts: "Rekeningen instellen"

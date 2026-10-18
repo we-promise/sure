@@ -441,6 +441,8 @@ en:
         sync_error: Sync error
         no_recent_sync: Sync overdue
         reconsent_required: Re-consent required
+        login_required: Login required
+        login_expires_soon: "Login expires in %{time} (%{at})"
         reconsent_needed:
           one: Re-consent needed in 1 day
           other: Re-consent needed in %{count} days
@@ -754,9 +756,11 @@ en:
         qr_cancel: Cancel QR login
         qr_back_to_credentials: Back to phone number and PIN or password
         qr_loading: Preparing QR code …
-        qr_instruction: Scan the QR code with your Trade Republic app and approve the login.
+        qr_instruction: Scan the QR code with your phone's camera, then approve the login in the Trade Republic app.
         qr_success: Login approved. Sure is refreshing the provider page.
         qr_error: QR login could not be started. Please try again.
+        requires_update: Log in again to resume syncing.
+        session_expires_in: "Login expires in %{time} (%{at})."
         add_account: Add another connection
         save_configuration: Save & Start Login
         update_configuration: Update Configuration
