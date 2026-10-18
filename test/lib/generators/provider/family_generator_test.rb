@@ -6,6 +6,9 @@ require "generators/provider/family/family_generator"
 # SyntaxError in data_enrichment.rb with nothing pointing back at the generator. So each
 # case asserts the result actually PARSES, not just that it looks right.
 class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
+  module GeneratedControllers
+  end
+
   def append(content)
     Provider::FamilyGenerator.append_source_enum_entry(content, "gocardless")
   end
@@ -168,6 +171,49 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes rendered, %(render_provider_panel("gocardless", alert: @gocardless_item.errors.full_messages.join(", ")))
     assert_includes rendered, 'render_provider_panel("gocardless", notice: t(".success"'
     assert_match(/if @gocardless_item\.save\n\s+redirect_to settings_providers_path, notice:/, rendered)
+  end
+
+  test "generated account entry points escape frames and preserve ordinary redirects" do
+    rendered = render_template("controller.rb.tt", class_name: "Gocardless", file_name: "gocardless",
+                               table_name: "gocardless_items", parsed_fields: [])
+    # Evaluate the actual scaffold in an isolated namespace, without installing a
+    # provider or altering the application's routes/models.
+    namespace = GeneratedControllers
+    namespace.module_eval(rendered)
+    controller_class = namespace.const_get(:GocardlessItemsController)
+    family = mock("family")
+    items = mock("items")
+    accounts = mock("accounts")
+    family.stubs(:gocardless_items).returns(items)
+    family.stubs(:accounts).returns(accounts)
+    items.stubs(:first).returns(nil)
+    accounts.stubs(:find).with("account-id").returns(accounts(:depository))
+    Current.stubs(:family).returns(family)
+
+    [ :preload_accounts, :select_accounts, :select_existing_account ].each do |action|
+      [ nil, "modal", "account-picker" ].each do |frame_id|
+        controller = controller_class.new
+        request = ActionDispatch::TestRequest.create
+        request.headers["Turbo-Frame"] = frame_id if frame_id
+        controller.set_request!(request)
+        controller.set_response!(ActionDispatch::TestResponse.new)
+        controller.params = { account_id: "account-id" }
+        controller.stubs(:settings_providers_path).returns("/settings/providers")
+        controller.stubs(:t).with(".no_credentials_configured").returns("Configure a connection first.")
+
+        controller.public_send(action)
+
+        assert_equal "Configure a connection first.", controller.flash[:alert]
+        if frame_id
+          assert_equal 200, controller.response.status
+          html = Nokogiri::HTML.fragment(controller.response.body)
+          assert html.at_css("turbo-frame##{frame_id} turbo-stream[action=redirect][target='/settings/providers']")
+        else
+          assert_equal 302, controller.response.status
+          assert_equal "http://test.host/settings/providers", controller.response.location
+        end
+      end
+    end
   end
 
   # Bank sync builds its connection rows and drawers from FAMILY_PANELS, so a

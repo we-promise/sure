@@ -3,7 +3,12 @@ require "application_system_test_case"
 class AccountsSyncUiTest < ApplicationSystemTestCase
   setup do
     @user = users(:family_admin)
+    # These tests control sync state explicitly; login must not start a new
+    # sync when fixtures were loaded before midnight.
+    @user.family.update!(auto_sync_on_login: false)
     Sync.incomplete.destroy_all
+    # Exercise the previous-day fixture boundary without waiting for midnight.
+    @user.family.syncs.update_all(created_at: 1.day.ago)
     sign_in @user
     Sync.incomplete.destroy_all
   end
