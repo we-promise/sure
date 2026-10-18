@@ -2,7 +2,7 @@
 pt-PT:
   chats:
     demo_banner_title: "Modo de Demonstração ativo"
-    demo_banner_message: "Está a utilizar modelos IA através de créditos disponibilizados pelo Cloudflare Workers AI. Os resultados podem variar, uma vez que a base de código foi testada com `gpt-4.1`, mas os seus tokens não são utilizados para treinar outros modelos! 🤖"
+    demo_banner_message: "Está a utilizar modelos IA através de créditos disponibilizados pelo Vercel AI Gateway. Os resultados podem variar, uma vez que a base de código foi testada com `gpt-4.1`, mas os seus tokens não são utilizados para treinar outros modelos! 🤖"
     thinking: "A pensar ..."
     worker_unhealthy_warning: "As respostas de IA podem não ser entregues neste momento — o worker em segundo plano parece estar em baixo ou sobrecarregado. Verifique se o seu worker Sidekiq está a funcionar."
     ai_greeting:

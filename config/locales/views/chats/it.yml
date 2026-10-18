@@ -2,7 +2,7 @@
 it:
   chats:
     demo_banner_title: "Modalità Demo Attiva"
-    demo_banner_message: "Stai utilizzando LLM tramite crediti forniti da Cloudflare Workers AI. I risultati possono variare poiché il codice è stato testato su `gpt-4.1` ma i tuoi token non vengono utilizzati per addestrare modelli! 🤖"
+    demo_banner_message: "Stai utilizzando LLM tramite crediti forniti da Vercel AI Gateway. I risultati possono variare poiché il codice è stato testato su `gpt-4.1` ma i tuoi token non vengono utilizzati per addestrare modelli! 🤖"
     thinking: "Sto elaborando ..."
     worker_unhealthy_warning: "Le risposte dell'IA potrebbero non arrivare in questo momento — il worker in background sembra non essere attivo o essere in ritardo. Verifica che il tuo worker Sidekiq sia in esecuzione."
     ai_greeting:
