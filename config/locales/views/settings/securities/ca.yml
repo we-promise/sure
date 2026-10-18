@@ -25,6 +25,8 @@ ca:
         webauthn_empty: Encara no hi ha cap clau d'accés ni de seguretat registrada.
         webauthn_last_used: Última utilització fa %{time_ago}
         webauthn_name_label: Nom de la clau
+        webauthn_code_label: "Codi d'autenticador o de recuperació"
+        webauthn_code_placeholder: "Codi actual de l'autenticador o un codi de recuperació sense utilitzar"
         webauthn_name_placeholder: Touch ID MacBook, YubiKey, etc.
         webauthn_remove: Elimina
         webauthn_remove_confirm: Segur que vols eliminar aquesta clau d'accés o de
@@ -35,6 +37,9 @@ ca:
         webauthn_title: Claus d'accés i claus de seguretat
         webauthn_unsupported: Aquest navegador no admet claus d'accés ni de seguretat.
   webauthn_credentials:
+    code_already_used: "Aquest codi ja s'ha utilitzat. Espera el codi següent de l'aplicació d'autenticació."
+    invalid_code: "Aquest codi no és vàlid. Introdueix un codi actual de l'aplicació d'autenticació o un codi de recuperació sense utilitzar."
+    rate_limited: "Massa intents. Espera un minut i torna-ho a provar."
     default_name: Clau de seguretat
     failure: No s'ha pogut desar aquesta clau d'accés o de seguretat. Torna-ho a provar.
     mfa_required: Activa l'autenticació en dos passos abans d'afegir una clau d'accés o
