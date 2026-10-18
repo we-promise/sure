@@ -899,7 +899,10 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "[data-testid='extra-payoff-date']", count: 0
-    assert_select "[data-testid='baseline-payoff-date']", count: 1
+    # With nothing entered, the total is the loan's own, with no saving to quote.
+    no_extra = @account.loan.payoff_projection(as_of: Date.current)
+    assert_select "[data-testid='total-cost']", text: format_money(no_extra.total_cost)
+    assert_select "[data-testid='total-cost-saved']", count: 0
     assert_not_includes chart_payload["visible"], "extra"
 
     get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "500" })
@@ -912,7 +915,13 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-testid='extra-months-sooner']",
       text: I18n.t("loans.tabs.extra_repayments.months_sooner", count: extra.months_sooner_than(baseline))
     assert_select "[data-testid='extra-interest-saved']", text: format_money(extra.interest_saved_versus(baseline))
-    assert_select "[data-testid='baseline-payoff-date']", text: I18n.l(baseline.payoff_date, format: :long)
+    # The third card is the total still to repay with the extra, and how much
+    # less that is than paying no extra, over the rest of the loan.
+    assert_select "[data-testid='total-cost']", text: format_money(extra.total_cost)
+    assert_select "[data-testid='total-cost-saved']",
+      text: I18n.t("loans.tabs.extra_repayments.total_cost_saved", amount: format_money(extra.total_cost_saved_versus(baseline)))
+    assert_operator extra.total_cost, :<, baseline.total_cost
+    assert_select "[data-testid='baseline-payoff-date']", count: 0
     assert_select "input[name='extra_payment[amount]'][value='500.00']", count: 1
     assert_select "select[name='extra_payment[frequency]'] option[selected][value='monthly']", count: 1
     assert_select "[data-testid='extra-dated-note']", count: 0

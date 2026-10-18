@@ -68,9 +68,10 @@ en:
           one: "%{count} month sooner"
           other: "%{count} months sooner"
         not_applicable: There is nothing left to repay on this loan, so there is no extra repayment to model.
-        not_cleared: Not paid off on the current repayment
         payoff_with_extra: Payoff with extra
-        payoff_without_extra: Payoff without extra
+        total_cost: Total cost from today
+        total_cost_not_cleared: Not paid off by the original maturity
+        total_cost_saved: "%{amount} less than without the extra"
         variable_rate_notice: This loan's rate changes over time. These figures apply the rate changes already recorded; a change that has not been recorded yet will shift them.
       repayment_progress:
         instalment: Payment %{number} · %{date}

@@ -345,6 +345,37 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_equal "Unknown extra frequency: \"daily\"", error.message
   end
 
+  # What is still to repay from today: the balance plus every remaining
+  # period's interest. The extra pays the same principal, so its total is
+  # lower by exactly the interest it saves.
+  test "total cost is today's balance plus the interest still to pay" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    baseline = loan.payoff_projection(as_of: @today)
+    with_extra = loan.payoff_projection(as_of: @today, extra: 1_000)
+
+    assert_equal Money.new(loan.account.balance + baseline.total_interest.amount, "USD"), baseline.total_cost
+    assert_equal baseline.payments.sum { |payment| payment[:payment_amount] }, baseline.total_cost.amount,
+      "the total is what the payments add up to"
+    assert_equal baseline.total_cost - with_extra.total_cost, with_extra.total_cost_saved_versus(baseline)
+    assert_equal with_extra.interest_saved_versus(baseline), with_extra.total_cost_saved_versus(baseline)
+  end
+
+  # A run that never clears the balance has no total: a balloon would still
+  # be owed, and adding it in would quote a cost the borrower never agreed.
+  test "a projection that never clears has no total cost" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: 400_000)
+
+    baseline = loan.payoff_projection(as_of: @today)
+    clearing = loan.payoff_projection(as_of: @today, extra: 20_000)
+
+    assert_nil baseline.total_cost
+    assert clearing.total_cost
+    assert_nil clearing.total_cost_saved_versus(baseline)
+  end
+
   test "no extra leaves the projection identical" do
     loan = build_loan(term_months: 24)
     loan.account.update!(balance: scheduled_balance_at(loan, @today) - 10_000)

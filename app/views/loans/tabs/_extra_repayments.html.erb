@@ -68,11 +68,17 @@
         <% end %>
       <% end %>
 
-      <%= summary_card title: t(".payoff_without_extra") do %>
-        <% if projection.payoff_date %>
-          <span data-testid="baseline-payoff-date"><%= l projection.payoff_date, format: :long %></span>
+      <%# The total still to repay: with the extra when one applies, and the
+          saving against paying no extra beneath it. %>
+      <% costed = extra_projection || projection %>
+      <%= summary_card title: t(".total_cost") do %>
+        <% if (total = costed.total_cost) %>
+          <span class="privacy-sensitive" data-testid="total-cost"><%= format_money total %></span>
+          <% if extra_projection && (saved = extra_projection.total_cost_saved_versus(projection)) %>
+            <span class="block text-xs text-secondary mt-1 privacy-sensitive" data-testid="total-cost-saved"><%= t(".total_cost_saved", amount: format_money(saved)) %></span>
+          <% end %>
         <% else %>
-          <%= t(".not_cleared") %>
+          <%= t(".total_cost_not_cleared") %>
         <% end %>
       <% end %>
     </div>

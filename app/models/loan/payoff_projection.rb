@@ -105,6 +105,24 @@ class Loan
       Money.new(remaining_contracted_interest - (simulation&.total_interest || 0), currency)
     end
 
+    # What is still to repay from today: the balance plus the interest of
+    # every remaining period, which is what the payments add up to. nil for a
+    # run that never clears: a balloon would still be owed on top.
+    def total_cost
+      return nil unless converged?
+
+      current_balance + total_interest
+    end
+
+    # How much less this projection costs from today than `other`, on the same
+    # terms as #months_sooner_than. Both repay the same balance, so this is
+    # the interest saved, put as the loan's total.
+    def total_cost_saved_versus(other)
+      return nil unless converged? && other.converged?
+
+      other.total_cost - total_cost
+    end
+
     # How much sooner this projection clears the loan than `other`, a
     # projection of the same loan on the same `as_of`. Both walk the same
     # remaining payment dates, so the difference in rows is the difference in

@@ -61,9 +61,10 @@ de:
           one: "%{count} Monat früher"
           other: "%{count} Monate früher"
         not_applicable: Auf diesen Kredit ist nichts mehr zu tilgen, daher gibt es keine Sondertilgung zu berechnen.
-        not_cleared: Mit der aktuellen Rate nicht getilgt
         payoff_with_extra: Tilgung mit Zusatzbetrag
-        payoff_without_extra: Tilgung ohne Zusatzbetrag
+        total_cost: Gesamtkosten ab heute
+        total_cost_not_cleared: Bis zum ursprünglichen Laufzeitende nicht getilgt
+        total_cost_saved: "%{amount} weniger als ohne Zusatzbetrag"
         variable_rate_notice: Der Zinssatz dieses Kredits ändert sich. Diese Zahlen berücksichtigen die bereits erfassten Zinsänderungen; eine noch nicht erfasste Änderung verschiebt sie.
       schedule:
         date: Datum
