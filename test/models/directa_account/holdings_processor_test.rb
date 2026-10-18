@@ -62,6 +62,9 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     )
     holding = @provider_account.account.holdings.sole
     holding.set_manual_cost_basis!(BigDecimal("35"))
+    provider_security = holding.provider_security
+    remapped_security = Security.create!(ticker: "CUSTOM:APPLE", name: "Personal Apple")
+    holding.remap_security!(remapped_security)
 
     refreshed = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("110"), cost_basis: BigDecimal("44"))
     DirectaAccount::HoldingsProcessor.new(@provider_account).process(
@@ -71,6 +74,9 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("35"), holding.reload.cost_basis
     assert_equal "manual", holding.cost_basis_source
     assert holding.cost_basis_locked?
+    assert holding.security_locked?
+    assert_equal remapped_security.id, holding.security_id
+    assert_equal provider_security.id, holding.provider_security_id
   end
 
   test "carries a locked manual basis into a new positive Directa snapshot without materialization" do
@@ -94,13 +100,43 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert next_holding.cost_basis_locked?
   end
 
+  test "the provider adapter carries remapped security and manual basis into a later snapshot" do
+    first_date = Date.current - 1.day
+    first = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"), date: first_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: first_date, positions: [ first ])
+    )
+    first_holding = @provider_account.account.holdings.sole
+    first_holding.set_manual_cost_basis!(BigDecimal("35"))
+    provider_security = first_holding.provider_security
+    remapped_security = Security.create!(ticker: "CUSTOM:APPLE-LATER", name: "Personal Apple")
+    first_holding.remap_security!(remapped_security)
+
+    next_date = first_date.next_day
+    refreshed = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("110"), cost_basis: BigDecimal("44"), date: next_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: next_date, positions: [ refreshed ])
+    )
+
+    next_holding = @provider_account.account.holdings.find_by!(date: next_date)
+    assert_equal BigDecimal("35"), next_holding.cost_basis
+    assert_equal "manual", next_holding.cost_basis_source
+    assert next_holding.cost_basis_locked?
+    assert next_holding.security_locked?
+    assert_equal remapped_security.id, next_holding.security_id
+    assert_equal provider_security.id, next_holding.provider_security_id
+  end
+
   test "carries a locked basis from an exact generated projection into the next provider snapshot" do
     first_date = Date.current - 2.days
     first = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"), date: first_date)
     DirectaAccount::HoldingsProcessor.new(@provider_account).process(
       normalized_snapshot(date: first_date, positions: [ first ])
     )
-    security = @provider_account.account.holdings.sole.security
+    provider_holding = @provider_account.account.holdings.sole
+    provider_security = provider_holding.provider_security
+    security = Security.create!(ticker: "CUSTOM:APPLE-PROJECTION", name: "Personal Apple")
+    provider_holding.remap_security!(security)
     projected_date = first_date.next_day
     projection = travel_to(projected_date.in_time_zone + 12.hours) do
       Holding::DirectaSnapshotCalculator.new(
@@ -131,6 +167,9 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("37"), next_holding.cost_basis
     assert_equal "manual", next_holding.cost_basis_source
     assert next_holding.cost_basis_locked?
+    assert next_holding.security_locked?
+    assert_equal security.id, next_holding.security_id
+    assert_equal provider_security.id, next_holding.provider_security_id
   end
 
   test "a zero quantity tombstone resets a locked manual basis before the position reopens" do
@@ -139,7 +178,11 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     DirectaAccount::HoldingsProcessor.new(@provider_account).process(
       normalized_snapshot(date: first_date, positions: [ first ])
     )
-    @provider_account.account.holdings.find_by!(date: first_date).set_manual_cost_basis!(BigDecimal("35"))
+    first_holding = @provider_account.account.holdings.find_by!(date: first_date)
+    first_holding.set_manual_cost_basis!(BigDecimal("35"))
+    provider_security = first_holding.provider_security
+    remapped_security = Security.create!(ticker: "CUSTOM:APPLE-CLOSED", name: "Personal Apple")
+    first_holding.remap_security!(remapped_security)
 
     tombstone_date = first_date.next_day
     DirectaAccount::HoldingsProcessor.new(@provider_account).process(
@@ -149,6 +192,8 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), tombstone.qty
     assert_nil tombstone.cost_basis
     assert_not tombstone.cost_basis_locked?
+    assert_equal remapped_security.id, tombstone.security_id
+    assert_equal provider_security.id, tombstone.provider_security_id
 
     reopen_date = tombstone_date.next_day
     reopened = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("120"), cost_basis: BigDecimal("52"), date: reopen_date)
@@ -160,6 +205,41 @@ class DirectaAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("52"), reopened_holding.cost_basis
     assert_equal "provider", reopened_holding.cost_basis_source
     assert_not reopened_holding.cost_basis_locked?
+    assert_equal remapped_security.id, reopened_holding.security_id
+    assert_equal provider_security.id, reopened_holding.provider_security_id
+  end
+
+  test "same-date reopen after a tombstone uses the new bank basis instead of the prior manual lock" do
+    first_date = Date.current - 1.day
+    first = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("100"), cost_basis: BigDecimal("40"), date: first_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: first_date, positions: [ first ])
+    )
+    first_holding = @provider_account.account.holdings.find_by!(date: first_date)
+    first_holding.set_manual_cost_basis!(BigDecimal("35"))
+    provider_security = first_holding.provider_security
+    remapped_security = Security.create!(ticker: "CUSTOM:APPLE-REOPEN", name: "Personal Apple")
+    first_holding.remap_security!(remapped_security)
+
+    reopen_date = first_date.next_day
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: reopen_date, positions: [])
+    )
+    tombstone = @provider_account.account.holdings.find_by!(date: reopen_date)
+    assert_equal BigDecimal("0"), tombstone.qty
+    assert_nil tombstone.cost_basis
+
+    reopened = normalized_position(quantity: BigDecimal("1"), amount: BigDecimal("120"), cost_basis: BigDecimal("52"), date: reopen_date)
+    DirectaAccount::HoldingsProcessor.new(@provider_account).process(
+      normalized_snapshot(date: reopen_date, positions: [ reopened ])
+    )
+
+    reopened_holding = @provider_account.account.holdings.find_by!(date: reopen_date)
+    assert_equal BigDecimal("52"), reopened_holding.cost_basis
+    assert_equal "provider", reopened_holding.cost_basis_source
+    assert_not reopened_holding.cost_basis_locked?
+    assert_equal remapped_security.id, reopened_holding.security_id
+    assert_equal provider_security.id, reopened_holding.provider_security_id
   end
 
   test "clears an unlocked stale provider basis when the bank average is unavailable" do

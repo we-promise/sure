@@ -152,7 +152,6 @@ en:
       holding: Holding
       weight: Weight
       value: Value
-      unrealized_return: Unrealized return
       accounts: Investment Accounts
       gains_by_tax_treatment: Gains by Tax Treatment
       unrealized_gains: Unrealized Gains
@@ -240,7 +239,6 @@ en:
         holding: Holding
         weight: Weight
         value: Value
-        unrealized_return: Unrealized return
       # Spending by Category section
       spending:
         title: Spending by Category

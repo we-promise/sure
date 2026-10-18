@@ -62,13 +62,7 @@ class DirectaAccount::HoldingsProcessor
 
     def import_position!(position, security:, account_provider:, snapshot:)
       adopt_verified_generated_projection!(security: security, snapshot: snapshot)
-      existing_for_date = account_provider.account.holdings.find_by(
-        security_id: security.id,
-        date: snapshot.date,
-        currency: snapshot.currency
-      )
-      same_date_manual_lock = locked_manual_basis?(existing_for_date)
-      manual_basis = prior_locked_manual_basis(
+      projected_manual_basis = projected_manual_basis(
         security: security,
         snapshot: snapshot,
         account_provider: account_provider
@@ -93,13 +87,7 @@ class DirectaAccount::HoldingsProcessor
       end
 
       clear_stale_provider_basis!(holding) if position.cost_basis.nil?
-      if same_date_manual_lock
-        # a same-date manual edit is the user's latest correction for this snapshot.
-      elsif !manual_basis.nil?
-        preserve_manual_basis!(holding, manual_basis)
-      else
-        clear_carried_manual_basis!(holding)
-      end
+      preserve_manual_basis!(holding, projected_manual_basis) unless projected_manual_basis.nil?
 
       if holding.provider_security_id.blank?
         holding.update!(provider_security_id: security.id)
@@ -108,33 +96,48 @@ class DirectaAccount::HoldingsProcessor
       holding
     end
 
-    def prior_locked_manual_basis(security:, snapshot:, account_provider:)
-      candidate = account_provider.account.holdings
-        .where(security_id: security.id, currency: snapshot.currency)
+    def projected_manual_basis(security:, snapshot:, account_provider:)
+      latest_provider_holding = provider_identity_holdings(account_provider, security)
+        .where(currency: snapshot.currency)
         .where("date < ?", snapshot.date)
-        .order(date: :desc)
+        .order(date: :desc, id: :desc)
         .first
-      return unless candidate&.qty&.positive? && locked_manual_basis?(candidate)
+      return unless latest_provider_holding&.qty&.positive?
 
-      own_provider_row = candidate.account_id == account_provider.account_id &&
-        candidate.account_provider_id == account_provider.id &&
-        candidate.provider_security_id == security.id
-      validated_projection = @content_validator.generated_snapshot_holding?(candidate)
-      return unless own_provider_row || validated_projection
+      visible_security_ids = [ security.id, latest_provider_holding.security_id ].uniq
+      candidate = account_provider.account.holdings
+        .where(
+          account_provider_id: nil,
+          external_id: nil,
+          security_id: visible_security_ids,
+          currency: snapshot.currency,
+          cost_basis_locked: true,
+          cost_basis_source: "manual"
+        )
+        .where("date > ? AND date < ?", latest_provider_holding.date, snapshot.date)
+        .order(date: :desc, id: :desc)
+        .detect do |holding|
+          holding.qty.to_d.positive? && !holding.cost_basis.nil? &&
+            @content_validator.generated_snapshot_holding?(holding)
+        end
 
-      candidate.cost_basis
+      candidate&.cost_basis
     end
 
-    def locked_manual_basis?(holding)
-      holding&.cost_basis_locked? && holding.cost_basis_source == "manual" && !holding.cost_basis.nil?
+    def provider_identity_holdings(account_provider, security)
+      account_provider.holdings.where(
+        "holdings.provider_security_id = :id OR " \
+        "(holdings.provider_security_id IS NULL AND holdings.security_id = :id)",
+        id: security.id
+      )
     end
 
     def preserve_manual_basis!(holding, cost_basis)
       holding.update!(cost_basis: cost_basis, cost_basis_source: "manual", cost_basis_locked: true)
     end
 
-    def clear_carried_manual_basis!(holding)
-      return unless locked_manual_basis?(holding)
+    def clear_tombstone_manual_basis!(holding)
+      return unless holding.cost_basis_locked? && holding.cost_basis_source == "manual"
 
       holding.update!(cost_basis: nil, cost_basis_source: nil, cost_basis_locked: false)
     end
@@ -210,7 +213,7 @@ class DirectaAccount::HoldingsProcessor
           raise DirectaItem::PortfolioNormalizer::Error.new(:holding_conflict)
         end
 
-        clear_carried_manual_basis!(imported)
+        clear_tombstone_manual_basis!(imported)
       end
     end
 
