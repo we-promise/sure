@@ -148,6 +148,19 @@ module SettingsHelper
       return { status: :off } unless item
 
       directa_provider_summary(item)
+    when "ca_auto_bank"
+      item = @ca_auto_bank_item || @ca_auto_bank_items&.first
+      return { status: :off } unless item
+
+      if !item.session_configured?
+        { status: :warn, meta: item.error_message.presence || t("ca_auto_bank.not_connected"), last_synced_at: item.last_synced_at }
+      elsif item.error_message.present?
+        { status: :err, meta: item.error_message, last_synced_at: item.last_synced_at }
+      elsif item.last_synced_at.blank?
+        { status: :warn, meta: t("ca_auto_bank.waiting_for_snapshot"), last_synced_at: nil }
+      else
+        { status: :ok, last_synced_at: item.last_synced_at }
+      end
     else
       { status: :off }
     end

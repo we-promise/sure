@@ -215,6 +215,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "trade_republic", title: "Trade Republic",  turbo_id: "trade-republic", partial: "trade_republic_panel" },
       { key: "fineco",         title: "Fineco",          turbo_id: "fineco",         partial: "fineco_panel", sync_supported: false },
       { key: "directa",        title: "Directa",         turbo_id: "directa",        partial: "directa_panel", sync_supported: false },
+      { key: "ca_auto_bank",   title: "CA Auto Bank",    turbo_id: "ca-auto-bank",   partial: "ca_auto_bank_panel", sync_supported: false },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
       { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" }
@@ -299,6 +300,9 @@ class Settings::ProvidersController < ApplicationController
       when "fineco"
         @fineco_items = Current.family.fineco_items.owned_by(Current.user).ordered
         @fineco_item = @fineco_items.find_by(owner_id: Current.user.id)
+      when "ca_auto_bank"
+        @ca_auto_bank_items = Current.family.ca_auto_bank_items.owned_by(Current.user).ordered
+        @ca_auto_bank_item = @ca_auto_bank_items.first
       when "directa"
         @directa_items = Current.family.directa_items.owned_by(Current.user).ordered
         @directa_item = @directa_items.find_by(owner_id: Current.user.id)
@@ -340,6 +344,8 @@ class Settings::ProvidersController < ApplicationController
       @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
       @fineco_items = Current.family.fineco_items.owned_by(Current.user).ordered
       @fineco_item = @fineco_items.find_by(owner_id: Current.user.id)
+      @ca_auto_bank_items = Current.family.ca_auto_bank_items.owned_by(Current.user).ordered
+      @ca_auto_bank_item = @ca_auto_bank_items.first
       @directa_items = Current.family.directa_items.owned_by(Current.user).ordered
       @directa_item = @directa_items.find_by(owner_id: Current.user.id)
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
@@ -400,6 +406,7 @@ class Settings::ProvidersController < ApplicationController
         "trade_republic" => @trade_republic_items,
         "fineco"         => @fineco_items,
         "directa"        => @directa_items,
+        "ca_auto_bank"   => @ca_auto_bank_items,
         "indexa_capital" => @indexa_capital_items,
         "sophtron"       => @sophtron_items
       }
@@ -482,7 +489,7 @@ class Settings::ProvidersController < ApplicationController
     end
 
     def panel_visible?(panel)
-      return true unless panel[:key].in?(%w[fineco directa])
+      return true unless panel[:key].in?(%w[fineco directa ca_auto_bank])
 
       Rails.application.config.app_mode.self_hosted? &&
         Current.user&.admin? &&

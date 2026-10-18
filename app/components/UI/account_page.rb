@@ -47,6 +47,12 @@ class UI::AccountPage < ApplicationComponent
     details.compact_blank.join(" · ").presence
   end
 
+  def ca_auto_bank_account
+    return @ca_auto_bank_account if defined?(@ca_auto_bank_account)
+
+    @ca_auto_bank_account = account.account_providers.find { |link| link.provider_type == "CaAutoBankAccount" }&.provider
+  end
+
   def active_tab
     tabs.find { |tab| tab == @active_tab&.to_sym } || tabs.first
   end

@@ -36,12 +36,17 @@ class Invitation < ApplicationRecord
     return false if would_orphan_owned_accounts?(user)
 
     transaction do
-      release_provider_item_ownership(user)
-      user.update!(family_id: family_id, role: role.to_s)
-      update!(accepted_at: Time.current)
-      family.auto_share_existing_accounts_with(user)
+      user.lock!
+      if would_orphan_owned_accounts?(user)
+        false
+      else
+        release_provider_item_ownership(user)
+        user.update!(family_id: family_id, role: role.to_s)
+        update!(accepted_at: Time.current)
+        family.auto_share_existing_accounts_with(user)
+        true
+      end
     end
-    true
   end
 
   # would_orphan_owned_accounts? blocks the move when the user owns accounts
@@ -55,9 +60,12 @@ class Invitation < ApplicationRecord
     return if user.family_id.blank? || user.family_id == family_id
 
     ProviderItemOwnable.owned_item_classes.each do |item_class|
-      item_class.where(owner_id: user.id)
-                .where.not(family_id: family_id)
-                .update_all(owner_id: nil, updated_at: Time.current)
+      items = item_class.where(owner_id: user.id).where.not(family_id: family_id)
+      if item_class == CaAutoBankItem
+        items.destroy_all
+      else
+        items.update_all(owner_id: nil, updated_at: Time.current)
+      end
     end
   end
 

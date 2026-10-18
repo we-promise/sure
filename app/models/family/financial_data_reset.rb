@@ -43,6 +43,7 @@ class Family::FinancialDataReset
     financekit_items
     fineco_items
     directa_items
+    ca_auto_bank_items
     binance_items
     brex_items
     coinbase_items

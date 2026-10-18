@@ -10,6 +10,16 @@ module AccountsHelper
   end
 
   def account_sync_authorized?(account)
+    ca_auto_bank_link = account.account_providers.detect { |provider| provider.provider_type == "CaAutoBankAccount" }
+    if ca_auto_bank_link
+      return false if Current.session&.active_impersonator_session_id.present?
+
+      item = ca_auto_bank_link.provider&.ca_auto_bank_item
+      user = Current.user
+      return item.present? && user&.admin? && item.owned_by?(user) && user.preview_features_enabled? &&
+        Rails.application.config.app_mode.self_hosted? && item.syncable?
+    end
+
     fineco_link = account.account_providers.detect { |provider| provider.provider_type == "FinecoAccount" }
     return true unless fineco_link
 

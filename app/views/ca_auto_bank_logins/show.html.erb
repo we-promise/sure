@@ -1,0 +1,55 @@
+<%= content_for :page_title, t("ca_auto_bank.connect") %>
+
+<main class="mx-auto max-w-3xl space-y-6">
+  <header class="space-y-3">
+    <%= render DS::Pill.new(label: t("ca_auto_bank.preview"), tone: :violet, marker: false) %>
+    <h1 class="text-2xl font-semibold text-primary"><%= t("ca_auto_bank.connect") %></h1>
+    <p class="text-sm text-secondary"><%= t("ca_auto_bank.connection_description") %></p>
+    <p class="text-sm text-secondary"><%= t("ca_auto_bank.session_limit") %></p>
+  </header>
+
+  <% if @error_code.present? %>
+    <%= render DS::Alert.new(message: t("ca_auto_bank.errors.#{@error_code}"), variant: :error) %>
+  <% end %>
+  <% unless @encryption_ready %>
+    <%= render DS::Alert.new(message: t("ca_auto_bank.errors.encryption_unavailable"), variant: :warning) %>
+  <% end %>
+
+  <% if @pending_login %>
+    <section class="space-y-4 rounded-xl border border-primary bg-container p-4"
+             data-controller="ca-auto-bank-login"
+             data-ca-auto-bank-login-url-value="<%= poll_ca_auto_bank_login_path %>"
+             data-ca-auto-bank-login-attempt-value="<%= @pending_login.fetch(:attempt_id) %>"
+             data-ca-auto-bank-login-expires-value="<%= @pending_login.fetch(:expires_at) %>"
+             data-ca-auto-bank-login-failure-value="<%= t("ca_auto_bank.errors.challenge_expired") %>">
+      <h2 class="text-lg font-semibold text-primary"><%= t("ca_auto_bank.approval_title") %></h2>
+      <p class="text-sm text-secondary" role="status" aria-live="polite" data-ca-auto-bank-login-target="status"><%= t("ca_auto_bank.approval_description") %></p>
+      <p class="text-sm text-destructive" role="alert" data-ca-auto-bank-login-target="error" hidden></p>
+      <noscript><p class="text-sm text-secondary"><%= t("ca_auto_bank.javascript_required") %></p></noscript>
+      <%= styled_form_with url: poll_ca_auto_bank_login_path, method: :post, scope: :ca_auto_bank_login do |form| %>
+        <%= form.hidden_field :attempt_id, value: @pending_login.fetch(:attempt_id) %>
+        <%= form.submit t("ca_auto_bank.check_approval") %>
+      <% end %>
+      <%= styled_form_with url: cancel_ca_auto_bank_login_path, method: :delete, scope: :ca_auto_bank_login do |form| %>
+        <%= form.hidden_field :attempt_id, value: @pending_login.fetch(:attempt_id) %>
+        <%= form.submit t("ca_auto_bank.cancel") %>
+      <% end %>
+    </section>
+  <% elsif @ca_auto_bank_item&.pending_login_state.present? %>
+    <%= render DS::Alert.new(message: t("ca_auto_bank.errors.login_in_progress"), variant: :info) %>
+  <% elsif @ca_auto_bank_item&.session_configured? && @error_code.blank? %>
+    <%= render "ca_auto_bank_items/status", item: @ca_auto_bank_item %>
+    <%= render DS::Link.new(text: t("ca_auto_bank.view_accounts"), href: accounts_path) %>
+  <% else %>
+    <%= styled_form_with url: start_ca_auto_bank_login_path, method: :post, scope: :ca_auto_bank_login,
+                         class: "space-y-4 rounded-xl border border-primary bg-container p-4" do |form| %>
+      <%= form.email_field :email, label: t("ca_auto_bank.email"), autocomplete: "username", autocapitalize: "off",
+                           autocorrect: "off", spellcheck: false, maxlength: 254, required: true %>
+      <%= form.password_field :password, label: t("ca_auto_bank.password"), autocomplete: "current-password",
+                              maxlength: 512, required: true, value: nil %>
+      <%= form.submit t("ca_auto_bank.connect"), disabled: !@encryption_ready %>
+    <% end %>
+  <% end %>
+
+  <%= render DS::Link.new(text: t("ca_auto_bank.back"), href: settings_providers_path, variant: :secondary) %>
+</main>

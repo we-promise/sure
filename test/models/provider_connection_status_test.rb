@@ -3,6 +3,28 @@
 require "test_helper"
 
 class ProviderConnectionStatusTest < ActiveSupport::TestCase
+  test "CA Auto Bank status requests reconnect after expiry without exposing bank credentials" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    provider = ProviderConnectionStatus::PROVIDERS.find { |entry| entry[:key] == "ca_auto_bank" }
+    item = CaAutoBankItem.new(family: families(:dylan_family), owner: users(:family_admin),
+      authentication_token: "private-bank-token", account_identity: "private-bank-identity",
+      request_session_id: "private-bank-session", pending_login_state: "private-bank-approval",
+      session_expires_at: 1.hour.from_now, status: :connected)
+
+    result = ProviderConnectionStatus.new(provider, item).to_h
+    assert_equal "CA Auto Bank", result[:name]
+    assert result[:credentials_configured]
+    refute result[:requires_update]
+    %w[private-bank-token private-bank-identity private-bank-session private-bank-approval].each do |secret|
+      refute_includes result.to_json, secret
+    end
+    travel 61.minutes do
+      expired = ProviderConnectionStatus.new(provider, item).to_h
+      refute expired[:credentials_configured]
+      assert expired[:requires_update]
+    end
+  end
+
   test "provider registry covers syncable family provider item associations" do
     expected_registry = Family.reflect_on_all_associations(:has_many).filter_map do |association|
       next unless association.name.to_s.end_with?("_items")

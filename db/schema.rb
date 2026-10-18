@@ -402,6 +402,45 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.index ["user_id"], name: "index_budgets_on_user_id"
   end
 
+  create_table "ca_auto_bank_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "ca_auto_bank_item_id", null: false
+    t.datetime "created_at", null: false
+    t.decimal "current_balance", precision: 19, scale: 4, null: false
+    t.jsonb "deposit_metadata"
+    t.date "effective_date"
+    t.decimal "interest_rate", precision: 10, scale: 6
+    t.string "kind", null: false
+    t.date "maturity_date"
+    t.string "name", null: false
+    t.string "report_uid", null: false
+    t.string "uid", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ca_auto_bank_item_id", "uid"], name: "index_ca_auto_bank_accounts_on_ca_auto_bank_item_id_and_uid", unique: true
+    t.index ["ca_auto_bank_item_id"], name: "index_ca_auto_bank_accounts_on_ca_auto_bank_item_id"
+    t.check_constraint "current_balance >= 0::numeric", name: "chk_ca_auto_bank_accounts_balance"
+    t.check_constraint "kind::text = ANY (ARRAY['libero'::character varying, 'time_deposit'::character varying]::text[])", name: "chk_ca_auto_bank_accounts_kind"
+  end
+
+  create_table "ca_auto_bank_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "account_identity"
+    t.text "authentication_token"
+    t.integer "connection_generation", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "last_sync_error_code"
+    t.uuid "owner_id", null: false
+    t.text "pending_login_state"
+    t.string "request_session_id"
+    t.datetime "session_expires_at"
+    t.datetime "snapshot_at"
+    t.string "status", default: "requires_update", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "owner_id"], name: "index_ca_auto_bank_items_on_family_id_and_owner_id", unique: true
+    t.index ["family_id"], name: "index_ca_auto_bank_items_on_family_id"
+    t.index ["owner_id"], name: "index_ca_auto_bank_items_on_owner_id"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'connected'::character varying, 'requires_update'::character varying]::text[])", name: "chk_ca_auto_bank_items_status"
+  end
+
   create_table "categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "classification_unused", default: "expense", null: false
     t.string "color", default: "#6172F3", null: false
@@ -3056,6 +3095,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
   add_foreign_key "budget_shares", "users", column: "viewer_id"
   add_foreign_key "budgets", "families"
   add_foreign_key "budgets", "users", on_delete: :cascade
+  add_foreign_key "ca_auto_bank_accounts", "ca_auto_bank_items", on_delete: :cascade
+  add_foreign_key "ca_auto_bank_items", "families", on_delete: :cascade
+  add_foreign_key "ca_auto_bank_items", "users", column: "owner_id", on_delete: :cascade
   add_foreign_key "categories", "families"
   add_foreign_key "categorization_comparisons", "families"
   add_foreign_key "categorization_comparisons", "transactions", on_delete: :nullify

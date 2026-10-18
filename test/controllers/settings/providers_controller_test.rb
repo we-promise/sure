@@ -220,7 +220,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   # Saves and errors from a row or the drawer re-render the panel by replacing
   # "<turbo_id>-providers-panel". SnapTrade and gated connectors never stream to it.
   test "every streamed panel renders the root its streams replace" do
-    Settings::ProvidersController::FAMILY_PANELS.reject { |panel| %w[snaptrade fineco directa].include?(panel[:key]) }.each do |panel|
+    Settings::ProvidersController::FAMILY_PANELS.reject { |panel| %w[snaptrade fineco directa ca_auto_bank].include?(panel[:key]) }.each do |panel|
       get connect_form_settings_providers_url(provider_key: panel[:key])
 
       assert_response :success

@@ -55,6 +55,9 @@ class AccountsController < ApplicationController
     @directa_items = visible_provider_items(
       family.directa_items.ordered.includes(directa_accounts: { account_provider: :account })
     )
+    @ca_auto_bank_items = visible_provider_items(
+      family.ca_auto_bank_items.ordered.includes(ca_auto_bank_accounts: { account_provider: :account })
+    )
 
     # An on-chain item is admitted as soon as ONE of its accounts is accessible,
     # so the card is told which of them this viewer may actually see. nil is the
@@ -279,6 +282,7 @@ class AccountsController < ApplicationController
   def unlink
     begin
       Account.transaction do
+        @account.lock! if @account.linked_to?("CaAutoBankAccount")
         @account.provider_account_for("FinancekitAccountLineage")&.disconnect!
 
         # Detach holdings from provider links before destroying them
@@ -410,7 +414,8 @@ class AccountsController < ApplicationController
     end
 
     def provider_item_sync_authorized?(item)
-      return true unless item.is_a?(FinecoItem) || item.is_a?(DirectaItem)
+      return true unless item.is_a?(FinecoItem) || item.is_a?(DirectaItem) || item.is_a?(CaAutoBankItem)
+      return false if item.is_a?(CaAutoBankItem) && Current.session&.active_impersonator_session_id.present?
 
       user = Current.user
       user&.admin? && item.owned_by?(user) && user.preview_features_enabled? &&
@@ -487,6 +492,7 @@ class AccountsController < ApplicationController
         @trade_republic_items,
         @fineco_items,
         @directa_items,
+        @ca_auto_bank_items,
         @onchain_wallet_items
       ].flatten.compact
 

@@ -1,0 +1,59 @@
+en:
+  settings:
+    providers:
+      taglines:
+        ca_auto_bank: Italian Libero savings and Tempo deposits
+  ca_auto_bank:
+    name: CA Auto Bank
+    preview: Preview
+    connect: Connect CA Auto Bank
+    manage: Manage connection
+    connection_description: "Connect your Italian Conto Deposito Libero and Tempo deposits. Enter your credentials, then approve access in the My CA Auto Bank app."
+    session_limit: "Automatic session renewal is not available. Reconnect when the bank session expires; your last saved balances remain visible. This preview supports app approval, not SMS login."
+    email: CA Auto Bank email
+    password: CA Auto Bank password
+    approval_title: Approve access in your bank app
+    approval_description: "Open My CA Auto Bank and approve the login request. Sure will check automatically and import your balances when approval succeeds."
+    javascript_required: "Use Check approval after approving access in your bank app."
+    check_approval: Check approval
+    cancel: Cancel login
+    back: Back to bank sync
+    view_accounts: View accounts
+    sync: Sync now
+    syncing: Syncing deposit balances…
+    sync_queued: CA Auto Bank balance sync has been queued.
+    waiting_for_snapshot: Connected. The first deposit balance sync has been queued.
+    last_synced: "Balances last synced %{time} ago."
+    session_expires: "Bank session expires %{time}."
+    not_connected: Connect to import your deposit balances.
+    disconnected: "CA Auto Bank disconnected. Saved accounts and balances were kept."
+    disconnect: Stop syncing
+    disconnect_confirmation: "Stop CA Auto Bank syncing? Your saved accounts and balances will be kept."
+    snapshot_scope: "Libero available cash and each active Tempo deposit are shown separately. Deposit balances contain principal only."
+    deposit_details: Deposit details
+    rate: Rate
+    opened: Start date
+    matures: Maturity date
+    reported_interest: Bank-reported interest
+    principal_note: "The balance contains principal only. Contract interest is shown as reported by the bank and is not recorded as paid income."
+    history_note: "Movement and interest-payment history are not imported in this preview. Balance history starts with your first successful sync."
+    errors:
+      invalid_credentials: Enter a valid email address and password.
+      authentication_failed: "The bank did not accept this login or its approval expired. Please try again."
+      unsupported_login: "This preview supports approval in the My CA Auto Bank app. SMS and additional account-selection steps are not supported yet."
+      invalid_session: "The bank returned an unrecognized session. Please reconnect."
+      session_expired: "The bank session expired. Reconnect to refresh your balances; your saved data has been kept."
+      provider_unavailable: "CA Auto Bank could not be reached. Please try again later."
+      rate_limited: "CA Auto Bank is limiting requests. Please wait before trying again."
+      encryption_unavailable: "Configure Active Record encryption before connecting CA Auto Bank."
+      login_in_progress: "A login is already waiting for approval in another Sure tab or session. Finish it or wait five minutes before retrying."
+      challenge_expired: "Login approval timed out or could not be checked. Cancel this attempt and reconnect."
+      challenge_not_available: "This login attempt is no longer available in this Sure session. Please reconnect."
+      login_authorization_changed: "Your Sure session or access changed. Sign in again before reconnecting."
+      account_identity_changed: "The bank returned a different account owner. Your existing connection and balances were kept."
+      invalid_response: "CA Auto Bank returned an unexpected response. Your previous balances were kept."
+      invalid_snapshot: "CA Auto Bank returned invalid deposit details. Your previous balances were kept."
+      incomplete_snapshot: "The bank's deposit totals did not reconcile. Your previous balances were kept."
+      account_conflict: "A CA Auto Bank account was unlinked or changed. Your existing accounts were kept."
+      stale_snapshot: "The bank returned an older balance snapshot. Your newer balances were kept."
+      sync_failed: "CA Auto Bank balances could not be refreshed. Your previous data was kept."

@@ -1,0 +1,25 @@
+<%# locals: (ca_auto_bank_item:, visible_accounts:) %>
+
+<%= tag.div id: dom_id(ca_auto_bank_item) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center gap-3">
+        <%= icon "chevron-right", class: "group-open:rotate-90" %>
+        <%= render ProviderLogo.new(provider_key: :ca_auto_bank) %>
+        <div class="space-y-1">
+          <p class="text-sm font-medium text-primary"><%= t("ca_auto_bank.name") %></p>
+          <%= render "ca_auto_bank_items/status", item: ca_auto_bank_item %>
+        </div>
+      </div>
+    <% end %>
+    <div class="mt-4 space-y-3">
+      <% if visible_accounts.any? %>
+        <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+      <% end %>
+      <p class="text-xs text-secondary"><%= t("ca_auto_bank.snapshot_scope") %></p>
+      <% if Current.user&.admin? && ca_auto_bank_item.owned_by?(Current.user) && Current.user.preview_features_enabled? %>
+        <%= render DS::Link.new(text: t("ca_auto_bank.manage"), href: ca_auto_bank_login_path, variant: :secondary) %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

@@ -1,0 +1,17 @@
+<%# locals: (provider_account:) %>
+
+<section class="space-y-3 rounded-xl border border-primary bg-container p-4" aria-label="<%= t("ca_auto_bank.deposit_details") %>">
+  <h2 class="text-lg font-semibold text-primary"><%= t("ca_auto_bank.deposit_details") %></h2>
+  <% if provider_account.kind == "time_deposit" %>
+    <%= render DS::Table.new(rows: [provider_account], label: t("ca_auto_bank.deposit_details"), inset: true) do |table| %>
+      <% table.with_column(t("ca_auto_bank.rate"), numeric: true) { |deposit| number_to_percentage(deposit.interest_rate, precision: 2) } %>
+      <% table.with_column(t("ca_auto_bank.opened")) { |deposit| l(deposit.effective_date, format: :long) } %>
+      <% table.with_column(t("ca_auto_bank.matures")) { |deposit| l(deposit.maturity_date, format: :long) } %>
+      <% table.with_column(t("ca_auto_bank.reported_interest"), numeric: true) do |deposit| %>
+        <span class="privacy-sensitive"><%= format_money(Money.new(deposit.deposit_metadata.fetch("reported_interest").to_d, "EUR")) %></span>
+      <% end %>
+    <% end %>
+    <p class="text-xs text-secondary"><%= t("ca_auto_bank.principal_note") %></p>
+  <% end %>
+  <p class="text-xs text-secondary"><%= t("ca_auto_bank.history_note") %></p>
+</section>
