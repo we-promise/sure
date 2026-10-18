@@ -661,14 +661,17 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
       )
     end
 
+    # An inactive email rule with one match that arrived after the rule was
+    # created, so only switching it on records that match as delivered. (Creating
+    # an email action records the matches it already has.)
     def email_rule_for(family)
       account = family.accounts.create!(name: "Baseline", balance: 1000, currency: "USD", accountable: Depository.new)
-      create_transaction(date: Date.current, account: account, name: "Baseline match zq")
-
-      Rule.create!(
+      rule = Rule.create!(
         family: family, resource_type: "transaction", active: false,
         conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "matches_regex", value: "baseline match zq") ],
         actions: [ Rule::Action.new(action_type: "send_email_notification") ]
       )
+      create_transaction(date: Date.current, account: account, name: "Baseline match zq")
+      rule
     end
 end
