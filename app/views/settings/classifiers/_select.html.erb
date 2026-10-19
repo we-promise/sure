@@ -1,0 +1,13 @@
+<%# locals: (key:, label:, hint:, settings:, choices:, width: "w-36") %>
+<%# One dropdown row of Settings → Classifier; choices: [[label, value]]. %>
+<div class="flex items-center justify-between gap-x-4">
+  <div class="flex-1 min-w-0">
+    <p class="text-sm text-primary"><%= label %></p>
+    <p class="text-xs text-secondary"><%= hint %></p>
+  </div>
+  <%= select_tag "bayes_settings[#{key}]",
+                 options_for_select(choices, settings.public_send(key)),
+                 id: nil, aria: { label: label },
+                 class: "rounded-lg border border-primary pl-3 pr-8 py-1.5 text-sm bg-container text-primary #{width} shrink-0",
+                 data: { auto_submit_form_target: "auto" } %>
+</div>

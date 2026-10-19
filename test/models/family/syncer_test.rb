@@ -62,6 +62,30 @@ class Family::SyncerTest < ActiveSupport::TestCase
     assert_no_enqueued_jobs(only: RuleJob)
   end
 
+  test "post-sync runs Bayes before queueing the rules, unless turned off" do
+    sequence = sequence("post_sync")
+    @family.expects(:bayes_categorize_uncategorized).in_sequence(sequence)
+    ApplyRulesJob.expects(:perform_later).with(@family).in_sequence(sequence)
+
+    Family::Syncer.new(@family).perform_post_sync
+
+    @family.update_bayes_settings!(categorize_after_sync: false)
+    @family.expects(:bayes_categorize_uncategorized).never
+    ApplyRulesJob.expects(:perform_later).with(@family)
+
+    Family::Syncer.new(@family).perform_post_sync
+  end
+
+  test "a Bayes failure is logged and the rules still run" do
+    @family.stubs(:bayes_categorize_uncategorized).raises(StandardError, "boom")
+
+    assert_difference -> { DebugLogEntry.where(level: "error").count }, 1 do
+      assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
+        Family::Syncer.new(@family).perform_post_sync
+      end
+    end
+  end
+
   private
     def syncable_item_associations
       Family.reflect_on_all_associations(:has_many).select do |association|

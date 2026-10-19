@@ -404,6 +404,14 @@ Rails.application.routes.draw do
       delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
     end
     resource :ai_prompts, only: %i[show update]
+    resource :classifier, only: %i[show update] do
+      post :run
+      post :clear_locks
+      post :evaluate
+      post :find_best
+      post :remember_weight
+      patch :apply_best
+    end
     resource :llm_usage, only: :show
     resource :guides, only: :show
     get "bank_sync", to: redirect("/settings/providers", status: 301)

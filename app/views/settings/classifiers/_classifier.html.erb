@@ -1,0 +1,10 @@
+<%# locals: (settings:) %>
+<%# What Bayes does: whether it runs after each sync, how sure it must be,
+    and whether its categories are locked. %>
+<%= classifier_section_form do %>
+  <%= render "settings/classifiers/toggle", key: :categorize_after_sync, settings: settings, label: t(".categorize_after_sync"), hint: t(".categorize_after_sync_hint") %>
+  <%= render "settings/classifiers/number", key: :threshold, settings: settings,
+        attrs: { step: 0.01 },
+        label: t(".threshold"), hint: t(".threshold_hint") %>
+  <%= render "settings/classifiers/toggle", key: :lock_results, settings: settings, label: t(".lock_results"), hint: t(".lock_results_hint") %>
+<% end %>

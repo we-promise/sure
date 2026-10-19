@@ -21,12 +21,29 @@ class Family::Syncer
 
   def perform_post_sync
     family.auto_match_transfers!
+    bayes_categorize
 
     Rails.logger.info("Applying rules for family #{family.id}")
     ApplyRulesJob.perform_later(family)
   end
 
   private
+    # Before the rules, so they see Bayes' categories. A failure is logged
+    # rather than raised: Sync#perform_post_sync would skip the rules too.
+    def bayes_categorize
+      return unless family.bayes_settings_object.categorize_after_sync
+
+      family.bayes_categorize_uncategorized
+    rescue => e
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "error",
+        message: "Bayesian categorization after sync failed: #{e.class}: #{e.message}",
+        source: self.class.name,
+        family: family,
+        metadata: { error_class: e.class.name, error_message: e.message }
+      )
+    end
 
     # Collect all syncable provider items via reflection so new `*_items`
     # integrations participate in nightly family sync as soon as they include

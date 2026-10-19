@@ -1,0 +1,45 @@
+<%# locals: (columns:, weight:, label: t("settings.classifiers.evaluation.threshold")) %>
+<%# columns: [[heading, report]]; label heads the first column, the value
+    each row is at. Each column's best row for the cost of a mistake, weight,
+    is bold. %>
+<div class="overflow-x-auto">
+  <%# Fixed layout, so every right / wrong column gets the same width. %>
+  <table class="w-full min-w-lg table-fixed text-sm tabular-nums">
+    <colgroup>
+      <col class="w-24">
+      <% columns.size.times do %>
+        <col>
+      <% end %>
+    </colgroup>
+    <thead>
+      <tr class="text-xs text-secondary text-left">
+        <th class="py-1 pr-3 font-normal"><%= label %></th>
+        <% columns.each do |heading, _| %>
+          <th class="py-1 pr-3 font-normal"><%= heading %></th>
+        <% end %>
+      </tr>
+      <tr class="text-xs text-secondary text-left">
+        <th></th>
+        <% columns.size.times do %>
+          <th class="py-1 pr-3 font-normal"><%= t("settings.classifiers.evaluation.right_wrong") %></th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% rows_by_threshold = columns.map { |_, report| report["sweep"].index_by { |row| row["threshold"] } } %>
+      <% bolds = columns.map { |_, report| Family::BayesEvaluation.best_threshold(report["sweep"], weight) if report["sweep"].any? } %>
+      <% rows_by_threshold.flat_map(&:keys).uniq.sort.each do |threshold| %>
+        <tr class="border-t border-tertiary">
+          <td class="py-1 pr-3"><%= threshold %></td>
+          <% rows_by_threshold.zip(bolds).each do |rows, bold| %>
+            <% if (cell = rows[threshold]) %>
+              <td class="<%= class_names("py-1 pr-3", "font-medium" => threshold == bold) %>"><%= cell["right"] %> / <span class="text-destructive"><%= cell["wrong"] %></span></td>
+            <% else %>
+              <td class="py-1 pr-3">–</td>
+            <% end %>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

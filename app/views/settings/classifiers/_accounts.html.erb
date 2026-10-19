@@ -1,0 +1,30 @@
+<%# locals: (settings:, accounts:) %>
+<%# Which accounts the classifier and the matcher work in: one setting for
+    both, so it sits above them. A checklist, so its own form. %>
+<div class="flex items-center justify-between gap-x-4">
+  <div class="flex-1 min-w-0">
+    <p class="text-sm text-primary"><%= t(".accounts") %></p>
+    <p class="text-xs text-secondary"><%= t(".accounts_hint") %></p>
+  </div>
+  <% excluded = settings.excluded_account_ids %>
+  <%= render layout: "pages/dashboard/filter_popover", locals: {
+        button_text: excluded.empty? ? t(".accounts_all") : t(".accounts_some", count: accounts.size - excluded.size, total: accounts.size),
+        search_label: t(".search_accounts"),
+        apply_text: t(".apply"),
+        hidden_fields: { account_filter: "1" },
+        url: settings_classifier_path,
+        method: :patch,
+        form_data: {}
+      } do %>
+    <% accounts.each do |account| %>
+      <%= render layout: "pages/dashboard/filter_popover_option", locals: {
+            name: "included_account_ids[]",
+            value: account.id,
+            checked: excluded.exclude?(account.id.to_s),
+            filter_name: account.name
+          } do %>
+        <span class="text-sm text-primary truncate"><%= account.name %></span>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

@@ -464,34 +464,84 @@ class Family < ApplicationRecord
     Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
   end
 
+  def bayes_settings_object
+    Family::BayesSettings.new(bayes_settings)
+  end
+
+  # Merges changes into the stored classifier settings; a blank number goes
+  # back to its default.
+  def update_bayes_settings!(changes)
+    update!(bayes_settings: bayes_settings_object.merge(changes).to_stored)
+  end
+
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
     AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end
 
+  # The LLM only: Bayes runs after each sync and from Settings → Classifier,
+  # before rules, so what it categorized is no longer uncategorized here.
   def auto_categorize_transactions(transaction_ids)
-    bayes_result = Family::BayesCategorizer.new(self).classify_and_apply(transaction_ids)
-    remaining_ids = Array(transaction_ids) - bayes_result.categorized_ids
+    AutoCategorizer.new(self, transaction_ids: transaction_ids).auto_categorize
+  end
 
-    # Bayes handled everything with sufficient confidence — skip the LLM
-    # categorizer entirely (including its no-provider error contract).
-    if bayes_result.categorized_ids.any? && remaining_ids.empty?
-      DebugLogEntry.capture(
-        category: "auto_categorization",
-        level: "info",
-        message: "Bayesian categorization handled all transactions; skipped LLM categorization",
-        source: self.class.name,
-        family: self,
-        metadata: {
-          requested_transaction_ids: Array(transaction_ids),
-          categorized_transaction_ids: bayes_result.categorized_ids,
-          modified_count: bayes_result.modified_count
-        }
-      )
-      return bayes_result.modified_count
-    end
+  # Runs Bayes over every uncategorized transaction the user hasn't locked;
+  # those it isn't sure about are tried again with a better model next time.
+  # Missing merchants are filled in first, if chosen, so Bayes sees them.
+  def bayes_categorize_uncategorized
+    fill_similar_merchants if bayes_settings_object.fill_similar_merchants
+    ids = categorizable_transactions.where(category_id: nil).enrichable(:category_id).pluck(:id)
+    ids.any? ? bayes_categorize_transactions(ids) : 0
+  end
 
-    llm_modified_count = AutoCategorizer.new(self, transaction_ids: remaining_ids).auto_categorize
-    bayes_result.modified_count + llm_modified_count
+  # Copies near-duplicates' merchant to every transaction without one the
+  # user hasn't locked, transfers aside. Returns how many got one.
+  def fill_similar_merchants
+    ids = categorizable_transactions.where(merchant_id: nil).where.not(kind: Transaction::TRANSFER_KINDS)
+                                    .enrichable(:merchant_id).pluck(:id)
+    return 0 if ids.empty?
+
+    filled = Family::SimilarMerchantFiller.new(self, settings: bayes_settings_object).fill(ids)
+    DebugLogEntry.capture(
+      category: "auto_categorization",
+      level: "info",
+      message: "Near-duplicate merchant fill gave #{filled} of #{ids.size} transactions a merchant",
+      source: self.class.name,
+      family: self,
+      metadata: { requested_count: ids.size, filled_count: filled }
+    )
+    filled
+  end
+
+  # Returns the modified count.
+  def bayes_categorize_transactions(transaction_ids)
+    result = Family::BayesCategorizer.new(self, settings: bayes_settings_object).classify_and_apply(transaction_ids)
+
+    DebugLogEntry.capture(
+      category: "auto_categorization",
+      level: "info",
+      message: "Bayesian categorization categorized #{result.categorized_ids.size} of #{Array(transaction_ids).size} transactions",
+      source: self.class.name,
+      family: self,
+      metadata: {
+        requested_transaction_ids: Array(transaction_ids),
+        categorized_transaction_ids: result.categorized_ids,
+        modified_count: result.modified_count
+      }
+    )
+    result.modified_count
+  end
+
+  # Unlocks the categories Bayes locked itself (lock_results) and the
+  # merchants the matcher did (lock_similar_merchants) that are still what
+  # they set, so rules and AI may change them again. The values stay.
+  # Returns how many were unlocked.
+  def clear_bayes_locks!
+    locked_by_bayes = transactions.where("transactions.locked_attributes ? 'category_id'")
+                                  .category_from("bayes", metadata: { locked_by_bayes: true })
+    locked_by_matcher = transactions.where("transactions.locked_attributes ? 'merchant_id'")
+                                    .where(Transaction.enriched_from_sql("merchant_id", "similar", metadata: { locked_by_similar: true }))
+    unlock_own_locks(locked_by_bayes, "category_id", "bayes", "locked_by_bayes") +
+      unlock_own_locks(locked_by_matcher, "merchant_id", "similar", "locked_by_similar")
   end
 
   def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil)
@@ -760,6 +810,25 @@ class Family < ApplicationRecord
   end
 
   private
+    def categorizable_transactions
+      transactions.visible.with_entry.merge(Entry.excluding_split_parents)
+    end
+
+    def unlock_own_locks(scope, attribute, source, flag)
+      count = 0
+      scope.find_each do |transaction|
+        ActiveRecord::Base.transaction do
+          transaction.update_column(:locked_attributes, transaction.locked_attributes.except(attribute))
+          # Without the flag, a lock the user sets later counts as confirming it.
+          transaction.data_enrichments.where(attribute_name: attribute, source: source)
+                     .update_all([ "metadata = metadata - ?", flag ])
+          transaction.touch
+        end
+        count += 1
+      end
+      count
+    end
+
     # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
     # `tax_advantaged_account_ids`. Joins `depositories` and filters by
     # `Depository::TAX_ADVANTAGED_SUBTYPES` (currently `%w[hsa]`). Extracted
