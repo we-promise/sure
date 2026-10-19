@@ -112,6 +112,17 @@ class Assistant::Function::CreateCategoryTest < ActiveSupport::TestCase
     assert_equal "validation_failed", result[:error]
   end
 
+  test "soft error when categories are locked" do
+    @family.update!(categories_locked: true)
+
+    assert_no_difference "@family.categories.count" do
+      result = @fn.call("name" => "Locked Category")
+
+      assert_equal false, result[:success]
+      assert_equal "categories_locked", result[:error]
+    end
+  end
+
   test "cannot use a parent from another family" do
     other_family = Family.create!(name: "Other", currency: "USD", locale: "en", country: "US", timezone: "UTC")
     other_parent = other_family.categories.create!(name: "Foreign Parent", color: "#e99537", lucide_icon: "shapes")

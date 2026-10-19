@@ -147,6 +147,16 @@ class Rule::Runner
       errors << error
       error_message = "#{error.class}: #{error.message}"
       Rails.logger.error("Rule::Runner failed for rule #{rule.id}: #{error_message}")
+      # A failed rule, such as a pattern that timed out, is the user's to fix, so
+      # support sees it in the debug log as RuleRun#fail_job! records its own.
+      DebugLogEntry.capture(
+        category: "rule_run",
+        level: "error",
+        message: "Rule run failed: #{error_message}",
+        source: self.class.name,
+        family: rule.family,
+        metadata: { rule_id: rule.id, rule_name: rule.name, execution_type: execution_type, error_class: error.class.name, error_message: error.message }
+      )
 
       DebugLogEntry.capture(
         category: "rule_run",
