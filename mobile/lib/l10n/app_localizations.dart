@@ -1952,6 +1952,12 @@ abstract class AppLocalizations {
   /// **'Split entries can\'t be edited directly. Use Edit split below.'**
   String get splitChildEditLocked;
 
+  /// Notice on the edit screen while the split lookup is pending or has failed; the form is read-only.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking whether this transaction is split. The fields stay locked until that finishes.'**
+  String get splitStatusUnknownLocked;
+
   /// Category label for a split entry without a category.
   ///
   /// In en, this message translates to:

@@ -353,6 +353,10 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
             if (isSplitChild) ...[
               SplitNoticeBanner(text: l.splitChildEditLocked),
               const SizedBox(height: 16),
+            ] else if (isSynced &&
+                !splits.isSplitStatusKnown(transactionId)) ...[
+              SplitNoticeBanner(text: l.splitStatusUnknownLocked),
+              const SizedBox(height: 16),
             ] else if (!isSynced) ...[
               Card(
                 color: colorScheme.errorContainer,

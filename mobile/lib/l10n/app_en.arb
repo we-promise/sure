@@ -994,6 +994,9 @@
   "splitChildEditLocked": "Split entries can't be edited directly. Use Edit split below.",
   "@splitChildEditLocked": { "description": "Notice on the edit screen of a split child, whose fields are read-only." },
 
+  "splitStatusUnknownLocked": "Checking whether this transaction is split. The fields stay locked until that finishes.",
+  "@splitStatusUnknownLocked": { "description": "Notice on the edit screen while the split lookup is pending or has failed; the form is read-only." },
+
   "splitUncategorized": "(uncategorized)",
   "@splitUncategorized": { "description": "Category label for a split entry without a category." },
 
