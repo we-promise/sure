@@ -166,6 +166,20 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 10_000 - 2 * 200, account.cash_balance
   end
 
+  test "remap_security keeps trade-derived positions on a linked account without a provider snapshot" do
+    account, security = linked_account_with_trade(users(:family_admin).family)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    holding = account.current_holdings.find_by!(security: security)
+    remapped = Security.create!(ticker: "RMPX", name: "Remapped", exchange_operating_mic: "XNAS")
+    (5.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: remapped, date: date, price: 200) }
+
+    patch remap_security_holding_path(holding), params: { security_id: "RMPX|XNAS" }
+
+    assert_redirected_to account_path(account, tab: "holdings")
+    assert_equal 2, account.reload.current_holdings.find_by!(security: remapped).qty
+    assert_equal 10_000 - 2 * 200, account.cash_balance
+  end
+
   private
     # A linked account whose provider sends no holdings, holding 2 shares
     # bought five days ago at 200.
