@@ -822,9 +822,11 @@ class Goal < ApplicationRecord
     @pace_money ||= Money.new(pace, currency)
   end
 
-  # Months of cash on hand at current pace (open-ended goals).
+  # Months of cash on hand at current pace (open-ended goals). None while part
+  # of the money is unmeasured: the pace would cover only the measured part.
   def months_of_runway
     return nil if target_date.present?
+    return nil unless pace_measurable?
     return nil if pace.zero? || pace.negative?
 
     (current_balance.to_d / pace.to_d).round(1)

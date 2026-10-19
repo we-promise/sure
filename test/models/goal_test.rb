@@ -1440,6 +1440,23 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 1300, measured.pace.to_d
   end
 
+  test "an open-ended goal with an unmeasurable account claims no runway" do
+    cash = Account.create!(family: @family, accountable: Depository.new, name: "Paid savings",
+                           currency: "USD", balance: 900)
+    create_transaction(account: cash, amount: -900, date: 10.days.ago.to_date)
+    anchored = Account.create!(family: @family, accountable: Depository.new, name: "Anchored savings",
+                               currency: "USD", balance: 500)
+    create_valuation(account: anchored, amount: 500, date: 30.days.ago.to_date, kind: "opening_anchor")
+
+    measured = goal_on(cash, target_amount: 50_000, name: "Measured", allocated: 450)
+    assert_equal BigDecimal("1.5"), measured.months_of_runway
+
+    # The measured half still has a pace of 300/mo of its own.
+    mixed = goal_on([ cash, anchored ], target_amount: 50_000, name: "Mixed", allocated: 450)
+    assert_equal 300, mixed.pace.to_d
+    assert_nil mixed.months_of_runway
+  end
+
   test "a goal whose pace cannot be measured sorts beside open-ended goals" do
     on_track = goal_on(valuation_tracked_account(balance: 112_000, year_ago: 100_000),
                        target_amount: 121_600, target_date: 360.days.from_now.to_date, name: "Zeta on track")
