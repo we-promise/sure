@@ -309,6 +309,7 @@
   "splitChildTitle": "Del av uppdelning",
   "splitChildDescription": "Den här posten är en del av en uppdelad transaktion. Redigera uppdelningen för att ändra den.",
   "splitChildEditLocked": "Delade poster kan inte redigeras direkt. Använd Redigera uppdelning nedan.",
+  "splitStatusUnknownLocked": "Kontrollerar om transaktionen är uppdelad. Fälten är låsta tills det är klart.",
   "splitUncategorized": "(okategoriserad)",
   "splitTransactionButton": "Dela upp transaktion",
   "splitTransactionDescription": "Dela upp transaktionen i flera poster med olika kategorier och belopp.",

@@ -25,8 +25,12 @@ import 'package:sure_mobile/widgets/sure_button.dart';
 import 'package:sure_mobile/widgets/transaction_split_section.dart';
 
 class _FakeAuthProvider extends ChangeNotifier implements AuthProvider {
+  _FakeAuthProvider({this.token = 'token'});
+
+  final String? token;
+
   @override
-  Future<String?> getValidAccessToken() async => 'token';
+  Future<String?> getValidAccessToken() async => token;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -120,7 +124,9 @@ class _Harness {
     bool online = true,
     bool hidden = false,
     MockClientHandler? handler,
-  })  : privacy = PrivacyProvider(initialHidden: hidden),
+    String? token = 'token',
+  })  : auth = _FakeAuthProvider(token: token),
+        privacy = PrivacyProvider(initialHidden: hidden),
         connectivity = _FakeConnectivity(online: online),
         transactions = _RecordingTransactionsProvider() {
     splits = TransactionSplitsProvider(
@@ -134,6 +140,7 @@ class _Harness {
     )..setConnectivityService(connectivity);
   }
 
+  final _FakeAuthProvider auth;
   final _FakeConnectivity connectivity;
   final PrivacyProvider privacy;
   final _RecordingTransactionsProvider transactions;
@@ -143,7 +150,7 @@ class _Harness {
   Widget wrap(Widget child) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthProvider>.value(value: _FakeAuthProvider()),
+        ChangeNotifierProvider<AuthProvider>.value(value: auth),
         ChangeNotifierProvider<CategoriesProvider>.value(
           value: _FakeCategoriesProvider(),
         ),
@@ -562,6 +569,20 @@ void main() {
 
       expect(find.text('Split entries'), findsOneWidget);
       expect(harness.splits.isSplitStatusKnown('parent_1'), isTrue);
+    });
+
+    testWidgets('offers a retry instead of spinning when the session expired',
+        (tester) async {
+      await useTallView(tester);
+      final harness = _Harness(token: null);
+      await tester.pumpWidget(harness.wrap(screen(transaction('parent_1'))));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text("Couldn't load split details."), findsOneWidget);
+      expect(find.byKey(const Key('split-retry')), findsOneWidget);
+      expect(harness.splits.isSplitStatusKnown('parent_1'), isFalse);
+      expect(harness.requests, isEmpty);
     });
 
     testWidgets('retries the lookup after reconnecting', (tester) async {

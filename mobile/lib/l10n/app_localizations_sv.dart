@@ -1064,6 +1064,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Delade poster kan inte redigeras direkt. Använd Redigera uppdelning nedan.';
 
   @override
+  String get splitStatusUnknownLocked =>
+      'Kontrollerar om transaktionen är uppdelad. Fälten är låsta tills det är klart.';
+
+  @override
   String get splitUncategorized => '(okategoriserad)';
 
   @override

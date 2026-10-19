@@ -1053,6 +1053,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Split entries can\'t be edited directly. Use Edit split below.';
 
   @override
+  String get splitStatusUnknownLocked =>
+      'Checking whether this transaction is split. The fields stay locked until that finishes.';
+
+  @override
   String get splitUncategorized => '(uncategorized)';
 
   @override

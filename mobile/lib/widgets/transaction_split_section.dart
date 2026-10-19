@@ -71,7 +71,12 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
       listen: false,
     );
     final accessToken = await authProvider.getValidAccessToken();
-    if (accessToken == null || !mounted) return;
+    if (!mounted) return;
+    if (accessToken == null) {
+      // Surface the retry banner instead of an endless spinner.
+      setState(() => _loaded = true);
+      return;
+    }
     await splitsProvider.loadSplit(
       accessToken: accessToken,
       transactionId: _id!,
@@ -287,8 +292,8 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
           child: Center(child: CircularProgressIndicator()),
         );
       }
-      if (splitsProvider.lastError != null &&
-          !splitsProvider.isSplitStatusKnown(_id!)) {
+      if (!splitsProvider.isSplitStatusKnown(_id!) &&
+          (_loaded || splitsProvider.lastError != null)) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
