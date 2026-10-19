@@ -21,10 +21,12 @@ class Api::V1::SplitsController < Api::V1::BaseController
   # check and then overflow the column, which surfaces as a 500.
   AMOUNT_LIMIT = BigDecimal(10)**15
   before_action :ensure_read_scope, only: [ :show ]
-  before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
+  before_action :ensure_write_scope, only: [ :create, :update, :destroy, :itemize ]
+  # Itemizing sends the receipt to the family's LLM provider.
+  before_action :require_ai_enabled, only: [ :itemize ]
   before_action :set_transaction
   before_action :resolve_to_parent
-  before_action :ensure_account_write_permission, only: [ :create, :update, :destroy ]
+  before_action :ensure_account_write_permission, only: [ :create, :update, :destroy, :itemize ]
 
   # GET /api/v1/transactions/:transaction_id/split
   def show
@@ -81,6 +83,34 @@ class Api::V1::SplitsController < Api::V1::BaseController
     render_not_split
   rescue ActiveRecord::RecordInvalid => e
     render_unprocessable(e.message)
+  end
+
+  # POST /api/v1/transactions/:transaction_id/split/itemize
+  #
+  # Reads a receipt attached to the transaction with the family's LLM provider
+  # and proposes split rows from its line items, with tax and discounts spread
+  # over the items. Nothing is saved: the response carries a `split` body that
+  # can be reviewed, edited and sent to POST .../split unchanged.
+  def itemize
+    unless @transaction.splittable?
+      return render_unprocessable("Transaction cannot be split", [ not_splittable_reason ])
+    end
+
+    proposal = Transaction::ReceiptItemizer.new(@transaction).propose(attachment_id: params[:attachment_id])
+
+    render json: {
+      transaction_id: @transaction.id,
+      attachment_id: proposal.attachment_id,
+      merchant_name: proposal.merchant_name,
+      currency: @entry.currency,
+      receipt_total: proposal.receipt_total.to_s("F"),
+      unmatched_amount: proposal.unmatched_amount.to_s("F"),
+      split: {
+        splits: proposal.rows.map { |row| { name: row.name, amount: row.amount.to_s("F") } }
+      }
+    }
+  rescue Transaction::ReceiptItemizer::Error => e
+    render_unprocessable("Could not itemize the receipt", [ e.message ])
   end
 
   # DELETE /api/v1/transactions/:transaction_id/split

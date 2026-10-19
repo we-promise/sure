@@ -401,6 +401,46 @@ class Provider::Openai < Provider
     end
   end
 
+  # Receipts arrive as PDFs (read as text) or photos (sent to a vision model),
+  # so this needs the same capability as PDF processing.
+  def supports_receipt_extraction?(model: @default_model)
+    supports_pdf_processing?(model: model)
+  end
+
+  # Reads the line items, tax, discount and total off a receipt.
+  # @param file_content [String] receipt bytes (PDF or image)
+  # @param content_type [String] MIME type of file_content
+  # @return [Provider::Response] wrapping a Provider::LlmConcept::ReceiptExtraction
+  def extract_receipt(file_content:, content_type:, model: "", family: nil, json_mode: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+      raise Error, "Model does not support receipt extraction: #{effective_model}" unless supports_receipt_extraction?(model: effective_model)
+
+      trace = create_langfuse_trace(
+        name: "openai.extract_receipt",
+        input: { content_type: content_type, size: file_content&.bytesize }
+      )
+
+      # Only an explicitly configured cap is sent: the 512-token budget
+      # fallback is too small for the JSON of a long itemized receipt.
+      result = ReceiptExtractor.new(
+        client,
+        model: effective_model,
+        file_content: file_content,
+        content_type: content_type,
+        custom_provider: custom_provider?,
+        langfuse_trace: trace,
+        family: family,
+        max_response_tokens: explicit_max_response_tokens,
+        json_mode: json_mode
+      ).extract
+
+      upsert_langfuse_trace(trace: trace, output: { line_item_count: result.line_items.size })
+
+      result
+    end
+  end
+
   def chat_response(
     prompt,
     model:,
