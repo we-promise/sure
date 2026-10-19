@@ -152,6 +152,7 @@ class BudgetCategory {
     this.rolledOverAmountCents,
     this.availableToSpend,
     this.availableToSpendCents,
+    this.sharedBudgetCents,
   });
 
   final String id;
@@ -173,6 +174,33 @@ class BudgetCategory {
   final int? rolledOverAmountCents;
   final String? availableToSpend;
   final int? availableToSpendCents;
+
+  /// For a subcategory sharing its parent's budget: the part of the parent's
+  /// budget (plus rollover) not reserved by sibling subcategories with their
+  /// own allocation. Set by [BudgetCategoryGroup.build].
+  final int? sharedBudgetCents;
+
+  /// A copy carrying [sharedBudgetCents].
+  BudgetCategory withSharedBudgetCents(int cents) => BudgetCategory(
+        id: id,
+        budgetId: budgetId,
+        currency: currency,
+        subcategory: subcategory,
+        inheritsParentBudget: inheritsParentBudget,
+        rolloverEnabled: rolloverEnabled,
+        category: category,
+        budgetedSpending: budgetedSpending,
+        budgetedSpendingCents: budgetedSpendingCents,
+        displayBudgetedSpending: displayBudgetedSpending,
+        displayBudgetedSpendingCents: displayBudgetedSpendingCents,
+        actualSpending: actualSpending,
+        actualSpendingCents: actualSpendingCents,
+        rolledOverAmount: rolledOverAmount,
+        rolledOverAmountCents: rolledOverAmountCents,
+        availableToSpend: availableToSpend,
+        availableToSpendCents: availableToSpendCents,
+        sharedBudgetCents: cents,
+      );
 
   String get name => category.name;
   String? get parentCategoryId => category.parentId;
@@ -202,8 +230,12 @@ class BudgetCategory {
   double get spentFraction {
     if (inheritsParentBudget) {
       // The API clamps a shared child's available amount at zero, so measure
-      // its spending against the parent allocation it draws from.
-      return spentFractionFor(actual: _actual, total: effectiveBudgetCents);
+      // its spending against the shared pool it draws from: the parent's
+      // budget less ring-fenced siblings (web: `percent_of_budget_spent`).
+      return spentFractionFor(
+        actual: _actual,
+        total: sharedBudgetCents ?? effectiveBudgetCents,
+      );
     }
     // For everything else `available = budget + rollover - actual`.
     return spentFractionFor(actual: _actual, total: _actual + _available);
@@ -286,8 +318,29 @@ class BudgetCategoryGroup {
       for (final root in roots)
         BudgetCategoryGroup(
           parent: root,
-          children: childrenByParent[root.category.id] ?? const [],
+          children: _withSharedBudgets(
+            root,
+            childrenByParent[root.category.id] ?? const [],
+          ),
         ),
+    ];
+  }
+
+  static List<BudgetCategory> _withSharedBudgets(
+    BudgetCategory parent,
+    List<BudgetCategory> children,
+  ) {
+    if (!children.any((c) => c.inheritsParentBudget)) return children;
+    final ringFenced = children
+        .where((c) => !c.inheritsParentBudget)
+        .fold<int>(0, (sum, c) => sum + (c.budgetedSpendingCents ?? 0));
+    final pool = (parent.budgetedSpendingCents ?? 0) +
+        (parent.rolledOverAmountCents ?? 0) -
+        ringFenced;
+    final shared = pool < 0 ? 0 : pool;
+    return [
+      for (final c in children)
+        c.inheritsParentBudget ? c.withSharedBudgetCents(shared) : c,
     ];
   }
 }

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:sure_mobile/providers/budgets_provider.dart';
 import 'package:sure_mobile/services/budgets_service.dart';
 
@@ -14,32 +17,145 @@ void main() {
     List<http.Request>? log,
     int statusCode = 200,
     bool Function()? isOffline,
+    DateTime Function()? now,
+    http.Client? client,
   }) {
     return BudgetsProvider(
       service: BudgetsService(
-        client: budgetsMockClient(
-          budgets: budgets,
-          categories: categories,
-          log: log,
-          statusCode: statusCode,
-        ),
+        client: client ??
+            budgetsMockClient(
+              budgets: budgets,
+              categories: categories,
+              log: log,
+              statusCode: statusCode,
+            ),
       ),
-      clock: clock,
+      clock: now ?? clock,
       isOffline: isOffline,
     );
   }
 
-  test('starts on the current month and cannot go past it', () {
+  test('can navigate up to two years past the current month', () {
     final provider = buildProvider();
     expect(provider.month, DateTime(2026, 10));
-    expect(provider.canGoNext, isFalse);
+    expect(provider.canGoNext, isTrue);
 
     provider.nextMonth();
-    expect(provider.month, DateTime(2026, 10));
+    expect(provider.month, DateTime(2026, 11));
+
+    for (var i = 0; i < 30; i++) {
+      provider.nextMonth();
+    }
+    expect(provider.month, DateTime(2028, 10));
+    expect(provider.canGoNext, isFalse);
 
     provider.previousMonth();
-    expect(provider.month, DateTime(2026, 9));
+    expect(provider.month, DateTime(2028, 9));
     expect(provider.canGoNext, isTrue);
+  });
+
+  test('opens on the custom period that contains today', () async {
+    final provider = buildProvider(
+      now: () => DateTime(2026, 10, 10),
+      budgets: [
+        budgetJson(
+          id: 'budget_sep',
+          startDate: '2026-09-15',
+          endDate: '2026-10-14',
+          name: 'Sep 15 - Oct 14, 2026',
+        ),
+      ],
+    );
+
+    await provider.loadMonth(accessToken: 'token');
+
+    expect(provider.month, DateTime(2026, 9));
+    expect(provider.budget?.id, 'budget_sep');
+    // Navigation is bounded by the current period, not the calendar month.
+    for (var i = 0; i < 30; i++) {
+      provider.nextMonth();
+    }
+    expect(provider.month, DateTime(2028, 9));
+  });
+
+  test('a network failure on a category line fails the month uncached',
+      () async {
+    final inner = budgetsMockHandler();
+    var failFood = true;
+    final provider = buildProvider(
+      client: MockClient((request) async {
+        if (failFood && request.url.path.endsWith('/bc_food')) {
+          throw http.ClientException('connection reset');
+        }
+        return inner(request);
+      }),
+    );
+
+    await provider.loadMonth(accessToken: 'token');
+    expect(provider.error, BudgetsLoadError.failed);
+    expect(provider.hasLoadedMonth, isFalse);
+
+    failFood = false;
+    await provider.loadMonth(accessToken: 'token');
+    expect(provider.error, isNull);
+    expect(provider.categories.every((c) => c.hasDerivedAmounts), isTrue);
+  });
+
+  test('a missing category line keeps its budgeted amount', () async {
+    final inner = budgetsMockHandler();
+    final provider = buildProvider(
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/bc_transport')) {
+          return http.Response('{"error":"not_found"}', 404);
+        }
+        return inner(request);
+      }),
+    );
+    await provider.loadMonth(accessToken: 'token');
+
+    expect(provider.error, isNull);
+    final transport =
+        provider.categories.firstWhere((c) => c.name == 'Transport');
+    expect(transport.hasDerivedAmounts, isFalse);
+    expect(transport.budgetedSpendingCents, 30000);
+  });
+
+  test('returning to a cached month clears a pending load', () async {
+    final inner = budgetsMockHandler();
+    final gate = Completer<void>();
+    var gateSeptember = false;
+    final provider = buildProvider(
+      client: MockClient((request) async {
+        if (gateSeptember &&
+            request.url.queryParameters['start_date'] == '2026-09-01') {
+          await gate.future;
+        }
+        return inner(request);
+      }),
+    );
+    await provider.loadMonth(accessToken: 'token');
+
+    gateSeptember = true;
+    provider.previousMonth();
+    final september = provider.loadMonth(accessToken: 'token');
+    await Future<void>.delayed(Duration.zero);
+    expect(provider.isLoading, isTrue);
+
+    provider.nextMonth();
+    await provider.loadMonth(accessToken: 'token');
+    expect(provider.isLoading, isFalse);
+    expect(provider.budget?.id, 'budget_oct');
+
+    gate.complete();
+    await september;
+    expect(provider.isLoading, isFalse);
+  });
+
+  test('markUnauthorized shows the session-expired state', () {
+    final provider = buildProvider();
+    provider.markUnauthorized();
+    expect(provider.error, BudgetsLoadError.unauthorized);
+    expect(provider.isLoading, isFalse);
   });
 
   test('assembles a month from the budget and category endpoints', () async {
@@ -62,10 +178,13 @@ void main() {
     ]);
     expect(provider.overBudgetCount, 1);
 
-    // list + show budget + list categories + one show per category
-    expect(log, hasLength(3 + 5));
-    expect(log.first.url.queryParameters['start_date'], '2026-10-01');
+    // current period lookup, then list + show budget + list categories +
+    // one show per category
+    expect(log, hasLength(1 + 3 + 5));
+    expect(log.first.url.queryParameters['start_date'], '2026-09-01');
     expect(log.first.url.queryParameters['end_date'], '2026-11-30');
+    expect(log[1].url.queryParameters['start_date'], '2026-10-01');
+    expect(log[1].url.queryParameters['end_date'], '2026-11-30');
   });
 
   test('uses the in-memory copy unless forced', () async {
@@ -78,7 +197,8 @@ void main() {
     expect(log.length, first);
 
     await provider.loadMonth(accessToken: 'token', forceRefresh: true);
-    expect(log.length, first * 2);
+    // The current period is looked up only once.
+    expect(log.length - first, 3 + 5);
   });
 
   test('matches a custom month start budget by its start month', () async {

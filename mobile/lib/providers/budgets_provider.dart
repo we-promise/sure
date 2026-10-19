@@ -44,6 +44,12 @@ class BudgetsProvider with ChangeNotifier {
   bool _showingCachedWhileOffline = false;
   int _generation = 0;
 
+  /// First month of the budget period that contains today. For a family whose
+  /// month starts on, say, the 15th, on October 10 that is September. Starts
+  /// as the calendar month and is corrected by the first successful load.
+  late DateTime _currentPeriodMonth = _firstOfMonth(_clock());
+  bool _currentPeriodResolved = false;
+
   /// First day of the month being shown.
   DateTime get month => _month;
   bool get isLoading => _isLoading;
@@ -93,8 +99,12 @@ class BudgetsProvider with ChangeNotifier {
     return count;
   }
 
-  /// Budgets only exist for past and current months.
-  bool get canGoNext => _month.isBefore(_firstOfMonth(_clock()));
+  /// The server accepts budgets up to two years past the current period
+  /// (web: `Budget.latest_valid_budget_start_date`), so planned future months
+  /// stay reachable.
+  bool get canGoNext => _month.isBefore(
+        DateTime(_currentPeriodMonth.year + 2, _currentPeriodMonth.month),
+      );
 
   void previousMonth() => _setMonth(DateTime(_month.year, _month.month - 1));
 
@@ -121,11 +131,24 @@ class BudgetsProvider with ChangeNotifier {
     await loadMonth(accessToken: accessToken, forceRefresh: true);
   }
 
+  /// Shows the session-expired state, e.g. when no access token is available.
+  void markUnauthorized() {
+    _generation++;
+    _isLoading = false;
+    _error = BudgetsLoadError.unauthorized;
+    _errorMessage = null;
+    _showingCachedWhileOffline = false;
+    notifyListeners();
+  }
+
   /// Loads the selected month. Uses the in-memory copy unless [forceRefresh].
   Future<void> loadMonth({
     required String accessToken,
     bool forceRefresh = false,
   }) async {
+    if (!_currentPeriodResolved && !_isOffline()) {
+      await _resolveCurrentPeriod(accessToken);
+    }
     final key = _monthKey(_month);
     final month = _month;
     final generation = ++_generation;
@@ -140,6 +163,8 @@ class BudgetsProvider with ChangeNotifier {
     }
 
     if (!forceRefresh && _cache.containsKey(key)) {
+      // A superseded request for another month can't clear this any more.
+      _isLoading = false;
       _showingCachedWhileOffline = false;
       _error = null;
       notifyListeners();
@@ -176,6 +201,34 @@ class BudgetsProvider with ChangeNotifier {
         _isLoading = false;
         notifyListeners();
       }
+    }
+  }
+
+  /// Finds the budget whose period contains today and, if the user hasn't
+  /// navigated yet, opens on it. Without one (no budget yet, or a failed
+  /// request) the calendar month stays, as before.
+  Future<void> _resolveCurrentPeriod(String accessToken) async {
+    final today = _clock();
+    final day = DateTime(today.year, today.month, today.day);
+    final initialMonth = _firstOfMonth(today);
+    try {
+      final result = await _service.getBudgets(
+        accessToken: accessToken,
+        startDate: DateTime(initialMonth.year, initialMonth.month - 1),
+        endDate: DateTime(initialMonth.year, initialMonth.month + 2, 0),
+        perPage: _perPage,
+      );
+      if (result['success'] != true) return;
+      _currentPeriodResolved = true;
+      for (final b in result['budgets'] as List<Budget>) {
+        if (!b.startDate.isAfter(day) && !b.endDate.isBefore(day)) {
+          _currentPeriodMonth = _firstOfMonth(b.startDate);
+          if (_month == initialMonth) _month = _currentPeriodMonth;
+          break;
+        }
+      }
+    } catch (e) {
+      _log.error('BudgetsProvider', 'Could not resolve current period: $e');
     }
   }
 
@@ -253,8 +306,9 @@ class BudgetsProvider with ChangeNotifier {
   }
 
   /// Replaces each index record with its show record (which carries actual
-  /// spending). A line whose detail request fails keeps its budgeted amount,
-  /// so one bad request never blanks the whole month; a 401 still fails it.
+  /// spending). A line whose detail record is gone (404) keeps its budgeted
+  /// amount; any other failure (401, network, server error) fails the month,
+  /// so a partial month is never cached as complete.
   Future<List<BudgetCategory>> _withDerivedAmounts(
     String accessToken,
     List<BudgetCategory> categories,
@@ -273,7 +327,7 @@ class BudgetsProvider with ChangeNotifier {
         final result = batch[k];
         if (result['success'] == true) {
           detailed[i + k] = result['budget_category'] as BudgetCategory;
-        } else if (result['error'] == 'unauthorized') {
+        } else if (result['error'] != 'not_found') {
           _throwIfFailed(result);
         }
       }

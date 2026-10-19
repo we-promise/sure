@@ -148,11 +148,25 @@ MockClient budgetsMockClient({
   List<Map<String, dynamic>>? categories,
   List<http.Request>? log,
   int statusCode = 200,
+}) =>
+    MockClient(budgetsMockHandler(
+      budgets: budgets,
+      categories: categories,
+      log: log,
+      statusCode: statusCode,
+    ));
+
+/// The request handler behind [budgetsMockClient], for tests that wrap it.
+Future<http.Response> Function(http.Request) budgetsMockHandler({
+  List<Map<String, dynamic>>? budgets,
+  List<Map<String, dynamic>>? categories,
+  List<http.Request>? log,
+  int statusCode = 200,
 }) {
   final budgetList = budgets ?? [budgetJson()];
   final categoryList = categories ?? octoberCategories();
 
-  return MockClient((request) async {
+  return (request) async {
     log?.add(request);
     if (statusCode != 200) {
       return http.Response('{"error":"nope"}', statusCode);
@@ -194,7 +208,7 @@ MockClient budgetsMockClient({
     }
 
     return http.Response('{"error":"unexpected"}', 500);
-  });
+  };
 }
 
 const _derivedKeys = {
