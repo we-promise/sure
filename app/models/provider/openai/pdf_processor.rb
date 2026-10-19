@@ -1,11 +1,12 @@
 class Provider::Openai::PdfProcessor
   include Provider::Openai::Concerns::UsageRecorder
+  include Provider::Openai::Concerns::JsonMode
 
   attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens,
-              :processing_mode
+              :processing_mode, :json_mode
 
   def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil,
-                 max_response_tokens:, processing_mode: :auto)
+                 max_response_tokens:, processing_mode: :auto, json_mode: nil)
     @client = client
     @model = model
     @pdf_content = pdf_content
@@ -14,6 +15,7 @@ class Provider::Openai::PdfProcessor
     @family = family
     @max_response_tokens = max_response_tokens
     @processing_mode = processing_mode
+    @json_mode = json_mode || default_json_mode
   end
 
   def process
@@ -125,9 +127,10 @@ class Provider::Openai::PdfProcessor
             role: "user",
             content: "Please analyze the following document text and provide a structured summary:\n\n#{pdf_text}"
           }
-        ],
-        response_format: { type: "json_object" }
+        ]
       }
+
+      apply_json_mode(params, mode: json_mode)
 
       response = client.chat(parameters: params)
 

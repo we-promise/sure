@@ -15,6 +15,7 @@ zh-CN:
     trade_republic_item:
       syncing: "正在同步"
       requires_update: "需要重新认证"
+      session_expires_in: "登录将在 %{time}后过期（%{at}）。"
       error: "错误"
       synced: "%{time}前同步。%{summary}。"
       setup_accounts: "设置账户"

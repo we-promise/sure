@@ -211,6 +211,7 @@ You can connect to Google Gemini either directly via Google AI Studio's OpenAI-c
 
 **Recommended Gemini models:**
 
+- `gemini-4-argon` - Flagship frontier reasoning model; 1M token context, native multimodal and deep multi-step reasoning for complex financial analysis, code execution, and agentic workflows
 - `gemini-3.8-flash` - Best all-around choice; fast, strong reasoning, and reliable tool calling for chat and finance tools
 - `gemini-3.5-flash-lite` - Ultra-low cost and fast; ideal for background categorization and merchant detection
 - `gemini-3.1-pro-preview` - Best for complex financial analysis, portfolio queries, and multi-year trends
@@ -1130,7 +1131,7 @@ Good test queries that exercise different capabilities:
 
 ### Cloud Costs
 
-**Pricing table last updated and verified: October 4, 2026.** Every model
+**Pricing table last updated and verified: October 17, 2026.** Every model
 listed in [`LlmUsage::PRICING`](../../app/models/llm_usage.rb) was checked against
 official sources. `PRICING_VERIFIED_ON` supplies the verification date shown on
 the LLM usage screen. This is a manual review date, not a claim that providers
@@ -1143,13 +1144,14 @@ Rates are USD per million tokens at the Standard tier. The source coverage is:
 | GPT-6 Sol/6.1 Sol, GPT-5.6, GPT-5.5, GPT-5.4, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1, o3, o4-mini (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
 | GPT-5.2/5.1 Chat aliases | [GPT-5.2 Chat](https://developers.openai.com/api/docs/models/gpt-5.2-chat-latest), [GPT-5.1 Chat](https://developers.openai.com/api/docs/models/gpt-5.1-chat-latest) |
 | o1-mini | [o1-mini](https://developers.openai.com/api/docs/models/o1-mini) |
-| Gemini 3.8/3.7/3.6/3.5 Flash, 3.5/3.1 Flash-Lite, 3.1 Pro, 3 Flash, 2.5 Pro/Flash | [Google pricing](https://ai.google.dev/gemini-api/docs/pricing) |
+| Gemini 4 Argon, 3.8/3.7/3.6/3.5 Flash, 3.5/3.1 Flash-Lite, 3.1 Pro, 3 Flash, 2.5 Pro/Flash | [Google pricing](https://ai.google.dev/gemini-api/docs/pricing) |
 | Claude Opus 4.6/4.7, Sonnet 4.5/4.6, Haiku 4.5 | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
 
 #### Dated pricing changes
 
 | Model | Input / output | Latest relevant published date found |
 | --- | --- | --- |
+| Gemini 4 Argon | $2 / $10 | October 2026: launch promotional pricing through November 30, 2026 ($4 / $20 standard starting December 1, 2026) |
 | GPT-6.1 Sol | $2 / $10 | September 29, 2026: launch pricing |
 | GPT-6 Sol | $2 / $10 | September 22, 2026: launch pricing |
 | GPT-5.6 Sol | $4 / $20 | August 21, 2026: price reduction; promotion available at least through November 21, 2026 |
@@ -1158,18 +1160,22 @@ Rates are USD per million tokens at the Standard tier. The source coverage is:
 | Claude Opus 4.7 | $5 / $25 | April 16, 2026: published launch rate; corrects Sure's erroneous $15 / $75 |
 | Claude Opus 4.6 | $5 / $25 | February 5, 2026: published base launch rate; corrects Sure's erroneous $15 / $75 |
 
-Dates above come from the [OpenAI changelog](https://developers.openai.com/api/docs/changelog)
+Dates above come from the [OpenAI changelog](https://developers.openai.com/api/docs/changelog),
+the [Gemini API documentation](https://ai.google.dev/gemini-api/docs/pricing),
 and the [Opus 4.7](https://www.anthropic.com/news/claude-opus-4-7) and
 [Opus 4.6](https://www.anthropic.com/news/claude-opus-4-6) announcements.
 For other listed rates, the latest price-change date was **not established**;
-their current prices were verified on October 4. Google's pricing page lists
-launch promotional pricing for Gemini 3.8, 3.7, and 3.6 Flash through December 31, 2026.
+their current prices were verified on October 17. Google's pricing page lists
+launch promotional pricing for Gemini 4 Argon ($2.00 / $10.00) through November 30, 2026,
+and Gemini 3.8, 3.7, and 3.6 Flash through December 31, 2026.
 
 #### Context tiers and estimate limits
 
 OpenAI's listed GPT-6 Sol, GPT-6.1 Sol, GPT-5.6, GPT-5.5/Pro and GPT-5.4/Pro
 rates increase above 272,000 input tokens: input doubles and output increases
 by 50% for the entire request. GPT-5.4 mini/nano retain their flat rates.
+Gemini 4 Argon is $2.00 / $10.00 through November 2026 ($4.00 / $20.00 standard starting
+December 2026) across its 1,048,576 token (1M) unified context window.
 Gemini 2.5 Pro changes from $1.25 / $10 to $2.50 / $15 above 200,000 input
 tokens. Gemini 3.1 Pro (and 3.1 Pro Preview) changes from $2.00 / $12.00 to
 $4.00 / $18.00 above 200,000 input tokens. Gemini 3.8 Flash, 3.7 Flash, and
@@ -1523,6 +1529,7 @@ Read and analysis:
 Write:
 - `update_transaction`, `update_budget`, `create_goal`
 - `unmatch_transfer` - Unlink a wrongly matched transfer
+- `update_transfer` - Count a transfer into an investment account as spending or as a plain transfer
 - `create_tag` / `update_tag`, `create_category` / `update_category`
 
 Documents:

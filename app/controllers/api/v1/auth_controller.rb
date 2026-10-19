@@ -13,9 +13,12 @@ module Api
       rescue_from SsoIdentityBlock::BlockedIdentity, with: :render_removed_identity
 
       def signup
-        # Mirrors RegistrationsController#ensure_signup_open.
-        if self_hosted? && Setting.onboarding_state == "closed"
-          render json: { error: "Signups are closed" }, status: :forbidden
+        # RegistrationsController refuses to register a user while the instance
+        # is closed. That gate is declared `if: :self_hosted?`, but
+        # onboarding_state only ever reaches "closed" on a self-hosted
+        # instance, so checking the state alone matches its effect.
+        if Setting.onboarding_state == "closed"
+          render json: { error: "Registration is currently closed" }, status: :forbidden
           return
         end
 
