@@ -1,0 +1,73 @@
+# frozen_string_literal: true
+
+# Queues AI auto-categorization for transactions.
+#
+# The web app only reaches the categorizer through a rule with the
+# "Auto-categorize transactions with AI" action, so an API client that imports
+# or syncs transactions had no way to ask for categories without creating and
+# running a rule. This queues the same AutoCategorizeJob the rule action does,
+# so the family's categorization provider, confidence threshold and locked
+# (user-set) categories are honored exactly as they are there.
+class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseController
+  # Bounds one request's id list; omit transaction_ids to cover every
+  # eligible transaction instead.
+  MAX_TRANSACTION_IDS = 1_000
+
+  before_action :ensure_write_scope
+  before_action :ensure_categorization_provider
+
+  # POST /api/v1/transactions/auto_categorize
+  def create
+    requested_ids = requested_transaction_ids
+    return if performed?
+
+    family = current_resource_owner.family
+    scope = family.auto_categorizable_transactions_for(current_resource_owner)
+    scope = scope.where(id: requested_ids) if requested_ids
+
+    queued_ids = family.queue_auto_categorization(scope)
+
+    render json: {
+      queued_count: queued_ids.size,
+      transaction_ids: queued_ids,
+      # Requested ids that were not queued: already categorized, locked, a
+      # transfer or split parent, or not a transaction this key can annotate.
+      # One list for every reason, so it says nothing about another
+      # family's ids.
+      skipped_transaction_ids: requested_ids ? requested_ids - queued_ids : []
+    }, status: :accepted
+  end
+
+  private
+
+    def ensure_write_scope
+      authorize_scope!(:write)
+    end
+
+    def ensure_categorization_provider
+      return if performed?
+      return if current_resource_owner.family.resolved_categorization_provider.present?
+
+      render_validation_error("No categorization provider is configured")
+    end
+
+    # nil when the caller sent no list (every eligible transaction), otherwise
+    # the unique ids it named.
+    def requested_transaction_ids
+      return nil unless params.key?(:transaction_ids)
+
+      raw = params[:transaction_ids]
+      unless raw.is_a?(Array) && raw.any? && raw.all? { |id| id.is_a?(String) && valid_uuid?(id) }
+        render_validation_error("transaction_ids must be a non-empty array of transaction IDs")
+        return nil
+      end
+
+      ids = raw.uniq
+      if ids.size > MAX_TRANSACTION_IDS
+        render_validation_error("transaction_ids accepts at most #{MAX_TRANSACTION_IDS} IDs")
+        return nil
+      end
+
+      ids
+    end
+end
