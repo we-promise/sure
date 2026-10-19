@@ -39,6 +39,7 @@ class RackAttackTest < ActionDispatch::IntegrationTest
       oidc_account_link/ip oidc_account_link/email
       api_login/ip api_login/email
       api_sso_link/ip api_sso_link/email
+      password_change/ip password_change/user
     ].each do |name|
       assert_includes throttles, name, "#{name} should have rate limiting configured"
     end
@@ -115,6 +116,136 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     assert_nil api_login_email_block.call(malformed_request)
   end
 
+  test "password change throttles discriminate by ip and signed-in user, and ignore unrelated requests" do
+    ip_block = Rack::Attack.throttles["password_change/ip"].block
+    user_block = Rack::Attack.throttles["password_change/user"].block
+
+    admin = users(:family_admin)
+    first_session = admin.sessions.create!
+    second_session = admin.sessions.create!
+    other_session = users(:family_member).sessions.create!
+    user_key = "user:#{admin.id}"
+
+    %w[PATCH PUT].each do |method|
+      request = throttle_request("/password", method: method, session_cookie: first_session.id)
+      assert_equal "203.0.113.5", ip_block.call(request), "#{method} /password should count toward the ip throttle"
+      assert_equal user_key, user_block.call(request), "#{method} /password should count toward the user throttle"
+    end
+
+    second_session_request = throttle_request("/password", method: "PATCH", session_cookie: second_session.id)
+    assert_equal user_key, user_block.call(second_session_request), "all of a user's sessions share one budget"
+
+    other_user_request = throttle_request("/password", method: "PATCH", session_cookie: other_session.id)
+    assert_equal "user:#{users(:family_member).id}", user_block.call(other_user_request), "each user gets their own budget"
+
+    format_request = throttle_request("/password.json", method: "PATCH", session_cookie: first_session.id)
+    assert_equal user_key, user_block.call(format_request)
+
+    # No route accepts POST /password; the form's POST + `_method=patch` is
+    # rewritten to PATCH by Rack::MethodOverride before Rack::Attack runs.
+    post_request = throttle_request("/password", method: "POST", session_cookie: first_session.id)
+    assert_nil ip_block.call(post_request)
+
+    edit_request = throttle_request("/password/edit", method: "GET", session_cookie: first_session.id)
+    assert_nil ip_block.call(edit_request), "viewing the form must not count toward the throttle"
+    assert_nil user_block.call(edit_request)
+
+    reset_request = throttle_request("/password_reset", method: "POST", session_cookie: first_session.id)
+    assert_nil ip_block.call(reset_request)
+    assert_nil user_block.call(reset_request)
+
+    # Without a valid session the request is redirected to sign in before any
+    # password check, so it spends neither budget.
+    no_session_request = throttle_request("/password", method: "PATCH")
+    assert_nil user_block.call(no_session_request), "a missing session cookie must not produce a throttle key"
+    assert_nil ip_block.call(no_session_request), "a missing session cookie must not spend the ip budget"
+
+    tampered_request = throttle_request("/password", method: "PATCH", raw_cookie: "session_token=#{first_session.id}")
+    assert_nil user_block.call(tampered_request), "an unsigned session cookie must not produce a throttle key"
+    assert_nil ip_block.call(tampered_request), "an unsigned session cookie must not spend the ip budget"
+
+    unknown_session_request = throttle_request("/password", method: "PATCH", session_cookie: SecureRandom.uuid)
+    assert_nil user_block.call(unknown_session_request), "a session that no longer exists must not produce a throttle key"
+    assert_nil ip_block.call(unknown_session_request), "a session that no longer exists must not spend the ip budget"
+  end
+
+  test "password change throttles ignore a session whose user was deactivated" do
+    ip_block = Rack::Attack.throttles["password_change/ip"].block
+    user_block = Rack::Attack.throttles["password_change/user"].block
+    user = users(:family_member)
+    session = user.sessions.create!
+    user.update_column(:active, false)
+
+    request = throttle_request("/password", method: "PATCH", session_cookie: session.id)
+    assert_nil user_block.call(request), "authentication rejects this session, so it must not produce a user key"
+    assert_nil ip_block.call(request), "authentication rejects this session, so it must not spend the ip budget"
+  end
+
+  test "password change throttle keys an impersonation by the impersonated user" do
+    user_block = Rack::Attack.throttles["password_change/user"].block
+    impersonation = impersonation_sessions(:in_progress)
+    support_session = users(:sure_support_staff).sessions.create!(active_impersonator_session: impersonation)
+
+    request = throttle_request("/password", method: "PATCH", session_cookie: support_session.id)
+    assert_equal "user:#{users(:family_member).id}", user_block.call(request),
+      "the password being checked is the impersonated user's, like Current.user"
+
+    impersonation.complete!
+    request = throttle_request("/password", method: "PATCH", session_cookie: support_session.id)
+    assert_equal "user:#{users(:sure_support_staff).id}", user_block.call(request),
+      "once the impersonation ends the session owner is the user again"
+  end
+
+  test "password change throttle blocks a signed-in session that rotates ips" do
+    # End to end through the real middleware stack: proves the session cookie
+    # is readable from inside Rack::Attack, which runs after MethodOverride
+    # but before the controller. The new password is deliberately too short so
+    # no request changes it; the throttle counts attempts, not failures.
+    sign_in users(:family_admin)
+
+    # Rack::Attack counts in fixed one-minute windows; freeze the clock so a
+    # minute boundary can't reset the counter mid-test.
+    freeze_time
+
+    with_rack_attack_enabled do
+      10.times do |i|
+        patch password_path, params: { user: { password_challenge: "wrong", password: "short", password_confirmation: "short" } },
+          env: { "REMOTE_ADDR" => "198.51.100.#{i + 1}" }
+        assert_response :unprocessable_entity
+      end
+
+      patch password_path, params: { user: { password_challenge: "wrong", password: "short", password_confirmation: "short" } },
+        env: { "REMOTE_ADDR" => "198.51.100.99" }
+      assert_response :too_many_requests
+    end
+  end
+
+  test "password change throttle shares one budget across a user's sessions" do
+    # Two separate browser sessions of the same user, each on its own ip:
+    # a per-session budget would allow 10 guesses per stolen session.
+    first = open_session
+    second = open_session
+    [ first, second ].each do |browser|
+      browser.post sessions_path, params: { email: users(:family_admin).email, password: user_password_test }
+    end
+
+    freeze_time
+
+    params = { user: { password_challenge: "wrong", password: "short", password_confirmation: "short" } }
+
+    with_rack_attack_enabled do
+      5.times do |i|
+        first.patch password_path, params: params, env: { "REMOTE_ADDR" => "198.51.100.#{i + 1}" }
+        assert_equal 422, first.response.status
+        second.patch password_path, params: params, env: { "REMOTE_ADDR" => "198.51.100.#{i + 101}" }
+        assert_equal 422, second.response.status
+      end
+
+      second.patch password_path, params: params, env: { "REMOTE_ADDR" => "198.51.100.250" }
+      assert_equal 429, second.response.status
+    end
+  end
+
   test "credential-guessing throttles still match when the path carries a format extension" do
     # None of these routes are declared `format: false`, so Rails' default
     # `(.:format)` segment means e.g. "/sessions.json" still reaches
@@ -174,11 +305,30 @@ class RackAttackTest < ActionDispatch::IntegrationTest
 
   private
 
+    # Rack::Attack is disabled in the test environment and its counters live
+    # in Rails.cache (:null_store here), so give it a real store for the block.
+    def with_rack_attack_enabled
+      previous_enabled = Rack::Attack.enabled
+      previous_store = Rack::Attack.cache.store
+      Rack::Attack.cache.store = ActiveSupport::Cache::MemoryStore.new
+      Rack::Attack.enabled = true
+      yield
+    ensure
+      Rack::Attack.enabled = previous_enabled
+      Rack::Attack.cache.store = previous_store
+    end
+
+    def signed_session_cookie(value)
+      jar = ActionDispatch::Request.new(Rails.application.env_config.dup).cookie_jar
+      jar.signed[:session_token] = value
+      "session_token=#{Rack::Utils.escape(jar[:session_token])}"
+    end
+
     NonRewindableInput = Struct.new(:io) do
       def read(*args) = io.read(*args)
     end
 
-    def throttle_request(path, method: "GET", params: {}, session: {}, json_body: nil, json_body_raw: nil, non_rewindable_json_body: nil)
+    def throttle_request(path, method: "GET", params: {}, session: {}, json_body: nil, json_body_raw: nil, non_rewindable_json_body: nil, session_cookie: nil, raw_cookie: nil)
       # Rack::MockRequest.env_for doesn't set REMOTE_ADDR, so #ip is nil
       # unless set explicitly — asserting against a real value here (rather
       # than comparing to request.ip, which could trivially be nil on both
@@ -194,7 +344,12 @@ class RackAttackTest < ActionDispatch::IntegrationTest
         opts["CONTENT_TYPE"] = "application/json"
       end
 
-      env = Rack::MockRequest.env_for(path, opts)
+      opts["HTTP_COOKIE"] = raw_cookie || signed_session_cookie(session_cookie) if raw_cookie || session_cookie
+
+      # Rails merges env_config (the cookie key generator, among others) into
+      # every request env before the middleware stack runs, Rack::Attack
+      # included.
+      env = Rails.application.env_config.merge(Rack::MockRequest.env_for(path, opts))
       env["rack.session"] = session
       Rack::Attack::Request.new(env)
     end

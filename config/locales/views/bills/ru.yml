@@ -258,12 +258,8 @@ ru:
       no_matches_title: Ничего не найдено
       no_matches_description: Попробуйте сбросить фильтр или поиск.
       col_name: Название
-      col_type: Тип
-      col_frequency: Периодичность
       col_amount: Сумма
       col_next: Следующая оплата
-      next_short: след. %{date}
-      col_status: Статус
       col_actions: Действия
       monthly_equivalent: '%{amount}/мес'
       types:
