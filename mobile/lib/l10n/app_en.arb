@@ -974,5 +974,131 @@
   },
 
   "chatConversationStartFailed": "Failed to start conversation. Please try again.",
-  "@chatConversationStartFailed": { "description": "Fallback snackbar shown when creating a new conversation from the first message fails." }
+  "@chatConversationStartFailed": { "description": "Fallback snackbar shown when creating a new conversation from the first message fails." },
+
+  "moreBudgets": "Budgets",
+  "@moreBudgets": { "description": "Menu item title for Budgets in the More screen." },
+
+  "moreBudgetsSubtitle": "Budgeted vs. actual spending by category",
+  "@moreBudgetsSubtitle": { "description": "Subtitle for the Budgets menu item in the More screen." },
+
+  "budgetsTitle": "Budgets",
+  "@budgetsTitle": { "description": "App bar title of the Budgets screen." },
+
+  "budgetsPreviousMonth": "Previous month",
+  "@budgetsPreviousMonth": { "description": "Tooltip for the button that shows the previous month's budget." },
+
+  "budgetsNextMonth": "Next month",
+  "@budgetsNextMonth": { "description": "Tooltip for the button that shows the next month's budget." },
+
+  "budgetsBudgeted": "Budgeted",
+  "@budgetsBudgeted": { "description": "Label for the total amount budgeted for spending this month." },
+
+  "budgetsActual": "Actual",
+  "@budgetsActual": { "description": "Label for the amount actually spent this month." },
+
+  "budgetsRemaining": "Remaining",
+  "@budgetsRemaining": { "description": "Label for the amount left to spend this month." },
+
+  "budgetsIncome": "Income",
+  "@budgetsIncome": { "description": "Label for the month's actual income in the budget summary." },
+
+  "budgetsExpectedIncome": "Expected {amount}",
+  "@budgetsExpectedIncome": {
+    "description": "Expected income for the month, shown next to actual income.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "budgetsOfAmount": "of {amount}",
+  "@budgetsOfAmount": {
+    "description": "Budget limit shown after the amount spent in a category, e.g. '$120 of $300'.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "budgetsAmountLeft": "{amount} left",
+  "@budgetsAmountLeft": {
+    "description": "Amount still available to spend in a category.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "budgetsOverBy": "{amount} over",
+  "@budgetsOverBy": {
+    "description": "Amount by which a category's spending exceeds its budget.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "budgetsRolledOver": "+{amount} rolled over",
+  "@budgetsRolledOver": {
+    "description": "Unspent amount carried over from the previous month into this category.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "budgetsSharedBudget": "Shared budget",
+  "@budgetsSharedBudget": { "description": "Shown for a subcategory without its own limit that draws from its parent category's budget." },
+
+  "budgetsNoLimit": "No budget",
+  "@budgetsNoLimit": { "description": "Shown for a category with spending but no budgeted amount." },
+
+  "budgetsCategoriesTitle": "Categories",
+  "@budgetsCategoriesTitle": { "description": "Heading of the per-category budget list." },
+
+  "budgetsFilterOverBudget": "Over budget ({count})",
+  "@budgetsFilterOverBudget": {
+    "description": "Filter showing only categories that are over budget, with how many there are.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "budgetsOverBudget": "Over budget",
+  "@budgetsOverBudget": { "description": "Badge on a category that has spent more than its budget." },
+
+  "budgetsNearLimit": "Near limit",
+  "@budgetsNearLimit": { "description": "Badge on a category that has spent at least 90% of its budget." },
+
+  "budgetsBudgetNumber": "Budget {number}",
+  "@budgetsBudgetNumber": {
+    "description": "Label for one of several budgets that exist for the same month (household, personal or shared).",
+    "placeholders": { "number": { "type": "int" } }
+  },
+
+  "budgetsNoBudgetTitle": "No budget for {month}",
+  "@budgetsNoBudgetTitle": {
+    "description": "Title shown when the server has no budget for the selected month.",
+    "placeholders": { "month": { "type": "String" } }
+  },
+
+  "budgetsNoBudgetMessage": "Budgets are created in Sure on the web. Open Budgets there to set one up for this month.",
+  "@budgetsNoBudgetMessage": { "description": "Explains how to create a budget when none exists for the selected month." },
+
+  "budgetsNotSetUpMessage": "No spending limits are set for this month yet. Set them up in Sure on the web.",
+  "@budgetsNotSetUpMessage": { "description": "Shown when a budget exists for the month but has no amounts set." },
+
+  "budgetsNoCategories": "No budgeted categories or spending this month.",
+  "@budgetsNoCategories": { "description": "Shown when no category line has a budget or spending." },
+
+  "budgetsOfflineTitle": "You're offline",
+  "@budgetsOfflineTitle": { "description": "Title shown when the budget cannot be loaded without a connection." },
+
+  "budgetsOfflineMessage": "Connect to the internet to load this month's budget.",
+  "@budgetsOfflineMessage": { "description": "Shown when offline and the selected month has not been loaded yet." },
+
+  "budgetsOfflineCached": "Offline. Showing the figures loaded earlier.",
+  "@budgetsOfflineCached": { "description": "Banner shown when offline and the budget shown was loaded earlier in the session." },
+
+  "budgetsLoadFailed": "Couldn't load budgets",
+  "@budgetsLoadFailed": { "description": "Title shown when loading budgets fails." },
+
+  "budgetsSessionExpired": "Your session has expired. Please sign in again.",
+  "@budgetsSessionExpired": { "description": "Shown when the budgets request is rejected as unauthorized." },
+
+  "budgetCategoryTransactionsEmpty": "No transactions in this category for {month}.",
+  "@budgetCategoryTransactionsEmpty": {
+    "description": "Empty state of a budget category's transaction list.",
+    "placeholders": { "month": { "type": "String" } }
+  },
+
+  "budgetCategoryTransactionsLoadMore": "Load more",
+  "@budgetCategoryTransactionsLoadMore": { "description": "Button that loads the next page of a budget category's transactions." },
+
+  "budgetCategoryTransactionsLoadFailed": "Couldn't load transactions",
+  "@budgetCategoryTransactionsLoadFailed": { "description": "Shown when a budget category's transactions fail to load." }
 }

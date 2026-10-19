@@ -1,0 +1,150 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sure_mobile/l10n/app_localizations.dart';
+import 'package:sure_mobile/providers/budgets_provider.dart';
+import 'package:sure_mobile/providers/privacy_provider.dart';
+import 'package:sure_mobile/screens/budget_category_transactions_screen.dart';
+import 'package:sure_mobile/screens/budgets_screen.dart';
+import 'package:sure_mobile/services/budgets_service.dart';
+import 'package:sure_mobile/services/preferences_service.dart';
+import 'package:sure_mobile/theme/sure_theme.dart';
+import 'package:sure_mobile/widgets/budget_category_row.dart';
+
+import '../support/budget_fixtures.dart';
+
+void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    PreferencesService.resetForTest();
+  });
+
+  BudgetsProvider buildProvider({List<Map<String, dynamic>>? budgets}) {
+    return BudgetsProvider(
+      service: BudgetsService(client: budgetsMockClient(budgets: budgets)),
+      clock: () => DateTime(2026, 10, 19),
+    );
+  }
+
+  Widget harness(BudgetsProvider provider, {required bool hidden}) {
+    return ChangeNotifierProvider<PrivacyProvider>(
+      create: (_) => PrivacyProvider(initialHidden: hidden),
+      child: MaterialApp(
+        theme: SureTheme.light,
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: BudgetsScreen(
+          provider: provider,
+          accessTokenLoader: () async => 'token',
+        ),
+      ),
+    );
+  }
+
+  Future<void> pumpScreen(
+    WidgetTester tester,
+    BudgetsProvider provider, {
+    bool hidden = false,
+  }) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.5;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(harness(provider, hidden: hidden));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('shows totals, nested categories and over-budget state',
+      (tester) async {
+    await pumpScreen(tester, buildProvider());
+
+    expect(find.text('October 2026'), findsOneWidget);
+    expect(find.text('Budgeted'), findsOneWidget);
+    expect(find.text(r'$2,000.00'), findsOneWidget);
+    expect(find.text(r'$1,500.00'), findsOneWidget);
+    expect(find.text(r'$500.00'), findsOneWidget);
+
+    expect(find.byType(BudgetCategoryRow), findsNWidgets(4));
+    expect(find.text('Gifts'), findsNothing);
+    expect(find.text('Groceries'), findsOneWidget);
+    expect(find.text(r'$120.00 over'), findsOneWidget);
+    expect(find.text('Over budget'), findsOneWidget);
+    expect(find.text('Near limit'), findsOneWidget);
+    expect(find.text('Shared budget'), findsOneWidget);
+    expect(find.text(r'+$50.00 rolled over'), findsOneWidget);
+
+    // Next month is disabled on the current month.
+    final next = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.chevron_right),
+    );
+    expect(next.onPressed, isNull);
+  });
+
+  testWidgets('over-budget filter shows only over-budget lines',
+      (tester) async {
+    await pumpScreen(tester, buildProvider());
+
+    await tester.tap(find.text('Over budget (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BudgetCategoryRow), findsOneWidget);
+    expect(find.text('Groceries'), findsOneWidget);
+    expect(find.text('Transport'), findsNothing);
+  });
+
+  testWidgets('privacy mode masks every amount', (tester) async {
+    await pumpScreen(tester, buildProvider(), hidden: true);
+
+    expect(find.text(r'$2,000.00'), findsNothing);
+    expect(find.textContaining(r'$1,500.00'), findsNothing);
+    expect(find.text(r'$••••'), findsWidgets);
+    expect(find.text(r'$•••• over'), findsOneWidget);
+  });
+
+  testWidgets('month without a budget shows the empty state', (tester) async {
+    await pumpScreen(tester, buildProvider(budgets: []));
+
+    expect(find.text('No budget for October 2026'), findsOneWidget);
+    expect(find.byType(BudgetCategoryRow), findsNothing);
+  });
+
+  testWidgets('previous month loads that month', (tester) async {
+    await pumpScreen(tester, buildProvider());
+
+    await tester.tap(find.byTooltip('Previous month'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No budget for September 2026'), findsOneWidget);
+    final next = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.chevron_right),
+    );
+    expect(next.onPressed, isNotNull);
+  });
+
+  testWidgets('tapping a parent opens its transactions with subcategories',
+      (tester) async {
+    await pumpScreen(tester, buildProvider());
+
+    await tester.tap(find.text('Food'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final screen = tester.widget<BudgetCategoryTransactionsScreen>(
+      find.byType(BudgetCategoryTransactionsScreen),
+    );
+    expect(screen.categoryIds, [
+      'cat_food',
+      'cat_groceries',
+      'cat_restaurants',
+    ]);
+    expect(screen.startDate, DateTime(2026, 10, 1));
+    expect(screen.endDate, DateTime(2026, 10, 31));
+  });
+}
