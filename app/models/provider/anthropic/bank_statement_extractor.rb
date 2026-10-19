@@ -148,7 +148,7 @@ class Provider::Anthropic::BankStatementExtractor
 
     def extract_tool_input(response)
       tool_use = Array(response.content).find { |block| block_type(block) == :tool_use }
-      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME}" unless tool_use
+      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME} (stop_reason: #{stop_reason(response)})" unless tool_use
 
       input = block_input(tool_use)
       input = JSON.parse(input) if input.is_a?(String)

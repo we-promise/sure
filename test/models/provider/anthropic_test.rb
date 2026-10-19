@@ -26,7 +26,10 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
   end
 
   test "structured_output_tool_choice forces the tool on models that accept it" do
-    %w[claude-sonnet-4-6 claude-haiku-4-5 claude-haiku-5-5 claude-opus-4-8].each do |model|
+    %w[
+      claude-sonnet-4-6 claude-haiku-4-5 claude-haiku-5-5 claude-opus-4-8 claude-3-7-sonnet-20250219
+      claude-sonnet-4-20250514 anthropic.claude-sonnet-4-5-20250929-v1:0 claude-sonnet-4-5@20250929
+    ].each do |model|
       assert_equal(
         { type: "tool", name: "report", disable_parallel_tool_use: true },
         Provider::Anthropic.structured_output_tool_choice(model, "report"),
@@ -35,10 +38,10 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     end
   end
 
-  test "structured_output_tool_choice sends auto to the Claude 5 families" do
+  test "structured_output_tool_choice sends auto to every other model" do
     %w[
       claude-opus-5-5 claude-sonnet-5-5 claude-fable-5-1 claude-mythos-5-1 claude-opus-5 claude-opus-5-6
-      us.anthropic.claude-sonnet-5-5-v1:0
+      claude-opus-6 claude-haiku-5-6 claude-haiku-6 us.anthropic.claude-sonnet-5-5-v1:0
     ].each do |model|
       assert_equal(
         { type: "auto", disable_parallel_tool_use: true },

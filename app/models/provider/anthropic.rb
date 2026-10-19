@@ -11,14 +11,15 @@ class Provider::Anthropic < Provider
   # All Claude 3.5+ and 4.x models accept native document content blocks.
   VISION_CAPABLE_MODEL_PREFIXES = %w[claude].freeze
 
-  # Claude model families that reject a forced `tool_choice` (`tool` or `any`)
-  # with a 400 from Opus 5.5, Sonnet 5.5, Fable 5.1 and Mythos 5.1 on. Matching
-  # the family anywhere in the ID covers later 5.x releases and Bedrock IDs such
-  # as `us.anthropic.claude-sonnet-5-5-v1:0`.
-  NO_FORCED_TOOL_CHOICE_MODEL_FAMILIES = %w[claude-opus-5 claude-sonnet-5 claude-fable-5 claude-mythos-5].freeze
+  # Claude 3.x, 4.x and Haiku 5.5 accept a forced `tool_choice`. Anything else
+  # gets `auto` (Opus 5.5, Sonnet 5.5, Fable 5.1 and Mythos 5.1 reject a forced
+  # one), so a model released after this line still works. Matches anywhere in
+  # the ID to cover Bedrock (`anthropic.claude-sonnet-4-5-…-v1:0`) and Vertex
+  # (`claude-sonnet-4-5@…`) IDs.
+  FORCED_TOOL_CHOICE_MODELS = /claude-(?:3|(?:opus|sonnet|haiku)-4|haiku-5-5)(?!\d)/
 
   def self.forced_tool_choice_supported?(model)
-    NO_FORCED_TOOL_CHOICE_MODEL_FAMILIES.none? { |family| model.to_s.include?(family) }
+    model.to_s.match?(FORCED_TOOL_CHOICE_MODELS)
   end
 
   # The tool_choice for a helper that returns its result through a single tool.
