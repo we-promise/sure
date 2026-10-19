@@ -220,6 +220,22 @@ class Settings::ClassifiersControllerTest < ActionDispatch::IntegrationTest
     assert_select ".translation_missing", count: 0
   end
 
+  test "with too little history the page warns and Apply stays off" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    sign_in @admin
+    report = { "n" => 0, "threshold" => 0.7, "sweep" => [ { "threshold" => 0.7, "right" => 0, "wrong" => 0 } ], "confusions" => {}, "uncategorized" => {} }
+    Rails.cache.write(Family::BayesEvaluation.cache_key(@family), {
+      "version" => Family::BayesEvaluation::RESULT_VERSION, "action" => "find_best", "digest" => @family.bayes_settings_object.digest,
+      "ran_at" => Time.current.iso8601, "months" => %w[2026-08 2026-09], "current" => report, "defaults" => report,
+      "best" => { "changes" => { "binary" => true }, "report" => report }, "short_history" => true
+    })
+
+    get settings_classifier_path
+
+    assert_select "#classifier_evaluation", text: /#{Regexp.escape(I18n.t("settings.classifiers.evaluation.short_history", months: Family::BayesEvaluation::MONTHS))}/
+    assert_select "#classifier_evaluation button[disabled]", text: I18n.t("settings.classifiers.evaluation.apply_best")
+  end
+
   test "apply saves the best found at the threshold for the chosen cost and tests it, unless the settings changed since" do
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     sign_in @admin

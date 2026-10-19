@@ -32,6 +32,9 @@
     <% if stale %>
       <%= render DS::Alert.new(message: t("settings.classifiers.evaluation.stale"), variant: :warning) %>
     <% end %>
+    <% if evaluation["short_history"] %>
+      <%= render DS::Alert.new(message: t("settings.classifiers.evaluation.short_history", months: Family::BayesEvaluation::MONTHS), variant: :warning) %>
+    <% end %>
 
     <p class="text-xs text-secondary">
       <%= t("settings.classifiers.evaluation.ran_at",
@@ -61,7 +64,7 @@
     <% end %>
 
     <div class="space-y-2">
-      <% if best && Family::BayesEvaluation.best_changes(evaluation, weight).empty? %>
+      <% if best && !evaluation["short_history"] && Family::BayesEvaluation.best_changes(evaluation, weight).empty? %>
         <p class="text-sm text-secondary"><%= t("settings.classifiers.evaluation.best_no_changes") %></p>
       <% end %>
       <% if changes.any? %>

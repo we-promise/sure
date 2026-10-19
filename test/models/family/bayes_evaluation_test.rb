@@ -276,6 +276,22 @@ class Family::BayesEvaluationTest < ActiveSupport::TestCase
     assert_equal({ "binary" => true, "prior" => false, "threshold" => 0.8 }, Family::BayesEvaluation.best_changes(result, 3))
   end
 
+  test "too little history keeps Apply off: nothing tested, or too few months for the search" do
+    assert Family::BayesEvaluation.new(@family, today: @today).run!["short_history"]
+
+    evaluation = fake_reports(tuned_evaluation)
+    settings = evaluation.send(:settings)
+    result = evaluation.run!(action: "find_best")
+    assert result["short_history"]
+    assert_equal({}, Family::BayesEvaluation.apply_changes(result, settings, 1))
+
+    # Three of the four searched months, each with history before it: enough.
+    [ 4, 5, 6 ].each { |month| create_transaction(account: @account, name: "Starbucks Coffee", category: @coffee, date: Date.new(2026, month, 3)) }
+    result = evaluation.run!(action: "find_best")
+    assert_not result["short_history"]
+    assert_not_empty Family::BayesEvaluation.apply_changes(result, settings, 1)
+  end
+
   test "apply leaves the threshold alone when it's already the one picked" do
     result = { "current" => { "threshold" => 0.8 },
                "best" => { "changes" => { "binary" => true }, "report" => { "sweep" => [ { "threshold" => 0.8, "right" => 5, "wrong" => 0 } ] } } }

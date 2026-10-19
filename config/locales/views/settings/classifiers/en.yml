@@ -68,6 +68,7 @@ en:
         right_wrong: Each cell is right / wrong.
         run: Test my settings
         running: Testing… this section updates when it's done.
+        short_history: Not enough history to tune yet. This needs about %{months} months of categorized transactions, so Apply stays off for now.
         similarity: Similarity
         stale: The settings have changed since this test.
         threshold: Threshold

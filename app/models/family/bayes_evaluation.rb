@@ -25,7 +25,7 @@ class Family::BayesEvaluation
   # (which tests the defaults).
   ACTIONS = %w[test find_best reset].freeze
   # Bumped when the cached result's shape changes, so an older one is ignored.
-  RESULT_VERSION = 7
+  RESULT_VERSION = 8
   # The matcher's settings: not searched; picked on the page from its own
   # table (matcher_changes).
   MATCHER_KEYS = %i[similar_threshold similar_min_neighbours similar_common_share].freeze
@@ -144,7 +144,7 @@ class Family::BayesEvaluation
   # Everything Apply saves: best_changes and matcher_changes; {} before
   # Find best settings.
   def self.apply_changes(result, settings, weight)
-    return {} unless result["best"]
+    return {} if !result["best"] || result["short_history"]
 
     best_changes(result, weight).merge(matcher_changes(result, settings, weight))
   end
@@ -216,7 +216,9 @@ class Family::BayesEvaluation
       "months" => holdout.month_labels,
       "current" => current,
       "defaults" => defaults.digest == settings.digest ? current : holdout.report(defaults),
-      "matcher" => holdout.matcher_report
+      "matcher" => holdout.matcher_report,
+      # Too little to go on, so Apply stays off (apply_changes).
+      "short_history" => current["n"].zero?
     }
     if action == "find_best"
       tuning = self.class.new(family, settings: settings, today: today << HOLDOUT_MONTHS, months: months - HOLDOUT_MONTHS)
@@ -225,6 +227,9 @@ class Family::BayesEvaluation
         "changes" => best.values.reject { |key, value| settings.values[key] == value }.transform_keys(&:to_s),
         "report" => best.digest == settings.digest ? current : holdout.report(best)
       }
+      # The search keeps a change only when it's better in all but one month
+      # (better), so with fewer months it can test it can't keep any.
+      result["short_history"] ||= tuning.months_with_history < months - HOLDOUT_MONTHS - 1
     end
     Rails.cache.write(self.class.cache_key(family), result, expires_in: CACHE_TTL)
     result
@@ -356,6 +361,14 @@ class Family::BayesEvaluation
     greedy(best, best_report, SEARCH_KEYS[:scoring] - features, &progress)
   end
 
+  # How many of these months have transactions to test and history before
+  # them to train on.
+  def months_with_history
+    month_starts.count do |start|
+      tested_scope.where(entries: { date: start...(start >> 1) }).exists? && tested_scope.where(entries: { date: ...start }).exists?
+    end
+  end
+
   private
     attr_reader :family, :settings, :today, :months
 
@@ -448,12 +461,16 @@ class Family::BayesEvaluation
     end
 
     def test_transactions(categorizer, start)
-      scope = family.transactions.where.not(category_id: nil).where.not(Transaction.category_from_sql("ai", "bayes"))
-                    .joins(:entry).where(entries: { date: start...(start >> 1) })
+      scope = tested_scope.where(entries: { date: start...(start >> 1) })
       excluded = categorizer.excluded_category_ids
       scope = scope.where.not(category_id: excluded) if excluded.any?
       scope = scope.where.not(entries: { account_id: categorizer.settings.excluded_account_ids }) if categorizer.settings.excluded_account_ids.any?
       scope.preload(:entry, :merchant).to_a
+    end
+
+    # Categorized transactions whose category isn't an automatic guess.
+    def tested_scope
+      family.transactions.where.not(category_id: nil).where.not(Transaction.category_from_sql("ai", "bayes")).joins(:entry)
     end
 
     def category_names
