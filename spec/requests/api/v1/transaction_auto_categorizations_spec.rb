@@ -71,8 +71,10 @@ RSpec.describe 'API V1 Transaction Auto-Categorization', type: :request do
                   'categorization provider and confidence threshold, as the "Auto-categorize ' \
                   'transactions with AI" rule action does. Only uncategorized transactions ' \
                   'without a locked (user-set) category are queued; transfers between the ' \
-                  'family\'s own accounts and split parents are skipped. Categories appear ' \
-                  'on the transactions once the background jobs finish.'
+                  'family\'s own accounts and split parents are skipped. A 202 means the jobs ' \
+                  'were queued, not that categories were assigned. A job can fail or the ' \
+                  'provider can return no confident match, leaving a transaction ' \
+                  'uncategorized. Read transactions back to see the result.'
       consumes 'application/json'
       produces 'application/json'
       parameter name: :body, in: :body, required: false,
