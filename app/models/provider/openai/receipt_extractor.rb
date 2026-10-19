@@ -1,12 +1,15 @@
 # Reads the itemized lines off a receipt so a transaction can be split by
 # them. Text PDFs (most emailed retailer receipts) are sent as extracted text,
-# which works with any model; photos are sent to the vision endpoint.
+# which works with any model; photos and scanned PDFs (rendered to page
+# images) are sent to the vision endpoint.
 class Provider::Openai::ReceiptExtractor
   include Provider::Openai::Concerns::UsageRecorder
   include Provider::Openai::Concerns::JsonMode
+  include Provider::Openai::Concerns::PdfPageRenderer
 
   IMAGE_CONTENT_TYPES = %w[image/jpeg image/jpg image/png image/gif image/webp].freeze
   MAX_TEXT_CHARS = 30_000
+  MAX_PDF_PAGES = 5
 
   attr_reader :client, :model, :file_content, :content_type, :custom_provider, :langfuse_trace, :family,
               :max_response_tokens, :json_mode
@@ -31,7 +34,7 @@ class Provider::Openai::ReceiptExtractor
 
     result =
       if content_type == "application/pdf"
-        extract_from_text
+        extract_from_pdf
       elsif IMAGE_CONTENT_TYPES.include?(content_type)
         extract_from_image
       else
@@ -79,12 +82,15 @@ class Provider::Openai::ReceiptExtractor
   private
 
     ReceiptExtraction = Provider::LlmConcept::ReceiptExtraction
-    ReceiptLineItem = Provider::LlmConcept::ReceiptLineItem
 
-    def extract_from_text
+    # A PDF without a text layer (a scanned or photographed receipt) is
+    # rendered to page images, the same fallback the PDF import path uses.
+    def extract_from_pdf
       text = Pdf::TextExtractor.pages(file_content).join("\n\n")
-      raise Provider::Openai::Error, "Could not read text from the receipt PDF" if text.blank?
+      text.present? ? extract_from_text(text) : extract_from_pdf_images
+    end
 
+    def extract_from_text(text)
       params = {
         model: model,
         messages: [
@@ -99,24 +105,32 @@ class Provider::Openai::ReceiptExtractor
     end
 
     def extract_from_image
+      vision_request([ "data:#{content_type};base64,#{Base64.strict_encode64(file_content)}" ])
+    end
+
+    def extract_from_pdf_images
+      pages = render_pdf_pages(file_content)
+      raise Provider::Openai::Error, "Could not read text or page images from the receipt PDF" if pages.empty?
+
+      vision_request(pages.first(MAX_PDF_PAGES).map { |page| "data:image/png;base64,#{page}" }, pages: pages.size)
+    end
+
+    def vision_request(image_urls, pages: nil)
+      content = image_urls.map { |url| { type: "image_url", image_url: { url: url } } }
+      content << { type: "text", text: "Read this receipt and respond with valid JSON only." }
+
       params = {
         model: model,
         messages: [
           { role: "system", content: instructions },
-          {
-            role: "user",
-            content: [
-              { type: "image_url", image_url: { url: "data:#{content_type};base64,#{Base64.strict_encode64(file_content)}" } },
-              { type: "text", text: "Read this receipt and respond with valid JSON only." }
-            ]
-          }
+          { role: "user", content: content }
         ]
       }
       # Not every OpenAI-compatible vision endpoint accepts response_format
       # alongside images (the PDF vision path omits it for the same reason).
       apply_response_limit(params)
 
-      request(params, operation: "extract_receipt_vision")
+      request(params, operation: "extract_receipt_vision", metadata: { pages: pages }.compact)
     end
 
     def apply_response_limit(params)
@@ -129,42 +143,12 @@ class Provider::Openai::ReceiptExtractor
       end
     end
 
-    def request(params, operation:)
+    def request(params, operation:, metadata: {})
       response = client.chat(parameters: params)
 
-      record_usage(model, response.dig("usage"), operation: operation, metadata: { content_type: content_type })
+      record_usage(model, response.dig("usage"), operation: operation, metadata: { content_type: content_type, **metadata })
 
-      build_result(parse_json_flexibly(response.dig("choices", 0, "message", "content")))
-    end
-
-    def build_result(parsed)
-      line_items = Array(parsed["line_items"]).filter_map do |item|
-        next unless item.is_a?(Hash)
-
-        amount = to_decimal(item["amount"])
-        name = item["name"].to_s.strip
-        next if amount.nil? || name.blank?
-
-        ReceiptLineItem.new(name: name.truncate(255), amount: amount)
-      end
-
-      ReceiptExtraction.new(
-        merchant_name: parsed["merchant_name"].presence,
-        currency: parsed["currency"].presence&.to_s&.upcase,
-        line_items: line_items,
-        tax: to_decimal(parsed["tax"]),
-        discount: to_decimal(parsed["discount"])&.abs,
-        total: to_decimal(parsed["total"])
-      )
-    end
-
-    def to_decimal(value)
-      return nil if value.nil? || value.to_s.strip.empty?
-
-      decimal = BigDecimal(value.to_s.strip)
-      decimal.finite? ? decimal : nil
-    rescue ArgumentError, TypeError
-      nil
+      ReceiptExtraction.from_response(parse_json_flexibly(response.dig("choices", 0, "message", "content")))
     end
 
     def parse_json_flexibly(raw)

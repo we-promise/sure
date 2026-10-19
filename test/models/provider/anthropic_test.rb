@@ -90,6 +90,23 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     assert_not @subject.supports_pdf_processing?(model: "gpt-4o")
   end
 
+  test "supports_receipt_extraction? follows PDF support" do
+    assert @subject.supports_receipt_extraction?(model: "claude-sonnet-4-6")
+    assert_not @subject.supports_receipt_extraction?(model: "gpt-4o")
+  end
+
+  test "extract_receipt wraps the extractor result in a provider response" do
+    extraction = Provider::LlmConcept::ReceiptExtraction.new(
+      merchant_name: "Shop", currency: "USD", line_items: [], tax: nil, discount: nil, total: nil
+    )
+    Provider::Anthropic::ReceiptExtractor.any_instance.expects(:extract).returns(extraction)
+
+    response = @subject.extract_receipt(file_content: "png-bytes", content_type: "image/png", model: "claude-sonnet-4-6")
+
+    assert response.success?
+    assert_equal extraction, response.data
+  end
+
   test "effective_model defers to ENV when set without consulting Setting" do
     ClimateControl.modify("ANTHROPIC_MODEL" => "claude-haiku-4-5") do
       Setting.expects(:anthropic_model).never
