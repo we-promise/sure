@@ -135,7 +135,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
         .joins(:entry)
         .where(entries: { parent_entry_id: @entry.id })
         .preload(
-          { entry: :account },
+          { entry: [ :account, :child_entries ] },
           :category, :merchant, :tags,
           transfer_as_outflow: { inflow_transaction: { entry: :account } },
           transfer_as_inflow: { outflow_transaction: { entry: :account } }

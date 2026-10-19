@@ -1735,9 +1735,13 @@ components:
       - id
       - date
       - amount
+      - amount_decimal
       - currency
       - name
       - classification
+      - kind
+      - excluded
+      - split_parent
       - account
       - tags
       - created_at
@@ -1751,6 +1755,11 @@ components:
           format: date
         amount:
           type: string
+          description: Formatted amount, rounded to the currency display precision
+        amount_decimal:
+          type: string
+          description: Exact stored amount as an unrounded, locale-independent decimal
+            string. Positive is an outflow, negative an inflow.
         currency:
           type: string
         name:
@@ -1768,6 +1777,26 @@ components:
           type: boolean
         classification:
           type: string
+        kind:
+          type: string
+          enum:
+          - standard
+          - funds_movement
+          - cc_payment
+          - loan_payment
+          - one_time
+          - investment_contribution
+          description: How budgets and reports treat the transaction. loan_payment
+            and investment_contribution count as expenses; funds_movement, cc_payment
+            and one_time are left out of budget totals.
+        excluded:
+          type: boolean
+          description: Whether the transaction is excluded from budget and report
+            totals. Splitting a transaction marks it excluded.
+        split_parent:
+          type: boolean
+          description: Whether the transaction has been split; its amount is then
+            carried by its split children.
         account:
           "$ref": "#/components/schemas/Account"
         category:
