@@ -8,9 +8,12 @@
 module Provider::PropertyValuationConcept
   extend ActiveSupport::Concern
 
+  # Addresses entered by hand store the country as typed, so full names
+  # ("United States") must match as well as codes. Compared after
+  # upcasing and removing periods ("U.S.A." → "USA").
   COUNTRY_ALIASES = {
-    "US" => %w[US USA],
-    "GB" => %w[GB UK GBR]
+    "US" => [ "US", "USA", "UNITED STATES", "UNITED STATES OF AMERICA" ],
+    "GB" => [ "GB", "UK", "GBR", "UNITED KINGDOM", "GREAT BRITAIN" ]
   }.freeze
 
   # `external_id` is the provider's own identifier for the property (e.g. a
@@ -71,7 +74,7 @@ module Provider::PropertyValuationConcept
       return false if required_address_fields.any? { |field| address[field].blank? }
       return false if requires_external_id? && external_id.blank?
 
-      country = address[:country].to_s.strip.upcase
+      country = address[:country].to_s.delete(".").squish.upcase
       country.blank? || COUNTRY_ALIASES.fetch(supported_country, [ supported_country ]).include?(country)
     end
   end

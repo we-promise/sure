@@ -33,7 +33,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 4
+  CURRENT_BACKFILL_VERSION = 5
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -90,7 +90,7 @@ module ActiveRecordEncryptionConfig
     lunchflow_accounts: [ "LunchflowAccount", %i[raw_payload raw_transactions_payload] ],
     enable_banking_accounts: [ "EnableBankingAccount", %i[raw_payload raw_transactions_payload] ],
     fio_accounts: [ "FioAccount", %i[raw_payload raw_transactions_payload iban] ],
-    snaptrade_accounts: [ "SnaptradeAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload raw_balances_payload] ],
+    snaptrade_accounts: [ "SnaptradeAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload raw_balances_payload account_number] ],
     coinbase_accounts: [ "CoinbaseAccount", %i[raw_payload raw_transactions_payload] ],
     coinspot_accounts: [ "CoinspotAccount", %i[raw_payload raw_transactions_payload] ],
     coinstats_accounts: [ "CoinstatsAccount", %i[raw_payload raw_transactions_payload] ],

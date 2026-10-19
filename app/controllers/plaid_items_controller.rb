@@ -284,26 +284,10 @@ class PlaidItemsController < ApplicationController
 
       respond_to do |format|
         format.html do
-          if turbo_frame_request?
-            render_frame_redirect(accounts_path, alert: alert)
-          else
-            redirect_to accounts_path, alert: alert
-          end
+          frame_redirect_to(accounts_path, alert: alert)
         end
         format.turbo_stream { stream_redirect_to(accounts_path, alert: alert) }
       end
-    end
-
-    # The Link flow is opened inside the "modal" turbo frame. A plain redirect
-    # is followed within that frame, so the flash is spent on a response whose
-    # body is discarded and the modal just closes. Answer with the frame itself
-    # carrying a redirect stream action, which performs a full-page visit.
-    def render_frame_redirect(path, alert:)
-      flash[:alert] = alert
-
-      render html: helpers.turbo_frame_tag(turbo_frame_request_id) {
-        helpers.turbo_stream.action(:redirect, path)
-      }
     end
 
     def safe_parse_plaid_error(error)
