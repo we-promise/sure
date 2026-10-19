@@ -5,6 +5,7 @@ import '../models/transaction.dart';
 import '../models/offline_transaction.dart';
 import '../providers/auth_provider.dart';
 import '../providers/categories_provider.dart';
+import '../providers/transaction_splits_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../screens/transaction_edit_screen.dart';
 import '../screens/transaction_form_screen.dart';
@@ -16,7 +17,9 @@ import '../theme/sure_tokens.dart';
 import '../providers/privacy_provider.dart';
 import '../utils/amount_parser.dart';
 import '../utils/money_masker.dart';
+import '../utils/split_list_grouping.dart';
 import '../widgets/money_text.dart';
+import '../widgets/transaction_split_section.dart' show SplitBadge;
 import '../l10n/app_localizations.dart';
 
 class TransactionsListScreen extends StatefulWidget {
@@ -468,6 +471,15 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
           }
 
           final transactions = _getFilteredTransactions(allTransactions);
+          // Group known split children under their parent, like the web list.
+          final splits = context.watch<TransactionSplitsProvider>();
+          final entries = groupSplitEntries<OfflineTransaction>(
+            transactions,
+            idOf: (t) => t.id,
+            childIdsOf: (id) =>
+                splits.isSplitParent(id) ? splits.splitFor(id)?.childIds : null,
+            parentIdOf: splits.parentIdFor,
+          );
 
           return RefreshIndicator(
             onRefresh: _loadTransactions,
@@ -510,9 +522,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                       )
                     : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: transactions.length,
+              itemCount: entries.length,
               itemBuilder: (context, index) {
-                final transaction = transactions[index];
+                final entry = entries[index];
+                final transaction = entry.item;
+                final isSplitParent = entry.role == SplitRole.parent;
+                final isSplitChild = entry.role == SplitRole.child;
                 final isSelected = transaction.id != null &&
                     _selectedTransactions.contains(transaction.id);
                 final isPending = transaction.syncStatus == SyncStatus.pending;
@@ -543,9 +558,13 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                   ),
                   confirmDismiss: (direction) => _confirmAndDeleteTransaction(transaction),
                   child: Opacity(
-                    opacity: hasPendingStatus ? 0.5 : 1.0,
+                    // Split parents are dimmed: their children carry the amounts.
+                    opacity: hasPendingStatus || isSplitParent ? 0.5 : 1.0,
                     child: Card(
-                      margin: const EdgeInsets.only(bottom: 12),
+                      margin: EdgeInsets.only(
+                        bottom: 12,
+                        left: entry.grouped ? 24 : 0,
+                      ),
                       child: InkWell(
                         onTap: _isSelectionMode && transaction.id != null
                             ? () => _toggleTransactionSelection(transaction.id!)
@@ -593,6 +612,17 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
+                                      if (isSplitParent) ...[
+                                        const SizedBox(width: 8),
+                                        SplitBadge(label: l.splitBadge),
+                                      ] else if (isSplitChild && !entry.grouped) ...[
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          Icons.call_split,
+                                          size: 14,
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                      ],
                                       if (transaction.categoryName != null) ...[
                                         const SizedBox(width: 8),
                                         Flexible(

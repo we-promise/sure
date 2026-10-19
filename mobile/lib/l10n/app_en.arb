@@ -974,5 +974,134 @@
   },
 
   "chatConversationStartFailed": "Failed to start conversation. Please try again.",
-  "@chatConversationStartFailed": { "description": "Fallback snackbar shown when creating a new conversation from the first message fails." }
+  "@chatConversationStartFailed": { "description": "Fallback snackbar shown when creating a new conversation from the first message fails." },
+
+  "splitBadge": "Split",
+  "@splitBadge": { "description": "Pill on a split parent in the transaction list." },
+
+  "splitSectionTitle": "Split entries",
+  "@splitSectionTitle": { "description": "Title of the split section on a split parent's detail screen." },
+
+  "splitSectionDescription": "This transaction has been split into the following entries.",
+  "@splitSectionDescription": { "description": "Description above the list of split children." },
+
+  "splitChildTitle": "Part of split",
+  "@splitChildTitle": { "description": "Title of the split section on a split child's detail screen." },
+
+  "splitChildDescription": "This entry is part of a split transaction. Edit the split to change it.",
+  "@splitChildDescription": { "description": "Description shown on a split child's detail screen." },
+
+  "splitChildEditLocked": "Split entries can't be edited directly. Use Edit split below.",
+  "@splitChildEditLocked": { "description": "Notice on the edit screen of a split child, whose fields are read-only." },
+
+  "splitUncategorized": "(uncategorized)",
+  "@splitUncategorized": { "description": "Category label for a split entry without a category." },
+
+  "splitTransactionButton": "Split transaction",
+  "@splitTransactionButton": { "description": "Button and section title that opens the split editor for an unsplit transaction." },
+
+  "splitTransactionDescription": "Split this transaction into multiple entries with different categories and amounts.",
+  "@splitTransactionDescription": { "description": "Description of the split action on the detail screen." },
+
+  "splitEditButton": "Edit split",
+  "@splitEditButton": { "description": "Button that opens the split editor for an existing split." },
+
+  "splitUnsplitButton": "Unsplit",
+  "@splitUnsplitButton": { "description": "Button that removes a split and restores the original transaction." },
+
+  "splitUnsplitTitle": "Unsplit transaction",
+  "@splitUnsplitTitle": { "description": "Title of the unsplit confirmation dialog." },
+
+  "splitUnsplitConfirm": "This will remove all split entries and restore the original transaction.",
+  "@splitUnsplitConfirm": { "description": "Body of the unsplit confirmation dialog." },
+
+  "splitUnsplitSuccess": "Transaction unsplit successfully",
+  "@splitUnsplitSuccess": { "description": "Snackbar after a split is removed." },
+
+  "splitUnsplitFailed": "Failed to unsplit transaction",
+  "@splitUnsplitFailed": { "description": "Fallback snackbar when removing a split fails." },
+
+  "splitOfflineNotice": "Connect to the internet to view or edit splits.",
+  "@splitOfflineNotice": { "description": "Shown on the detail screen while offline, since splits need the server." },
+
+  "splitLoadFailed": "Couldn't load split details.",
+  "@splitLoadFailed": { "description": "Shown when the split details request fails." },
+
+  "splitEditorNewTitle": "Split transaction",
+  "@splitEditorNewTitle": { "description": "App bar title of the split editor when creating a split." },
+
+  "splitEditorEditTitle": "Edit split",
+  "@splitEditorEditTitle": { "description": "App bar title of the split editor when editing a split." },
+
+  "splitEditorOriginalAmount": "Original amount",
+  "@splitEditorOriginalAmount": { "description": "Label for the parent transaction amount in the split editor." },
+
+  "splitEditorRowLabel": "Split #{number}",
+  "@splitEditorRowLabel": {
+    "description": "Heading of one row in the split editor.",
+    "placeholders": {"number": {"type": "int"}}
+  },
+
+  "splitEditorNameLabel": "Name",
+  "@splitEditorNameLabel": { "description": "Label for a split row's name field." },
+
+  "splitEditorNamePlaceholder": "Split name",
+  "@splitEditorNamePlaceholder": { "description": "Placeholder for a split row's name field." },
+
+  "splitEditorNameRequired": "Name is required",
+  "@splitEditorNameRequired": { "description": "Validation error for an empty split row name." },
+
+  "splitEditorAmountLabel": "Amount",
+  "@splitEditorAmountLabel": { "description": "Label for a split row's amount field." },
+
+  "splitEditorAmountHelper": "Enter amounts in the same direction as the original transaction. Use a minus sign for a part that goes the other way.",
+  "@splitEditorAmountHelper": { "description": "Helper text explaining the sign convention for split amounts." },
+
+  "splitEditorAmountRequired": "Amount is required",
+  "@splitEditorAmountRequired": { "description": "Validation error for an empty split amount." },
+
+  "splitEditorAmountInvalid": "Enter a valid amount",
+  "@splitEditorAmountInvalid": { "description": "Validation error for an unparseable split amount." },
+
+  "splitEditorAmountZero": "Amount can't be zero",
+  "@splitEditorAmountZero": { "description": "Validation error for a zero split amount." },
+
+  "splitEditorAmountTooPrecise": "Use at most {decimals} decimal places",
+  "@splitEditorAmountTooPrecise": {
+    "description": "Validation error when a split amount has more decimals than the currency allows.",
+    "placeholders": {"decimals": {"type": "int"}}
+  },
+
+  "splitEditorCategoryLabel": "Category",
+  "@splitEditorCategoryLabel": { "description": "Label for a split row's category picker." },
+
+  "splitEditorAddRow": "Add split",
+  "@splitEditorAddRow": { "description": "Button that adds a row to the split editor." },
+
+  "splitEditorRemoveRow": "Remove split",
+  "@splitEditorRemoveRow": { "description": "Tooltip for the button that removes a split row." },
+
+  "splitEditorRemaining": "Remaining",
+  "@splitEditorRemaining": { "description": "Label of the remaining-to-allocate indicator." },
+
+  "splitEditorAmountsMustMatch": "Split amounts must equal the original transaction amount.",
+  "@splitEditorAmountsMustMatch": { "description": "Shown while the split rows do not add up to the original amount." },
+
+  "splitEditorSubmitNew": "Split transaction",
+  "@splitEditorSubmitNew": { "description": "Save button label when creating a split." },
+
+  "splitEditorSubmitEdit": "Update split",
+  "@splitEditorSubmitEdit": { "description": "Save button label when editing a split." },
+
+  "splitEditorSaved": "Transaction split successfully",
+  "@splitEditorSaved": { "description": "Snackbar after a split is created." },
+
+  "splitEditorUpdated": "Split updated successfully",
+  "@splitEditorUpdated": { "description": "Snackbar after a split is updated." },
+
+  "splitEditorSaveFailed": "Failed to save split",
+  "@splitEditorSaveFailed": { "description": "Fallback snackbar when saving a split fails." },
+
+  "splitEditorOffline": "You're offline. Splits can only be saved while connected.",
+  "@splitEditorOffline": { "description": "Shown in the split editor while offline." }
 }

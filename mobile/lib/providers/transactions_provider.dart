@@ -362,6 +362,32 @@ class TransactionsProvider with ChangeNotifier {
     }
   }
 
+  /// Refresh the cache after a split was created, replaced or removed on the
+  /// server. Children the server destroyed are dropped locally first, because
+  /// an account-scoped sync only upserts and would leave them behind.
+  Future<void> refreshAfterSplitChange({
+    required String accessToken,
+    required String accountId,
+    List<String> removedChildIds = const [],
+  }) async {
+    try {
+      for (final id in removedChildIds) {
+        await _offlineStorage.deleteTransactionByServerId(id);
+      }
+    } catch (e) {
+      _log.error(
+        'TransactionsProvider',
+        'Failed to drop removed split children with ${e.runtimeType}',
+      );
+    }
+
+    await fetchTransactions(
+      accessToken: accessToken,
+      accountId: accountId,
+      forceSync: true,
+    );
+  }
+
   /// Delete a transaction
   Future<bool> deleteTransaction({
     required String accessToken,
