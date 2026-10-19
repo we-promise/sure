@@ -70,6 +70,12 @@ class Account::LinkableTest < ActiveSupport::TestCase
     assert @account.supports_category_matcher?
   end
 
+  test "supports_category_matcher? returns true for Redbark-linked accounts" do
+    AccountProvider.create!(account: @account, provider: redbark_accounts(:savings_account))
+
+    assert @account.supports_category_matcher?
+  end
+
   test "supports_category_matcher? returns false for unlinked accounts and providers without a matcher" do
     refute @account.supports_category_matcher?
 

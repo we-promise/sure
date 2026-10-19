@@ -116,6 +116,76 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 0, result[:failed]
   end
 
+  test "transactions processor applies the matched Sure category" do
+    @family.categories.bootstrap!
+
+    @redbark_account.update!(raw_transactions_payload: [
+      {
+        "id" => "tx_cat_1",
+        "status" => "posted",
+        "date" => Date.current.to_s,
+        "description" => "WOOLWORTHS SYDNEY",
+        "amount" => "-45.00",
+        "direction" => "debit",
+        "merchantName" => "Woolworths",
+        "category" => "FOOD_AND_DRINK"
+      }
+    ])
+
+    RedbarkAccount::Transactions::Processor.new(@redbark_account).process
+
+    entry = @account.entries.find_by(external_id: "redbark_tx_cat_1", source: "redbark")
+    assert_equal "Food & Drink", entry.transaction.category&.name
+  end
+
+  test "transactions processor falls back to merchant_category_code when category is unmapped" do
+    @family.categories.bootstrap!
+
+    @redbark_account.update!(raw_transactions_payload: [
+      {
+        "id" => "tx_cat_mcc",
+        "status" => "posted",
+        "date" => Date.current.to_s,
+        "description" => "WOOLWORTHS SYDNEY",
+        "amount" => "-45.00",
+        "direction" => "debit",
+        "merchantName" => "Woolworths",
+        "category" => "MERCHANDISE", # intentionally unmapped by category code alone
+        "merchantCategoryCode" => "5411" # supermarkets -> Groceries
+      }
+    ])
+
+    RedbarkAccount::Transactions::Processor.new(@redbark_account).process
+
+    entry = @account.entries.find_by(external_id: "redbark_tx_cat_mcc", source: "redbark")
+    assert_equal "Groceries", entry.transaction.category&.name
+  end
+
+  test "transactions processor skips category matching when the account has the matcher switched off" do
+    @family.categories.bootstrap!
+    @account.update!(enable_category_matcher: false)
+
+    @redbark_account.update!(raw_transactions_payload: [
+      {
+        "id" => "tx_cat_2",
+        "status" => "posted",
+        "date" => Date.current.to_s,
+        "description" => "WOOLWORTHS SYDNEY",
+        "amount" => "-45.00",
+        "direction" => "debit",
+        "merchantName" => "Woolworths",
+        "category" => "FOOD_AND_DRINK"
+      }
+    ])
+
+    RedbarkAccount::Transactions::Processor.new(@redbark_account).process
+
+    entry = @account.entries.find_by(external_id: "redbark_tx_cat_2", source: "redbark")
+    assert_nil entry.transaction.category_id
+    # Still imported, still carries the raw category - only the auto-category is withheld.
+    assert_equal "FOOD_AND_DRINK", entry.transaction.extra.dig("redbark", "category")
+  end
+
   test "transactions processor returns empty result when no transactions" do
     @redbark_account.update!(raw_transactions_payload: [])
 
