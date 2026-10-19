@@ -57,6 +57,7 @@ zh-CN:
       description: 此投资缺少数值，我们无法计算其回报或价值。
       missing_data: 缺少数据
     show:
+      price_source_label: "价格来源"
       avg_cost_label: 平均成本
       current_market_price_label: 当前市场价
       delete: 删除

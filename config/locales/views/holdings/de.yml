@@ -53,6 +53,7 @@ de:
       description: Bei dieser Position fehlen Werte, deshalb ließen sich Rendite und Wert nicht berechnen
       missing_data: Fehlende Daten
     show:
+      price_source_label: "Kursquelle"
       avg_cost_label: Durchschnittlicher Einstandspreis
       current_market_price_label: Aktueller Marktpreis
       delete: Löschen

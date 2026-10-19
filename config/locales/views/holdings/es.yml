@@ -57,6 +57,7 @@ es:
       description: Esta inversión tiene valores faltantes y no pudimos calcular su rendimiento o valor.
       missing_data: Datos faltantes
     show:
+      price_source_label: "Fuente de precios"
       avg_cost_label: Costo promedio
       current_market_price_label: Precio de mercado actual
       delete: Eliminar

@@ -57,6 +57,7 @@ hu:
       description: Ennél a befektetésnél hiányoznak adatok, ezért a hozamot és az értéket nem lehetett kiszámítani.
       missing_data: Hiányzó adatok
     show:
+      price_source_label: "Árfolyamforrás"
       avg_cost_label: Átlagos bekerülési érték
       current_market_price_label: Aktuális piaci ár
       delete: Törlés

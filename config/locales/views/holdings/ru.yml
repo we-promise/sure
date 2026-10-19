@@ -52,6 +52,7 @@ ru:
     reset_security:
       success: Ценная бумага сброшена до значения поставщика.
     show:
+      price_source_label: "Источник котировок"
       avg_cost_label: Средняя стоимость
       book_value_label: Балансовая стоимость
       cancel: Отмена

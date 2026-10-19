@@ -1,0 +1,11 @@
+---
+ro:
+  securities:
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (implicit)"
+      offline: "%{provider} (în pauză)"
+      unavailable: "%{provider} (indisponibil)"
+      none: "Niciuna, prețuri din sincronizarea contului sau din tranzacții"
+    providers:
+      unknown: "Necunoscut"

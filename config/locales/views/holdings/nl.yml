@@ -44,6 +44,7 @@ nl:
       description: Deze investering heeft ontbrekende waarden en we konden het rendement of de waarde niet berekenen.
       missing_data: Ontbrekende gegevens
     show:
+      price_source_label: "Koersbron"
       avg_cost_label: Gemiddelde kostprijs
       current_market_price_label: Huidige marktprijs
       delete: Verwijderen

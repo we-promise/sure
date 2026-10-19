@@ -58,6 +58,7 @@ en:
         its returns or value.
       missing_data: Missing data
     show:
+      price_source_label: "Price Source"
       avg_cost_label: Average Cost
       current_market_price_label: Current Market Price
       delete: Delete
