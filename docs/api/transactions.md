@@ -66,10 +66,16 @@ A transaction response includes:
   "id": "uuid",
   "date": "2024-01-15",
   "amount": "$75.50",
+  "amount_cents": 7550,
+  "signed_amount_cents": -7550,
+  "amount_decimal": "75.5",
   "currency": "USD",
   "name": "Grocery shopping",
   "notes": "Weekly groceries",
   "classification": "expense",
+  "kind": "standard",
+  "excluded": false,
+  "split_parent": false,
   "account": {
     "id": "uuid",
     "name": "Checking Account",
@@ -98,6 +104,17 @@ A transaction response includes:
   "updated_at": "2024-01-15T10:30:00Z"
 }
 ```
+
+### Amounts, kind and exclusion
+
+| Field | Description |
+| --- | --- |
+| `amount` | Formatted for display and rounded to the currency's precision. Don't parse it. |
+| `amount_cents` / `signed_amount_cents` | Integer minor units, also rounded. |
+| `amount_decimal` | The exact stored amount as an unrounded decimal string (for example `"12.3456"`), independent of locale. Positive is an outflow, negative an inflow. Use it when the amount has to match exactly, such as the split amounts sent to `POST /api/v1/transactions/{id}/split`. |
+| `kind` | One of `standard`, `funds_movement`, `cc_payment`, `loan_payment`, `one_time`, `investment_contribution`. Budgets and reports count `loan_payment` and `investment_contribution` as expenses whatever the sign of their amount, and leave `funds_movement`, `cc_payment` and `one_time` out. `classification` only follows the amount's sign. |
+| `excluded` | `true` when the transaction is left out of budget and report totals. |
+| `split_parent` | `true` when the transaction has been split. Splitting a transaction marks it excluded, and its split children carry the amount. |
 
 ## Creating transactions
 

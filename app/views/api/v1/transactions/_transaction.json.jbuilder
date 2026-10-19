@@ -14,6 +14,13 @@ amount_cents = (amount_money.amount * conversion_factor).round(0).to_i.abs
 json.amount_cents amount_cents
 json.signed_amount_cents(transaction.entry.classification == "income" ? amount_cents : -amount_cents)
 
+# `amount` and `amount_cents` are both rounded to the currency's display
+# precision, but entries store decimal(19,4). Expose the stored value
+# unrounded, as a locale-independent string in the entry's own sign
+# convention (positive = outflow, negative = inflow), the same field split
+# show returns, so a client can build a split that sums exactly.
+json.amount_decimal transaction.entry.amount.to_s
+
 json.currency transaction.entry.currency
 json.name transaction.entry.name
 json.notes transaction.entry.notes
@@ -21,6 +28,18 @@ json.external_id transaction.entry.external_id
 json.source transaction.entry.source
 json.user_modified transaction.entry.user_modified
 json.classification transaction.entry.classification
+
+# How budgets and reports treat the row: loan_payment and
+# investment_contribution count as expenses whatever the amount's sign, and
+# Transaction::BUDGET_EXCLUDED_KINDS are left out entirely.
+json.kind transaction.kind
+
+# Excluded entries are left out of budget and report totals, and splitting
+# marks the parent excluded. A split parent's amount is carried by its children, so a
+# client summing a list should skip the parent. Callers that render many rows
+# should preload entry: :child_entries to keep split_parent free of queries.
+json.excluded transaction.entry.excluded
+json.split_parent transaction.entry.child_entries.any?
 
 # Account information
 json.account do
