@@ -180,7 +180,7 @@ class RedbarkItem::ImporterReissuedIdsTest < ActiveSupport::TestCase
     def import_original(original)
       @redbark_account.update!(raw_transactions_payload: [ original ])
       RedbarkAccount::Transactions::Processor.new(@redbark_account).process
-        @account.entries.find_by!(external_id: "redbark_#{original["id"]}")
+      @account.entries.find_by!(external_id: "redbark_#{original["id"]}")
     end
 
     def sync(fetched)
