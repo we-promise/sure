@@ -21,6 +21,7 @@ class BayesCategorizeJobTest < ActiveJob::TestCase
         BayesCategorizeJob.perform_now(@family, apply_rules: true)
       end
     end
+    assert DebugLogEntry.where(level: "error").order(:created_at).last.metadata["backtrace"].present?
   end
 
   test "Run raises a failure and queues no rules" do

@@ -16,7 +16,7 @@ class BayesCategorizeJob < ApplicationJob
       message: "Bayesian categorization after sync failed: #{e.class}: #{e.message}",
       source: self.class.name,
       family: family,
-      metadata: { error_class: e.class.name, error_message: e.message }
+      metadata: { error_class: e.class.name, error_message: e.message, backtrace: Array(e.backtrace).first(10) }
     )
   ensure
     ApplyRulesJob.perform_later(family) if apply_rules
