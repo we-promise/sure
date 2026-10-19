@@ -39,6 +39,9 @@ en:
           paused:
             one: 1 paused
             other: "%{count} paused"
+          pace_unknown:
+            one: 1 with pace unknown
+            other: "%{count} with pace unknown"
         on_track_sub_all_good: All active goals on pace
         on_track_all_caught_up: All caught up
       goals_section:

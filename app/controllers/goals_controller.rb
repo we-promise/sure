@@ -300,6 +300,7 @@ class GoalsController < ApplicationController
       reached = active_goals.count { |g| g.status == :reached }
       no_date = active_goals.count { |g| g.status == :no_target_date }
       paused = active_goals.count(&:paused?)
+      pace_unknown = active_goals.count { |g| !g.paused? && g.status == :pace_unknown }
 
       # Denominator of the "Goals on track" tile. A goal only belongs in
       # the fraction if there is a benchmark to compare against:
@@ -336,6 +337,7 @@ class GoalsController < ApplicationController
         behind_count: behind,
         no_date_count: no_date,
         paused_count: paused,
+        pace_unknown_count: pace_unknown,
         tracked_total: tracked_total,
         active_total: active_goals.size
       }
