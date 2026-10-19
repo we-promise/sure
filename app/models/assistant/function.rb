@@ -7,6 +7,14 @@ class Assistant::Function
     def description
       raise NotImplementedError, "Subclasses must implement the description class method"
     end
+
+    # Whether #call can run under MCP's read-only mode (see McpController).
+    # False by default — a new Function is a write tool until its author reads
+    # its own #call and opts it in. Only flip this after confirming #call
+    # performs no INSERT, UPDATE, DELETE, file write, or other mutation.
+    def read_only?
+      false
+    end
   end
 
   MAX_PAGE_SIZE = 100
