@@ -1070,7 +1070,11 @@ class Family::DataImporter
           transfer.notes = data["notes"]
         end
         # Transfer kinds only apply once a transfer is confirmed (see Transfer#confirm!)
-        apply_transfer_transaction_kinds!(transfer) if transfer.confirmed?
+        if transfer.confirmed?
+          apply_transfer_transaction_kinds!(transfer)
+          # Restores a user's explicit choice over the destination's default kind.
+          transfer.update_investment_contribution!(truthy?(data["investment_contribution"])) unless data["investment_contribution"].nil?
+        end
         increment_summary("Transfer", transfer.previously_new_record? ? :created : :updated)
       end
     end
