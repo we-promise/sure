@@ -125,6 +125,55 @@ void main() {
       expect(groups.first.hasOverBudget, isTrue);
     });
 
+    test('shared subcategory excludes ring-fenced sibling allocations', () {
+      final groups = BudgetCategoryGroup.build(
+        octoberCategories().map(BudgetCategory.fromJson).toList(),
+      );
+      final restaurants =
+          groups.first.children.firstWhere((c) => c.name == 'Restaurants');
+
+      // $800 Food less $400 ring-fenced for Groceries leaves a $400 pool;
+      // $240 spent is 60% of it (web: percent_of_budget_spent).
+      expect(restaurants.sharedBudgetCents, 40000);
+      expect(restaurants.spentFraction, closeTo(0.6, 0.0001));
+      // Ring-fenced siblings are unchanged.
+      final groceries =
+          groups.first.children.firstWhere((c) => c.name == 'Groceries');
+      expect(groceries.sharedBudgetCents, isNull);
+      expect(groceries.spentFraction, closeTo(1.3, 0.0001));
+    });
+
+    test('shared pool never goes below zero', () {
+      final groups = BudgetCategoryGroup.build([
+        BudgetCategory.fromJson(budgetCategoryJson(
+          id: 'bc_p',
+          categoryId: 'cat_p',
+          name: 'Parent',
+          budgetedCents: 10000,
+        )),
+        BudgetCategory.fromJson(budgetCategoryJson(
+          id: 'bc_rf',
+          categoryId: 'cat_rf',
+          name: 'Ring-fenced',
+          parentId: 'cat_p',
+          budgetedCents: 15000,
+        )),
+        BudgetCategory.fromJson(budgetCategoryJson(
+          id: 'bc_sh',
+          categoryId: 'cat_sh',
+          name: 'Shared',
+          parentId: 'cat_p',
+          inheritsParent: true,
+          displayBudgetedCents: 10000,
+          actualCents: 500,
+          availableCents: 0,
+        )),
+      ]);
+      final shared = groups.single.children.last;
+      expect(shared.sharedBudgetCents, 0);
+      expect(shared.spentFraction, 1.0);
+    });
+
     test('orphan subcategory becomes its own group', () {
       final groups = BudgetCategoryGroup.build([
         BudgetCategory.fromJson(

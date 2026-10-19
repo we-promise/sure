@@ -60,6 +60,10 @@ class _BudgetCategoryTransactionsScreenState
   bool _loading = false;
   bool _failed = false;
 
+  /// Whether the request that failed was a reload from page one, so its retry
+  /// repeats it instead of appending the next page to stale rows.
+  bool _failedWasReset = false;
+
   bool get _hasMore => _page < _totalPages;
 
   @override
@@ -84,7 +88,11 @@ class _BudgetCategoryTransactionsScreenState
     final token = await _accessToken();
     if (!mounted) return;
     if (token == null) {
-      setState(() => _loading = false);
+      setState(() {
+        _loading = false;
+        _failed = true;
+        _failedWasReset = reset;
+      });
       return;
     }
 
@@ -111,6 +119,7 @@ class _BudgetCategoryTransactionsScreenState
             : nextPage;
       } else {
         _failed = true;
+        _failedWasReset = reset;
       }
     });
   }
@@ -157,7 +166,9 @@ class _BudgetCategoryTransactionsScreenState
                   label: _failed
                       ? l.commonTryAgain
                       : l.budgetCategoryTransactionsLoadMore,
-                  onPressed: _loading ? null : () => _loadPage(),
+                  onPressed: _loading
+                      ? null
+                      : () => _loadPage(reset: _failed && _failedWasReset),
                   loading: _loading,
                   variant: SureButtonVariant.outline,
                   size: SureButtonSize.sm,
