@@ -40,6 +40,7 @@ fr:
       never_synced: Jamais synchronisé.
       syncing: "Synchronisation en cours"
       requires_update: "Réauthentification requise"
+      session_expires_in: "La connexion expire dans %{time} (%{at})."
       error: "Erreur"
       synced: "Synchronisé il y a %{time}. %{summary}."
       setup_accounts: "Configurer les comptes"

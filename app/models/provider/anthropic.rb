@@ -68,7 +68,6 @@ class Provider::Anthropic < Provider
 
   def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
-      raise Error, "Too many transactions to auto-categorize. Max is 25 per request." if transactions.size > 25
       if user_categories.blank?
         family_id = family&.id || "unknown"
         Rails.logger.error("Cannot auto-categorize transactions for family #{family_id}: no categories available")
@@ -124,8 +123,6 @@ class Provider::Anthropic < Provider
 
   def auto_detect_merchants(transactions: [], user_merchants: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
-      raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25
-
       effective_model = model.presence || @default_model
 
       trace = create_langfuse_trace(
@@ -150,8 +147,6 @@ class Provider::Anthropic < Provider
 
   def enhance_provider_merchants(merchants: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
-      raise Error, "Too many merchants to enhance. Max is 25 per request." if merchants.size > 25
-
       effective_model = model.presence || @default_model
 
       trace = create_langfuse_trace(

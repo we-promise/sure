@@ -11,12 +11,17 @@ class CreditCardsController < ApplicationController
   )
 
   def update
+    # The update saves more than once (locks), which clears saved_changes, so
+    # compare the limit before and after instead.
+    @available_credit_before = @account.accountable&.available_credit
     super
     # Only apply provider settings once the account update succeeded (redirect);
     # a failed update renders :edit and must not persist the flag.
     if response.redirect?
       update_enable_banking_settings
+      update_lunchflow_settings
       update_simplefin_settings
+      update_sophtron_settings
     end
   end
 
@@ -36,6 +41,27 @@ class CreditCardsController < ApplicationController
       end
     end
 
+    # In available-credit mode the debt is read from the card's limit (its
+    # Available credit field), so a new limit needs a resync just as toggling
+    # the flag does. One sync covers both. A form without the flag keeps it.
+    def update_lunchflow_settings
+      provider_account = @account.provider_account_for("LunchflowAccount")
+      return unless provider_account.present?
+
+      lunchflow_params = params.permit(account: { lunchflow: [ :treat_balance_as_available_credit ] })
+        .dig(:account, :lunchflow)
+      if lunchflow_params&.key?(:treat_balance_as_available_credit)
+        provider_account.update!(
+          treat_balance_as_available_credit: ActiveModel::Type::Boolean.new.cast(lunchflow_params[:treat_balance_as_available_credit])
+        )
+      end
+
+      flag_changed = provider_account.saved_change_to_treat_balance_as_available_credit?
+      limit_changed = provider_account.treat_balance_as_available_credit? &&
+        @account.accountable.reload.available_credit != @available_credit_before
+      provider_account.lunchflow_item.sync_later if flag_changed || limit_changed
+    end
+
     def update_simplefin_settings
       simplefin_params = params.permit(account: { simplefin: [ :balance_sign_override ] })
         .dig(:account, :simplefin)
@@ -49,6 +75,34 @@ class CreditCardsController < ApplicationController
         attribute: :balance_sign_override,
         value: override
       ) { |provider_account| provider_account.simplefin_item.sync_later }
+    end
+
+    def update_sophtron_settings
+      sophtron_params = params.permit(account: { sophtron: [ :balance_sign_override ] })
+        .dig(:account, :sophtron)
+      return if sophtron_params.blank?
+
+      override = sophtron_params[:balance_sign_override]
+      override = nil unless override.in?(%w[credit debt])
+
+      provider_account = @account.provider_account_for("SophtronAccount")
+      return unless provider_account.present?
+
+      provider_account.apply_balance_sign_override!(override)
+    rescue StandardError => e
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to apply Sophtron balance sign override",
+        source: "CreditCardsController#update_sophtron_settings",
+        provider_key: "sophtron",
+        family: Current.family,
+        account: @account,
+        account_provider: provider_account&.account_provider,
+        metadata: { error_class: e.class.name, error_message: e.message, balance_sign_override: override }
+      )
+      flash.delete(:notice)
+      flash[:alert] = t("credit_cards.update.sophtron_balance_sign_error")
     end
 
     def update_provider_setting(provider_type:, attribute:, value:)
