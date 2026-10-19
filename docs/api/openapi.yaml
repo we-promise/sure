@@ -4698,7 +4698,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: invite code required or invalid
+          description: 'registration refused: the instance is closed to new registrations,
+            or an invite code is required or invalid'
           content:
             application/json:
               schema:
@@ -4802,6 +4803,13 @@ paths:
                         type: boolean
         '401':
           description: invalid credentials, MFA required, or account deactivated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: 'local login is disabled: the instance is SSO-only, and this
+            account is not a super admin using the emergency override'
           content:
             application/json:
               schema:
@@ -5686,7 +5694,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/CategoryDetail"
         '422':
-          description: validation error - duplicate name
+          description: validation error - duplicate name or categories locked
           content:
             application/json:
               schema:
