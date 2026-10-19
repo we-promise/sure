@@ -189,9 +189,10 @@ class Provider::ScalableTest < ActiveSupport::TestCase
       assert_equal "authentication_failed", error.code
     end
 
-    tampered = signed_token(claims)
-    replacement = tampered.end_with?("A") ? "B" : "A"
-    tampered = tampered[0...-1] + replacement
+    header, payload, signature = signed_token(claims).split(".")
+    signature_bytes = Base64.urlsafe_decode64(signature)
+    signature_bytes.setbyte(0, signature_bytes.getbyte(0) ^ 1)
+    tampered = [ header, payload, Base64.urlsafe_encode64(signature_bytes, padding: false) ].join(".")
     verifier = Provider::Scalable.new
     queue_http(verifier, discovery_response, jwks_response)
     error = assert_raises(Provider::Scalable::Error) do
