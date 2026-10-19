@@ -401,10 +401,17 @@ class Provider::Openai < Provider
     end
   end
 
-  # Receipts arrive as PDFs (read as text) or photos (sent to a vision model),
-  # so this needs the same capability as PDF processing.
-  def supports_receipt_extraction?(model: @default_model)
-    supports_pdf_processing?(model: model)
+  # Text PDFs are read as extracted text through ordinary chat, so any
+  # supported model can itemize them. Photos (and PDFs without a text layer,
+  # which are rendered to page images) need a vision-capable model with PDF
+  # processing enabled.
+  # @param content_type [String, nil] the receipt's MIME type; nil asks whether
+  #   any receipt can be read
+  def supports_receipt_extraction?(model: @default_model, content_type: nil)
+    return supports_pdf_processing?(model: model) if ReceiptExtractor::IMAGE_CONTENT_TYPES.include?(content_type)
+    return false unless content_type.nil? || content_type == "application/pdf"
+
+    supports_model?(model.to_s)
   end
 
   # Reads the line items, tax, discount and total off a receipt.
@@ -414,7 +421,9 @@ class Provider::Openai < Provider
   def extract_receipt(file_content:, content_type:, model: "", family: nil, json_mode: nil)
     with_provider_response do
       effective_model = model.presence || @default_model
-      raise Error, "Model does not support receipt extraction: #{effective_model}" unless supports_receipt_extraction?(model: effective_model)
+      unless supports_receipt_extraction?(model: effective_model, content_type: content_type)
+        raise Error, "Model does not support #{content_type} receipts: #{effective_model}"
+      end
 
       trace = create_langfuse_trace(
         name: "openai.extract_receipt",
@@ -432,7 +441,8 @@ class Provider::Openai < Provider
         langfuse_trace: trace,
         family: family,
         max_response_tokens: explicit_max_response_tokens,
-        json_mode: json_mode
+        json_mode: json_mode,
+        vision: supports_pdf_processing?(model: effective_model)
       ).extract
 
       upsert_langfuse_trace(trace: trace, output: { line_item_count: result.line_items.size })

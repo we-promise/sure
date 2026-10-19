@@ -1,7 +1,8 @@
 # Reads the itemized lines off a receipt so a transaction can be split by
 # them. Text PDFs (most emailed retailer receipts) are sent as extracted text;
 # photos go as native image blocks and PDFs without a text layer (scanned
-# receipts) as native document blocks, which Claude reads visually.
+# receipts) as native document blocks, which Claude reads visually and which
+# need a vision-capable model.
 class Provider::Anthropic::ReceiptExtractor
   include Provider::Anthropic::Concerns::UsageRecorder
 
@@ -18,15 +19,18 @@ class Provider::Anthropic::ReceiptExtractor
   MAX_IMAGE_BYTES = 5 * 1024 * 1024
   MAX_TEXT_CHARS = 30_000
 
-  attr_reader :client, :model, :file_content, :content_type, :langfuse_trace, :family
+  attr_reader :client, :model, :file_content, :content_type, :langfuse_trace, :family, :vision
 
-  def initialize(client, model:, file_content:, content_type:, langfuse_trace: nil, family: nil)
+  # @param vision [Boolean] whether the model can read images and documents;
+  #   without it only text PDFs can be read
+  def initialize(client, model:, file_content:, content_type:, langfuse_trace: nil, family: nil, vision: true)
     @client = client
     @model = model
     @file_content = file_content
     @content_type = content_type
     @langfuse_trace = langfuse_trace
     @family = family
+    @vision = vision
   end
 
   def extract
@@ -106,6 +110,7 @@ class Provider::Anthropic::ReceiptExtractor
       if text.present?
         [ [ { type: "text", text: "Receipt text:\n\n#{text.truncate(MAX_TEXT_CHARS)}" } ], "extract_receipt" ]
       else
+        require_vision!("This receipt PDF has no text layer; reading it")
         if file_content.bytesize > Provider::Anthropic::PdfProcessor::MAX_PDF_BYTES
           raise Provider::Anthropic::Error, "Receipt PDF is too large (#{file_content.bytesize} bytes) for Anthropic's request limit"
         end
@@ -115,11 +120,16 @@ class Provider::Anthropic::ReceiptExtractor
     end
 
     def image_content
+      require_vision!("Reading a receipt photo")
       if file_content.bytesize > MAX_IMAGE_BYTES
         raise Provider::Anthropic::Error, "Receipt image is too large (#{file_content.bytesize} bytes); Anthropic accepts images up to 5 MB"
       end
 
       [ [ base64_block("image", IMAGE_MEDIA_TYPES[content_type]), read_prompt ], "extract_receipt_vision" ]
+    end
+
+    def require_vision!(what)
+      raise Provider::Anthropic::Error, "#{what} needs a vision-capable model" unless vision
     end
 
     def base64_block(type, media_type)
@@ -168,8 +178,11 @@ class Provider::Anthropic::ReceiptExtractor
       raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME}" unless tool_use
 
       input = block_input(tool_use)
-      input = JSON.parse(input) if input.is_a?(String)
-      input
+      input.is_a?(String) ? JSON.parse(input) : input
+    rescue JSON::ParserError
+      # JSON::ParserError quotes the input, which holds receipt content that
+      # must not reach logs or traces.
+      raise Provider::Anthropic::Error, "Could not parse #{TOOL_NAME} input from the receipt extraction response"
     end
 
     def block_type(block)

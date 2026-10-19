@@ -244,10 +244,16 @@ class Provider::Anthropic < Provider
     end
   end
 
-  # Receipts arrive as PDFs or photos, which need the same vision-capable
-  # model as PDF processing.
-  def supports_receipt_extraction?(model: @default_model)
-    supports_pdf_processing?(model: model)
+  # Text PDFs are sent as extracted text, which any supported model reads.
+  # Photos and PDFs without a text layer (sent as document blocks) need a
+  # vision-capable model, as PDF processing does.
+  # @param content_type [String, nil] the receipt's MIME type; nil asks whether
+  #   any receipt can be read
+  def supports_receipt_extraction?(model: @default_model, content_type: nil)
+    return supports_pdf_processing?(model: model) if ReceiptExtractor::IMAGE_MEDIA_TYPES.key?(content_type)
+    return false unless content_type.nil? || content_type == "application/pdf"
+
+    supports_model?(model)
   end
 
   # Reads the line items, tax, discount and total off a receipt.
@@ -257,7 +263,9 @@ class Provider::Anthropic < Provider
   def extract_receipt(file_content:, content_type:, model: "", family: nil)
     with_provider_response do
       effective_model = model.presence || @default_model
-      raise Error, "Model does not support receipt extraction: #{effective_model}" unless supports_receipt_extraction?(model: effective_model)
+      unless supports_receipt_extraction?(model: effective_model, content_type: content_type)
+        raise Error, "Model does not support #{content_type} receipts: #{effective_model}"
+      end
 
       trace = create_langfuse_trace(
         name: "anthropic.extract_receipt",
@@ -270,7 +278,8 @@ class Provider::Anthropic < Provider
         file_content: file_content,
         content_type: content_type,
         langfuse_trace: trace,
-        family: family
+        family: family,
+        vision: supports_pdf_processing?(model: effective_model)
       ).extract
 
       upsert_langfuse_trace(trace: trace, output: { line_item_count: result.line_items.size })

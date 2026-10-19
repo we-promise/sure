@@ -83,6 +83,41 @@ class Provider::Anthropic::ReceiptExtractorTest < ActiveSupport::TestCase
     end
   end
 
+  test "reads a text PDF without a vision-capable model" do
+    Pdf::TextExtractor.expects(:pages).returns([ "HAMMER 30.00" ])
+    captured = nil
+    client = stub_client(tool_response(RECEIPT_INPUT)) { |params| captured = params }
+
+    build_extractor(client, content_type: "application/pdf", vision: false).extract
+
+    assert_equal [ "text" ], captured[:messages].first[:content].map { |block| block[:type] }
+  end
+
+  test "needs a vision-capable model for photos and scanned PDFs" do
+    client = mock
+    client.expects(:messages).never
+
+    error = assert_raises(Provider::Anthropic::Error) do
+      build_extractor(client, content_type: "image/png", file_content: "png-bytes", vision: false).extract
+    end
+    assert_match "vision-capable", error.message
+
+    Pdf::TextExtractor.expects(:pages).returns([ "" ])
+    error = assert_raises(Provider::Anthropic::Error) do
+      build_extractor(client, content_type: "application/pdf", vision: false).extract
+    end
+    assert_match "vision-capable", error.message
+  end
+
+  test "keeps receipt content out of the error when the tool input is not JSON" do
+    client = stub_client(tool_response("{\"merchant_name\": \"Hardware store\", \"line_items\": [Hammer"))
+
+    error = assert_raises(Provider::Anthropic::Error) do
+      build_extractor(client, content_type: "image/png", file_content: "png-bytes").extract
+    end
+    assert_no_match(/Hammer|Hardware/, error.message)
+  end
+
   test "rejects unsupported and oversized files before calling the API" do
     client = mock
     client.expects(:messages).never
@@ -99,13 +134,14 @@ class Provider::Anthropic::ReceiptExtractorTest < ActiveSupport::TestCase
   end
 
   private
-    def build_extractor(client, content_type:, file_content: @pdf_content, family: nil)
+    def build_extractor(client, content_type:, file_content: @pdf_content, family: nil, vision: true)
       Provider::Anthropic::ReceiptExtractor.new(
         client,
         model: "claude-sonnet-4-6",
         file_content: file_content,
         content_type: content_type,
-        family: family
+        family: family,
+        vision: vision
       )
     end
 
