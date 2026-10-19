@@ -147,6 +147,12 @@ class BudgetsProvider with ChangeNotifier {
     bool forceRefresh = false,
   }) async {
     if (!_currentPeriodResolved && !_isOffline()) {
+      // Show the spinner while the current period resolves; every branch
+      // below resets the flag or re-sets it for the month fetch.
+      _isLoading = true;
+      _error = null;
+      _errorMessage = null;
+      notifyListeners();
       await _resolveCurrentPeriod(accessToken);
     }
     final key = _monthKey(_month);

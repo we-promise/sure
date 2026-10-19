@@ -120,6 +120,28 @@ void main() {
     expect(transport.budgetedSpendingCents, 30000);
   });
 
+  test('shows the loading state while the current period resolves', () async {
+    final inner = budgetsMockHandler();
+    final gate = Completer<void>();
+    var calls = 0;
+    final provider = buildProvider(
+      client: MockClient((request) async {
+        if (calls++ == 0) await gate.future;
+        return inner(request);
+      }),
+    );
+
+    final load = provider.loadMonth(accessToken: 'token');
+    await Future<void>.delayed(Duration.zero);
+    expect(provider.isLoading, isTrue);
+    expect(provider.hasLoadedMonth, isFalse);
+
+    gate.complete();
+    await load;
+    expect(provider.isLoading, isFalse);
+    expect(provider.hasLoadedMonth, isTrue);
+  });
+
   test('returning to a cached month clears a pending load', () async {
     final inner = budgetsMockHandler();
     final gate = Completer<void>();
