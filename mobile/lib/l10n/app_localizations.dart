@@ -1915,6 +1915,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to start conversation. Please try again.'**
   String get chatConversationStartFailed;
+
+  /// Menu item title for Budgets in the More screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgets'**
+  String get moreBudgets;
+
+  /// Subtitle for the Budgets menu item in the More screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgeted vs. actual spending by category'**
+  String get moreBudgetsSubtitle;
+
+  /// App bar title of the Budgets screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgets'**
+  String get budgetsTitle;
+
+  /// Tooltip for the button that shows the previous month's budget.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous month'**
+  String get budgetsPreviousMonth;
+
+  /// Tooltip for the button that shows the next month's budget.
+  ///
+  /// In en, this message translates to:
+  /// **'Next month'**
+  String get budgetsNextMonth;
+
+  /// Label for the total amount budgeted for spending this month.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgeted'**
+  String get budgetsBudgeted;
+
+  /// Label for the amount actually spent this month.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual'**
+  String get budgetsActual;
+
+  /// Label for the amount left to spend this month.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get budgetsRemaining;
+
+  /// Label for the month's actual income in the budget summary.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get budgetsIncome;
+
+  /// Expected income for the month, shown next to actual income.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected {amount}'**
+  String budgetsExpectedIncome(String amount);
+
+  /// Budget limit shown after the amount spent in a category, e.g. '$120 of $300'.
+  ///
+  /// In en, this message translates to:
+  /// **'of {amount}'**
+  String budgetsOfAmount(String amount);
+
+  /// Amount still available to spend in a category.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} left'**
+  String budgetsAmountLeft(String amount);
+
+  /// Amount by which a category's spending exceeds its budget.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} over'**
+  String budgetsOverBy(String amount);
+
+  /// Unspent amount carried over from the previous month into this category.
+  ///
+  /// In en, this message translates to:
+  /// **'+{amount} rolled over'**
+  String budgetsRolledOver(String amount);
+
+  /// Shown for a subcategory without its own limit that draws from its parent category's budget.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared budget'**
+  String get budgetsSharedBudget;
+
+  /// Shown for a category with spending but no budgeted amount.
+  ///
+  /// In en, this message translates to:
+  /// **'No budget'**
+  String get budgetsNoLimit;
+
+  /// Heading of the per-category budget list.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get budgetsCategoriesTitle;
+
+  /// Filter showing only categories that are over budget, with how many there are.
+  ///
+  /// In en, this message translates to:
+  /// **'Over budget ({count})'**
+  String budgetsFilterOverBudget(int count);
+
+  /// Badge on a category that has spent more than its budget.
+  ///
+  /// In en, this message translates to:
+  /// **'Over budget'**
+  String get budgetsOverBudget;
+
+  /// Badge on a category that has spent at least 90% of its budget.
+  ///
+  /// In en, this message translates to:
+  /// **'Near limit'**
+  String get budgetsNearLimit;
+
+  /// Label for one of several budgets that exist for the same month (household, personal or shared).
+  ///
+  /// In en, this message translates to:
+  /// **'Budget {number}'**
+  String budgetsBudgetNumber(int number);
+
+  /// Title shown when the server has no budget for the selected month.
+  ///
+  /// In en, this message translates to:
+  /// **'No budget for {month}'**
+  String budgetsNoBudgetTitle(String month);
+
+  /// Explains how to create a budget when none exists for the selected month.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgets are created in Sure on the web. Open Budgets there to set one up for this month.'**
+  String get budgetsNoBudgetMessage;
+
+  /// Shown when a budget exists for the month but has no amounts set.
+  ///
+  /// In en, this message translates to:
+  /// **'No spending limits are set for this month yet. Set them up in Sure on the web.'**
+  String get budgetsNotSetUpMessage;
+
+  /// Shown when no category line has a budget or spending.
+  ///
+  /// In en, this message translates to:
+  /// **'No budgeted categories or spending this month.'**
+  String get budgetsNoCategories;
+
+  /// Title shown when the budget cannot be loaded without a connection.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline'**
+  String get budgetsOfflineTitle;
+
+  /// Shown when offline and the selected month has not been loaded yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to the internet to load this month\'s budget.'**
+  String get budgetsOfflineMessage;
+
+  /// Banner shown when offline and the budget shown was loaded earlier in the session.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline. Showing the figures loaded earlier.'**
+  String get budgetsOfflineCached;
+
+  /// Title shown when loading budgets fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load budgets'**
+  String get budgetsLoadFailed;
+
+  /// Shown when the budgets request is rejected as unauthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Please sign in again.'**
+  String get budgetsSessionExpired;
+
+  /// Empty state of a budget category's transaction list.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions in this category for {month}.'**
+  String budgetCategoryTransactionsEmpty(String month);
+
+  /// Button that loads the next page of a budget category's transactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get budgetCategoryTransactionsLoadMore;
+
+  /// Shown when a budget category's transactions fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load transactions'**
+  String get budgetCategoryTransactionsLoadFailed;
 }
 
 class _AppLocalizationsDelegate
