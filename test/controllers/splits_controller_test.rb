@@ -384,6 +384,18 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name=?][value=?]", "split[splits][1][amount]", "-66.67"
   end
 
+  test "itemize shows proposed amounts at the currency's precision" do
+    attach_receipt
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(receipt(
+      [ "Bananas", 40.5 ], [ "Detergent", 59.5 ]
+    )))
+
+    post itemize_transaction_split_path(@entry), headers: { "Turbo-Frame" => "modal" }
+
+    assert_select "input[name=?][value=?]", "split[splits][0][amount]", "-40.50"
+    assert_select "input[name=?][value=?]", "split[splits][1][amount]", "-59.50"
+  end
+
   test "itemize explains a failure and keeps the blank editor" do
     attach_receipt
     provider = receipt_provider(nil)
