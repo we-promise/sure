@@ -435,6 +435,7 @@ class Family::DataExporter
             outflow_transaction_id: transfer.outflow_transaction_id,
             status: transfer.status,
             notes: transfer.notes,
+            investment_contribution: transfer.investment_contribution_choice,
             created_at: transfer.created_at,
             updated_at: transfer.updated_at
           }
