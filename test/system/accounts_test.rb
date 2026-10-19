@@ -41,6 +41,38 @@ class AccountsTest < ApplicationSystemTestCase
     assert_equal "false", find_button("Pick icon")["aria-disabled"]
   end
 
+  test "an account logo the browser cannot load gives way to the initials" do
+    Account.any_instance.stubs(:logo_url).returns("/missing-account-logo.png")
+    visit account_url(accounts(:depository))
+
+    logo = find("[data-controller='image-fallback']", match: :first)
+    within(logo) do
+      assert_selector "[data-image-fallback-target='fallback']", visible: true
+      assert_no_selector "img", visible: true
+    end
+
+    # An image that failed before the controller connected still gives way.
+    page.execute_script(<<~JS, logo)
+      const logo = arguments[0];
+      logo.removeAttribute("data-controller");
+      logo.querySelector("img").classList.remove("hidden");
+      logo.querySelector("[data-image-fallback-target=fallback]").classList.add("hidden");
+    JS
+    within(logo) { assert_selector "img", visible: true }
+    page.execute_script("arguments[0].setAttribute('data-controller', 'image-fallback')", logo)
+    within(logo) { assert_no_selector "img", visible: true }
+
+    # A source that loads later brings the image back.
+    page.execute_script(<<~JS, logo)
+      arguments[0].querySelector("img").src = "data:image/svg+xml," +
+        encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>');
+    JS
+    within(logo) do
+      assert_selector "img", visible: true
+      assert_no_selector "[data-image-fallback-target='fallback']", visible: true
+    end
+  end
+
   test "can create investment account" do
     assert_account_created("Investment")
   end
