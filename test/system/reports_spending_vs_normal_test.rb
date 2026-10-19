@@ -10,6 +10,7 @@ class ReportsSpendingVsNormalTest < ApplicationSystemTestCase
     @category = @user.family.categories.create!(name: "Treemap Coffee")
 
     # A year of £10 a month, then £40 this month: four times normal.
+    travel_to Date.current.beginning_of_month + 14.days
     12.times { |i| create_transaction(account: @account, date: Date.current.beginning_of_month - (i + 1).months + 2.days, amount: 10, category: @category) }
     create_transaction(account: @account, date: Date.current.beginning_of_month + 1.day, amount: 40, category: @category)
 
@@ -26,11 +27,18 @@ class ReportsSpendingVsNormalTest < ApplicationSystemTestCase
       box.hover
     end
 
-    assert_selector "[role='tooltip']", text: "More than normal by"
+    assert_selector "[role='tooltip']", text: "more than normal"
 
     find("g.leaf[aria-label^='Treemap Coffee']").click
 
     assert_current_path(/\/transactions\?/)
     assert_includes URI.decode_www_form_component(current_url), "Treemap Coffee"
+  end
+
+  test "Enter on a box opens its transactions without grabbing the section" do
+    section = find("section[data-section-key='spending_vs_normal']")
+    section.find("g.leaf[aria-label^='Treemap Coffee']").send_keys(:enter)
+
+    assert_current_path(/\/transactions\?/)
   end
 end

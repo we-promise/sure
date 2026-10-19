@@ -1,6 +1,9 @@
 # Net spending per category for a period, compared with what is normal for
 # that category: its net spending over the year before the period, scaled to
-# the period's length. Feeds the "Spending vs normal" Reports section.
+# the period's length. An unfinished period (the default current month)
+# counts spending so far and compares it with the same number of days from
+# each of the 12 month starts before it. Feeds the "Spending vs normal"
+# Reports section.
 #
 # Net means expense minus refunds in the same category, the way the cash flow
 # Sankey nets them, so a refunded purchase doesn't count as spending. Totals
@@ -15,7 +18,12 @@ class IncomeStatement::SpendingComparison
   # compare against, so `normal` is nil.
   MIN_BASELINE_DAYS = 28
 
-  Row = Data.define(:category, :total, :normal, :subcategories) do
+  # Changes smaller than this are left out of the change list.
+  MIN_CHANGE = 1
+
+  # direct: a parent's own spending (booked on the parent, not a
+  # subcategory), listed among its subcategories.
+  Row = Data.define(:category, :total, :normal, :subcategories, :direct) do
     def change
       normal && total - normal
     end
@@ -30,24 +38,34 @@ class IncomeStatement::SpendingComparison
 
   attr_reader :period, :baseline_period
 
-  # The first transaction these totals could count: in the statement's
-  # eligible accounts and not excluded, as IncomeStatement::Totals filters.
-  # Opening-balance valuations can predate real activity by years, accounts
-  # outside the user's finances aren't counted, and an excluded old entry
-  # isn't spending, so any of them would dilute "normal" with empty months.
+  # The first transaction these totals could count, filtered as
+  # IncomeStatement::Totals filters: in the statement's eligible accounts, not
+  # excluded, not pending, and not a kind budgets skip (transfers and card
+  # payments). Opening-balance valuations, an early transfer or an excluded
+  # entry can predate real spending by years, and would dilute "normal" with
+  # empty months.
   def self.history_start(income_statement)
-    Entry.where(account_id: income_statement.eligible_accounts.select(:id), entryable_type: "Transaction", excluded: false)
+    Entry.joins("JOIN transactions ON transactions.id = entries.entryable_id")
+         .where(account_id: income_statement.eligible_accounts.select(:id), entryable_type: "Transaction", excluded: false)
+         .merge(Transaction.excluding_pending)
+         .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
          .minimum(:date)
   end
 
-  def initialize(income_statement, period:, history_start:)
+  def initialize(income_statement, period:, history_start:, as_of: Date.current)
     @income_statement = income_statement
-    @period = period
+    @in_progress = period.start_date <= as_of && as_of < period.end_date
+    # An unfinished period counts spending so far.
+    @period = @in_progress ? Period.custom(start_date: period.start_date, end_date: as_of) : period
     @baseline_period = build_baseline_period(history_start)
   end
 
+  def in_progress?
+    @in_progress
+  end
+
   def comparable?
-    baseline_period.present?
+    baseline_period.present? && (!in_progress? || baseline_windows.any?)
   end
 
   # Parent categories (and the synthetic Uncategorized) with net spending in
@@ -57,7 +75,7 @@ class IncomeStatement::SpendingComparison
   def rows
     @rows ||= begin
       current = net_by_category(period)
-      baseline = comparable? ? net_by_category(baseline_period) : {}
+      baseline = comparable? ? baseline_net : {}
 
       parents = (current.values + baseline.values).map { |e| e[:category] }
         .reject(&:subcategory?).uniq { |c| key_for(c) }
@@ -75,6 +93,19 @@ class IncomeStatement::SpendingComparison
     comparable? ? rows.sum { |row| row.normal || 0 } : nil
   end
 
+  # Parent rows changed by at least MIN_CHANGE against normal, most increased
+  # first. Empty without a normal.
+  def changes
+    rows.select { |row| row.change && row.change.abs >= MIN_CHANGE }.sort_by { |row| -row.change }
+  end
+
+  # Rows the treemap draws: positive totals only, at both levels.
+  def drawable_rows
+    rows.select { |row| row.total.positive? }.map do |row|
+      row.with(subcategories: row.subcategories.select { |sub| sub.total.positive? })
+    end
+  end
+
   # Amounts are decimal strings in the family currency; ratio is a decimal
   # string too (0.5 = 50% more than normal). A parent's own spending, booked on
   # the parent rather than a subcategory, is listed among its subcategories
@@ -83,11 +114,26 @@ class IncomeStatement::SpendingComparison
     {
       currency: income_statement.family.currency,
       period: period_json(period),
+      in_progress: in_progress?,
       baseline_period: baseline_period && period_json(baseline_period),
       comparable: comparable?,
       total: decimal(total),
       normal_total: normal_total && decimal(normal_total),
-      categories: rows.map { |row| row_json(row).merge(subcategories: row.subcategories.map { |sub| row_json(sub) }) }
+      categories: rows.map { |row| row_json(row).merge(subcategories: row.subcategories.map { |sub| row_json(sub).merge(direct: sub.direct) }) }
+    }
+  end
+
+  # One row in the shared representation (see as_json).
+  def row_json(row)
+    {
+      id: row.category.id,
+      name: row.category.name,
+      color: row.category.color,
+      filter_value: row.category.filter_value,
+      total: decimal(row.total),
+      normal: row.normal && decimal(row.normal),
+      change: row.change && decimal(row.change),
+      ratio: row.ratio && decimal(row.ratio.round(4))
     }
   end
 
@@ -116,7 +162,7 @@ class IncomeStatement::SpendingComparison
         child_normal = scaled_normal(baseline.dig(child.id, :net))
         next if child_total.zero? && !child_normal&.positive?
 
-        Row.new(category: child, total: child_total, normal: child_normal, subcategories: [])
+        Row.new(category: child, total: child_total, normal: child_normal, subcategories: [], direct: false)
       end
 
       # Refunds can push a subcategory's net below zero, which lowers the
@@ -128,10 +174,10 @@ class IncomeStatement::SpendingComparison
       direct_total = [ total - subcategories.sum(&:total), 0 ].max
       direct_normal = normal && [ normal - subcategories.sum { |s| s.normal || 0 }, 0 ].max
       if direct_total.positive? || direct_normal&.positive?
-        subcategories << Row.new(category: parent, total: direct_total, normal: direct_normal, subcategories: [])
+        subcategories << Row.new(category: parent, total: direct_total, normal: direct_normal, subcategories: [], direct: true)
       end
 
-      Row.new(category: parent, total: total, normal: normal, subcategories: subcategories.sort_by { |s| -s.total })
+      Row.new(category: parent, total: total, normal: normal, subcategories: subcategories.sort_by { |s| -s.total }, direct: false)
     end
 
     # { key => { category:, net: } } for every category with activity, where
@@ -151,8 +197,28 @@ class IncomeStatement::SpendingComparison
 
     def scaled_normal(baseline_net)
       return nil unless comparable?
+      return positive(baseline_net) if in_progress? # already an average of same-length windows
 
       positive(baseline_net) * period_days / baseline_days
+    end
+
+    # A whole period compares with the baseline year scaled to its length. An
+    # unfinished one compares with the same number of days from each of the
+    # 12 month starts before it, so a bill paid on the 1st counts the same in
+    # both and early-month spending isn't measured against a whole month.
+    def baseline_net
+      return net_by_category(baseline_period) unless in_progress?
+
+      baseline_windows.map { |w| net_by_category(w) }.each_with_object({}) do |net, avg|
+        net.each { |key, e| (avg[key] ||= { category: e[:category], net: 0 })[:net] += e[:net] / baseline_windows.size }
+      end
+    end
+
+    def baseline_windows
+      @baseline_windows ||= (1..12).filter_map do |i|
+        start = period.start_date - i.months
+        Period.custom(start_date: start, end_date: start + (period_days - 1).days) if start >= baseline_period.start_date
+      end
     end
 
     def period_days
@@ -165,19 +231,6 @@ class IncomeStatement::SpendingComparison
 
     def positive(value)
       [ value || 0, 0 ].max
-    end
-
-    def row_json(row)
-      {
-        id: row.category.id,
-        name: row.category.name,
-        color: row.category.color,
-        filter_value: row.category.filter_value,
-        total: decimal(row.total),
-        normal: row.normal && decimal(row.normal),
-        change: row.change && decimal(row.change),
-        ratio: row.ratio && decimal(row.ratio.round(4))
-      }
     end
 
     def period_json(p)

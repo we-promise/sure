@@ -22,20 +22,14 @@ class Api::V1::SpendingVsNormalController < Api::V1::BaseController
 
   private
     def requested_period
+      # The whole current month; the comparison cuts an unfinished period to
+      # today and compares it with the same days of earlier months.
       if params[:start_date].nil? && params[:end_date].nil?
         today = Date.current
-        return Period.custom(start_date: today.beginning_of_month, end_date: today)
+        return Period.custom(start_date: today.beginning_of_month, end_date: today.end_of_month)
       end
 
       start_date, end_date = parse_date(params[:start_date]), parse_date(params[:end_date])
       Period.custom(start_date: start_date, end_date: end_date) if start_date && end_date && start_date <= end_date
-    end
-
-    def parse_date(value)
-      return unless value.is_a?(String) && value.match?(/\A\d{4}-\d{2}-\d{2}\z/)
-      date = Date.iso8601(value)
-      date if date.year.positive?
-    rescue Date::Error
-      nil
     end
 end

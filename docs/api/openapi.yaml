@@ -3508,6 +3508,10 @@ components:
           nullable: true
           description: Fractional change against normal (0.5 = 50% more). Null without
             a positive normal
+        direct:
+          type: boolean
+          description: 'Present on subcategories only: true for the parent''s own
+            spending, booked on the parent rather than a subcategory'
         subcategories:
           type: array
           items:
@@ -3518,6 +3522,7 @@ components:
       required:
       - currency
       - period
+      - in_progress
       - baseline_period
       - comparable
       - total
@@ -3528,10 +3533,24 @@ components:
           type: string
         period:
           "$ref": "#/components/schemas/FinancialPeriod"
+        in_progress:
+          type: boolean
+          description: 'The period has not ended: it is cut to today, and normal is
+            the average of the same number of days from each of up to 12 earlier month
+            starts'
         baseline_period:
-          allOf:
-          - "$ref": "#/components/schemas/FinancialPeriod"
+          type: object
           nullable: true
+          required:
+          - start_date
+          - end_date
+          properties:
+            start_date:
+              type: string
+              format: date
+            end_date:
+              type: string
+              format: date
           description: Up to a year before the period, from the first counted transaction.
             Null with under 28 days of history
         comparable:
@@ -9306,7 +9325,8 @@ paths:
       description: 'Net spending per category in a period, compared with each category''s
         normal: its net spending over the year before the period, scaled to the period
         length. The data behind the Reports section "Spending vs normal". Uses the
-        authenticated user''s finance accounts and Sure reporting rules.'
+        authenticated user''s finance accounts and Sure reporting rules. Experimental:
+        the section is a preview feature, and how normal is defined may still change.'
       parameters:
       - name: start_date
         in: query

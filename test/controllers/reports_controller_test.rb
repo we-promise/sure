@@ -125,16 +125,16 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
   test "the spending baseline starts at the first transaction in the user's own finances" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    @family.entries.where(entryable_type: "Transaction").destroy_all
     hidden = Account.create!(family: @family, owner: users(:family_member), name: "Not shared", currency: @family.currency, balance: 0, accountable: Depository.new)
-    hidden_date = 200.days.ago.to_date
-    create_transaction(account: hidden, date: hidden_date, amount: 10)
-    own_first = Entry.where(account_id: @family.income_statement(user: @user).eligible_accounts.select(:id), entryable_type: "Transaction").minimum(:date)
-    assert_operator own_first, :>, hidden_date, "fixture data must start after the hidden transaction for this test to mean anything"
+    create_transaction(account: hidden, date: 200.days.ago.to_date, amount: 10)
+    own_first = 100.days.ago.to_date
+    create_transaction(account: accounts(:depository), date: own_first, amount: 10)
 
     get reports_path
 
     baseline = controller.instance_variable_get(:@spending_comparison).baseline_period
-    assert(baseline.nil? || baseline.start_date >= own_first, "baseline started at #{baseline&.start_date}, before the user's first visible transaction")
+    assert_equal own_first, baseline.start_date
   end
 
   # The desktop app clones these into the tray when a download such as the CSV

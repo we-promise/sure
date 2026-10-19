@@ -51,9 +51,11 @@ class IncomeStatement::SpendingComparisonTest < ActiveSupport::TestCase
     assert json[:comparable]
     assert_equal "200.0", food[:total]
     assert_equal "Food", food[:filter_value]
-    assert_kind_of String, food[:normal]
-    assert_kind_of String, food[:ratio]
-    assert_equal [ [ @groceries.id, "150.0" ], [ @food.id, "50.0" ] ], food[:subcategories].map { |s| [ s[:id], s[:total] ] }
+    normal = 1200 * 30 / 365r
+    assert_in_delta normal, BigDecimal(food[:normal]), 1e-12
+    assert_equal ((200 - normal) / normal).to_d(20).round(4).to_s("F"), food[:ratio]
+    assert_not json[:in_progress]
+    assert_equal [ [ @groceries.id, "150.0", false ], [ @food.id, "50.0", true ] ], food[:subcategories].map { |s| [ s[:id], s[:total], s[:direct] ] }
   end
 
   test "as_json without history has no normal" do
@@ -67,6 +69,50 @@ class IncomeStatement::SpendingComparisonTest < ActiveSupport::TestCase
     assert_nil json[:normal_total]
     assert_nil uncategorized[:normal]
     assert_equal Category::UNCATEGORIZED_FILTER_VALUE, uncategorized[:filter_value]
+  end
+
+  test "an unfinished period compares with the same days of earlier months" do
+    # 10 a day for the year before September, and on pace by Sep 10
+    (Date.new(2025, 9, 1)..Date.new(2026, 8, 31)).each { |d| create_transaction(account: @account, date: d, amount: 10, category: @travel) if d.day <= 30 }
+    (1..10).each { |d| create_transaction(account: @account, date: Date.new(2026, 9, d), amount: 10, category: @travel) }
+
+    result = comparison(history_start: @baseline_start, as_of: Date.new(2026, 9, 10))
+    travel = result.rows.find { |r| r.category == @travel }
+
+    assert result.in_progress?
+    assert_equal Date.new(2026, 9, 10), result.period.end_date
+    assert_equal 100, travel.total
+    assert_in_delta 0, travel.ratio, 0.01
+  end
+
+  test "a bill paid on the 1st reads as normal early in the month" do
+    12.times { |i| create_transaction(account: @account, date: Date.new(2025, 9, 1) + i.months, amount: 1000, category: @travel) }
+    create_transaction(account: @account, date: Date.new(2026, 9, 1), amount: 1000, category: @travel)
+
+    travel = comparison(history_start: @baseline_start, as_of: Date.new(2026, 9, 5)).rows.find { |r| r.category == @travel }
+
+    assert_in_delta 1000, travel.normal, 0.01
+    assert_in_delta 0, travel.ratio, 0.0001
+  end
+
+  test "history starts after early transfers and pending transactions" do
+    create_transaction(account: @account, date: Date.new(2024, 1, 10), amount: 40, kind: "funds_movement")
+    create_transaction(account: @account, date: Date.new(2024, 2, 10), amount: 40, category: @food).entryable.update!(extra: { "simplefin" => { "pending" => true } })
+    create_transaction(account: @account, date: Date.new(2026, 3, 2), amount: 25, category: @food)
+
+    assert_equal Date.new(2026, 3, 2), IncomeStatement::SpendingComparison.history_start(IncomeStatement.new(@family))
+  end
+
+  test "changes list the parents that moved by at least 1, most increased first" do
+    12.times { |i| create_transaction(account: @account, date: @baseline_start + i.months + 3.days, amount: 100, category: @food) }
+    12.times { |i| create_transaction(account: @account, date: @baseline_start + i.months + 3.days, amount: 100, category: @travel) }
+    create_transaction(account: @account, date: Date.new(2026, 9, 5), amount: 300, category: @food)
+
+    changes = comparison(history_start: @baseline_start).changes
+
+    assert_equal [ @food, @travel ], changes.map(&:category)
+    assert changes.first.change.positive?
+    assert changes.last.change.negative?
   end
 
   test "normal is the year before the period, scaled to the period's length" do
@@ -133,7 +179,7 @@ class IncomeStatement::SpendingComparisonTest < ActiveSupport::TestCase
   end
 
   private
-    def comparison(history_start: @period.start_date)
-      IncomeStatement::SpendingComparison.new(IncomeStatement.new(@family), period: @period, history_start: history_start)
+    def comparison(history_start: @period.start_date, as_of: Date.new(2026, 10, 15))
+      IncomeStatement::SpendingComparison.new(IncomeStatement.new(@family), period: @period, history_start: history_start, as_of: as_of)
     end
 end

@@ -1,10 +1,16 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
+import {
+  CHART_TOOLTIP_CONTEXT_CLASSES,
+  CHART_TOOLTIP_VALUE_CLASSES,
+  createChartTooltip,
+} from "utils/chart_tooltip";
 
 // Connects to data-controller="spending-treemap"
 //
 // Box size is net spending in the period; fill is the change against the
-// category's normal (blue = less, red = more, inset surface = about normal).
+// category's normal (green = less, red = more, inset surface = about normal),
+// as the Reports summary cards colour lower and higher spending.
 // Clicking a box opens Transactions filtered to that category and period.
 function tint(token, percent) {
   return percent === 100
@@ -21,57 +27,46 @@ export default class extends Controller {
   };
 
   // Functional tokens mixed into the container colour, so every step follows
-  // the theme (light and dark remap --color-info / --color-destructive). The
-  // two lighter steps keep the theme's text colour (ink: null).
+  // the theme (light and dark remap --color-success / --color-destructive).
+  // The strongest red stops at 80% and the strongest green at 50% (dark
+  // mode's green is light), so the theme's text colour keeps AA contrast in
+  // both themes. Totals are clamped at zero, so the lowest ratio is -1.
   static STEPS = [
-    {
-      key: "much_less",
-      min: Number.NEGATIVE_INFINITY,
-      max: -1,
-      fill: tint("--color-info", 100),
-      ink: "var(--color-white)",
-    },
     {
       key: "less",
       min: -1,
       max: -0.5,
-      fill: tint("--color-info", 60),
-      ink: null,
+      fill: tint("--color-success", 50),
     },
     {
       key: "slightly_less",
       min: -0.5,
       max: -0.15,
-      fill: tint("--color-info", 30),
-      ink: null,
+      fill: tint("--color-success", 30),
     },
     {
       key: "normal",
       min: -0.15,
       max: 0.15,
       fill: "var(--color-surface-inset)",
-      ink: null,
     },
     {
       key: "slightly_more",
       min: 0.15,
       max: 0.5,
       fill: tint("--color-destructive", 30),
-      ink: null,
     },
     {
       key: "more",
       min: 0.5,
       max: 1,
       fill: tint("--color-destructive", 60),
-      ink: null,
     },
     {
       key: "much_more",
       min: 1,
       max: Number.POSITIVE_INFINITY,
-      fill: tint("--color-destructive", 100),
-      ink: "var(--color-white)",
+      fill: tint("--color-destructive", 80),
     },
   ];
 
@@ -90,11 +85,16 @@ export default class extends Controller {
     this.#tooltip?.remove();
   }
 
-  #step(ratio) {
-    if (ratio === null || ratio === undefined) return this.constructor.STEPS[3];
+  // Without history every box is neutral. A normal of zero with spending is
+  // new spending, so it takes the strongest step instead of reading as normal.
+  #step(data) {
+    const steps = this.constructor.STEPS;
+    const normal = steps.find((s) => s.key === "normal");
+    if (!this.comparableValue || !data.has_normal) return normal;
+    if (data.ratio === null)
+      return data.change_sign > 0 ? steps.at(-1) : normal;
     return (
-      this.constructor.STEPS.find((s) => ratio >= s.min && ratio < s.max) ||
-      this.constructor.STEPS[3]
+      steps.find((s) => data.ratio >= s.min && data.ratio < s.max) || normal
     );
   }
 
@@ -131,8 +131,9 @@ export default class extends Controller {
       .join("g")
       .attr("class", "group");
 
+    // A group with one box would print its label twice.
     groups
-      .filter((d) => d.x1 - d.x0 > 48)
+      .filter((d) => d.x1 - d.x0 > 48 && d.children.length > 1)
       .append("text")
       .attr("x", (d) => d.x0 + 4)
       .attr("y", (d) => d.y0 + 14)
@@ -148,11 +149,13 @@ export default class extends Controller {
       .attr("class", "leaf cursor-pointer")
       .attr("tabindex", 0)
       .attr("role", "link")
-      .attr("aria-label", (d) => this.#describe(d).join(". "))
+      .attr("aria-label", (d) => d.data.description.join(". "))
       .on("click", (_, d) => this.#open(d))
       .on("keydown", (event, d) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
+          // The section's keydown would grab it for reordering
+          event.stopPropagation();
           this.#open(d);
         }
       })
@@ -166,36 +169,24 @@ export default class extends Controller {
       .attr("width", (d) => Math.max(0, d.x1 - d.x0))
       .attr("height", (d) => Math.max(0, d.y1 - d.y0))
       .attr("rx", 3)
-      .attr(
-        "fill",
-        (d) => this.#step(this.comparableValue ? d.data.ratio : null).fill,
-      )
+      .attr("fill", (d) => this.#step(d.data).fill)
       .attr("class", "transition-opacity hover:opacity-80");
 
     const labelled = leaves.filter((d) => d.x1 - d.x0 > 56 && d.y1 - d.y0 > 34);
-    const ink = (d) =>
-      this.#step(this.comparableValue ? d.data.ratio : null).ink;
     labelled
       .append("text")
       .attr("x", (d) => d.x0 + 6)
       .attr("y", (d) => d.y0 + 16)
       .attr(
         "class",
-        (d) =>
-          `text-xs font-medium pointer-events-none ${ink(d) ? "" : "text-primary fill-current"}`,
+        "text-xs font-medium text-primary fill-current pointer-events-none",
       )
-      .style("fill", (d) => ink(d))
       .text((d) => this.#fit(d.data.name, d.x1 - d.x0 - 12, 6.5));
     labelled
       .append("text")
       .attr("x", (d) => d.x0 + 6)
       .attr("y", (d) => d.y0 + 30)
-      .attr(
-        "class",
-        (d) =>
-          `text-xs pointer-events-none ${ink(d) ? "" : "text-primary fill-current"}`,
-      )
-      .style("fill", (d) => ink(d))
+      .attr("class", "text-xs text-primary fill-current pointer-events-none")
       .text((d) => d.data.total_label);
   }
 
@@ -217,61 +208,36 @@ export default class extends Controller {
     }
   }
 
-  #describe(d) {
-    const parent = d.parent?.data?.name;
-    const name =
-      parent && parent !== d.data.name
-        ? `${parent} › ${d.data.name}`
-        : d.data.name;
-    const lines = [`${name}: ${d.data.total_full}`];
-    if (!this.comparableValue || d.data.normal_label === null) {
-      lines.push(this.labelsValue.no_normal);
-    } else {
-      lines.push(`${this.labelsValue.normal} ${d.data.normal_label}`);
-      if (d.data.change_label) {
-        const pct =
-          d.data.ratio === null
-            ? ""
-            : ` (${Math.round(Math.abs(d.data.ratio) * 100)}%)`;
-        lines.push(
-          `${d.data.change_sign < 0 ? this.labelsValue.less : this.labelsValue.more} ${d.data.change_label}${pct}`,
-        );
-      }
-    }
-    return lines;
-  }
-
   #showTooltip(event, d) {
     if (!this.#tooltip) {
-      this.#tooltip = document.createElement("div");
-      this.#tooltip.className =
-        "fixed z-50 pointer-events-none bg-container text-primary shadow-border-xs rounded-lg px-3 py-2 text-xs max-w-64";
+      this.#tooltip = createChartTooltip(document.body);
+      this.#tooltip.style.position = "fixed";
       this.#tooltip.setAttribute("role", "tooltip");
-      document.body.appendChild(this.#tooltip);
     }
-    const [first, ...rest] = this.#describe(d);
+    const [first, ...rest] = d.data.description;
     this.#tooltip.replaceChildren();
     const strong = document.createElement("div");
-    strong.className = "font-medium text-sm";
+    strong.className = CHART_TOOLTIP_VALUE_CLASSES;
     strong.textContent = first;
     this.#tooltip.appendChild(strong);
     for (const line of [...rest, this.labelsValue.open]) {
       const row = document.createElement("div");
-      row.className = "text-secondary";
+      row.className = CHART_TOOLTIP_CONTEXT_CLASSES;
       row.textContent = line;
       this.#tooltip.appendChild(row);
     }
 
+    // Shown before measuring, so the edge clamps see its real size.
+    this.#tooltip.style.display = "block";
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX ?? rect.right;
     const y = event.clientY ?? rect.top;
     this.#tooltip.style.left = `${Math.min(x + 12, window.innerWidth - this.#tooltip.offsetWidth - 8)}px`;
     this.#tooltip.style.top = `${Math.max(8, y - this.#tooltip.offsetHeight - 12)}px`;
-    this.#tooltip.hidden = false;
   }
 
   #hideTooltip() {
-    if (this.#tooltip) this.#tooltip.hidden = true;
+    if (this.#tooltip) this.#tooltip.style.display = "none";
   }
 
   #open(d) {

@@ -1859,15 +1859,21 @@ RSpec.configure do |config|
               normal: { type: :string, nullable: true, description: 'Net spending over the baseline period, scaled to the period length. Null without enough history' },
               change: { type: :string, nullable: true, description: 'total minus normal' },
               ratio: { type: :string, nullable: true, description: 'Fractional change against normal (0.5 = 50% more). Null without a positive normal' },
+              direct: { type: :boolean, description: 'Present on subcategories only: true for the parent\'s own spending, booked on the parent rather than a subcategory' },
               subcategories: { type: :array, items: { '$ref' => '#/components/schemas/SpendingVsNormalCategory' }, description: 'Present on parent categories only; adds up to the parent total' }
             }
           },
           SpendingVsNormal: {
-            type: :object, required: %w[currency period baseline_period comparable total normal_total categories],
+            type: :object, required: %w[currency period in_progress baseline_period comparable total normal_total categories],
             properties: {
               currency: { type: :string },
               period: { '$ref' => '#/components/schemas/FinancialPeriod' },
-              baseline_period: { allOf: [ { '$ref' => '#/components/schemas/FinancialPeriod' } ], nullable: true, description: 'Up to a year before the period, from the first counted transaction. Null with under 28 days of history' },
+              in_progress: { type: :boolean, description: 'The period has not ended: it is cut to today, and normal is the average of the same number of days from each of up to 12 earlier month starts' },
+              baseline_period: {
+                type: :object, nullable: true, required: %w[start_date end_date],
+                properties: { start_date: { type: :string, format: :date }, end_date: { type: :string, format: :date } },
+                description: 'Up to a year before the period, from the first counted transaction. Null with under 28 days of history'
+              },
               comparable: { type: :boolean },
               total: { type: :string }, normal_total: { type: :string, nullable: true },
               categories: { type: :array, items: { '$ref' => '#/components/schemas/SpendingVsNormalCategory' }, description: 'Parent categories, largest total first' }
