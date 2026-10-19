@@ -66,10 +66,12 @@
 
       <%# Split rows: one blank row, or the rows proposed from a receipt %>
       <%
+        # Number inputs take only dot-decimal values, whatever the user's language.
         precision = Money::Currency.new(@entry.currency).default_precision
-        amount_step = number_with_precision(BigDecimal(10)**-precision, precision: precision)
+        input_number = ->(value) { number_with_precision(value, precision: precision, separator: ".", delimiter: "") }
+        amount_step = input_number.call(BigDecimal(10)**-precision)
         rows = if @receipt_proposal
-          @receipt_proposal.rows.map { |row| { name: row.name, amount: number_with_precision(-row.amount, precision: precision) } }
+          @receipt_proposal.rows.map { |row| { name: row.name, amount: input_number.call(-row.amount) } }
         else
           [ { name: @entry.name, amount: nil } ]
         end

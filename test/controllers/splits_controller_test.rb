@@ -397,6 +397,18 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name=?][value=?]", "split[splits][1][amount]", "-59.50"
   end
 
+  test "itemize uses dot decimals in the editor for a decimal-comma language" do
+    attach_receipt
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(receipt(
+      [ "Television", 1234.5 ], [ "Cable", -1134.5 ]
+    )))
+
+    post itemize_transaction_split_path(@entry, locale: "de"), headers: { "Turbo-Frame" => "modal" }
+
+    assert_select "input[name=?][value=?][step=?]", "split[splits][0][amount]", "-1234.50", "0.01"
+    assert_select "input[name=?][value=?]", "split[splits][1][amount]", "1134.50"
+  end
+
   test "itemize allows three-decimal amounts in the editor" do
     @entry.update!(currency: "KWD")
     attach_receipt
