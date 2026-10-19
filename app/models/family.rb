@@ -493,6 +493,37 @@ class Family < ApplicationRecord
     AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end
 
+  # Transactions the AI categorizer may fill in on this user's behalf: still
+  # uncategorized, on an account the user may annotate, not one leg of a
+  # transfer between the family's own accounts (nothing to categorize, the
+  # same kinds the Uncategorized filter leaves out), not a split parent (its
+  # children carry the categories), and without a locked category -- a
+  # category the user set or cleared by hand is never overwritten.
+  def auto_categorizable_transactions_for(user)
+    transactions
+      .visible
+      .merge(Entry.excluding_split_parents)
+      .where(entries: { account_id: accounts.annotatable_by(user).select(:id) })
+      .where(category_id: nil)
+      .where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS)
+      .enrichable(:category_id)
+  end
+
+  # Queues AI categorization in the batch size the provider accepts, the way
+  # the rule action does, and returns the ids that were queued. The jobs run
+  # through AutoCategorizeJob, so the family's categorization provider and
+  # confidence threshold apply exactly as they do for rules.
+  def queue_auto_categorization(transactions)
+    batch_size = Provider::LlmConcept.max_items_per_call
+    ids = transactions.order(:id).pluck(:id)
+
+    ids.each_slice(batch_size) do |batch_ids|
+      AutoCategorizeJob.perform_later(self, transaction_ids: batch_ids)
+    end
+
+    ids
+  end
+
   # The LLM only: Bayes is its own rule (Category classifier), so what it
   # categorized is no longer uncategorized here.
   def auto_categorize_transactions(transaction_ids)
