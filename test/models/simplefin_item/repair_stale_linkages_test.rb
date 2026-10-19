@@ -189,4 +189,59 @@ class SimplefinItem::RepairStaleLinkagesTest < ActiveSupport::TestCase
     assert_equal other_account, other_linked_sfa.reload.current_account
     assert_nil unlinked_sfa.reload.current_account
   end
+
+  # A reconnect issues new account ids and new transaction ids for the same
+  # transactions (#3436). The stale account's rows must not survive beside their
+  # re-issued twins, or every transaction in the window is imported twice.
+  def reconnect_fixture
+    posted = 5.days.ago.beginning_of_day.to_i
+    tx = ->(id) { { id: id, posted: posted, transacted_at: posted, amount: "-10.25", description: "Amazon", payee: "Amazon", memo: "" } }
+
+    stale_sfa = SimplefinAccount.create!(
+      simplefin_item: @item, account_id: "ACT-old", name: "Card", currency: "USD",
+      current_balance: 0, account_type: "credit", raw_transactions_payload: [ tx.("T1") ]
+    )
+    account = Account.create!(
+      family: @family, name: "Card", currency: "USD", balance: 0,
+      accountable: Depository.create!(subtype: :checking)
+    )
+    AccountProvider.create!(account: account, provider: stale_sfa)
+    SimplefinAccount::Transactions::Processor.new(stale_sfa).process
+
+    new_sfa = SimplefinAccount.create!(
+      simplefin_item: @item, account_id: "ACT-new", name: "Card", currency: "USD",
+      current_balance: 0, account_type: "credit", raw_transactions_payload: [ tx.("T2") ]
+    )
+    @item.upstream_account_ids = [ new_sfa.account_id ]
+
+    [ stale_sfa, new_sfa, account, account.entries.find_by!(external_id: "simplefin_T1") ]
+  end
+
+  test "P2 reconnect re-keys entries carried over from the stale account" do
+    stale_sfa, new_sfa, account, entry = reconnect_fixture
+
+    @item.send(:repair_stale_linkages, [ stale_sfa, new_sfa ])
+
+    new_sfa.reload
+    assert_equal account, new_sfa.current_account
+    assert_equal [ "T2" ], new_sfa.raw_transactions_payload.map { |t| t["id"] }
+    assert_equal "simplefin_T2", entry.reload.external_id
+
+    assert_no_difference -> { Entry.count } do
+      SimplefinAccount::Transactions::Processor.new(new_sfa).process
+    end
+  end
+
+  test "a failed linkage transfer rolls back the re-key and the merged payload" do
+    stale_sfa, new_sfa, account, entry = reconnect_fixture
+    AccountProvider.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid)
+
+    @item.send(:repair_stale_linkages, [ stale_sfa, new_sfa ])
+
+    # The linkage stays on the stale account, so its entry must keep the stale id
+    # or the stale payload's next pass re-creates simplefin_T1 beside it.
+    assert_equal account, stale_sfa.reload.current_account
+    assert_equal "simplefin_T1", entry.reload.external_id
+    assert_equal [ "T2" ], new_sfa.reload.raw_transactions_payload.map { |t| t["id"] }
+  end
 end

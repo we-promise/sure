@@ -848,8 +848,12 @@ class SimplefinItem::Importer
       # Merge transactions from chunked/regular imports (accumulate history).
       # Prefer non-pending records with a real posted timestamp over earlier
       # pending placeholders that sometimes come back with posted: 0.
+      id_rotation = nil
       if transactions.is_a?(Array) && transactions.any?
-        existing_transactions = simplefin_account.raw_transactions_payload.to_a
+        # Stored rows the bridge re-issued under a new id give way to the new row,
+        # or the id-keyed merge below keeps both and each becomes an entry.
+        id_rotation = SimplefinAccount::TransactionIdRotation.new(simplefin_account.raw_transactions_payload, transactions)
+        existing_transactions = id_rotation.retained_rows
 
         Rails.logger.info "SimplefinItem::Importer#import_account - Merging transactions for account_id=#{account_id}: #{existing_transactions.count} existing + #{transactions.count} new"
 
@@ -956,7 +960,11 @@ class SimplefinItem::Importer
       end
 
       begin
-        simplefin_account.save!
+        # Entries move to their new ids only if the payload naming those ids saves.
+        SimplefinAccount.transaction do
+          id_rotation&.rekey_entries!(simplefin_account.current_account)
+          simplefin_account.save!
+        end
 
         # Log final state after save for debugging
         if is_investment

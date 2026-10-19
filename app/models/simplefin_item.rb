@@ -184,38 +184,46 @@ class SimplefinItem < ApplicationRecord
 
       # Transfer the linkage from old to new
       begin
-        # Merge transactions from old to new before transferring
-        old_transactions = stale_match.raw_transactions_payload.to_a
-        new_transactions = new_sfa.raw_transactions_payload.to_a
-        if old_transactions.any?
-          Rails.logger.info "SimplefinItem#repair_stale_linkages - Merging #{old_transactions.count} transactions from old SimplefinAccount"
-          merged = merge_transactions(old_transactions, new_transactions)
-          new_sfa.update!(raw_transactions_payload: merged)
+        # One transaction: re-keyed entries must not outlive a failed transfer, or
+        # the stale account's payload re-creates their old ids on the next pass.
+        SimplefinAccount.transaction do
+          # Merge transactions from old to new before transferring
+          old_transactions = stale_match.raw_transactions_payload.to_a
+          new_transactions = new_sfa.raw_transactions_payload.to_a
+          if old_transactions.any?
+            Rails.logger.info "SimplefinItem#repair_stale_linkages - Merging #{old_transactions.count} transactions from old SimplefinAccount"
+            # A reconnect re-issues transaction ids too. Rows that came back under a
+            # new id give way to the new row, and their entries move to the new id.
+            id_rotation = SimplefinAccount::TransactionIdRotation.new(old_transactions, new_transactions)
+            id_rotation.rekey_entries!(account)
+            merged = merge_transactions(id_rotation.retained_rows, new_transactions)
+            new_sfa.update!(raw_transactions_payload: merged)
+          end
+
+          # Check if linked via legacy FK (use to_s for UUID comparison safety)
+          if account.simplefin_account_id.to_s == stale_match.id.to_s
+            account.simplefin_account_id = new_sfa.id
+            account.save!
+          end
+
+          # Check if linked via AccountProvider
+          if stale_match.account_provider.present?
+            Rails.logger.info "SimplefinItem#repair_stale_linkages - Transferring AccountProvider linkage from SimplefinAccount #{stale_match.id} to #{new_sfa.id}"
+            stale_match.account_provider.update!(provider: new_sfa)
+          end
+
+          # If the new one doesn't have an AccountProvider yet, create one
+          new_sfa.ensure_account_provider!
+
+          Rails.logger.info "SimplefinItem#repair_stale_linkages - Successfully transferred linkage for Account '#{account.name}' to SimplefinAccount id=#{new_sfa.id}"
+
+          # Clear transactions from stale SimplefinAccount and leave it orphaned
+          # We don't destroy it because has_one :account, dependent: :nullify would nullify the FK we just set
+          # IMPORTANT: Use update_all to bypass AR associations - stale_match.update! would
+          # trigger autosave on the preloaded account association, reverting the FK we just set!
+          SimplefinAccount.where(id: stale_match.id).update_all(raw_transactions_payload: [], raw_holdings_payload: [])
+          Rails.logger.info "SimplefinItem#repair_stale_linkages - Cleared data from stale SimplefinAccount id=#{stale_match.id} (leaving orphaned)"
         end
-
-        # Check if linked via legacy FK (use to_s for UUID comparison safety)
-        if account.simplefin_account_id.to_s == stale_match.id.to_s
-          account.simplefin_account_id = new_sfa.id
-          account.save!
-        end
-
-        # Check if linked via AccountProvider
-        if stale_match.account_provider.present?
-          Rails.logger.info "SimplefinItem#repair_stale_linkages - Transferring AccountProvider linkage from SimplefinAccount #{stale_match.id} to #{new_sfa.id}"
-          stale_match.account_provider.update!(provider: new_sfa)
-        end
-
-        # If the new one doesn't have an AccountProvider yet, create one
-        new_sfa.ensure_account_provider!
-
-        Rails.logger.info "SimplefinItem#repair_stale_linkages - Successfully transferred linkage for Account '#{account.name}' to SimplefinAccount id=#{new_sfa.id}"
-
-        # Clear transactions from stale SimplefinAccount and leave it orphaned
-        # We don't destroy it because has_one :account, dependent: :nullify would nullify the FK we just set
-        # IMPORTANT: Use update_all to bypass AR associations - stale_match.update! would
-        # trigger autosave on the preloaded account association, reverting the FK we just set!
-        SimplefinAccount.where(id: stale_match.id).update_all(raw_transactions_payload: [], raw_holdings_payload: [])
-        Rails.logger.info "SimplefinItem#repair_stale_linkages - Cleared data from stale SimplefinAccount id=#{stale_match.id} (leaving orphaned)"
       rescue => e
         Rails.logger.error "SimplefinItem#repair_stale_linkages - Failed to transfer linkage: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
