@@ -145,6 +145,20 @@ class Goals::LifecyclePanelComponentTest < ViewComponent::TestCase
     assert component_for(measured).show_projection_legend?
   end
 
+  # The chart draws the required line from the target alone, measured pace or
+  # not, so its swatch must not disappear with the projection's.
+  test "an unmeasurable goal keeps its required swatch and loses only the projection's" do
+    anchored = pot(balance: 1_000)
+    create_valuation(account: anchored, amount: 1_000, date: 30.days.ago.to_date, kind: "opening_anchor")
+    goal = dated_goal(anchored)
+    assert goal.monthly_target_amount.to_d.positive?
+
+    render_inline(component_for(goal))
+
+    assert_selector "span", exact_text: I18n.t("goals.show.projection.legend_required"), normalize_ws: true
+    assert_no_selector "span", exact_text: I18n.t("goals.show.projection.legend_projection"), normalize_ws: true
+  end
+
   private
     def pot(balance:, name: "Pot #{SecureRandom.hex(3)}")
       Account.create!(family: @family, accountable: Depository.new, name: name,
