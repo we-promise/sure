@@ -7,7 +7,7 @@ class Transactions::CategorizesController < ApplicationController
     ]
     @position = [ params[:position].to_i, 0 ].max
     groups = Transaction::Grouper.strategy.call(
-      Current.accessible_entries,
+      Current.annotatable_entries,
       limit: 1,
       offset: @position
     )
@@ -28,10 +28,10 @@ class Transactions::CategorizesController < ApplicationController
     remaining_ids = all_entry_ids - entry_ids
 
     category = Current.family.categories.find(params[:category_id])
-    entries  = Current.accessible_entries.excluding_split_parents.where(id: entry_ids)
+    entries  = Current.annotatable_entries.excluding_split_parents.where(id: entry_ids)
     count    = entries.bulk_update!({ category_id: category.id })
 
-    if params[:create_rule] == "1"
+    if params[:create_rule] == "1" && (count.positive? || entry_ids.empty?)
       rule = Rule.create_from_grouping(
         Current.family,
         params[:grouping_key],
@@ -75,7 +75,7 @@ class Transactions::CategorizesController < ApplicationController
   def preview_rule
     filter           = params[:filter].to_s.strip
     transaction_type = params[:transaction_type].presence
-    entries          = filter.present? ? Entry.uncategorized_matching(Current.accessible_entries, filter, transaction_type) : []
+    entries          = filter.present? ? Entry.uncategorized_matching(Current.annotatable_entries, filter, transaction_type) : []
     @categories      = Current.family.categories.includes(:parent).alphabetically
 
     render turbo_stream: [
@@ -92,13 +92,13 @@ class Transactions::CategorizesController < ApplicationController
   end
 
   def assign_entry
-    entry         = Current.accessible_entries.excluding_split_parents.find(params[:entry_id])
+    entry         = Current.annotatable_entries.excluding_split_parents.find(params[:entry_id])
     category      = Current.family.categories.find(params[:category_id])
     position      = params[:position].to_i
     all_entry_ids = Array.wrap(params[:all_entry_ids]).reject(&:blank?)
     remaining_ids = all_entry_ids - [ entry.id.to_s ]
 
-    Current.accessible_entries.where(id: entry.id).bulk_update!({ category_id: category.id })
+    Current.annotatable_entries.where(id: entry.id).bulk_update!({ category_id: category.id })
 
     remaining_entries = uncategorized_entries_for(remaining_ids)
     remaining_ids     = remaining_entries.map { |e| e.id.to_s }
@@ -120,12 +120,12 @@ class Transactions::CategorizesController < ApplicationController
   private
 
     def uncategorized_count
-      Current.accessible_entries.uncategorized_transactions.count
+      Current.annotatable_entries.uncategorized_transactions.count
     end
 
     def uncategorized_entries_for(ids)
       return [] if ids.blank?
-      Current.accessible_entries
+      Current.annotatable_entries
         .excluding_split_parents
         .where(id: ids)
         .uncategorized_transactions
