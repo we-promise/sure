@@ -54,6 +54,10 @@ class _CashFlowCategoryTransactionsScreenState
   bool _loading = false;
   bool _failed = false;
 
+  /// Bumped by [_refresh]; a page response from an older generation is
+  /// dropped so it can't land in the reset list.
+  int _generation = 0;
+
   bool get _hasMore => _totalPages == null || _page < _totalPages!;
 
   @override
@@ -77,40 +81,55 @@ class _CashFlowCategoryTransactionsScreenState
     return context.read<AuthProvider>().getValidAccessToken();
   }
 
+  @visibleForTesting
+  Future<void> refreshForTest() => _refresh();
+
+  @visibleForTesting
+  Future<void> loadMoreForTest() => _loadMore();
+
   Future<void> _refresh() async {
     setState(() {
+      _generation++;
       _transactions.clear();
       _page = 0;
       _totalPages = null;
       _failed = false;
+      _loading = false;
     });
     await _loadMore();
   }
 
   Future<void> _loadMore() async {
     if (_loading || !_hasMore || _failed) return;
+    final generation = _generation;
+    final nextPage = _page + 1;
     setState(() => _loading = true);
 
-    final token = await _accessToken();
     Map<String, dynamic>? result;
-    if (token != null) {
-      result = await _service.getTransactions(
-        accessToken: token,
-        page: _page + 1,
-        perPage: _perPage,
-        startDate: widget.range.startIso,
-        endDate: widget.range.endIso,
-        categoryIds: widget.category.transactionCategoryIds,
-      );
+    try {
+      final token = await _accessToken();
+      if (token != null) {
+        result = await _service.getTransactions(
+          accessToken: token,
+          page: nextPage,
+          perPage: _perPage,
+          startDate: widget.range.startIso,
+          endDate: widget.range.endIso,
+          categoryIds: widget.category.transactionCategoryIds,
+        );
+      }
+    } catch (_) {
+      // A failed token refresh (or storage error) is a failed page.
+      result = null;
     }
-    if (!mounted) return;
+    if (!mounted || generation != _generation) return;
 
     setState(() {
       _loading = false;
       if (result != null && result['success'] == true) {
         final page = (result['transactions'] as List).cast<Transaction>();
         _transactions.addAll(page);
-        _page += 1;
+        _page = nextPage;
         final pagination = result['pagination'];
         if (pagination is Map && pagination['total_pages'] is int) {
           _totalPages = pagination['total_pages'] as int;

@@ -47,6 +47,8 @@ void main() {
   Widget harness({
     required CashFlowService cashFlowService,
     bool hidden = false,
+    DateTime Function()? clock,
+    AccessTokenLoader? accessTokenLoader,
   }) {
     return ChangeNotifierProvider<PrivacyProvider>.value(
       value: PrivacyProvider(initialHidden: hidden),
@@ -71,8 +73,8 @@ void main() {
               );
             }),
           ),
-          accessTokenLoader: (_) async => 'token',
-          clock: () => DateTime(2026, 10, 19),
+          accessTokenLoader: accessTokenLoader ?? (_) async => 'token',
+          clock: clock ?? () => DateTime(2026, 10, 19),
         ),
       ),
     );
@@ -217,6 +219,43 @@ void main() {
     expect(calls, 2);
     expect(find.text('Outdated'), findsOneWidget);
     expect(find.text(r'$3,500.00'), findsOneWidget);
+  });
+
+  testWidgets('refetches a cached period once its date range moves',
+      (tester) async {
+    usePhoneSurface(tester);
+    var today = DateTime(2026, 10, 31);
+    await tester
+        .pumpWidget(harness(cashFlowService: service(), clock: () => today));
+    await tester.pumpAndSettle();
+    expect(requests.last.queryParameters['start_date'], '2026-10-01');
+
+    await tester.tap(find.byKey(const ValueKey('cashFlowPeriod_lastMonth')));
+    await tester.pumpAndSettle();
+
+    // The date changes while the screen stays open.
+    today = DateTime(2026, 11, 1);
+    final count = requests.length;
+    await tester.tap(find.byKey(const ValueKey('cashFlowPeriod_currentMonth')));
+    await tester.pumpAndSettle();
+
+    expect(requests.length, count + 1);
+    expect(requests.last.queryParameters['start_date'], '2026-11-01');
+    expect(requests.last.queryParameters['end_date'], '2026-11-01');
+  });
+
+  testWidgets('shows the error state when the access token loader throws',
+      (tester) async {
+    usePhoneSurface(tester);
+    await tester.pumpWidget(harness(
+      cashFlowService: service(),
+      accessTokenLoader: (_) async => throw Exception('storage failed'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Couldn't load cash flow"), findsOneWidget);
+    expect(find.text('Try Again'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
   testWidgets('More screen links to Cash Flow', (tester) async {
