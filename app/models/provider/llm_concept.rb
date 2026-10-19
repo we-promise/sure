@@ -46,6 +46,21 @@ module Provider::LlmConcept
     raise NotImplementedError, "Provider does not support PDF processing"
   end
 
+  # One printed line of a receipt. `amount` is the line total as printed,
+  # before receipt-level tax and discounts.
+  ReceiptLineItem = Data.define(:name, :amount)
+  # `tax` and `discount` are receipt-level totals as positive numbers; any of
+  # the numeric fields is nil when the receipt does not show it.
+  ReceiptExtraction = Data.define(:merchant_name, :currency, :line_items, :tax, :discount, :total)
+
+  def supports_receipt_extraction?
+    false
+  end
+
+  def extract_receipt(file_content:, content_type:, family: nil)
+    raise NotImplementedError, "Provider does not support receipt extraction"
+  end
+
   ChatMessage = Data.define(:id, :output_text)
   ChatStreamChunk = Data.define(:type, :data, :usage)
   ChatResponse = Data.define(:id, :model, :messages, :function_requests)

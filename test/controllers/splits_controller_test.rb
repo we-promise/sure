@@ -346,4 +346,91 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("splits.destroy.success"), flash[:notice]
     refute @entry.reload.excluded?
   end
+
+  test "new offers to fill the split from an attached receipt" do
+    attach_receipt
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(nil))
+
+    get new_transaction_split_path(@entry)
+
+    assert_response :success
+    assert_match I18n.t("splits.new.fill_from_receipt"), response.body
+  end
+
+  test "new does not offer receipt filling without a receipt" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(nil))
+
+    get new_transaction_split_path(@entry)
+
+    assert_response :success
+    assert_no_match I18n.t("splits.new.fill_from_receipt"), response.body
+  end
+
+  test "itemize pre-fills the editor from the receipt without saving" do
+    attach_receipt
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(receipt(
+      [ "Bananas", 30 ], [ "Detergent", 60 ], tax: 10
+    )))
+
+    assert_no_difference "Entry.count" do
+      post itemize_transaction_split_path(@entry), headers: { "Turbo-Frame" => "modal" }
+    end
+
+    assert_response :success
+    assert_match I18n.t("splits.new.receipt_applied"), response.body
+    assert_select "input[name=?][value=?]", "split[splits][0][name]", "Bananas"
+    assert_select "input[name=?][value=?]", "split[splits][0][amount]", "-33.33"
+    assert_select "input[name=?][value=?]", "split[splits][1][name]", "Detergent"
+    assert_select "input[name=?][value=?]", "split[splits][1][amount]", "-66.67"
+  end
+
+  test "itemize explains a failure and keeps the blank editor" do
+    attach_receipt
+    provider = receipt_provider(nil)
+    provider.define_singleton_method(:extract_receipt) do |**|
+      Provider::Response.new(success?: false, data: nil, error: StandardError.new("provider down"))
+    end
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+
+    post itemize_transaction_split_path(@entry), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("splits.itemize.failed"), response.body
+    assert_select "input[name=?][value=?]", "split[splits][0][name]", "Grocery Store"
+  end
+
+  test "itemize is forbidden without AI consent" do
+    attach_receipt
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(nil))
+    @user.update!(ai_enabled: false)
+
+    post itemize_transaction_split_path(@entry)
+
+    assert_response :forbidden
+  end
+
+  private
+    def attach_receipt
+      @entry.transaction.attachments.attach(io: StringIO.new("%PDF-1.4 receipt"), filename: "receipt.pdf", content_type: "application/pdf")
+    end
+
+    def receipt(*items, tax: nil)
+      Provider::LlmConcept::ReceiptExtraction.new(
+        merchant_name: "Grocery Store",
+        currency: "USD",
+        line_items: items.map { |name, amount| Provider::LlmConcept::ReceiptLineItem.new(name: name, amount: BigDecimal(amount.to_s)) },
+        tax: tax && BigDecimal(tax.to_s),
+        discount: nil,
+        total: nil
+      )
+    end
+
+    def receipt_provider(data)
+      provider = Object.new
+      provider.define_singleton_method(:supports_receipt_extraction?) { true }
+      provider.define_singleton_method(:extract_receipt) do |**|
+        Provider::Response.new(success?: true, data: data, error: nil)
+      end
+      provider
+    end
 end
