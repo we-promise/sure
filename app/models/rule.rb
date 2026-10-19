@@ -32,6 +32,53 @@ class Rule < ApplicationRecord
   validate :min_actions
   validate :no_duplicate_actions
 
+  # Switching a rule on records the transactions it already matches as delivered,
+  # so an email action only reports what appears afterwards. Rule::Action seeds the
+  # same baseline when the action is created, but a rule switched off and on again
+  # (by the toggle, the form, Apply or an import) would otherwise email every match
+  # from before, including those from while it was off.
+  #
+  # after_update, not after_update_commit: it runs inside the save's transaction,
+  # after the nested conditions and actions are written, so the baseline is taken
+  # from the conditions as saved and is committed together with `active`. Nothing
+  # can see the rule switched on without its baseline. Declared after the nested
+  # attributes so it runs after their autosave. A new rule needs no callback:
+  # creating its email action seeds the baseline.
+  after_update :seed_notification_baseline, if: :switched_on?
+
+  # Set when this save's after_update took the baseline, or tried to and timed
+  # out. Rule::Action's commit callback for an email action added in the same
+  # save then skips its own, which would run the query again and, on a timeout,
+  # switch off a rule that has its baseline. Reset at the start of every save.
+  before_save :reset_notification_baseline_taken
+
+  def notification_baseline_taken_in_this_save?
+    @notification_baseline_taken == true
+  end
+
+  # True when the last save asked to switch the rule on, or gave it an email
+  # action, but the baseline query timed out, so the rule was left off.
+  def notification_baseline_timed_out?
+    @notification_baseline_timed_out == true
+  end
+
+  # Without a baseline the next run would email every past match, so the rule
+  # is switched off. Rule::Action calls this from its commit callback, on the
+  # rule the save went through (the controller's), so the response can say so.
+  # Recorded in the debug log, where support can see why the rule went off.
+  def notification_baseline_timed_out!(error, source:)
+    @notification_baseline_timed_out = true
+    update_columns(active: false)
+    DebugLogEntry.capture(
+      category: "rule_notification",
+      level: "warn",
+      message: "Notification baseline timed out; rule switched off",
+      source: source,
+      family: family,
+      metadata: { rule_id: id, rule_name: name, error_class: error.class.name, error_message: error.message }
+    )
+  end
+
   def action_executors
     registry.action_executors
   end
@@ -49,8 +96,12 @@ class Rule < ApplicationRecord
     end
   end
 
+  # Display-only: a pattern that times out reads as zero here, and the failure
+  # surfaces where the rule actually runs (#apply).
   def affected_resource_count
     matching_scope.count
+  rescue Rule::SafeRegex::TimeoutError
+    0
   end
 
   # Whether the rule, as stored, has an email action. Read from the database,
@@ -114,8 +165,13 @@ class Rule < ApplicationRecord
   end
 
   # Whether this rule's conditions currently match the given transaction.
+  #
+  # A pattern that times out matches nothing here, as it does when the rule runs:
+  # the rule cannot categorize the transaction, so the prompt is still offered.
   def matches_transaction?(transaction)
-    matching_scope.where(id: transaction.id).exists?
+    matching_scope(only_id: transaction.id).exists?
+  rescue Rule::SafeRegex::TimeoutError
+    false
   end
 
   # The transactions this rule currently matches, as a relation (e.g. for the
@@ -146,6 +202,8 @@ class Rule < ApplicationRecord
     transaction_ids = Set.new
     rules.each do |rule|
       transaction_ids.merge(rule.matching_scope.pluck(:id))
+    rescue Rule::SafeRegex::TimeoutError
+      next
     end
 
     transaction_ids.size
@@ -209,8 +267,12 @@ class Rule < ApplicationRecord
     end
   end
 
-  def matching_scope
+  # `only_id` narrows the match to one resource inside the query itself, so a
+  # check on a single transaction runs any pattern on that row alone rather
+  # than on the whole family.
+  def matching_scope(only_id: nil)
     scope = registry.resource_scope
+    scope = scope.where(id: only_id) if only_id
 
     # 1. Prepare the query with joins required by conditions
     conditions.each do |condition|
@@ -222,7 +284,13 @@ class Rule < ApplicationRecord
       scope = condition.apply(scope)
     end
 
-    scope
+    # A pattern is the one condition whose cost the database cannot bound by
+    # itself, so its matches are resolved here, under a statement timeout, and
+    # the scope returned is those ids. Every reader gets the timeout, and a
+    # caller such as Rule::Runner sees it as this rule failing.
+    return scope unless conditions.any?(&:uses_regex?)
+
+    scope_for_transaction_ids(Rule::SafeRegex.with_timeout { scope.pluck(:id) })
   end
 
   private
@@ -265,6 +333,27 @@ class Rule < ApplicationRecord
           end
         end
       end
+    end
+
+    def switched_on?
+      saved_change_to_active?(from: false, to: true)
+    end
+
+    def seed_notification_baseline
+      @notification_baseline_timed_out = false
+      return unless actions.exists?(action_type: "send_email_notification")
+
+      @notification_baseline_taken = true
+      NotificationDelivery.record_for(rule_id: id, transaction_ids: matching_transaction_ids)
+    rescue Rule::SafeRegex::TimeoutError => e
+      # As in Rule::Action#seed_notification_baseline: without a baseline the next
+      # run would email every past match, so the rule stays off. The timed-out query
+      # ran in its own savepoint, so the rest of the save still commits.
+      notification_baseline_timed_out!(e, source: self.class.name)
+    end
+
+    def reset_notification_baseline_taken
+      @notification_baseline_taken = false
     end
 
     def normalize_name

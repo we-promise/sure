@@ -126,6 +126,20 @@ class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
     assert_no_enqueued_jobs(only: RuleEmailNotificationJob) { Rule.find(@rule.id).apply }
   end
 
+  test "a pattern that times out in the preview reports the updated rule with a regex_timeout error" do
+    Rule.any_instance.stubs(:matching_scope).raises(Rule::SafeRegex::TimeoutError)
+
+    result = @fn.call("rule_id" => @rule.id, "conditions" => [
+      { "condition_type" => "transaction_name", "operator" => "matches_regex", "value" => "zxq" }
+    ])
+
+    assert_not result[:success]
+    assert_equal "regex_timeout", result[:error]
+    assert_match "updated", result[:message]
+    assert_equal [ "zxq" ], @rule.reload.conditions.map(&:value)
+    assert_not result[:rule][:active]
+  end
+
   private
     def email_rule
       @family.rules.create!(

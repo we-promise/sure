@@ -105,4 +105,24 @@ class Assistant::Function::CreateRuleTest < ActiveSupport::TestCase
     assert result[:success], result.inspect
     assert_equal [ old.id ], NotificationDelivery.where(rule_id: result[:rule][:id]).pluck(:transaction_id)
   end
+
+  # The rule is saved before the preview runs, so a timeout there must still
+  # say the rule exists, inactive.
+  test "a pattern that times out in the preview reports the saved rule with a regex_timeout error" do
+    Rule.any_instance.stubs(:matching_scope).raises(Rule::SafeRegex::TimeoutError)
+
+    result = nil
+    assert_difference "Rule.count", 1 do
+      result = @fn.call(
+        "conditions" => [ { "condition_type" => "transaction_name", "operator" => "matches_regex", "value" => "zxq" } ],
+        "actions" => [ { "action_type" => "set_transaction_category", "value" => @category.id } ]
+      )
+    end
+
+    assert_not result[:success]
+    assert_equal "regex_timeout", result[:error]
+    assert_match "saved", result[:message]
+    assert_equal Rule.order(:created_at).last.id, result[:rule][:id]
+    assert_not result[:rule][:active]
+  end
 end
