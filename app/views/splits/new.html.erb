@@ -66,7 +66,8 @@
       <%# Split rows: one blank row, or the rows proposed from a receipt %>
       <%
         rows = if @receipt_proposal
-          @receipt_proposal.rows.map { |row| { name: row.name, amount: (-row.amount).to_f } }
+          precision = Money::Currency.new(@entry.currency).default_precision
+          @receipt_proposal.rows.map { |row| { name: row.name, amount: number_with_precision(-row.amount, precision: precision) } }
         else
           [ { name: @entry.name, amount: nil } ]
         end
