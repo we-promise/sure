@@ -30,7 +30,8 @@ class ProviderConnectionStatus
     { key: "wise", type: "WiseItem", association: :wise_items, accounts: :wise_accounts },
     { key: "fineco", type: "FinecoItem", association: :fineco_items, accounts: :fineco_accounts },
     { key: "directa", type: "DirectaItem", association: :directa_items, accounts: :directa_accounts },
-    { key: "ca_auto_bank", type: "CaAutoBankItem", association: :ca_auto_bank_items, accounts: :ca_auto_bank_accounts }
+    { key: "ca_auto_bank", type: "CaAutoBankItem", association: :ca_auto_bank_items, accounts: :ca_auto_bank_accounts },
+    { key: "scalable", type: "ScalableItem", association: :scalable_items, accounts: :scalable_accounts }
   ].freeze
 
   class << self

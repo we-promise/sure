@@ -3,6 +3,22 @@
 require "test_helper"
 
 class ProviderConnectionStatusTest < ActiveSupport::TestCase
+  test "Scalable status exposes connection health without credentials or pending approval data" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    provider = ProviderConnectionStatus::PROVIDERS.find { |entry| entry[:key] == "scalable" }
+    credentials = { "person_id" => "private-person", "access_token" => "private-access",
+      "refresh_token" => "private-refresh", "private_key_pem" => "private-dpop" }
+    item = ScalableItem.new(family: families(:dylan_family), owner: users(:family_admin),
+      credentials: JSON.generate(credentials), person_identity: "private-person",
+      pending_login_state: "private-approval", status: :connected)
+
+    result = ProviderConnectionStatus.new(provider, item).to_h
+    assert_equal "scalable", result[:provider]
+    assert result[:credentials_configured]
+    refute result[:requires_update]
+    (credentials.values + [ "private-approval" ]).each { |value| refute_includes result.to_json, value }
+  end
+
   test "CA Auto Bank status requests reconnect after expiry without exposing bank credentials" do
     ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
     provider = ProviderConnectionStatus::PROVIDERS.find { |entry| entry[:key] == "ca_auto_bank" }
