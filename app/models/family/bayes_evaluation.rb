@@ -97,9 +97,11 @@ class Family::BayesEvaluation
   # The matcher's best cell for weight, over every cutoff: [cutoff, number
   # agreeing, similarity] where right − weight × wrong is highest; on a tie,
   # the most agreeing, then the highest similarity, then the highest cutoff
-  # (the fewest words ignored). nil without a matcher result. The page shows
-  # the table at its cutoff.
+  # (the fewest words ignored). nil without a matcher result, or when it
+  # scored no transactions. The page shows the table at its cutoff.
   def self.best_matcher(result, weight)
+    return if result.dig("matcher", "n")&.zero?
+
     cells = result.dig("matcher", "cutoffs").to_h.flat_map do |cutoff, sweeps|
       sweeps.flat_map { |agreeing, sweep| sweep.map { |row| [ cutoff, agreeing, row ] } }
     end
@@ -142,11 +144,12 @@ class Family::BayesEvaluation
   end
 
   # Everything Apply saves: best_changes and matcher_changes; {} before
-  # Find best settings.
+  # Find best settings. Too little history holds back only the categories':
+  # the matcher is scored on the months shown, never searched.
   def self.apply_changes(result, settings, weight)
-    return {} if !result["best"] || result["short_history"]
+    return {} unless result["best"]
 
-    best_changes(result, weight).merge(matcher_changes(result, settings, weight))
+    (result["short_history"] ? {} : best_changes(result, weight)).merge(matcher_changes(result, settings, weight))
   end
 
   # What Apply saves for the matcher: the best cell's cutoff, number
@@ -217,7 +220,7 @@ class Family::BayesEvaluation
       "current" => current,
       "defaults" => defaults.digest == settings.digest ? current : holdout.report(defaults),
       "matcher" => holdout.matcher_report,
-      # Too little to go on, so Apply stays off (apply_changes).
+      # Too little to tune the categories on (apply_changes).
       "short_history" => current["n"].zero?
     }
     if action == "find_best"

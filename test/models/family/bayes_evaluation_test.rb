@@ -90,6 +90,9 @@ class Family::BayesEvaluationTest < ActiveSupport::TestCase
     assert_equal({ "similar_common_share" => 0.4, "similar_min_neighbours" => 1 }, Family::BayesEvaluation.matcher_changes(result, settings, 1))
     # Only after Find best settings, as for the categories.
     assert_equal({}, Family::BayesEvaluation.apply_changes(result.except("best"), settings, 1))
+    # Too little history for the categories still applies the matcher's, but not when it scored nothing.
+    assert_equal [ "similar_common_share", "similar_min_neighbours" ], Family::BayesEvaluation.apply_changes(result.merge("short_history" => true), settings, 1).keys
+    assert_equal({}, Family::BayesEvaluation.matcher_changes(result.merge("matcher" => result["matcher"].merge("n" => 0)), settings, 1))
     # Without it, every 1- and 2-agreeing cell and 3 at 0.8 score 8: 3 at 0.8, at the highest cutoff.
     result["matcher"]["cutoffs"][0.4] = sweeps
     assert_equal [ 0.4, 3, 0.8 ], Family::BayesEvaluation.best_matcher(result, 1)
