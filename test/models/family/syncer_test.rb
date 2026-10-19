@@ -54,6 +54,7 @@ class Family::SyncerTest < ActiveSupport::TestCase
   end
 
   test "applies rules in one ordered run per family after sync" do
+    @family.update_bayes_settings!(categorize_after_sync: false)
     syncer = Family::Syncer.new(@family)
 
     assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
