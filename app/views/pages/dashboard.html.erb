@@ -60,7 +60,8 @@
 <%= turbo_frame_tag "dashboard_sections", target: "_top" do %>
   <% if accessible_accounts.any? %>
     <div class="flex items-center justify-end mb-4">
-      <%= render UI::PeriodPicker.new(selected: @period, url: root_path, frame: "dashboard_sections") %>
+      <%# Keeps the widgets' own months and filters; a preset replaces any custom range. %>
+      <%= render UI::PeriodPicker.new(selected: @period, url: root_path, frame: "dashboard_sections", extra_params: @dashboard_view_params.except(:start_date, :end_date)) %>
     </div>
   <% end %>
 
