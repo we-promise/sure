@@ -35,19 +35,20 @@
     <% end %>
 
     <% if @receipt_proposal %>
-      <div class="mb-3 rounded-lg bg-container-inset px-3 py-2 text-sm">
-        <p class="text-primary"><%= t("splits.new.receipt_applied") %></p>
-        <% unless @receipt_proposal.unmatched_amount.zero? %>
-          <p class="text-xs text-secondary">
-            <%= t("splits.new.receipt_unmatched",
-                  receipt_total: format_money(Money.new(@receipt_proposal.receipt_total, @entry.currency)),
-                  name: @entry.name) %>
-          </p>
+      <div class="mb-3">
+        <%= render DS::Alert.new(title: t("splits.new.receipt_applied"), variant: :success, live: :status) do %>
+          <% unless @receipt_proposal.unmatched_amount.zero? %>
+            <p class="text-secondary">
+              <%= t("splits.new.receipt_unmatched",
+                    receipt_total: format_money(Money.new(@receipt_proposal.receipt_total, @entry.currency)),
+                    name: @entry.name) %>
+            </p>
+          <% end %>
         <% end %>
       </div>
     <% elsif @receipt_error %>
-      <div class="mb-3 rounded-lg bg-container-inset px-3 py-2 text-sm text-secondary">
-        <%= @receipt_error %>
+      <div class="mb-3">
+        <%= render DS::Alert.new(message: @receipt_error, variant: :error, live: :alert) %>
       </div>
     <% end %>
 

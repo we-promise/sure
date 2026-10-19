@@ -378,6 +378,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match I18n.t("splits.new.receipt_applied"), response.body
+    assert_select "[role=status]", text: /#{Regexp.escape(I18n.t("splits.new.receipt_applied"))}/
     assert_select "input[name=?][value=?]", "split[splits][0][name]", "Bananas"
     assert_select "input[name=?][value=?]", "split[splits][0][amount]", "-33.33"
     assert_select "input[name=?][value=?]", "split[splits][1][name]", "Detergent"
@@ -407,7 +408,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     post itemize_transaction_split_path(@entry), headers: { "Turbo-Frame" => "modal" }
 
     assert_response :success
-    assert_match I18n.t("splits.itemize.failed"), response.body
+    assert_select "[role=alert]", text: /#{Regexp.escape(I18n.t("splits.itemize.failed"))}/
     assert_select "input[name=?][value=?]", "split[splits][0][name]", "Grocery Store"
   end
 
@@ -439,7 +440,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
 
     def receipt_provider(data)
       provider = Object.new
-      provider.define_singleton_method(:supports_receipt_extraction?) { true }
+      provider.define_singleton_method(:supports_receipt_extraction?) { |**| true }
       provider.define_singleton_method(:extract_receipt) do |**|
         Provider::Response.new(success?: true, data: data, error: nil)
       end

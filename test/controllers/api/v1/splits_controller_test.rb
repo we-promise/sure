@@ -539,6 +539,31 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "itemize returns 401 without an API key" do
+    attach_receipt
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    post itemize_api_v1_transaction_split_url(@transaction), as: :json
+
+    assert_response :unauthorized
+  end
+
+  test "itemize returns 404 for an unknown transaction" do
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    post itemize_api_v1_transaction_split_url(SecureRandom.uuid), headers: api_headers(@api_key), as: :json
+
+    assert_response :not_found
+  end
+
+  test "itemize returns 404 for a malformed transaction id" do
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    post itemize_api_v1_transaction_split_url("not-a-uuid"), headers: api_headers(@api_key), as: :json
+
+    assert_response :not_found
+  end
+
   test "itemize requires the read_write scope" do
     post itemize_api_v1_transaction_split_url(@transaction), headers: api_headers(@read_only_api_key), as: :json
 
@@ -563,7 +588,7 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
 
     def receipt_provider(data)
       provider = Object.new
-      provider.define_singleton_method(:supports_receipt_extraction?) { true }
+      provider.define_singleton_method(:supports_receipt_extraction?) { |**| true }
       provider.define_singleton_method(:extract_receipt) do |**|
         Provider::Response.new(success?: true, data: data, error: nil)
       end
