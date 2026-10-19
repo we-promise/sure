@@ -86,6 +86,20 @@ class IncomeStatement::AccountSankeyTest < ActiveSupport::TestCase
     assert_balanced result
   end
 
+  test "a transfer counts when either leg is in the period, and not when a leg is excluded" do
+    transaction(@checking, -1000, @salary)
+    transaction(@card, 250, @shopping)
+    straddling = create_transfer(from_account: @checking, to_account: @card, amount: 100, date: @month - 2)
+    straddling.inflow_transaction.reload.entry.update!(date: @month + 1)
+    excluded = create_transfer(from_account: @checking, to_account: @card, amount: 60, date: @month + 5)
+    excluded.inflow_transaction.reload.entry.update!(excluded: true)
+    result = graph
+
+    assert_link result, "account_#{@checking.id}", "account_#{@card.id}", "100.0"
+    assert_link result, "deficit_node", "account_#{@card.id}", "150.0"
+    assert_balanced result
+  end
+
   test "a transfer out of an account in deficit is not drawn" do
     transaction(@checking, -1000, @salary)
     transaction(@card, 250, @shopping)

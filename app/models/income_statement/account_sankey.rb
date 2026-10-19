@@ -120,15 +120,19 @@ class IncomeStatement::AccountSankey
     end
 
     # [from_account_id, to_account_id, amount in the family currency] for each
-    # confirmed transfer in the period between two of the given accounts.
+    # confirmed transfer between two of the given accounts with either leg in
+    # the period (legs can be days apart, so one may fall just outside it).
+    # Neither leg may be excluded.
     def transfers_between(account_ids)
       currency = @statement.family.currency
-      outflows = Transaction.joins(:entry).where(kind: %w[funds_movement cc_payment],
-        entries: { account_id: account_ids, date: @period.start_date..@period.end_date, excluded: false })
-      inflows = Transaction.joins(:entry).where(entries: { account_id: account_ids })
+      legs = Transaction.joins(:entry).where(entries: { account_id: account_ids, excluded: false })
+      outflows = legs.where(kind: %w[funds_movement cc_payment])
+      in_period = legs.where(entries: { date: @period.start_date..@period.end_date })
 
-      Transfer.confirmed
-        .where(outflow_transaction_id: outflows.select(:id), inflow_transaction_id: inflows.select(:id))
+      between = Transfer.confirmed.where(outflow_transaction_id: outflows.select(:id), inflow_transaction_id: legs.select(:id))
+
+      between.where(outflow_transaction_id: in_period.select(:id))
+        .or(between.where(inflow_transaction_id: in_period.select(:id)))
         .includes(outflow_transaction: :entry, inflow_transaction: :entry)
         .filter_map do |transfer|
           outflow = transfer.outflow_transaction.entry
