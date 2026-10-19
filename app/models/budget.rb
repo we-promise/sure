@@ -14,13 +14,13 @@ class Budget < ApplicationRecord
   belongs_to :family
   belongs_to :user, optional: true
 
-  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
+  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy, inverse_of: :budget
 
   validates :start_date, :end_date, presence: true
   validates :start_date, :end_date, uniqueness: { scope: [ :family_id, :user_id ] }
 
   monetize :available_cash, :earmarked_for_goals, :free_cash
-  monetize :budgeted_spending, :expected_income, :allocated_spending,
+  monetize :budgeted_spending, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
            :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income,
            :total_rolled_over
@@ -481,18 +481,25 @@ class Budget < ApplicationRecord
     income_statement.income_totals(period: self.period).total
   end
 
+  def expected_income_money
+    return nil if monetizable_currency.nil?
+
+    Money.new(expected_income || 0, monetizable_currency)
+  end
+
   def actual_income_percent
-    return 0 unless expected_income > 0
+    return 0 unless expected_income && expected_income > 0
 
     (actual_income / expected_income.to_f) * 100
   end
 
   def remaining_expected_income
-    expected_income - actual_income
+    (expected_income || 0) - actual_income
   end
 
   def surplus_percent
     return 0 unless remaining_expected_income.negative?
+    return 100 unless expected_income && expected_income > 0
 
     remaining_expected_income.abs / expected_income.to_f * 100
   end

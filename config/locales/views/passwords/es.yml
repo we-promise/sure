@@ -1,6 +1,7 @@
 ---
 es:
   passwords:
+    disabled: "El cambio de contraseña a través de Sure está desactivado. Por favor, gestiona tu contraseña a través de tu proveedor de identidad."
     edit:
       password: Nueva contraseña
       password_challenge: Contraseña actual

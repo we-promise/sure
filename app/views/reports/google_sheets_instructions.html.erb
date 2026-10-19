@@ -47,7 +47,7 @@
             data: { action: "click->DS--dialog#close" }
           ) %>
         <% else %>
-          <%= render DS::Button.new(
+          <%= render DS::Link.new(
             text: t("reports.google_sheets_instructions.go_to_api_keys"),
             variant: "primary",
             full_width: true,
