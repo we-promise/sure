@@ -74,7 +74,11 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
 
   Future<void> _load({bool forceRefresh = false}) async {
     final token = await _accessToken();
-    if (!mounted || token == null) return;
+    if (!mounted) return;
+    if (token == null) {
+      _provider.markUnauthorized();
+      return;
+    }
     await _provider.loadMonth(accessToken: token, forceRefresh: forceRefresh);
   }
 

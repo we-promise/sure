@@ -28,7 +28,11 @@ void main() {
     );
   }
 
-  Widget harness(BudgetsProvider provider, {required bool hidden}) {
+  Widget harness(
+    BudgetsProvider provider, {
+    required bool hidden,
+    Future<String?> Function()? loader,
+  }) {
     return ChangeNotifierProvider<PrivacyProvider>(
       create: (_) => PrivacyProvider(initialHidden: hidden),
       child: MaterialApp(
@@ -43,7 +47,7 @@ void main() {
         ],
         home: BudgetsScreen(
           provider: provider,
-          accessTokenLoader: () async => 'token',
+          accessTokenLoader: loader ?? () async => 'token',
         ),
       ),
     );
@@ -53,11 +57,12 @@ void main() {
     WidgetTester tester,
     BudgetsProvider provider, {
     bool hidden = false,
+    Future<String?> Function()? loader,
   }) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.5;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(harness(provider, hidden: hidden));
+    await tester.pumpWidget(harness(provider, hidden: hidden, loader: loader));
     await tester.pumpAndSettle();
   }
 
@@ -80,11 +85,11 @@ void main() {
     expect(find.text('Shared budget'), findsOneWidget);
     expect(find.text(r'+$50.00 rolled over'), findsOneWidget);
 
-    // Next month is disabled on the current month.
+    // Planned future months stay reachable from the current month.
     final next = tester.widget<IconButton>(
       find.widgetWithIcon(IconButton, Icons.chevron_right),
     );
-    expect(next.onPressed, isNull);
+    expect(next.onPressed, isNotNull);
   });
 
   testWidgets('over-budget filter shows only over-budget lines',
@@ -146,5 +151,15 @@ void main() {
     ]);
     expect(screen.startDate, DateTime(2026, 10, 1));
     expect(screen.endDate, DateTime(2026, 10, 31));
+  });
+
+  testWidgets('without an access token shows the session-expired state',
+      (tester) async {
+    await pumpScreen(tester, buildProvider(), loader: () async => null);
+
+    expect(
+      find.text('Your session has expired. Please sign in again.'),
+      findsOneWidget,
+    );
   });
 }
