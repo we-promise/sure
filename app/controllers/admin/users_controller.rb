@@ -63,6 +63,11 @@ module Admin
         return
       end
 
+      if password_change_requested? && !password_change_allowed_for?(@user)
+        redirect_to admin_users_path, alert: t(".password_disabled")
+        return
+      end
+
       if password_change_requested?
         errors = validate_password_criteria(user_params[:password])
         if errors.any?
@@ -174,7 +179,7 @@ module Admin
 
     private
 
-      helper_method :family_label_for
+      helper_method :family_label_for, :password_change_allowed_for?
 
       def set_user
         @user = User.find(params[:id])
@@ -195,6 +200,12 @@ module Admin
 
       def password_change_requested?
         user_params[:password].present? && @user.has_local_password?
+      end
+
+      # Same policy as PasswordsController and local sign-in: a password that
+      # could not be used to sign in must not be set by an admin either.
+      def password_change_allowed_for?(user)
+        user.has_local_password? && AuthConfig.local_login_allowed_for?(user)
       end
 
       def validate_password_criteria(password)
