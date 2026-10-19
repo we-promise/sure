@@ -5,6 +5,11 @@ class RuleJob < ApplicationJob
 
   retry_on Rule::Runner::LockBusy, wait: 30.seconds, attempts: 20
 
+  # A pattern that timed out would time out again, so the failed run the runner
+  # records is final: the job is not retried (a retry would also run every
+  # active rule above this one again).
+  discard_on Rule::SafeRegex::TimeoutError
+
   def perform(rule, ignore_attribute_locks: false, execution_type: "manual")
     runner = Rule::Runner.new(
       rule.family,

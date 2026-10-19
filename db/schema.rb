@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_14_081500) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -842,6 +842,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_081500) do
     t.string "assistant_type", default: "builtin", null: false
     t.boolean "auto_sync_on_login", default: true, null: false
     t.string "bills_feed_token"
+    t.boolean "categories_locked", default: false, null: false
     t.decimal "categorization_confidence_threshold", precision: 3, scale: 2, default: "0.7", null: false
     t.string "categorization_provider", default: "llm", null: false
     t.decimal "categorization_shadow_rate", precision: 3, scale: 2, default: "0.0", null: false
@@ -2683,6 +2684,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_081500) do
     t.string "brokerage_account_id"
     t.datetime "created_at", null: false
     t.string "currency"
+    t.uuid "device_id", default: -> { "gen_random_uuid()" }, null: false
     t.uuid "family_id", null: false
     t.string "name"
     t.string "newest_event_id"
@@ -2691,6 +2693,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_14_081500) do
     t.string "phone_number"
     t.boolean "scheduled_for_deletion", default: false, null: false
     t.text "session_blob"
+    t.datetime "session_expires_at"
     t.string "status", default: "good", null: false
     t.jsonb "timeline_cursors", default: {}, null: false
     t.datetime "updated_at", null: false

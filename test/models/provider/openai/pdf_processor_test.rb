@@ -247,6 +247,57 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_equal [], processor.send(:convert_pdf_to_images)
   end
 
+  test "text extraction omits response_format when json_mode is none" do
+    client = mock
+    client.expects(:chat).with do |request|
+      !request[:parameters].key?(:response_format)
+    end.returns(pdf_chat_response)
+
+    processor = build_processor_for(client, json_mode: "none")
+    processor.stubs(:extract_text_from_pdf).returns("Statement text")
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
+  test "text extraction asks for json_object by default" do
+    client = mock
+    client.expects(:chat).with do |request|
+      request[:parameters][:response_format] == { type: "json_object" }
+    end.returns(pdf_chat_response)
+
+    processor = build_processor_for(client)
+    processor.stubs(:extract_text_from_pdf).returns("Statement text")
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
+  test "text extraction resolves json_mode from LLM_JSON_MODE" do
+    client = mock
+    client.expects(:chat).with do |request|
+      !request[:parameters].key?(:response_format)
+    end.returns(pdf_chat_response)
+
+    with_env_overrides("LLM_JSON_MODE" => "none") do
+      processor = build_processor_for(client)
+      processor.stubs(:extract_text_from_pdf).returns("Statement text")
+      processor.process
+    end
+  end
+
+  test "auto mode falls back to vision when the provider rejects the text request" do
+    client = mock
+    client.expects(:chat).returns(pdf_chat_response)
+    client.expects(:chat).with do |request|
+      !request[:parameters].key?(:response_format)
+    end.raises(Provider::Openai::Error, "unsupported response_format")
+
+    processor = build_processor_for(client, json_mode: "none", processing_mode: :auto)
+    processor.stubs(:extract_text_from_pdf).returns("Statement text")
+    processor.stubs(:convert_pdf_to_images).returns([ "synthetic-image" ])
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
   private
     # Build a vision processor with synthetic images and a mocked API client.
     # @return [Provider::Openai::PdfProcessor] processor under test
@@ -298,5 +349,27 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       trace = mock
       trace.stubs(:span).returns(span)
       trace
+    end
+    # Builds a processor around a mocked client for the json_mode tests.
+    # @return [Provider::Openai::PdfProcessor] processor under test
+    def build_processor_for(client, json_mode: nil, processing_mode: :text)
+      Provider::Openai::PdfProcessor.new(
+        client,
+        model: "gpt-4.1",
+        pdf_content: @pdf_content,
+        max_response_tokens: 512,
+        processing_mode: processing_mode,
+        json_mode: json_mode
+      )
+    end
+
+    # @return [Hash] a chat completion carrying a minimal PDF analysis result
+    def pdf_chat_response
+      {
+        "choices" => [ { "message" => { "content" => {
+          document_type: "other", summary: "Synthetic PDF", extracted_data: {}
+        }.to_json } } ],
+        "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
+      }
     end
 end
