@@ -1424,6 +1424,41 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 1000, Goal.find(goal.id).pace.to_d
   end
 
+  # The stored balance converts each entry to the account's currency, so the
+  # excluded sum taken back out of it has to be in that currency too.
+  test "an excluded deposit in another currency comes out at its converted amount" do
+    account = valuation_tracked_account(balance: 124_000, year_ago: 100_000)
+    ExchangeRate.create!(date: 10.days.ago.to_date, from_currency: "EUR", to_currency: "USD", rate: 2)
+    create_transaction(account: account, amount: -6_000, currency: "EUR", date: 10.days.ago.to_date, excluded: true)
+
+    # (24,000 − 12,000) / 12; read raw, the 6,000 would leave 1,500.
+    assert_equal 1000, goal_on(account, target_amount: 200_000).pace.to_d
+  end
+
+  # The balance leaves out an entry it cannot convert, so there is nothing of
+  # it in the change to take back out.
+  test "an excluded entry with no exchange rate is left alone, as the balance leaves it" do
+    account = valuation_tracked_account(balance: 124_000, year_ago: 100_000)
+    create_transaction(account: account, amount: -6_000, currency: "EUR", date: 10.days.ago.to_date, excluded: true)
+
+    assert_equal 2000, goal_on(account, target_amount: 200_000).pace.to_d
+  end
+
+  # A split parent is always excluded, but the balance counts its children
+  # instead of it. Taking the parent out as well would remove the money twice.
+  test "a split parent is not taken out of a valuation-tracked pace on top of its children" do
+    account = valuation_tracked_account(balance: 124_000, year_ago: 100_000)
+    parent = create_transaction(account: account, amount: -12_000, date: 10.days.ago.to_date)
+    parent.split!([
+      { name: "Gift", amount: -8_000, excluded: "1" },
+      { name: "Refund", amount: -4_000, excluded: "1" }
+    ])
+    assert parent.reload.excluded?
+
+    # The children's 12,000 out once: (24,000 − 12,000) / 12.
+    assert_equal 1000, goal_on(account, target_amount: 200_000).pace.to_d
+  end
+
   test "an excluded entry older than the pace year does not move the balance pace" do
     account = valuation_tracked_account(balance: 124_000, year_ago: 100_000)
     create_transaction(account: account, amount: -12_000, date: 380.days.ago.to_date, excluded: true)

@@ -154,7 +154,9 @@ this order:
    divided by twelve. On the contributions basis the window's
    `net_market_flows` are subtracted, so pace measures what progress does.
    Stored balances include excluded entries, so excluded transactions in
-   the window are taken back out, as path 1 leaves them out.
+   the window are taken back out, as path 1 leaves them out. They are read
+   as `Balance::SyncCache` counts them: split parents skipped, amounts
+   converted to the account's currency, unconvertible entries skipped.
    With no balance row a year back, the account is unmeasured; a missing
    row is never read as a zero opening balance.
 3. **Dormant.** Otherwise, any transaction that is not excluded, at any

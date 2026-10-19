@@ -304,7 +304,7 @@ class Goal < ApplicationRecord
   # recent valuation on under a year of history, or updates all older than a
   # year) has no measurable pace.
   #
-  # Five family-wide queries, none per goal, for the same N+1 reason as
+  # A fixed number of family-wide queries, none per goal, for the same N+1 reason as
   # pace_for. `transaction_pace` is pace_for's result, so accounts it already
   # covers are not read again.
   def self.balance_pace_for(family, transaction_pace = pace_for(family))
@@ -336,18 +336,29 @@ class Goal < ApplicationRecord
         .group(:account_id)
         .sum(:net_market_flows)
 
-      excluded_flows = Entry
+      # Read the way Balance::SyncCache builds the balance: split parents left
+      # out (their children count instead), each amount converted to the
+      # account's currency, and an entry with no rate skipped, as it was there.
+      excluded_flows = Hash.new(0.to_d)
+      Entry
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(account_id: starts.keys, date: (cutoff + 1)..Date.current, excluded: true)
         .merge(Transaction.excluding_pending)
-        .group(:account_id)
-        .sum(:amount)
+        .excluding_split_parents
+        .includes(:account, :entryable)
+        .each do |entry|
+          excluded_flows[entry.account_id] += entry.amount_money.exchange_to(
+            entry.account.currency, date: entry.date, custom_rate: entry.entryable.exchange_rate
+          ).amount.to_d
+        rescue Money::ConversionError
+          next
+        end
 
       starts.each do |account_id, start|
         balance[account_id] = {
           start: start.to_d,
           market_flows: (flows[account_id] || 0).to_d,
-          excluded_flows: (excluded_flows[account_id] || 0).to_d
+          excluded_flows: excluded_flows[account_id]
         }
       end
     end
