@@ -10128,6 +10128,31 @@ paths:
           type: array
           items:
             type: string
+      - name: budget_id
+        in: query
+        required: false
+        description: 'Only rows the budget''s category drill-down on the web lists:
+          transactions in the budget period, on the accounts its spending is computed
+          from (the owner''s report accounts for a personal budget, the caller''s
+          for the household budget), excluding the funds_movement, cc_payment and
+          one_time kinds. Must be a budget the caller can see; returns 404 otherwise.'
+        schema:
+          type: string
+          format: uuid
+      - name: exclude_split_parents
+        in: query
+        required: false
+        description: When true, leave out transactions that have been split (their
+          split children are still listed).
+        schema:
+          type: boolean
+      - name: excluded
+        in: query
+        required: false
+        description: false lists only transactions counted in budget and report totals;
+          true lists only excluded ones, split parents included. Omit to list both.
+        schema:
+          type: boolean
       responses:
         '200':
           description: transactions filtered by date range
@@ -10135,6 +10160,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TransactionCollection"
+        '404':
+          description: budget not found or not visible to the caller
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid report filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
     post:
       summary: Create transaction
       tags:
