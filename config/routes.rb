@@ -62,6 +62,7 @@ Rails.application.routes.draw do
       post :sync
       get :setup_accounts
       post :complete_account_setup
+      post :generate_sca_keypair
     end
   end
 
@@ -113,6 +114,21 @@ Rails.application.routes.draw do
   end
 
   resources :kraken_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :coinspot_items, only: [ :create, :update, :destroy ] do
     collection do
       get :select_accounts
       post :link_accounts
@@ -195,6 +211,29 @@ Rails.application.routes.draw do
       post :sync
       get :setup_accounts
       post :complete_account_setup
+    end
+  end
+
+  # Trade Republic routes (login steps are TR-specific: web login needs a
+  # two-phase initiate/confirm handshake with the Trade Republic app)
+  resources :trade_republic_items, only: [ :show, :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      post :repair
+      get :setup_accounts
+      post :complete_account_setup
+      post :initiate_login
+      post :complete_login
+      post :poll_login
+      post :initiate_qr_login
+      post :poll_qr_login
+      post :cancel_qr_login
     end
   end
 
@@ -292,8 +331,12 @@ Rails.application.routes.draw do
   get "exports/archive/:token", to: "archived_exports#show", as: :archived_export
 
   get "changelog", to: "pages#changelog"
+  get "release_highlight", to: "release_highlights#show"
+  patch "release_highlight/dismiss", to: "release_highlights#dismiss"
   get "feedback", to: "pages#feedback"
+  get "dashboard/cash_flow", to: "cash_flows#show", as: :dashboard_cash_flow
   patch "dashboard/preferences", to: "pages#update_preferences"
+  patch "dashboard/sections/:section_key/hidden", to: "pages#update_section_hidden", as: :dashboard_section_hidden
 
   resource :current_session, only: %i[update]
 
@@ -360,7 +403,7 @@ Rails.application.routes.draw do
     resource :mcp, controller: "mcp", only: :show do
       delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
     end
-    resource :ai_prompts, only: :show
+    resource :ai_prompts, only: %i[show update]
     resource :llm_usage, only: :show
     resource :guides, only: :show
     get "bank_sync", to: redirect("/settings/providers", status: 301)
@@ -385,6 +428,10 @@ Rails.application.routes.draw do
     delete :destroy_all, on: :collection
   end
 
+  namespace :tag do
+    resource :dropdown, only: :show
+  end
+
   namespace :category do
     resource :dropdown, only: :show
   end
@@ -395,6 +442,7 @@ Rails.application.routes.draw do
     get :merge, on: :collection
     post :perform_merge, on: :collection
     post :bootstrap, on: :collection
+    patch :toggle_lock, on: :collection
     delete :destroy_all, on: :collection
   end
 
@@ -526,15 +574,55 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :recurring_transactions, only: %i[index destroy] do
+  resources :bills, only: %i[index show] do
+    # POST for the same reason recurring_transactions#identify is: detection
+    # mutates (creates suggested series and occurrences), so it stays behind
+    # CSRF protection rather than a plain URL.
     collection do
-      match :identify, via: [ :get, :post ]
-      match :cleanup, via: [ :get, :post ]
+      post :detect
+      post :ai_review, to: "bills/ai_reviews#create"
+      post :reset_feed_token
+    end
+    member do
+      get :smart_configuration, to: "bills/smart_configurations#show"
+    end
+  end
+  get "bills_feed/:token", to: "bills_feeds#show", as: :bills_feed, defaults: { format: :ics }
+
+  resources :recurring_occurrences, only: %i[show] do
+    member do
+      post :mark_paid
+      post :skip
+      post :reopen
+      patch :snooze
+      patch :override_amount
+    end
+
+    resources :allocations, controller: :recurring_allocations, only: %i[create]
+  end
+
+  resources :recurring_allocations, only: %i[destroy] do
+    member do
+      post :confirm
+      post :reject
+    end
+  end
+
+  resources :recurring_transactions, only: %i[index new create edit update destroy] do
+    collection do
+      # POST only: all three mutate. They accepted GET while DS::Link's method
+      # option was inert, which left destructive work sitting behind a plain
+      # URL and outside CSRF protection. Every call site passes method: :post.
+      post :identify
+      post :cleanup
+      post :smart_fill, to: "recurring_transactions/smart_fills#create"
       patch :update_settings
     end
 
     member do
-      match :toggle_status, via: [ :get, :post ]
+      post :toggle_status
+      post :confirm
+      post :dismiss
     end
   end
 
@@ -567,6 +655,7 @@ Rails.application.routes.draw do
 
     collection do
       delete :destroy_all
+      patch :reorder
       get :confirm_all
       post :apply_all
       post :clear_ai_cache
@@ -616,6 +705,9 @@ Rails.application.routes.draw do
 
       get :address
       patch :update_address
+
+      post :refresh_valuation
+      post :link_valuation
     end
   end
   resources :vehicles, only: %i[new create edit update]
@@ -636,6 +728,18 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
+      namespace :financekit do
+        get "capabilities", to: "connections#capabilities"
+        resources :connections, only: [ :create, :show, :destroy ] do
+          put "account_mappings/:source_id", to: "connections#mapping"
+          post :activate, to: "connections#activate"
+          post :credential, to: "connections#credential"
+          post :repair, to: "connections#repair"
+          resources :conflicts, only: [ :index, :update ]
+        end
+        post "publishers/:publisher_id/batches", to: "batches#create", as: :publisher_batches_upload
+        get "publishers/:publisher_id/batches/:batch_id", to: "batches#show", as: :publisher_batch_status
+      end
       # Authentication endpoints
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
@@ -658,7 +762,9 @@ Rails.application.routes.draw do
       resources :security_prices, only: [ :index, :show ]
       resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
-      resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :transactions, only: [ :index, :show, :create, :update, :destroy ] do
+        resource :split, only: [ :show, :create, :update, :destroy ]
+      end
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
       resources :holdings, only: [ :index, :show ]
       resources :transfers, only: [ :index, :show ]
@@ -677,6 +783,7 @@ Rails.application.routes.draw do
         post :publish, on: :member
       end
       resource :usage, only: [ :show ], controller: :usage
+      resource :cash_flow, only: [ :show ], controller: :cash_flows
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       resources :insights, only: [ :index ]
       resources :push_subscriptions, only: [ :create, :destroy ]
@@ -811,6 +918,37 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :monobank_items, only: %i[create update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :fio_items, only: %i[create update destroy] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   resources :sophtron_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
@@ -882,7 +1020,12 @@ Rails.application.routes.draw do
     # name even for singular resources, unlike its plural siblings above
     # that happen to round-trip cleanly). The controller file is singular,
     # so name it explicitly.
-    resource :system_health, only: :show, controller: "system_health"
+    resource :system_health, only: :show, controller: "system_health" do
+      get :ai_status
+      get :hosted_usage
+      post :verify_worker_ai
+      post :send_test_push
+    end
   end
 
   # Defines the root path route ("/")

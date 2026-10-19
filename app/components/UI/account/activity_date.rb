@@ -1,7 +1,7 @@
 class UI::Account::ActivityDate < ApplicationComponent
   attr_reader :account, :data
 
-  delegate :date, :entries, :balance, :transfers, to: :data
+  delegate :date, :entries, :balance, :transfers, :split_parents, to: :data
 
   def initialize(account:, data:)
     @account = account

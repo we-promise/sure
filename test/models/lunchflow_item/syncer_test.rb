@@ -91,6 +91,18 @@ class LunchflowItem::SyncerTest < ActiveSupport::TestCase
     assert_equal "sync_error", error["category"]
   end
 
+  test "a rejected API key fails the sync and flags the connection" do
+    Provider::Lunchflow.any_instance.stubs(:get_accounts)
+                       .raises(Provider::Lunchflow::LunchflowError.new("Invalid API key", :unauthorized, status: 401))
+    sync = Sync.create!(syncable: @lunchflow_item)
+
+    sync.perform
+
+    assert sync.reload.failed?, "expected the sync to fail, was #{sync.status}"
+    assert_equal "Invalid API key", sync.error
+    assert @lunchflow_item.reload.requires_update?
+  end
+
   private
 
     def recording_sync

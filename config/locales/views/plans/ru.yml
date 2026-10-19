@@ -1,0 +1,44 @@
+---
+ru:
+  plans:
+    show:
+      title: Планирование
+      subtitle: Решите, куда пойдут ваши деньги — сколько тратить и сколько откладывать.
+    budget_card:
+      title: Этот месяц
+      edit_budget: Изменить бюджет
+      of_total: из %{total}
+      days_left:
+        one: Остался %{count} день
+        few: Осталось %{count} дня
+        many: Осталось %{count} дней
+        other: Осталось %{count} дня
+      percent_used: Использовано %{percent}%
+      top_categories: Основные категории
+      view_budget: Открыть весь бюджет
+      empty_body: Задайте месячный лимит расходов и лимиты по категориям, чтобы видеть, как проходит этот месяц.
+      set_up: Настроить бюджет на этот месяц
+    goals_card:
+      title: Ваши цели
+      new_goal: Новая цель
+      active_count:
+        one: '%{count} активная'
+        few: '%{count} активные'
+        many: '%{count} активных'
+        other: '%{count} активной'
+      of_targets: из %{total} по всем целям
+      behind_count:
+        one: '%{count} отстаёт от графика'
+        few: '%{count} отстают от графика'
+        many: '%{count} отстают от графика'
+        other: '%{count} отстают от графика'
+      pending_count:
+        one: '%{count} ожидаемое пополнение'
+        few: '%{count} ожидаемых пополнения'
+        many: '%{count} ожидаемых пополнений'
+        other: '%{count} ожидаемого пополнения'
+      all_on_pace: Всё идёт по графику
+      active_goals: Активные цели
+      pending_marker: ожидается
+      runway: '%{months} мес. запаса · %{pace}/мес.'
+      all_goals: Все цели

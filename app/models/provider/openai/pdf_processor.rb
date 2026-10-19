@@ -1,11 +1,12 @@
 class Provider::Openai::PdfProcessor
   include Provider::Openai::Concerns::UsageRecorder
+  include Provider::Openai::Concerns::JsonMode
 
   attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens,
-              :processing_mode
+              :processing_mode, :json_mode
 
   def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil,
-                 max_response_tokens:, processing_mode: :auto)
+                 max_response_tokens:, processing_mode: :auto, json_mode: nil)
     @client = client
     @model = model
     @pdf_content = pdf_content
@@ -14,6 +15,7 @@ class Provider::Openai::PdfProcessor
     @family = family
     @max_response_tokens = max_response_tokens
     @processing_mode = processing_mode
+    @json_mode = json_mode || default_json_mode
   end
 
   def process
@@ -105,6 +107,8 @@ class Provider::Openai::PdfProcessor
 
     PdfProcessingResult = Provider::LlmConcept::PdfProcessingResult
 
+    # Summarize extracted PDF text using the existing uncapped text request.
+    # @return [Provider::LlmConcept::PdfProcessingResult] parsed document summary
     def process_with_text_extraction
       effective_model = model.presence || Provider::Openai::DEFAULT_MODEL
 
@@ -123,9 +127,10 @@ class Provider::Openai::PdfProcessor
             role: "user",
             content: "Please analyze the following document text and provide a structured summary:\n\n#{pdf_text}"
           }
-        ],
-        response_format: { type: "json_object" }
+        ]
       }
+
+      apply_json_mode(params, mode: json_mode)
 
       response = client.chat(parameters: params)
 
@@ -144,20 +149,16 @@ class Provider::Openai::PdfProcessor
     def extract_text_from_pdf
       return nil if pdf_content.blank?
 
-      reader = PDF::Reader.new(StringIO.new(pdf_content))
-      text_parts = []
-
-      reader.pages.each_with_index do |page, index|
-        text_parts << "--- Page #{index + 1} ---"
-        text_parts << page.text
-      end
-
-      text_parts.join("\n\n")
+      Pdf::TextExtractor.pages(pdf_content).each_with_index.flat_map do |text, index|
+        [ "--- Page #{index + 1} ---", text ]
+      end.join("\n\n")
     rescue => e
       Rails.logger.error("Failed to extract text from PDF: #{e.message}")
       nil
     end
 
+    # Summarize rendered pages using the endpoint's completion-limit contract.
+    # @return [Provider::LlmConcept::PdfProcessingResult] parsed document summary
     def process_with_vision
       effective_model = model.presence || Provider::Openai::DEFAULT_MODEL
 
@@ -187,9 +188,13 @@ class Provider::Openai::PdfProcessor
         messages: [
           { role: "system", content: instructions + "\n\nIMPORTANT: Respond with valid JSON only, no markdown or other formatting." },
           { role: "user", content: content }
-        ],
-        max_tokens: max_response_tokens
+        ]
       }
+      if Provider::Openai.native_pdf_completion_limit?(model: effective_model, custom_provider: custom_provider)
+        params[:max_completion_tokens] = max_response_tokens if max_response_tokens
+      else
+        params[:max_tokens] = max_response_tokens
+      end
 
       response = client.chat(parameters: params)
 

@@ -10,17 +10,17 @@
         }
       ) %>
   <div class="my-2" id="list" data-list-filter-target="list">
-    <% Current.family.tags.alphabetically.each do |tag| %>
+    <% ([ Tag.untagged ] + Current.family.tags.alphabetically).each do |tag| %>
       <div class="filterable-item flex items-center gap-2 p-2" data-filter-name="<%= tag.name %>">
         <%= form.check_box :tags,
                            {
                              multiple: true,
-                             checked: @q[:tags]&.include?(tag.name),
+                             checked: @q[:tags]&.include?(tag.filter_value),
                              class: "checkbox checkbox--light"
                            },
-                           tag.name,
+                           tag.filter_value,
                            nil %>
-        <%= form.label :tags, value: tag.name, class: "text-sm text-primary flex items-center gap-2" do %>
+        <%= form.label :tags, value: tag.filter_value, class: "text-sm text-primary flex items-center gap-2" do %>
           <% tag_color = tag.color.presence || Tag::UNCATEGORIZED_COLOR %>
           <span class="border text-sm font-medium px-3 py-1 rounded-full inline-flex items-center gap-2"
                 style="

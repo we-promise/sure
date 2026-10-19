@@ -3,6 +3,9 @@ ca:
   transfers:
     create:
       success: Transferència creada
+      exchange_rate_unavailable: No hi ha cap tipus de canvi disponible per a les monedes i la data seleccionades
+      date_invalid: no és vàlida
+      stale_form: Aquest formulari ja s'ha enviat amb dades diferents. Actualitza la pàgina i torna-ho a provar.
     destroy:
       success: Transferència eliminada
     form:
@@ -10,7 +13,7 @@ ca:
       date: Data
       destination_amount: Import rebut
       destination_amount_display: 'Import rebut: %{amount}'
-      exchange_rate_display: 'Taxa de canvi: %{rate}'
+      exchange_rate_display: 'Tipus de canvi: %{rate}'
       expense: Despesa
       from: Des de
       income: Ingrés
@@ -19,6 +22,9 @@ ca:
       submit: Crea transferència
       to: A
       transfer: Transferència
+      bank_charges: Comissions bancàries
+      outgoing_fee: Comissió de la transferència emesa
+      incoming_fee: Comissió de la transferència rebuda
     new:
       title: Nova transferència
     show:
@@ -43,5 +49,8 @@ ca:
       total: Total
       transfer_amount: Import de la transferència
       uncategorized: Sense categoria
+      bank_charges: Comissions bancàries
+      source_fee: Comissió d'origen
+      destination_fee: Comissió de destinació
     update:
       success: Transferència actualitzada

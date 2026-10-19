@@ -146,14 +146,19 @@ At the time of writing, `tools/list` includes:
 | `get_tags` | Tags with pagination |
 | `get_categories` | Categories with hierarchy and pagination |
 | `create_goal` | Create a savings goal linked to depository accounts |
+| `set_opening_balance` | Set a manual account's opening balance and the date it applies from, reporting whether the current balance changes. Supports `dry_run` |
+| `unmatch_transfer` | Unlink a confirmed or pending transfer (by either transaction's id) so a wrong match can be redone; rejects the pairing for auto-match by default. Supports `dry_run` |
+| `update_transfer` | Switch a confirmed transfer into an investment or crypto account between an investment contribution (counted as spending) and a plain transfer, e.g. when a brokerage or crypto account only converts currency. Supports `dry_run` |
 | `create_tag` / `update_tag` | Manage tags |
 | `create_category` / `update_category` | Manage categories |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
 | `update_budget` | Update budget allocations for a month |
+| `get_rules` / `get_rule_options` | Transaction rules in readable form (ids resolved to names, latest run; paginated, with a text search), and the condition and action types a rule can use |
+| `preview_rule` | Match count and a sample of matching transactions for a saved rule or an unsaved definition, without changing anything |
+| `create_rule` / `update_rule` | Save a rule definition. Rules are always saved inactive, and changing an active rule's conditions or actions deactivates it. AI-backed actions are not available |
+| `apply_rule` | Activate a rule and apply it. Requires the `preview_token` from `preview_rule`, `create_rule` or `update_rule` (never `get_rules`; it expires after 30 minutes) and refuses if the rule or its matches have changed; keeps hand-set values unless `override_locked: true` |
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
-
-These are the same tools used by Sure's built-in AI assistant.
 
 ### Preview Tools
 
@@ -172,6 +177,20 @@ permissions enforced in the web UI.
 | `record_valuation` | Record an account's value on a date, with a required source citation |
 | `get_valuations` | List recorded valuations newest first, including the citation stored in each entry's notes; the read pair for `record_valuation` |
 | `get_insights` | Read the proactive insights feed (spending anomalies, cash-flow warnings, subscription audits and more) without marking anything read |
+| `get_bills` | List bills, subscriptions and other recurring obligations with each one's current payment state |
+| `get_bill_details` | One bill's full configuration, open occurrences, payment history, price-change history and cost analytics |
+| `get_paycheck_plan` | Income plan sliced into pay periods: what is due before the next payday, what stays reserved for later bills, what is safe to spend |
+| `get_bill_audit` | Deterministic bills review: possible duplicates, price changes, trials about to convert, upcoming renewals, long-overdue bills and undeclared recurring patterns |
+| `create_bill` | Create a bill, subscription, installment plan or income schedule |
+| `update_bill` | Update one bill's configuration; amount changes apply from today forward |
+| `record_bill_payment` | Record a partial payment against a bill's open occurrence, or settle it in full |
+
+Because tool calls never pass through the Bills pages' controllers, the bills
+tools re-check the family's recurring-transactions feature gate (Settings →
+Recurring transactions) and the MCP user's per-account access on every call.
+With the feature disabled they return an error result instead of data, bills
+tied to accounts the user cannot see are never returned, and the write tools
+refuse series on accounts shared with the user read-only.
 
 They exist for agents that maintain a document-backed record of a family's
 wealth over time. See
@@ -381,6 +400,19 @@ If your Claude Desktop build expects a raw MCP endpoint instead of an OAuth inte
 
 Use either the client's OAuth support or a bearer token, depending on what that build supports.
 
+### Cursor and other native MCP clients
+
+Desktop MCP clients such as Cursor and VS Code authenticate with OAuth Dynamic Client Registration (`POST /register`) and then open a browser for consent. Native clients register a private-use redirect URI rather than an `https://` callback, for example:
+
+- Cursor desktop: `cursor://anysphere.cursor-mcp/oauth/callback`
+- Newer Cursor IDE/CLI builds: `http://localhost:8787/callback`
+- Cursor web: `https://www.cursor.com/agents/mcp/oauth/callback`
+- VS Code extensions: `vscode://...`
+
+Sure accepts those native-app URI schemes, loopback `http://` callbacks, and `https://` callbacks. After you authorize in the browser, the client exchanges the authorization code (PKCE) for a bearer token and calls `/mcp`.
+
+If OAuth is inconvenient (CI, scripts, or a client that cannot complete the browser flow), use the static `MCP_API_TOKEN` bearer token instead.
+
 ### Custom Agents
 
 Any AI agent that supports JSON-RPC 2.0 can connect to the MCP endpoint. The agent should:
@@ -389,6 +421,10 @@ Any AI agent that supports JSON-RPC 2.0 can connect to the MCP endpoint. The age
 2. Include the `Authorization: Bearer <token>` header
 3. Use the JSON-RPC 2.0 format for requests
 4. Handle the protocol methods: `initialize`, `tools/list`, `tools/call`
+
+### Using MCP without the in-app chat
+
+MCP does not depend on the in-app assistant. To use only your own agent, set the assistant type to **None in app (connect your own agent via MCP)** in **Settings -> Self-Hosting**, or set `ASSISTANT_TYPE=mcp_only` for the whole instance. The chat sidebar and its entry points disappear; `/mcp`, OAuth, and **Settings -> MCP** keep working.
 
 ## Troubleshooting
 

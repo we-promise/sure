@@ -53,6 +53,7 @@ en:
     mercury_items: Mercury
     messages: Messages
     mfa: Two-factor authentication
+    monobank_items: Monobank
     oidc_accounts: SSO accounts
     onboardings: Onboarding
     other_assets: Other assets
@@ -82,6 +83,7 @@ en:
     sso_identities: SSO connections
     sso_providers: SSO providers
     subscriptions: Subscription
+    system_health: System Health
     tags: Tags
     trades: Trades
     transactions: Transactions

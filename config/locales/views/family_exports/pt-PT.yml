@@ -1,0 +1,48 @@
+---
+pt-PT:
+  family_exports:
+    access_denied: Acesso negado
+    create:
+      success: Exportação iniciada. Poderá descarregá-la em breve.
+    delete_confirmation: Tem a certeza de que deseja eliminar esta exportação? Esta ação é irreversível.
+    delete_failed_confirmation: Tem a certeza de que deseja eliminar esta exportação falhada?
+    cancel:
+      cancelled: Exportação marcada como falhada. Pode criar uma nova exportação de imediato.
+      not_cancellable: Esta exportação não pode ser marcada como falhada neste momento — a sua tarefa pode ainda estar em execução. Tente novamente assim que estiver inativa há uma hora.
+    destroy:
+      success: Exportação eliminada com sucesso
+    export_not_ready: A exportação ainda não está pronta para descarregar
+    exporting: A exportar...
+    new:
+      dialog_title: Exportar os seus dados
+      dialog_subtitle: Descarregar todos os seus dados financeiros
+      whats_included: "O que está incluído:"
+      accounts_and_balances: Todas as contas e saldos
+      transaction_history: Histórico de transações
+      investment_trades: Negociações de investimentos
+      categories_tags_rules: Categorias, etiquetas e regras
+      note_label: Nota
+      note_description: Esta exportação inclui todos os seus dados, mas apenas alguns deles podem ser importados de volta através da funcionalidade de importação CSV. Suportamos importações de contas, transações (com categoria e etiquetas) e negociações. Os restantes dados da conta não podem ser importados e servem apenas para os seus registos.
+      cancel: Cancelar
+      export_data: Exportar dados
+    index:
+      title: Exportações
+      new: Nova exportação
+    table:
+      title: Exportações
+      header:
+        date: Data
+        filename: Nome do ficheiro
+        status: Estado
+        actions: Ações
+      row:
+        status:
+          in_progress: Em curso
+          complete: Concluída
+          failed: Falhada
+        actions:
+          delete: Eliminar
+          download: Descarregar
+          mark_failed: Marcar como falhada
+          confirm_mark_failed: Esta exportação está inativa há algum tempo e a sua tarefa em segundo plano foi provavelmente interrompida. Marcá-la como falhada? Pode criar uma nova exportação de imediato.
+      empty: Ainda não há exportações.

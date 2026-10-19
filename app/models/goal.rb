@@ -746,7 +746,10 @@ class Goal < ApplicationRecord
     end
 
     segments = []
-    segments << { color: color.presence || "var(--color-blue-500)", amount: filled, id: "saved" } if filled.positive?
+    # A real colour, not a CSS variable: the ring runs this segment through
+    # d3.color, which cannot parse var(...) and left the ring blank (#4030).
+    # The same fallback as Goals::AvatarComponent, so ring and avatar match.
+    segments << { color: color.presence || Goal::COLORS.first, amount: filled, id: "saved" } if filled.positive?
     segments << { color: "var(--budget-unused-fill)", amount: rem, id: "unused" } if rem.positive?
     segments
   end
@@ -929,12 +932,7 @@ class Goal < ApplicationRecord
       destructive: true,
       high_severity: true,
       title: I18n.t("goals.show.confirm_delete_title"),
-      # Escaped: the dialog assigns `body` to innerHTML (so bodies like the
-      # accounts' confirm_body_html can carry <p>), so a goal named
-      # "<img src=x onerror=…>" would otherwise run when a family member opens
-      # the confirmation. Only `body` needs this — the dialog sets its title and
-      # button label with textContent.
-      body: I18n.t("goals.show.confirm_delete_body", name: ERB::Util.html_escape(name)),
+      body: I18n.t("goals.show.confirm_delete_body", name: name),
       btn_text: I18n.t("goals.show.confirm_delete_cta")
     )
   end

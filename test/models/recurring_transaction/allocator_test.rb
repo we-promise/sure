@@ -295,6 +295,36 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_nil allocation.source_amount
   end
 
+  # The remainder guard is opt-in and lives INSIDE the occurrence lock,
+  # because a caller's pre-lock capacity check is advisory: two concurrent
+  # payments can both read the same stale remainder. Sequentially that
+  # surfaces as: the second payment sees the first one's allocation.
+  test "a capped amount cannot exceed what remains on the cycle" do
+    occurrence = usd_occurrence(expected: 100)
+    allocator = RecurringTransaction::Allocator.new(occurrence)
+
+    allocator.allocate!(amount: 60, source: "user_created", cap_at_remaining: true)
+
+    error = assert_raises(RecurringTransaction::Allocator::OverAllocationError) do
+      allocator.allocate!(amount: 60, source: "user_created", cap_at_remaining: true)
+    end
+    assert_match(/remaining/, error.message)
+    assert_equal 60, occurrence.reload.allocations.sum(:allocated_amount)
+  end
+
+  # Exceeding the remainder stays legal for every caller that does not ask
+  # for capping: a single settlement above the expected amount is how a price
+  # rise gets recorded, and PriceChangeDetector reads exactly those.
+  test "an uncapped settlement above the expected amount is still permitted" do
+    occurrence = usd_occurrence(expected: 80)
+
+    allocation = RecurringTransaction::Allocator.new(occurrence)
+                                                .allocate!(amount: 95, source: "user_created")
+
+    assert allocation.persisted?
+    assert_equal 95, occurrence.reload.allocations.sum(:allocated_amount)
+  end
+
   private
 
     def foreign_entry(amount:, currency:)

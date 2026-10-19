@@ -26,6 +26,17 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
     )
   end
 
+  test "group_by_round splits consecutive results by round and keeps untagged results together" do
+    a = { call_id: "a", round: 1 }
+    b = { call_id: "b", round: 2 }
+    c = { call_id: "c", round: 2 }
+
+    assert_equal [ [ a ], [ b, c ] ], Assistant::Responder.group_by_round([ a, b, c ])
+    assert_equal [ [ { call_id: "x" }, { call_id: "y" } ] ],
+                 Assistant::Responder.group_by_round([ { call_id: "x" }, { call_id: "y" } ])
+    assert_equal [], Assistant::Responder.group_by_round([])
+  end
+
   test "default iteration cap is eight rounds" do
     assert_equal 8, Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS
   end
@@ -68,6 +79,21 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
     assert_equal functions_seen.first, functions_seen.last
     assert_equal :none, tool_choices_seen.last
     assert tool_choices_seen[0..-2].all?(&:nil?)
+  end
+
+  test "a model that never stops calling tools hits the cap and raises" do
+    function_request = Provider::LlmConcept::ChatFunctionRequest.new(
+      id: "1", call_id: "1", function_name: "echo", function_args: "{}"
+    )
+    tool_response = Provider::LlmConcept::ChatResponse.new(
+      id: "1", model: "gpt-4.1", messages: [], function_requests: [ function_request ]
+    )
+
+    @llm.stubs(:chat_response).returns(provider_success_response(tool_response))
+
+    with_iteration_cap(2) do
+      assert_raises(Assistant::Responder::ToolCallLimitError) { @responder.respond }
+    end
   end
 
   private

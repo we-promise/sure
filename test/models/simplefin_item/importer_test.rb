@@ -35,6 +35,40 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 1911.72, credit_card.cash_balance
   end
 
+  test "balances-only import honors a credit balance sign override" do
+    credit_card = accounts(:credit_card)
+    simplefin_account = create_simplefin_account("sf_credit_override_1", "Store Card", "credit", -48.48)
+    simplefin_account.update!(balance_sign_override: "credit")
+    credit_card.update!(simplefin_account_id: simplefin_account.id)
+
+    @importer.send(:import_account_minimal_and_balance, {
+      id: simplefin_account.account_id,
+      name: "Store Card",
+      balance: -48.48,
+      currency: "USD"
+    })
+
+    assert_equal(-48.48, credit_card.reload.balance)
+    assert_equal(-48.48, credit_card.cash_balance)
+  end
+
+  test "balances-only import honors a debt balance sign override" do
+    credit_card = accounts(:credit_card)
+    simplefin_account = create_simplefin_account("sf_debt_override_1", "Store Card", "credit", 48.48)
+    simplefin_account.update!(balance_sign_override: "debt")
+    credit_card.update!(simplefin_account_id: simplefin_account.id)
+
+    @importer.send(:import_account_minimal_and_balance, {
+      id: simplefin_account.account_id,
+      name: "Store Card",
+      balance: 48.48,
+      currency: "USD"
+    })
+
+    assert_equal 48.48, credit_card.reload.balance
+    assert_equal 48.48, credit_card.cash_balance
+  end
+
   test "balances-only import keeps a positive loan principal positive" do
     loan = accounts(:loan)
     simplefin_account = create_simplefin_account("sf_loan_1", "Mortgage Loan", "loan", 250_000)
@@ -85,7 +119,50 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 1_000, depository.cash_balance
   end
 
+  # Both steps read every provider's flag and decide "pending" the same way, so
+  # the sync must count for review before it excludes: run through their one
+  # caller and the stale Lunch Flow entry is reported and then excluded, rather
+  # than excluded by the first step and invisible to the second. Swap the two
+  # calls and stale_unmatched_pending goes to nil here.
+  test "stale pending review counts every provider's flag before the exclusion hides it" do
+    account = @family.accounts.create!(name: "Stale pending", balance: 0, currency: "USD", accountable: Depository.new)
+    create_pending_entry(account, "simplefin_maybe", "simplefin", "maybe", 10)
+    create_pending_entry(account, "simplefin_false", "simplefin", "off", 11)
+    create_pending_entry(account, "lunchflow_pending", "lunchflow", true, 12)
+
+    @importer.send(:review_and_exclude_stale_pending, account)
+
+    stats = @importer.send(:stats)
+    assert_equal 2, stats["stale_unmatched_pending"]
+    assert_equal 2, stats["stale_pending_excluded"]
+    assert_empty stats.fetch("reconciliation_errors", [])
+    assert_equal [ "simplefin_false" ], account.entries.where(excluded: false).pluck(:name)
+  end
+
+  test "a rejected access URL marks the item for reconnection and logs it" do
+    provider = mock
+    provider.expects(:get_accounts).raises(
+      Provider::Simplefin::SimplefinError.new("SimpleFIN URL points to a disallowed network address", :invalid_url)
+    )
+    importer = SimplefinItem::Importer.new(@item, simplefin_provider: provider)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "simplefin", family: @family).count }, 1 do
+      assert_raises(Provider::Simplefin::SimplefinError) do
+        importer.send(:fetch_accounts_data, start_date: nil, pending: false)
+      end
+    end
+
+    assert @item.reload.requires_update?
+  end
+
   private
+
+    def create_pending_entry(account, name, provider, pending, amount)
+      account.entries.create!(
+        name: name, date: 10.days.ago.to_date, amount: amount, currency: "USD",
+        entryable: Transaction.new(extra: { provider => { "pending" => pending } })
+      )
+    end
 
     def create_simplefin_account(account_id, name, account_type, current_balance)
       @item.simplefin_accounts.create!(

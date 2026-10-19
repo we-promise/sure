@@ -48,6 +48,9 @@ uk:
       default: "%d.%m.%Y"
       long: "%d %B %Y"
       short: "%d %b"
+      month_year: '%m.%Y'
+      short_month_year: '%b %Y'
+      short_with_year: '%d %b %Y'
     month_names:
     -
     - Січня
@@ -141,7 +144,7 @@ uk:
     messages:
       accepted: має бути прийнятий
       blank: не може бути пустим
-      confirmation: не збігається з підтвердженням
+      confirmation: не збігається зі значенням поля %{attribute}
       empty: не може бути порожнім
       equal_to: має дорівнювати %{count}
       even: має бути парним
@@ -175,6 +178,7 @@ uk:
         many: неправильна довжина (має бути %{count} знаків)
         one: неправильна довжина (має бути %{count} знак)
         other: неправильна довжина (має бути %{count} знаку)
+      in: має бути в межах %{count}
     template:
       body: 'Помилки виявлено в таких полях:'
       header:
@@ -213,27 +217,27 @@ uk:
         format: "%n %u"
         units:
           billion:
-            few: Мільярдів
+            few: Мільярди
             many: Мільярдів
             one: Мільярд
             other: Мільярдів
           million:
-            few: Мільйонів
+            few: Мільйони
             many: Мільйонів
             one: Мільйон
             other: Мільйонів
           quadrillion:
-            few: Квадрильйонів
+            few: Квадрильйони
             many: Квадрильйонів
             one: Квадрильйон
             other: Квадрильйонів
           thousand:
-            few: Тисяч
+            few: Тисячі
             many: Тисяч
             one: Тисяча
             other: Тисяч
           trillion:
-            few: Трильйонів
+            few: Трильйони
             many: Трильйонів
             one: Трильйон
             other: Трильйонів
@@ -276,3 +280,10 @@ uk:
       long: "%d %B %Y, %H:%M"
       short: "%d %b, %H:%M"
     pm: по полудні
+  mcp:
+    errors:
+      invalid_session_id: Недійсний ідентифікатор сесії MCP
+      unsupported_protocol_version: 'Непідтримувана версія протоколу MCP: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris мають використовувати https, loopback http або URI-схему нативного застосунку

@@ -11,110 +11,180 @@ pl:
     show:
       chart_title: Łączna wartość
     subtypes:
-      brokerage:
-        short: Maklerskie
-        long: Konto maklerskie
       401k:
-        short: 401(k)
         long: 401(k)
-      roth_401k:
-        short: Roth 401(k)
-        long: Roth 401(k)
+        short: 401(k)
       403b:
-        short: 403(b)
         long: 403(b)
+        short: 403(b)
       457b:
-        short: 457(b)
         long: 457(b)
-      tsp:
-        short: TSP
-        long: Plan oszczędnościowy Thrift
-      ira:
-        short: IRA
-        long: Tradycyjne IRA
-      roth_ira:
-        short: Roth IRA
-        long: Roth IRA
-      sep_ira:
-        short: SEP IRA
-        long: SEP IRA
-      simple_ira:
-        short: SIMPLE IRA
-        long: SIMPLE IRA
+        short: 457(b)
       529_plan:
-        short: 529 Plan
         long: Edukacyjny plan oszczędnościowy 529
-      hsa:
-        short: HSA
-        long: Konto oszczędnościowe na cele zdrowotne
-      ugma:
-        short: UGMA
-        long: Powiernicze konto UGMA
-      utma:
-        short: UTMA
-        long: Powiernicze konto UTMA
-      isa:
-        short: ISA
-        long: Indywidualne konto oszczędnościowe
-      lisa:
-        short: LISA
-        long: Dożywotnie konto ISA
-      sipp:
-        short: SIPP
-        long: Indywidualna emerytura samodzielnie inwestowana
-      workplace_pension_uk:
-        short: Emerytalne
-        long: Emerytura pracownicza
-      rrsp:
-        short: RRSP
-        long: Zarejestrowany emerytalny plan oszczędnościowy
-      tfsa:
-        short: TFSA
-        long: Konto oszczędnościowe zwolnione z podatku
-      resp:
-        short: RESP
-        long: Zarejestrowany edukacyjny plan oszczędnościowy
-      lira:
-        short: LIRA
-        long: Zablokowane konto emerytalne
-      rrif:
-        short: RRIF
-        long: Zarejestrowany fundusz dochodu emerytalnego
-      super:
-        short: Super
-        long: Fundusz emerytalny
-      smsf:
-        short: SMSF
-        long: Samodzielnie zarządzany fundusz emerytalny
-      pea:
-        short: PEA
-        long: Plan oszczędnościowy w akcjach (PEA)
-      pillar_3a:
-        short: Pillar 3a
-        long: Prywatna emerytura (Filar 3a)
-      riester:
-        short: Riester
-        long: Riester-Rente
-      pension:
-        short: Emerytalne
-        long: Emerytalne
-      retirement:
-        short: Emerytalne
-        long: Konto emerytalne
-      mutual_fund:
-        short: Fundusz
-        long: Fundusz inwestycyjny
+        short: 529 Plan
       angel:
-        short: Anioł
         long: Inwestycja anielska
-      trust:
-        short: Trust
-        long: Trust
+        short: Anioł
+      apy:
+        long: Atal Pension Yojana
+        short: APY
+      brokerage:
+        long: Konto maklerskie
+        short: Maklerskie
+      corporate_bond:
+        long: Obligacja korporacyjna
+        short: Obligacja korporacyjna
+      fd:
+        long: Lokata terminowa
+        short: FD
+      g_sec:
+        long: Obligacje skarbowe (G-Sec)
+        short: G-Sec
+      gold:
+        long: Złoto (fizyczne lub cyfrowe)
+        short: Złoto
+      gold_etf:
+        long: ETF na złoto
+        short: ETF na złoto
+      gold_mf:
+        long: Fundusz inwestycyjny złota
+        short: Fundusz złota
+      hsa:
+        long: Konto oszczędnościowe na cele zdrowotne
+        short: HSA
+      indian_equity:
+        long: Akcje indyjskie
+        short: Akcje indyjskie
+      indian_etf:
+        long: ETF indyjski
+        short: ETF indyjski
+      indian_stocks:
+        long: Akcje indyjskie (Demat)
+        short: Akcje indyjskie
+      infrastructure_bond:
+        long: Obligacja infrastrukturalna
+        short: Obligacja infra
+      ira:
+        long: Tradycyjne IRA
+        short: IRA
+      isa:
+        long: Indywidualne konto oszczędnościowe
+        short: ISA
+      kvp:
+        long: Kisan Vikas Patra
+        short: KVP
+      life_insurance:
+        long: Ubezpieczenie na życie
+        short: Ubezpieczenie na życie
+      lira:
+        long: Zablokowane konto emerytalne
+        short: LIRA
+      lisa:
+        long: Dożywotnie konto ISA
+        short: LISA
+      mutual_fund:
+        long: Fundusz inwestycyjny
+        short: Fundusz
+      nps:
+        long: National Pension System
+        short: NPS
+      nsc:
+        long: National Savings Certificate
+        short: NSC
       other:
-        short: Inne
         long: Inna inwestycja
+        short: Inne
+      pea:
+        long: Plan oszczędnościowy w akcjach (PEA)
+        short: PEA
+      pension:
+        long: Emerytalne
+        short: Emerytalne
+      pillar_3a:
+        long: Prywatna emerytura (Filar 3a)
+        short: Pillar 3a
+      pomis:
+        long: Post Office Monthly Income Scheme
+        short: POMIS
+      ppf:
+        long: Public Provident Fund
+        short: PPF
+      rd:
+        long: Lokata odnawialna
+        short: RD
+      resp:
+        long: Zarejestrowany edukacyjny plan oszczędnościowy
+        short: RESP
+      retirement:
+        long: Konto emerytalne
+        short: Emerytalne
+      riester:
+        long: Riester-Rente
+        short: Riester
+      roth_401k:
+        long: Roth 401(k)
+        short: Roth 401(k)
+      roth_ira:
+        long: Roth IRA
+        short: Roth IRA
+      rrif:
+        long: Zarejestrowany fundusz dochodu emerytalnego
+        short: RRIF
+      rrsp:
+        long: Zarejestrowany emerytalny plan oszczędnościowy
+        short: RRSP
+      scss:
+        long: Senior Citizens' Savings Scheme
+        short: SCSS
+      sdl:
+        long: Obligacje stanowe (SDL)
+        short: SDL
+      sep_ira:
+        long: SEP IRA
+        short: SEP IRA
+      sgb:
+        long: Sovereign Gold Bond
+        short: SGB
+      simple_ira:
+        long: SIMPLE IRA
+        short: SIMPLE IRA
+      sipp:
+        long: Indywidualna emerytura samodzielnie inwestowana
+        short: SIPP
+      smsf:
+        long: Samodzielnie zarządzany fundusz emerytalny
+        short: SMSF
+      ssy:
+        long: Sukanya Samriddhi Yojana
+        short: SSY
+      super:
+        long: Fundusz emerytalny
+        short: Super
+      tax_free_bond:
+        long: Obligacja wolna od podatku
+        short: Obligacja wolna od podatku
+      tfsa:
+        long: Konto oszczędnościowe zwolnione z podatku
+        short: TFSA
+      trust:
+        long: Trust
+        short: Trust
+      tsp:
+        long: Plan oszczędnościowy Thrift
+        short: TSP
+      ugma:
+        long: Powiernicze konto UGMA
+        short: UGMA
+      utma:
+        long: Powiernicze konto UTMA
+        short: UTMA
+      workplace_pension_uk:
+        long: Emerytura pracownicza
+        short: Emerytalne
     value_tooltip:
       cash: Gotówka
       holdings: Pozycje
       total: Saldo portfela
-      total_value_tooltip: Łączne saldo portfela to suma gotówki maklerskiej (dostępnej do handlu) oraz aktualnej wartości rynkowej Twoich pozycji.
+      total_value_tooltip: Łączne saldo portfela to suma gotówki maklerskiej (dostępnej
+        do handlu) oraz aktualnej wartości rynkowej Twoich pozycji.

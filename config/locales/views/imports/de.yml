@@ -68,6 +68,11 @@ de:
       show:
         description: Wähle die Spalten aus, die den jeweiligen Feldern in deiner CSV entsprechen.
         title: Import konfigurieren
+        template_found: Importvorlage gefunden
+        template_description: Wir haben eine Konfiguration aus einem früheren Import für dieses Konto gefunden. Möchtest du sie für diesen Import übernehmen?
+        manually_configure: Manuell konfigurieren
+        apply_template: Vorlage übernehmen
+        sample_caption: Beispieldaten aus deiner hochgeladenen CSV-Datei
       trade_import:
         date_format_label: Datumsformat
         account_label: Konto
@@ -242,6 +247,7 @@ de:
       map: Zuordnen
       confirm: Bestätigen
       select: Auswählen
+      label: Schritt %{step}
       progress: Schritt %{step} von %{total}
     index:
       title: Importe
@@ -441,6 +447,7 @@ de:
       category: Kategorie
       tag: Tag
     publish:
+      guest_new_categories_or_tags: Gäste können keine Kategorien oder Tags anlegen. Ordne sie bestehenden zu oder lass sie leer.
       max_rows_exceeded: Dein Import überschreitet die Höchstzahl von %{max} Zeilen.
       started: Dein Import läuft jetzt im Hintergrund.
     revert:

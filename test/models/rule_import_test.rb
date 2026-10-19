@@ -157,6 +157,122 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal existing_tag.id, action.value
   end
 
+  test "imports multi-tag actions, reusing existing tags and creating missing ones" do
+    existing_tag = @family.tags.create!(name: "Existing Tag")
+
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Multi tag rule","transaction",true,,"[{\"condition_type\":\"transaction_name\",\"operator\":\"like\",\"value\":\"test\"}]","[{\"action_type\":\"set_transaction_tags\",\"value\":\"Existing Tag,New Tag\"}]"
+    CSV
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { Tag.where(family: @family).count }, 1 do
+      import.send(:import!)
+    end
+
+    new_tag = Tag.find_by!(family: @family, name: "New Tag")
+
+    rule = Rule.find_by!(family: @family, name: "Multi tag rule")
+    action = rule.actions.first
+    assert_equal "set_transaction_tags", action.action_type
+    assert_equal [ existing_tag.id, new_tag.id ], action.value.split(",")
+  end
+
+  test "imports a multi-tag action preserving a tag name that contains a comma" do
+    existing_tag = @family.tags.create!(name: "Existing Tag")
+
+    actions_json = [
+      {
+        action_type: "set_transaction_tags",
+        value: CSV.generate_line([ "Existing Tag", "Food, Dining" ], row_sep: "")
+      }
+    ].to_json
+    conditions_json = [
+      { condition_type: "transaction_name", operator: "like", value: "test" }
+    ].to_json
+
+    csv = CSV.generate do |csv_out|
+      csv_out << %w[name resource_type active effective_date conditions actions]
+      csv_out << [ "Comma tag rule", "transaction", true, nil, conditions_json, actions_json ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { Tag.where(family: @family).count }, 1 do
+      import.send(:import!)
+    end
+
+    comma_tag = Tag.find_by!(family: @family, name: "Food, Dining")
+
+    rule = Rule.find_by!(family: @family, name: "Comma tag rule")
+    action = rule.actions.first
+    assert_equal "set_transaction_tags", action.action_type
+    assert_equal [ existing_tag.id, comma_tag.id ], action.value.split(",")
+  end
+
+  test "imports transaction_tag condition and maps tag name to id" do
+    existing_tag = @family.tags.create!(name: "Existing Tag")
+
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Tag condition rule","transaction",true,,"[{\"condition_type\":\"transaction_tag\",\"operator\":\"=\",\"value\":\"Existing Tag\"}]","[{\"action_type\":\"auto_categorize\"}]"
+    CSV
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_no_difference -> { Tag.where(family: @family).count } do
+      import.send(:import!)
+    end
+
+    rule = Rule.find_by!(family: @family, name: "Tag condition rule")
+    condition = rule.conditions.first
+    assert_equal "transaction_tag", condition.condition_type
+    assert_equal existing_tag.id, condition.value
+  end
+
+  test "creates a missing tag referenced by a transaction_tag condition" do
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "New tag condition rule","transaction",true,,"[{\"condition_type\":\"transaction_tag\",\"operator\":\"=\",\"value\":\"Brand New Tag\"}]","[{\"action_type\":\"auto_categorize\"}]"
+    CSV
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { Tag.where(family: @family).count }, 1 do
+      import.send(:import!)
+    end
+
+    new_tag = Tag.find_by!(family: @family, name: "Brand New Tag")
+    rule = Rule.find_by!(family: @family, name: "New tag condition rule")
+    assert_equal new_tag.id, rule.conditions.first.value
+  end
+
+  test "reuses a category created for an earlier row within the same import" do
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "First coffee rule","transaction",true,,"[{\"condition_type\":\"transaction_name\",\"operator\":\"like\",\"value\":\"coffee\"}]","[{\"action_type\":\"set_transaction_category\",\"value\":\"Coffee Shops\"}]"
+      "Second coffee rule","transaction",true,,"[{\"condition_type\":\"transaction_name\",\"operator\":\"like\",\"value\":\"latte\"}]","[{\"action_type\":\"set_transaction_category\",\"value\":\"Coffee Shops\"}]"
+    CSV
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { Category.where(family: @family).count }, 1 do
+      import.send(:import!)
+    end
+
+    category = Category.find_by!(family: @family, name: "Coffee Shops")
+    first_rule = Rule.find_by!(family: @family, name: "First coffee rule")
+    second_rule = Rule.find_by!(family: @family, name: "Second coffee rule")
+    assert_equal category.id, first_rule.actions.first.value
+    assert_equal category.id, second_rule.actions.first.value
+  end
+
   test "updates existing rule when re-importing with same name" do
     # First import
     import1 = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
@@ -232,6 +348,116 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_raises ActiveRecord::RecordInvalid do
       import.send(:import!)
     end
+  end
+
+  test "reports a validation error for a null byte in an imported condition" do
+    csv = CSV.generate do |rows|
+      rows << %w[name resource_type active effective_date conditions actions]
+      rows << [
+        "Invalid condition rule",
+        "transaction",
+        true,
+        nil,
+        [ { condition_type: "transaction_name", operator: "like", value: "bad\0value" } ].to_json,
+        [ { action_type: "exclude_transaction" } ].to_json
+      ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    error = assert_raises(ActiveRecord::RecordInvalid) { import.send(:import!) }
+    assert_match(/value is invalid/i, error.message)
+    assert_nil @family.rules.find_by(name: "Invalid condition rule")
+  end
+
+  test "rejects an imported name with a trailing null byte" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
+    import.generate_rows_from_csv
+    row = import.rows.first
+    row.name = "Invalid name\0"
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      import.send(:create_or_update_rule_from_row, row)
+    end
+
+    assert_match(/Name is invalid/, error.message)
+    assert_nil @family.rules.find_by(name: "Invalid name")
+  end
+
+  test "rejects an imported resource type with a trailing null byte" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
+    import.generate_rows_from_csv
+    row = import.rows.first
+    row.resource_type = "transaction\0"
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      import.send(:create_or_update_rule_from_row, row)
+    end
+
+    assert_match(/Resource type is invalid/, error.message)
+  end
+
+  test "rejects null bytes in imported references before looking them up" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
+    counts = [ @family.categories.count, @family.merchants.count, @family.tags.count ]
+
+    {
+      resolve_import_condition_value: [ "transaction_category", "transaction_merchant", "transaction_tag" ],
+      resolve_import_action_value: [ "set_transaction_category", "set_transaction_merchant", "set_transaction_tags" ]
+    }.each do |resolver, types|
+      type_key = resolver == :resolve_import_condition_value ? "condition_type" : "action_type"
+
+      types.each do |type|
+        error = assert_raises(ActiveRecord::RecordInvalid, type) do
+          import.send(resolver, { type_key => type, "value" => "Bad\0reference" })
+        end
+        assert_match(/Value is invalid/, error.message)
+      end
+    end
+
+    assert_equal counts, [ @family.categories.count, @family.merchants.count, @family.tags.count ]
+  end
+
+  test "rejects null bytes in imported operator and action type" do
+    [
+      [ "like\0", "exclude_transaction" ],
+      [ "like", "exclude_transaction\0" ]
+    ].each do |operator, action_type|
+      csv = CSV.generate do |rows|
+        rows << %w[name resource_type active effective_date conditions actions]
+        rows << [
+          "Invalid metadata rule", "transaction", true, nil,
+          [ { condition_type: "transaction_name", operator: operator, value: "coffee" } ].to_json,
+          [ { action_type: action_type } ].to_json
+        ]
+      end
+
+      import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+      import.generate_rows_from_csv
+
+      error = assert_raises(ActiveRecord::RecordInvalid) { import.send(:import!) }
+      assert_match(/is invalid/, error.message)
+      assert_nil @family.rules.find_by(name: "Invalid metadata rule")
+    end
+  end
+
+  test "rejects an unknown imported action type" do
+    csv = CSV.generate do |rows|
+      rows << %w[name resource_type active effective_date conditions actions]
+      rows << [
+        "Unknown action rule", "transaction", true, nil,
+        [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ].to_json,
+        [ { action_type: "garbage" } ].to_json
+      ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    error = assert_raises(ActiveRecord::RecordInvalid) { import.send(:import!) }
+    assert_match(/is not included in the list/, error.message)
+    assert_nil @family.rules.find_by(name: "Unknown action rule")
   end
 
   test "imports valid JSON conditions whose values contain escaped quotes" do

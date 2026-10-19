@@ -1,6 +1,11 @@
 ---
 en:
   trades:
+    api_errors:
+      activity_label_must_match_type: "investment_activity_label must be %{label} when type is %{type}"
+      invalid_activity_label: Invalid investment activity label
+      invalid_type: Invalid type
+      supported_types: "type must be one of: %{types}"
     form:
       account: Transfer account (optional)
       account_prompt: Search account

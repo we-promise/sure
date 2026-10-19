@@ -7,6 +7,63 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
   end
 
+  test "investment account activity is not offered as a bill or an income source" do
+    # Brokerage and retirement feeds deliver dividends, reinvestments and
+    # payroll contributions as plain Transaction rows, monthly and tightly
+    # clustered -- the exact shape the detector looks for.
+    investment = accounts(:investment)
+    assert_equal "Investment", investment.accountable_type
+
+    3.times do |i|
+      # A monthly dividend reinvestment: looks exactly like a subscription.
+      investment.entries.create!(
+        date: (i + 1).months.ago.to_date,
+        amount: 7.24,
+        currency: "USD",
+        name: "REINVESTMENT FIDELITY US BOND INDEX",
+        entryable: Transaction.new
+      )
+
+      # A payroll 401k contribution: an inflow, so it reads as recurring income.
+      investment.entries.create!(
+        date: (i + 1).months.ago.to_date,
+        amount: -437.50,
+        currency: "USD",
+        name: "LEGAL & GENERAL S&P DC CIT",
+        entryable: Transaction.new
+      )
+    end
+
+    # Crypto is excluded by the same constant. Without its own entries the test
+    # would still pass if "Crypto" were dropped from NON_BILLABLE_ACCOUNTABLE_TYPES.
+    crypto = accounts(:crypto)
+    assert_equal "Crypto", crypto.accountable_type
+
+    3.times do |i|
+      crypto.entries.create!(
+        date: (i + 1).months.ago.to_date, amount: 12.50, currency: "USD",
+        name: "EXCHANGE TRADING FEE", entryable: Transaction.new
+      )
+      crypto.entries.create!(
+        date: (i + 1).months.ago.to_date, amount: -60.00, currency: "USD",
+        name: "STAKING REWARD", entryable: Transaction.new
+      )
+    end
+
+    bill_names = @identifier.candidate_patterns(sign: :outflow, min_occurrences: 2).map { |p| p[:name] }
+    assert_not_includes bill_names, "REINVESTMENT FIDELITY US BOND INDEX"
+    assert_not_includes bill_names, "EXCHANGE TRADING FEE"
+
+    income_names = @identifier.income_source_candidates(min_occurrences: 2).map { |c| c[:name] }
+    assert_not_includes income_names, "LEGAL & GENERAL S&P DC CIT"
+    assert_not_includes income_names, "STAKING REWARD"
+
+    # And the automatic pipeline does not create series for them either.
+    assert_no_difference "@family.recurring_transactions.count" do
+      @identifier.identify_recurring_patterns
+    end
+  end
+
   test "candidate_patterns offers undeclared recurring shapes and skips claimed, junk, and wrong-sign ones" do
     account = @family.accounts.first
 
@@ -424,6 +481,44 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_empty recurring_lookup_queries
     recurring_transactions.each do |recurring|
       assert_equal 3, recurring.reload.occurrence_count
+    end
+  end
+
+  test "refreshes claimed series without per-series recurrence rule or account lookups" do
+    account = @family.accounts.first
+    names = Array.new(3) { |index| "Claimed Performance Subscription #{index}" }
+
+    names.each_with_index do |name, index|
+      create_name_pattern_entries(account: account, name: name, amount: 40 + index, day: 5)
+
+      @family.recurring_transactions.create!(
+        account: account,
+        name: name,
+        amount: 40 + index,
+        currency: "USD",
+        expected_day_of_month: 5,
+        last_occurrence_date: 4.months.ago.to_date,
+        next_expected_date: 1.month.from_now.to_date,
+        occurrence_count: 1,
+        status: "active"
+      )
+    end
+
+    queries = nil
+    assert_no_difference -> { @family.recurring_transactions.count } do
+      queries = capture_sql_queries do
+        @identifier.identify_recurring_patterns
+      end
+    end
+
+    # One batched preload is fine; a query per claimed series is the N+1.
+    rule_queries = queries.grep(/\ASELECT .*FROM "recurrence_rules"/)
+    account_queries = queries.grep(/\ASELECT "accounts"\.\* FROM "accounts" WHERE "accounts"\."id"/)
+
+    assert_operator rule_queries.size, :<=, 1, rule_queries.join(" | ")
+    assert_operator account_queries.size, :<=, 1, account_queries.join(" | ")
+    @family.recurring_transactions.where(name: names).each do |recurring|
+      assert_equal 3, recurring.occurrence_count
     end
   end
 

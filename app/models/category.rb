@@ -12,13 +12,29 @@ class Category < ApplicationRecord
          dependent: :nullify
   belongs_to :parent, class_name: "Category", optional: true
 
+  # Set by .uncategorized so #filter_value can identify the synthetic instance
+  # without a locale-sensitive name comparison. Not a DB column.
+  attr_writer :synthetic_uncategorized
+
+  # Stable, non-localized filter value for the synthetic "Uncategorized" option.
+  # Using an opaque sentinel (rather than the translated display name) means a real
+  # category can never collide with it, regardless of name or locale.
+  UNCATEGORIZED_FILTER_VALUE = "__uncategorized__"
+
   validates :name, :color, :lucide_icon, :family, presence: true
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }
   validates :name, uniqueness: { scope: :family_id }
+  validates :name, exclusion: { in: [ UNCATEGORIZED_FILTER_VALUE ] }
 
   validate :category_level_limit
+  validate :parent_in_same_family
 
   before_save :inherit_color_from_parent
+
+  # prepend: runs before dependent: :nullify's own before_destroy, so the
+  # reassignment (which touches entries to bust report caches) still sees the
+  # transactions; nullify then runs as the safety net.
+  before_destroy :reassign_transactions_to_nothing, prepend: true
 
   scope :alphabetically, -> { order(:name) }
   scope :recently_used, -> { where.not(last_used_at: nil).order(last_used_at: :desc) }
@@ -228,7 +244,7 @@ class Category < ApplicationRecord
         name: I18n.t(UNCATEGORIZED_NAME_KEY),
         color: UNCATEGORIZED_COLOR,
         lucide_icon: "circle-dashed"
-      )
+      ).tap { |category| category.synthetic_uncategorized = true }
     end
 
     def other_investments
@@ -336,7 +352,7 @@ class Category < ApplicationRecord
 
   def replace_and_destroy!(replacement)
     transaction do
-      transactions.update_all category_id: replacement&.id
+      Transaction.reassign_category!(transactions, replacement&.id)
       destroy!
     end
   end
@@ -373,6 +389,18 @@ class Category < ApplicationRecord
     !persisted? && name == I18n.t(UNCATEGORIZED_NAME_KEY)
   end
 
+  # The value the transactions-filter checkbox submits for this category: the
+  # persisted name for a real category, or the stable sentinel for the
+  # synthetic "Uncategorized" pseudo-category returned by .uncategorized.
+  #
+  # Uses the explicit synthetic_uncategorized marker set by .uncategorized, not
+  # uncategorized? -- that predicate compares name against I18n.t in the *current*
+  # locale, so it would give the wrong answer if the instance were built under one
+  # locale and read under another.
+  def filter_value
+    @synthetic_uncategorized ? UNCATEGORIZED_FILTER_VALUE : name
+  end
+
   # Predicate: is this the synthetic "Other Investments" category?
   def other_investments?
     !persisted? && name == I18n.t(OTHER_INVESTMENTS_NAME_KEY)
@@ -384,10 +412,20 @@ class Category < ApplicationRecord
   end
 
   private
+    def reassign_transactions_to_nothing
+      Transaction.reassign_category!(transactions, nil)
+    end
+
     def category_level_limit
       if (subcategory? && parent&.subcategory?) || (parent? && subcategory?)
         errors.add(:parent, "can't have more than 2 levels of subcategories")
       end
+    end
+
+    def parent_in_same_family
+      return if parent.nil? || parent.family_id == family_id
+
+      errors.add(:parent, :invalid)
     end
 
     def monetizable_currency

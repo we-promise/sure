@@ -1,0 +1,5 @@
+de:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: "Die SSO-Identität kann wieder für die Anmeldung oder Kontoerstellung verwendet werden."

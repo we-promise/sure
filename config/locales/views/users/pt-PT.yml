@@ -1,0 +1,30 @@
+---
+pt-PT:
+  users:
+    destroy:
+      success: A sua conta foi eliminada.
+    update:
+      email_change_failed: Falha ao alterar o endereço de e-mail.
+      email_change_initiated: Verifique o seu novo endereço de e-mail para obter instruções
+        de confirmação.
+      success: O seu perfil foi atualizado.
+    resend_confirmation_email:
+      success: Um novo e-mail de confirmação está na fila para ser enviado.
+      no_pending_change: Não existe nenhuma alteração de e-mail pendente de momento!
+    reset:
+      success: A sua conta foi reposta. Os dados serão eliminados em segundo plano dentro de algum tempo.
+      unauthorized: Não está autorizado a realizar esta ação
+    reset_with_sample_data:
+      success: A sua conta foi reposta e os dados de exemplo estão a ser preparados. Verá os dados de demonstração em breve.
+    roles:
+      admin: Administrador
+      member: Membro
+      super_admin: Super administrador
+    user_menu:
+      aria_label: Abrir menu da conta
+      version: Versão
+      settings: Definições
+      changelog: Registo de alterações
+      feedback: Feedback
+      contact: Contacto
+      log_out: Terminar sessão

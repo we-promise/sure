@@ -71,8 +71,10 @@ fr:
           holdings_value: Valeur des holdings
           remaining_principal_balance: Solde principal restant
           total_account_value: Valeur totale du compte
+          total_gains: Gains totaux
         views:
           cash: Espèces
+          gains: Gains / ROI
           holdings: Holdings
           total_value: Valeur totale
         vs_available_history: par rapport à l'historique disponible
@@ -88,6 +90,9 @@ fr:
         warning: Avertissement
     dialog:
       close: Fermer
+    icon_picker:
+      no_matching_icons: Aucune icône correspondante
+      search_placeholder: Rechercher des icônes...
     link:
       opens_in_new_tab: "(ouvre dans un nouvel onglet)"
     pill:

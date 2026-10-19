@@ -21,6 +21,38 @@ class CategoryTest < ActiveSupport::TestCase
     assert_nil transactions.map { |t| t.reload.category }.uniq.first
   end
 
+  test "replacing and destroying invalidates entries_cache_version" do
+    before = @family.entries_cache_version
+
+    travel 1.second do
+      categories(:food_and_drink).replace_and_destroy!(categories(:income))
+    end
+
+    assert_not_equal before, @family.entries_cache_version
+  end
+
+  test "replacing with nil invalidates entries_cache_version" do
+    before = @family.entries_cache_version
+
+    travel 1.second do
+      categories(:food_and_drink).replace_and_destroy!(nil)
+    end
+
+    assert_not_equal before, @family.entries_cache_version
+  end
+
+  test "destroy nullifies transaction categories and bumps entries_cache_version" do
+    transaction = transactions(:one)
+    before = @family.entries_cache_version
+
+    travel 1.second do
+      categories(:food_and_drink).destroy!
+    end
+
+    assert_nil transaction.reload.category_id
+    assert_not_equal before, @family.entries_cache_version
+  end
+
   test "destroying parent category preserves subcategory transaction assignments" do
     parent = @family.categories.create!(
       name: "Parent With Child Transactions",
@@ -57,6 +89,24 @@ class CategoryTest < ActiveSupport::TestCase
     assert_nil category.parent
   end
 
+  test "a parent must belong to the same family" do
+    other_family = families(:empty)
+    foreign_parent = other_family.categories.create!(name: "Foreign Parent", color: "#123456")
+
+    category = @family.categories.new(name: "Cross Family Child", color: "#000000", parent: foreign_parent)
+
+    assert_not category.valid?
+    assert category.errors.of_kind?(:parent, :invalid)
+  end
+
+  test "a parent from the same family is accepted" do
+    parent = categories(:food_and_drink)
+    category = @family.categories.create!(name: "Same Family Child", color: "#000000", parent: parent)
+
+    assert_equal parent, category.parent
+    assert_equal parent.color, category.color, "subcategories inherit their parent's color"
+  end
+
   test "subcategory can only be one level deep" do
     category = categories(:subcategory)
 
@@ -88,6 +138,30 @@ class CategoryTest < ActiveSupport::TestCase
     I18n.with_locale(:en) do
       assert_equal "Food & Drink", categories(:food_and_drink).display_name
       assert_equal "Uncategorized", Category.uncategorized.display_name
+    end
+  end
+
+  test "rejects the reserved Uncategorized filter sentinel as a name" do
+    category = Category.new(name: Category::UNCATEGORIZED_FILTER_VALUE, color: "#123456", lucide_icon: "folder", family: @family)
+
+    assert_not category.valid?
+    assert_includes category.errors[:name], "is reserved"
+  end
+
+  test "filter_value returns the sentinel for the synthetic Uncategorized category and the name for real categories" do
+    assert_equal Category::UNCATEGORIZED_FILTER_VALUE, Category.uncategorized.filter_value
+    assert_equal categories(:food_and_drink).name, categories(:food_and_drink).filter_value
+  end
+
+  test "filter_value stays the sentinel even when read under a different locale than it was built in" do
+    # Regression test: filter_value must not rely on a locale-sensitive name
+    # comparison (uncategorized? checks name against I18n.t in the *current*
+    # locale), or a synthetic instance built under one locale and read under
+    # another would silently stop matching.
+    synthetic = I18n.with_locale(:"zh-CN") { Category.uncategorized }
+
+    I18n.with_locale(:en) do
+      assert_equal Category::UNCATEGORIZED_FILTER_VALUE, synthetic.filter_value
     end
   end
 

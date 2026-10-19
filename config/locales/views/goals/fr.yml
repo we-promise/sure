@@ -68,7 +68,7 @@ fr:
         target_balance_pending: "Calculé à l'enregistrement"
         target_balance_hint: "D'après vos dépenses mensuelles médianes sur le nombre de mois ci-dessus. Recalculé chaque mois."
         target_date: Date cible
-        whole_balance: Solde total
+        whole_balance: "Vide : tout le solde"
       save: Enregistrer les modifications
       subtypes:
         cd: Compte à terme
@@ -122,6 +122,7 @@ fr:
         no_target_date: Ouvert
         on_track: En bonne voie
         paused: En pause
+      chips_aria: Filtrer les objectifs par statut
       empty_filtered: Aucun objectif ne correspond.
       goals_section:
         heading: Objectifs

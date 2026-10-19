@@ -5,6 +5,7 @@ tr:
       invalid_credentials: Geçersiz e-posta veya şifre.
       local_login_disabled: Yerel şifre girişi devre dışı. Lütfen tekli oturum açmayı
         kullanın.
+      account_deactivated: Bu hesap devre dışı bırakıldı. Lütfen bir yöneticiyle iletişime geçin.
     destroy:
       logout_successful: Başarıyla çıkış yaptınız.
     failure:
@@ -35,6 +36,8 @@ tr:
       password_placeholder: Şifrenizi girin
       submit: Giriş yap
       title: Hesabınıza giriş yapın
+      passkey_button: Geçiş anahtarıyla giriş yap
+      passkey_unsupported: Bu tarayıcı geçiş anahtarlarını desteklemiyor.
     openid_connect:
       account_linked: Hesap %{provider} ile başarıyla bağlandı
       failed: OpenID Connect ile kimlik doğrulaması yapılamadı.

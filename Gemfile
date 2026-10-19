@@ -86,8 +86,9 @@ gem "httparty"
 gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.0"
 gem "webauthn", "~> 3.4"
+gem "websocket-driver", "~> 0.8"
 gem "activerecord-import"
-gem "rubyzip", "~> 2.3"
+gem "rubyzip", "~> 3.4"
 gem "pdf-reader", "~> 2.12"
 
 # OpenID Connect, OAuth & SAML authentication

@@ -1,0 +1,15 @@
+---
+pt-PT:
+  password_resets:
+    disabled: A reposição de palavra-passe através do Sure está desativada. Reponha a sua palavra-passe através do seu serviço de identidade.
+    sso_only_user: A sua conta utiliza SSO para autenticação. Contacte o seu administrador para gerir as suas credenciais.
+    edit:
+      title: Repor palavra-passe
+    new:
+      requested: Verifique o seu e-mail para obter uma ligação para repor a sua palavra-passe.
+      submit: Repor palavra-passe
+      title: Repor palavra-passe
+      back: Voltar
+    update:
+      invalid_token: Token inválido.
+      success: A sua palavra-passe foi reposta.

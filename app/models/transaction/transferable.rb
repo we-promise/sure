@@ -2,8 +2,15 @@ module Transaction::Transferable
   extend ActiveSupport::Concern
 
   included do
-    has_one :transfer_as_inflow, class_name: "Transfer", foreign_key: "inflow_transaction_id", dependent: :destroy
-    has_one :transfer_as_outflow, class_name: "Transfer", foreign_key: "outflow_transaction_id", dependent: :destroy
+    # inverse_of is load-bearing, not cosmetic: Transfer#categorizable? calls
+    # from_account on every transfer row of the transactions index, which walks
+    # transfer.outflow_transaction.entry.account. The index only preloads the
+    # counterparty (inflow) leg, so without the inverse each outflow row
+    # re-queries its own transaction, entry and account (an N+1 that
+    # TransactionsControllerTest "index preloads transfer counterparty entry
+    # and account to avoid N+1" catches).
+    has_one :transfer_as_inflow, class_name: "Transfer", foreign_key: "inflow_transaction_id", inverse_of: :inflow_transaction, dependent: :destroy
+    has_one :transfer_as_outflow, class_name: "Transfer", foreign_key: "outflow_transaction_id", inverse_of: :outflow_transaction, dependent: :destroy
 
     # We keep track of rejected transfers to avoid auto-matching them again
     has_one :rejected_transfer_as_inflow, class_name: "RejectedTransfer", foreign_key: "inflow_transaction_id", dependent: :destroy
@@ -14,11 +21,14 @@ module Transaction::Transferable
     transfer_as_inflow || transfer_as_outflow
   end
 
-  def transfer_match_candidates(date_window: 30)
+  def transfer_match_candidates(
+    date_window: 30,
+    exchange_rate_tolerance: Family::AutoTransferMatchable.manual_match_exchange_rate_tolerance
+  )
     candidates_scope = if self.entry.amount.negative?
-      family_matches_scope(date_window: date_window, inflow_transaction_id: self.id)
+      family_matches_scope(date_window: date_window, exchange_rate_tolerance: exchange_rate_tolerance, inflow_transaction_id: self.id)
     else
-      family_matches_scope(date_window: date_window, outflow_transaction_id: self.id)
+      family_matches_scope(date_window: date_window, exchange_rate_tolerance: exchange_rate_tolerance, outflow_transaction_id: self.id)
     end
 
     candidates_scope.map do |match|

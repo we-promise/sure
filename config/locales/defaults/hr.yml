@@ -42,6 +42,7 @@ hr:
       default: "%d.%m.%Y."
       long: "%e. %B %Y."
       short: "%e.%-m."
+      short_with_year: "%-d. %b %Y."
     month_names:
     -
     - siječnja

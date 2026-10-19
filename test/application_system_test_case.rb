@@ -86,13 +86,33 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     def sign_in(user)
       visit new_session_path
       within %(form[action='#{sessions_path}']) do
-        fill_in "Email", with: user.email
-        fill_in "Password", with: user_password_test
-        click_on "Log in"
+        # Look fields up by type rather than label text: the labels are
+        # translated, so a browser negotiating a non-English locale would
+        # otherwise break every system test's login.
+        find("input[type='email']").set(user.email)
+        find("input[type='password']").set(user_password_test)
+        find("[type='submit']").click
       end
 
-      # Trigger Capybara's wait mechanism to avoid timing issues with logins
-      find("h1", text: "Welcome back, #{user.first_name}")
+      # Trigger Capybara's wait mechanism to avoid timing issues with logins.
+      # The greeting around it is translated; the user's own name is not.
+      find("h1", text: user.first_name)
+    end
+
+    # Drags horizontally across the full width of `element`. Driven off the
+    # element's own rendered width rather than fixed offsets — chart widths vary
+    # with viewport and font metrics (they differ between local and CI headless
+    # Chrome), and a start point outside the element never begins the gesture.
+    def drag_across(element)
+      inset = 20
+      width = element.native.rect.width
+
+      page.driver.browser.action
+        .move_to(element.native, -(width / 2 - inset).round, 0)
+        .click_and_hold
+        .move_by((width - (2 * inset)).round, 0)
+        .release
+        .perform
     end
 
     def login_as(user)

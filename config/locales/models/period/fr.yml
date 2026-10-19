@@ -18,6 +18,7 @@ fr:
       label: Année en cours
       label_short: AC
     custom:
+      comparison_label: "%{start_date} au %{end_date}"
       label: Période personnalisée
       label_short: Personnalisé
     last_10_years:

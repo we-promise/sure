@@ -43,6 +43,9 @@ es:
       unknown: --
       no_cost_basis: Sin base de costes
     index:
+      positions:
+        one: "%{count} posición"
+        other: "%{count} posiciones"
       average_cost: Costo promedio
       holdings: Posiciones
       name: Nombre

@@ -1,0 +1,15 @@
+---
+en:
+  recurring_allocations:
+    over_allocation: That would allocate more than the transaction's amount
+    missing_rate: No exchange rate available; enter the amount explicitly
+    already_allocated: That transaction is already applied to this bill
+    invalid: The payment could not be recorded
+    create:
+      success: Payment applied
+    destroy:
+      success: Payment unlinked
+    confirm:
+      success: Payment applied to the bill
+    reject:
+      success: "Dismissed. That transaction won't be suggested for this bill again." 

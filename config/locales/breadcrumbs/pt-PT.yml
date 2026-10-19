@@ -1,0 +1,92 @@
+---
+pt-PT:
+  breadcrumbs:
+    account_sharings: Partilha de conta
+    account_statements: Arquivo de extratos
+    accounts: Contas
+    ai_prompts: Comandos de IA
+    api_key: Chave de API
+    api_keys: Chaves de API
+    appearance: Aparência
+    appearances: Aparência
+    bank_sync: Sincronização bancária
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Categorias de orçamento
+    budgets: Orçamentos
+    categories: Categorias
+    categorize: Categorizar
+    changelog: Novidades
+    chats: Conversas
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Cartões de crédito
+    cryptos: Cripto
+    dashboard: Visão geral
+    debug: Depuração
+    debugs: Depuração
+    depositories: Contas de dinheiro
+    enable_banking_items: Ativar Banca
+    exports: Exportações
+    family_exports: Exportações
+    family_merchants: Comerciantes
+    feedback: Comentários
+    guides: Guias
+    holdings: Posições
+    home: Início
+    hostings: Self-Hosting
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Representações
+    imports: Importações
+    indexa_capital_items: Indexa Capital
+    intro: Introdução
+    investments: Investimentos
+    invitations: Convites
+    invite_codes: Códigos de convite
+    kraken_items: Kraken
+    llm_usage: Utilização de AI
+    llm_usages: Utilização de AI
+    loans: Empréstimos
+    lunchflow_items: Lunch Flow
+    mcp: Servidor MCP
+    merchants: Comerciantes
+    mercury_items: Mercury
+    messages: Mensagens
+    mfa: Autenticação de dois fatores
+    oidc_accounts: Contas SSO
+    onboardings: Onboarding
+    other_assets: Outros Ativos
+    other_liabilities: Outros Passivos
+    payments: Pagamentos
+    pending_duplicate_merges: Revisão de duplicados
+    plaid_items: Plaid
+    plan: Plano
+    preferences: Preferências
+    profile: Informações do Perfil
+    profiles: Informações do Perfil
+    properties: Imóveis
+    providers: Serviços
+    recurring_transactions: Recorrentes
+    redbark_items: Redbark
+    registrations: Registar
+    reports: Relatórios
+    rules: Regras
+    securities: Títulos
+    security: Segurança
+    self_hosting: Self-Hosting
+    sessions: Iniciar sessão
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Divisão
+    sso_identities: Ligações SSO
+    sso_providers: Serviços SSO
+    subscriptions: Subscrição
+    tags: Etiquetas
+    trades: Negociações
+    transactions: Transações
+    transfer_matches: Correspondências de transferências
+    transfers: Transferências
+    users: Utilizadores
+    valuations: Avaliações
+    vehicles: Veículos

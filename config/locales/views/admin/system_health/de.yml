@@ -1,0 +1,182 @@
+---
+de:
+  admin:
+    system_health:
+      hosted_usage:
+        loading: "Hosting-Nutzung wird geladen…"
+        title: "Hosting-Nutzung"
+        snapshot: "Schreibgeschützter Datenbankstand vom %{time}"
+        summary:
+          trial_households_count: "Testhaushalte (letzte 30 Tage)"
+          trial_members_count: "Aktuelle Test-Mitgliedskonten"
+          trials_expiring_soon_count: "Testphasen enden in 7 Tagen"
+          cleanup_eligible_count: "Haushalte im Bereinigungsumfang"
+          active_supporter_households_count: "Aktive Unterstützerhaushalte (lokal)"
+          supporter_subscription_count: "Abonnementzeilen mit Stripe-Verknüpfung"
+        summary_help: "Testzahlen beziehen sich auf in den letzten 30 Tagen erfasste Abonnements. Die Zahlen für bald endende Testphasen, Bereinigung und Unterstützung umfassen alle passenden aktuellen Zeilen, ohne Tabellenlimit."
+        limitations_title: "Was diese Zahlen aussagen"
+        limitations: "Die aktuellen Tabellen enthalten keinen vollständigen Verlauf von Testphasen, Zahlungen oder Sitzungsaktivität. Das Erstellungsdatum kann aus einem Import stammen. Mitgliedskonten sind keine nachgewiesenen Einzelpersonen. Diese Ansicht ändert keine Haushalts- oder Abonnementdaten. Zurücksetzungen der gemeinsamen Demo entfernen alte Haushalte und Sitzungen; der Besucherverlauf lässt sich daher nicht rekonstruieren."
+        trials:
+          title: "Kürzlich erfasste Testhaushalte"
+          description: "Seit dem %{date} erfasste Abonnements mit gespeichertem Testende, einschließlich umgewandelter Testphasen. Höchstens %{limit} Haushalte werden angezeigt."
+          sessions_help: "Sitzungen sind gespeicherte Anmeldungen aktivierter Nutzer, keine aktuell online befindlichen Nutzer oder Besuche. Abmelden löscht den Eintrag. Das letzte Erstellungsdatum ist kein Zeitpunkt der letzten Aktivität."
+          empty: "Keine Testhaushalte in diesem Zeitraum erfasst"
+        cleanup:
+          title: "Bereinigungsberechtigung"
+          description: "Entspricht dem bestehenden Bereinigungsumfang: pausiertes oder Testabonnement seit mehr als 14 Tagen abgelaufen, oder kein Abonnement und Haushalt älter als 45 + 14 Tage. Höchstens %{limit} Haushalte werden angezeigt."
+          eligibility_help: "Kürzliche Anmeldungen verhindern keine Übereinstimmung. Die Berechtigung bestätigt keine Löschung; 90 Tage sind die Archivaufbewahrung, nicht die Bereinigungsschwelle für Testphasen."
+          disabled: "Die geplante Testbereinigung ist außerhalb des verwalteten Modus deaktiviert. Hier werden nur passende Datensätze angezeigt."
+          empty: "Keine Haushalte im Bereinigungsumfang"
+          reasons:
+            expired_trial_grace_elapsed: "Testphase beendet; 14 Tage Kulanz abgelaufen"
+            no_subscription_grace_elapsed: "Kein Abonnement; 45 + 14 Tage abgelaufen"
+        supporters:
+          title: "Lokaler Unterstützerstatus"
+          description: "Aktuelle lokale Abonnementzeilen mit Kunden- und Abonnement-IDs im Stripe-Format; das synthetische Demoabonnement ist ausgeschlossen. Der Status bestätigt weder Zahlungseingänge noch Erstzahlungsdaten. Es erfolgt keine Stripe-Anfrage."
+          empty: "Keine Abonnementzeilen mit Stripe-Verknüpfung"
+        columns:
+          household: "Haushalts-ID"
+          recorded_at: "Abonnement erfasst"
+          trial_ends_at: "Testende"
+          status: "Aktueller Status"
+          members: "Mitgliedskonten"
+          retained_sessions: "Gespeicherte Anmeldesitzungen"
+          recent_sessions: "Gespeicherte Sitzungen der letzten 30 Tage"
+          latest_session: "Letzte gespeicherte Anmeldung"
+          cleanup_eligible: "Bereinigung möglich"
+          cleanup_reason: "Grund"
+          subscription_rows: "Abonnementzeilen"
+        statuses:
+          unknown: "Unbekannt"
+          incomplete: "Unvollständig"
+          incomplete_expired: "Unvollständig, abgelaufen"
+          trialing: "Testphase"
+          active: "Aktiv"
+          past_due: "Überfällig"
+          canceled: "Gekündigt"
+          unpaid: "Unbezahlt"
+          paused: "Pausiert"
+          no_subscription: "Kein Abonnement"
+        not_recorded: "Nicht erfasst"
+        eligible: "Berechtigt"
+        not_eligible: "Nicht berechtigt"
+        synthetic_demo: "Synthetische Demo"
+      push_notifications:
+        send_test: "Testbenachrichtigung senden"
+        queueing: "Wird eingereiht…"
+        title: "Push-Benachrichtigungen"
+        requested_at: "Letzter Test angefordert am %{time}"
+        result_help: "Die Annahme durch APNs bestätigt nicht die Zustellung auf deinem Gerät. Aktualisiere die Ergebnisse, um den Worker-Status zu sehen. Ergebnisse werden 24 Stunden gespeichert."
+        results_label: "Testergebnisse"
+        device: "Gerät %{number}"
+        pending: "Ausstehend"
+        refresh: "Ergebnisse aktualisieren"
+        columns:
+          device: "Gerät"
+          environment: "APNs-Umgebung"
+          status: "Ergebnis"
+          checked_at: "Letzte Aktualisierung"
+        environments:
+          sandbox: "Sandbox"
+          production: "Produktion"
+        messages:
+          enqueue_failed: "Der Test konnte nicht eingereiht werden. Prüfe Sidekiq und aktualisiere die Ergebnisse unten."
+          ready: "Sende eine Testbenachrichtigung an die für dein Konto registrierten, aktivierten iOS-Geräte."
+          queued: "Testbenachrichtigung eingereiht. Aktualisiere die Ergebnisse unten, um den Status zu prüfen."
+          hosted_only: "Push-Benachrichtigungen sind nur im gehosteten Modus verfügbar."
+          ineligible: "Nur ein aktiver Super-Admin kann eine Testbenachrichtigung senden."
+          no_devices: "Aktiviere Push-Benachrichtigungen in der Sure-iOS-App für dieses Konto, um einen Test zu senden."
+          disabled: "Der Betreiber hat den Push-Versand deaktiviert."
+          not_configured: "Die APNs-Zugangsdaten sind nicht konfiguriert."
+          cooldown: "Bitte warte 30 Sekunden, bevor du einen weiteren Test sendest."
+          storage_unavailable: "Die Testanfrage konnte nicht gespeichert werden. Prüfe die Konfiguration des gemeinsamen Caches."
+        statuses:
+          queued: "Eingereiht"
+          accepted: "Von APNs angenommen"
+          skipped: "Übersprungen: nicht mehr berechtigt"
+          rejected: "Von APNs abgelehnt; Push-Debug-Protokolle prüfen"
+          unregistered: "Geräteregistrierung ist nicht mehr gültig"
+          retrying: "Vorübergehender Fehler; erneuter Versuch"
+          failed: "Fehlgeschlagen; Push-Debug-Protokolle prüfen"
+          enqueue_failed: "Einreihen fehlgeschlagen; Sidekiq prüfen"
+          expired: "Ohne abschließendes Ergebnis abgelaufen"
+      push_notification:
+        title: "Sure-Testbenachrichtigung"
+        body: "Dies ist eine Testbenachrichtigung für dein Sure-Konto."
+      verify_worker_ai:
+        queued: Die Worker-Prüfung wurde in die Warteschlange gestellt. Das Ergebnis erscheint unten, sobald ein Worker-Prozess die Prüfung übernimmt – normalerweise innerhalb weniger Sekunden.
+      show:
+        title: Systemstatus
+        tabs:
+          hosted_usage: "Hosting-Nutzung"
+          background_jobs: Hintergrundaufgaben
+          ai: KI-Status
+        alert:
+          title: Hintergrundaufgaben werden nicht ausgeführt
+        status_section_title: Sidekiq-Status
+        status_section_description: Aktueller Status des Hintergrundprozesses, der Synchronisierungen sowie die Berechnung von Kontoständen und Nettovermögen ausführt.
+        counters_section_title: Aufgabenstatistik
+        counters_section_description: Zusammengefasste Sidekiq-Zähler über alle Warteschlangen hinweg.
+        queues_section_title: Warteschlangen
+        queues_section_description: Anzahl der Aufgaben und Wartezeit der ältesten Aufgabe je Warteschlange. Die Wartezeit wird in Sekunden angegeben.
+        labels:
+          status: Status
+          processes: Worker-Prozesse
+          last_heartbeat: Letztes Lebenszeichen
+          max_queue_latency: Längste Wartezeit
+          enqueued: In der Warteschlange
+          retries: Zur Wiederholung vorgemerkt
+          failed: Fehlgeschlagen
+          processed_total: Insgesamt verarbeitet
+          queue: Warteschlange
+          size: Anzahl der Aufgaben
+          latency: Wartezeit
+        values:
+          healthy: Funktionsfähig
+          unhealthy: Beeinträchtigt
+          time_ago: vor %{time_ago}
+          never: Nie
+          seconds: "%{seconds} s"
+          no_queues: Es sind keine Warteschlangen registriert. Möglicherweise läuft der Worker nicht.
+        ai:
+          loading: "Live-Prüfungen laufen…"
+          labels:
+            failure_reason: Fehlerursache
+            function_calling_failure_reason: Fehlerursache beim Funktionsaufruf
+            pdf_text_extraction_failure_reason: Fehlerursache bei der Textextraktion
+            pdf_vision_processing_failure_reason: Fehlerursache bei der Bildverarbeitung oder nativen Dokumentverarbeitung
+          failure_codes:
+            model_not_available: Das konfigurierte Modell wurde vom Anbieter nicht zurückgegeben
+            no_tool_call: Das Modell hat geantwortet, ohne das Prüfwerkzeug aufzurufen
+            tools_refused: Der Dienst hat dieselbe Anfrage ohne Werkzeuge beantwortet, sie mit Werkzeugen jedoch abgelehnt
+            invalid_response: Der Dienst hat eine unerwartete Antwort zurückgegeben
+            dimensions_mismatch: Die Dimensionen des Embedding-Vektors stimmen nicht mit den konfigurierten Dimensionen überein
+            extension_not_enabled: Die PostgreSQL-Erweiterung vector ist nicht aktiviert
+            table_not_found: Die Tabelle vector_store_chunks wurde nicht gefunden
+            render_missing_binary: Der Renderer pdftoppm (poppler-utils) ist in diesem Container nicht verfügbar
+            timeout: Der Dienst hat nicht innerhalb des Zeitlimits für die Prüfung geantwortet
+            request_failed: Die Anfrage an den Dienst ist fehlgeschlagen
+            unsupported_provider: Der Anbieter unterstützt diese Prüfung nicht
+          worker:
+            title: Worker-Verifikation
+            description: Die obigen Prüfungen wurden in diesem Web-Prozess ausgeführt. Die meisten KI-Aufgaben – Antworten des Assistenten, PDF-Verarbeitung, Embeddings, automatische Kategorisierung und Händlererkennung – laufen jedoch in einem Sidekiq-Worker-Prozess. Dessen Netzwerkzugriff, DNS, Proxy-Regeln oder geladene Zugangsdaten können abweichen. Stelle eine Prüfung in die Warteschlange, um die Konfiguration und Erreichbarkeit aus Sicht eines Workers zu prüfen.
+            verify_button: Worker-Konfiguration prüfen
+            coverage_notice: Jede Prüfung erfasst genau einen Worker-Prozess – denjenigen, der sie aus der Warteschlange übernimmt. Bei mehreren Worker-Replikaten bestätigt ein erfolgreiches Ergebnis nicht, dass alle Worker funktionsfähig sind. Stelle die Prüfung erneut in die Warteschlange, um eine weitere Stichprobe zu erhalten.
+            empty:
+              title: Bisher hat kein Worker ein Prüfergebnis gemeldet
+              description: Klicke auf „Worker-Konfiguration prüfen“, um eine asynchrone Prüfung in die Warteschlange zu stellen. Das Ergebnis erscheint hier, sobald ein Worker-Prozess die Prüfung übernimmt.
+            labels:
+              process: Worker-Prozess
+              checked_at: Geprüft
+              configuration: Konfiguration
+            configuration_statuses:
+              match: Entspricht dem Web-Prozess
+              mismatch: Weicht vom Web-Prozess ab
+            statuses:
+              passing: Erfolgreich
+              failing: Fehlgeschlagen
+              stale: Veraltet
+            settings_origin:
+              title: Welche Einstellungen erfordern einen Neustart?
+              database_backed: Änderungen an Anbieter, Modell und API-Schlüssel unter Einstellungen → Self-Hosting werden in der Datenbank gespeichert. rails-settings-cached verwirft beim Speichern den gemeinsamen Cache. Web- und Worker-Prozess verwenden daher bei der nächsten Anfrage oder Aufgabe den neuen Wert – kein Neustart erforderlich.
+              env_backed: Die Embedding-Konfiguration und alle ausschließlich über Umgebungsvariablen gesetzten Werte werden beim Start des jeweiligen Containers festgelegt. Rails kann die Umgebung eines anderen Containers nicht ändern. Nach solchen Änderungen müssen daher sowohl der Web- als auch der Worker-Dienst neu gestartet oder neu erstellt werden. Wenn die Bereitstellung nur einen der Dienste neu startet oder ein Secret ohne Pod-Neustart aktualisiert, wird die Änderung nicht überall übernommen.

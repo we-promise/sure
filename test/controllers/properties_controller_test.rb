@@ -537,4 +537,314 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_property_path
   end
+
+  # Chimnie (UK, UPRN-based) lookups
+
+  def chimnie_avm_response
+    Provider::Response.new(
+      success?: true,
+      data: Provider::PropertyValuationConcept::PropertyValuation.new(
+        valuation: 425_000,
+        currency: "GBP",
+        property_type: nil,
+        year_built: nil,
+        area_value: nil,
+        area_unit: "sqft",
+        external_id: "999000000001",
+        valuation_low: 340_000,
+        valuation_high: 530_000,
+        confidence: "high"
+      ),
+      error: nil
+    )
+  end
+
+  def chimnie_lookup_params(uprn: "999000000001")
+    {
+      avm_provider: "chimnie",
+      account: {
+        name: "Chester Flat",
+        accountable_type: "Property",
+        address: { line1: "1 High Street", locality: "Chester", region: "", postal_code: "CH1 1MN" },
+        property: { avm_external_id: uprn }
+      }
+    }
+  end
+
+  test "Chimnie lookup form asks for a UPRN and a UK address" do
+    Provider::Registry.stubs(:chimnie).returns(mock)
+
+    get new_property_path(method: "chimnie")
+
+    assert_response :success
+    assert_match "Add property via Chimnie", response.body
+    assert_select "input[name='account[property][avm_external_id]'][required]"
+    assert_select "input[name='account[address][region]']:not([required])"
+    assert_match "United Kingdom", response.body
+  end
+
+  test "Chimnie lookup previews the estimate range and confidence by UPRN" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).with(
+      line1: "1 High Street",
+      locality: "Chester",
+      region: "",
+      postal_code: "CH1 1MN",
+      external_id: "999000000001"
+    ).returns(chimnie_avm_response)
+    Provider::Registry.stubs(:chimnie).returns(provider)
+
+    assert_no_difference "Account.count" do
+      post properties_path, params: chimnie_lookup_params
+    end
+
+    assert_response :success
+    assert_match "Confirm property details", response.body
+    assert_match "999000000001", response.body
+    assert_match "Estimate range", response.body
+    assert_match "High", response.body
+    assert_match "HM Land Registry", response.body
+    assert_no_match "couldn&#39;t find a property record", response.body
+  end
+
+  test "Chimnie lookup requires a UPRN without spending a request" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).never
+    Provider::Registry.stubs(:chimnie).returns(provider)
+
+    assert_no_difference "Account.count" do
+      post properties_path, params: chimnie_lookup_params(uprn: "")
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "UPRN", response.body
+  end
+
+  test "Chimnie confirm creates a GBP property linked by UPRN" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).once.returns(chimnie_avm_response)
+    Provider::Registry.stubs(:chimnie).returns(provider)
+
+    post properties_path, params: chimnie_lookup_params
+    token = css_select("input[name='avm_preview_token']").first["value"]
+
+    assert_difference -> { Account.count } => 1 do
+      post properties_path, params: {
+        avm_provider: "chimnie",
+        avm_step: "confirm",
+        avm_preview_token: token,
+        account: { accountable_type: "Property" }
+      }
+    end
+
+    account = Account.order(:created_at).last
+    assert_equal "GBP", account.currency
+    assert_equal 425_000, account.balance
+    assert account.active?
+    assert_equal "chimnie", account.property.avm_provider
+    assert_equal "999000000001", account.property.avm_external_id
+    assert_equal "GB", account.property.address.country
+    assert_equal "GBP", account.entries.valuations.last.currency
+    assert_equal "Chimnie valuation", account.entries.valuations.last.name
+  end
+
+  test "refresh_valuation queues a forced refresh of the property" do
+    @account.property.update!(avm_provider: "chimnie", avm_external_id: "999000000001")
+    Provider::Registry.stubs(:chimnie).returns(mock)
+
+    assert_enqueued_with(job: SyncPropertyValuationsJob, args: [ { property_id: @account.property.id, force: true } ]) do
+      post refresh_valuation_property_path(@account)
+    end
+
+    assert_redirected_to account_path(@account)
+  end
+
+  test "refresh_valuation does nothing for properties without a provider" do
+    @account.property.update!(avm_provider: nil)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post refresh_valuation_property_path(@account)
+    end
+
+    assert_redirected_to account_path(@account)
+  end
+
+  test "refresh_valuation refuses when the provider is no longer configured" do
+    @account.property.update!(avm_provider: "chimnie", avm_external_id: "999000000001")
+    Provider::Registry.stubs(:chimnie).returns(nil)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post refresh_valuation_property_path(@account)
+    end
+
+    assert_redirected_to account_path(@account)
+    assert_match "Chimnie isn't configured", flash[:alert]
+  end
+
+  test "method selector shows provider logos for valuation providers" do
+    Provider::Registry.stubs(:chimnie).returns(mock)
+
+    get new_property_path(step: "method_select")
+
+    assert_response :success
+    assert_select "a[href*='method=chimnie']", text: /CH\s+Add via Chimnie/
+  end
+
+  test "refresh_valuation is scoped to the current family" do
+    @account.property.update!(avm_provider: "chimnie", avm_external_id: "999000000001")
+    sign_in users(:empty)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post refresh_valuation_property_path(@account)
+    end
+
+    assert_response :not_found
+  end
+
+  test "overview offers a valuation refresh for provider-linked properties" do
+    @account.property.update!(avm_provider: "chimnie", avm_external_id: "999000000001", avm_last_synced_on: Date.current)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "form[action='#{refresh_valuation_property_path(@account)}']"
+  end
+
+  test "link_valuation links a manual property after its first valuation succeeds" do
+    @account.property.update!(avm_provider: nil, avm_last_synced_on: 1.year.ago.to_date)
+    @account.property.address.update!(country: "United States")
+    Provider::Registry.stubs(:rentcast).returns(rentcast_provider_returning(Provider::Response.new(success?: true, data: valuation_data(612_000), error: nil)))
+
+    post link_valuation_property_path(@account, avm_provider: "rentcast")
+
+    assert_redirected_to account_path(@account)
+    assert_equal "Linked to RentCast and updated the property's value.", flash[:notice]
+    assert_equal "rentcast", @account.property.reload.avm_provider
+    assert_equal Date.current, @account.property.avm_last_synced_on
+    assert_equal 612_000, @account.reload.balance
+  end
+
+  test "link_valuation keeps the property unlinked when the first valuation fails" do
+    @account.property.update!(avm_provider: nil)
+    error = Provider::Rentcast::Error.new("No property found")
+    Provider::Registry.stubs(:rentcast).returns(rentcast_provider_returning(Provider::Response.new(success?: false, data: nil, error: error)))
+
+    post link_valuation_property_path(@account, avm_provider: "rentcast")
+
+    assert_redirected_to account_path(@account)
+    assert_equal "RentCast couldn't value this property, so it wasn't linked. Check that the address is correct, then try again.", flash[:alert]
+    assert_nil @account.property.reload.avm_provider
+    assert_equal 550_000, @account.reload.balance
+  end
+
+  test "link_valuation keeps the property unlinked when the provider budget is spent" do
+    @account.property.update!(avm_provider: nil)
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(false)
+    provider.expects(:fetch_property_valuation).never
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    post link_valuation_property_path(@account, avm_provider: "rentcast")
+
+    assert_nil @account.property.reload.avm_provider
+    assert flash[:alert].present?
+  end
+
+  test "link_valuation refuses an unconfigured provider" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:rentcast).returns(nil)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_redirected_to account_path(@account)
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "link_valuation refuses providers that need a property identifier" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:chimnie).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "chimnie")
+    end
+
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "link_valuation refuses addresses outside the provider's country" do
+    @account.property.update!(avm_provider: nil)
+    @account.property.address.update!(country: "Canada")
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "link_valuation requires a known country" do
+    @account.property.update!(avm_provider: nil)
+    @account.property.address.update!(country: "")
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "link_valuation does not replace an existing provider" do
+    @account.property.update!(avm_provider: "realie")
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_equal "realie", @account.property.reload.avm_provider
+  end
+
+  test "link_valuation is scoped to the current family" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:rentcast).returns(mock)
+    sign_in users(:empty)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_response :not_found
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "overview offers linking a manual property to a configured provider" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "form[action='#{link_valuation_property_path(@account, avm_provider: "rentcast")}']"
+    assert_select "form[action*='avm_provider=chimnie']", count: 0
+  end
+
+  private
+    def valuation_data(valuation)
+      Provider::PropertyValuationConcept::PropertyValuation.new(
+        valuation: valuation, currency: "USD", property_type: "single_family_home",
+        year_built: 2002, area_value: 1000, area_unit: "sqft"
+      )
+    end
+
+    def rentcast_provider_returning(response)
+      provider = mock
+      provider.stubs(:requests_remaining?).returns(true)
+      provider.stubs(:valuation_currency).returns("USD")
+      provider.stubs(:fetch_property_valuation).returns(response)
+      provider
+    end
 end

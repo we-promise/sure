@@ -1,0 +1,10 @@
+---
+tr:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_chat_system: Sohbet sistem istemi
+        ai_prompt_categorizer_openai: İşlem kategorizasyon istemi (OpenAI)
+        ai_prompt_categorizer_anthropic: İşlem kategorizasyon istemi (Anthropic)
+        ai_prompt_merchant_openai: Satıcı tespit istemi (OpenAI)
+        ai_prompt_merchant_anthropic: Satıcı tespit istemi (Anthropic)

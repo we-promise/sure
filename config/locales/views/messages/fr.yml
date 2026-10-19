@@ -2,6 +2,9 @@
 fr:
   messages:
     chat_form:
+      coming_soon: Bientôt disponible
       disclaimer: Les réponses de l’IA sont uniquement informatives. Pas de conseils
         financiers !
       placeholder: Demandez n'importe quoi...
+    create:
+      chat_not_found: Cette discussion n'est plus disponible.

@@ -1,0 +1,34 @@
+---
+pt-PT:
+  layouts:
+    application:
+      insights: Indicadores
+      privacy_mode: Ativar/desativar modo de privacidade
+      resize_left_sidebar: Redimensionar a barra lateral de contas
+      resize_right_sidebar: Redimensionar a barra lateral do assistente
+      skip_to_main: Ir para o conteúdo principal
+      nav:
+        assistant: Assistente
+        budgets: Orçamentos
+        home: Início
+        plan: Plano
+        reports: Relatórios
+        goals: Objetivos
+        transactions: Transações
+    auth:
+      existing_account: Já tem conta?
+      no_account: É novo no %{product_name}?
+      sign_in: Iniciar sessão
+      sign_up: Criar conta
+    shared:
+      footer:
+        privacy_policy: Política de Privacidade
+        terms_of_service: Termos de Serviço
+      confirm_dialog:
+        are_you_sure: Tem a certeza?
+        cannot_be_undone: Esta ação é irreversível.
+        confirm: Confirmar
+    trial:
+      open_demo: Abrir demo
+      data_deleted_in_days: Dados removidos em %{days} dias
+      contribute: Contribuir

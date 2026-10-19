@@ -43,6 +43,9 @@ hu:
       unknown: "--"
       no_cost_basis: Nincs bekerülési érték
     index:
+      positions:
+        one: "%{count} pozíció"
+        other: "%{count} pozíció"
       average_cost: Átlagos bekerülési érték
       holdings: Pozíciók
       name: Név

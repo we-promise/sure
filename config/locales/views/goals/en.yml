@@ -333,7 +333,7 @@ en:
         notes_placeholder: A reminder for future you…
         funding_accounts: Funding accounts
         funding_accounts_hint: This goal's balance is the balance (or earmarked portion) of these accounts.
-        whole_balance: Whole balance
+        whole_balance: "Blank: whole balance"
         earmark_for: Earmark amount for %{account}
         earmark_hint: Leave an amount blank to dedicate that account's whole balance.
       subtypes:

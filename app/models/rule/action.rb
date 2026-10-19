@@ -1,7 +1,13 @@
 class Rule::Action < ApplicationRecord
   belongs_to :rule, touch: true
 
-  validates :action_type, presence: true
+  SUPPORTED_ACTION_TYPES = Rule::Registry::TransactionResource.action_executor_keys.freeze
+
+  validates :action_type, presence: true, if: -> { action_type.to_s.valid_encoding? }
+  # A NUL or invalid encoding is reported by DatabaseTextValidator instead.
+  validates :action_type, inclusion: { in: SUPPORTED_ACTION_TYPES, allow_blank: true },
+    if: -> { DatabaseTextValidator.acceptable?(action_type) }
+  validates_with DatabaseTextValidator, attributes: %i[action_type value]
 
   # Pre-seed (watermark): when a send_email_notification action is created — on a
   # new rule OR added to an existing one — record all currently-matching
@@ -20,24 +26,60 @@ class Rule::Action < ApplicationRecord
   after_create_commit :seed_notification_baseline
   after_update_commit :seed_notification_baseline, if: :saved_change_to_action_type?
 
+  # Accepts an Array (e.g. from a multi-select tag input) and stores it as a
+  # comma-separated string in the existing `value` column, so multi-value
+  # actions don't require a schema change. A single scalar value round-trips
+  # unchanged, which keeps existing single-value rows backward compatible.
+  def value=(val)
+    if val.is_a?(Array)
+      val = val.reject do |item|
+        next false if item.is_a?(String) && !item.valid_encoding?
+
+        item.blank?
+      end.join(",")
+    end
+    super(val)
+  end
+
+  # Encodes a list of tag (or other) names as a single comma-separated string
+  # for the portable `value`/CSV-import representation, CSV-quoting any name
+  # that itself contains a comma (e.g. "Food, Dining") so it round-trips as
+  # one name instead of being split into two on import.
+  def self.encode_multi_value_names(names)
+    CSV.generate_line(names, row_sep: "")
+  end
+
+  # Inverse of .encode_multi_value_names. Also accepts a plain unquoted
+  # comma-separated string (the format used before quoting was introduced),
+  # which CSV parses the same way as long as no name contains a comma.
+  def self.decode_multi_value_names(str)
+    CSV.parse_line(str.to_s) || []
+  end
+
   def apply(resource_scope, ignore_attribute_locks: false, rule_run: nil)
-    executor.execute(resource_scope, value: value, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run) || 0
+    executor.execute(resource_scope, value: execution_value, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run) || 0
   end
 
   def options
     executor.options
   end
 
+  def claimed_attributes
+    executor.claimed_attributes
+  end
+
+  def reserves_claimed_attributes?
+    executor.reserves_claimed_attributes? && executor.actionable?(value)
+  end
+
   def value_display
-    if value.present?
-      if options
-        options.find { |option| option.last == value }&.first
-      else
-        ""
-      end
-    else
-      ""
-    end
+    return "" if value.blank?
+
+    cached_options = options
+    return "" if cached_options.blank?
+
+    labels_by_id = cached_options.to_h { |label, id| [ id.to_s, label ] }
+    Array(execution_value).filter_map { |v| labels_by_id[v] }.join(", ")
   end
 
   def executor
@@ -45,12 +87,23 @@ class Rule::Action < ApplicationRecord
   end
 
   private
+    def execution_value
+      executor.type == "multi_select" ? value.to_s.split(",") : value
+    end
+
     def seed_notification_baseline
       return unless action_type == "send_email_notification"
+      return if rule.notification_baseline_taken_in_this_save?
 
       NotificationDelivery.record_for(
         rule_id: rule_id,
         transaction_ids: rule.matching_transaction_ids
       )
+    rescue Rule::SafeRegex::TimeoutError => e
+      # The action is already committed. With no baseline, leaving the rule on would
+      # email every past match on its next run, so it is switched off instead; the
+      # user can turn it back on after changing the pattern. Through the rule, so
+      # an update that saved this action reports the switch-off, not success.
+      rule.notification_baseline_timed_out!(e, source: self.class.name)
     end
 end

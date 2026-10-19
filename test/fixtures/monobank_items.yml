@@ -1,0 +1,9 @@
+one:
+  family: dylan_family
+
+  name: "Test Monobank Connection"
+  access_token: "monobank-test-access-token"
+  institution_id: "monobank"
+  institution_name: "Monobank"
+  institution_domain: "monobank.ua"
+  status: good

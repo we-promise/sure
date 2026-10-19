@@ -1,0 +1,107 @@
+---
+pt-PT:
+  properties:
+    edit:
+      edit: Editar %{account}
+      title: Introduzir imóvel manualmente
+    form:
+      address_line1: Morada
+      address_line1_placeholder: Rua Principal, 123
+      area: Área útil
+      area_placeholder: '2000'
+      area_unit: Unidade de medida
+      country: País
+      country_placeholder: PT
+      locality: Cidade
+      locality_placeholder: Lisboa
+      none: Nenhum
+      postal_code: Código postal
+      postal_code_placeholder: '1000-001'
+      region: Distrito
+      region_placeholder: Lisboa
+      subtype_prompt: Selecione o tipo de imóvel
+      year_built: Ano de construção
+      year_built_placeholder: '2000'
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    new:
+      title: Introduzir imóvel manualmente
+      next: "Seguinte"
+      avm_option: "Adicionar via %{provider}"
+      avm_title: "Adicionar imóvel via %{provider}"
+      avm_description: "Introduza um nome para o imóvel e a sua morada. O %{provider} irá procurar os detalhes do imóvel e o valor de mercado estimado por si."
+      avm_us_only: "O %{provider} só suporta imóveis localizados nos Estados Unidos."
+      avm_submit: "Procurar imóvel"
+      avm_preview_title: "Confirmar detalhes do imóvel"
+      avm_preview_description: "Isto é o que o %{provider} encontrou. Reveja os detalhes antes de adicionar o imóvel — ainda não foi criado nada."
+      avm_preview_no_record: "O %{provider} não conseguiu encontrar um registo do imóvel nesta morada, pelo que o valor apresentado é uma estimativa baseada na área circundante. Verifique novamente a morada antes de continuar."
+      avm_preview_back: "Voltar"
+      avm_preview_confirm: "Adicionar imóvel"
+    address:
+      title: "Introduzir imóvel manualmente"
+      address_line1_label: "Linha de morada 1"
+      address_line1_placeholder: "Rua Principal, 123"
+      city_label: "Cidade"
+      city_placeholder: "Lisboa"
+      state_region_label: "Distrito/Região"
+      state_region_placeholder: "Lisboa"
+      postal_code_label: "Código postal"
+      postal_code_placeholder: "1000-001"
+      country_label: "País"
+      country_placeholder: "PT"
+      save: "Guardar"
+    balances:
+      title: "Introduzir imóvel manualmente"
+      market_value_label: "Valor de mercado estimado"
+      market_value_tooltip: "O valor de mercado estimado do seu imóvel. Este número pode frequentemente ser encontrado em sites como o Zillow ou o Redfin, e nunca é um número exato."
+      save: "Guardar"
+      next: "Seguinte"
+    overview_fields:
+      name_label: "Designação"
+      name_placeholder: "Casa de férias"
+      subtype_prompt: "Selecione o tipo"
+      property_type_label: "Tipo de imóvel"
+      year_built_label: "Ano de construção (opcional)"
+      year_built_placeholder: "1990"
+      area_label: "Área (opcional)"
+      area_placeholder: "1200"
+      square_feet: "Pés quadrados"
+      square_meters: "Metros quadrados"
+      area_unit_label: "Unidade de área"
+    overview:
+      living_area: Área útil
+      market_value: Valor de mercado
+      purchase_price: Preço de compra
+      trend: Tendência
+      unknown: Desconhecido
+      year_built: Ano de construção
+    tabs:
+      overview:
+        living_area: Área útil
+        market_value: Valor de mercado
+        purchase_price: Preço de compra
+        trend: Tendência
+        unknown: Desconhecido
+        year_built: Ano de construção
+        edit_account_details: "Editar detalhes da conta"
+    subtypes:
+      apartment:
+        short: Apartamento
+        long: Apartamento
+      plot:
+        short: Terreno
+        long: Terreno
+      commercial:
+        short: Comercial
+        long: Imóvel Comercial
+      rented:
+        short: Arrendado
+        long: Imóvel Arrendado
+      agri_land:
+        short: Terreno Agrícola
+        long: Terreno Agrícola
+    form_tabs:
+      address: Morada
+      overview: Resumo
+      value: Valor

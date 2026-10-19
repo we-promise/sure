@@ -14,11 +14,14 @@ fr:
       spending_anomaly: Voir les transactions de %{category}
       subscription_audit: Vérifier les transactions récurrentes
     card:
+      acknowledge: Compris
+      acknowledge_title: Masquer jusqu'à ce que les chiffres changent
       acknowledged: "Analyse ignorée"
       dismiss: Ignorer
       dismissed: Analyse ignorée
       new: Nouveau
     feed:
+      acknowledge_aria: 'Compris : %{title}'
       header: Dernières
       header_new: Nouveau
       view_all: Voir toutes les analyses
@@ -29,6 +32,7 @@ fr:
       idle_days:
         one: inactif depuis %{count} jour
         other: inactif depuis %{count} jours
+      need_attention: requièrent votre attention
       of_budget: du budget
       on_pace: au rythme actuel
       today: aujourd'hui

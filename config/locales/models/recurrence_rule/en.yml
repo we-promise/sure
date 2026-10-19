@@ -9,6 +9,14 @@ en:
         weekday: "Weekday"
         weekday_ordinal: "Week of month"
         month_of_year: "Month"
+      recurring_transaction/recurrence_rules:
+        base: "Recurrence rule:"
+        frequency: "Frequency"
+        interval: "Interval"
+        day_of_month: "Day of month"
+        weekday: "Weekday"
+        weekday_ordinal: "Week of month"
+        month_of_year: "Month"
     errors:
       models:
         recurrence_rule:
