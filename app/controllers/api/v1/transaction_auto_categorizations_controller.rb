@@ -15,6 +15,7 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
 
   before_action :ensure_write_scope
   before_action :ensure_categorization_provider
+  before_action :ensure_family_has_categories
 
   # POST /api/v1/transactions/auto_categorize
   def create
@@ -51,8 +52,19 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
       render_validation_error("No categorization provider is configured")
     end
 
+    # The categorizer picks from the family's own categories and fails every
+    # job when there are none. These API jobs have no rule run to record that
+    # failure, so reject up front instead of queuing work that can't succeed.
+    def ensure_family_has_categories
+      return if performed?
+      return if current_resource_owner.family.categories.exists?
+
+      render_validation_error("The family has no categories to assign; create categories first")
+    end
+
     # nil when the caller sent no list (every eligible transaction), otherwise
-    # the unique ids it named.
+    # the unique ids it named, lowercased so they compare equal to the ids
+    # PostgreSQL returns.
     def requested_transaction_ids
       return nil unless params.key?(:transaction_ids)
 
@@ -62,12 +74,12 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
         return nil
       end
 
-      ids = raw.uniq
-      if ids.size > MAX_TRANSACTION_IDS
+      # The limit applies to the list as sent, duplicates included.
+      if raw.size > MAX_TRANSACTION_IDS
         render_validation_error("transaction_ids accepts at most #{MAX_TRANSACTION_IDS} IDs")
         return nil
       end
 
-      ids
+      raw.map(&:downcase).uniq
     end
 end

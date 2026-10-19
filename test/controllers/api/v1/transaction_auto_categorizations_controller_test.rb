@@ -139,6 +139,34 @@ class Api::V1::TransactionAutoCategorizationsControllerTest < ActionDispatch::In
     assert_equal "validation_failed", JSON.parse(response.body)["error"]
   end
 
+  test "returns 422 when the family has no categories" do
+    @family.categories.destroy_all
+
+    assert_no_enqueued_jobs(only: AutoCategorizeJob) do
+      post auto_categorize_api_v1_transactions_url,
+           params: { transaction_ids: [ @uncategorized.id ] },
+           headers: api_headers(@api_key), as: :json
+    end
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "validation_failed", body["error"]
+    assert_match(/no categories/, body["message"])
+  end
+
+  test "treats uppercase ids as the same transaction" do
+    assert_enqueued_with(job: AutoCategorizeJob, args: [ @family, { transaction_ids: [ @uncategorized.id ] } ]) do
+      post auto_categorize_api_v1_transactions_url,
+           params: { transaction_ids: [ @uncategorized.id.upcase, @uncategorized.id ] },
+           headers: api_headers(@api_key), as: :json
+    end
+
+    assert_response :accepted
+    body = JSON.parse(response.body)
+    assert_equal [ @uncategorized.id ], body["transaction_ids"]
+    assert_equal [], body["skipped_transaction_ids"]
+  end
+
   test "returns 422 for malformed transaction_ids" do
     [ [], "not-an-array", [ "not-a-uuid" ] ].each do |ids|
       post auto_categorize_api_v1_transactions_url,
@@ -156,6 +184,19 @@ class Api::V1::TransactionAutoCategorizationsControllerTest < ActionDispatch::In
     post auto_categorize_api_v1_transactions_url,
          params: { transaction_ids: ids },
          headers: api_headers(@api_key), as: :json
+
+    assert_response :unprocessable_entity
+  end
+
+  test "counts duplicate ids toward the limit" do
+    max_ids = Api::V1::TransactionAutoCategorizationsController::MAX_TRANSACTION_IDS
+    ids = Array.new(max_ids + 1, @uncategorized.id)
+
+    assert_no_enqueued_jobs(only: AutoCategorizeJob) do
+      post auto_categorize_api_v1_transactions_url,
+           params: { transaction_ids: ids },
+           headers: api_headers(@api_key), as: :json
+    end
 
     assert_response :unprocessable_entity
   end
