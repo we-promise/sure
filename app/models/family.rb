@@ -656,9 +656,10 @@ class Family < ApplicationRecord
 
     [
       id,
+      currency,
       key,
       data_invalidation_key,
-      accounts.maximum(:updated_at)
+      accounts_status_version
     ].compact.join("_")
   end
 
@@ -692,7 +693,8 @@ class Family < ApplicationRecord
   # nothing on entries, but changes which entries `uncategorized_transactions`
   # considers accessible).
   def accounts_status_version
-    "#{accounts.count}-#{accounts.maximum(:updated_at)&.to_f}"
+    count, max_at = accounts.pick(Arel.sql("count(*)"), Arel.sql('max("accounts"."updated_at")'))
+    "#{count}-#{max_at&.to_f}"
   end
 
   # Used for invalidating caches that render merchant name/logo for recurring
