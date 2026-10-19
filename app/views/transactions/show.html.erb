@@ -91,7 +91,8 @@
                     selected_id: ef.object.category_id,
                     disabled: @entry.split_child? || annotate_locked,
                     auto_submit: true,
-                    blank_label: t(".uncategorized")
+                    blank_label: t(".uncategorized"),
+                    locked: Current.family.categories_locked?
                   ) %>
             <% end %>
           <% elsif @entry.transaction.category_set_on_transfer_outflow? %>
@@ -317,7 +318,7 @@
                   </div>
                   <%= ef.select :investment_activity_label,
                         options_for_select(
-                          [["—", nil]] + Transaction::ACTIVITY_LABELS.map { |l| [t("transactions.activity_labels.#{l.parameterize(separator: '_')}"), l] },
+                          [["—", nil]] + Transaction::ACTIVITY_LABELS.map { |l| [investment_activity_label_name(l), l] },
                           @entry.entryable.investment_activity_label
                         ),
                         { label: false },

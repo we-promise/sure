@@ -19,8 +19,10 @@ class AccountableSparklinesController < ApplicationController
       @family ||= Current.family
     end
 
+    # Scope to the accounts the current user can access (owned or shared),
+    # matching the account list and group total rendered in the sidebar.
     def account_scope
-      @account_scope ||= family.accounts.visible.where(accountable_type: @accountable.name)
+      @account_scope ||= Current.accessible_accounts.visible.where(accountable_type: @accountable.name)
     end
 
     def account_ids
@@ -67,7 +69,19 @@ class AccountableSparklinesController < ApplicationController
       )
     end
 
+    # The series is built from exactly these account rows, so the key carries a
+    # digest of them. A share count/timestamp version can stay the same while
+    # access changes (ownership moved by update_all, shares replaced with older
+    # timestamps); the row digest changes whenever the accessible set does and
+    # never repeats for a different set.
     def cache_key
-      family.build_cache_key("#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
+      family.build_cache_key(
+        "#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}_#{account_rows_digest}",
+        invalidate_on_data_updates: true
+      )
+    end
+
+    def account_rows_digest
+      Digest::SHA256.hexdigest(account_identity_rows.map { |row| row.join(":") }.sort.join(","))
     end
 end

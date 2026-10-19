@@ -1,8 +1,6 @@
 class Eval::Langfuse::ExperimentRunner
   attr_reader :dataset, :model, :provider, :client, :provider_config
 
-  BATCH_SIZE = 25
-
   def initialize(dataset, model:, provider: "openai", client: nil, provider_config: {})
     @dataset = dataset
     @model = model
@@ -83,8 +81,9 @@ class Eval::Langfuse::ExperimentRunner
     def process_items(items)
       results = []
 
-      items.each_slice(BATCH_SIZE).with_index do |batch, batch_idx|
-        Rails.logger.info("[Langfuse Experiment] Processing batch #{batch_idx + 1}/#{(items.size.to_f / BATCH_SIZE).ceil}")
+      batch_size = Provider::LlmConcept.max_items_per_call
+      items.each_slice(batch_size).with_index do |batch, batch_idx|
+        Rails.logger.info("[Langfuse Experiment] Processing batch #{batch_idx + 1}/#{(items.size.to_f / batch_size).ceil}")
 
         batch_results = process_batch(batch)
         results.concat(batch_results)

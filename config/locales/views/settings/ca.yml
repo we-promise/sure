@@ -491,6 +491,8 @@ ca:
           one: Cal renovar el consentiment en %{count} dia
           other: Cal renovar el consentiment en %{count} dies
         reconsent_required: Cal renovar el consentiment
+        login_required: "Cal iniciar sessió"
+        login_expires_soon: "La sessió caduca d'aquí a %{time} (%{at})"
         sync_error: Error de sincronització
       not_authorized: No autoritzat
       not_found: Proveïdor no trobat.
@@ -669,9 +671,11 @@ ca:
         qr_cancel: Cancel·la l'inici de sessió amb QR
         qr_back_to_credentials: Torna al número de telèfon i PIN
         qr_loading: Preparant el codi QR…
-        qr_instruction: Escaneja el codi QR amb l'aplicació de Trade Republic i aprova l'inici de sessió.
+        qr_instruction: Escaneja el codi QR amb la càmera del telèfon i després aprova l'inici de sessió a l'aplicació de Trade Republic.
         qr_success: Inici de sessió aprovat. Sure està actualitzant la pàgina del proveïdor.
         qr_error: No s'ha pogut iniciar la sessió amb QR. Torna-ho a provar.
+        requires_update: "Torna a iniciar sessió per reprendre la sincronització."
+        session_expires_in: "La sessió caduca d'aquí a %{time} (%{at})."
         add_account: "Afegeix una altra connexió"
         save_configuration: Desa i inicia sessió
         update_configuration: Actualitza la configuració
