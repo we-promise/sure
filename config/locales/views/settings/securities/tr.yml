@@ -24,6 +24,8 @@ tr:
         webauthn_empty: Henüz kayıtlı geçiş anahtarı veya güvenlik anahtarı yok.
         webauthn_last_used: Son kullanım %{time_ago} önce
         webauthn_name_label: Anahtar adı
+        webauthn_code_label: "Doğrulayıcı veya yedek kod"
+        webauthn_code_placeholder: "Güncel doğrulayıcı kodu veya kullanılmamış bir yedek kod"
         webauthn_name_placeholder: MacBook Touch ID, YubiKey vb.
         webauthn_remove: Kaldır
         webauthn_remove_confirm: Bu geçiş anahtarını veya güvenlik anahtarını kaldırmak
@@ -34,6 +36,9 @@ tr:
         webauthn_unsupported: Bu tarayıcı geçiş anahtarlarını veya güvenlik anahtarlarını
           desteklemiyor.
   webauthn_credentials:
+    code_already_used: "Bu kod zaten kullanıldı. Doğrulayıcı uygulamanızdaki bir sonraki kodu bekleyin."
+    invalid_code: "Bu kod geçersiz. Doğrulayıcı uygulamanızdan güncel bir kod veya kullanılmamış bir yedek kod girin."
+    rate_limited: "Çok fazla deneme. Bir dakika bekleyip tekrar deneyin."
     default_name: Güvenlik anahtarı
     failure: Bu geçiş anahtarı veya güvenlik anahtarı kaydedilemedi. Lütfen tekrar
       deneyin.

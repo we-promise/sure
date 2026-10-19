@@ -342,6 +342,8 @@ es:
         no_recent_sync: Sincronización pendiente
         registration_needed: Registro necesario
         reconsent_required: Se requiere renovar el consentimiento
+        login_required: "Inicio de sesión requerido"
+        login_expires_soon: "El inicio de sesión caduca en %{time} (%{at})"
         reconsent_needed:
           one: Renovar consentimiento en 1 día
           other: Renovar consentimiento en %{count} días
@@ -455,6 +457,7 @@ es:
         application_id_placeholder_new: Introduce el Application ID
         application_id_placeholder_update: Introduce un nuevo ID para actualizarlo
         client_certificate_label: Certificado de cliente (con clave privada)
+        keep_client_certificate_hint: "Déjalo en blanco para conservar el certificado actual"
         save_and_connect: Guardar y conectar
         update_connection: Actualizar conexión
         connected_bank: Banco conectado
