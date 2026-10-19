@@ -1,14 +1,6 @@
 class Provider::Openai::AutoCategorizer
   include Provider::Openai::Concerns::UsageRecorder
-
-  # JSON response format modes for custom providers
-  # - "strict": Use strict JSON schema (requires full OpenAI API compatibility)
-  # - "json_object": Use json_object response format (broader compatibility)
-  # - "none": No response format constraint (maximum compatibility with local LLMs)
-  JSON_MODE_STRICT = "strict"
-  JSON_MODE_OBJECT = "json_object"
-  JSON_MODE_NONE = "none"
-  JSON_MODE_AUTO = "auto"
+  include Provider::Openai::Concerns::JsonMode
 
   # Threshold for auto mode: if more than this percentage returns null, retry with none mode
   # This is a heuristic to detect when strict JSON mode is breaking the model's ability to reason
@@ -25,31 +17,6 @@ class Provider::Openai::AutoCategorizer
     @langfuse_trace = langfuse_trace
     @family = family
     @json_mode = json_mode || default_json_mode
-  end
-
-  VALID_JSON_MODES = [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE, JSON_MODE_AUTO ].freeze
-
-  # Determine default JSON mode based on configuration hierarchy:
-  # 1. Environment variable (LLM_JSON_MODE) - highest priority, for testing/override
-  # 2. Setting.openai_json_mode - user-configured in app settings
-  # 3. Default: auto mode (recommended for all providers)
-  #
-  # Mode descriptions:
-  # - "auto": Tries strict first, falls back to none if >50% fail (recommended default)
-  # - "strict": Best for thinking models (qwen-thinking, deepseek-reasoner) - skips verbose <think> tags
-  # - "none": Best for non-thinking models (gpt-oss, llama, mistral) - allows reasoning in output
-  # - "json_object": Middle ground, broader compatibility than strict
-  def default_json_mode
-    # 1. Check environment variable first (allows runtime override for testing)
-    env_mode = ENV["LLM_JSON_MODE"]
-    return env_mode if env_mode.present? && VALID_JSON_MODES.include?(env_mode)
-
-    # 2. Check app settings (user-configured)
-    setting_mode = Setting.openai_json_mode
-    return setting_mode if setting_mode.present? && VALID_JSON_MODES.include?(setting_mode)
-
-    # 3. Default: auto mode for all providers (tries strict first, falls back to none if needed)
-    JSON_MODE_AUTO
   end
 
   def auto_categorize
@@ -219,20 +186,11 @@ class Provider::Openai::AutoCategorizer
       }
 
       # Add response format based on json_mode setting
-      case mode
-      when JSON_MODE_STRICT
-        params[:response_format] = {
-          type: "json_schema",
-          json_schema: {
-            name: "auto_categorize_personal_finance_transactions",
-            strict: true,
-            schema: json_schema
-          }
-        }
-      when JSON_MODE_OBJECT
-        params[:response_format] = { type: "json_object" }
-        # JSON_MODE_NONE: no response_format constraint
-      end
+      apply_json_mode(params, mode: mode, schema: {
+        name: "auto_categorize_personal_finance_transactions",
+        strict: true,
+        schema: json_schema
+      })
 
       response = client.chat(parameters: params)
 

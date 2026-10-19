@@ -8,11 +8,15 @@
 class IncomeStatement::DailyExpenseTotals
   include IncomeStatement::ScopedTransactionsQuery
 
-  def initialize(family, transactions_scope:, date_range:, included_account_ids: nil)
+  # `by_category: true` splits each day's total by the transactions'
+  # category_id (nil for uncategorized), so callers can narrow the series to
+  # some categories without another query.
+  def initialize(family, transactions_scope:, date_range:, included_account_ids: nil, by_category: false)
     @family = family
     @transactions_scope = transactions_scope
     @date_range = date_range
     @included_account_ids = included_account_ids
+    @by_category = by_category
 
     validate_date_range!
   end
@@ -22,26 +26,33 @@ class IncomeStatement::DailyExpenseTotals
     return [] if @included_account_ids&.empty?
 
     ActiveRecord::Base.connection.select_all(query_sql).map do |row|
-      DailyTotal.new(date: row["day"].to_date, total: row["total"])
+      if @by_category
+        CategoryDailyTotal.new(date: row["day"].to_date, category_id: row["category_id"], total: row["total"])
+      else
+        DailyTotal.new(date: row["day"].to_date, total: row["total"])
+      end
     end
   end
 
   private
     DailyTotal = Data.define(:date, :total)
+    CategoryDailyTotal = Data.define(:date, :category_id, :total)
 
     def query_sql
       ActiveRecord::Base.sanitize_sql_array([ query_sql_body, sql_params ])
     end
 
     # Mirrors IncomeStatement::Totals' transactions subquery, but groups by
-    # entry date instead of category and keeps only the expense rows. The
-    # classification CASE is repeated in the GROUP BY (rather than referenced
-    # by alias) because only some databases accept aliases there.
+    # entry date (and category, when asked) instead of category alone, and
+    # keeps only the expense rows. The classification CASE is repeated in the
+    # GROUP BY (rather than referenced by alias) because only some databases
+    # accept aliases there.
     def query_sql_body
       <<~SQL
-        SELECT day, total FROM (
+        SELECT day, #{category_column_sql("category_id")}total FROM (
           SELECT
             ae.date as day,
+            #{category_column_sql("at.category_id as category_id")}
             #{classification_sql("at")} as classification,
             ABS(SUM(#{converted_amount_sql("at")})) as total
           FROM (#{@transactions_scope.to_sql}) at
@@ -56,11 +67,17 @@ class IncomeStatement::DailyExpenseTotals
             AND a.exclude_from_reports = false
             #{exclude_tax_advantaged_sql}
             #{include_finance_accounts_sql}
-          GROUP BY ae.date, #{classification_sql("at")}
+          GROUP BY ae.date, #{category_column_sql("at.category_id")}#{classification_sql("at")}
         ) daily
         WHERE classification = 'expense'
         ORDER BY day
       SQL
+    end
+
+    # The extra column (with its trailing comma) that splits rows by
+    # category, or nothing for the plain per-day series.
+    def category_column_sql(column)
+      @by_category ? "#{column}, " : ""
     end
 
     def sql_params

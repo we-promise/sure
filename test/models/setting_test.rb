@@ -160,6 +160,21 @@ class SettingTest < ActiveSupport::TestCase
     assert_nil Setting.brand_fetch_icon_url("example.com")
   end
 
+  test "LLM_PROVIDER env wins over a stored llm_provider" do
+    original = Setting.raw_llm_provider
+    Setting.llm_provider = "anthropic"
+
+    with_env_overrides("LLM_PROVIDER" => "openai") do
+      assert_equal "openai", Setting.llm_provider
+    end
+
+    with_env_overrides("LLM_PROVIDER" => nil) do
+      assert_equal "anthropic", Setting.llm_provider
+    end
+  ensure
+    Setting.llm_provider = original
+  end
+
   test "enabled_securities_providers falls back to twelve_data when nothing is configured" do
     with_env_overrides("SECURITIES_PROVIDERS" => nil, "SECURITIES_PROVIDER" => nil) do
       assert_equal [ "twelve_data" ], Setting.enabled_securities_providers

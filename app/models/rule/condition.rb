@@ -20,6 +20,8 @@ class Rule::Condition < ApplicationRecord
     if: -> { value.to_s.valid_encoding? }
   validates_with DatabaseTextValidator, attributes: %i[condition_type operator value]
 
+  validate :regex_value_is_safe, if: :regex_value_changed?
+
   accepts_nested_attributes_for :sub_conditions, allow_destroy: true
 
   # We don't store rule_id on sub_conditions, so "walk up" to the parent rule
@@ -47,6 +49,21 @@ class Rule::Condition < ApplicationRecord
     return true if will_save_change_to_value? && value_in_database.presence != value.presence
 
     association(:sub_conditions).target.any?(&:match_criteria_changing?)
+  end
+
+  def regex?
+    Rule::ConditionFilter::REGEX_OPERATORS.include?(operator)
+  end
+
+  # True when this condition, or any condition nested in it, matches a pattern.
+  def uses_regex?
+    compound? ? sub_conditions.any?(&:regex?) : regex?
+  end
+
+  # Probing costs a database round trip, so an untouched condition (a rule being
+  # toggled active, say) is not probed again.
+  def regex_value_changed?
+    regex? && (new_record? || will_save_change_to_value? || will_save_change_to_operator?)
   end
 
   def apply(scope)
@@ -92,6 +109,19 @@ class Rule::Condition < ApplicationRecord
   end
 
   private
+    # A blank value is already reported by the presence validation, and one the
+    # database will not store (a null byte, malformed UTF-8) by
+    # DatabaseTextValidator. Neither can be probed: the driver refuses to send it.
+    def regex_value_is_safe
+      return unless DatabaseTextValidator.acceptable?(value)
+      return if value.blank?
+
+      error = Rule::SafeRegex.error_for(value)
+      return if error.nil?
+
+      errors.add(:value, :"regex_#{error}", count: Rule::SafeRegex::MAX_LENGTH)
+    end
+
     def normalize_legacy_condition_type
       return unless condition_type.is_a?(String) && condition_type.valid_encoding?
       return if condition_type.blank?
