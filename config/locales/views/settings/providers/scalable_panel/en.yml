@@ -6,7 +6,7 @@ en:
       scalable_panel:
         preview: Preview
         description: Connect your Scalable Capital investment account to your Sure family.
-        read_only: Sure reads brokerage cash and securities holdings. It cannot place, change, or cancel trades.
+        read_only: Sure reads brokerage cash, settled deposits and withdrawals, and securities holdings. It cannot place, change, or cancel trades.
         profile_security_note: The Scalable CLI may require Profile, Security, and Agentic Investing to be enabled. Those settings can enable capabilities beyond this connector's read-only use.
         syncing: Syncing Scalable Capital…
         waiting_for_snapshot: Connected. The first account sync is queued.

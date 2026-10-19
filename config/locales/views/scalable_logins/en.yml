@@ -9,7 +9,7 @@ en:
       read_only: Sure reads your Scalable investment account, including brokerage cash and securities holdings. It cannot place, change, or cancel trades.
       profile_security_note: First enable Scalable CLI on Scalable's web platform under Profile > Security > Agentic Investing. CLI access can grant capabilities beyond this connector's data import.
       approval_title: Approve sign-in with Scalable Capital
-      approval_instructions: Keep this page open while Sure checks the sign-in automatically.
+      approval_instructions: After entering the code, approve the sign-in request in the Scalable Capital phone app. Return to this Sure page and keep it open while sign-in completes automatically.
       user_code_label: One-time code
       open_verification_page: Open Scalable Capital's verification page
       phase:

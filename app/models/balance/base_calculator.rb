@@ -34,6 +34,8 @@ class Balance::BaseCalculator
   def calculation_start_date
     @calculation_start_date ||= if directa_account_provider
       directa_first_snapshot_date || account.opening_anchor_date || account.created_at&.to_date
+    elsif scalable_first_snapshot_date
+      scalable_first_snapshot_date
     else
       [ account.opening_anchor_date, account.entries.excluding_pending.minimum(:date) ].compact.min
     end
@@ -82,6 +84,7 @@ class Balance::BaseCalculator
       return 0 unless account.balance_type == :investment
       return 0 if fineco_first_snapshot_date && date <= fineco_first_snapshot_date
       return 0 if directa_first_snapshot_date && date <= directa_first_snapshot_date
+      return 0 if scalable_first_snapshot_date && date <= scalable_first_snapshot_date
 
       start_of_day_holdings_value = holdings_value_for_date(date.prev_day)
       end_of_day_holdings_value = holdings_value_for_date(date)
@@ -115,6 +118,13 @@ class Balance::BaseCalculator
       return @directa_account_provider if defined?(@directa_account_provider)
 
       @directa_account_provider = account.account_providers.find_by(provider_type: "DirectaAccount")
+    end
+
+    def scalable_first_snapshot_date
+      return @scalable_first_snapshot_date if defined?(@scalable_first_snapshot_date)
+
+      provider_link = account.account_providers.find_by(provider_type: "ScalableAccount")
+      @scalable_first_snapshot_date = provider_link&.provider&.securities_history_start_date
     end
 
     def flows_for_date(date)

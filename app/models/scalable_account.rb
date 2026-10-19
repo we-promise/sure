@@ -26,6 +26,10 @@ class ScalableAccount < ApplicationRecord
     kind == BROKER_KIND
   end
 
+  def securities_history_start_date
+    holdings.where("qty > 0").minimum(:date)
+  end
+
   def current_account
     account
   end

@@ -23,3 +23,6 @@ en:
       unsupported_account: Scalable Capital returned an account type this preview cannot import.
       stale_snapshot: Scalable Capital returned an older snapshot. Your newer saved data was kept.
       sync_failed: Scalable Capital could not refresh your data. Your saved data was kept.
+      history_incomplete: Scalable Capital cash history could not be fully verified. Your saved history was kept; the latest account balance remains available.
+      history_changed: Scalable Capital cash history changed during import. Your saved history was kept; try syncing again later.
+      history_unsupported: Scalable Capital returned a transaction type this preview cannot import. Your saved history was kept; the latest account balance remains available.

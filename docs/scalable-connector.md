@@ -14,7 +14,7 @@ Refresh tokens can rotate. Sure serializes refresh and data requests per connect
 
 References: src/auth.rs, src/channel.rs, src/token_verifier.rs, src/dpop/mod.rs, src/session_refresh.rs.
 
-The public OpenID discovery document was checked live without authentication on 2026-10-19. Its issuer, JWKS URI, device authorization/token endpoints and ES256 DPoP support match the pinned source. This verifies metadata only, not a successful account login.
+The public OpenID discovery document was checked live without authentication on 2026-10-19. Its issuer, JWKS URI, device authorization/token endpoints and ES256 DPoP support match the pinned source. An attended device-code login, separate phone approval and automatic first brokerage import were also verified on that date. Refresh longevity and importing a nonempty securities portfolio remain unverified for this account.
 
 ## Read capabilities
 
@@ -31,7 +31,11 @@ References: src/broker_shared.rs, src/broker_queries.rs, src/broker_projections.
 
 The first connector slice supports verified EUR broker cash and holdings snapshots without an outstanding margin loan. A nonzero or unverified loaned balance is rejected until its accounting contract is established. It uses the read time for the native account snapshot, keeps the bank valuation timestamp separately, reconciles the supplied valuation with holdings and cash before writing, and keeps prior data when responses are partial, stale or inconsistent. Reconnects reuse provider portfolio identities.
 
-Activity, cost basis, total-return history, Overnight and fixed-term products require additional verified response contracts. The preview hides and rejects manual basis/security remapping and market-price replacement controls for connected Scalable holdings; incomplete local journal history cannot invent a basis for the imported position. Ordinary manual journal entries remain local bookkeeping and never call Scalable order APIs. A successful static test is not proof of account-level availability. No order, purchase, sale, withdrawal or transfer capability is implemented. CLI credentials themselves may still carry broader permissions; excluding trading code does not narrow backend permissions.
+Settled EUR deposits and withdrawals are imported as native transactions after fully reading the available paginated history and verifying transaction details. Source deposits are positive and withdrawals negative; Sure's entry convention reverses those signs. A summary can say CONFIRMED while its detail is already settled, so the detail's pending flag and settlement history determine eligibility. Repeated imports use portfolio-scoped source identities. Incomplete, changed or unsupported history retains previous entries and reports a history-specific error while a valid current snapshot remains available.
+
+Cash-only accounts can reconstruct their cash balance history from those settled movements. For accounts with observed securities holdings, charts start at the first positive holdings snapshot; older cash activity remains visible without implying earlier securities valuations or portfolio returns.
+
+Trade activity, other cash transaction types, cost basis, total-return history, Overnight and fixed-term products require additional verified response contracts. The preview hides and rejects manual basis/security remapping and market-price replacement controls for connected Scalable holdings; incomplete local journal history cannot invent a basis for the imported position. Ordinary manual journal entries remain local bookkeeping and never call Scalable order APIs. A successful static test is not proof of account-level availability. No order, purchase, sale, withdrawal or transfer capability is implemented. CLI credentials themselves may still carry broader permissions; excluding trading code does not narrow backend permissions.
 
 ## Operation
 

@@ -130,10 +130,68 @@ module Provider::Scalable::ReadQueries
     }
   GRAPHQL
 
+  BROKER_TRANSACTIONS = <<~GRAPHQL.freeze
+    query BrokerTransactions($accountId: ID!, $portfolioId: ID!, $input: BrokerTransactionInput!) {
+      account(id: $accountId) {
+        id
+        brokerPortfolio(id: $portfolioId) {
+          id
+          moreTransactions(input: $input) {
+            cursor
+            total
+            transactions {
+              __typename
+              id
+              currency
+              type
+              status
+              isCancellation
+              lastEventDateTime
+              ... on BrokerCashTransactionSummary {
+                cashTransactionType
+                amount
+              }
+            }
+          }
+        }
+      }
+    }
+  GRAPHQL
+
+  BROKER_TRANSACTION_DETAILS = <<~GRAPHQL.freeze
+    query BrokerTransactionDetails($accountId: ID!, $portfolioId: ID!, $transactionId: ID!) {
+      account(id: $accountId) {
+        id
+        brokerPortfolio(id: $portfolioId) {
+          id
+          transactionDetails(id: $transactionId) {
+            __typename
+            id
+            currency
+            type
+            lastEventDateTime
+            isPending
+            isCancellation
+            ... on BrokerCashTransaction {
+              cashTransactionType
+              amount
+              description
+              cashTransactionHistory: transactionHistory {
+                state
+              }
+            }
+          }
+        }
+      }
+    }
+  GRAPHQL
+
   DOCUMENTS = {
     broker_portfolios: { name: "ResolveBrokerIds", query: RESOLVE_BROKER_IDS }.freeze,
     broker_overview: { name: "BrokerOverview", query: BROKER_OVERVIEW }.freeze,
     broker_cash_breakdown: { name: "BrokerLimits", query: BROKER_CASH_BREAKDOWN }.freeze,
-    broker_holdings: { name: "BrokerHoldings", query: BROKER_HOLDINGS }.freeze
+    broker_holdings: { name: "BrokerHoldings", query: BROKER_HOLDINGS }.freeze,
+    broker_transactions: { name: "BrokerTransactions", query: BROKER_TRANSACTIONS }.freeze,
+    broker_transaction_details: { name: "BrokerTransactionDetails", query: BROKER_TRANSACTION_DETAILS }.freeze
   }.freeze
 end

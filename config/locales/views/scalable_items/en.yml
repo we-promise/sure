@@ -8,7 +8,7 @@ en:
       reconnect: Sign in to Scalable Capital
       stop_syncing: Stop syncing
       stop_syncing_confirmation: Stop syncing Scalable Capital? Your saved accounts and balances will remain in Sure.
-      snapshot_scope: Sure reads brokerage cash and supported securities holdings from your Scalable investment account. Trading actions are unavailable in Sure.
+      snapshot_scope: Sure reads brokerage cash, settled deposits and withdrawals, and supported securities holdings from your Scalable investment account. Trading actions are unavailable in Sure.
     sync:
       unavailable: Scalable Capital is not ready to sync. Sign in again to continue.
       already_running: A Scalable Capital sync is already running.

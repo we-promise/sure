@@ -58,8 +58,12 @@ class Balance::LinkedInvestmentSeriesNormalizer
           .group(:account_id)
           .minimum(:date)
 
+        scalable_dates = scalable_snapshot_start_dates(account_ids)
+        activity_dates.except!(*scalable_dates.keys)
+
         stable_holding_dates = stable_provider_holding_start_dates(account_ids)
           .merge(directa_snapshot_start_dates(account_ids))
+          .merge(scalable_dates)
 
         account_ids.filter_map do |account_id|
           [ activity_dates[account_id], stable_holding_dates[account_id] ].compact.min
@@ -95,6 +99,15 @@ class Balance::LinkedInvestmentSeriesNormalizer
             dates[provider_link.account_id] = date if date
           end
       end
+
+      def scalable_snapshot_start_dates(account_ids)
+        AccountProvider.where(account_id: account_ids, provider_type: "ScalableAccount")
+          .includes(:provider)
+          .each_with_object({}) do |provider_link, dates|
+            date = provider_link.provider&.securities_history_start_date
+            dates[provider_link.account_id] = date if date
+          end
+      end
   end
 
   # Normalizes chart series for linked investment accounts by trimming unsupported
@@ -120,13 +133,13 @@ class Balance::LinkedInvestmentSeriesNormalizer
 
     opening_money = Money.new(opening_amount(first_supported_history_date), active_points.first.value.currency)
 
-    if first_supported_history_date >= series.start_date && active_points.first.date > first_supported_history_date
+    if scalable_snapshot_start_date.nil? && first_supported_history_date >= series.start_date && active_points.first.date > first_supported_history_date
       # Periodic sampling missed the exact opening date (e.g. coarse 1-month or
       # 1-week intervals): prepend an anchor point on the exact opening date with
       # the initial balance (e.g. $0), only when the inception date falls within
       # the requested series date range.
       active_points = [ opening_point(date: first_supported_history_date, date_formatted: nil, value: opening_money), *active_points ]
-    elsif active_points.first.date == first_supported_history_date &&
+    elsif scalable_snapshot_start_date.nil? && active_points.first.date == first_supported_history_date &&
           first_provider_activity_date == first_supported_history_date
       # Sampling landed exactly on the opening date (e.g. a daily "All" chart)
       # and that date is the first provider activity date: the first point
@@ -153,6 +166,8 @@ class Balance::LinkedInvestmentSeriesNormalizer
   end
 
   def supported_history_start_date
+    return scalable_snapshot_start_date if scalable_snapshot_start_date
+
     [ first_provider_activity_date, stable_provider_holding_start_date ].compact.min
   end
 
@@ -227,6 +242,13 @@ class Balance::LinkedInvestmentSeriesNormalizer
       return @direct_provider_link if defined?(@direct_provider_link)
 
       @direct_provider_link = account.account_providers.find_by(provider_type: "DirectaAccount")
+    end
+
+    def scalable_snapshot_start_date
+      return @scalable_snapshot_start_date if defined?(@scalable_snapshot_start_date)
+
+      provider_link = account.account_providers.find_by(provider_type: "ScalableAccount")
+      @scalable_snapshot_start_date = provider_link&.provider&.securities_history_start_date
     end
 
     def directa_snapshot_start_date

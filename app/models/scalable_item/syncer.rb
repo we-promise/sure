@@ -67,9 +67,59 @@ class ScalableItem::Syncer
         window_start_date: sync&.window_start_date,
         window_end_date: sync&.window_end_date
       )
+
+      sync_history(provider, account_id)
     end
   end
 
   def perform_post_sync
   end
+
+  private
+
+    def sync_history(provider, account_id)
+      @item.scalable_accounts.order(:id).each do |provider_account|
+        ApplicationRecord.transaction(requires_new: true) do
+          rows = ScalableItem::HistoryReader.new(
+            provider: provider, account_id: account_id, portfolio_id: provider_account.uid
+          ).read
+          normalized = ScalableItem::HistoryNormalizer.new(rows: rows, portfolio_id: provider_account.uid).normalize
+          verify_history_cash!(provider, account_id, provider_account)
+          ScalableItem::HistoryImporter.new(@item).import(provider_account: provider_account, normalized: normalized)
+        end
+      end
+    rescue Provider::Scalable::Error => error
+      raise if %w[session_expired authentication_failed account_identity_changed].include?(error.code)
+
+      @item.reload
+      code = %w[history_incomplete history_changed history_unsupported rate_limited provider_unavailable].include?(error.code) ? error.code : "history_incomplete"
+      attributes = { last_sync_error_code: code }
+      attributes[:next_sync_at] = 15.minutes.from_now if %w[rate_limited provider_unavailable].include?(code)
+      @item.update!(attributes)
+      DebugLogEntry.capture(
+        category: "provider_sync_error", level: "warn", source: self.class.name,
+        provider_key: "scalable", family: @item.family,
+        message: "Scalable cash history import was not completed.", metadata: { error_code: code }
+      )
+    end
+
+    def verify_history_cash!(provider, account_id, provider_account)
+      response = provider.read(:broker_cash_breakdown,
+        variables: { "accountId" => account_id, "portfolioId" => provider_account.uid })
+      account = response["account"] if response.is_a?(Hash)
+      portfolio = account["brokerPortfolio"] if account.is_a?(Hash)
+      cash = portfolio.dig("payments", "buyingPower") if portfolio.is_a?(Hash)
+      unless account.is_a?(Hash) && account["id"] == account_id && portfolio.is_a?(Hash) &&
+          portfolio["id"] == provider_account.uid && cash.is_a?(Hash)
+        raise Provider::Scalable::Error.new(:history_incomplete)
+      end
+
+      cash_balance = BigDecimal(cash.fetch("cashBalance").to_s)
+      loaned = BigDecimal(cash.fetch("loaned").to_s)
+      unless cash_balance.finite? && cash_balance == provider_account.cash_balance && loaned.finite? && loaned.zero?
+        raise Provider::Scalable::Error.new(:history_changed)
+      end
+    rescue ArgumentError, TypeError, KeyError
+      raise Provider::Scalable::Error.new(:history_incomplete), cause: nil
+    end
 end

@@ -54,6 +54,9 @@ class Provider::Scalable < Provider
       "stale_snapshot" => "Scalable Capital account data changed during import. Saved account data was kept.",
       "session_expired" => "Scalable Capital session expired. Reconnect to continue.",
       "sync_failed" => "Scalable Capital data could not be synchronized. Saved account data was kept.",
+      "history_incomplete" => "Scalable Capital cash history could not be fully verified. Saved history was kept.",
+      "history_changed" => "Scalable Capital cash history changed during import. Saved history was kept.",
+      "history_unsupported" => "Scalable Capital returned a transaction type this preview cannot import. Saved history was kept.",
       "unsupported_account" => "Scalable Capital returned an unsupported account.",
       "invalid_snapshot" => "Scalable Capital returned invalid account data. Saved account data was kept."
     }.freeze

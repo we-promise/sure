@@ -33,7 +33,7 @@ class ScalableItem::Importer
               kind: ScalableAccount::BROKER_KIND,
               current_balance: portfolio.current_balance,
               cash_balance: portfolio.cash_balance,
-              raw_metadata: JSON.generate(portfolio.raw_metadata),
+              raw_metadata: JSON.generate(snapshot_metadata(provider_account, portfolio)),
               snapshot_at: portfolio.observed_at
             )
             provider_account.save!
@@ -85,6 +85,15 @@ class ScalableItem::Importer
   end
 
   private
+
+    def snapshot_metadata(provider_account, portfolio)
+      metadata = portfolio.raw_metadata.deep_dup
+      previous = JSON.parse(provider_account.raw_metadata.presence || "{}")
+      metadata["history"] = previous["history"] if previous.is_a?(Hash) && previous["history"].is_a?(Hash)
+      metadata
+    rescue JSON::ParserError
+      raise Provider::Scalable::Error.new(:invalid_snapshot), cause: nil
+    end
 
     def validate_snapshot!(snapshot)
       valid = snapshot.is_a?(ScalableItem::PortfolioNormalizer::Snapshot) &&

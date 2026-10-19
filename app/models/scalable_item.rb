@@ -12,6 +12,7 @@ class ScalableItem < ApplicationRecord
     encryption_unavailable login_in_progress challenge_expired challenge_not_available
     login_authorization_changed account_identity_changed account_conflict invalid_snapshot
     incomplete_snapshot unsupported_account stale_snapshot sync_failed
+    history_incomplete history_changed history_unsupported
   ].freeze
 
   enum :status, { pending: "pending", connected: "connected", requires_update: "requires_update" }, default: :requires_update
