@@ -38,15 +38,26 @@ class TransactionSplitsProvider with ChangeNotifier {
 
   final Map<String, TransactionSplit> _splitsByParent = {};
   final Map<String, String> _parentByChild = {};
+
+  /// Transactions whose split membership (parent, child, or not split) has
+  /// been confirmed by the server in this session.
+  final Set<String> _known = {};
   final Set<String> _loading = {};
   ConnectivityService? _connectivityService;
   bool _isDisposed = false;
 
   static const offlineError = 'offline';
 
+  /// Follows [service] so split widgets rebuild when connectivity changes;
+  /// the proxy provider keeps this instance, so nothing else notifies them.
   void setConnectivityService(ConnectivityService service) {
+    if (identical(service, _connectivityService)) return;
+    _connectivityService?.removeListener(_onConnectivityChanged);
     _connectivityService = service;
+    service.addListener(_onConnectivityChanged);
   }
+
+  void _onConnectivityChanged() => _notify();
 
   bool get isOnline => _connectivityService?.isOnline ?? true;
 
@@ -65,6 +76,12 @@ class TransactionSplitsProvider with ChangeNotifier {
 
   bool isSplitChild(String transactionId) =>
       _parentByChild.containsKey(transactionId);
+
+  /// Whether the server has confirmed if [transactionId] is a split parent,
+  /// a split child, or not split. Until then, edits that the API rejects for
+  /// split children must stay locked.
+  bool isSplitStatusKnown(String transactionId) =>
+      _known.contains(transactionId);
 
   String? parentIdFor(String childId) => _parentByChild[childId];
 
@@ -102,6 +119,7 @@ class TransactionSplitsProvider with ChangeNotifier {
         } else {
           _remember(split);
         }
+        _known.add(transactionId);
         return split;
       }
       _lastError = result['error'] as String?;
@@ -147,7 +165,7 @@ class TransactionSplitsProvider with ChangeNotifier {
       if (result['success'] != true) {
         return SplitActionResult(
           success: false,
-          error: result['error'] as String?,
+          error: _displayableError(result['error'] as String?, 'saveSplit'),
         );
       }
 
@@ -169,10 +187,7 @@ class TransactionSplitsProvider with ChangeNotifier {
         'TransactionSplitsProvider',
         'saveSplit failed with ${e.runtimeType}',
       );
-      return const SplitActionResult(
-        success: false,
-        error: 'Something went wrong. Please try again.',
-      );
+      return const SplitActionResult(success: false);
     }
   }
 
@@ -194,7 +209,7 @@ class TransactionSplitsProvider with ChangeNotifier {
       if (result['success'] != true) {
         return SplitActionResult(
           success: false,
-          error: result['error'] as String?,
+          error: _displayableError(result['error'] as String?, 'unsplit'),
         );
       }
 
@@ -210,10 +225,7 @@ class TransactionSplitsProvider with ChangeNotifier {
         'TransactionSplitsProvider',
         'unsplit failed with ${e.runtimeType}',
       );
-      return const SplitActionResult(
-        success: false,
-        error: 'Something went wrong. Please try again.',
-      );
+      return const SplitActionResult(success: false);
     }
   }
 
@@ -227,14 +239,33 @@ class TransactionSplitsProvider with ChangeNotifier {
   void clear() {
     _splitsByParent.clear();
     _parentByChild.clear();
+    _known.clear();
     _notify();
+  }
+
+  /// Server validation messages are shown as they are. Session and transport
+  /// failures are logged and returned as null, so screens show their own
+  /// localized failure message instead.
+  String? _displayableError(String? error, String operation) {
+    if (error == null ||
+        error == 'unauthorized' ||
+        error.startsWith('Network error:')) {
+      _log.error(
+        'TransactionSplitsProvider',
+        '$operation failed: ${error ?? 'no error message'}',
+      );
+      return null;
+    }
+    return error;
   }
 
   void _remember(TransactionSplit split) {
     _forget(split.transactionId);
     _splitsByParent[split.transactionId] = split;
+    _known.add(split.transactionId);
     for (final childId in split.childIds) {
       _parentByChild[childId] = split.transactionId;
+      _known.add(childId);
     }
   }
 
@@ -255,6 +286,8 @@ class TransactionSplitsProvider with ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
+    _connectivityService?.removeListener(_onConnectivityChanged);
+    _connectivityService = null;
     super.dispose();
   }
 }
