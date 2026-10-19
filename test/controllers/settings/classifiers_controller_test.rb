@@ -14,7 +14,7 @@ class Settings::ClassifiersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "input[type=checkbox][name='bayes_settings[merchant_name_words]'][checked]"
-    assert_select "select[name='bayes_settings[word_split]'] option[selected][value='ascii']"
+    assert_select "input[type=hidden][name='bayes_settings[word_split]'][value='ascii']"
     assert_select "input[name='bayes_settings[threshold]'][value='0.7']"
     assert_select "input[name='included_category_ids[]']", count: @family.categories.count
     assert_select "#classifier_evaluation"
