@@ -1376,6 +1376,17 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 0, goal.pace.to_d
   end
 
+  # A recent valuation shows the balance moves outside transactions, so an old
+  # transaction must not make the account a measured zero (dormant).
+  test "a recent valuation on under a year of history stays unmeasured despite an older transaction" do
+    account = valuation_tracked_account(balance: 112_000, year_ago: 100_000, history_from: 200.days.ago.to_date)
+    create_transaction(account: account, amount: -1_000, date: 150.days.ago.to_date)
+    goal = goal_on(account, target_amount: 121_600, target_date: 360.days.from_now.to_date)
+
+    assert_not goal.pace_measurable?
+    assert_equal :pace_unknown, goal.status
+  end
+
   test "a balance update exactly a year old still counts, one a day older does not" do
     on_edge = valuation_tracked_account(balance: 112_000, year_ago: 100_000, valuation_on: Date.current - 365)
     past_edge = valuation_tracked_account(balance: 112_000, year_ago: 100_000, valuation_on: Date.current - 366)
