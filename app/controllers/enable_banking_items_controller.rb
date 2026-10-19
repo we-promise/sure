@@ -255,26 +255,8 @@ class EnableBankingItemsController < ApplicationController
             next
           end
 
-          # Create the internal Account (uses save! internally, will raise on failure)
-          # Skip initial sync - provider sync will handle balance creation with correct currency
-          account = Account.create_and_sync(
-            {
-              family: Current.family,
-              name: enable_banking_account.name,
-              balance: enable_banking_account.current_balance || 0,
-              currency: enable_banking_account.currency || "EUR",
-              accountable_type: accountable_type,
-              accountable_attributes: {}
-            },
-            skip_initial_sync: true
-          )
-
-          # Link account to enable_banking_account via account_providers
-          # Uses create! so any failure will rollback the entire transaction
-          AccountProvider.create!(
-            account: account,
-            provider: enable_banking_account
-          )
+          account = EnableBankingAccount::Linker.new(enable_banking_account, user: Current.user)
+            .link!(account_type: accountable_type)
 
           created_accounts << account
         end
@@ -345,51 +327,42 @@ class EnableBankingItemsController < ApplicationController
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
 
-    # Update sync start date from form if provided
-    if params[:sync_start_date].present?
-      @enable_banking_item.update!(sync_start_date: params[:sync_start_date])
-    end
-
     created_count = 0
     skipped_count = 0
 
-    account_types.each do |enable_banking_account_id, selected_type|
-      # Skip accounts marked as "skip"
-      if selected_type == "skip" || selected_type.blank?
-        skipped_count += 1
-        next
+    begin
+      Current.family.with_lock do
+        if params[:sync_start_date].present?
+          @enable_banking_item.update!(sync_start_date: params[:sync_start_date])
+        end
+
+        account_types.each do |enable_banking_account_id, selected_type|
+          if selected_type == "skip" || selected_type.blank?
+            skipped_count += 1
+            next
+          end
+
+          enable_banking_account = @enable_banking_item.enable_banking_accounts.find(enable_banking_account_id)
+          selected_subtype = account_subtypes[enable_banking_account_id]
+          selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
+
+          EnableBankingAccount::Linker.new(enable_banking_account, user: Current.user)
+            .link!(account_type: selected_type, subtype: selected_subtype)
+          created_count += 1
+        end
+
+        @enable_banking_item.update!(pending_account_setup: false)
       end
-
-      enable_banking_account = @enable_banking_item.enable_banking_accounts.find(enable_banking_account_id)
-      selected_subtype = account_subtypes[enable_banking_account_id]
-
-      # Default subtype for CreditCard since it only has one option
-      selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
-
-      # Create account with user-selected type and subtype
-      account = Account.create_from_enable_banking_account(
-        enable_banking_account,
-        selected_type,
-        selected_subtype
-      )
-
-      # Link account via AccountProvider
-      AccountProvider.create!(
-        account: account,
-        provider: enable_banking_account
-      )
-
-      created_count += 1
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+      redirect_to accounts_path, alert: t(".link_failed", default: "Failed to link accounts: %{error}", error: e.message), status: :see_other
+      return
     end
-
-    # Clear pending status and mark as complete
-    @enable_banking_item.update!(pending_account_setup: false)
 
     # Trigger a sync to process the imported data if accounts were created
     @enable_banking_item.sync_later if created_count > 0
 
     if created_count > 0
-      flash[:notice] = t(".success", default: "%{count} account(s) created successfully!", count: created_count)
+      flash[:notice] = t(".success", default: "%{count} account(s) linked successfully!", count: created_count)
     elsif skipped_count > 0
       flash[:notice] = t(".all_skipped", default: "All accounts were skipped. You can set them up later from the accounts page.")
     else
@@ -441,42 +414,13 @@ class EnableBankingItemsController < ApplicationController
       return
     end
 
-    # Relink behavior: detach any legacy link and point provider link at the chosen account
-    orphaned_account = nil
-    Account.transaction do
-      enable_banking_account.lock!
-
-      # Upsert the AccountProvider mapping deterministically
-      ap = AccountProvider.find_or_initialize_by(provider: enable_banking_account)
-      previous_account = ap.account
-      ap.account_id = @account.id
-      ap.save!
-
-      # If the provider was previously linked to a different account in this family,
-      # and that account is now orphaned, quietly disable it so it disappears from the
-      # visible manual list. This mirrors the unified flow expectation that the provider
-      # follows the chosen account.
-      if previous_account && previous_account.id != @account.id && previous_account.family_id == @account.family_id
-        begin
-          # Disabled accounts still appear (greyed-out) in the manual list after a full refresh.
-          # Use the app's standard deletion path (async) so the duplicate disappears and the
-          # "pending_deletion" state remains truthful in the UI.
-          orphaned_account = previous_account if previous_account.may_mark_for_deletion?
-        rescue => e
-          Rails.logger.warn("Failed to cleanup orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
-        end
-      end
-    end
-
-    # Queue the orphan for deletion only after the relink commits. destroy_later
-    # pushes DestroyJob only once every open transaction commits, so called in
-    # the block above, an enqueue error would leave it from the commit, past
-    # the rescue inside it.
     begin
-      orphaned_account&.destroy_later
-    rescue => e
-      Rails.logger.warn("Failed to cleanup orphaned account #{orphaned_account.id}: #{e.class} - #{e.message}")
+      EnableBankingAccount::Linker.new(enable_banking_account, user: Current.user).link_existing!(@account)
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to account_path(@account), alert: e.record.errors.full_messages.to_sentence, status: :see_other
+      return
     end
+    enable_banking_account.enable_banking_item.sync_later
 
     if turbo_frame_request?
       # Reload the item to ensure associations are fresh

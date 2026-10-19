@@ -20,6 +20,8 @@ class EnableBankingItem < ApplicationRecord
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
 
+  before_destroy :lock_family_for_unlink, prepend: true
+
   has_many :enable_banking_accounts, dependent: :destroy
   has_many :accounts, through: :enable_banking_accounts
 
@@ -362,6 +364,9 @@ class EnableBankingItem < ApplicationRecord
   end
 
   private
+    def lock_family_for_unlink
+      family.lock!
+    end
 
     # Authentication approach preference, lowest number wins.
     # REDIRECT is the smoothest (PSU authenticates entirely on the ASPSP page).

@@ -307,10 +307,7 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
-  # The orphan cleanup's enqueue runs once the relink transaction commits. If it
-  # ran inside that transaction, its error would escape the action's rescue
-  # after the relink had committed, and the request would fail.
-  test "link_existing_account still succeeds when the orphan's destroy enqueue fails" do
+  test "link_existing_account refuses to replace an already linked account" do
     orphan = Account.create!(
       family: @family,
       name: "Old Checking",
@@ -332,7 +329,7 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
       current_balance: 0
     )
     AccountProvider.create!(account: orphan, provider: eb_account)
-    DestroyJob.queue_adapter.expects(:enqueue).once.raises(RedisClient::CannotConnectError, "Connection refused")
+    DestroyJob.queue_adapter.expects(:enqueue).never
 
     post link_existing_account_enable_banking_items_path, params: {
       account_id: target.id,
@@ -340,8 +337,64 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :see_other
-    assert_equal target, AccountProvider.find_by!(provider: eb_account).account
+    assert_equal orphan, AccountProvider.find_by!(provider: eb_account).account
     assert_equal "active", orphan.reload.status
+    assert_redirected_to account_path(target)
+    assert_match "already linked", flash[:alert]
+  end
+
+  test "account setup reconnects the remembered account and is idempotent" do
+    @item.update!(aspsp_name: "Test Bank")
+    provider = @item.enable_banking_accounts.create!(name: "Checking", uid: "old-consent", currency: "EUR",
+      current_balance: 10, raw_payload: { identification_hash: "stable-primary-hash" })
+    original = EnableBankingAccount::Linker.new(provider, user: users(:family_admin))
+      .link!(account_type: "Depository", subtype: "checking")
+    @item.unlink_all!(dry_run: false)
+    provider.destroy!
+    incoming = @item.enable_banking_accounts.create!(name: "Checking", uid: "new-consent", currency: "EUR",
+      current_balance: 10, raw_payload: { identification_hash: "stable-primary-hash" })
+    @item.update!(pending_account_setup: true)
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    2.times do
+      assert_no_difference "Account.count" do
+        post complete_account_setup_enable_banking_item_url(@item), params: {
+          account_types: { incoming.id => "Depository" }, account_subtypes: { incoming.id => "checking" }
+        }
+      end
+      assert_redirected_to accounts_path
+      assert_equal original.id, incoming.reload.account.id
+    end
+
+    assert_not @item.reload.pending_account_setup?
+    assert_equal 1, original.account_providers.count
+  end
+
+  test "account setup rolls back all links if a remembered account conflicts" do
+    @item.update!(aspsp_name: "Test Bank", pending_account_setup: true)
+    remembered = @item.enable_banking_accounts.create!(name: "Checking", uid: "existing", currency: "EUR",
+      current_balance: 10, raw_payload: { identification_hash: "stable-primary-hash" })
+    EnableBankingAccount::Linker.new(remembered, user: users(:family_admin))
+      .link!(account_type: "Depository", subtype: "checking")
+    first = @item.enable_banking_accounts.create!(name: "New account", uid: "new", currency: "USD",
+      current_balance: 0, raw_payload: { identification_hash: "other-stable-hash" })
+    original_start = @item.sync_start_date
+    EnableBankingItem.any_instance.expects(:sync_later).never
+
+    assert_no_difference [ "Account.count", "AccountProvider.count" ] do
+      post complete_account_setup_enable_banking_item_url(@item), params: {
+        account_types: { first.id => "Depository", remembered.id => "CreditCard" },
+        account_subtypes: { first.id => "checking", remembered.id => "credit_card" },
+        sync_start_date: Date.new(2025, 1, 1).to_s
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert_match "currency or type", flash[:alert]
+    assert_nil first.reload.account
+    assert @item.reload.pending_account_setup?
+    assert_nil @item.sync_start_date if original_start.nil?
+    assert_equal original_start, @item.sync_start_date if original_start.present?
   end
 
   private

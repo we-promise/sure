@@ -23,6 +23,32 @@ class EnableBankingAccount < ApplicationRecord
     account
   end
 
+  def reconnection_fingerprint
+    item = enable_banking_item
+    primary_hash = raw_payload.is_a?(Hash) ? raw_payload["identification_hash"].presence || raw_payload[:identification_hash].presence : nil
+    return if primary_hash.blank? || item.aspsp_name.blank? || item.country_code.blank? || currency.blank?
+
+    Digest::SHA256.hexdigest([ "enable_banking_v1", item.country_code.upcase,
+                              item.aspsp_name.strip.downcase, currency.upcase, primary_hash ].to_json)
+  end
+
+  def remember_native_account!(native_account)
+    fingerprint = reconnection_fingerprint
+    return unless fingerprint && !native_account.destroyed? && !native_account.pending_deletion?
+
+    unless native_account.family_id == enable_banking_item.family_id && native_account.currency == currency
+      errors.add(:base, I18n.t("enable_banking_accounts.linking.errors.family_currency_mismatch"))
+      raise ActiveRecord::RecordInvalid, self
+    end
+    if native_account.enable_banking_fingerprint.present? && native_account.enable_banking_fingerprint != fingerprint
+      errors.add(:base, I18n.t("enable_banking_accounts.linking.errors.identity_mismatch"))
+      raise ActiveRecord::RecordInvalid, self
+    end
+    attributes = { enable_banking_fingerprint: fingerprint }
+    attributes[:institution_name] = enable_banking_item.aspsp_name if native_account[:institution_name].blank?
+    native_account.update!(attributes)
+  end
+
   # Returns the API account ID (UUID) for Enable Banking API calls
   # The Enable Banking API requires a valid UUID for balance/transaction endpoints
   # Falls back to raw_payload["uid"] for existing accounts that have the wrong account_id stored

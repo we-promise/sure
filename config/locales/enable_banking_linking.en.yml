@@ -1,0 +1,14 @@
+en:
+  enable_banking_accounts:
+    linking:
+      errors:
+        cannot_manage: You cannot manage this bank connection.
+        already_linked: This bank account is already linked. Keep its existing Sure account.
+        ambiguous_identity: Multiple Sure accounts match this bank identity. Resolve the duplicates before reconnecting.
+        already_remembered: This bank account already has an existing Sure account.
+        cannot_reconnect: You cannot reconnect this bank account to that Sure account.
+        pending_deletion: This account is being deleted.
+        identity_mismatch: This Sure account belongs to a different bank account.
+        incompatible_account: The existing account's currency or type differs from this selection.
+        other_provider: The existing account is linked to another provider.
+        family_currency_mismatch: Bank identity and Sure account do not belong to the same family and currency.

@@ -22,7 +22,8 @@ en:
     complete_account_setup:
       all_skipped: All accounts were skipped. You can set them up later on the accounts page.
       no_accounts: No accounts available to set up.
-      success: Successfully created %{count} accounts!
+      success: Successfully linked %{count} accounts!
+      link_failed: "Failed to link accounts: %{error}"
     create:
       success: Enable Banking configuration successful.
     destroy:

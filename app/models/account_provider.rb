@@ -9,6 +9,9 @@ class AccountProvider < ApplicationRecord
 
   validate :financekit_has_exclusive_writer, if: -> { new_record? || will_save_change_to_account_id? || will_save_change_to_provider_id? || will_save_change_to_provider_type? }
 
+  after_save :remember_enable_banking_identity
+  before_destroy :remember_enable_banking_identity
+
   # When unlinking a CoinStats account, also destroy the CoinstatsAccount record
   # so it doesn't remain orphaned and count as "needs setup".
   # Other providers may legitimately enter a "needs setup" state.
@@ -34,6 +37,9 @@ class AccountProvider < ApplicationRecord
   end
 
   private
+    def remember_enable_banking_identity
+      provider.remember_native_account!(account) if provider_type == "EnableBankingAccount" && provider && account
+    end
 
     def financekit_has_exclusive_writer
       # belongs_to :account already reports a missing account; bail out rather
