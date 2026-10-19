@@ -974,5 +974,92 @@
   },
 
   "chatConversationStartFailed": "Failed to start conversation. Please try again.",
-  "@chatConversationStartFailed": { "description": "Fallback snackbar shown when creating a new conversation from the first message fails." }
+  "@chatConversationStartFailed": { "description": "Fallback snackbar shown when creating a new conversation from the first message fails." },
+
+  "moreCashFlow": "Cash Flow",
+  "@moreCashFlow": { "description": "Menu item title for the Cash Flow report in the More screen." },
+
+  "moreCashFlowSubtitle": "Income, spending and savings by category",
+  "@moreCashFlowSubtitle": { "description": "Subtitle for the Cash Flow menu item in the More screen." },
+
+  "cashFlowTitle": "Cash Flow",
+  "@cashFlowTitle": { "description": "App bar title of the Cash Flow report screen." },
+
+  "cashFlowPeriodCurrentMonth": "This month",
+  "@cashFlowPeriodCurrentMonth": { "description": "Period chip: current month to date (web MTD)." },
+
+  "cashFlowPeriodLastMonth": "Last month",
+  "@cashFlowPeriodLastMonth": { "description": "Period chip: the previous calendar month (web LM)." },
+
+  "cashFlowPeriodLast30Days": "Last 30 days",
+  "@cashFlowPeriodLast30Days": { "description": "Period chip: last 30 days (web 30D)." },
+
+  "cashFlowPeriodLast90Days": "Last 90 days",
+  "@cashFlowPeriodLast90Days": { "description": "Period chip: last 90 days (web 90D)." },
+
+  "cashFlowPeriodCurrentYear": "Year to date",
+  "@cashFlowPeriodCurrentYear": { "description": "Period chip: current year to date (web YTD)." },
+
+  "cashFlowPeriodLast365Days": "Last 365 days",
+  "@cashFlowPeriodLast365Days": { "description": "Period chip: last 365 days (web 365D)." },
+
+  "cashFlowIncome": "Income",
+  "@cashFlowIncome": { "description": "Summary label and segment label for income." },
+
+  "cashFlowExpenses": "Expenses",
+  "@cashFlowExpenses": { "description": "Summary label and segment label for expenses." },
+
+  "cashFlowNetSavings": "Net savings",
+  "@cashFlowNetSavings": { "description": "Summary label for income minus expenses." },
+
+  "cashFlowSavingsRate": "{rate} savings rate",
+  "@cashFlowSavingsRate": {
+    "description": "Savings rate shown under net savings, e.g. '18.2% savings rate'.",
+    "placeholders": { "rate": {"type": "String", "example": "18.2%"} }
+  },
+
+  "cashFlowExpensesByCategory": "Expenses by category",
+  "@cashFlowExpensesByCategory": { "description": "Section header for the expense category chart and list." },
+
+  "cashFlowIncomeByCategory": "Income by category",
+  "@cashFlowIncomeByCategory": { "description": "Section header for the income category chart and list." },
+
+  "cashFlowShareOfExpenses": "{percent} of expenses",
+  "@cashFlowShareOfExpenses": {
+    "description": "Category row subtitle with its share of total expenses.",
+    "placeholders": { "percent": {"type": "String", "example": "24.5%"} }
+  },
+
+  "cashFlowShareOfIncome": "{percent} of income",
+  "@cashFlowShareOfIncome": {
+    "description": "Category row subtitle with its share of total income.",
+    "placeholders": { "percent": {"type": "String", "example": "80%"} }
+  },
+
+  "cashFlowEmpty": "No income or expenses in this period",
+  "@cashFlowEmpty": { "description": "Empty state title when the period has no categorized cash flow." },
+
+  "cashFlowEmptySubtitle": "Try another period or pull to refresh.",
+  "@cashFlowEmptySubtitle": { "description": "Empty state subtitle on the Cash Flow screen." },
+
+  "cashFlowNoExpenses": "No expenses in this period",
+  "@cashFlowNoExpenses": { "description": "Shown in the category section when the expense side is empty." },
+
+  "cashFlowNoIncome": "No income in this period",
+  "@cashFlowNoIncome": { "description": "Shown in the category section when the income side is empty." },
+
+  "cashFlowLoadFailed": "Couldn't load cash flow",
+  "@cashFlowLoadFailed": { "description": "Error state title when the cash flow request fails." },
+
+  "cashFlowOffline": "You're offline. Cash flow is calculated by your Sure server, so it needs a connection.",
+  "@cashFlowOffline": { "description": "Error state message when the device is offline and no report is loaded." },
+
+  "cashFlowOutdated": "Outdated",
+  "@cashFlowOutdated": { "description": "Badge shown when the displayed report could not be refreshed." },
+
+  "cashFlowTransactionsEmpty": "No transactions in this period",
+  "@cashFlowTransactionsEmpty": { "description": "Empty state of the category transactions screen." },
+
+  "cashFlowTransactionsLoadFailed": "Couldn't load transactions",
+  "@cashFlowTransactionsLoadFailed": { "description": "Error state of the category transactions screen." }
 }

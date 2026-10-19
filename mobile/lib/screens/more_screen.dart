@@ -4,6 +4,7 @@ import '../theme/sure_colors.dart';
 import '../theme/sure_tokens.dart';
 import '../widgets/sure_list_group.dart';
 import 'calendar_screen.dart';
+import 'cash_flow_screen.dart';
 import 'recent_transactions_screen.dart';
 
 class MoreScreen extends StatelessWidget {
@@ -22,6 +23,20 @@ class MoreScreen extends StatelessWidget {
           children: [
             SureListGroup(
               children: [
+                SureListRow(
+                  leading: _iconBadge(context, Icons.insights),
+                  title: l.moreCashFlow,
+                  subtitle: l.moreCashFlowSubtitle,
+                  showChevron: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CashFlowScreen(),
+                      ),
+                    );
+                  },
+                ),
                 SureListRow(
                   leading: _iconBadge(context, Icons.calendar_month),
                   title: l.moreCalendar,

@@ -1915,6 +1915,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to start conversation. Please try again.'**
   String get chatConversationStartFailed;
+
+  /// Menu item title for the Cash Flow report in the More screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash Flow'**
+  String get moreCashFlow;
+
+  /// Subtitle for the Cash Flow menu item in the More screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Income, spending and savings by category'**
+  String get moreCashFlowSubtitle;
+
+  /// App bar title of the Cash Flow report screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash Flow'**
+  String get cashFlowTitle;
+
+  /// Period chip: current month to date (web MTD).
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get cashFlowPeriodCurrentMonth;
+
+  /// Period chip: the previous calendar month (web LM).
+  ///
+  /// In en, this message translates to:
+  /// **'Last month'**
+  String get cashFlowPeriodLastMonth;
+
+  /// Period chip: last 30 days (web 30D).
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 days'**
+  String get cashFlowPeriodLast30Days;
+
+  /// Period chip: last 90 days (web 90D).
+  ///
+  /// In en, this message translates to:
+  /// **'Last 90 days'**
+  String get cashFlowPeriodLast90Days;
+
+  /// Period chip: current year to date (web YTD).
+  ///
+  /// In en, this message translates to:
+  /// **'Year to date'**
+  String get cashFlowPeriodCurrentYear;
+
+  /// Period chip: last 365 days (web 365D).
+  ///
+  /// In en, this message translates to:
+  /// **'Last 365 days'**
+  String get cashFlowPeriodLast365Days;
+
+  /// Summary label and segment label for income.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get cashFlowIncome;
+
+  /// Summary label and segment label for expenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Expenses'**
+  String get cashFlowExpenses;
+
+  /// Summary label for income minus expenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Net savings'**
+  String get cashFlowNetSavings;
+
+  /// Savings rate shown under net savings, e.g. '18.2% savings rate'.
+  ///
+  /// In en, this message translates to:
+  /// **'{rate} savings rate'**
+  String cashFlowSavingsRate(String rate);
+
+  /// Section header for the expense category chart and list.
+  ///
+  /// In en, this message translates to:
+  /// **'Expenses by category'**
+  String get cashFlowExpensesByCategory;
+
+  /// Section header for the income category chart and list.
+  ///
+  /// In en, this message translates to:
+  /// **'Income by category'**
+  String get cashFlowIncomeByCategory;
+
+  /// Category row subtitle with its share of total expenses.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent} of expenses'**
+  String cashFlowShareOfExpenses(String percent);
+
+  /// Category row subtitle with its share of total income.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent} of income'**
+  String cashFlowShareOfIncome(String percent);
+
+  /// Empty state title when the period has no categorized cash flow.
+  ///
+  /// In en, this message translates to:
+  /// **'No income or expenses in this period'**
+  String get cashFlowEmpty;
+
+  /// Empty state subtitle on the Cash Flow screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Try another period or pull to refresh.'**
+  String get cashFlowEmptySubtitle;
+
+  /// Shown in the category section when the expense side is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No expenses in this period'**
+  String get cashFlowNoExpenses;
+
+  /// Shown in the category section when the income side is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No income in this period'**
+  String get cashFlowNoIncome;
+
+  /// Error state title when the cash flow request fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load cash flow'**
+  String get cashFlowLoadFailed;
+
+  /// Error state message when the device is offline and no report is loaded.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline. Cash flow is calculated by your Sure server, so it needs a connection.'**
+  String get cashFlowOffline;
+
+  /// Badge shown when the displayed report could not be refreshed.
+  ///
+  /// In en, this message translates to:
+  /// **'Outdated'**
+  String get cashFlowOutdated;
+
+  /// Empty state of the category transactions screen.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions in this period'**
+  String get cashFlowTransactionsEmpty;
+
+  /// Error state of the category transactions screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load transactions'**
+  String get cashFlowTransactionsLoadFailed;
 }
 
 class _AppLocalizationsDelegate
