@@ -148,7 +148,7 @@ Only uncategorized transactions on accounts the key's user may annotate are queu
 }
 ```
 
-Categories appear on the transactions once the background jobs finish; read them back with `GET /api/v1/transactions/{id}`.
+A `202` means the jobs were queued, not that categories were assigned. A job can fail, or the provider can find no match above the confidence threshold, so a queued transaction may stay uncategorized. Read the results back with `GET /api/v1/transactions/{id}` once the jobs have run.
 
 ## Transfer transactions
 
