@@ -81,6 +81,54 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert Transfer.exists?(inflow_transaction_id: good_in.entryable_id, outflow_transaction_id: good_out.entryable_id)
   end
 
+  test "retries the whole matching pass on a deadlock and succeeds once it clears" do
+    @family.stubs(:sleep)
+    @family.instance_variable_set(:@deadlock_test_attempts, 0)
+
+    @family.define_singleton_method(:perform_auto_match_transfers!, lambda { |**_kwargs|
+      @deadlock_test_attempts += 1
+      raise ActiveRecord::Deadlocked, "deadlock detected" if @deadlock_test_attempts <= 2
+      :matched
+    })
+
+    assert_nothing_raised { @family.auto_match_transfers! }
+    assert_equal 3, @family.instance_variable_get(:@deadlock_test_attempts)
+  end
+
+  test "gives up after exceeding the deadlock retry limit" do
+    @family.stubs(:sleep)
+    @family.instance_variable_set(:@deadlock_test_attempts, 0)
+
+    @family.define_singleton_method(:perform_auto_match_transfers!, lambda { |**_kwargs|
+      @deadlock_test_attempts += 1
+      raise ActiveRecord::Deadlocked, "deadlock detected"
+    })
+
+    assert_raises(ActiveRecord::Deadlocked) { @family.auto_match_transfers! }
+    # One initial attempt plus MAX_DEADLOCK_RETRIES retries.
+    assert_equal Family::AutoTransferMatchable::MAX_DEADLOCK_RETRIES + 1, @family.instance_variable_get(:@deadlock_test_attempts)
+  end
+
+  test "perform_auto_match_transfers! opens a real savepoint instead of joining the caller's transaction" do
+    # Every real caller (Sync#perform_post_sync, via Sync.transaction in
+    # finalize_if_all_children_finalized) runs auto_match_transfers! nested inside an
+    # already-open transaction. Without requires_new: true, Transfer.transaction here would
+    # just join that outer transaction instead of opening a savepoint, so a deadlock would
+    # abort the WHOLE outer transaction -- and the retry in auto_match_transfers! would hit
+    # PG::InFailedSqlTransaction on its very first query (a different, unrescued error)
+    # instead of succeeding.
+    #
+    # This can't be caught by nesting an outer transaction in the test itself and forcing a
+    # real error, the way it would need to be reproduced in production: Rails' transactional
+    # test fixtures make the test's own wrapping transaction non-joinable, which means ANY
+    # nested `transaction do` (even without requires_new) gets savepoint-like recovery during
+    # tests only -- masking exactly the distinction this asserts. Asserting the call directly
+    # is what's left.
+    Transfer.expects(:transaction).with(requires_new: true).yields
+
+    @family.send(:perform_auto_match_transfers!, account: nil, exchange_rate_tolerance: Family::AutoTransferMatchable.exchange_rate_tolerance)
+  end
+
   test "a :taken on one column from a different pairing is skipped, not marked" do
     outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
