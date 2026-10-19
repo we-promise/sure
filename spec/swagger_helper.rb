@@ -82,6 +82,36 @@ RSpec.configure do |config|
               }
             }
           },
+          TransactionAutoCategorizationRequest: {
+            type: :object,
+            properties: {
+              transaction_ids: {
+                type: :array,
+                minItems: 1,
+                maxItems: 1000,
+                items: { type: :string, format: :uuid },
+                description: 'Transactions to categorize. Omit to queue every eligible transaction.'
+              }
+            }
+          },
+          TransactionAutoCategorization: {
+            type: :object,
+            required: %w[queued_count transaction_ids skipped_transaction_ids],
+            properties: {
+              queued_count: { type: :integer },
+              transaction_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Transactions queued for categorization'
+              },
+              skipped_transaction_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Requested transactions that were not queued: already categorized, ' \
+                             'category locked, a transfer or split parent, or not writable by this key'
+              }
+            }
+          },
           Split: {
             type: :object,
             required: %w[transaction_id amount amount_decimal amount_cents currency children],

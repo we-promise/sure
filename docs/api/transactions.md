@@ -32,6 +32,7 @@ All transaction endpoints require an OAuth2 access token or API key that grants 
 | `POST /api/v1/transactions` | `write` | Create a new transaction. |
 | `PATCH /api/v1/transactions/{id}` | `write` | Update an existing transaction. |
 | `DELETE /api/v1/transactions/{id}` | `write` | Permanently delete a transaction. |
+| `POST /api/v1/transactions/auto_categorize` | `write` | Queue AI auto-categorization for uncategorized transactions. |
 
 Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components (pagination, errors, accounts, categories, merchants, tags), and security definitions.
 
@@ -124,6 +125,30 @@ Example request body:
   }
 }
 ```
+
+## Auto-categorizing transactions
+
+`POST /api/v1/transactions/auto_categorize` queues AI categorization in the background, the same work the "Auto-categorize transactions with AI" rule action does. It uses the family's configured categorization provider and confidence threshold, and returns `422` when no provider is configured.
+
+Send `transaction_ids` (up to 1,000) to categorize specific transactions, or omit it to queue every eligible one:
+
+```json
+{
+  "transaction_ids": ["uuid", "uuid"]
+}
+```
+
+Only uncategorized transactions on accounts the key's user may annotate are queued. Transactions whose category is locked (set or cleared by hand), transfers between the family's own accounts, and split parents are skipped. The response is `202 Accepted`:
+
+```json
+{
+  "queued_count": 1,
+  "transaction_ids": ["uuid"],
+  "skipped_transaction_ids": ["uuid"]
+}
+```
+
+Categories appear on the transactions once the background jobs finish; read them back with `GET /api/v1/transactions/{id}`.
 
 ## Transfer transactions
 

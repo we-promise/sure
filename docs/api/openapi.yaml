@@ -75,6 +75,39 @@ components:
                   excluded:
                     type: boolean
                     nullable: true
+    TransactionAutoCategorizationRequest:
+      type: object
+      properties:
+        transaction_ids:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: string
+            format: uuid
+          description: Transactions to categorize. Omit to queue every eligible transaction.
+    TransactionAutoCategorization:
+      type: object
+      required:
+      - queued_count
+      - transaction_ids
+      - skipped_transaction_ids
+      properties:
+        queued_count:
+          type: integer
+        transaction_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Transactions queued for categorization
+        skipped_transaction_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: 'Requested transactions that were not queued: already categorized,
+            category locked, a transfer or split parent, or not writable by this key'
     Split:
       type: object
       required:
@@ -9862,6 +9895,39 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/transactions/auto_categorize":
+    post:
+      summary: Auto-categorize transactions with AI
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Queues AI categorization in the background using the family's configured
+        categorization provider and confidence threshold, as the "Auto-categorize
+        transactions with AI" rule action does. Only uncategorized transactions without
+        a locked (user-set) category are queued; transfers between the family's own
+        accounts and split parents are skipped. Categories appear on the transactions
+        once the background jobs finish.
+      parameters: []
+      responses:
+        '202':
+          description: categorization queued
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TransactionAutoCategorization"
+        '422':
+          description: no categorization provider is configured, or transaction_ids
+            is invalid
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/TransactionAutoCategorizationRequest"
   "/api/v1/transactions":
     get:
       summary: List transactions
