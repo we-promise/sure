@@ -1,18 +1,12 @@
 <%# locals: (item:) %>
 
-<div class="space-y-2 text-sm" role="status">
-  <% if item.error_message.present? %>
-    <p class="text-warning"><%= item.error_message %></p>
-  <% elsif item.syncing? %>
-    <p class="text-secondary"><%= t("ca_auto_bank.syncing") %></p>
-  <% elsif item.snapshot_at.present? %>
-    <p class="text-secondary"><%= t("ca_auto_bank.last_synced", time: time_ago_in_words(item.snapshot_at)) %></p>
-  <% elsif item.session_configured? %>
-    <p class="text-secondary"><%= t("ca_auto_bank.waiting_for_snapshot") %></p>
-  <% else %>
-    <p class="text-secondary"><%= t("ca_auto_bank.not_connected") %></p>
-  <% end %>
+<% sync_status = BankSyncStatusPresenter.new(item: item, provider_key: :ca_auto_bank) %>
+
+<div class="space-y-2 text-sm">
+  <%= render BankSyncStatusComponent.new(presenter: sync_status) %>
   <% if item.session_configured? %>
-    <p class="text-secondary"><%= t("ca_auto_bank.session_expires", time: l(item.session_expires_at, format: :short)) %></p>
+    <p class="text-xs text-secondary">
+      <%= t("ca_auto_bank.session_expires", time: "#{l(item.session_expires_at, format: :short)} (#{Time.zone.name})") %>
+    </p>
   <% end %>
 </div>

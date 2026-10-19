@@ -73,7 +73,14 @@ class Provider::Directa
   class AccountIdentityMismatch < Error; end
   class InvalidResponse < Error; end
   class RequestTimeout < Error; end
-  class ProviderUnavailable < Error; end
+  class ProviderUnavailable < Error
+    attr_reader :retry_after
+
+    def initialize(message, failure_code: nil, retry_after: nil)
+      @retry_after = retry_after
+      super(message, failure_code: failure_code)
+    end
+  end
   class RedirectRejected < Error; end
   class ResponseTooLarge < Error; end
   class SequenceError < Error; end
@@ -771,7 +778,9 @@ class Provider::Directa
         raise_error(AuthenticationError, :authentication_failed, "Directa authentication failed.")
       end
       if response.status == 429
-        raise_error(ProviderUnavailable, :rate_limited, "Directa request was rate limited.")
+        raise ProviderUnavailable.new(
+          "Directa request was rate limited.", failure_code: :rate_limited, retry_after: response.retry_after
+        ), cause: nil
       end
 
       klass = response.status >= 500 ? ProviderUnavailable : InvalidResponse

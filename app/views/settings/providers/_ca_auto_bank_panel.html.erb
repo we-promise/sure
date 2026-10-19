@@ -7,8 +7,9 @@
   <% end %>
   <div class="flex flex-wrap justify-end gap-2">
     <% if @ca_auto_bank_item&.ready_for_sync? %>
-      <%= render DS::Button.new(text: t("ca_auto_bank.sync"), icon: "refresh-cw", variant: :secondary,
-                               href: sync_ca_auto_bank_item_path(@ca_auto_bank_item), disabled: @ca_auto_bank_item.syncing?) %>
+      <%= render DS::Button.new(text: t("ca_auto_bank.sync.action"), icon: "refresh-cw", variant: :secondary,
+                               href: sync_ca_auto_bank_item_path(@ca_auto_bank_item),
+                               disabled: @ca_auto_bank_item.syncing? || @ca_auto_bank_item.sync_cooldown?) %>
     <% end %>
     <%= render DS::Link.new(text: t(@ca_auto_bank_item&.session_configured? ? "ca_auto_bank.manage" : "ca_auto_bank.connect"),
                            href: ca_auto_bank_login_path, frame: :_top) %>

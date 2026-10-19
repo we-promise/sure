@@ -1,34 +1,58 @@
 # Enable Banking sync pacing
 
-Each bank connection has a persisted refresh deadline. Manual refreshes, login
-refreshes and family jobs share the same 15-minute minimum interval. A PostgreSQL
-advisory lock prevents overlapping imports for the same connection, including
-imports that outlast that interval. Other banks can continue syncing independently.
+Connections share a persisted budget by family, Enable Banking application and
+exact ASPSP name/country, so reconnecting a consent does not reset its bank
+cooldown. Background refreshes run at most once every six hours; a manual refresh
+can run after the connection's 15-minute minimum interval, unless a bank's hard
+rate-limit deadline is still active. A PostgreSQL advisory lock prevents
+overlapping imports for that bank scope. Data requests are spaced by about one
+second per bank, including pagination and date-window fallback requests.
+
+Only a fresh, user-triggered fetch may send the current request's PSU IP and
+user-agent, and it sends them only when all headers required by the ASPSP are
+available. Background jobs send no PSU headers. The previous request IP is not
+reused. The interactive context is short-lived, encrypted in the queued sync,
+bound to its item, session and user, and consumed once.
+
+Before any bank account is linked, the consent callback records the account
+catalog and marks accounts for setup without consuming a data-refresh cycle.
+Completing setup or linking an account starts the first eligible data refresh
+from that user request.
 
 HTTP 429 and the structured `ASPSP_RATE_LIMIT_EXCEEDED` error immediately stop
 the import, including the remaining accounts, transaction pages and pending-data
 requests. Sure retains the last saved financial data and the bank authorization.
-The failed sync stays failed: scheduling a retry does not advance the last
-successful refresh time.
+The attempt records a deferred status rather than a generic sync error.
+Scheduling a retry does not advance the last successful data refresh time.
 
-A valid `Retry-After` header supplies the next attempt, with a 15-minute minimum.
+A valid `Retry-After` header supplies the next hard rate-limit deadline, with a
+15-minute minimum. It is shared across connections for the same bank scope.
 Both delta seconds and HTTP dates are supported. Invalid, expired or excessively
 long values (over seven days) use the fallback: six hours, then twelve hours,
 then at most daily until a refresh succeeds. These are conservative application
 defaults, not a statement of any particular bank's contractual quota. Temporary
-network failures and HTTP 5xx responses get three retries after 5, 15 and 60
-minutes, then surface as an ordinary failure requiring investigation.
+network failures and HTTP 5xx responses allow three retry attempts, with nominal
+5-, 15- and 60-minute delays. The effective automatic deadline also respects the
+item floor, six-hour background cadence and any shared hard bank limit. Exhausted
+retries surface as an ordinary failure requiring investigation.
 
-Retry intent is stored in PostgreSQL and a delayed job runs it. The existing
-hourly scheduler also recovers overdue retries if queueing failed or a job was
-lost. Obsolete retry jobs cannot bypass a newer deadline. Successful refreshes
-clear the retry state; reauthorization clears the previous consent's cooldown.
-Disconnecting or an invalid authorization prevents background retry requests.
+Retry intent is stored in PostgreSQL and a delayed job runs it at the effective
+automatic deadline, including the background cadence and any shared hard limit.
+The existing hourly scheduler also recovers overdue retries if queueing failed
+or a job was lost. Obsolete retry jobs cannot bypass a newer deadline.
+Reauthorization and disconnecting a consent do not clear the persistent bank
+budget. Invalid authorization prevents background retry requests.
 
-Bank Sync shows a warning with the planned retry time and disables repeated
-refresh clicks during cooldown. Permanent errors and unrelated failed
-connections remain errors. Support diagnostics record retry reason, HTTP status,
-attempt and deadline without response bodies, financial data or credentials.
+Bank Sync distinguishes normal background pacing, an active hard rate limit and
+an automatic retry, showing the next relevant time with the local time zone.
+Partial imports do not advance the last successful refresh time. Support
+diagnostics record retry reason, HTTP status, attempt and deadline without
+response bodies, financial data or credentials.
+
+Older successful timestamps are conservatively inferred from completed syncs
+that reached post-import account setup. Deferred and explicitly partial attempts
+are excluded. Historical records cannot establish whether every older balance
+request succeeded; new imports record that distinction explicitly.
 
 ## Reconnecting without duplicating accounts
 

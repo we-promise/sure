@@ -18,10 +18,19 @@ class DirectaItemsController < ApplicationController
       redirect_back_or_to settings_providers_path(anchor: "directa"),
         notice: t("directa_items.sync.already_running"),
         status: :see_other
-    else
-      @directa_item.sync_later
+    elsif @directa_item.sync_cooldown?(lane: :portfolio)
       redirect_back_or_to settings_providers_path(anchor: "directa"),
-        notice: t("directa_items.sync.queued"),
+        notice: @directa_item.sync_cooldown_message(lane: :portfolio),
+        status: :see_other
+    else
+      sync = @directa_item.sync_later
+      notice = if sync
+        t("directa_items.sync.queued")
+      else
+        @directa_item.sync_cooldown_message(lane: :portfolio) || t("directa_items.sync.unavailable")
+      end
+      redirect_back_or_to settings_providers_path(anchor: "directa"),
+        notice: notice,
         status: :see_other
     end
   end

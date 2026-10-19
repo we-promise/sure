@@ -61,4 +61,53 @@ class CaAutoBankItemTest < ActiveSupport::TestCase
     sync = item.family.syncs.create!
     Family::Syncer.new(item.family).perform_sync(sync)
   end
+
+  test "a snapshot 429 persists pacing and retains the session and saved balances" do
+    item = ca_connected_item
+    Account.any_instance.stubs(:sync_later).returns(nil)
+    CaAutoBankItem::Importer.new(item).import(snapshot: ca_snapshot(item, cash: 125))
+    prior_snapshot_at = item.reload.snapshot_at
+    prior_token = item.authentication_token
+    prior_balances = item.ca_auto_bank_accounts.order(:id).pluck(:current_balance)
+    provider = mock("CA Auto Bank reader")
+    provider.expects(:fetch_snapshot).once.raises(Provider::CaAutoBank::Error.new(:rate_limited, retry_after: "3600"))
+    item.stubs(:provider).returns(provider)
+    now = Time.current
+
+    assert_nil CaAutoBankItem::Syncer.new(item).perform_sync(Sync.create!(syncable: item))
+    assert_nil CaAutoBankItem::Syncer.new(item).perform_sync(Sync.create!(syncable: item))
+
+    item.reload
+    assert_equal "rate_limited", item.last_sync_error_code
+    assert_equal prior_token, item.authentication_token
+    assert_equal prior_snapshot_at, item.snapshot_at
+    assert_equal prior_balances, item.ca_auto_bank_accounts.order(:id).pluck(:current_balance)
+    assert_operator item.next_sync_at, :>=, now + 59.minutes
+  end
+
+  test "pacing preserves long Retry-After values and bounds excessive ones" do
+    item = ca_connected_item
+    now = Time.current
+
+    assert item.reserve_sync_attempt!(at: now)
+    assert_in_delta (now + 5.minutes).to_f, item.sync_eligible_at.to_f, 0.001
+
+    item.record_rate_limit!(retry_after: "86400", at: now)
+    assert_in_delta (now + 24.hours).to_f, item.next_sync_at.to_f, 0.001
+
+    item.record_rate_limit!(retry_after: "99999999", at: now)
+    assert_in_delta (now + 7.days).to_f, item.next_sync_at.to_f, 0.001
+
+    item.update!(next_sync_at: nil)
+    item.record_rate_limit!(retry_after: "invalid", at: now)
+    assert_in_delta (now + 15.minutes).to_f, item.next_sync_at.to_f, 0.001
+  end
+
+  test "a busy per-item provider lock skips bank calls" do
+    item = ca_connected_item
+    item.stubs(:with_provider_sync_lock).returns(false)
+    item.expects(:provider).never
+
+    assert_nil CaAutoBankItem::Syncer.new(item).perform_sync(Sync.create!(syncable: item))
+  end
 end

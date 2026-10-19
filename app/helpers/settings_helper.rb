@@ -135,14 +135,7 @@ module SettingsHelper
       item = @fineco_item || @fineco_items&.first
       return { status: :off } unless item
 
-      last_synced_at = item.last_synced_at
-      if item.requires_update?
-        { status: :warn, meta: t("settings.providers.fineco_panel.requires_update"), last_synced_at: last_synced_at }
-      elsif item.last_sync_error.present?
-        { status: :err, meta: t("settings.providers.fineco_panel.sync_error"), last_synced_at: last_synced_at }
-      else
-        { status: :ok, meta: t("settings.providers.fineco_panel.preview_connection"), last_synced_at: last_synced_at }
-      end
+      bank_sync_provider_summary(item, :fineco)
     when "directa"
       item = @directa_item || @directa_items&.first
       return { status: :off } unless item
@@ -152,28 +145,12 @@ module SettingsHelper
       item = @ca_auto_bank_item || @ca_auto_bank_items&.first
       return { status: :off } unless item
 
-      if !item.session_configured?
-        { status: :warn, meta: item.error_message.presence || t("ca_auto_bank.not_connected"), last_synced_at: item.last_synced_at }
-      elsif item.error_message.present?
-        { status: :err, meta: item.error_message, last_synced_at: item.last_synced_at }
-      elsif item.last_synced_at.blank?
-        { status: :warn, meta: t("ca_auto_bank.waiting_for_snapshot"), last_synced_at: nil }
-      else
-        { status: :ok, last_synced_at: item.last_synced_at }
-      end
+      bank_sync_provider_summary(item, :ca_auto_bank)
     when "scalable"
       item = @scalable_item || @scalable_items&.first
       return { status: :off } unless item
 
-      if item.requires_update?
-        { status: :warn, meta: item.error_message.presence || t("settings.providers.scalable_panel.sign_in_required"), last_synced_at: item.last_synced_at }
-      elsif item.error_message.present?
-        { status: :err, meta: item.error_message, last_synced_at: item.last_synced_at }
-      elsif item.last_synced_at.blank?
-        { status: :warn, meta: t("settings.providers.scalable_panel.waiting_for_snapshot"), last_synced_at: nil }
-      else
-        { status: :ok, meta: t("settings.providers.scalable_panel.preview_connection"), last_synced_at: item.last_synced_at }
-      end
+      bank_sync_provider_summary(item, :scalable)
     else
       { status: :off }
     end
@@ -296,56 +273,64 @@ module SettingsHelper
         return { status: :warn, meta: t("settings.providers.directa_panel.status_unavailable") }
       end
 
-      last_synced_at = item.last_synced_at if item.respond_to?(:last_synced_at)
-      case item.status
-      when "pending", "requires_update"
-        { status: :warn, meta: t("settings.providers.directa_panel.sign_in_required"), last_synced_at: last_synced_at }
-      when "connected"
-        if item.respond_to?(:waiting_for_first_snapshot?) && item.waiting_for_first_snapshot?
-          if directa_sync_error?(item) && !directa_awaiting_valuation?(item)
-            { status: :err, meta: t("settings.providers.directa_panel.sync_error"), last_synced_at: last_synced_at }
-          else
-            { status: :warn, meta: t("settings.providers.directa_panel.waiting_for_snapshot"), last_synced_at: last_synced_at }
-          end
-        elsif directa_sync_error?(item)
-          { status: :err, meta: t("settings.providers.directa_panel.sync_error"), last_synced_at: last_synced_at }
-        elsif item.respond_to?(:session_configured?) && item.session_configured? &&
-            item.respond_to?(:portfolio_snapshot_at) && item.portfolio_snapshot_at.present?
-          { status: :ok, meta: t("settings.providers.directa_panel.preview_connection"), last_synced_at: last_synced_at }
-        else
-          { status: :warn, meta: t("settings.providers.directa_panel.status_unavailable"), last_synced_at: last_synced_at }
-        end
+      presentation = BankSyncStatusPresenter.new(item: item, provider_key: :directa)
+      meta = case presentation.state
+      when :connection_required, :reconnect_required
+        t("settings.providers.directa_panel.sign_in_required")
+      when :waiting_for_snapshot
+        t("settings.providers.directa_panel.waiting_for_snapshot")
+      when :up_to_date
+        t("settings.providers.directa_panel.preview_connection")
+      when :temporary_error
+        t("settings.providers.directa_panel.sync_error")
       else
-        { status: :warn, meta: t("settings.providers.directa_panel.status_unavailable"), last_synced_at: last_synced_at }
+        presentation.summary_message
       end
+
+      { status: presentation.summary_status, meta: meta, last_synced_at: presentation.last_successful_at }
     end
 
-    def directa_sync_error?(item)
-      (item.respond_to?(:last_sync_error_code) && item.last_sync_error_code.present?) ||
-        (item.respond_to?(:last_sync_error) && item.last_sync_error.present?)
-    end
+    def bank_sync_provider_summary(item, provider_key)
+      presentation = BankSyncStatusPresenter.new(item: item, provider_key: provider_key)
 
-    def directa_awaiting_valuation?(item)
-      item.respond_to?(:last_sync_error_code) && item.last_sync_error_code == "awaiting_valuation"
+      {
+        status: presentation.summary_status,
+        meta: presentation.summary_message,
+        last_synced_at: presentation.last_successful_at
+      }
     end
 
     def enable_banking_summary
       health = @provider_sync_health&.dig("enable_banking") || {}
-      last_synced_at = health[:last_synced_at]
-
       items = Array(@enable_banking_items)
-      waiting = items.find(&:sync_retry_pending?)
-      unhandled_error = items.any? do |item|
-        next false if item.sync_retry_pending?
+      presentations = items.map { |item| BankSyncStatusPresenter.new(item: item, provider_key: :enable_banking) }
+      last_synced_at = presentations.filter_map(&:last_successful_at).max
 
-        latest = item.latest_sync_record
-        item.sync_error.present? || latest&.failed? || latest&.stale?
-      end
-      if waiting && !unhandled_error
-        return { status: :warn, meta: waiting.sync_cooldown_message, last_synced_at: last_synced_at }
+      if presentations.any?(&:terminal_error?)
+        return { status: :err, meta: t("settings.providers.meta.sync_error"), last_synced_at: last_synced_at }
       end
 
-      return { status: :err, meta: t("settings.providers.meta.sync_error"), last_synced_at: nil } if health[:error]
+      reconnect = presentations.find { |presentation| presentation.state == :reconnect_required }
+      if reconnect
+        return { status: :warn, meta: t("settings.providers.meta.reconsent_required"), last_synced_at: last_synced_at }
+      end
+
+      retrying = presentations.find do |presentation|
+        presentation.state == :rate_limited || (presentation.state == :temporary_error && presentation.expected_retry?)
+      end
+      if retrying
+        return { status: :warn, meta: retrying.summary_message, last_synced_at: last_synced_at }
+      end
+
+      connection_needed = presentations.find { |presentation| presentation.state == :connection_required }
+      if connection_needed
+        return { status: :warn, meta: t("settings.providers.enable_banking_panel.ready_to_link"), last_synced_at: last_synced_at }
+      end
+
+      scheduled = presentations.find { |presentation| presentation.state == :scheduled }
+      if scheduled
+        return { status: :ok, meta: scheduled.summary_message, last_synced_at: last_synced_at }
+      end
 
       valid_items = @enable_banking_items&.reject(&:needs_authorization?) || []
 

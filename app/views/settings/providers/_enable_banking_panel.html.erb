@@ -107,47 +107,18 @@
     %>
     <div class="border-t border-primary pt-4 space-y-3">
       <% items.each do |item| %>
+        <% sync_status = BankSyncStatusPresenter.new(item: item, provider_key: :enable_banking) %>
         <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-container border border-primary">
           <div class="flex items-center gap-3">
-            <% if item.syncing? %>
-              <div class="w-2 h-2 bg-inverse rounded-full animate-pulse"></div>
-              <div>
-                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.syncing", default: "Syncing") %></p>
-                <p class="text-xs text-secondary"><%= t("settings.providers.enable_banking_panel.syncing", default: "Syncing") %></p>
-              </div>
-            <% elsif item.sync_retry_pending? %>
-              <div class="w-2 h-2 bg-warning rounded-full"></div>
-              <div>
-                <p class="text-sm font-medium text-primary"><%= item.institution_display_name %></p>
-                <p class="text-xs text-warning" role="status"><%= item.sync_cooldown_message %></p>
-              </div>
-            <% elsif item.sync_error.present? %>
-              <div class="w-2 h-2 bg-destructive rounded-full"></div>
-              <div>
-                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.connection_error") %></p>
-                <p class="text-xs text-destructive" title="<%= item.sync_error %>"><%= item.sync_error.truncate(50) %></p>
-              </div>
-            <% elsif item.session_valid? %>
-              <div class="w-2 h-2 bg-success rounded-full"></div>
-              <div>
-                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.connected_bank") %></p>
-                <p class="text-xs text-secondary">
-                  <%= t("settings.providers.enable_banking_panel.session_expires", date: item.session_expires_at&.strftime("%b %d, %Y") || t("settings.providers.enable_banking_panel.unknown")) %>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium text-primary"><%= item.institution_display_name %></p>
+              <%= render BankSyncStatusComponent.new(presenter: sync_status) %>
+              <% if item.session_valid? && item.session_expires_at.present? %>
+                <p class="mt-1 text-xs text-secondary">
+                  <%= t("settings.providers.enable_banking_panel.session_expires", date: "#{l(item.session_expires_at, format: :long)} (#{Time.zone.name})") %>
                 </p>
-              </div>
-            <% elsif item.session_expired? %>
-              <div class="w-2 h-2 bg-warning rounded-full"></div>
-              <div>
-                <p class="text-sm font-medium text-primary"><%= item.aspsp_name || t("settings.providers.enable_banking_panel.connection") %></p>
-                <p class="text-xs text-destructive"><%= t("settings.providers.enable_banking_panel.session_expired_reconnect") %></p>
-              </div>
-            <% else %>
-              <div class="w-2 h-2 bg-secondary rounded-full"></div>
-              <div>
-                <p class="text-sm font-medium text-primary"><%= t("settings.providers.enable_banking_panel.configured") %></p>
-                <p class="text-xs text-secondary"><%= t("settings.providers.enable_banking_panel.ready_to_link") %></p>
-              </div>
-            <% end %>
+              <% end %>
+            </div>
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
@@ -159,8 +130,8 @@
                 size: :sm,
                 href: sync_enable_banking_item_path(item, source: "panel"),
                 method: :post,
-                disabled: item.syncing? || item.sync_cooldown?,
-                title: item.sync_cooldown? ? item.sync_cooldown_message : nil
+                disabled: sync_status.manual_refresh_blocked?,
+                title: sync_status.manual_refresh_blocked? ? sync_status.timing_message : nil
               ) %>
             <% elsif item.session_expired? %>
               <%= render DS::Button.new(

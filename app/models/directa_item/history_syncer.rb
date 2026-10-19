@@ -46,6 +46,19 @@ class DirectaItem::HistorySyncer
   end
 
   def perform
+    result = @item.with_provider_sync_lock do
+      @item.reload
+      next if @item.sync_cooldown?(lane: :history)
+      next unless @item.reserve_sync_attempt!(lane: :history)
+
+      completed = perform_locked
+      @item.clear_sync_rate_limit! if completed
+      completed
+    end
+    !!result
+  end
+
+  def perform_locked
     @captured_generation = @item.connection_generation
     @source_request_budget = SourceRequestBudget.new
     Timeout.timeout(MAX_HISTORY_SECONDS, TimeoutFailure) do
@@ -92,7 +105,11 @@ class DirectaItem::HistorySyncer
     record_failure(history_error_code(error.code))
     false
   rescue Provider::Directa::Error => error
-    record_failure(provider_error_code(error))
+    if provider_error_code(error) == "history_rate_limited"
+      record_history_rate_limit(error)
+    else
+      record_failure(provider_error_code(error))
+    end
     false
   rescue Failure => error
     record_failure(error.code)
@@ -104,6 +121,8 @@ class DirectaItem::HistorySyncer
     @captured_generation = nil
     @source_request_budget = nil
   end
+
+  private :perform_locked
 
   def inspect
     "#<#{self.class.name}: redacted>"
@@ -325,10 +344,24 @@ class DirectaItem::HistorySyncer
 
     def provider_error_code(error)
       code = error.failure_code.to_s
+      return "history_rate_limited" if code == "rate_limited"
       return "history_identity_changed" if code.include?("identity")
       return "history_invalid_data" if code.match?(/invalid|duplicate|sequence/)
 
       "history_incomplete"
+    end
+
+    def record_history_rate_limit(error)
+      return unless @captured_generation && ActiveRecordEncryptionConfig.explicitly_configured?
+
+      recorded = @item.record_rate_limit!(
+        retry_after: error.retry_after,
+        expected_generation: @captured_generation,
+        updates: { history_sync_error_code: "history_rate_limited" }
+      )
+      capture_failure("history_rate_limited") if recorded
+    rescue StandardError
+      nil
     end
 
     def record_failure(code, require_update: false)

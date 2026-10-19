@@ -22,6 +22,26 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_equal "ASPSP_RATE_LIMIT_EXCEEDED", error.response_data[:error]
   end
 
+  test "each HTTP date-fallback request reserves a bank request slot" do
+    budget = mock("bank sync budget")
+    budget.expects(:wait_for_data_request_slot!).twice
+    provider = Provider::EnableBanking.new(
+      application_id: "test_app_id",
+      client_certificate: @provider.private_key.to_pem,
+      sync_budget: budget
+    )
+    validation_response = OpenStruct.new(
+      code: 422,
+      body: { error: "WRONG_TRANSACTIONS_PERIOD", detail: { message: "out of bound" } }.to_json
+    )
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+    Provider::EnableBanking.expects(:get).twice.returns(validation_response, success_response)
+
+    result = provider.get_account_transactions(account_id: "acct", date_from: 6.months.ago.to_date)
+
+    assert_equal [], result[:transactions]
+  end
+
   test "ASPSP rate limits on other statuses accept HTTP date deadlines" do
     response = OpenStruct.new(code: 400, body: { error: "ASPSP_RATE_LIMIT_EXCEEDED" }.to_json,
                               headers: { "retry-after" => 2.hours.from_now.httpdate })

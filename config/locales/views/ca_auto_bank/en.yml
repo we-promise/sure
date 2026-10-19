@@ -19,9 +19,14 @@ en:
     cancel: Cancel login
     back: Back to bank sync
     view_accounts: View accounts
-    sync: Sync now
+    sync:
+      action: Sync now
+      cooldown: "You can refresh CA Auto Bank after %{time}."
+      rate_limited: "CA Auto Bank is temporarily limiting requests. You can refresh after %{time}."
     syncing: Syncing deposit balances…
     sync_queued: CA Auto Bank balance sync has been queued.
+    sync_already_running: A CA Auto Bank sync is already running.
+    sync_unavailable: CA Auto Bank cannot be refreshed right now. Try again later.
     waiting_for_snapshot: Connected. The first deposit balance sync has been queued.
     last_synced: "Balances last synced %{time} ago."
     session_expires: "Bank session expires %{time}."

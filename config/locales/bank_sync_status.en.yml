@@ -1,0 +1,47 @@
+en:
+  bank_sync_status:
+    states:
+      syncing:
+        title: Syncing
+        message: Sure is refreshing %{provider} data.
+      up_to_date:
+        title: Latest snapshot saved
+        message: No sync issue is waiting for attention.
+      scheduled:
+        title: Waiting for the next refresh
+        message: This is a normal wait, not a sync error.
+      rate_limited:
+        title: Requests temporarily limited
+        message: "%{provider} is temporarily limiting sync requests."
+      partial_import:
+        title: Some data could not be refreshed
+        message: Some data could not be refreshed. Previously saved balances and transactions remain available in Sure.
+      temporary_error:
+        title: Sync could not be completed
+        message: The latest refresh did not complete.
+      reconnect_required:
+        title: Reconnect required
+        message: Reconnect %{provider} to resume syncing.
+      connection_required:
+        title: Connection required
+        message: Connect %{provider} to start syncing.
+      waiting_for_snapshot:
+        title: Waiting for the first snapshot
+        message: No successful data snapshot is available yet.
+    timing:
+      scheduled_background: "Next background check is due after %{time}."
+      automatic_retry: "Automatic retry is due after %{time}."
+      retry_due: The retry is due and waiting for the next background check.
+      manual_refresh: "Manual refresh is available after %{time}."
+      manual_refresh_available: A manual refresh is available now.
+    last_successful:
+      at: "Last successful data snapshot: %{time}."
+      none: No successful data snapshot is recorded yet.
+    saved_data_retained: Previously saved data remains available in Sure.
+    time_with_zone: "%{time} (%{time_zone})"
+    providers:
+      enable_banking: Enable Banking
+      directa: Directa
+      ca_auto_bank: CA Auto Bank
+      scalable: Scalable Capital
+      fineco: Fineco

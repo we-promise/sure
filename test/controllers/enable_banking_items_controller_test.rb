@@ -257,6 +257,20 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  test "callback leaves an unlinked catalog for setup without reserving a data sync" do
+    stub_authorization_start
+    post authorize_enable_banking_item_url(@item), params: { aspsp_name: "Test Bank", psu_type: "personal" }
+    @item.enable_banking_accounts.create!(name: "Checking", uid: "catalog-only", currency: "EUR")
+    EnableBankingItem.any_instance.stubs(:complete_authorization)
+    EnableBankingItem.any_instance.expects(:sync_later).never
+
+    get callback_enable_banking_items_url, params: { code: "good-code", state: @sent_state }
+
+    assert_redirected_to accounts_path
+    assert @item.reload.pending_account_setup?
+    assert_equal "Bank connected. Choose the accounts to add to Sure.", flash[:notice]
+  end
+
   test "callback rejects the item id as state" do
     stub_authorization_start
     post authorize_enable_banking_item_url(@item), params: { aspsp_name: "Test Bank", psu_type: "personal" }
@@ -354,7 +368,8 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     incoming = @item.enable_banking_accounts.create!(name: "Checking", uid: "new-consent", currency: "EUR",
       current_balance: 10, raw_payload: { identification_hash: "stable-primary-hash" })
     @item.update!(pending_account_setup: true)
-    EnableBankingItem.any_instance.stubs(:sync_later)
+    EnableBankingItem.any_instance.expects(:interactive_psu_context).twice.returns("fresh-context")
+    EnableBankingItem.any_instance.expects(:sync_later).twice.with(psu_context: "fresh-context")
 
     2.times do
       assert_no_difference "Account.count" do

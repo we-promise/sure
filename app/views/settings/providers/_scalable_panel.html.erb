@@ -1,6 +1,8 @@
 <div id="scalable-providers-panel" class="space-y-4">
   <%= render DS::Pill.new(label: t("settings.providers.scalable_panel.preview"), tone: :violet, marker: false) %>
 
+  <% sync_status = BankSyncStatusPresenter.new(item: @scalable_item, provider_key: :scalable) if @scalable_item %>
+
   <div class="space-y-2 text-sm text-secondary">
     <p><%= t("settings.providers.scalable_panel.description") %></p>
     <p><%= t("settings.providers.scalable_panel.read_only") %></p>
@@ -9,17 +11,7 @@
 
   <% if @scalable_item.present? %>
     <div class="space-y-3 rounded-lg bg-container-inset p-3 text-sm">
-      <% if @scalable_item.syncing? %>
-        <p class="text-secondary"><%= t("settings.providers.scalable_panel.syncing") %></p>
-      <% elsif @scalable_item.requires_update? %>
-        <p class="text-warning"><%= @scalable_item.error_message.presence || t("settings.providers.scalable_panel.sign_in_required") %></p>
-      <% elsif @scalable_item.error_message.present? %>
-        <p class="text-warning"><%= @scalable_item.error_message %></p>
-      <% elsif @scalable_item.last_synced_at.present? %>
-        <p class="text-secondary"><%= t("settings.providers.scalable_panel.last_synced", time: time_ago_in_words(@scalable_item.last_synced_at)) %></p>
-      <% else %>
-        <p class="text-secondary"><%= t("settings.providers.scalable_panel.waiting_for_snapshot") %></p>
-      <% end %>
+      <%= render BankSyncStatusComponent.new(presenter: sync_status) %>
     </div>
   <% end %>
 

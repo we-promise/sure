@@ -43,6 +43,25 @@ class CaAutoBankItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("ca_auto_bank.errors.session_expired")
   end
 
+  test "sync queues a ready item" do
+    CaAutoBankItem.any_instance.expects(:sync_later).once.returns(:queued)
+
+    post sync_ca_auto_bank_item_path(@item)
+
+    assert_redirected_to settings_providers_path(anchor: "ca-auto-bank")
+    assert_equal I18n.t("ca_auto_bank.sync_queued"), flash[:notice]
+  end
+
+  test "sync shows its persisted cooldown without enqueueing another snapshot" do
+    @item.record_rate_limit!(retry_after: "3600", updates: { last_sync_error_code: "rate_limited" })
+    CaAutoBankItem.any_instance.expects(:sync_later).never
+
+    post sync_ca_auto_bank_item_path(@item)
+
+    assert_redirected_to settings_providers_path(anchor: "ca-auto-bank")
+    assert_equal @item.sync_cooldown_message, flash[:notice]
+  end
+
   test "another owner cannot sync or disconnect this connection" do
     other = users(:empty)
     other.update!(preferences: (other.preferences || {}).merge("preview_features_enabled" => true))

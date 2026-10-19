@@ -43,11 +43,16 @@ class EnableBankingItemsController < ApplicationController
   end
 
   def sync
+    scheduled_sync = nil
     unless @enable_banking_item.syncing?
-      @enable_banking_item.sync_later
+      scheduled_sync = @enable_banking_item.sync_later(
+        psu_context: current_enable_banking_psu_context(@enable_banking_item)
+      )
     end
     if provider_panel_form?
-      notice = @enable_banking_item.sync_cooldown? ? @enable_banking_item.sync_cooldown_message : t("settings.providers.sync_provider_in_progress")
+      waiting = !scheduled_sync && !@enable_banking_item.syncing? &&
+        (@enable_banking_item.sync_cooldown? || @enable_banking_item.background_sync_waiting?)
+      notice = waiting ? @enable_banking_item.sync_cooldown_message : t("settings.providers.sync_provider_in_progress")
       return render_provider_panel("enable_banking", notice: notice,
                                    enable_banking_items: Current.family.enable_banking_items.ordered)
     end
@@ -104,9 +109,6 @@ class EnableBankingItemsController < ApplicationController
       else
         @enable_banking_item
       end
-
-      # Capture PSU IP for use in background sync PSU headers
-      target_item.update(last_psu_ip: request.remote_ip) if request.remote_ip.present?
 
       language = I18n.locale.to_s.split("-").first
 
@@ -171,16 +173,25 @@ class EnableBankingItemsController < ApplicationController
       return
     end
 
-    # Refresh PSU IP on callback (user's browser is present here)
-    enable_banking_item.update(last_psu_ip: request.remote_ip) if request.remote_ip.present?
-
     begin
       enable_banking_item.complete_authorization(code: code)
 
-      # Trigger sync to process accounts
-      enable_banking_item.sync_later
+      if enable_banking_item.has_visible_linked_accounts?
+        # the callback browser is present for this first post-consent data fetch.
+        scheduled_sync = enable_banking_item.sync_later(psu_context: current_enable_banking_psu_context(enable_banking_item))
+        notice = if scheduled_sync
+          t(".success", default: "Successfully connected to your bank. Your accounts are syncing.")
+        elsif enable_banking_item.sync_cooldown? || enable_banking_item.background_sync_waiting?
+          enable_banking_item.sync_cooldown_message
+        else
+          t(".connected", default: "Bank connected.")
+        end
+      else
+        enable_banking_item.refresh_pending_account_setup!
+        notice = t(".accounts_ready", default: "Bank connected. Choose the accounts to add to Sure.")
+      end
 
-      redirect_to accounts_path, notice: t(".success", default: "Successfully connected to your bank. Your accounts are being synced.")
+      redirect_to accounts_path, notice: notice
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "Enable Banking session creation error: #{e.message}"
       redirect_to settings_providers_path, alert: t(".session_failed", default: "Failed to complete authorization: %{message}", message: e.message)
@@ -268,7 +279,9 @@ class EnableBankingItemsController < ApplicationController
     end
 
     # Trigger sync if accounts were created
-    enable_banking_item.sync_later if created_accounts.any?
+    if created_accounts.any?
+      enable_banking_item.sync_later(psu_context: current_enable_banking_psu_context(enable_banking_item))
+    end
 
     if created_accounts.any?
       redirect_to accounts_path, notice: t(".success", default: "%{count} account(s) linked successfully.", count: created_accounts.count)
@@ -359,7 +372,9 @@ class EnableBankingItemsController < ApplicationController
     end
 
     # Trigger a sync to process the imported data if accounts were created
-    @enable_banking_item.sync_later if created_count > 0
+    if created_count > 0
+      @enable_banking_item.sync_later(psu_context: current_enable_banking_psu_context(@enable_banking_item))
+    end
 
     if created_count > 0
       flash[:notice] = t(".success", default: "%{count} account(s) linked successfully!", count: created_count)
@@ -420,7 +435,8 @@ class EnableBankingItemsController < ApplicationController
       redirect_to account_path(@account), alert: e.record.errors.full_messages.to_sentence, status: :see_other
       return
     end
-    enable_banking_account.enable_banking_item.sync_later
+    item = enable_banking_account.enable_banking_item
+    item.sync_later(psu_context: current_enable_banking_psu_context(item))
 
     if turbo_frame_request?
       # Reload the item to ensure associations are fresh
@@ -468,6 +484,15 @@ class EnableBankingItemsController < ApplicationController
   end
 
   private
+    def current_enable_banking_psu_context(item)
+      item.interactive_psu_context(
+        ip_address: request.remote_ip,
+        user_agent: request.user_agent,
+        user: Current.true_user,
+        session: Current.session
+      )
+    end
+
     # Pending states map state => item id, so parallel flows (two tabs) each
     # keep their own entry. Only the newest few are kept.
     def issue_oauth_state_for(item)

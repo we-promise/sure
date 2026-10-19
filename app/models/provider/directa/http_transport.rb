@@ -7,7 +7,11 @@ require "uri"
 
 class Provider::Directa
   class HttpTransport
-    Response = Data.define(:status, :body)
+    Response = Data.define(:status, :body, :retry_after) do
+      def initialize(status:, body:, retry_after: nil)
+        super(status: status, body: body, retry_after: retry_after)
+      end
+    end
 
     ROUTES = {
       login: [ :post, LOGIN_PATH ],
@@ -33,11 +37,13 @@ class Provider::Directa
       request = build_request(method, uri, form)
       body = +"".b
       status = nil
+      retry_after = nil
       run_with_deadline(deadline) do
         http = build_http(deadline)
         http.start do |connection|
           connection.request(request) do |response|
             status = response.code.to_i
+            retry_after = response["Retry-After"]
             content_length = response["content-length"].to_i if response["content-length"].to_s.match?(/\A\d+\z/)
             if content_length && content_length > body_limit
               raise ResponseTooLarge.new("Directa response exceeded the size limit.", failure_code: :response_too_large)
@@ -53,7 +59,7 @@ class Provider::Directa
           end
         end
       end
-      Response.new(status: status, body: body.force_encoding(Encoding::UTF_8).freeze)
+      Response.new(status: status, body: body.force_encoding(Encoding::UTF_8).freeze, retry_after: retry_after)
     rescue RequestTimeout
       raise
     rescue ResponseTooLarge

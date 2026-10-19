@@ -1,5 +1,5 @@
 class CaAutoBankItem < ApplicationRecord
-  include Syncable, ProviderItemOwnable
+  include ProviderSyncPacing, Syncable, ProviderItemOwnable
 
   credential_scope :tenant_wide
 
@@ -62,6 +62,7 @@ class CaAutoBankItem < ApplicationRecord
   def error_message
     return I18n.t("ca_auto_bank.errors.session_expired") if reconnect_required? && snapshot_at.present?
     return if last_sync_error_code.blank?
+    return sync_cooldown_message if last_sync_error_code == "rate_limited" && sync_rate_limited?
 
     I18n.t("ca_auto_bank.errors.#{ERROR_CODES.include?(last_sync_error_code) ? last_sync_error_code : 'sync_failed'}")
   end
@@ -74,6 +75,10 @@ class CaAutoBankItem < ApplicationRecord
   end
 
   private
+
+    def sync_pacing_translation_scope
+      "ca_auto_bank.sync"
+    end
 
     def credentials_require_encryption
       return if ActiveRecordEncryptionConfig.explicitly_configured?

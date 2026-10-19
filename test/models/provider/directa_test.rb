@@ -550,6 +550,20 @@ class Provider::DirectaTest < ActiveSupport::TestCase
     assert_equal :request_not_allowed, error.failure_code
   end
 
+  test "HTTP 429 preserves Retry-After for persisted provider pacing" do
+    client = Provider::Directa.new(http_transport: FakeHttpTransport.new)
+
+    error = assert_raises(Provider::Directa::ProviderUnavailable) do
+      client.send(:ensure_success_response!,
+        Provider::Directa::HttpTransport::Response.new(status: 429, body: "busy", retry_after: "3600"),
+        :portfolio_unavailable)
+    end
+
+    assert_equal :rate_limited, error.failure_code
+    assert_equal "3600", error.retry_after
+    refute_includes error.message, "busy"
+  end
+
   private
 
     def response(operation, body)

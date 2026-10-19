@@ -1,5 +1,7 @@
 <%# locals: (enable_banking_item:, visible_accounts:) %>
 
+<% sync_status = BankSyncStatusPresenter.new(item: enable_banking_item, provider_key: :enable_banking) %>
+
 <%= tag.div id: dom_id(enable_banking_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
@@ -17,30 +19,7 @@
               <% end %>
             </div>
             <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
-            <% if enable_banking_item.syncing? %>
-              <div class="text-secondary flex items-center gap-1">
-                <%= icon "loader", size: "sm", class: "animate-spin" %>
-                <%= tag.span t(".syncing") %>
-              </div>
-            <% elsif enable_banking_item.sync_retry_pending? %>
-              <p class="text-xs text-warning" role="status"><%= enable_banking_item.sync_cooldown_message %></p>
-            <% elsif enable_banking_item.requires_update? %>
-              <div class="text-warning flex items-center gap-1">
-                <%= icon "alert-triangle", size: "sm", color: "warning" %>
-                <%= tag.span t(".reconnect") %>
-              </div>
-            <% else %>
-              <p class="text-secondary">
-                <% if enable_banking_item.last_synced_at %>
-                  <%= t(".last_synced", time: time_ago_in_words(enable_banking_item.last_synced_at)) %>
-                  <% if enable_banking_item.sync_status_summary %>
-                    · <%= enable_banking_item.sync_status_summary %>
-                  <% end %>
-                <% else %>
-                  <%= t(".never_synced") %>
-                <% end %>
-              </p>
-            <% end %>
+            <%= render BankSyncStatusComponent.new(presenter: sync_status) %>
           </div>
         </div>
 
@@ -58,7 +37,8 @@
               <%= icon(
                 "refresh-cw",
                 as_button: true,
-                href: sync_enable_banking_item_path(enable_banking_item)
+              href: sync_enable_banking_item_path(enable_banking_item),
+              disabled: sync_status.manual_refresh_blocked?
               ) %>
             <% end %>
 
@@ -109,7 +89,9 @@
           <% stats = latest_sync&.sync_stats || {} %>
           <% latest_sync_error = latest_sync&.error %>
         <% end %>
-        <% if latest_sync_error.present? && stats.is_a?(Hash) %>
+        <% expected_defer_stats = sync_status.expected_defer_stats?(stats) %>
+        <% stats = sync_status.sync_summary_stats(stats) %>
+        <% if latest_sync_error.present? && stats.is_a?(Hash) && !expected_defer_stats && !sync_status.retry_pending? && sync_status.state != :reconnect_required %>
           <% stats = stats.merge(
             "total_errors" => 1,
             "errors" => [{ "message" => latest_sync_error }]

@@ -4,10 +4,21 @@ class DirectaItem::Syncer
   end
 
   def perform_sync(sync)
+    result = @item.with_provider_sync_lock { perform_locked(sync) }
+    return unless result
+
+    @item.sync_history_later if result
+    result
+  end
+
+  def perform_locked(sync)
+    @item.reload
+    generation = nil
+    snapshot = nil
     generation = @item.connection_generation
-    unless @item.ready_for_sync?
-      raise DirectaItem::PortfolioNormalizer::Error.new(:sync_failed)
-    end
+    return if @item.sync_cooldown?(lane: :portfolio)
+    raise DirectaItem::PortfolioNormalizer::Error.new(:sync_failed) unless @item.ready_for_sync?
+    return unless @item.reserve_sync_attempt!(lane: :portfolio)
 
     snapshot = @item.provider.fetch_portfolio_snapshot
     result = DirectaItem::Importer.new(@item).import(
@@ -16,7 +27,7 @@ class DirectaItem::Syncer
       window_start_date: sync.window_start_date,
       window_end_date: sync.window_end_date
     )
-    @item.sync_history_later
+    @item.clear_sync_rate_limit!
     result
   rescue DirectaItem::PortfolioNormalizer::Error => error
     expected_generation = snapshot&.connection_generation || generation
@@ -28,12 +39,29 @@ class DirectaItem::Syncer
     record_sync_failure("sync_failed", expected_generation: generation)
     capture_failure("sync_failed")
     raise DirectaItem::PortfolioNormalizer::Error.new(:sync_failed), cause: nil
+  rescue Provider::Directa::ProviderUnavailable => error
+    expected_generation = snapshot&.connection_generation || generation
+    if error.failure_code.to_s == "rate_limited"
+      @item.record_rate_limit!(
+        retry_after: error.retry_after,
+        expected_generation: expected_generation,
+        updates: { last_sync_error_code: "rate_limited" }
+      )
+      capture_failure("rate_limited")
+      return
+    end
+
+    record_sync_failure("sync_failed", expected_generation: expected_generation)
+    capture_failure("sync_failed")
+    raise DirectaItem::PortfolioNormalizer::Error.new(:sync_failed), cause: nil
   rescue StandardError
     expected_generation = snapshot&.connection_generation || generation
     record_sync_failure("sync_failed", expected_generation: expected_generation)
     capture_failure("sync_failed")
     raise DirectaItem::PortfolioNormalizer::Error.new(:sync_failed), cause: nil
   end
+
+  private :perform_locked
 
   def perform_post_sync
   end

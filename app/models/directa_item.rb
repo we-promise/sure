@@ -1,5 +1,5 @@
 class DirectaItem < ApplicationRecord
-  include Syncable, ProviderItemOwnable
+  include ProviderSyncPacing, Syncable, ProviderItemOwnable
 
   credential_scope :tenant_wide
 
@@ -19,19 +19,21 @@ class DirectaItem < ApplicationRecord
     "security_conflict" => "A Directa security identity conflicts with existing data. Your previous data was kept.",
     "holding_conflict" => "A Directa position conflicts with existing account data. Your previous data was kept.",
     "stale_snapshot" => "Directa returned an older portfolio snapshot. Your previous data was kept.",
+    "rate_limited" => "Directa is temporarily limiting requests. Your saved data was kept.",
     "sync_failed" => "Directa portfolio syncing failed. Your previous data was kept. Retry or reconnect.",
     "history_incomplete" => "Directa activity history is incomplete. Existing entries were kept.",
     "history_invalid_data" => "Directa returned invalid activity history. Existing entries were kept.",
     "history_unsupported_activity" => "Directa returned an unsupported activity. Existing entries were kept.",
     "history_changed" => "Directa activity history changed within saved coverage. Existing entries were kept for review.",
     "history_identity_changed" => "The Directa account identity changed during activity history sync. Existing entries were kept.",
+    "history_rate_limited" => "Directa is temporarily limiting activity history requests. Your saved data was kept.",
     "history_sync_failed" => "Directa activity history could not be synchronized. Your portfolio snapshot remains available."
   }.freeze
 
   SYNC_ERROR_CODES = SYNC_ERROR_MESSAGES.keys.freeze
   HISTORY_SYNC_ERROR_CODES = %w[
     history_incomplete history_invalid_data history_unsupported_activity history_changed
-    history_identity_changed history_sync_failed
+    history_identity_changed history_rate_limited history_sync_failed
   ].freeze
 
   enum :status, { pending: "pending", connected: "connected", requires_update: "requires_update" }, default: :requires_update
@@ -163,7 +165,9 @@ class DirectaItem < ApplicationRecord
   end
 
   def last_sync_error
-    SYNC_ERROR_MESSAGES[last_sync_error_code]
+    return SYNC_ERROR_MESSAGES["rate_limited"] if sync_rate_limited?
+
+    SYNC_ERROR_MESSAGES[last_sync_error_code] || SYNC_ERROR_MESSAGES[history_sync_error_code]
   end
 
   def disconnect!
@@ -179,6 +183,21 @@ class DirectaItem < ApplicationRecord
   end
 
   private
+
+    def sync_attempt_column(lane)
+      case lane.to_sym
+      when :sync, :portfolio
+        :last_sync_attempt_at
+      when :history
+        :last_history_sync_attempt_at
+      else
+        raise ArgumentError, "Unknown Directa sync lane"
+      end
+    end
+
+    def sync_pacing_translation_scope
+      "directa_items.sync"
+    end
 
     def owner_belongs_to_family
       errors.add(:owner, :invalid) if owner && family_id.present? && owner.family_id != family_id

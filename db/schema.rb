@@ -429,7 +429,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.integer "connection_generation", default: 0, null: false
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
+    t.datetime "last_sync_attempt_at"
     t.string "last_sync_error_code"
+    t.datetime "next_sync_at"
     t.uuid "owner_id", null: false
     t.text "pending_login_state"
     t.string "request_session_id"
@@ -697,9 +699,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
     t.string "history_sync_error_code"
+    t.datetime "last_history_sync_attempt_at"
+    t.datetime "last_sync_attempt_at"
     t.string "last_sync_error_code"
     t.text "mono_token"
     t.text "multi_token"
+    t.datetime "next_sync_at"
     t.uuid "owner_id", null: false
     t.text "pending_login_state"
     t.datetime "portfolio_snapshot_at"
@@ -757,6 +762,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.string "institution_name"
     t.string "institution_url"
     t.string "last_psu_ip"
+    t.datetime "last_successful_sync_at"
     t.string "name"
     t.datetime "next_sync_at"
     t.boolean "pending_account_setup", default: false
@@ -777,6 +783,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.index ["session_expires_at"], name: "index_enable_banking_items_on_session_expires_at_for_stale_ip", where: "(last_psu_ip IS NOT NULL)"
     t.index ["status"], name: "index_enable_banking_items_on_status"
     t.index ["updated_at"], name: "index_enable_banking_items_on_updated_at_for_stale_ip", where: "((last_psu_ip IS NOT NULL) AND (session_expires_at IS NULL))"
+  end
+
+  create_table "enable_banking_sync_budgets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "active_sync_id"
+    t.boolean "active_sync_online", default: false, null: false
+    t.string "bank_key", limit: 64, null: false
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.datetime "last_data_request_at"
+    t.datetime "next_background_sync_at"
+    t.datetime "rate_limited_until"
+    t.datetime "updated_at", null: false
+    t.index ["active_sync_id"], name: "index_enable_banking_sync_budgets_on_active_sync_id"
+    t.index ["family_id", "bank_key"], name: "index_enable_banking_sync_budgets_on_family_and_bank", unique: true
+    t.index ["family_id"], name: "index_enable_banking_sync_budgets_on_family_id"
+    t.index ["next_background_sync_at"], name: "index_enable_banking_sync_budgets_on_next_background_sync_at"
   end
 
   create_table "entries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3158,6 +3180,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
   add_foreign_key "directa_items", "users", column: "owner_id", on_delete: :cascade
   add_foreign_key "enable_banking_accounts", "enable_banking_items"
   add_foreign_key "enable_banking_items", "families"
+  add_foreign_key "enable_banking_sync_budgets", "families", on_delete: :cascade
   add_foreign_key "entries", "account_statements", column: "reconciled_by_statement_id", on_delete: :nullify
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "entries", column: "parent_entry_id", on_delete: :cascade

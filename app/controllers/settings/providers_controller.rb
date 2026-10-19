@@ -109,10 +109,29 @@ class Settings::ProvidersController < ApplicationController
       items = syncable_type.constantize.where(family: Current.family).syncable
     end
     scheduled = items.reject(&:syncing?)
-    scheduled.each(&:sync_later)
+    queued = scheduled.filter_map do |item|
+      if item.is_a?(EnableBankingItem)
+        item.sync_later(
+          psu_context: item.interactive_psu_context(
+            ip_address: request.remote_ip,
+            user_agent: request.user_agent,
+            user: Current.true_user,
+            session: Current.session
+          )
+        )
+      else
+        item.sync_later
+      end
+    end
 
-    notice_key = scheduled.any? ? "settings.providers.sync_provider_in_progress" : "settings.providers.sync_provider_no_items"
-    redirect_to settings_providers_path, notice: t(notice_key)
+    notice = if queued.any?
+      t("settings.providers.sync_provider_in_progress")
+    elsif provider_key == "enable_banking" && (waiting_item = scheduled.find { |item| item.sync_cooldown? || item.background_sync_waiting? })
+      waiting_item.sync_cooldown_message
+    else
+      t("settings.providers.sync_provider_no_items")
+    end
+    redirect_to settings_providers_path, notice: notice
   end
 
   def connect_form

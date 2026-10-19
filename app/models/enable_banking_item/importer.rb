@@ -68,9 +68,10 @@ class EnableBankingItem::Importer
 
   attr_reader :enable_banking_item, :enable_banking_provider
 
-  def initialize(enable_banking_item, enable_banking_provider:)
+  def initialize(enable_banking_item, enable_banking_provider:, psu_headers: {})
     @enable_banking_item = enable_banking_item
     @enable_banking_provider = enable_banking_provider
+    @psu_headers = psu_headers
   end
 
   def import
@@ -252,7 +253,7 @@ class EnableBankingItem::Importer
     def fetch_and_update_balance(enable_banking_account)
       balance_data = enable_banking_provider.get_account_balances(
         account_id: enable_banking_account.api_account_id,
-        psu_headers: enable_banking_item.build_psu_headers
+        psu_headers: @psu_headers
       ).with_indifferent_access
 
       # Enable Banking returns an array of balances. Use booked ledger balances for
@@ -814,7 +815,7 @@ class EnableBankingItem::Importer
         enable_banking_account,
         start_date: start_date,
         transaction_status: "BOOK",
-        psu_headers: enable_banking_item.build_psu_headers
+        psu_headers: @psu_headers
       )
 
       if include_pending
@@ -848,7 +849,7 @@ class EnableBankingItem::Importer
             enable_banking_account,
             start_date: start_date,
             transaction_status: "PDNG",
-            psu_headers: enable_banking_item.build_psu_headers
+            psu_headers: @psu_headers
           )
         rescue Provider::EnableBanking::EnableBankingError => e
           raise unless [ :validation_error, :bad_request ].include?(e.error_type)

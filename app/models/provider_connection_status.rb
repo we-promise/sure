@@ -199,9 +199,15 @@ class ProviderConnectionStatus
       {
         syncing: syncing?,
         status_summary: sync_status_summary,
-        last_synced_at: latest_completed_sync&.completed_at,
+        last_synced_at: last_successful_sync_at,
         latest: latest_sync_payload(latest_sync)
       }
+    end
+
+    def last_successful_sync_at
+      return item.last_successful_sync_at if provider[:key] == "enable_banking"
+
+      latest_completed_sync&.completed_at
     end
 
     def sync_status_summary

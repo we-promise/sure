@@ -193,7 +193,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(item)}"
     assert_select "a[href=?]", fineco_login_path, text: I18n.t("fineco_items.card.reconnect")
     assert_select "form[action=?]", fineco_item_path(item), count: 0
-    assert_includes response.body, I18n.t("fineco_items.card.reauthentication_required")
+    assert_select "##{dom_id(item)} p", text: I18n.t("bank_sync_status.states.reconnect_required.message", provider: "Fineco")
   end
 
   test "index does not leak wallet accounts a member was never given" do

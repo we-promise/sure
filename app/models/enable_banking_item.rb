@@ -61,6 +61,31 @@ class EnableBankingItem < ApplicationRecord
     session_id.present? && session_expires_at.present? && session_expires_at <= Time.current
   end
 
+  # historical Enable Banking syncs only count as successful imports when the
+  # post-import setup phase recorded total_accounts. Graceful expired-session
+  # syncs complete without that statistic and must not look fresh.
+  def last_successful_sync_at
+    self[:last_successful_sync_at] || syncs.completed
+      .where("sync_stats LIKE ?", '%"total_accounts"%')
+      .where("sync_stats NOT LIKE ? AND sync_stats NOT LIKE ? AND sync_stats NOT LIKE ?",
+        '%"partial_import":true%', '%"deferred":true%', '%"catalog_only":true%')
+      .order(completed_at: :desc, id: :desc)
+      .pick(:completed_at)
+  end
+
+  def last_synced_at
+    last_successful_sync_at
+  end
+
+  def has_visible_linked_accounts?
+    enable_banking_accounts.joins(:account_provider, :account).merge(Account.visible).exists?
+  end
+
+  def refresh_pending_account_setup!
+    unlinked_accounts = enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
+    update!(pending_account_setup: unlinked_accounts.exists?)
+  end
+
   # A session-level 401/404 flags the item requires_update while its session
   # can still look unexpired.
   def needs_authorization?
@@ -166,21 +191,27 @@ class EnableBankingItem < ApplicationRecord
     raise StandardError.new("Enable Banking provider is not configured") unless provider
 
     result = provider.create_session(code: code)
+    with_lock do
+      enable_banking_sync_budget
+      existing_item_deadline = next_sync_at if next_sync_at.present? && next_sync_at > Time.current
 
-    # Store session information
-    update!(
-      session_id: result[:session_id],
-      session_expires_at: parse_session_expiry(result),
-      authorization_id: nil,  # Clear the authorization ID
-      requested_consent_valid_until: nil,  # Only needed as a fallback until the session is established
-      next_sync_at: nil,
-      sync_retry_reason: nil,
-      sync_retry_count: 0,
-      status: :good
-    )
+      # store session information
+      update!(
+        session_id: result[:session_id],
+        session_expires_at: parse_session_expiry(result),
+        authorization_id: nil,  # clear the authorization ID
+        requested_consent_valid_until: nil,  # only needed as a fallback until the session is established
+        last_psu_ip: nil,
+        next_sync_at: existing_item_deadline,
+        sync_retry_reason: nil,
+        sync_retry_count: 0,
+        status: :good
+      )
+    end
 
     # Import the accounts from the session
     import_accounts_from_session(result[:accounts] || [])
+    refresh_pending_account_setup!
 
     result
   end
@@ -206,8 +237,8 @@ class EnableBankingItem < ApplicationRecord
     Rails.logger.warn "EnableBankingItem #{id} - Failed to reconcile session expiry: #{e.message}"
   end
 
-  def import_latest_enable_banking_data
-    provider = enable_banking_provider
+  def import_latest_enable_banking_data(psu_headers: {}, sync_budget: nil)
+    provider = enable_banking_provider(sync_budget: sync_budget)
     unless provider
       Rails.logger.error "EnableBankingItem #{id} - Cannot import: Enable Banking provider is not configured"
       raise StandardError.new("Enable Banking provider is not configured")
@@ -219,7 +250,11 @@ class EnableBankingItem < ApplicationRecord
       raise StandardError.new("Enable Banking session is not valid or has expired")
     end
 
-    EnableBankingItem::Importer.new(self, enable_banking_provider: provider).import
+    EnableBankingItem::Importer.new(
+      self,
+      enable_banking_provider: provider,
+      psu_headers: psu_headers
+    ).import
   rescue => e
     Rails.logger.error "EnableBankingItem #{id} - Failed to import data: #{e.message}"
     raise
@@ -366,6 +401,7 @@ class EnableBankingItem < ApplicationRecord
   private
     def lock_family_for_unlink
       family.lock!
+      enable_banking_sync_budget
     end
 
     # Authentication approach preference, lowest number wins.

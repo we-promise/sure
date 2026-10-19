@@ -41,6 +41,63 @@ class ProviderConnectionStatusTest < ActiveSupport::TestCase
     end
   end
 
+  test "Enable Banking status keeps the actual success time after a newer deferred sync" do
+    provider = ProviderConnectionStatus::PROVIDERS.find { |entry| entry[:key] == "enable_banking" }
+    successful_at = 3.hours.ago
+    deferred_at = Time.current
+    item = EnableBankingItem.new(
+      family: families(:dylan_family),
+      name: "Synthetic bank",
+      status: :good,
+      last_successful_sync_at: successful_at
+    )
+    deferred_sync = Sync.new(
+      syncable: item,
+      status: "completed",
+      created_at: deferred_at,
+      completed_at: deferred_at,
+      sync_stats: {}
+    )
+
+    status = ProviderConnectionStatus.new(
+      provider,
+      item,
+      latest_sync: deferred_sync,
+      latest_completed_sync: deferred_sync,
+      syncing: false
+    ).to_h
+
+    assert_in_delta successful_at.to_f, status.dig(:sync, :last_synced_at).to_f, 0.001
+    assert_operator status.dig(:sync, :last_synced_at), :<, deferred_at
+  end
+
+  test "Enable Banking status has no successful time for a completed no-op without a marker" do
+    provider = ProviderConnectionStatus::PROVIDERS.find { |entry| entry[:key] == "enable_banking" }
+    noop_at = Time.current
+    item = EnableBankingItem.new(
+      family: families(:dylan_family),
+      name: "Synthetic bank",
+      status: :good
+    )
+    noop_sync = Sync.new(
+      syncable: item,
+      status: "completed",
+      created_at: noop_at,
+      completed_at: noop_at,
+      sync_stats: {}
+    )
+
+    status = ProviderConnectionStatus.new(
+      provider,
+      item,
+      latest_sync: noop_sync,
+      latest_completed_sync: noop_sync,
+      syncing: false
+    ).to_h
+
+    assert_nil status.dig(:sync, :last_synced_at)
+  end
+
   test "provider registry covers syncable family provider item associations" do
     expected_registry = Family.reflect_on_all_associations(:has_many).filter_map do |association|
       next unless association.name.to_s.end_with?("_items")

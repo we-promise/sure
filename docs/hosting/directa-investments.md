@@ -75,6 +75,16 @@ the standard provider flow. Stopping syncing clears its session and pending
 login challenge while retaining saved financial records. Expired bank sessions
 require another attended login; automatic renewal has not been established.
 
+Portfolio refreshes have a five-minute minimum interval. A portfolio or activity
+history request that receives HTTP 429 stores a connection-wide retry deadline;
+the provider's `Retry-After` value is honored up to seven days, with a 15-minute
+fallback when the response has no usable deadline. Portfolio and history reads
+share a per-connection lock, while their five-minute attempt intervals remain
+independent so the normal history job can run after a portfolio refresh. A
+concurrent job that cannot acquire the lock exits before making bank requests.
+A throttled request leaves the existing session, portfolio and Activity
+unchanged. No bank quota is assumed and no automatic retry schedule is added.
+
 ## Unrealized return
 
 For supported products with unit multiplier one, Sure imports the bank's

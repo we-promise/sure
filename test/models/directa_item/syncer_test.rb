@@ -32,6 +32,36 @@ class DirectaItem::SyncerTest < ActiveSupport::TestCase
     assert_nil @item.reload.last_sync_error_code
   end
 
+  test "a portfolio 429 persists its deadline and keeps the session and saved snapshot" do
+    account = DirectaItem::Importer.new(@item).import(snapshot: provider_snapshot(cash_amount: BigDecimal("35"))).account
+    prior_snapshot_at = @item.reload.portfolio_snapshot_at
+    prior_tokens = [ @item.multi_token, @item.mono_token ]
+    client = mock("Directa reader")
+    client.expects(:fetch_portfolio_snapshot).once.raises(
+      Provider::Directa::ProviderUnavailable.new("limited", failure_code: :rate_limited, retry_after: "3600")
+    )
+    @item.stubs(:provider).returns(client)
+    DirectaHistorySyncJob.expects(:perform_later).never
+    now = Time.current
+
+    assert_nil DirectaItem::Syncer.new(@item).perform_sync(Sync.create!(syncable: @item))
+    assert_nil DirectaItem::Syncer.new(@item).perform_sync(Sync.create!(syncable: @item))
+
+    @item.reload
+    assert_equal "rate_limited", @item.last_sync_error_code
+    assert_equal prior_tokens, [ @item.multi_token, @item.mono_token ]
+    assert_equal prior_snapshot_at, @item.portfolio_snapshot_at
+    assert_operator @item.next_sync_at, :>=, now + 59.minutes
+    assert_equal BigDecimal("35"), account.reload.balance
+  end
+
+  test "a busy per-item provider lock skips bank calls" do
+    @item.stubs(:with_provider_sync_lock).returns(false)
+    @item.expects(:provider).never
+
+    assert_nil DirectaItem::Syncer.new(@item).perform_sync(Sync.create!(syncable: @item))
+  end
+
   test "keeps the old account and session when Directa authentication expires" do
     account = DirectaItem::Importer.new(@item).import(snapshot: provider_snapshot(cash_amount: BigDecimal("35"))).account
     prior_snapshot_at = @item.reload.portfolio_snapshot_at

@@ -16,7 +16,7 @@ class DirectaItemsControllerTest < ActionDispatch::IntegrationTest
   test "sync queues a read for a connected owner-scoped item" do
     DirectaItem.any_instance.expects(:syncable?).returns(true)
     DirectaItem.any_instance.expects(:syncing?).returns(false)
-    DirectaItem.any_instance.expects(:sync_later).once
+    DirectaItem.any_instance.expects(:sync_later).once.returns(:queued)
 
     with_directa_access do
       post sync_directa_item_path(@directa_item)
@@ -25,6 +25,18 @@ class DirectaItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_redirected_to settings_providers_path(anchor: "directa")
     assert_equal I18n.t("directa_items.sync.queued"), flash[:notice]
+  end
+
+  test "sync shows its persisted cooldown without enqueueing another read" do
+    @directa_item.update!(next_sync_at: 1.hour.from_now)
+    DirectaItem.any_instance.expects(:sync_later).never
+
+    with_directa_access do
+      post sync_directa_item_path(@directa_item)
+    end
+
+    assert_response :see_other
+    assert_equal @directa_item.sync_cooldown_message(lane: :portfolio), flash[:notice]
   end
 
   test "sync rejects an item without a verified session" do

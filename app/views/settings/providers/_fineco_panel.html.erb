@@ -1,6 +1,8 @@
 <div id="fineco-providers-panel" class="space-y-4">
   <%= render DS::Pill.new(label: t("settings.providers.fineco_panel.preview"), tone: :violet, marker: false) %>
 
+  <% sync_status = BankSyncStatusPresenter.new(item: @fineco_item, provider_key: :fineco) if @fineco_item %>
+
   <div class="space-y-2 text-sm text-secondary">
     <p><%= t("settings.providers.fineco_panel.description") %></p>
     <p><%= t("settings.providers.fineco_panel.read_only") %></p>
@@ -9,19 +11,7 @@
 
   <% if @fineco_item %>
     <div class="space-y-3 rounded-lg bg-container-inset p-3 text-sm">
-      <% if @fineco_item.syncing? %>
-        <p class="text-secondary"><%= t("settings.providers.fineco_panel.syncing") %></p>
-      <% elsif @fineco_item.requires_update? %>
-        <p class="text-warning"><%= t("settings.providers.fineco_panel.requires_update") %></p>
-      <% elsif @fineco_item.last_sync_error.present? %>
-        <p class="text-warning"><%= t("settings.providers.fineco_panel.sync_error") %></p>
-      <% elsif @fineco_item.last_synced_at.present? %>
-        <p class="text-secondary">
-          <%= t("settings.providers.fineco_panel.last_synced", time: time_ago_in_words(@fineco_item.last_synced_at)) %>
-        </p>
-      <% else %>
-        <p class="text-secondary"><%= t("settings.providers.fineco_panel.never_synced") %></p>
-      <% end %>
+      <%= render BankSyncStatusComponent.new(presenter: sync_status) %>
     </div>
   <% end %>
 

@@ -62,6 +62,27 @@ class DirectaItem::HistorySyncerTest < ActiveSupport::TestCase
     assert_nil @item.reload.history_sync_error_code
   end
 
+  test "a history 429 persists the shared deadline without changing credentials or coverage" do
+    reader = mock("Directa history reader")
+    reader.expects(:fetch_orders).once.raises(
+      Provider::Directa::ProviderUnavailable.new("limited", failure_code: :rate_limited, retry_after: "7200")
+    )
+    Provider::Directa::History.expects(:new).once.with(session: @session, http_transport: anything).returns(reader)
+    prior_tokens = [ @item.multi_token, @item.mono_token ]
+    prior_snapshot_at = @item.portfolio_snapshot_at
+    now = Time.current
+
+    refute DirectaItem::HistorySyncer.new(@item).perform
+    refute DirectaItem::HistorySyncer.new(@item).perform
+
+    @item.reload
+    assert_equal "history_rate_limited", @item.history_sync_error_code
+    assert_equal prior_tokens, [ @item.multi_token, @item.mono_token ]
+    assert_equal prior_snapshot_at, @item.portfolio_snapshot_at
+    assert_nil @provider_account.reload.history_ledger
+    assert_operator @item.next_sync_at, :>=, now + 119.minutes
+  end
+
   test "rejects changed normalized passes without importing either result" do
     stub_two_passes(normalized: [ normalized_result, normalized_result(fingerprint: "b" * 64) ])
     DirectaItem::HistoryImporter.expects(:new).never
@@ -69,6 +90,13 @@ class DirectaItem::HistorySyncerTest < ActiveSupport::TestCase
     refute DirectaItem::HistorySyncer.new(@item).perform
 
     assert_equal "history_changed", @item.reload.history_sync_error_code
+  end
+
+  test "a busy shared provider lock skips history reads" do
+    @item.stubs(:with_provider_sync_lock).returns(false)
+    Provider::Directa::History.expects(:new).never
+
+    refute DirectaItem::HistorySyncer.new(@item).perform
   end
 
   test "rejects a statement response from another account identity" do

@@ -20,11 +20,12 @@ class Provider::EnableBanking
   headers "User-Agent" => "Sure Finance Enable Banking Client"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
-  attr_reader :application_id, :private_key
+  attr_reader :application_id, :private_key, :sync_budget
 
-  def initialize(application_id:, client_certificate:)
+  def initialize(application_id:, client_certificate:, sync_budget: nil)
     @application_id = application_id
     @private_key = extract_private_key(client_certificate)
+    @sync_budget = sync_budget
   end
 
   # Get list of available ASPSPs (banks) for a country
@@ -138,6 +139,7 @@ class Provider::EnableBanking
   # @return [Hash] Account details
   def get_account_details(account_id:, psu_headers: {})
     encoded_id = CGI.escape(account_id.to_s)
+    sync_budget&.wait_for_data_request_slot!
     response = self.class.get(
       "#{BASE_URL}/accounts/#{encoded_id}/details",
       headers: auth_headers.merge(safe_psu_headers(psu_headers))
@@ -154,6 +156,7 @@ class Provider::EnableBanking
   # @return [Hash] Balance information
   def get_account_balances(account_id:, psu_headers: {})
     encoded_id = CGI.escape(account_id.to_s)
+    sync_budget&.wait_for_data_request_slot!
     response = self.class.get(
       "#{BASE_URL}/accounts/#{encoded_id}/balances",
       headers: auth_headers.merge(safe_psu_headers(psu_headers))
@@ -181,6 +184,7 @@ class Provider::EnableBanking
     query_params[:date_to] = date_to.to_date.iso8601 if date_to
     query_params[:continuation_key] = continuation_key if continuation_key
 
+    sync_budget&.wait_for_data_request_slot!
     response = self.class.get(
       "#{BASE_URL}/accounts/#{encoded_id}/transactions",
       headers: auth_headers.merge(safe_psu_headers(psu_headers)),

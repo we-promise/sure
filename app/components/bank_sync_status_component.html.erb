@@ -1,0 +1,23 @@
+<% if presenter.show_alert? %>
+  <%= render DS::Alert.new(title: presenter.title, variant: presenter.variant, live: presenter.live) do %>
+    <p><%= presenter.message %></p>
+    <% if presenter.timing_message.present? %>
+      <p><%= presenter.timing_message %></p>
+    <% end %>
+    <% if presenter.stale_data_message.present? %>
+      <p><%= presenter.stale_data_message %></p>
+    <% end %>
+    <p><%= presenter.last_successful_message %></p>
+  <% end %>
+<% else %>
+  <%= tag.div(class: "space-y-0.5 text-sm", role: (presenter.live == :status ? "status" : nil)) do %>
+    <p class="flex items-center gap-1 text-secondary">
+      <%= helpers.icon(presenter.icon_name, size: "sm", color: presenter.icon_color, class: ("animate-spin" if presenter.state == :syncing)) %>
+      <span class="font-medium"><%= presenter.title %></span>
+      <% if presenter.state == :syncing %>
+        <span><%= presenter.message %></span>
+      <% end %>
+    </p>
+    <p class="text-xs text-secondary"><%= presenter.last_successful_message %></p>
+  <% end %>
+<% end %>

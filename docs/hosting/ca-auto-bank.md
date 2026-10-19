@@ -41,6 +41,14 @@ for reconnection when its session expires. Bank authentication rejection also in
 session. Saved accounts, balances and deposit details remain available. No
 password retry, OTP request or speculative keepalive runs in the background.
 
+Manual snapshot requests have a five-minute minimum interval. An HTTP 429 stores
+a persistent retry deadline, using the bank's `Retry-After` value when present
+and safe to parse, or a 15-minute fallback. The deadline is capped at seven
+days. A per-connection lock rejects overlapping snapshot work before HTTP, and
+each attempt checks the deadline before making bank requests. A rate-limited
+attempt preserves the accepted bank session and the last saved balances; Sure
+does not add a scheduled retry or infer a bank request quota.
+
 ## Accounts and values
 
 - **Libero:** an EUR Savings account using the bank's available cash balance.

@@ -338,7 +338,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_select "form[action=?]", fineco_item_path(item)
       assert_select "a[href=?]", fineco_login_path, text: I18n.t("settings.providers.fineco_panel.reconnect")
     end
-    assert_match(/Last snapshot/, response.body)
+    assert_match(/Last successful data snapshot:/, response.body)
     refute_includes response.body, "FINECO-TEST-ACCOUNT"
   end
 
@@ -382,7 +382,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_select "a[href=?]", fineco_login_path, text: I18n.t("settings.providers.fineco_panel.reconnect")
       assert_select "form[action=?]", sync_fineco_item_path(item), count: 0
       assert_select "form[action=?]", fineco_item_path(item), count: 0
-      assert_select "p", text: I18n.t("settings.providers.fineco_panel.requires_update")
+      assert_select "p", text: I18n.t("bank_sync_status.states.reconnect_required.message", provider: "Fineco")
     end
     assert FinecoItem.exists?(item.id)
     assert investment_account.reload.investment?

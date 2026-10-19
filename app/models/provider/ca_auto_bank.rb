@@ -13,11 +13,12 @@ class Provider::CaAutoBank
   MAX_DEPOSITS = 200
 
   class Error < StandardError
-    attr_reader :code, :diagnostics
+    attr_reader :code, :diagnostics, :retry_after
 
-    def initialize(code, diagnostics: {})
+    def initialize(code, diagnostics: {}, retry_after: nil)
       @code = code.to_s
       @diagnostics = diagnostics.slice(:operation, :http_status, :bank_error_code, :transport_error).freeze
+      @retry_after = retry_after
       super(@code)
     end
   end
@@ -176,12 +177,14 @@ class Provider::CaAutoBank
       http_request = (method == :get ? Net::HTTP::Get : Net::HTTP::Post).new(uri, headers)
       http_request.body = JSON.generate(body) if body
       status = nil
+      retry_after = nil
       response_body = +""
       Timeout.timeout(25) do
         Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 15, write_timeout: 10) do |http|
           http.max_retries = 0
           http.request(http_request) do |response|
             status = response.code.to_i
+            retry_after = response["Retry-After"]
             response.read_body do |chunk|
               raise Error.new(:invalid_response) if response_body.bytesize + chunk.bytesize > BODY_LIMIT
 
@@ -193,7 +196,7 @@ class Provider::CaAutoBank
       @last_response_diagnostics = response_diagnostics(path, status, response_body)
       raise Error.new(:session_expired) if authentication && [ 401, 403 ].include?(status)
       raise Error.new(:authentication_failed) if !authentication && [ 400, 401, 403 ].include?(status)
-      raise Error.new(:rate_limited) if status == 429
+      raise Error.new(:rate_limited, retry_after: retry_after) if status == 429
       raise Error.new(:provider_unavailable) unless status == 200 || (allow_pending && status == 511)
 
       parsed = JSON.parse(response_body)
@@ -201,7 +204,8 @@ class Provider::CaAutoBank
 
       [ status, parsed ]
     rescue Error => error
-      raise Error.new(error.code, diagnostics: response_diagnostics(path, status, response_body)), cause: nil
+      raise Error.new(error.code, diagnostics: response_diagnostics(path, status, response_body),
+        retry_after: error.retry_after || retry_after), cause: nil
     rescue JSON::ParserError, Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError
       raise Error.new(:invalid_response, diagnostics: response_diagnostics(path, status, response_body)), cause: nil
     rescue IOError, SystemCallError, OpenSSL::SSL::SSLError, Timeout::Error, SocketError => error

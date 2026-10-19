@@ -45,6 +45,21 @@ class Provider::CaAutoBankTest < ActiveSupport::TestCase
     assert_not_requested(:get, "https://untrusted.example/")
   end
 
+  test "HTTP 429 preserves Retry-After without exposing the response body" do
+    stub_request(:get, /\/user\z/).to_return(status: 429, body: "private limit response",
+      headers: { "Retry-After" => "3600" })
+
+    error = assert_raises(Provider::CaAutoBank::Error) do
+      Provider::CaAutoBank.new(authentication_token: ca_token).account_identity
+    end
+
+    assert_equal "rate_limited", error.code
+    assert_equal "3600", error.retry_after
+    assert_equal 429, error.diagnostics.fetch(:http_status)
+    refute_includes error.message, "private"
+    refute_includes error.diagnostics.to_json, "private"
+  end
+
   test "token expiry accepts only the observed JWT format" do
     expiry = 1.hour.from_now.change(usec: 0)
     assert_equal expiry.to_i, Provider::CaAutoBank.token_expires_at(ca_token(expires_at: expiry)).to_i

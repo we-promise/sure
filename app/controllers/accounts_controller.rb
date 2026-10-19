@@ -197,6 +197,15 @@ class AccountsController < ApplicationController
 
           if item.is_a?(PlaidItem)
             item.sync_later_with_provider_refresh
+          elsif item.is_a?(EnableBankingItem)
+            item.sync_later(
+              psu_context: item.interactive_psu_context(
+                ip_address: request.remote_ip,
+                user_agent: request.user_agent,
+                user: Current.true_user,
+                session: Current.session
+              )
+            )
           else
             item.sync_later
           end

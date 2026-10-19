@@ -13,5 +13,7 @@ en:
       unavailable: Directa is not ready to sync. Reconnect to continue.
       already_running: A Directa sync is already running.
       queued: Directa sync has been queued.
+      cooldown: "You can refresh Directa after %{time}."
+      rate_limited: "Directa is temporarily limiting requests. You can refresh after %{time}."
     destroy:
       success: Directa syncing has been disconnected. Saved data remains in Sure.
