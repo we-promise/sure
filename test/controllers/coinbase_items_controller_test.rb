@@ -65,6 +65,77 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
     assert @coinbase_item.reload.syncing?
   end
 
+  # Add Account -> Crypto -> Coinbase used to bounce back to Settings even when
+  # the connection's sync had already found wallets waiting to be set up.
+  test "select_accounts opens the wallet setup of the family's Coinbase connection" do
+    get select_accounts_coinbase_items_url
+
+    assert_redirected_to setup_accounts_coinbase_item_path(@coinbase_item)
+    assert_response :see_other
+  end
+
+  test "select_accounts sends the user to Settings when no connection has credentials" do
+    @coinbase_item.update!(scheduled_for_deletion: true)
+
+    get select_accounts_coinbase_items_url
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("coinbase_items.select_accounts.no_credentials_configured"), flash[:alert]
+  end
+
+  test "select_accounts leaves the Add Account modal for Settings at the top level" do
+    @coinbase_item.update!(scheduled_for_deletion: true)
+
+    get select_accounts_coinbase_items_url, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("coinbase_items.select_accounts.no_credentials_configured"), flash[:alert]
+  end
+
+  test "select_accounts asks which connection when there are several, unless one is named" do
+    other_item = CoinbaseItem.create!(family: @family, name: "Second Coinbase", api_key: "key_2", api_secret: "secret_2")
+
+    get select_accounts_coinbase_items_url
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("coinbase_items.select_accounts.select_connection"), flash[:alert]
+
+    get select_accounts_coinbase_items_url(coinbase_item_id: other_item.id)
+
+    assert_redirected_to setup_accounts_coinbase_item_path(other_item)
+  end
+
+  test "select_accounts says the named connection is unavailable when another one exists" do
+    get select_accounts_coinbase_items_url(coinbase_item_id: SecureRandom.uuid)
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("coinbase_items.select_accounts.connection_unavailable"), flash[:alert]
+  end
+
+  test "select_accounts carries a safe return_to into setup and drops an unsafe one" do
+    get select_accounts_coinbase_items_url(return_to: "/imports/123/confirm")
+    assert_redirected_to setup_accounts_coinbase_item_path(@coinbase_item, return_to: "/imports/123/confirm")
+
+    get select_accounts_coinbase_items_url(return_to: "//evil.example")
+    assert_redirected_to setup_accounts_coinbase_item_path(@coinbase_item)
+  end
+
+  test "setup_accounts keeps return_to for finishing and cancelling" do
+    get setup_accounts_coinbase_item_url(@coinbase_item, return_to: "/imports/123/confirm")
+
+    assert_response :success
+    assert_select "input[type=hidden][name=return_to][value=?]", "/imports/123/confirm"
+    assert_select "a[href=?]", "/imports/123/confirm", text: I18n.t("coinbase_items.setup_accounts.cancel")
+  end
+
+  test "complete_account_setup returns to return_to" do
+    post complete_account_setup_coinbase_item_url(@coinbase_item), params: { return_to: "/imports/123/confirm" }
+
+    assert_redirected_to "/imports/123/confirm"
+  end
+
   test "should show setup_accounts page" do
     get setup_accounts_coinbase_item_url(@coinbase_item)
     assert_response :success
@@ -210,5 +281,42 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
         coinbase_account_id: coinbase_account.id
       }
     end
+  end
+
+  # The orphan cleanup's enqueue runs once the relink transaction commits. If it
+  # ran inside that transaction, its error would escape the action's rescue
+  # after the relink had committed, and the request would fail.
+  test "link_existing_account still succeeds when the orphan's destroy enqueue fails" do
+    orphan = Account.create!(
+      family: @family,
+      name: "Old Crypto",
+      balance: 0,
+      currency: "USD",
+      accountable: Crypto.create!(subtype: "exchange")
+    )
+    target = Account.create!(
+      family: @family,
+      name: "Manual Crypto",
+      balance: 0,
+      currency: "USD",
+      accountable: Crypto.create!(subtype: "exchange")
+    )
+    coinbase_account = @coinbase_item.coinbase_accounts.create!(
+      name: "BTC Wallet",
+      account_id: "btc_123",
+      currency: "BTC",
+      current_balance: 0.5
+    )
+    AccountProvider.create!(account: orphan, provider: coinbase_account)
+    DestroyJob.queue_adapter.expects(:enqueue).once.raises(RedisClient::CannotConnectError, "Connection refused")
+
+    post link_existing_account_coinbase_items_url, params: {
+      account_id: target.id,
+      coinbase_account_id: coinbase_account.id
+    }
+
+    assert_redirected_to accounts_path
+    assert_equal target, coinbase_account.reload.current_account
+    assert_equal "active", orphan.reload.status
   end
 end
