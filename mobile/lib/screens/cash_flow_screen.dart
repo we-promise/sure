@@ -66,6 +66,11 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
   CashFlowSide _side = CashFlowSide.expense;
 
   final Map<CashFlowPeriod, CashFlowReport> _reports = {};
+
+  /// The date range each cached report was fetched for. A preset such as
+  /// "This month" moves when the date changes, so a cached report only
+  /// counts while its range still matches.
+  final Map<CashFlowPeriod, CashFlowDateRange> _reportRanges = {};
   final Set<CashFlowPeriod> _stale = {};
   bool _loading = false;
   bool _offline = false;
@@ -97,7 +102,11 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
 
   Future<void> _load({bool force = false}) async {
     final period = _period;
-    if (!force && _reports.containsKey(period) && !_stale.contains(period)) {
+    final range = _rangeFor(period);
+    if (!force &&
+        _reports.containsKey(period) &&
+        !_stale.contains(period) &&
+        _reportRanges[period] == range) {
       return;
     }
     final requestId = ++_requestId;
@@ -108,13 +117,15 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
     });
 
     final offline = _connectivity()?.isOffline ?? false;
-    final token = offline ? null : await _accessToken();
     Map<String, dynamic>? result;
-    if (token != null) {
-      result = await _service.getCashFlow(
-        accessToken: token,
-        range: _rangeFor(period),
-      );
+    try {
+      final token = offline ? null : await _accessToken();
+      if (token != null) {
+        result = await _service.getCashFlow(accessToken: token, range: range);
+      }
+    } catch (_) {
+      // A failed token refresh (or storage error) is a failed load.
+      result = null;
     }
     if (!mounted || requestId != _requestId) return;
 
@@ -122,6 +133,7 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
       _loading = false;
       if (result != null && result['success'] == true) {
         _reports[period] = result['report'] as CashFlowReport;
+        _reportRanges[period] = range;
         _stale.remove(period);
       } else {
         _offline = offline;
