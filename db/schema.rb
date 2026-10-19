@@ -2414,6 +2414,42 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.index ["family_id"], name: "index_rules_on_family_id"
   end
 
+  create_table "scalable_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "cash_balance", precision: 19, scale: 4, null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 19, scale: 4, null: false
+    t.string "kind", null: false
+    t.string "name", null: false
+    t.text "raw_metadata"
+    t.uuid "scalable_item_id", null: false
+    t.datetime "snapshot_at"
+    t.string "uid", null: false
+    t.datetime "updated_at", null: false
+    t.index ["scalable_item_id", "uid"], name: "index_scalable_accounts_on_scalable_item_id_and_uid", unique: true
+    t.index ["scalable_item_id"], name: "index_scalable_accounts_on_scalable_item_id"
+    t.check_constraint "kind::text = ANY (ARRAY['broker'::character varying, 'overnight'::character varying]::text[])", name: "chk_scalable_accounts_kind"
+  end
+
+  create_table "scalable_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.integer "connection_generation", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.text "credentials"
+    t.uuid "family_id", null: false
+    t.string "last_sync_error_code"
+    t.datetime "next_sync_at"
+    t.uuid "owner_id", null: false
+    t.text "pending_login_state"
+    t.text "person_identity"
+    t.datetime "snapshot_at"
+    t.string "status", default: "requires_update", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "owner_id"], name: "index_scalable_items_on_family_id_and_owner_id", unique: true
+    t.index ["family_id"], name: "index_scalable_items_on_family_id"
+    t.index ["owner_id"], name: "index_scalable_items_on_owner_id"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'connected'::character varying, 'requires_update'::character varying]::text[])", name: "chk_scalable_items_status"
+  end
+
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "asset_class"
     t.string "asset_sub_class"
@@ -3235,6 +3271,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
   add_foreign_key "rule_conditions", "rules"
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
+  add_foreign_key "scalable_accounts", "scalable_items", on_delete: :cascade
+  add_foreign_key "scalable_items", "families", on_delete: :cascade
+  add_foreign_key "scalable_items", "users", column: "owner_id", on_delete: :cascade
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify

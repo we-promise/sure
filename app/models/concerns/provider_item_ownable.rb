@@ -28,7 +28,7 @@ module ProviderItemOwnable
   # so it does not depend on autoload order -- add a provider here when wiring
   # one up. Callers that must sweep ownership across providers (a user changing
   # families, say) iterate this.
-  OWNED_ITEM_CLASS_NAMES = %w[PlaidItem FinecoItem DirectaItem CaAutoBankItem].freeze
+  OWNED_ITEM_CLASS_NAMES = %w[PlaidItem FinecoItem DirectaItem CaAutoBankItem ScalableItem].freeze
 
   def self.owned_item_classes
     OWNED_ITEM_CLASS_NAMES.map(&:constantize)

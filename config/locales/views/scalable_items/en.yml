@@ -1,0 +1,18 @@
+en:
+  scalable_items:
+    card:
+      syncing: Reading brokerage cash and investments…
+      last_synced: Last synced %{time} ago
+      not_synced: Waiting for the first account sync.
+      sync: Sync
+      reconnect: Sign in to Scalable Capital
+      stop_syncing: Stop syncing
+      stop_syncing_confirmation: Stop syncing Scalable Capital? Your saved accounts and balances will remain in Sure.
+      snapshot_scope: Sure reads brokerage cash and supported securities holdings from your Scalable investment account. Trading actions are unavailable in Sure.
+    sync:
+      unavailable: Scalable Capital is not ready to sync. Sign in again to continue.
+      already_running: A Scalable Capital sync is already running.
+      cooldown: Scalable Capital is temporarily limiting sync requests. Try again later.
+      queued: Scalable Capital sync has been queued.
+    destroy:
+      success: Scalable Capital syncing has been disconnected. Saved data remains in Sure.

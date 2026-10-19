@@ -1,7 +1,9 @@
 <%# locals: (holding:, editable: true) %>
 
 <%= turbo_frame_tag dom_id(holding, :cost_basis) do %>
-  <% if holding.cost_basis_locked? && !editable %>
+  <% if holding.scalable_snapshot_backed? %>
+    <%= tag.span holding.avg_cost ? format_money(holding.avg_cost) : "--", class: "privacy-sensitive" %>
+  <% elsif holding.cost_basis_locked? && !editable %>
     <%# Locked and not editable (from holdings list) - just show value, right-aligned %>
     <div class="flex items-center justify-end gap-1">
       <%= tag.span format_money(holding.avg_cost), class: "privacy-sensitive" %>

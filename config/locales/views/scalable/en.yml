@@ -1,0 +1,25 @@
+en:
+  providers:
+    scalable:
+      name: Scalable Capital
+      connection_description: Connect your Scalable Capital investment account and view its brokerage cash and holdings.
+  scalable:
+    name: Scalable Capital
+    errors:
+      authentication_failed: Scalable Capital did not approve this sign-in. Start a new attempt.
+      invalid_response: Scalable Capital returned an unexpected response. Your saved data was kept.
+      session_expired: The Scalable Capital session expired. Sign in again to resume syncing.
+      provider_unavailable: Scalable Capital could not be reached. Try again later.
+      rate_limited: Scalable Capital is limiting requests. Wait before trying again.
+      encryption_unavailable: Configure application encryption before connecting Scalable Capital.
+      login_in_progress: A Scalable Capital sign-in is already in progress. Finish it or wait for it to expire.
+      challenge_expired: This Scalable Capital sign-in attempt expired. Start again.
+      challenge_not_available: This sign-in attempt is unavailable in this Sure session. Start again.
+      login_authorization_changed: This Sure session can no longer finish the Scalable Capital sign-in. Start again from an authorized administrator session.
+      account_identity_changed: Scalable Capital returned a different account identity. Your saved data was kept.
+      account_conflict: A Scalable Capital account conflicts with existing account data. Your saved data was kept.
+      invalid_snapshot: Scalable Capital returned invalid account data. Your saved data was kept.
+      incomplete_snapshot: Scalable Capital returned incomplete account data. Your saved data was kept.
+      unsupported_account: Scalable Capital returned an account type this preview cannot import.
+      stale_snapshot: Scalable Capital returned an older snapshot. Your newer saved data was kept.
+      sync_failed: Scalable Capital could not refresh your data. Your saved data was kept.

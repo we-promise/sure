@@ -59,6 +59,12 @@ class Holding::Materializer
           account_provider_id: directa_account_provider.id,
           security_ids: security_ids
         ).calculate
+      elsif scalable_account_provider
+        Holding::ScalableSnapshotCalculator.new(
+          account,
+          account_provider_id: scalable_account_provider.id,
+          security_ids: security_ids
+        ).calculate
       else
         calculator.calculate
       end
@@ -313,6 +319,12 @@ class Holding::Materializer
       return @directa_account_provider if defined?(@directa_account_provider)
 
       @directa_account_provider = account.account_providers.find_by(provider_type: "DirectaAccount")
+    end
+
+    def scalable_account_provider
+      return @scalable_account_provider if defined?(@scalable_account_provider)
+
+      @scalable_account_provider = account.account_providers.find_by(provider_type: "ScalableAccount")
     end
 
     def holding_key(holding)

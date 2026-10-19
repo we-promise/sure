@@ -1,0 +1,22 @@
+en:
+  settings:
+    providers:
+      taglines:
+        scalable: Read Scalable Capital brokerage cash and holdings
+      scalable_panel:
+        preview: Preview
+        description: Connect your Scalable Capital investment account to your Sure family.
+        read_only: Sure reads brokerage cash and securities holdings. It cannot place, change, or cancel trades.
+        profile_security_note: The Scalable CLI may require Profile, Security, and Agentic Investing to be enabled. Those settings can enable capabilities beyond this connector's read-only use.
+        syncing: Syncing Scalable Capital…
+        waiting_for_snapshot: Connected. The first account sync is queued.
+        sign_in_required: Sign in to Scalable Capital to start or resume syncing. Saved data remains available.
+        status_unavailable: Scalable Capital's connection status could not be confirmed. Check the connection before relying on saved data.
+        preview_connection: Connected. The latest Scalable Capital account data is available.
+        sync_error: Scalable Capital could not refresh your saved data. Previous data was kept.
+        last_synced: Last synced %{time} ago
+        sync: Sync now
+        connect: Connect
+        reconnect: Sign in again
+        disconnect: Disconnect
+        disconnect_confirmation: Stop syncing Scalable Capital? Saved balances and holdings will remain in Sure.

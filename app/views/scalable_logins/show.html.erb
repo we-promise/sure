@@ -1,0 +1,83 @@
+<% page_title_key = @scalable_item&.credentials_configured? ? ".connected_title" : ".title" %>
+<%= content_for :page_title, t(page_title_key) %>
+
+<main class="mx-auto max-w-3xl space-y-6">
+  <header class="space-y-3">
+    <%= render DS::Pill.new(label: t("scalable_logins.show.preview"), tone: :violet, marker: false) %>
+    <h1 class="text-2xl font-semibold text-primary"><%= t(page_title_key) %></h1>
+    <p class="text-sm text-secondary"><%= t(@scalable_item&.session_configured? ? ".connected_description" : ".description") %></p>
+    <p class="text-sm text-secondary"><%= t("scalable_logins.show.read_only") %></p>
+    <p class="text-sm text-secondary"><%= t("scalable_logins.show.profile_security_note") %></p>
+  </header>
+
+  <% if @error_code.present? %>
+    <%= render DS::Alert.new(message: t("scalable.errors.#{@error_code}"), variant: :error) %>
+  <% end %>
+  <% unless @encryption_ready %>
+    <%= render DS::Alert.new(message: t("scalable.errors.encryption_unavailable"), variant: :warning) %>
+  <% end %>
+
+  <% if @pending_login %>
+    <% phase = @pending_login.fetch(:phase, "device").to_s.in?(%w[device phone_approval]) ? @pending_login.fetch(:phase).to_s : "device" %>
+    <section class="space-y-4 rounded-xl border border-primary bg-container p-4"
+             data-controller="scalable-login"
+             data-scalable-login-url-value="<%= poll_scalable_login_path %>"
+             data-scalable-login-attempt-value="<%= @pending_login.fetch(:attempt_id) %>"
+             data-scalable-login-expires-value="<%= @pending_login.fetch(:expires_at).to_time.iso8601 %>"
+             data-scalable-login-poll-interval-value="<%= @pending_login.fetch(:poll_interval) %>"
+             data-scalable-login-phase-value="<%= phase %>"
+             data-scalable-login-device-status-value="<%= t("scalable_logins.show.phase.device") %>"
+             data-scalable-login-phone-status-value="<%= t("scalable_logins.show.phase.phone_approval") %>"
+             data-scalable-login-retrying-status-value="<%= t("scalable_logins.show.retrying_status") %>"
+             data-scalable-login-failure-value="<%= t("scalable.errors.challenge_expired") %>">
+      <h2 class="text-lg font-semibold text-primary"><%= t("scalable_logins.show.approval_title") %></h2>
+      <p class="text-sm text-secondary" role="status" aria-live="polite" data-scalable-login-target="status"><%= t("scalable_logins.show.phase.#{phase}") %></p>
+      <p class="text-sm text-destructive" role="alert" data-scalable-login-target="error" hidden></p>
+      <div class="space-y-2">
+        <p class="text-sm font-medium text-primary"><%= t("scalable_logins.show.user_code_label") %></p>
+        <p class="w-fit rounded-lg bg-container-inset px-4 py-2 font-mono text-2xl tracking-widest text-primary" aria-label="<%= t("scalable_logins.show.user_code_label") %>"><%= @pending_login.fetch(:user_code) %></p>
+        <%= render DS::Link.new(
+              text: t("scalable_logins.show.open_verification_page"),
+              href: @pending_login.fetch(:verification_url),
+              variant: :secondary,
+              target: "_blank",
+              rel: "noopener noreferrer"
+            ) %>
+      </div>
+      <p class="text-sm text-secondary"><%= t("scalable_logins.show.approval_instructions") %></p>
+      <noscript><p class="text-sm text-secondary"><%= t("scalable_logins.show.javascript_required") %></p></noscript>
+      <%= styled_form_with url: cancel_scalable_login_path, method: :delete, scope: :scalable_login do |form| %>
+        <%= form.hidden_field :attempt_id, value: @pending_login.fetch(:attempt_id) %>
+        <%= form.submit t("scalable_logins.show.cancel") %>
+      <% end %>
+    </section>
+  <% elsif @login_in_progress %>
+    <%= render DS::Alert.new(message: t("scalable.errors.login_in_progress"), variant: :info) %>
+  <% elsif @scalable_item&.session_configured? %>
+    <p class="text-sm text-secondary" role="status" aria-live="polite">
+      <%= t(@scalable_item.last_synced_at.blank? ? ".status_waiting_for_snapshot" : ".status_connected") %>
+    </p>
+    <% if @scalable_item.error_message.present? %>
+      <%= render DS::Alert.new(message: @scalable_item.error_message, variant: :error) %>
+    <% end %>
+    <div class="flex flex-wrap gap-2">
+      <% if @scalable_item.ready_for_sync? %>
+        <%= render DS::Button.new(
+              text: t("scalable_logins.show.sync_now"),
+              icon: "refresh-cw",
+              variant: :secondary,
+              href: sync_scalable_item_path(@scalable_item),
+              disabled: @scalable_item.syncing? || !@scalable_item.sync_due?
+            ) %>
+      <% end %>
+      <%= render DS::Link.new(text: t("scalable_logins.show.view_accounts"), href: accounts_path, variant: :secondary) %>
+    </div>
+  <% else %>
+    <%= styled_form_with url: start_scalable_login_path, method: :post, scope: :scalable_login,
+                         class: "space-y-4 rounded-xl border border-primary bg-container p-4" do |form| %>
+      <%= form.submit t(@scalable_item&.requires_update? ? ".reconnect" : ".connect"), disabled: !@encryption_ready %>
+    <% end %>
+  <% end %>
+
+  <%= render DS::Link.new(text: t("scalable_logins.show.back_to_providers"), href: settings_providers_path, variant: :secondary) %>
+</main>

@@ -26,6 +26,7 @@ class Provider
       fineco:         { region: "IT",      kinds: %w[Investment],      maturity: :alpha,  logo_text: "FI", logo_color: "#1d4ed8", domain: "finecobank.com", name: "Fineco" },
       directa:        { region: "IT",      kinds: %w[Investment],      maturity: :alpha,  logo_text: "DI", logo_color: nil, domain: "directa.it", name: "Directa" },
       ca_auto_bank:   { region: "IT",      kinds: %w[Bank],            maturity: :alpha,  logo_text: "CA", logo_color: nil, domain: "ca-autobank.it", name: "CA Auto Bank" },
+      scalable:       { region: "DE",      kinds: %w[Investment],      maturity: :alpha,  logo_text: "SC", logo_color: nil, domain: "scalable.capital", name: "Scalable Capital" },
       plaid:          { region: "US",      kinds: %w[Bank],            maturity: :stable, logo_text: "PL", logo_color: "#4f46e5", domain: "plaid.com", tier: "Paid" },
       plaid_eu:       { region: "EU",      kinds: %w[Bank],            maturity: :stable, logo_text: "PL", logo_color: "#4f46e5", domain: "plaid.com", tier: "Paid", name: "Plaid EU" },
       questrade:      { region: "CA",      kinds: %w[Investment],      maturity: :beta,   logo_text: "QT", logo_color: "#0d9488", domain: "questrade.com" },

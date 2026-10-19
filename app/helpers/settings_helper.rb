@@ -161,6 +161,19 @@ module SettingsHelper
       else
         { status: :ok, last_synced_at: item.last_synced_at }
       end
+    when "scalable"
+      item = @scalable_item || @scalable_items&.first
+      return { status: :off } unless item
+
+      if item.requires_update?
+        { status: :warn, meta: item.error_message.presence || t("settings.providers.scalable_panel.sign_in_required"), last_synced_at: item.last_synced_at }
+      elsif item.error_message.present?
+        { status: :err, meta: item.error_message, last_synced_at: item.last_synced_at }
+      elsif item.last_synced_at.blank?
+        { status: :warn, meta: t("settings.providers.scalable_panel.waiting_for_snapshot"), last_synced_at: nil }
+      else
+        { status: :ok, meta: t("settings.providers.scalable_panel.preview_connection"), last_synced_at: item.last_synced_at }
+      end
     else
       { status: :off }
     end

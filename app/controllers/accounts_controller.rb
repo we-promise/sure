@@ -58,6 +58,9 @@ class AccountsController < ApplicationController
     @ca_auto_bank_items = visible_provider_items(
       family.ca_auto_bank_items.ordered.includes(ca_auto_bank_accounts: { account_provider: :account })
     )
+    @scalable_items = visible_provider_items(
+      family.scalable_items.ordered.includes(scalable_accounts: { account_provider: :account })
+    )
 
     # An on-chain item is admitted as soon as ONE of its accounts is accessible,
     # so the card is told which of them this viewer may actually see. nil is the
@@ -414,12 +417,13 @@ class AccountsController < ApplicationController
     end
 
     def provider_item_sync_authorized?(item)
-      return true unless item.is_a?(FinecoItem) || item.is_a?(DirectaItem) || item.is_a?(CaAutoBankItem)
-      return false if item.is_a?(CaAutoBankItem) && Current.session&.active_impersonator_session_id.present?
+      return true unless item.is_a?(FinecoItem) || item.is_a?(DirectaItem) || item.is_a?(CaAutoBankItem) || item.is_a?(ScalableItem)
+      return false if (item.is_a?(CaAutoBankItem) || item.is_a?(ScalableItem)) && Current.session&.active_impersonator_session_id.present?
 
       user = Current.user
+      syncable = item.is_a?(ScalableItem) ? item.sync_due? : item.syncable?
       user&.admin? && item.owned_by?(user) && user.preview_features_enabled? &&
-        Rails.application.config.app_mode.self_hosted? && item.syncable?
+        Rails.application.config.app_mode.self_hosted? && syncable
     end
 
     def set_manageable_account
@@ -493,6 +497,7 @@ class AccountsController < ApplicationController
         @fineco_items,
         @directa_items,
         @ca_auto_bank_items,
+        @scalable_items,
         @onchain_wallet_items
       ].flatten.compact
 

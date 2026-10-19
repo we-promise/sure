@@ -100,7 +100,14 @@ class Settings::ProvidersController < ApplicationController
     syncable_type = PANEL_SYNCABLE_TYPES[provider_key]
     return redirect_to settings_providers_path unless syncable_type
 
-    items = syncable_type.constantize.where(family: Current.family).syncable
+    if provider_key == "scalable"
+      return head :forbidden if Current.session&.active_impersonator_session_id.present?
+      return redirect_to settings_providers_path unless panel_visible?(FAMILY_PANELS_BY_KEY.fetch("scalable"))
+
+      items = Current.family.scalable_items.owned_by(Current.user).syncable
+    else
+      items = syncable_type.constantize.where(family: Current.family).syncable
+    end
     scheduled = items.reject(&:syncing?)
     scheduled.each(&:sync_later)
 
@@ -216,6 +223,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "fineco",         title: "Fineco",          turbo_id: "fineco",         partial: "fineco_panel", sync_supported: false },
       { key: "directa",        title: "Directa",         turbo_id: "directa",        partial: "directa_panel", sync_supported: false },
       { key: "ca_auto_bank",   title: "CA Auto Bank",    turbo_id: "ca-auto-bank",   partial: "ca_auto_bank_panel", sync_supported: false },
+      { key: "scalable",       title: "Scalable Capital", turbo_id: "scalable",      partial: "scalable_panel", sync_supported: false },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
       { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" }
@@ -249,6 +257,7 @@ class Settings::ProvidersController < ApplicationController
       "trading212"     => "Trading212Item",
       "trade_republic" => "TradeRepublicItem",
       "directa"        => "DirectaItem",
+      "scalable"       => "ScalableItem",
       "indexa_capital" => "IndexaCapitalItem",
       "sophtron"       => "SophtronItem"
     }.freeze
@@ -306,6 +315,9 @@ class Settings::ProvidersController < ApplicationController
       when "directa"
         @directa_items = Current.family.directa_items.owned_by(Current.user).ordered
         @directa_item = @directa_items.find_by(owner_id: Current.user.id)
+      when "scalable"
+        @scalable_items = Current.family.scalable_items.owned_by(Current.user).ordered
+        @scalable_item = @scalable_items.first
       when "indexa_capital"
         @indexa_capital_items = Current.family.indexa_capital_items.ordered
       when "sophtron"
@@ -348,6 +360,8 @@ class Settings::ProvidersController < ApplicationController
       @ca_auto_bank_item = @ca_auto_bank_items.first
       @directa_items = Current.family.directa_items.owned_by(Current.user).ordered
       @directa_item = @directa_items.find_by(owner_id: Current.user.id)
+      @scalable_items = Current.family.scalable_items.owned_by(Current.user).ordered
+      @scalable_item = @scalable_items.first
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
@@ -407,6 +421,7 @@ class Settings::ProvidersController < ApplicationController
         "fineco"         => @fineco_items,
         "directa"        => @directa_items,
         "ca_auto_bank"   => @ca_auto_bank_items,
+        "scalable"       => @scalable_items,
         "indexa_capital" => @indexa_capital_items,
         "sophtron"       => @sophtron_items
       }
@@ -489,7 +504,8 @@ class Settings::ProvidersController < ApplicationController
     end
 
     def panel_visible?(panel)
-      return true unless panel[:key].in?(%w[fineco directa ca_auto_bank])
+      return true unless panel[:key].in?(%w[fineco directa ca_auto_bank scalable])
+      return false if panel[:key] == "scalable" && Current.session&.active_impersonator_session_id.present?
 
       Rails.application.config.app_mode.self_hosted? &&
         Current.user&.admin? &&

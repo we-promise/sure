@@ -1,0 +1,27 @@
+en:
+  scalable_logins:
+    show:
+      title: Connect Scalable Capital
+      connected_title: Scalable Capital connection
+      preview: Preview
+      description: Sign in with Scalable Capital to connect your investment account and import brokerage cash and holdings to Sure.
+      connected_description: Sure is connected to Scalable Capital. Reconnect if Scalable Capital asks you to sign in again.
+      read_only: Sure reads your Scalable investment account, including brokerage cash and securities holdings. It cannot place, change, or cancel trades.
+      profile_security_note: First enable Scalable CLI on Scalable's web platform under Profile > Security > Agentic Investing. CLI access can grant capabilities beyond this connector's data import.
+      approval_title: Approve sign-in with Scalable Capital
+      approval_instructions: Keep this page open while Sure checks the sign-in automatically.
+      user_code_label: One-time code
+      open_verification_page: Open Scalable Capital's verification page
+      phase:
+        device: Enter this code on Scalable Capital's verification page. Sure will check approval automatically.
+        phone_approval: Approve this sign-in in the Scalable Capital app. Sure will check approval automatically.
+      javascript_required: Automatic sign-in checks require JavaScript. Reopen this page with JavaScript enabled.
+      retrying_status: Connection interrupted. Sure is retrying the approval check.
+      cancel: Cancel sign-in
+      connect: Connect Scalable Capital
+      reconnect: Sign in again
+      sync_now: Sync now
+      view_accounts: View accounts
+      back_to_providers: Back to providers
+      status_connected: Scalable Capital is connected. Your latest account data is available.
+      status_waiting_for_snapshot: Scalable Capital is connected. The first account sync is queued.

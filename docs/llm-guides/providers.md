@@ -21,6 +21,13 @@ brand behind it (on-chain wallets) omits the domain and sets `logo_icon` instead
 Institution logos are a separate concept and belong on accounts through
 `Account#logo_url`, never on a provider.
 
+## Scalable snapshot preview
+
+The self-hosted Scalable Capital preview uses native device authorization and
+verified broker cash/holdings snapshots. Read [its connector contract](../scalable-connector.md)
+before extending authentication, products, account linking or materialization.
+Activity, basis and additional savings products require separate verified contracts.
+
 ## Support diagnostics
 
 When a provider sync/import path encounters a recoverable error, suspicious partial

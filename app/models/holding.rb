@@ -54,6 +54,8 @@ class Holding < ApplicationRecord
   # otherwise falls back to calculating from trades. Returns nil when cost
   # basis cannot be determined (no trades and no provider cost_basis).
   def avg_cost
+    return nil if scalable_snapshot_backed? && !cost_basis_locked?
+
     # Use stored cost_basis if available (eliminates N+1 queries)
     # - If locked (user-set), trust the value even if 0 (valid for airdrops)
     # - Otherwise require positive since providers sometimes return 0 when unknown
@@ -74,6 +76,10 @@ class Holding < ApplicationRecord
 
     # Fallback to calculation for holdings without pre-computed cost_basis
     calculate_avg_cost
+  end
+
+  def scalable_snapshot_backed?
+    account&.account_providers&.load&.any? { |provider| provider.provider_type == "ScalableAccount" }
   end
 
   def trend

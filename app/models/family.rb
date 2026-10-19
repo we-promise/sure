@@ -15,6 +15,7 @@ class Family < ApplicationRecord
   include FinecoConnectable
   include DirectaConnectable
   include CaAutoBankConnectable
+  include ScalableConnectable
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable

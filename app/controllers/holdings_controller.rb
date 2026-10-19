@@ -3,6 +3,7 @@ class HoldingsController < ApplicationController
 
   before_action :set_holding, only: %i[show update destroy unlock_cost_basis remap_security reset_security sync_prices]
   before_action :require_holding_write_permission!, only: %i[update destroy unlock_cost_basis remap_security reset_security sync_prices]
+  before_action :require_supported_snapshot_action!, only: %i[update unlock_cost_basis remap_security reset_security sync_prices]
 
   def index
     @account = accessible_accounts.find(params[:account_id])
@@ -183,6 +184,10 @@ class HoldingsController < ApplicationController
 
     def require_holding_write_permission!
       require_account_permission!(@holding.account)
+    end
+
+    def require_supported_snapshot_action!
+      head :forbidden if @holding.scalable_snapshot_backed?
     end
 
     def holding_params
