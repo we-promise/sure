@@ -1,6 +1,7 @@
 ---
 pl:
   passwords:
+    disabled: "Zmiana hasła przez Sure jest wyłączona. Zarządzaj hasłem przez swojego dostawcę tożsamości."
     edit:
       password: Nowe hasło
       password_challenge: Obecne hasło

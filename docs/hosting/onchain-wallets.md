@@ -1,7 +1,7 @@
 # On-chain (self-custody) wallets
 
-Sure can track wallets you hold the keys to — Bitcoin, six EVM networks and
-Solana — from their **public addresses only**. Nothing is signed, no key or seed
+Sure can track wallets you hold the keys to — Bitcoin, six EVM networks,
+Solana, Polkadot and the Cosmos Hub — from their **public addresses only**. Nothing is signed, no key or seed
 phrase is ever entered, and no API key is required for any chain.
 
 This document covers where the data comes from, what needs configuring, the
@@ -78,6 +78,8 @@ listed, so the cause is visible without having to reproduce it.
 | Gnosis | Blockscout (`gnosis.blockscout.com`) | No | `BLOCKSCOUT_GNOSIS_URL` |
 | Solana | Public JSON-RPC (`api.mainnet-beta.solana.com`) | No | `SOLANA_RPC_URL` |
 | Solana token names | Jupiter token search (`lite-api.jup.ag`) | No | `SOLANA_TOKEN_LIST_URL` |
+| Cosmos Hub | Public REST node (`cosmos-rest.publicnode.com`) | No | `COSMOS_REST_URL` |
+| Polkadot | Parity's public Asset Hub Sidecar | No | `POLKADOT_SIDECAR_URL` (must be an Asset Hub Sidecar) |
 
 Every override expects the base URL of a compatible instance, without a trailing
 slash — useful if you run your own indexer or node, or if a public endpoint rate
@@ -109,6 +111,8 @@ address, the cost is roughly:
 | Bitcoin | 1 + up to 10 history pages |
 | EVM | 1 summary + up to 10 pages of transfers + up to 10 pages of token transfers |
 | Solana | ~2 + up to 25 transaction reads |
+| Cosmos Hub | 3, plus a page per extra 200 validators staked with |
+| Polkadot | 1 |
 
 History is capped by default at 10 pages per source — 250 transactions for
 Bitcoin, 10 pages per EVM collection — and at 25 transactions for Solana, which
@@ -239,6 +243,15 @@ unknown mint keeps a label built from its mint address and is tracked by quantit
 only, rather than being handed the real asset's price. A handful of major mints
 resolve without the list, so they keep working if it is unreachable. Names are
 cached for 24 hours per mint, misses included.
+
+**Cosmos Hub has no transfer history.** Public nodes do not index
+transactions, so only the ATOM balance is read: spendable, staked and unbonding,
+but not unclaimed rewards or IBC tokens. Past transfers are not
+imported.
+
+**Polkadot has no transfer history.** No keyless source indexes transfers, so
+only the DOT balance on Asset Hub is read, staked DOT included. Other Asset Hub
+tokens are not. Past transfers are not imported.
 
 **Fees are not itemised.** Network fees are included in the net effect of each
 transfer rather than recorded separately. On Solana, native balance changes below

@@ -11,14 +11,6 @@ class RedbarkItem::SyncCompleteEvent
       account.broadcast_sync_complete
     end
 
-    # Update the Redbark item view
-    redbark_item.broadcast_replace_to(
-      redbark_item.family,
-      target: "redbark_item_#{redbark_item.id}",
-      partial: "redbark_items/redbark_item",
-      locals: { redbark_item: redbark_item }
-    )
-
     # Let family handle sync notifications
     redbark_item.family.broadcast_sync_complete
   end
