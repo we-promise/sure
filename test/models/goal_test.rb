@@ -1407,6 +1407,46 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 1000, Goal.find(goal.id).pace.to_d
   end
 
+  # The transaction path leaves excluded entries out of pace; the balance path
+  # reads stored balances, which include them. Without taking them back out, an
+  # excluded deposit that pushed the account off the transaction path would be
+  # counted after all, through the balance change.
+  test "an excluded deposit does not count towards a valuation-tracked pace" do
+    account = valuation_tracked_account(balance: 124_000, year_ago: 100_000)
+    goal = goal_on(account, target_amount: 200_000)
+    # 24,000 change / 12 before anything is excluded.
+    assert_equal 2000, goal.pace.to_d
+
+    create_transaction(account: account, amount: -12_000, date: 10.days.ago.to_date, excluded: true)
+
+    # Still on the balance path (an excluded entry is no counted transaction),
+    # and the excluded 12,000 leaves (24,000 − 12,000) / 12.
+    assert_equal 1000, Goal.find(goal.id).pace.to_d
+  end
+
+  test "an excluded entry older than the pace year does not move the balance pace" do
+    account = valuation_tracked_account(balance: 124_000, year_ago: 100_000)
+    create_transaction(account: account, amount: -12_000, date: 380.days.ago.to_date, excluded: true)
+
+    # Already inside the year-old balance it is measured from.
+    assert_equal 2000, goal_on(account, target_amount: 200_000).pace.to_d
+  end
+
+  # An account whose only transactions are excluded has no counted history, so
+  # it is not a measured zero.
+  test "an account whose only transactions are excluded is not dormant" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Excluded only",
+                              currency: "USD", balance: 1_000)
+    create_transaction(account: account, amount: -1_000, date: 200.days.ago.to_date, excluded: true)
+    goal = goal_on(account, target_amount: 5_000, target_date: 360.days.from_now.to_date)
+
+    assert_not goal.pace_measurable?
+    assert_equal :pace_unknown, goal.status
+
+    account.entries.update_all(excluded: false)
+    assert Goal.find(goal.id).pace_measurable?
+  end
+
   test "a cash account nobody has paid into lately is still measured and behind" do
     account = Account.create!(family: @family, accountable: Depository.new, name: "Dormant savings",
                               currency: "USD", balance: 1_000)

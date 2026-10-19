@@ -113,8 +113,9 @@ the selected account's connection state.
 - `:pace_unknown` when the goal has a deadline but `pace_measurable?` is
   false: at least one linked account gives no evidence of how its balance
   moves (see below). It is neither on track nor behind, so it stays out of
-  the "behind" count and the on-track tile's denominator, sorts beside
-  `:no_target_date`, and has no index chip of its own.
+  the "behind" count and the on-track tile's denominator (whose subline
+  counts it instead), sorts beside `:no_target_date`, and has no index chip
+  of its own.
 - `:on_track` when the goal has a deadline and `monthly_target_amount <= pace`.
 - `:behind` otherwise.
 
@@ -152,9 +153,12 @@ this order:
    `end_balance` of its latest balance row on or before a year ago,
    divided by twelve. On the contributions basis the window's
    `net_market_flows` are subtracted, so pace measures what progress does.
+   Stored balances include excluded entries, so excluded transactions in
+   the window are taken back out, as path 1 leaves them out.
    With no balance row a year back, the account is unmeasured; a missing
    row is never read as a zero opening balance.
-3. **Dormant.** Otherwise, any transaction at any date: a measured zero.
+3. **Dormant.** Otherwise, any transaction that is not excluded, at any
+   date: a measured zero.
    A savings account nobody has paid into lately is honestly behind.
 4. **Unmeasured.** Anything else (an opening balance and nothing since,
    or valuations all older than a year).

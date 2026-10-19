@@ -288,19 +288,23 @@ class Goal < ApplicationRecord
   # its balance instead, provided someone has actually recorded a value for it
   # in the last year:
   #
-  #   { balance: { account_id => { start: year-old end_balance, market_flows: window sum } },
+  #   { balance: { account_id => { start: year-old end_balance, market_flows: window sum,
+  #                                excluded_flows: window sum of excluded entry amounts } },
   #     dormant: [account_id, ...] }
   #
   # `balance` holds accounts with a reconciliation or current-anchor valuation
   # in the trailing year AND a balance row a year back to measure from. History
   # shorter than a year is not measured: there is no year-old row, and reading
-  # its absence as zero would call the whole balance growth. `dormant` holds
-  # accounts with transactions, just none lately: their pace is a measured zero.
+  # its absence as zero would call the whole balance growth. Stored balances
+  # include excluded entries, which pace_for leaves out, so their sum over the
+  # window is carried too and taken back out of the change. `dormant` holds
+  # accounts with counted transactions, just none lately: their pace is a
+  # measured zero. Excluded ones do not count there either.
   # Any linked account in neither map (an opening balance and nothing since, a
   # recent valuation on under a year of history, or updates all older than a
   # year) has no measurable pace.
   #
-  # Four family-wide queries, none per goal, for the same N+1 reason as
+  # Five family-wide queries, none per goal, for the same N+1 reason as
   # pace_for. `transaction_pace` is pace_for's result, so accounts it already
   # covers are not read again.
   def self.balance_pace_for(family, transaction_pace = pace_for(family))
@@ -332,13 +336,25 @@ class Goal < ApplicationRecord
         .group(:account_id)
         .sum(:net_market_flows)
 
+      excluded_flows = Entry
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+        .where(account_id: starts.keys, date: (cutoff + 1)..Date.current, excluded: true)
+        .merge(Transaction.excluding_pending)
+        .group(:account_id)
+        .sum(:amount)
+
       starts.each do |account_id, start|
-        balance[account_id] = { start: start.to_d, market_flows: (flows[account_id] || 0).to_d }
+        balance[account_id] = {
+          start: start.to_d,
+          market_flows: (flows[account_id] || 0).to_d,
+          excluded_flows: (excluded_flows[account_id] || 0).to_d
+        }
       end
     end
 
     dormant = Entry
       .where(account_id: account_ids - valued_ids, entryable_type: "Transaction")
+      .where("entries.excluded IS NOT TRUE")
       .distinct
       .pluck(:account_id)
 
@@ -784,7 +800,8 @@ class Goal < ApplicationRecord
   #
   # An account with no counted transaction in that window is measured from its
   # balance instead: the change over the last year, divided by twelve (see
-  # Goal.balance_pace_for). On the contributions basis the year's market movement is
+  # Goal.balance_pace_for). Excluded transactions in that year are taken back
+  # out, as they are here. On the contributions basis the year's market movement is
   # taken out, so pace measures the same thing progress does. An account with
   # no evidence either way contributes 0 here, and makes pace_measurable? false.
   #
@@ -1239,7 +1256,9 @@ class Goal < ApplicationRecord
       evidence = pooled_balance_pace[:balance][account.id]
       return nil if evidence.nil?
 
-      change = account.balance.to_d - evidence[:start]
+      # An entry's amount is negative for an inflow, so adding the excluded sum
+      # takes those flows back out of the change.
+      change = account.balance.to_d - evidence[:start] + evidence[:excluded_flows]
       change -= evidence[:market_flows] if contributions_basis?
       change / 12
     end
