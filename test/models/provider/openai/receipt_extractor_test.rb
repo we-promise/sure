@@ -51,12 +51,54 @@ class Provider::Openai::ReceiptExtractorTest < ActiveSupport::TestCase
     assert_equal 2, result.line_items.size
   end
 
-  test "raises when the PDF has no text" do
+  test "renders a scanned PDF to page images for the vision endpoint" do
     Pdf::TextExtractor.expects(:pages).returns([ "" ])
+    Provider::Openai::ReceiptExtractor.any_instance.expects(:render_pdf_pages).returns(%w[page1 page2])
+    client = capturing_client(RECEIPT_JSON)
+
+    result = build_extractor(client, content_type: "application/pdf").extract
+
+    parts = client.last_params[:messages].last[:content]
+    urls = parts.select { |part| part[:type] == "image_url" }.map { |part| part.dig(:image_url, :url) }
+    assert_equal [ "data:image/png;base64,page1", "data:image/png;base64,page2" ], urls
+    assert_nil client.last_params[:response_format]
+    assert_equal 2, result.line_items.size
+  end
+
+  test "sends at most MAX_PDF_PAGES page images" do
+    Pdf::TextExtractor.expects(:pages).returns([ "" ])
+    pages = Array.new(Provider::Openai::ReceiptExtractor::MAX_PDF_PAGES + 2) { |i| "page#{i}" }
+    Provider::Openai::ReceiptExtractor.any_instance.expects(:render_pdf_pages).returns(pages)
+    client = capturing_client(RECEIPT_JSON)
+
+    build_extractor(client, content_type: "application/pdf").extract
+
+    images = client.last_params[:messages].last[:content].count { |part| part[:type] == "image_url" }
+    assert_equal Provider::Openai::ReceiptExtractor::MAX_PDF_PAGES, images
+  end
+
+  test "raises when a PDF has neither text nor renderable pages" do
+    Pdf::TextExtractor.expects(:pages).returns([ "" ])
+    Provider::Openai::ReceiptExtractor.any_instance.expects(:render_pdf_pages).returns([])
+    client = capturing_client(RECEIPT_JSON)
 
     assert_raises(Provider::Openai::Error) do
-      build_extractor(capturing_client(RECEIPT_JSON), content_type: "application/pdf").extract
+      build_extractor(client, content_type: "application/pdf").extract
     end
+    assert_nil client.last_params, "no request is sent"
+  end
+
+  test "renders a real image-only PDF with pdftoppm" do
+    skip "pdftoppm (poppler-utils) is not installed" unless system("which pdftoppm > /dev/null 2>&1")
+
+    pdf = image_only_pdf
+    assert_equal "", Pdf::TextExtractor.pages(pdf).join.strip, "fixture has no text layer"
+
+    pages = build_extractor(capturing_client(RECEIPT_JSON), content_type: "application/pdf", file_content: pdf)
+      .send(:render_pdf_pages, pdf)
+
+    assert_equal 1, pages.size
+    assert Base64.strict_decode64(pages.first).start_with?("\x89PNG".b)
   end
 
   test "raises for an unsupported file type" do
@@ -66,6 +108,27 @@ class Provider::Openai::ReceiptExtractorTest < ActiveSupport::TestCase
   end
 
   private
+    # A one-page PDF with a filled rectangle and no text layer.
+    def image_only_pdf
+      objects = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R >>",
+        "<< /Length 18 >>\nstream\n10 10 100 100 re f\nendstream"
+      ]
+      pdf = +"%PDF-1.4\n"
+      offsets = objects.each_with_index.map do |body, index|
+        offset = pdf.bytesize
+        pdf << "#{index + 1} 0 obj\n#{body}\nendobj\n"
+        offset
+      end
+      xref = pdf.bytesize
+      pdf << "xref\n0 #{objects.size + 1}\n0000000000 65535 f \n"
+      offsets.each { |offset| pdf << format("%010d 00000 n \n", offset) }
+      pdf << "trailer\n<< /Size #{objects.size + 1} /Root 1 0 R >>\nstartxref\n#{xref}\n%%EOF\n"
+      pdf.b
+    end
+
     def build_extractor(client, content_type:, file_content: "%PDF-1.4 fake".b)
       Provider::Openai::ReceiptExtractor.new(
         client,

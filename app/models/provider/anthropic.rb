@@ -244,6 +244,41 @@ class Provider::Anthropic < Provider
     end
   end
 
+  # Receipts arrive as PDFs or photos, which need the same vision-capable
+  # model as PDF processing.
+  def supports_receipt_extraction?(model: @default_model)
+    supports_pdf_processing?(model: model)
+  end
+
+  # Reads the line items, tax, discount and total off a receipt.
+  # @param file_content [String] receipt bytes (PDF or image)
+  # @param content_type [String] MIME type of file_content
+  # @return [Provider::Response] wrapping a Provider::LlmConcept::ReceiptExtraction
+  def extract_receipt(file_content:, content_type:, model: "", family: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+      raise Error, "Model does not support receipt extraction: #{effective_model}" unless supports_receipt_extraction?(model: effective_model)
+
+      trace = create_langfuse_trace(
+        name: "anthropic.extract_receipt",
+        input: { content_type: content_type, size: file_content&.bytesize }
+      )
+
+      result = ReceiptExtractor.new(
+        client,
+        model: effective_model,
+        file_content: file_content,
+        content_type: content_type,
+        langfuse_trace: trace,
+        family: family
+      ).extract
+
+      upsert_langfuse_trace(trace: trace, output: { line_item_count: result.line_items.size })
+
+      result
+    end
+  end
+
   def extract_bank_statement(pdf_content:, model: "", family: nil)
     with_provider_response do
       effective_model = model.presence || @default_model
