@@ -114,7 +114,9 @@ class Provider::Openai::ReceiptExtractor
 
     def extract_from_pdf_images
       require_vision!("This receipt PDF has no text layer; reading it")
-      pages = render_pdf_pages(file_content)
+      # Only the first pages are rendered: receipts are short, and this runs
+      # inside a synchronous request.
+      pages = render_pdf_pages(file_content, max_pages: MAX_PDF_PAGES)
       raise Provider::Openai::Error, "Could not read text or page images from the receipt PDF" if pages.empty?
 
       vision_request(pages.first(MAX_PDF_PAGES).map { |page| "data:image/png;base64,#{page}" }, pages: pages.size)

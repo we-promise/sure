@@ -66,8 +66,9 @@
 
       <%# Split rows: one blank row, or the rows proposed from a receipt %>
       <%
+        precision = Money::Currency.new(@entry.currency).default_precision
+        amount_step = number_with_precision(BigDecimal(10)**-precision, precision: precision)
         rows = if @receipt_proposal
-          precision = Money::Currency.new(@entry.currency).default_precision
           @receipt_proposal.rows.map { |row| { name: row.name, amount: number_with_precision(-row.amount, precision: precision) } }
         else
           [ { name: @entry.name, amount: nil } ]
@@ -79,6 +80,7 @@
                      index: index,
                      name: row[:name],
                      amount: row[:amount],
+                     step: amount_step,
                      categories: @categories,
                      merchants: @merchants,
                      tags: @tags,
@@ -89,6 +91,7 @@
       <template data-split-transaction-target="rowTemplate">
         <%= render "splits/row",
                    index: "ROW_IDX_PLACEHOLDER",
+                   step: amount_step,
                    categories: @categories,
                    merchants: @merchants,
                    tags: @tags %>

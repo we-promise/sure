@@ -393,8 +393,20 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
 
     post itemize_transaction_split_path(@entry), headers: { "Turbo-Frame" => "modal" }
 
-    assert_select "input[name=?][value=?]", "split[splits][0][amount]", "-40.50"
+    assert_select "input[name=?][value=?][step=?]", "split[splits][0][amount]", "-40.50", "0.01"
     assert_select "input[name=?][value=?]", "split[splits][1][amount]", "-59.50"
+  end
+
+  test "itemize allows three-decimal amounts in the editor" do
+    @entry.update!(currency: "KWD")
+    attach_receipt
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(receipt(
+      [ "Bananas", 40.125 ], [ "Detergent", 59.875 ], currency: nil
+    )))
+
+    post itemize_transaction_split_path(@entry), headers: { "Turbo-Frame" => "modal" }
+
+    assert_select "input[name=?][value=?][step=?]", "split[splits][0][amount]", "-40.125", "0.001"
   end
 
   test "itemize explains a failure and keeps the blank editor" do
@@ -427,10 +439,10 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
       @entry.transaction.attachments.attach(io: StringIO.new("%PDF-1.4 receipt"), filename: "receipt.pdf", content_type: "application/pdf")
     end
 
-    def receipt(*items, tax: nil)
+    def receipt(*items, tax: nil, currency: "USD")
       Provider::LlmConcept::ReceiptExtraction.new(
         merchant_name: "Grocery Store",
-        currency: "USD",
+        currency: currency,
         line_items: items.map { |name, amount| Provider::LlmConcept::ReceiptLineItem.new(name: name, amount: BigDecimal(amount.to_s)) },
         tax: tax && BigDecimal(tax.to_s),
         discount: nil,

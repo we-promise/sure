@@ -68,7 +68,8 @@ class Provider::Openai::ReceiptExtractorTest < ActiveSupport::TestCase
   test "sends at most MAX_PDF_PAGES page images" do
     Pdf::TextExtractor.expects(:pages).returns([ "" ])
     pages = Array.new(Provider::Openai::ReceiptExtractor::MAX_PDF_PAGES + 2) { |i| "page#{i}" }
-    Provider::Openai::ReceiptExtractor.any_instance.expects(:render_pdf_pages).returns(pages)
+    Provider::Openai::ReceiptExtractor.any_instance.expects(:render_pdf_pages)
+      .with(anything, max_pages: Provider::Openai::ReceiptExtractor::MAX_PDF_PAGES).returns(pages)
     client = capturing_client(RECEIPT_JSON)
 
     build_extractor(client, content_type: "application/pdf").extract
@@ -99,6 +100,13 @@ class Provider::Openai::ReceiptExtractorTest < ActiveSupport::TestCase
 
     assert_equal 1, pages.size
     assert Base64.strict_decode64(pages.first).start_with?("\x89PNG".b)
+  end
+
+  test "asks pdftoppm for only the first pages" do
+    extractor = build_extractor(capturing_client(RECEIPT_JSON), content_type: "application/pdf")
+    extractor.expects(:system).with("pdftoppm", "-png", "-r", "150", "-l", "5", anything, anything).returns(true)
+
+    assert_equal [], extractor.send(:render_pdf_pages, "%PDF-1.4".b, max_pages: 5)
   end
 
   test "reads a text PDF without a vision-capable model" do
