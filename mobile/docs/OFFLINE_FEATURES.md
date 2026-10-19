@@ -319,6 +319,21 @@ The app automatically syncs in these scenarios:
 - **Cache Invalidation**: Account cache is refreshed on each sync to ensure accurate balances
 - **Memory Usage**: Only active transactions are kept in memory; database queries are paginated
 
+## Online-only Actions
+
+### Transaction Splits
+
+Splitting a transaction, editing a split and unsplitting call
+`/api/v1/transactions/:id/split` directly and are **not** queued offline: the
+offline queue only replays creates and deletes. While offline, the split section
+on the transaction screen is read-only (cached splits stay visible) and the
+split editor cannot save.
+
+After a split write, children the server destroyed are removed from the local
+cache and the account's transactions are re-fetched, because an account-scoped
+sync only upserts. The list groups children under their parent for splits the
+app has loaded (the transactions index does not say which rows are split).
+
 ## Future Enhancements
 
 Potential improvements for future versions:
