@@ -60,6 +60,9 @@ variant carries the hierarchy, not the width.
 
 - Cancel takes `variant: :secondary` or `:ghost`. A Cancel that leaves the
   page is a `DS::Link` with the same variant.
+- A destructive action takes `variant: :destructive` in the primary's place.
+  `f.submit` is always primary, so a destructive single action is a
+  `DS::Button` with `full_width: true` and `type: :submit`.
 - Don't put `f.submit` in a pair: it is always full width and ignores
   `class:`. Render the primary with `type: :submit`, as above.
 - Keep the default size. `size: :sm` text buttons are 28px tall, and the 44px
