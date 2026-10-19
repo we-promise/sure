@@ -99,6 +99,21 @@ class Assistant::Function::MatchTransferTest < ActiveSupport::TestCase
     assert_match "review_transfer", result[:message]
   end
 
+  test "points a pending auto-match of the requested pair at confirming, not rejecting" do
+    outflow = create_transaction(account: @checking, amount: 120).transaction
+    inflow = create_transaction(account: @card, amount: -120).transaction
+    pending = Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow, status: "pending")
+
+    result = @function.call("transaction_id" => outflow.id, "counterpart_transaction_id" => inflow.id)
+
+    assert_equal "pending_match", result[:error]
+    assert_equal pending.id, result[:transfer][:transfer_id]
+    assert_match "\"confirm\"", result[:message]
+    assert_no_match(/Reject it/, result[:message])
+    assert pending.reload.pending?
+    assert_not RejectedTransfer.exists?(inflow_transaction_id: inflow.id, outflow_transaction_id: outflow.id)
+  end
+
   test "requires exactly one of counterpart_transaction_id and target_account_id" do
     outflow = create_transaction(account: @checking, amount: 120).transaction
 

@@ -71,7 +71,14 @@ class Assistant::Function::ReviewTransfer < Assistant::Function
     return error("not_pending", "The transfer was reviewed by another request; it is no longer pending.") unless reviewed
 
     if params["action"] == "confirm"
-      { success: true, action: "confirmed", transfer: snapshot.merge(status: transfer.status) }
+      # confirm! sets the kinds, so report the transactions as they are now.
+      confirmed = {
+        transfer_id: transfer.id,
+        outflow: serialize_transaction(transfer.outflow_transaction.reload),
+        inflow: serialize_transaction(transfer.inflow_transaction.reload),
+        status: transfer.status
+      }
+      { success: true, action: "confirmed", transfer: confirmed }
     else
       { success: true, action: "rejected", transfer: snapshot }
     end

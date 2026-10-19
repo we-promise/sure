@@ -31,8 +31,11 @@ class Assistant::Function::MatchTransfer < Assistant::Function
         Pass dry_run: true to see what would happen without changing anything.
 
         Returns already_linked (with the transfer id) if either transaction is
-        already in a transfer. For a pending auto-match, reject it with
-        review_transfer first. Matching the same pair again is a no-op.
+        already in a transfer. If the pair you asked for is already a pending
+        auto-match, returns pending_match: confirm it with review_transfer
+        (action "confirm"). For a pending auto-match with a different
+        counterpart, reject it with review_transfer first. Matching the same
+        confirmed pair again is a no-op.
       INSTRUCTIONS
     end
   end
@@ -84,6 +87,14 @@ class Assistant::Function::MatchTransfer < Assistant::Function
     if (existing = transaction.transfer)
       return already_matched(existing, transaction) if same_match?(existing, transaction, counterpart, account)
 
+      if existing.pending? && same_pair?(existing, transaction, counterpart, account)
+        return error(
+          "pending_match",
+          "This pair is already a pending auto-match. Confirm it with review_transfer (action: \"confirm\", transfer_id: \"#{existing.id}\"); don't reject it.",
+          transfer: serialize_transfer(existing, from: transaction)
+        )
+      end
+
       return error(
         "already_linked",
         existing.pending? ? "The transaction is in a pending auto-match. Reject it with review_transfer before matching it elsewhere." : "The transaction is already part of a transfer.",
@@ -112,8 +123,12 @@ class Assistant::Function::MatchTransfer < Assistant::Function
 
   private
     def same_match?(transfer, transaction, counterpart, account)
+      !transfer.pending? && same_pair?(transfer, transaction, counterpart, account)
+    end
+
+    def same_pair?(transfer, transaction, counterpart, account)
       other = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction : transfer.inflow_transaction
-      return false if transfer.pending? || other.nil?
+      return false if other.nil?
 
       counterpart ? other.id == counterpart.id : other.entry.account_id == account.id
     end

@@ -17,6 +17,9 @@ class Assistant::Function::ReviewTransferTest < ActiveSupport::TestCase
     assert_equal true, result[:success]
     assert_equal "confirmed", result[:action]
     assert @transfer.reload.confirmed?
+    assert_equal "funds_movement", @inflow.reload.kind
+    assert_equal @outflow.reload.kind, result[:transfer][:outflow][:kind]
+    assert_equal "funds_movement", result[:transfer][:inflow][:kind]
   end
 
   test "rejects a pending transfer and remembers the pairing" do
