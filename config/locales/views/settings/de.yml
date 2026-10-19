@@ -254,6 +254,7 @@ de:
         application_id_placeholder_new: Application ID eintragen
         application_id_placeholder_update: Neue ID eintragen, um sie zu ändern
         client_certificate_label: Client-Zertifikat (mit Private Key)
+        keep_client_certificate_hint: "Leer lassen, um das aktuelle Zertifikat beizubehalten"
         config_locked_message: Trenn alle verknüpften Banken, bevor du diese Zugangsdaten änderst.
         config_locked_title: Konfiguration gesperrt
         configured: Eingerichtet
@@ -420,6 +421,8 @@ de:
           one: Erneute Zustimmung in 1 Tag nötig
           other: Erneute Zustimmung in %{count} Tagen nötig
         reconsent_required: Erneute Zustimmung nötig
+        login_required: "Anmeldung erforderlich"
+        login_expires_soon: "Anmeldung läuft in %{time} ab (%{at})"
         sync_error: Sync-Fehler
       not_authorized: Nicht berechtigt
       not_found: Anbieter nicht gefunden.
@@ -547,9 +550,11 @@ de:
         qr_cancel: QR-Login abbrechen
         qr_back_to_credentials: Zurück zu Telefonnummer und PIN oder Passwort
         qr_loading: QR-Code wird vorbereitet …
-        qr_instruction: Scanne den QR-Code mit deiner Trade-Republic-App und bestätige die Anmeldung.
+        qr_instruction: Scanne den QR-Code mit der Kamera deines Smartphones und bestätige die Anmeldung anschließend in der Trade-Republic-App.
         qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
         qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
+        requires_update: "Melde dich erneut an, um die Synchronisierung fortzusetzen."
+        session_expires_in: "Anmeldung läuft in %{time} ab (%{at})."
         add_account: Weitere Verbindung hinzufügen
         save_configuration: Speichern und Login starten
         update_configuration: Konfiguration aktualisieren

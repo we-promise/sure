@@ -6,6 +6,8 @@ class AccountsController < ApplicationController
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
+  helper_method :visible_card_accounts
+
   def index
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
     @manual_accounts = family.accounts
@@ -122,7 +124,8 @@ class AccountsController < ApplicationController
       records: txn_entryables,
       associations: {
         transfer_as_outflow: { inflow_transaction: { entry: :account } },
-        transfer_as_inflow: { outflow_transaction: { entry: :account } }
+        # :category for the read-only category an inflow leg shows (Transaction#category_set_on_transfer_outflow?)
+        transfer_as_inflow: { outflow_transaction: [ :category, { entry: :account } ] }
       }
     ).call
 
@@ -243,8 +246,11 @@ class AccountsController < ApplicationController
       redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_linked")
     else
       begin
-        @account.destroy_later
-        redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+        if @account.destroy_later == false
+          redirect_to accounts_path, alert: t("accounts.destroy.failed")
+        else
+          redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+        end
       rescue => e
         Rails.logger.error "Failed to schedule account #{@account.id} for deletion: #{e.message}"
         redirect_to accounts_path, alert: t("accounts.destroy.failed")
@@ -400,6 +406,16 @@ class AccountsController < ApplicationController
       end
     end
 
+    # The accounts a provider card on this page may list. A card is admitted
+    # by visible_provider_items as soon as ONE of its accounts is accessible,
+    # so it must not then render the rest (#3630). Admins see every account.
+    def visible_card_accounts(item)
+      return item.accounts if Current.user.admin?
+
+      @accessible_account_id_set ||= @accessible_account_ids.to_set
+      item.accounts.select { |account| @accessible_account_id_set.include?(account.id) }
+    end
+
     def visible_provider_items(items)
       accessible_ids = @accessible_account_ids.to_a
 
@@ -410,10 +426,8 @@ class AccountsController < ApplicationController
 
         # Ownership shows a member their own connection, importantly including
         # one just created that has not synced any accounts yet. It must not
-        # widen what they can see: the card renders the item's accounts
-        # unfiltered, and is re-rendered by a family-wide broadcast with no
-        # viewer, so an owner is shown the card only while every account on it
-        # is already accessible to them.
+        # widen what they can see, so an owner is shown the card only while
+        # every account on it is already accessible to them.
         if item.respond_to?(:owned_by?) && item.owned_by?(Current.user)
           next true if (account_ids - accessible_ids).empty?
         end

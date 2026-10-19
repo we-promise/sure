@@ -34,7 +34,11 @@ class Family < ApplicationRecord
 
 
   MONIKERS = [ "Family", "Group" ].freeze
-  ASSISTANT_TYPES = %w[builtin external].freeze
+  # `mcp_only` removes the in-app assistant (chat, sidebar, chat-seeding
+  # buttons) without touching MCP: /mcp serves the same tool registry to
+  # external agents whatever this says. "Off" stays free for a future
+  # no-LLM-at-all switch; categorization still runs under `mcp_only`.
+  ASSISTANT_TYPES = %w[builtin external mcp_only].freeze
 
   # Which provider categorizes this family's transactions. Family-level rather
   # than a global Setting because it decides whose transaction descriptions get
@@ -171,6 +175,16 @@ class Family < ApplicationRecord
     ENV["CATEGORIZATION_PROVIDER"].presence || categorization_provider
   end
 
+  # ENV-over-column precedence for the assistant, same shape as the provider
+  # above. Unknown ENV values pass through; callers treat them as builtin.
+  def effective_assistant_type
+    ENV["ASSISTANT_TYPE"].presence || assistant_type.presence || "builtin"
+  end
+
+  def assistant_enabled?
+    effective_assistant_type != "mcp_only"
+  end
+
   # The provider that will actually categorize this family's transactions,
   # falling back to the LLM path when Jev is unselected or unconfigured.
   # Credentials alone never select Jev; the family has to choose it, because
@@ -240,6 +254,7 @@ class Family < ApplicationRecord
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }
+  validates :categories_locked, inclusion: { in: [ true, false ] }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
 
   before_validation :normalize_enabled_currencies!
@@ -515,7 +530,7 @@ class Family < ApplicationRecord
       if duplicates.any?
         duplicate_ids = duplicates.map(&:id)
         categories.where(parent_id: duplicate_ids).update_all(parent_id: keeper.id)
-        Transaction.where(category_id: duplicate_ids).update_all(category_id: keeper.id)
+        Transaction.reassign_category!(transactions.where(category_id: duplicate_ids), keeper.id)
         BudgetCategory.where(category_id: duplicate_ids).update_all(category_id: keeper.id)
         categories.where(id: duplicate_ids).delete_all
       end
@@ -624,6 +639,15 @@ class Family < ApplicationRecord
     entries.order(:date).first&.date || Date.current
   end
 
+  # Earliest Transaction/Trade entry date: the family's first real activity.
+  # Unlike oldest_entry_date (any entry type; kept as-is for budgets and the
+  # AI balance sheet), valuations and opening balances don't count here, so a
+  # single old valuation can't stretch All-range charts back for years (#4007).
+  # Returns nil when the family has no Transaction/Trade entries yet.
+  def earliest_activity_date
+    entries.where(entryable_type: %w[Transaction Trade]).minimum(:date)
+  end
+
   # Used for invalidating family / balance sheet related aggregation queries
   def build_cache_key(key, invalidate_on_data_updates: false)
     # Our data sync process updates this timestamp whenever any family account successfully completes a data update.
@@ -632,24 +656,29 @@ class Family < ApplicationRecord
 
     [
       id,
+      currency,
       key,
       data_invalidation_key,
-      accounts.maximum(:updated_at)
+      accounts_status_version
     ].compact.join("_")
   end
 
   # Used for invalidating entry related aggregation queries
   def entries_cache_version
-    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f || 0}"
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f || 0}-#{categories_version}"
   end
 
-  # Used for invalidating caches keyed on entries (e.g. the transactions
-  # index's uncategorized count). Unlike #entries_cache_version, includes
-  # .count so a hard-deleted entry busts the cache even when it didn't hold
-  # the current max updated_at, and uses full-precision timestamps so two
-  # updates within the same second still produce distinct versions.
+  # Used for caches keyed on entries (e.g. the transactions index's
+  # uncategorized count). Counts capture deletions, and full-precision
+  # timestamps distinguish updates within the same second.
   def entries_version
-    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}"
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}-#{categories_version}"
+  end
+
+  # Category deletion can nullify a late assignment without touching its
+  # entry; category metadata also affects cached entry results.
+  def categories_version
+    "#{categories.count}-#{categories.maximum(:updated_at)&.to_f || 0}"
   end
 
   # Used for invalidating caches keyed on recurring transactions (e.g. the
@@ -664,7 +693,8 @@ class Family < ApplicationRecord
   # nothing on entries, but changes which entries `uncategorized_transactions`
   # considers accessible).
   def accounts_status_version
-    "#{accounts.count}-#{accounts.maximum(:updated_at)&.to_f}"
+    count, max_at = accounts.pick(Arel.sql("count(*)"), Arel.sql('max("accounts"."updated_at")'))
+    "#{count}-#{max_at&.to_f}"
   end
 
   # Used for invalidating caches that render merchant name/logo for recurring

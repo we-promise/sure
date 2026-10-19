@@ -15,7 +15,7 @@ class PlaidItemBroadcastRenderTest < ActiveSupport::TestCase
 
     html = ApplicationController.render(
       partial: "plaid_items/plaid_item",
-      locals: { plaid_item: item }
+      locals: { plaid_item: item, visible_accounts: item.accounts }
     )
 
     assert_includes html, account.name

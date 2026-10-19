@@ -1165,4 +1165,24 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     session_record.reload
     assert_in_delta recent_activity, session_record.updated_at, 10.seconds
   end
+
+  # create_session_for refuses a deactivated user, so the OIDC callback cannot
+  # mint one either. Nothing covered that, and the identity record survives
+  # deactivation, so it is worth pinning down.
+  test "a deactivated user cannot sign in again through their SSO identity" do
+    oidc_identity = oidc_identities(:bob_google)
+    @user.sessions.destroy_all
+    @user.update_column(:active, false)
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    get "/auth/openid_connect/callback"
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
+  end
 end

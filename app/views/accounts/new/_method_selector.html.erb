@@ -22,7 +22,11 @@
         connect providers whose credential is scoped to the single connection
         they authenticate (see ProviderItemOwnable). %>
     <% provider_configs.each do |config| %>
-      <% next unless Current.user&.admin? || config[:member_connectable] %>
+      <%# The controller gate is `member_connectable? && Current.user&.member?`
+          (ConnectorAuthorizable#require_connector_create!). Without the role
+          check here a GUEST is offered the link and refused on submit, which
+          reads as a broken control rather than an absent one. %>
+      <% next unless Current.user&.admin? || (Current.user&.member? && config[:member_connectable]) %>
       <% link_path = config[:new_account_path].call(accountable_type, params[:return_to]) %>
       <% is_lunchflow = config[:key] == "lunchflow" %>
 
