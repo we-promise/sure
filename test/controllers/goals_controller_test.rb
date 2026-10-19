@@ -149,6 +149,20 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_select "label[for=amount]", text: /#{I18n.t("goals.consume.amount_label")}/
   end
 
+  # The amount is in goal currency even when it comes off a euro earmark, so
+  # the dialog says which currency it wants and which account holds which.
+  test "the consumption dialog names a foreign account's currency" do
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "Euro Savings", currency: "EUR", balance: 1_000)
+    @goal.goal_accounts.create!(account: eur, allocated_amount: 500)
+
+    get consume_goal_url(@goal)
+
+    assert_response :success
+    assert_includes response.body, "Euro Savings · EUR"
+    assert_select "p", text: I18n.t("goals.consume.goal_currency_hint", currency: "USD")
+  end
+
   # Both figures in the dialog blur under privacy mode, as they do on the goal
   # page. The amount also stays clickable: it is the one field the reader fills.
   test "the consumption dialog blurs its figures under privacy mode and the amount stays editable" do
@@ -290,7 +304,7 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     @goal.save!
     ExchangeRate.stubs(:provider).returns(nil)
 
-    warning = I18n.t("goals.currency_warning.body", from: "EUR", to: @goal.currency)
+    warning = I18n.t("goals.currency_warning.body", count: 1, from: "EUR", to: @goal.currency)
 
     get goal_url(@goal)
     assert_response :success

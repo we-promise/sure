@@ -79,11 +79,14 @@ export default class extends Controller {
     if (Number.isNaN(entered)) return this.#hide(warning);
 
     const total = others + entered;
-    // Only foreign-currency rows with a known rate carry one.
+    // Only foreign-currency rows with a known rate carry one. Past the
+    // balance the goal counts its pro-rata share, not the typed amount.
     const rate = Number.parseFloat(row.dataset.rate);
+    const counted =
+      total > balance ? Math.max((entered * balance) / total, 0) : entered;
     const converted =
       rate > 0
-        ? ` ${this.convertedValue.replace("{amount}", this.#money(entered * rate))}`
+        ? ` ${this.convertedValue.replace("{amount}", this.#money(counted * rate))}`
         : "";
 
     if (total > balance) {

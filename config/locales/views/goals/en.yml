@@ -3,8 +3,10 @@ en:
   goals:
     currency_warning:
       title: Some balances aren't counted
-      body: "No %{from} → %{to} exchange rate is available yet, so %{from} balances are left out of this total."
-      settings_link: Choose an exchange rate provider
+      body:
+        one: "No %{from} → %{to} exchange rate is available yet, so %{from} balances are left out of this total."
+        other: "No exchange rates from %{from} to %{to} are available yet, so those balances are left out of this total."
+      settings_link: Exchange rate provider settings
     color_picker:
       trigger_label: Choose color and icon
       color_heading: Color
@@ -106,6 +108,7 @@ en:
       amount_hint: "%{saved} is currently backing this goal."
       account_label: From which account?
       earmark_note: The amount you record stops being reserved for this goal, so your other goals on that account get their share back.
+      goal_currency_hint: "Enter the amount in %{currency}. For an account in another currency, it's converted at today's rate before it comes off that account's earmark."
       cancel: Cancel
       submit: Record it
       success: "%{amount} recorded as used."
@@ -345,7 +348,7 @@ en:
         whole_balance: "Blank: whole balance"
         earmark_for: Earmark amount for %{account}
         earmark_hint: Leave an amount blank to dedicate that account's whole balance.
-        currency_conversion_hint: "Accounts can use different currencies. Totals are converted to %{currency}; account earmarks stay in each account’s currency."
+        currency_conversion_hint: "Accounts can use different currencies. Totals are converted to %{currency}; account earmarks stay in each account's currency."
       subtypes:
         checking: Checking
         savings: Savings

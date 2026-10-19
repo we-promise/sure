@@ -55,11 +55,11 @@
 
             <div class="text-right space-y-0.5">
               <div class="flex items-baseline justify-end gap-1.5">
-                <p class="text-sm font-medium text-primary tabular-nums privacy-sensitive"><%= row[:last_30_money].format(precision: 0) %></p>
+                <p class="text-sm font-medium text-primary tabular-nums privacy-sensitive"><%= row[:rate_missing] ? "—" : row[:last_30_money].format(precision: 0) %></p>
                 <p class="text-xs text-subdued"><%= t("goals.show.funding_last_30d") %></p>
               </div>
               <div class="flex items-baseline justify-end gap-1.5">
-                <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= row[:last_90_money].format(precision: 0) %></p>
+                <p class="text-xs text-secondary tabular-nums privacy-sensitive"><%= row[:rate_missing] ? "—" : row[:last_90_money].format(precision: 0) %></p>
                 <p class="text-xs text-subdued"><%= t("goals.show.funding_last_90d") %></p>
               </div>
             </div>

@@ -22,6 +22,9 @@ class GoalMultiCurrencyTest < ApplicationSystemTestCase
       earmark = I18n.t("goals.form.fields.earmark_for", account: @eur.name)
       fill_in earmark, with: "500"
       assert_text I18n.t("goals.form.earmark.converted").sub("{amount}", Money.new(600, "USD").format(precision: 0))
+      # Past the €1,000 balance the goal counts its pro-rata share, not the typed amount.
+      fill_in earmark, with: "2000"
+      assert_text I18n.t("goals.form.earmark.converted").sub("{amount}", Money.new(1_200, "USD").format(precision: 0))
       fill_in earmark, with: ""
       click_button I18n.t("goals.form.create")
     end
