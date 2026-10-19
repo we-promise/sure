@@ -227,6 +227,73 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "standard", transfer.inflow_transaction.reload.kind
   end
 
+  test "update_investment_contribution! turns a contribution into a plain transfer and back" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+    transfer.confirm!
+    assert transfer.investment_contribution?
+
+    assert transfer.update_investment_contribution!(false)
+
+    outflow = transfer.outflow_transaction.reload
+    assert_equal "funds_movement", outflow.kind
+    assert_nil outflow.category
+    assert outflow.locked?(:kind)
+    assert_not transfer.investment_contribution?
+    assert_not transfer.categorizable?
+
+    assert transfer.update_investment_contribution!(true)
+
+    outflow.reload
+    assert_equal "investment_contribution", outflow.kind
+    assert_equal families(:dylan_family).investment_contributions_category, outflow.category
+    assert transfer.investment_contribution?
+    assert transfer.categorizable?
+  end
+
+  test "update_investment_contribution! keeps a category the user chose" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+    transfer.outflow_transaction.update!(category: categories(:food_and_drink))
+    transfer.confirm!
+
+    transfer.update_investment_contribution!(false)
+
+    assert_equal categories(:food_and_drink), transfer.outflow_transaction.reload.category
+  end
+
+  test "update_investment_contribution! leaves transfers that cannot be a contribution alone" do
+    payment = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+    payment.confirm!
+    pending = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+
+    assert_not payment.update_investment_contribution!(false)
+    assert_not pending.update_investment_contribution!(false)
+
+    assert_equal "cc_payment", payment.outflow_transaction.reload.kind
+    assert_not payment.outflow_transaction.locked?(:kind)
+    assert_equal "standard", pending.outflow_transaction.reload.kind
+  end
+
+  test "kind_for_leg keeps a plain transfer the user chose over a contribution" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+    transfer.confirm!
+    transfer.update_investment_contribution!(false)
+
+    assert_equal "funds_movement", transfer.reload.kind_for_leg(transfer.outflow_transaction)
+    assert_equal "funds_movement", transfer.kind_for_leg(transfer.inflow_transaction)
+  end
+
+  test "reject! drops the contribution choice with the transfer" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+    transfer.confirm!
+    transfer.update_investment_contribution!(false)
+
+    transfer.reject!
+
+    outflow = transfer.outflow_transaction.reload
+    assert_equal "standard", outflow.kind
+    assert_not outflow.locked?(:kind)
+  end
+
   test "kind_for_account returns investment_contribution for investment accounts" do
     assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:investment))
   end
