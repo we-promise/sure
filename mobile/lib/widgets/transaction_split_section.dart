@@ -49,6 +49,9 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
   bool _loaded = false;
   bool _working = false;
 
+  /// Set while offline, so the lookup is retried once the device reconnects.
+  bool _wasOffline = false;
+
   String? get _id => widget.transaction.id;
 
   bool get _isSynced =>
@@ -267,6 +270,15 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
     final split = splitsProvider.splitFor(_id!);
     final loading = splitsProvider.isLoading(_id!) || (!_loaded && isOnline);
 
+    if (!isOnline) {
+      _wasOffline = true;
+    } else if (_wasOffline) {
+      _wasOffline = false;
+      if (_loaded && !splitsProvider.isSplitStatusKnown(_id!)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+      }
+    }
+
     if (split == null) {
       if (!isOnline) return SplitNoticeBanner(text: l.splitOfflineNotice);
       if (loading) {
@@ -275,8 +287,26 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
           child: Center(child: CircularProgressIndicator()),
         );
       }
-      if (splitsProvider.lastError != null) {
-        return SplitNoticeBanner(text: l.splitLoadFailed);
+      if (splitsProvider.lastError != null &&
+          !splitsProvider.isSplitStatusKnown(_id!)) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SplitNoticeBanner(text: l.splitLoadFailed),
+            const SizedBox(height: SureSpacing.md),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SureButton(
+                key: const Key('split-retry'),
+                label: l.commonTryAgain,
+                variant: SureButtonVariant.outline,
+                size: SureButtonSize.sm,
+                leading: const Icon(Icons.refresh, size: 16),
+                onPressed: _load,
+              ),
+            ),
+          ],
+        );
       }
 
       final target = _targetForUnsplit();

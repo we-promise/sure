@@ -81,9 +81,16 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
 
   Future<void> _save() async {
     final l = AppLocalizations.of(context);
-    if (!_formKey.currentState!.validate() || widget.transaction.id == null) {
+    final id = widget.transaction.id;
+    if (!_formKey.currentState!.validate() || id == null) {
       return;
     }
+    // Re-check: the API rejects direct edits to split children.
+    final splits = Provider.of<TransactionSplitsProvider>(
+      context,
+      listen: false,
+    );
+    if (!splits.isSplitStatusKnown(id) || splits.isSplitChild(id)) return;
 
     setState(() {
       _isSaving = true;
@@ -321,11 +328,17 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final transactionId = widget.transaction.id;
     // Split children are owned by their parent's split: the API rejects direct
-    // edits to them, so only the split editor can change them.
-    final isSplitChild = transactionId != null &&
-        context.watch<TransactionSplitsProvider>().isSplitChild(transactionId);
+    // edits to them, so only the split editor can change them. The transaction
+    // index omits split membership, so the form stays locked until the split
+    // lookup below has confirmed this is not a split child.
+    final splits = context.watch<TransactionSplitsProvider>();
+    final isSplitChild =
+        transactionId != null && splits.isSplitChild(transactionId);
+    final isSynced = transactionId != null &&
+        widget.transaction.syncStatus == SyncStatus.synced;
     final canEdit = transactionId != null &&
-        widget.transaction.syncStatus == SyncStatus.synced &&
+        isSynced &&
+        splits.isSplitStatusKnown(transactionId) &&
         !isSplitChild;
 
     final l = AppLocalizations.of(context);
@@ -340,7 +353,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
             if (isSplitChild) ...[
               SplitNoticeBanner(text: l.splitChildEditLocked),
               const SizedBox(height: 16),
-            ] else if (!canEdit) ...[
+            ] else if (!isSynced) ...[
               Card(
                 color: colorScheme.errorContainer,
                 child: Padding(
@@ -413,7 +426,8 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
               },
             ),
             const SizedBox(height: 24),
-            Text(l.transactionEditTagsLabel, style: Theme.of(context).textTheme.titleMedium),
+            Text(l.transactionEditTagsLabel,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Consumer<TagsProvider>(
               builder: (context, tagsProvider, _) =>

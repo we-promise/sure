@@ -35,7 +35,12 @@ class _FakeAuthProvider extends ChangeNotifier implements AuthProvider {
 class _FakeConnectivity extends ChangeNotifier implements ConnectivityService {
   _FakeConnectivity({required this.online});
 
-  final bool online;
+  bool online;
+
+  void setOnline(bool value) {
+    online = value;
+    notifyListeners();
+  }
 
   @override
   bool get isOnline => online;
@@ -116,6 +121,7 @@ class _Harness {
     bool hidden = false,
     MockClientHandler? handler,
   })  : privacy = PrivacyProvider(initialHidden: hidden),
+        connectivity = _FakeConnectivity(online: online),
         transactions = _RecordingTransactionsProvider() {
     splits = TransactionSplitsProvider(
       service: TransactionSplitsService(
@@ -125,9 +131,10 @@ class _Harness {
           return http.Response(_splitJson(), 200);
         }),
       ),
-    )..setConnectivityService(_FakeConnectivity(online: online));
+    )..setConnectivityService(connectivity);
   }
 
+  final _FakeConnectivity connectivity;
   final PrivacyProvider privacy;
   final _RecordingTransactionsProvider transactions;
   late final TransactionSplitsProvider splits;
@@ -533,6 +540,108 @@ void main() {
         isNull,
       );
       expect(harness.requests, isEmpty);
+    });
+
+    testWidgets('offers a retry when the split lookup fails', (tester) async {
+      await useTallView(tester);
+      var fail = true;
+      final harness = _Harness(
+        handler: (_) async => fail
+            ? http.Response('{"error":"boom"}', 500)
+            : http.Response(_splitJson(), 200),
+      );
+      await tester.pumpWidget(harness.wrap(screen(transaction('parent_1'))));
+      await tester.pumpAndSettle();
+
+      expect(find.text("Couldn't load split details."), findsOneWidget);
+      expect(harness.splits.isSplitStatusKnown('parent_1'), isFalse);
+
+      fail = false;
+      await tester.tap(find.byKey(const Key('split-retry')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Split entries'), findsOneWidget);
+      expect(harness.splits.isSplitStatusKnown('parent_1'), isTrue);
+    });
+
+    testWidgets('retries the lookup after reconnecting', (tester) async {
+      await useTallView(tester);
+      final harness = _Harness(online: false);
+      await tester.pumpWidget(harness.wrap(screen(transaction('parent_1'))));
+      await tester.pumpAndSettle();
+      expect(harness.requests, isEmpty);
+
+      harness.connectivity.setOnline(true);
+      await tester.pumpAndSettle();
+
+      expect(harness.requests, hasLength(1));
+      expect(find.text('Split entries'), findsOneWidget);
+    });
+  });
+
+  group('TransactionSplitsProvider', () {
+    test('notifies listeners when connectivity changes', () {
+      final harness = _Harness(online: false);
+      var notified = 0;
+      harness.splits.addListener(() => notified++);
+
+      harness.connectivity.setOnline(true);
+      expect(notified, 1);
+      expect(harness.splits.isOnline, isTrue);
+
+      harness.splits.dispose();
+      harness.connectivity.setOnline(false);
+      expect(notified, 1);
+    });
+
+    test('split membership is unknown until the lookup succeeds', () async {
+      final harness = _Harness(
+        handler: (_) async => http.Response('{"error":"boom"}', 500),
+      );
+      expect(harness.splits.isSplitStatusKnown('child_1'), isFalse);
+      await harness.splits
+          .loadSplit(accessToken: 'token', transactionId: 'child_1');
+      expect(harness.splits.isSplitStatusKnown('child_1'), isFalse);
+
+      final ok = _Harness();
+      await ok.splits.loadSplit(accessToken: 'token', transactionId: 'child_1');
+      expect(ok.splits.isSplitStatusKnown('child_1'), isTrue);
+      expect(ok.splits.isSplitStatusKnown('child_2'), isTrue);
+      expect(ok.splits.isSplitChild('child_1'), isTrue);
+    });
+
+    test('hides session and network errors, keeps validation messages',
+        () async {
+      const rows = [SplitRowInput(name: 'A', amount: '100')];
+      Future<String?> errorFor(http.Response response) async {
+        final harness = _Harness(handler: (_) async => response);
+        final result = await harness.splits.saveSplit(
+          accessToken: 'token',
+          transactionId: 'parent_1',
+          rows: rows,
+          replace: false,
+        );
+        expect(result.success, isFalse);
+        return result.error;
+      }
+
+      expect(await errorFor(http.Response('{}', 401)), isNull);
+      expect(
+        await errorFor(http.Response(
+          '{"error":"validation_failed","message":"Splits must sum to the '
+          'transaction amount"}',
+          422,
+        )),
+        contains('sum'),
+      );
+
+      final offline = _Harness(
+        handler: (_) async => throw http.ClientException('reset'),
+      );
+      final unsplit = await offline.splits
+          .unsplit(accessToken: 'token', transactionId: 'parent_1');
+      expect(unsplit.success, isFalse);
+      expect(unsplit.error, isNull);
     });
   });
 }
