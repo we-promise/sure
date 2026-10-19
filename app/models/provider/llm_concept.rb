@@ -88,7 +88,9 @@ module Provider::LlmConcept
     end
   end
 
-  def supports_receipt_extraction?
+  # @param content_type [String, nil] the receipt's MIME type; nil asks whether
+  #   any receipt can be read
+  def supports_receipt_extraction?(content_type: nil)
     false
   end
 

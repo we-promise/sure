@@ -90,9 +90,16 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     assert_not @subject.supports_pdf_processing?(model: "gpt-4o")
   end
 
-  test "supports_receipt_extraction? follows PDF support" do
+  test "supports_receipt_extraction? reads text PDFs with any supported model and photos with vision models" do
     assert @subject.supports_receipt_extraction?(model: "claude-sonnet-4-6")
+    assert @subject.supports_receipt_extraction?(model: "claude-sonnet-4-6", content_type: "image/png")
+    assert @subject.supports_receipt_extraction?(model: "claude-sonnet-4-6", content_type: "application/pdf")
     assert_not @subject.supports_receipt_extraction?(model: "gpt-4o")
+    assert_not @subject.supports_receipt_extraction?(model: "claude-sonnet-4-6", content_type: "text/plain")
+
+    @subject.stubs(:supports_pdf_processing?).returns(false)
+    assert @subject.supports_receipt_extraction?(model: "claude-sonnet-4-6", content_type: "application/pdf")
+    assert_not @subject.supports_receipt_extraction?(model: "claude-sonnet-4-6", content_type: "image/png")
   end
 
   test "extract_receipt wraps the extractor result in a provider response" do

@@ -1,7 +1,7 @@
 # Reads the itemized lines off a receipt so a transaction can be split by
 # them. Text PDFs (most emailed retailer receipts) are sent as extracted text,
 # which works with any model; photos and scanned PDFs (rendered to page
-# images) are sent to the vision endpoint.
+# images) are sent to the vision endpoint, which needs a vision-capable model.
 class Provider::Openai::ReceiptExtractor
   include Provider::Openai::Concerns::UsageRecorder
   include Provider::Openai::Concerns::JsonMode
@@ -12,10 +12,12 @@ class Provider::Openai::ReceiptExtractor
   MAX_PDF_PAGES = 5
 
   attr_reader :client, :model, :file_content, :content_type, :custom_provider, :langfuse_trace, :family,
-              :max_response_tokens, :json_mode
+              :max_response_tokens, :json_mode, :vision
 
+  # @param vision [Boolean] whether the model can read images; without it only
+  #   text PDFs can be read
   def initialize(client, model:, file_content:, content_type:, custom_provider: false, langfuse_trace: nil,
-                 family: nil, max_response_tokens: nil, json_mode: nil)
+                 family: nil, max_response_tokens: nil, json_mode: nil, vision: true)
     @client = client
     @model = model
     @file_content = file_content
@@ -25,6 +27,7 @@ class Provider::Openai::ReceiptExtractor
     @family = family
     @max_response_tokens = max_response_tokens
     @json_mode = json_mode || default_json_mode
+    @vision = vision
   end
 
   def extract
@@ -36,6 +39,7 @@ class Provider::Openai::ReceiptExtractor
       if content_type == "application/pdf"
         extract_from_pdf
       elsif IMAGE_CONTENT_TYPES.include?(content_type)
+        require_vision!("Reading a receipt photo")
         extract_from_image
       else
         raise Provider::Openai::Error, "Unsupported receipt type: #{content_type}"
@@ -109,10 +113,15 @@ class Provider::Openai::ReceiptExtractor
     end
 
     def extract_from_pdf_images
+      require_vision!("This receipt PDF has no text layer; reading it")
       pages = render_pdf_pages(file_content)
       raise Provider::Openai::Error, "Could not read text or page images from the receipt PDF" if pages.empty?
 
       vision_request(pages.first(MAX_PDF_PAGES).map { |page| "data:image/png;base64,#{page}" }, pages: pages.size)
+    end
+
+    def require_vision!(what)
+      raise Provider::Openai::Error, "#{what} needs a vision-capable model" unless vision
     end
 
     def vision_request(image_urls, pages: nil)
@@ -172,6 +181,8 @@ class Provider::Openai::ReceiptExtractor
         end
       end
 
-      raise Provider::Openai::Error, "Could not parse JSON from receipt extraction response: #{raw.truncate(200)}"
+      # The raw response holds receipt content, which must not reach logs or
+      # traces through the error message.
+      raise Provider::Openai::Error, "Could not parse JSON from receipt extraction response (#{raw.length} characters)"
     end
 end

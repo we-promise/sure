@@ -101,6 +101,42 @@ class Provider::Openai::ReceiptExtractorTest < ActiveSupport::TestCase
     assert Base64.strict_decode64(pages.first).start_with?("\x89PNG".b)
   end
 
+  test "reads a text PDF without a vision-capable model" do
+    Pdf::TextExtractor.expects(:pages).returns([ "HAMMER 30.00\nNAILS 20.00" ])
+    client = capturing_client(RECEIPT_JSON)
+
+    result = build_extractor(client, content_type: "application/pdf", vision: false).extract
+
+    assert_equal 2, result.line_items.size
+    assert_kind_of String, client.last_params[:messages].last[:content]
+  end
+
+  test "needs a vision-capable model for photos and scanned PDFs" do
+    client = capturing_client(RECEIPT_JSON)
+
+    error = assert_raises(Provider::Openai::Error) do
+      build_extractor(client, content_type: "image/png", file_content: "png-bytes", vision: false).extract
+    end
+    assert_match "vision-capable", error.message
+
+    Pdf::TextExtractor.expects(:pages).returns([ "" ])
+    Provider::Openai::ReceiptExtractor.any_instance.expects(:render_pdf_pages).never
+    error = assert_raises(Provider::Openai::Error) do
+      build_extractor(client, content_type: "application/pdf", vision: false).extract
+    end
+    assert_match "vision-capable", error.message
+    assert_nil client.last_params, "no request is sent"
+  end
+
+  test "keeps receipt content out of the error when the response is not JSON" do
+    client = capturing_client("Hammer 30.00 at Hardware store, card ending 4242")
+
+    error = assert_raises(Provider::Openai::Error) do
+      build_extractor(client, content_type: "image/png", file_content: "png-bytes").extract
+    end
+    assert_no_match(/Hammer|Hardware|4242/, error.message)
+  end
+
   test "raises for an unsupported file type" do
     assert_raises(Provider::Openai::Error) do
       build_extractor(capturing_client(RECEIPT_JSON), content_type: "text/plain").extract
@@ -129,13 +165,14 @@ class Provider::Openai::ReceiptExtractorTest < ActiveSupport::TestCase
       pdf.b
     end
 
-    def build_extractor(client, content_type:, file_content: "%PDF-1.4 fake".b)
+    def build_extractor(client, content_type:, file_content: "%PDF-1.4 fake".b, vision: true)
       Provider::Openai::ReceiptExtractor.new(
         client,
         model: "gpt-4.1",
         file_content: file_content,
         content_type: content_type,
-        json_mode: "json_object"
+        json_mode: "json_object",
+        vision: vision
       )
     end
 
