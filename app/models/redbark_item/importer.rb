@@ -144,12 +144,18 @@ class RedbarkItem::Importer
 
         if transactions_data.any?
           transactions_hashes = transactions_data.map { |t| sdk_object_to_hash(t) }
-          merged = merge_transactions(
-            redbark_account.raw_transactions_payload || [],
-            transactions_hashes,
-            window_start: start_date
-          )
-          redbark_account.upsert_redbark_transactions_snapshot!(merged)
+          stored = redbark_account.raw_transactions_payload || []
+
+          RedbarkAccount.transaction do
+            dropped_stored_ids, dropped_fetched_ids = apply_reissued_ids(redbark_account, stored, transactions_hashes, start_date)
+
+            merged = merge_transactions(
+              stored.reject { |t| dropped_stored_ids.include?(transaction_key(t)) },
+              transactions_hashes.reject { |t| dropped_fetched_ids.include?(transaction_key(t)) },
+              window_start: start_date
+            )
+            redbark_account.upsert_redbark_transactions_snapshot!(merged)
+          end
           stats["transactions_found"] = stats.fetch("transactions_found", 0) + transactions_data.size
         end
       rescue Provider::Redbark::AuthenticationError
@@ -273,6 +279,77 @@ class RedbarkItem::Importer
       end
       new_transactions.each { |t| by_id[transaction_key(t)] = t }
       by_id.values
+    end
+
+    # Points existing entries at the ids a bank re-issued (see
+    # RedbarkAccount::TransactionIdReissue) and returns the stored and fetched
+    # ids to leave out of the snapshot, so the processor can't import the old
+    # or generated row as a second entry.
+    #
+    # A re-key moves only external_id: a protected entry keeps everything
+    # else, and an unprotected one is refreshed from the new row by the
+    # processor as usual. A generated id is recorded as an alias on the entry
+    # it duplicates, which keeps its id for when the bank restores it; with no
+    # such entry it is handled like any other new id.
+    def apply_reissued_ids(redbark_account, stored, fetched, window_start)
+      entries = redbark_account.current_account&.entries&.where(source: "redbark")
+      return [ Set.new, Set.new ] if entries.nil?
+
+      known_alias_ids = Transaction.where(id: entries.where(entryable_type: "Transaction").select(:entryable_id))
+        .where("transactions.extra -> 'redbark' -> 'alias_ids' IS NOT NULL")
+        .pluck(Arel.sql("transactions.extra -> 'redbark' -> 'alias_ids'"))
+        .flatten.map(&:to_s).to_set
+
+      result = RedbarkAccount::TransactionIdReissue.new(
+        stored: stored, fetched: fetched, window_start: window_start, known_alias_ids: known_alias_ids
+      ).call
+
+      dropped_stored_ids = Set.new
+      dropped_fetched_ids = known_alias_ids.dup
+
+      result.aliases.each do |kept_id, generated_id|
+        entry = entries.find_by(external_id: "redbark_#{kept_id}", entryable_type: "Transaction")
+
+        if entry
+          record_alias(entry.entryable, generated_id)
+          dropped_fetched_ids << generated_id
+        else
+          dropped_stored_ids << kept_id
+        end
+      end
+
+      result.re_keys.each do |old_id, new_id|
+        dropped_stored_ids << old_id
+
+        if entries.exists?(external_id: "redbark_#{new_id}")
+          DebugLogEntry.capture(
+            category: "provider_sync",
+            level: "warn",
+            message: "Redbark re-issued a transaction id that already has an entry; left both entries as they are",
+            source: self.class.name,
+            provider_key: "redbark",
+            family: redbark_item.family,
+            account_provider: redbark_account.account_provider,
+            metadata: { redbark_account_id: redbark_account.id, old_id: old_id, new_id: new_id }
+          )
+          next
+        end
+
+        entries.where(external_id: "redbark_#{old_id}")
+          .update_all(external_id: "redbark_#{new_id}", updated_at: Time.current)
+      end
+
+      [ dropped_stored_ids, dropped_fetched_ids ]
+    end
+
+    def record_alias(transaction, generated_id)
+      extra = (transaction.extra || {}).deep_dup
+      redbark = extra["redbark"] || {}
+      alias_ids = Array(redbark["alias_ids"])
+      return if alias_ids.include?(generated_id)
+
+      extra["redbark"] = redbark.merge("alias_ids" => alias_ids + [ generated_id ])
+      transaction.update_columns(extra: extra)
     end
 
     def within_window?(transaction, window_start)

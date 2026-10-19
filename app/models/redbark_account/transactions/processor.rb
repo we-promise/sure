@@ -170,7 +170,9 @@ class RedbarkAccount::Transactions::Processor
           "merchant" => data[:merchantName],
           "category" => data[:category],
           "merchant_category_code" => data[:merchantCategoryCode],
-          "direction" => data[:direction]
+          "direction" => data[:direction],
+          "reference" => data[:reference].presence,
+          "extended_description" => data[:extendedDescription].presence
         }.compact
       }
     end
