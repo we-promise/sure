@@ -59,6 +59,7 @@ RSpec.describe 'API V1 Transaction Auto-Categorization', type: :request do
   end
 
   before do
+    family.categories.create!(name: 'Food & Drink', color: '#4da568', lucide_icon: 'utensils')
     allow_any_instance_of(Family).to receive(:resolved_categorization_provider).and_return(Object.new)
   end
 
@@ -84,7 +85,8 @@ RSpec.describe 'API V1 Transaction Auto-Categorization', type: :request do
         run_test!
       end
 
-      response '422', 'no categorization provider is configured, or transaction_ids is invalid' do
+      response '422', 'no categorization provider is configured, the family has no categories, ' \
+                      'or transaction_ids is invalid' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:body) { { transaction_ids: [ 'not-a-uuid' ] } }
         run_test!

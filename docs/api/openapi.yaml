@@ -9917,8 +9917,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/TransactionAutoCategorization"
         '422':
-          description: no categorization provider is configured, or transaction_ids
-            is invalid
+          description: no categorization provider is configured, the family has no
+            categories, or transaction_ids is invalid
           content:
             application/json:
               schema:

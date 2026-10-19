@@ -128,9 +128,9 @@ Example request body:
 
 ## Auto-categorizing transactions
 
-`POST /api/v1/transactions/auto_categorize` queues AI categorization in the background, the same work the "Auto-categorize transactions with AI" rule action does. It uses the family's configured categorization provider and confidence threshold, and returns `422` when no provider is configured.
+`POST /api/v1/transactions/auto_categorize` queues AI categorization in the background, the same work the "Auto-categorize transactions with AI" rule action does. It uses the family's configured categorization provider and confidence threshold, and picks from the family's existing categories. It returns `422` when no provider is configured or the family has no categories.
 
-Send `transaction_ids` (up to 1,000) to categorize specific transactions, or omit it to queue every eligible one:
+Send `transaction_ids` (up to 1,000 entries, duplicates included) to categorize specific transactions, or omit it to queue every eligible one. IDs are matched case-insensitively and returned in lowercase:
 
 ```json
 {
