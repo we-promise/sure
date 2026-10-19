@@ -78,9 +78,7 @@
           <% when :logo %>
             <% unless item[:value].nil? %>
               <% if logo_for(item) %>
-                <%= image_tag logo_for(item),
-                      class: "w-6 h-6 rounded-full border border-secondary",
-                      loading: "lazy" %>
+                <%= render DS::Logo.new(src: logo_for(item), name: item[:label], class_name: "w-6 h-6 rounded-full border border-secondary") %>
               <% else %>
                 <%= render DS::FilledIcon.new(
                       variant: :text,

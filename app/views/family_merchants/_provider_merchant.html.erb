@@ -5,7 +5,8 @@
     <div class="flex w-full items-center gap-2.5">
       <% if provider_merchant.logo_url %>
         <div class="w-8 h-8 rounded-full flex justify-center items-center">
-          <%= image_tag Setting.transform_brand_fetch_url(provider_merchant.logo_url), class: "w-8 h-8 rounded-full", loading: "lazy" %>
+          <%= render DS::Logo.new(src: Setting.transform_brand_fetch_url(provider_merchant.logo_url),
+                name: provider_merchant.name, class_name: "w-8 h-8 rounded-full") %>
         </div>
       <% else %>
         <div class="w-8 h-8 rounded-full flex items-center justify-center bg-container-inset text-secondary text-sm font-medium">
