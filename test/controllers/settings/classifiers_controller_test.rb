@@ -121,6 +121,18 @@ class Settings::ClassifiersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "no second run while one is running" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    sign_in @admin
+    Family::BayesEvaluation.mark_running!(@family)
+
+    assert_no_enqueued_jobs only: BayesEvaluationJob do
+      post evaluate_settings_classifier_path
+      post find_best_settings_classifier_path
+    end
+    assert_redirected_to settings_classifier_path(anchor: "classifier_evaluation")
+  end
+
   test "the cost of a mistake is saved as it changes, within its range" do
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     sign_in @admin
@@ -177,7 +189,7 @@ class Settings::ClassifiersControllerTest < ActionDispatch::IntegrationTest
     assert_select "#classifier_evaluation th", text: I18n.t("settings.classifiers.evaluation.similarity")
     assert_select "h2", text: I18n.t("settings.classifiers.show.matcher_tuning")
     # Each column's best row in bold: 0.7 in the category table's two, 0.9 in the matcher's.
-    assert_select "#classifier_evaluation td.font-medium", count: 4
+    assert_select "#classifier_evaluation td span.font-medium", count: 4
     assert_select ".translation_missing", count: 0
   end
 

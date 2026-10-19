@@ -58,7 +58,15 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
 
     log_entry = DebugLogEntry.order(:created_at).last
     assert_equal "Bayesian categorization categorized 1 of 2 transactions", log_entry.message
-    assert_equal [ coffee.id ], log_entry.metadata["categorized_transaction_ids"]
+    assert_equal 1, log_entry.metadata["categorized_count"]
+  end
+
+  test "Bayes leaves transfer legs uncategorized" do
+    train_two_categories
+    transfer = create_transaction(account: @account, name: "Starbucks Coffee", kind: "funds_movement").transaction
+
+    assert_equal 0, @family.bayes_categorize_uncategorized
+    assert_nil transfer.reload.category
   end
 
   test "clearing Bayes locks unlocks only what Bayes locked and still has its pick" do

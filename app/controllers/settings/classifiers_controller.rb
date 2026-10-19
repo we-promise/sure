@@ -81,9 +81,11 @@ class Settings::ClassifiersController < ApplicationController
   end
 
   private
+    # One run at a time: a second would overwrite the first's result.
     def start_evaluation(action)
-      Family::BayesEvaluation.mark_running!(Current.family)
-      BayesEvaluationJob.perform_later(Current.family, action: action)
+      if Family::BayesEvaluation.start_running!(Current.family)
+        BayesEvaluationJob.perform_later(Current.family, action: action)
+      end
 
       redirect_to settings_classifier_path(anchor: "classifier_evaluation")
     end

@@ -25,7 +25,7 @@ class Family::BayesEvaluation
   # (which tests the defaults).
   ACTIONS = %w[test find_best reset].freeze
   # Bumped when the cached result's shape changes, so an older one is ignored.
-  RESULT_VERSION = 6
+  RESULT_VERSION = 7
   # The matcher's settings: not searched; picked on the page from its own
   # table (matcher_changes).
   MATCHER_KEYS = %i[similar_threshold similar_min_neighbours similar_common_share].freeze
@@ -34,10 +34,10 @@ class Family::BayesEvaluation
   # they're measured from today, not each month, so the evaluation can't
   # judge them.
   SEARCH_KEYS = {
-    category_training: %i[exclude_transfers skip_self_labels skip_ai_labels],
+    category_training: %i[exclude_transfers skip_self_labels],
     words: %i[include_notes spread_filter word_split
               drop_numbers keep_single_chars drop_codes binary bigrams],
-    merchant: %i[merchant_name_words merchant_field skip_ai_merchants],
+    merchant: %i[merchant_name_words merchant_field],
     amount: %i[amount_field amount_by_direction],
     account: %i[account_field],
     scoring: %i[complement smoothing separate_fields prior]
@@ -58,7 +58,6 @@ class Family::BayesEvaluation
   # A setting that does nothing unless this holds isn't tried.
   SEARCH_ONLY_IF = {
     amount_by_direction: :amount_field.to_proc,
-    skip_ai_merchants: :merchant_field.to_proc,
     separate_fields: ->(settings) { settings.merchant_field || settings.account_field }
   }.freeze
 
@@ -75,6 +74,11 @@ class Family::BayesEvaluation
 
   def self.mark_running!(family)
     Rails.cache.write(running_key(family), true, expires_in: RUNNING_TTL)
+  end
+
+  # Marks a run as started unless one already is; false if one is.
+  def self.start_running!(family)
+    Rails.cache.write(running_key(family), true, expires_in: RUNNING_TTL, unless_exist: true)
   end
 
   # The chosen cost of a mistake, kept across runs and reloads.

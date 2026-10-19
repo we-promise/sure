@@ -484,13 +484,28 @@ class Family < ApplicationRecord
     AutoCategorizer.new(self, transaction_ids: transaction_ids).auto_categorize
   end
 
-  # Runs Bayes over every uncategorized transaction the user hasn't locked;
-  # those it isn't sure about are tried again with a better model next time.
-  # Missing merchants are filled in first, if chosen, so Bayes sees them.
+  # Runs Bayes over every uncategorized transaction the user hasn't locked,
+  # transfer legs aside (they never belong in Uncategorized); those it isn't
+  # sure about are tried again with a better model next time. Missing
+  # merchants are filled in first, if chosen, so Bayes sees them. Returns the
+  # modified count.
   def bayes_categorize_uncategorized
     fill_similar_merchants if bayes_settings_object.fill_similar_merchants
-    ids = categorizable_transactions.where(category_id: nil).enrichable(:category_id).pluck(:id)
-    ids.any? ? bayes_categorize_transactions(ids) : 0
+    scope = categorizable_transactions.where(category_id: nil).where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS)
+                                      .enrichable(:category_id)
+    requested = scope.count
+    return 0 if requested.zero?
+
+    result = Family::BayesCategorizer.new(self, settings: bayes_settings_object).classify_and_apply(scope.select(:id))
+    DebugLogEntry.capture(
+      category: "auto_categorization",
+      level: "info",
+      message: "Bayesian categorization categorized #{result.categorized_ids.size} of #{requested} transactions",
+      source: self.class.name,
+      family: self,
+      metadata: { requested_count: requested, categorized_count: result.categorized_ids.size, modified_count: result.modified_count }
+    )
+    result.modified_count
   end
 
   # Copies near-duplicates' merchant to every transaction without one the
@@ -510,25 +525,6 @@ class Family < ApplicationRecord
       metadata: { requested_count: ids.size, filled_count: filled }
     )
     filled
-  end
-
-  # Returns the modified count.
-  def bayes_categorize_transactions(transaction_ids)
-    result = Family::BayesCategorizer.new(self, settings: bayes_settings_object).classify_and_apply(transaction_ids)
-
-    DebugLogEntry.capture(
-      category: "auto_categorization",
-      level: "info",
-      message: "Bayesian categorization categorized #{result.categorized_ids.size} of #{Array(transaction_ids).size} transactions",
-      source: self.class.name,
-      family: self,
-      metadata: {
-        requested_transaction_ids: Array(transaction_ids),
-        categorized_transaction_ids: result.categorized_ids,
-        modified_count: result.modified_count
-      }
-    )
-    result.modified_count
   end
 
   # Unlocks the categories Bayes locked itself (lock_results) and the

@@ -7,20 +7,31 @@ class BayesEvaluationJob < ApplicationJob
 
   def perform(family, action: "test")
     settings = family.bayes_settings_object
-    evaluation = Family::BayesEvaluation.new(family, settings: settings).run!(action: action) do |changes|
-      Family::BayesEvaluation.mark_running!(family)
-      trying = I18n.t("settings.classifiers.evaluation.trying", changes: changes.map { |key, value|
-        I18n.t("settings.classifiers.evaluation.change", setting: I18n.t("settings.classifiers.#{Family::BayesEvaluation.section_for(key)}.#{key}"),
-                                                         value: Family::BayesEvaluation.value_label(key, value))
-      }.join("; "))
-      Turbo::StreamsChannel.broadcast_update_to(family, target: "classifier_evaluation_progress", html: ERB::Util.html_escape(trying))
+    evaluation = begin
+      Family::BayesEvaluation.new(family, settings: settings).run!(action: action) do |changes|
+        Family::BayesEvaluation.mark_running!(family)
+        trying = I18n.t("settings.classifiers.evaluation.trying", changes: changes.map { |key, value|
+          I18n.t("settings.classifiers.evaluation.change", setting: I18n.t("settings.classifiers.#{Family::BayesEvaluation.section_for(key)}.#{key}"),
+                                                           value: Family::BayesEvaluation.value_label(key, value))
+        }.join("; "))
+        Turbo::StreamsChannel.broadcast_update_to(family, target: "classifier_evaluation_progress", html: ERB::Util.html_escape(trying))
+      end
+    rescue
+      # Back to the last result, so the page isn't left on "Testing…".
+      broadcast_panel(family, Family::BayesEvaluation.cached(family), settings)
+      raise
     end
 
-    Turbo::StreamsChannel.broadcast_replace_to(
-      family,
-      target: "classifier_evaluation",
-      partial: "settings/classifiers/evaluation",
-      locals: { evaluation: evaluation, settings: settings, running: false, weight: Family::BayesEvaluation.weight(family) }
-    )
+    broadcast_panel(family, evaluation, settings)
   end
+
+  private
+    def broadcast_panel(family, evaluation, settings)
+      Turbo::StreamsChannel.broadcast_replace_to(
+        family,
+        target: "classifier_evaluation",
+        partial: "settings/classifiers/evaluation",
+        locals: { evaluation: evaluation, settings: settings, running: false, weight: Family::BayesEvaluation.weight(family) }
+      )
+    end
 end

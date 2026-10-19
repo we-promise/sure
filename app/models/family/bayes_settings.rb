@@ -3,18 +3,19 @@
 # so a family that never touched the page follows any later change of a
 # default. DEFAULTS reproduce the original categorizer (multinomial NB, add-1,
 # uniform prior, words from name, notes and merchant name), so the page
-# compares any tuning with it.
+# compares any tuning with it, except that Bayes' own unconfirmed guesses
+# don't train it (skip_self_labels).
 class Family::BayesSettings
   DEFAULTS = {
     # Training
     excluded_category_ids: [],
     excluded_account_ids: [],
-    skip_self_labels: false,
+    # On: Bayes runs after every sync, so its own guesses would otherwise
+    # train the next run and a wrong one would be reinforced.
+    skip_self_labels: true,
     # A guess the user has left alone this long counts as accepted: picking
     # the same category again doesn't lock it, so there's no other way.
     self_label_grace_days: 90,
-    skip_ai_labels: false,
-    ai_label_grace_days: 90,
     exclude_transfers: false,
     # The training set is held in memory, so it's capped; the newest
     # transactions are the most representative of current spending.
@@ -40,8 +41,6 @@ class Family::BayesSettings
     # Account and merchant
     account_field: false,
     merchant_field: false,
-    skip_ai_merchants: true,
-    ai_merchant_grace_days: 90,
     # Matcher: before Bayes, a missing merchant is copied from near-duplicates
     # (Family::SimilarMerchantFiller) this alike, when at least this many
     # agree. On one family's history 0.8–0.95 made little difference; 2
@@ -51,12 +50,9 @@ class Family::BayesSettings
     similar_threshold: 0.9,
     similar_min_neighbours: 2,
     similar_common_share: 0.2,
-    # Copying from its own copies and from AI merchants, like Bayes'
-    # skip_self_labels / skip_ai_labels.
+    # Copying from its own copies, like Bayes' skip_self_labels.
     similar_skip_self: true,
     similar_self_grace_days: 90,
-    similar_skip_ai: false,
-    similar_ai_grace_days: 90,
 
     # Scoring
     complement: false,
@@ -82,10 +78,7 @@ class Family::BayesSettings
 
   RANGES = {
     self_label_grace_days: 1..3650,
-    ai_label_grace_days: 1..3650,
-    ai_merchant_grace_days: 1..3650,
     similar_self_grace_days: 1..3650,
-    similar_ai_grace_days: 1..3650,
     max_training_transactions: 100..20_000,
     threshold: 0.05..0.99,
     spread_margin: 0.0..0.9,

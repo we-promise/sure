@@ -13,6 +13,19 @@ class BayesEvaluationJobTest < ActiveJob::TestCase
     BayesEvaluationJob.perform_now(family)
   end
 
+  test "a failed run puts the panel back on the last result and still raises" do
+    family = families(:empty)
+    cached = { "digest" => "earlier" }
+    Family::BayesEvaluation.stubs(:cached).with(family).returns(cached)
+    Family::BayesEvaluation.any_instance.expects(:run!).raises(ActiveRecord::QueryCanceled)
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).with do |*args|
+      options = args.last
+      options[:target] == "classifier_evaluation" && options[:locals][:evaluation] == cached && options[:locals][:running] == false
+    end
+
+    assert_raises(ActiveRecord::QueryCanceled) { BayesEvaluationJob.perform_now(family) }
+  end
+
   test "a search shows each change it tries" do
     family = families(:empty)
     Family::BayesEvaluation.any_instance.expects(:run!).with(action: "find_best").multiple_yields([ { binary: true } ], [ { smoothing: 0.1 } ], [ { word_split: "unicode", amount_field: true } ]).returns({})

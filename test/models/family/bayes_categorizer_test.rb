@@ -466,20 +466,6 @@ class Family::BayesCategorizerTest < ActiveSupport::TestCase
     assert_equal 20, tuned(exclude_transfers: true).send(:training_transactions).size
   end
 
-  test "settings: AI labels can wait for a lock or their grace period" do
-    train_two_categories
-    ai_labelled = Array.new(3) { create_transaction(account: @account, name: "Starbucks Coffee").transaction }
-    ai_labelled.each { |txn| txn.enrich_attribute(:category_id, @coffee.id, source: "ai") }
-
-    assert_equal 23, tuned.send(:training_transactions).size
-    assert_equal 20, tuned(skip_ai_labels: true).send(:training_transactions).size
-    ai_labelled.first.lock_attr!(:category_id)
-    assert_equal 21, tuned(skip_ai_labels: true).send(:training_transactions).size
-    travel 91.days do
-      assert_equal 23, tuned(skip_ai_labels: true).send(:training_transactions).size
-    end
-  end
-
   test "settings: Bayes' own labels count once locked or past their grace period" do
     train_two_categories
     guess = create_transaction(account: @account, name: "Starbucks Coffee").transaction
@@ -490,22 +476,6 @@ class Family::BayesCategorizerTest < ActiveSupport::TestCase
       assert_equal 20, tuned(self_label_grace_days: 100).send(:training_transactions).size
       assert_equal 21, tuned(skip_self_labels: false).send(:training_transactions).size
     end
-  end
-
-  test "settings: AI merchants can wait for a lock or their grace period" do
-    train_two_categories
-    txn = create_transaction(account: @account, name: "Card payment", category: @coffee).transaction
-    txn.enrich_attribute(:merchant_id, @starbucks.id, source: "ai")
-    merchant_token = "merchant:#{@starbucks.id}"
-
-    assert_not_includes tuned.send(:tokens_for, txn), merchant_token
-    assert_includes tuned(skip_ai_merchants: false).send(:tokens_for, txn), merchant_token
-    travel 91.days do
-      assert_includes tuned.send(:tokens_for, txn), merchant_token
-      assert_not_includes tuned(ai_merchant_grace_days: 100).send(:tokens_for, txn), merchant_token
-    end
-    txn.lock_attr!(:merchant_id)
-    assert_includes tuned(ai_merchant_grace_days: 100).send(:tokens_for, txn), merchant_token
   end
 
   test "settings: lock_results locks Bayes' labels without counting them as confirmed" do

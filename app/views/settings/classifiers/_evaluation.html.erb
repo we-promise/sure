@@ -78,14 +78,12 @@
       <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <%# Changing the cost saves it and reloads, moving the bold rows and what Apply sets. %>
         <%= form_with url: remember_weight_settings_classifier_path, method: :post, class: "flex items-center gap-2",
-                      data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do %>
-          <label class="flex items-center gap-2 text-sm text-primary">
-            <%= t("settings.classifiers.evaluation.weight") %>
-            <%= select_tag :weight,
-                           options_for_select(Family::BayesEvaluation::WEIGHTS.map { |w| [ t("settings.classifiers.evaluation.weight_option", count: w), w ] }, weight),
-                           id: nil, class: "rounded-lg border border-primary pl-3 pr-8 py-1.5 text-sm bg-container text-primary",
-                           data: { auto_submit_form_target: "auto" } %>
-          </label>
+                      data: { controller: "auto-submit-form" } do |form| %>
+          <label for="weight_trigger" class="text-sm text-primary whitespace-nowrap"><%= t("settings.classifiers.evaluation.weight") %></label>
+          <div class="w-40">
+            <%= render DS::Select.new(form: form, method: :weight, selected: weight,
+                                      items: Family::BayesEvaluation::WEIGHTS.map { |w| { value: w, label: t("settings.classifiers.evaluation.weight_option", count: w) } }) %>
+          </div>
           <%= render DS::Tooltip.new(text: t("settings.classifiers.evaluation.weight_hint"), placement: "top-start") %>
         <% end %>
         <%= render DS::Button.new(text: t("settings.classifiers.evaluation.apply_best"), href: apply_best_settings_classifier_path,

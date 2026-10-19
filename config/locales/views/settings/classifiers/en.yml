@@ -26,8 +26,6 @@ en:
         exclude_transfers: Exclude transfers
         exclude_transfers_hint: Transfers and payments between your accounts.
         search_categories: Search categories
-        skip_ai_labels: Don't learn from AI categories until confirmed or this many days old
-        skip_ai_labels_hint: A recent AI guess at the category may be wrong.
         skip_self_labels: Don't learn from Bayes' own guesses until confirmed or this many days old
         skip_self_labels_hint: Confirmed means you changed or locked it. A wrong guess isn't fed back in and reinforced; one left alone that long counts as accepted.
       classifier:
@@ -67,7 +65,7 @@ en:
         ran_at: Scored %{time} ago on %{count} transactions (%{months}).
         reset: Reset to defaults
         reset_confirm: Reset every classifier setting to its default, and test them?
-        right_wrong: Right / wrong
+        right_wrong: Each cell is right / wrong.
         run: Test my settings
         running: Testing… this section updates when it's done.
         similarity: Similarity
@@ -96,8 +94,6 @@ en:
         similar_min_neighbours_option:
           one: 1 merchant
           other: "%{count} merchants"
-        similar_skip_ai: Don't copy from AI merchants until confirmed or this many days old
-        similar_skip_ai_hint: A recent AI guess at the merchant may be wrong. Off copies them, as most merchants are AI-detected and seldom locked.
         similar_skip_self: Don't copy from the matcher's own merchants until confirmed or this many days old
         similar_skip_self_hint: Confirmed means you changed or locked it. A wrong copy isn't spread; one left alone that long counts as accepted.
       merchant:
@@ -105,8 +101,6 @@ en:
         merchant_field_hint: Counts by identity, so a renamed merchant keeps its history.
         merchant_name_words: Include the merchant's name as words
         merchant_name_words_hint: Read like the description, as the original does, so similar names share evidence. Overlaps with the token below.
-        skip_ai_merchants: Don't use AI-detected merchants until confirmed or this many days old
-        skip_ai_merchants_hint: A recent AI guess at the merchant may be wrong.
       run:
         success: Bayes is categorizing uncategorized transactions. This may take a few moments.
       scoring:

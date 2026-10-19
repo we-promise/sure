@@ -4,7 +4,4 @@
 <%= classifier_section_form do %>
   <%= render "settings/classifiers/option", key: :merchant_name_words, settings: settings, label: t(".merchant_name_words"), hint: t(".merchant_name_words_hint") %>
   <%= render "settings/classifiers/option", key: :merchant_field, settings: settings, label: t(".merchant_field"), hint: t(".merchant_field_hint") %>
-  <%= render "settings/classifiers/option", key: :skip_ai_merchants, settings: settings, indent: true, disabled: !settings.merchant_field,
-        number_key: :ai_merchant_grace_days,
-        label: t(".skip_ai_merchants"), hint: t(".skip_ai_merchants_hint") %>
 <% end %>

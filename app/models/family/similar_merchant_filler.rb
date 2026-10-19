@@ -3,9 +3,8 @@
 # confirmed merchant, and all the same one. Runs before Bayes, so Bayes sees
 # the merchant. Confirmed means, optionally (Merchant matcher tuning): not its own
 # recent copy, unless the user locked it (a lock it set itself,
-# lock_similar_merchants, doesn't count), so a wrong copy isn't spread; and
-# not a recent unlocked AI guess. AI merchants count by default, as most
-# merchants are AI-detected and seldom locked. The pool is the newest transactions
+# lock_similar_merchants, doesn't count), so a wrong copy isn't spread. AI
+# merchants count: the detector locks what it sets. The pool is the newest transactions
 # with a merchant, capped like Bayes' training set, outside excluded accounts.
 # Transfers neither give nor get one: they have no merchant, and a
 # description typed in the banking app makes them look alike.
@@ -40,9 +39,6 @@ class Family::SimilarMerchantFiller
   def confirmed
     scope = eligible(family.transactions.where.not(merchant_id: nil).joins(:entry))
     scope = scope.where.not(own_copy_sql(settings.similar_self_grace_days.days.ago)) if settings.similar_skip_self
-    if settings.similar_skip_ai
-      scope = scope.where.not(Family::BayesCategorizer.unconfirmed_merchant_sql(settings.similar_ai_grace_days.days.ago))
-    end
     scope
   end
 

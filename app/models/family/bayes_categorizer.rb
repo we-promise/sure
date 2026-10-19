@@ -35,11 +35,6 @@ class Family::BayesCategorizer
   # Letters mixed with 2+ digits: reference codes like "2k4l19"; keeps "7eleven", "o2".
   CODE = /\A(?=.*\p{L})(?=(?:.*\p{N}){2})/
 
-  # The transaction's merchant is still a recent, unlocked AI-detection guess.
-  def self.unconfirmed_merchant_sql(cutoff)
-    "NOT (transactions.locked_attributes ? 'merchant_id') AND #{Transaction.enriched_from_sql("merchant_id", "ai", since: cutoff)}"
-  end
-
   # categorized_ids: transaction ids the model labeled at/above threshold
   # (regardless of whether the write actually changed anything).
   # modified_count: how many of those writes changed the category.
@@ -135,9 +130,7 @@ class Family::BayesCategorizer
     # and the account. Binary counts each token once per transaction.
     def tokens_for(transaction)
       tokens = word_tokens(transaction)
-      if settings.merchant_field && transaction.merchant_id && !unconfirmed_merchant_ids.include?(transaction.id)
-        tokens << "merchant:#{transaction.merchant_id}"
-      end
+      tokens << "merchant:#{transaction.merchant_id}" if settings.merchant_field && transaction.merchant_id
       tokens << "account:#{transaction.entry.account_id}" if settings.account_field
       settings.binary ? tokens.uniq : tokens
     end
@@ -186,9 +179,9 @@ class Family::BayesCategorizer
 
     # The newest categorized transactions by creation (as the original), dated on
     # or before as_of if given, minus excluded categories and accounts, and
-    # minus labels still waiting to be confirmed: Bayes' own (so a wrong guess
-    # isn't fed back in and reinforced) and, optionally, the AI's. A label trains once someone
-    # changes or locks it, or after its grace period.
+    # optionally minus Bayes' own labels still waiting to be confirmed, so a
+    # wrong guess isn't fed back in and reinforced. A label trains once
+    # someone changes or locks it, or after its grace period.
     def training_transactions
       @training_transactions ||= begin
         scope = family.transactions.where.not(category_id: nil).joins(:entry)
@@ -196,10 +189,7 @@ class Family::BayesCategorizer
         scope = scope.where.not(category_id: excluded_category_ids) if excluded_category_ids.any?
         scope = scope.where.not(entries: { account_id: settings.excluded_account_ids }) if settings.excluded_account_ids.any?
         scope = scope.where.not(kind: Transaction::TRANSFER_KINDS) if settings.exclude_transfers
-        if settings.skip_self_labels
-          scope = scope.where.not(unconfirmed_label_sql("bayes", settings.self_label_grace_days.days.ago))
-        end
-        scope = scope.where.not(unconfirmed_label_sql("ai", settings.ai_label_grace_days.days.ago)) if settings.skip_ai_labels
+        scope = scope.where.not(unconfirmed_self_label_sql) if settings.skip_self_labels
         scope.preload(*preloads)
              .order("transactions.created_at DESC, transactions.id DESC")
              .limit(settings.max_training_transactions)
@@ -207,23 +197,12 @@ class Family::BayesCategorizer
       end
     end
 
-    # The category is still a recent guess from source. A lock the user set
-    # confirms it; one Bayes set itself (lock_results) doesn't.
-    def unconfirmed_label_sql(source, cutoff)
-      "#{Transaction.category_from_sql(source, since: cutoff)} AND (NOT (transactions.locked_attributes ? 'category_id') " \
-        "OR #{Transaction.category_from_sql(source, metadata: { locked_by_bayes: true })})"
-    end
-
-    # Training transactions whose merchant is an AI guess not yet confirmed:
-    # their merchant isn't used as evidence.
-    def unconfirmed_merchant_ids
-      @unconfirmed_merchant_ids ||= if settings.merchant_field && settings.skip_ai_merchants
-        family.transactions.where(id: training_transactions.map(&:id))
-              .where(self.class.unconfirmed_merchant_sql(settings.ai_merchant_grace_days.days.ago))
-              .pluck(:id).to_set
-      else
-        Set.new
-      end
+    # The category is still Bayes' recent guess. A lock the user set confirms
+    # it; one Bayes set itself (lock_results) doesn't.
+    def unconfirmed_self_label_sql
+      "#{Transaction.category_from_sql("bayes", since: settings.self_label_grace_days.days.ago)} " \
+        "AND (NOT (transactions.locked_attributes ? 'category_id') " \
+        "OR #{Transaction.category_from_sql("bayes", metadata: { locked_by_bayes: true })})"
     end
 
     # { category_id => { counts: { token => n }, field_totals: { field => n }, docs: n, total: n } }

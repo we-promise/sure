@@ -3,10 +3,10 @@
     words, which words are dropped, then how they're counted. Splitting
     comes before dropping: split with symbols, mcdonald's stays whole, so
     there's no "s" to drop. %>
-<%= classifier_section_form do %>
+<%= classifier_section_form do |form| %>
   <%= render "settings/classifiers/option", key: :include_notes, settings: settings, label: t(".include_notes"), hint: t(".include_notes_hint") %>
 
-  <%= render "settings/classifiers/select", key: :word_split, settings: settings, width: "w-64 max-w-1/2",
+  <%= render "settings/classifiers/select", form: form, key: :word_split, settings: settings, width: "w-64 max-w-1/2",
         choices: Family::BayesSettings::CHOICES[:word_split].map { |choice| [ t(".word_split_#{choice}"), choice ] },
         label: t(".word_split"), hint: t(".word_split_hint") %>
 

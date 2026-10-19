@@ -77,14 +77,7 @@ class Family::SimilarMerchantFillerTest < ActiveSupport::TestCase
     assert_equal 0, fill(transaction("HULU LLC 12"))
   end
 
-  test "AI merchants can wait for a lock or their grace days, and its own copies needn't" do
-    guesses = Array.new(2) { transaction("NETFLIX.COM 8812").tap { |t| t.enrich_attribute(:merchant_id, @netflix.id, source: "ai") } }
-    missing = transaction("Netflix com 1203")
-
-    assert_equal 0, fill(missing, similar_skip_ai: true)
-    guesses.each { |guess| guess.data_enrichments.update_all(updated_at: 91.days.ago) }
-    assert_equal 1, fill(missing, similar_skip_ai: true)
-
+  test "its own copies count when that check is off" do
     2.times { transaction("HULU LLC 77").tap { |t| t.enrich_attribute(:merchant_id, @hulu.id, source: "similar") } }
     assert_equal 1, fill(transaction("Hulu LLC 12"), similar_skip_self: false)
   end
