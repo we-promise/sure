@@ -27,6 +27,10 @@ class Assistant::Function::GetPaycheckPlan < Assistant::Function
         this bill come out of".
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?

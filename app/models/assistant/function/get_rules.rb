@@ -32,6 +32,10 @@ class Assistant::Function::GetRules < Assistant::Function
         response includes total_results, page, page_size and total_pages.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?

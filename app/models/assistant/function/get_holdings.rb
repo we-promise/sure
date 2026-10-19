@@ -50,6 +50,10 @@ class Assistant::Function::GetHoldings < Assistant::Function
         ```
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?
