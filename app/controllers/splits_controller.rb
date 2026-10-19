@@ -19,8 +19,8 @@ class SplitsController < ApplicationController
 
     begin
       @receipt_proposal = Transaction::ReceiptItemizer.new(@entry.transaction).propose(attachment_id: params[:attachment_id])
-    rescue Transaction::ReceiptItemizer::Error => e
-      Rails.logger.warn("Receipt itemization failed for entry #{@entry.id}: #{e.message}")
+    rescue Transaction::ReceiptItemizer::Error
+      # The itemizer records the failure in the debug log.
       @receipt_error = t(".failed")
     end
 
