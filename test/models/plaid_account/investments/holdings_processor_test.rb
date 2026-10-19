@@ -43,7 +43,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
                       .with(plaid_security_id: "456")
                       .returns(
                         OpenStruct.new(
-                          security: securities(:aapl),
+                          security: securities(:msft),
                           cash_equivalent?: false,
                           brokerage_cash?: false
                         )
@@ -66,8 +66,9 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal 200, holdings.second.qty
     assert_equal 200, holdings.second.price
     assert_equal "USD", holdings.second.currency
-    assert_equal securities(:aapl), holdings.second.security
-    assert_equal Date.current, holdings.second.date
+    assert_equal securities(:msft), holdings.second.security
+    # The undated entry is written on the snapshot's date, not on today
+    assert_equal 1.day.ago.to_date, holdings.second.date
   end
 
   # Plaid does not delete future holdings because it doesn't support holdings deletion
@@ -96,7 +97,8 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
       account_provider_id: account_provider.id
     )
 
-    # Plaid returns holdings from yesterday - future holdings should remain
+    # Plaid returns holdings priced one and two days ago, so the snapshot is
+    # yesterday's and today's holding is later than it - it should remain
     test_investments_payload = {
       securities: [],
       holdings: [
@@ -105,21 +107,21 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
           "quantity" => 50,
           "institution_price" => 50,
           "iso_currency_code" => "USD",
-          "institution_price_as_of" => Date.current
+          "institution_price_as_of" => 1.day.ago.to_date
         },
         {
           "security_id" => "clean",
           "quantity" => 75,
           "institution_price" => 75,
           "iso_currency_code" => "USD",
-          "institution_price_as_of" => 1.day.ago.to_date
+          "institution_price_as_of" => 2.days.ago.to_date
         },
         {
           "security_id" => "past",
           "quantity" => 100,
           "institution_price" => 100,
           "iso_currency_code" => "USD",
-          "institution_price_as_of" => 1.day.ago.to_date
+          "institution_price_as_of" => 2.days.ago.to_date
         }
       ],
       transactions: []
@@ -150,7 +152,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert account.holdings.exists?(future_aapl_holding.id)
 
     # Should have the correct holdings from Plaid
-    assert account.holdings.exists?(security: securities(:msft), date: Date.current, qty: 50)
+    assert account.holdings.exists?(security: securities(:msft), date: 1.day.ago.to_date, qty: 50)
     assert account.holdings.exists?(security: third_security, date: 1.day.ago.to_date, qty: 75)
     assert account.holdings.exists?(security: securities(:aapl), date: 1.day.ago.to_date, qty: 100)
   end
@@ -325,4 +327,162 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     holding = account.holdings.find_by(security: securities(:aapl))
     assert_equal "EUR", holding.currency  # Should use account's currency
   end
+
+  # Plaid dates each holding by its own price date. These run the processor on
+  # a payload and read the result through the readers of "current holdings",
+  # which take the provider rows on the account's single newest date.
+
+  test "holdings priced on different days all land on the snapshot date and are current" do
+    snapshot_date = Date.current - 1
+    a, b = securities(:aapl), securities(:msft)
+    link_account_provider!
+
+    process_holdings(
+      "a" => [ a, { "quantity" => 10, "institution_price_as_of" => snapshot_date.to_s } ],
+      "b" => [ b, { "quantity" => 5, "institution_price_as_of" => (snapshot_date - 3).to_s } ]
+    )
+
+    assert_equal [ a.id, b.id ].sort, account.current_holdings.pluck(:security_id).sort
+    assert_equal [ snapshot_date ], account.holdings.distinct.pluck(:date)
+
+    snapshot = Holding::PortfolioSnapshot.new(account)
+    assert_equal 5, snapshot.to_h[b.id]
+    assert_equal snapshot_date, snapshot.effective_dates[b.id]
+  end
+
+  test "a holding reported at zero with a lagging price date lands on the snapshot date and is not current" do
+    snapshot_date = Date.current - 1
+    a, b = securities(:aapl), securities(:msft)
+    link_account_provider!
+
+    process_holdings(
+      "a" => [ a, { "quantity" => 10, "institution_price_as_of" => snapshot_date.to_s } ],
+      "b" => [ b, { "quantity" => 0, "institution_price_as_of" => (snapshot_date - 3).to_s } ]
+    )
+
+    b_holding = account.holdings.find_by!(security: b)
+    assert_equal snapshot_date, b_holding.date
+    assert_equal 0, b_holding.qty
+    assert_equal [ a.id ], account.current_holdings.pluck(:security_id)
+
+    snapshot = Holding::PortfolioSnapshot.new(account)
+    assert_equal 0, snapshot.to_h.fetch(b.id)
+    assert_equal snapshot_date, snapshot.effective_dates[b.id]
+  end
+
+  test "a security sold to zero replaces its earlier quantity on the snapshot date" do
+    snapshot_date = Date.current - 1
+    a, b = securities(:aapl), securities(:msft)
+    account_provider = link_account_provider!
+    account.holdings.create!(
+      security: b, date: snapshot_date, qty: 10, price: 50, amount: 500,
+      currency: "USD", account_provider_id: account_provider.id
+    )
+    assert_includes account.current_holdings.pluck(:security_id), b.id
+
+    process_holdings(
+      "a" => [ a, { "quantity" => 10, "institution_price_as_of" => snapshot_date.to_s } ],
+      "b" => [ b, { "quantity" => 0, "institution_price_as_of" => (snapshot_date - 3).to_s } ]
+    )
+
+    assert_not_includes account.current_holdings.pluck(:security_id), b.id
+    assert_equal 0, account.holdings.find_by!(security: b, date: snapshot_date).qty
+  end
+
+  test "a holding priced ahead of today lands on the snapshot date" do
+    snapshot_date = Date.current - 1
+    a, b = securities(:aapl), securities(:msft)
+    link_account_provider!
+
+    process_holdings(
+      "a" => [ a, { "quantity" => 10, "institution_price_as_of" => snapshot_date.to_s } ],
+      "b" => [ b, { "quantity" => 5, "institution_price_as_of" => (Date.current + 1).to_s } ]
+    )
+
+    assert_equal [ a.id, b.id ].sort, account.current_holdings.pluck(:security_id).sort
+    assert_equal [ snapshot_date ], account.holdings.distinct.pluck(:date)
+    assert_equal snapshot_date, account.latest_provider_holdings_snapshot_date
+  end
+
+  test "an undated holding takes the snapshot date, not today" do
+    snapshot_date = Date.current - 1
+    a, b = securities(:aapl), securities(:msft)
+    link_account_provider!
+
+    process_holdings(
+      "a" => [ a, { "quantity" => 10, "institution_price_as_of" => snapshot_date.to_s } ],
+      "b" => [ b, { "quantity" => 5 } ]
+    )
+
+    assert_equal [ a.id, b.id ].sort, account.current_holdings.pluck(:security_id).sort
+    assert_equal [ snapshot_date ], account.holdings.distinct.pluck(:date)
+  end
+
+  test "a security from an earlier snapshot is not current and its row is kept" do
+    snapshot_date = Date.current - 1
+    a, b = securities(:aapl), securities(:msft)
+    c = Security.create!(ticker: "GOOGL", name: "Google", exchange_operating_mic: "XNAS", country_code: "US")
+    account_provider = link_account_provider!
+    earlier = account.holdings.create!(
+      security: c, date: snapshot_date - 1, qty: 3, price: 50, amount: 150,
+      currency: "USD", account_provider_id: account_provider.id
+    )
+
+    process_holdings(
+      "a" => [ a, { "quantity" => 10, "institution_price_as_of" => snapshot_date.to_s } ],
+      "b" => [ b, { "quantity" => 5, "institution_price_as_of" => (snapshot_date - 3).to_s } ]
+    )
+
+    assert_not_includes account.current_holdings.pluck(:security_id), c.id
+    assert_equal 3, earlier.reload.qty
+    assert_equal snapshot_date - 1, earlier.date
+  end
+
+  test "a payload priced on one day is written on that day" do
+    price_date = Date.current - 4
+    link_account_provider!
+
+    process_holdings(
+      "a" => [ securities(:aapl), { "quantity" => 10, "institution_price_as_of" => price_date.to_s } ],
+      "b" => [ securities(:msft), { "quantity" => 5, "institution_price_as_of" => price_date.to_s } ]
+    )
+
+    assert_equal [ price_date, price_date ], account.holdings.pluck(:date)
+  end
+
+  test "with no usable price date, holdings land on today" do
+    c = Security.create!(ticker: "GOOGL", name: "Google", exchange_operating_mic: "XNAS", country_code: "US")
+    link_account_provider!
+
+    process_holdings(
+      "a" => [ securities(:aapl), { "quantity" => 10 } ],
+      "b" => [ securities(:msft), { "quantity" => 5, "institution_price_as_of" => "not a date" } ],
+      "c" => [ c, { "quantity" => 3, "institution_price_as_of" => (Date.current + 1).to_s } ]
+    )
+
+    assert_equal [ Date.current ] * 3, account.holdings.pluck(:date)
+  end
+
+  private
+    def account
+      @plaid_account.current_account
+    end
+
+    def link_account_provider!
+      AccountProvider.create!(account: account, provider: @plaid_account).tap { @plaid_account.reload }
+    end
+
+    # entries: { plaid_security_id => [security, holding attributes] }
+    def process_holdings(entries)
+      holdings = entries.map do |plaid_security_id, (security, attributes)|
+        @security_resolver.stubs(:resolve)
+                          .with(plaid_security_id: plaid_security_id)
+                          .returns(OpenStruct.new(security: security))
+
+        { "security_id" => plaid_security_id, "institution_price" => 50, "iso_currency_code" => "USD" }.merge(attributes)
+      end
+
+      @plaid_account.update!(raw_holdings_payload: { "holdings" => holdings })
+      PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+    end
 end
