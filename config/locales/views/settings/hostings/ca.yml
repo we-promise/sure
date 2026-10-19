@@ -139,10 +139,6 @@ ca:
         json_mode_label: Mode JSON
         json_mode_none: Cap (millor per a models estàndard)
         json_mode_strict: Estricte (millor per a models de pensament)
-        max_items_per_call_help: 'Límit superior per als lots d''autocategorització
-          / detecció de comerç. Per defecte: 25. Els lots més grans es divideixen
-          automàticament per encabir-se a la finestra de context.'
-        max_items_per_call_label: Màxim d'elements per lot (opcional)
         max_response_tokens_help: 'Tokens reservats per a la resposta del model. Per
           defecte: 512. Redueix per alliberar espai per a un historial més llarg.'
         max_response_tokens_label: Màxim de tokens de resposta (opcional)
@@ -305,6 +301,8 @@ ca:
         not_configured_hint: Afegeix una clau API de %{provider} a continuació per activar-lo.
         data_retention_heading: Tractament de les dades
         data_retention: Per defecte, les dades enviades a l'API no s'utilitzen per entrenar models; les API allotjades pels proveïdors conserven les dades uns 30 dies per a la supervisió d'abusos i seguretat. Els endpoints personalitzats o autoallotjats segueixen la teva pròpia política.
+        max_items_per_call_help: "Límit superior per als lots d'autocategorització / detecció de comerç. Per defecte: 25. Amb proveïdors compatibles amb OpenAI, els lots més grans es divideixen automàticament per encabir-se a la finestra de context."
+        max_items_per_call_label: Màxim d'elements per lot (opcional)
       anthropic_settings:
         title: Anthropic (Claude)
         description: Introdueix la teva clau API d'Anthropic. Opcionalment, apunta l'URL base a AWS Bedrock o GCP Vertex.
