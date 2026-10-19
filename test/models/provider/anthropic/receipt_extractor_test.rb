@@ -75,6 +75,21 @@ class Provider::Anthropic::ReceiptExtractorTest < ActiveSupport::TestCase
     assert_equal "extract_receipt_vision", family.llm_usages.order(:created_at).last.operation
   end
 
+  test "records the billed usage once when the tool input cannot be used" do
+    family = families(:dylan_family)
+    client = stub_client(OpenStruct.new(content: [ OpenStruct.new(type: :text, text: "no") ], usage: OpenStruct.new(input_tokens: 800, output_tokens: 20)))
+
+    assert_difference -> { family.llm_usages.count }, 1 do
+      assert_raises(Provider::Anthropic::Error) do
+        build_extractor(client, content_type: "image/png", file_content: "png-bytes", family: family).extract
+      end
+    end
+
+    usage = family.llm_usages.order(:created_at).last
+    assert_equal "extract_receipt_vision", usage.operation
+    assert_equal 820, usage.total_tokens
+  end
+
   test "raises when the model does not call the tool" do
     client = stub_client(OpenStruct.new(content: [ OpenStruct.new(type: :text, text: "no") ], usage: nil))
 

@@ -11,7 +11,8 @@ module Provider::Openai::Concerns::PdfPageRenderer
     # Provider::Openai::Error with failure_code :render_missing_binary) from
     # "renderer ran but rejected the input" (return [] so the caller can
     # degrade gracefully).
-    def render_pdf_pages(pdf_content)
+    # @param max_pages [Integer, nil] render only the first pages; nil renders all
+    def render_pdf_pages(pdf_content, max_pages: nil)
       return [] if pdf_content.blank?
 
       Dir.mktmpdir do |tmpdir|
@@ -22,7 +23,8 @@ module Provider::Openai::Concerns::PdfPageRenderer
         # the executable cannot be started (binary not installed) and `false`
         # when it runs but exits non-zero (present but rejected the input).
         output_prefix = File.join(tmpdir, "page")
-        rendered = system("pdftoppm", "-png", "-r", "150", pdf_path, output_prefix)
+        page_limit = max_pages ? [ "-l", max_pages.to_i.to_s ] : []
+        rendered = system("pdftoppm", "-png", "-r", "150", *page_limit, pdf_path, output_prefix)
         raise pdf_renderer_missing_error if rendered.nil?
 
         # Read all generated images (empty array when pdftoppm exited non-zero)

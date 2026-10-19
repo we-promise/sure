@@ -49,15 +49,20 @@ class Provider::Anthropic::ReceiptExtractor
       tool_choice: { type: "tool", name: TOOL_NAME, disable_parallel_tool_use: true }
     )
 
-    result = ReceiptExtraction.from_response(extract_tool_input(response))
-
+    # The call is billed even when its tool input cannot be parsed, so usage
+    # is recorded before parsing and no error row is added after it.
     record_usage(model, response.usage, operation: operation, metadata: { content_type: content_type })
+    usage_recorded = true
+
+    result = ReceiptExtraction.from_response(extract_tool_input(response))
 
     span&.end(output: { line_item_count: result.line_items.size }, usage: usage_hash(response.usage))
     result
   rescue => e
     span&.end(output: { error: e.message, error_detail: safe_error_detail(e) }, level: "ERROR")
-    record_usage_error(model, operation: operation || "extract_receipt", error: e, metadata: { content_type: content_type })
+    unless usage_recorded
+      record_usage_error(model, operation: operation || "extract_receipt", error: e, metadata: { content_type: content_type })
+    end
     raise
   end
 
