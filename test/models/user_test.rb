@@ -238,6 +238,28 @@ class UserTest < ActiveSupport::TestCase
     assert_not User.find(user.id).verify_otp?(code), "a freshly loaded user must reject it too"
   end
 
+  test "otp_code_status answers like verify_otp without spending the code" do
+    user = users(:family_member)
+    user.setup_mfa!
+    backup_code = user.enable_mfa!.first
+
+    travel_to Time.zone.parse("2026-10-07 12:00:10") do
+      code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+      assert_equal :accepted, user.otp_code_status(code)
+      assert_equal :accepted, user.otp_code_status(code), "checking must not claim the time step"
+      assert_equal :accepted, user.otp_code_status(backup_code)
+      assert_equal :accepted, user.otp_code_status(backup_code), "checking must not consume the backup code"
+      assert_equal :invalid, user.otp_code_status("000000")
+      assert_equal :invalid, user.otp_code_status(nil)
+
+      assert_equal :accepted, user.verify_otp(code)
+      assert_equal :replayed, user.otp_code_status(code)
+      assert_equal :accepted, user.verify_otp(backup_code)
+      assert_equal :invalid, user.otp_code_status(backup_code)
+    end
+  end
+
   test "verify_otp? accepts the next time step's code after one was used" do
     user = users(:family_member)
     user.setup_mfa!
@@ -483,6 +505,32 @@ class UserTest < ActiveSupport::TestCase
   ensure
     Setting.openai_access_token = previous
     @user.family.update!(assistant_type: "builtin")
+  end
+
+  test "ai_available? is false when the assistant type is mcp_only, even with a provider configured" do
+    previous = Setting.openai_access_token
+    @user.family.update!(assistant_type: "mcp_only")
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil do
+      Setting.openai_access_token = "token"
+
+      Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+      assert_not @user.ai_available?
+      assert_not @user.ai_enabled?
+
+      Rails.application.config.app_mode.stubs(:self_hosted?).returns(false)
+      assert_not @user.ai_available?
+    end
+  ensure
+    Setting.openai_access_token = previous
+  end
+
+  test "ASSISTANT_TYPE=mcp_only overrides the family assistant type" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    @user.family.update!(assistant_type: "external")
+    with_env_overrides ASSISTANT_TYPE: "mcp_only", EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main" do
+      assert_not @user.ai_available?
+      assert_not @user.family.assistant_enabled?
+    end
   end
 
   test "intro layout collapses sidebars and enables ai" do

@@ -34,7 +34,11 @@ class Family < ApplicationRecord
 
 
   MONIKERS = [ "Family", "Group" ].freeze
-  ASSISTANT_TYPES = %w[builtin external].freeze
+  # `mcp_only` removes the in-app assistant (chat, sidebar, chat-seeding
+  # buttons) without touching MCP: /mcp serves the same tool registry to
+  # external agents whatever this says. "Off" stays free for a future
+  # no-LLM-at-all switch; categorization still runs under `mcp_only`.
+  ASSISTANT_TYPES = %w[builtin external mcp_only].freeze
 
   # Which provider categorizes this family's transactions. Family-level rather
   # than a global Setting because it decides whose transaction descriptions get
@@ -171,6 +175,16 @@ class Family < ApplicationRecord
     ENV["CATEGORIZATION_PROVIDER"].presence || categorization_provider
   end
 
+  # ENV-over-column precedence for the assistant, same shape as the provider
+  # above. Unknown ENV values pass through; callers treat them as builtin.
+  def effective_assistant_type
+    ENV["ASSISTANT_TYPE"].presence || assistant_type.presence || "builtin"
+  end
+
+  def assistant_enabled?
+    effective_assistant_type != "mcp_only"
+  end
+
   # The provider that will actually categorize this family's transactions,
   # falling back to the LLM path when Jev is unselected or unconfigured.
   # Credentials alone never select Jev; the family has to choose it, because
@@ -241,6 +255,7 @@ class Family < ApplicationRecord
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }
   validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
+  validates :categories_locked, inclusion: { in: [ true, false ] }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
 
   before_validation :normalize_enabled_currencies!
@@ -634,6 +649,15 @@ class Family < ApplicationRecord
     entries.order(:date).first&.date || Date.current
   end
 
+  # Earliest Transaction/Trade entry date: the family's first real activity.
+  # Unlike oldest_entry_date (any entry type; kept as-is for budgets and the
+  # AI balance sheet), valuations and opening balances don't count here, so a
+  # single old valuation can't stretch All-range charts back for years (#4007).
+  # Returns nil when the family has no Transaction/Trade entries yet.
+  def earliest_activity_date
+    entries.where(entryable_type: %w[Transaction Trade]).minimum(:date)
+  end
+
   # Used for invalidating family / balance sheet related aggregation queries
   def build_cache_key(key, invalidate_on_data_updates: false)
     # Our data sync process updates this timestamp whenever any family account successfully completes a data update.
@@ -642,9 +666,10 @@ class Family < ApplicationRecord
 
     [
       id,
+      currency,
       key,
       data_invalidation_key,
-      accounts.maximum(:updated_at)
+      accounts_status_version
     ].compact.join("_")
   end
 
@@ -678,7 +703,8 @@ class Family < ApplicationRecord
   # nothing on entries, but changes which entries `uncategorized_transactions`
   # considers accessible).
   def accounts_status_version
-    "#{accounts.count}-#{accounts.maximum(:updated_at)&.to_f}"
+    count, max_at = accounts.pick(Arel.sql("count(*)"), Arel.sql('max("accounts"."updated_at")'))
+    "#{count}-#{max_at&.to_f}"
   end
 
   # Used for invalidating caches that render merchant name/logo for recurring
