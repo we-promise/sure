@@ -22,6 +22,31 @@ class EntriesHelperTest < ActionView::TestCase
     assert_equal({ entry: valuation, running_balance: nil, hide_balance: true, flat: true }, valuation_options[:locals])
   end
 
+  test "compact_row_context_fields renders both context inputs without ids" do
+    @view_ctx = "account"
+    @is_filtered = false
+
+    html = compact_row_context_fields
+
+    assert_match(/name="view_ctx"/, html)
+    assert_match(/value="account"/, html)
+    assert_match(/name="is_filtered"/, html)
+    assert_match(/value="0"/, html)
+    assert_no_match(/id=/, html)
+  end
+
+  test "compact_row_context_fields defaults to global and unfiltered" do
+    @view_ctx = nil
+    @is_filtered = nil
+
+    html = compact_row_context_fields
+
+    assert_match(/name="view_ctx"/, html)
+    assert_match(/value="global"/, html)
+    assert_match(/name="is_filtered"/, html)
+    assert_match(/value="0"/, html)
+  end
+
   test "dedupe_transfer_entries removes only the inflow side of a transfer" do
     outflow = entries(:transfer_out)
     inflow = entries(:transfer_in)

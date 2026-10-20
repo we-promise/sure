@@ -41,11 +41,6 @@ module TransactionsHelper
     "transactions/searches/filters/#{filter[:key]}"
   end
 
-  # @return [Hash] the filter shown when the user has not picked one
-  def get_default_transaction_search_filter
-    transaction_search_filters[0]
-  end
-
   # A split child is only folded under its parent when the user asked for
   # grouping and the current view is rendering grouped.
   #

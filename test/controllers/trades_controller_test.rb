@@ -647,6 +647,8 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "input[type='hidden'][name='view_ctx'][value='account']", minimum: 1
     assert_select "input[type='hidden'][name='is_filtered'][value='1']", minimum: 1
+    assert_select "input#view_ctx", count: 0
+    assert_select "input#is_filtered", count: 0
   end
 
   test "compact trade row mobile subtitle has no orphan bullet" do

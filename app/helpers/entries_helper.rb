@@ -42,6 +42,16 @@ module EntriesHelper
     { partial: partial, locals: locals }
   end
 
+  # Hidden fields that carry the compact row context through a drawer's forms.
+  # `id: nil` keeps the ids off the DOM: a drawer can mount several forms at
+  # once, and duplicated context-field ids would be invalid.
+  def compact_row_context_fields(view_ctx: @view_ctx, is_filtered: @is_filtered)
+    safe_join([
+      hidden_field_tag(:view_ctx, view_ctx || "global", id: nil),
+      hidden_field_tag(:is_filtered, is_filtered ? "1" : "0", id: nil)
+    ])
+  end
+
   # Drops the inflow leg of transfers whose both legs are listed, keeping the
   # original order so flat (ungrouped) lists stay chronological.
   def dedupe_transfer_entries(entries)
