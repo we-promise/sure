@@ -11,6 +11,13 @@ class Api::V1::CashFlowsController < Api::V1::BaseController
     unless [ nil, "sankey" ].include?(params[:include]) && [ nil, "sankey" ].include?(params[:view])
       return invalid_query("invalid_view", "include and view support only sankey")
     end
+    if params[:group_by] && params[:view] != "sankey"
+      return invalid_query("invalid_group_by", "group_by requires view=sankey")
+    end
+    group_by = params[:group_by] || "category"
+    unless IncomeStatement::CashFlowGraph::GROUPINGS.key?(group_by)
+      return invalid_query("invalid_group_by", "group_by must be category or account")
+    end
     if params[:start_date] || params[:end_date]
       start_date, end_date = parse_date(params[:start_date]), parse_date(params[:end_date])
       unless params[:view] == "sankey" && params[:month].nil? && start_date && end_date && start_date <= end_date
@@ -27,7 +34,7 @@ class Api::V1::CashFlowsController < Api::V1::BaseController
 
     if params[:view] == "sankey"
       # Arbitrary graph ranges must not allocate a daily comparison series.
-      render json: IncomeStatement::CashFlowGraph.new(statement, period: period, as_of: today)
+      render json: IncomeStatement::CashFlowGraph.new(statement, period: period, group_by: group_by, as_of: today)
     else
       render json: IncomeStatement::CashFlow.new(statement, month: month, as_of: today, include_sankey: params[:include] == "sankey")
     end

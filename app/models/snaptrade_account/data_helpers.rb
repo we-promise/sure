@@ -1,6 +1,14 @@
 module SnaptradeAccount::DataHelpers
   extend ActiveSupport::Concern
 
+  HELD_ROW_SECURITY_ID_SQL = "holdings.security_id".freeze
+  PROVIDER_ROW_SECURITY_ID_SQL = <<~SQL.squish.freeze
+    CASE WHEN holdings.security_locked
+      THEN COALESCE(holdings.provider_security_id, holdings.security_id)
+      ELSE holdings.security_id
+    END
+  SQL
+
   private
 
     # Convert SnapTrade SDK objects to hashes
@@ -56,11 +64,17 @@ module SnaptradeAccount::DataHelpers
       nil
     end
 
-    def resolve_security(symbol, symbol_data)
+    # A ticker can have several Security rows (one per exchange), so the
+    # lookup must be deterministic or a holding flips between rows from one
+    # sync to the next (#3988). Order: the row the account already holds, the
+    # row on SnapTrade's reported exchange, then a fixed preference order.
+    #
+    # provider_row: true is for holdings; see held_security_for.
+    def resolve_security(symbol, symbol_data, account: nil, account_provider_id: nil, provider_row: false)
       ticker = symbol.to_s.upcase.strip
       return nil if ticker.blank?
 
-      security = Security.find_by(ticker: ticker)
+      security = existing_security_for(ticker, symbol_data, account, account_provider_id, provider_row)
 
       # If security exists but has a bad name (looks like a hash), update it
       if security && security.name&.start_with?("{")
@@ -85,16 +99,114 @@ module SnaptradeAccount::DataHelpers
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
       # Handle race condition - another process may have created it
       Rails.logger.error "Failed to create security #{ticker}: #{e.message}"
-      Security.find_by(ticker: ticker) # Retry find in case of race condition
+      existing_security_for(ticker, symbol_data, account, account_provider_id, provider_row) # Retry find in case of race condition
+    end
+
+    def existing_security_for(ticker, symbol_data, account, account_provider_id, provider_row = false)
+      held_security_for(account, ticker, account_provider_id, provider_row: provider_row) ||
+        reported_exchange_security_for(ticker, symbol_data) ||
+        preferred_security_for(ticker, symbol_data, account, account_provider_id)
+    end
+
+    # The row the position currently sits on, so it never moves. That includes
+    # a same-ticker remap: SnapTrade sends no external_id, so the import
+    # adapter's provider_security fallbacks never run for it. Latest date
+    # wins, provider holdings first.
+    #
+    # Only SnapTrade's own holdings and those with no provider (materialized
+    # from the account's trades). Without an external_id the adapter matches
+    # on security, date and currency alone, so following another provider's
+    # holding onto its row would overwrite that provider's quantity.
+    #
+    # With provider_row: true, a holding the user remapped (security_locked)
+    # answers with the row SnapTrade sent (provider_security_id), matched on
+    # that row's ticker. Holdings need it: the import adapter carries a remap
+    # and a locked cost basis to a new day's row by finding the earlier row
+    # whose provider_security_id is the security it is given. Trades must not
+    # use it, because a remap moves the position's trades to the chosen row.
+    def held_security_for(account, ticker, account_provider_id, provider_row: false)
+      return nil unless account
+
+      security_id_sql = provider_row ? PROVIDER_ROW_SECURITY_ID_SQL : HELD_ROW_SECURITY_ID_SQL
+
+      security_id = account.holdings
+        .where(account_provider_id: [ account_provider_id, nil ].uniq)
+        .joins(Arel.sql("INNER JOIN securities ON securities.id = #{security_id_sql}"))
+        .where("UPPER(securities.ticker) = ?", ticker)
+        .order(date: :desc)
+        .order(Arel.sql("holdings.account_provider_id IS NULL"), :id)
+        .pick(Arel.sql(security_id_sql))
+
+      security_id && Security.find_by(id: security_id)
+    end
+
+    def reported_exchange_security_for(ticker, symbol_data)
+      exchange = extract_exchange(symbol_data)
+      return nil if exchange.blank?
+
+      # Rows SnapTrade created carry its exchange in exchange_mic, not
+      # exchange_operating_mic, so they need a second match.
+      Security.find_by_ticker_and_exchange(ticker: ticker, exchange_operating_mic: exchange) ||
+        Security.where("UPPER(ticker) = ?", ticker).where(exchange_mic: exchange).order(:created_at, :id).first
+    end
+
+    # Not an identity match: the rows differ by exchange, and this order says
+    # nothing about which market SnapTrade trades. Once picked, the held
+    # position keeps the pick, so a wrong one never corrects itself; record
+    # each ambiguous pick so support can find the affected accounts.
+    def preferred_security_for(ticker, symbol_data, account, account_provider_id)
+      candidates = Security.where("UPPER(ticker) = ?", ticker)
+        .order(:offline, Arel.sql("price_provider IS NULL"), :created_at, :id)
+        .to_a
+
+      if candidates.size > 1
+        capture_ambiguous_security(ticker, candidates, symbol_data, account, account_provider_id)
+      end
+
+      candidates.first
+    end
+
+    def capture_ambiguous_security(ticker, candidates, symbol_data, account, account_provider_id)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Resolved #{ticker} to one of #{candidates.size} securities by fallback order; " \
+                 "no held position and no row on the reported exchange",
+        source: self.class.name,
+        provider_key: "snaptrade",
+        account: account,
+        account_provider_id: account_provider_id,
+        metadata: {
+          ticker: ticker,
+          reported_exchange: extract_exchange(symbol_data),
+          chosen_security_id: candidates.first.id,
+          candidates: candidates.map do |security|
+            security.slice(:id, :exchange_operating_mic, :exchange_mic, :offline, :price_provider)
+          end
+        }
+      )
     end
 
     def extract_security_name(symbol_data, fallback_ticker)
+      # Options contract with underlying symbol details
+      if (opt_type = symbol_data[:option_type] || symbol_data["option_type"]).present?
+        underlying = extract_underlying_ticker(symbol_data)
+        strike = symbol_data[:strike_price] || symbol_data["strike_price"]
+        exp_date = symbol_data[:expiration_date] || symbol_data["expiration_date"]
+
+        if underlying.present? && strike.present?
+          formatted_strike = (strike.to_f % 1).zero? ? "$#{strike.to_i}" : "$#{strike}"
+          formatted_exp = parse_date(exp_date)&.to_s || exp_date
+          return "#{underlying} #{formatted_strike} #{opt_type.to_s.upcase}#{formatted_exp.present? ? " (#{formatted_exp})" : ""}"
+        end
+      end
+
       # Try various paths where the name might be
       name = symbol_data[:description] || symbol_data["description"]
 
-      # If description is missing or looks like a type description, use ticker
+      # If description is missing or looks like a type description, use ticker directly without titleize
       if name.blank? || name.is_a?(Hash) || name =~ /^(COMMON STOCK|CRYPTOCURRENCY|ETF|MUTUAL FUND)$/i
-        name = fallback_ticker
+        return fallback_ticker
       end
 
       # Titleize for readability if it's all caps
@@ -104,7 +216,9 @@ module SnaptradeAccount::DataHelpers
     end
 
     def extract_exchange(symbol_data)
-      exchange = symbol_data[:exchange] || symbol_data["exchange"]
+      underlying = extract_underlying_data(symbol_data)
+      exchange = underlying[:exchange] if underlying
+      exchange ||= symbol_data[:exchange] || symbol_data["exchange"]
       return exchange.presence if exchange.is_a?(String)
       return nil unless exchange.is_a?(Hash)
 
@@ -113,8 +227,10 @@ module SnaptradeAccount::DataHelpers
 
     def extract_country_code(symbol_data)
       # Try to extract country from currency or exchange
-      currency = symbol_data[:currency]
-      currency = currency.dig(:code) if currency.is_a?(Hash)
+      underlying = extract_underlying_data(symbol_data)
+      currency = underlying[:currency] if underlying
+      currency ||= symbol_data[:currency] || symbol_data["currency"]
+      currency = currency[:code] || currency["code"] if currency.is_a?(Hash)
 
       case currency
       when "USD"
@@ -127,6 +243,24 @@ module SnaptradeAccount::DataHelpers
         nil # Could be many countries
       else
         nil
+      end
+    end
+
+    def extract_underlying_data(symbol_data)
+      raw = symbol_data[:underlying_symbol] || symbol_data["underlying_symbol"]
+      raw.is_a?(Hash) ? raw.with_indifferent_access : nil
+    end
+
+    def extract_underlying_ticker(symbol_data)
+      raw = symbol_data[:underlying_symbol] || symbol_data["underlying_symbol"]
+      if raw.is_a?(Hash)
+        data = raw.with_indifferent_access
+        data[:symbol] || data[:raw_symbol]
+      elsif raw.is_a?(String)
+        raw.presence
+      else
+        sym = symbol_data[:symbol] || symbol_data["symbol"]
+        sym.is_a?(Hash) ? (sym[:symbol] || sym["symbol"]) : sym.presence
       end
     end
 
@@ -153,5 +287,21 @@ module SnaptradeAccount::DataHelpers
       else
         fallback_currency
       end
+    end
+
+    # SnapTrade reports option `units` in contracts while quoting `price` per
+    # underlying share. Standard options represent 100 underlying shares per
+    # contract; mini options (`is_mini_option: true`) represent 10.
+    def contract_multiplier(symbol_data, option_data = nil)
+      data = option_data.presence || symbol_data
+      return 1 unless data.is_a?(Hash)
+
+      data = data.with_indifferent_access
+      is_option = option_data.present? ||
+                  data[:option_type].present? ||
+                  !data[:is_mini_option].nil?
+      return 1 unless is_option
+
+      ActiveModel::Type::Boolean.new.cast(data[:is_mini_option]) ? 10 : 100
     end
 end

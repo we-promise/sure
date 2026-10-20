@@ -76,7 +76,7 @@ class LunchflowAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
 
     assert_equal 2, holdings.count
     assert_equal "USD", holdings.first.currency
-    assert_equal "lunchflow_hld_test_123", holdings.first.external_id
+    assert_equal "lunchflow_hld_test_123_#{Date.current}", holdings.first.external_id
   end
 
   test "skips processing for non-investment accounts" do
@@ -149,7 +149,7 @@ class LunchflowAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     end
 
     holding = Holding.where(account: @account).where.not(external_id: nil).last
-    assert_equal "lunchflow_hld_custom_123", holding.external_id
+    assert_equal "lunchflow_hld_custom_123_#{Date.current}", holding.external_id
     assert_equal 100, holding.qty
     assert_equal 5000.0, holding.amount
   end

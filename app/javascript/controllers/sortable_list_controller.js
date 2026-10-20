@@ -1,16 +1,26 @@
 import { Controller } from "@hotwired/stimulus";
 
+// Reorderable list with mouse, touch (hold on the handle) and keyboard
+// (Enter/Space to grab, arrow keys to move, release to save). Each item needs
+// data-sortable-list-target="item" and data-sortable-list-id. On every change
+// the ids are sent as JSON to urlValue, nested under paramValue
+// ("a.b" sends { a: { b: [...] } }).
 export default class extends Controller {
-  static targets = ["section", "handle"];
+  static targets = ["item", "handle"];
 
-  // Short delay to prevent accidental touches on the grip handle
+  // Hold delay to require deliberate press-and-hold before activating drag mode.
+  // Lists whose whole item reacts to touch (not just a small grip) should raise
+  // it so a normal scroll does not start a drag.
   static values = {
+    url: String,
+    param: String,
     holdDelay: { type: Number, default: 150 },
   };
 
   connect() {
     this.draggedElement = null;
     this.placeholder = null;
+    this.touchStartX = 0;
     this.touchStartY = 0;
     this.currentTouchY = 0;
     this.isTouching = false;
@@ -21,6 +31,14 @@ export default class extends Controller {
 
   // ===== Mouse Drag Events =====
   dragStart(event) {
+    // If a touch interaction is in progress, cancel native drag —
+    // use touch events with hold delay instead.
+    // This avoids blocking mouse/trackpad drag on touch-capable laptops.
+    if (this.isTouching || this.pendingSection) {
+      event.preventDefault();
+      return;
+    }
+
     this.draggedElement = event.currentTarget;
     this.draggedElement.classList.add("opacity-50");
     this.draggedElement.setAttribute("aria-grabbed", "true");
@@ -67,20 +85,25 @@ export default class extends Controller {
   }
 
   // ===== Touch Events =====
-  // Touch events are bound to the drag handle only, with a short hold delay
-  // to prevent accidental touches.
+  // A press-and-hold gesture activates drag mode; a plain scroll gesture
+  // (finger moves before the hold delay elapses) cancels it.
 
   touchStart(event) {
-    // Find the parent section element from the handle
+    // Find the parent item element from the handle
     const section = event.currentTarget.closest(
-      "[data-reports-sortable-target='section']",
+      "[data-sortable-list-target='item']",
     );
     if (!section) return;
 
     this.pendingSection = section;
+    this.touchStartX = event.touches[0].clientX;
     this.touchStartY = event.touches[0].clientY;
     this.currentTouchY = this.touchStartY;
     this.holdActivated = false;
+
+    // Prevent text selection while waiting for hold to activate
+    section.style.userSelect = "none";
+    section.style.webkitUserSelect = "none";
 
     // Start hold timer
     this.holdTimer = setTimeout(() => {
@@ -104,10 +127,24 @@ export default class extends Controller {
   }
 
   touchMove(event) {
-    if (!this.holdActivated || !this.isTouching || !this.draggedElement) return;
+    const touchX = event.touches[0].clientX;
+    const touchY = event.touches[0].clientY;
+
+    // If hold hasn't activated yet, cancel if user moves too far (scrolling or swiping)
+    // Uses Euclidean distance to catch diagonal gestures too
+    if (!this.holdActivated) {
+      const dx = touchX - this.touchStartX;
+      const dy = touchY - this.touchStartY;
+      if (dx * dx + dy * dy > 100) { // 10px radius
+        this.cancelHold();
+      }
+      return;
+    }
+
+    if (!this.isTouching || !this.draggedElement) return;
 
     event.preventDefault();
-    this.currentTouchY = event.touches[0].clientY;
+    this.currentTouchY = touchY;
 
     const afterElement = this.getDragAfterElement(this.currentTouchY);
     this.clearPlaceholders();
@@ -144,6 +181,27 @@ export default class extends Controller {
     this.resetTouchState();
   }
 
+  touchCancel() {
+    this.cancelHold();
+
+    if (this.draggedElement) {
+      this.draggedElement.classList.remove("opacity-50", "scale-[1.02]");
+      this.draggedElement.setAttribute("aria-grabbed", "false");
+    }
+
+    this.clearPlaceholders();
+    this.resetTouchState();
+  }
+
+  // Belt-and-suspenders alongside the `[-webkit-touch-callout:none]` class:
+  // if a long-press context menu/link-preview still fires (e.g. a browser
+  // that ignores the CSS property), don't let it interrupt the hold gesture.
+  suppressContextMenu(event) {
+    if (this.pendingSection || this.isTouching) {
+      event.preventDefault();
+    }
+  }
+
   cancelHold() {
     if (this.holdTimer) {
       clearTimeout(this.holdTimer);
@@ -152,6 +210,16 @@ export default class extends Controller {
   }
 
   resetTouchState() {
+    // Restore text selection
+    if (this.pendingSection) {
+      this.pendingSection.style.userSelect = "";
+      this.pendingSection.style.webkitUserSelect = "";
+    }
+    if (this.draggedElement) {
+      this.draggedElement.style.userSelect = "";
+      this.draggedElement.style.webkitUserSelect = "";
+    }
+
     this.isTouching = false;
     this.draggedElement = null;
     this.pendingSection = null;
@@ -159,8 +227,14 @@ export default class extends Controller {
   }
 
   // ===== Keyboard Navigation =====
+  // Bound either on the item itself or on a handle inside it. Focus returns
+  // to the bound element after each move.
   handleKeyDown(event) {
-    const currentSection = event.currentTarget;
+    const currentSection = event.currentTarget.closest(
+      "[data-sortable-list-target='item']",
+    );
+    if (!currentSection) return;
+    this.keyboardFocusElement = event.currentTarget;
 
     switch (event.key) {
       case "ArrowUp":
@@ -229,23 +303,23 @@ export default class extends Controller {
 
   moveUp(section) {
     const previousSibling = section.previousElementSibling;
-    if (previousSibling?.hasAttribute("data-section-key")) {
+    if (previousSibling && this.itemTargets.includes(previousSibling)) {
       this.element.insertBefore(section, previousSibling);
-      section.focus();
+      this.keyboardFocusElement?.focus();
     }
   }
 
   moveDown(section) {
     const nextSibling = section.nextElementSibling;
-    if (nextSibling?.hasAttribute("data-section-key")) {
+    if (nextSibling && this.itemTargets.includes(nextSibling)) {
       this.element.insertBefore(nextSibling, section);
-      section.focus();
+      this.keyboardFocusElement?.focus();
     }
   }
 
   getDragAfterElement(y) {
     const draggableElements = [
-      ...this.sectionTargets.filter((section) => section !== this.draggedElement),
+      ...this.itemTargets.filter((section) => section !== this.draggedElement),
     ];
 
     return draggableElements.reduce(
@@ -273,7 +347,7 @@ export default class extends Controller {
   }
 
   clearPlaceholders() {
-    this.sectionTargets.forEach((section) => {
+    this.itemTargets.forEach((section) => {
       section.classList.remove(
         "border-t-4",
         "border-b-4",
@@ -284,43 +358,66 @@ export default class extends Controller {
     });
   }
 
-  async saveOrder() {
-    const order = this.sectionTargets.map(
-      (section) => section.dataset.sectionKey,
-    );
+  buildBody(order) {
+    return this.paramValue
+      .split(".")
+      .reduceRight((value, key) => ({ [key]: value }), order);
+  }
 
-    // Safely obtain CSRF token
-    const csrfToken = document.querySelector('meta[name="csrf-token"]');
-    if (!csrfToken) {
-      console.error(
-        "[Reports Sortable] CSRF token not found. Cannot save section order.",
-      );
-      return;
+  // Saves run one at a time. A change made while a save is in flight is sent
+  // once it finishes, with the latest order only, so an older request can
+  // never land after a newer one and restore an earlier order.
+  saveOrder() {
+    this.pendingOrder = this.itemTargets.map(
+      (item) => item.dataset.sortableListId,
+    );
+    if (!this.saving) this.flushSaves();
+  }
+
+  async flushSaves() {
+    this.saving = true;
+    while (this.pendingOrder) {
+      const order = this.pendingOrder;
+      this.pendingOrder = null;
+      await this.sendOrder(order);
     }
+    this.saving = false;
+  }
+
+  async sendOrder(order) {
+    // The meta tag is missing when forgery protection is off (e.g. in tests);
+    // the server still rejects requests without a valid token when it is on.
+    const csrfToken = document.querySelector(
+      'meta[name="csrf-token"]',
+    )?.content;
+    const headers = { "Content-Type": "application/json" };
+    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
 
     try {
-      const response = await fetch("/reports/update_preferences", {
+      const response = await fetch(this.urlValue, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken.content,
-        },
-        body: JSON.stringify({ preferences: { reports_section_order: order } }),
+        headers,
+        body: JSON.stringify(this.buildBody(order)),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error(
-          "[Reports Sortable] Failed to save section order:",
+          "[Sortable List] Failed to save order:",
           response.status,
           errorData,
         );
+        // Show the order that is actually saved instead of the unsaved one,
+        // e.g. when the list changed in another tab.
+        this.pendingOrder = null;
+        Turbo.visit(window.location.href, { action: "replace" });
       }
     } catch (error) {
-      console.error(
-        "[Reports Sortable] Network error saving section order:",
-        error,
-      );
+      console.error("[Sortable List] Network error saving order:", error);
+      // A newer order still gets sent; otherwise show what is actually saved.
+      if (!this.pendingOrder) {
+        Turbo.visit(window.location.href, { action: "replace" });
+      }
     }
   }
 }

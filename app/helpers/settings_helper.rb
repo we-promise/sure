@@ -120,7 +120,7 @@ module SettingsHelper
       sync_based_summary(key)
     when "trade_republic"
       return { status: :off } unless @trade_republic_items&.any?
-      sync_based_summary(key)
+      trade_republic_summary
     when "indexa_capital"
       return { status: :off } unless @indexa_capital_items&.any?
       sync_based_summary(key)
@@ -276,6 +276,27 @@ module SettingsHelper
       else
         { status: :ok, last_synced_at: nil }
       end
+    end
+
+    # Like Enable Banking, the row warns before a session ends and once a
+    # connection has to log in again. A Trade Republic login lasts only
+    # 24 hours, so the warning starts two hours before the end. A login
+    # comes first: an ended session no longer syncs, so a failed last sync
+    # would otherwise show until the next login.
+    def trade_republic_summary
+      summary = sync_based_summary("trade_republic")
+
+      if @trade_republic_items.any?(&:needs_login?)
+        return summary.merge(status: :warn, meta: t("settings.providers.meta.login_required"))
+      end
+      return summary if summary[:status] == :err
+
+      expiring = @trade_republic_items
+        .select { |item| item.ready_for_sync? && item.session_expires_at.present? && item.session_expires_at < 2.hours.from_now }
+        .min_by(&:session_expires_at)
+      return summary unless expiring
+
+      summary.merge(status: :warn, meta: trade_republic_session_expiry("settings.providers.meta.login_expires_soon", expiring.session_expires_at))
     end
 
     def not_self_hosted?
