@@ -91,7 +91,7 @@ class BalanceSheet
 
       accounts.sort_by do |account|
         position = positions[account.id]
-        [ position ? 0 : 1, position || 0, account.name.to_s.downcase ]
+        [ position ? 0 : 1, position || 0, account.name.to_s.downcase, account.id.to_s ]
       end
     end
 end

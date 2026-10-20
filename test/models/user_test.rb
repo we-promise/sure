@@ -1381,6 +1381,14 @@ class UserTest < ActiveSupport::TestCase
     assert_equal [ accounts(:credit_card).id ], order["credit_card"]
   end
 
+  test "update_manual_account_order drops family accounts not shared with the user" do
+    unshared = families(:dylan_family).accounts.create!(name: "Unshared", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:family_member))
+
+    assert @user.update_manual_account_order("depository", [ unshared.id, accounts(:depository).id ])
+
+    assert_equal [ accounts(:depository).id ], @user.reload.manual_account_order["depository"]
+  end
+
   test "update_manual_account_order drops accounts from another group" do
     @user.update_manual_account_order("depository", [ accounts(:credit_card).id, accounts(:depository).id ])
 
