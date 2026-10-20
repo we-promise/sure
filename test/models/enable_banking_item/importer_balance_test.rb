@@ -594,6 +594,469 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_nil unsaved_account.current_balance
   end
 
+  test "import refreshes the balance after fetching transactions" do
+    link_account(Depository.create!)
+
+    @enable_banking_item.stubs(:upsert_enable_banking_snapshot!)
+    @importer.stubs(:fetch_session_data).returns(accounts: [])
+    order = sequence("balance after transactions")
+    @importer.expects(:fetch_and_store_transactions).with(@enable_banking_account).returns(success: true, transactions_count: 0).in_sequence(order)
+    @importer.expects(:fetch_and_update_balance).with(@enable_banking_account).returns(true).in_sequence(order)
+
+    @importer.import
+  end
+
+  test "import still refreshes the balance when the transaction fetch raises" do
+    link_account(Depository.create!)
+
+    @enable_banking_item.stubs(:upsert_enable_banking_snapshot!)
+    @importer.stubs(:fetch_session_data).returns(accounts: [])
+    @importer.stubs(:fetch_and_store_transactions).raises(StandardError, "boom")
+    @importer.expects(:fetch_and_update_balance).with(@enable_banking_account).returns(true)
+
+    result = @importer.import
+
+    assert_equal 1, result[:transactions_failed]
+    assert_equal 0, result[:balances_failed]
+  end
+
+  test "a failed import leaves the anchor's verification untouched" do
+    link_account(Depository.create!)
+    @enable_banking_account.update!(balance_verified: false)
+
+    @enable_banking_item.stubs(:upsert_enable_banking_snapshot!)
+    @importer.stubs(:fetch_session_data).returns(accounts: [])
+    @importer.stubs(:fetch_and_store_transactions).raises(StandardError, "boom")
+    stub_balances(clbd("950.00"))
+
+    result = @importer.import
+
+    # The syncer stops before the processor whenever the import fails, so this
+    # balance never becomes the anchor and must not vouch for the old one.
+    assert_not result[:success]
+    @enable_banking_account.reload
+    assert_equal BigDecimal("950.00"), @enable_banking_account.current_balance
+    assert_not @enable_banking_account.balance_verified?
+    assert @enable_banking_account.balance_evidence_verified?
+  end
+
+  test "duplicate CLBD balances without metadata pick the lower one on a depository account (#3188)" do
+    link_account(Depository.create!)
+    stub_balances(clbd("1234.56"), clbd("5834.56"))
+
+    assert_difference "DebugLogEntry.count", 1 do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("1234.56"), @enable_banking_account.current_balance
+    assert_not @enable_banking_account.balance_evidence_verified?, "a heuristic pick must not become a trusted anchor"
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "provider_sync_warning", entry.category
+    assert_equal "lowest", entry.metadata["stage"]
+    assert_equal 2, entry.metadata["candidates"].size
+  end
+
+  test "a single balance per type counts as evidence and logs nothing" do
+    stub_balances(clbd("1234.56"))
+
+    assert_no_difference "DebugLogEntry.count" do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+
+    assert @enable_banking_account.reload.balance_evidence_verified?
+  end
+
+  test "duplicate balances in different currencies are narrowed by currency before any tiebreak" do
+    link_account(Depository.create!)
+    @enable_banking_account.update!(raw_payload: { "currency" => "EUR" })
+    stub_balances(clbd("900.00", currency: "USD"), clbd("1234.56"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("1234.56"), @enable_banking_account.current_balance
+    assert @enable_banking_account.balance_evidence_verified?
+    assert_empty DebugLogEntry.where("metadata ->> 'stage' IS NOT NULL")
+  end
+
+  test "duplicate balances pointing to different bookings prefer the newer booking" do
+    link_account(CreditCard.create!)
+    @enable_banking_account.update!(raw_transactions_payload: [
+      booked_tx("ref-old", 3.days.ago.to_date, "10.00"),
+      booked_tx("ref-new", 1.day.ago.to_date, "20.00")
+    ])
+    stub_balances(
+      clbd("100.00", last_committed_transaction: "ref-old"),
+      clbd("80.00", last_committed_transaction: "ref-new")
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("80.00"), @enable_banking_account.reload.current_balance
+    assert_equal "last_committed_transaction", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "duplicate balances pointing to the same booking fall through to later stages" do
+    link_account(Depository.create!)
+    @enable_banking_account.update!(raw_transactions_payload: [ booked_tx("ref-1", 1.day.ago.to_date, "10.00") ])
+    stub_balances(
+      clbd("5834.56", last_committed_transaction: "ref-1"),
+      clbd("1234.56", last_committed_transaction: "ref-1")
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("1234.56"), @enable_banking_account.reload.current_balance
+    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "a gap equal to the credit limit identifies the overdraft-inclusive balance" do
+    link_account(Depository.create!)
+    @enable_banking_account.update!(credit_limit: BigDecimal("4600.00"))
+    stub_balances(clbd("5834.56"), clbd("1234.56"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("1234.56"), @enable_banking_account.reload.current_balance
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "credit_limit", entry.metadata["stage"]
+    assert_equal "4600.0", entry.metadata["credit_limit"]
+  end
+
+  test "a verified previous anchor minus booked outflows picks the matching balance" do
+    account = link_account(Depository.create!)
+    create_anchor(account, amount: 1000, date: 2.days.ago.to_date)
+    @enable_banking_account.update!(
+      balance_verified: true,
+      raw_transactions_payload: [ booked_tx("ref-1", 1.day.ago.to_date, "50.00", indicator: "DBIT") ]
+    )
+    # 1000 - 50 = 950. Adding the outflow instead (1050) would pick 1100.
+    stub_balances(clbd("1100.00"), clbd("950.00"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("950.00"), @enable_banking_account.reload.current_balance
+    assert @enable_banking_account.balance_evidence_verified?
+    assert_equal "anchor", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "the anchor check abstains when bookings on the anchor day change the answer" do
+    account = link_account(Depository.create!)
+    create_anchor(account, amount: 1000, date: 2.days.ago.to_date)
+    @enable_banking_account.update!(
+      balance_verified: true,
+      raw_transactions_payload: [ booked_tx("ref-same-day", 2.days.ago.to_date, "700.00", indicator: "DBIT") ]
+    )
+    # Without the anchor-day booking 1000 matches, with it 300 does.
+    stub_balances(clbd("1000.00"), clbd("300.00"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("300.00"), @enable_banking_account.reload.current_balance
+    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "the anchor check abstains when a booked amount cannot be parsed" do
+    account = link_account(Depository.create!)
+    create_anchor(account, amount: 1000, date: 2.days.ago.to_date)
+    @enable_banking_account.update!(
+      balance_verified: true,
+      raw_transactions_payload: [ booked_tx("ref-bad", 1.day.ago.to_date, "not-a-number", indicator: "DBIT") ]
+    )
+    # Treating the bad amount as 0 would confirm 1000 as the anchor-backed pick.
+    stub_balances(clbd("1000.00"), clbd("950.00"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("950.00"), @enable_banking_account.reload.current_balance
+    assert_not @enable_banking_account.balance_evidence_verified?
+    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "the anchor check falls back to value_date when booking_date is missing" do
+    account = link_account(Depository.create!)
+    create_anchor(account, amount: 1000, date: 2.days.ago.to_date)
+    tx = booked_tx("ref-1", 1.day.ago.to_date, "50.00", indicator: "DBIT")
+    tx["value_date"] = tx.delete("booking_date")
+    @enable_banking_account.update!(balance_verified: true, raw_transactions_payload: [ tx ])
+    stub_balances(clbd("1000.00"), clbd("950.00"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("950.00"), @enable_banking_account.reload.current_balance
+    assert_equal "anchor", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "the anchor check ignores pending rows and bookings before the anchor date" do
+    account = link_account(Depository.create!)
+    create_anchor(account, amount: 1000, date: 2.days.ago.to_date)
+    @enable_banking_account.update!(
+      balance_verified: true,
+      raw_transactions_payload: [
+        booked_tx("ref-before", 3.days.ago.to_date, "300.00", indicator: "DBIT"),
+        booked_tx("ref-pending", 1.day.ago.to_date, "300.00", indicator: "DBIT").merge("status" => "PDNG", "_pending" => true),
+        booked_tx("ref-in", 1.day.ago.to_date, "100.00", indicator: "CRDT")
+      ]
+    )
+    stub_balances(clbd("1100.00"), clbd("700.00"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("1100.00"), @enable_banking_account.reload.current_balance
+    assert_equal "anchor", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "the anchor check is skipped when the previous balance was not verified" do
+    account = link_account(Depository.create!)
+    create_anchor(account, amount: 1000, date: 2.days.ago.to_date)
+    @enable_banking_account.update!(balance_verified: false, raw_transactions_payload: [])
+    stub_balances(clbd("1000.00"), clbd("800.00"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("800.00"), @enable_banking_account.reload.current_balance
+    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "an anchor tie is broken by the newer last_change_date_time" do
+    account = link_account(Depository.create!)
+    create_anchor(account, amount: 1000, date: 2.days.ago.to_date)
+    @enable_banking_account.update!(balance_verified: true, raw_transactions_payload: [])
+    stub_balances(
+      clbd("999.99", last_change_date_time: "2026-09-29T08:00:00Z"),
+      clbd("1000.00", last_change_date_time: "2026-09-30T08:00:00Z")
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("1000.00"), @enable_banking_account.reload.current_balance
+    assert_not @enable_banking_account.balance_evidence_verified?
+    assert @enable_banking_account.balance_verified?, "only the processor may change the anchor's verification"
+    assert_equal "anchor_timestamp", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "the anchor check abstains when no candidate matches the expected balance" do
+    account = link_account(Depository.create!)
+    create_anchor(account, amount: 1000, date: 2.days.ago.to_date)
+    @enable_banking_account.update!(balance_verified: true, raw_transactions_payload: [])
+    # 1500 is closer to 1000 than 1600 but still no match, so it is no evidence.
+    stub_balances(clbd("1600.00"), clbd("1500.00"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("1500.00"), @enable_banking_account.reload.current_balance
+    assert_not @enable_banking_account.balance_evidence_verified?
+    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "duplicate fresher balances go through the same tiebreak regardless of response order" do
+    link_account(Depository.create!)
+    itav = lambda do |amount|
+      { balance_type: "ITAV", balance_amount: { amount: amount, currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-29" }
+    end
+    opbd = { balance_type: "OPBD", balance_amount: { amount: "100.00", currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-01" }
+
+    [ [ "900.00", "200.00" ], [ "200.00", "900.00" ] ].each do |first, second|
+      stub_balances(opbd, itav.call(first), itav.call(second))
+
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+      assert_equal BigDecimal("200.00"), @enable_banking_account.reload.current_balance, "order #{first}, #{second}"
+      assert_not @enable_banking_account.balance_evidence_verified?
+      assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    end
+  end
+
+  test "an older entry of the fresher type keeps an evidence-backed fresher pick unverified" do
+    stub_balances(
+      { balance_type: "OPBD", balance_amount: { amount: "100.00", currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-01" },
+      { balance_type: "ITAV", balance_amount: { amount: "150.00", currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-15" },
+      { balance_type: "ITAV", balance_amount: { amount: "900.00", currency: "USD" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-29" },
+      { balance_type: "ITAV", balance_amount: { amount: "200.00", currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-29" }
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("200.00"), @enable_banking_account.current_balance
+    assert_not @enable_banking_account.balance_evidence_verified?
+  end
+
+  test "several balances of unknown types are not treated as evidence" do
+    @enable_banking_account.update!(balance_evidence_verified: true)
+    stub_balances(
+      { balance_type: "XYZ1", balance_amount: { amount: "100.00", currency: "EUR" }, credit_debit_indicator: "CRDT" },
+      { balance_type: "XYZ2", balance_amount: { amount: "900.00", currency: "EUR" }, credit_debit_indicator: "CRDT" }
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("100.00"), @enable_banking_account.current_balance
+    assert_not @enable_banking_account.balance_evidence_verified?
+  end
+
+  test "a fresher balance whose type is duplicated is not marked as verified" do
+    @enable_banking_account.update!(balance_evidence_verified: true)
+    stub_balances(
+      { balance_type: "OPBD", balance_amount: { amount: "100.00", currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-01" },
+      { balance_type: "ITAV", balance_amount: { amount: "200.00", currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-29" },
+      { balance_type: "ITAV", balance_amount: { amount: "900.00", currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-29" }
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_not @enable_banking_account.reload.balance_evidence_verified?
+  end
+
+  test "import counts a raising balance refresh as failed and keeps syncing" do
+    link_account(Depository.create!)
+
+    @enable_banking_item.stubs(:upsert_enable_banking_snapshot!)
+    @importer.stubs(:fetch_session_data).returns(accounts: [])
+    @importer.stubs(:fetch_and_store_transactions).returns(success: true, transactions_count: 1)
+    @importer.stubs(:fetch_and_update_balance).raises(ActiveRecord::StatementInvalid, "lock timeout")
+
+    result = nil
+    assert_nothing_raised { result = @importer.import }
+
+    assert_equal 1, result[:balances_failed]
+    assert_equal 1, result[:transactions_imported]
+  end
+
+  test "duplicate balances on a credit card keep the first reported entry" do
+    link_account(CreditCard.create!)
+    stub_balances(clbd("500.00"), clbd("100.00"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("500.00"), @enable_banking_account.reload.current_balance
+    assert_equal "first", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "a gap equal to the credit limit decides before the booking references" do
+    link_account(Depository.create!)
+    @enable_banking_account.update!(
+      credit_limit: BigDecimal("4580.00"),
+      raw_transactions_payload: [
+        booked_tx("ref-a", 2.days.ago.to_date, "10.00"),
+        booked_tx("ref-b", 1.day.ago.to_date, "20.00")
+      ]
+    )
+    stub_balances(
+      clbd("1234.56", last_committed_transaction: "ref-a"),
+      clbd("5814.56", last_committed_transaction: "ref-b")
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("1234.56"), @enable_banking_account.reload.current_balance
+    assert_equal "credit_limit", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "an evidence-backed tie in the fresher type stays verified when it has no older entries" do
+    link_account(Depository.create!)
+    @enable_banking_account.update!(credit_limit: BigDecimal("4600.00"))
+    itav = lambda do |amount|
+      { balance_type: "ITAV", balance_amount: { amount: amount, currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-29" }
+    end
+    stub_balances(
+      { balance_type: "OPBD", balance_amount: { amount: "100.00", currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-01" },
+      itav.call("5834.56"),
+      itav.call("1234.56")
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("1234.56"), @enable_banking_account.current_balance
+    assert @enable_banking_account.balance_evidence_verified?
+    assert_equal "credit_limit", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "the same amount reported twice is no tie" do
+    link_account(Depository.create!)
+    stub_balances(clbd("1000.00"), clbd("1000.00"))
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("1000.00"), @enable_banking_account.current_balance
+    assert @enable_banking_account.balance_evidence_verified?
+  end
+
+  test "a duplicated period boundary balance that a fresher balance replaces is not logged" do
+    link_account(Depository.create!)
+    opbd = lambda do |amount|
+      { balance_type: "OPBD", balance_amount: { amount: amount, currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-01" }
+    end
+    stub_balances(
+      opbd.call("100.00"),
+      opbd.call("900.00"),
+      { balance_type: "ITAV", balance_amount: { amount: "200.00", currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-29" }
+    )
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+
+    @enable_banking_account.reload
+    assert_equal BigDecimal("200.00"), @enable_banking_account.current_balance
+    assert @enable_banking_account.balance_evidence_verified?
+  end
+
+  test "the anchor check leaves unidentified card holds out of the booked flows" do
+    account = link_account(Depository.create!)
+    create_anchor(account, amount: 1000, date: 2.days.ago.to_date)
+    hold = {
+      "entry_reference" => nil,
+      "transaction_id" => nil,
+      "status" => "BOOK",
+      "booking_date" => 1.day.ago.to_date.iso8601,
+      "credit_debit_indicator" => "DBIT",
+      "transaction_amount" => { "amount" => "50.00", "currency" => "EUR" },
+      "remittance_information" => [ "474836xxxxxx6879 003015315475" ]
+    }
+    @enable_banking_account.update!(balance_verified: true, raw_transactions_payload: [ hold ])
+    stub_balances(clbd("1000.00"), clbd("950.00"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("1000.00"), @enable_banking_account.reload.current_balance
+    assert_equal "anchor", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "the anchor check ignores an anchor written before the provider account was linked" do
+    account = link_account(Depository.create!)
+    create_anchor(account, amount: 1000, date: 2.days.ago.to_date)
+    @enable_banking_account.account_provider.update_column(:created_at, 1.hour.from_now)
+    @enable_banking_account.update!(balance_verified: true, raw_transactions_payload: [])
+    stub_balances(clbd("1000.00"), clbd("800.00"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("800.00"), @enable_banking_account.reload.current_balance
+    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "an unchanged tie is logged once, a changed one again" do
+    link_account(Depository.create!)
+    stub_balances(clbd("5834.56"), clbd("1234.56"))
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      2.times { assert @importer.send(:fetch_and_update_balance, @enable_banking_account) }
+    end
+
+    stub_balances(clbd("5800.00"), clbd("1200.00"))
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+  end
+
   private
 
     def link_account(accountable)
@@ -606,6 +1069,44 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
         accountable: accountable
       )
       AccountProvider.create!(account: account, provider: @enable_banking_account)
+      @enable_banking_account.reload
+      account
+    end
+
+    def create_anchor(account, amount:, date:)
+      account.entries.create!(
+        date: date,
+        name: "Current balance",
+        amount: amount,
+        currency: "EUR",
+        entryable: Valuation.new(kind: "current_anchor")
+      )
+    end
+
+    def stub_balances(*balances)
+      @mock_provider.stubs(:get_account_balances).returns(balances: balances)
+    end
+
+    def clbd(amount, currency: "EUR", **metadata)
+      {
+        name: "Accounting balance",
+        balance_type: "CLBD",
+        balance_amount: { amount: amount, currency: currency },
+        credit_debit_indicator: "CRDT",
+        last_change_date_time: nil,
+        reference_date: nil,
+        last_committed_transaction: nil
+      }.merge(metadata)
+    end
+
+    def booked_tx(entry_reference, booking_date, amount, indicator: "DBIT")
+      {
+        "entry_reference" => entry_reference,
+        "status" => "BOOK",
+        "booking_date" => booking_date.iso8601,
+        "credit_debit_indicator" => indicator,
+        "transaction_amount" => { "amount" => amount, "currency" => "EUR" }
+      }
     end
 
     # Shaped like PayPal's response: the primary EUR balance first, then empty
