@@ -443,9 +443,7 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
       account: { type: Loan, currency: "USD" },
       entries: [
         { type: "opening_anchor", date: 2.days.ago.to_date, balance: 20000 },
-        # "Loan payment" of $2000, which reduces the principal
-        # TODO: We'll eventually need to calculate which portion of the txn was "interest" vs. "principal", but for now we'll just assume it's all principal
-        # since we don't have a first-class way to track interest payments yet.
+        # A loan without terms keeps the legacy full-payment behavior.
         { type: "transaction", date: 1.day.ago.to_date, amount: -2000 }
       ]
     )
@@ -471,6 +469,32 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
         }
       ]
     )
+  end
+
+  test "amortizable loan payments reduce only principal" do
+    account = create_account_with_ledger(
+      account: { type: Loan, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 2.days.ago.to_date, balance: 20_000 },
+        { type: "transaction", date: Date.yesterday, amount: -2_000 }
+      ]
+    )
+    account.loan.update!(
+      subtype: "auto",
+      interest_rate: 12,
+      term_months: 360,
+      rate_type: "fixed",
+      start_date: 2.days.ago.to_date,
+      initial_balance: 20_000
+    )
+    account.reload
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+    payment_day = calculated.find { |balance| balance.date == Date.yesterday }
+
+    assert_equal BigDecimal("18006.58"), payment_day.balance
+    assert_equal BigDecimal("1993.42"), payment_day.non_cash_inflows
+    assert_equal BigDecimal("0"), payment_day.non_cash_adjustments
   end
 
   test "non cash accounts can only use valuations and transactions will be recorded but ignored for balance calculation" do

@@ -96,6 +96,10 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
     # Positive entries amount on an "asset" account means, "account value has decreased"
     # Positive entries amount on a "liability" account means, "account debt has increased"
     def signed_entry_flows(entries)
+      if account.loan? && entries.any? && (change = loan_principal_change(entries.first.date))
+        return -change.net
+      end
+
       entry_flows = entries.sum(&:amount)
       account.asset? ? entry_flows : -entry_flows
     end
