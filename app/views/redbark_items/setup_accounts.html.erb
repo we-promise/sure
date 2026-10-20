@@ -35,6 +35,13 @@
             </div>
           </div>
 
+          <%
+            # Loop-invariant: the same for every row, computed once rather than
+            # recomputed on each iteration below.
+            default_sync_start_date = RedbarkAccount::DEFAULT_INITIAL_HISTORY_DAYS.days.ago.to_date
+            min_sync_start_date = RedbarkAccount::MAX_SYNC_START_DATE_LOOKBACK_DAYS.days.ago.to_date
+            max_sync_start_date = Date.current
+          %>
           <div class="space-y-4 max-h-96 overflow-y-auto">
             <% @unlinked_accounts.each do |redbark_account| %>
               <div class="border border-primary rounded-lg p-4">
@@ -60,10 +67,10 @@
                   <%= t(".sync_start_date_label") %>
                 </label>
                 <%= date_field_tag "accounts[#{redbark_account.id}][sync_start_date]",
-                                    redbark_account.sync_start_date || RedbarkAccount::DEFAULT_INITIAL_HISTORY_DAYS.days.ago.to_date,
+                                    redbark_account.sync_start_date || default_sync_start_date,
                                     id: "sync_start_date_#{redbark_account.id}",
-                                    min: RedbarkAccount::MAX_SYNC_START_DATE_LOOKBACK_DAYS.days.ago.to_date,
-                                    max: Date.current,
+                                    min: min_sync_start_date,
+                                    max: max_sync_start_date,
                                     autocomplete: "off",
                                     class: "bg-container border border-primary rounded px-2 py-1 text-sm text-primary w-full" %>
                 <p class="text-xs text-secondary mt-1"><%= t(".sync_start_date_help") %></p>
