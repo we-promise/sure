@@ -53,6 +53,32 @@ class Security::Split < ApplicationRecord
       end
     end
 
+    # Re-points a merged duplicate's splits at the security that replaces it.
+    # On an ex-date both have, the manual row stays over a provider's, and
+    # between equals the canonical security's stays. The other is deleted.
+    # Returns how many were moved and how many dropped.
+    def move!(from:, to:)
+      counts = { moved: 0, dropped: 0 }
+
+      where(security_id: Array(from).map(&:id)).find_each do |split|
+        existing = to.splits.find_by(ex_date: split.ex_date)
+
+        if existing.nil?
+          split.update!(security: to)
+          counts[:moved] += 1
+        elsif split.manual? && !existing.manual?
+          existing.destroy!
+          split.update!(security: to)
+          counts[:moved] += 1
+        else
+          split.destroy!
+          counts[:dropped] += 1
+        end
+      end
+
+      counts
+    end
+
     private
       def report_overruled(split, provider_ratio, provider)
         return if provider_ratio == split.ratio

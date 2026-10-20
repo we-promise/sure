@@ -149,6 +149,37 @@ class Security::SplitTest < ActiveSupport::TestCase
     assert_equal [ holder.id ], enqueued_account_ids
   end
 
+  test "a duplicate's split moves to the canonical security" do
+    canonical = Security.create!(ticker: "CANO", name: "Canonical")
+    split = record(2, 1, "snaptrade")
+
+    Security::Split.move!(from: @security, to: canonical)
+
+    assert_equal canonical.id, split.reload.security_id
+  end
+
+  test "on a collision manual wins" do
+    canonical = Security.create!(ticker: "CANO", name: "Canonical")
+    canonical.splits.create!(ex_date: @ex_date, numerator: 3, denominator: 1, source: "snaptrade")
+    record(2, 1, "manual")
+
+    Security::Split.move!(from: @security, to: canonical)
+
+    assert_equal [ 2, 1, "manual" ], canonical.splits.sole.values_at(:numerator, :denominator, :source)
+    assert_empty @security.splits.reload
+  end
+
+  test "on a collision between equals the canonical row stays" do
+    canonical = Security.create!(ticker: "CANO", name: "Canonical")
+    canonical.splits.create!(ex_date: @ex_date, numerator: 3, denominator: 1, source: "manual")
+    record(2, 1, "manual")
+
+    Security::Split.move!(from: @security, to: canonical)
+
+    assert_equal [ 3, 1 ], canonical.splits.sole.values_at(:numerator, :denominator)
+    assert_empty @security.splits.reload
+  end
+
   private
     def record(numerator, denominator, source)
       Security::Split.record!(security: @security, ex_date: @ex_date, numerator: numerator, denominator: denominator, source: source)
