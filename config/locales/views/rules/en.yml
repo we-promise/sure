@@ -64,6 +64,9 @@ en:
       cost_warning: You may incur costs, please check with the model provider for the most up-to-date prices.
       view_usage_history: View usage history
       confirm_changes: Confirm changes
+    action_executors:
+      append_transaction_notes: Add line to transaction notes
+      set_transaction_notes: Set transaction notes
     actions:
       to_label: to
       value_placeholder: Enter a value

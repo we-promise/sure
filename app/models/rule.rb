@@ -31,6 +31,7 @@ class Rule < ApplicationRecord
   # Every rule must have at least 1 action
   validate :min_actions
   validate :no_duplicate_actions
+  validate :no_conflicting_note_actions
 
   # Switching a rule on records the transactions it already matches as delivered,
   # so an email action only reports what appears afterwards. Rule::Action seeds the
@@ -210,7 +211,7 @@ class Rule < ApplicationRecord
     has_async = false
 
     actions.each do |action|
-      excluded_ids = action.claimed_attributes.flat_map { |attribute| claimed_ids.fetch(attribute, []).to_a }.uniq
+      excluded_ids = action.blocking_attributes.flat_map { |attribute| claimed_ids.fetch(attribute, []).to_a }.uniq
       action_scope = Rule.excluding_transaction_ids(scope, excluded_ids)
       result = action.apply(action_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
 
@@ -311,6 +312,14 @@ class Rule < ApplicationRecord
       action_types = actions.reject(&:marked_for_destruction?).map(&:action_type)
 
       errors.add(:base, :duplicate_actions, types: action_types.inspect) if action_types.uniq.count != action_types.count
+    end
+
+    # Replacing and appending the notes in one rule would rewrite them on every
+    # run (the append re-adds its line after the replace, or the other way round).
+    def no_conflicting_note_actions
+      action_types = actions.reject(&:marked_for_destruction?).map(&:action_type)
+
+      errors.add(:base, :conflicting_note_actions) if (%w[set_transaction_notes append_transaction_notes] - action_types).empty?
     end
 
     # Validation: To keep rules simple and easy to understand, we don't allow nested compound conditions.

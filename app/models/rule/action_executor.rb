@@ -33,6 +33,13 @@ class Rule::ActionExecutor
     []
   end
 
+  # Attributes whose claims keep this action away from a transaction. Usually
+  # the attributes it claims itself; an additive action can be blocked by a
+  # replacing action above without blocking other additive actions.
+  def blocking_attributes
+    claimed_attributes
+  end
+
   # Whether matching this action keeps rules further down from setting
   # claimed_attributes. False for actions that only fill a field later and not
   # for every match, so a broad one doesn't silently block the rules below it.

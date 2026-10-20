@@ -300,6 +300,47 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     other&.close
   end
 
+  test "the rule higher up wins the notes field" do
+    create_rule("Top", "Whole Foods", notes: "Groceries run")
+    create_rule("Bottom", "Whole Foods", append_notes: "Check receipt")
+
+    run_active_rules
+
+    assert_equal "Groceries run", @whole_foods.reload.entry.notes
+  end
+
+  test "lines from several appending rules add up" do
+    create_rule("Top", "Whole Foods", append_notes: "Check receipt")
+    create_rule("Bottom", "Whole", append_notes: "Reimbursable")
+
+    run_active_rules
+    run_active_rules
+
+    assert_equal "Check receipt\nReimbursable", @whole_foods.reload.entry.notes
+  end
+
+  test "a blank note action above does not claim the notes" do
+    top = create_rule("Top", "Whole Foods", notes: "Placeholder")
+    top.actions.first.update_column(:value, " ")
+    blank_append = create_rule("Middle", "Whole Foods", append_notes: "Placeholder")
+    blank_append.actions.first.update_column(:value, "\n")
+    create_rule("Bottom", "Whole", notes: "Groceries run")
+
+    run_active_rules
+
+    assert_equal "Groceries run", @whole_foods.reload.entry.notes
+  end
+
+  test "an appended note keeps a rule further down from replacing the notes" do
+    create_rule("Top", "Whole Foods", append_notes: "Check receipt")
+    create_rule("Bottom", "Whole Foods", notes: "Groceries run")
+
+    run_active_rules
+    run_active_rules
+
+    assert_equal "Check receipt", @whole_foods.reload.entry.notes
+  end
+
   private
     def run_active_rules
       Rule::Runner.new(@family, rules: @family.rules.where(active: true), execution_type: "scheduled").run
@@ -310,6 +351,8 @@ class Rule::RunnerTest < ActiveSupport::TestCase
       actions << Rule::Action.new(action_type: "set_transaction_category", value: category.id) if category
       actions << Rule::Action.new(action_type: "set_transaction_tags", value: tags.map(&:id)) if tags
       actions << Rule::Action.new(action_type: "set_transaction_name", value: options[:name]) if options[:name]
+      actions << Rule::Action.new(action_type: "set_transaction_notes", value: options[:notes]) if options[:notes]
+      actions << Rule::Action.new(action_type: "append_transaction_notes", value: options[:append_notes]) if options[:append_notes]
 
       @family.rules.create!(
         name: name,

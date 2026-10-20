@@ -3,6 +3,9 @@ de:
   rules:
     no_action: Keine Aktion
     no_condition: Keine Bedingung
+    action_executors:
+      append_transaction_notes: Zeile an Notiz anhängen
+      set_transaction_notes: Notiz ersetzen
     actions:
       value_placeholder: Wert eingeben
     apply_all:

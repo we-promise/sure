@@ -4,6 +4,7 @@ de:
     errors:
       models:
         rule:
+          conflicting_note_actions: Eine Regel kann die Notiz nicht gleichzeitig ersetzen und eine Zeile anhängen
           duplicate_actions: 'Eine Regel darf keine doppelten Aktionen enthalten: %{types}'
           min_actions: braucht mindestens eine Aktion
           nested_conditions: Zusammengesetzte Bedingungen lassen sich nicht verschachteln

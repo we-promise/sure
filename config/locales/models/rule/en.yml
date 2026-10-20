@@ -4,6 +4,7 @@ en:
     errors:
       models:
         rule:
+          conflicting_note_actions: "A rule cannot both set and add a line to the transaction notes"
           min_actions: "must have at least one action"
           duplicate_actions: "Rule cannot have duplicate actions %{types}"
           nested_conditions: "Compound conditions cannot be nested"

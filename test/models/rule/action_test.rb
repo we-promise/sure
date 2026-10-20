@@ -292,4 +292,122 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal 0, result
     assert_nil @txn1.reload.investment_activity_label
   end
+
+  test "set_transaction_notes replaces the notes" do
+    @txn1.entry.lock_attr!(:notes)
+    @txn2.entry.update!(notes: "Old note")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_transaction_notes",
+      value: "Reimbursable"
+    )
+
+    assert_equal 2, action.apply(@rule_scope)
+
+    assert_nil @txn1.reload.entry.notes
+    assert_equal "Reimbursable", @txn2.reload.entry.notes
+    assert_equal "Reimbursable", @txn3.reload.entry.notes
+  end
+
+  test "set_transaction_notes overrides locked notes when ignore_attribute_locks" do
+    @txn1.entry.lock_attr!(:notes)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_transaction_notes",
+      value: "Reimbursable"
+    )
+
+    action.apply(@rule_scope, ignore_attribute_locks: true)
+
+    assert_equal "Reimbursable", @txn1.reload.entry.notes
+  end
+
+  test "set_transaction_notes does nothing for a blank value" do
+    @txn1.entry.update!(notes: "Keep me")
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_notes", value: " ")
+
+    assert_equal 0, action.apply(@rule_scope)
+    assert_equal "Keep me", @txn1.reload.entry.notes
+  end
+
+  test "append_transaction_notes adds the text as a new line" do
+    @txn1.entry.lock_attr!(:notes)
+    @txn2.entry.update!(notes: "Paid by card\n")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "append_transaction_notes",
+      value: "Reimbursable"
+    )
+
+    assert_equal 2, action.apply(@rule_scope)
+
+    assert_nil @txn1.reload.entry.notes
+    assert_equal "Paid by card\nReimbursable", @txn2.reload.entry.notes
+    assert_equal "Reimbursable", @txn3.reload.entry.notes
+  end
+
+  test "append_transaction_notes does not add the same text twice" do
+    @txn2.entry.update!(notes: "Reimbursable\nPaid by card")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "append_transaction_notes",
+      value: "Reimbursable"
+    )
+
+    action.apply(@rule_scope)
+    assert_equal 0, action.apply(@rule_scope)
+
+    assert_equal "Reimbursable\nPaid by card", @txn2.reload.entry.notes
+    assert_equal "Reimbursable", @txn3.reload.entry.notes
+  end
+
+  test "append_transaction_notes only skips exact lines, not longer text" do
+    @txn2.entry.update!(notes: "Reimbursable by employer")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "append_transaction_notes",
+      value: "Reimbursable"
+    )
+
+    action.apply(@rule_scope)
+
+    assert_equal "Reimbursable by employer\nReimbursable", @txn2.reload.entry.notes
+  end
+
+  test "append_transaction_notes adds only the missing lines of a multi-line value" do
+    @txn2.entry.update!(notes: "Check receipt")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "append_transaction_notes",
+      value: "Check receipt\r\nReimbursable\n"
+    )
+
+    action.apply(@rule_scope)
+    assert_equal 0, action.apply(@rule_scope)
+
+    assert_equal "Check receipt\nReimbursable", @txn2.reload.entry.notes
+    assert_equal "Check receipt\nReimbursable", @txn3.reload.entry.notes
+  end
+
+  test "append_transaction_notes overrides locked notes when ignore_attribute_locks" do
+    @txn1.entry.update!(notes: "Mine")
+    @txn1.entry.lock_attr!(:notes)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "append_transaction_notes",
+      value: "Reimbursable"
+    )
+
+    action.apply(@rule_scope, ignore_attribute_locks: true)
+
+    assert_equal "Mine\nReimbursable", @txn1.reload.entry.notes
+  end
 end

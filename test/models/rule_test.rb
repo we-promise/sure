@@ -10,6 +10,18 @@ class RuleTest < ActiveSupport::TestCase
     @groceries_category = @family.categories.create!(name: "Groceries")
   end
 
+  test "rejects setting and appending the notes in the same rule" do
+    rule = @family.rules.build(resource_type: "transaction")
+    rule.actions.build(action_type: "append_transaction_notes", value: "Check receipt")
+    rule.actions.build(action_type: "set_transaction_notes", value: "Reimbursable")
+
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:base, :conflicting_note_actions)
+
+    rule.actions.last.mark_for_destruction
+    assert rule.valid?
+  end
+
   test "rejects a null byte in the rule name" do
     rule = @family.rules.build(name: "bad\0name", resource_type: "transaction")
     rule.actions.build(action_type: "exclude_transaction")
