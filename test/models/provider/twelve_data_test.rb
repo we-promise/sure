@@ -241,13 +241,17 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
   # they cannot notice a counter that is written but never read back. This one
   # runs against a real RedisCacheStore, the production cache store.
   test "throttle_request enforces the per-minute credit limit using a real Redis cache" do
-    store = ActiveSupport::Cache::RedisCacheStore.new(url: ENV.fetch("REDIS_URL", "redis://localhost:6379"))
+    # A per-run namespace keeps the counter key unique, so concurrent or retried
+    # runs sharing one Redis can never read each other's leftover counts.
+    store = ActiveSupport::Cache::RedisCacheStore.new(
+      url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
+      namespace: "test:twelve_data:#{SecureRandom.hex(8)}"
+    )
     Rails.stubs(:cache).returns(store)
 
-    # Freeze 30s into a minute so the counter key is stable and the wait is predictable
+    # Freeze 30s into a minute so the wait is predictable
     travel_to Time.utc(2026, 1, 1, 12, 0, 30) do
       minute_key = "twelve_data:credits:#{Time.current.to_i / 60}"
-      store.delete(minute_key)
 
       sleeps = []
       @provider.define_singleton_method(:sleep) { |duration| sleeps << duration }
