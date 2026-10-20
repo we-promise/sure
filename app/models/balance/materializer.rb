@@ -15,7 +15,8 @@ class Balance::Materializer
 
   def materialize_balances
     Balance.transaction do
-      @had_calculated_holdings = holdings_from_trades? && account.holdings.where(account_provider_id: nil).exists?
+      @had_derived_position = derived_position?
+      clear_derived_holdings if @had_derived_position && !holdings_from_trades?
       materialize_holdings
       calculate_balances
 
@@ -28,6 +29,8 @@ class Balance::Materializer
         update_account_info
       elsif holdings_from_trades?
         update_cash_balance
+      elsif @had_derived_position
+        account.update!(cash_balance: account.balance)
       end
     end
   end
@@ -65,6 +68,23 @@ class Balance::Materializer
       Holding::ForwardCalculator.new(account).calculate.any? { |holding| holding.qty.negative? }
     end
 
+    # Whether a linked account without a provider snapshot holds a position
+    # this fallback built: a latest non-provider row with a quantity. Read
+    # before materializing, whichever way the fallback then goes. The reverse
+    # path's own rows end at zero, so they do not count.
+    def derived_position?
+      strategy == :reverse && account.latest_provider_holdings_snapshot_date.nil? && account.current_holdings.exists?
+    end
+
+    # When the fallback stands aside for an account it had built, the reverse
+    # path would read that position back as the provider's snapshot and keep
+    # it. Clearing the rows first leaves the account as it reads without the
+    # fallback; cash goes back to the provider's balance after.
+    def clear_derived_holdings
+      account.holdings.where(account_provider_id: nil).delete_all
+      account.holdings.reset
+    end
+
     # The provider set cash_balance to the whole balance, as it sent no
     # holdings. Once holdings come from trades, cash is what they leave of the
     # provider's balance. Only cash is written: the balance stays the provider's.
@@ -73,7 +93,7 @@ class Balance::Materializer
     # calculated holding keeps the provider's cash untouched.
     def update_cash_balance
       unless account.trades.exists?
-        account.update!(cash_balance: account.balance) if @had_calculated_holdings
+        account.update!(cash_balance: account.balance) if @had_derived_position
         return
       end
 

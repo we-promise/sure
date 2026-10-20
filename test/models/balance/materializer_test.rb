@@ -393,6 +393,25 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_equal 10_000, account.cash_balance
   end
 
+  # An account the fallback already built can later receive a sell from before
+  # its first buy. The fallback then stands aside, so the position it built and
+  # the cash it wrote go too, rather than the reverse path reading that
+  # position back as the account's snapshot.
+  test "trade history that becomes incomplete clears the derived position and its cash" do
+    account, security = linked_account_with_trade
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    assert_equal 2, account.reload.current_holdings.find_by!(security: security).qty
+    assert_equal 10_000 - 2 * 200, account.cash_balance
+
+    create_trade(security, account: account, qty: -5, date: 5.days.ago.to_date, price: 200)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    account.reload
+    assert_nil account.current_holdings.find_by(security: security)
+    assert_not account.holdings.where("qty < 0").exists?
+    assert_equal 10_000, account.cash_balance
+  end
+
   # The guard reads the position the trades actually build. Summing trade
   # quantities would call this one negative (2 - 3), but the 2:1 split between
   # them leaves one share.
