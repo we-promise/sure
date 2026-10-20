@@ -20,6 +20,22 @@ class Loan::PaidBreakdownTest < ActiveSupport::TestCase
     assert_in_delta 1.0, paid.ratios.values.sum, 0.0001
   end
 
+  test "splits a linked full EMI using the ledger's actual interest" do
+    account = create_loan(entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }
+    ])
+    instalment = account.loan.amortization_schedule.payments.first
+
+    create_linked_payment(account, instalment.payment.amount, instalment.date)
+    account.reload
+
+    paid = account.loan.paid_breakdown(as_of: instalment.date)
+
+    assert_equal Money.new(943.89, "USD"), paid.principal
+    assert_equal Money.new(122.30, "USD"), paid.interest
+    assert_equal instalment.payment, paid.total
+  end
+
   test "adds scheduled interest for a linked principal-only instalment" do
     account = create_loan(entries: [
       { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }
@@ -34,6 +50,23 @@ class Loan::PaidBreakdownTest < ActiveSupport::TestCase
     assert_equal instalment.principal, paid.principal
     assert_equal instalment.interest, paid.interest, "the interest was paid as a separate expense"
     assert_equal instalment.payment, paid.total
+  end
+
+  test "a linked prepayment alongside a linked full EMI does not double-count interest" do
+    account = create_loan(entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }
+    ])
+    instalment = account.loan.amortization_schedule.payments.first
+
+    create_linked_payment(account, instalment.payment.amount, instalment.date)
+    create_linked_payment(account, 2_000, instalment.date)
+    account.reload
+
+    paid = account.loan.paid_breakdown(as_of: instalment.date)
+
+    assert_equal Money.new(2_943.89, "USD"), paid.principal
+    assert_equal Money.new(122.30, "USD"), paid.interest
+    assert_equal Money.new(3_066.19, "USD"), paid.total
   end
 
   test "a linked prepayment does not add a second instalment's interest" do

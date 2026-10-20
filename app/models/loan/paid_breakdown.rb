@@ -3,9 +3,9 @@ class Loan
   #
   # The principal figure comes from the same ledger replay that reduces the
   # balance, so extra payments and prepayments are included. Interest comes from
-  # the full payments in that ledger. A linked transfer is principal-only by
-  # design, so a linked instalment's interest is read from the schedule instead
-  # -- it was paid as a separate expense.
+  # the full payments in that ledger. A linked principal-only transfer carries
+  # no interest of its own, so its instalment interest is read from the schedule
+  # instead -- it was paid as a separate expense.
   #
   # A loan with no opening anchor has no ledger to replay. It falls back to the
   # recorded balance for principal and the schedule for interest.
@@ -76,10 +76,11 @@ class Loan
         )
       end
 
-      # Linked transfers are recorded at their principal amount. When one
-      # matches a scheduled instalment's principal, the interest for that
-      # instalment was paid separately and belongs in the total. Matching on the
-      # amount keeps prepayments out of this: they have no instalment interest.
+      # Linked principal-only transfers are recorded at their principal amount.
+      # When one matches a scheduled instalment's principal, the interest for
+      # that instalment was paid separately and belongs in the total. Matching
+      # on the amount keeps prepayments out of this: they have no instalment
+      # interest.
       def linked_interest(changes)
         counted = Set.new
         covered = changes.each_with_object(Set.new) do |(date, change), instalments|

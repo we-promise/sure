@@ -1,6 +1,7 @@
 class Loan
-  # Replays a loan's entries so unlinked payments reduce principal by only the
-  # amount left after interest, as a reducing-balance loan does.
+  # Replays a loan's entries so a full payment reduces principal by only the
+  # amount left after interest. Linked principal-only transfers and prepayments
+  # still reduce principal by the full amount.
   class PrincipalPayments
     Change = Data.define(:principal_paid, :principal_added, :interest_paid, :linked_paid) do
       def net
@@ -55,24 +56,32 @@ class Loan
           linked, unlinked = transactions.partition { |entry| linked?(entry) }
           interest = accrued_interest(principal, last_date, date)
 
-          linked_added = linked.select { |entry| entry.amount.positive? }.sum(BigDecimal("0"), &:amount).round(precision)
-          linked_paid = -linked.select { |entry| entry.amount.negative? }.sum(BigDecimal("0"), &:amount).round(precision)
+          linked_positive = linked.select { |entry| entry.amount.positive? }
+          linked_negative = linked.select { |entry| entry.amount.negative? }
+          linked_full, linked_principal_only = linked_negative.partition { |entry| linked_full_payment?(entry) }
+
+          linked_added = linked_positive.sum(BigDecimal("0"), &:amount).round(precision)
+          linked_principal_paid = -linked_principal_only.sum(BigDecimal("0"), &:amount).round(precision)
+          linked_full_payment = -linked_full.sum(BigDecimal("0"), &:amount).round(precision)
+
           principal += linked_added
-          linked_paid = [ linked_paid, principal ].min
-          principal -= linked_paid
+          linked_principal_paid = [ linked_principal_paid, principal ].min
+          principal -= linked_principal_paid
 
           unlinked_added = unlinked.select { |entry| entry.amount.positive? }.sum(BigDecimal("0"), &:amount).round(precision)
           unlinked_payment = -unlinked.select { |entry| entry.amount.negative? }.sum(BigDecimal("0"), &:amount).round(precision)
+          full_payment = linked_full_payment + unlinked_payment
+
           principal += unlinked_added
-          unlinked_paid = [ (unlinked_payment - interest).round(precision), BigDecimal("0") ].max
-          unlinked_paid = [ unlinked_paid, principal ].min
-          principal -= unlinked_paid
+          full_paid = [ (full_payment - interest).round(precision), BigDecimal("0") ].max
+          full_paid = [ full_paid, principal ].min
+          principal -= full_paid
 
           changes[date] = Change.new(
-            principal_paid: linked_paid + unlinked_paid,
+            principal_paid: linked_principal_paid + full_paid,
             principal_added: linked_added + unlinked_added,
-            interest_paid: [ interest, unlinked_payment ].min,
-            linked_paid: linked_paid
+            interest_paid: [ interest, full_payment ].min,
+            linked_paid: linked_principal_paid
           )
           last_date = date
         end
@@ -92,6 +101,30 @@ class Loan
 
       def linked?(entry)
         linked_transaction_ids.include?(entry.entryable_id)
+      end
+
+      # A linked transfer is principal-only by default: the app records the
+      # principal there and the interest as a separate expense. An external bank
+      # transfer matching the scheduled EMI is a full payment and must be split;
+      # otherwise its whole amount would repay principal.
+      def linked_full_payment?(entry)
+        return false unless entry.amount.negative?
+
+        payment = scheduled_payment_for(entry.date)
+        return false if payment.nil?
+
+        amount = -entry.amount
+        payment_amount = payment.payment.amount
+        principal_amount = payment.principal.amount
+
+        amount <= payment_amount * BigDecimal("1.02") &&
+          amount > principal_amount &&
+          (amount - payment_amount).abs < (amount - principal_amount).abs
+      end
+
+      def scheduled_payment_for(date)
+        @schedule ||= loan.amortization_schedule
+        @schedule&.payment_for(date)
       end
 
       def linked_transaction_ids

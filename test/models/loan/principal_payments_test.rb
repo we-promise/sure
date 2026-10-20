@@ -137,6 +137,38 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2000"), change.linked_paid
   end
 
+  test "a linked full EMI is split into interest and principal" do
+    account = create_loan(term_months: 12, initial_balance: 12_000, entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }
+    ])
+    instalment = account.loan.amortization_schedule.payments.first
+
+    create_linked_payment(account, instalment.payment.amount, instalment.date)
+    account.reload
+
+    change = principal_payments(account).change_for(instalment.date)
+
+    assert_equal BigDecimal("943.89"), change.principal_paid
+    assert_equal BigDecimal("122.30"), change.interest_paid
+    assert_equal BigDecimal("0"), change.linked_paid
+  end
+
+  test "a linked transfer equal to scheduled principal stays principal-only" do
+    account = create_loan(term_months: 12, initial_balance: 12_000, entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }
+    ])
+    instalment = account.loan.amortization_schedule.payments.first
+
+    create_linked_payment(account, instalment.principal.amount, instalment.date)
+    account.reload
+
+    change = principal_payments(account).change_for(instalment.date)
+
+    assert_equal BigDecimal("946.19"), change.principal_paid
+    assert_equal BigDecimal("0"), change.interest_paid
+    assert_equal BigDecimal("946.19"), change.linked_paid
+  end
+
   test "a loan without an opening anchor is left alone" do
     account = create_loan(entries: [
       { type: "current_anchor", date: Date.current, balance: 20_000 }
@@ -177,5 +209,22 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
 
     def principal_payments(account)
       Loan::PrincipalPayments.for(account.loan, entries: Balance::SyncCache.new(account).entries)
+    end
+
+    def create_linked_payment(account, amount, date)
+      source = account.family.accounts.create!(
+        name: "Checking",
+        balance: 10_000,
+        currency: "USD",
+        accountable: Depository.new
+      )
+
+      Transfer::Creator.new(
+        family: account.family,
+        source_account_id: source.id,
+        destination_account_id: account.id,
+        date: date,
+        amount: amount
+      ).create
     end
 end
