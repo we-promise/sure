@@ -75,7 +75,82 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("5000"), payments.change_for(PAYMENT_DATE).principal_added
     assert_equal BigDecimal("0"), payments.change_for(PAYMENT_DATE).principal_paid
-    assert_equal BigDecimal("1753.42"), payments.change_for(Date.new(2026, 3, 2)).principal_paid
+    assert_equal BigDecimal("0"), payments.change_for(PAYMENT_DATE).interest_paid
+    assert_equal BigDecimal("1556.16"), payments.change_for(Date.new(2026, 3, 2)).principal_paid
+    assert_equal BigDecimal("443.84"), payments.change_for(Date.new(2026, 3, 2)).interest_paid
+  end
+
+  test "unpaid interest carries into the next unlinked payment" do
+    account = create_loan(entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 20_000 },
+      { type: "transaction", date: PAYMENT_DATE, amount: -100 },
+      { type: "transaction", date: Date.new(2026, 3, 2), amount: -2_000 }
+    ])
+
+    payments = principal_payments(account)
+    first = payments.change_for(PAYMENT_DATE)
+    second = payments.change_for(Date.new(2026, 3, 2))
+
+    assert_equal BigDecimal("0"), first.principal_paid
+    assert_equal BigDecimal("100"), first.interest_paid
+    assert_equal BigDecimal("1705.48"), second.principal_paid
+    assert_equal BigDecimal("294.52"), second.interest_paid
+  end
+
+  test "a linked principal-only transfer does not carry its own interest" do
+    account = create_loan(term_months: 12, initial_balance: 12_000, entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 },
+      { type: "transaction", date: Date.new(2026, 3, 3), amount: -2_000 }
+    ])
+    instalment = account.loan.amortization_schedule.payments.first
+
+    create_linked_payment(account, instalment.principal.amount, instalment.date)
+    account.reload
+
+    change = principal_payments(account).change_for(Date.new(2026, 3, 3))
+
+    assert_equal BigDecimal("1890.98"), change.principal_paid
+    assert_equal BigDecimal("109.02"), change.interest_paid
+  end
+
+  test "a reconciliation clears unpaid interest" do
+    account = create_loan(entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 20_000 },
+      { type: "transaction", date: PAYMENT_DATE, amount: -100 },
+      { type: "reconciliation", date: Date.new(2026, 2, 15), balance: 19_000 },
+      { type: "transaction", date: Date.new(2026, 3, 17), amount: -2_000 }
+    ])
+
+    change = principal_payments(account).change_for(Date.new(2026, 3, 17))
+
+    assert_equal BigDecimal("1812.60"), change.principal_paid
+    assert_equal BigDecimal("187.40"), change.interest_paid
+  end
+
+  test "a payment on a current anchor date is counted before the anchor resets principal" do
+    account = create_loan(entries: [
+      { type: "opening_anchor", date: Date.yesterday, balance: 20_000 },
+      { type: "current_anchor", date: Date.current, balance: 18_006.58 },
+      { type: "transaction", date: Date.current, amount: -2_000 }
+    ])
+
+    change = principal_payments(account).change_for(Date.current)
+
+    assert_equal BigDecimal("1993.42"), change.principal_paid
+    assert_equal BigDecimal("6.58"), change.interest_paid
+  end
+
+  test "a payment on a reconciliation date is counted before the reset" do
+    account = create_loan(entries: [
+      { type: "opening_anchor", date: 4.days.ago.to_date, balance: 20_000 },
+      { type: "reconciliation", date: 2.days.ago.to_date, balance: 18_013.15 },
+      { type: "transaction", date: 2.days.ago.to_date, amount: -2_000 }
+    ])
+
+    change = principal_payments(account).change_for(2.days.ago.to_date)
+
+    assert_equal BigDecimal("1986.85"), change.principal_paid
+    assert_equal BigDecimal("13.15"), change.interest_paid
   end
 
   test "interest follows recorded rate changes" do

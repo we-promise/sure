@@ -53,10 +53,6 @@ class Loan
             interest = changes.sum(BigDecimal("0")) { |_date, change| change.interest_paid }
             interest += linked_interest(changes)
 
-            # A linked principal transfer carries no interest of its own. When
-            # no scheduled instalment matched one, the schedule supplies it.
-            interest = scheduled_totals.fetch(:interest) if interest.zero? && principal.positive?
-
             { principal: principal, interest: interest }
           else
             {

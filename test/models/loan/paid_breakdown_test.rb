@@ -69,6 +69,22 @@ class Loan::PaidBreakdownTest < ActiveSupport::TestCase
     assert_equal Money.new(3_066.19, "USD"), paid.total
   end
 
+  test "a linked prepayment alone does not invent scheduled interest" do
+    account = create_loan(entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }
+    ])
+    instalment = account.loan.amortization_schedule.payments.first
+
+    create_linked_payment(account, 2_000, instalment.date)
+    account.reload
+
+    paid = account.loan.paid_breakdown(as_of: instalment.date + 4.months)
+
+    assert_equal Money.new(2_000, "USD"), paid.principal
+    assert_equal Money.new(0, "USD"), paid.interest
+    assert_equal Money.new(2_000, "USD"), paid.total
+  end
+
   test "a linked prepayment does not add a second instalment's interest" do
     account = create_loan(entries: [
       { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }

@@ -497,6 +497,33 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), payment_day.non_cash_adjustments
   end
 
+  test "amortizable loan payment on the current anchor date is counted in forward history" do
+    account = create_account_with_ledger(
+      account: { type: Loan, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: Date.yesterday, balance: 20_000 },
+        { type: "current_anchor", date: Date.current, balance: 18_006.58 },
+        { type: "transaction", date: Date.current, amount: -2_000 }
+      ]
+    )
+    account.loan.update!(
+      subtype: "auto",
+      interest_rate: 12,
+      term_months: 360,
+      rate_type: "fixed",
+      start_date: Date.yesterday,
+      initial_balance: 20_000
+    )
+    account.reload
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+    anchor_day = calculated.find { |balance| balance.date == Date.current }
+
+    assert_equal BigDecimal("18006.58"), anchor_day.balance
+    assert_equal BigDecimal("1993.42"), anchor_day.non_cash_inflows
+    assert_equal BigDecimal("0"), anchor_day.non_cash_adjustments
+  end
+
   test "non cash accounts can only use valuations and transactions will be recorded but ignored for balance calculation" do
     [ Property, Vehicle, OtherAsset, OtherLiability ].each do |account_type|
       account = create_account_with_ledger(

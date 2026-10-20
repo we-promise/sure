@@ -39,19 +39,23 @@ class Loan
         changes = {}
         principal = account.opening_anchor_balance.to_d.round(precision)
         last_date = account.opening_anchor_date
+        unpaid_interest = BigDecimal("0")
 
         entries.group_by(&:date).sort_by(&:first).each do |date, date_entries|
           next if date < last_date
 
-          if (valuation = date_entries.find(&:valuation?))
+          valuation = date_entries.find(&:valuation?)
+          transactions = date_entries.select(&:transaction?)
+
+          if transactions.empty?
+            next if valuation.nil?
+
             principal = valuation.amount.to_d.round(precision)
             last_date = date
+            unpaid_interest = BigDecimal("0")
             changes[date] = zero_change
             next
           end
-
-          transactions = date_entries.select(&:transaction?)
-          next if transactions.empty?
 
           linked, unlinked = transactions.partition { |entry| linked?(entry) }
           interest = accrued_interest(principal, last_date, date)
@@ -72,17 +76,34 @@ class Loan
           unlinked_payment = -unlinked.select { |entry| entry.amount.negative? }.sum(BigDecimal("0"), &:amount).round(precision)
           full_payment = linked_full_payment + unlinked_payment
 
+          # Linked principal-only transfers pay their interest separately, so
+          # only interest already carried from unlinked payments is due here.
+          interest_due = if full_payment.zero? && linked_principal_paid.positive?
+            unpaid_interest
+          else
+            interest + unpaid_interest
+          end
+
           principal += unlinked_added
-          full_paid = [ (full_payment - interest).round(precision), BigDecimal("0") ].max
+          full_paid = [ (full_payment - interest_due).round(precision), BigDecimal("0") ].max
           full_paid = [ full_paid, principal ].min
           principal -= full_paid
+
+          interest_paid = [ interest_due, full_payment ].min
+          unpaid_interest = (interest_due - interest_paid).round(precision)
 
           changes[date] = Change.new(
             principal_paid: linked_principal_paid + full_paid,
             principal_added: linked_added + unlinked_added,
-            interest_paid: [ interest, full_payment ].min,
+            interest_paid: interest_paid,
             linked_paid: linked_principal_paid
           )
+
+          if valuation
+            principal = valuation.amount.to_d.round(precision)
+            unpaid_interest = BigDecimal("0")
+          end
+
           last_date = date
         end
 
