@@ -340,6 +340,41 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_not account.holdings.exists?(security: stale)
   end
 
+  # A provider's trade history can start after a position was opened (Plaid
+  # sends at most two years), so a sell can arrive without its buy. Built from
+  # zero that is a negative position, and cash above the provider's total. The
+  # fallback stands aside and the account reads as it did without it.
+  test "a sell without its buy leaves the account as it was, with no negative position" do
+    account = linked_investment_account
+    security = Security.create!(ticker: "SOLDX", name: "Sold")
+    (5.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: security, date: date, price: 200) }
+    create_trade(security, account: account, qty: -2, date: 3.days.ago.to_date, price: 200)
+    create_valuation(account: account, amount: 10_000, date: 1.day.ago.to_date, kind: "current_anchor")
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    account.reload
+    assert_not account.holdings.where("qty < 0").exists?, "no negative position is stored"
+    assert_equal 10_000, account.cash_balance
+  end
+
+  # The guard reads the position the trades actually build. Summing trade
+  # quantities would call this one negative (2 - 3), but the 2:1 split between
+  # them leaves one share.
+  test "a position a split carries through a larger sell still builds from trades" do
+    account = linked_investment_account
+    security = Security.create!(ticker: "SPLTX", name: "Split")
+    (5.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: security, date: date, price: 100) }
+    create_trade(security, account: account, qty: 2, date: 5.days.ago.to_date, price: 200)
+    security.splits.create!(ex_date: 3.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+    create_trade(security, account: account, qty: -3, date: 2.days.ago.to_date, price: 100)
+    create_valuation(account: account, amount: 10_000, date: 1.day.ago.to_date, kind: "current_anchor")
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    assert_equal 1, account.reload.current_holdings.find_by!(security: security).qty
+  end
+
   private
 
     def assert_balance_fields_persisted(expected_balances)

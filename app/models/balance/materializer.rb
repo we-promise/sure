@@ -48,7 +48,21 @@ class Balance::Materializer
     def holdings_from_trades?
       return @holdings_from_trades if defined?(@holdings_from_trades)
 
-      @holdings_from_trades = strategy == :reverse && account.latest_provider_holdings_snapshot_date.nil?
+      @holdings_from_trades = strategy == :reverse &&
+        account.latest_provider_holdings_snapshot_date.nil? &&
+        !incomplete_trade_history?
+    end
+
+    # A provider's trade history can begin after a position was opened (Plaid
+    # sends at most two years), so a sell can arrive without its buy. Built from
+    # zero that is a negative position. Read from the forward calculator itself,
+    # not a sum of trade quantities, so a split between trades is applied.
+    def incomplete_trade_history?
+      return false unless account.trades.exists?
+
+      Holding::ForwardCalculator.new(account).calculate
+        .group_by(&:security_id)
+        .any? { |_security_id, holdings| holdings.max_by(&:date).qty.negative? }
     end
 
     # The provider set cash_balance to the whole balance, as it sent no
