@@ -4,7 +4,9 @@ Rails.configuration.x.posthog = ActiveSupport::OrderedOptions.new
 # Explicit opt-in for local analytics testing; production remains enabled.
 Rails.configuration.x.posthog.development_enabled = ActiveModel::Type::Boolean.new.cast(ENV.fetch("POSTHOG_DEVELOPMENT_ENABLED", "false"))
 Rails.configuration.x.posthog.api_key = ENV["POSTHOG_KEY"].presence
-Rails.configuration.x.posthog.host = ENV.fetch("POSTHOG_HOST", "https://us.i.posthog.com")
+# .presence (not .fetch) so an explicitly-blank POSTHOG_HOST="" still falls
+# back to the default instead of reaching PostHog::Client as an empty string.
+Rails.configuration.x.posthog.host = ENV["POSTHOG_HOST"].presence || "https://us.i.posthog.com"
 Rails.configuration.x.posthog.feedback_enabled = ActiveModel::Type::Boolean.new.cast(ENV.fetch("POSTHOG_FEEDBACK_ENABLED", "true"))
 # Public client configuration for shared feedback, including self-hosted Sankey.
 # This write-only project token is safe to distribute; it is not an admin key.
@@ -22,10 +24,34 @@ Rails.configuration.x.posthog.feedback_surveys = {
   }.freeze
 }.freeze
 
-if (api_key = Rails.configuration.x.posthog.api_key).present?
+# Both the server client below AND the browser snippet
+# (app/views/shared/_posthog.html.erb, rendered from _head.html.erb) AND
+# the CSP script-src/connect-src allowlist (content_security_policy.rb)
+# send data to this host — posthog-ruby sends the API key in the request
+# body and silently skips TLS when the scheme isn't https, and the browser
+# integration would ship analytics/session data in cleartext the same way.
+# A single `enabled` method gates all three integration points so a bad
+# POSTHOG_HOST disables PostHog everywhere instead of only wherever a
+# reviewer happened to look first. Defined as a method (not a value computed
+# once at boot) so it re-evaluates against api_key/host, which tests stub.
+Rails.configuration.x.posthog.define_singleton_method(:enabled) do
+  next false unless api_key.present?
+  scheme = begin
+    URI.parse(host).scheme
+  rescue URI::InvalidURIError
+    nil
+  end
+  scheme == "https"
+end
+
+if Rails.configuration.x.posthog.api_key.present? && !Rails.configuration.x.posthog.enabled
+  Rails.logger.error("[PostHog] POSTHOG_HOST (#{Rails.configuration.x.posthog.host}) is not HTTPS — refusing to enable PostHog (server client, browser snippet, and CSP allowlist) to avoid sending the API key/analytics data in cleartext.")
+end
+
+if Rails.configuration.x.posthog.enabled
   # Initialize PostHog client
   $posthog = PostHog::Client.new({
-    api_key: api_key,
+    api_key: Rails.configuration.x.posthog.api_key,
     host: Rails.configuration.x.posthog.host,
     on_error: Proc.new { |status, msg| puts "PostHog error: #{status} - #{msg}" }
   })
