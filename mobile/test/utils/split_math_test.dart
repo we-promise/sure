@@ -28,6 +28,13 @@ void main() {
   });
 
   group('SplitMath.parseUserInput', () {
+    test('rejects signs that are not a single leading sign', () {
+      expect(SplitMath.parseUserInput('12\u22123', locale: 'en'), isNull);
+      expect(SplitMath.parseUserInput('1\u2212', locale: 'en'), isNull);
+      expect(SplitMath.parseUserInput('--5', locale: 'en'), isNull);
+      expect(SplitMath.parseUserInput('\u22125', locale: 'en'),
+          BigInt.from(-50000));
+    });
     test('handles grouping and the locale decimal separator', () {
       expect(
         SplitMath.parseUserInput('1,234.56', locale: 'en'),

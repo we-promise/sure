@@ -85,6 +85,12 @@ class SplitMath {
         .hasMatch(text)) {
       return null;
     }
+    final signMatches =
+        RegExp(r'[+\-\u2212\u2012\u2013\u2014]').allMatches(text).toList();
+    if (signMatches.length > 1 ||
+        (signMatches.isNotEmpty && signMatches.first.start != 0)) {
+      return null;
+    }
     try {
       final canonical = AmountParser.canonicalize(text, locale: locale);
       if (!RegExp(r'^[+-]?(\d+\.?\d*|\.\d+)$').hasMatch(canonical)) {
