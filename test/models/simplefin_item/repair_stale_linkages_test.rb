@@ -193,13 +193,17 @@ class SimplefinItem::RepairStaleLinkagesTest < ActiveSupport::TestCase
   # A reconnect issues new account ids and new transaction ids for the same
   # transactions (#3436). The stale account's rows must not survive beside their
   # re-issued twins, or every transaction in the window is imported twice.
-  def reconnect_fixture
+  # `retain_old_row` adds a stale row the new account was not served, so it
+  # survives the merge and a merged payload differs from the new account's own.
+  def reconnect_fixture(retain_old_row: false)
     posted = 5.days.ago.beginning_of_day.to_i
     tx = ->(id) { { id: id, posted: posted, transacted_at: posted, amount: "-10.25", description: "Amazon", payee: "Amazon", memo: "" } }
+    stale_payload = [ tx.("T1") ]
+    stale_payload << tx.("OLD9").merge(posted: posted - 86_400, transacted_at: posted - 86_400) if retain_old_row
 
     stale_sfa = SimplefinAccount.create!(
       simplefin_item: @item, account_id: "ACT-old", name: "Card", currency: "USD",
-      current_balance: 0, account_type: "credit", raw_transactions_payload: [ tx.("T1") ]
+      current_balance: 0, account_type: "credit", raw_transactions_payload: stale_payload
     )
     account = Account.create!(
       family: @family, name: "Card", currency: "USD", balance: 0,
@@ -233,7 +237,7 @@ class SimplefinItem::RepairStaleLinkagesTest < ActiveSupport::TestCase
   end
 
   test "a failed linkage transfer rolls back the re-key and the merged payload" do
-    stale_sfa, new_sfa, account, entry = reconnect_fixture
+    stale_sfa, new_sfa, account, entry = reconnect_fixture(retain_old_row: true)
     AccountProvider.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid)
 
     @item.send(:repair_stale_linkages, [ stale_sfa, new_sfa ])
