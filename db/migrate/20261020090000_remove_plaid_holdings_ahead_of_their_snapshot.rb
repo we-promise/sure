@@ -35,22 +35,39 @@ class RemovePlaidHoldingsAheadOfTheirSnapshot < ActiveRecord::Migration[8.1]
     dates.reject { |date| date > today }.max || today
   end
 
-  def up
-    providers = select_rows(<<~SQL)
-      SELECT account_providers.id, plaid_accounts.raw_holdings_payload
-      FROM account_providers
-      JOIN plaid_accounts ON plaid_accounts.id = account_providers.provider_id
-      WHERE account_providers.provider_type = 'PlaidAccount'
-    SQL
+  BATCH_SIZE = 100
 
-    providers.each do |account_provider_id, raw_payload|
-      payload = raw_payload.is_a?(String) ? JSON.parse(raw_payload) : raw_payload
-      cutoff = self.class.snapshot_date(payload)
-
-      execute ActiveRecord::Base.sanitize_sql_array([
-        "DELETE FROM holdings WHERE account_provider_id = ? AND date > ?", account_provider_id, cutoff
-      ])
+  # The payload is read through a model, not raw SQL: where Active Record
+  # encryption is configured, PlaidAccount encrypts raw_holdings_payload, and a
+  # raw read would see ciphertext and no price dates. This declares it under
+  # the same condition PlaidAccount does (Encryptable#encryption_ready?), and
+  # is built when the migration runs so it takes the configuration of then.
+  def self.plaid_account_payloads
+    Class.new(ActiveRecord::Base) do
+      self.table_name = "plaid_accounts"
+      def self.name = "RemovePlaidHoldingsAheadOfTheirSnapshot::PlaidAccountPayload"
+      encrypts :raw_holdings_payload if ActiveRecordEncryptionConfig.explicitly_configured?
     end
+  end
+
+  def up
+    remove_stale_rows(batch_size: BATCH_SIZE)
+  end
+
+  # In batches, so neither every Plaid payload nor every provider id is held at
+  # once; one DELETE per account provider.
+  def remove_stale_rows(batch_size:)
+    self.class.plaid_account_payloads
+      .joins("JOIN account_providers ON account_providers.provider_id = plaid_accounts.id")
+      .where(account_providers: { provider_type: "PlaidAccount" })
+      .select("plaid_accounts.id", "plaid_accounts.raw_holdings_payload", "account_providers.id AS account_provider_id")
+      .find_each(batch_size: batch_size) do |plaid_account|
+        cutoff = self.class.snapshot_date(plaid_account.raw_holdings_payload)
+
+        execute ActiveRecord::Base.sanitize_sql_array([
+          "DELETE FROM holdings WHERE account_provider_id = ? AND date > ?", plaid_account.account_provider_id, cutoff
+        ])
+      end
   end
 
   # The removed rows were stale copies of positions the next Plaid sync writes

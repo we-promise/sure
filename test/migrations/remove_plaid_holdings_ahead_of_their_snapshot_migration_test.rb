@@ -107,6 +107,40 @@ class RemovePlaidHoldingsAheadOfTheirSnapshotMigrationTest < ActiveSupport::Test
     end
   end
 
+  # Where Active Record encryption is configured, PlaidAccount encrypts the
+  # payload, so a raw read sees ciphertext and no price dates. The migration
+  # reads it as the model does.
+  test "an encrypted payload is read through encryption" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    write_encrypted_payload("holdings" => @payload)
+    plaid_row(@aapl, @snapshot_date, 10)
+    stale = plaid_row(@msft, Date.current, 9)
+
+    run_migration
+
+    assert_not Holding.exists?(stale.id)
+  end
+
+  # The scan runs in batches; every Plaid account is still reached.
+  test "every Plaid account is scanned when the scan is batched" do
+    second = PlaidAccount.create!(plaid_item: @plaid_account.plaid_item, plaid_id: "acc_mock_2", plaid_type: "investment",
+                                  name: "Second Plaid", currency: "USD", current_balance: 100,
+                                  raw_holdings_payload: { "holdings" => @payload })
+    second_account = Account.create!(family: @account.family, name: "Second", balance: 100, currency: "USD",
+                                     accountable: Investment.new)
+    second_provider = AccountProvider.create!(account: second_account, provider: second)
+    stale_one = plaid_row(@msft, Date.current, 9)
+    stale_two = second_account.holdings.create!(security: @msft, date: Date.current, qty: 9, price: 50, amount: 450,
+                                                currency: "USD", account_provider_id: second_provider.id)
+
+    ActiveRecord::Migration.suppress_messages do
+      RemovePlaidHoldingsAheadOfTheirSnapshot.new.remove_stale_rows(batch_size: 1)
+    end
+
+    assert_not Holding.exists?(stale_one.id)
+    assert_not Holding.exists?(stale_two.id)
+  end
+
   test "running it twice removes nothing more" do
     plaid_row(@aapl, @snapshot_date, 10)
     plaid_row(@msft, Date.current, 9)
@@ -121,6 +155,20 @@ class RemovePlaidHoldingsAheadOfTheirSnapshotMigrationTest < ActiveSupport::Test
     def plaid_row(security, date, qty)
       @account.holdings.create!(security: security, date: date, qty: qty, price: 50, amount: qty * 50,
                                 currency: "USD", account_provider_id: @plaid_provider.id)
+    end
+
+    def write_encrypted_payload(payload)
+      encrypted = Class.new(ActiveRecord::Base) do
+        self.table_name = "plaid_accounts"
+        def self.name = "EncryptedPlaidAccountForTest"
+        encrypts :raw_holdings_payload
+      end
+      encrypted.select(:id).find(@plaid_account.id).update!(raw_holdings_payload: payload)
+
+      raw = ActiveRecord::Base.connection.select_value(
+        ActiveRecord::Base.sanitize_sql_array([ "SELECT raw_holdings_payload::text FROM plaid_accounts WHERE id = ?", @plaid_account.id ])
+      )
+      assert_no_match(/institution_price_as_of/, raw, "the payload must be stored encrypted, or this proves nothing")
     end
 
     def sync_holdings
