@@ -2,7 +2,7 @@ class Loan
   # Replays a loan's entries so unlinked payments reduce principal by only the
   # amount left after interest, as a reducing-balance loan does.
   class PrincipalPayments
-    Change = Data.define(:principal_paid, :principal_added) do
+    Change = Data.define(:principal_paid, :principal_added, :interest_paid, :linked_paid) do
       def net
         principal_added - principal_paid
       end
@@ -25,6 +25,10 @@ class Loan
 
     def change_for(date)
       @changes[date]
+    end
+
+    def changes
+      @changes
     end
 
     private
@@ -66,7 +70,9 @@ class Loan
 
           changes[date] = Change.new(
             principal_paid: linked_paid + unlinked_paid,
-            principal_added: linked_added + unlinked_added
+            principal_added: linked_added + unlinked_added,
+            interest_paid: [ interest, unlinked_payment ].min,
+            linked_paid: linked_paid
           )
           last_date = date
         end
@@ -111,7 +117,12 @@ class Loan
       end
 
       def zero_change
-        Change.new(principal_paid: BigDecimal("0"), principal_added: BigDecimal("0"))
+        Change.new(
+          principal_paid: BigDecimal("0"),
+          principal_added: BigDecimal("0"),
+          interest_paid: BigDecimal("0"),
+          linked_paid: BigDecimal("0")
+        )
       end
   end
 end

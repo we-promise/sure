@@ -26,4 +26,26 @@ class LoanOverviewViewTest < ActionView::TestCase
     assert_includes rendered, "Payment 4 ·", "the instalment on the page's date"
     assert_not_includes rendered, "Payment 9 ·", "not the one the clock is on"
   end
+
+  test "the overview shows the principal and interest paid through its reference date" do
+    @account.entries.create!(
+      date: Date.new(2026, 1, 15), name: "Opening balance", amount: 12_000, currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+    @account.entries.create!(
+      date: Date.new(2026, 2, 15), name: "Loan payment", amount: -1_000, currency: "USD",
+      entryable: Transaction.new
+    )
+    @account.update_column(:balance, 11_000)
+
+    render partial: "loans/tabs/overview", locals: { account: @account, as_of: Date.new(2026, 4, 20) }
+
+    assert_select "section", text: /Paid so far/ do |cards|
+      assert_equal 1, cards.size
+      assert_includes cards.first.text, "April 20, 2026"
+      assert_includes cards.first.text, "Principal + interest"
+      assert_includes cards.first.text, "$1,000.00", "the principal paid so far"
+      assert_includes cards.first.text, "$0.00", "no interest on an interest-free loan"
+    end
+  end
 end

@@ -17,6 +17,8 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
 
       assert_equal BigDecimal("1802.74"), change.principal_paid, "#{subtype} should split principal from interest"
       assert_equal BigDecimal("0"), change.principal_added
+      assert_equal BigDecimal("197.26"), change.interest_paid
+      assert_equal BigDecimal("0"), change.linked_paid
       assert_equal BigDecimal("-1802.74"), change.net
     end
   end
@@ -30,6 +32,7 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
     change = principal_payments(account).change_for(PAYMENT_DATE)
 
     assert_equal BigDecimal("0"), change.principal_paid
+    assert_equal BigDecimal("100"), change.interest_paid, "only the part of the accrued interest that was paid"
     assert_equal BigDecimal("0"), change.net
   end
 
@@ -88,6 +91,7 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
     change = principal_payments(account).change_for(PAYMENT_DATE)
 
     assert_equal BigDecimal("1704.11"), change.principal_paid
+    assert_equal BigDecimal("295.89"), change.interest_paid
   end
 
   test "reconciliation resets the principal used for later interest" do
@@ -129,6 +133,8 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("2000"), change.principal_paid, "a linked loan transfer must not have interest deducted twice"
     assert_equal BigDecimal("0"), change.principal_added
+    assert_equal BigDecimal("0"), change.interest_paid, "linked transfers carry principal only"
+    assert_equal BigDecimal("2000"), change.linked_paid
   end
 
   test "a loan without an opening anchor is left alone" do
