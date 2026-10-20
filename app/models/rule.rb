@@ -111,9 +111,13 @@ class Rule < ApplicationRecord
   end
 
   # Holds the family's rule positions until the transaction ends, so rules
-  # added at the same time can't share one (see assign_next_position).
+  # added at the same time can't share one (see assign_next_position). Inside
+  # a transaction with_connection is its connection, without leasing one to
+  # the thread for good.
   def self.lock_positions!(family)
-    connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family.id.to_s ]))
+    with_connection do |connection|
+      connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family.id.to_s ]))
+    end
   end
 
   # Sets the run order of all rules of a family. ordered_ids must list every
