@@ -747,7 +747,7 @@ RSpec.configure do |config|
           },
           Rule: {
             type: :object,
-            required: %w[id resource_type active position stop_processing conditions actions created_at updated_at],
+            required: %w[id resource_type active position stop_processing apply_immediately conditions actions created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string, nullable: true },
@@ -756,6 +756,7 @@ RSpec.configure do |config|
               effective_date: { type: :string, format: :date, nullable: true },
               position: { type: :integer, description: 'Run order within the family; rules run from the lowest position up and the top rule wins per attribute' },
               stop_processing: { type: :boolean, description: 'When true, rules further down do not change transactions this rule matches' },
+              apply_immediately: { type: :boolean, description: 'When true, the rule also runs right after a transaction is created or changed by hand, in a bulk edit or via the API; otherwise it only runs on the nightly and sync runs' },
               conditions: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/RuleCondition' }
@@ -804,7 +805,7 @@ RSpec.configure do |config|
               id: { type: :string, format: :uuid },
               rule_id: { type: :string, format: :uuid },
               rule_name: { type: :string, nullable: true },
-              execution_type: { type: :string, enum: %w[manual scheduled] },
+              execution_type: { type: :string, enum: %w[manual scheduled immediate] },
               status: { type: :string, enum: %w[pending success failed] },
               transactions_queued: { type: :integer, minimum: 0 },
               transactions_processed: { type: :integer, minimum: 0 },

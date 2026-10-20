@@ -35,6 +35,21 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "bulk update runs rules set to apply immediately on the changed transactions" do
+    @user.family.rules.create!(
+      resource_type: "transaction", active: true, apply_immediately: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "x") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: Category.first.id) ]
+    )
+    entries = @user.family.entries.transactions.excluding_split_parents.limit(2)
+
+    post transactions_bulk_update_url, params: { bulk_update: { entry_ids: entries.map(&:id), notes: "Bulk note" } }
+
+    assert_enqueued_jobs 1, only: ApplyImmediateRulesJob
+    job = enqueued_jobs.find { |enqueued| enqueued[:job] == ApplyImmediateRulesJob }
+    assert_equal entries.map(&:entryable_id).sort, job[:args].last["transaction_ids"].sort
+  end
+
   test "bulk update preloads transaction records" do
     transaction_ids = @user.family.entries.transactions.limit(4).pluck(:id)
 

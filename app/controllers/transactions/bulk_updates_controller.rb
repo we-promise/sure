@@ -21,6 +21,8 @@ class Transactions::BulkUpdatesController < ApplicationController
         bulk_update_entries(annotate_ids, scoped_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES))
     end
 
+    Rule.apply_immediately_later(Current.family, selected.where(entryable_type: "Transaction").pluck(:entryable_id)) if updated.positive?
+
     redirect_back_or_to transactions_path, notice: "#{updated} transactions updated"
   end
 

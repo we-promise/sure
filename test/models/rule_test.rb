@@ -1,7 +1,7 @@
 require "test_helper"
 
 class RuleTest < ActiveSupport::TestCase
-  include EntriesTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:empty)
@@ -526,8 +526,55 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal [ first, second ], @family.rules.ordered.to_a
   end
 
+  test "apply_immediately_later enqueues only when the family has active immediate rules" do
+    transaction = create_transaction(account: @account, name: "Whole Foods").transaction
+    create_category_rule("Nightly")
+    create_category_rule("Paused", apply_immediately: true, active: false)
+
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob) do
+      Rule.apply_immediately_later(@family, transaction.id)
+    end
+
+    create_category_rule("Immediate", apply_immediately: true)
+
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ transaction.id ] } ]) do
+      Rule.apply_immediately_later(@family, [ transaction.id, transaction.id, nil ])
+    end
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob) do
+      Rule.apply_immediately_later(@family, [])
+    end
+  end
+
+  test "apply_immediately_later does not raise when the job cannot be enqueued" do
+    transaction = create_transaction(account: @account, name: "Whole Foods").transaction
+    create_category_rule("Immediate", apply_immediately: true)
+    ApplyImmediateRulesJob.stubs(:perform_later).raises(RuntimeError, "queue down")
+
+    assert_nil Rule.apply_immediately_later(@family, transaction.id)
+  end
+
+  test "apply_immediately_later logs a job the adapter refuses" do
+    transaction = create_transaction(account: @account, name: "Whole Foods").transaction
+    create_category_rule("Immediate", apply_immediately: true)
+    ApplyImmediateRulesJob.stubs(:perform_later).returns(false)
+    Rails.logger.expects(:error).with(regexp_matches(/could not enqueue ApplyImmediateRulesJob/))
+
+    assert_nil Rule.apply_immediately_later(@family, transaction.id)
+  end
+
   private
     def create_exclude_rule
       @family.rules.create!(resource_type: "transaction", actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    end
+
+    def create_category_rule(name, apply_immediately: false, active: true)
+      @family.rules.create!(
+        name: name,
+        resource_type: "transaction",
+        active: active,
+        apply_immediately: apply_immediately,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+      )
     end
 end

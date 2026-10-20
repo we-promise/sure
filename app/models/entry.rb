@@ -302,6 +302,12 @@ class Entry < ApplicationRecord
     entryable.lock_saved_attributes!
   end
 
+  # Rules set to "apply immediately" run for this transaction after a person
+  # created or changed it.
+  def apply_immediate_rules_later
+    Rule.apply_immediately_later(account.family, entryable_id) if transaction?
+  end
+
   # Enqueues an account sync whose window starts at the earliest date this
   # entry has occupied since it was loaded, so balances are recomputed from
   # wherever the entry used to sit.

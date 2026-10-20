@@ -165,6 +165,7 @@ class TransactionsController < ApplicationController
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+      @entry.apply_immediate_rules_later
 
       respond_with_created_entry(@entry)
     else
@@ -202,6 +203,7 @@ class TransactionsController < ApplicationController
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.sync_account_later if sync_needed
+      @entry.apply_immediate_rules_later
 
       notes_changed = @entry.saved_change_to_notes?
 
@@ -265,6 +267,7 @@ class TransactionsController < ApplicationController
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
     @entry.transaction.lock_attr!(:tag_ids)
+    @entry.apply_immediate_rules_later
 
     respond_to do |format|
       # JSON stays first so Accept: */* callers keep the original response.

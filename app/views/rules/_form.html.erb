@@ -109,5 +109,14 @@
     <%= f.toggle :stop_processing %>
   </section>
 
+  <section class="flex items-center gap-4 justify-between">
+    <div class="text-sm space-y-1">
+      <h3 class="font-medium text-primary"><%= t(".apply_immediately_label") %></h3>
+      <p class="text-secondary"><%= t(".apply_immediately_description") %></p>
+      <p class="text-secondary"><%= t(".apply_immediately_ai_cost") %></p>
+    </div>
+    <%= f.toggle :apply_immediately %>
+  </section>
+
   <%= f.submit %>
 <% end %>

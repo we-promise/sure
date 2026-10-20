@@ -104,6 +104,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.mark_user_modified! if user_modified_requested?
       @entry.sync_account_later
+      @entry.apply_immediate_rules_later
 
       @transaction = @entry.transaction
       render :show, status: :created
@@ -169,6 +170,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         raise ActiveRecord::Rollback
       end
     end
+
+    # After the commit, so the enqueue runs here and not in a deferred
+    # after-commit callback once the response is already rendered.
+    @entry.apply_immediate_rules_later if @transaction
 
   rescue => e
     Rails.logger.error "TransactionsController#update error: #{e.message}"

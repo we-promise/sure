@@ -1386,6 +1386,8 @@ class Family::DataImporter
           effective_date: data["effective_date"].present? ? Date.parse(data["effective_date"].to_s) : nil,
           stop_processing: data["stop_processing"] || false
         )
+        # Exports made before this setting existed don't carry it; keep the stored value then.
+        rule.apply_immediately = data["apply_immediately"] || false if data.key?("apply_immediately")
 
         rule.conditions.destroy_all unless created
         rule.actions.destroy_all unless created

@@ -86,6 +86,8 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
       entry.lock_saved_attributes!
     end
 
+    entry.apply_immediate_rules_later
+
     {
       success: true,
       transaction: serialize(transaction.reload),

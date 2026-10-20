@@ -1313,6 +1313,7 @@ components:
       - active
       - position
       - stop_processing
+      - apply_immediately
       - conditions
       - actions
       - created_at
@@ -1342,6 +1343,11 @@ components:
           type: boolean
           description: When true, rules further down do not change transactions this
             rule matches
+        apply_immediately:
+          type: boolean
+          description: When true, the rule also runs right after a transaction is
+            created or changed by hand, in a bulk edit or via the API; otherwise it
+            only runs on the nightly and sync runs
         conditions:
           type: array
           items:
@@ -1426,6 +1432,7 @@ components:
           enum:
           - manual
           - scheduled
+          - immediate
         status:
           type: string
           enum:
@@ -8792,6 +8799,7 @@ paths:
           enum:
           - manual
           - scheduled
+          - immediate
       - name: start_executed_at
         in: query
         required: false

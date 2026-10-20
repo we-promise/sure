@@ -35,6 +35,7 @@ de:
       execution_types:
         manual: Manuell
         scheduled: Geplant
+        immediate: Sofort
       statuses:
         pending: Ausstehend
         success: Erfolgreich
@@ -81,6 +82,9 @@ de:
       stop_processing_description: Weiter unten stehende Regeln ändern die Transaktionen nicht mehr, die diese Regel trifft.
       stop_processing_label: Danach keine weiteren Regeln anwenden
       then: DANN
+      apply_immediately_label: Sofort bei neuen und geänderten Transaktionen anwenden
+      apply_immediately_description: Läuft direkt, nachdem eine Transaktion von Hand, per Mehrfachbearbeitung oder über die API angelegt oder geändert wurde, und weiterhin nachts. Die aktiven Regeln darüber laufen vorher auf diesen Transaktionen, diese Regel liefert also dasselbe Ergebnis wie im nächtlichen Lauf. Regeln weiter unten warten auf den nächtlichen Lauf, ebenso die E-Mails der Regeln darüber. Felder, die du selbst gesetzt hast, bleiben unverändert.
+      apply_immediately_ai_cost: KI-Aktionen in dieser Regel oder in einer aktiven Regel darüber kosten je neue oder geänderte Transaktion, die sie treffen, eine KI-Anfrage.
     index:
       ai_cost_warning: Regelaktionen mit KI kosten Geld. Filtere so eng wie möglich, damit keine unnötigen Kosten entstehen.
       delete_all_rules: Alle Regeln löschen
@@ -106,6 +110,8 @@ de:
       re_apply_rule: Regel erneut anwenden
       stop_processing: Stopp
       stop_processing_hint: Weiter unten stehende Regeln ändern die Transaktionen nicht mehr, die diese Regel trifft.
+      apply_immediately: Sofort
+      apply_immediately_hint: Läuft auch direkt, nachdem eine Transaktion von Hand, per Mehrfachbearbeitung oder über die API angelegt oder geändert wurde, zusammen mit den aktiven Regeln darüber.
       then: DANN
     update:
       success: Regel aktualisiert

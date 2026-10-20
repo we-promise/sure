@@ -1952,6 +1952,35 @@ end
     assert_match I18n.t("transactions.show.category_set_on_outflow"), response.body
   end
 
+  test "creating a transaction runs rules set to apply immediately" do
+    create_immediate_rule
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id, name: "New transaction", date: Date.current,
+        currency: "USD", amount: 100, nature: "outflow", entryable_type: "Transaction",
+        entryable_attributes: { category_id: "" }
+      }
+    }
+
+    created_entry = Entry.order(:created_at).last
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ created_entry.entryable_id ] } ])
+  end
+
+  test "changing a transaction runs rules set to apply immediately" do
+    create_immediate_rule
+
+    patch transaction_url(@entry), params: { entry: { name: "Renamed" } }
+
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @entry.entryable_id ] } ])
+  end
+
+  test "changing a transaction queues nothing without immediate rules" do
+    patch transaction_url(@entry), params: { entry: { name: "Renamed" } }
+
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
   test "does not offer guests to create a rule through a transaction update" do
     category = categories(:income)
     @entry.update!(name: "AMZN Mktp UK")
@@ -1975,6 +2004,14 @@ end
   end
 
   private
+    def create_immediate_rule
+      @user.family.rules.create!(
+        name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Renamed") ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id) ]
+      )
+    end
+
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
     end

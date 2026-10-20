@@ -7,6 +7,19 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
     @transaction = transactions(:one)
   end
 
+  test "changing the category runs rules set to apply immediately" do
+    @entry.account.family.rules.create!(
+      name: "Immediate", resource_type: "transaction", active: true, apply_immediately: true,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
+    )
+
+    patch transaction_category_url(@entry),
+      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: @transaction.id, category_id: categories(:income).id } } },
+      as: :turbo_stream
+
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @entry.account.family, { transaction_ids: [ @transaction.id ] } ])
+  end
+
   test "assigning a category touches its last_used_at" do
     category = categories(:income)
     assert_nil category.last_used_at

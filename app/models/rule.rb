@@ -19,6 +19,7 @@ class Rule < ApplicationRecord
   # Rules run top to bottom. created_at breaks ties, e.g. for rules created at
   # the same moment before anyone reordered them.
   scope :ordered, -> { order(:position, :created_at, :id) }
+  scope :applied_immediately, -> { where(active: true, apply_immediately: true) }
 
   validates :resource_type, presence: true, if: -> { resource_type.to_s.valid_encoding? }
   # A NUL or invalid encoding is reported by DatabaseTextValidator instead.
@@ -204,12 +205,14 @@ class Rule < ApplicationRecord
   # transactions a rule higher up stopped. claimed_ids maps an attribute to the
   # transaction ids a rule higher up already set it for; an action leaves those
   # transactions alone ("top rule wins").
-  def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {})
+  def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [])
     total_modified = 0
     total_async_jobs = 0
     has_async = false
 
     actions.each do |action|
+      next if skip_action_types.include?(action.action_type)
+
       excluded_ids = action.claimed_attributes.flat_map { |attribute| claimed_ids.fetch(attribute, []).to_a }.uniq
       action_scope = Rule.excluding_transaction_ids(scope, excluded_ids)
       result = action.apply(action_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
@@ -231,6 +234,27 @@ class Rule < ApplicationRecord
     else
       total_modified
     end
+  end
+
+  # Runs the "apply immediately" rules for transactions a person just created
+  # or changed (web, bulk edit, API, assistant). Families without such rules
+  # enqueue nothing. Best-effort: the change is already saved and the nightly
+  # run applies the rules anyway, so a failed enqueue must not fail the request.
+  # Callers inside a database transaction call this after it, so the enqueue
+  # is not deferred to an after-commit callback outside this rescue.
+  def self.apply_immediately_later(family, transaction_ids)
+    transaction_ids = Array(transaction_ids).compact.uniq
+    return if transaction_ids.empty? || !family.rules.applied_immediately.exists?
+
+    # perform_later returns false instead of raising when the adapter
+    # refuses the job (see RulesController#enqueue_clear_ai_cache).
+    return if ApplyImmediateRulesJob.perform_later(family, transaction_ids: transaction_ids)
+
+    Rails.logger.error("Rule.apply_immediately_later could not enqueue ApplyImmediateRulesJob for family #{family.id}")
+    nil
+  rescue StandardError => e
+    Rails.logger.error("Rule.apply_immediately_later failed for family #{family.id}: #{e.class}: #{e.message}")
+    nil
   end
 
   def apply_later(ignore_attribute_locks: false)

@@ -535,6 +535,14 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "update saves apply immediately" do
+    rule = create_category_rule("Groceries")
+
+    patch rule_url(rule), params: { rule: { apply_immediately: "1" } }
+
+    assert rule.reload.apply_immediately?
+  end
+
   test "apply_all enqueues job and redirects" do
     assert_enqueued_with(job: ApplyAllRulesJob) do
       post apply_all_rules_url
@@ -711,6 +719,14 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def create_category_rule(name)
+      @user.family.rules.create!(
+        name: name, resource_type: "transaction", active: true,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: entries(:transaction).name) ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id) ]
+      )
+    end
+
     # A regex condition, so a stubbed timeout reaches the baseline query, and one
     # matching transaction, so a recorded baseline is visible as a delivery.
     # An active regex rule with one match and no email action yet.

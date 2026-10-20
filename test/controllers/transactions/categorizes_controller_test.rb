@@ -280,7 +280,56 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_url
   end
 
+  test "create runs rules set to apply immediately on the categorized transactions" do
+    create_immediate_rule
+    entry1 = create_transaction(account: @account, name: "Starbucks")
+    entry2 = create_transaction(account: @account, name: "Starbucks")
+
+    post transactions_categorize_url,
+      params: {
+        position: 0,
+        grouping_key: "Starbucks",
+        entry_ids: [ entry1.id, entry2.id ],
+        all_entry_ids: [ entry1.id, entry2.id ],
+        category_id: @category.id
+      },
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_equal [ entry1.entryable_id, entry2.entryable_id ].sort, immediate_job_transaction_ids.sort
+  end
+
+  test "assign_entry runs rules set to apply immediately on the categorized transaction" do
+    create_immediate_rule
+    entry = create_transaction(account: @account, name: "Starbucks")
+    other = create_transaction(account: @account, name: "Starbucks")
+
+    patch assign_entry_transactions_categorize_url, params: {
+      entry_id: entry.id,
+      category_id: @category.id,
+      position: 0,
+      all_entry_ids: [ entry.id, other.id ]
+    }
+
+    assert_response :success
+    assert_equal [ entry.entryable_id ], immediate_job_transaction_ids
+  end
+
   private
+    def create_immediate_rule
+      @family.rules.create!(
+        resource_type: "transaction", active: true, apply_immediately: true,
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Starbucks") ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_tags", value: tags(:one).id) ]
+      )
+    end
+
+    def immediate_job_transaction_ids
+      jobs = enqueued_jobs.select { |enqueued| enqueued[:job] == ApplyImmediateRulesJob }
+      assert_equal 1, jobs.size
+      jobs.first[:args].last["transaction_ids"]
+    end
+
 
     def sign_out
       # Deleting sessions through the controller de-authenticates the request the
