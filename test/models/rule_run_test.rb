@@ -104,6 +104,15 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run.complete_job!(modified_count: 0)
   end
 
+  test "a failed result broadcast does not fail the job that finished the run" do
+    rule_run = create_rule_run
+    rule_run.update!(execution_type: "immediate")
+    Family.any_instance.stubs(:broadcast_replace_to).raises(RuntimeError, "cable down")
+
+    assert_nothing_raised { rule_run.complete_job!(modified_count: 1) }
+    assert_equal "success", rule_run.reload.status
+  end
+
   test "other runs offer nothing when their jobs finish" do
     rule_run = create_rule_run
 

@@ -35,12 +35,17 @@ class RuleRun < ApplicationRecord
   # Family::SyncCompleteEvent. A full-page refresh would wipe forms that are
   # still open, such as the drawer the person just edited in; the toast waits
   # until they are done.
+  # Best-effort: the rules already ran, so a failed broadcast must not fail
+  # (and retry) the job that called it, which would repeat its AI work.
   def self.offer_immediate_result(family)
     family.broadcast_replace_to(
       family,
       target: "sync-toast",
       partial: "shared/notifications/sync_toast"
     )
+  rescue StandardError => e
+    Rails.logger.warn("RuleRun.offer_immediate_result failed for family #{family.id}: #{e.class}: #{e.message}")
+    nil
   end
 
   # Thread-safe method to complete a job and update the run
