@@ -15,6 +15,13 @@ export default class extends Controller {
     url: String,
     param: String,
     holdDelay: { type: Number, default: 150 },
+    // Milliseconds after which an unanswered save counts as failed, so a
+    // stalled request cannot hold back every later save. 0 waits forever.
+    saveTimeout: { type: Number, default: 0 },
+    // The same list rendered more than once on a page (e.g. once per tab)
+    // follows a move right away: other sortable lists with the same url and
+    // param are reordered too.
+    mirrorLists: { type: Boolean, default: false },
   };
 
   connect() {
@@ -31,6 +38,10 @@ export default class extends Controller {
 
   // ===== Mouse Drag Events =====
   dragStart(event) {
+    // A drag starting inside a row that is not draggable itself (an image,
+    // selected text) is not a reorder.
+    if (!event.currentTarget.draggable) return;
+
     // If a touch interaction is in progress, cancel native drag —
     // use touch events with hold delay instead.
     // This avoids blocking mouse/trackpad drag on touch-capable laptops.
@@ -43,15 +54,25 @@ export default class extends Controller {
     this.draggedElement.classList.add("opacity-50");
     this.draggedElement.setAttribute("aria-grabbed", "true");
     event.dataTransfer.effectAllowed = "move";
+    // Firefox only starts a drag that carries data. A custom type keeps text
+    // fields from accepting the row as a drop.
+    event.dataTransfer.setData(
+      "application/x-sortable-list-id",
+      this.draggedElement.dataset.sortableListId ?? "",
+    );
   }
 
   dragEnd(event) {
     event.currentTarget.classList.remove("opacity-50");
     event.currentTarget.setAttribute("aria-grabbed", "false");
+    this.draggedElement = null;
     this.clearPlaceholders();
   }
 
   dragOver(event) {
+    // A drag from another list on the page is not ours to drop.
+    if (!this.draggedElement) return;
+
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
 
@@ -68,6 +89,8 @@ export default class extends Controller {
   }
 
   drop(event) {
+    if (!this.draggedElement) return;
+
     event.preventDefault();
     event.stopPropagation();
 
@@ -368,10 +391,41 @@ export default class extends Controller {
   // once it finishes, with the latest order only, so an older request can
   // never land after a newer one and restore an earlier order.
   saveOrder() {
-    this.pendingOrder = this.itemTargets.map(
-      (item) => item.dataset.sortableListId,
+    const order = this.itemTargets.map((item) => item.dataset.sortableListId);
+    const queue = this.mirrorListsValue ? this.mirrorOrder(order) : this;
+    queue.pendingOrder = order;
+    if (!queue.saving) queue.flushSaves();
+  }
+
+  // Applies the order to the other copies of this list and returns the
+  // controller whose queue saves for all copies, so their saves also run one
+  // at a time.
+  mirrorOrder(order) {
+    const lists = [
+      ...document.querySelectorAll(`[data-controller~='${this.identifier}']`),
+    ].filter(
+      (list) =>
+        list.dataset.sortableListUrlValue === this.urlValue &&
+        list.dataset.sortableListParamValue === this.paramValue,
     );
-    if (!this.saving) this.flushSaves();
+
+    lists.forEach((list) => {
+      if (list === this.element) return;
+
+      order.forEach((id) => {
+        const item = list.querySelector(
+          `[data-sortable-list-id='${CSS.escape(id)}']`,
+        );
+        if (item) list.appendChild(item);
+      });
+    });
+
+    return (
+      this.application.getControllerForElementAndIdentifier(
+        lists[0],
+        this.identifier,
+      ) ?? this
+    );
   }
 
   async flushSaves() {
@@ -398,6 +452,10 @@ export default class extends Controller {
         method: "PATCH",
         headers,
         body: JSON.stringify(this.buildBody(order)),
+        signal:
+          this.saveTimeoutValue > 0 && AbortSignal.timeout
+            ? AbortSignal.timeout(this.saveTimeoutValue)
+            : undefined,
       });
 
       if (!response.ok) {

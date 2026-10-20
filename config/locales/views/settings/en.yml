@@ -193,6 +193,7 @@ en:
         general_title: General
         default_period: Default Period
         default_account_order: Default Account Order
+        default_account_order_hint: With Manual, drag accounts in the sidebar to set their order.
         language: Language
         language_auto: Browser language
         page_title: Preferences

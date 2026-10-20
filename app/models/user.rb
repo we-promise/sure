@@ -592,6 +592,34 @@ class User < ApplicationRecord
     AccountOrder.find(default_account_order) || AccountOrder.default
   end
 
+  MANUAL_ACCOUNT_ORDER_LIMIT = 500
+
+  # Drag-and-drop order of accounts per account group, keyed by accountable
+  # key (e.g. "depository") with account ids in display order.
+  def manual_account_order
+    order = preferences&.dig("manual_account_order")
+    order.is_a?(Hash) ? order : {}
+  end
+
+  # Stores the order of one account group. Ids the user cannot access are
+  # dropped so the stored preference never references foreign accounts.
+  def update_manual_account_order(group_key, account_ids)
+    group_key = group_key.to_s
+    return false unless Accountable::TYPES.map(&:underscore).include?(group_key)
+    return false unless account_ids.is_a?(Array)
+
+    requested_ids = account_ids.map(&:to_s).uniq.first(MANUAL_ACCOUNT_ORDER_LIMIT)
+    accessible_ids = accessible_accounts.where(id: requested_ids, accountable_type: group_key.camelize).pluck(:id).to_set
+    ordered_ids = requested_ids.select { |id| accessible_ids.include?(id) }
+
+    transaction do
+      lock!
+      updated_prefs = (preferences || {}).deep_dup
+      updated_prefs["manual_account_order"] = manual_account_order.merge(group_key => ordered_ids)
+      update!(preferences: updated_prefs)
+    end
+  end
+
   def default_account_for_transactions
     return nil unless default_account_id.present?
 

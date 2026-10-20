@@ -45,6 +45,7 @@ de:
         general_title: Allgemein
         default_period: Standardzeitraum
         default_account_order: Standardreihenfolge der Konten
+        default_account_order_hint: Bei „Manuell“ ziehst du die Konten in der Seitenleiste in die gewünschte Reihenfolge.
         language: Sprache
         language_auto: Browsersprache
         page_title: Einstellungen

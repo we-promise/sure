@@ -31,6 +31,9 @@ class Settings::AppearancesController < ApplicationController
         selected = (account_groups.is_a?(Array) ? account_groups : [ account_groups ])
         updated_prefs["always_expanded_account_groups"] = selected.select { |k| valid_keys.include?(k) }
       end
+      # Account order is a column, not a preference; unknown keys are ignored.
+      account_order = params.dig(:user, :default_account_order)
+      @user.default_account_order = account_order if AccountOrder::ORDERS.key?(account_order.to_s)
       @user.update!(preferences: updated_prefs)
     end
     redirect_to settings_appearance_path
