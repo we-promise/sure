@@ -120,6 +120,7 @@ class Loan
           .pick(:date, :balance)
 
         if as_of == Date.current && account.has_current_anchor? &&
+            account.current_anchor_date <= as_of &&
             (snapshot_date.nil? || account.current_anchor_date > snapshot_date)
           balance = account.current_anchor_balance
         end
