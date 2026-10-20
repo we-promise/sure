@@ -1,10 +1,6 @@
 module EnableBankingItem::Provided
   extend ActiveSupport::Concern
 
-  # Carrier-grade NAT (RFC 6598), which Tailscale also uses. IPAddr#private?
-  # does not cover it.
-  SHARED_ADDRESS_SPACE = IPAddr.new("100.64.0.0/10")
-
   def enable_banking_provider
     return nil unless credentials_configured?
 
@@ -34,14 +30,10 @@ module EnableBankingItem::Provided
 
   private
     # last_psu_ip is the browser's address as Rails saw it. On a self-hosted
-    # instance reached over a LAN or VPN that is a private address, which
-    # banks reject as an invalid PSU IP, so only a public one is sent.
+    # instance reached over a LAN or VPN that is a private or other
+    # special-purpose address, which banks reject as an invalid PSU IP, so only
+    # a public one is sent.
     def public_psu_ip
-      ip = IPAddr.new(last_psu_ip.to_s).native
-      return nil if ip.private? || ip.loopback? || ip.link_local? || ip.to_i.zero? || SHARED_ADDRESS_SPACE.include?(ip)
-
-      last_psu_ip
-    rescue IPAddr::Error
-      nil
+      last_psu_ip if NetworkAddress.public?(last_psu_ip)
     end
 end

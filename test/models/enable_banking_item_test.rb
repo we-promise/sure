@@ -238,7 +238,7 @@ class EnableBankingItemTest < ActiveSupport::TestCase
   test "build_psu_headers sends a public PSU IP to a bank that requires it" do
     @item.aspsp_required_psu_headers = [ "Psu-Ip-Address" ]
 
-    %w[81.2.3.4 2a00:1450:4001::1].each do |ip|
+    %w[81.2.3.4 2a00:1450:4001::1 64:ff9b::5102:304].each do |ip|
       @item.last_psu_ip = ip
       assert_equal({ "Psu-Ip-Address" => ip }, @item.build_psu_headers, ip)
     end
@@ -262,6 +262,18 @@ class EnableBankingItemTest < ActiveSupport::TestCase
       "169.254.1.1" => "an IPv4 link-local address",
       "::ffff:100.64.0.1" => "a carrier-grade NAT address written as IPv6",
       "0.0.0.0" => "the unspecified address",
+      "::" => "the IPv6 unspecified address",
+      "198.18.0.1" => "a benchmarking address a VPN may assign",
+      "192.0.0.8" => "an IETF protocol assignment",
+      "192.0.2.1" => "a documentation address",
+      "203.0.113.5" => "another documentation address",
+      "224.0.0.1" => "a multicast address",
+      "255.255.255.255" => "the broadcast address",
+      "2001:db8::1" => "an IPv6 documentation address",
+      "ff02::1" => "an IPv6 multicast address",
+      "64:ff9b::c0a8:114" => "a home LAN address written as NAT64",
+      "2002:c0a8:114::1" => "a home LAN address written as 6to4",
+      "::c0a8:114" => "a home LAN address written as IPv4-compatible",
       "not-an-ip" => "an unparseable value"
     }.each do |ip, kind|
       @item.last_psu_ip = ip
