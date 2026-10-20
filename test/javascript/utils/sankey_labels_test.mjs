@@ -101,3 +101,59 @@ test("same-depth nodes in different visual columns do not compete", () => {
   const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
   assert.equal(hidden.size, 0);
 });
+
+// On a phone the columns sit ~100px apart, so "Investment Income" beside the
+// first column ran across the gap into the Cash Flow bar.
+test("a label that would run into another column's bar yields", () => {
+  const nodes = [
+    { index: 0, x0: 0, x1: 15, value: 1042, y0: 250, y1: 254 },
+    { index: 1, x0: 120, x1: 135, value: 61957, y0: 60, y1: 300 },
+  ];
+  const labelBoxes = new Map([
+    [0, { x: 21, y: 240, width: 108, height: 26 }],
+    [1, { x: 141, y: 168, width: 70, height: 26 }],
+  ]);
+  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING, labelBoxes });
+  assert.equal(hidden.has(0), true, "label crossing the next bar yields");
+  assert.equal(hidden.has(1), false);
+});
+
+test("a label that stops short of the next column keeps showing", () => {
+  const nodes = [
+    { index: 0, x0: 0, x1: 15, value: 9855, y0: 230, y1: 246 },
+    { index: 1, x0: 120, x1: 135, value: 61957, y0: 60, y1: 300 },
+  ];
+  const labelBoxes = new Map([
+    [0, { x: 21, y: 226, width: 60, height: 26 }],
+    [1, { x: 141, y: 168, width: 70, height: 26 }],
+  ]);
+  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING, labelBoxes });
+  assert.equal(hidden.size, 0);
+});
+
+test("of two labels from different columns that would collide, the smaller yields", () => {
+  const nodes = [
+    { index: 0, x0: 120, x1: 135, value: 3230, y0: 100, y1: 110 }, // label runs right
+    { index: 1, x0: 300, x1: 315, value: 21967, y0: 100, y1: 140 }, // label runs left
+  ];
+  const labelBoxes = new Map([
+    [0, { x: 141, y: 92, width: 90, height: 26 }],
+    [1, { x: 200, y: 108, width: 94, height: 26 }],
+  ]);
+  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING, labelBoxes });
+  assert.equal(hidden.has(1), false, "more prominent label keeps its place");
+  assert.equal(hidden.has(0), true);
+});
+
+test("label boxes in the same column are left to the spacing rule", () => {
+  const nodes = column([
+    [500, 0, 20],
+    [400, 30, 50],
+  ]).map((node) => ({ ...node, x1: 115 }));
+  const labelBoxes = new Map([
+    [0, { x: 121, y: -3, width: 80, height: 26 }],
+    [1, { x: 121, y: 26, width: 80, height: 26 }],
+  ]);
+  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING, labelBoxes });
+  assert.equal(hidden.size, 0);
+});
