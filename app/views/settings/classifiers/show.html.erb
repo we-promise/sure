@@ -21,9 +21,6 @@
     icon: "play"
   ) %>
 <% end %>
-<%= settings_section title: t(".accounts") do %>
-  <%= render "settings/classifiers/accounts", settings: @settings, accounts: @accounts %>
-<% end %>
 <%= settings_section title: t(".title"), subtitle: t(".description") do %>
   <%= render "settings/classifiers/classifier", settings: @settings, active: @rules_active["bayes_categorize"] %>
 <% end %>

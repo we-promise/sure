@@ -84,7 +84,7 @@ class Family::BayesCategorizer
   end
 
   # Labels every uncategorized, enrichable transaction in transaction_ids
-  # whose argmax confidence clears the threshold, outside excluded accounts.
+  # whose argmax confidence clears the threshold.
   # No-op (empty Result) when the training guard fails.
   def classify_and_apply(transaction_ids)
     return Result.new(categorized_ids: [], modified_count: 0) unless enough_training_data?
@@ -93,7 +93,6 @@ class Family::BayesCategorizer
     modified_count = 0
 
     scope = family.transactions.where(id: transaction_ids, category_id: nil).enrichable(:category_id)
-    scope = scope.joins(:entry).where.not(entries: { account_id: settings.excluded_account_ids }) if settings.excluded_account_ids.any?
     scope.includes(*preloads).find_each do |transaction|
       category_id, confidence = classify(transaction)
       next if category_id.nil?
@@ -178,7 +177,7 @@ class Family::BayesCategorizer
     end
 
     # The newest categorized transactions by creation (as the original), dated on
-    # or before as_of if given, minus excluded categories and accounts, and
+    # or before as_of if given, minus excluded categories, and
     # optionally minus Bayes' own labels still waiting to be confirmed, so a
     # wrong guess isn't fed back in and reinforced. A label trains once
     # someone changes or locks it, or after its grace period.
@@ -187,7 +186,6 @@ class Family::BayesCategorizer
         scope = family.transactions.where.not(category_id: nil).joins(:entry)
         scope = scope.where(entries: { date: ..as_of }) if as_of
         scope = scope.where.not(category_id: excluded_category_ids) if excluded_category_ids.any?
-        scope = scope.where.not(entries: { account_id: settings.excluded_account_ids }) if settings.excluded_account_ids.any?
         scope = scope.where.not(kind: Transaction::TRANSFER_KINDS) if settings.exclude_transfers
         scope = scope.where.not(unconfirmed_self_label_sql) if settings.skip_self_labels
         scope.preload(*preloads)

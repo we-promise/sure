@@ -5,13 +5,6 @@ en:
       account:
         account_field: Include the account as one token
         account_field_hint: "Which account a transaction is in counts as evidence. It never decides alone: a transaction needs a known word or merchant."
-      accounts:
-        accounts: Accounts
-        accounts_all: All accounts
-        accounts_hint: The classifier and the matcher neither learn from nor change transactions in unchecked accounts.
-        accounts_some: "%{count} of %{total} accounts"
-        apply: Apply
-        search_accounts: Search accounts
       amount:
         amount_by_direction: Include the direction, money in or out
         amount_by_direction_hint: Each category learns which way its money goes, and refunds and purchases at the same shop stay apart.
@@ -45,7 +38,7 @@ en:
         best: Best found
         best_changes: "Best found, changed from yours:"
         best_no_changes: Nothing scored better than your settings.
-        buttons_hint: "Test my settings scores your settings. Find best settings searches the %{tuning} months before the ones shown, so what it finds is scored on months it didn't see. It judges by ROC-AUC: how well the scores rank each category's transactions above the rest, at any threshold, keeping a change only when it's higher overall and in all but one of those %{tuning} months alone. It first picks the inputs (every combination of the merchant token, amount and account; then scoring the merchant and account apart; then the merchant's name and the notes as words), then tries one change at a time to the other settings, and last to Scoring. Defaults are the original classifier's, with your choice of categories and accounts; Reset to defaults switches to them and tests them."
+        buttons_hint: "Test my settings scores your settings. Find best settings searches the %{tuning} months before the ones shown, so what it finds is scored on months it didn't see. It judges by ROC-AUC: how well the scores rank each category's transactions above the rest, at any threshold, keeping a change only when it's higher overall and in all but one of those %{tuning} months alone. It first picks the inputs (every combination of the merchant token, amount and account; then scoring the merchant and account apart; then the merchant's name and the notes as words), then tries one change at a time to the other settings, and last to Scoring. Defaults are the original classifier's, with your choice of categories; Reset to defaults switches to them and tests them."
         categories_heading: Category classifier
         change: "%{setting}: %{value}"
         confusion: "%{actual} → %{predicted}"
@@ -116,7 +109,6 @@ en:
         smoothing: Smoothing
         smoothing_hint: Added to every count so an unseen word doesn't rule a category out (0.001–10). 1 is the original's; lower trusts what's been seen more.
       show:
-        accounts: Accounts
         add_rule_body: There's no %{name} rule in your rules, so there's nothing to turn on. Add it to the top of your rules?
         add_rule_cancel: "No"
         add_rule_confirm: Add rule

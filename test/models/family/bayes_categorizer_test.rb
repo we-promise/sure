@@ -445,19 +445,6 @@ class Family::BayesCategorizerTest < ActiveSupport::TestCase
     assert_equal [ @groceries.id, rent.id ].sort, tuned(excluded_category_ids: [ food.id ]).send(:class_models).keys.sort
   end
 
-  test "settings: excluded accounts are neither trained on nor classified" do
-    train_two_categories
-    other = @family.accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
-    5.times { create_transaction(account: other, name: "Starbucks Coffee", category: @coffee) }
-    pending = create_transaction(account: other, name: "Starbucks Coffee").transaction
-    excluding = tuned(excluded_account_ids: [ other.id ])
-
-    assert_equal 25, tuned.send(:training_transactions).size
-    assert_equal 20, excluding.send(:training_transactions).size
-    assert_equal [], excluding.classify_and_apply([ pending.id ]).categorized_ids
-    assert_nil pending.reload.category
-  end
-
   test "settings: transfers can be left out of training" do
     train_two_categories
     3.times { create_transaction(account: @account, name: "To savings", category: @groceries, kind: "funds_movement") }

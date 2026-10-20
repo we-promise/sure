@@ -7,8 +7,8 @@
 # last MONTHS; "Find best settings" searches the months before them, so the
 # best found is scored on months it never saw (see search). The latest
 # result is cached, with the defaults alongside for comparison and the
-# digest of the settings it tested. The defaults keep the chosen categories
-# and accounts, so every column scores the same transactions. Each run also
+# digest of the settings it tested. The defaults keep the chosen categories,
+# so every column scores the same transactions. Each run also
 # scores the matcher (Family::SimilarMerchantFiller) on the same months, at
 # every cutoff, similarity and number agreeing it offers (matcher_report).
 class Family::BayesEvaluation
@@ -209,8 +209,7 @@ class Family::BayesEvaluation
   def run!(action: "test", &progress)
     holdout = self.class.new(family, settings: settings, today: today, months: HOLDOUT_MONTHS)
     current = holdout.report
-    defaults = Family::BayesSettings.new(excluded_category_ids: settings.excluded_category_ids,
-                                         excluded_account_ids: settings.excluded_account_ids)
+    defaults = Family::BayesSettings.new(excluded_category_ids: settings.excluded_category_ids)
     result = {
       "version" => RESULT_VERSION,
       "action" => action,
@@ -467,7 +466,6 @@ class Family::BayesEvaluation
       scope = tested_scope.where(entries: { date: start...(start >> 1) })
       excluded = categorizer.excluded_category_ids
       scope = scope.where.not(category_id: excluded) if excluded.any?
-      scope = scope.where.not(entries: { account_id: categorizer.settings.excluded_account_ids }) if categorizer.settings.excluded_account_ids.any?
       scope.preload(:entry, :merchant).to_a
     end
 

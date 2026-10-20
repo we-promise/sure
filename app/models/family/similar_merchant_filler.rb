@@ -5,7 +5,7 @@
 # recent copy, unless the user locked it (a lock it set itself,
 # lock_similar_merchants, doesn't count), so a wrong copy isn't spread. AI
 # merchants count: the detector locks what it sets. The pool is the newest transactions
-# with a merchant, capped like Bayes' training set, outside excluded accounts.
+# with a merchant, capped like Bayes' training set.
 # Transfers neither give nor get one: they have no merchant, and a
 # description typed in the banking app makes them look alike.
 class Family::SimilarMerchantFiller
@@ -65,9 +65,6 @@ class Family::SimilarMerchantFiller
     end
 
     def eligible(scope)
-      scope = scope.where.not(kind: Transaction::TRANSFER_KINDS)
-      return scope if settings.excluded_account_ids.empty?
-
-      scope.joins(:entry).where.not(entries: { account_id: settings.excluded_account_ids })
+      scope.where.not(kind: Transaction::TRANSFER_KINDS)
     end
 end

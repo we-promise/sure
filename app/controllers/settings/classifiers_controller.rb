@@ -10,7 +10,6 @@ class Settings::ClassifiersController < ApplicationController
     ]
     @settings = Current.family.bayes_settings_object
     @categories = Current.family.categories.alphabetically_by_hierarchy
-    @accounts = Current.family.accounts.alphabetically
     @evaluation = Family::BayesEvaluation.cached(Current.family)
     @evaluation_running = Family::BayesEvaluation.running?(Current.family)
     @weight = Family::BayesEvaluation.weight(Current.family)
@@ -29,7 +28,6 @@ class Settings::ClassifiersController < ApplicationController
 
     changes = settings_params.to_h
     changes[:excluded_category_ids] = excluded_category_ids if params.key?(:category_filter)
-    changes[:excluded_account_ids] = excluded_account_ids if params.key?(:account_filter)
     Current.family.update_bayes_settings!(changes) if changes.any?
 
     redirect_to settings_classifier_path
@@ -128,9 +126,5 @@ class Settings::ClassifiersController < ApplicationController
       categories = Current.family.categories.pluck(:id, :parent_id).map { |id, parent_id| [ id.to_s, parent_id&.to_s ] }
       partly_checked_parents = categories.filter_map { |id, parent_id| parent_id if included.include?(id) }
       categories.map(&:first) - included - partly_checked_parents
-    end
-
-    def excluded_account_ids
-      Current.family.accounts.pluck(:id).map(&:to_s) - Array(params[:included_account_ids]).map(&:to_s)
     end
 end

@@ -4,7 +4,8 @@
 # classifier, at the top of every family's order (users can move them). Each
 # is on where the family already has an active rule doing the same with AI,
 # so only families paying for that get the free step before it. Their old
-# on/off settings go.
+# on/off settings go, and the account filter: a rule's conditions choose
+# accounts now.
 class AddClassifierRules < ActiveRecord::Migration[8.1]
   RULES = [
     # action_type, name, position, the AI action that turns it on
@@ -35,7 +36,7 @@ class AddClassifierRules < ActiveRecord::Migration[8.1]
       SQL
     end
 
-    execute "UPDATE families SET bayes_settings = bayes_settings - 'categorize_after_sync' - 'fill_similar_merchants'"
+    execute "UPDATE families SET bayes_settings = bayes_settings - 'categorize_after_sync' - 'fill_similar_merchants' - 'excluded_account_ids'"
   end
 
   # Removes the two actions, and the rules left without one, then numbers

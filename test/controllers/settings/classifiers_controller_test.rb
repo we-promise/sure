@@ -65,14 +65,6 @@ class Settings::ClassifiersControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ dropped_child.id.to_s ], @family.reload.bayes_settings_object.excluded_category_ids
   end
 
-  test "the account checklist saves what's unchecked, even when that's everything" do
-    sign_in @admin
-
-    patch settings_classifier_path, params: { account_filter: "1" }
-
-    assert_equal @family.accounts.pluck(:id).map(&:to_s).sort, @family.reload.bayes_settings_object.excluded_account_ids
-  end
-
   test "reset clears every setting and tests the defaults" do
     @family.update_bayes_settings!(bigrams: "1")
     sign_in @admin

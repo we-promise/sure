@@ -82,13 +82,6 @@ class Family::SimilarMerchantFillerTest < ActiveSupport::TestCase
     assert_equal 1, fill(transaction("Hulu LLC 12"), similar_skip_self: false)
   end
 
-  test "excluded accounts neither give nor get merchants" do
-    2.times { transaction("NETFLIX.COM 8812", merchant: @netflix) }
-    missing = transaction("Netflix com 1203")
-
-    assert_equal 0, fill(missing, excluded_account_ids: [ @account.id ])
-  end
-
   test "transfers neither give nor get merchants" do
     bank = @family.merchants.create!(name: "CBA")
     2.times { transaction("Savings top-up", merchant: bank, kind: "funds_movement") }

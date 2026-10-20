@@ -9,7 +9,6 @@ class Family::BayesSettings
   DEFAULTS = {
     # Training
     excluded_category_ids: [],
-    excluded_account_ids: [],
     # On: Bayes runs with the rules after every sync, so its own guesses would
     # otherwise train the next run and a wrong one would be reinforced.
     skip_self_labels: true,
