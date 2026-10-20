@@ -76,10 +76,51 @@ class HoldingCostBasisTest < ApplicationSystemTestCase
     find(per_share_field).fill_in(with: "", fill_options: { clear: :backspace })
     assert_field total_field_id, with: ""
 
-    save_cost_basis
+    find(per_share_field).ancestor("form").click_on I18n.t("holdings.cost_basis_cell.save")
+    assert_selector per_share_field
+    assert_no_selector "#confirm-dialog[open]"
 
     assert_nil @holding.reload.cost_basis
     assert_not @holding.cost_basis_locked?
+  end
+
+  # The total field shows two decimals but is step="any", so a pasted total
+  # below a cent is kept as pasted and gives the exact per-share cost.
+  test "a pasted total is not rounded to the total field's two decimals" do
+    @holding.update!(qty: 10)
+
+    open_cost_basis_editor
+    paste_into "##{total_field_id}", "0.049"
+    assert_field total_field_id, with: "0.049"
+    assert_field per_share_field_id, with: "0.0049"
+    save_cost_basis
+
+    assert_equal BigDecimal("0.0049"), @holding.reload.cost_basis
+
+    # Unrounded pastes are written out, not in exponent notation (1.2e-7).
+    open_cost_basis_editor
+    paste_into per_share_field, "0.00000012"
+    assert_field per_share_field_id, with: "0.00000012"
+  end
+
+  test "cancelling the confirmation keeps the holdings-list editor open and Cancel refocuses its trigger" do
+    @holding.update!(qty: 10, cost_basis: 12.5, cost_basis_source: "manual", cost_basis_locked: false)
+
+    visit account_path(@holding.account, tab: "holdings")
+    trigger = find("##{dom_id(@holding, :cost_basis)} [data-DS--popover-target='button']")
+    trigger.click
+    field = "##{dom_id(@holding, :popover_cost_basis)}_holding_per_share_cost_basis"
+    find(field).fill_in(with: "20")
+    find(field).ancestor("form").click_on I18n.t("holdings.cost_basis_cell.save")
+
+    within("#confirm-dialog") { find("button[value=cancel]").click }
+    assert_no_selector "#confirm-dialog[open]"
+    assert_field field.delete_prefix("#"), with: "20"
+
+    find(field).ancestor("form").click_on I18n.t("holdings.cost_basis_cell.cancel")
+    assert_no_selector field
+    assert page.evaluate_script("document.activeElement.matches(\"##{dom_id(@holding, :cost_basis)} [data-DS--popover-target='button']\")")
+    assert_equal BigDecimal("12.5"), @holding.reload.cost_basis
   end
 
   test "overwriting a cost basis asks first and keeps it when cancelled" do

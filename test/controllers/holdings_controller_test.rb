@@ -121,7 +121,8 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
       assert_equal "× 10 shares", rows[1].text.squish
       assert rows[2].at_css("input##{form_id}_total_cost_basis:not([name])[value='125.00']")
     end
-    assert_select "label[for=#{form_id}_per_share_cost_basis]", text: I18n.t("holdings.cost_basis_cell.per_share_label")
+    assert_select "label[for=#{form_id}_per_share_cost_basis]", text: /\A\s*#{I18n.t("holdings.cost_basis_cell.per_share_label")}\s*\*\s*\z/
+    assert_select "input##{form_id}_per_share_cost_basis[required]"
     assert_select "label[for=#{form_id}_total_cost_basis]", text: "= #{I18n.t("holdings.cost_basis_cell.total_cost_basis_label")}"
     assert_select "[data-cost-basis-form-target=perShareValue]", count: 0
   end

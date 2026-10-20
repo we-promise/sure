@@ -9,6 +9,8 @@
   # shown as 0.00; an unknown basis leaves the fields empty (Holding#known_cost_basis).
   # Both fields use step="any", so money_field leaves pastes unrounded: a
   # per-share price below a cent (10 x 0.0049) gives the same basis as typing it.
+  # The per-share field is required, so an emptied editor is not submitted (and
+  # does not ask to overwrite the basis only to be rejected).
   current_per_share = holding.known_cost_basis
   per_share_precision = current_per_share ? current_per_share.round(4).to_s("F").split(".").last.sub(/0+\z/, "").length.clamp(2, 4) : 2
   current_total = current_per_share && holding.qty.positive? ? (current_per_share * holding.qty).round(2) : nil
@@ -39,6 +41,7 @@
         currency_value_override: holding.currency,
         value: current_per_share,
         precision: per_share_precision,
+        required: true,
         placeholder: "0.00",
         input_class: "privacy-sensitive privacy-sensitive-interactive",
         step: "any",

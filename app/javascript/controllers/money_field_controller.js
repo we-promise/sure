@@ -67,8 +67,11 @@ export default class extends Controller {
 
     event.preventDefault();
     const precision = this.#pastePrecision();
+    // Unrounded, but never in exponent notation (0.000000123, not 1.23e-7).
     this.amountTarget.value =
-      precision === null ? String(parsed) : parsed.toFixed(precision);
+      precision === null
+        ? parsed.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 20 })
+        : parsed.toFixed(precision);
 
     // auto_submit_form listens for "change" on number inputs while validation
     // and the goal form's suggestion listen for "input", and assigning .value
