@@ -20,6 +20,13 @@ class CashFlowTest < ApplicationSystemTestCase
     chart = find("#cashflow-preview [data-preview-sankey-chart-target='chart']", match: :first)
     assert_selector "#cashflow-preview svg .sankey-link"
     assert page.evaluate_script("performance.getEntriesByType('resource').some(e => e.name.includes('/dashboard/cash_flow?'))")
+    # A label hidden to avoid a collision can sit over another node; it must
+    # not catch that node's clicks.
+    assert page.evaluate_script(<<~JS)
+      Array.from(document.querySelectorAll("#cashflow-preview svg text"))
+        .filter(text => text.style.opacity === "0")
+        .every(text => getComputedStyle(text).pointerEvents === "none")
+    JS
     within "#cashflow-preview" do
       click_button "Expand", enable_aria_label: true
     end

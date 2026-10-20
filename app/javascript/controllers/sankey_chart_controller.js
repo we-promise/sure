@@ -48,6 +48,14 @@ export default class extends Controller {
     this.#createTooltip();
     this.#syncZoomControls();
     this.#draw();
+
+    // Labels are measured to keep them off neighbouring bars; measure again
+    // once the page font has replaced the fallback.
+    if (document.fonts?.status === "loading") {
+      document.fonts.ready.then(() => {
+        if (this.connected) this.#draw();
+      });
+    }
   }
 
   dataValueChanged() {
@@ -363,6 +371,11 @@ export default class extends Controller {
       )
       .style("cursor", "default")
       .style("opacity", (d) => (hiddenLabels.has(d.index) ? 0 : 1))
+      // A hidden label can sit over another node's bar; it must not take
+      // that bar's hovers and clicks, even while hover reveals it.
+      .style("pointer-events", (d) =>
+        hiddenLabels.has(d.index) ? "none" : null,
+      )
       .style("transition", "opacity 0.2s ease")
       .each(function (d) {
         controller.#writeLabel(d3.select(this), d, width);

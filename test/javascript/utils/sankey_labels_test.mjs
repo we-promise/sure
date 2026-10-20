@@ -157,3 +157,19 @@ test("label boxes in the same column are left to the spacing rule", () => {
   const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING, labelBoxes });
   assert.equal(hidden.size, 0);
 });
+
+test("a label rejected for crossing a bar doesn't keep its smaller neighbour hidden", () => {
+  const nodes = [
+    { index: 0, x0: 300, x1: 315, value: 1000, y0: 100, y1: 140 },
+    { index: 1, x0: 300, x1: 315, value: 200, y0: 145, y1: 150 },
+    { index: 2, x0: 200, x1: 215, value: 1500, y0: 100, y1: 160 },
+  ];
+  const labelBoxes = new Map([
+    [0, { x: 190, y: 106, width: 104, height: 26 }],
+    [1, { x: 240, y: 134, width: 54, height: 26 }],
+  ]);
+  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING, labelBoxes });
+  assert.equal(hidden.has(0), true, "crosses the bar to its left");
+  assert.equal(hidden.has(1), false, "takes the place it was crowded out of");
+  assert.equal(hidden.has(2), false);
+});

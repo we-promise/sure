@@ -16,35 +16,39 @@ export function hiddenSankeyLabels(nodes, { height, minSpacing, labelBoxes }) {
   const hiddenLabels = new Set();
   const isLargeGraph = height > 600;
   const spacing = isLargeGraph ? minSpacing * 0.7 : minSpacing;
+  const bars = labelBoxes ? nodes.map(barBox) : [];
+  const keptYsByColumn = new Map();
+  const keptBoxes = [];
 
-  // Group nodes by visual column (x position assigned by d3-sankey)
-  const columns = new Map();
-  nodes.forEach((node) => {
+  // One pass in prominence order, so a label rejected for crossing into
+  // another column never blocks a smaller neighbour that would fit.
+  [...nodes].sort(byProminence).forEach((node) => {
+    // Columns are the visual x position assigned by d3-sankey
     const column = Math.round(node.x0);
-    if (!columns.has(column)) columns.set(column, []);
-    columns.get(column).push(node);
+    const nodeY = (node.y0 + node.y1) / 2;
+    const keptYs = keptYsByColumn.get(column) || [];
+
+    // Tall bars in large graphs always earn their label.
+    const spaced =
+      (isLargeGraph && node.y1 - node.y0 > spacing * 1.5) ||
+      keptYs.every((keptY) => Math.abs(nodeY - keptY) >= spacing);
+
+    const box = labelBoxes?.get(node.index);
+    const clear =
+      !box ||
+      !(
+        bars.some((bar) => bar.node !== node && overlaps(box, bar)) ||
+        // Same-column spacing is the rule above's job.
+        keptBoxes.some((kept) => kept.column !== column && overlaps(box, kept.box))
+      );
+
+    if (spaced && clear) {
+      keptYsByColumn.set(column, [...keptYs, nodeY]);
+      if (box) keptBoxes.push({ column, box });
+    } else {
+      hiddenLabels.add(node.index);
+    }
   });
-
-  columns.forEach((columnNodes) => {
-    const keptYs = [];
-
-    [...columnNodes].sort(byProminence).forEach((node) => {
-      const nodeY = (node.y0 + node.y1) / 2;
-      const nodeHeight = node.y1 - node.y0;
-
-      // Tall bars in large graphs always earn their label.
-      if (
-        (isLargeGraph && nodeHeight > spacing * 1.5) ||
-        keptYs.every((keptY) => Math.abs(nodeY - keptY) >= spacing)
-      ) {
-        keptYs.push(nodeY);
-      } else {
-        hiddenLabels.add(node.index);
-      }
-    });
-  });
-
-  if (labelBoxes) hideLabelsCrossingColumns(nodes, labelBoxes, hiddenLabels);
 
   return hiddenLabels;
 }
@@ -67,31 +71,12 @@ function overlaps(a, b) {
   );
 }
 
-function hideLabelsCrossingColumns(nodes, labelBoxes, hiddenLabels) {
-  const bars = nodes.map((node) => ({
+function barBox(node) {
+  return {
     node,
     x: node.x0,
     y: node.y0,
     width: node.x1 - node.x0,
     height: node.y1 - node.y0,
-  }));
-  const kept = [];
-
-  [...nodes].sort(byProminence).forEach((node) => {
-    const box = labelBoxes.get(node.index);
-    if (!box || hiddenLabels.has(node.index)) return;
-
-    // Same-column spacing is the rule above's job.
-    const column = Math.round(node.x0);
-    const coversBar = bars.some((bar) => bar.node !== node && overlaps(box, bar));
-    const coversLabel = kept.some(
-      (other) => other.column !== column && overlaps(box, other.box),
-    );
-
-    if (coversBar || coversLabel) {
-      hiddenLabels.add(node.index);
-    } else {
-      kept.push({ column, box });
-    }
-  });
+  };
 }
