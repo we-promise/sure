@@ -93,10 +93,10 @@ namespace :simplefin do
 
     to_restore = []
 
-    excluded_pending.includes(:account).find_each do |pending_entry|
-      # Check if there's a VALID posted match using CORRECT logic (forward-only dates)
-      # Posted date must be ON or AFTER pending date
-      valid_match = pending_entry.account.entries
+    # Check if there's a VALID posted match using CORRECT logic (forward-only dates)
+    # Posted date must be ON or AFTER pending date
+    valid_match = ->(pending_entry) do
+      pending_entry.account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where.not(id: pending_entry.id)
         .where(currency: pending_entry.currency)
@@ -104,8 +104,10 @@ namespace :simplefin do
         .where(date: pending_entry.date..(pending_entry.date + date_window.days))
         .where(Transaction.not_pending_sql("transactions", providers: %w[simplefin plaid]))
         .exists?
+    end
 
-      unless valid_match
+    excluded_pending.includes(:account).find_each do |pending_entry|
+      unless valid_match.call(pending_entry)
         to_restore << pending_entry
         puts "SHOULD RESTORE (no valid match):"
         puts "  ID=#{pending_entry.id} | #{pending_entry.date} | #{pending_entry.name} | #{pending_entry.amount} #{pending_entry.currency}"
@@ -123,13 +125,17 @@ namespace :simplefin do
         puts "To restore these transactions, run:"
         puts "  rails simplefin:pending_restore DRY_RUN=false"
       else
-        ids = to_restore.map(&:id)
-        Entry.transaction do
+        restored = Entry.transaction do
+          # A sync may have posted the match since the scan; re-check under the row lock.
+          ids = Entry.where(id: to_restore.map(&:id), excluded: true)
+            .includes(:account).order(:id).lock
+            .reject { |entry| valid_match.call(entry) }.map(&:id)
           Entry.where(id: ids).update_all(excluded: false)
           # update_all skips the after_save that forgets why the sync excluded them.
           DataEnrichment.sync_exclusion.where(enrichable_type: "Entry", enrichable_id: ids).delete_all
+          ids.size
         end
-        puts "Restored #{to_restore.count} transactions!"
+        puts "Restored #{restored} transactions!"
       end
     else
       puts "No wrongly excluded transactions found."
