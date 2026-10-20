@@ -44,17 +44,27 @@ class Rule::ActionExecutor::AppendTransactionNotes < Rule::ActionExecutor
     end
 
     count_modified_resources(scope) do |txn|
-      notes = txn.entry.notes.to_s
-      missing = lines - notes.lines.map(&:strip)
-      next false if missing.empty?
+      # The new notes are built from the current ones, so read, compare and
+      # save under a row lock: an edit committed in between (which may also
+      # lock the notes) is then seen instead of being overwritten. Not
+      # entry.with_lock: Entry#transaction is the delegated-type reader.
+      Entry.transaction do
+        txn.entry.lock!
+        notes = txn.entry.notes.to_s
+        missing = lines - notes.lines.map(&:strip)
 
-      text = missing.join("\n")
-      txn.entry.enrich_attribute(
-        :notes,
-        notes.blank? ? text : "#{notes.rstrip}\n#{text}",
-        source: "rule",
-        ignore_locks: ignore_attribute_locks
-      )
+        if missing.empty?
+          false
+        else
+          text = missing.join("\n")
+          txn.entry.enrich_attribute(
+            :notes,
+            notes.blank? ? text : "#{notes.rstrip}\n#{text}",
+            source: "rule",
+            ignore_locks: ignore_attribute_locks
+          )
+        end
+      end
     end
   end
 end

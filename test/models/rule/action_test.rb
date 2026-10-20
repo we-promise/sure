@@ -350,6 +350,23 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal "Reimbursable", @txn3.reload.entry.notes
   end
 
+  test "append_transaction_notes builds on notes saved after the entry was loaded" do
+    @txn2.entry.update!(notes: "Paid by card")
+    stale_entry = Entry.find(@txn2.entry.id)
+    Entry.where(id: stale_entry.id).update_all(notes: "Edited by hand")
+    Transaction.any_instance.stubs(:entry).returns(stale_entry)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "append_transaction_notes",
+      value: "Reimbursable"
+    )
+
+    action.apply(Transaction.where(id: @txn2.id))
+
+    assert_equal "Edited by hand\nReimbursable", Entry.find(stale_entry.id).notes
+  end
+
   test "append_transaction_notes does not add the same text twice" do
     @txn2.entry.update!(notes: "Reimbursable\nPaid by card")
 
