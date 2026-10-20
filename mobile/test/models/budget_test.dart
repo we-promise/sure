@@ -143,6 +143,38 @@ void main() {
       expect(groceries.spentFraction, closeTo(1.3, 0.0001));
     });
 
+    test('shared pool ignores ring-fenced siblings\' rollover', () {
+      // The API's parent rollover is display_rolled_over_amount: its own $0
+      // plus the ring-fenced child's $50. Rails' pool is 1000 - 200 = 800.
+      final groups = BudgetCategoryGroup.build([
+        BudgetCategory.fromJson(budgetCategoryJson(
+          id: 'bc_p',
+          categoryId: 'cat_p',
+          name: 'Parent',
+          budgetedCents: 100000,
+          rolledOverCents: 5000,
+        )),
+        BudgetCategory.fromJson(budgetCategoryJson(
+          id: 'bc_rf',
+          categoryId: 'cat_rf',
+          name: 'Ring-fenced',
+          parentId: 'cat_p',
+          budgetedCents: 20000,
+          rolledOverCents: 5000,
+        )),
+        BudgetCategory.fromJson(budgetCategoryJson(
+          id: 'bc_sh',
+          categoryId: 'cat_sh',
+          name: 'Shared',
+          parentId: 'cat_p',
+          inheritsParent: true,
+          displayBudgetedCents: 100000,
+          actualCents: 1000,
+        )),
+      ]);
+      expect(groups.single.children.last.sharedBudgetCents, 80000);
+    });
+
     test('shared pool never goes below zero', () {
       final groups = BudgetCategoryGroup.build([
         BudgetCategory.fromJson(budgetCategoryJson(

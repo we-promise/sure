@@ -334,8 +334,14 @@ class BudgetCategoryGroup {
     final ringFenced = children
         .where((c) => !c.inheritsParentBudget)
         .fold<int>(0, (sum, c) => sum + (c.budgetedSpendingCents ?? 0));
+    // The API's parent rollover is Rails' display_rolled_over_amount: the
+    // parent's own plus its ring-fenced children's. The shared pool only
+    // gets the parent's own, so take the ring-fenced rollovers back out.
+    final ringFencedRollover = children
+        .where((c) => !c.inheritsParentBudget)
+        .fold<int>(0, (sum, c) => sum + (c.rolledOverAmountCents ?? 0));
     final pool = (parent.budgetedSpendingCents ?? 0) +
-        (parent.rolledOverAmountCents ?? 0) -
+        ((parent.rolledOverAmountCents ?? 0) - ringFencedRollover) -
         ringFenced;
     final shared = pool < 0 ? 0 : pool;
     return [
