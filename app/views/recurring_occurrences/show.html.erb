@@ -10,10 +10,7 @@
     is why it is its own drawer, one link away from the bill's.
 
     frame: "drawer", responsive: true matches every other detail surface in the
-    app -- a centred card on a phone, a right-hand drawer from lg up. The close
-    button is ours rather than dialog.close_button, because that one carries
-    `hidden lg:flex` under `responsive`, which leaves a phone with no visible
-    way out. %>
+    app -- a centred card on a phone, a right-hand drawer from lg up. %>
 
 <%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
   <% dialog.with_header(custom_header: true) do %>

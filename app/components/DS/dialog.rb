@@ -161,12 +161,13 @@ class DS::Dialog < DesignSystemComponent
     @responsive
   end
 
+  # Shown at every width: responsive dialogs use it as their only close
+  # control on phones too.
   def close_button
-    classes = responsive? ? "ml-auto hidden lg:flex" : "ml-auto"
     render DS::Button.new(
       variant: "icon",
       size: :sm,
-      class: classes,
+      class: "ml-auto",
       icon: "x",
       title: I18n.t("ds.dialog.close"),
       aria_label: I18n.t("ds.dialog.close"),
