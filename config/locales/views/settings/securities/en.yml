@@ -16,6 +16,8 @@ en:
         mfa_title: Two-Factor Authentication
         webauthn_add: Add passkey or security key
         webauthn_added: Added %{date}
+        webauthn_code_label: Authenticator or backup code
+        webauthn_code_placeholder: Current authenticator code or an unused backup code
         webauthn_description: Use a passkey, Touch ID, Windows Hello, or a hardware
           security key as a second factor when signing in.
         webauthn_empty: No passkeys or security keys are registered yet.
@@ -31,8 +33,11 @@ en:
         webauthn_unsupported: This browser does not support passkeys or security
           keys.
   webauthn_credentials:
+    code_already_used: That code was already used. Wait for the next code from your authenticator app.
     default_name: Security key
     failure: Could not save that passkey or security key. Please try again.
+    invalid_code: That code is not valid. Enter a current code from your authenticator app or an unused backup code.
     mfa_required: Enable two-factor authentication before adding a passkey or security
       key.
+    rate_limited: Too many attempts. Please wait a minute and try again.
     success: Passkey or security key removed.

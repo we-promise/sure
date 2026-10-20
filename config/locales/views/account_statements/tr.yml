@@ -37,6 +37,7 @@ tr:
       files_hint: PDF, CSV veya XLSX. Dosya başına en fazla %{max_size}MB.
       files_label: Ekstre dosyaları
       inbox_upload: Yükle
+      period_hint: "Sure dönemi, belirtilmişse PDF’ten veya dosya adındaki bir tarihten (ör. 2026-04) okur. Dönemi ekstre üzerinde de ayarlayabilirsiniz."
     index:
       account_label: Hesap
       confidence: "%{confidence} eşleşme"

@@ -7,6 +7,10 @@ require "rails/all"
 Bundler.require(*Rails.groups)
 
 module Sure
+  # Matches Rails::Application::Finisher#setup_default_session_store for Sure::Application
+  # ("_#{railtie_name.chomp("_application")}_session" → "_sure_session").
+  SESSION_COOKIE_KEY = "_sure_session"
+
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1
@@ -23,6 +27,9 @@ module Sure
     #
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
+
+    # Explicit source of truth for the session cookie name (also used by Codespaces).
+    config.session_store :cookie_store, key: SESSION_COOKIE_KEY
 
     # TODO: This is here for incremental adoption of localization.  This can be removed when all translations are implemented.
     config.i18n.fallbacks = true
