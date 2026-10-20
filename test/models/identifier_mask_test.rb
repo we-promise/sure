@@ -36,4 +36,26 @@ class IdentifierMaskTest < ActiveSupport::TestCase
     assert_equal "1234", IdentifierMask.last4_chars("5555 1234", strip_whitespace: true)
     assert_nil IdentifierMask.last4_chars("12", hide_short: true)
   end
+
+  test "strip_dashes ignores dash separators" do
+    assert_equal "•••2300", IdentifierMask.last4("12-3456-7890123-00", strip_dashes: true)
+  end
+
+  test "mask_identifiers masks values under identifier keys only" do
+    masked = IdentifierMask.mask_identifiers({
+      "counter_iban" => "UA213223130000026007233566001", # pipelock:ignore IBAN
+      "counterAccountName" => "Jane Doe",
+      "details" => { "routingNumber" => "021000021", "account_number_last_4" => "6001" },
+      "other_account" => [ "12-3456-7890123-00" ]
+    })
+
+    assert_equal "•••6001", masked["counter_iban"]
+    assert_equal "Jane Doe", masked["counterAccountName"]
+    assert_equal({ "routingNumber" => "•••0021", "account_number_last_4" => "6001" }, masked["details"])
+    assert_equal [ "•••3-00" ], masked["other_account"]
+  end
+
+  test "mask_identifier keeps a Czech bank code" do
+    assert_equal "•••7890/2010", IdentifierMask.mask_identifier("1234567890/2010")
+  end
 end

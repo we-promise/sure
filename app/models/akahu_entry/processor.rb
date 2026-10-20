@@ -128,7 +128,7 @@ class AkahuEntry::Processor
       # Notes are shown, exported and passed to the assistant, so the
       # counterparty's account number keeps only its last 4 digits (dashes
       # dropped, or "12-3456-…-00" would show little more than the suffix).
-      parts << "#{t('akahu_entry.notes.other_account')}: #{IdentifierMask.last4(meta[:other_account].to_s.delete("-"))}" if meta[:other_account].present?
+      parts << "#{t('akahu_entry.notes.other_account')}: #{IdentifierMask.last4(meta[:other_account], strip_dashes: true)}" if meta[:other_account].present?
       parts.presence&.join(" | ")
     end
 

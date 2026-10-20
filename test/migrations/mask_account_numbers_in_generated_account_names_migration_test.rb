@@ -65,11 +65,25 @@ class MaskAccountNumbersInGeneratedAccountNamesMigrationTest < ActiveSupport::Te
     assert_equal "Interactive Brokers (•••#{ibkr_account.ibkr_account_id.last(4)})", ibkr_account.reload.name
   end
 
+  test "works through providers across several batches" do
+    second = @questrade_account.dup
+    second.update!(questrade_account_id: "87654321", name: "RRSP (87654321)")
+    @account.update_column(:name, "TFSA (12345678)")
+    migration = MaskAccountNumbersInGeneratedAccountNames.new
+    migration.stubs(:batch_size).returns(1)
+
+    run_migration(migration)
+
+    assert_equal "TFSA (•••5678)", @questrade_account.reload.name
+    assert_equal "TFSA (•••5678)", @account.reload.name
+    assert_equal "RRSP (•••4321)", second.reload.name
+  end
+
   private
 
-    def run_migration
+    def run_migration(migration = MaskAccountNumbersInGeneratedAccountNames.new)
       ActiveRecord::Migration.suppress_messages do
-        MaskAccountNumbersInGeneratedAccountNames.new.up
+        migration.up
       end
     end
 end

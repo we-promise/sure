@@ -71,7 +71,7 @@ module TransactionsHelper
     tx = obj.respond_to?(:transaction) ? obj.transaction : obj
     return nil unless tx.respond_to?(:extra) && tx.extra.present?
 
-    extra = mask_extra_identifiers(tx.extra)
+    extra = IdentifierMask.mask_identifiers(tx.extra)
 
     if extra.is_a?(Hash) && extra["simplefin"].present?
       sf = extra["simplefin"]
@@ -145,43 +145,6 @@ module TransactionsHelper
         raw: pretty_json(extra)
       }
     end
-  end
-
-  # Keys under which providers store a full account identifier in
-  # Transaction#extra: counterparty IBANs and account numbers (Monobank, Fio,
-  # Akahu), and whatever an institution puts into SimpleFIN's free-form extra.
-  # A key matches when its last words name an identifier, in any casing
-  # ("routingNumber", "counter_iban"), so "counter_account_name" or
-  # "account_number_last_4" are left alone. Every value under a matching key
-  # is cut down to its last 4 characters before anything is displayed.
-  EXTRA_IDENTIFIER_KEY = /\A(?:.*_)?(?:ibans?|bban|edrpou|pan|acc(?:oun)?t_(?:number|no|num)|routing_(?:number|no)|sort_code|card_number|counter_account|other_account)\z/
-
-  def extra_identifier_key?(key)
-    key.to_s.underscore.match?(EXTRA_IDENTIFIER_KEY)
-  end
-
-  def mask_extra_identifiers(value, mask_all: false)
-    case value
-    when Hash
-      value.to_h do |key, child|
-        [ key, mask_extra_identifiers(child, mask_all: mask_all || extra_identifier_key?(key)) ]
-      end
-    when Array
-      value.map { |item| mask_extra_identifiers(item, mask_all:) }
-    when String, Numeric
-      mask_all ? mask_extra_identifier(value) : value
-    else
-      value
-    end
-  end
-
-  # Czech-style "<account>/<bank code>" keeps the bank code, which on its own
-  # identifies no one, so the masked account part stays recognizable.
-  def mask_extra_identifier(value)
-    account, bank_code = value.to_s.split("/", 2)
-    return IdentifierMask.last4(value) unless bank_code.present? && bank_code.match?(/\A\d{4}\z/)
-
-    "#{IdentifierMask.last4(account)}/#{bank_code}"
   end
 
   # Flatten hashes into labeled rows; pretty-print remaining nested structures.

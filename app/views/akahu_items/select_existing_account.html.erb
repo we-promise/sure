@@ -26,7 +26,7 @@
                   <div class="flex-1">
                     <div class="font-medium text-sm text-primary"><%= akahu_account.name %></div>
                     <div class="text-xs text-secondary mt-1">
-                      <%= [mask_last4(akahu_account.formatted_account&.delete("-")), akahu_account.currency, akahu_account.account_type].compact.join(" · ") %>
+                      <%= [akahu_account.masked_account_number, akahu_account.currency, akahu_account.account_type].compact.join(" · ") %>
                     </div>
                   </div>
                 </label>

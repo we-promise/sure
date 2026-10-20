@@ -46,6 +46,22 @@ class RemoveMercuryRoutingDetailsFromNotesMigrationTest < ActiveSupport::TestCas
     assert_equal "Office supplies - Q1 restock", plain.reload.notes
   end
 
+  test "keeps a trailing hash that is not Mercury's details object" do
+    entry = mercury_entry(notes: 'Invoice - {"tag" => "tax"}')
+
+    run_migration
+
+    assert_equal 'Invoice - {"tag" => "tax"}', entry.reload.notes
+  end
+
+  test "drops international wire details" do
+    entry = mercury_entry(notes: 'Supplier - {"internationalWireRoutingInfo" => {"iban" => "GB82WEST12345698765432", "swiftCode" => "WESTGB22"}}') # pipelock:ignore IBAN
+
+    run_migration
+
+    assert_equal "Supplier", entry.reload.notes
+  end
+
   private
 
     def mercury_entry(notes:)

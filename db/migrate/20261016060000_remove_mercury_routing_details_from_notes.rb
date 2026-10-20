@@ -11,9 +11,17 @@
 class RemoveMercuryRoutingDetailsFromNotes < ActiveRecord::Migration[8.1]
   BATCH_SIZE = 500
 
+  # Top-level keys of Mercury's transaction `details` object.
+  DETAILS_KEYS = %w[
+    address domesticWireRoutingInfo electronicRoutingInfo
+    internationalWireRoutingInfo debitCardInfo creditCardInfo
+  ].freeze
+
   # The hash always came last: either the whole note, or after " - ".
-  # Matches Ruby's Hash#inspect with and without spaces around "=>".
-  DETAILS_HASH = /(?:\A| - )\{"[A-Za-z_]+" ?=> ?.*\}\z/m
+  # Matches Ruby's Hash#inspect with and without spaces around "=>", and only
+  # when it starts with one of the details keys, so a note that merely ends
+  # in some other hash-like text is kept.
+  DETAILS_HASH = /(?:\A| - )\{"(?:#{DETAILS_KEYS.join("|")})" ?=> ?.*\}\z/m
 
   def up
     last_id = nil
@@ -34,7 +42,13 @@ class RemoveMercuryRoutingDetailsFromNotes < ActiveRecord::Migration[8.1]
         cleaned = strip_details(notes)
         next if cleaned == notes
 
-        execute "UPDATE entries SET notes = #{connection.quote(cleaned)} WHERE id = #{connection.quote(id)}"
+        # Skip the row if its notes changed or got locked since the SELECT.
+        execute <<~SQL
+          UPDATE entries SET notes = #{connection.quote(cleaned)}
+          WHERE id = #{connection.quote(id)}
+            AND notes = #{connection.quote(notes)}
+            AND NOT (COALESCE(locked_attributes, '{}'::jsonb) ? 'notes')
+        SQL
       end
       last_id = rows.last.first
     end

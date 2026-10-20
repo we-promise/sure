@@ -4,10 +4,9 @@ class IndexaCapitalAccount < ApplicationRecord
   include CurrencyNormalizable
   include IndexaCapitalAccount::DataHelpers
 
-  # Dropped in RemoveAccountNumberFromIndexaCapitalAccounts. Ignoring it lets
-  # this code run whether or not that migration has run yet. It does not
-  # protect processes still running the previous release, which write the
-  # column until they restart. Can be removed in a later release.
+  # Duplicate of indexa_capital_account_id, no longer read or written. The
+  # column stays for now because workers still on the previous release write
+  # it during a rolling deploy; a later release can drop it.
   self.ignored_columns += [ "account_number" ]
 
   belongs_to :indexa_capital_item
