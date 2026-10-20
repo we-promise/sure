@@ -18,6 +18,8 @@ zh-TW:
         webauthn_empty: 尚未註冊任何密碼金鑰或安全金鑰。
         webauthn_last_used: 上次使用於 %{time_ago}前
         webauthn_name_label: 金鑰名稱
+        webauthn_code_label: "驗證器代碼或備援代碼"
+        webauthn_code_placeholder: "目前的驗證器代碼或未使用的備援代碼"
         webauthn_name_placeholder: MacBook Touch ID、YubiKey 等
         webauthn_remove: 移除
         webauthn_remove_confirm: 確定要移除此密碼金鑰或安全金鑰嗎？
@@ -25,6 +27,9 @@ zh-TW:
         webauthn_title: 密碼金鑰與安全金鑰
         webauthn_unsupported: 這個瀏覽器不支援密碼金鑰或安全金鑰。
   webauthn_credentials:
+    code_already_used: "此代碼已被使用。請等待驗證器應用程式產生下一個代碼。"
+    invalid_code: "此代碼無效。請輸入驗證器應用程式中的目前代碼或未使用的備援代碼。"
+    rate_limited: "嘗試次數過多。請稍候一分鐘再試一次。"
     default_name: 安全金鑰
     failure: 無法儲存該密碼金鑰或安全金鑰，請再試一次。
     mfa_required: 請先啟用雙重驗證，才能新增密碼金鑰或安全金鑰。
