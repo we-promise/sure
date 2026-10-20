@@ -147,6 +147,17 @@ class Loan::PaidBreakdownTest < ActiveSupport::TestCase
     assert_equal Money.new(2_000, "USD"), paid.principal, "a later payment must not affect an earlier as_of"
   end
 
+  test "the fallback uses the current anchor when today has no balance snapshot" do
+    account = create_loan(entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 0 },
+      { type: "current_anchor", date: Date.current, balance: 8_000 }
+    ])
+
+    paid = account.loan.paid_breakdown(as_of: Date.current)
+
+    assert_equal Money.new(4_000, "USD"), paid.principal
+  end
+
   test "the fallback returns zero principal when no balance snapshot qualifies" do
     as_of = Date.new(2026, 4, 20)
     account = create_loan(entries: [

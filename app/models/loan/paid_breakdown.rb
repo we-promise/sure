@@ -118,6 +118,11 @@ class Loan
           .where(currency: account.currency, date: ..as_of)
           .order(date: :desc)
           .pick(:balance)
+
+        if balance.nil? && as_of == Date.current && account.has_current_anchor?
+          balance = account.current_anchor_balance
+        end
+
         return BigDecimal("0") unless balance
 
         (borrowed - balance.to_d.abs).clamp(BigDecimal("0"), borrowed)
