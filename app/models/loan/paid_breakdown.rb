@@ -114,12 +114,13 @@ class Loan
         account = loan.account
         return BigDecimal("0") unless borrowed.positive? && account
 
-        balance = account.balances
+        snapshot_date, balance = account.balances
           .where(currency: account.currency, date: ..as_of)
           .order(date: :desc)
-          .pick(:balance)
+          .pick(:date, :balance)
 
-        if balance.nil? && as_of == Date.current && account.has_current_anchor?
+        if as_of == Date.current && account.has_current_anchor? &&
+            (snapshot_date.nil? || account.current_anchor_date > snapshot_date)
           balance = account.current_anchor_balance
         end
 
