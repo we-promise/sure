@@ -122,9 +122,30 @@ module Family::AutoTransferMatchable
       attempt += 1
       perform_auto_match_transfers!(account: account, exchange_rate_tolerance: exchange_rate_tolerance)
     rescue ActiveRecord::Deadlocked => e
-      raise if attempt > MAX_DEADLOCK_RETRIES
+      if attempt > MAX_DEADLOCK_RETRIES
+        Rails.logger.error("Family#auto_match_transfers! gave up after #{MAX_DEADLOCK_RETRIES} deadlock retries: #{e.message}")
+        DebugLogEntry.capture(
+          category: "provider_sync",
+          level: "error",
+          message: "Family#auto_match_transfers! gave up after #{MAX_DEADLOCK_RETRIES} deadlock retries",
+          source: "Family::AutoTransferMatchable",
+          family: self,
+          account: account,
+          metadata: { attempt: attempt, error: e.message }
+        )
+        raise
+      end
 
       Rails.logger.warn("Family#auto_match_transfers! deadlocked (attempt #{attempt}/#{MAX_DEADLOCK_RETRIES}), retrying: #{e.message}")
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Family#auto_match_transfers! deadlocked, retrying",
+        source: "Family::AutoTransferMatchable",
+        family: self,
+        account: account,
+        metadata: { attempt: attempt, max_retries: MAX_DEADLOCK_RETRIES, error: e.message }
+      )
       sleep(deadlock_retry_delay(attempt))
       retry
     end
