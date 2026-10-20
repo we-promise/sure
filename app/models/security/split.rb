@@ -6,9 +6,15 @@
 # The holding calculators apply it at the open of the ex-date, before that
 # day's trades (#249).
 class Security::Split < ApplicationRecord
+  # Who said the split happened. A user's own entry outranks a provider's, so a
+  # sync never overwrites what someone recorded by hand (#3781). Each provider
+  # that writes splits adds itself here.
+  SOURCES = %w[manual snaptrade].freeze
+
   belongs_to :security
 
   validates :ex_date, :source, presence: true
+  validates :source, inclusion: { in: SOURCES }, allow_blank: true
   validates :numerator, :denominator, numericality: { only_integer: true, greater_than: 0 }
   validates :ex_date, uniqueness: { scope: :security_id }
   validate :changes_the_share_count
@@ -16,6 +22,70 @@ class Security::Split < ApplicationRecord
   # New shares per old, exact.
   def ratio
     Rational(numerator, denominator)
+  end
+
+  def manual?
+    source == "manual"
+  end
+
+  class << self
+    # The one way a split row is written. Keyed on the security and ex-date,
+    # under the security's row lock so two writers cannot race to the unique
+    # index. A manual write replaces whatever is there; a provider's replaces
+    # another provider's, but never a manual row: that row is kept, and a
+    # provider that disagrees with it is recorded for support. Returns the row
+    # that stands.
+    def record!(security:, ex_date:, numerator:, denominator:, source:)
+      security.with_lock do
+        split = security.splits.find_or_initialize_by(ex_date: ex_date)
+
+        if split.persisted? && split.manual? && source.to_s != "manual"
+          report_overruled(split, Rational(numerator, denominator), source)
+          next split
+        end
+
+        split.assign_attributes(numerator: numerator, denominator: denominator, source: source)
+        next split unless split.changed?
+
+        split.save!
+        split.send(:rematerialize_holders)
+        split
+      end
+    end
+
+    private
+      def report_overruled(split, provider_ratio, provider)
+        return if provider_ratio == split.ratio
+
+        DebugLogEntry.capture(
+          category: "security_split",
+          level: "warn",
+          message: "Provider split differs from a manually recorded split; the manual one is kept",
+          source: name,
+          provider_key: provider.to_s,
+          metadata: {
+            security_id: split.security_id,
+            ticker: split.security.ticker,
+            ex_date: split.ex_date.iso8601,
+            provider_ratio: "#{provider_ratio.numerator}:#{provider_ratio.denominator}",
+            manual_ratio: "#{split.ratio.numerator}:#{split.ratio.denominator}"
+          }
+        )
+      end
+  end
+
+  # Changes an existing row in place, a moved ex-date included. Unlike
+  # .record!, this edits a row the caller already holds, so precedence is
+  # the caller's decision.
+  def revise!(ex_date:, numerator:, denominator:, source:)
+    update!(ex_date: ex_date, numerator: numerator, denominator: denominator, source: source)
+    rematerialize_holders if saved_changes?
+    self
+  end
+
+  def remove!
+    destroy!
+    rematerialize_holders
   end
 
   # The scale of the `qty` columns on `holdings` and `trades`. A quantity this
@@ -47,6 +117,18 @@ class Security::Split < ApplicationRecord
   end
 
   private
+    # Every account with a holding or a trade in the security, in any family:
+    # a split changes all of their share counts. One job each, enqueued after
+    # the write commits (ApplicationJob.enqueue_after_transaction_commit).
+    def rematerialize_holders
+      trade_account_ids = Entry.where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security_id).select(:id)).select(:account_id)
+      holding_account_ids = Holding.where(security_id: security_id).select(:account_id)
+
+      Account.where(id: trade_account_ids).or(Account.where(id: holding_account_ids)).find_each do |account|
+        SecuritySplitRematerializeJob.perform_later(account, security)
+      end
+    end
+
     # A 1:1 "split" changes nothing, and the DB refuses it too. Reuses Rails'
     # own `other_than` message, so no new string is needed.
     def changes_the_share_count
