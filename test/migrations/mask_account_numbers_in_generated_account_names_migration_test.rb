@@ -36,6 +36,14 @@ class MaskAccountNumbersInGeneratedAccountNamesMigrationTest < ActiveSupport::Te
     assert_equal "Retirement", @account.reload.name
   end
 
+  test "masks the number anywhere in a renamed account" do
+    @account.update_column(:name, "TFSA 12345678 (old)")
+
+    run_migration
+
+    assert_equal "TFSA •••5678 (old)", @account.reload.name
+  end
+
   test "masks a Fio default name" do
     fio_account = fio_accounts(:checking)
 

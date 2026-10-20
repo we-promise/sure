@@ -3,26 +3,25 @@
 # names show up in lists, reports, exports, the API and the assistant. New
 # names keep only the last 4 characters; this rewrites the existing ones.
 #
-# Only the exact full number is replaced, and only where a name still ends
-# with it ("(<number>)", for Fio "... Fio banka <number>", for an Interactive
-# Brokers provider record the bare number), so any wording a
-# user added is kept and renamed accounts that no longer carry the number are
-# left alone.
+# Only the exact full number is replaced, wherever it appears in a provider
+# record's or linked account's name, so any wording a user added is kept and
+# renamed accounts that no longer carry the number are left alone. An
+# Interactive Brokers provider record named after the bare number gets the
+# default name.
 class MaskAccountNumbersInGeneratedAccountNames < ActiveRecord::Migration[8.1]
   PREFIX = "•••"
   BATCH_SIZE = 500
 
   # provider account table => [ provider_type, identifier column, name style ]
+  # (:ibkr records may be named after the bare account id)
   PROVIDERS = {
-    "questrade_accounts" => [ "QuestradeAccount", "questrade_account_id", :parenthesized ],
-    "indexa_capital_accounts" => [ "IndexaCapitalAccount", "indexa_capital_account_id", :parenthesized ],
+    "questrade_accounts" => [ "QuestradeAccount", "questrade_account_id", :default ],
+    "indexa_capital_accounts" => [ "IndexaCapitalAccount", "indexa_capital_account_id", :default ],
     "ibkr_accounts" => [ "IbkrAccount", "ibkr_account_id", :ibkr ],
-    "trade_republic_accounts" => [ "TradeRepublicAccount", "trade_republic_account_id", :parenthesized ],
-    "trading212_accounts" => [ "Trading212Account", "trading212_account_id", :parenthesized ],
-    "fio_accounts" => [ "FioAccount", "fio_account_id", :fio ]
+    "trade_republic_accounts" => [ "TradeRepublicAccount", "trade_republic_account_id", :default ],
+    "trading212_accounts" => [ "Trading212Account", "trading212_account_id", :default ],
+    "fio_accounts" => [ "FioAccount", "fio_account_id", :default ]
   }.freeze
-
-  FIO_INSTITUTION_NAME = "Fio banka"
 
   def up
     PROVIDERS.each do |table, (provider_type, id_column, style)|
@@ -90,22 +89,8 @@ class MaskAccountNumbersInGeneratedAccountNames < ActiveRecord::Migration[8.1]
       return nil if name.blank?
 
       masked = "#{PREFIX}#{identifier.last(4)}"
+      return "Interactive Brokers (#{masked})" if style == :ibkr && name == identifier
 
-      case style
-      when :parenthesized
-        suffix = "(#{identifier})"
-        name.end_with?(suffix) ? "#{name.delete_suffix(suffix)}(#{masked})" : nil
-      when :ibkr
-        # The provider record was named after the bare account id; the linked
-        # account got "Interactive Brokers (<id>)".
-        if name == identifier
-          "Interactive Brokers (#{masked})"
-        elsif name.end_with?("(#{identifier})")
-          "#{name.delete_suffix("(#{identifier})")}(#{masked})"
-        end
-      when :fio
-        suffix = "#{FIO_INSTITUTION_NAME} #{identifier}"
-        name.end_with?(suffix) ? "#{name.delete_suffix(suffix)}#{FIO_INSTITUTION_NAME} #{masked}" : nil
-      end
+      name.gsub(identifier, masked) if name.include?(identifier)
     end
 end
