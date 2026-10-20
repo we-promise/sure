@@ -84,6 +84,16 @@ class PlaidAccount < ApplicationRecord
     dates.reject { |date| date > Date.current }.max || Date.current
   end
 
+  # Price dates in the holdings payload that are present but cannot be read,
+  # which holdings_snapshot_date leaves out.
+  def unparseable_holding_price_dates
+    holdings = raw_holdings_payload&.dig("holdings") || []
+    holdings.filter_map do |holding|
+      value = holding["institution_price_as_of"]
+      value if value.present? && parse_holding_date(value).nil?
+    end
+  end
+
   private
     def parse_holding_date(value)
       return nil if value.blank?

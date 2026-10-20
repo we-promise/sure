@@ -463,6 +463,39 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal [ Date.current ] * 3, account.holdings.pluck(:date)
   end
 
+  # A malformed price date is dropped from the snapshot date silently, and with
+  # nothing else usable the whole sync lands on today. Support needs to see why.
+  test "an unparseable price date is recorded once per sync for support" do
+    account_provider = link_account_provider!
+
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync", provider_key: "plaid").count }, 1 do
+      process_holdings(
+        "a" => [ securities(:aapl), { "quantity" => 10, "institution_price_as_of" => "not a date" } ],
+        "b" => [ securities(:msft), { "quantity" => 5, "institution_price_as_of" => "31/02/2026" } ]
+      )
+    end
+
+    entry = DebugLogEntry.where(provider_key: "plaid").order(:created_at).last
+    assert_equal "warn", entry.level
+    assert_equal account_provider, entry.account_provider
+    assert_equal account.family, entry.family
+    assert_equal [ "not a date", "31/02/2026" ], entry.metadata["unparseable_dates"]
+    assert_equal Date.current.iso8601, entry.metadata["snapshot_date"]
+  end
+
+  test "missing, blank and future price dates record nothing" do
+    link_account_provider!
+
+    assert_no_difference -> { DebugLogEntry.where(provider_key: "plaid").count } do
+      process_holdings(
+        "a" => [ securities(:aapl), { "quantity" => 10 } ],
+        "b" => [ securities(:msft), { "quantity" => 5, "institution_price_as_of" => "" } ],
+        "c" => [ Security.create!(ticker: "GOOGL", name: "Google", exchange_operating_mic: "XNAS", country_code: "US"),
+                 { "quantity" => 3, "institution_price_as_of" => (Date.current + 1).to_s } ]
+      )
+    end
+  end
+
   private
     def account
       @plaid_account.current_account

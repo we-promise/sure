@@ -9,6 +9,7 @@ class PlaidAccount::Investments::HoldingsProcessor
     # own price date: the quantities are all as of this sync, and the readers
     # of current holdings take the provider rows on a single date.
     snapshot_date = plaid_account.holdings_snapshot_date
+    capture_unparseable_price_dates(snapshot_date)
 
     holdings.each do |plaid_holding|
       resolved_security_result = security_resolver.resolve(plaid_security_id: plaid_holding["security_id"])
@@ -43,6 +44,26 @@ class PlaidAccount::Investments::HoldingsProcessor
 
   private
     attr_reader :plaid_account, :security_resolver
+
+    # A price date that cannot be read is left out of the snapshot date, and
+    # with nothing else usable the sync lands on today. Recorded once per sync,
+    # where support can see why.
+    def capture_unparseable_price_dates(snapshot_date)
+      unparseable = plaid_account.unparseable_holding_price_dates
+      return if unparseable.empty?
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Plaid holdings carried unparseable price dates; they were left out of the snapshot date",
+        source: self.class.name,
+        provider_key: "plaid",
+        family: account&.family,
+        account: account,
+        account_provider: plaid_account.account_provider,
+        metadata: { unparseable_dates: unparseable.first(5).map(&:to_s), count: unparseable.size, snapshot_date: snapshot_date.iso8601 }
+      )
+    end
 
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
