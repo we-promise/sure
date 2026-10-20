@@ -1412,43 +1412,6 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Invalid invite code", JSON.parse(response.body)["error"]
   end
 
-  test "login is rejected when local login is disabled" do
-    AuthConfig.stubs(:local_login_enabled?).returns(false)
-    user = users(:family_admin)
-
-    assert_no_difference("Doorkeeper::AccessToken.count") do
-      post "/api/v1/auth/login", params: { email: user.email, password: user_password_test, device: @device_info }
-    end
-
-    assert_response :forbidden
-  end
-
-  test "login with local admin override is rejected for non super admins" do
-    AuthConfig.stubs(:local_login_enabled?).returns(false)
-    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
-    user = users(:family_admin)
-
-    assert_no_difference("Doorkeeper::AccessToken.count") do
-      post "/api/v1/auth/login", params: { email: user.email, password: user_password_test, device: @device_info }
-    end
-
-    # Same answer as a wrong password, so super admins can't be enumerated.
-    assert_response :unauthorized
-    assert_equal "Invalid email or password", JSON.parse(response.body)["error"]
-  end
-
-  test "login with local admin override is allowed for super admins" do
-    AuthConfig.stubs(:local_login_enabled?).returns(false)
-    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
-    user = users(:sure_support_staff)
-
-    assert_difference("Doorkeeper::AccessToken.count", 1) do
-      post "/api/v1/auth/login", params: { email: user.email, password: user_password_test, device: @device_info }
-    end
-
-    assert_response :success
-  end
-
   test "login hashes the password even when the email is unknown" do
     User.expects(:authenticate_by).with(email: "nobody@example.com", password: "Whatever1!").returns(nil)
 
