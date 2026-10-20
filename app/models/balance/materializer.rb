@@ -60,7 +60,7 @@ class Balance::Materializer
       current_balance = account.balances.where(currency: account.currency).order(date: :desc).first
       return unless current_balance
 
-      Rails.logger.info("Cash balance from trade-derived holdings: cash=#{current_balance.end_cash_balance}")
+      Rails.logger.info("Cash balance set from trade-derived holdings for account #{account.id}")
       account.update!(cash_balance: current_balance.end_cash_balance)
     end
 
