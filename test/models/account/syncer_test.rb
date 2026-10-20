@@ -144,7 +144,9 @@ class Account::SyncerTest < ActiveSupport::TestCase
 
     Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
 
-    assert_equal 2, account.reload.current_holdings.find_by!(security: security).qty
+    account.reload
+    assert_equal 2, account.current_holdings.find_by!(security: security).qty
+    assert_equal 10_000 - 2 * 200, account.cash_balance
   end
 
   private
