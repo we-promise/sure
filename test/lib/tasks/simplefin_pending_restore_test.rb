@@ -41,6 +41,18 @@ class SimplefinPendingRestoreTest < ActiveSupport::TestCase
     assert_not entry.reload.excluded
   end
 
+  test "restoring forgets why the sync excluded the entry" do
+    entry = excluded_entry("simplefin" => { "pending" => true })
+    Entry.record_auto_exclusions([ [ entry.id, "simplefin" ] ], reason: "stale_pending", days: 8)
+
+    restore
+
+    assert_not entry.reload.excluded
+    assert_empty entry.data_enrichments.sync_exclusion
+    entry.update!(excluded: true)
+    assert_nil entry.auto_exclusion, "a later manual exclusion is not credited to the sync"
+  end
+
   test "keeps an excluded entry that has a posted match" do
     entry = excluded_entry("simplefin" => { "pending" => true })
     companion(entry, {})

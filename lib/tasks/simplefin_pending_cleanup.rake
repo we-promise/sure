@@ -123,7 +123,12 @@ namespace :simplefin do
         puts "To restore these transactions, run:"
         puts "  rails simplefin:pending_restore DRY_RUN=false"
       else
-        Entry.where(id: to_restore.map(&:id)).update_all(excluded: false)
+        ids = to_restore.map(&:id)
+        Entry.transaction do
+          Entry.where(id: ids).update_all(excluded: false)
+          # update_all skips the after_save that forgets why the sync excluded them.
+          DataEnrichment.sync_exclusion.where(enrichable_type: "Entry", enrichable_id: ids).delete_all
+        end
         puts "Restored #{to_restore.count} transactions!"
       end
     else
