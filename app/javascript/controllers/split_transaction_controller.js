@@ -46,9 +46,14 @@ export default class extends Controller {
 
     const remaining = total - sum
     const absRemaining = Math.abs(remaining)
-    const balanced = absRemaining < 0.005
+    // Tolerance and displayed decimals follow the row step (0.01 -> 2 places,
+    // 0.001 -> 3, 1 -> 0) so a three-decimal currency isn't called balanced
+    // while 0.003 is outstanding.
+    const step = Number.parseFloat(this.stepValue) || 0.01
+    const decimals = Math.max(0, Math.round(-Math.log10(step)))
+    const balanced = absRemaining < step / 2
 
-    this.remainingTarget.textContent = balanced ? "0.00" : remaining.toFixed(2)
+    this.remainingTarget.textContent = balanced ? (0).toFixed(decimals) : remaining.toFixed(decimals)
 
     // Visual feedback on remaining balance
     const container = this.remainingContainerTarget

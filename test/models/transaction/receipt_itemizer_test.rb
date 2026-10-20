@@ -240,14 +240,14 @@ class Transaction::ReceiptItemizerTest < ActiveSupport::TestCase
     assert_match "No receipt attachment found", log.message
   end
 
-  test "rounds the unmatched row to the currency precision" do
+  test "rejects an entry finer than the currency precision instead of dropping the residual" do
     @entry.update_columns(amount: BigDecimal("54.0049"))
     provider = stub_provider(extraction(items: [ [ "Hammer", 30 ], [ "Nails", 20 ] ]))
 
-    proposal = Transaction::ReceiptItemizer.new(@transaction.reload, provider: provider).propose
-
-    assert_equal BigDecimal("4"), proposal.unmatched_amount
-    assert proposal.rows.all? { |row| row.amount == row.amount.round(2) }
+    error = assert_raises(Transaction::ReceiptItemizer::Error) do
+      Transaction::ReceiptItemizer.new(@transaction.reload, provider: provider).propose
+    end
+    assert_match(/more decimals/, error.message)
   end
 
   test "available needs AI consent, a capable provider, a receipt and a splittable transaction" do

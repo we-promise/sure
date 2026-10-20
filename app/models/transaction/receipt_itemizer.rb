@@ -137,6 +137,11 @@ class Transaction::ReceiptItemizer
       # entries.amount is decimal(19,4): round to the currency's precision like
       # the item rows, so the leftover row never carries finer precision.
       unmatched = (parent_total - receipt_total).round(precision)
+      # An entry finer than the currency precision (e.g. 54.0049 USD) can't be
+      # split into precision-sized rows that sum to it exactly.
+      if (parent_total - receipt_total - unmatched).nonzero?
+        raise Error, "The transaction amount has more decimals than #{entry.currency} allows, so the receipt can't be split exactly"
+      end
       rows << Row.new(name: entry.name, amount: unmatched * sign) unless unmatched.zero?
 
       Proposal.new(
