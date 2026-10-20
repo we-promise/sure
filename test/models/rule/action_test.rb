@@ -367,6 +367,21 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal "Edited by hand\nReimbursable", Entry.find(stale_entry.id).notes
   end
 
+  test "append_transaction_notes skips a transaction deleted while the rule runs" do
+    @txn2.entry.update!(notes: "Paid by card")
+    stale_entry = Entry.find(@txn2.entry.id)
+    Transaction.any_instance.stubs(:entry).returns(stale_entry)
+    stale_entry.stubs(:lock!).raises(ActiveRecord::RecordNotFound)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "append_transaction_notes",
+      value: "Reimbursable"
+    )
+
+    assert_equal 0, action.apply(Transaction.where(id: @txn2.id))
+  end
+
   test "append_transaction_notes does not add the same text twice" do
     @txn2.entry.update!(notes: "Reimbursable\nPaid by card")
 

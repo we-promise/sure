@@ -65,6 +65,9 @@ class Rule::ActionExecutor::AppendTransactionNotes < Rule::ActionExecutor
           )
         end
       end
+    rescue ActiveRecord::RecordNotFound
+      # Deleted since the scope was loaded: nothing left to append to.
+      false
     end
   end
 end
