@@ -107,12 +107,6 @@ class EnableBankingEntry::Processor
     line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{1,2}[.\/]\d{1,2}\.?\s+\d{2}:\d{2}\z/i)
   end
 
-  # True when the transaction represents an unfinalized card authorization hold
-  # (missing provider identifiers, no legitimate counterparty name, and a masked
-  # card descriptor in remittance or transaction code).
-  # Certain institutions expose un-finalized card holds this way even under a "BOOK" status payload.
-  #
-  # @return [Boolean]
   # Prefer booking_date, fall back to value_date, then transaction_date.
   # Timestamps are read in the family's timezone.
   def self.transaction_date(raw_transaction_data, timezone)
@@ -138,6 +132,12 @@ class EnableBankingEntry::Processor
     end
   end
 
+  # True when the transaction represents an unfinalized card authorization hold
+  # (missing provider identifiers, no legitimate counterparty name, and a masked
+  # card descriptor in remittance or transaction code).
+  # Certain institutions expose un-finalized card holds this way even under a "BOOK" status payload.
+  #
+  # @return [Boolean]
   def self.unidentified_hold?(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
     return false unless identifierless?(data)

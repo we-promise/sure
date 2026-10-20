@@ -658,6 +658,15 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal 2, entry.metadata["candidates"].size
   end
 
+  test "the same duplicate balances are logged only once across syncs" do
+    link_account(Depository.create!)
+    stub_balances(clbd("1234.56"), clbd("5834.56"))
+
+    assert_difference "DebugLogEntry.count", 1 do
+      2.times { assert @importer.send(:fetch_and_update_balance, @enable_banking_account) }
+    end
+  end
+
   test "a single balance per type counts as evidence and logs nothing" do
     stub_balances(clbd("1234.56"))
 

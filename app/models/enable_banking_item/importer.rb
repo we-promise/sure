@@ -634,8 +634,8 @@ class EnableBankingItem::Importer
 
       DebugLogEntry
         .where(account_provider: account_provider, category: "provider_sync_warning", source: self.class.name)
-        .order(created_at: :desc)
-        .pick(Arel.sql("metadata->>'fingerprint'"))
+        .order(created_at: :desc, id: :desc)
+        .first&.metadata&.dig("fingerprint")
     end
 
     # Guards the OPBD/PRCD priority (see BALANCE_TYPE_PRIORITY) against picking a
