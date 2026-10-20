@@ -246,12 +246,18 @@ class Goal < ApplicationRecord
 
   attr_writer :pooled_allocations
 
+  # Every account linked to one of the family's goals: the list the family-wide
+  # readers below start from. inject_backing_math! reads it once and hands it to
+  # each of them.
+  def self.linked_account_ids_for(family)
+    GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
+  end
+
   # Family-wide map of cumulative market gain/loss per account_id (sum of
   # balances.net_market_flows). Injected on index alongside pooled_allocations
   # so contributions-basis goals don't fire one Balance aggregate per account
   # per goal (N+1).
-  def self.market_flows_for(family)
-    account_ids = GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
+  def self.market_flows_for(family, account_ids: linked_account_ids_for(family))
     return {} if account_ids.empty?
 
     Balance.where(account_id: account_ids).group(:account_id).sum(:net_market_flows)
@@ -265,8 +271,7 @@ class Goal < ApplicationRecord
   # sorting/rendering N goals (active_display_sort calls goal.status, which
   # reaches #pace for any goal with a target_date) fires one grouped query
   # instead of one Entry.sum per goal.
-  def self.pace_for(family)
-    account_ids = GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
+  def self.pace_for(family, account_ids: linked_account_ids_for(family))
     return {} if account_ids.empty?
 
     Entry
@@ -308,8 +313,7 @@ class Goal < ApplicationRecord
   # A fixed number of family-wide queries, none per goal, for the same N+1 reason as
   # pace_for. `transaction_pace` is pace_for's result, so accounts it already
   # covers are not read again.
-  def self.balance_pace_for(family, transaction_pace = pace_for(family))
-    account_ids = GoalAccount.joins(:goal).where(goals: { family_id: family.id }).distinct.pluck(:account_id)
+  def self.balance_pace_for(family, transaction_pace = pace_for(family), account_ids: linked_account_ids_for(family))
     account_ids -= transaction_pace.keys
     return { balance: {}, dormant: [] } if account_ids.empty?
 
@@ -394,9 +398,10 @@ class Goal < ApplicationRecord
   # pace_for).
   def self.inject_backing_math!(goals, family)
     pooled = pooled_allocations_for(family)
-    flows = market_flows_for(family)
-    pace_map = pace_for(family)
-    balance_pace_map = balance_pace_for(family, pace_map)
+    account_ids = linked_account_ids_for(family)
+    flows = market_flows_for(family, account_ids: account_ids)
+    pace_map = pace_for(family, account_ids: account_ids)
+    balance_pace_map = balance_pace_for(family, pace_map, account_ids: account_ids)
     goals.each do |goal|
       goal.pooled_allocations = pooled
       goal.market_flows = flows

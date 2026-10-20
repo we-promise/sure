@@ -1589,6 +1589,22 @@ class GoalTest < ActiveSupport::TestCase
     end
   end
 
+  # pace_for, balance_pace_for and market_flows_for all start from the same
+  # family-wide list of linked accounts.
+  test "preparing the goals reads the family's linked accounts once" do
+    goal_on(valuation_tracked_account(balance: 112_000, year_ago: 100_000), target_amount: 500_000)
+
+    plucks = 0
+    sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+      plucks += 1 if payload[:sql].to_s.include?('SELECT DISTINCT "goal_accounts"."account_id"')
+    end
+    ActiveRecord::Base.uncached { Goal.prepared_for(@family) }
+
+    assert_equal 1, plucks
+  ensure
+    ActiveSupport::Notifications.unsubscribe(sub) if sub
+  end
+
   private
     # A manual account whose value moves only through balance updates: a
     # balance row at `history_from`, a reconciliation valuation on

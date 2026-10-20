@@ -171,7 +171,9 @@ pace is unmeasurable, `projection_payload` sends `avg_monthly: nil` and no
 shortfall label, and the chart draws no projection line. The evidence is
 read by `Goal.pace_for` and `Goal.balance_pace_for`, both family-wide and
 injected by `Goal.inject_backing_math!`, so a page of goals costs no
-query per goal.
+query per goal. That method reads the linked account ids once
+(`Goal.linked_account_ids_for`) and passes them to both, and to
+`Goal.market_flows_for`.
 
 `Goal#monthly_target_amount` is `(remaining_amount / months_remaining).ceil(2)`.
 `months_remaining` uses day precision: `(target_date - Date.current) / 30.0`,
