@@ -255,6 +255,33 @@ class SimplefinItem::ImporterRotatedIdsTest < ActiveSupport::TestCase
     assert_equal [ "T3" ], payload_ids
   end
 
+  # The overlapping sync can also move the linkage: its repair_stale_linkages
+  # links this SimpleFIN account to the account holding the entries. Re-keying
+  # with the linkage this sync loaded before the lock (none) would skip the
+  # entry and save the new id beside it.
+  test "a sync re-keys through the linkage as stored, not as loaded" do
+    store(row("T1"))
+    entry = entry_for("T1")
+    new_sfa = SimplefinAccount.create!(
+      simplefin_item: @item, account_id: "ACT-new", name: "Checking", currency: "USD",
+      current_balance: 0, account_type: "checking"
+    )
+    @importer.stubs(:update_inactive_state).with do |sfa, _|
+      assert_nil sfa.current_account, "the linkage must be loaded, and empty, before the other sync commits"
+      # The other sync's repair: the linkage and the stale payload move over.
+      AccountProvider.where(provider: @sfa).update_all(provider_id: new_sfa.id)
+      SimplefinAccount.where(id: new_sfa.id).update_all(raw_transactions_payload: [ row("T1") ])
+      SimplefinAccount.where(id: @sfa.id).update_all(raw_transactions_payload: [])
+      true
+    end
+
+    import(row("T2"), sfa: new_sfa)
+    SimplefinAccount::Transactions::Processor.new(new_sfa.reload).process
+
+    assert_equal "simplefin_T2", entry.reload.external_id
+    assert_equal [ "simplefin_T2" ], external_ids
+  end
+
   test "N4 a fetch that omits older rows never evicts them" do
     old = 120.days.ago.beginning_of_day.to_i
     store(row("OLD1", posted: old, transacted_at: old), row("OLD2", posted: old, transacted_at: old, amount: "-3.00"))

@@ -982,6 +982,12 @@ class SimplefinItem::Importer
             if stored_now != stored_snapshot
               id_rotation, simplefin_account.raw_transactions_payload = merged_transaction_payload(stored_now, transactions, account_id)
             end
+
+            # That sync's repair_stale_linkages may also have moved the linkage to
+            # this account. The associations were loaded before the lock, so they
+            # are read again: re-keying through a stale (empty) linkage would skip
+            # the entry and save the new id beside it.
+            %i[account account_provider linked_account].each { |name| simplefin_account.association(name).reset }
           end
 
           id_rotation&.rekey_entries!(simplefin_account.current_account)
