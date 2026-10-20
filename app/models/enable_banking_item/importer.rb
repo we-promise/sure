@@ -39,6 +39,9 @@ class EnableBankingItem::Importer
 
   PERIOD_BOUNDARY_TYPES = %w[opbd openingbooked prcd previouslyclosedbooked].freeze
 
+  BALANCE_DIAGNOSTIC_MAX_CANDIDATES = 20
+  BALANCE_DIAGNOSTIC_MAX_FIELD_LENGTH = 128
+
   # Only these types may outrank OPBD/PRCD on freshness (see fresher_balance) —
   # the same accounting-semantics exclusion as BALANCE_TYPE_PRIORITY itself, so a
   # forward-looking FWAV or an informational INFO/OTHR can't override a legitimate
@@ -255,6 +258,7 @@ class EnableBankingItem::Importer
         account_id: enable_banking_account.api_account_id,
         psu_headers: @psu_headers
       ).with_indifferent_access
+      fetched_at = Time.current
 
       # Enable Banking returns an array of balances. Use booked ledger balances for
       # current_balance/net worth before considering available balances. Available
@@ -295,6 +299,7 @@ class EnableBankingItem::Importer
         currency: balance_currency(balance) || enable_banking_account.currency,
         balance_evidence_verified: tiebreak_stage.nil? || VERIFIED_TIEBREAK_STAGES.include?(tiebreak_stage)
       )
+      capture_balance_selection_debug_log(enable_banking_account, balances, balance, parsed_amount, fetched_at:)
       # Only now is the chosen-currency balance known to be the one in use.
       capture_skipped_currency_balances(enable_banking_account, currency, skipped)
 
@@ -334,6 +339,65 @@ class EnableBankingItem::Importer
       parse_currency(balance.dig(:balance_amount, :currency) || balance[:currency])
     end
 
+    def capture_balance_selection_debug_log(enable_banking_account, balances, selected_balance, parsed_amount, fetched_at:)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "info",
+        message: "Enable Banking balance candidates and selected balance",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          selected_current_amount: bounded_balance_diagnostic_value(parsed_amount.to_s("F")),
+          fetched_at: fetched_at.iso8601(6),
+          candidates: balance_diagnostic_candidates(balances, selected_balance)
+        }
+      )
+    rescue StandardError
+      nil
+    end
+
+    def balance_diagnostic_candidates(balances, selected_balance)
+      selected_index = balances.index { |candidate| candidate.equal?(selected_balance) }
+      candidate_limit = [ balances.length, BALANCE_DIAGNOSTIC_MAX_CANDIDATES ].min
+      indexes = (0...candidate_limit).to_a
+      indexes[-1] = selected_index if selected_index && !indexes.include?(selected_index)
+
+      indexes.map do |index|
+        balance = balances[index]
+        candidate = {
+          balance_type: bounded_balance_diagnostic_value(balance[:balance_type]),
+          credit_debit_indicator: bounded_balance_diagnostic_value(balance[:credit_debit_indicator]),
+          reference_date: bounded_balance_diagnostic_value(balance[:reference_date]),
+          last_change_date_time: bounded_balance_diagnostic_value(balance[:last_change_date_time]),
+          selected: index == selected_index
+        }.compact
+
+        balance_amount = balance[:balance_amount]
+        if balance_amount.is_a?(Hash)
+          candidate[:balance_amount] = {
+            amount: bounded_balance_diagnostic_value(balance_amount[:amount] || balance[:amount]),
+            currency: bounded_balance_diagnostic_value(balance_amount[:currency] || balance[:currency])
+          }.compact
+        else
+          candidate[:amount] = bounded_balance_diagnostic_value(balance[:amount])
+          candidate[:currency] = bounded_balance_diagnostic_value(balance[:currency])
+          candidate.compact!
+        end
+
+        candidate
+      end
+    end
+
+    def bounded_balance_diagnostic_value(value)
+      return if value.nil? || value.is_a?(Hash) || value.is_a?(Array)
+
+      value.to_s.first(BALANCE_DIAGNOSTIC_MAX_FIELD_LENGTH)
+    end
+
     # Read from the raw snapshot, not the stored column: the stored currency
     # may already be the wrong one picked from a multi-currency response.
     # PayPal reports XXX (no currency) for the wallet; parse_currency turns
@@ -370,6 +434,8 @@ class EnableBankingItem::Importer
           other_balances: funded
         }
       )
+    rescue StandardError
+      nil
     end
 
     # The flag only changes how a credit card's balance is read (see

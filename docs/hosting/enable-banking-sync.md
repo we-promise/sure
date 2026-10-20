@@ -54,6 +54,15 @@ that reached post-import account setup. Deferred and explicitly partial attempts
 are excluded. Historical records cannot establish whether every older balance
 request succeeded; new imports record that distinction explicitly.
 
+## Balance snapshots and support diagnostics
+
+The displayed balance is the latest successfully saved provider snapshot;
+“last fetched” records when Sure last fetched provider data, not the balance's
+statement or effective date. Recent successful balance selections appear in the
+super-admin Debug view (`/settings/debug`) with sanitized candidate types,
+amounts, currencies and dates, plus the selected amount and fetch time. These
+diagnostics contain financial balance amounts.
+
 ## Reconnecting without duplicating accounts
 
 Enable Banking's API account UID belongs to a consent session. Sure remembers a

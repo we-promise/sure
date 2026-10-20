@@ -437,11 +437,11 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     balances[2] = balances[2].merge(balance_amount: { amount: "15.50", currency: "USD" })
     @mock_provider.stubs(:get_account_balances).returns(balances: balances)
 
-    assert_difference -> { DebugLogEntry.where(category: "provider_sync").count }, 1 do
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync").count }, 2 do
       assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
     end
 
-    entry = DebugLogEntry.where(category: "provider_sync").order(:created_at).last
+    entry = DebugLogEntry.where(category: "provider_sync").find { |debug_entry| debug_entry.metadata.key?("other_balances") }
     assert_equal "EUR", entry.metadata["currency"]
     assert_equal [ { "currency" => "USD", "balance_type" => "CLBD", "amount" => "15.50" } ], entry.metadata["other_balances"]
   end
@@ -461,13 +461,159 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_nil @enable_banking_account.reload.current_balance
   end
 
-  test "fetch_and_update_balance does not log empty balances in other currencies" do
+  test "fetch_and_update_balance does not add empty balances to the cross-currency summary" do
     @enable_banking_account.update!(raw_payload: { "uid" => "paypal", "currency" => "EUR" })
     @mock_provider.stubs(:get_account_balances).returns(balances: paypal_balances)
 
-    assert_no_difference -> { DebugLogEntry.where(category: "provider_sync").count } do
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync").count }, 1 do
       assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
     end
+
+    entry = DebugLogEntry.where(category: "provider_sync").order(:created_at).last
+    assert_nil entry.metadata["other_balances"]
+    assert_equal 3, entry.metadata["candidates"].length
+  end
+
+  test "fetch_and_update_balance captures sanitized balance candidates and selected fetch time" do
+    account = Account.create!(
+      family: @family,
+      name: "BPER",
+      balance: 0,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Depository.create!
+    )
+    account_provider = AccountProvider.create!(account:, provider: @enable_banking_account)
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "ITAV",
+          balance_amount: { amount: "1392.20", currency: "EUR", access_token: "nested-secret" },
+          credit_debit_indicator: "CRDT",
+          reference_date: "2026-10-20",
+          last_change_date_time: "2026-10-20T10:00:00Z",
+          account_id: "response-account-id",
+          name: "response-account-name",
+          transaction_reference: "response-transaction-reference",
+          response_body: "response-body-secret",
+          token: "response-token",
+          iban: "response-iban",
+          psu_headers: "response-psu-headers"
+        },
+        {
+          balance_type: "ITBD",
+          amount: "1422.30",
+          currency: "EUR",
+          credit_debit_indicator: "CRDT",
+          reference_date: "2026-10-20",
+          last_change_date_time: "2026-10-20T10:00:00Z"
+        },
+        {
+          balance_type: "OTHR",
+          amount: "0.00",
+          currency: "EUR",
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync").count }, 1 do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+
+    entry = DebugLogEntry.where(category: "provider_sync").order(:created_at).last
+    metadata = entry.metadata
+    assert_equal "provider_sync", entry.category
+    assert_equal "info", entry.level
+    assert_equal "EnableBankingItem::Importer", entry.source
+    assert_equal "enable_banking", entry.provider_key
+    assert_equal @family.id, entry.family_id
+    assert_equal account_provider.id, entry.account_provider_id
+    assert_equal @enable_banking_item.id, metadata["enable_banking_item_id"]
+    assert_equal @enable_banking_account.id, metadata["enable_banking_account_id"]
+    assert_equal "1422.3", metadata["selected_current_amount"]
+    assert_in_delta Time.current, Time.iso8601(metadata["fetched_at"]), 10
+    expected_metadata_keys = %w[enable_banking_item_id enable_banking_account_id selected_current_amount fetched_at candidates].sort
+    assert_equal expected_metadata_keys, metadata.keys.sort
+    assert_equal [
+      {
+        "balance_type" => "ITAV",
+        "balance_amount" => { "amount" => "1392.20", "currency" => "EUR" },
+        "credit_debit_indicator" => "CRDT",
+        "reference_date" => "2026-10-20",
+        "last_change_date_time" => "2026-10-20T10:00:00Z",
+        "selected" => false
+      },
+      {
+        "balance_type" => "ITBD",
+        "amount" => "1422.30",
+        "currency" => "EUR",
+        "credit_debit_indicator" => "CRDT",
+        "reference_date" => "2026-10-20",
+        "last_change_date_time" => "2026-10-20T10:00:00Z",
+        "selected" => true
+      },
+      {
+        "balance_type" => "OTHR",
+        "amount" => "0.00",
+        "currency" => "EUR",
+        "credit_debit_indicator" => "CRDT",
+        "selected" => false
+      }
+    ], metadata["candidates"]
+    assert_equal BigDecimal("1422.30"), @enable_banking_account.reload.current_balance
+
+    %w[
+      response-account-id
+      response-account-name
+      response-transaction-reference
+      response-body-secret
+      response-token
+      nested-secret
+      response-iban
+      response-psu-headers
+    ].each do |value|
+      refute_includes metadata.to_json, value
+    end
+  end
+
+  test "fetch_and_update_balance bounds candidate count and provider string lengths" do
+    balances = Array.new(25) do |index|
+      {
+        balance_type: "OTHR",
+        balance_amount: { amount: "1.00", currency: "EUR" },
+        credit_debit_indicator: index.zero? ? "C" * 300 : "CRDT",
+        reference_date: index.zero? ? "r" * 300 : "2026-10-20"
+      }
+    end
+    balances << {
+      balance_type: "CLBD",
+      balance_amount: { amount: "1422.30", currency: "EUR" },
+      credit_debit_indicator: "CRDT"
+    }
+    @mock_provider.stubs(:get_account_balances).returns(balances:)
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    candidates = DebugLogEntry.where(category: "provider_sync").order(:created_at).last.metadata["candidates"]
+    assert_equal 20, candidates.length
+    assert_equal 128, candidates.first["credit_debit_indicator"].length
+    assert_equal 128, candidates.first["reference_date"].length
+    assert_equal "CLBD", candidates.last["balance_type"]
+    assert candidates.last["selected"]
+  end
+
+  test "fetch_and_update_balance keeps the saved balance when selection diagnostic capture raises" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        { balance_type: "CLBD", balance_amount: { amount: "1422.30", currency: "EUR" }, credit_debit_indicator: "CRDT" },
+        { balance_type: "CLBD", balance_amount: { amount: "10.00", currency: "USD" }, credit_debit_indicator: "CRDT" }
+      ]
+    )
+    DebugLogEntry.stubs(:capture).raises(StandardError, "capture failed")
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    assert_equal BigDecimal("1422.30"), @enable_banking_account.reload.current_balance
   end
 
   test "fetch_and_update_balance handles descriptive booked balance types" do
