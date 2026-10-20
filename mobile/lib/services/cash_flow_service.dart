@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/cash_flow.dart';
 import 'api_config.dart';
+import 'transactions_service.dart';
 
 /// Fetches server-calculated cash flow from `GET /api/v1/cash_flow`.
 class CashFlowService {
@@ -49,7 +50,10 @@ class CashFlowService {
       } else {
         return {
           'success': false,
-          'error': _errorMessage(response.body) ?? 'Failed to load cash flow',
+          'error': TransactionsService.errorMessageFromResponseBody(
+            response.body,
+            fallback: 'Failed to load cash flow',
+          ),
         };
       }
     } catch (e) {
@@ -58,17 +62,5 @@ class CashFlowService {
         'error': 'Unable to load cash flow. Please try again later.',
       };
     }
-  }
-
-  static String? _errorMessage(String body) {
-    try {
-      final data = jsonDecode(body);
-      if (data is Map && data['message'] is String) {
-        return data['message'] as String;
-      }
-    } catch (_) {
-      // Non-JSON error bodies fall back to the generic message.
-    }
-    return null;
   }
 }
