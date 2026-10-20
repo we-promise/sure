@@ -28,7 +28,7 @@ module Provider::Openai::Concerns::PdfPageRenderer
         raise pdf_renderer_missing_error if rendered.nil?
 
         # Read all generated images (empty array when pdftoppm exited non-zero)
-        image_files = Dir.glob(File.join(tmpdir, "page-*.png")).sort
+        image_files = Dir.glob(File.join(tmpdir, "page-*.png")).sort_by { |f| f[/(\d+)\.png\z/, 1].to_i }
         image_files.map do |img_path|
           Base64.strict_encode64(File.binread(img_path))
         end

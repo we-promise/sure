@@ -60,6 +60,7 @@
             controller: "split-transaction",
             split_transaction_total_value: (-@entry.amount).to_f,
             split_transaction_currency_value: @entry.currency,
+            split_transaction_step_value: (BigDecimal(10)**-Money::Currency.new(@entry.currency).default_precision).to_s("F"),
             turbo_frame: :_top
           }
         ) do %>

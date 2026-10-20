@@ -419,6 +419,7 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     post itemize_transaction_split_path(@entry), headers: { "Turbo-Frame" => "modal" }
 
     assert_select "input[name=?][value=?][step=?]", "split[splits][0][amount]", "-40.125", "0.001"
+    assert_select "form[data-split-transaction-step-value=?]", "0.001"
   end
 
   test "itemize explains a failure and keeps the blank editor" do
