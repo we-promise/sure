@@ -9,6 +9,11 @@
 # encrypted at all, and security:backfill_encryption covers them once keys are
 # set.
 class EncryptExistingProviderIdentifiers < ActiveRecord::Migration[8.1]
+  # Each row commits on its own, so a running sync never waits on locks held
+  # until the whole migration finishes. A rerun after a partial run is safe:
+  # rows already done are skipped.
+  disable_ddl_transaction!
+
   COLUMNS = {
     "EnableBankingItem" => %w[last_psu_ip],
     "AkahuAccount" => %w[formatted_account],
