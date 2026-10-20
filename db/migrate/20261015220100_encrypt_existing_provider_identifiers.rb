@@ -27,18 +27,52 @@ class EncryptExistingProviderIdentifiers < ActiveRecord::Migration[8.1]
     end
   end
 
+  # Writes the values back as plaintext, so code from before this release can
+  # read them again after a rollback. The current code reads both forms.
   def down
-    # Encrypted values stay readable; nothing to undo.
+    COLUMNS.each do |model_name, columns|
+      model = model_name.constantize
+      next unless model.encryption_ready?
+
+      model.reset_column_information
+      columns.each { |column| decrypt_ciphertext(model, column) }
+    end
   end
 
   private
 
     def encrypt_plaintext(model, column)
-      json = %i[json jsonb].include?(model.columns_hash[column].type)
+      json = json_column?(model, column)
+
+      each_stored_value(model, column) do |id, raw|
+        next if ActiveRecord::Encryption.encryptor.encrypted?(raw)
+
+        value = json ? JSON.parse(raw) : raw
+        # update_all casts through the encrypted attribute type, so the
+        # value is written as ciphertext.
+        unchanged(model, column, id, raw).update_all(column => value)
+      end
+    end
+
+    def decrypt_ciphertext(model, column)
+      json = json_column?(model, column)
+
+      each_stored_value(model, column) do |id, raw|
+        next unless ActiveRecord::Encryption.encryptor.encrypted?(raw)
+
+        plaintext = ActiveRecord::Encryption.encryptor.decrypt(raw)
+        # Plain SQL, so the value is not encrypted again on the way in.
+        unchanged(model, column, id, raw).update_all(
+          [ "#{connection.quote_column_name(column)} = ?#{"::jsonb" if json}", plaintext ]
+        )
+      end
+    end
+
+    # Paged by id so large payload columns are not loaded all at once.
+    def each_stored_value(model, column)
       quoted = connection.quote_column_name(column)
       last_id = nil
 
-      # Paged by id so large payload columns are not loaded all at once.
       loop do
         after = last_id ? "AND id > #{connection.quote(last_id)}" : ""
         rows = connection.select_rows(<<~SQL)
@@ -48,15 +82,18 @@ class EncryptExistingProviderIdentifiers < ActiveRecord::Migration[8.1]
         SQL
         break if rows.empty?
 
-        rows.each do |id, raw|
-          next if ActiveRecord::Encryption.encryptor.encrypted?(raw)
-
-          value = json ? JSON.parse(raw) : raw
-          # update_all casts through the encrypted attribute type, so the
-          # value is written as ciphertext.
-          model.unscoped.where(id: id).update_all(column => value)
-        end
+        rows.each { |id, raw| yield id, raw }
         last_id = rows.last.first
       end
+    end
+
+    # Skips the row if a sync wrote a new value since it was read, instead of
+    # overwriting that value with the old one.
+    def unchanged(model, column, id, raw)
+      model.unscoped.where(id: id).where("#{connection.quote_column_name(column)}::text = ?", raw)
+    end
+
+    def json_column?(model, column)
+      %i[json jsonb].include?(model.columns_hash[column].type)
     end
 end
