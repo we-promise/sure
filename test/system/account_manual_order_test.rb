@@ -126,7 +126,7 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     end
   end
 
-  test "a sync refresh waits while a row is held with the keyboard" do
+  test "a sync refresh waits while a row is held, even after focus left it" do
     checking = accounts(:depository)
     plaid = accounts(:connected)
 
@@ -141,7 +141,9 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     end
 
     # The toast a finished sync broadcasts; it would morph-refresh the page.
+    # Focus has moved on, as after a touch drag or a click elsewhere.
     page.execute_script(<<~JS)
+      document.activeElement.blur();
       const toast = document.createElement("div");
       toast.dataset.controller = "sync-toast";
       toast.dataset.syncToastAutoRefreshDelayValue = "100";
