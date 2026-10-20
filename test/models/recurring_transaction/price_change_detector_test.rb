@@ -111,15 +111,17 @@ class RecurringTransaction::PriceChangeDetectorTest < ActiveSupport::TestCase
   end
 
   test "occurrence lookups do not grow with the number of series" do
+    # Distinct names: series sharing account, name and amount violate the
+    # recurring_transactions dedup unique index.
     2.times do |i|
-      series = create_series(amount: 79.99, manual: false)
+      series = create_series(amount: 79.99, manual: false, name: "SERVICE #{i}")
       settle(series, (i + 1).months.ago.to_date, 79.99)
       settle(series, Date.current - i, 79.99)
     end
     baseline = count_queries { @detector.detect! }
 
     3.times do |i|
-      series = create_series(amount: 79.99, manual: false)
+      series = create_series(amount: 79.99, manual: false, name: "SERVICE #{i + 2}")
       settle(series, (i + 3).months.ago.to_date, 79.99)
       settle(series, Date.current - i - 3, 79.99)
     end
@@ -135,11 +137,11 @@ class RecurringTransaction::PriceChangeDetectorTest < ActiveSupport::TestCase
       count
     end
 
-    def create_series(amount:, manual:)
+    def create_series(amount:, manual:, name: "FIBER INTERNET")
       due = Date.current + 20
 
       @family.recurring_transactions.create!(
-        name: "FIBER INTERNET",
+        name: name,
         account: @account,
         amount: amount,
         currency: "USD",
