@@ -90,7 +90,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
       context,
       listen: false,
     );
-    if (!splits.isSplitStatusKnown(id) || splits.isSplitChild(id)) return;
+    if (!splits.canEditAfterLookup(id) || splits.isSplitChild(id)) return;
 
     setState(() {
       _isSaving = true;
@@ -223,7 +223,8 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
       items.add(
         DropdownMenuItem<String?>(
           value: _selectedCategoryId,
-          child: Text(widget.transaction.categoryName ?? l.transactionEditCurrentCategory),
+          child: Text(widget.transaction.categoryName ??
+              l.transactionEditCurrentCategory),
         ),
       );
     }
@@ -258,7 +259,8 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
       items.add(
         DropdownMenuItem<String?>(
           value: _selectedMerchantId,
-          child: Text(widget.transaction.merchantName ?? l.transactionEditCurrentMerchant),
+          child: Text(widget.transaction.merchantName ??
+              l.transactionEditCurrentMerchant),
         ),
       );
     }
@@ -293,7 +295,9 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
         combinedTags.add(
           TransactionTag(
             id: selectedId,
-            name: fallbackName.isNotEmpty ? fallbackName : l.transactionEditUnknownTag,
+            name: fallbackName.isNotEmpty
+                ? fallbackName
+                : l.transactionEditUnknownTag,
           ),
         );
       }
@@ -338,7 +342,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
         widget.transaction.syncStatus == SyncStatus.synced;
     final canEdit = transactionId != null &&
         isSynced &&
-        splits.isSplitStatusKnown(transactionId) &&
+        splits.canEditAfterLookup(transactionId) &&
         !isSplitChild;
 
     final l = AppLocalizations.of(context);
@@ -354,7 +358,7 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
               SplitNoticeBanner(text: l.splitChildEditLocked),
               const SizedBox(height: 16),
             ] else if (isSynced &&
-                !splits.isSplitStatusKnown(transactionId)) ...[
+                !splits.canEditAfterLookup(transactionId)) ...[
               SplitNoticeBanner(text: l.splitStatusUnknownLocked),
               const SizedBox(height: 16),
             ] else if (!isSynced) ...[

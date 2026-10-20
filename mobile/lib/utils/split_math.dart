@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import 'amount_parser.dart';
+
 /// Why a split row amount was rejected.
 enum SplitAmountError { required, invalid, zero, tooPrecise }
 
@@ -72,38 +74,26 @@ class SplitMath {
   }
 
   /// Parses user input typed in the app's locale (e.g. `"1 234,56"` in
-  /// Swedish) into scaled units. Grouping separators are stripped, and the
-  /// locale's decimal separator (or a lone `.`) is treated as the decimal
-  /// point. Returns null when the input is not a plain number.
+  /// Swedish) into scaled units. Locale separator handling is delegated to
+  /// [AmountParser]; input with anything but digits, separators, spaces and
+  /// a sign is rejected (AmountParser alone would silently drop letters).
+  /// Returns null when the input is not a plain number.
   static BigInt? parseUserInput(String input, {String? locale}) {
-    var text = input
-        .trim()
-        .replaceAll('\u2212', '-')
-        .replaceAll(RegExp(r'[\s\u00A0\u202F]'), '');
+    final text = input.trim();
     if (text.isEmpty) return null;
-
-    String decimalSep = '.';
-    String groupSep = ',';
-    try {
-      final symbols = NumberFormat.decimalPattern(locale).symbols;
-      decimalSep = symbols.DECIMAL_SEP;
-      groupSep = symbols.GROUP_SEP;
-    } catch (_) {}
-
-    if (decimalSep == ',') {
-      // "1.234,56" -> "1234.56"; a lone "." is still accepted as decimal.
-      if (text.contains(',')) {
-        text = text.replaceAll('.', '').replaceAll(',', '.');
-      }
-    } else {
-      if (groupSep.trim().isNotEmpty) {
-        text = text.replaceAll(groupSep, '');
-      }
-      text = text.replaceAll(',', '');
+    if (RegExp(r'[^0-9.,+\-\u2212\u2012\u2013\u2014\s\u00A0\u202F]')
+        .hasMatch(text)) {
+      return null;
     }
-
-    if (!RegExp(r'^[+-]?(\d+\.?\d*|\.\d+)$').hasMatch(text)) return null;
-    return parseUnits(text);
+    try {
+      final canonical = AmountParser.canonicalize(text, locale: locale);
+      if (!RegExp(r'^[+-]?(\d+\.?\d*|\.\d+)$').hasMatch(canonical)) {
+        return null;
+      }
+      return parseUnits(canonical);
+    } on FormatException {
+      return null;
+    }
   }
 
   /// Number of decimal places actually used by [units] (0..[scale]).

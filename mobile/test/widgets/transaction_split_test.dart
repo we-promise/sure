@@ -615,7 +615,8 @@ void main() {
       expect(notified, 1);
     });
 
-    test('split membership is unknown until the lookup succeeds', () async {
+    test('a failed lookup does not lock editing; success records membership',
+        () async {
       final harness = _Harness(
         handler: (_) async => http.Response('{"error":"boom"}', 500),
       );
@@ -623,6 +624,8 @@ void main() {
       await harness.splits
           .loadSplit(accessToken: 'token', transactionId: 'child_1');
       expect(harness.splits.isSplitStatusKnown('child_1'), isFalse);
+      expect(harness.splits.canEditAfterLookup('child_1'), isTrue);
+      expect(harness.splits.isSplitChild('child_1'), isFalse);
 
       final ok = _Harness();
       await ok.splits.loadSplit(accessToken: 'token', transactionId: 'child_1');

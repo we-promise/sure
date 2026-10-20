@@ -42,6 +42,7 @@ class TransactionSplitsProvider with ChangeNotifier {
   /// Transactions whose split membership (parent, child, or not split) has
   /// been confirmed by the server in this session.
   final Set<String> _known = {};
+  final Set<String> _failedLookups = {};
   final Set<String> _loading = {};
   ConnectivityService? _connectivityService;
   bool _isDisposed = false;
@@ -83,6 +84,11 @@ class TransactionSplitsProvider with ChangeNotifier {
   bool isSplitStatusKnown(String transactionId) =>
       _known.contains(transactionId);
 
+  /// Whether the edit form may be used: the split status is known, or its
+  /// lookup failed (the server still rejects direct edits of split children).
+  bool canEditAfterLookup(String transactionId) =>
+      _known.contains(transactionId) || _failedLookups.contains(transactionId);
+
   String? parentIdFor(String childId) => _parentByChild[childId];
 
   String? _lastError;
@@ -94,6 +100,14 @@ class TransactionSplitsProvider with ChangeNotifier {
   /// Fetches the split for [transactionId]. Returns null when it is not split.
   /// When the request fails, the cached split (if any) is returned and
   /// [lastError] says why.
+  /// A failed lookup must not lock editing of an ordinary transaction: let
+  /// the user proceed, since the server still rejects direct edits of split
+  /// children. Only transactions with no cached split are unlocked, and the
+  /// lookup is retried the next time the screen loads.
+  void _allowEditingAfterFailedLookup(String transactionId) {
+    if (splitFor(transactionId) == null) _failedLookups.add(transactionId);
+  }
+
   Future<TransactionSplit?> loadSplit({
     required String accessToken,
     required String transactionId,
@@ -120,9 +134,11 @@ class TransactionSplitsProvider with ChangeNotifier {
           _remember(split);
         }
         _known.add(transactionId);
+        _failedLookups.remove(transactionId);
         return split;
       }
       _lastError = result['error'] as String?;
+      _allowEditingAfterFailedLookup(transactionId);
       return splitFor(transactionId);
     } catch (e) {
       _log.error(
@@ -130,6 +146,7 @@ class TransactionSplitsProvider with ChangeNotifier {
         'loadSplit failed with ${e.runtimeType}',
       );
       _lastError = 'Something went wrong. Please try again.';
+      _allowEditingAfterFailedLookup(transactionId);
       return splitFor(transactionId);
     } finally {
       _loading.remove(transactionId);
@@ -240,6 +257,7 @@ class TransactionSplitsProvider with ChangeNotifier {
     _splitsByParent.clear();
     _parentByChild.clear();
     _known.clear();
+    _failedLookups.clear();
     _notify();
   }
 
