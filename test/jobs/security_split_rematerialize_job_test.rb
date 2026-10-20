@@ -38,6 +38,23 @@ class SecuritySplitRematerializeJobTest < ActiveJob::TestCase
     assert_equal [ 10, 20 ], quantities
   end
 
+  # retry_on's block runs only once the attempts are spent, so a retry while the
+  # sync is still running defers again rather than materialising mid-sync.
+  # retry_on counts attempts per exception, in exception_executions.
+  test "a retry while the sync is still running defers again, and the last attempt materialises" do
+    @account.syncs.create!.update_columns(status: "syncing")
+
+    retry_job = SecuritySplitRematerializeJob.new(@account, @security)
+    retry_job.exception_executions = { "[SecuritySplitRematerializeJob::SyncInProgress]" => 5 }
+    assert_enqueued_with(job: SecuritySplitRematerializeJob) { retry_job.perform_now }
+    assert_equal [ 10, 10 ], quantities, "attempt 6 of 20 must not materialise while the sync runs"
+
+    last_job = SecuritySplitRematerializeJob.new(@account, @security)
+    last_job.exception_executions = { "[SecuritySplitRematerializeJob::SyncInProgress]" => 19 }
+    assert_no_enqueued_jobs(only: SecuritySplitRematerializeJob) { last_job.perform_now }
+    assert_equal [ 10, 20 ], quantities, "with the attempts spent the account is materialised anyway"
+  end
+
   test "a pending sync does not hold the job back" do
     @account.syncs.create!
 
