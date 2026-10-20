@@ -1057,6 +1057,38 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     end
   end
 
+  test "the anchor check abstains when a booked flow has no usable date" do
+    account = link_account(Depository.create!)
+    create_anchor(account, amount: 1000, date: 2.days.ago.to_date)
+    undated = booked_tx("ref-1", 1.day.ago.to_date, "100.00").merge("booking_date" => nil)
+    @enable_banking_account.update!(balance_verified: true, raw_transactions_payload: [ undated ])
+    stub_balances(clbd("1000.00"), clbd("900.00"))
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("900.00"), @enable_banking_account.reload.current_balance
+    assert_not @enable_banking_account.balance_evidence_verified?
+    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
+  test "the anchor check dates timestamped bookings in the family timezone" do
+    @family.update!(timezone: "America/New_York")
+    travel_to Time.zone.parse("2026-10-10 12:00:00 UTC") do
+      account = link_account(Depository.create!)
+      create_anchor(account, amount: 1000, date: Date.new(2026, 10, 9))
+      # 02:00 UTC on the 9th is still the 8th in New York, so the booking is
+      # before the anchor and the expected balance stays 1000.
+      early = booked_tx("ref-1", Date.new(2026, 10, 9), "50.00").merge("booking_date" => "2026-10-09T02:00:00Z")
+      @enable_banking_account.update!(balance_verified: true, raw_transactions_payload: [ early ])
+      stub_balances(clbd("950.00"), clbd("1000.00"))
+
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+      assert_equal BigDecimal("1000.00"), @enable_banking_account.reload.current_balance
+      assert_equal "anchor", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    end
+  end
+
   private
 
     def link_account(accountable)

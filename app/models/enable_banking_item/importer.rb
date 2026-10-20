@@ -505,9 +505,12 @@ class EnableBankingItem::Importer
       return nil unless anchor_written_by_this_link?(account, enable_banking_account)
 
       anchor_date = account.current_anchor_date
-      dated = booked.filter_map do |tx|
-        date = raw_transaction_date(tx)
-        [ date, signed_transaction_amount(tx) ] if date && date >= anchor_date && date <= Date.current
+      flows = booked.map { |tx| [ raw_transaction_date(tx), tx ] }
+      # A booking without a usable date may fall after the anchor: abstain.
+      return nil if flows.any? { |date, _| date.nil? }
+
+      dated = flows.filter_map do |date, tx|
+        [ date, signed_transaction_amount(tx) ] if date >= anchor_date && date <= Date.current
       end
       # An unparseable amount makes the expected balance unknowable: abstain.
       return nil if dated.any? { |_, amount| amount.nil? }
@@ -542,9 +545,14 @@ class EnableBankingItem::Importer
       candidates.select { |balance| (signed_balance_amount(balance) - expected).abs <= BALANCE_TIEBREAK_TOLERANCE }
     end
 
-    # Same date precedence as EnableBankingEntry::Processor#date.
+    # Same dates as the entries get (EnableBankingEntry::Processor#date); nil
+    # when the row has no usable date.
     def raw_transaction_date(tx)
-      parse_reference_date(tx[:booking_date].presence || tx[:value_date].presence || tx[:transaction_date])
+      return nil if tx.values_at(:booking_date, :value_date, :transaction_date).all?(&:blank?)
+
+      EnableBankingEntry::Processor.transaction_date(tx, enable_banking_item.family.timezone)
+    rescue ArgumentError, TypeError
+      nil
     end
 
     def booked_raw_transactions(enable_banking_account)
