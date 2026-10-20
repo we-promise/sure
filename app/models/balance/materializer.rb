@@ -56,14 +56,13 @@ class Balance::Materializer
 
     # A provider's trade history can begin after a position was opened (Plaid
     # sends at most two years), so a sell can arrive without its buy. Built from
-    # zero that is a negative position. Read from the forward calculator itself,
-    # not a sum of trade quantities, so a split between trades is applied.
+    # zero that goes negative, on the latest day or on any day before a later
+    # buy. Read from the forward calculator itself, not a sum of trade
+    # quantities, so a split between trades is applied.
     def incomplete_trade_history?
       return false unless account.trades.exists?
 
-      Holding::ForwardCalculator.new(account).calculate
-        .group_by(&:security_id)
-        .any? { |_security_id, holdings| holdings.max_by(&:date).qty.negative? }
+      Holding::ForwardCalculator.new(account).calculate.any? { |holding| holding.qty.negative? }
     end
 
     # The provider set cash_balance to the whole balance, as it sent no

@@ -375,6 +375,24 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_equal 10_000, account.cash_balance
   end
 
+  # A sell before a later buy goes negative in between even when the latest
+  # quantity is positive. That history is incomplete too, so the fallback does
+  # not show the one share left: the account reads as it did without it.
+  test "a sell before a later buy leaves the account as it was" do
+    account = linked_investment_account
+    security = Security.create!(ticker: "DIPX", name: "Dip")
+    (6.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: security, date: date, price: 200) }
+    create_trade(security, account: account, qty: -2, date: 5.days.ago.to_date, price: 200)
+    create_trade(security, account: account, qty: 3, date: 3.days.ago.to_date, price: 200)
+    create_valuation(account: account, amount: 10_000, date: 1.day.ago.to_date, kind: "current_anchor")
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    account.reload
+    assert_nil account.current_holdings.find_by(security: security), "the fallback would show one share"
+    assert_equal 10_000, account.cash_balance
+  end
+
   # The guard reads the position the trades actually build. Summing trade
   # quantities would call this one negative (2 - 3), but the 2:1 split between
   # them leaves one share.
