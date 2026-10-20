@@ -107,6 +107,19 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
     assert changed.reload.locked?(:merchant_id)
   end
 
+  test "clearing Bayes locks is all or none" do
+    merchant = @family.merchants.create!(name: "Netflix")
+    transaction = create_transaction(account: @account, name: "Netflix com").transaction
+    transaction.enrich_attribute(:merchant_id, merchant.id, source: "similar", metadata: { locked_by_similar: true })
+    transaction.lock_attr!(:merchant_id)
+    ActiveRecord::Relation.any_instance.stubs(:touch_all).raises(ActiveRecord::StatementInvalid, "boom")
+
+    assert_raises(ActiveRecord::StatementInvalid) { @family.clear_bayes_locks! }
+
+    assert transaction.reload.locked?(:merchant_id)
+    assert transaction.data_enrichments.find_by(attribute_name: "merchant_id").metadata["locked_by_similar"]
+  end
+
   private
     def assert_ai_categorization_log(transaction_ids:, categorized_transaction_ids: transaction_ids)
       log_entry = DebugLogEntry.order(:created_at).last

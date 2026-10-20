@@ -490,13 +490,14 @@ class Family < ApplicationRecord
   # merchants are filled in first, if chosen, so Bayes sees them. Returns the
   # modified count.
   def bayes_categorize_uncategorized
-    fill_similar_merchants if bayes_settings_object.fill_similar_merchants
+    settings = bayes_settings_object
+    fill_similar_merchants(settings) if settings.fill_similar_merchants
     scope = categorizable_transactions.where(category_id: nil).where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS)
                                       .enrichable(:category_id)
     requested = scope.count
     return 0 if requested.zero?
 
-    result = Family::BayesCategorizer.new(self, settings: bayes_settings_object).classify_and_apply(scope.select(:id))
+    result = Family::BayesCategorizer.new(self, settings: settings).classify_and_apply(scope.select(:id))
     DebugLogEntry.capture(
       category: "auto_categorization",
       level: "info",
@@ -510,12 +511,12 @@ class Family < ApplicationRecord
 
   # Copies near-duplicates' merchant to every transaction without one the
   # user hasn't locked, transfers aside. Returns how many got one.
-  def fill_similar_merchants
+  def fill_similar_merchants(settings = bayes_settings_object)
     ids = categorizable_transactions.where(merchant_id: nil).where.not(kind: Transaction::TRANSFER_KINDS)
                                     .enrichable(:merchant_id).pluck(:id)
     return 0 if ids.empty?
 
-    filled = Family::SimilarMerchantFiller.new(self, settings: bayes_settings_object).fill(ids)
+    filled = Family::SimilarMerchantFiller.new(self, settings: settings).fill(ids)
     DebugLogEntry.capture(
       category: "auto_categorization",
       level: "info",
@@ -529,15 +530,17 @@ class Family < ApplicationRecord
 
   # Unlocks the categories Bayes locked itself (lock_results) and the
   # merchants the matcher did (lock_similar_merchants) that are still what
-  # they set, so rules and AI may change them again. The values stay.
-  # Returns how many were unlocked.
+  # they set, so rules and AI may change them again. The values stay. All or
+  # none; returns how many were unlocked.
   def clear_bayes_locks!
     locked_by_bayes = transactions.where("transactions.locked_attributes ? 'category_id'")
                                   .category_from("bayes", metadata: { locked_by_bayes: true })
     locked_by_matcher = transactions.where("transactions.locked_attributes ? 'merchant_id'")
                                     .where(Transaction.enriched_from_sql("merchant_id", "similar", metadata: { locked_by_similar: true }))
-    unlock_own_locks(locked_by_bayes, "category_id", "bayes", "locked_by_bayes") +
-      unlock_own_locks(locked_by_matcher, "merchant_id", "similar", "locked_by_similar")
+    Transaction.transaction do
+      unlock_own_locks(locked_by_bayes, "category_id", "bayes", "locked_by_bayes") +
+        unlock_own_locks(locked_by_matcher, "merchant_id", "similar", "locked_by_similar")
+    end
   end
 
   def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil)
@@ -810,19 +813,19 @@ class Family < ApplicationRecord
       transactions.visible.with_entry.merge(Entry.excluding_split_parents)
     end
 
+    # In batches, like Transaction.reassign_category!. update_all skips the
+    # touch a save carries to the entry (Family#entries_cache_version), so the
+    # entries are touched too.
     def unlock_own_locks(scope, attribute, source, flag)
-      count = 0
-      scope.find_each do |transaction|
-        ActiveRecord::Base.transaction do
-          transaction.update_column(:locked_attributes, transaction.locked_attributes.except(attribute))
-          # Without the flag, a lock the user sets later counts as confirming it.
-          transaction.data_enrichments.where(attribute_name: attribute, source: source)
-                     .update_all([ "metadata = metadata - ?", flag ])
-          transaction.touch
-        end
-        count += 1
+      ids = scope.lock("FOR UPDATE OF transactions").pluck(:id)
+      ids.each_slice(Transaction::REASSIGN_TOUCH_BATCH_SIZE) do |batch|
+        Transaction.where(id: batch).update_all([ "locked_attributes = locked_attributes - ?, updated_at = ?", attribute, Time.current ])
+        # Without the flag, a lock the user sets later counts as confirming it.
+        DataEnrichment.where(enrichable_type: "Transaction", enrichable_id: batch, attribute_name: attribute, source: source)
+                      .update_all([ "metadata = metadata - ?", flag ])
+        Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
       end
-      count
+      ids.size
     end
 
     # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
