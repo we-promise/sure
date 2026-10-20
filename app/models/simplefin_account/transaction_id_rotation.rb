@@ -93,12 +93,19 @@ class SimplefinAccount::TransactionIdRotation
     def content_key(row)
       t = row.with_indifferent_access
       [
-        t[:posted].to_i,
-        t[:transacted_at].to_i,
+        epoch(t[:posted]),
+        epoch(t[:transacted_at]),
         t[:amount].to_d,
         t[:description].to_s,
         t[:payee].to_s,
         SimplefinEntry::Processor.pending?(t)
       ]
+    end
+
+    # Bridges send epoch seconds or ISO strings (see Simplefin::DateUtils).
+    # String#to_i would read every ISO date in a year as that year, so two
+    # charges months apart would share a content group.
+    def epoch(value)
+      Simplefin::DateUtils.parse_provider_time(value)&.to_i
     end
 end

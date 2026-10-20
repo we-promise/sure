@@ -210,6 +210,30 @@ class SimplefinItem::ImporterRotatedIdsTest < ActiveSupport::TestCase
     assert_no_pairing(description: "Amazon Mktp")
   end
 
+  # The bridge may send dates as ISO strings, which Simplefin::DateUtils accepts.
+  # Compared as String#to_i, every date in a year reads as that year.
+  test "N3 ISO dates a day apart never pair" do
+    day = Time.at(@posted).utc
+    other = day.yday == 1 ? day + 1.day : day - 1.day
+    store(row("T1", posted: day.iso8601, transacted_at: day.iso8601))
+
+    import(row("T2", posted: other.iso8601, transacted_at: other.iso8601))
+
+    assert_equal %w[T1 T2], payload_ids.sort
+    assert_equal "simplefin_T1", entry_for("T1").external_id
+  end
+
+  test "the same instant pairs whether it is sent as epoch seconds or an ISO string" do
+    store(row("T1"))
+    entry = entry_for("T1")
+    iso = Time.at(@posted).utc.iso8601
+
+    import(row("T2", posted: iso, transacted_at: iso))
+
+    assert_equal "simplefin_T2", entry.reload.external_id
+    assert_equal [ "T2" ], payload_ids
+  end
+
   test "N4 a fetch that omits older rows never evicts them" do
     old = 120.days.ago.beginning_of_day.to_i
     store(row("OLD1", posted: old, transacted_at: old), row("OLD2", posted: old, transacted_at: old, amount: "-3.00"))
