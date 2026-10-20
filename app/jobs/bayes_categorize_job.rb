@@ -1,24 +1,11 @@
-# Bayes over the uncategorized transactions: after a sync (apply_rules:
-# true, which then queues the rules so they see its categories) and from
-# Settings → Classifier's Run. After a sync a failure is logged rather than
-# raised, so the rules still run once and a retry doesn't queue them again.
+# Settings → Classifier's Run: the matcher (when its rule is on), then Bayes,
+# over the uncategorized transactions, outside the rule order. After a sync
+# they run as rules (Merchant matcher, Category classifier).
 class BayesCategorizeJob < ApplicationJob
   queue_as :medium_priority
 
-  def perform(family, apply_rules: false)
+  def perform(family)
+    family.fill_similar_merchants if family.classifier_rule_active?("fill_similar_merchants")
     family.bayes_categorize_uncategorized
-  rescue => e
-    raise unless apply_rules
-
-    DebugLogEntry.capture(
-      category: "auto_categorization",
-      level: "error",
-      message: "Bayesian categorization after sync failed: #{e.class}: #{e.message}",
-      source: self.class.name,
-      family: family,
-      metadata: { error_class: e.class.name, error_message: e.message, backtrace: Array(e.backtrace).first(10) }
-    )
-  ensure
-    ApplyRulesJob.perform_later(family) if apply_rules
   end
 end

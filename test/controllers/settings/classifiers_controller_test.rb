@@ -18,7 +18,8 @@ class Settings::ClassifiersControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='bayes_settings[threshold]'][value='0.7']"
     assert_select "input[name='included_category_ids[]']", count: @family.categories.count
     assert_select "#classifier_evaluation"
-    assert_select "input[type=checkbox][role=switch][name='bayes_settings[categorize_after_sync]'][checked]"
+    # The fixture family has no classifier rules, so both switches are off.
+    assert_select "input[type=checkbox][role=switch][name='active']:not([checked])", count: 2
     assert_select ".translation_missing", count: 0
     assert_select "span", text: I18n.t("settings.classifiers.category_training.exclude_transfers_hint")
   end
@@ -84,14 +85,38 @@ class Settings::ClassifiersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_classifier_path(anchor: "classifier_evaluation")
   end
 
-  test "the after-sync toggle saves off and on" do
+  test "a rule's switch offers to add its rule when there's none, then turns it off and on" do
+    sign_in @admin
+    name = I18n.t("rules.classifier_rules.category_classifier")
+    title = I18n.t("settings.classifiers.show.add_rule_title", name: name)
+
+    patch rule_settings_classifier_path, params: { action_type: "bayes_categorize", active: "1" }
+    assert_redirected_to settings_classifier_path(add_rule: "bayes_categorize")
+    get settings_classifier_path(add_rule: "bayes_categorize")
+    assert_select "dialog", text: /#{Regexp.escape(title)}/
+
+    assert_difference -> { @family.rules.count }, 1 do
+      post add_rule_settings_classifier_path, params: { action_type: "bayes_categorize" }
+    end
+    rule = @family.classifier_rules("bayes_categorize").sole
+    assert rule.active?
+    assert_equal 1, rule.position
+
+    patch rule_settings_classifier_path, params: { action_type: "bayes_categorize", active: "0" }
+    assert_not rule.reload.active?
+    patch rule_settings_classifier_path, params: { action_type: "bayes_categorize", active: "1" }
+    assert rule.reload.active?
+    # With the rule there, the question isn't asked.
+    get settings_classifier_path(add_rule: "bayes_categorize")
+    assert_select "dialog", text: /#{Regexp.escape(title)}/, count: 0
+  end
+
+  test "a rule's switch only knows the matcher and Bayes" do
     sign_in @admin
 
-    patch settings_classifier_path, params: { bayes_settings: { categorize_after_sync: "0" } }
-    assert_not @family.reload.bayes_settings_object.categorize_after_sync
+    patch rule_settings_classifier_path, params: { action_type: "auto_categorize", active: "1" }
 
-    patch settings_classifier_path, params: { bayes_settings: { categorize_after_sync: "1" } }
-    assert @family.reload.bayes_settings_object.categorize_after_sync
+    assert_response :bad_request
   end
 
   test "run and clear locks queue their jobs" do

@@ -25,10 +25,10 @@
   <%= render "settings/classifiers/accounts", settings: @settings, accounts: @accounts %>
 <% end %>
 <%= settings_section title: t(".title"), subtitle: t(".description") do %>
-  <%= render "settings/classifiers/classifier", settings: @settings %>
+  <%= render "settings/classifiers/classifier", settings: @settings, active: @rules_active["bayes_categorize"] %>
 <% end %>
 <%= settings_section title: t(".matcher"), subtitle: t(".matcher_description") do %>
-  <%= render "settings/classifiers/matcher", settings: @settings %>
+  <%= render "settings/classifiers/matcher", settings: @settings, active: @rules_active["fill_similar_merchants"] %>
 <% end %>
 <%= settings_section title: t(".auto_tune") do %>
   <%= render "settings/classifiers/evaluation", evaluation: @evaluation, settings: @settings, running: @evaluation_running, weight: @weight %>
@@ -56,4 +56,17 @@
 <% end %>
 <%= settings_section title: t(".scoring") do %>
   <%= render "settings/classifiers/scoring", settings: @settings %>
+<% end %>
+
+<% if @add_rule %>
+  <%# Turning on a switch whose rule was deleted (rule): add it again? %>
+  <% name = Family.classifier_rule_name(@add_rule) %>
+  <%= render DS::Dialog.new(disable_frame: true, width: "md") do |dialog| %>
+    <% dialog.with_header(title: t(".add_rule_title", name: name)) %>
+    <% dialog.with_body do %>
+      <p class="text-sm text-secondary"><%= t(".add_rule_body", name: name) %></p>
+    <% end %>
+    <% dialog.with_action(cancel_action: true, text: t(".add_rule_cancel"), variant: "outline") %>
+    <% dialog.with_action(text: t(".add_rule_confirm"), href: add_rule_settings_classifier_path, method: :post, params: { action_type: @add_rule }) %>
+  <% end %>
 <% end %>

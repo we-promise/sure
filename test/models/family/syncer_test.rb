@@ -54,27 +54,12 @@ class Family::SyncerTest < ActiveSupport::TestCase
   end
 
   test "applies rules in one ordered run per family after sync" do
-    @family.update_bayes_settings!(categorize_after_sync: false)
     syncer = Family::Syncer.new(@family)
 
     assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
       syncer.perform_post_sync
     end
     assert_no_enqueued_jobs(only: RuleJob)
-  end
-
-  test "post-sync queues Bayes, which queues the rules, unless turned off" do
-    assert_enqueued_with(job: BayesCategorizeJob, args: [ @family, { apply_rules: true } ]) do
-      Family::Syncer.new(@family).perform_post_sync
-    end
-    assert_no_enqueued_jobs(only: ApplyRulesJob)
-
-    @family.update_bayes_settings!(categorize_after_sync: false)
-    assert_no_enqueued_jobs(only: BayesCategorizeJob) do
-      assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
-        Family::Syncer.new(@family).perform_post_sync
-      end
-    end
   end
 
   private

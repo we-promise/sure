@@ -110,6 +110,12 @@ class Rule < ApplicationRecord
     matching_scope.pluck(:id)
   end
 
+  # Holds the family's rule positions until the transaction ends, so rules
+  # added at the same time can't share one (see assign_next_position).
+  def self.lock_positions!(family)
+    connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family.id.to_s ]))
+  end
+
   # Sets the run order of all rules of a family. ordered_ids must list every
   # rule of the family exactly once, so a stale page (a rule added or deleted
   # meanwhile) cannot leave rules with clashing or missing positions.
@@ -293,9 +299,7 @@ class Rule < ApplicationRecord
     def assign_next_position
       return if position.to_i.positive?
 
-      self.class.connection.execute(
-        self.class.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family_id.to_s ])
-      )
+      self.class.lock_positions!(family)
       self.position = family.rules.maximum(:position).to_i + 1
     end
 

@@ -10,8 +10,8 @@ class Family::BayesSettings
     # Training
     excluded_category_ids: [],
     excluded_account_ids: [],
-    # On: Bayes runs after every sync, so its own guesses would otherwise
-    # train the next run and a wrong one would be reinforced.
+    # On: Bayes runs with the rules after every sync, so its own guesses would
+    # otherwise train the next run and a wrong one would be reinforced.
     skip_self_labels: true,
     # A guess the user has left alone this long counts as accepted: picking
     # the same category again doesn't lock it, so there's no other way.
@@ -41,11 +41,11 @@ class Family::BayesSettings
     # Account and merchant
     account_field: false,
     merchant_field: false,
-    # Matcher: before Bayes, a missing merchant is copied from near-duplicates
-    # (Family::SimilarMerchantFiller) this alike, when at least this many
-    # agree. On one family's history 0.8–0.95 made little difference; 2
-    # instead of 1 halved the mistakes, most of them one shop under two merchants.
-    fill_similar_merchants: false,
+    # Matcher (the Merchant matcher rule): a missing merchant is copied from
+    # near-duplicates (Family::SimilarMerchantFiller) this alike, when at
+    # least this many agree. On one family's history 0.8–0.95 made little
+    # difference; 2 instead of 1 halved the mistakes, most of them one shop
+    # under two merchants.
     lock_similar_merchants: false,
     similar_threshold: 0.9,
     similar_min_neighbours: 2,
@@ -61,10 +61,9 @@ class Family::BayesSettings
     binary: false,
     separate_fields: false,
 
-    # Classifier
+    # Classifier (the Category classifier rule)
     threshold: 0.7,
-    lock_results: false,
-    categorize_after_sync: true
+    lock_results: false
   }.freeze
 
   CHOICES = { word_split: %w[ascii unicode symbols] }.freeze

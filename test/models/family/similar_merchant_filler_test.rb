@@ -98,15 +98,16 @@ class Family::SimilarMerchantFillerTest < ActiveSupport::TestCase
     assert_equal 0, fill(transfer, missing)
   end
 
-  test "the family fills merchants before Bayes only when chosen" do
+  test "the family fills only the missing merchants in scope, and Bayes fills none" do
     2.times { transaction("NETFLIX.COM 8812", merchant: @netflix) }
     missing = transaction("Netflix com 1203")
+    elsewhere = transaction("Netflix com 5531")
 
     @family.bayes_categorize_uncategorized
     assert_nil missing.reload.merchant_id
 
-    @family.update_bayes_settings!(fill_similar_merchants: true)
-    @family.bayes_categorize_uncategorized
+    assert_equal 1, @family.fill_similar_merchants(@family.transactions.where(id: missing.id))
     assert_equal @netflix.id, missing.reload.merchant_id
+    assert_nil elsewhere.reload.merchant_id
   end
 end

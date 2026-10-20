@@ -49,6 +49,17 @@ class Rule::Registry::TransactionResourceTest < ActiveSupport::TestCase
     assert_includes keys, "auto_detect_merchants"
   end
 
+  test "the matcher and Bayes are offered without any provider" do
+    rule = build_rule(action_type: "exclude_transaction")
+    @family.stubs(:resolved_categorization_provider).returns(nil)
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    keys = rule.registry.action_executors.map(&:key)
+
+    assert_includes keys, "fill_similar_merchants"
+    assert_includes keys, "bayes_categorize"
+  end
+
   private
     def build_rule(action_type:)
       @family.rules.create!(

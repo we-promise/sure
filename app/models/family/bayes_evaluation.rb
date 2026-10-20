@@ -25,7 +25,7 @@ class Family::BayesEvaluation
   # (which tests the defaults).
   ACTIONS = %w[test find_best reset].freeze
   # Bumped when the cached result's shape changes, so an older one is ignored.
-  RESULT_VERSION = 8
+  RESULT_VERSION = 9
   # The matcher's settings: not searched; picked on the page from its own
   # table (matcher_changes).
   MATCHER_KEYS = %i[similar_threshold similar_min_neighbours similar_common_share].freeze

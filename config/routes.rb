@@ -405,6 +405,8 @@ Rails.application.routes.draw do
     end
     resource :ai_prompts, only: %i[show update]
     resource :classifier, only: %i[show update] do
+      patch :rule
+      post :add_rule
       post :run
       post :clear_locks
       post :evaluate

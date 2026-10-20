@@ -255,6 +255,8 @@ class Family < ApplicationRecord
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }
   validates :categories_locked, inclusion: { in: [ true, false ] }
+
+  after_create_commit :add_classifier_rules
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
 
   before_validation :normalize_enabled_currencies!
@@ -478,26 +480,22 @@ class Family < ApplicationRecord
     AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end
 
-  # The LLM only: Bayes runs after each sync and from Settings → Classifier,
-  # before rules, so what it categorized is no longer uncategorized here.
+  # The LLM only: Bayes is its own rule (Category classifier), so what it
+  # categorized is no longer uncategorized here.
   def auto_categorize_transactions(transaction_ids)
     AutoCategorizer.new(self, transaction_ids: transaction_ids).auto_categorize
   end
 
-  # Runs Bayes over every uncategorized transaction the user hasn't locked,
-  # transfer legs aside (they never belong in Uncategorized); those it isn't
-  # sure about are tried again with a better model next time. Missing
-  # merchants are filled in first, if chosen, so Bayes sees them. Returns the
-  # modified count.
-  def bayes_categorize_uncategorized
-    settings = bayes_settings_object
-    fill_similar_merchants(settings) if settings.fill_similar_merchants
-    scope = categorizable_transactions.where(category_id: nil).where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS)
-                                      .enrichable(:category_id)
+  # Runs Bayes over the uncategorized transactions in scope the user hasn't
+  # locked, transfer legs aside (they never belong in Uncategorized); those
+  # it isn't sure about are tried again with a better model next time.
+  # Returns the modified count.
+  def bayes_categorize_uncategorized(scope = categorizable_transactions)
+    scope = scope.where(category_id: nil).where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS).enrichable(:category_id)
     requested = scope.count
     return 0 if requested.zero?
 
-    result = Family::BayesCategorizer.new(self, settings: settings).classify_and_apply(scope.select(:id))
+    result = Family::BayesCategorizer.new(self, settings: bayes_settings_object).classify_and_apply(scope.select(:id))
     DebugLogEntry.capture(
       category: "auto_categorization",
       level: "info",
@@ -509,14 +507,13 @@ class Family < ApplicationRecord
     result.modified_count
   end
 
-  # Copies near-duplicates' merchant to every transaction without one the
-  # user hasn't locked, transfers aside. Returns how many got one.
-  def fill_similar_merchants(settings = bayes_settings_object)
-    ids = categorizable_transactions.where(merchant_id: nil).where.not(kind: Transaction::TRANSFER_KINDS)
-                                    .enrichable(:merchant_id).pluck(:id)
+  # Copies near-duplicates' merchant to every transaction in scope without
+  # one the user hasn't locked, transfers aside. Returns how many got one.
+  def fill_similar_merchants(scope = categorizable_transactions)
+    ids = scope.where(merchant_id: nil).where.not(kind: Transaction::TRANSFER_KINDS).enrichable(:merchant_id).pluck(:id)
     return 0 if ids.empty?
 
-    filled = Family::SimilarMerchantFiller.new(self, settings: settings).fill(ids)
+    filled = Family::SimilarMerchantFiller.new(self).fill(ids)
     DebugLogEntry.capture(
       category: "auto_categorization",
       level: "info",
@@ -526,6 +523,41 @@ class Family < ApplicationRecord
       metadata: { requested_count: ids.size, filled_count: filled }
     )
     filled
+  end
+
+  # The matcher and Bayes are rules (Merchant matcher, Category classifier),
+  # so they run in the family's rule order; whether one is on is whether a
+  # rule with its action is. Settings → Classifier switches them.
+  CLASSIFIER_ACTION_TYPES = %w[fill_similar_merchants bayes_categorize].freeze
+
+  def self.classifier_rule_name(action_type)
+    action_type == "bayes_categorize" ? I18n.t("rules.classifier_rules.category_classifier") : I18n.t("rules.classifier_rules.merchant_matcher")
+  end
+
+  def classifier_rules(action_type)
+    rules.where(id: Rule::Action.where(action_type: action_type).select(:rule_id))
+  end
+
+  def classifier_rule_active?(action_type)
+    classifier_rules(action_type).exists?(active: true)
+  end
+
+  def set_classifier_rule_active!(action_type, active)
+    classifier_rules(action_type).find_each { |rule| rule.update!(active: active) }
+  end
+
+  # A rule with no conditions at the top of the order, the others moving
+  # down one; Bayes goes below the matcher when that's at the top, so the
+  # merchants it fills are there for Bayes.
+  def add_classifier_rule!(action_type, active: true)
+    Rule.transaction do
+      Rule.lock_positions!(self)
+      matcher_first = action_type == "bayes_categorize" && classifier_rules("fill_similar_merchants").exists?(position: 1)
+      position = matcher_first ? 2 : 1
+      rules.where(position: position..).update_all("position = position + 1")
+      rules.create!(name: self.class.classifier_rule_name(action_type), resource_type: "transaction", active: active, position: position,
+                    actions_attributes: [ { action_type: action_type } ])
+    end
   end
 
   # Unlocks the categories Bayes locked itself (lock_results) and the
@@ -809,6 +841,10 @@ class Family < ApplicationRecord
   end
 
   private
+    def add_classifier_rules
+      CLASSIFIER_ACTION_TYPES.each { |action_type| add_classifier_rule!(action_type) }
+    end
+
     def categorizable_transactions
       transactions.visible.with_entry.merge(Entry.excluding_split_parents)
     end

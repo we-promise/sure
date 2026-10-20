@@ -23,13 +23,7 @@ class Family::Syncer
     family.auto_match_transfers!
 
     Rails.logger.info("Applying rules for family #{family.id}")
-    if family.bayes_settings_object.categorize_after_sync
-      # Out of the sync's transaction; it queues the rules once done, so they
-      # see Bayes' categories.
-      BayesCategorizeJob.perform_later(family, apply_rules: true)
-    else
-      ApplyRulesJob.perform_later(family)
-    end
+    ApplyRulesJob.perform_later(family)
   end
 
   private

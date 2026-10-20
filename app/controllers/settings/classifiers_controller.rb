@@ -14,6 +14,10 @@ class Settings::ClassifiersController < ApplicationController
     @evaluation = Family::BayesEvaluation.cached(Current.family)
     @evaluation_running = Family::BayesEvaluation.running?(Current.family)
     @weight = Family::BayesEvaluation.weight(Current.family)
+    @rules_active = Family::CLASSIFIER_ACTION_TYPES.index_with { |action_type| Current.family.classifier_rule_active?(action_type) }
+    # Asked by rule, when its switch was turned on without a rule to turn on.
+    @add_rule = params[:add_rule].presence_in(Family::CLASSIFIER_ACTION_TYPES)
+    @add_rule = nil if @add_rule && Current.family.classifier_rules(@add_rule).exists?
   end
 
   # Each section of the page is its own auto-submitting form, so only that
@@ -34,7 +38,27 @@ class Settings::ClassifiersController < ApplicationController
     redirect_to settings_classifier_path, alert: e.record.errors.full_messages.to_sentence
   end
 
-  # Bayes on its own, now; rules don't run after it.
+  # The matcher's or Bayes' switch, in step with its rule on the Rules page.
+  # Turning on one whose rule was deleted asks whether to add it again.
+  def rule
+    action_type = classifier_action_type
+    active = params[:active] == "1"
+    if active && !Current.family.classifier_rules(action_type).exists?
+      return redirect_to settings_classifier_path(add_rule: action_type)
+    end
+
+    Current.family.set_classifier_rule_active!(action_type, active)
+    redirect_to settings_classifier_path
+  end
+
+  def add_rule
+    action_type = classifier_action_type
+    Current.family.add_classifier_rule!(action_type)
+    redirect_to settings_classifier_path, notice: t(".success", name: Family.classifier_rule_name(action_type))
+  end
+
+  # The matcher (while its rule is on) and Bayes, now, outside the rule
+  # order; rules don't run after them.
   def run
     BayesCategorizeJob.perform_later(Current.family)
     redirect_to settings_classifier_path, notice: t(".success")
@@ -88,6 +112,10 @@ class Settings::ClassifiersController < ApplicationController
       end
 
       redirect_to settings_classifier_path(anchor: "classifier_evaluation")
+    end
+
+    def classifier_action_type
+      params.require(:action_type).presence_in(Family::CLASSIFIER_ACTION_TYPES) || raise(ActionController::BadRequest)
     end
 
     def settings_params

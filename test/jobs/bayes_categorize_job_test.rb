@@ -5,30 +5,20 @@ class BayesCategorizeJobTest < ActiveJob::TestCase
     @family = families(:empty)
   end
 
-  test "after a sync it runs Bayes, then queues the rules" do
+  test "Run fills merchants while the matcher's rule is on, then runs Bayes" do
+    @family.stubs(:classifier_rule_active?).with("fill_similar_merchants").returns(true)
+    sequence = sequence("run")
+    @family.expects(:fill_similar_merchants).in_sequence(sequence)
+    @family.expects(:bayes_categorize_uncategorized).in_sequence(sequence)
+
+    BayesCategorizeJob.perform_now(@family)
+  end
+
+  test "Run skips the matcher while its rule is off" do
+    @family.stubs(:classifier_rule_active?).with("fill_similar_merchants").returns(false)
+    @family.expects(:fill_similar_merchants).never
     @family.expects(:bayes_categorize_uncategorized)
 
-    assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
-      BayesCategorizeJob.perform_now(@family, apply_rules: true)
-    end
-  end
-
-  test "after a sync a failure is logged and the rules still run" do
-    @family.stubs(:bayes_categorize_uncategorized).raises(StandardError, "boom")
-
-    assert_difference -> { DebugLogEntry.where(level: "error").count }, 1 do
-      assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
-        BayesCategorizeJob.perform_now(@family, apply_rules: true)
-      end
-    end
-    assert DebugLogEntry.where(level: "error").order(:created_at).last.metadata["backtrace"].present?
-  end
-
-  test "Run raises a failure and queues no rules" do
-    @family.stubs(:bayes_categorize_uncategorized).raises(StandardError, "boom")
-
-    assert_no_enqueued_jobs(only: ApplyRulesJob) do
-      assert_raises(StandardError) { BayesCategorizeJob.perform_now(@family) }
-    end
+    BayesCategorizeJob.perform_now(@family)
   end
 end

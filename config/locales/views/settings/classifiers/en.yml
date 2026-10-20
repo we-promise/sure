@@ -28,12 +28,14 @@ en:
         search_categories: Search categories
         skip_self_labels: Don't learn from Bayes' own guesses until confirmed or this many days old
         skip_self_labels_hint: Confirmed means you changed or locked it. A wrong guess isn't fed back in and reinforced; one left alone that long counts as accepted.
+      add_rule:
+        success: The %{name} rule was added to the top of your rules.
       classifier:
         apply: Apply
-        categorize_after_sync: Categorize after each sync
-        categorize_after_sync_hint: Bayes categorizes uncategorized transactions before your rules run. What it isn't sure about is left for an Auto-categorize rule.
         lock_results: Lock the categories the classifier sets
         lock_results_hint: Stops rules changing Bayes' picks, unless you click Apply on a rule. AI never changes Bayes' picks, locked or not.
+        rule: Categorize with the classifier
+        rule_hint: The Category classifier rule, on and off with it in Rules. It categorizes uncategorized transactions in your rule order, after each sync; what it isn't sure about is left for an Auto-categorize rule.
         threshold: Threshold
         threshold_hint: Lowest score Bayes acts on (0.05–0.99). Lower categorizes more, with more mistakes.
       clear_locks:
@@ -81,10 +83,10 @@ en:
           one: 1 right answer
           other: "%{count} right answers"
       matcher:
-        fill_similar_merchants: Fill in missing merchants from near-duplicates
         lock_similar_merchants: Lock the merchants the matcher sets
         lock_similar_merchants_hint: Stops rules, AI and syncs changing them, unless you click Apply on a rule. Its own locks don't count as confirmed (Merchant matcher tuning).
-        fill_similar_merchants_hint: "Before Bayes runs, a transaction without a merchant gets the one its near-duplicates, like \"NETFLIX.COM 8812\" and \"Netflix com\", all have. Transfers are left out."
+        rule: Fill in missing merchants from near-duplicates
+        rule_hint: "The Merchant matcher rule, on and off with it in Rules. In your rule order, a transaction without a merchant gets the one its near-duplicates, like \"NETFLIX.COM 8812\" and \"Netflix com\", all have. Transfers are left out."
         similar_threshold: Similarity
         similar_threshold_hint: Lowest similarity of the descriptions, ignoring numbers and reference codes (0.5–0.99). Lower fills more, with more mistakes. Auto-tune's Apply sets it too.
       matcher_tuning:
@@ -115,6 +117,10 @@ en:
         smoothing_hint: Added to every count so an unseen word doesn't rule a category out (0.001–10). 1 is the original's; lower trusts what's been seen more.
       show:
         accounts: Accounts
+        add_rule_body: There's no %{name} rule in your rules, so there's nothing to turn on. Add it to the top of your rules?
+        add_rule_cancel: "No"
+        add_rule_confirm: Add rule
+        add_rule_title: Add the %{name} rule?
         account: Account tuning
         amount: Amount tuning
         auto_tune: Auto-tune
@@ -125,7 +131,7 @@ en:
         clear_locks_confirm_title: Clear Bayes locks?
         description: The Bayes category classifier learns from your categorized transactions and categorizes new ones before any AI provider. Changes to these settings take effect from the next categorization run; transactions already categorized keep their categories.
         matcher: Matcher
-        matcher_description: Fills in missing merchants from near-duplicates, before Bayes runs (after each sync and on Run). It changes the merchants stored.
+        matcher_description: Fills in missing merchants from near-duplicates, as the Merchant matcher rule (after each sync) and on Run. It changes the merchants stored.
         matcher_tuning: Merchant matcher tuning
         merchant: Merchant tuning
         run: Run
