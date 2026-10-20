@@ -8,7 +8,7 @@ class Loan
   # instead -- it was paid as a separate expense.
   #
   # A loan with no opening anchor has no ledger to replay. It falls back to the
-  # recorded balance for principal and the schedule for interest.
+  # recorded balance as of that date for principal and the schedule for interest.
   class PaidBreakdown
     def initialize(loan, as_of: Date.current)
       @loan = loan
@@ -56,7 +56,7 @@ class Loan
             { principal: principal, interest: interest }
           else
             {
-              principal: balance_principal_paid,
+              principal: balance_principal_paid(as_of),
               interest: scheduled_totals.fetch(:interest)
             }
           end
@@ -109,12 +109,18 @@ class Loan
         end
       end
 
-      def balance_principal_paid
+      def balance_principal_paid(as_of)
         borrowed = loan.original_balance.amount
-        balance = loan.account&.balance
-        return BigDecimal("0") unless borrowed.positive? && balance
+        account = loan.account
+        return BigDecimal("0") unless borrowed.positive? && account
 
-        (borrowed - balance.abs).clamp(BigDecimal("0"), borrowed)
+        balance = account.balances
+          .where(currency: account.currency, date: ..as_of)
+          .order(date: :desc)
+          .pick(:balance)
+        return BigDecimal("0") unless balance
+
+        (borrowed - balance.to_d.abs).clamp(BigDecimal("0"), borrowed)
       end
 
       def same_amount?(left, right)

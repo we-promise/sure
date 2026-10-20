@@ -116,12 +116,13 @@ class Loan::PaidBreakdownTest < ActiveSupport::TestCase
     assert_equal BigDecimal("122.30"), paid.interest.amount
   end
 
-  test "a loan without an opening anchor uses the balance and the schedule" do
+  test "a loan without an opening anchor uses the as-of balance and the schedule" do
     as_of = Date.new(2026, 4, 20)
     account = create_loan(entries: [
       { type: "current_anchor", date: OPENING_DATE, balance: 9_000 }
     ])
     account.update_column(:balance, 9_000)
+    account.balances.create!(date: as_of, balance: 9_000, currency: "USD")
 
     paid = account.loan.paid_breakdown(as_of: as_of)
     scheduled = account.loan.amortization_schedule.payments.select { |payment| payment.date <= as_of }
@@ -129,6 +130,34 @@ class Loan::PaidBreakdownTest < ActiveSupport::TestCase
 
     assert_equal Money.new(3_000, "USD"), paid.principal
     assert_equal Money.new(expected_interest, "USD"), paid.interest
+  end
+
+  test "the fallback uses the latest balance snapshot on or before as_of" do
+    as_of = Date.new(2026, 4, 20)
+    account = create_loan(entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 0 },
+      { type: "transaction", date: Date.new(2026, 5, 15), amount: -2_000 }
+    ])
+    account.update_column(:balance, 8_000)
+    account.balances.create!(date: as_of, balance: 10_000, currency: "USD")
+    account.balances.create!(date: as_of + 1.month, balance: 8_000, currency: "USD")
+
+    paid = account.loan.paid_breakdown(as_of: as_of)
+
+    assert_equal Money.new(2_000, "USD"), paid.principal, "a later payment must not affect an earlier as_of"
+  end
+
+  test "the fallback returns zero principal when no balance snapshot qualifies" do
+    as_of = Date.new(2026, 4, 20)
+    account = create_loan(entries: [
+      { type: "current_anchor", date: OPENING_DATE, balance: 9_000 }
+    ])
+    account.update_column(:balance, 9_000)
+    account.balances.create!(date: as_of + 1.month, balance: 9_000, currency: "USD")
+
+    paid = account.loan.paid_breakdown(as_of: as_of)
+
+    assert_equal Money.new(0, "USD"), paid.principal
   end
 
   test "an opening anchor with no payments does not invent paid instalments" do
