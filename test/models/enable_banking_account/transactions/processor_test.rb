@@ -35,6 +35,67 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     }
   end
 
+  # Same movement before and after the ASPSP assigns it an entry_reference. The
+  # stored payload is never pruned, so both rows reach the processor in one batch.
+  def raw_identifierless_transaction(amount: "31.00")
+    {
+      transaction_id:         nil,
+      entry_reference:        nil,
+      booking_date:           2.days.ago.to_date.to_s,
+      transaction_amount:     { amount: amount, currency: "EUR" },
+      creditor:               { name: "" },
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "ACME 0009876" ],
+      status:                 "BOOK"
+    }
+  end
+
+  test "a movement identified later in the same batch does not import twice" do
+    identifierless = raw_identifierless_transaction
+    settled = identifierless.merge(entry_reference: "2026-02-02.1")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ identifierless, settled ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal 1, @account.entries.where(source: "enable_banking").count
+    assert @account.entries.exists?(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
+  end
+
+  test "a stale identifierless row later in the same batch is skipped, not reimported" do
+    identifierless = raw_identifierless_transaction(amount: "32.00")
+    settled = identifierless.merge(entry_reference: "2026-02-02.2")
+
+    # The identifierless row is already stored from an earlier sync.
+    @enable_banking_account.update!(raw_transactions_payload: [ identifierless ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    assert_equal 1, @account.entries.where(source: "enable_banking").count
+
+    # Now the settled row arrives ahead of the stale one it supersedes.
+    @enable_banking_account.update!(raw_transactions_payload: [ settled, identifierless ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal 1, @account.entries.where(source: "enable_banking").count
+    assert @account.entries.exists?(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
+  end
+
+  test "a pending identifierless row earlier in the same batch is left to pending->booked reconciliation" do
+    pending_raw = raw_identifierless_transaction(amount: "33.00").merge(status: "PDNG", _pending: true)
+    settled = raw_identifierless_transaction(amount: "33.00").merge(entry_reference: "2026-02-02.3")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ pending_raw, settled ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    entries = @account.entries.where(source: "enable_banking")
+    assert_equal 1, entries.count
+    entry = entries.first
+    assert_equal EnableBankingEntry::Processor.compute_external_id(settled), entry.external_id
+    assert_not entry.transaction.pending?
+    # The claim would have recorded the content hash it superseded; the adapter's
+    # pending match does not. Which mechanism settled the row is the point here.
+    assert_not entry.transaction.extra.to_h.key?("superseded_external_ids"),
+               "the same-batch claim set must not offer a pending row as a predecessor"
+  end
+
   test "does not re-import a pending transaction whose external_id was manually merged" do
     pending_ext_id = "enable_banking_PDNG_MERGED"
 

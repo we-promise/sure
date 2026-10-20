@@ -334,4 +334,62 @@ class EnableBankingItemTest < ActiveSupport::TestCase
 
     assert @item.sync_start_date_shortfall?
   end
+
+  test "build_psu_headers sends a public PSU IP to a bank that requires it" do
+    @item.aspsp_required_psu_headers = [ "Psu-Ip-Address" ]
+
+    %w[81.2.3.4 2a00:1450:4001::1 64:ff9b::5102:304].each do |ip|
+      @item.last_psu_ip = ip
+      assert_equal({ "Psu-Ip-Address" => ip }, @item.build_psu_headers, ip)
+    end
+  end
+
+  # A self-hosted instance reached over a LAN or VPN records the browser's own
+  # address, which a bank rejects as an invalid PSU IP. Leaving the header out
+  # is what the bank accepts.
+  test "build_psu_headers leaves out a PSU IP that is not a public address" do
+    @item.aspsp_required_psu_headers = [ "Psu-Ip-Address" ]
+
+    {
+      "192.168.1.20" => "a home LAN",
+      "10.0.0.5" => "a private network",
+      "172.17.0.1" => "the Docker bridge",
+      "100.101.1.2" => "a carrier-grade NAT or Tailscale address",
+      "127.0.0.1" => "loopback",
+      "::1" => "IPv6 loopback",
+      "fd12:3456::1" => "an IPv6 unique local address",
+      "fe80::1" => "an IPv6 link-local address",
+      "169.254.1.1" => "an IPv4 link-local address",
+      "::ffff:100.64.0.1" => "a carrier-grade NAT address written as IPv6",
+      "0.0.0.0" => "the unspecified address",
+      "::" => "the IPv6 unspecified address",
+      "198.18.0.1" => "a benchmarking address a VPN may assign",
+      "192.0.0.8" => "an IETF protocol assignment",
+      "192.0.2.1" => "a documentation address",
+      "198.51.100.7" => "another documentation address",
+      "203.0.113.5" => "a third documentation address",
+      "224.0.0.1" => "a multicast address",
+      "240.0.0.1" => "a reserved address",
+      "255.255.255.255" => "the broadcast address",
+      "100::1" => "an IPv6 discard-only address",
+      "2001:2::1" => "an IPv6 benchmarking address",
+      "64:ff9b:1::1" => "a local-use NAT64 address",
+      "2001:db8::1" => "an IPv6 documentation address",
+      "ff02::1" => "an IPv6 multicast address",
+      "64:ff9b::c0a8:114" => "a home LAN address written as NAT64",
+      "2002:c0a8:114::1" => "a home LAN address written as 6to4",
+      "::c0a8:114" => "a home LAN address written as IPv4-compatible",
+      "not-an-ip" => "an unparseable value"
+    }.each do |ip, kind|
+      @item.last_psu_ip = ip
+      assert_equal({}, @item.build_psu_headers, kind)
+    end
+  end
+
+  test "build_psu_headers sends nothing when the bank also requires a header it can't supply" do
+    @item.aspsp_required_psu_headers = [ "Psu-Ip-Address", "Psu-User-Agent" ]
+    @item.last_psu_ip = "81.2.3.4"
+
+    assert_equal({}, @item.build_psu_headers)
+  end
 end

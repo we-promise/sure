@@ -161,6 +161,93 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_nil entry.transaction.reload.category
   end
 
+  test "create does not categorize entries from read-only shared accounts" do
+    read_only_account = accounts(:credit_card) # shared read_only with family_member
+    entry = create_transaction(account: read_only_account, name: "Starbucks")
+
+    sign_in users(:family_member)
+    post transactions_categorize_url,
+      params: {
+        position: 0,
+        grouping_key: "Starbucks",
+        entry_ids: [ entry.id ],
+        all_entry_ids: [ entry.id ],
+        category_id: @category.id
+      },
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "create does not create a rule when no entry could be categorized" do
+    read_only_account = accounts(:credit_card) # shared read_only with family_member
+    entry = create_transaction(account: read_only_account, name: "Starbucks")
+
+    sign_in users(:family_member)
+    assert_no_difference "Rule.count" do
+      post transactions_categorize_url,
+        params: {
+          position: 0,
+          grouping_key: "Starbucks",
+          entry_ids: [ entry.id ],
+          all_entry_ids: [ entry.id ],
+          category_id: @category.id,
+          create_rule: "1"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+    end
+  end
+
+  test "create categorizes entries from read_write shared accounts" do
+    read_write_account = accounts(:credit_card)
+    read_write_account.account_shares.find_by!(user: users(:family_member)).update!(permission: "read_write")
+    entry = create_transaction(account: read_write_account, name: "Starbucks")
+
+    sign_in users(:family_member)
+    post transactions_categorize_url,
+      params: {
+        position: 0,
+        grouping_key: "Starbucks",
+        entry_ids: [ entry.id ],
+        all_entry_ids: [ entry.id ],
+        category_id: @category.id
+      },
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_equal @category, entry.transaction.reload.category
+  end
+
+  test "assign_entry does not categorize an entry from a read-only shared account" do
+    read_only_account = accounts(:credit_card) # shared read_only with family_member
+    entry = create_transaction(account: read_only_account, name: "Starbucks")
+
+    sign_in users(:family_member)
+    patch assign_entry_transactions_categorize_url, params: {
+      entry_id: entry.id,
+      category_id: @category.id,
+      position: 0,
+      all_entry_ids: [ entry.id ]
+    }
+
+    assert_response :not_found
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "show and preview_rule skip entries from read-only shared accounts" do
+    read_only_account = accounts(:credit_card) # shared read_only with family_member
+    entry = create_transaction(account: read_only_account, name: "ReadOnlyShop")
+
+    sign_in users(:family_member)
+
+    get transactions_categorize_url
+    assert_not_includes response.body, entry.id
+
+    get preview_rule_transactions_categorize_url(filter: "ReadOnlyShop"),
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+    assert_response :success
+    assert_not_includes response.body, entry.id
+  end
+
   # GET /transactions/categorize/preview_rule
 
   test "preview_rule returns matching entries for a filter" do

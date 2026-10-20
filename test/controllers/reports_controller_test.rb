@@ -98,6 +98,18 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "index sections keep data-section-key next to the sortable id" do
+    get reports_path
+    assert_response :ok
+
+    assert_select "section[data-sortable-list-id]" do |sections|
+      assert sections.any?
+      sections.each do |section|
+        assert_equal section["data-sortable-list-id"], section["data-section-key"]
+      end
+    end
+  end
+
   # The desktop app clones these into the tray when a download such as the CSV
   # export ends, since it has no download list of its own, and reads their data
   # attributes for its native notification.
@@ -541,15 +553,22 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     income_href = transactions_path(q: { categories: [ income_category.name ], start_date: start_date, end_date: end_date })
     uncategorized_href = transactions_path(q: { categories: [ Category.uncategorized.filter_value ], start_date: start_date, end_date: end_date })
 
-    assert_select "tr[data-category='category-#{expense_category.id}'] a[href=?]", expense_href, text: expense_category.name
-    assert_select "tr[data-category='category-#{income_category.id}'] a[href=?]", income_href, text: income_category.name
-    assert_select "tr[data-category='category-uncategorized'] a[href=?]", uncategorized_href, text: Category.uncategorized.name
+    assert_select "tr[data-category='category-#{expense_category.id}'] a[href=?]", expense_href, text: /#{Regexp.escape(expense_category.name)}/
+    assert_select "tr[data-category='category-#{income_category.id}'] a[href=?]", income_href, text: /#{Regexp.escape(income_category.name)}/
+    assert_select "tr[data-category='category-uncategorized'] a[href=?]", uncategorized_href, text: /#{Regexp.escape(Category.uncategorized.name)}/
 
-    # Hit target via stretched ::before, anchored to the category cell's flex
-    # wrapper. Deliberately NOT the <tr>: CSS 2.1 9.3.1 leaves position:relative
-    # undefined on table rows and WebKit does not implement it, so anchoring
-    # there let the overlay escape and swallow every click on the page in Safari.
-    assert_select "tr.group\\/category-row[data-category='category-#{expense_category.id}'] td div.relative a[class*='before:absolute'][class*='before:inset-0']"
+    # Full-row hit target via a normal flex <a> wrapping icon+name+count —
+    # deliberately not a `position: relative`/`absolute` stretched-link inside
+    # the <table>, which caused a WebKit scrollHeight bug (see #3093).
+    assert_select "tr[data-category='category-#{expense_category.id}'] a.flex.items-center"
+    assert_select "tr[data-category='category-#{expense_category.id}'].relative", 0
+    assert_select "tr[data-category='category-#{expense_category.id}'] a[class*='before:absolute']", 0
+
+    # Amount and percentage cells are each wrapped in their own normal-flow
+    # <a> to the same href, so the full row remains clickable without a
+    # stretched-link overlay spanning the <tr>.
+    assert_select "tr[data-category='category-#{expense_category.id}'] td:nth-child(2) a[href=?]", expense_href
+    assert_select "tr[data-category='category-#{expense_category.id}'] td:nth-child(3) a[href=?]", expense_href
   end
 
   test "index uncategorized category link stays on the stable filter value while the displayed text is localized" do
@@ -565,7 +584,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     href = transactions_path(q: { categories: [ Category::UNCATEGORIZED_FILTER_VALUE ], start_date: start_date, end_date: end_date })
-    assert_select "tr[data-category='category-uncategorized'] a[href=?]", href, text: localized_name
+    assert_select "tr[data-category='category-uncategorized'] a[href=?]", href, text: /#{Regexp.escape(localized_name)}/
   end
 
   test "index excludes tax-advantaged account transactions from activity breakdown" do
@@ -740,6 +759,15 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     # as one both inflates the number of sales and books a gain nobody made.
     assert_match I18n.t("reports.investment_performance.sells_count", count: 1), response.body
     assert_no_match(/#{Regexp.escape(I18n.t("reports.investment_performance.sells_count", count: 2))}/, response.body)
+  end
+
+  # POSTing to settings_api_keys_path is create, which needs api_key params.
+  test "google sheets instructions link to the API keys page" do
+    get google_sheets_instructions_reports_url
+
+    assert_response :success
+    assert_select "a[href=?][data-turbo-frame=_top]", settings_api_keys_path, text: I18n.t("reports.google_sheets_instructions.go_to_api_keys")
+    assert_select "form[action=?]", settings_api_keys_path, count: 0
   end
 
   private

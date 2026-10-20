@@ -15,6 +15,20 @@ class BillsHelperTest < ActionView::TestCase
     end
   end
 
+  test "an All bills row names its kind unless it is a plain bill, and recedes unless it is live" do
+    bill = RecurringTransaction.new(bill_type: "bill", status: "active", name: "Rent", amount: 10, currency: "USD", expected_day_of_month: 1)
+    income = RecurringTransaction.new(bill_type: "income", status: "active", name: "Salary", amount: -10, currency: "USD", expected_day_of_month: 1)
+    ended = RecurringTransaction.new(bill_type: "income", status: "ended", name: "Old job", amount: -10, currency: "USD", expected_day_of_month: 1)
+
+    assert_equal frequency_label(bill), bills_series_subline(bill)
+    assert_equal "#{I18n.t("bills.all.types.income")} · #{frequency_label(income)}", bills_series_subline(income)
+
+    assert_equal "text-primary", bills_series_tone(bill)
+    assert_equal "text-success", bills_series_amount_tone(income)
+    assert_equal "text-secondary", bills_series_tone(ended)
+    assert_equal "text-secondary", bills_series_amount_tone(ended)
+  end
+
   # The matcher has always stored WHY it matched something, in match_signals.
   # Nothing rendered it, so the app showed a bare percentage instead of the
   # facts the percentage is made of.
@@ -33,6 +47,12 @@ class BillsHelperTest < ActionView::TestCase
       I18n.t("bills.match.exact_amount"),
       I18n.t("bills.match.due_date")
     ], reasons
+  end
+
+  test "a recurring transfer's match reads as a transfer to the same account" do
+    reasons = bills_match_reasons({ transfer: 0.40, account: 0.10 }, currency: "USD")
+
+    assert_equal [ I18n.t("bills.match.same_transfer") ], reasons
   end
 
   # signals[:account] is a constant 0.10 on every candidate, because
