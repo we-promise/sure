@@ -6,6 +6,7 @@ import {
   shift,
 } from "@floating-ui/dom";
 import { Controller } from "@hotwired/stimulus";
+import { floatingStrategy } from "utils/floating_strategy";
 
 /**
  * Strict action-list menu. Container is `role="menu"`, items are
@@ -119,6 +120,9 @@ export default class extends Controller {
     this.contentTarget.classList.toggle("hidden", !nextShow);
     this.buttonTarget.setAttribute("aria-expanded", nextShow.toString());
     if (nextShow) {
+      // Resolve the positioning mode once, as the panel opens. The layout
+      // around the trigger is stable for the life of the open panel.
+      this.positionStrategy = floatingStrategy(this.element);
       this.update();
       this.#focusFirstMenuItem();
     }
@@ -169,12 +173,7 @@ export default class extends Controller {
 
     const isSmallScreen = !window.matchMedia("(min-width: 768px)").matches;
     const useMobileFullwidth = isSmallScreen && this.mobileFullwidthValue;
-    // Size containers establish a containing block for positioned descendants.
-    // A fixed panel would apply Floating UI's viewport-relative coordinates
-    // against the container and drift away from its trigger — same guard as
-    // DS--popover.
-    const insideSizeContainer = this.hasSizeContainer();
-    const strategy = insideSizeContainer ? "absolute" : "fixed";
+    const strategy = this.positionStrategy || floatingStrategy(this.element);
     // Commit the positioning mode before measuring so Floating UI resolves
     // the offset parent under the same mode the coordinates are applied in.
     this.contentTarget.style.position = strategy;
@@ -200,12 +199,5 @@ export default class extends Controller {
         });
       }
     });
-  }
-
-  hasSizeContainer() {
-    for (let ancestor = this.element.parentElement; ancestor; ancestor = ancestor.parentElement) {
-      if (getComputedStyle(ancestor).containerType !== "normal") return true;
-    }
-    return false;
   }
 }
