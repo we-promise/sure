@@ -15,7 +15,6 @@ class Settings::ClassifiersController < ApplicationController
     @evaluation_running = Family::BayesEvaluation.running?(Current.family)
     @weight = Family::BayesEvaluation.weight(Current.family)
     @rules_active = Family::CLASSIFIER_ACTION_TYPES.index_with { |action_type| Current.family.classifier_rule_active?(action_type) }
-    # Asked by rule, when its switch was turned on without a rule to turn on.
     @add_rule = params[:add_rule].presence_in(Family::CLASSIFIER_ACTION_TYPES)
     @add_rule = nil if @add_rule && Current.family.classifier_rules(@add_rule).exists?
   end
@@ -57,8 +56,6 @@ class Settings::ClassifiersController < ApplicationController
     redirect_to settings_classifier_path, notice: t(".success", name: Family.classifier_rule_name(action_type))
   end
 
-  # The matcher (while its rule is on) and Bayes, now, outside the rule
-  # order; rules don't run after them.
   def run
     BayesCategorizeJob.perform_later(Current.family)
     redirect_to settings_classifier_path, notice: t(".success")

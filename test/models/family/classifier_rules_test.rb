@@ -19,7 +19,7 @@ class Family::ClassifierRulesTest < ActiveSupport::TestCase
     assert rules.all? { |rule| rule.conditions.none? }
   end
 
-  test "an added rule goes in at the top, Bayes below the matcher, the others moving down" do
+  test "an added rule goes in at the top, the others moving down" do
     mine = name_rule("Mine", "Starbucks", tags: [ @tag ])
     @family.classifier_rules("bayes_categorize").destroy_all
     @family.classifier_rules("fill_similar_merchants").destroy_all
@@ -30,7 +30,7 @@ class Family::ClassifierRulesTest < ActiveSupport::TestCase
     @family.add_classifier_rule!("bayes_categorize")
 
     # A deleted rule leaves a gap in the numbers, as any does; the order holds.
-    assert_equal [ "Merchant matcher", "Category classifier", "Mine" ], @family.rules.ordered.map(&:name)
+    assert_equal [ "Category classifier", "Merchant matcher", "Mine" ], @family.rules.ordered.map(&:name)
     assert_equal [ 1, 2 ], @family.rules.ordered.first(2).map(&:position)
     assert_operator mine.reload.position, :>, 2
   end

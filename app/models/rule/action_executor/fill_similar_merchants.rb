@@ -10,8 +10,6 @@ class Rule::ActionExecutor::FillSimilarMerchants < Rule::ActionExecutor
     [ :merchant_id ]
   end
 
-  # Fills only the matches it's sure of, so a broad rule doesn't keep the
-  # rules below it from setting the merchant.
   def reserves_claimed_attributes?
     false
   end

@@ -10,8 +10,6 @@ class Rule::ActionExecutor::BayesCategorize < Rule::ActionExecutor
     [ :category_id ]
   end
 
-  # Categorizes only the matches it's sure of, so a broad rule doesn't keep
-  # the rules below it from setting the category.
   def reserves_claimed_attributes?
     false
   end

@@ -255,11 +255,10 @@ class Family < ApplicationRecord
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }
   validates :categories_locked, inclusion: { in: [ true, false ] }
-
-  after_create_commit :add_classifier_rules
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
 
   before_validation :normalize_enabled_currencies!
+  after_create_commit :add_classifier_rules
 
   def primary_currency_code
     self.class.normalize_currency_code(currency) || "USD"
@@ -547,15 +546,12 @@ class Family < ApplicationRecord
   end
 
   # A rule with no conditions at the top of the order, the others moving
-  # down one; Bayes goes below the matcher when that's at the top, so the
-  # merchants it fills are there for Bayes.
+  # down one.
   def add_classifier_rule!(action_type, active: true)
     Rule.transaction do
       Rule.lock_positions!(self)
-      matcher_first = action_type == "bayes_categorize" && classifier_rules("fill_similar_merchants").exists?(position: 1)
-      position = matcher_first ? 2 : 1
-      rules.where(position: position..).update_all("position = position + 1")
-      rules.create!(name: self.class.classifier_rule_name(action_type), resource_type: "transaction", active: active, position: position,
+      rules.update_all("position = position + 1")
+      rules.create!(name: self.class.classifier_rule_name(action_type), resource_type: "transaction", active: active, position: 1,
                     actions_attributes: [ { action_type: action_type } ])
     end
   end
@@ -841,8 +837,9 @@ class Family < ApplicationRecord
   end
 
   private
+    # Bayes first, so the matcher lands above it.
     def add_classifier_rules
-      CLASSIFIER_ACTION_TYPES.each { |action_type| add_classifier_rule!(action_type) }
+      CLASSIFIER_ACTION_TYPES.reverse_each { |action_type| add_classifier_rule!(action_type) }
     end
 
     def categorizable_transactions
