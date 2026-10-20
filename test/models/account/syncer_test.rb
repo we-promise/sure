@@ -140,6 +140,9 @@ class Account::SyncerTest < ActiveSupport::TestCase
   # holdings gets its positions from its trades (#4302).
   test "perform_sync on a linked account without a provider snapshot materializes trades" do
     account, security = linked_account_with_trade(families(:empty))
+    # The price moves after the provider's balance date, so a balance
+    # recomputed from the position would no longer be the provider's.
+    Security::Price.find_by!(security: security, date: Date.current).update!(price: 210)
     Account::MarketDataImporter.any_instance.stubs(:import_all)
 
     Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
@@ -147,6 +150,7 @@ class Account::SyncerTest < ActiveSupport::TestCase
     account.reload
     assert_equal 2, account.current_holdings.find_by!(security: security).qty
     assert_equal 10_000 - 2 * 200, account.cash_balance
+    assert_equal 10_000, account.balance
   end
 
   private
