@@ -13,6 +13,10 @@ class Entry < ApplicationRecord
 
   attr_accessor :unsplitting
 
+  # Why a sync may exclude an entry on its own; recorded as a "sync"
+  # DataEnrichment on `excluded` (see #exclude_automatically!).
+  AUTO_EXCLUSION_REASONS = %w[stale_pending posted_match].freeze
+
   monetize :amount
 
   belongs_to :account
@@ -43,6 +47,8 @@ class Entry < ApplicationRecord
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
+  # Once included again, a later exclusion (by hand or by a rule) is not the sync's.
+  after_save :forget_auto_exclusion, if: -> { saved_change_to_excluded?(to: false) }
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -104,6 +110,14 @@ class Entry < ApplicationRecord
     pending.where("entries.date < ?", days.days.ago.to_date)
   }
 
+  # Stale pendings the sync may still exclude: included, and not kept included
+  # by the user (turning Exclude off locks `excluded`). The column is nullable,
+  # hence the COALESCE: a NULL must not hide the entry from the cleanup.
+  scope :excludable_stale_pending, ->(days: 8) {
+    stale_pending(days: days).where(excluded: false)
+      .where.not("COALESCE(entries.locked_attributes, '{}'::jsonb) ? 'excluded'")
+  }
+
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
     joins(:account).where(accounts: { family_id: family.id })
@@ -150,14 +164,19 @@ class Entry < ApplicationRecord
   # @param days [Integer] Number of days after which pending is considered stale (default: 8)
   # @return [Integer] Number of entries excluded
   def self.auto_exclude_stale_pending(account:, days: 8)
-    stale_entries = account.entries.stale_pending(days: days).where(excluded: false)
-    count = stale_entries.count
+    count = 0
 
-    if count > 0
-      stale_entries.update_all(excluded: true, updated_at: Time.current)
-      Rails.logger.info("Auto-excluded #{count} stale pending transaction(s) for account #{account.id} (#{account.name})")
+    transaction do
+      # Only the entries rows are locked: the sync never writes transactions
+      # here, so it cannot deadlock with a normal save.
+      rows = account.entries.excludable_stale_pending(days: days).lock("FOR UPDATE OF entries").pluck(:id, :source)
+      next if rows.empty?
+
+      record_auto_exclusions(rows, reason: "stale_pending", days: days)
+      count = where(id: rows.map(&:first)).update_all(excluded: true, updated_at: Time.current)
     end
 
+    Rails.logger.info("Auto-excluded #{count} stale pending transaction(s) for account #{account.id} (#{account.name})") if count > 0
     count
   end
 
@@ -210,11 +229,13 @@ class Entry < ApplicationRecord
           account: acct.name,
           match_type: "exact"
         }
+        # Skip entries excluded or deleted since they were loaded.
+        next if !dry_run && !pending_entry.exclude_automatically!(reason: "posted_match", matched_entry_id: posted_match.id)
+
         stats[:details] << detail
         stats[:reconciled] += 1
 
         unless dry_run
-          pending_entry.update!(excluded: true)
           Rails.logger.info("Reconciled pending→posted duplicate: excluded entry #{pending_entry.id} (#{pending_entry.name}) matched to #{posted_match.id}")
         end
         next
@@ -291,6 +312,48 @@ class Entry < ApplicationRecord
     end
 
     stats
+  end
+
+  # Records why a sync excluded each [entry id, provider] row as a "sync"
+  # DataEnrichment on `excluded`; a repeat exclusion refreshes the record.
+  def self.record_auto_exclusions(rows, reason:, **details)
+    now = Time.current
+    DataEnrichment.upsert_all(
+      rows.map do |id, provider|
+        {
+          enrichable_type: "Entry", enrichable_id: id, source: "sync", attribute_name: "excluded", value: true,
+          metadata: { reason: reason, provider: provider, **details }, created_at: now, updated_at: now
+        }
+      end,
+      unique_by: %i[enrichable_id enrichable_type source attribute_name],
+      update_only: %w[value metadata updated_at]
+    )
+  end
+
+  # Excludes the entry on behalf of a sync and records why, so support and the
+  # user can tell it apart from a manual exclusion. Returns false when the entry
+  # is gone or already excluded.
+  def exclude_automatically!(reason:, **details)
+    raise ArgumentError, "unknown auto-exclusion reason: #{reason}" unless reason.in?(AUTO_EXCLUSION_REASONS)
+
+    self.class.transaction do
+      # Reload under a row lock: the user may have changed the entry since it was loaded.
+      lock!
+      return false if excluded?
+
+      self.class.record_auto_exclusions([ [ id, source ] ], reason: reason, **details)
+      update!(excluded: true)
+      true
+    end
+  rescue ActiveRecord::RecordNotFound
+    false
+  end
+
+  # The "sync" enrichment explaining why this entry is excluded, or nil.
+  def auto_exclusion
+    return unless excluded?
+
+    data_enrichments.sync_exclusion.first
   end
 
   def classification
@@ -601,6 +664,10 @@ class Entry < ApplicationRecord
   end
 
   private
+
+    def forget_auto_exclusion
+      data_enrichments.sync_exclusion.delete_all
+    end
 
     # Remembers the earliest date this entry had before any save that changed
     # it, for sync_account_later to use as the sync window start.

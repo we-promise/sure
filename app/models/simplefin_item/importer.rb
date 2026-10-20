@@ -1418,6 +1418,7 @@ class SimplefinItem::Importer
       stale_unmatched = account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(excluded: false)
+        .where.not("COALESCE(entries.locked_attributes, '{}'::jsonb) ? 'excluded'") # kept by the user, not up for review
         .where("entries.date < ?", 8.days.ago.to_date)
         .where(Transaction.pending_sql)
         .where(<<~SQL.squish)

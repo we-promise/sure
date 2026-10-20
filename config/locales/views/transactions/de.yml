@@ -50,6 +50,10 @@ de:
       details: Details
       exclude: Ausschließen
       exclude_description: Ausgeschlossene Transaktionen werden aus Budgetberechnungen und Berichten entfernt.
+      auto_excluded_title: Automatisch ausgeschlossen
+      auto_excluded_stale_pending: Am %{date} hat der Bank-Sync diese vorgemerkte Transaktion ausgeschlossen, weil sie nach %{days} Tagen noch nicht gebucht war.
+      auto_excluded_posted_match: Am %{date} hat der Bank-Sync diese vorgemerkte Transaktion ausgeschlossen, weil ihre gebuchte Fassung als eigene Transaktion eingegangen ist.
+      auto_excluded_other: Am %{date} hat der Bank-Sync diese Transaktion ausgeschlossen.
       activity_type: Aktivitätsart
       activity_type_description: Art der Anlageaktivität (Kauf, Verkauf, Dividende usw.). Wird automatisch erkannt oder manuell gesetzt.
       one_time_title: Einmalige %{type}
