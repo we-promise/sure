@@ -114,9 +114,12 @@ export default class extends Controller {
     const el = document.activeElement;
     if (!el || el === document.body || el === document.documentElement)
       return false;
+    // A list item held with the keyboard (sortable-list) is only saved when
+    // it is released; a morph would drop the move.
     return (
       el.isContentEditable ||
-      el.closest("form, dialog, [role='dialog']") !== null
+      el.closest("form, dialog, [role='dialog'], [aria-grabbed='true']") !==
+        null
     );
   }
 }
