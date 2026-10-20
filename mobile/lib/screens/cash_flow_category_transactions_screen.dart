@@ -130,12 +130,10 @@ class _CashFlowCategoryTransactionsScreenState
         final page = (result['transactions'] as List).cast<Transaction>();
         _transactions.addAll(page);
         _page = nextPage;
+        // GET /api/v1/transactions always returns pagination.total_pages.
         final pagination = result['pagination'];
         if (pagination is Map && pagination['total_pages'] is int) {
           _totalPages = pagination['total_pages'] as int;
-        } else {
-          // Without pagination metadata, a short page is the last one.
-          _totalPages = page.length < _perPage ? _page : null;
         }
       } else {
         _failed = true;
@@ -254,7 +252,7 @@ class _CashFlowCategoryTransactionsScreenState
   Widget _amount(BuildContext context, Transaction transaction, bool hidden) {
     // The API's `amount` is a formatted string whose sign follows Sure's
     // ledger convention; present it by classification instead.
-    final isIncome = transaction.nature == 'income';
+    final isIncome = transaction.isIncome;
     final magnitude = transaction.amount.replaceFirst(RegExp(r'^\s*[-−]'), '');
     return MoneyText(
       MoneyMasker.mask('${isIncome ? '+' : '-'}$magnitude', hidden: hidden),
