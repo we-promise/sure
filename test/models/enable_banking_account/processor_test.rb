@@ -70,6 +70,28 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "USD", @account.reload.currency
   end
 
+  test "available funds are display metadata and never become another asset or anchor" do
+    @enable_banking_account.update!(balance_snapshot: Provider::BankBalanceSnapshot.build_enable_banking(
+      balances: [
+        { balance_type: "CLBD", balance_amount: { amount: "1500.00", currency: "EUR" } },
+        { balance_type: "ITAV", balance_amount: { amount: "4500.00", currency: "EUR" } }
+      ],
+      fetched_at: Time.current,
+      bank_name: "Test Bank",
+      country_code: "FR"
+    ))
+
+    assert_no_difference "Account.count" do
+      EnableBankingAccount::Processor.new(@enable_banking_account).process
+    end
+
+    assert_equal 1500.to_d, @account.reload.balance
+    assert_equal 1500.to_d, @account.cash_balance
+    anchor = @account.entries.where(entryable_type: "Valuation").order(:created_at).last
+    assert_equal 1500.to_d, anchor.amount
+    assert_equal 4500.to_d, Provider::BankBalanceSnapshot.new(@enable_banking_account.reload.balance_snapshot).available.money.amount
+  end
+
   test "does nothing when no linked account" do
     @account.account_providers.destroy_all
 

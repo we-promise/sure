@@ -414,11 +414,12 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
       balances: [ { balance_type: "CLBD", balance_amount: { amount: "12.00", currency: "XXX" }, credit_debit_indicator: "CRDT" } ]
     )
 
-    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    assert_not @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     @enable_banking_account.reload
     assert_equal BigDecimal("12.00"), @enable_banking_account.current_balance
     assert_equal "EUR", @enable_banking_account.currency
+    assert Provider::BankBalanceSnapshot.new(@enable_banking_account.balance_snapshot).failed?
   end
 
   test "fetch_and_update_balance stores the normalized balance currency" do
@@ -1291,6 +1292,166 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     end
   end
 
+  test "saves both provider observations independently of the canonical balance" do
+    fetched_at = Time.utc(2026, 10, 20, 16, 37)
+    @mock_provider.stubs(:get_account_balances).returns(balances: [
+      { balance_type: "CLBD", balance_amount: { amount: "50.00", currency: "EUR" }, reference_date: "2026-10-19" },
+      { balance_type: "ITAV", balance_amount: { amount: "1250.00", currency: "EUR" }, reference_date: "2026-10-20" }
+    ])
+
+    travel_to fetched_at do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+
+    saved = @enable_banking_account.reload
+    snapshot = Provider::BankBalanceSnapshot.new(saved.balance_snapshot)
+    assert_equal 50.to_d, saved.current_balance
+    assert_equal 50.to_d, snapshot.booked.money.amount
+    assert_equal 1250.to_d, snapshot.available.money.amount
+    assert_equal Date.new(2026, 10, 19), snapshot.booked.reference_date
+    assert_equal fetched_at, snapshot.fetched_at
+    assert_no_difference [ "Account.count", "Entry.count", "Balance.count" ] do
+      @enable_banking_account.upsert_enable_banking_snapshot!({ uid: saved.account_id, currency: "EUR" }, preserve_balance: true)
+    end
+    assert_equal snapshot.fetched_at, Provider::BankBalanceSnapshot.new(saved.reload.balance_snapshot).fetched_at
+  end
+
+  test "a complete response clears an omitted available balance and an empty response clears all observations" do
+    save_display_balances
+    @mock_provider.stubs(:get_account_balances).returns(balances: [
+      { balance_type: "CLBD", balance_amount: { amount: "60.00", currency: "EUR" } }
+    ])
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    snapshot = Provider::BankBalanceSnapshot.new(@enable_banking_account.reload.balance_snapshot)
+    assert_equal 60.to_d, snapshot.booked.money.amount
+    assert_nil snapshot.available
+
+    @mock_provider.stubs(:get_account_balances).returns(balances: [])
+    assert_not @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    snapshot = Provider::BankBalanceSnapshot.new(@enable_banking_account.reload.balance_snapshot)
+    assert_nil snapshot.booked
+    assert_nil snapshot.available
+    assert_not snapshot.failed?
+  end
+
+  test "failed and malformed fetches retain observations without advancing their fetched time" do
+    save_display_balances
+    original = @enable_banking_account.reload.balance_snapshot
+    @mock_provider.stubs(:get_account_balances).raises(Timeout::Error)
+    travel 1.hour do
+      assert_not @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+    snapshot = Provider::BankBalanceSnapshot.new(@enable_banking_account.reload.balance_snapshot)
+    assert snapshot.failed?
+    assert_equal Time.iso8601(original.fetch("fetched_at")), snapshot.fetched_at
+    assert_equal 75.to_d, snapshot.available.money.amount
+    assert_operator snapshot.last_attempted_at, :>, snapshot.fetched_at
+
+    @mock_provider.stubs(:get_account_balances).returns(balances: [
+      { balance_type: "CLBD", balance_amount: { amount: "90.00", currency: "EUR" } },
+      { balance_type: "ITAV", balance_amount: { amount: "broken", currency: "EUR" } }
+    ])
+    assert_not @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    saved = @enable_banking_account.reload
+    assert_equal 90.to_d, saved.current_balance
+    snapshot = Provider::BankBalanceSnapshot.new(saved.balance_snapshot)
+    assert snapshot.failed?
+    assert_equal 50.to_d, snapshot.booked.money.amount
+    assert_equal Time.iso8601(original.fetch("fetched_at")), snapshot.fetched_at
+  end
+
+  test "missing balance lists and invalid selected amounts cannot become fresh zero balances" do
+    save_display_balances
+    original = @enable_banking_account.reload.balance_snapshot
+    [ {}, { balances: nil }, { balances: [ { balance_type: "CLBD", balance_amount: { amount: "invalid", currency: "EUR" } } ] } ].each do |response|
+      @mock_provider.stubs(:get_account_balances).returns(response)
+      assert_not @importer.send(:fetch_and_update_balance, @enable_banking_account)
+      assert_nil @enable_banking_account.reload.current_balance
+      snapshot = Provider::BankBalanceSnapshot.new(@enable_banking_account.balance_snapshot)
+      assert snapshot.failed?
+      assert_equal 50.to_d, snapshot.booked.money.amount
+      assert_equal Time.iso8601(original.fetch("fetched_at")), snapshot.fetched_at
+    end
+  end
+
+  test "provider-wrapped retryable failures mark the display attempt before propagating" do
+    save_display_balances
+    original = @enable_banking_account.reload.balance_snapshot
+    [
+      Provider::EnableBanking::EnableBankingError.new("request failed", :request_failed),
+      Provider::EnableBanking::EnableBankingError.new("timeout", :timeout),
+      Provider::EnableBanking::EnableBankingError.new("limited", :rate_limited, http_status: 429),
+      Provider::EnableBanking::EnableBankingError.new("temporary failure", :unknown, http_status: 503)
+    ].each do |error|
+      @mock_provider.stubs(:get_account_balances).raises(error)
+      travel 1.hour do
+        assert_raises(Provider::EnableBanking::EnableBankingError) do
+          @importer.send(:fetch_and_update_balance, @enable_banking_account)
+        end
+      end
+      saved = @enable_banking_account.reload
+      snapshot = Provider::BankBalanceSnapshot.new(saved.balance_snapshot)
+      assert snapshot.failed?
+      assert_operator snapshot.last_attempted_at, :>, snapshot.fetched_at
+      assert_equal Time.iso8601(original.fetch("fetched_at")), snapshot.fetched_at
+      assert_equal 75.to_d, snapshot.available.money.amount
+      assert_equal 50.to_d, saved.current_balance
+    end
+  end
+
+  test "malformed availability cannot be hidden by valid foreign currency balances" do
+    save_display_balances
+    original = @enable_banking_account.reload.balance_snapshot
+    @enable_banking_account.update!(raw_payload: { "currency" => "EUR" })
+
+    [ nil, "ZZZ" ].each do |currency|
+      @mock_provider.stubs(:get_account_balances).returns(balances: paypal_balances + [
+        { balance_type: "ITAV", balance_amount: { amount: "70.00", currency: currency } }
+      ])
+      travel 1.hour do
+        assert_not @importer.send(:fetch_and_update_balance, @enable_banking_account)
+      end
+      saved = @enable_banking_account.reload
+      snapshot = Provider::BankBalanceSnapshot.new(saved.balance_snapshot)
+      assert_equal 392.04.to_d, saved.current_balance
+      assert snapshot.failed?
+      assert_equal 75.to_d, snapshot.available.money.amount
+      assert_equal Time.iso8601(original.fetch("fetched_at")), snapshot.fetched_at
+    end
+  end
+
+  test "display observations only retain the chosen account currency" do
+    @enable_banking_account.update!(raw_payload: { "currency" => "EUR" })
+    @mock_provider.stubs(:get_account_balances).returns(balances: paypal_balances + [
+      { balance_type: "ITAV", balance_amount: { amount: "20.00", currency: "USD" } }
+    ])
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    snapshot = Provider::BankBalanceSnapshot.new(@enable_banking_account.reload.balance_snapshot)
+    assert_equal "EUR", snapshot.booked.money.currency.iso_code
+    assert_equal 392.04.to_d, snapshot.booked.money.amount
+    assert_nil snapshot.available
+  end
+
+  test "a malformed display response contributes to the import partial-data counters" do
+    account = Account.create!(family: @family, name: "Bank", currency: "EUR", balance: 50,
+      cash_balance: 50, accountable: Depository.create!)
+    AccountProvider.create!(account: account, provider: @enable_banking_account)
+    @importer.stubs(:fetch_session_data).returns(accounts: [])
+    @enable_banking_item.stubs(:upsert_enable_banking_snapshot!)
+    @mock_provider.stubs(:get_account_balances).returns(balances: [
+      { balance_type: "CLBD", balance_amount: { amount: "60.00", currency: "EUR" } },
+      { balance_type: "ITAV", balance_amount: { amount: "invalid", currency: "EUR" } }
+    ])
+    @importer.stubs(:fetch_and_store_transactions).returns(success: true, transactions_count: 0)
+
+    result = @importer.import
+
+    assert result[:success]
+    assert_equal 1, result[:balances_failed]
+    assert_equal 60.to_d, @enable_banking_account.reload.current_balance
+    assert Provider::BankBalanceSnapshot.new(@enable_banking_account.balance_snapshot).failed?
+  end
+
   private
 
     def link_account(accountable)
@@ -1341,6 +1502,14 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
         "credit_debit_indicator" => indicator,
         "transaction_amount" => { "amount" => amount, "currency" => "EUR" }
       }
+    end
+
+    def save_display_balances
+      @mock_provider.stubs(:get_account_balances).returns(balances: [
+        { balance_type: "CLBD", balance_amount: { amount: "50.00", currency: "EUR" } },
+        { balance_type: "ITAV", balance_amount: { amount: "75.00", currency: "EUR" } }
+      ])
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
     end
 
     # Shaped like PayPal's response: the primary EUR balance first, then empty

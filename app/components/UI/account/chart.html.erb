@@ -38,6 +38,8 @@
     </div>
   </div>
 
+  <%= render UI::Account::BankBalances.new(account: account) %>
+
   <%= turbo_frame_tag dom_id(@account, :chart_details) do %>
     <div class="px-4">
       <%= render partial: "shared/trend_change", locals: { trend: trend, comparison_label: comparison_label } %>

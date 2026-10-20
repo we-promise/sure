@@ -18,6 +18,21 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     )
   end
 
+  test "balance observations are encrypted at rest when encryption is configured" do
+    skip "Encryption not configured" unless EnableBankingAccount.encryption_ready?
+
+    snapshot = { "status" => "complete", "fetched_at" => Time.current.iso8601,
+                 "balances" => { "booked" => { "amount" => "123.45", "currency" => "EUR", "source_type" => "CLBD" } } }
+    @account.update!(balance_snapshot: snapshot)
+    stored = EnableBankingAccount.connection.select_value(
+      EnableBankingAccount.sanitize_sql_array([ "SELECT balance_snapshot FROM enable_banking_accounts WHERE id = ?", @account.id ])
+    )
+
+    assert_includes EnableBankingAccount.encrypted_attributes.map(&:to_s), "balance_snapshot"
+    assert_not_includes stored, "123.45"
+    assert_equal snapshot, @account.reload.balance_snapshot
+  end
+
   # suggested_account_type / suggested_subtype mapping
   test "suggests Depository checking for CACC" do
     @account.update!(account_type: "CACC")

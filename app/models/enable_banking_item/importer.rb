@@ -263,19 +263,26 @@ class EnableBankingItem::Importer
       # Enable Banking returns an array of balances. Use booked ledger balances for
       # current_balance/net worth before considering available balances. Available
       # balances can include arranged overdraft facilities and overstate cash.
-      balances = Array(balance_data[:balances]).map { |balance| balance.with_indifferent_access }
+      unless balance_data[:balances].is_a?(Array) && balance_data[:balances].all? { |candidate| candidate.is_a?(Hash) }
+        raise Provider::BankBalanceSnapshot::InvalidSnapshot, "Invalid bank balance snapshot"
+      end
+
+      balances = balance_data[:balances].map(&:with_indifferent_access)
+      currency, kept, skipped = split_balances_by_currency(balances, enable_banking_account)
+      display_snapshot = build_display_balance_snapshot(enable_banking_account, balances, fetched_at: fetched_at, currency: currency)
 
       if balances.empty?
+        enable_banking_account.update!(balance_snapshot: display_snapshot)
         mark_balance_unavailable(enable_banking_account)
         return false
       end
 
-      currency, kept, skipped = split_balances_by_currency(balances, enable_banking_account)
       balance, tiebreak_stage = select_current_balance(
         kept, enable_banking_account, prefer_available: prefer_available_balance?(enable_banking_account)
       )
 
       unless balance.present?
+        mark_display_balance_fetch_failed(enable_banking_account)
         mark_balance_unavailable(enable_banking_account)
         return false
       end
@@ -283,12 +290,13 @@ class EnableBankingItem::Importer
       amount = balance.dig(:balance_amount, :amount) || balance[:amount]
 
       unless amount.present?
+        mark_display_balance_fetch_failed(enable_banking_account)
         mark_balance_unavailable(enable_banking_account)
         return false
       end
 
       indicator = balance[:credit_debit_indicator].to_s.upcase
-      parsed_amount = amount.to_d
+      parsed_amount = parse_current_balance_amount(amount)
 
       # Enable Banking uses positive amounts for both credit and debit.
       # DBIT indicates a negative balance (money owed/withdrawn).
@@ -297,20 +305,23 @@ class EnableBankingItem::Importer
       enable_banking_account.update!(
         current_balance: parsed_amount,
         currency: balance_currency(balance) || enable_banking_account.currency,
-        balance_evidence_verified: tiebreak_stage.nil? || VERIFIED_TIEBREAK_STAGES.include?(tiebreak_stage)
+        balance_evidence_verified: tiebreak_stage.nil? || VERIFIED_TIEBREAK_STAGES.include?(tiebreak_stage),
+        balance_snapshot: display_snapshot
       )
       capture_balance_selection_debug_log(enable_banking_account, balances, balance, parsed_amount, fetched_at:)
       # Only now is the chosen-currency balance known to be the one in use.
       capture_skipped_currency_balances(enable_banking_account, currency, skipped)
 
-      true
+      display_snapshot["status"] == "complete"
     rescue Provider::EnableBanking::EnableBankingError => e
+      mark_display_balance_fetch_failed(enable_banking_account)
       @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
       Rails.logger.error "EnableBankingItem::Importer - Error fetching balance for account #{enable_banking_account.uid}: #{e.message}"
       capture_balance_sync_error(enable_banking_account, e)
       mark_balance_unavailable(enable_banking_account)
       false
     rescue => e
+      mark_display_balance_fetch_failed(enable_banking_account)
       @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching balance for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
       capture_balance_sync_error(enable_banking_account, e)
@@ -750,6 +761,60 @@ class EnableBankingItem::Importer
         current_balance: nil,
         updated_at: Time.current
       )
+    end
+
+    def mark_display_balance_fetch_failed(enable_banking_account)
+      return unless enable_banking_account.persisted?
+
+      enable_banking_account.update!(balance_snapshot: failed_display_balance_snapshot(enable_banking_account))
+    rescue StandardError
+      Rails.logger.warn("EnableBankingItem::Importer - Could not record failed display balance attempt")
+    end
+
+    def parse_current_balance_amount(amount)
+      value = BigDecimal(amount.to_s)
+      return value if value.finite?
+
+      raise ArgumentError
+    rescue ArgumentError, TypeError
+      raise Provider::BankBalanceSnapshot::InvalidSnapshot, "Invalid bank balance amount"
+    end
+
+    def failed_display_balance_snapshot(enable_banking_account)
+      previous = enable_banking_account.balance_snapshot
+      previous = {} unless previous.is_a?(Hash)
+      previous.merge(
+        "status" => "failed",
+        "last_attempted_at" => Time.current.iso8601(6)
+      )
+    end
+
+    def build_display_balance_snapshot(enable_banking_account, balances, fetched_at:, currency:)
+      Provider::BankBalanceSnapshot.build_enable_banking(
+        balances: balances,
+        fetched_at: fetched_at,
+        bank_name: enable_banking_item.aspsp_name,
+        country_code: enable_banking_item.country_code,
+        currency: currency
+      )
+    rescue Provider::BankBalanceSnapshot::InvalidSnapshot
+      capture_invalid_display_balance_snapshot(enable_banking_account)
+      failed_display_balance_snapshot(enable_banking_account)
+    end
+
+    def capture_invalid_display_balance_snapshot(enable_banking_account)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Invalid Enable Banking display balances; keeping previous observations",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: { enable_banking_account_id: enable_banking_account.id }
+      )
+    rescue StandardError
+      Rails.logger.warn("EnableBankingItem::Importer - Could not record invalid display balance diagnostic")
     end
 
     def capture_balance_sync_error(enable_banking_account, error)

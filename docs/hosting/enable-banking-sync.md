@@ -56,9 +56,44 @@ request succeeded; new imports record that distinction explicitly.
 
 ## Balance snapshots and support diagnostics
 
-The displayed balance is the latest successfully saved provider snapshot;
+Depository account details show **Booked balance** and **Available balance** from
+the bank's balances endpoint, alongside the existing account balance. These are
+observations of the same account, not additional assets: account totals, sidebar
+subtotals, net worth and balance-history anchors continue to use the single
+canonical account balance. Its existing balance-type selection priority is
+unchanged. Available funds can include an overdraft facility.
+
+The encrypted `EnableBankingAccount.balance_snapshot` stores a bounded, normalized
+observation for each supported kind with its original source type, amount,
+currency, bank reference date and optional bank last-change time. Only the
+account's selected currency is retained. Booked types are CLBD/ITBD/OPBD/PRCD;
+available types are ITAV/CLAV/OPAV, including descriptive spellings. Forward
+availability and informational balances are not relabeled as cash availability.
+XPCD normally appears separately as **Expected balance**. Only BPER Banca in Italy
+uses XPCD as an available-balance fallback, with an explicit explanation: its
+observed bank-app available figure matched XPCD. This is a narrow observed bank
+mapping, not a claim that expected and available are equivalent across banks.
+An explicitly available type takes precedence over that fallback.
+
+A complete response replaces the display snapshot, so an omitted kind becomes
+**Not provided**, including an explicitly empty response. Failed or malformed
+responses retain the previous valid observations and their original fetch time,
+with a failed-attempt indicator. A malformed secondary balance cannot replace the
+last valid display snapshot or prevent a valid canonical balance from updating.
+The additional snapshot survives account-catalog updates. It is not reconstructed
+from transactions or read from support diagnostics. Other connectors' brokerage
+cash, buying power, credit availability and deposit principal are not relabeled.
+
+The additive migration leaves existing rows NULL. They show **Not fetched yet**
+until the next normally paced balance fetch; there is no historical availability
+backfill or quota reset. Use the existing encryption keys when upgrading. Only
+native Depository accounts with a same-family, same-currency provider link show
+the panel; investment, loan and credit-card semantics remain separate.
+
+The account balance is the latest successfully saved provider snapshot;
 “last fetched” records when Sure last fetched provider data, not the balance's
-statement or effective date. Recent successful balance selections appear in the
+statement or effective date. The panel shows bank reference dates separately;
+missing bank dates remain explicitly unknown. Recent successful selections appear in the
 super-admin Debug view (`/settings/debug`) with sanitized candidate types,
 amounts, currencies and dates, plus the selected amount and fetch time. These
 diagnostics contain financial balance amounts.

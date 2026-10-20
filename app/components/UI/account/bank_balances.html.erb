@@ -1,0 +1,73 @@
+<div class="space-y-3 border-t border-primary px-4 py-3">
+  <h2 class="text-sm font-medium text-primary"><%= t("UI.account.bank_balances.title") %></h2>
+
+  <% if presenter.failed? %>
+    <%= render DS::Note.new do %>
+      <p><%= t("UI.account.bank_balances.#{presenter.failure_message_key}") %></p>
+    <% end %>
+  <% end %>
+
+  <dl class="space-y-2">
+    <% presenter.balance_rows.each do |row| %>
+      <%= render DS::DetailRow.new(
+        label: t("UI.account.bank_balances.#{row.key}_balance"),
+        value_class: "privacy-sensitive"
+      ) do |detail_row| %>
+        <% detail_row.with_value do %>
+          <% if row.observation %>
+            <% money = row.observation.money %>
+            <% reference_date = row.observation.reference_date %>
+            <% reference_date_display = reference_date ? l(reference_date, format: :long) : t("UI.account.bank_balances.unknown") %>
+            <div class="space-y-1">
+              <p class="font-medium"><%= money.format %> <%= money.currency.iso_code %></p>
+              <p class="text-xs text-secondary"><%= t("UI.account.bank_balances.source_type", source_type: row.observation.source_type) %></p>
+              <p class="text-xs text-secondary">
+                <%= t("UI.account.bank_balances.reference_date", date: reference_date_display) %>
+              </p>
+              <% if row.observation.last_changed_at %>
+                <p class="text-xs text-secondary">
+                  <%= t("UI.account.bank_balances.bank_last_changed", time: format_time(row.observation.last_changed_at)) %>
+                </p>
+              <% end %>
+            </div>
+          <% else %>
+            <%= t("UI.account.bank_balances.#{presenter.missing_value_key}") %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% fetched_at = presenter.fetched_at %>
+    <%= render DS::DetailRow.new(
+      label: t("UI.account.bank_balances.fetched_at"),
+      value_class: "privacy-sensitive"
+    ) do |detail_row| %>
+      <% detail_row.with_value do %>
+        <%= fetched_at ? format_time(fetched_at) : t("UI.account.bank_balances.#{presenter.fetched_at_missing_key}") %>
+      <% end %>
+    <% end %>
+
+    <% if presenter.last_attempted_at %>
+      <%= render DS::DetailRow.new(
+        label: t("UI.account.bank_balances.last_attempted_at"),
+        value_class: "privacy-sensitive"
+      ) do |detail_row| %>
+        <% detail_row.with_value do %>
+          <%= format_time(presenter.last_attempted_at) %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </dl>
+
+  <div class="space-y-2">
+    <%= render DS::Note.new do %>
+      <p><%= t("UI.account.bank_balances.availability_note") %></p>
+    <% end %>
+
+    <% if presenter.expected_balance_used_for_availability? %>
+      <%= render DS::Note.new do %>
+        <p><%= t("UI.account.bank_balances.expected_availability_note") %></p>
+      <% end %>
+    <% end %>
+  </div>
+</div>

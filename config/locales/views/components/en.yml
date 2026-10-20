@@ -4,6 +4,28 @@ en:
     period_picker:
       aria_label: "Time period: %{period}"
     account:
+      bank_balances:
+        title: "Bank balances"
+        booked_balance: "Booked balance"
+        available_balance: "Available balance"
+        expected_balance: "Expected balance"
+        not_provided: "Not provided"
+        not_fetched_yet: "Not fetched yet"
+        source_type: "Source type: %{source_type}"
+        reference_date: "Bank reference date: %{date}"
+        bank_last_changed: "Bank last changed: %{time}"
+        fetched_at: "Fetched at"
+        last_attempted_at: "Last attempted"
+        time_with_zone: "%{time} (%{time_zone})"
+        unknown: "Unknown"
+        latest_fetch_failed_with_saved_values: >-
+          The latest balance fetch failed. Saved values are retained from the last successful fetch.
+        latest_fetch_failed_without_saved_values: >-
+          The latest balance fetch failed. No successful balance fetch is available yet.
+        availability_note: >-
+          Available balance may include credit. It is informational and does not change account or net worth totals.
+        expected_availability_note: >-
+          For BPER Banca, the bank's expected balance is used as the available balance.
       activity_feed:
         toggle_selection_checkboxes: Toggle selection
       balance_reconciliation:

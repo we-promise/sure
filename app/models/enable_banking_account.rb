@@ -5,6 +5,7 @@ class EnableBankingAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
+    encrypts :balance_snapshot
   end
 
   belongs_to :enable_banking_item
