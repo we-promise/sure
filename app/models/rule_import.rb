@@ -1,6 +1,7 @@
 class RuleImport < Import
   def import!
     transaction do
+      @rules_with_stored_email_action = Rule.ids_with_stored_email_notification_action(family.rules)
       rows.each do |row|
         create_or_update_rule_from_row(row)
       end
@@ -166,8 +167,9 @@ class RuleImport < Import
       rule.effective_date = parse_date(row.effective_date)
 
       # An email action replacing the rule's own keeps the baseline it recorded
-      # (see Rule::Action#keep_notification_baseline).
-      had_email_action = rule.stored_email_notification_action?
+      # (see Rule::Action#keep_notification_baseline), as stored before this
+      # import: not one an earlier row of it wrote.
+      had_email_action = rule.persisted? && @rules_with_stored_email_action.include?(rule.id)
 
       # Clear existing conditions and actions
       rule.conditions.destroy_all

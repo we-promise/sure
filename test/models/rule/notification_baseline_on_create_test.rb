@@ -107,6 +107,26 @@ class Rule::NotificationBaselineOnCreateTest < ActiveSupport::TestCase
     assert_equal [ @bakery.id, @cafe.id ].sort, delivered_ids(rule)
   end
 
+  # Every row of an import shares one transaction. The second row for a rule
+  # sees the email action the first row has only just written, uncommitted; the
+  # first action is replaced before it commits, so nothing has recorded a
+  # baseline for the second to keep.
+  test "a RuleImport naming a new email rule twice still records its baseline" do
+    import_rules_csv("cafe", rows: 2)
+
+    rule = @family.rules.find_by!(name: "Cafe alerts")
+    assert_equal [ @bakery.id, @cafe.id ].sort, delivered_ids(rule)
+    assert_equal [], emailed_ids(rule) { RuleJob.perform_now(rule) }
+  end
+
+  test "a Sure import naming a new email rule twice still records its baseline" do
+    Family::DataImporter.new(@family, [ rule_ndjson("cafe"), rule_ndjson("cafe") ].join("\n")).import!
+
+    rule = @family.rules.find_by!(name: "Cafe alerts")
+    assert_equal [ @bakery.id, @cafe.id ].sort, delivered_ids(rule)
+    assert_equal [], emailed_ids(rule) { RuleJob.perform_now(rule) }
+  end
+
   test "a Sure import records the baseline for a new email rule" do
     Family::DataImporter.new(@family, rule_ndjson("cafe")).import!
 
@@ -158,12 +178,12 @@ class Rule::NotificationBaselineOnCreateTest < ActiveSupport::TestCase
       )
     end
 
-    def import_rules_csv(value, action_type: "send_email_notification")
+    def import_rules_csv(value, action_type: "send_email_notification", rows: 1)
       conditions = [ { condition_type: "transaction_name", operator: "like", value: value } ].to_json
       actions = [ { action_type: action_type } ].to_json
-      csv = CSV.generate do |rows|
-        rows << %w[name resource_type active effective_date conditions actions]
-        rows << [ "Cafe alerts", "transaction", "true", "", conditions, actions ]
+      csv = CSV.generate do |csv_rows|
+        csv_rows << %w[name resource_type active effective_date conditions actions]
+        rows.times { csv_rows << [ "Cafe alerts", "transaction", "true", "", conditions, actions ] }
       end
 
       import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")

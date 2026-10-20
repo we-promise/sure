@@ -1368,6 +1368,7 @@ class Family::DataImporter
         position = Integer(record.dig("data", "position"), exception: false)
         [ position || Float::INFINITY, index ]
       end.map(&:first)
+      with_stored_email_action = Rule.ids_with_stored_email_notification_action(@family.rules)
 
       records.each do |record|
         data = record["data"]
@@ -1388,8 +1389,9 @@ class Family::DataImporter
         )
 
         # An email action replacing the rule's own keeps the baseline it recorded
-        # (see Rule::Action#keep_notification_baseline).
-        had_email_action = rule.stored_email_notification_action?
+        # (see Rule::Action#keep_notification_baseline), as stored before this
+        # import: not one an earlier record of it wrote.
+        had_email_action = rule.persisted? && with_stored_email_action.include?(rule.id)
 
         rule.conditions.destroy_all unless created
         rule.actions.destroy_all unless created
