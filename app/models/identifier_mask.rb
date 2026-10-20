@@ -71,10 +71,12 @@ module IdentifierMask
 
   # Czech-style "<account>/<bank code>" keeps the bank code, which on its own
   # identifies no one, so the masked account part stays recognizable.
+  # Grouping spaces and dashes are dropped first, so a grouped IBAN or an Akahu
+  # account number masks to the same digits here as in notes and setup views.
   def mask_identifier(value)
     account, bank_code = value.to_s.split("/", 2)
-    return last4(value) unless bank_code.present? && bank_code.match?(/\A\d{4}\z/)
+    return last4(value, strip_whitespace: true, strip_dashes: true) unless bank_code.present? && bank_code.match?(/\A\d{4}\z/)
 
-    "#{last4(account)}/#{bank_code}"
+    "#{last4(account, strip_whitespace: true, strip_dashes: true)}/#{bank_code}"
   end
 end

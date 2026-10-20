@@ -52,7 +52,11 @@ class IdentifierMaskTest < ActiveSupport::TestCase
     assert_equal "•••6001", masked["counter_iban"]
     assert_equal "Jane Doe", masked["counterAccountName"]
     assert_equal({ "routingNumber" => "•••0021", "account_number_last_4" => "6001" }, masked["details"])
-    assert_equal [ "•••3-00" ], masked["other_account"]
+    assert_equal [ "•••2300" ], masked["other_account"]
+  end
+
+  test "mask_identifier ignores grouping spaces" do
+    assert_equal "•••7890", IdentifierMask.mask_identifier("DE89 3704 0044 0532 0178 90") # pipelock:ignore IBAN
   end
 
   test "mask_identifier keeps a Czech bank code" do
