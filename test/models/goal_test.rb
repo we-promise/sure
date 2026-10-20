@@ -1482,6 +1482,22 @@ class GoalTest < ActiveSupport::TestCase
     assert Goal.find(goal.id).pace_measurable?
   end
 
+  # A pending transaction can still be reversed, so it is no evidence that the
+  # account has a history of being paid into. pace_for leaves it out too.
+  test "an account whose only transaction is pending is not dormant" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Pending only",
+                              currency: "USD", balance: 1_000)
+    entry = create_transaction(account: account, amount: -1_000, date: 200.days.ago.to_date)
+    entry.transaction.update!(extra: { "plaid" => { "pending" => true } })
+    goal = goal_on(account, target_amount: 5_000, target_date: 360.days.from_now.to_date)
+
+    assert_not goal.pace_measurable?
+    assert_equal :pace_unknown, goal.status
+
+    entry.transaction.update!(extra: {})
+    assert Goal.find(goal.id).pace_measurable?
+  end
+
   test "a cash account nobody has paid into lately is still measured and behind" do
     account = Account.create!(family: @family, accountable: Depository.new, name: "Dormant savings",
                               currency: "USD", balance: 1_000)

@@ -159,8 +159,8 @@ this order:
    converted to the account's currency, unconvertible entries skipped.
    With no balance row a year back, the account is unmeasured; a missing
    row is never read as a zero opening balance.
-3. **Dormant.** Otherwise, any transaction that is not excluded, at any
-   date: a measured zero.
+3. **Dormant.** Otherwise, any transaction that is neither excluded nor
+   pending, at any date: a measured zero.
    A savings account nobody has paid into lately is honestly behind.
 4. **Unmeasured.** Anything else (an opening balance and nothing since,
    or valuations all older than a year).

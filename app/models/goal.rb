@@ -299,7 +299,8 @@ class Goal < ApplicationRecord
   # include excluded entries, which pace_for leaves out, so their sum over the
   # window is carried too and taken back out of the change. `dormant` holds
   # accounts with counted transactions, just none lately: their pace is a
-  # measured zero. Excluded ones do not count there either.
+  # measured zero. Excluded and pending ones do not count there either, as
+  # they do not in pace_for.
   # Any linked account in neither map (an opening balance and nothing since, a
   # recent valuation on under a year of history, or updates all older than a
   # year) has no measurable pace.
@@ -364,8 +365,10 @@ class Goal < ApplicationRecord
     end
 
     dormant = Entry
-      .where(account_id: account_ids - valued_ids, entryable_type: "Transaction")
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      .where(account_id: account_ids - valued_ids)
       .where("entries.excluded IS NOT TRUE")
+      .merge(Transaction.excluding_pending)
       .distinct
       .pluck(:account_id)
 
