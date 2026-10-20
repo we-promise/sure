@@ -793,6 +793,77 @@ class SimplefinItem::Importer
       nil
     end
 
+    # The rotation for `stored` against `transactions`, and the payload they merge
+    # into (see import_account). A method so the save can run it again against
+    # the payload as stored.
+    def merged_transaction_payload(stored, transactions, account_id)
+      # Stored rows the bridge re-issued under a new id give way to the new row,
+      # or the id-keyed merge below keeps both and each becomes an entry.
+      id_rotation = SimplefinAccount::TransactionIdRotation.new(stored, transactions)
+      existing_transactions = id_rotation.retained_rows
+
+      Rails.logger.info "SimplefinItem::Importer#import_account - Merging transactions for account_id=#{account_id}: #{existing_transactions.count} existing + #{transactions.count} new"
+
+      # Build a map of key => best_tx
+      best_by_key = {}
+
+      comparator = lambda do |a, b|
+        ax = a.with_indifferent_access
+        bx = b.with_indifferent_access
+
+        # Key dates
+        a_posted = ax[:posted].to_i
+        b_posted = bx[:posted].to_i
+        a_trans  = ax[:transacted_at].to_i
+        b_trans  = bx[:transacted_at].to_i
+
+        a_pending = !!ax[:pending]
+        b_pending = !!bx[:pending]
+
+        # 1) Prefer real posted date over 0/blank
+        a_has_posted = a_posted > 0
+        b_has_posted = b_posted > 0
+        return a if a_has_posted && !b_has_posted
+        return b if b_has_posted && !a_has_posted
+
+        # 2) Prefer later posted date
+        if a_posted != b_posted
+          return a_posted > b_posted ? a : b
+        end
+
+        # 3) Prefer non-pending over pending
+        if a_pending != b_pending
+          return a_pending ? b : a
+        end
+
+        # 4) Prefer later transacted_at
+        if a_trans != b_trans
+          return a_trans > b_trans ? a : b
+        end
+
+        # 5) Stable: keep 'a'
+        a
+      end
+
+      build_key = lambda do |tx|
+        t = tx.with_indifferent_access
+        t[:id] || t[:fitid] || [ t[:posted], t[:amount], t[:description] ]
+      end
+
+      (existing_transactions + transactions).each do |tx|
+        key = build_key.call(tx)
+        if (cur = best_by_key[key])
+          best_by_key[key] = comparator.call(cur, tx)
+        else
+          best_by_key[key] = tx
+        end
+      end
+
+      merged_transactions = best_by_key.values
+
+      [ id_rotation, merged_transactions ]
+    end
+
     def import_account(account_data)
       account_id = account_data[:id].to_s
 
@@ -850,69 +921,8 @@ class SimplefinItem::Importer
       # pending placeholders that sometimes come back with posted: 0.
       id_rotation = nil
       if transactions.is_a?(Array) && transactions.any?
-        # Stored rows the bridge re-issued under a new id give way to the new row,
-        # or the id-keyed merge below keeps both and each becomes an entry.
-        id_rotation = SimplefinAccount::TransactionIdRotation.new(simplefin_account.raw_transactions_payload, transactions)
-        existing_transactions = id_rotation.retained_rows
-
-        Rails.logger.info "SimplefinItem::Importer#import_account - Merging transactions for account_id=#{account_id}: #{existing_transactions.count} existing + #{transactions.count} new"
-
-        # Build a map of key => best_tx
-        best_by_key = {}
-
-        comparator = lambda do |a, b|
-          ax = a.with_indifferent_access
-          bx = b.with_indifferent_access
-
-          # Key dates
-          a_posted = ax[:posted].to_i
-          b_posted = bx[:posted].to_i
-          a_trans  = ax[:transacted_at].to_i
-          b_trans  = bx[:transacted_at].to_i
-
-          a_pending = !!ax[:pending]
-          b_pending = !!bx[:pending]
-
-          # 1) Prefer real posted date over 0/blank
-          a_has_posted = a_posted > 0
-          b_has_posted = b_posted > 0
-          return a if a_has_posted && !b_has_posted
-          return b if b_has_posted && !a_has_posted
-
-          # 2) Prefer later posted date
-          if a_posted != b_posted
-            return a_posted > b_posted ? a : b
-          end
-
-          # 3) Prefer non-pending over pending
-          if a_pending != b_pending
-            return a_pending ? b : a
-          end
-
-          # 4) Prefer later transacted_at
-          if a_trans != b_trans
-            return a_trans > b_trans ? a : b
-          end
-
-          # 5) Stable: keep 'a'
-          a
-        end
-
-        build_key = lambda do |tx|
-          t = tx.with_indifferent_access
-          t[:id] || t[:fitid] || [ t[:posted], t[:amount], t[:description] ]
-        end
-
-        (existing_transactions + transactions).each do |tx|
-          key = build_key.call(tx)
-          if (cur = best_by_key[key])
-            best_by_key[key] = comparator.call(cur, tx)
-          else
-            best_by_key[key] = tx
-          end
-        end
-
-        merged_transactions = best_by_key.values
+        stored_snapshot = simplefin_account.raw_transactions_payload.to_a
+        id_rotation, merged_transactions = merged_transaction_payload(stored_snapshot, transactions, account_id)
         attrs[:raw_transactions_payload] = merged_transactions
 
         Rails.logger.info "SimplefinItem::Importer#import_account - Merged result for account_id=#{account_id}: #{merged_transactions.count} total transactions"
@@ -962,6 +972,18 @@ class SimplefinItem::Importer
       begin
         # Entries move to their new ids only if the payload naming those ids saves.
         SimplefinAccount.transaction do
+          # Another sync of this account may have saved since the payload was read
+          # (syncs can overlap once the first is over five minutes old). The row
+          # lock serialises the two; pairing again against what is stored keeps
+          # the re-keys and the payload on one snapshot, or the stale payload
+          # would put an id back beside the entry the other sync re-keyed.
+          if id_rotation && simplefin_account.persisted?
+            stored_now = SimplefinAccount.where(id: simplefin_account.id).lock.pick(:raw_transactions_payload).to_a
+            if stored_now != stored_snapshot
+              id_rotation, simplefin_account.raw_transactions_payload = merged_transaction_payload(stored_now, transactions, account_id)
+            end
+          end
+
           id_rotation&.rekey_entries!(simplefin_account.current_account)
           simplefin_account.save!
         end

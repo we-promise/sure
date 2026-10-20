@@ -187,9 +187,13 @@ class SimplefinItem < ApplicationRecord
         # One transaction: re-keyed entries must not outlive a failed transfer, or
         # the stale account's payload re-creates their old ids on the next pass.
         SimplefinAccount.transaction do
-          # Merge transactions from old to new before transferring
-          old_transactions = stale_match.raw_transactions_payload.to_a
-          new_transactions = new_sfa.raw_transactions_payload.to_a
+          # Merge transactions from old to new before transferring. Both payloads
+          # are read as stored, under a row lock: an overlapping sync may have
+          # saved either since they were loaded, and pairing the loaded copies
+          # would re-key entries against ids the stored payload no longer holds.
+          stored = SimplefinAccount.where(id: [ stale_match.id, new_sfa.id ]).lock.order(:id).pluck(:id, :raw_transactions_payload).to_h
+          old_transactions = stored.fetch(stale_match.id, stale_match.raw_transactions_payload).to_a
+          new_transactions = stored.fetch(new_sfa.id, new_sfa.raw_transactions_payload).to_a
           if old_transactions.any?
             Rails.logger.info "SimplefinItem#repair_stale_linkages - Merging #{old_transactions.count} transactions from old SimplefinAccount"
             # A reconnect re-issues transaction ids too. Rows that came back under a

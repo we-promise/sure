@@ -234,6 +234,27 @@ class SimplefinItem::ImporterRotatedIdsTest < ActiveSupport::TestCase
     assert_equal [ "T2" ], payload_ids
   end
 
+  # Two syncs can overlap once the first is over five minutes old (Sync::VISIBLE_FOR).
+  # Here a second rotation (T2 -> T3) arrives in a sync that read the payload
+  # before the first sync's T1 -> T2 committed. Pairing against what it read
+  # would re-key nothing and save T3 beside the committed T2: a duplicate.
+  test "a sync that read the payload before another committed pairs against what is stored" do
+    store(row("T1"))
+    entry = entry_for("T1")
+    @importer.stubs(:update_inactive_state).with do |sfa, _|
+      # The overlapping sync commits between this one's read and its save.
+      Entry.where(id: entry.id).update_all(external_id: "simplefin_T2")
+      SimplefinAccount.where(id: sfa.id).update_all(raw_transactions_payload: [ row("T2") ])
+      true
+    end
+
+    import(row("T3"))
+    process
+
+    assert_equal [ "simplefin_T3" ], external_ids
+    assert_equal [ "T3" ], payload_ids
+  end
+
   test "N4 a fetch that omits older rows never evicts them" do
     old = 120.days.ago.beginning_of_day.to_i
     store(row("OLD1", posted: old, transacted_at: old), row("OLD2", posted: old, transacted_at: old, amount: "-3.00"))

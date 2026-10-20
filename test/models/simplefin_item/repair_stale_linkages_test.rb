@@ -244,4 +244,20 @@ class SimplefinItem::RepairStaleLinkagesTest < ActiveSupport::TestCase
     assert_equal "simplefin_T1", entry.reload.external_id
     assert_equal [ "T2" ], new_sfa.reload.raw_transactions_payload.map { |t| t["id"] }
   end
+
+  # A repair reads both payloads as stored when its transaction starts, not as
+  # loaded: an overlapping sync may have changed them since.
+  test "a repair pairs against the payloads as stored, not as loaded" do
+    stale_sfa, new_sfa, account, entry = reconnect_fixture
+    # Since these were loaded, the new account was served T3 in place of T2.
+    posted = 5.days.ago.beginning_of_day.to_i
+    t3 = { id: "T3", posted: posted, transacted_at: posted, amount: "-10.25", description: "Amazon", payee: "Amazon", memo: "" }
+    SimplefinAccount.where(id: new_sfa.id).update_all(raw_transactions_payload: [ t3 ])
+
+    @item.send(:repair_stale_linkages, [ stale_sfa, new_sfa ])
+
+    assert_equal "simplefin_T3", entry.reload.external_id
+    assert_equal [ "T3" ], new_sfa.reload.raw_transactions_payload.map { |t| t["id"] }
+    assert_equal account, new_sfa.current_account
+  end
 end
