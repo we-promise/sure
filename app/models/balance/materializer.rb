@@ -15,6 +15,7 @@ class Balance::Materializer
 
   def materialize_balances
     Balance.transaction do
+      @had_calculated_holdings = holdings_from_trades? && account.holdings.where(account_provider_id: nil).exists?
       materialize_holdings
       calculate_balances
 
@@ -68,8 +69,14 @@ class Balance::Materializer
     # The provider set cash_balance to the whole balance, as it sent no
     # holdings. Once holdings come from trades, cash is what they leave of the
     # provider's balance. Only cash is written: the balance stays the provider's.
+    # When the last trade goes, the purge has cleared the position it built, so
+    # cash is the provider's whole balance again. An account that never had a
+    # calculated holding keeps the provider's cash untouched.
     def update_cash_balance
-      return unless account.trades.exists?
+      unless account.trades.exists?
+        account.update!(cash_balance: account.balance) if @had_calculated_holdings
+        return
+      end
 
       current_balance = account.balances.where(currency: account.currency).order(date: :desc).first
       return unless current_balance

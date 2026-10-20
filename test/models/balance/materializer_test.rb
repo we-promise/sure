@@ -340,6 +340,23 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_not account.holdings.exists?(security: stale)
   end
 
+  # Removing the last trade leaves the fallback with nothing to build: its
+  # purge clears the derived position, so cash goes back to the provider's
+  # whole balance rather than staying at the trade-adjusted figure.
+  test "removing the last trade clears the derived position and resets cash to the provider's balance" do
+    account, security = linked_account_with_trade
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    assert_equal 10_000 - 2 * 200, account.reload.cash_balance
+
+    account.trades.each { |trade| trade.entry.destroy! }
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    account.reload
+    assert_nil account.current_holdings.find_by(security: security)
+    assert_equal 10_000, account.cash_balance
+    assert_equal 10_000, account.balance
+  end
+
   # A provider's trade history can start after a position was opened (Plaid
   # sends at most two years), so a sell can arrive without its buy. Built from
   # zero that is a negative position, and cash above the provider's total. The
