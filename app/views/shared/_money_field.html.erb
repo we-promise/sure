@@ -5,17 +5,13 @@
                    elsif form.object && form.object.respond_to?(currency_method)
                      form.object.public_send(currency_method)
                    end
-   currency = Money::Currency.new(currency_value || options[:default_currency] || "USD")
-   # :precision formats the rendered value and, by default, rounds pastes too.
-   # round_paste: false keeps pastes unrounded on a step="any" field whose
-   # rendered value still uses :precision (e.g. a per-share price below a cent).
-   client_precision = options[:precision] unless options[:round_paste] == false %>
+   currency = Money::Currency.new(currency_value || options[:default_currency] || "USD") %>
 
 <div class="form-field <%= options[:container_class] %>"
      data-controller="money-field"
      data-money-field-separator-value="<%= currency.separator %>"
      data-money-field-separator-currency-value="<%= currency.iso_code %>"
-     <% if client_precision.present? %> data-money-field-precision-value="<%= client_precision %>"<% end %>
+     <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>>
   <% if options[:label_tooltip] %>
     <div class="form-field__header">

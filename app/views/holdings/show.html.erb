@@ -114,7 +114,7 @@
                 <% if @holding.cost_basis_source.present? %>
                   <span class="text-xs text-secondary">(<%= @holding.cost_basis_source_label %>)</span>
                 <% end %>
-                <button type="button" class="ml-1" data-action="click->drawer-cost-basis#toggle">
+                <button type="button" class="ml-1" data-action="click->drawer-cost-basis#toggle" data-drawer-cost-basis-target="opener">
                   <%= icon "pencil", size: "xs", class: "text-secondary hover:text-primary" %>
                 </button>
               </dd>

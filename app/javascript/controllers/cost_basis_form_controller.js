@@ -14,6 +14,12 @@ export default class extends Controller {
   // Updates the per-share field with the calculated value, keeping up to four
   // decimals so a price below a cent is not saved as 0.00
   updatePerShare() {
+    // An empty total empties the submitted per-share field instead of saving 0
+    if (this.totalTarget.value.trim() === "") {
+      this.perShareTarget.value = ""
+      return
+    }
+
     const total = parseLocaleFloat(this.totalTarget.value)
     const qty = this.qtyValue || 1
     this.perShareTarget.value = qty > 0 ? this.#formatPerShare(total / qty) : "0.00"
@@ -22,6 +28,11 @@ export default class extends Controller {
   // Called when user types in the per-share field
   // Updates the total cost basis field with the calculated value
   updateTotal() {
+    if (this.perShareTarget.value.trim() === "") {
+      this.totalTarget.value = ""
+      return
+    }
+
     const perShare = parseLocaleFloat(this.perShareTarget.value)
     const qty = this.qtyValue || 1
     this.totalTarget.value = (perShare * qty).toFixed(2)

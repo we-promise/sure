@@ -136,11 +136,30 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{form_id}_per_share_cost_basis[value='12.20']"
   end
 
+  # money_field#pasteAmount leaves pastes unrounded on step="any" fields.
   test "cost basis editor does not round pasted values to its display decimals" do
     get holding_path(@holding)
 
     assert_select "form[data-controller=cost-basis-form] [data-controller=money-field]", count: 2
-    assert_select "form[data-controller=cost-basis-form] [data-money-field-precision-value]", count: 0
+    assert_select "form[data-controller=cost-basis-form] input[step=any]", count: 2
+  end
+
+  test "cost basis editor blurs its values in privacy mode" do
+    get holding_path(@holding)
+
+    assert_select "form[data-controller=cost-basis-form]" do
+      assert_select "input.privacy-sensitive.privacy-sensitive-interactive", count: 2
+      assert_select "span.privacy-sensitive", text: /shares\z/, count: 1
+    end
+  end
+
+  test "cost basis editor submits through Turbo so the overwrite confirmation shows" do
+    @holding.update!(qty: 10, cost_basis: 12.5, cost_basis_locked: true)
+
+    get holding_path(@holding)
+
+    assert_select "form[data-controller=cost-basis-form][data-turbo-frame=_top][data-turbo-confirm]"
+    assert_select "form[data-controller=cost-basis-form][data-turbo=false]", count: 0
   end
 
   test "cost basis editor shows a stored zero basis instead of placeholders" do

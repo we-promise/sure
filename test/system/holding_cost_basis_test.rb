@@ -60,7 +60,60 @@ class HoldingCostBasisTest < ApplicationSystemTestCase
     assert_equal BigDecimal("16.3333"), @holding.reload.cost_basis
   end
 
+  # Clearing a field must clear the other one too: an empty total used to put
+  # 0.00 into the submitted per-share field and lock an unknown basis as 0.
+  test "clearing either field leaves the other empty and saves no basis" do
+    @holding.update!(qty: 10)
+
+    open_cost_basis_editor
+    find("##{total_field_id}").fill_in(with: "49")
+    assert_field per_share_field_id, with: "4.90"
+    find("##{total_field_id}").fill_in(with: "", fill_options: { clear: :backspace })
+    assert_field per_share_field_id, with: ""
+
+    find(per_share_field).fill_in(with: "4.9")
+    assert_field total_field_id, with: "49.00"
+    find(per_share_field).fill_in(with: "", fill_options: { clear: :backspace })
+    assert_field total_field_id, with: ""
+
+    save_cost_basis
+
+    assert_nil @holding.reload.cost_basis
+    assert_not @holding.cost_basis_locked?
+  end
+
+  test "overwriting a cost basis asks first and keeps it when cancelled" do
+    @holding.update!(qty: 10, cost_basis: 12.5, cost_basis_source: "manual", cost_basis_locked: true)
+
+    open_cost_basis_editor
+    find(per_share_field).fill_in(with: "20")
+    find(per_share_field).ancestor("form").click_on I18n.t("holdings.cost_basis_cell.save")
+
+    within "#confirm-dialog" do
+      assert_text I18n.t("holdings.cost_basis_cell.overwrite_confirm_title")
+      find("button[value=cancel]").click
+    end
+
+    assert_equal BigDecimal("12.5"), @holding.reload.cost_basis
+
+    save_cost_basis
+    assert_equal BigDecimal("20"), @holding.reload.cost_basis
+  end
+
+  test "the drawer editor moves focus in on open and back to the pencil on cancel" do
+    open_cost_basis_editor
+    assert_equal per_share_field_id, active_element_id
+
+    find(per_share_field).ancestor("form").click_on I18n.t("holdings.cost_basis_cell.cancel")
+    assert_no_selector per_share_field
+    assert page.evaluate_script("document.activeElement.matches('[data-drawer-cost-basis-target=opener]')")
+  end
+
   private
+    def active_element_id
+      page.evaluate_script("document.activeElement.id")
+    end
+
     def form_id
       "#{dom_id(@holding, :drawer_cost_basis)}_holding"
     end
@@ -83,8 +136,12 @@ class HoldingCostBasisTest < ApplicationSystemTestCase
       assert_selector per_share_field
     end
 
+    # A holding that already has a basis asks before overwriting it.
     def save_cost_basis
-      find(per_share_field).ancestor("form").click_on I18n.t("holdings.cost_basis_cell.save")
+      form = find(per_share_field).ancestor("form")
+      confirm = form["data-turbo-confirm"].present?
+      form.click_on I18n.t("holdings.cost_basis_cell.save")
+      within("#confirm-dialog") { find("button[value=confirm]", visible: true).click } if confirm
       assert_no_selector per_share_field
     end
 
