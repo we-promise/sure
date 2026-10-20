@@ -73,6 +73,10 @@ es:
       attachments: Adjuntos
       exclude: Excluir
       exclude_description: Las transacciones excluidas se eliminarán de los cálculos y presupuestos e informes.
+      auto_excluded_title: "Excluida automáticamente"
+      auto_excluded_stale_pending: "El %{date} la sincronización bancaria excluyó esta transacción pendiente porque no se había contabilizado en %{days} días."
+      auto_excluded_posted_match: "El %{date} la sincronización bancaria excluyó esta transacción pendiente porque su versión contabilizada llegó como una transacción independiente."
+      auto_excluded_other: "El %{date} la sincronización bancaria excluyó esta transacción."
       activity_type: Tipo de actividad
       activity_type_description: Tipo de actividad de inversión (Compra, Venta, Dividendo, etc.). Detectado automáticamente o configurado manualmente.
       one_time_title: Transacción puntual %{type}

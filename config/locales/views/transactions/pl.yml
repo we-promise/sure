@@ -329,6 +329,10 @@ pl:
       exclude: Wyklucz
       exclude_description: Wykluczone transakcje zostaną usunięte z obliczeń budżetowych
         i raportów.
+      auto_excluded_title: "Wykluczona automatycznie"
+      auto_excluded_stale_pending: "%{date} synchronizacja z bankiem wykluczyła tę oczekującą transakcję, ponieważ nie została zaksięgowana w ciągu %{days} dni."
+      auto_excluded_posted_match: "%{date} synchronizacja z bankiem wykluczyła tę oczekującą transakcję, ponieważ jej zaksięgowana wersja pojawiła się jako osobna transakcja."
+      auto_excluded_other: "%{date} synchronizacja z bankiem wykluczyła tę transakcję."
       keep_both: Nie, zachowaj obie
       loan_payment: Spłata pożyczki
       mark_recurring: Oznacz jako cykliczną
