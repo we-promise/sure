@@ -8,7 +8,7 @@ import { Controller } from "@hotwired/stimulus"
 // without this controller needing to know about them.
 export default class extends Controller {
   static targets = ["rowsContainer", "row", "rowTemplate", "amountInput", "remaining", "remainingContainer", "error", "submitButton", "nameInput"]
-  static values = { total: Number, currency: String }
+  static values = { total: Number, currency: String, step: { type: String, default: "0.01" } }
 
   connect() {
     this.updateRemaining()

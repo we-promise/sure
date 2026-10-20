@@ -77,9 +77,9 @@ class Transaction::ReceiptItemizer
     raise Error, "No LLM provider that can read receipts is configured" unless provider&.supports_receipt_extraction?
     raise Error, "Transaction cannot be split" unless transaction.splittable?
 
-    attachment = find_attachment(attachment_id)
-
+    attachment = nil
     begin
+      attachment = find_attachment(attachment_id)
       response = provider.extract_receipt(
         file_content: attachment.download,
         content_type: attachment.content_type,
@@ -134,7 +134,9 @@ class Transaction::ReceiptItemizer
       rows = items.zip(allocated).map { |item, amount| Row.new(name: item.name, amount: amount * sign) }
 
       receipt_total = allocated.sum(BigDecimal("0"))
-      unmatched = parent_total - receipt_total
+      # entries.amount is decimal(19,4): round to the currency's precision like
+      # the item rows, so the leftover row never carries finer precision.
+      unmatched = (parent_total - receipt_total).round(precision)
       rows << Row.new(name: entry.name, amount: unmatched * sign) unless unmatched.zero?
 
       Proposal.new(
@@ -191,8 +193,8 @@ class Transaction::ReceiptItemizer
         provider: provider,
         metadata: {
           transaction_id: transaction.id,
-          attachment_id: attachment.id,
-          content_type: attachment.content_type,
+          attachment_id: attachment&.id,
+          content_type: attachment&.content_type,
           provider_error_class: provider_error&.class&.name
         }.compact
       )

@@ -226,6 +226,30 @@ class Transaction::ReceiptItemizerTest < ActiveSupport::TestCase
     end
   end
 
+  test "records a missing receipt in the debug log" do
+    @transaction.attachments.purge
+    provider = stub_provider(extraction(items: [ [ "Hammer", 54 ] ]))
+
+    assert_difference -> { DebugLogEntry.where(category: "receipt_itemization").count }, 1 do
+      assert_raises(Transaction::ReceiptItemizer::Error) do
+        Transaction::ReceiptItemizer.new(@transaction.reload, provider: provider).propose
+      end
+    end
+
+    log = DebugLogEntry.where(category: "receipt_itemization").recent.first
+    assert_match "No receipt attachment found", log.message
+  end
+
+  test "rounds the unmatched row to the currency precision" do
+    @entry.update_columns(amount: BigDecimal("54.0049"))
+    provider = stub_provider(extraction(items: [ [ "Hammer", 30 ], [ "Nails", 20 ] ]))
+
+    proposal = Transaction::ReceiptItemizer.new(@transaction.reload, provider: provider).propose
+
+    assert_equal BigDecimal("4"), proposal.unmatched_amount
+    assert proposal.rows.all? { |row| row.amount == row.amount.round(2) }
+  end
+
   test "available needs AI consent, a capable provider, a receipt and a splittable transaction" do
     provider = stub_provider(nil)
 
