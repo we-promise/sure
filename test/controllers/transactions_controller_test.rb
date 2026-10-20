@@ -1997,6 +1997,20 @@ end
     assert_select "#transaction-search-filters li p", text: other.id, count: 0
   end
 
+  # The initial's circle uses the info token, which follows the theme; a raw
+  # palette class keeps the light-mode shade in dark mode.
+  test "an account chip's initial uses the info token, by name or by id" do
+    account = accounts(:depository)
+
+    [ { account_ids: [ account.id ] }, { accounts: [ account.name ] } ].each do |q|
+      get transactions_url(q: q)
+
+      assert_response :success
+      assert_select "#transaction-search-filters li div[class~='bg-info/10']", text: account.name[0].upcase
+      assert_select "#transaction-search-filters li [class*='bg-blue-600']", count: 0
+    end
+  end
+
   test "an account_ids chip is still removed by its id" do
     account = accounts(:depository)
 

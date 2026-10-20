@@ -19,7 +19,7 @@
   <% elsif param_key == "accounts" || param_key == "account_ids" %>
     <% account_label = account_filter_label(param_key, param_value, filter_account_ids: params.dig(:q, :account_ids)) %>
     <div class="flex items-center gap-2">
-      <div class="w-5 h-5 bg-blue-600/10 text-xs flex items-center justify-center rounded-full"><%= account_label[0].upcase %></div>
+      <div class="w-5 h-5 bg-info/10 text-xs flex items-center justify-center rounded-full"><%= account_label[0].upcase %></div>
       <p><%= account_label %></p>
     </div>
   <% elsif param_key == "amount" %>
