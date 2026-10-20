@@ -412,6 +412,23 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_equal 10_000, account.cash_balance
   end
 
+  # Where the fallback stands aside, the reverse path writes rows of its own,
+  # ending at zero today. They are not a derived position, so later syncs keep
+  # the provider's cash rather than resetting it to the balance.
+  test "an account the fallback stands aside for keeps the provider's cash across syncs" do
+    account = linked_investment_account
+    account.update_columns(cash_balance: 7_000)
+    security = Security.create!(ticker: "KEEPX", name: "Keep")
+    (5.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: security, date: date, price: 200) }
+    create_trade(security, account: account, qty: -2, date: 3.days.ago.to_date, price: 200)
+    create_valuation(account: account, amount: 10_000, date: 1.day.ago.to_date, kind: "current_anchor")
+
+    2.times { Balance::Materializer.new(account, strategy: :reverse).materialize_balances }
+
+    assert account.holdings.where(account_provider_id: nil).exists?, "the reverse path wrote its own rows"
+    assert_equal 7_000, account.reload.cash_balance
+  end
+
   # The guard reads the position the trades actually build. Summing trade
   # quantities would call this one negative (2 - 3), but the 2:1 split between
   # them leaves one share.
