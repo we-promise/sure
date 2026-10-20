@@ -34,7 +34,7 @@ class BudgetProgressBar extends StatelessWidget {
     final clamped = fraction.isNaN ? 0.0 : fraction.clamp(0.0, 1.0);
 
     return Semantics(
-      value: '${(fraction * 100).round()}%',
+      value: '${(clamped * 100).round()}%',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(height),
         child: SizedBox(

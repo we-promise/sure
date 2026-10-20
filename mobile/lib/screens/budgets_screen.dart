@@ -356,9 +356,12 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
           addRow(child, [child.category.id]);
         }
       } else {
-        addRow(group.parent, group.categoryIds);
+        // Like the web, a parent that isn't itself visible only exists as the
+        // container of its visible subcategories: no row, no indent.
+        final showParent = group.parent.isVisible;
+        if (showParent) addRow(group.parent, group.categoryIds);
         for (final child in group.children) {
-          addRow(child, [child.category.id], indented: true);
+          addRow(child, [child.category.id], indented: showParent);
         }
       }
     }
