@@ -143,6 +143,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
+    rule_input = @entry.rule_input_snapshot
+
     Entry.transaction do
       if @entry.update(entry_params_for_update)
         sync_needed = @entry.saved_changes_affect_balances?
@@ -173,7 +175,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     # After the commit, so the enqueue runs here and not in a deferred
     # after-commit callback once the response is already rendered.
-    @entry.apply_immediate_rules_later if @transaction
+    @entry.apply_immediate_rules_later(changed_from: rule_input) if @transaction
 
   rescue => e
     Rails.logger.error "TransactionsController#update error: #{e.message}"

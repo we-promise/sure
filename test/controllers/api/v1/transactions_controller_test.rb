@@ -346,6 +346,19 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @family, { transaction_ids: [ @transaction.id ] } ])
   end
 
+  test "an API update that changes nothing runs no immediate rules" do
+    @family.rules.create!(
+      resource_type: "transaction", active: true, apply_immediately: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "API") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @family.categories.first.id) ]
+    )
+
+    put api_v1_transaction_url(@transaction), params: { transaction: { name: @transaction.entry.name } }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
   test "should create transaction with external idempotency key" do
     transaction_params = {
       transaction: {

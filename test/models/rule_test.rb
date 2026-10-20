@@ -526,6 +526,20 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal [ first, second ], @family.rules.ordered.to_a
   end
 
+  test "matching_scope resolves a pattern only within the given transactions" do
+    wanted = create_transaction(account: @account, name: "Coffee shop").transaction
+    create_transaction(account: @account, name: "Coffee bar")
+    rule = @family.rules.create!(
+      resource_type: "transaction", active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "matches_regex", value: "coffee") ],
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
+    )
+
+    rule.expects(:scope_for_transaction_ids).with([ wanted.id ]).returns(Transaction.where(id: wanted.id))
+
+    assert_equal [ wanted.id ], rule.matching_scope(within_ids: [ wanted.id ]).pluck(:id)
+  end
+
   test "apply_immediately_later enqueues only when the family has active immediate rules" do
     transaction = create_transaction(account: @account, name: "Whole Foods").transaction
     create_category_rule("Nightly")

@@ -18,15 +18,10 @@ class ApplyImmediateRulesJob < ApplicationJob
       transaction_ids: transaction_ids
     ).run
 
-    return unless rule_runs.any? { |rule_run| rule_run.pending? || rule_run.transactions_modified.to_i.positive? }
+    # Runs with AI actions are still pending here; they offer their result
+    # once their jobs are done (RuleRun#complete_job!).
+    return unless rule_runs.any? { |rule_run| rule_run.transactions_modified.to_i.positive? }
 
-    # Offer the result through the sync toast, like Family::SyncCompleteEvent.
-    # A full-page refresh would wipe forms that are still open, such as the
-    # drawer the person just edited in; the toast waits until they are done.
-    family.broadcast_replace_to(
-      family,
-      target: "sync-toast",
-      partial: "shared/notifications/sync_toast"
-    )
+    RuleRun.offer_immediate_result(family)
   end
 end

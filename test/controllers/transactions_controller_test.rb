@@ -1981,6 +1981,43 @@ end
     assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
   end
 
+  test "an update that changes nothing runs no immediate rules" do
+    create_immediate_rule
+
+    patch transaction_url(@entry), params: { entry: { name: @entry.name, notes: @entry.notes } }
+
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "an update reduced to nothing by the account permission runs no immediate rules" do
+    create_immediate_rule
+    read_only_entry = entries(:transfer_in) # credit card, shared read_only with family_member
+    sign_in users(:family_member)
+
+    patch transaction_url(read_only_entry), params: { entry: { name: "Renamed" } }
+
+    assert_not_equal "Renamed", read_only_entry.reload.name
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "setting the same tags again runs no immediate rules" do
+    create_immediate_rule
+    @entry.transaction.update!(tag_ids: [ tags(:one).id ])
+
+    patch tags_transaction_url(@entry, format: :json), params: { tag_ids: [ tags(:one).id ] }
+
+    assert_response :success
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
+  test "toggling a tag runs immediate rules" do
+    create_immediate_rule
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream
+
+    assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @entry.entryable_id ] } ])
+  end
+
   test "does not offer guests to create a rule through a transaction update" do
     category = categories(:income)
     @entry.update!(name: "AMZN Mktp UK")

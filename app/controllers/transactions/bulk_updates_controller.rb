@@ -16,22 +16,25 @@ class Transactions::BulkUpdatesController < ApplicationController
     full_ids = rows.select(&:last).map(&:first).uniq
     annotate_ids = rows.map(&:first).uniq - full_ids
 
+    changed_ids = []
+    collect_changed = ->(entry) { changed_ids << entry.entryable_id }
+
     updated = Entry.transaction do
-      bulk_update_entries(full_ids, scoped_params) +
-        bulk_update_entries(annotate_ids, scoped_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES))
+      bulk_update_entries(full_ids, scoped_params, &collect_changed) +
+        bulk_update_entries(annotate_ids, scoped_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES), &collect_changed)
     end
 
-    Rule.apply_immediately_later(Current.family, selected.where(entryable_type: "Transaction").pluck(:entryable_id)) if updated.positive?
+    Rule.apply_immediately_later(Current.family, changed_ids)
 
     redirect_back_or_to transactions_path, notice: "#{updated} transactions updated"
   end
 
   private
-    def bulk_update_entries(entry_ids, attributes)
+    def bulk_update_entries(entry_ids, attributes, &on_change)
       return 0 if entry_ids.empty?
 
       Current.family.entries.where(id: entry_ids).includes(:entryable)
-             .bulk_update!(attributes, update_tags: attributes.key?(:tag_ids))
+             .bulk_update!(attributes, update_tags: attributes.key?(:tag_ids), &on_change)
     end
 
     def bulk_update_params

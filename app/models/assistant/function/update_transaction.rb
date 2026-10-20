@@ -73,6 +73,8 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
 
     return error("no_changes", "Provide at least one field to update.") if no_changes?(entry_attrs, params)
 
+    rule_input = entry.rule_input_snapshot
+
     Entry.transaction do
       entry.update!(entry_attrs)
 
@@ -86,7 +88,7 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
       entry.lock_saved_attributes!
     end
 
-    entry.apply_immediate_rules_later
+    entry.apply_immediate_rules_later(changed_from: rule_input)
 
     {
       success: true,

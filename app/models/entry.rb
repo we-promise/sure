@@ -302,10 +302,31 @@ class Entry < ApplicationRecord
     entryable.lock_saved_attributes!
   end
 
+  # Columns that record how an entry was edited rather than what it holds.
+  RULE_INPUT_IGNORED_COLUMNS = %w[updated_at locked_attributes user_modified].freeze
+
+  # What rules can read from this transaction. Taken before an edit and passed
+  # to apply_immediate_rules_later, so an edit that changed nothing (same
+  # values, or only fields the person may not change) runs no rules. Tags are
+  # read from the database, since toggle_tag! bypasses the loaded association.
+  def rule_input_snapshot
+    return unless transaction?
+
+    [
+      attributes.except(*RULE_INPUT_IGNORED_COLUMNS),
+      entryable.attributes.except(*RULE_INPUT_IGNORED_COLUMNS),
+      Tagging.where(taggable: entryable).pluck(:tag_id).sort
+    ]
+  end
+
   # Rules set to "apply immediately" run for this transaction after a person
-  # created or changed it.
-  def apply_immediate_rules_later
-    Rule.apply_immediately_later(account.family, entryable_id) if transaction?
+  # created or changed it. With changed_from (a rule_input_snapshot from before
+  # the edit) they only run when the edit changed something.
+  def apply_immediate_rules_later(changed_from: nil)
+    return unless transaction?
+    return if changed_from && changed_from == rule_input_snapshot
+
+    Rule.apply_immediately_later(account.family, entryable_id)
   end
 
   # Enqueues an account sync whose window starts at the earliest date this
@@ -550,6 +571,9 @@ class Entry < ApplicationRecord
     # To avoid accidentally clearing tags when only updating other fields,
     # tags are only modified when explicitly requested via update_tags: true.
     #
+    # With a block, yields each transaction entry whose values actually changed
+    # (see Entry#rule_input_snapshot), e.g. to run immediate rules on them.
+    #
     # @param bulk_update_params [Hash] The parameters to update
     # @param update_tags [Boolean] Whether to update tags (default: false)
     def bulk_update!(bulk_update_params, update_tags: false)
@@ -571,6 +595,7 @@ class Entry < ApplicationRecord
       transaction do
         all.each do |entry|
           changed = false
+          before = entry.rule_input_snapshot if block_given?
 
           # Update standard attributes
           if bulk_attributes.present?
@@ -598,6 +623,7 @@ class Entry < ApplicationRecord
           if changed
             entry.lock_saved_attributes!
             entry.mark_user_modified!
+            yield entry if block_given? && before != entry.rule_input_snapshot
           end
         end
       end

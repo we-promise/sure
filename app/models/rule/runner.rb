@@ -74,11 +74,7 @@ class Rule::Runner
     end
 
     def unstopped_scope(rule)
-      scope = rule.matching_scope
-      # One array parameter, like Rule.excluding_transaction_ids, so a large
-      # bulk edit stays below PostgreSQL's bind limit.
-      scope = scope.where("transactions.id = ANY(?::uuid[])", PG::TextEncoder::Array.new.encode(transaction_ids)) if transaction_ids
-      Rule.excluding_transaction_ids(scope, stopped_ids)
+      Rule.excluding_transaction_ids(rule.matching_scope(within_ids: transaction_ids), stopped_ids)
     end
 
     def record_claims(rule, matched_ids)

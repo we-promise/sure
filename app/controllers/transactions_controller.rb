@@ -186,6 +186,8 @@ class TransactionsController < ApplicationController
   end
 
   def update
+    rule_input = @entry.rule_input_snapshot
+
     if @entry.update(permitted_entry_params)
       sync_needed = @entry.saved_changes_affect_balances?
       transaction = @entry.transaction
@@ -203,7 +205,7 @@ class TransactionsController < ApplicationController
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
       @entry.sync_account_later if sync_needed
-      @entry.apply_immediate_rules_later
+      @entry.apply_immediate_rules_later(changed_from: rule_input)
 
       notes_changed = @entry.saved_change_to_notes?
 
@@ -255,6 +257,8 @@ class TransactionsController < ApplicationController
   def update_tags
     return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
 
+    rule_input = @entry.rule_input_snapshot
+
     # The transaction-row tag picker toggles one tag at a time; the drawer's
     # multiselect sends the full set.
     if params[:toggle_tag_id].present?
@@ -267,7 +271,7 @@ class TransactionsController < ApplicationController
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
     @entry.transaction.lock_attr!(:tag_ids)
-    @entry.apply_immediate_rules_later
+    @entry.apply_immediate_rules_later(changed_from: rule_input)
 
     respond_to do |format|
       # JSON stays first so Accept: */* callers keep the original response.

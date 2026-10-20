@@ -95,6 +95,22 @@ class RuleRunTest < ActiveSupport::TestCase
     assert_equal 1, rule_run.transactions_modified
   end
 
+  test "an immediate run offers its result once its last job changed something" do
+    rule_run = create_rule_run(pending_jobs_count: 2)
+    rule_run.update!(execution_type: "immediate")
+
+    RuleRun.expects(:offer_immediate_result).with(@rule.family).once
+    rule_run.complete_job!(modified_count: 1)
+    rule_run.complete_job!(modified_count: 0)
+  end
+
+  test "other runs offer nothing when their jobs finish" do
+    rule_run = create_rule_run
+
+    RuleRun.expects(:offer_immediate_result).never
+    rule_run.complete_job!(modified_count: 1)
+  end
+
   private
     def create_rule_run(status: "pending", pending_jobs_count: 1)
       @rule.rule_runs.create!(

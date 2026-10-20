@@ -285,9 +285,14 @@ class Rule < ApplicationRecord
   # `only_id` narrows the match to one resource inside the query itself, so a
   # check on a single transaction runs any pattern on that row alone rather
   # than on the whole family.
-  def matching_scope(only_id: nil)
+  # within_ids limits the scope to those transactions before any pattern is
+  # resolved, so an immediate run doesn't scan the whole family. One array
+  # parameter, like Rule.excluding_transaction_ids, so a large bulk edit stays
+  # below PostgreSQL's bind limit.
+  def matching_scope(only_id: nil, within_ids: nil)
     scope = registry.resource_scope
     scope = scope.where(id: only_id) if only_id
+    scope = scope.where("transactions.id = ANY(?::uuid[])", PG::TextEncoder::Array.new.encode(within_ids)) if within_ids
 
     # 1. Prepare the query with joins required by conditions
     conditions.each do |condition|

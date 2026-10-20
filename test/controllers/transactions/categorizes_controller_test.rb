@@ -299,6 +299,25 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ entry1.entryable_id, entry2.entryable_id ].sort, immediate_job_transaction_ids.sort
   end
 
+  test "create runs immediate rules only on transactions whose category changed" do
+    create_immediate_rule
+    changed = create_transaction(account: @account, name: "Starbucks")
+    unchanged = create_transaction(account: @account, name: "Starbucks", category: @category)
+
+    post transactions_categorize_url,
+      params: {
+        position: 0,
+        grouping_key: "Starbucks",
+        entry_ids: [ changed.id, unchanged.id ],
+        all_entry_ids: [ changed.id, unchanged.id ],
+        category_id: @category.id
+      },
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_equal [ changed.entryable_id ], immediate_job_transaction_ids
+  end
+
   test "assign_entry runs rules set to apply immediately on the categorized transaction" do
     create_immediate_rule
     entry = create_transaction(account: @account, name: "Starbucks")

@@ -31,6 +31,18 @@ class RuleRun < ApplicationRecord
     [ transactions_processed - transactions_modified, 0 ].max
   end
 
+  # Offers the result of an immediate run through the sync toast, like
+  # Family::SyncCompleteEvent. A full-page refresh would wipe forms that are
+  # still open, such as the drawer the person just edited in; the toast waits
+  # until they are done.
+  def self.offer_immediate_result(family)
+    family.broadcast_replace_to(
+      family,
+      target: "sync-toast",
+      partial: "shared/notifications/sync_toast"
+    )
+  end
+
   # Thread-safe method to complete a job and update the run
   def complete_job!(modified_count: 0)
     with_lock do
@@ -42,6 +54,9 @@ class RuleRun < ApplicationRecord
 
       save!
     end
+
+    # An immediate run with AI actions finishes here, after its job finished.
+    self.class.offer_immediate_result(rule.family) if execution_type == "immediate" && pending_jobs_count.zero? && transactions_modified.positive?
   end
 
   def fail_job!(error:, source:, transaction_ids: [])
