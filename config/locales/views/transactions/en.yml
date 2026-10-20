@@ -167,7 +167,7 @@ en:
       split_label: "Split"
     transfer_match:
       auto_matched: Auto-matched
-      auto_matched_short: A/M
+      auto_matched_short: Auto
       confirm_match: Confirm match
       payment_confirmed: Payment is confirmed
       reject_match: Reject match
