@@ -542,6 +542,12 @@ class Entry < ApplicationRecord
 
     # Bulk update entries with the given parameters.
     #
+    # No authorization happens here: callers must scope the relation to entries
+    # the user may change (e.g. Current.annotatable_entries, Account.writable_by)
+    # and pass only the fields that permission allows
+    # (AccountShare::ANNOTATE_* for annotate-only shares), and must resolve
+    # category, merchant and tag IDs through the family.
+    #
     # Tags are handled separately from other entryable attributes because they use
     # a join table (taggings) rather than a direct column. This means:
     # - category_id: nil means "no category" (column value)
