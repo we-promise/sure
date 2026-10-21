@@ -3,6 +3,11 @@ require "posthog"
 Rails.configuration.x.posthog = ActiveSupport::OrderedOptions.new
 # Explicit opt-in for local analytics testing; production remains enabled.
 Rails.configuration.x.posthog.development_enabled = ActiveModel::Type::Boolean.new.cast(ENV.fetch("POSTHOG_DEVELOPMENT_ENABLED", "false"))
+# One environment gate for browser analytics, feedback, and configuration health.
+def (Rails.configuration.x.posthog).browser_enabled?
+  Rails.env.production? || (Rails.env.development? && development_enabled)
+end
+
 Rails.configuration.x.posthog.api_key = ENV["POSTHOG_KEY"].presence
 Rails.configuration.x.posthog.host = ENV.fetch("POSTHOG_HOST", "https://us.i.posthog.com")
 Rails.configuration.x.posthog.feedback_enabled = ActiveModel::Type::Boolean.new.cast(ENV.fetch("POSTHOG_FEEDBACK_ENABLED", "true"))
@@ -34,7 +39,7 @@ end
 # Daily UI usage shares the bundled feedback destination, independently of any
 # installation-owned analytics project. Capture also checks these gates.
 feedback_config = Rails.configuration.x.posthog
-if feedback_config.feedback_enabled && (Rails.env.production? || (Rails.env.development? && feedback_config.development_enabled))
+if feedback_config.feedback_enabled && feedback_config.browser_enabled?
   $posthog_feedback = PostHog::Client.new(
     feedback_config.self_hosted_feedback_project.merge(
       on_error: Proc.new { |status, _msg| Rails.logger.debug("PostHog feedback capture failed (status #{status})") }
