@@ -516,20 +516,31 @@ class Family < ApplicationRecord
   #
   # Returns [queued_ids, unqueued_ids]. perform_later can return false when
   # the adapter refuses a job, so a batch only counts as queued when it was
-  # actually enqueued; after the first refused batch the rest are left unqueued.
+  # actually enqueued (an adapter error counts as refused); after the first refused batch the rest are left unqueued.
   def queue_auto_categorization(transactions)
     batch_size = Provider::LlmConcept.max_items_per_call
     ids = transactions.order(:id).pluck(:id)
     queued = []
 
     ids.each_slice(batch_size) do |batch_ids|
-      break unless AutoCategorizeJob.perform_later(self, transaction_ids: batch_ids)
+      break unless enqueue_auto_categorization_batch(batch_ids)
 
       queued.concat(batch_ids)
     end
 
     [ queued, ids - queued ]
   end
+
+  # True when the batch was enqueued. A refused job (false) and an adapter
+  # error (e.g. Redis down) both count as not queued, so the endpoint can
+  # report exactly which ids still need a retry instead of failing with a 500.
+  def enqueue_auto_categorization_batch(batch_ids)
+    AutoCategorizeJob.perform_later(self, transaction_ids: batch_ids).present?
+  rescue => error
+    Rails.logger.error("Auto-categorization enqueue failed for family #{id}: #{error.class}: #{error.message}")
+    false
+  end
+  private :enqueue_auto_categorization_batch
 
   # The LLM only: Bayes is its own rule (Category classifier), so what it
   # categorized is no longer uncategorized here.
