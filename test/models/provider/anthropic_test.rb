@@ -30,6 +30,7 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
       claude-sonnet-4-6 claude-haiku-4-5 claude-haiku-5-5 claude-opus-4-8 claude-3-7-sonnet-20250219
       claude-sonnet-4-20250514 anthropic.claude-sonnet-4-5-20250929-v1:0 claude-sonnet-4-5@20250929
       anthropic/claude-sonnet-4.5 anthropic/claude-haiku-5.5
+      anthropic/claude-sonnet-4.5 anthropic/claude-haiku-5.5
     ].each do |model|
       assert_equal(
         { type: "tool", name: "report", disable_parallel_tool_use: true },
