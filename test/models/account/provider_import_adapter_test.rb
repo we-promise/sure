@@ -110,6 +110,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
     transfer = loan_entry.transaction.reload.transfer
     assert transfer.present?, "expected the two legs to be auto-matched"
+    transfer.confirm!
     assert_equal "funds_movement", loan_entry.transaction.kind
     assert_equal "loan_payment", checking_entry.transaction.reload.kind
 
@@ -127,6 +128,60 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
     assert_equal "funds_movement", loan_entry.transaction.reload.kind
     assert_equal "loan_payment", checking_entry.transaction.reload.kind
+  end
+
+  test "re-importing a contribution the user turned into a plain transfer keeps that choice" do
+    checking_entry = @adapter.import_transaction(
+      external_id: "plaid_checking_to_broker",
+      amount: 300.00,
+      currency: "USD",
+      date: Date.current,
+      name: "To broker",
+      source: "plaid"
+    )
+    broker_entry = accounts(:investment).entries.create!(
+      name: "From checking", date: Date.current, amount: -300, currency: "USD", entryable: Transaction.new
+    )
+    transfer = Transfer.create!(inflow_transaction: broker_entry.transaction, outflow_transaction: checking_entry.transaction)
+    transfer.confirm!
+    transfer.update_investment_contribution!(false)
+
+    # A provider kind hint makes the adapter re-derive the leg from its transfer.
+    @adapter.import_transaction(
+      external_id: "plaid_checking_to_broker",
+      amount: 300.00,
+      currency: "USD",
+      date: Date.current,
+      name: "To broker",
+      source: "plaid",
+      kind: "standard"
+    )
+
+    assert_equal "funds_movement", checking_entry.transaction.reload.kind
+  end
+
+  test "re-importing an unconfirmed auto-matched leg does not give it a transfer kind" do
+    loan_entry = Account::ProviderImportAdapter.new(accounts(:loan)).import_transaction(
+      external_id: "plaid_loan_inflow_pending", amount: -200.00, currency: "USD",
+      date: Date.current, name: "Loan Repayment Received", source: "plaid"
+    )
+    checking_entry = @adapter.import_transaction(
+      external_id: "plaid_checking_outflow_pending", amount: 200.00, currency: "USD",
+      date: Date.current, name: "Loan Repayment", source: "plaid"
+    )
+
+    @family.auto_match_transfers!
+    transfer = checking_entry.transaction.reload.transfer
+    assert transfer.present?, "expected the two legs to be auto-matched"
+    assert transfer.pending?
+
+    @adapter.import_transaction(
+      external_id: "plaid_checking_outflow_pending", amount: 200.00, currency: "USD",
+      date: Date.current, name: "Loan Repayment", source: "plaid", kind: "funds_movement"
+    )
+
+    assert_equal "funds_movement", checking_entry.transaction.reload.kind
+    assert_not_equal "loan_payment", checking_entry.transaction.kind
   end
 
   test "a provider transfer hint does not overwrite the kind of a matched payment leg" do
@@ -148,8 +203,10 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     )
 
     @family.auto_match_transfers!
-    assert checking_entry.transaction.reload.transfer.present?, "expected the two legs to be auto-matched"
-    assert_equal "loan_payment", checking_entry.transaction.kind
+    transfer = checking_entry.transaction.reload.transfer
+    assert transfer.present?, "expected the two legs to be auto-matched"
+    transfer.confirm!
+    assert_equal "loan_payment", checking_entry.transaction.reload.kind
 
     # Up flags the outgoing leg as an internal transfer (transferAccount).
     @adapter.import_transaction(
@@ -185,6 +242,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     )
     @family.auto_match_transfers!
     assert loan_entry.transaction.reload.transfer.present?, "expected the two legs to be auto-matched"
+    loan_entry.transaction.transfer.confirm!
 
     # State left behind by syncs before the fix: the matched inflow was
     # turned back into loan_payment.
@@ -273,6 +331,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       )
     end
     @family.auto_match_transfers!
+    Transfer.pending.find_each(&:confirm!)
 
     # Up flags the outgoing legs as internal transfers, so the kind is derived
     # from each leg's transfer; without the hint the adapter derives nothing.
@@ -702,6 +761,153 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     )
 
     assert_equal account_provider.id, holding.account_provider_id
+  end
+
+  test "carries a remapped security forward to the next day's holding" do
+    account, adapter, account_provider = provider_holding_setup
+    reported = Security.create!(ticker: "RPTD", name: "Reported Fund")
+    chosen = Security.create!(ticker: "CHSN", name: "Chosen Fund")
+    first_day = 20.days.ago.to_date
+
+    import_daily_holding(adapter, account_provider, reported, first_day).remap_security!(chosen)
+    next_day = import_daily_holding(adapter, account_provider, reported, first_day + 1)
+
+    assert_equal chosen.id, next_day.security_id
+    assert_equal reported.id, next_day.provider_security_id
+    assert next_day.security_locked?
+    assert_equal 2, account.holdings.where(security: chosen).count
+  end
+
+  test "carries a locked cost basis forward to the next day's holding" do
+    _account, adapter, account_provider = provider_holding_setup
+    security = Security.create!(ticker: "LCKD", name: "Locked Basis Fund")
+    first_day = 20.days.ago.to_date
+
+    import_daily_holding(adapter, account_provider, security, first_day).set_manual_cost_basis!(42)
+    next_day = import_daily_holding(adapter, account_provider, security, first_day + 1, cost_basis: 10)
+
+    assert_equal 42, next_day.cost_basis
+    assert_equal "manual", next_day.cost_basis_source
+    assert next_day.cost_basis_locked?
+  end
+
+  test "does not revive a correction the user has since undone" do
+    _account, adapter, account_provider = provider_holding_setup
+    security = Security.create!(ticker: "UNDO", name: "Unlocked Basis Fund")
+    first_day = 20.days.ago.to_date
+
+    import_daily_holding(adapter, account_provider, security, first_day).set_manual_cost_basis!(42)
+    import_daily_holding(adapter, account_provider, security, first_day + 1).unlock_cost_basis!
+    third_day = import_daily_holding(adapter, account_provider, security, first_day + 2, cost_basis: 10)
+
+    assert_equal 10, third_day.cost_basis
+    assert_equal "provider", third_day.cost_basis_source
+    assert_not third_day.cost_basis_locked?
+  end
+
+  test "a second same-day import of a remapped position's provider row updates today's row" do
+    account, adapter, account_provider = provider_holding_setup
+    original = Security.create!(ticker: "DUPE", name: "Provider Row")
+    chosen = Security.create!(ticker: "DUPE", name: "Chosen Row", exchange_operating_mic: "XNYS")
+    yesterday = Date.current - 1
+
+    import_holding_without_external_id(adapter, account_provider, original, yesterday).remap_security!(chosen)
+    import_holding_without_external_id(adapter, account_provider, original, Date.current)
+
+    assert_nothing_raised do
+      import_holding_without_external_id(adapter, account_provider, original, Date.current, quantity: 12)
+    end
+
+    today = account.holdings.where(security: [ original, chosen ], date: Date.current, currency: "USD")
+    assert_equal [ chosen.id ], today.pluck(:security_id)
+    assert_equal 12, today.first.qty
+  end
+
+  test "a remapped position's chosen row carries the lock and the original provider row forward" do
+    account, adapter, account_provider = provider_holding_setup
+    original = Security.create!(ticker: "PICK", name: "Provider Row")
+    chosen = Security.create!(ticker: "PICK", name: "Chosen Row", exchange_operating_mic: "XNYS")
+    yesterday = Date.current - 1
+
+    earlier = import_holding_without_external_id(adapter, account_provider, original, yesterday)
+    earlier.remap_security!(chosen)
+    earlier.set_manual_cost_basis!(42)
+
+    today = import_holding_without_external_id(adapter, account_provider, chosen, Date.current, cost_basis: 10)
+
+    assert_equal chosen.id, today.security_id
+    assert today.security_locked?
+    assert_equal original.id, today.provider_security_id
+    assert_equal 42, today.cost_basis
+    assert today.cost_basis_locked?
+    assert_equal 1, account.holdings.where(security: [ original, chosen ], date: Date.current).count
+  end
+
+  # Chained remaps: the user moved the provider's A onto B, and the provider's B
+  # onto C. An incoming B matches yesterday's B->C row by provider security and
+  # the A->B row as a correction locked to B, both on the same date. The
+  # provider-security match is the position B came from, so it wins. The A->B
+  # row is created first and has the lower id, so neither insertion order nor
+  # an id tiebreak alone would return the right one.
+  test "a chained remap carries forward the row the provider security came from" do
+    account, adapter, account_provider = provider_holding_setup
+    first = Security.create!(ticker: "CHNA", name: "Provider A")
+    middle = Security.create!(ticker: "CHNB", name: "Provider B, chosen for A")
+    last = Security.create!(ticker: "CHNC", name: "Chosen for B")
+    yesterday = Date.current - 1
+    account.holdings.create!(
+      id: "00000000-0000-4000-8000-000000000001", security: middle, provider_security: first, security_locked: true, account_provider: account_provider,
+      date: yesterday, currency: "USD", qty: 1, price: 10, amount: 10, cost_basis: 11, cost_basis_locked: true
+    )
+    account.holdings.create!(
+      id: "ffffffff-ffff-4fff-bfff-ffffffffffff", security: last, provider_security: middle, security_locked: true, account_provider: account_provider,
+      date: yesterday, currency: "USD", qty: 2, price: 10, amount: 20, cost_basis: 22, cost_basis_locked: true
+    )
+
+    today = import_holding_without_external_id(adapter, account_provider, middle, Date.current)
+
+    assert_equal last.id, today.security_id
+    assert_equal middle.id, today.provider_security_id
+    assert_equal 22, today.cost_basis
+  end
+
+  test "another provider's same-day row with that provider security is not claimed" do
+    account, adapter, account_provider = provider_holding_setup
+    other_provider = AccountProvider.create!(account: account, provider: snaptrade_accounts(:vanguard_ira))
+    original = Security.create!(ticker: "MINE", name: "Provider Row")
+    chosen = Security.create!(ticker: "MINE", name: "Chosen Row", exchange_operating_mic: "XNYS")
+    others = account.holdings.create!(
+      security: chosen, provider_security: original, security_locked: true, account_provider: other_provider,
+      date: Date.current, currency: "USD", qty: 5, price: 100, amount: 500
+    )
+
+    ours = import_holding_without_external_id(adapter, account_provider, original, Date.current)
+
+    assert_not_equal others.id, ours.id
+    assert_equal original.id, ours.security_id
+    assert_equal account_provider.id, ours.account_provider_id
+    others.reload
+    assert_equal 5, others.qty
+    assert_equal other_provider.id, others.account_provider_id
+  end
+
+  test "an unlocked earlier row on the chosen security is not treated as a correction" do
+    account, adapter, account_provider = provider_holding_setup
+    original = Security.create!(ticker: "OPEN", name: "Provider Row")
+    chosen = Security.create!(ticker: "OPEN", name: "Chosen Row", exchange_operating_mic: "XNYS")
+    account.holdings.create!(
+      security: chosen, provider_security: original, security_locked: false, account_provider: account_provider,
+      date: Date.current - 1, currency: "USD", qty: 10, price: 100, amount: 1000,
+      cost_basis: 42, cost_basis_source: "manual", cost_basis_locked: true
+    )
+
+    today = import_holding_without_external_id(adapter, account_provider, chosen, Date.current, cost_basis: 10)
+
+    assert_not today.security_locked?
+    assert_equal chosen.id, today.provider_security_id
+    assert_equal 10, today.cost_basis
+    assert_equal "provider", today.cost_basis_source
+    assert_not today.cost_basis_locked?
   end
 
   test "does not delete future holdings when can_delete_holdings? returns false" do
@@ -2240,5 +2446,44 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       end
 
       queries
+    end
+
+    def provider_holding_setup
+      account = accounts(:investment)
+      account_provider = AccountProvider.create!(account: account, provider: plaid_accounts(:one))
+      [ account, Account::ProviderImportAdapter.new(account), account_provider ]
+    end
+
+    # One provider snapshot per day, identified the way the daily-snapshot
+    # processors do it: the provider's id suffixed with the date.
+    def import_daily_holding(adapter, account_provider, security, date, cost_basis: nil)
+      adapter.import_holding(
+        security: security,
+        quantity: 10,
+        amount: 1000,
+        currency: "USD",
+        date: date,
+        price: 100,
+        cost_basis: cost_basis,
+        external_id: "provider_lot_#{date}",
+        source: "plaid",
+        account_provider_id: account_provider.id
+      )
+    end
+
+    # A provider that sends no external_id (Plaid, Indexa Capital, SnapTrade
+    # securities): the row is keyed by security, date and currency.
+    def import_holding_without_external_id(adapter, account_provider, security, date, quantity: 10, cost_basis: nil)
+      adapter.import_holding(
+        security: security,
+        quantity: quantity,
+        amount: quantity * 100,
+        currency: "USD",
+        date: date,
+        price: 100,
+        cost_basis: cost_basis,
+        source: "plaid",
+        account_provider_id: account_provider.id
+      )
     end
 end

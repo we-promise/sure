@@ -67,8 +67,11 @@ export default class extends Controller {
 
     event.preventDefault();
     const precision = this.#pastePrecision();
+    // Unrounded, but never in exponent notation (0.000000123, not 1.23e-7).
     this.amountTarget.value =
-      precision === null ? String(parsed) : parsed.toFixed(precision);
+      precision === null
+        ? parsed.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 20 })
+        : parsed.toFixed(precision);
 
     // auto_submit_form listens for "change" on number inputs while validation
     // and the goal form's suggestion listen for "input", and assigning .value
@@ -94,10 +97,13 @@ export default class extends Controller {
   // currency selection without a second lookup. BTC's step arrives as
   // "1.0e-08", so the decimal count is derived numerically rather than by
   // counting characters. Returns null when the step declares no precision —
-  // step="any", which the trade amount, price and fee fields use — so the
-  // pasted value is written unrounded instead of being truncated to a default
-  // that would drop a sub-cent crypto price to "0.00".
+  // step="any", which the trade amount, price and fee fields and the cost basis
+  // editor use — so the pasted value is written unrounded instead of being
+  // truncated to a default or display precision that would drop a sub-cent
+  // price to "0.00". step="any" wins over the precision value for that reason.
   #pastePrecision() {
+    if (this.amountTarget.step === "any") return null;
+
     if (this.hasPrecisionValue && Number.isInteger(this.precisionValue)) {
       return this.precisionValue;
     }

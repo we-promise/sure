@@ -98,6 +98,18 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "index sections keep data-section-key next to the sortable id" do
+    get reports_path
+    assert_response :ok
+
+    assert_select "section[data-sortable-list-id]" do |sections|
+      assert sections.any?
+      sections.each do |section|
+        assert_equal section["data-sortable-list-id"], section["data-section-key"]
+      end
+    end
+  end
+
   # The desktop app clones these into the tray when a download such as the CSV
   # export ends, since it has no download list of its own, and reads their data
   # attributes for its native notification.
@@ -747,6 +759,15 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     # as one both inflates the number of sales and books a gain nobody made.
     assert_match I18n.t("reports.investment_performance.sells_count", count: 1), response.body
     assert_no_match(/#{Regexp.escape(I18n.t("reports.investment_performance.sells_count", count: 2))}/, response.body)
+  end
+
+  # POSTing to settings_api_keys_path is create, which needs api_key params.
+  test "google sheets instructions link to the API keys page" do
+    get google_sheets_instructions_reports_url
+
+    assert_response :success
+    assert_select "a[href=?][data-turbo-frame=_top]", settings_api_keys_path, text: I18n.t("reports.google_sheets_instructions.go_to_api_keys")
+    assert_select "form[action=?]", settings_api_keys_path, count: 0
   end
 
   private

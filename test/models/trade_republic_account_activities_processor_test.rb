@@ -382,59 +382,45 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-500"), Entry.find_by!(external_id: "trade_republic_event_evt_credit_card_cash_in").amount
   end
 
-  test "stamp duty is imported as a charge and its cancellation as a refund" do
+  test "a stamp duty cancellation books nothing" do
+    # Trade Republic turns the charge's timeline item into its cancellation.
+    # The statement books the charge and the refund, which cancel out.
     @tr_account.update!(raw_timeline_payload: [
-      {
-        id: "evt_stamp_duty",
-        timestamp: "2026-02-18T14:34:02Z",
-        eventType: "STAMP_DUTY_TAX_PAID",
-        title: "Stamp duty (Portfolio)",
-        status: "EXECUTED",
-        detail: { amount: -22.24, signed_amount: -22.24, currency: "EUR" }
-      },
-      {
-        id: "evt_stamp_duty_cancel",
-        timestamp: "2026-02-18T09:37:01Z",
-        eventType: "STAMP_DUTY_TAX_PAID",
-        title: "Stamp duty (Portfolio)",
-        subtitle: "Cancellation of stamp duty",
-        status: "EXECUTED",
-        detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
-      }
+      stamp_duty_event(id: "evt_stamp_duty_cancel", timestamp: "2026-02-18T09:37:01Z", amount: -15.40, cancellation: true),
+      stamp_duty_event(id: "evt_stamp_duty_new", timestamp: "2026-02-18T14:34:02Z", amount: -16.10)
     ])
     TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
 
-    assert_equal BigDecimal("22.24"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty").amount
-    assert_equal BigDecimal("-20.99"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel").amount
+    assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty_cancel")
+    assert_equal BigDecimal("16.10"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_new").amount
   end
 
-  test "stamp duty cancellation without a status is still imported as a refund" do
-    import_event({
-      id: "evt_stamp_duty_cancel_no_status",
-      timestamp: "2026-02-18T09:37:01Z",
-      eventType: "STAMP_DUTY_TAX_PAID",
-      title: "Stamp duty (Portfolio)",
-      subtitle: "Cancellation of stamp duty",
-      detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
-    })
+  test "a stamp duty cancellation does not refund an earlier charge of the same amount" do
+    # Recurring stamp duty often repeats its amount, so an earlier charge that
+    # matches is not evidence of the one the cancellation replaced.
+    @tr_account.update!(raw_timeline_payload: [
+      stamp_duty_event(id: "evt_stamp_duty", timestamp: "2025-10-07T06:16:00Z", amount: -15.40),
+      stamp_duty_event(id: "evt_stamp_duty_cancel", timestamp: "2026-02-18T09:37:01Z", amount: -15.40, cancellation: true, status: nil)
+    ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
 
-    assert_equal BigDecimal("-20.99"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_cancel_no_status").amount
+    assert_equal BigDecimal("15.40"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty").amount
+    assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty_cancel")
   end
 
-  test "a stamp duty refund on a portfolio account is not booked as a contribution" do
-    import_event({
-      id: "evt_stamp_duty_refund",
-      timestamp: "2026-02-18T09:37:01Z",
-      eventType: "STAMP_DUTY_TAX_PAID",
-      title: "Stamp duty (Portfolio)",
-      subtitle: "Cancellation of stamp duty",
-      status: "EXECUTED",
-      detail: { amount: -20.99, signed_amount: -20.99, currency: "EUR" }
-    })
+  test "removes a refund an earlier sync booked for a stamp duty cancellation" do
+    Account::ProviderImportAdapter.new(@account).import_transaction(
+      external_id: "trade_republic_event_evt_stamp_duty_cancel",
+      amount: BigDecimal("-15.40"),
+      currency: "EUR",
+      date: Date.parse("2026-02-18"),
+      name: "Stamp duty (Portfolio)",
+      source: "trade_republic"
+    )
 
-    transaction = Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty_refund").transaction
-    assert_nil transaction.investment_activity_label
-    assert_equal "standard", transaction.kind
+    import_event(stamp_duty_event(id: "evt_stamp_duty_cancel", timestamp: "2026-02-18T09:37:01Z", amount: -15.40, cancellation: true))
+
+    assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty_cancel")
   end
 
   test "a voided stamp duty charge is not imported as a refund" do
@@ -448,6 +434,29 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     })
 
     assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty_voided")
+  end
+
+  test "removes a stamp duty charge whose item Trade Republic later voids" do
+    import_event(stamp_duty_event(id: "evt_stamp_duty", timestamp: "2026-01-12T10:58:47Z", amount: -15.40))
+    assert_equal BigDecimal("15.40"), Entry.find_by!(external_id: "trade_republic_event_evt_stamp_duty").amount
+
+    voided = stamp_duty_event(id: "evt_stamp_duty", timestamp: "2026-01-12T10:58:47Z", amount: -15.40, status: nil)
+    import_event(voided.merge(subtitle: "Cancelled"))
+
+    assert_nil Entry.find_by(external_id: "trade_republic_event_evt_stamp_duty")
+  end
+
+  test "keeps a card payment flagged only by its subtitle" do
+    import_event({
+      id: "evt_card", timestamp: "2026-01-12T10:58:47Z", eventType: "CARD_TRANSACTION",
+      title: "Cancelled Cafe", status: "EXECUTED", detail: { amount: -4.50, signed_amount: -4.50, currency: "EUR" }
+    })
+    import_event({
+      id: "evt_card", timestamp: "2026-01-12T10:58:47Z", eventType: "CARD_TRANSACTION",
+      title: "Cancelled Cafe", subtitle: "Cancelled", detail: { amount: -4.50, signed_amount: -4.50, currency: "EUR" }
+    })
+
+    assert Entry.exists?(external_id: "trade_republic_event_evt_card")
   end
 
   test "category direction wins over the provider signed amount" do
@@ -707,6 +716,51 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_stock_bonus")
     assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_stock_bonus")
+  end
+
+  test "Private Markets bonus units import as a portfolio trade without a cash leg" do
+    cash_account, cash_sure = create_linked_cash_account!
+    @tr_account.update!(raw_timeline_payload: [ private_markets_event(id: "evt_pm_buy", subtitle: "Buy Order", quantity: "20.0", amount: "2001.0"), private_markets_event ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    bonus = find_trade("trade_republic_event_evt_pm_bonus")
+    assert_equal BigDecimal("0.2"), bonus.entryable.qty
+    # The statement credits the bonus and buys the units with it; the
+    # value stays in the price for the cost basis.
+    assert_equal 0, bonus.amount
+    assert_in_delta BigDecimal("20.0"), bonus.entryable.qty * bonus.entryable.price, BigDecimal("0.01")
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_pm_bonus")
+    assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_pm_bonus")
+
+    # The order the bonus belongs to still settles against cash.
+    assert_equal BigDecimal("2001.0"), cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_pm_buy").amount
+    assert @account.entries.exists?(external_id: "trade_republic_settlement_evt_pm_buy")
+  end
+
+  test "removes the cash leg an earlier sync booked for Private Markets bonus units" do
+    cash_account, cash_sure = create_linked_cash_account!
+    # Earlier syncs settled the bonus like the order it belongs to.
+    @tr_account.update!(raw_timeline_payload: [ private_markets_event(subtitle: "Buy Order") ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    assert cash_sure.entries.exists?(external_id: "trade_republic_event_evt_pm_bonus")
+    assert @account.entries.exists?(external_id: "trade_republic_settlement_evt_pm_bonus")
+
+    @tr_account.update!(raw_timeline_payload: [ private_markets_event ])
+    # Until the portfolio pass rebooks the trade without cash (it runs first,
+    # but can fail), the cash leg stays so the portfolio's cash nets to zero.
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    assert cash_sure.entries.exists?(external_id: "trade_republic_event_evt_pm_bonus")
+    assert @account.entries.exists?(external_id: "trade_republic_settlement_evt_pm_bonus")
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_equal 0, find_trade("trade_republic_event_evt_pm_bonus").amount
+    assert_not cash_sure.entries.exists?(external_id: "trade_republic_event_evt_pm_bonus")
+    assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_pm_bonus")
   end
 
   test "round up imports as a portfolio trade and a cash outflow when split" do
@@ -1403,6 +1457,10 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     deposit = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_funded").transaction
     assert_equal bank_outflow.transaction, deposit.transfer&.outflow_transaction
+    assert_equal "standard", deposit.reload.kind
+
+    deposit.transfer.confirm!
+
     assert_equal "funds_movement", deposit.reload.kind
   end
 
@@ -1792,17 +1850,19 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "price backfill attempt marker stays out of the transaction provider detail" do
+  test "retry attempt markers stay out of the transaction provider detail" do
+    markers = Provider::TradeRepublicClient::RETRY_MARKER_KEYS
+    assert_includes markers, Provider::TradeRepublicClient::DETAIL_BACKFILL_ATTEMPTED_AT_KEY
     cash_account, cash_sure = create_linked_cash_account!
     cash_account.update!(raw_timeline_payload: [ deposit_event.deep_merge(
-      detail: { Provider::TradeRepublicClient::PRICE_BACKFILL_ATTEMPTED_AT_KEY => "2026-08-01T10:00:00Z" }
+      detail: markers.index_with { "2026-08-01T10:00:00Z" }
     ) ])
 
     TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
 
     entry = Entry.find_by!(account: cash_sure, external_id: "trade_republic_event_evt_dep")
     provider_detail = entry.entryable.extra.dig("trade_republic", "provider_detail")
-    assert_not provider_detail.key?(Provider::TradeRepublicClient::PRICE_BACKFILL_ATTEMPTED_AT_KEY)
+    assert_empty provider_detail.keys & markers
   end
 
   test "preserves protected entries when reconciling declined upstream events" do
@@ -1832,6 +1892,94 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     assert Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_card_protected")
     assert entry.reload.user_modified?
+  end
+
+  test "bond purchase books nominal and percent-of-par price on the bond's own security" do
+    @tr_account.update!(raw_positions_payload: [
+      {
+        "isin" => "IT0005377152",
+        "name" => "ITALIEN 19/40",
+        "category" => "interest_products",
+        "instrument_type" => "bond",
+        "quantity" => "2677.95",
+        "price" => "0.8404"
+      }
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    import_event({
+      id: "evt_bond",
+      timestamp: "2025-11-18T11:19:31Z",
+      category: "orderExecution",
+      title: "März 2040",
+      detail: {
+        isin: "IT0005377152",
+        name: "März 2040",
+        quantity: "2677.95",
+        price: "0.9267",
+        amount: "2498.31",
+        fees: "1.0",
+        currency: "EUR",
+        instrument_type: "bond"
+      }
+    })
+
+    entry = find_trade("trade_republic_event_evt_bond")
+    trade = entry.entryable
+    assert_equal "IT0005377152", trade.security.ticker
+    assert trade.security.offline?
+    assert_equal @account.holdings.first.security, trade.security
+    assert_equal BigDecimal("2677.95"), trade.qty
+    assert_equal BigDecimal("0.9267"), trade.price
+    assert_equal BigDecimal("1"), trade.fee
+    assert_equal BigDecimal("2498.31"), entry.amount
+    assert_equal "IT0005377152 · 2677.95x ITALIEN 19/40", entry.name
+  end
+
+  test "a sold bond's security takes the instrument name stamped on its trade" do
+    import_event({
+      id: "evt_sold_bond",
+      timestamp: "2025-11-18T11:19:31Z",
+      category: "orderExecution",
+      title: "März 2040",
+      detail: {
+        isin: "IT0005377152",
+        name: "März 2040",
+        instrument_name: "ITALIEN 19/40",
+        quantity: "-2677.95",
+        price: "0.95",
+        amount: "2544.05",
+        currency: "EUR",
+        instrument_type: "bond"
+      }
+    })
+
+    entry = find_trade("trade_republic_event_evt_sold_bond")
+    assert_equal "ITALIEN 19/40", entry.entryable.security.name
+    assert_equal "IT0005377152 · 2677.95x ITALIEN 19/40", entry.name
+  end
+
+  test "stored bond trades on the legacy BOND listing resolve by ISIN" do
+    Security.expects(:search_provider).never
+    import_event({
+      id: "evt_legacy_bond",
+      timestamp: "2025-11-18T11:19:31Z",
+      category: "orderExecution",
+      detail: {
+        isin: "IT0005377152",
+        name: "März 2040",
+        quantity: "2677.95",
+        price: "0.9267",
+        amount: "2498.31",
+        currency: "EUR",
+        symbol: "BOND",
+        exchange_slug: "LSX"
+      }
+    })
+
+    security = find_trade("trade_republic_event_evt_legacy_bond").entryable.security
+    assert_equal "IT0005377152", security.ticker
+    assert_nil security.exchange_operating_mic
   end
 
   private
@@ -1900,6 +2048,38 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     # Shaped like a stored stock bonus: no status, no amount on the timeline,
     # shares and value from the detail.
+    def private_markets_event(id: "evt_pm_bonus", subtitle: "1 % Bonus", quantity: "0.2", amount: "20.0")
+      {
+        id: id,
+        timestamp: "2025-09-15T13:36:00.000+0000",
+        eventType: "PRIVATE_MARKET_FUND_TRADE_EXECUTED",
+        category: "orderExecution",
+        title: "Private Equity",
+        subtitle: subtitle,
+        status: "EXECUTED",
+        detail: {
+          amount: amount,
+          signed_amount: "-#{amount}",
+          currency: "EUR",
+          quantity: quantity,
+          isin: "LU0000000001",
+          name: "Private Equity"
+        }
+      }
+    end
+
+    def stamp_duty_event(id:, timestamp:, amount:, cancellation: false, status: "EXECUTED", title: "Stamp duty (Portfolio)")
+      {
+        id: id,
+        timestamp: timestamp,
+        eventType: "STAMP_DUTY_TAX_PAID",
+        title: title,
+        subtitle: ("Cancellation of stamp duty" if cancellation),
+        status: status,
+        detail: { amount: amount, signed_amount: amount, currency: "EUR" }
+      }.compact
+    end
+
     def stock_bonus_event
       {
         id: "evt_stock_bonus",

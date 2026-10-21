@@ -191,9 +191,9 @@ module Provider::TradeRepublicTimelineEvent
       nil
     end
 
-    # Trade Republic reports a stamp duty refund as a STAMP_DUTY_TAX_PAID
-    # event whose subtitle says it is a cancellation. It is a real credit,
-    # not a cancelled event.
+    # Trade Republic turns a cancelled stamp duty charge into a
+    # STAMP_DUTY_TAX_PAID event whose subtitle says it is a cancellation. It is
+    # not a declined event: the activities processor books nothing for it.
     def stamp_duty_cancellation?(event)
       return false unless event.is_a?(Hash)
 
@@ -236,7 +236,7 @@ module Provider::TradeRepublicTimelineEvent
       # Only subtitle/badge — never title. Titles are often security or
       # merchant names and can contain substrings like "cancel" without
       # meaning the event itself failed. A stamp duty cancellation's
-      # subtitle names the refund, so only its badge counts.
+      # subtitle names the cancellation, so only its badge counts.
       def declined_subtitle?(event)
         values = [ event[:badge] ]
         values << event[:subtitle] unless stamp_duty_cancellation?(event)
