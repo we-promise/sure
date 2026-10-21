@@ -219,7 +219,8 @@ class Loan
           )
       end
 
-      # Every series the chart draws is named here, with its payoff date.
+      # Every series the chart draws is named here, with its payoff date, and
+      # the principal and interest split the tooltip adds.
       def aria_description(actual:)
         description = I18n.t(
           "UI.account.chart.loan.aria_description",
@@ -236,7 +237,13 @@ class Loan
           ) ].join(" ")
         end
 
-        description
+        # The tooltip's split of each scheduled payment is not drawn anywhere
+        # else, so the description says it is there.
+        [ description, I18n.t(
+          "UI.account.chart.loan.aria_composition",
+          principal: I18n.t("loans.tabs.schedule.principal"),
+          interest: I18n.t("loans.tabs.schedule.interest")
+        ) ].join(" ")
       end
 
       def long_date(date, fallback)

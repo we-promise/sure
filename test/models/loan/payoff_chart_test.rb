@@ -225,6 +225,18 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
     )
   end
 
+  # The tooltip on each scheduled payment splits it into principal and interest
+  # (#4006), so a screen reader is told the same detail exists.
+  test "the accessible description says each scheduled payment's tooltip splits principal and interest" do
+    payload = Loan::PayoffChart.new(on_contract_loan, as_of: @today).payload
+
+    composition = I18n.t("UI.account.chart.loan.aria_composition",
+                         principal: I18n.t("loans.tabs.schedule.principal"),
+                         interest: I18n.t("loans.tabs.schedule.interest"))
+    assert_match(/Principal.*Interest/, composition)
+    assert_includes payload[:aria_description], composition
+  end
+
   test "the accessible description dates recorded history when it starts after origination" do
     loan = on_contract_loan
     first_recorded_date = loan.origination_date >> 6
