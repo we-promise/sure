@@ -161,6 +161,21 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_not_includes account_ids, excluded_account.id
   end
 
+  test "group totals skip shared accounts not included in the member's finances" do
+    member = users(:new_email)
+    included_account = create_account(balance: 1000, accountable: Depository.new)
+    excluded_account = create_account(balance: 2000, accountable: Depository.new)
+    included_account.share_with!(member, include_in_finances: true)
+    excluded_account.share_with!(member, include_in_finances: false)
+
+    assets = BalanceSheet.new(@family, user: member).assets
+    depository_group = assets.account_groups.find { |ag| ag.name == Depository.display_name }
+
+    assert_includes depository_group.accounts.map(&:id), excluded_account.id
+    assert_equal 1000, depository_group.total
+    assert_equal assets.total, assets.account_groups.sum(&:total)
+  end
+
   test "calculates asset group totals" do
     create_account(balance: 1000, accountable: Depository.new)
     create_account(balance: 2000, accountable: Depository.new)
