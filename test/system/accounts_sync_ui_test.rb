@@ -6,10 +6,16 @@ class AccountsSyncUiTest < ApplicationSystemTestCase
     # These tests control sync state explicitly; login must not start a new
     # sync when fixtures were loaded before midnight.
     @user.family.update!(auto_sync_on_login: false)
-    Sync.for_family(@user.family).incomplete.destroy_all
+    Sync.incomplete.for_family(@user.family).destroy_all
     # Exercise the previous-day fixture boundary without waiting for midnight.
     @user.family.syncs.update_all(created_at: 1.day.ago)
     sign_in @user
+    # Guard against background syncs enqueued during the login flow even when auto_sync_on_login is false
+    Sync.incomplete.for_family(@user.family).destroy_all
+  end
+
+  teardown do
+    Sync.incomplete.destroy_all
   end
 
   test "idle state shows a plain refresh trigger with no cancel control" do
