@@ -6,7 +6,7 @@ import { Controller } from "@hotwired/stimulus";
 // the ids are sent as JSON to urlValue, nested under paramValue
 // ("a.b" sends { a: { b: [...] } }).
 export default class extends Controller {
-  static targets = ["item", "handle"];
+  static targets = ["item"];
 
   // Hold delay to require deliberate press-and-hold before activating drag mode.
   // Lists whose whole item reacts to touch (not just a small grip) should raise
@@ -22,6 +22,13 @@ export default class extends Controller {
     // follows a move right away: other sortable lists with the same url and
     // param are reordered too.
     mirrorLists: { type: Boolean, default: false },
+    // Where a dragged item lands: "below" inserts it before the first item
+    // whose vertical centre is below the pointer (a single column),
+    // "nearest" next to the item whose centre is closest (a grid): before it
+    // on its upper half, after it on its lower half.
+    dropTarget: { type: String, default: "below" },
+    // Leave keys pressed on a control inside an item to that control.
+    ownKeysOnly: { type: Boolean, default: false },
   };
 
   connect() {
@@ -29,11 +36,16 @@ export default class extends Controller {
     this.placeholder = null;
     this.touchStartX = 0;
     this.touchStartY = 0;
+    this.currentTouchX = 0;
     this.currentTouchY = 0;
     this.isTouching = false;
     this.keyboardGrabbedElement = null;
     this.holdTimer = null;
     this.holdActivated = false;
+  }
+
+  disconnect() {
+    this.cancelHold();
   }
 
   // ===== Mouse Drag Events =====
@@ -65,10 +77,12 @@ export default class extends Controller {
   dragEnd(event) {
     event.currentTarget.classList.remove("opacity-50");
     event.currentTarget.setAttribute("aria-grabbed", "false");
-    this.draggedElement = null;
     this.clearPlaceholders();
+    this.draggedElement = null;
   }
 
+  // Only a drag that started on one of the items is a reorder; a file or
+  // text dragged in from outside is left to the browser.
   dragOver(event) {
     // A drag from another list on the page is not ours to drop.
     if (!this.draggedElement) return;
@@ -76,16 +90,7 @@ export default class extends Controller {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
 
-    const afterElement = this.getDragAfterElement(event.clientY);
-    const container = this.element;
-
-    this.clearPlaceholders();
-
-    if (afterElement == null) {
-      this.showPlaceholder(container.lastElementChild, "after");
-    } else {
-      this.showPlaceholder(afterElement, "before");
-    }
+    this.showDropPosition(event.clientX, event.clientY);
   }
 
   drop(event) {
@@ -94,15 +99,7 @@ export default class extends Controller {
     event.preventDefault();
     event.stopPropagation();
 
-    const afterElement = this.getDragAfterElement(event.clientY);
-    const container = this.element;
-
-    if (afterElement == null) {
-      container.appendChild(this.draggedElement);
-    } else {
-      container.insertBefore(this.draggedElement, afterElement);
-    }
-
+    this.moveDraggedTo(event.clientX, event.clientY);
     this.clearPlaceholders();
     this.saveOrder();
   }
@@ -118,9 +115,14 @@ export default class extends Controller {
     );
     if (!section) return;
 
+    // Another controller may switch dragging off for a while, e.g. the
+    // dashboard Sankey while its expanded view is open.
+    if (section.getAttribute("draggable") === "false") return;
+
     this.pendingSection = section;
     this.touchStartX = event.touches[0].clientX;
     this.touchStartY = event.touches[0].clientY;
+    this.currentTouchX = this.touchStartX;
     this.currentTouchY = this.touchStartY;
     this.holdActivated = false;
 
@@ -158,7 +160,8 @@ export default class extends Controller {
     if (!this.holdActivated) {
       const dx = touchX - this.touchStartX;
       const dy = touchY - this.touchStartY;
-      if (dx * dx + dy * dy > 100) { // 10px radius
+      // 10px radius
+      if (dx * dx + dy * dy > 100) {
         this.cancelHold();
       }
       return;
@@ -167,16 +170,10 @@ export default class extends Controller {
     if (!this.isTouching || !this.draggedElement) return;
 
     event.preventDefault();
+    this.currentTouchX = touchX;
     this.currentTouchY = touchY;
 
-    const afterElement = this.getDragAfterElement(this.currentTouchY);
-    this.clearPlaceholders();
-
-    if (afterElement == null) {
-      this.showPlaceholder(this.element.lastElementChild, "after");
-    } else {
-      this.showPlaceholder(afterElement, "before");
-    }
+    this.showDropPosition(this.currentTouchX, this.currentTouchY);
   }
 
   touchEnd() {
@@ -187,14 +184,7 @@ export default class extends Controller {
       return;
     }
 
-    const afterElement = this.getDragAfterElement(this.currentTouchY);
-    const container = this.element;
-
-    if (afterElement == null) {
-      container.appendChild(this.draggedElement);
-    } else {
-      container.insertBefore(this.draggedElement, afterElement);
-    }
+    this.moveDraggedTo(this.currentTouchX, this.currentTouchY);
 
     this.draggedElement.classList.remove("opacity-50", "scale-[1.02]");
     this.draggedElement.setAttribute("aria-grabbed", "false");
@@ -257,6 +247,9 @@ export default class extends Controller {
       "[data-sortable-list-target='item']",
     );
     if (!currentSection) return;
+    // Keys pressed on a control inside the item (a header button, a widget's
+    // own inputs) belong to that control, not to the reorder grab.
+    if (this.ownKeysOnlyValue && event.target !== event.currentTarget) return;
     this.keyboardFocusElement = event.currentTarget;
 
     switch (event.key) {
@@ -340,15 +333,53 @@ export default class extends Controller {
     }
   }
 
-  getDragAfterElement(y) {
-    const draggableElements = [
-      ...this.itemTargets.filter((section) => section !== this.draggedElement),
-    ];
+  // ===== Drop Position =====
+  // Measures the items before touching any classes, so a drag event does
+  // not force an extra layout pass.
+  showDropPosition(pointerX, pointerY) {
+    const { element, position } = this.dropSlot(pointerX, pointerY);
+    this.clearPlaceholders();
+    this.showPlaceholder(element, position);
+  }
 
-    return draggableElements.reduce(
+  moveDraggedTo(pointerX, pointerY) {
+    const { element, position } = this.dropSlot(pointerX, pointerY);
+
+    if (position === "after") {
+      element.after(this.draggedElement);
+    } else {
+      element.before(this.draggedElement);
+    }
+  }
+
+  // The item the dragged one lands next to, and on which side.
+  dropSlot(pointerX, pointerY) {
+    const draggableElements = this.itemTargets.filter(
+      (section) => section !== this.draggedElement,
+    );
+
+    if (this.dropTargetValue === "nearest") {
+      const nearest = this.nearestItem(draggableElements, pointerX, pointerY);
+      if (nearest) {
+        // The lower half of the closest card drops after it, so a card can
+        // also move past the last one.
+        const box = nearest.getBoundingClientRect();
+        const after = pointerY > box.top + box.height / 2;
+        return { element: nearest, position: after ? "after" : "before" };
+      }
+    } else {
+      const below = this.firstItemBelow(draggableElements, pointerY);
+      if (below) return { element: below, position: "before" };
+    }
+
+    return { element: this.element.lastElementChild, position: "after" };
+  }
+
+  firstItemBelow(items, pointerY) {
+    return items.reduce(
       (closest, child) => {
         const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
+        const offset = pointerY - box.top - box.height / 2;
 
         if (offset < 0 && offset > closest.offset) {
           return { offset: offset, element: child };
@@ -357,6 +388,25 @@ export default class extends Controller {
       },
       { offset: Number.NEGATIVE_INFINITY },
     ).element;
+  }
+
+  nearestItem(items, pointerX, pointerY) {
+    let closest = null;
+    let minDistance = Number.POSITIVE_INFINITY;
+
+    items.forEach((child) => {
+      const rect = child.getBoundingClientRect();
+      const dx = pointerX - (rect.left + rect.width / 2);
+      const dy = pointerY - (rect.top + rect.height / 2);
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = child;
+      }
+    });
+
+    return closest;
   }
 
   showPlaceholder(element, position) {
