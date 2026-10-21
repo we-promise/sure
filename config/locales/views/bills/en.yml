@@ -205,6 +205,12 @@ en:
       bridge_label: Before your next paycheck
       bridge_amount: "· %{amount} due"
       bridge_split: "Due before %{date}, covered by the %{cash} in your accounts."
+      bridge_left: "%{amount} left after bills"
+      bridge_show_more:
+        one: Show 1 more
+        other: "Show %{count} more"
+      bridge_allocation_aria: "Of %{cash} in your accounts, %{due} is due before your next paycheck and %{left} is left."
+      item_overdue: Overdue
       shortfall_label: Short before your next payday
       shortfall_amount: "· %{amount}"
       shortfall_split: "%{obligations} is due before %{date} and your accounts hold %{cash}."

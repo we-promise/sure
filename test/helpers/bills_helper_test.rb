@@ -159,6 +159,20 @@ class BillsHelperTest < ActionView::TestCase
     assert_empty paycheck_allocation_segments(build_period(income: 0, due: 28.71, reserved: 695.62))
   end
 
+  # The covered bridge earns nothing, so its bar measures the window's bills
+  # against the cash on hand instead of a paycheck.
+  test "a covered bridge divides its cash into due and left" do
+    period = build_period(income: 0, due: 150, reserved: 0, leading: true, cash_on_hand: BigDecimal("5000"))
+
+    assert_equal [ [ :due, 3.0 ], [ :left, 97.0 ] ], paycheck_bridge_segments(period)
+  end
+
+  # Unknown is not zero: with no balance there is nothing to divide, and the
+  # bar must not draw one.
+  test "a bridge with an unknown balance has no bar" do
+    assert_empty paycheck_bridge_segments(build_period(income: 0, due: 150, reserved: 0, leading: true))
+  end
+
   test "a zero part is dropped rather than drawn as a hairline" do
     segments = paycheck_allocation_segments(build_period(income: 1200, due: 0, reserved: 338.12))
 
