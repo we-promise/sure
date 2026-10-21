@@ -171,8 +171,10 @@ class RuleImport < Import
       # import: not one an earlier row of it wrote.
       had_email_action = rule.persisted? && @rules_with_stored_email_action.include?(rule.id)
 
-      # Clear existing conditions and actions
-      rule.conditions.destroy_all
+      # Clear existing conditions and actions. The conditions are marked rather
+      # than destroyed now, so the rule's save removes them and sees its
+      # conditions change (Rule re-seeds an email rule's baseline then).
+      rule.conditions.each(&:mark_for_destruction)
       rule.actions.destroy_all
 
       # Create conditions
