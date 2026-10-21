@@ -49,27 +49,30 @@ class EncryptExistingProviderIdentifiers < ActiveRecord::Migration[8.1]
     def encrypt_plaintext(model, column)
       json = json_column?(model, column)
 
-      each_stored_value(model, column) do |id, raw|
-        next if ActiveRecord::Encryption.encryptor.encrypted?(raw)
-
-        value = json ? JSON.parse(raw) : raw
-        # update_all casts through the encrypted attribute type, so the
-        # value is written as ciphertext.
-        unchanged(model, column, id, raw).update_all(column => value)
+      # update_all casts through the encrypted attribute type, so the value is
+      # written as ciphertext.
+      rewrite_stored_values(model, column, encrypted: false) do |raw|
+        { column => json ? JSON.parse(raw) : raw }
       end
     end
 
     def decrypt_ciphertext(model, column)
-      json = json_column?(model, column)
+      cast = "::jsonb" if json_column?(model, column)
 
+      # Plain SQL, so the value is not encrypted again on the way in.
+      rewrite_stored_values(model, column, encrypted: true) do |raw|
+        [ "#{connection.quote_column_name(column)} = ?#{cast}", ActiveRecord::Encryption.encryptor.decrypt(raw) ]
+      end
+    end
+
+    # Rewrites each stored value that is currently encrypted (or not) with the
+    # update the block returns for it. Values in the other state are skipped,
+    # so a rerun after a partial run only touches the rows left over.
+    def rewrite_stored_values(model, column, encrypted:)
       each_stored_value(model, column) do |id, raw|
-        next unless ActiveRecord::Encryption.encryptor.encrypted?(raw)
+        next unless ActiveRecord::Encryption.encryptor.encrypted?(raw) == encrypted
 
-        plaintext = ActiveRecord::Encryption.encryptor.decrypt(raw)
-        # Plain SQL, so the value is not encrypted again on the way in.
-        unchanged(model, column, id, raw).update_all(
-          [ "#{connection.quote_column_name(column)} = ?#{"::jsonb" if json}", plaintext ]
-        )
+        unchanged(model, column, id, raw).update_all(yield(raw))
       end
     end
 
