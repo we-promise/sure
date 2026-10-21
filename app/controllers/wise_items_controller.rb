@@ -180,7 +180,7 @@ class WiseItemsController < ApplicationController
     @wise_item = resolve_wise_item_for_selection
 
     unless @wise_item
-      redirect_to settings_providers_path, alert: t("wise_items.select_accounts.no_connection") and return
+      frame_redirect_to settings_providers_path, alert: t("wise_items.select_accounts.no_connection") and return
     end
 
     @available_accounts = @wise_item.wise_accounts.unlinked

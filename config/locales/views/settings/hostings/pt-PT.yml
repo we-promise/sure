@@ -107,6 +107,8 @@ pt-PT:
         not_configured_hint: "Adicione uma chave de API de %{provider} abaixo para a ativar."
         data_retention_heading: Tratamento de dados
         data_retention: As entradas da API não são utilizadas para treinar modelos por predefinição; as APIs alojadas dos serviços retêm dados durante ~30 dias para confiança e segurança. Os endpoints personalizados ou autoalojados seguem a sua própria política.
+        max_items_per_call_label: Máx. de Itens por Lote (Opcional)
+        max_items_per_call_help: "Limite superior para os lotes de categorização automática / deteção de comerciantes. Predefinição: 25. Com fornecedores compatíveis com OpenAI, lotes maiores são automaticamente divididos para caberem na janela de contexto."
       anthropic_settings:
         title: Anthropic (Claude)
         description: Introduza a sua chave de API da Anthropic. Opcionalmente, aponte a Base URL para o AWS Bedrock ou GCP Vertex.
@@ -139,8 +141,6 @@ pt-PT:
         context_window_help: "Total de tokens que o modelo aceitará. Predefinição: 2048 — aumente para 8192+ para a OpenAI cloud ou modelos locais de grande contexto."
         max_response_tokens_label: Máx. de Tokens de Resposta (Opcional)
         max_response_tokens_help: "Tokens reservados para a resposta do modelo. Predefinição: 512. Reduza para abrir espaço para um histórico mais longo."
-        max_items_per_call_label: Máx. de Itens por Lote (Opcional)
-        max_items_per_call_help: "Limite superior para os lotes de categorização automática / deteção de comerciantes. Predefinição: 25. Lotes maiores são automaticamente divididos para caberem na janela de contexto."
         ai_response_timeout_heading: Tempo Limite de Resposta do Chat
         ai_response_timeout_description: Quanto tempo o chat espera pelo assistente antes de mostrar um erro de "sem resposta". Aumente isto se executar um modelo local em hardware lento — as respostas dos serviços compatíveis com OpenAI não são transmitidas em fluxo e as rondas de chamadas de ferramentas não mostram nada, pelo que o chat pode permanecer em "A pensar…" durante toda a vez.
         ai_response_timeout_label: Tempo Limite de Resposta em Segundos (Opcional)

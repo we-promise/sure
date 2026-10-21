@@ -53,22 +53,31 @@ export default class extends Controller {
     this.codeTarget.replaceChildren();
     this.statusTarget.textContent = this.loadingTextValue;
 
+    let initiation = null;
     try {
-      const response = await fetch(this.initiateUrlValue, {
+      // A cancel waits for this request: sent earlier, it would be overtaken
+      // by the login this request stores.
+      initiation = fetch(this.initiateUrlValue, {
         method: "POST",
         headers: { ...this.headers(), Accept: "text/vnd.turbo-stream.html" },
         credentials: "same-origin",
         body: this.body(),
       });
+      this.initiation = initiation;
+      const response = await initiation;
+      if (this.stopped) return;
       if (!response.ok)
         throw new Error(`QR login initiation failed: ${response.status}`);
 
       const result = await response.json();
+      if (this.stopped) return;
       this.renderQr(result);
 
       await this.poll();
     } catch (error) {
       this.showError(error);
+    } finally {
+      if (this.initiation === initiation) this.initiation = null;
     }
   }
 
@@ -186,23 +195,47 @@ export default class extends Controller {
     this.polling = false;
     this.panelTarget.hidden = true;
     this.codeTarget.replaceChildren();
-    this.buttonTarget.disabled = false;
+    // A login started before the server confirms the cancellation would be
+    // cleared by it, so the button stays disabled until then.
+    this.buttonTarget.disabled = true;
+    this.setButtonLabel(this.loginTextValue);
 
     try {
+      await this.initiation?.catch(() => {});
       const response = await fetch(this.cancelUrlValue, {
         method: "POST",
-        headers: this.headers(),
+        headers: { ...this.headers(), Accept: "text/vnd.turbo-stream.html" },
         credentials: "same-origin",
         body: this.body(),
       });
       if (!response.ok)
         throw new Error(`QR login cancellation failed: ${response.status}`);
 
-      Turbo.renderStreamMessage(await response.text());
+      const stream = await response.text();
+      if (!this.element.isConnected) return;
+
+      // In Settings this replaces the connection card, which brings back the
+      // credentials form hidden while the login was pending. Turbo replaces
+      // it on the next repaint, so the old button stays disabled until the
+      // new card brings an enabled one. The Accounts page has no such card.
+      const replacesCard = this.streamReplacesElement(stream);
+      Turbo.renderStreamMessage(stream);
+      if (!replacesCard) this.buttonTarget.disabled = false;
     } catch (error) {
       this.stopped = false;
+      this.buttonTarget.disabled = false;
       console.warn("[Trade Republic] QR login cancellation failed", error);
     }
+  }
+
+  streamReplacesElement(stream) {
+    const template = document.createElement("template");
+    template.innerHTML = stream;
+    const targetId = template.content
+      .querySelector("turbo-stream")
+      ?.getAttribute("target");
+    const target = targetId && document.getElementById(targetId);
+    return Boolean(target?.contains(this.element));
   }
 
   renderQr(result) {
@@ -220,7 +253,12 @@ export default class extends Controller {
   }
 
   setButtonLabel(label) {
-    if (this.hasLabelTarget) this.labelTarget.textContent = label;
+    // DS::Button renders its text in a span, so without a label target the
+    // button's own text is updated.
+    const target = this.hasLabelTarget
+      ? this.labelTarget
+      : this.buttonTarget.querySelector("span");
+    if (target) target.textContent = label;
   }
 
   headers() {
