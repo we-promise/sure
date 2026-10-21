@@ -2358,6 +2358,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.string "classification_fetched_from"
     t.boolean "classification_locked", default: false, null: false
     t.string "classification_source"
+    t.datetime "constituents_fetched_at"
     t.string "country_code"
     t.datetime "created_at", null: false
     t.string "exchange_acronym"
@@ -2404,6 +2405,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.index ["event_type"], name: "index_security_audit_logs_on_event_type"
     t.index ["user_id", "created_at"], name: "index_security_audit_logs_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_security_audit_logs_on_user_id"
+  end
+
+  create_table "security_constituents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name"
+    t.uuid "security_id", null: false
+    t.string "ticker", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "weight", precision: 9, scale: 6
+    t.index ["security_id", "ticker"], name: "index_security_constituents_on_security_id_and_ticker", unique: true
+    t.index ["security_id"], name: "index_security_constituents_on_security_id"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3308,6 +3320,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
   add_foreign_key "rules", "families"
   add_foreign_key "rules", "rule_groups", on_delete: :nullify
   add_foreign_key "security_audit_logs", "users", on_delete: :nullify
+  add_foreign_key "security_constituents", "securities"
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify
