@@ -1389,7 +1389,9 @@ class Family::DataImporter
         # Exports made before this setting existed don't carry it; keep the stored value then.
         rule.apply_immediately = data["apply_immediately"] || false if data.key?("apply_immediately")
 
-        rule.conditions.destroy_all unless created
+        # Marked rather than destroyed now, so the rule's save removes them and
+        # sees its conditions change (Rule re-seeds an email rule's baseline then).
+        rule.conditions.each(&:mark_for_destruction) unless created
         rule.actions.destroy_all unless created
 
         # Build conditions
