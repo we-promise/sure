@@ -12,9 +12,18 @@ class RedbarkItem::Syncer
   def perform_sync(sync)
     Rails.logger.info "RedbarkItem::Syncer - Starting sync for item #{redbark_item.id}"
 
+    # ONE clock for the whole sync. The import stamps the account-details
+    # snapshot with it, and the processing phase dates its findings by it, so
+    # the freshness gate in RedbarkAccount::LoanDetailsProcessor compares a
+    # clock against itself. Reading `Time.current` in the import and
+    # `Date.current` again in the processing gives a sync that fetches at
+    # 23:59 and processes at 00:00 two different dates, and the processor then
+    # discards the snapshot this very sync just stored.
+    synced_at = Time.current
+
     # Phase 1: Import data from provider API
     sync.update!(status_text: I18n.t("redbark_items.sync.status.importing")) if sync.respond_to?(:status_text)
-    import_stats = redbark_item.import_latest_redbark_data(sync: sync)
+    import_stats = redbark_item.import_latest_redbark_data(sync: sync, fetched_at: synced_at)
 
     # Phase 2: Collect setup statistics
     finalize_setup_counts(sync)
@@ -24,7 +33,7 @@ class RedbarkItem::Syncer
     if linked_redbark_accounts.any?
       sync.update!(status_text: I18n.t("redbark_items.sync.status.processing")) if sync.respond_to?(:status_text)
       mark_import_started(sync)
-      redbark_item.process_accounts
+      redbark_item.process_accounts(as_of: synced_at.to_date)
 
       # Phase 4: Schedule balance calculations
       sync.update!(status_text: I18n.t("redbark_items.sync.status.calculating")) if sync.respond_to?(:status_text)

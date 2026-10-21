@@ -2186,6 +2186,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
   end
 
   create_table "redbark_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "account_details_fetched_at"
     t.string "account_status"
     t.string "account_type"
     t.string "connection_id"
@@ -2196,6 +2197,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
     t.jsonb "institution_metadata"
     t.string "name", null: false
     t.string "provider"
+    t.jsonb "raw_account_details_payload"
     t.jsonb "raw_payload"
     t.jsonb "raw_transactions_payload"
     t.string "redbark_account_id", null: false
