@@ -58,12 +58,21 @@ class FinancekitBodyLimit
       buffer ? buffer.replace(data) : data
     end
 
+    # The Rack input contract gives gets no length argument, so the wrapped
+    # stream's gets would pull a whole line (an unbounded one, with no
+    # newline) before any cap applied. This reads a byte at a time up to the
+    # limit instead. Slow, but nothing on this route reads by line; it exists
+    # so a future line reader can't step around the cap.
     def gets
-      line = @io.gets
-      return nil if line.nil?
+      line = +""
+      while @read < @limit
+        byte = @io.read(1)
+        break if byte.nil?
 
-      line = line.byteslice(0, [ @limit - @read, 0 ].max)
-      @read += line.bytesize
+        @read += 1
+        line << byte
+        break if byte == "\n"
+      end
       line.empty? ? nil : line
     end
 

@@ -51,6 +51,27 @@ class FinancekitBodyLimitTest < ActiveSupport::TestCase
     @body = "b" * (Financekit::MAX_BYTES + 10)
   end
 
+  # gets has no length argument under the Rack input contract, so an endless
+  # line must not be pulled from the stream whole before the cap applies.
+  test "gets reads no further than the limit on a line with no newline" do
+    io = StringIO.new("c" * (Financekit::MAX_BYTES * 3))
+    input = FinancekitBodyLimit::LimitedInput.new(io, Financekit::MAX_BYTES + 1)
+
+    line = input.gets
+
+    assert_equal Financekit::MAX_BYTES + 1, line.bytesize
+    assert_operator io.pos, :<=, Financekit::MAX_BYTES + 1, "the underlying stream was read past the cap"
+    assert_nil input.gets, "nothing more is returned once the cap is reached"
+  end
+
+  test "gets still returns whole lines under the limit" do
+    input = FinancekitBodyLimit::LimitedInput.new(StringIO.new("one\ntwo\n"), 100)
+
+    assert_equal "one\n", input.gets
+    assert_equal "two\n", input.gets
+    assert_nil input.gets
+  end
+
   test "leaves a body within the limit untouched" do
     body = "{\"ok\":true}"
     status, = @app.call(env_for("/api/v1/financekit/publishers/abc/batches", body))
