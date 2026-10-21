@@ -176,7 +176,7 @@ class GoalTest < ActiveSupport::TestCase
     assert_includes new_goal.errors[:linked_accounts], "Linked accounts must belong to the same family as the goal."
   end
 
-  test "linked accounts must share currency with goal" do
+  test "linked accounts may use a different currency from the goal" do
     eur_account = Account.create!(
       family: @family,
       accountable: Depository.new,
@@ -186,8 +186,7 @@ class GoalTest < ActiveSupport::TestCase
     )
     new_goal = @family.goals.new(name: "T", target_amount: 100, currency: "USD")
     new_goal.goal_accounts.build(account: eur_account)
-    assert_not new_goal.valid?
-    assert_includes new_goal.errors[:linked_accounts], "All linked accounts must share the same currency."
+    assert new_goal.valid?
   end
 
   test "currency can't change once linked accounts exist" do
@@ -1314,6 +1313,25 @@ class GoalTest < ActiveSupport::TestCase
     assert_not Goal.find(goal.id).pace_measurable?
   end
 
+  # A goal can now link an account in another currency. The balance path
+  # measures in the account's currency, so its pace is converted to the goal's
+  # at today's rate, as the transaction path is.
+  test "a valuation-tracked pace in another currency is converted to the goal's" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = valuation_tracked_account(balance: 112_000, year_ago: 100_000, currency: "EUR")
+    goal = goal_on(account, target_amount: 300_000)
+
+    # No rate: the 1,000 EUR/mo is left out and reported, never read as dollars.
+    assert goal.pace_measurable?
+    assert_equal 0, goal.pace.to_d
+    assert goal.currency_conversion_incomplete?
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.5, date: Date.current)
+    goal = Goal.find(goal.id)
+    assert_equal 1500, goal.pace.to_d
+    assert_not goal.currency_conversion_incomplete?
+  end
+
   test "a valuation-tracked goal whose required pace is below its balance pace is on track" do
     account = valuation_tracked_account(balance: 112_000, year_ago: 100_000)
     # 9,600 to find over 12 months: 800/mo required against a 1,000/mo pace.
@@ -1610,11 +1628,11 @@ class GoalTest < ActiveSupport::TestCase
     # balance row at `history_from`, a reconciliation valuation on
     # `valuation_on`, today's value on the account itself, no transactions.
     def valuation_tracked_account(balance:, year_ago:, history_from: 400.days.ago.to_date,
-                                  valuation_on: 30.days.ago.to_date, accountable: Investment.new)
+                                  valuation_on: 30.days.ago.to_date, accountable: Investment.new, currency: "USD")
       account = Account.create!(family: @family, accountable: accountable,
-                                name: "Super #{SecureRandom.hex(3)}", currency: "USD", balance: balance)
-      account.balances.create!(date: history_from, balance: year_ago, start_cash_balance: year_ago, currency: "USD")
-      create_valuation(account: account, amount: balance, date: valuation_on)
+                                name: "Super #{SecureRandom.hex(3)}", currency: currency, balance: balance)
+      account.balances.create!(date: history_from, balance: year_ago, start_cash_balance: year_ago, currency: currency)
+      create_valuation(account: account, amount: balance, date: valuation_on, currency: currency)
       account
     end
 
