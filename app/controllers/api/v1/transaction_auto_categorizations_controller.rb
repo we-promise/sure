@@ -26,7 +26,18 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
     scope = family.auto_categorizable_transactions_for(current_resource_owner)
     scope = scope.where(id: requested_ids) if requested_ids
 
-    queued_ids = family.queue_auto_categorization(scope)
+    queued_ids, unqueued_ids = family.queue_auto_categorization(scope)
+
+    if unqueued_ids.any?
+      return render json: {
+        error: "service_unavailable",
+        message: "Could not queue #{unqueued_ids.size} of #{queued_ids.size + unqueued_ids.size} transactions; " \
+                 "#{queued_ids.size} were queued. Retry to queue the rest.",
+        queued_count: queued_ids.size,
+        transaction_ids: queued_ids,
+        unqueued_transaction_ids: unqueued_ids
+      }, status: :service_unavailable
+    end
 
     render json: {
       queued_count: queued_ids.size,
