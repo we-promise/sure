@@ -842,6 +842,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
     t.string "assistant_type", default: "builtin", null: false
     t.boolean "auto_sync_on_login", default: true, null: false
     t.string "bills_feed_token"
+    t.boolean "categories_locked", default: false, null: false
     t.decimal "categorization_confidence_threshold", precision: 3, scale: 2, default: "0.7", null: false
     t.string "categorization_provider", default: "llm", null: false
     t.decimal "categorization_shadow_rate", precision: 3, scale: 2, default: "0.0", null: false
@@ -854,6 +855,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
     t.boolean "early_access", default: false
     t.string "enabled_currencies", array: true
     t.boolean "household_budget_enabled", default: true, null: false
+    t.boolean "investment_contributions_as_spending", default: true, null: false
     t.datetime "last_sync_all_attempted_at"
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
@@ -2184,6 +2186,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
   end
 
   create_table "redbark_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "account_details_fetched_at"
     t.string "account_status"
     t.string "account_type"
     t.string "connection_id"
@@ -2194,6 +2197,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
     t.jsonb "institution_metadata"
     t.string "name", null: false
     t.string "provider"
+    t.jsonb "raw_account_details_payload"
     t.jsonb "raw_payload"
     t.jsonb "raw_transactions_payload"
     t.string "redbark_account_id", null: false

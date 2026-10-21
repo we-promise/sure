@@ -17,8 +17,10 @@ class BudgetCategoriesController < ApplicationController
     # correctly tags inflow as funds_movement and outflow per destination
     # account) shows under the Uncategorized card -- or any retained
     # category -- even though the aggregate ignores it. See issue #1059.
+    # A family that does not count investing as spending also leaves out
+    # investment contributions (Family#analytics_excluded_kinds).
     @recent_transactions = @budget.transactions
-                                  .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
+                                  .where.not(transactions: { kind: Current.family.analytics_excluded_kinds })
 
     if params[:id] == BudgetCategory.uncategorized.id
       @budget_category = @budget.uncategorized_budget_category
