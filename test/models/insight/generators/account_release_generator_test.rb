@@ -95,7 +95,7 @@ class Insight::Generators::AccountReleaseGeneratorTest < ActiveSupport::TestCase
     term_deposit(available_on: Date.new(2026, 10, 15), name: "Festgeld")
 
     generated = I18n.with_locale(:de) { generate.first }
-    body = I18n.with_locale(:de) { Insight::BodyWriter.new(@family).write(generated) }
+    body = I18n.with_locale(:de) { Insight::BodyWriter.new.write(generated) }
 
     assert_equal "Festgeld wird bald frei", generated.title
     assert_equal "#{generated.facts[:balance]} auf Festgeld werden am 15. Oktober 2026 verfügbar.", body
