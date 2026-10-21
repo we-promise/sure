@@ -15,15 +15,12 @@ class Settings::PreferencesController < ApplicationController
     @user = Current.user
     user_params = params.permit(user: [ :preview_features_enabled, :account_release_channel, :account_release_lead_days ]).fetch(:user, {})
 
-    @user.transaction do
-      @user.lock!
-      updated_prefs = (@user.preferences || {}).deep_dup
+    @user.with_locked_preferences do |updated_prefs|
       if user_params.key?(:preview_features_enabled)
         updated_prefs["preview_features_enabled"] =
           ActiveModel::Type::Boolean.new.cast(user_params[:preview_features_enabled])
       end
       assign_account_release_preferences(updated_prefs, user_params)
-      @user.update!(preferences: updated_prefs)
     end
     redirect_to settings_preferences_path
   end

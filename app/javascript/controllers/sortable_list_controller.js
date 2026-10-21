@@ -15,6 +15,13 @@ export default class extends Controller {
     url: String,
     param: String,
     holdDelay: { type: Number, default: 150 },
+    // Milliseconds after which an unanswered save counts as failed, so a
+    // stalled request cannot hold back every later save. 0 waits forever.
+    saveTimeout: { type: Number, default: 0 },
+    // The same list rendered more than once on a page (e.g. once per tab)
+    // follows a move right away: other sortable lists with the same url and
+    // param are reordered too.
+    mirrorLists: { type: Boolean, default: false },
     // Where a dragged item lands: "below" inserts it before the first item
     // whose vertical centre is below the pointer (a single column),
     // "nearest" next to the item whose centre is closest (a grid): before it
@@ -43,6 +50,10 @@ export default class extends Controller {
 
   // ===== Mouse Drag Events =====
   dragStart(event) {
+    // A drag starting inside a row that is not draggable itself (an image,
+    // selected text) is not a reorder.
+    if (!event.currentTarget.draggable) return;
+
     // If a touch interaction is in progress, cancel native drag —
     // use touch events with hold delay instead.
     // This avoids blocking mouse/trackpad drag on touch-capable laptops.
@@ -55,6 +66,12 @@ export default class extends Controller {
     this.draggedElement.classList.add("opacity-50");
     this.draggedElement.setAttribute("aria-grabbed", "true");
     event.dataTransfer.effectAllowed = "move";
+    // Firefox only starts a drag that carries data. A custom type keeps text
+    // fields from accepting the row as a drop.
+    event.dataTransfer.setData(
+      "application/x-sortable-list-id",
+      this.draggedElement.dataset.sortableListId ?? "",
+    );
   }
 
   dragEnd(event) {
@@ -67,6 +84,7 @@ export default class extends Controller {
   // Only a drag that started on one of the items is a reorder; a file or
   // text dragged in from outside is left to the browser.
   dragOver(event) {
+    // A drag from another list on the page is not ours to drop.
     if (!this.draggedElement) return;
 
     event.preventDefault();
@@ -295,8 +313,20 @@ export default class extends Controller {
         "ring-offset-2",
       );
       this.keyboardGrabbedElement = null;
-      this.saveOrder();
+      return this.saveOrder();
     }
+  }
+
+  // Bound to turbo:before-visit. A visit (e.g. following a link inside the
+  // list) replaces the page before a row still held with the keyboard is
+  // released, which would drop the move. The row is dropped where it is and
+  // the visit waits until the order is saved, so the next page shows it.
+  saveBeforeVisit(event) {
+    if (!this.keyboardGrabbedElement) return;
+
+    event.preventDefault();
+    const { url } = event.detail;
+    this.releaseKeyboardGrab().then(() => Turbo.visit(url));
   }
 
   moveUp(section) {
@@ -421,12 +451,45 @@ export default class extends Controller {
 
   // Saves run one at a time. A change made while a save is in flight is sent
   // once it finishes, with the latest order only, so an older request can
-  // never land after a newer one and restore an earlier order.
+  // never land after a newer one and restore an earlier order. Resolves once
+  // the queue has sent everything.
   saveOrder() {
-    this.pendingOrder = this.itemTargets.map(
-      (item) => item.dataset.sortableListId,
+    const order = this.itemTargets.map((item) => item.dataset.sortableListId);
+    const queue = this.mirrorListsValue ? this.mirrorOrder(order) : this;
+    queue.pendingOrder = order;
+    if (!queue.saving) queue.savesFinished = queue.flushSaves();
+    return queue.savesFinished;
+  }
+
+  // Applies the order to the other copies of this list and returns the
+  // controller whose queue saves for all copies, so their saves also run one
+  // at a time.
+  mirrorOrder(order) {
+    const lists = [
+      ...document.querySelectorAll(`[data-controller~='${this.identifier}']`),
+    ].filter(
+      (list) =>
+        list.dataset.sortableListUrlValue === this.urlValue &&
+        list.dataset.sortableListParamValue === this.paramValue,
     );
-    if (!this.saving) this.flushSaves();
+
+    lists.forEach((list) => {
+      if (list === this.element) return;
+
+      order.forEach((id) => {
+        const item = list.querySelector(
+          `[data-sortable-list-id='${CSS.escape(id)}']`,
+        );
+        if (item) list.appendChild(item);
+      });
+    });
+
+    return (
+      this.application.getControllerForElementAndIdentifier(
+        lists[0],
+        this.identifier,
+      ) ?? this
+    );
   }
 
   async flushSaves() {
@@ -453,6 +516,10 @@ export default class extends Controller {
         method: "PATCH",
         headers,
         body: JSON.stringify(this.buildBody(order)),
+        signal:
+          this.saveTimeoutValue > 0 && AbortSignal.timeout
+            ? AbortSignal.timeout(this.saveTimeoutValue)
+            : undefined,
       });
 
       if (!response.ok) {

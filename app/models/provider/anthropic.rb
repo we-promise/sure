@@ -11,6 +11,36 @@ class Provider::Anthropic < Provider
   # All Claude 3.5+ and 4.x models accept native document content blocks.
   VISION_CAPABLE_MODEL_PREFIXES = %w[claude].freeze
 
+  # Claude 3.x, 4.x and Haiku 5.5 accept a forced `tool_choice`. Anything else
+  # gets `auto` (Opus 5.5, Sonnet 5.5, Fable 5.1 and Mythos 5.1 reject a forced
+  # one), so a model released after this line still works. Matches anywhere in
+  # the ID to cover Bedrock (`anthropic.claude-sonnet-4-5-…-v1:0`) and Vertex
+  # (`claude-sonnet-4-5@…`) IDs.
+  FORCED_TOOL_CHOICE_MODELS = /claude-(?:3|(?:opus|sonnet|haiku)-4|haiku-5[-.]5)(?!\d)/
+
+  def self.forced_tool_choice_supported?(model)
+    model.to_s.match?(FORCED_TOOL_CHOICE_MODELS)
+  end
+
+  # The tool_choice for a helper that returns its result through a single tool.
+  # Models that can't be forced get `auto`, paired with structured_output_system.
+  def self.structured_output_tool_choice(model, tool_name)
+    if forced_tool_choice_supported?(model)
+      { type: "tool", name: tool_name, disable_parallel_tool_use: true }
+    else
+      { type: "auto", disable_parallel_tool_use: true }
+    end
+  end
+
+  # The system prompt for a helper that returns its result through a single tool.
+  # With `auto`, a family's prompt override may not mention the tool, so a fixed
+  # instruction to call it is appended.
+  def self.structured_output_system(instructions, model, tool_name)
+    return instructions if forced_tool_choice_supported?(model)
+
+    "#{instructions}\n\nReturn the result by calling the #{tool_name} tool. Do not answer with text."
+  end
+
   def self.effective_model
     # Use ENV[].presence rather than ENV.fetch(KEY, default) so the Setting
     # lookup is only performed when the ENV var is actually absent — otherwise

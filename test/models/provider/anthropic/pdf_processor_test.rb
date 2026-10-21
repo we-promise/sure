@@ -166,6 +166,28 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
     assert_match(/detail unavailable/i, captured_output[:error_detail])
   end
 
+  test "sends tool_choice auto to a model that rejects a forced tool" do
+    fake_response = build_response(content: [
+      tool_use_block(
+        id: "toolu_4",
+        name: "report_document_analysis",
+        input: { "document_type" => "bank_statement", "summary" => "Statement.", "extracted_data" => {} }
+      )
+    ])
+    captured = nil
+    client = stub_client(fake_response) { |params| captured = params }
+
+    result = Provider::Anthropic::PdfProcessor.new(
+      client,
+      model: "claude-sonnet-5-5",
+      pdf_content: @pdf_content
+    ).process
+
+    assert_equal({ type: "auto", disable_parallel_tool_use: true }, captured[:tool_choice])
+    assert_includes captured[:system_], "calling the report_document_analysis tool"
+    assert_equal "bank_statement", result.document_type
+  end
+
   private
     def stub_failing_client(error)
       messages = mock
