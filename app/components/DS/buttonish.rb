@@ -63,19 +63,19 @@ class DS::Buttonish < DesignSystemComponent
   SIZES = {
     sm: {
       container_classes: "px-2 py-1",
-      icon_container_classes: "inline-flex items-center justify-center w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-11",
+      icon_container_classes: "items-center justify-center w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-11",
       radius_classes: "rounded-md",
       text_classes: "text-sm"
     },
     md: {
       container_classes: "px-3 py-2",
-      icon_container_classes: "inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11",
+      icon_container_classes: "items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11",
       radius_classes: "rounded-lg",
       text_classes: "text-sm"
     },
     lg: {
       container_classes: "px-4 py-3",
-      icon_container_classes: "inline-flex items-center justify-center w-12 h-12",
+      icon_container_classes: "items-center justify-center w-12 h-12",
       radius_classes: "rounded-xl",
       text_classes: "text-base"
     }
@@ -157,9 +157,13 @@ class DS::Buttonish < DesignSystemComponent
       self.class::SIZES.dig(size)
     end
 
-    # Make sure that user can override common classes like `hidden`
+    # Make sure that user can override common classes like `hidden`. Only the
+    # display utility gives way: a responsive `hidden lg:inline-flex` still
+    # needs the alignment and gap once it shows, and nothing else may add
+    # `inline-flex` back (it wins over `hidden` in the generated CSS).
     def merged_base_classes
-      base_display_classes = "inline-flex items-center gap-1"
+      base_display_classes = "inline-flex"
+      base_layout_classes = "items-center gap-1"
       base_radius_classes = size_data.dig(:radius_classes)
 
       extra_classes_list = (extra_classes || "").split
@@ -172,6 +176,8 @@ class DS::Buttonish < DesignSystemComponent
       unless has_display_override
         base_classes << base_display_classes
       end
+
+      base_classes << base_layout_classes
 
       unless has_radius_override
         base_classes << base_radius_classes
