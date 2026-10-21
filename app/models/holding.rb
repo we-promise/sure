@@ -360,8 +360,8 @@ class Holding < ApplicationRecord
     # have it. A buy on the ex-date is already in the new shares, as in
     # Security#split_factor_between. The splits are read once per holding.
     def split_adjusted(qty, trade_date)
-      @splits_to_date ||= security.splits.select { |split| split.ex_date <= date }
-      factor = @splits_to_date.select { |split| split.ex_date > trade_date }.reduce(Rational(1)) { |product, split| product * split.ratio }
+      @splits ||= security.splits.to_a
+      factor = Security::Split.factor_between(@splits, trade_date, date)
 
       factor == 1 ? qty : Security::Split.scale(qty, factor)
     end

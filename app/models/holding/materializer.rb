@@ -271,13 +271,7 @@ class Holding::Materializer
     end
 
     def cumulative_split_factor(security_id, from, to)
-      return Rational(1) if from.nil? || to.nil? || from >= to
-
-      splits_by_security[security_id].reduce(Rational(1)) do |factor, split|
-        next factor unless split.ex_date > from && split.ex_date <= to
-
-        factor * split.ratio
-      end
+      Security::Split.factor_between(splits_by_security[security_id], from, to)
     end
 
     def splits_by_security

@@ -39,7 +39,9 @@ class Security::Split < ApplicationRecord
       security.with_lock do
         split = security.splits.find_or_initialize_by(ex_date: ex_date)
 
-        if split.persisted? && split.manual? && source.to_s != "manual"
+        # Only a known provider is turned away here. Anything else falls
+        # through to save!, whose validations refuse it.
+        if split.persisted? && split.manual? && source.to_s != "manual" && SOURCES.include?(source.to_s)
           report_overruled(split, Rational(numerator, denominator), source)
           next split
         end
@@ -55,7 +57,12 @@ class Security::Split < ApplicationRecord
 
     # Re-points a merged duplicate's splits at the security that replaces it.
     # On an ex-date both have, the manual row stays over a provider's, and
-    # between equals the canonical security's stays. The other is deleted.
+    # between equals the canonical security's stays. The other is deleted, and
+    # recorded for support when its terms differ from the one kept.
+    #
+    # The callers re-point holdings and trades first, and those holdings were
+    # built against the duplicate's splits. So whenever either side has a
+    # split, every holder of `to` is rebuilt (after the merge commits).
     # Returns how many were moved and how many dropped.
     def move!(from:, to:)
       counts = { moved: 0, dropped: 0 }
@@ -67,19 +74,67 @@ class Security::Split < ApplicationRecord
           split.update!(security: to)
           counts[:moved] += 1
         elsif split.manual? && !existing.manual?
+          report_dropped(kept: split, dropped: existing, into: to)
           existing.destroy!
           split.update!(security: to)
           counts[:moved] += 1
         else
+          report_dropped(kept: existing, dropped: split, into: to)
           split.destroy!
           counts[:dropped] += 1
         end
       end
 
+      rematerialize_holders_of(to) if counts.values.sum.positive? || to.splits.exists?
       counts
     end
 
+    # The product of the splits after `from` and on or before `to`: a split on
+    # its ex-date is already in that day's shares. Every reader of a split
+    # range goes through here, whether its splits are preloaded or not.
+    def factor_between(splits, from, to)
+      return Rational(1) if from.nil? || to.nil? || from >= to
+
+      splits.reduce(Rational(1)) do |factor, split|
+        split.ex_date > from && split.ex_date <= to ? factor * split.ratio : factor
+      end
+    end
+
+    # Every account with a holding or a trade in the security, in any family:
+    # a split changes all of their share counts. One job each, enqueued after
+    # the write commits (ApplicationJob.enqueue_after_transaction_commit).
+    def rematerialize_holders_of(security)
+      trade_account_ids = Entry.where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security.id).select(:id)).select(:account_id)
+      holding_account_ids = Holding.where(security_id: security.id).select(:account_id)
+
+      Account.where(id: trade_account_ids).or(Account.where(id: holding_account_ids)).find_each do |account|
+        SecuritySplitRematerializeJob.perform_later(account, security)
+      end
+    end
+
     private
+      def report_dropped(kept:, dropped:, into:)
+        return if kept.ratio == dropped.ratio
+
+        DebugLogEntry.capture(
+          category: "security_split",
+          level: "warn",
+          message: "Merging duplicate securities dropped a split whose terms differ from the one kept",
+          source: name,
+          provider_key: dropped.source.to_s,
+          metadata: {
+            security_id: into.id,
+            duplicate_security_id: dropped.security_id == into.id ? kept.security_id : dropped.security_id,
+            ticker: into.ticker,
+            ex_date: kept.ex_date.iso8601,
+            kept_ratio: "#{kept.ratio.numerator}:#{kept.ratio.denominator}",
+            kept_source: kept.source,
+            dropped_ratio: "#{dropped.ratio.numerator}:#{dropped.ratio.denominator}",
+            dropped_source: dropped.source
+          }
+        )
+      end
+
       def report_overruled(split, provider_ratio, provider)
         return if provider_ratio == split.ratio
 
@@ -143,16 +198,8 @@ class Security::Split < ApplicationRecord
   end
 
   private
-    # Every account with a holding or a trade in the security, in any family:
-    # a split changes all of their share counts. One job each, enqueued after
-    # the write commits (ApplicationJob.enqueue_after_transaction_commit).
     def rematerialize_holders
-      trade_account_ids = Entry.where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security_id).select(:id)).select(:account_id)
-      holding_account_ids = Holding.where(security_id: security_id).select(:account_id)
-
-      Account.where(id: trade_account_ids).or(Account.where(id: holding_account_ids)).find_each do |account|
-        SecuritySplitRematerializeJob.perform_later(account, security)
-      end
+      self.class.rematerialize_holders_of(security)
     end
 
     # A 1:1 "split" changes nothing, and the DB refuses it too. Reuses Rails'

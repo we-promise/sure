@@ -55,6 +55,41 @@ class SecuritySplitRematerializeJobTest < ActiveJob::TestCase
     assert_equal [ 10, 20 ], quantities, "with the attempts spent the account is materialised anyway"
   end
 
+  # A cancel request does not stop a sync that has started: it finishes its
+  # work, and would overwrite holdings rebuilt underneath it.
+  test "a running sync asked to cancel still holds the job back" do
+    @account.syncs.create!.update_columns(status: "syncing", cancel_requested_at: Time.current)
+
+    assert_enqueued_with(job: SecuritySplitRematerializeJob) do
+      SecuritySplitRematerializeJob.perform_now(@account, @security)
+    end
+    assert_equal [ 10, 10 ], quantities
+  end
+
+  # A split is a fact about the security, so the write that enqueues these
+  # runs in whichever family's zone made it. Each account's holdings are
+  # dated by its own family's "today".
+  test "the job materialises in the account's family time zone, not the enqueuer's" do
+    @account.family.update!(timezone: "Pacific/Auckland")
+    zones = []
+    Balance::Materializer.any_instance.stubs(:materialize_balances).with { zones << Time.zone.name }
+
+    Time.use_zone("UTC") { SecuritySplitRematerializeJob.perform_now(@account, @security) }
+
+    assert_equal [ "Pacific/Auckland" ], zones
+  end
+
+  # Not UTC: the app's default zone is UTC, so a lost fallback would pass there.
+  test "an unknown family zone falls back to the enqueuer's" do
+    @account.family.update_column(:timezone, "Mars/Olympus_Mons")
+    zones = []
+    Balance::Materializer.any_instance.stubs(:materialize_balances).with { zones << Time.zone.name }
+
+    Time.use_zone("Asia/Tokyo") { SecuritySplitRematerializeJob.perform_now(@account, @security) }
+
+    assert_equal [ "Asia/Tokyo" ], zones
+  end
+
   test "a pending sync does not hold the job back" do
     @account.syncs.create!
 

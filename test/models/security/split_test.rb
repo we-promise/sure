@@ -54,6 +54,23 @@ class Security::SplitTest < ActiveSupport::TestCase
     assert_equal 1, @security.split_factor_between(@ex_date, @ex_date + 29)
     assert_equal 6, @security.split_factor_between(@ex_date - 1, @ex_date + 30)
   end
+  # One definition of "after the first date, on or before the second" for every
+  # reader, preloaded or not.
+  test "the shared factor takes the splits after the first date and on or before the second" do
+    splits = [
+      @security.splits.new(ex_date: @ex_date, numerator: 2, denominator: 1),
+      @security.splits.new(ex_date: @ex_date + 30, numerator: 3, denominator: 1)
+    ]
+
+    assert_equal 1, Security::Split.factor_between(splits, @ex_date - 10, @ex_date - 1)
+    assert_equal 2, Security::Split.factor_between(splits, @ex_date - 1, @ex_date)
+    assert_equal 1, Security::Split.factor_between(splits, @ex_date, @ex_date + 29)
+    assert_equal 6, Security::Split.factor_between(splits, @ex_date - 1, @ex_date + 30)
+    assert_equal 1, Security::Split.factor_between(splits, @ex_date + 30, @ex_date - 1), "a reversed range takes nothing"
+    assert_equal 1, Security::Split.factor_between(splits, nil, @ex_date)
+    assert_equal 1, Security::Split.factor_between(splits, @ex_date - 1, nil)
+  end
+
   test "an unknown source is refused" do
     assert_not @security.splits.new(ex_date: @ex_date, numerator: 2, denominator: 1, source: "yahoo").valid?
   end
@@ -95,6 +112,17 @@ class Security::SplitTest < ActiveSupport::TestCase
       record(4, 2, "snaptrade")
     end
     assert_equal "manual", @security.splits.sole.source
+  end
+
+  # The manual row's early return used to skip validation, so a misspelled or
+  # missing provider passed silently whenever a manual row stood.
+  test "an unknown or missing source is refused even when a manual row stands" do
+    manual = record(2, 1, "manual")
+
+    [ "yahoo", nil ].each do |source|
+      assert_raises(ActiveRecord::RecordInvalid, source.inspect) { record(3, 1, source) }
+    end
+    assert_equal [ 2, 1, "manual" ], manual.reload.values_at(:numerator, :denominator, :source)
   end
 
   test "a provider write replaces another provider row" do
@@ -180,6 +208,80 @@ class Security::SplitTest < ActiveSupport::TestCase
     assert_empty @security.splits.reload
   end
 
+  # The merge tasks re-point holdings and trades before moving splits, so the
+  # holdings a sync built against the duplicate's splits are stale until the
+  # canonical security's holders are rebuilt.
+  test "moving a duplicate's split rematerializes every account now holding the canonical security" do
+    canonical = Security.create!(ticker: "CANO", name: "Canonical")
+    holder = holding_account(families(:dylan_family), canonical)
+    record(2, 1, "snaptrade")
+    clear_enqueued_jobs
+
+    Security::Split.move!(from: @security, to: canonical)
+
+    assert_equal [ holder.id ], enqueued_account_ids
+    job = enqueued_jobs.find { |queued| queued[:job] == SecuritySplitRematerializeJob }
+    assert_equal canonical, ActiveJob::Arguments.deserialize(job[:args]).second
+  end
+
+  test "merging into a security with splits rematerializes even when the duplicate has none" do
+    canonical = Security.create!(ticker: "CANO", name: "Canonical")
+    canonical.splits.create!(ex_date: @ex_date, numerator: 2, denominator: 1, source: "manual")
+    holder = holding_account(families(:dylan_family), canonical)
+
+    Security::Split.move!(from: @security, to: canonical)
+
+    assert_equal [ holder.id ], enqueued_account_ids
+  end
+
+  test "merging when neither security has a split enqueues nothing" do
+    canonical = Security.create!(ticker: "CANO", name: "Canonical")
+    holding_account(families(:dylan_family), canonical)
+
+    Security::Split.move!(from: @security, to: canonical)
+
+    assert_empty enqueued_account_ids
+  end
+
+  # Two securities are often merged because they disagree, so the split a
+  # merge drops is recorded whenever its terms differ from the one kept.
+  test "a merge that drops a split with different terms logs both" do
+    canonical = Security.create!(ticker: "CANO", name: "Canonical")
+    canonical.splits.create!(ex_date: @ex_date, numerator: 3, denominator: 1, source: "manual")
+    record(2, 1, "manual")
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      Security::Split.move!(from: @security, to: canonical)
+    end
+
+    log = DebugLogEntry.order(:created_at).last
+    assert_equal [ "3:1", "manual", "2:1", "manual", @ex_date.iso8601, canonical.id, @security.id ],
+                 log.metadata.values_at("kept_ratio", "kept_source", "dropped_ratio", "dropped_source", "ex_date", "security_id", "duplicate_security_id")
+  end
+
+  test "a merge where the manual split replaces a provider one with different terms logs both" do
+    canonical = Security.create!(ticker: "CANO", name: "Canonical")
+    canonical.splits.create!(ex_date: @ex_date, numerator: 3, denominator: 1, source: "snaptrade")
+    record(2, 1, "manual")
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      Security::Split.move!(from: @security, to: canonical)
+    end
+
+    log = DebugLogEntry.order(:created_at).last
+    assert_equal [ "2:1", "manual", "3:1", "snaptrade" ], log.metadata.values_at("kept_ratio", "kept_source", "dropped_ratio", "dropped_source")
+  end
+
+  test "a merge that drops a split with the same terms logs nothing" do
+    canonical = Security.create!(ticker: "CANO", name: "Canonical")
+    canonical.splits.create!(ex_date: @ex_date, numerator: 4, denominator: 2, source: "snaptrade")
+    record(2, 1, "manual")
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      Security::Split.move!(from: @security, to: canonical)
+    end
+  end
+
   private
     def record(numerator, denominator, source)
       Security::Split.record!(security: @security, ex_date: @ex_date, numerator: numerator, denominator: denominator, source: source)
@@ -190,9 +292,9 @@ class Security::SplitTest < ActiveSupport::TestCase
         .map { |job| ActiveJob::Arguments.deserialize(job[:args]).first.id }
     end
 
-    def holding_account(family)
+    def holding_account(family, security = @security)
       account = family.accounts.create!(name: "Holder", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
-      account.holdings.create!(security: @security, date: @ex_date - 1, qty: 1, price: 10, amount: 10, currency: "USD")
+      account.holdings.create!(security: security, date: @ex_date - 1, qty: 1, price: 10, amount: 10, currency: "USD")
       account
     end
 
