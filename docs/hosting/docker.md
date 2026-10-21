@@ -119,7 +119,16 @@ RAILS_ASSUME_SSL: "true"
 
 #### Sending email (SMTP)
 
-Sure sends email, such as password resets and rule notifications, through an SMTP server that you provide. Email is sent by the background worker (the `worker` service), not by `web`, so the worker must have these settings.
+Sure sends email through an SMTP server that you provide. Email is sent by the background worker (the `worker` service), not by `web`, so the worker must have these settings.
+
+On a self-hosted instance, Sure sends these emails:
+
+- Password reset links, when password sign-in is enabled.
+- A confirmation link when a user changes their email address, but only when **Require email confirmation** is on under Settings > Self-Hosting. When it is off, the new address is saved straight away and nothing is sent.
+- Rule notifications, from rules with a "Send email notification" action.
+- The follow-up email after a PDF import is processed.
+
+Invitations are never emailed on a self-hosted instance, even with SMTP set up. After you add a member, copy the invitation link from Settings > Profile Info and send it to them yourself.
 
 | Variable | What it does | Default when not set |
 |----------|--------------|----------------------|
@@ -156,6 +165,8 @@ x-rails-env: &rails_env
   SMTP_TLS_ENABLED: ${SMTP_TLS_ENABLED:-true}
 ```
 
+The table above lists the app's own defaults. This snippet sets different ones for Compose: port 465 with TLS from the start of the connection (SMTPS). For a server that uses STARTTLS on port 587, set `SMTP_PORT` and `SMTP_TLS_ENABLED` in `.env` as shown below.
+
 Then set the values in `.env`:
 
 ```txt
@@ -164,6 +175,9 @@ EMAIL_SENDER="sure@example.com"
 SMTP_ADDRESS="smtp.example.com"
 SMTP_USERNAME="replacemewithyoursmtpusername"
 SMTP_PASSWORD="replacemewithyoursmtppassword"
+# For STARTTLS on port 587 instead of SMTPS on 465:
+# SMTP_PORT="587"
+# SMTP_TLS_ENABLED="false"
 ```
 
 Set every key you list in the anchor. Docker Compose passes a listed key that has no value in `.env` as an empty value, not as unset. An empty `EMAIL_SENDER` replaces the `sender@sure.local` fallback with an empty address, and an empty `SMTP_USERNAME` still makes the app try to log in. If your server needs no login, leave the `SMTP_USERNAME` and `SMTP_PASSWORD` lines out of the anchor.
