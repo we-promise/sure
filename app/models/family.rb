@@ -664,10 +664,19 @@ class Family < ApplicationRecord
     # By including it in the cache key, we can expire caches every time family account data changes.
     data_invalidation_key = invalidate_on_data_updates ? latest_sync_completed_at : nil
 
+    # Balance-sheet / sidebar / sparkline caches convert foreign-currency balances
+    # into family.currency (often falling back to 1:1 when no rate exists yet).
+    # Rates and the target currency can change without touching accounts or syncs
+    # (e.g. first USD→EUR row arrives after linking IBKR). Mirror
+    # IncomeStatement#cache_freshness_key so those caches do not serve 1:1
+    # amounts labeled in the family currency until a 12h TTL or unrelated write.
+    # Related: #4200 (currency-change gap); this covers newly fetched FX rates.
     [
       id,
       currency,
       key,
+      currency,
+      (ExchangeRate.maximum(:updated_at)&.to_i if invalidate_on_data_updates),
       data_invalidation_key,
       accounts_status_version
     ].compact.join("_")

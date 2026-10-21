@@ -56,7 +56,10 @@ module AccountsHelper
       end
 
     [
-      family.build_cache_key("account_sidebar_tabs_v3", invalidate_on_data_updates: true),
+      # v4: family.build_cache_key now includes currency + ExchangeRate
+      # freshness when invalidate_on_data_updates is true (see Family#build_cache_key).
+      # Bump so existing v3 fragments are not mixed with the new key shape mid-TTL.
+      family.build_cache_key("account_sidebar_tabs_v4", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
       active_tab,
