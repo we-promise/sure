@@ -260,10 +260,15 @@ class TransactionsController < ApplicationController
     rule_input = @entry.rule_input_snapshot
 
     # The transaction-row tag picker toggles one tag at a time; the drawer's
-    # multiselect sends the full set.
+    # multiselect sends the full set, plus the set it last saved so only its
+    # own changes apply and tags a rule added meanwhile stay.
     if params[:toggle_tag_id].present?
       @toggled_tag = Current.family.tags.find(params[:toggle_tag_id])
       @entry.transaction.toggle_tag!(@toggled_tag)
+    elsif params.key?(:previous_tag_ids)
+      previous_ids = Array(params[:previous_tag_ids]).reject(&:blank?)
+      wanted_ids = @entry.transaction.tag_ids.map(&:to_s) - (previous_ids - tag_ids_param) | (tag_ids_param - previous_ids)
+      @entry.transaction.tag_ids = Current.family.tags.where(id: wanted_ids).pluck(:id)
     else
       @entry.transaction.tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
     end

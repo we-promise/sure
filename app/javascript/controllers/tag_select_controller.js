@@ -31,6 +31,9 @@ export default class extends Controller {
         .filter((option) => option.getAttribute("aria-selected") === "true")
         .map((option) => option.dataset.tagId),
     );
+    // The set last saved from here; the server applies only the difference,
+    // so tags something else (e.g. a rule) set in the meantime survive.
+    this.savedIds = new Set(this.selectedIds);
     this.renderSelection();
     this.observeMenuResize();
   }
@@ -124,12 +127,11 @@ export default class extends Controller {
   }
 
   handleSearchKeydown(event) {
-    if (
-      event.key === "Enter" &&
-      !this.createFormTarget.classList.contains("hidden") &&
-      !this.creating
-    ) {
-      event.preventDefault();
+    if (event.key !== "Enter") return;
+
+    // Never submit the surrounding form natively.
+    event.preventDefault();
+    if (!this.createFormTarget.classList.contains("hidden") && !this.creating) {
       this.createTag();
     }
   }
@@ -234,9 +236,10 @@ export default class extends Controller {
 
     const abortController = new AbortController();
     this.submitAbortController = abortController;
+    const tagIds = Array.from(this.selectedIds);
 
     try {
-      await fetch(this.updateUrlValue, {
+      const response = await fetch(this.updateUrlValue, {
         method: "PATCH",
         headers: {
           Accept: "application/json",
@@ -245,11 +248,13 @@ export default class extends Controller {
           "X-Requested-With": "XMLHttpRequest",
         },
         body: JSON.stringify({
-          tag_ids: Array.from(this.selectedIds),
+          tag_ids: tagIds,
+          previous_tag_ids: Array.from(this.savedIds),
         }),
         credentials: "same-origin",
         signal: abortController.signal,
       });
+      if (response.ok) this.savedIds = new Set(tagIds);
     } catch (error) {
       if (error.name !== "AbortError") throw error;
     } finally {

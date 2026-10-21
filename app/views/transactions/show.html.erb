@@ -63,10 +63,12 @@
               url: transaction_path(@entry),
               data: { controller: "auto-submit-form" } do |f| %>
           <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+          <%# "change", not "blur": leaving the field untouched must not send its stale value. %>
           <%= f.text_field :name,
                 label: t(".name_label"),
                 disabled: @entry.split_child? || edit_locked,
-                "data-auto-submit-form-target": "auto" %>
+                "data-auto-submit-form-target": "auto",
+                "data-autosubmit-trigger-event": "change" %>
         <% end %>
         <%= styled_form_with model: @entry,
               url: transaction_path(@entry),
