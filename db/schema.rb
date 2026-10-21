@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -834,6 +834,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.index ["from_currency", "to_currency", "date"], name: "index_exchange_rates_on_base_converted_date_unique", unique: true
     t.index ["from_currency"], name: "index_exchange_rates_on_from_currency"
     t.index ["to_currency"], name: "index_exchange_rates_on_to_currency"
+    t.check_constraint "rate > 0::numeric AND rate <> 'NaN'::numeric AND rate::text <> 'Infinity'::text", name: "chk_exchange_rates_rate_positive"
   end
 
   create_table "families", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -841,6 +842,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.string "assistant_type", default: "builtin", null: false
     t.boolean "auto_sync_on_login", default: true, null: false
     t.string "bills_feed_token"
+    t.boolean "categories_locked", default: false, null: false
     t.decimal "categorization_confidence_threshold", precision: 3, scale: 2, default: "0.7", null: false
     t.string "categorization_provider", default: "llm", null: false
     t.decimal "categorization_shadow_rate", precision: 3, scale: 2, default: "0.0", null: false
@@ -853,6 +855,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.boolean "early_access", default: false
     t.string "enabled_currencies", array: true
     t.boolean "household_budget_enabled", default: true, null: false
+    t.boolean "investment_contributions_as_spending", default: true, null: false
     t.datetime "last_sync_all_attempted_at"
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
@@ -1611,6 +1614,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.jsonb "raw_holdings_payload"
     t.jsonb "raw_payload"
     t.jsonb "raw_transactions_payload"
+    t.boolean "treat_balance_as_available_credit", default: false, null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_lunchflow_accounts_on_account_id"
     t.index ["lunchflow_item_id", "account_id"], name: "index_lunchflow_accounts_on_item_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
@@ -1947,6 +1951,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
   create_table "properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "area_unit"
     t.integer "area_value"
+    t.string "avm_external_id"
     t.date "avm_last_synced_on"
     t.string "avm_provider"
     t.datetime "created_at", null: false
@@ -1955,7 +1960,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2277,8 +2282,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.date "effective_date"
     t.uuid "family_id", null: false
     t.string "name"
+    t.integer "position", default: 0, null: false
     t.string "resource_type", null: false
+    t.boolean "stop_processing", default: false, null: false
     t.datetime "updated_at", null: false
+    t.index ["family_id", "position"], name: "index_rules_on_family_id_and_position"
     t.index ["family_id"], name: "index_rules_on_family_id"
   end
 
@@ -2485,6 +2493,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.string "account_type"
     t.decimal "available_balance", precision: 19, scale: 4
     t.decimal "balance", precision: 19, scale: 4
+    t.string "balance_sign_override"
     t.datetime "created_at", null: false
     t.string "currency"
     t.string "customer_id"
@@ -2500,6 +2509,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.index ["account_id"], name: "index_sophtron_accounts_on_account_id"
     t.index ["sophtron_item_id", "account_id"], name: "idx_unique_sophtron_accounts_per_item", unique: true
     t.index ["sophtron_item_id"], name: "index_sophtron_accounts_on_sophtron_item_id"
+    t.check_constraint "balance_sign_override::text = ANY (ARRAY['credit'::character varying::text, 'debt'::character varying::text])", name: "chk_sophtron_accounts_balance_sign_override"
   end
 
   create_table "sophtron_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2675,6 +2685,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.string "brokerage_account_id"
     t.datetime "created_at", null: false
     t.string "currency"
+    t.uuid "device_id", default: -> { "gen_random_uuid()" }, null: false
     t.uuid "family_id", null: false
     t.string "name"
     t.string "newest_event_id"
@@ -2683,6 +2694,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.string "phone_number"
     t.boolean "scheduled_for_deletion", default: false, null: false
     t.text "session_blob"
+    t.datetime "session_expires_at"
     t.string "status", default: "good", null: false
     t.jsonb "timeline_cursors", default: {}, null: false
     t.datetime "updated_at", null: false

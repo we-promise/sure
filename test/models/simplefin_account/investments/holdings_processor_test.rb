@@ -249,6 +249,42 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_in_delta 258.1781, position[:price].to_f, 0.01
   end
 
+  test "each day's sync keeps its own holding row" do
+    # The external_id carries the snapshot date, so the next day's sync
+    # creates a new row instead of finding yesterday's by id and moving it
+    # forward. Without that, the account never has more than one row per
+    # security and its holdings history collapses onto the latest day.
+    account = accounts(:investment)
+    security = Security.create!(ticker: "DAILY", name: "Daily Snapshot Fund")
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+    processor.stubs(:account).returns(account)
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+    )
+
+    first_day = Date.current
+
+    processor.stubs(:holdings_data).returns([
+      { "id" => "lot-a", "symbol" => "DAILY", "shares" => "10", "market_value" => "1000" }
+    ])
+    processor.process
+
+    travel_to 1.day.from_now do
+      processor.stubs(:holdings_data).returns([
+        { "id" => "lot-a", "symbol" => "DAILY", "shares" => "12", "market_value" => "1260" }
+      ])
+      processor.process
+    end
+
+    holdings = account.holdings.where(security: security).order(:date)
+
+    assert_equal [ first_day, first_day + 1 ], holdings.map(&:date)
+    assert_equal [ 10, 12 ], holdings.map { |h| h.qty.to_i }
+    assert_equal [ "simplefin_lot-a_#{first_day}", "simplefin_lot-a_#{first_day + 1}" ], holdings.map(&:external_id)
+  end
+
   test "a position with any unknown-basis lot reports no aggregate basis" do
     # Averaging only the lots that reported a basis would apply that figure to
     # shares whose cost is unknown, fabricating cost and gain/loss.

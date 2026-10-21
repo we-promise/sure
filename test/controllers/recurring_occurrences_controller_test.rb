@@ -39,6 +39,16 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # DS::Button renders type="button" unless told otherwise, so Record payment
+  # did nothing when clicked; only Enter in a field submitted the form.
+  test "record payment submits the manual payment form" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_select "form[action=?]", recurring_occurrence_allocations_path(@occurrence) do
+      assert_select "button[type=submit]", text: /Record payment/
+    end
+  end
+
   # A whole-unit currency steps by 1. With a 0.01 minimum as the step base,
   # every whole amount was off-step and the browser refused to submit it.
   test "the manual payment steps from its minimum in the bill's currency" do

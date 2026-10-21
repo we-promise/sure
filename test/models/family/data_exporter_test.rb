@@ -440,6 +440,8 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert rule_data["data"].key?("name")
       assert rule_data["data"].key?("resource_type")
       assert rule_data["data"].key?("active")
+      assert_equal @rule.position, rule_data["data"]["position"]
+      assert_equal false, rule_data["data"]["stop_processing"]
       assert rule_data["data"].key?("conditions")
       assert rule_data["data"].key?("actions")
     end
@@ -930,6 +932,21 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports a user's choice to make an investment transfer a plain transfer" do
+    brokerage = @family.accounts.create!(name: "Brokerage", accountable: Investment.new, balance: 0, currency: "USD")
+    outflow = create_transaction_entry(@account, amount: 100, date: Date.parse("2024-01-15"), name: "To brokerage")
+    inflow = create_transaction_entry(brokerage, amount: -100, date: Date.parse("2024-01-15"), name: "From checking")
+    transfer = Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
+    assert transfer.update_investment_contribution!(false)
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      transfer_data = ndjson_records.find { |record| record["type"] == "Transfer" && record.dig("data", "id") == transfer.id }
+
+      assert_equal false, transfer_data["data"]["investment_contribution"]
+    end
+  end
+
   test "exports transfer decisions and rejected transfers in NDJSON" do
     destination_account = @family.accounts.create!(
       name: "Savings Account",
@@ -965,6 +982,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal transfer_outflow.entryable.id, transfer_data["data"]["outflow_transaction_id"]
       assert_equal "confirmed", transfer_data["data"]["status"]
       assert_equal "Confirmed by user", transfer_data["data"]["notes"]
+      assert_nil transfer_data["data"]["investment_contribution"]
 
       rejected_transfer_data = ndjson_records.find { |record| record["type"] == "RejectedTransfer" && record.dig("data", "id") == rejected_transfer.id }
       assert rejected_transfer_data

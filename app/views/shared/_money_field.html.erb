@@ -77,7 +77,8 @@
             "auto-submit-form-target": ("auto" if options[:auto_submit]),
             action: [ options.dig(:amount_data, :action), "paste->money-field#pasteAmount", "blur->money-field#normalizeAmount" ].compact.join(" ")
           }.compact),
-          required: options[:required] %>
+          required: options[:required],
+          **options.slice(:name) %>
       </div>
 
       <% unless options[:hide_currency] %>
