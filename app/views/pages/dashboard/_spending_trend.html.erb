@@ -1,4 +1,4 @@
-<%# locals: (spending_trend_data:) %>
+<%# locals: (spending_trend_data:, view_params:) %>
 <%
   data = spending_trend_data
   period = data[:current_period]
@@ -14,9 +14,15 @@
   previous_label = data[:previous_label]
   previous_comparison_day = data[:previous_comparison_day]
   date_range_short = data[:date_range_short]
+  category_options = data[:category_options]
+  # The other widgets' months and filters, carried through this widget's
+  # links and form so changing it doesn't reset them.
+  other_view_params = view_params.except(:spending_month, :spending_category_ids)
 %>
 <div id="spending-trend-section" class="px-4 space-y-4">
-  <div class="flex items-center justify-between gap-3">
+  <%# Both rows wrap, so on narrow widths the controls drop below the date
+      and then onto a second line instead of overflowing the card. %>
+  <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-secondary hidden sm:block">
       <%= t(".date_range", start_date: l(period.date_range.begin, format: :long), end_date: l(period.date_range.end, format: :long)) %>
     </p>
@@ -24,7 +30,7 @@
       <%= date_range_short %>
     </p>
 
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <%= render DS::Tooltip.new(text: t(".period_scope_hint"), placement: "top-start") %>
 
       <%= render DS::Menu.new(variant: :button, placement: "bottom-end", max_height: "18rem") do |menu| %>
@@ -38,10 +44,43 @@
           <% menu.with_item(
                variant: :link,
                text: I18n.l(month, format: :month_year).capitalize,
-               href: root_path({ spending_month: month.iso8601 }),
+               href: root_path(other_view_params.merge(spending_month: month.iso8601, spending_category_ids: data[:category_ids]).compact),
                frame: "dashboard_sections",
-               selected: month == data[:month]
+               selected: month == data[:month],
+               data: { turbo_action: "advance" }
              ) %>
+        <% end %>
+      <% end %>
+
+      <%= render layout: "pages/dashboard/filter_popover", locals: {
+            button_text: data[:category_ids] ? t(".filter_categories", count: data[:selected_category_count]) : t(".filter_categories_all"),
+            search_label: t(".search_categories"),
+            apply_text: t(".apply"),
+            hidden_fields: other_view_params.merge(spending_month: data[:month].iso8601),
+            list_controllers: "list-filter category-filter"
+          } do %>
+        <%# Same cascade as the transactions category filter: a parent is
+            submitted only while all its subcategories are checked, and
+            picking a parent covers its subcategories. %>
+        <% category_options.each do |option| %>
+          <% category = option.category %>
+          <%= render layout: "pages/dashboard/filter_popover_option", locals: {
+                name: "spending_category_ids[]",
+                value: option.value,
+                checked: option.checked,
+                filter_name: category.display_name,
+                checkbox_data: {
+                  category_filter_target: "checkbox",
+                  action: "change->category-filter#toggle",
+                  category_id: category.id,
+                  parent_id: category.parent_id
+                }
+              } do %>
+            <% if category.parent_id.present? %>
+              <%= icon("corner-down-right", size: "sm") %>
+            <% end %>
+            <%= render partial: "categories/badge", locals: { category: category } %>
+          <% end %>
         <% end %>
       <% end %>
     </div>

@@ -1,11 +1,9 @@
 class Provider::Openai::BatchSlicer
   class ContextOverflowError < StandardError; end
 
-  # Splits `items` into sub-batches that respect both a hard item cap and a
-  # token-budget cap. Used by auto_categorize / auto_detect_merchants /
-  # enhance_provider_merchants so callers can pass larger batches and have the
-  # provider fan them out to fit small-context models.
-  def self.call(items, max_items:, max_tokens:, fixed_tokens: 0)
+  # Splits `items` into sub-batches that fit the token budget, so a batch too
+  # big for a small-context model fans out instead of failing.
+  def self.call(items, max_tokens:, fixed_tokens: 0)
     items = Array(items)
     return [] if items.empty?
 
@@ -26,10 +24,7 @@ class Provider::Openai::BatchSlicer
               "Single item requires ~#{item_tokens} tokens, which exceeds available budget (#{available})"
       end
 
-      would_exceed_items  = current.size >= max_items.to_i
-      would_exceed_tokens = current_tokens + item_tokens > available
-
-      if would_exceed_items || would_exceed_tokens
+      if current_tokens + item_tokens > available
         batches << current unless current.empty?
         current = []
         current_tokens = 0
