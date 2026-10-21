@@ -262,4 +262,35 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
 
     assert_not sleep_called, "Should not sleep when under credit limit"
   end
+
+  # The tests above stub Rails.cache, and the test env uses a null store, so
+  # they cannot notice a counter that is written but never read back. This one
+  # runs against a real RedisCacheStore, the production cache store.
+  test "throttle_request enforces the per-minute credit limit using a real Redis cache" do
+    # A per-run namespace keeps the counter key unique, so concurrent or retried
+    # runs sharing one Redis can never read each other's leftover counts.
+    store = ActiveSupport::Cache::RedisCacheStore.new(
+      url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
+      namespace: "test:twelve_data:#{SecureRandom.hex(8)}"
+    )
+    Rails.stubs(:cache).returns(store)
+
+    # Freeze 30s into a minute so the wait is predictable
+    travel_to Time.utc(2026, 1, 1, 12, 0, 30) do
+      minute_key = "twelve_data:credits:#{Time.current.to_i / 60}"
+
+      sleeps = []
+      @provider.define_singleton_method(:sleep) { |duration| sleeps << duration }
+
+      with_env_overrides(TWELVE_DATA_MIN_REQUEST_INTERVAL: "0", TWELVE_DATA_MAX_REQUESTS_PER_MINUTE: "3") do
+        3.times { @provider.send(:throttle_request) }
+        assert_empty sleeps, "Should not wait while under the per-minute limit"
+
+        @provider.send(:throttle_request)
+        assert_equal [ 31 ], sleeps, "Should wait for the next minute once the limit is reached"
+      end
+    ensure
+      store.delete(minute_key)
+    end
+  end
 end

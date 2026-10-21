@@ -119,13 +119,16 @@ class ProviderConnectionStatus
     def item_status
       return item.effective_status(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
 
+      # A session can end while the stored status is still good.
+      return "requires_update" if item_boolean(:needs_login?)
+
       item_value(:status)
     end
 
     def item_requires_update?
       return item.setup_token_update_required?(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
 
-      item_boolean(:requires_update?)
+      item_boolean(:requires_update?) || item_boolean(:needs_login?)
     end
 
     def pending_account_setup?

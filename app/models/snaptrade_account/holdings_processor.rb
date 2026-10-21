@@ -97,7 +97,9 @@ class SnaptradeAccount::HoldingsProcessor
       Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing holding for ticker: #{ticker}"
 
       # Resolve or create the security
-      security = resolve_security(ticker, symbol_data)
+      # The provider's own row, so the import adapter can carry a user's remap
+      # and cost-basis lock forward; it returns the row the holding is on.
+      security = resolve_security(ticker, symbol_data, account: account, account_provider_id: @snaptrade_account.account_provider&.id, provider_row: true)
       return unless security
 
       # Parse values
@@ -118,7 +120,7 @@ class SnaptradeAccount::HoldingsProcessor
       Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Importing holding: #{ticker} qty=#{quantity} price=#{price} currency=#{currency}"
 
       # Import the holding via the adapter
-      import_adapter.import_holding(
+      holding = import_adapter.import_holding(
         security: security,
         quantity: quantity,
         amount: amount,
@@ -136,7 +138,7 @@ class SnaptradeAccount::HoldingsProcessor
       avg_price = data["average_purchase_price"] || data[:average_purchase_price] ||
                   data["cost_basis"] || data[:cost_basis]
       if avg_price.present?
-        update_holding_cost_basis(security, avg_price)
+        update_holding_cost_basis(holding&.security || security, avg_price)
       end
     end
 

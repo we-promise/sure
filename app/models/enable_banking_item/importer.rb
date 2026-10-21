@@ -27,6 +27,16 @@ class EnableBankingItem::Importer
     ITAV interimAvailable
   ].freeze
 
+  # With "Balance is available credit" on for a credit card, the bank's figure
+  # is the available credit, so available types come first. Some cards report
+  # the credit limit as the booked balance (mBank PL: ITBD = limit, ITAV =
+  # available credit). XPCD (expected) keeps its place after the booked types:
+  # it is a projected booked balance, not an available-credit figure.
+  AVAILABLE_CREDIT_BALANCE_TYPE_PRIORITY = (%w[
+    CLAV closingAvailable
+    ITAV interimAvailable
+  ] + BALANCE_TYPE_PRIORITY).uniq.freeze
+
   PERIOD_BOUNDARY_TYPES = %w[opbd openingbooked prcd previouslyclosedbooked].freeze
 
   # Only these types may outrank OPBD/PRCD on freshness (see fresher_balance) —
@@ -235,7 +245,9 @@ class EnableBankingItem::Importer
       end
 
       currency, kept, skipped = split_balances_by_currency(balances, enable_banking_account)
-      balance = select_current_balance(kept)
+      balance = select_current_balance(
+        kept, prefer_available: prefer_available_balance?(enable_banking_account)
+      )
 
       unless balance.present?
         mark_balance_unavailable(enable_banking_account)
@@ -337,10 +349,19 @@ class EnableBankingItem::Importer
       )
     end
 
-    def select_current_balance(balances)
-      by_type = balances.index_by { |balance| normalize_balance_type(balance[:balance_type]) }
+    # The flag only changes how a credit card's balance is read (see
+    # EnableBankingAccount::Processor#process_account!), so any other linked
+    # account stays booked-first even if the flag is still set from an earlier link.
+    def prefer_available_balance?(enable_banking_account)
+      enable_banking_account.treat_balance_as_available_credit? &&
+        enable_banking_account.current_account&.accountable_type == "CreditCard"
+    end
 
-      BALANCE_TYPE_PRIORITY.each do |type|
+    def select_current_balance(balances, prefer_available: false)
+      by_type = balances.index_by { |balance| normalize_balance_type(balance[:balance_type]) }
+      priority = prefer_available ? AVAILABLE_CREDIT_BALANCE_TYPE_PRIORITY : BALANCE_TYPE_PRIORITY
+
+      priority.each do |type|
         normalized_type = normalize_balance_type(type)
         balance = by_type[normalized_type]
         next unless balance.present?
@@ -528,16 +549,18 @@ class EnableBankingItem::Importer
       )
 
       if include_pending
-        # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG) with _pending: true
+        # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG or an unidentified hold) with _pending: true
         all_transactions = all_transactions.map do |tx|
           tx_ia = tx.with_indifferent_access
-          tx_ia[:status] == "PDNG" ? tx_ia.merge(_pending: true) : tx_ia
+          is_pending = tx_ia[:status] == "PDNG" || EnableBankingEntry::Processor.unidentified_hold?(tx_ia)
+          is_pending ? tx_ia.merge(_pending: true) : tx_ia
         end
       else
         # If include_pending is false, we must filter out any pending transactions
-        # that were returned (e.g. if the bank ignores transaction_status="BOOK").
+        # that were returned (e.g. if the bank ignores transaction_status="BOOK" or returns unfinalized holds).
         all_transactions = all_transactions.reject do |tx|
-          tx.with_indifferent_access[:status] == "PDNG"
+          tx_ia = tx.with_indifferent_access
+          tx_ia[:status] == "PDNG" || EnableBankingEntry::Processor.unidentified_hold?(tx_ia)
         end
       end
 
@@ -606,7 +629,7 @@ class EnableBankingItem::Importer
       unless include_pending
         removed_pending = existing_transactions.reject! do |tx|
           tx = tx.with_indifferent_access
-          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
         end
       end
 
@@ -632,7 +655,7 @@ class EnableBankingItem::Importer
         if include_pending
           removed_pending ||= existing_transactions.reject! do |tx|
             tx = tx.with_indifferent_access
-            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
             next false unless pending_flag
 
             fp = EnableBankingEntry::Processor.compute_external_id(tx)

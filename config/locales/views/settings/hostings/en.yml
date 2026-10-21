@@ -130,6 +130,8 @@ en:
         not_configured_hint: "Add a %{provider} API key below to activate it."
         data_retention_heading: Data handling
         data_retention: API inputs are not used to train models by default; the providers' hosted APIs retain data for ~30 days for trust & safety. Custom or self-hosted endpoints follow your own policy.
+        max_items_per_call_label: Max Items Per Batch (Optional)
+        max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. With OpenAI-compatible providers, larger batches are auto-sliced to fit the context window."
       anthropic_settings:
         title: Anthropic (Claude)
         description: Enter your Anthropic API key. Optionally point Base URL at AWS Bedrock or GCP Vertex.
@@ -202,8 +204,6 @@ en:
         context_window_help: "Total tokens the model will accept. Default: 2048 — raise to 8192+ for cloud OpenAI or large-context local models."
         max_response_tokens_label: Max Response Tokens (Optional)
         max_response_tokens_help: "Tokens reserved for the model's reply. Default: 512. Lower to free up room for longer history."
-        max_items_per_call_label: Max Items Per Batch (Optional)
-        max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. Larger batches are auto-sliced to fit the context window."
         timeout_heading: Timeouts
         timeout_description: Controls how long OpenAI-compatible model calls may run before Sure gives up. Raise these if you run a local model on slow hardware.
         openai_request_timeout_label: Request Timeout in Seconds (Optional)
