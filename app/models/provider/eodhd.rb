@@ -21,6 +21,12 @@ class Provider::Eodhd < Provider
     true
   end
 
+  # The same response carries `ETF_Data.Holdings` for a fund -- see
+  # `etf_constituents` below.
+  def supplies_constituents?
+    true
+  end
+
   # EODHD free tier provides ~1 year of EOD data
   def max_history_days
     365
@@ -195,9 +201,30 @@ class Provider::Eodhd < Provider
         kind: general.dig("Type"),
         exchange_operating_mic: exchange_operating_mic,
         sector: general.dig("Sector"),
-        industry: general.dig("Industry")
+        industry: general.dig("Industry"),
+        constituents: etf_constituents(parsed)
       )
     end
+  end
+
+  # A fund's own holdings, from the SAME fundamentals response the metadata and
+  # the classification already come from -- so they cost no additional request.
+  #
+  # EODHD keys the holdings hash by a suffixed ticker ("AAPL.US") and carries the
+  # bare one in `Code`. The bare ticker is what matches anything in `securities`,
+  # so the key is used only as a fallback for a malformed entry.
+  def etf_constituents(parsed)
+    holdings = parsed.dig("ETF_Data", "Holdings")
+    return nil unless holdings.is_a?(Hash) && holdings.any?
+
+    holdings.filter_map do |key, holding|
+      next unless holding.is_a?(Hash)
+
+      ticker = holding["Code"].presence || key.to_s.split(".").first
+      next if ticker.blank?
+
+      { ticker: ticker, name: holding["Name"].presence, weight: holding["Assets_%"] }
+    end.presence
   end
 
   def fetch_security_price(symbol:, exchange_operating_mic: nil, date:)

@@ -1,9 +1,10 @@
 require "test_helper"
 
-# `supplies_classification?` gates whether a provider is asked at all, so a
-# provider that CAN answer and forgets to say so is silently never asked --
-# classification simply stops, and reads as missing data rather than as a
-# missing line of code.
+# `supplies_classification?` and `supplies_constituents?` gate whether a
+# provider is asked at all, so a provider that CAN answer and forgets to say so
+# is silently never asked -- classification simply stops, a fund's holdings are
+# never stored, and both read as missing data rather than as a missing line of
+# code.
 #
 # So the declarations are checked against what the providers actually build. The
 # source is read rather than the provider called, because calling means API keys
@@ -14,6 +15,7 @@ class Provider::SecurityCapabilityTest < ActiveSupport::TestCase
   # Either field is a classification: a provider that returns only an industry
   # still has to be asked.
   BUILDS_CLASSIFICATION = /^\s*(sector|industry):/
+  BUILDS_CONSTITUENTS = /^\s*constituents:/
 
   test "every provider that returns a classification declares it" do
     mismatched = capability_mismatches(builds: BUILDS_CLASSIFICATION, declares: :supplies_classification?)
@@ -34,6 +36,27 @@ class Provider::SecurityCapabilityTest < ActiveSupport::TestCase
 
     assert_empty overclaiming,
                  "these providers declare a classification they never build: #{overclaiming.join(", ")}"
+  end
+
+  test "every provider that returns constituents declares it" do
+    mismatched = capability_mismatches(builds: BUILDS_CONSTITUENTS, declares: :supplies_constituents?)
+
+    assert_empty mismatched,
+                 "these providers return constituents but answer false to supplies_constituents?, " \
+                 "so the constituents gate will never ask them: #{mismatched.join(", ")}"
+  end
+
+  # The other direction for constituents. A provider claiming them without
+  # building them would be asked once per security and stamp an empty table.
+  test "a provider that returns no constituents does not claim them" do
+    overclaiming = security_providers.reject do |klass, source|
+      next true if source.match?(BUILDS_CONSTITUENTS)
+
+      !klass.allocate.supplies_constituents?
+    end.map { |klass, _| klass.name }
+
+    assert_empty overclaiming,
+                 "these providers declare constituents they never build: #{overclaiming.join(", ")}"
   end
 
   private

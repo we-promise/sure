@@ -18,10 +18,16 @@ module Provider::SecurityConcept
   # defaults `currency:`. This Data has ten implementers; without the
   # defaults every one of them would raise at construction the day these
   # fields were added.
+  #
+  # `constituents` is a fund's own holdings -- an array of
+  # `{ticker:, name:, weight:}`, weight being the provider's percentage of fund
+  # assets. Nil for anything that is not a fund, which is most securities, and
+  # nil rather than `[]` so "not a fund" and "a fund we could not read" are the
+  # same answer to the caller: neither is worth asking about again.
   SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic,
-                             :sector, :industry) do
+                             :sector, :industry, :constituents) do
     def initialize(symbol:, name:, links:, logo_url:, description:, kind:, exchange_operating_mic:,
-                   sector: nil, industry: nil)
+                   sector: nil, industry: nil, constituents: nil)
       super
     end
   end
@@ -66,6 +72,17 @@ module Provider::SecurityConcept
   # Same shape as `max_history_days` below: declared on the concept, safely
   # defaulted, overridden by the providers it applies to.
   def supplies_classification?
+    false
+  end
+
+  # Whether this provider can answer for a fund's own holdings. Declared for the
+  # same reason as `supplies_classification?`, and defaulting to false for the
+  # same trade: the gate keys on `constituents_fetched_at`, so without a
+  # capability to consult, a security synced under a provider with nothing to
+  # give would be stamped with an empty table and never asked again, even after
+  # a capable provider is configured. A new provider that returns
+  # `constituents:` from `fetch_security_info` must override this.
+  def supplies_constituents?
     false
   end
 

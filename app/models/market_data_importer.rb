@@ -40,7 +40,8 @@ class MarketDataImporter
     # Details are metadata rather than prices, and import_provider_details skips
     # the provider once a security has them, so every online security keeps them.
     Security.online.find_each do |security|
-      security.import_provider_details(clear_cache: clear_cache, include_classification: true)
+      # See Account::MarketDataImporter: one request carries both answers.
+      security.import_provider_details(clear_cache: clear_cache, include_classification: true, include_constituents: true)
     end
   end
 
