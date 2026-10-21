@@ -139,8 +139,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
                 schema: { type: :boolean }
       parameter name: :excluded, in: :query, required: false,
                 description: 'Filters on the entry excluded flag only. false lists entries not flagged excluded; true lists only flagged ones, ' \
-                             'split parents included. It does not apply account, kind or budget rules, so combine it with budget_id ' \
-                             'for a totals-ready list. Omit to list both.',
+                             'split parents included. It does not apply all budget or report eligibility rules, even with budget_id, ' \
+                             'so the results are not guaranteed to match totals. Omit to list both.',
                 schema: { type: :boolean }
 
       response '200', 'transactions listed' do

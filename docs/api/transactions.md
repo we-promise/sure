@@ -58,7 +58,7 @@ The `GET /api/v1/transactions` endpoint supports the following query parameters 
 | `search` | string | Search by name, notes, or merchant name |
 | `budget_id` | uuid | Only transactions the budget's category drill-down lists (see below) |
 | `exclude_split_parents` | boolean | `true` leaves out transactions that have been split; their split children are still listed |
-| `excluded` | boolean | Filters on the entry excluded flag only: `false` lists entries not flagged excluded, `true` only flagged ones (split parents included). It does not apply account, kind or budget rules, so combine it with `budget_id` for a totals-ready list. Omit to list both |
+| `excluded` | boolean | Filters on the entry excluded flag only: `false` lists entries not flagged excluded, `true` only flagged ones (split parents included). It does not apply all budget or report eligibility rules, even with `budget_id`, so the results are not guaranteed to match totals. Omit to list both |
 
 Filters combine, so `budget_id` can be narrowed further with `category_id`, `account_id`, a date range and so on. A malformed or empty `budget_id`, or an `exclude_split_parents` / `excluded` value other than `true`, `false`, `1` or `0` (including an empty one), returns `422`. Leave a parameter out to turn its filter off.
 
