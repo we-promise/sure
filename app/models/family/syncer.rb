@@ -21,11 +21,10 @@ class Family::Syncer
 
   def perform_post_sync
     family.auto_match_transfers!
+    family.backfill_provider_merchant_logos
 
     Rails.logger.info("Applying rules for family #{family.id}")
-    family.rules.where(active: true).each do |rule|
-      rule.apply_later
-    end
+    ApplyRulesJob.perform_later(family)
   end
 
   private

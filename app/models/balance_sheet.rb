@@ -76,6 +76,8 @@ class BalanceSheet
         sort_by_balance(accounts)
       when "balance_desc"
         sort_by_balance(accounts).reverse
+      when "manual"
+        sort_manually(accounts)
       else
         accounts
       end
@@ -89,5 +91,17 @@ class BalanceSheet
 
     def sort_by_balance(accounts)
       accounts.sort_by { |account| [ account.converted_balance, account.id ] }
+    end
+
+    # Accounts the user has dragged into place come first, in their saved
+    # position within their group; accounts added since then follow
+    # alphabetically.
+    def sort_manually(accounts)
+      positions = user.manual_account_order.values.flat_map { |ids| ids.each_with_index.to_a }.to_h
+
+      accounts.sort_by do |account|
+        position = positions[account.id]
+        [ position ? 0 : 1, position || 0, account.name.to_s.downcase, account.id.to_s ]
+      end
     end
 end

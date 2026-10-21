@@ -18,16 +18,25 @@ namespace :rules do
 
     puts "Applying #{rules.count} rules for family #{family_id}..."
 
-    rules.find_each do |rule|
-      print "  Applying rule '#{rule.name || rule.id}'... "
-      begin
-        RuleJob.perform_now(rule, ignore_attribute_locks: true, execution_type: "manual")
-        puts "done"
-      rescue => e
-        puts "failed: #{e.message}"
-      end
+    # One top-to-bottom pass, like "Apply all" in the UI. Called directly rather
+    # than via a job, so a busy family lock fails here instead of being retried
+    # in the background while the task reports success.
+    runner = Rule::Runner.new(family, rules: rules, execution_type: "manual", ignore_attribute_locks: true)
+
+    begin
+      rule_runs = runner.run
+    rescue Rule::Runner::LockBusy => e
+      puts "failed: #{e.message}. Try again once the current sync has finished."
+      exit 1
+    end
+
+    rule_runs.compact.each do |rule_run|
+      line = "  Rule '#{rule_run.rule_name || rule_run.rule_id}': #{rule_run.status}"
+      line += " (#{rule_run.error_message})" if rule_run.error_message.present?
+      puts line
     end
 
     puts "Finished applying all rules"
+    exit 1 if runner.errors.any?
   end
 end

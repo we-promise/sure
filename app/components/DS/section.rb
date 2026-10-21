@@ -14,7 +14,7 @@ class DS::Section < DesignSystemComponent
   # card, not the screen.
   renders_one :aside
 
-  attr_reader :title, :count, :collapsible, :persist_key, :inset
+  attr_reader :title, :count, :collapsible, :persist_key, :inset, :divided
 
   # @param title [String] an h2, so the sections join the page's outline
   # @param count [Integer] the "· N" after the title
@@ -22,21 +22,33 @@ class DS::Section < DesignSystemComponent
   #   for a list that can run long. It starts open.
   # @param persist_key [String, nil] remember a collapsed section on this device
   #   (persisted-disclosure); only for a collapsible section
-  # @param inset [Boolean] frame the section in container-inset, which is the
-  #   default here, unlike on DS::Table. Pass false when a parent's shell
+  # @param inset [Boolean] frame the section in a surface-inset shell, which is
+  #   the default here, unlike on DS::Table. Pass false when a parent's shell
   #   already frames it, such as one that stacks several sections.
-  def initialize(title:, count:, collapsible: false, persist_key: nil, inset: true)
+  #
+  # The shell is surface-inset because a section sits on the page, not in a
+  # card. container-inset is the page's own colour in light mode, so the shell
+  # vanished there: headings floated, and the cards sat 4px inside every other
+  # card's edge. Dark mode showed it, so the page changed shape with the theme.
+  # @param divided [Boolean] hairline between rows. Pass false for a list that
+  #   reads like the transactions list, whose rows are spaced, not ruled.
+  def initialize(title:, count:, collapsible: false, persist_key: nil, inset: true, divided: true)
     @title = title
     @count = count
     @collapsible = collapsible
     @persist_key = persist_key
     @inset = inset
+    @divided = divided
 
     raise ArgumentError, "persist_key: needs collapsible: true" if persist_key && !collapsible
   end
 
   def container_classes
-    "rounded-xl bg-container-inset p-1" if inset
+    "rounded-xl bg-surface-inset p-1" if inset
+  end
+
+  def card_classes
+    class_names("@container bg-container rounded-lg shadow-border-xs", "divide-y divide-subdued": divided)
   end
 
   def persist_data

@@ -19,17 +19,22 @@
 #   ) %>
 #
 class ProviderSyncSummary < ViewComponent::Base
-  attr_reader :stats, :provider_item, :institutions_count, :activities_pending
+  attr_reader :stats, :provider_item, :institutions_count, :activities_pending, :show_account_details
 
   # @param stats [Hash] The sync statistics hash from sync.sync_stats
   # @param provider_item [Object] The provider item (must respond to last_synced_at)
   # @param institutions_count [Integer, nil] Optional count of connected institutions
   # @param activities_pending [Boolean] Whether activities are still being fetched in background
-  def initialize(stats:, provider_item:, institutions_count: nil, activities_pending: false)
+  # @param show_account_details [Boolean] Whether the viewer may see every account on
+  #   the connection. The detail lists name accounts and transactions from the last
+  #   sync, so a member shared only some of them gets the counts without the names
+  #   (#3630).
+  def initialize(stats:, provider_item:, institutions_count: nil, activities_pending: false, show_account_details: true)
     @stats = stats || {}
     @provider_item = provider_item
     @institutions_count = institutions_count
     @activities_pending = activities_pending
+    @show_account_details = show_account_details
   end
 
   def activities_pending?
@@ -84,6 +89,7 @@ class ProviderSyncSummary < ViewComponent::Base
   end
 
   def skip_details
+    return [] unless show_account_details
     stats["skip_details"] || []
   end
 
@@ -160,6 +166,7 @@ class ProviderSyncSummary < ViewComponent::Base
   end
 
   def error_details
+    return [] unless show_account_details
     stats["errors"] || []
   end
 
@@ -177,6 +184,7 @@ class ProviderSyncSummary < ViewComponent::Base
   end
 
   def stale_pending_details
+    return [] unless show_account_details
     stats["stale_pending_details"] || []
   end
 
@@ -190,6 +198,7 @@ class ProviderSyncSummary < ViewComponent::Base
   end
 
   def stale_unmatched_details
+    return [] unless show_account_details
     stats["stale_unmatched_details"] || []
   end
 
@@ -203,6 +212,7 @@ class ProviderSyncSummary < ViewComponent::Base
   end
 
   def pending_reconciled_details
+    return [] unless show_account_details
     stats["pending_reconciled_details"] || []
   end
 
@@ -216,6 +226,7 @@ class ProviderSyncSummary < ViewComponent::Base
   end
 
   def duplicate_suggestions_details
+    return [] unless show_account_details
     stats["duplicate_suggestions_details"] || []
   end
 
@@ -229,6 +240,7 @@ class ProviderSyncSummary < ViewComponent::Base
   end
 
   def data_quality_details
+    return [] unless show_account_details
     stats["data_quality_details"] || []
   end
 
