@@ -73,6 +73,22 @@ class Api::V1::TransactionAutoCategorizationsControllerTest < ActionDispatch::In
     assert_response :accepted
   end
 
+  test "returns 503 and does not report refused batches as queued" do
+    Provider::LlmConcept.stubs(:max_items_per_call).returns(1)
+    other = create_transaction(account: @account, name: "Hardware store").transaction
+    AutoCategorizeJob.stubs(:perform_later).returns(true).then.returns(false)
+
+    post auto_categorize_api_v1_transactions_url,
+         params: { transaction_ids: [ @uncategorized.id, other.id ] },
+         headers: api_headers(@api_key), as: :json
+
+    assert_response :service_unavailable
+    body = JSON.parse(response.body)
+    assert_equal 1, body["queued_count"]
+    assert_equal 1, body["unqueued_transaction_ids"].size
+    assert_empty body["transaction_ids"] & body["unqueued_transaction_ids"]
+  end
+
   test "skips categorized, locked, transfer and split parent transactions" do
     categorized = create_transaction(account: @account, category: categories(:food_and_drink)).transaction
     locked = create_transaction(account: @account, name: "Left blank on purpose").transaction
