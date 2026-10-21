@@ -40,13 +40,13 @@ class MaskAccountNumbersInGeneratedAccountNames < ActiveRecord::Migration[8.1]
           next if identifier.length <= 4
 
           if (new_name = mask_name(provider_name, identifier, style))
-            execute "UPDATE #{quote_table_name(table)} SET name = #{connection.quote(new_name)} WHERE id = #{connection.quote(provider_id)}"
+            execute "UPDATE #{quote_table_name(table)} SET name = #{connection.quote(new_name)} WHERE id = #{connection.quote(provider_id)} AND name = #{connection.quote(provider_name)}"
           end
 
           provider_rows.each do |_, _, _, account_id, account_name|
             next unless account_id && (new_name = mask_name(account_name, identifier, style))
 
-            execute "UPDATE accounts SET name = #{connection.quote(new_name)} WHERE id = #{connection.quote(account_id)}"
+            execute "UPDATE accounts SET name = #{connection.quote(new_name)} WHERE id = #{connection.quote(account_id)} AND name = #{connection.quote(account_name)}"
           end
         end
 

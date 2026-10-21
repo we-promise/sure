@@ -9,6 +9,11 @@
 # are touched, and only the trailing hash: the user-facing note in front of it
 # is kept.
 class RemoveMercuryRoutingDetailsFromNotes < ActiveRecord::Migration[8.1]
+  # Each batch commits on its own, so a sync writing the same entries during
+  # the deploy is not blocked until the whole migration ends; every update is
+  # guarded by the notes it read, so a rerun or an interleaved edit is safe.
+  disable_ddl_transaction!
+
   BATCH_SIZE = 500
 
   # Top-level keys of Mercury's transaction `details` object.
