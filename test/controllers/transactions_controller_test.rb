@@ -987,6 +987,39 @@ end
     assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
   end
 
+  # Only hand-made rows used to count, so a bill that detection had already
+  # found never disabled the button (#4368).
+  test "mark_as_recurring refuses a transaction a detected bill already covers" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Betashares"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+
+    family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 100,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: false,
+      occurrence_count: 2
+    )
+
+    get transaction_url(entry)
+    assert_select "button[disabled]", text: /Mark as Recurring/
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(entry.entryable)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+  end
+
   test "mark_as_recurring shows already-exists alert when a concurrent request wins the race" do
     family = families(:empty)
     sign_in users(:empty)

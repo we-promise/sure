@@ -154,6 +154,16 @@ class RecurringTransactionsController < ApplicationController
   def create
     @recurring_transaction = build_declared_bill
 
+    # The posted fields carry only a name, and a detected bill is keyed by
+    # merchant with no name, so whether this duplicates a bill is asked of the
+    # transaction the dialog was opened from. The dialog already said so; this
+    # catches a stale dialog or a direct POST.
+    if (@source_entry = Current.accessible_entries.find_by(id: params[:entry_id])) &&
+        params[:allow_duplicate].blank? &&
+        (@covering_series = covering_series_for(@source_entry))
+      return render :new, status: :unprocessable_entity, layout: dialog_layout
+    end
+
     if @recurring_transaction.errors.none? && save_declared_bill
       flash[:notice] = @recurring_transaction.typed_income? ? t(".success_income") : t(".success")
 
@@ -258,6 +268,8 @@ class RecurringTransactionsController < ApplicationController
     # smart-fill path, so a failed suggestion still leaves the user exactly
     # where the plain prefill would have.
     def prefill_recurring_from_entry(entry)
+      @source_entry = entry
+      @covering_series = covering_series_for(entry)
       @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name
       @recurring_transaction.amount = entry.amount.abs
       @recurring_transaction.currency = entry.currency
@@ -269,6 +281,13 @@ class RecurringTransactionsController < ApplicationController
     end
 
   private
+
+    # Only a bill this user can open is worth naming in the dialog.
+    def covering_series_for(entry)
+      return unless entry.transaction?
+
+      Current.family.recurring_transactions.accessible_by(Current.user).covering(entry)
+    end
 
     # Sign-filtered detected patterns not yet covered by any series, mapped
     # to what the picker renders. Each candidate carries its latest entry's

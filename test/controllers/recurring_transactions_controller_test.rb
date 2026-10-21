@@ -1278,7 +1278,105 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://pay.example/theirs", read_only_sibling.reload.payment_url
   end
 
+  # "Create bill" from a transaction used to save a second bill for a payment
+  # that was already paying one (#4368): the declared bill is keyed by name,
+  # the detected one by merchant, so no unique index could ever collide.
+  test "new from a transaction a bill already covers names that bill and links to it" do
+    entry, detected = covered_entry_and_detected_bill
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    assert_select "a[href=?]", bill_path(detected), text: I18n.t("recurring_transactions.new.covered_open")
+    assert_select "input[type=hidden][name=entry_id][value=?]", entry.id
+    assert_select "input[type=hidden][name=allow_duplicate][value=1]"
+  end
+
+  test "new from a transaction no bill covers shows no warning" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_no_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    assert_select "input[type=hidden][name=entry_id][value=?]", entry.id
+    assert_select "input[name=allow_duplicate]", count: 0
+  end
+
+  # The submitted fields carry only a name; the detected bill has a merchant
+  # and no name. Identity has to come from the posted entry, or this passes.
+  test "create refuses a second bill for a transaction a merchant-keyed bill covers" do
+    entry, detected = covered_entry_and_detected_bill
+
+    assert_no_difference "RecurringTransaction.count" do
+      post recurring_transactions_url, params: covered_create_params(entry)
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    assert_select "a[href=?]", bill_path(detected)
+  end
+
+  test "create makes the separate bill when asked to" do
+    entry, = covered_entry_and_detected_bill
+
+    assert_difference "RecurringTransaction.count", 1 do
+      post recurring_transactions_url, params: covered_create_params(entry).merge(allow_duplicate: "1")
+    end
+
+    assert_redirected_to bills_path
+  end
+
+  test "create from a transaction no bill covers still saves" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+
+    assert_difference "RecurringTransaction.count", 1 do
+      post recurring_transactions_url, params: covered_create_params(entry)
+    end
+
+    assert_redirected_to bills_path
+  end
+
   private
+
+    def covering_merchant
+      @covering_merchant ||= @family.merchants.create!(name: "Betashares")
+    end
+
+    def covered_entry_and_detected_bill
+      entry = accounts(:depository).entries.create!(
+        date: Date.current, amount: 100, currency: "USD", name: "BETASHARES DIRECT DEBIT",
+        entryable: Transaction.new(merchant: covering_merchant)
+      )
+      detected = @family.recurring_transactions.create!(
+        account: accounts(:depository), merchant: covering_merchant, name: nil,
+        amount: 100, currency: "USD", expected_day_of_month: Date.current.day,
+        last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current,
+        status: "active", manual: false, occurrence_count: 2
+      )
+      [ entry, detected ]
+    end
+
+    # What the prefilled dialog posts: the merchant's name, never its id.
+    def covered_create_params(entry)
+      {
+        entry_id: entry.id,
+        recurring_transaction: {
+          name: "Betashares",
+          amount: "100",
+          account_id: accounts(:depository).id,
+          first_due_on: (Date.current + 1.month).iso8601,
+          frequency_preset: "monthly"
+        }
+      }
+    end
 
     def create_series(name:, account: accounts(:depository), merchant: nil, status: "active", payment_url: nil,
                       amount: 25, bill_type: "bill")

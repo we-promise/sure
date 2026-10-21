@@ -72,6 +72,32 @@
       </div>
     <% end %>
 
-    <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0 %>
+    <% if @covering_series %>
+      <%# The transaction this dialog was opened from is already paying a bill.
+          Saving would count it twice, so the bill comes first and the form
+          waits behind a deliberate choice: a second price tier is the one
+          legitimate reason to want another. %>
+      <div class="mb-5">
+        <%= render DS::Alert.new(title: t(".covered_title"), variant: :warning, live: :polite) do %>
+          <p><%= t(".covered_body", name: @covering_series.display_name) %></p>
+          <%= render DS::Link.new(
+                text: t(".covered_open"),
+                variant: :default,
+                href: bill_path(@covering_series),
+                frame: "_top"
+              ) %>
+        <% end %>
+      </div>
+
+      <%= render DS::Disclosure.new(title: t(".covered_create_anyway"), align: "left") do %>
+        <div class="pt-2">
+          <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0,
+                             source_entry_id: @source_entry&.id, allow_duplicate: true %>
+        </div>
+      <% end %>
+    <% else %>
+      <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0,
+                         source_entry_id: @source_entry&.id %>
+    <% end %>
   <% end %>
 <% end %>

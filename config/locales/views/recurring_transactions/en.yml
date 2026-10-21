@@ -63,6 +63,10 @@ en:
       pick_different: Start from a different transaction
       smart_fill: Smart-fill with AI
       smart_fill_applied: AI suggested these values from the charge history. Review before saving.
+      covered_title: This transaction already belongs to a bill
+      covered_body: "%{name} already tracks this payment, so a new bill would count it twice."
+      covered_open: Open bill
+      covered_create_anyway: Create a separate bill anyway
     smart_fills:
       create:
         failed: Could not analyze the charge history right now. The form kept the transaction's own values.

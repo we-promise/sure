@@ -457,7 +457,7 @@ class TransactionsController < ApplicationController
     # Check if a recurring transaction already exists for this pattern.
     # The UI disables the button ahead of time using the same lookup, but this
     # guard remains as the authoritative check (e.g. stale page, direct POST).
-    existing = transaction.existing_manual_recurring_transaction
+    existing = Current.family.recurring_transactions.covering(transaction.entry)
 
     if existing
       flash[:alert] = t("recurring_transactions.already_exists")
@@ -559,7 +559,7 @@ class TransactionsController < ApplicationController
     def assign_mark_recurring_state
       return unless can_edit_entry? && !@entry.split_child?
 
-      existing = @entry.transaction.existing_manual_recurring_transaction
+      existing = Current.family.recurring_transactions.covering(@entry)
 
       @mark_recurring_href = mark_as_recurring_transaction_path(@entry.transaction)
       @mark_recurring_subtitle_class = existing ? "text-subdued" : "text-secondary"

@@ -139,6 +139,14 @@ class RecurringTransaction < ApplicationRecord
     name.presence || merchant&.name
   end
 
+  # Every name this series answers to, normalised: its own and the bank
+  # texts it has learned. The one place a series' names are compared, so the
+  # matcher and the covering check below cannot drift apart.
+  def known_names
+    ([ name ] + Array(matcher_hints["name_aliases"]))
+      .compact.map { |known| RecurringTransaction::Matcher.normalize_name(known) }.to_set
+  end
+
   def merchant_or_name_present
     if merchant_id.blank? && name.blank?
       errors.add(:base, :merchant_or_name_required)
@@ -478,6 +486,44 @@ class RecurringTransaction < ApplicationRecord
 
     low, high = [ anchor_amount / ratio, anchor_amount * ratio ].minmax
     candidate_amount.between?(low, high)
+  end
+
+  # The series in this scope that an entry already belongs to, if any. Guards
+  # both ways of turning a transaction into a bill ("Create bill" and "Mark as
+  # recurring"), so it sees what the matcher sees: detected series as well as
+  # hand-made ones. A declared bill is keyed by name and a detected one by
+  # merchant, so the unique indexes never collide between the two.
+  #
+  # An entry with a confirmed allocation is covered by that series, whatever
+  # its identity. Otherwise a non-ended series covers it when it shares the
+  # currency and account (an accountless series takes any account), the
+  # merchant when the series has one, or else a name the series knows (the
+  # entry's own text, or its merchant's name, which is what "Create bill"
+  # names a bill after), and an amount inside the variance band, so a second
+  # price tier stays creatable. The band is signed, so an inflow never lands
+  # inside a bill's band, nor an outflow inside income's.
+  def self.covering(entry)
+    scope = where(family_id: entry.account.family_id).where.not(status: "ended")
+
+    allocated = scope.joins(recurring_occurrences: :allocations)
+                     .merge(RecurringAllocation.confirmed)
+                     .find_by(recurring_allocations: { entry_id: entry.id })
+    return allocated if allocated
+
+    merchant = entry.entryable.try(:merchant)
+    names = [ entry.name, merchant&.name ].compact_blank.map { |name| Matcher.normalize_name(name) }
+
+    scope.where(currency: entry.currency, account_id: [ entry.account_id, nil ], destination_account_id: nil)
+         .order(:created_at)
+         .find do |series|
+           next false unless amount_within_variance_band?(entry.amount, series.amount)
+
+           if series.merchant_id.present?
+             series.merchant_id == merchant&.id
+           else
+             series.known_names.intersect?(names)
+           end
+         end
   end
 
   # Create a manual recurring transaction from an existing transaction
