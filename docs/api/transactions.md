@@ -60,14 +60,15 @@ The `GET /api/v1/transactions` endpoint supports the following query parameters 
 | `exclude_split_parents` | boolean | `true` leaves out transactions that have been split; their split children are still listed |
 | `excluded` | boolean | `false` lists only transactions counted in budget and report totals, `true` only excluded ones (split parents included). Omit to list both |
 
-Filters combine, so `budget_id` can be narrowed further with `category_id`, `account_id`, a date range and so on. A malformed `budget_id`, or an `exclude_split_parents` / `excluded` value other than `true`, `false`, `1` or `0`, returns `422`.
+Filters combine, so `budget_id` can be narrowed further with `category_id`, `account_id`, a date range and so on. A malformed or empty `budget_id`, or an `exclude_split_parents` / `excluded` value other than `true`, `false`, `1` or `0` (including an empty one), returns `422`. Leave a parameter out to turn its filter off.
 
 ### Budget and report lists
 
 `budget_id` returns the rows the web budget category drill-down lists for that budget:
 
 - transactions dated within the budget's period;
-- on the accounts the budget's spending is computed from: for the household budget, the accounts the caller owns or has been shared that are included in reports; for a personal budget, its owner's accounts that are included in reports (including when the owner shared the budget with the caller);
+- on the accounts the budget's spending is computed from: for the household budget, the accounts the caller owns or has been shared that are included in reports; for a personal budget, its owner's accounts that are included in reports;
+- and, as everywhere in this API, only on accounts the caller can access. A shared personal budget does not share the owner's accounts, so a viewer only sees the rows on accounts the owner has also shared with them, and the list can then add up to less than the budget's spending;
 - leaving out the `funds_movement`, `cc_payment` and `one_time` kinds, which budgets ignore.
 
 The budget must be one `GET /api/v1/budgets/{id}` would return to the caller (the household budget, the caller's own, or one shared with them); any other id returns `404`. Unlike the unfiltered list, rows on disabled accounts are left out, as they are on the web.

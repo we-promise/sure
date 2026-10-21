@@ -10135,7 +10135,8 @@ paths:
           transactions in the budget period, on the accounts its spending is computed
           from (the owner''s report accounts for a personal budget, the caller''s
           for the household budget), excluding the funds_movement, cc_payment and
-          one_time kinds. Must be a budget the caller can see; returns 404 otherwise.'
+          one_time kinds, and limited to accounts the caller can access. Must be
+          a budget the caller can see; returns 404 otherwise.'
         schema:
           type: string
           format: uuid

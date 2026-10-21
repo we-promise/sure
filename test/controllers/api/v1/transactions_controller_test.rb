@@ -261,21 +261,37 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "budget_id on a shared personal budget lists the owner's report accounts" do
+  test "budget_id on a shared personal budget lists the owner's report accounts shared with the caller" do
     @family.update!(personal_budgets: true)
     owner = users(:family_member)
     budget = create_past_budget(user: owner)
     BudgetShare.create!(owner: owner, viewer: @user, permission: "read_only")
     in_period = budget.start_date + 3.days
     owners_account = create_owned_account(owner: owner)
+    AccountShare.create!(account: owners_account, user: @user, permission: "read_only")
     owners_row = create_transaction(account: owners_account, amount: 30, date: in_period, name: "Owner spend")
     create_transaction(account: @account, amount: 30, date: in_period, name: "Viewer spend")
 
     get api_v1_transactions_url, params: { budget_id: budget.id }, headers: api_headers(@api_key)
     assert_response :success
 
-    # Same rows the web drill-down shows a viewer of the shared budget.
     assert_equal [ owners_row.entryable_id ], JSON.parse(response.body)["transactions"].map { |row| row["id"] }
+  end
+
+  test "budget_id on a shared personal budget leaves out the owner's accounts not shared with the caller" do
+    @family.update!(personal_budgets: true)
+    owner = users(:family_member)
+    budget = create_past_budget(user: owner)
+    BudgetShare.create!(owner: owner, viewer: @user, permission: "read_only")
+    in_period = budget.start_date + 3.days
+    create_transaction(account: create_owned_account(owner: owner), amount: 30, date: in_period, name: "Owner private spend")
+
+    get api_v1_transactions_url, params: { budget_id: budget.id, per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+
+    data = JSON.parse(response.body)
+    assert_empty data["transactions"], "a budget share alone must not expose the owner's account rows"
+    assert_equal 0, data["pagination"]["total_count"]
   end
 
   test "budget_id rejects another family's budget" do
@@ -341,6 +357,18 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
       assert_equal "#{key} must be true or false", JSON.parse(response.body)["message"]
     end
+  end
+
+  test "report filters reject a present but empty value" do
+    %i[exclude_split_parents excluded].each do |key|
+      get "#{api_v1_transactions_url}?#{key}=", headers: api_headers(@api_key)
+      assert_response :unprocessable_entity
+      assert_equal "#{key} must be true or false", JSON.parse(response.body)["message"]
+    end
+
+    get "#{api_v1_transactions_url}?budget_id=", headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_equal "budget_id must be a valid UUID", JSON.parse(response.body)["message"]
   end
 
   test "should search transactions" do
