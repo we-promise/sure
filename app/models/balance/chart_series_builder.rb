@@ -1,6 +1,7 @@
 class Balance::ChartSeriesBuilder
   def initialize(account_ids:, currency:, period: Period.last_30_days, interval: nil,
-                 favorable_direction: "up", account_active_until_dates: {})
+                 favorable_direction: "up", account_active_until_dates: {}, strict_currency_conversion: false)
+    @strict_currency_conversion = strict_currency_conversion
     @account_ids = account_ids
     @currency = currency
     @period = period
@@ -70,6 +71,9 @@ class Balance::ChartSeriesBuilder
 
     def build_series_for(column)
       values = query_data.map do |datum|
+        if @strict_currency_conversion && datum[:missing_currency].present?
+          raise Money::ConversionError.new(from_currency: datum[:missing_currency], to_currency: currency, date: datum.date)
+        end
         # Map column names to their start equivalents
         previous_column = case column
         when :end_balance then :start_balance
@@ -144,10 +148,11 @@ class Balance::ChartSeriesBuilder
     end
 
     # 1 for an account already in the target currency, else the rate the
-    # lateral join below found. NULL when the currency has no rate at all, so
+    # lateral join below found. NULL when the currency has no usable rate, so
     # the account drops out of the day's sum rather than counting at 1 (#3640).
+    # Strict conversion raises on that same gap instead (see missing_currency).
     def balance_rate_sql
-      "CASE WHEN accounts.currency = :target_currency THEN 1 ELSE er.rate END"
+      "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END"
     end
 
     def query
@@ -172,6 +177,10 @@ class Balance::ChartSeriesBuilder
         )
         SELECT
           d.date,
+          MIN(accounts.currency) FILTER (
+            WHERE accounts.currency <> :target_currency
+              AND last_bal.end_balance <> 0 AND (er.rate IS NULL OR er.rate <= 0)
+          ) AS missing_currency,
           -- Use flows_factor: already handles asset (+1) vs liability (-1)
           COALESCE(SUM(last_bal.end_balance * last_bal.flows_factor * #{balance_rate_sql} * :sign_multiplier::integer), 0) AS end_balance,
           COALESCE(SUM(last_bal.end_cash_balance * last_bal.flows_factor * #{balance_rate_sql} * :sign_multiplier::integer), 0) AS end_cash_balance,

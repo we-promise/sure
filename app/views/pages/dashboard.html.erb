@@ -114,13 +114,14 @@
   <% end %>
 
   <% two_column = Current.user.dashboard_two_column? %>
-  <div class="grid grid-cols-1 <%= "2xl:grid-cols-2 2xl:items-start 2xl:gap-y-0 2xl:[grid-auto-flow:row_dense] 2xl:[grid-auto-rows:1px]" if two_column %> gap-6 pb-6 lg:pb-12" data-controller="dashboard-sortable dashboard-masonry" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="<%= t("pages.dashboard.sections_aria_label") %>">
+  <div class="grid grid-cols-1 <%= "2xl:grid-cols-2 2xl:items-start 2xl:gap-y-0 2xl:[grid-auto-flow:row_dense] 2xl:[grid-auto-rows:1px]" if two_column %> gap-6 pb-6 lg:pb-12" data-controller="sortable-list dashboard-masonry" data-sortable-list-url-value="<%= dashboard_preferences_path %>" data-sortable-list-param-value="preferences.section_order" data-sortable-list-hold-delay-value="800" data-sortable-list-drop-target-value="nearest" data-sortable-list-own-keys-only-value="true" data-action="dragover->sortable-list#dragOver drop->sortable-list#drop" role="list" aria-label="<%= t("pages.dashboard.sections_aria_label") %>">
   <% if accessible_accounts.any? %>
     <% @dashboard_sections.each do |section| %>
       <section
-        class="bg-container rounded-xl shadow-border-xs transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2<%= " 2xl:col-span-2" if two_column && section[:layout][:col_span] == "full" %>"
+        class="bg-container rounded-xl shadow-border-xs transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 [-webkit-touch-callout:none]<%= " 2xl:col-span-2" if two_column && section[:layout][:col_span] == "full" %>"
         style="<%= "--dash-widget-h: #{section[:layout][:height_px]}px;" if section[:layout][:grow] %>"
-        data-dashboard-sortable-target="section"
+        data-sortable-list-target="item"
+        data-sortable-list-id="<%= section[:key] %>"
         data-section-key="<%= section[:key] %>"
         <%= "autofocus" if @just_shown_section == section[:key] %>
         data-controller="dashboard-section<%= " cashflow-expand" if section[:key] == "cashflow_sankey" %>"
@@ -132,13 +133,14 @@
         aria-grabbed="false"
         aria-label="<%= t(section[:title]) %> section. Press Enter or Space to grab for reordering, then use arrow keys to move."
         data-action="
-          dragstart->dashboard-sortable#dragStart
-          dragend->dashboard-sortable#dragEnd
-          touchstart->dashboard-sortable#touchStart
-          touchmove->dashboard-sortable#touchMove
-          touchend->dashboard-sortable#touchEnd
-          touchcancel->dashboard-sortable#touchEnd
-          keydown->dashboard-sortable#handleKeyDown">
+          dragstart->sortable-list#dragStart
+          dragend->sortable-list#dragEnd
+          touchstart->sortable-list#touchStart
+          touchmove->sortable-list#touchMove
+          touchend->sortable-list#touchEnd
+          touchcancel->sortable-list#touchCancel
+          contextmenu->sortable-list#suppressContextMenu
+          keydown->sortable-list#handleKeyDown">
         <div class="px-4 py-2 flex items-center justify-between">
           <div class="flex items-center gap-2">
             <button
