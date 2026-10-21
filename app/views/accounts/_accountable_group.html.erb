@@ -32,7 +32,7 @@
             sortable_list_hold_delay_value: 400,
             sortable_list_save_timeout_value: 10_000,
             sortable_list_mirror_lists_value: true,
-            action: "dragover->sortable-list#dragOver drop->sortable-list#drop account-sort-mode:stop@window->sortable-list#releaseKeyboardGrab"
+            action: "dragover->sortable-list#dragOver drop->sortable-list#drop account-sort-mode:stop@window->sortable-list#releaseKeyboardGrab turbo:before-visit@window->sortable-list#saveBeforeVisit"
           } : {} do %>
       <% account_group.accounts.each do |account| %>
         <%# Rows become draggable only in sort mode (account-sort-mode). %>

@@ -313,8 +313,20 @@ export default class extends Controller {
         "ring-offset-2",
       );
       this.keyboardGrabbedElement = null;
-      this.saveOrder();
+      return this.saveOrder();
     }
+  }
+
+  // Bound to turbo:before-visit. A visit (e.g. following a link inside the
+  // list) replaces the page before a row still held with the keyboard is
+  // released, which would drop the move. The row is dropped where it is and
+  // the visit waits until the order is saved, so the next page shows it.
+  saveBeforeVisit(event) {
+    if (!this.keyboardGrabbedElement) return;
+
+    event.preventDefault();
+    const { url } = event.detail;
+    this.releaseKeyboardGrab().then(() => Turbo.visit(url));
   }
 
   moveUp(section) {
@@ -439,12 +451,14 @@ export default class extends Controller {
 
   // Saves run one at a time. A change made while a save is in flight is sent
   // once it finishes, with the latest order only, so an older request can
-  // never land after a newer one and restore an earlier order.
+  // never land after a newer one and restore an earlier order. Resolves once
+  // the queue has sent everything.
   saveOrder() {
     const order = this.itemTargets.map((item) => item.dataset.sortableListId);
     const queue = this.mirrorListsValue ? this.mirrorOrder(order) : this;
     queue.pendingOrder = order;
-    if (!queue.saving) queue.flushSaves();
+    if (!queue.saving) queue.savesFinished = queue.flushSaves();
+    return queue.savesFinished;
   }
 
   // Applies the order to the other copies of this list and returns the

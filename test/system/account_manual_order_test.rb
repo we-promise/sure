@@ -62,6 +62,29 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     assert_eventually { @user.reload.manual_account_order["depository"]&.first(2) == [ plaid.id, checking.id ] }
   end
 
+  test "following an account link saves a row still held with the keyboard" do
+    checking = accounts(:depository)
+    plaid = accounts(:connected)
+
+    visit account_path(checking)
+
+    within_testid("account-sidebar-tabs") do
+      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+
+      handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
+      handle.send_keys(:enter)
+      handle.send_keys(:up)
+
+      find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] a[href='#{account_path(plaid)}']").click
+    end
+
+    assert_current_path account_path(plaid)
+    assert_eventually { @user.reload.manual_account_order["depository"]&.first(2) == [ plaid.id, checking.id ] }
+    within_testid("account-sidebar-tabs") do
+      assert_equal [ plaid.id, checking.id ], visible_depository_ids.first(2)
+    end
+  end
+
   test "a stalled save times out and reloads the saved order" do
     checking = accounts(:depository)
     plaid = accounts(:connected)
