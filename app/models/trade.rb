@@ -88,6 +88,19 @@ class Trade < ApplicationRecord
     Trend.new(current: current_value, previous: cost_basis)
   end
 
+  # Set by callers that list many disposals, so calculate_realized_gain_loss
+  # reads one preloaded set per account instead of querying holdings per
+  # trade. An empty array is authoritative: it means "preloaded, and there
+  # are none", not "not preloaded".
+  #
+  # Written out rather than attr_writer because realized_gain_loss memoises
+  # on first call: a trade measured before its holdings arrived would keep the
+  # figure it derived without them.
+  def preloaded_holdings=(value)
+    @preloaded_holdings = value
+    remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+  end
+
   # Set by callers that list many disposals, so the proceeds conversion below
   # reads one preloaded set instead of a query per foreign disposal. Keyed
   # `[from, to, date]`.
