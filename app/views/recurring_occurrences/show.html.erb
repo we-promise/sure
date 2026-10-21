@@ -23,15 +23,7 @@
           <%= occurrence_due_label(@occurrence) %>
         </p>
       </div>
-      <%= render DS::Button.new(
-            variant: "icon",
-            size: :sm,
-            icon: "x",
-            class: "ml-auto shrink-0",
-            title: t("ds.dialog.close"),
-            aria_label: t("ds.dialog.close"),
-            data: { action: "DS--dialog#close" }
-          ) %>
+      <%= dialog.close_button %>
     </div>
   <% end %>
 

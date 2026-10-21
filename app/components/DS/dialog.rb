@@ -162,12 +162,13 @@ class DS::Dialog < DesignSystemComponent
   end
 
   # Shown at every width: responsive dialogs use it as their only close
-  # control on phones too.
+  # control on phones too. shrink-0 keeps its square beside a long title in a
+  # custom header.
   def close_button
     render DS::Button.new(
       variant: "icon",
       size: :sm,
-      class: "ml-auto",
+      class: "ml-auto shrink-0",
       icon: "x",
       title: I18n.t("ds.dialog.close"),
       aria_label: I18n.t("ds.dialog.close"),
