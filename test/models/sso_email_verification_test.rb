@@ -6,7 +6,9 @@ class SsoEmailVerificationTest < ActiveSupport::TestCase
       { name: "openid_connect", strategy: "openid_connect" },
       { name: "google_oauth2", strategy: "google_oauth2" },
       { name: "github", strategy: "github" },
-      { name: "corp_saml", strategy: "saml" }
+      { name: "corp_saml", strategy: "saml" },
+      { name: "corp_oidc", strategy: "openid_connect", settings: { "treat_email_as_verified" => "1" } },
+      { name: "off_oidc", strategy: "openid_connect", settings: { "treat_email_as_verified" => "0" } }
     ])
   end
 
@@ -37,6 +39,24 @@ class SsoEmailVerificationTest < ActiveSupport::TestCase
     assert SsoEmailVerification.verified?(auth(provider: "github", extra: { all_emails: verified }))
     assert_not SsoEmailVerification.verified?(auth(provider: "github", extra: { all_emails: unverified }))
     assert_not SsoEmailVerification.verified?(auth(provider: "github"))
+  end
+
+  test "accepts Entra ID's xms_edov claim when email_verified is missing" do
+    assert SsoEmailVerification.verified?(auth(provider: "openid_connect", extra: { raw_info: { "xms_edov" => true } }))
+    assert SsoEmailVerification.verified?(auth(provider: "openid_connect", extra: { raw_info: { "xms_edov" => "true" } }))
+    assert_not SsoEmailVerification.verified?(auth(provider: "openid_connect", extra: { raw_info: { "xms_edov" => false } }))
+  end
+
+  test "does not let xms_edov override an explicit false email_verified" do
+    assert_not SsoEmailVerification.verified?(
+      auth(provider: "openid_connect", info: { email_verified: false }, extra: { raw_info: { "xms_edov" => true } })
+    )
+  end
+
+  test "trusts a provider opted in with treat_email_as_verified" do
+    assert SsoEmailVerification.verified?(auth(provider: "corp_oidc"))
+    assert_not SsoEmailVerification.verified?(auth(provider: "off_oidc"))
+    assert_not SsoEmailVerification.verified?(auth(provider: "corp_oidc", email: nil))
   end
 
   test "trusts the email a SAML IdP asserts" do

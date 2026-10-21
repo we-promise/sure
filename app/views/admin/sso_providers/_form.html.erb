@@ -206,6 +206,18 @@
     </div>
     <p class="text-xs text-secondary -mt-2"><%= t("admin.sso_providers.form.default_role_help") %></p>
 
+    <div class="flex items-center justify-between gap-4">
+      <div class="space-y-1">
+        <p class="text-sm font-medium text-primary"><%= t("admin.sso_providers.form.treat_email_as_verified_label") %></p>
+        <p class="text-xs text-secondary"><%= t("admin.sso_providers.form.treat_email_as_verified_help") %></p>
+      </div>
+      <%= render DS::Toggle.new(
+            id: "sso_provider_settings_treat_email_as_verified",
+            name: "sso_provider[settings][treat_email_as_verified]",
+            checked: ActiveModel::Type::Boolean.new.cast(sso_provider.settings&.dig("treat_email_as_verified")) || false
+          ) %>
+    </div>
+
     <details class="mt-4">
       <summary class="cursor-pointer text-sm font-medium text-secondary hover:text-primary"><%= t("admin.sso_providers.form.role_mapping_title") %></summary>
       <div class="mt-3 space-y-3 pl-4 border-l-2 border-tertiary">

@@ -1069,6 +1069,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       first_name: "Blocked",
       last_name: "User",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: false
     }, expires_in: 10.minutes)
 
@@ -1109,7 +1110,9 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :forbidden
+    assert_match "did not confirm your email", JSON.parse(response.body)["error"]
     assert_nil invitation.reload.accepted_at
+    assert_equal "email_not_verified", SsoAuditLog.by_event("jit_blocked").recent.first.metadata["reason"]
   end
 
   test "should reject SSO create account with expired linking code" do

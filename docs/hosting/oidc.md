@@ -57,7 +57,7 @@ OIDC_REDIRECT_URI="https://yourdomain.com/auth/openid_connect/callback"
 
 Restart the application after saving the variables.
 
-When OIDC is correctly configured, users can sign in from the login page using the **Sign in with OpenID Connect** button (label can be customized, see below). The IdP must report the user's email as verified, and it must match an existing user or be allowed for JIT creation. For OIDC and Google this is the `email_verified` claim (`true`, or the string `"true"`); GitHub uses its verified primary email; SAML trusts the email the IdP asserts. Without it, the user can still link an existing account with its password, but no account is created and no invitation is redeemed.
+When OIDC is correctly configured, users can sign in from the login page using the **Sign in with OpenID Connect** button (label can be customized, see below). The IdP must report the user's email as verified, and it must match an existing user or be allowed for JIT creation. For OIDC and Google this is the `email_verified` claim (`true`, or the string `"true"`); Microsoft Entra ID can send the optional `xms_edov` claim instead; GitHub uses its verified primary email; SAML trusts the email the IdP asserts. A missing claim counts as unverified. Without it, the user can still link an existing account with its password, but no account is created and no invitation is redeemed (see [Verified emails](#67-verified-emails-for-jit-and-invitations)).
 
 ---
 
@@ -130,7 +130,7 @@ production:
 
 - `ALLOWED_OIDC_DOMAINS`
   - Optional comma‑separated list of domains (e.g. `example.com,corp.com`).
-  - When **empty**, JIT SSO account creation is allowed for any verified email.
+  - When **empty**, JIT SSO account creation is allowed for any verified email (see [Verified emails](#67-verified-emails-for-jit-and-invitations)).
   - When **set**, JIT SSO account creation is only allowed if the email domain is in this list.
   - Applies uniformly to all SSO providers (OIDC, Google, GitHub, etc.) that supply an email.
 
@@ -454,6 +454,24 @@ Expand **"Role Mapping"** in the admin UI to map IdP group names to Sure roles. 
 
 Mapping is case-sensitive and matches exact group claim values from the IdP. When a user belongs to multiple mapped groups, the highest role wins (`super_admin` > `admin` > `member`). If no groups match, the Default Role is used.
 
+### 6.7 Verified emails for JIT and invitations
+
+JIT account creation and redeeming a pending invitation by email both trust the email the IdP returns, so Sure requires the IdP to confirm it:
+
+| Strategy | Counts as verified |
+|---|---|
+| OpenID Connect, Google | `email_verified` claim is `true` (or `"true"`). If the claim is missing, Sure also accepts Microsoft Entra ID's optional `xms_edov` claim (email domain owner verified). |
+| GitHub | The returned email is marked verified in the account's email list. |
+| SAML 2.0 | Always: SAML has no standard verification attribute, so the email the admin-configured IdP asserts is trusted. |
+
+A missing claim counts as **unverified**. Unverified users can still link an existing Sure account by entering that account's password, and token-based invitation links keep working. Blocked attempts are written to the audit log as `jit_blocked` with reason `email_not_verified`.
+
+**Microsoft Entra ID** does not send `email_verified` by default. Either add the optional `xms_edov` claim to the ID token in the app registration (Token configuration → Add optional claim), or use the opt-in below.
+
+**Treat emails from this provider as verified** (provider form at `/admin/sso_providers`, off by default) skips the check for one provider. Only turn it on for an IdP where users cannot set or change their own email address, such as a company directory you manage. On an IdP with self-service sign-up or editable emails, anyone could claim another person's invitation or pass `ALLOWED_OIDC_DOMAINS`. This setting is only available for database-backed providers.
+
+> **Upgrading:** after this change, JIT sign-ups through an IdP that never sends `email_verified` (or `xms_edov`) stop with a message telling the user their email was not confirmed. Check `SsoAuditLog.by_event("jit_blocked")` and either configure the claim in the IdP or enable the opt-in for that provider.
+
 ---
 
 ## 7. Troubleshooting
@@ -607,7 +625,7 @@ Note: Super‑admins cannot change their own role.
 
 ## 11. Audit Logging
 
-SSO events are logged to `sso_audit_logs`: `login`, `login_failed`, `logout`, `logout_idp` (federated logout), `link`, `unlink`, `jit_account_created`.
+SSO events are logged to `sso_audit_logs`: `login`, `login_failed`, `logout`, `logout_idp` (federated logout), `link`, `unlink`, `jit_account_created`, `jit_blocked` (JIT creation or invitation refused because the IdP did not verify the email).
 
 Query via console:
 

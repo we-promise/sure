@@ -492,10 +492,15 @@ class OidcAccountsControllerTest < ActionController::TestCase
     session[:pending_oidc_auth] = new_user_auth.except("email_verified")
 
     assert_no_difference [ "User.count", "Family.count" ] do
-      post :create_user
+      assert_difference -> { SsoAuditLog.by_event("jit_blocked").count }, 1 do
+        post :create_user
+      end
     end
 
     assert_redirected_to new_session_path
+    assert_equal I18n.t("oidc_accounts.create_user.email_not_verified"), flash[:alert]
+    log = SsoAuditLog.by_event("jit_blocked").recent.first
+    assert_equal "email_not_verified", log.metadata["reason"]
   end
 
   test "link offers neither account creation nor the invitation for an unverified email" do
@@ -512,6 +517,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_response :success
     assert_select "form[action='#{create_user_oidc_account_path}']", count: 0
     assert_select "button", text: I18n.t("oidc_accounts.link.submit_accept_invitation"), count: 0
+    assert_select "p", text: I18n.t("oidc_accounts.link.email_not_verified")
   end
 
   test "create_link still links an existing account when the email is unverified" do

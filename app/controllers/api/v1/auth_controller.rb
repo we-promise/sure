@@ -254,10 +254,21 @@ module Api
         # require it to be verified.
         email_verified = email.present? && cached[:email_verified] == true
 
-        # Check for a pending invitation for this email
-        invitation = Invitation.pending.find_by(email: email) if email_verified
+        unless email_verified
+          SsoAuditLog.log_jit_blocked!(
+            provider: cached[:provider],
+            request: request,
+            reason: "email_not_verified",
+            metadata: { email: email, client: "mobile" }
+          )
+          render json: { error: "Your identity provider did not confirm your email address, so no account can be created. Please contact an administrator." }, status: :forbidden
+          return
+        end
 
-        unless email_verified && (invitation.present? || cached[:allow_account_creation])
+        # Check for a pending invitation for this email
+        invitation = Invitation.pending.find_by(email: email)
+
+        unless invitation.present? || cached[:allow_account_creation]
           render json: { error: "SSO account creation is disabled. Please contact an administrator." }, status: :forbidden
           return
         end

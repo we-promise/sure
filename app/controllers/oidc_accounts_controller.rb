@@ -21,6 +21,7 @@ class OidcAccountsController < ApplicationController
 
     # Determine whether we should offer JIT account creation for this
     # pending auth, based on JIT mode and allowed domains.
+    @email_unverified = @email.present? && !pending_email_verified?
     @allow_account_creation = pending_email_verified? &&
       (@pending_invitation.present? || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(@email)))
   end
@@ -114,7 +115,13 @@ class OidcAccountsController < ApplicationController
     # JIT creation and invitation redemption trust the IdP's email, so they
     # require the IdP to have verified it (see docs/hosting/oidc.md).
     unless pending_email_verified?
-      redirect_to new_session_path, alert: t(".account_creation_disabled")
+      SsoAuditLog.log_jit_blocked!(
+        provider: @pending_auth["provider"],
+        request: request,
+        reason: "email_not_verified",
+        metadata: { email: email }
+      )
+      redirect_to new_session_path, alert: t(".email_not_verified")
       return
     end
 

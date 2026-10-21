@@ -61,7 +61,7 @@
       ) %>
     <% else %>
       <p class="text-xs text-secondary">
-        <%= t("oidc_accounts.link.account_creation_disabled") %>
+        <%= @email_unverified ? t("oidc_accounts.link.email_not_verified") : t("oidc_accounts.link.account_creation_disabled") %>
       </p>
     <% end %>
   </div>
