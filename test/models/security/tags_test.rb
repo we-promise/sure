@@ -123,4 +123,22 @@ class Security::TagsTest < ActiveSupport::TestCase
 
     assert_equal [ @other_tag.id ], Tagging.where(taggable: @security).pluck(:tag_id)
   end
+
+  # The security's row lock does not cover the tags, so the wanted tags are
+  # read FOR SHARE: a concurrent delete of one of them then waits for this
+  # write instead of failing its insert. A race can't be staged reliably in a
+  # test, so this pins the lock itself.
+  test "the wanted tags are read under a share lock" do
+    statements = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+      statements << payload[:sql]
+    end
+
+    @security.set_tags_for(@family, [ @tag.id ])
+
+    assert statements.any? { |sql| sql.include?(%("tags")) && sql.include?("FOR SHARE") },
+           "expected the wanted tags to be read FOR SHARE"
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
+  end
 end
