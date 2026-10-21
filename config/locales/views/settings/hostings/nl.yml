@@ -46,8 +46,10 @@ nl:
         access_token_placeholder: Voer hier uw toegangstoken in
         uri_base_label: API basis-URL (optioneel)
         uri_base_placeholder: "https://api.openai.com/v1 (standaard)"
+        uri_base_local_help: "Voor een model op je eigen computer vul je het OpenAI-compatibele endpoint in, bijvoorbeeld Ollama op http://localhost:11434/v1, of http://ollama:11434/v1 als Sure en Ollama als Docker Compose-services draaien."
         model_label: Model (optioneel)
         model_placeholder: "gpt-4.1 (standaard)"
+        model_required_help: "Verplicht als je een API-basis-URL instelt: vul de modelnaam in die je server gebruikt, zoals llama3.1 voor Ollama."
         json_mode_label: JSON modus
         json_mode_auto: Auto (aanbevolen)
         json_mode_strict: Strikt (beste voor denkende modellen)

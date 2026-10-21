@@ -132,6 +132,7 @@ fr:
         model_function_calling_link: Vérifier le modèle configuré
         model_label: Modèle (Optionnel)
         model_placeholder: gpt-4.1 (par défaut)
+        model_required_help: "Obligatoire lorsque vous définissez une URL de base de l'API : saisissez le nom du modèle utilisé par votre serveur, par exemple llama3.1 pour Ollama."
         openai_request_timeout_help: 'Valeur par défaut : 60. S''applique à chaque requête HTTP compatible OpenAI, y compris la catégorisation automatique, la détection des marchands, le chat, le traitement des PDF et les appels au magasin de vecteurs. OPENAI_REQUEST_TIMEOUT prime sur ce champ.'
         openai_request_timeout_label: Délai de requête en secondes (facultatif)
         timeout_description: Détermine la durée maximale des appels aux modèles compatibles OpenAI avant que Sure n'abandonne. Augmentez ces valeurs si vous exécutez un modèle local sur du matériel lent.
@@ -139,6 +140,7 @@ fr:
         title: OpenAI
         uri_base_label: URL de base de l'API (Optionnel)
         uri_base_placeholder: https://api.openai.com/v1 (par défaut)
+        uri_base_local_help: "Pour un modèle sur votre propre machine, saisissez son endpoint compatible OpenAI, par exemple Ollama à http://localhost:11434/v1, ou http://ollama:11434/v1 si Sure et Ollama tournent comme services Docker Compose."
       provider_selection:
         binance_public_hint: gratuit, aucune clé API -- crypto uniquement (BTC, ETH, etc.)
         env_configured_message: La sélection du fournisseur est désactivée car des variables d'environnement sont définies. Pour activer la sélection ici, supprimez ces variables d'environnement de votre configuration.

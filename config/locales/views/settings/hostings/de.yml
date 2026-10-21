@@ -79,8 +79,10 @@ de:
         access_token_placeholder: Gib hier dein Zugriffstoken ein
         uri_base_label: API-Basis-URL (optional)
         uri_base_placeholder: "https://api.openai.com/v1 (Standard)"
+        uri_base_local_help: "Für ein Modell auf deinem eigenen Rechner gib dessen OpenAI-kompatiblen Endpunkt ein, zum Beispiel Ollama unter http://localhost:11434/v1, oder http://ollama:11434/v1, wenn Sure und Ollama als Docker-Compose-Dienste laufen."
         model_label: Modell (optional)
         model_placeholder: "gpt-4.1 (Standard)"
+        model_required_help: "Erforderlich, wenn du eine API-Basis-URL festlegst: Gib den Modellnamen ein, den dein Server verwendet, etwa llama3.1 für Ollama."
         model_function_calling_help: Der KI-Assistent liest deine Daten mithilfe von Funktionsaufrufen. Wähl daher ein Modell, das laut Dokumentation deines Anbieters Tools beziehungsweise Function Calling unterstützt. Ohne diese Unterstützung schlägt der Chat mit einer wenig aussagekräftigen Fehlermeldung des Anbieters fehl.
         model_function_calling_link: Konfiguriertes Modell prüfen
         json_mode_label: JSON-Modus

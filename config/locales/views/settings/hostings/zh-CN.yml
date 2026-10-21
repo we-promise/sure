@@ -44,9 +44,11 @@ zh-CN:
         json_mode_strict: 严格（最适合思考模型）
         model_label: 模型（可选）
         model_placeholder: gpt-4.1（默认）
+        model_required_help: "设置了 API 基础 URL 时必填：填写你的服务器使用的模型名称，例如 Ollama 的 llama3.1。"
         title: OpenAI 设置
         uri_base_label: API 基础 URL（可选）
         uri_base_placeholder: https://api.openai.com/v1（默认）
+        uri_base_local_help: "如果模型运行在你自己的机器上，请填写其兼容 OpenAI 的端点，例如 Ollama 的 http://localhost:11434/v1；如果 Sure 和 Ollama 作为 Docker Compose 服务运行，则填写 http://ollama:11434/v1。"
         budget_heading: Token 预算
         budget_description: 控制每次 AI 请求可使用的 Token 上限。
         context_window_label: 上下文窗口（可选）
