@@ -17,8 +17,11 @@ class RecurringTransaction
   class Allocator
     class OverAllocationError < StandardError; end
     # Nothing of the entry is left: other allocations already take all of it.
-    # A subclass, so every caller that refuses over-allocation refuses this too.
+    # Subclasses, so every caller that refuses over-allocation refuses these
+    # too. AlreadyAllocatedError is the case where this occurrence is the one
+    # holding the entry.
     class EntryExhaustedError < OverAllocationError; end
+    class AlreadyAllocatedError < OverAllocationError; end
     class MissingRateError < StandardError; end
 
     # Postgres keeps single-key and two-key advisory locks in separate spaces,
@@ -359,6 +362,13 @@ class RecurringTransaction
         # and used to surface only as the allocation's own "greater than 0"
         # validation, which the user read as an unexplained failure.
         unless capacity.positive?
+          # Used up by THIS occurrence means a repeated link (a double submit,
+          # a stale tab). With capacity left the unique index reports that as
+          # already allocated, and "other payments due" would be untrue here.
+          if occurrence.allocations.exists?(entry: entry)
+            raise AlreadyAllocatedError, I18n.t("recurring_transactions.allocator.already_allocated")
+          end
+
           raise EntryExhaustedError, I18n.t("recurring_transactions.allocator.entry_exhausted")
         end
 

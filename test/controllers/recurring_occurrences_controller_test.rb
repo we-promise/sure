@@ -421,6 +421,21 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("recurring_allocations.entry_exhausted"), flash[:alert]
   end
 
+  # A double submit, or a tab left open after the first link went through.
+  test "linking again a transaction this cycle already used up says it is on this bill" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 10, currency: "USD", name: "Netflix charge",
+      entryable: Transaction.new(merchant: merchants(:netflix))
+    )
+    post recurring_occurrence_allocations_url(@occurrence, entry_id: entry.id)
+    assert_equal 1, @occurrence.allocations.count
+
+    post recurring_occurrence_allocations_url(@occurrence, entry_id: entry.id)
+
+    assert_equal 1, @occurrence.allocations.count
+    assert_equal I18n.t("recurring_allocations.already_allocated"), flash[:alert]
+  end
+
   # Sharing is per account. A member with no share on the brokerage must not be
   # able to settle a bill with a transaction from it, which would both spend an
   # obligation against money they cannot see and echo the charge back to them.

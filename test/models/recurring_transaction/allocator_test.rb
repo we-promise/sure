@@ -198,6 +198,16 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_empty september.allocations
   end
 
+  test "relinking an entry this occurrence already uses up is a duplicate, not exhaustion" do
+    lump = entry_for(500)
+    @allocator.allocate!(entry: lump)
+
+    assert_raises Allocator::AlreadyAllocatedError do
+      @allocator.allocate!(entry: lump)
+    end
+    assert_equal 1, @occurrence.allocations.where(entry: lump).count
+  end
+
   test "the same entry cannot be allocated twice to one occurrence" do
     # Partial amounts so the capacity guard passes; the unique index is the
     # backstop this test pins.
