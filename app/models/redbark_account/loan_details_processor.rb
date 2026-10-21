@@ -146,36 +146,11 @@ class RedbarkAccount::LoanDetailsProcessor
         return
       end
 
-      return if record_first_sighting
-      record_change
-    end
-
-    # A loan whose rate was never recorded is not a loan whose rate just moved.
-    # Setting the base rate is the honest reading; a schedule row would claim a
-    # change happened on a day nothing is known to have happened.
-    #
-    # TRUE WHETHER OR NOT THE WRITE STUCK, deliberately. A blank rate that stays
-    # blank is either locked, which the user asked for and which must not be
-    # routed around through the schedule, or refused, in which case the rate is
-    # still blank next sync, so the next sync is a first sighting again and
-    # retries it. Falling through to `record_change` would date a change on a
-    # day nothing moved.
-    def record_first_sighting
-      return false if loan.interest_rate.present?
-
-      write({ interest_rate: reported_rate })
-      true
-    end
-
-    def record_change
-      in_force = loan.current_variable_rate(as_of)
-      return if in_force.present? && BigDecimal(in_force.to_s) == reported_rate
-
-      schedule = (loan.variable_rate_schedule || {}).stringify_keys
-      key = as_of.to_date.iso8601
-      return if schedule.key?(key) && BigDecimal(schedule[key].to_s) == reported_rate
-
-      write({ variable_rate_schedule: schedule.merge(key => reported_rate.to_s) })
+      # First sighting, unchanged rate and dated change are the loan's rules,
+      # shared with Plaid. A first sighting that is locked or refused leaves
+      # the rate blank, so the next sync is a first sighting again rather than
+      # a change dated on a day nothing moved.
+      write(loan.variable_rate_update_for(reported_rate, as_of: as_of))
     end
 
     # `rate_type` is blank on a loan nobody has classified. A bank calling its

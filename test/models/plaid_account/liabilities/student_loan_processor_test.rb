@@ -264,6 +264,22 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
     assert_equal 90_000, loan.initial_balance.to_i
   end
 
+  # The processor still sends rate_type "fixed", but a user's lock on
+  # "variable" holds, and the loan's rate change is then dated.
+  test "a student loan the user locked as variable has its rate change dated" do
+    loan = loan_with(interest_rate: 4.5, rate_type: "variable", start_date: Date.new(2020, 1, 1))
+    loan.lock_attr!(:rate_type)
+    payload("interest_rate_percentage" => 5.2)
+
+    PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account.reload, as_of: Date.new(2026, 1, 15)).process
+
+    loan.reload
+    assert_equal "variable", loan.rate_type
+    assert_equal 4.5, loan.interest_rate.to_f
+    assert_equal [ "2026-01-15" ], loan.variable_rate_schedule.keys
+    assert_equal BigDecimal("5.2"), BigDecimal(loan.variable_rate_schedule["2026-01-15"].to_s)
+  end
+
   private
     def loan_with(**attrs)
       loan = @plaid_account.current_account.loan
