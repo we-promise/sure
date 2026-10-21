@@ -217,18 +217,46 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
       "on contract, the projection must charge the running month what the schedule charges it"
   end
 
+  # The projection is the second caller of Loan::Simulator, and it builds its
+  # own. A loan on actual/365 must be projected on actual/365: otherwise the
+  # schedule reconciles to the lender's statement while the projection beside
+  # it charges a flat twelfth, and a borrower exactly on contract is told they
+  # are saving (or losing) interest they are not.
+  test "a loan on actual/365 is projected on the basis its schedule charges" do
+    loan = build_loan(term_months: 24, day_count_convention: "actual_365")
+    next_row = loan.amortization_schedule.payments.find { |p| p.date > @today }
+    on_date = next_row.date
+    following = loan.amortization_schedule.payments.find { |p| p.date > on_date }
+    loan.account.update!(balance: next_row.ending_balance.amount)
+
+    days = (following.date - on_date).to_i
+    opening = next_row.ending_balance.amount
+    actual_365 = (opening * BigDecimal("0.06") * days / 365).round(2)
+    flat = (opening * BigDecimal("0.06") / 12).round(2)
+    assert_not_equal flat, actual_365, "the period must be one where the two bases disagree"
+    assert_equal actual_365, following.interest.amount, "the schedule charges actual/365"
+
+    projection = Loan.find(loan.id).payoff_projection(as_of: on_date)
+
+    assert_equal following.interest.amount, projection.payments.first[:interest_payment],
+      "the projection's first period must charge what the schedule charges it"
+    assert_equal BigDecimal("0"), projection.interest_saved.amount,
+      "on contract, the projection must save nothing against its own schedule"
+  end
+
   private
     # Built the way the account form builds one: with an opening valuation for
     # the amount borrowed. `Loan#original_balance` reads it; without it the
     # principal follows whatever the current balance is later set to, and a
     # schedule read after a balance update would amortise a different loan.
-    def build_loan(term_months:, rate_type: "fixed", interest_rate: 6)
+    def build_loan(term_months:, rate_type: "fixed", interest_rate: 6, day_count_convention: "thirty_360")
       account = Account.create!(
         family: @family, name: "Loan #{SecureRandom.hex(4)}",
         balance: 500_000, currency: "USD",
         accountable: Loan.new(subtype: "mortgage", interest_rate: interest_rate,
                               term_months: term_months, rate_type: rate_type,
-                              start_date: Date.new(2026, 1, 1))
+                              start_date: Date.new(2026, 1, 1),
+                              day_count_convention: day_count_convention)
       )
       account.entries.create!(
         date: Date.new(2026, 1, 1), name: "Opening balance", amount: 500_000, currency: "USD",

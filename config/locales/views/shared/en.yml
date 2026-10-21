@@ -15,7 +15,14 @@ en:
       cancel: Cancel
       title: Are you sure?
     money_field:
+      above_max: Enter an amount of at most %{max}.
+      below_min: Enter an amount of at least %{min}.
+      invalid_amount: Enter a valid amount or expression.
       label: Amount
+      operator_add: Add
+      operator_subtract: Subtract
+      operator_multiply: Multiply
+      operator_divide: Divide
     exchange_rate_tabs:
       calculate_rate_tab: Calculate FX rate
       convert_tab: Convert with FX rate

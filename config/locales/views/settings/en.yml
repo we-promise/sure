@@ -143,6 +143,10 @@ en:
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
+        insight_dig_in:
+          title: Insight Dig In
+          subtitle: First chat message when you dig into an insight with AI
+          label: Dig in message
       update:
         success: AI prompts updated
         multiple_errors: "Multiple prompts are too long (maximum is %{count} characters)"
