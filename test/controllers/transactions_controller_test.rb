@@ -412,7 +412,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_includes response.body, "A manual recurring transaction already exists for this pattern"
+    assert_includes response.body, I18n.t("recurring_transactions.already_covered")
     assert_select "button[disabled]", text: /Mark as Recurring/
   end
 
@@ -897,7 +897,7 @@ end
     end
 
     assert_redirected_to transactions_path
-    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
   end
 
   test "mark_as_recurring allows a second manual recurring transaction with same merchant but different amount" do
@@ -984,7 +984,7 @@ end
     end
 
     assert_redirected_to transactions_path
-    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
   end
 
   # Only hand-made rows used to count, so a bill that detection had already
@@ -1010,14 +1010,16 @@ end
     )
 
     get transaction_url(entry)
-    assert_select "button[disabled]", text: /Mark as Recurring/
+    assert_select "button[disabled][title=?]", I18n.t("recurring_transactions.already_covered"), text: /Mark as Recurring/
+    assert_select "##{ActionView::RecordIdentifier.dom_id(entry, :mark_recurring)} p",
+                  text: I18n.t("recurring_transactions.already_covered")
 
     assert_no_difference "RecurringTransaction.count" do
       post mark_as_recurring_transaction_path(entry.entryable)
     end
 
     assert_redirected_to transactions_path
-    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
   end
 
   test "mark_as_recurring shows already-exists alert when a concurrent request wins the race" do

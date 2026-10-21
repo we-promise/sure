@@ -1291,6 +1291,42 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", bill_path(detected), text: I18n.t("recurring_transactions.new.covered_open")
     assert_select "input[type=hidden][name=entry_id][value=?]", entry.id
     assert_select "input[type=hidden][name=allow_duplicate][value=1]"
+    assert_select "a[href=?]", confirm_recurring_transaction_path(detected), count: 0
+  end
+
+  # A suggestion is a bill Sure found and is waiting on. Saving a separate one
+  # now would only become a duplicate when the suggestion is confirmed, so the
+  # dialog offers the confirm instead, with the separate bill still behind it.
+  test "new from a transaction a suggested bill covers offers to confirm it" do
+    entry, suggested = covered_entry_and_detected_bill(status: "suggested")
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.covered_suggested_title"), response.body
+    assert_no_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    assert_select "a[href=?][data-turbo-method=post][data-turbo-frame=_top]",
+                  confirm_recurring_transaction_path(suggested),
+                  text: I18n.t("recurring_transactions.new.covered_confirm")
+    assert_select "a[href=?]", bill_path(suggested), text: I18n.t("recurring_transactions.new.covered_open")
+    assert_select "input[type=hidden][name=allow_duplicate][value=1]"
+  end
+
+  # The confirm action 404s for a read-only share, so the dialog must not
+  # offer a button that can only fail.
+  test "a read-only share is told about the suggestion but not offered the confirm" do
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    # The credit card fixture is shared with the member read_only.
+    entry, suggested = covered_entry_and_detected_bill(status: "suggested", account: accounts(:credit_card))
+
+    sign_in member
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.covered_suggested_title"), response.body
+    assert_select "a[href=?]", confirm_recurring_transaction_path(suggested), count: 0
+    assert_select "a[href=?]", bill_path(suggested)
   end
 
   test "new from a transaction no bill covers shows no warning" do
@@ -1350,16 +1386,16 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
       @covering_merchant ||= @family.merchants.create!(name: "Betashares")
     end
 
-    def covered_entry_and_detected_bill
-      entry = accounts(:depository).entries.create!(
-        date: Date.current, amount: 100, currency: "USD", name: "BETASHARES DIRECT DEBIT",
+    def covered_entry_and_detected_bill(status: "active", account: accounts(:depository))
+      entry = account.entries.create!(
+        date: Date.current, amount: 100, currency: account.currency, name: "BETASHARES DIRECT DEBIT",
         entryable: Transaction.new(merchant: covering_merchant)
       )
       detected = @family.recurring_transactions.create!(
-        account: accounts(:depository), merchant: covering_merchant, name: nil,
-        amount: 100, currency: "USD", expected_day_of_month: Date.current.day,
+        account: account, merchant: covering_merchant, name: nil,
+        amount: 100, currency: account.currency, expected_day_of_month: Date.current.day,
         last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current,
-        status: "active", manual: false, occurrence_count: 2
+        status: status, manual: false, occurrence_count: 2
       )
       [ entry, detected ]
     end

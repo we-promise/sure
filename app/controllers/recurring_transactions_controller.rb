@@ -19,6 +19,8 @@ class RecurringTransactionsController < ApplicationController
   before_action :set_recurring_transaction, only: %i[edit update toggle_status destroy confirm dismiss]
   before_action :ensure_series_writable, only: %i[update toggle_status destroy confirm dismiss]
 
+  helper_method :series_writable?
+
   def index
     scope = Current.family.recurring_transactions
                   .accessible_by(Current.user)
@@ -373,10 +375,11 @@ class RecurringTransactionsController < ApplicationController
     # Accountless series carry no account gate. Same contract as
     # RecurringOccurrencesController#ensure_series_writable.
     def ensure_series_writable
-      return if @recurring_transaction.account_id.nil?
-      return if Account.writable_by(Current.user).where(id: @recurring_transaction.account_id).exists?
+      raise ActiveRecord::RecordNotFound unless series_writable?(@recurring_transaction)
+    end
 
-      raise ActiveRecord::RecordNotFound
+    def series_writable?(series)
+      series.account_id.nil? || Account.writable_by(Current.user).where(id: series.account_id).exists?
     end
 
     # name, amount and account are handled by apply_editable_identity rather

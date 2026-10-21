@@ -77,15 +77,30 @@
           Saving would count it twice, so the bill comes first and the form
           waits behind a deliberate choice: a second price tier is the one
           legitimate reason to want another. %>
+      <%# A suggestion is that bill, found by detection and not yet confirmed.
+          Confirming it links this payment; a separate bill would become the
+          duplicate the moment the suggestion was confirmed. %>
+      <% suggested = @covering_series.suggested? %>
       <div class="mb-5">
-        <%= render DS::Alert.new(title: t(".covered_title"), variant: :warning, live: :polite) do %>
-          <p><%= t(".covered_body", name: @covering_series.display_name) %></p>
-          <%= render DS::Link.new(
-                text: t(".covered_open"),
-                variant: :default,
-                href: bill_path(@covering_series),
-                frame: "_top"
-              ) %>
+        <%= render DS::Alert.new(title: t(suggested ? ".covered_suggested_title" : ".covered_title"), variant: :warning, live: :polite) do %>
+          <p><%= t(suggested ? ".covered_suggested_body" : ".covered_body", name: @covering_series.display_name) %></p>
+          <div class="flex flex-wrap items-center gap-3">
+            <% if suggested && series_writable?(@covering_series) %>
+              <%= render DS::Link.new(
+                    text: t(".covered_confirm"),
+                    variant: "primary",
+                    href: confirm_recurring_transaction_path(@covering_series),
+                    method: :post,
+                    frame: "_top"
+                  ) %>
+            <% end %>
+            <%= render DS::Link.new(
+                  text: t(".covered_open"),
+                  variant: :default,
+                  href: bill_path(@covering_series),
+                  frame: "_top"
+                ) %>
+          </div>
         <% end %>
       </div>
 

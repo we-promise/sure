@@ -66,6 +66,9 @@ en:
       covered_title: This transaction already belongs to a bill
       covered_body: "%{name} already tracks this payment, so a new bill would count it twice."
       covered_open: Open bill
+      covered_suggested_title: Sure already suggested a bill for this payment
+      covered_suggested_body: "%{name} is waiting in your suggestions. Confirm it to track this payment, so a new bill does not count it twice."
+      covered_confirm: Confirm bill
       covered_create_anyway: Create a separate bill anyway
     smart_fills:
       create:
@@ -173,6 +176,7 @@ en:
     confirm_delete_income: "Remove %{name} as income? Your transactions stay exactly as they are. This only removes the income and its schedule."
     marked_as_recurring: Transaction marked as recurring
     already_exists: A manual recurring transaction already exists for this pattern
+    already_covered: A bill already tracks this payment
     creation_failed: Failed to create recurring transaction. Please check the transaction details and try again.
     unexpected_error: An unexpected error occurred while creating the recurring transaction
     amount_range: "Range: %{min} to %{max}"

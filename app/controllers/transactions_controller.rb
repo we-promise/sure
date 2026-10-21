@@ -460,7 +460,7 @@ class TransactionsController < ApplicationController
     existing = Current.family.recurring_transactions.covering(transaction.entry)
 
     if existing
-      flash[:alert] = t("recurring_transactions.already_exists")
+      flash[:alert] = t("recurring_transactions.already_covered")
       redirect_back_or_to transactions_path
       return
     end
@@ -563,9 +563,9 @@ class TransactionsController < ApplicationController
 
       @mark_recurring_href = mark_as_recurring_transaction_path(@entry.transaction)
       @mark_recurring_subtitle_class = existing ? "text-subdued" : "text-secondary"
-      @mark_recurring_subtitle = existing ? t("recurring_transactions.already_exists") : t("transactions.show.mark_recurring_subtitle")
+      @mark_recurring_subtitle = existing ? t("recurring_transactions.already_covered") : t("transactions.show.mark_recurring_subtitle")
       @mark_recurring_disabled = existing.present?
-      @mark_recurring_title = existing ? t("recurring_transactions.already_exists") : nil
+      @mark_recurring_title = existing ? t("recurring_transactions.already_covered") : nil
       @mark_recurring_button_class = existing ? "disabled:opacity-50" : nil
     end
 
