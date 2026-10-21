@@ -242,6 +242,22 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1.1234567890"), trade.price
   end
 
+  # realized_gain_loss memoises on first call, so a trade measured before its
+  # holdings arrived would keep the figure it derived without them. The writer
+  # clears that memo; attr_writer would not, and the stale nil would stand.
+  test "assigning preloaded holdings re-derives a realised figure already taken" do
+    account, security = position_with_known_cost_basis
+    sell = build_negative_trade(account, security, label: "Sell")
+
+    sell.preloaded_holdings = []
+    assert_nil sell.realized_gain_loss, "an empty preload is authoritative: no holding, no basis"
+
+    sell.preloaded_holdings = account.holdings.to_a
+
+    assert_equal BigDecimal(80), sell.realized_gain_loss.value.amount,
+                 "40 sold at 3 against a basis of 1: the second assignment must be read"
+  end
+
   test "a transfer out realises nothing, however it is priced" do
     account, security = position_with_known_cost_basis
 
