@@ -205,6 +205,24 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 3000 + 5000, liability_groups.find { |ag| ag.name == OtherLiability.display_name }.total
   end
 
+  test "sorts accounts in the user's manual order, new accounts last alphabetically" do
+    user = users(:empty)
+    user.update!(default_account_order: "manual")
+    checking = create_account(name: "Checking", balance: 0, accountable: Depository.new, owner: user)
+    savings = create_account(name: "Savings", balance: 0, accountable: Depository.new, owner: user)
+    create_account(name: "Brokerage", balance: 0, accountable: Depository.new, owner: user)
+    create_account(name: "Another", balance: 0, accountable: Depository.new, owner: user)
+    card = create_account(name: "Card", balance: 0, accountable: CreditCard.new, owner: user)
+
+    user.update_manual_account_order("depository", [ savings.id, checking.id ])
+    user.update_manual_account_order("credit_card", [ card.id ])
+
+    balance_sheet = BalanceSheet.new(@family, user: user)
+
+    assert_equal %w[Savings Checking Another Brokerage], balance_sheet.assets.account_groups.first.accounts.map(&:name)
+    assert_equal %w[Card], balance_sheet.liabilities.account_groups.first.accounts.map(&:name)
+  end
+
   private
     def create_account(attributes = {})
       account = @family.accounts.create! name: "Test", currency: "USD", **attributes
