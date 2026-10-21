@@ -113,6 +113,8 @@ class RecurringAllocationsController < ApplicationController
 
     def allocation_error_message(error)
       case error
+      # Before its parent class, which would otherwise claim it.
+      when RecurringTransaction::Allocator::EntryExhaustedError then t("recurring_allocations.entry_exhausted")
       when RecurringTransaction::Allocator::OverAllocationError then t("recurring_allocations.over_allocation")
       when RecurringTransaction::Allocator::MissingRateError then t("recurring_allocations.missing_rate")
       when ActiveRecord::RecordNotUnique then t("recurring_allocations.already_allocated")

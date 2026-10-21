@@ -16,6 +16,9 @@ class RecurringTransaction
   #     they sum to the full expected amount.
   class Allocator
     class OverAllocationError < StandardError; end
+    # Nothing of the entry is left: other allocations already take all of it.
+    # A subclass, so every caller that refuses over-allocation refuses this too.
+    class EntryExhaustedError < OverAllocationError; end
     class MissingRateError < StandardError; end
 
     # Postgres keeps single-key and two-key advisory locks in separate spaces,
@@ -350,6 +353,14 @@ class RecurringTransaction
         end
 
         capacity = entry_capacity(entry, entry.amount.abs)
+
+        # The default amount is bounded by what the entry has left, so an
+        # exhausted entry defaults to zero. Zero passes the comparison below
+        # and used to surface only as the allocation's own "greater than 0"
+        # validation, which the user read as an unexplained failure.
+        unless capacity.positive?
+          raise EntryExhaustedError, I18n.t("recurring_transactions.allocator.entry_exhausted")
+        end
 
         if source_amount > capacity + RecurringOccurrence::CLOSE_EPSILON
           raise OverAllocationError, I18n.t("recurring_transactions.allocator.over_allocated",
