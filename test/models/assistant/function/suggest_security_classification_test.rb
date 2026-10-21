@@ -178,4 +178,15 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
                     Assistant::Function::SuggestSecurityClassification,
                     "the gate did not offer the tool to a preview user"
   end
+
+  # A proposal replaces the family's pending one for that security, so a guest,
+  # who may view the family's setup but not change it, must not be able to
+  # overwrite a member's. The registry feeds chat and /mcp alike.
+  test "a guest is not offered the tool, even with preview features on" do
+    guest = users(:intro_user)
+    assert guest.guest?, "precondition: the fixture is a guest"
+    guest.update!(preferences: (guest.preferences || {}).merge("preview_features_enabled" => true))
+
+    assert_not_includes Assistant.function_classes(guest.reload), Assistant::Function::SuggestSecurityClassification
+  end
 end

@@ -39,13 +39,16 @@ module Assistant
   ].freeze
 
   # Guests may view family configuration but not change it, so these tools are
-  # left out of a guest's registry (chat and MCP alike).
+  # left out of a guest's registry (chat and MCP alike). A classification
+  # proposal replaces the family's pending one for that security, so a guest
+  # could otherwise overwrite a member's.
   FAMILY_CONFIG_FUNCTION_CLASSES = [
     Function::CreateTag,
     Function::UpdateTag,
     Function::CreateCategory,
     Function::UpdateCategory,
-    Function::DeleteCategory
+    Function::DeleteCategory,
+    Function::SuggestSecurityClassification
   ].freeze
 
   class << self
