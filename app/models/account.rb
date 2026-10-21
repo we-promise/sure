@@ -10,6 +10,9 @@ class Account < ApplicationRecord
   end
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
+  # Covers every writer (form, Enable Banking, data import), so a type
+  # without an IBAN never keeps one.
+  before_validation :clear_unsupported_iban
   # IbanNormalizable strips everything but letters/digits and upcases, so
   # IBANs from Enable Banking ("DE893704...") and manually-entered ones in any
   # formatting style ("DE89 3704...", "DE89.3704...", "DE89-3704...")
@@ -637,6 +640,10 @@ class Account < ApplicationRecord
     read_attribute(:institution_domain).presence || provider&.institution_domain
   end
 
+  def supports_iban?
+    Accountable.from_type(accountable_type)&.supports_iban? || false
+  end
+
   def manual_crypto_exchange?
     accountable_type == "Crypto" &&
       accountable&.subtype == "exchange" &&
@@ -885,6 +892,9 @@ class Account < ApplicationRecord
   end
 
   private
+    def clear_unsupported_iban
+      self.iban = nil if iban.present? && !supports_iban?
+    end
 
     # perform_later raises (the Sidekiq adapter re-raises RedisClient errors) or
     # returns false (ActiveJob::EnqueueError). Either way the status goes back.

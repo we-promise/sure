@@ -16,6 +16,22 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "only bank-held account types support an iban" do
+    assert Account.new(accountable_type: "Depository").supports_iban?
+    assert Account.new(accountable_type: "Loan").supports_iban?
+    assert_not Account.new(accountable_type: "Vehicle").supports_iban?
+    assert_not Account.new(accountable_type: "Property").supports_iban?
+    assert_not Account.new.supports_iban?
+  end
+
+  test "an account type without an iban drops one on save" do
+    vehicle = accounts(:vehicle)
+
+    vehicle.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    assert_nil vehicle.reload.iban
+  end
+
   test "normalizes iban by stripping spaces and upcasing" do
     @account.iban = "de89 3704 0044 0532 0130 00"
     @account.valid?

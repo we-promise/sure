@@ -8,6 +8,10 @@ class CreditCard < ApplicationRecord
   }.freeze
 
   class << self
+    def supports_iban?
+      true
+    end
+
     def color
       "#F13636"
     end
