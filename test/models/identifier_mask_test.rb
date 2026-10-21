@@ -67,6 +67,21 @@ class IdentifierMaskTest < ActiveSupport::TestCase
     assert_equal "•••5399", masked["counter_account"]["iban"]
   end
 
+  test "mask_identifiers still masks numbers under other or deeper keys of an identifier object" do
+    masked = IdentifierMask.mask_identifiers({
+      "counter_account" => { "accountId" => "12-3456-7890123-00" },
+      "iban" => { "full" => "DE89370400440532013000" }, # pipelock:ignore IBAN
+      "card_number" => { "details" => { "number" => "4111111111111111", "brand" => "visa" } },
+      "other_account" => [ { "name" => "Jane Doe", "number" => "1234567890" } ]
+    })
+
+    assert_equal "•••2300", masked["counter_account"]["accountId"]
+    assert_equal "•••3000", masked["iban"]["full"]
+    assert_equal "•••1111", masked["card_number"]["details"]["number"]
+    assert_equal "visa", masked["card_number"]["details"]["brand"]
+    assert_equal [ { "name" => "Jane Doe", "number" => "•••7890" } ], masked["other_account"]
+  end
+
   test "mask_identifier ignores grouping spaces" do
     assert_equal "•••7890", IdentifierMask.mask_identifier("DE89 3704 0044 0532 0178 90") # pipelock:ignore IBAN
   end

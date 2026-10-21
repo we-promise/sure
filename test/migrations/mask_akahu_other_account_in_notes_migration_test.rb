@@ -4,43 +4,52 @@ require "test_helper"
 require Rails.root.join("db/migrate/20261021060000_mask_akahu_other_account_in_notes")
 
 class MaskAkahuOtherAccountInNotesMigrationTest < ActiveSupport::TestCase
+  OTHER_ACCOUNT = "12-3456-7890123-00"
+
   setup do
     @account = accounts(:depository)
   end
 
   test "masks the other account at the end of the notes" do
-    entry = akahu_entry(notes: "Coffee | Reference: 1234 | Other account: 12-3456-7890123-00")
+    entry = akahu_entry(notes: "Coffee | Reference: 1234 | Other account: #{OTHER_ACCOUNT}")
 
     run_migration
 
     assert_equal "Coffee | Reference: 1234 | Other account: •••2300", entry.reload.notes
   end
 
-  test "masks the other account in the middle of the notes and with a 3-digit suffix" do
-    entry = akahu_entry(notes: "Gegenkonto: 12-3456-7890123-001 | Code: ABC")
+  test "masks notes written in another language" do
+    entry = akahu_entry(notes: "Gegenkonto: #{OTHER_ACCOUNT}")
 
     run_migration
 
-    assert_equal "Gegenkonto: •••3001 | Code: ABC", entry.reload.notes
+    assert_equal "Gegenkonto: •••2300", entry.reload.notes
+  end
+
+  test "leaves other parts alone, even when they hold an account number" do
+    notes = "Rent | Reference: 98-7654-3210987-00 | Code: X"
+    entry = akahu_entry(notes: notes)
+
+    run_migration
+
+    assert_equal notes, entry.reload.notes
   end
 
   test "leaves notes the user edited" do
-    entry = akahu_entry(notes: "Other account: 12-3456-7890123-00")
+    entry = akahu_entry(notes: "Other account: #{OTHER_ACCOUNT}")
     entry.update_column(:locked_attributes, { "notes" => Time.current.iso8601 })
 
     run_migration
 
-    assert_equal "Other account: 12-3456-7890123-00", entry.reload.notes
+    assert_equal "Other account: #{OTHER_ACCOUNT}", entry.reload.notes
   end
 
-  test "leaves other providers and numbers outside a labelled part alone" do
-    other = create_entry(source: "plaid", notes: "Other account: 12-3456-7890123-00")
-    inline = akahu_entry(notes: "Paid 12-3456-7890123-00 back")
+  test "leaves other providers alone" do
+    entry = create_entry(source: "plaid", notes: "Other account: #{OTHER_ACCOUNT}")
 
     run_migration
 
-    assert_equal "Other account: 12-3456-7890123-00", other.reload.notes
-    assert_equal "Paid 12-3456-7890123-00 back", inline.reload.notes
+    assert_equal "Other account: #{OTHER_ACCOUNT}", entry.reload.notes
   end
 
   private
@@ -53,7 +62,7 @@ class MaskAkahuOtherAccountInNotesMigrationTest < ActiveSupport::TestCase
       @account.entries.create!(
         name: "Payment", date: Date.current, amount: 10, currency: "USD",
         source: source, external_id: SecureRandom.uuid, notes: notes,
-        entryable: Transaction.new
+        entryable: Transaction.new(extra: { "akahu" => { "other_account" => OTHER_ACCOUNT } })
       )
     end
 

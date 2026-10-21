@@ -4,36 +4,36 @@
 # Notes are shown, exported and passed to the assistant. New imports keep only
 # the last 4 digits; this masks the numbers in notes already stored.
 #
-# Only Akahu entries whose notes the user has not edited (notes not locked)
-# are touched, and only a number in New Zealand's account format that ends a
-# "<label>: <value>" part, so the label in whichever language the note was
-# written in is kept.
+# The number is taken from the transaction's stored Akahu metadata and only
+# replaced where it ends the notes, which is where the importer put it, so
+# the label (in whichever language the note was written) and every other part
+# stay as they are. Notes the user has edited (notes locked) are left alone.
 class MaskAkahuOtherAccountInNotes < ActiveRecord::Migration[8.1]
   BATCH_SIZE = 500
   PREFIX = "•••"
-
-  # Bank-branch-account-suffix, the suffix having 2 or 3 digits.
-  ACCOUNT_NUMBER_SQL = "[0-9]{2}-[0-9]{4}-[0-9]{7}-[0-9]{2,3}"
-  OTHER_ACCOUNT = /(?<=: )\d{2}-\d{4}-\d{7}-\d{2,3}(?= \| |\z)/
 
   def up
     last_id = nil
 
     loop do
-      after = last_id ? "AND id > #{connection.quote(last_id)}" : ""
+      after = last_id ? "AND entries.id > #{connection.quote(last_id)}" : ""
       rows = select_rows(<<~SQL)
-        SELECT id, notes FROM entries
-        WHERE source = 'akahu'
-          AND notes ~ #{connection.quote(ACCOUNT_NUMBER_SQL)}
-          AND NOT (COALESCE(locked_attributes, '{}'::jsonb) ? 'notes')
+        SELECT entries.id, entries.notes, transactions.extra -> 'akahu' ->> 'other_account'
+        FROM entries
+        JOIN transactions ON transactions.id = entries.entryable_id
+          AND entries.entryable_type = 'Transaction'
+        WHERE entries.source = 'akahu'
+          AND transactions.extra -> 'akahu' ->> 'other_account' <> ''
+          AND entries.notes IS NOT NULL
+          AND NOT (COALESCE(entries.locked_attributes, '{}'::jsonb) ? 'notes')
           #{after}
-        ORDER BY id LIMIT #{BATCH_SIZE}
+        ORDER BY entries.id LIMIT #{BATCH_SIZE}
       SQL
       break if rows.empty?
 
-      rows.each do |id, notes|
-        masked = notes.gsub(OTHER_ACCOUNT) { |number| "#{PREFIX}#{number.delete("-").last(4)}" }
-        next if masked == notes
+      rows.each do |id, notes, other_account|
+        masked = mask(notes, other_account)
+        next unless masked
 
         # Skip the row if its notes changed or got locked since the SELECT.
         execute <<~SQL
@@ -48,7 +48,18 @@ class MaskAkahuOtherAccountInNotes < ActiveRecord::Migration[8.1]
   end
 
   def down
-    # The full numbers are still in the Akahu account's raw transactions
-    # payload; they are not written back into notes.
+    # The full numbers are still in the transactions' Akahu metadata; they are
+    # not written back into notes.
   end
+
+  private
+
+    # Same output as the importer: dashes dropped, last 4 characters kept.
+    def mask(notes, other_account)
+      suffix = ": #{other_account}"
+      digits = other_account.delete("-")
+      return nil unless notes.end_with?(suffix) && digits.length > 4
+
+      "#{notes.delete_suffix(other_account)}#{PREFIX}#{digits.last(4)}"
+    end
 end

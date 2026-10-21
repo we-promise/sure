@@ -92,7 +92,7 @@ class MaskAccountNumbersInGeneratedAccountNames < ActiveRecord::Migration[8.1]
       masked = "#{PREFIX}#{identifier.last(4)}"
       return "Interactive Brokers (#{masked})" if style == :ibkr && name == identifier
 
-      pattern = /(?<![[:alnum:]])#{Regexp.escape(identifier)}(?![[:alnum:]])/
-      name.gsub(pattern, masked) if name.match?(pattern)
+      new_name = name.gsub(/(?<![[:alnum:]])#{Regexp.escape(identifier)}(?![[:alnum:]])/, masked)
+      new_name unless new_name == name
     end
 end
