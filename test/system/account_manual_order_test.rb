@@ -85,6 +85,29 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     end
   end
 
+  test "leaving sort mode keeps focus in the sidebar when no sort toggle is visible" do
+    visit account_path(accounts(:depository))
+
+    within_testid("account-sidebar-tabs") do
+      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+    end
+
+    # Like a tab that renders no sort toggle: nothing visible to return to.
+    page.execute_script(<<~JS)
+      document.querySelectorAll("[data-account-sort-mode-target='toggle']").forEach((toggle) => {
+        toggle.style.display = "none";
+      });
+    JS
+
+    within_testid("account-sidebar-tabs") do
+      click_button I18n.t("accounts.sidebar.sort_mode.done")
+    end
+
+    assert evaluate_script(<<~JS), "focus fell back to the page body"
+      document.activeElement.closest("[data-controller~='account-sort-mode']") !== null
+    JS
+  end
+
   test "a stalled save times out and reloads the saved order" do
     checking = accounts(:depository)
     plaid = accounts(:connected)
@@ -221,5 +244,6 @@ class AccountManualOrderTest < ApplicationSystemTestCase
         flunk "condition not met within #{timeout}s" if Time.current > deadline
         sleep 0.1
       end
+      pass
     end
 end

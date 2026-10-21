@@ -48,7 +48,7 @@ export default class extends Controller {
       group.open = false;
     });
     this.openedGroups = null;
-    if (focusWillHide) this.visibleToggle()?.focus();
+    if (focusWillHide) this.focusAfterStop();
   }
 
   // Handles rendered later (e.g. another tab's list) follow the current mode.
@@ -86,7 +86,21 @@ export default class extends Controller {
     });
   }
 
-  visibleToggle() {
-    return this.toggleTargets.find((toggle) => toggle.offsetParent !== null);
+  // Keeps keyboard users in the sidebar when the focused handle or bar hides:
+  // on the visible sort toggle, or on the sidebar itself when the active tab
+  // has none, instead of letting focus fall back to the page body.
+  focusAfterStop() {
+    const toggle = this.toggleTargets.find(
+      (toggle) => toggle.offsetParent !== null,
+    );
+    if (toggle) {
+      toggle.focus();
+      return;
+    }
+
+    if (!this.element.hasAttribute("tabindex")) {
+      this.element.setAttribute("tabindex", "-1");
+    }
+    this.element.focus();
   }
 }
