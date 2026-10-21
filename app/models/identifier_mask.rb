@@ -44,26 +44,35 @@ module IdentifierMask
   # Akahu), and whatever an institution puts into SimpleFIN's free-form extra.
   # A key matches when its last words name an identifier, in any casing
   # ("routingNumber", "counter_iban"), so "counter_account_name" or
-  # "account_number_last_4" are left alone. Every value under a matching key
-  # is cut down to its last 4 characters before anything is displayed.
+  # "account_number_last_4" are left alone. A plain value (or a list of plain
+  # values) under a matching key is cut down to its last 4 characters before
+  # anything is displayed.
   IDENTIFIER_KEY = /\A(?:.*_)?(?:ibans?|bban|edrpou|pan|acc(?:oun)?t_(?:number|no|num)|routing_(?:number|no)|sort_code|card_number|counter_account|other_account)\z/
 
-  def identifier_key?(key)
-    key.to_s.underscore.match?(IDENTIFIER_KEY)
+  # Directly inside an object stored under an identifier key ("counter_account" =>
+  # { "name" => ..., "number" => ... }) these generic keys hold the number
+  # itself; descriptive fields such as "name" or "brand" stay readable.
+  NESTED_IDENTIFIER_KEY = /\A(?:number|no|num|identifier|value)\z/
+
+  def identifier_key?(key, nested: false)
+    normalized = key.to_s.underscore
+    normalized.match?(IDENTIFIER_KEY) || (nested && normalized.match?(NESTED_IDENTIFIER_KEY))
   end
 
-  # Returns a copy of a provider payload (Transaction#extra) with every value
-  # under an identifier key masked.
-  def mask_identifiers(value, mask_all: false)
+  # Returns a copy of a provider payload (Transaction#extra) with every
+  # identifier masked. Each nested object is checked key by key, so a match
+  # higher up never masks unrelated fields further down.
+  def mask_identifiers(value, mask: false, nested: false)
     case value
     when Hash
       value.to_h do |key, child|
-        [ key, mask_identifiers(child, mask_all: mask_all || identifier_key?(key)) ]
+        child_is_identifier = identifier_key?(key, nested:)
+        [ key, mask_identifiers(child, mask: child_is_identifier, nested: child_is_identifier) ]
       end
     when Array
-      value.map { |item| mask_identifiers(item, mask_all:) }
+      value.map { |item| mask_identifiers(item, mask:, nested:) }
     when String, Numeric
-      mask_all ? mask_identifier(value) : value
+      mask ? mask_identifier(value) : value
     else
       value
     end

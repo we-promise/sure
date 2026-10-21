@@ -55,6 +55,18 @@ class IdentifierMaskTest < ActiveSupport::TestCase
     assert_equal [ "•••2300" ], masked["other_account"]
   end
 
+  test "mask_identifiers leaves descriptive fields under an identifier key alone" do
+    masked = IdentifierMask.mask_identifiers({
+      "card_number" => { "last4" => "1234", "brand" => "visa" },
+      "counter_account" => { "name" => "Jane Doe", "number" => "1234567890/2010", "iban" => "CZ6508000000192000145399" } # pipelock:ignore IBAN
+    })
+
+    assert_equal "visa", masked["card_number"]["brand"]
+    assert_equal "Jane Doe", masked["counter_account"]["name"]
+    assert_equal "•••7890/2010", masked["counter_account"]["number"]
+    assert_equal "•••5399", masked["counter_account"]["iban"]
+  end
+
   test "mask_identifier ignores grouping spaces" do
     assert_equal "•••7890", IdentifierMask.mask_identifier("DE89 3704 0044 0532 0178 90") # pipelock:ignore IBAN
   end
