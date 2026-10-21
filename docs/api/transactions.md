@@ -69,7 +69,7 @@ Filters combine, so `budget_id` can be narrowed further with `category_id`, `acc
 - transactions dated within the budget's period;
 - on the accounts the budget's spending is computed from: for the household budget, the accounts the caller owns or has been shared that are included in reports; for a personal budget, its owner's accounts that are included in reports;
 - and, as everywhere in this API, only on accounts the caller can access. A shared personal budget does not share the owner's accounts, so a viewer only sees the rows on accounts the owner has also shared with them, and the list can then add up to less than the budget's spending;
-- leaving out the `funds_movement`, `cc_payment` and `one_time` kinds, which budgets ignore.
+- leaving out the `funds_movement`, `cc_payment` and `one_time` kinds, which budgets ignore, and `investment_contribution` too when the family does not count investing as spending.
 
 The budget must be one `GET /api/v1/budgets/{id}` would return to the caller (the household budget, the caller's own, or one shared with them); any other id returns `404`. Unlike the unfiltered list, rows on disabled accounts are left out, as they are on the web.
 
