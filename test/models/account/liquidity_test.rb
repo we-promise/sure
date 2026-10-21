@@ -102,6 +102,24 @@ class Account::LiquidityTest < ActiveSupport::TestCase
     assert_nil account.renewal_term_months
   end
 
+  test "a vehicle keeps its default whatever choice is sent" do
+    account = create_account(Vehicle, nil)
+
+    account.update!(liquidity_choice: "immediate")
+
+    assert_equal "long_term", account.reload.liquidity
+    assert_not account.liquidity_manual?
+  end
+
+  test "liabilities still take a manual choice" do
+    account = create_account(CreditCard, nil)
+
+    account.update!(liquidity_choice: "long_term")
+
+    assert_equal "long_term", account.reload.liquidity
+    assert account.liquidity_manual?
+  end
+
   test "an unknown choice is rejected" do
     account = create_account(Depository, "checking")
 

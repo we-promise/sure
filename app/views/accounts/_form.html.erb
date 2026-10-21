@@ -24,7 +24,7 @@
 
     <%= yield form %>
 
-    <% if preview_features_enabled? && account.accountable_class&.classification == "asset" %>
+    <% if preview_features_enabled? && account.liquidity_selectable? %>
       <%= render "accounts/liquidity_fields", form: form, account: account %>
     <% end %>
 

@@ -95,6 +95,12 @@ module Account::Liquidity
     liquidity_choice || (liquidity_manual? ? liquidity : AUTOMATIC)
   end
 
+  # Whether the form offers the availability choice.
+  def liquidity_selectable?
+    type = Accountable.from_type(accountable_type)
+    type.present? && type.classification == "asset" && type.liquidity_selectable?
+  end
+
   def liquidity_manual?
     locked?(:liquidity)
   end
@@ -171,6 +177,10 @@ module Account::Liquidity
 
   private
     def apply_liquidity
+      # A type with a fixed level always follows its default, also when a
+      # choice arrives through the API or an import.
+      @liquidity_choice = AUTOMATIC if Accountable.from_type(accountable_type)&.liquidity_selectable? == false
+
       case liquidity_choice
       when nil
         self.liquidity = default_liquidity if !liquidity_manual? && liquidity_default_needed?

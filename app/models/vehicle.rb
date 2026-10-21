@@ -20,6 +20,10 @@ class Vehicle < ApplicationRecord
       "long_term"
     end
 
+    def liquidity_selectable?
+      false
+    end
+
     def color
       "#F23E94"
     end

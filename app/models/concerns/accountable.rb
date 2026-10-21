@@ -64,6 +64,13 @@ module Accountable
       "immediate"
     end
 
+    # Whether the availability can be chosen per account. A vehicle stays at
+    # its default ("long_term"): a level or a release date means nothing for
+    # a car.
+    def liquidity_selectable?
+      true
+    end
+
     # Tax treatment a subtype brings with it, nil when the type has none.
     def default_tax_treatment_for(_subtype)
       nil
