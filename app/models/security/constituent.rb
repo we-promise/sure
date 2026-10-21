@@ -45,4 +45,46 @@ class Security::Constituent < ApplicationRecord
     listed = weighted.each_with_object({}) { |row, map| map[row.ticker] = row.weight / divisor }
     FundShares.new(listed: listed, unlisted: 1 - total / divisor)
   end
+
+  # `securities` maps each upcased ticker to the row it means, or nil;
+  # `ambiguous` holds the tickers that resolved to nil because several rows
+  # matched and nothing said which one.
+  Resolution = Data.define(:securities, :ambiguous)
+
+  # Which `securities` row each constituent ticker means. A constituent is a
+  # bare ticker, and `securities` allows one ticker on several exchanges, so
+  # picking one of several matches would file the fund's slice under whichever
+  # listing the database returned first, and the total would still add up.
+  #
+  # The rule: one match resolves. Several resolve only when the family holds
+  # exactly one of them, because a household's own position is the best
+  # evidence of which listing a fund means. Otherwise -- none held, or more
+  # than one -- the ticker resolves to nil and is named in `ambiguous`, so a
+  # reader can say so. A ticker with no row resolves to nil and is not
+  # ambiguous. A reader should still count an unresolved constituent's value,
+  # unclassified, rather than drop it.
+  #
+  # One query for every ticker given, so a reader can resolve a whole
+  # portfolio's constituents at once rather than one fund at a time.
+  def self.resolve_tickers(tickers, held_security_ids: [])
+    wanted = tickers.map { |ticker| ticker.to_s.upcase }.uniq
+    return Resolution.new(securities: {}, ambiguous: Set.new) if wanted.empty?
+
+    candidates = Security.where("upper(ticker) IN (?)", wanted).group_by { |security| security.ticker.upcase }
+    held = held_security_ids.to_set
+    ambiguous = Set.new
+
+    securities = wanted.index_with do |ticker|
+      rows = candidates.fetch(ticker, [])
+      next rows.first if rows.size <= 1
+
+      held_rows = rows.select { |row| held.include?(row.id) }
+      next held_rows.first if held_rows.one?
+
+      ambiguous << ticker
+      nil
+    end
+
+    Resolution.new(securities: securities, ambiguous: ambiguous)
+  end
 end
