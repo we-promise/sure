@@ -32,7 +32,10 @@ module Assistant
     Function::GetBillAudit,
     Function::CreateBill,
     Function::UpdateBill,
-    Function::RecordBillPayment
+    Function::RecordBillPayment,
+    # Writes proposals that change nothing until a person approves them, and
+    # nothing in the app lists or approves them yet. Preview until it does.
+    Function::SuggestSecurityClassification
   ].freeze
 
   class << self

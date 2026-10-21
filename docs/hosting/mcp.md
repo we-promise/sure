@@ -177,6 +177,7 @@ permissions enforced in the web UI.
 | `create_bill` | Create a bill, subscription, installment plan or income schedule |
 | `update_bill` | Update one bill's configuration; amount changes apply from today forward |
 | `record_bill_payment` | Record a partial payment against a bill's open occurrence, or settle it in full |
+| `suggest_security_classification` | Propose an asset class, sub-class, sector and region for held securities. Records a proposal for a person to approve and changes no security; securities classified by hand or locked are skipped |
 
 Because tool calls never pass through the Bills pages' controllers, the bills
 tools re-check the family's recurring-transactions feature gate (Settings →
