@@ -392,23 +392,97 @@ module Security::Provided
   # `supplies_constituents?`, and this guard is a second lock on the same door:
   # an incapable provider reaching here would wipe a stored set it was never in
   # a position to replace, and then stamp the emptiness as fact.
+  #
+  # A row the table would refuse is skipped and logged, not raised: one bad row
+  # would roll the whole fund back unstamped and stop both market data
+  # importers at this fund on every run.
   def store_constituents(list)
     return unless price_data_provider&.supplies_constituents?
 
+    rows, skipped = constituent_rows_from(list)
+
     transaction do
       constituents.destroy_all
-
-      Array(list).each do |entry|
-        weight = entry[:weight] || entry["weight"]
-        constituents.create!(
-          ticker: entry[:ticker] || entry["ticker"],
-          name: entry[:name] || entry["name"],
-          weight: weight.present? ? BigDecimal(weight.to_s) : nil
-        )
-      end
-
+      rows.each { |row| constituents.create!(row) }
       update_column(:constituents_fetched_at, Time.current)
     end
+
+    skipped.each { |reason, entry| log_skipped_constituent(reason, entry) }
+  end
+
+  # Splits a provider list into rows the table will accept and [reason, entry]
+  # pairs it would refuse. Tickers are compared after the strip and
+  # case-sensitively, as `validates :ticker, uniqueness:` compares them, and
+  # the first occurrence of a ticker is the one kept.
+  #
+  # A weight is checked against the column as well as the model: `BigDecimal`
+  # parses "NaN" and "Infinity" without raising, and a value the model accepts
+  # can still overflow `numeric(9,6)`, so either would have raised out of the
+  # transaction just as an invalid row did.
+  def constituent_rows_from(list)
+    seen = Set.new
+    rows = []
+    skipped = []
+
+    Array(list).each do |entry|
+      unless entry.is_a?(Hash)
+        skipped << [ "malformed_entry", entry ]
+        next
+      end
+
+      ticker = (entry[:ticker] || entry["ticker"]).to_s.strip
+      raw_weight = entry[:weight] || entry["weight"]
+      weight = begin
+        raw_weight.present? ? BigDecimal(raw_weight.to_s) : nil
+      rescue ArgumentError, TypeError
+        :non_numeric
+      end
+      weight = :non_numeric if weight.is_a?(BigDecimal) && !weight.finite?
+
+      reason = if ticker.blank? then "blank_ticker"
+      elsif weight == :non_numeric then "non_numeric_weight"
+      elsif weight&.negative? then "negative_weight"
+      elsif weight && weight.round(constituent_weight_scale) >= constituent_weight_limit then "out_of_range_weight"
+      elsif seen.include?(ticker) then "duplicate_ticker"
+      end
+
+      if reason
+        skipped << [ reason, entry ]
+      else
+        seen << ticker
+        rows << { ticker: ticker, name: (entry[:name] || entry["name"]).to_s.strip.presence, weight: weight }
+      end
+    end
+
+    [ rows, skipped ]
+  end
+
+  # The bound `numeric(precision, scale)` holds, read from the column so the two
+  # cannot drift: Postgres rounds to the scale first, so 999.9999995 overflows.
+  def constituent_weight_limit
+    column = Security::Constituent.columns_hash["weight"]
+    BigDecimal(10)**(column.precision - column.scale)
+  end
+
+  def constituent_weight_scale
+    Security::Constituent.columns_hash["weight"].scale
+  end
+
+  def log_skipped_constituent(reason, entry)
+    DebugLogEntry.capture(
+      category: "security_holdings",
+      level: "warn",
+      message: "Skipped a fund holding the provider reported in a form that cannot be stored",
+      source: "Security#store_constituents",
+      provider: price_data_provider,
+      metadata: {
+        security_id: id,
+        security_ticker: ticker,
+        ticker: entry.is_a?(Hash) ? (entry[:ticker] || entry["ticker"]) : nil,
+        reason: reason,
+        entry: entry.is_a?(Hash) ? entry.to_h : entry
+      }
+    )
   end
 
   # A provider's type says what the wrapper is, not what it holds. "Common
