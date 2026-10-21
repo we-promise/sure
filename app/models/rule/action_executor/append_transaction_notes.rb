@@ -44,20 +44,25 @@ class Rule::ActionExecutor::AppendTransactionNotes < Rule::ActionExecutor
     end
 
     count_modified_resources(scope) do |txn|
+      # with_entry only joins, so the entry loads here and is nil when it was
+      # deleted since the scope was loaded: nothing left to append to.
+      entry = txn.entry
+      next false unless entry
+
       # The new notes are built from the current ones, so read, compare and
       # save under a row lock: an edit committed in between (which may also
       # lock the notes) is then seen instead of being overwritten. Not
       # entry.with_lock: Entry#transaction is the delegated-type reader.
       Entry.transaction do
-        txn.entry.lock!
-        notes = txn.entry.notes.to_s
+        entry.lock!
+        notes = entry.notes.to_s
         missing = lines - notes.lines.map(&:strip)
 
         if missing.empty?
           false
         else
           text = missing.join("\n")
-          txn.entry.enrich_attribute(
+          entry.enrich_attribute(
             :notes,
             notes.blank? ? text : "#{notes.rstrip}\n#{text}",
             source: "rule",
@@ -66,7 +71,7 @@ class Rule::ActionExecutor::AppendTransactionNotes < Rule::ActionExecutor
         end
       end
     rescue ActiveRecord::RecordNotFound
-      # Deleted since the scope was loaded: nothing left to append to.
+      # Deleted between loading the entry and locking it.
       false
     end
   end

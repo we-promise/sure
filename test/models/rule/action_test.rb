@@ -382,6 +382,18 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal 0, action.apply(Transaction.where(id: @txn2.id))
   end
 
+  test "append_transaction_notes skips a transaction whose entry is gone when it loads" do
+    Transaction.any_instance.stubs(:entry).returns(nil)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "append_transaction_notes",
+      value: "Reimbursable"
+    )
+
+    assert_equal 0, action.apply(Transaction.where(id: @txn2.id))
+  end
+
   test "append_transaction_notes does not add the same text twice" do
     @txn2.entry.update!(notes: "Reimbursable\nPaid by card")
 
