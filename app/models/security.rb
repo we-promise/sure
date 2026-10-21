@@ -140,7 +140,6 @@ class Security < ApplicationRecord
   # never attached: that would show its name to every family holding the
   # security.
   def set_tags_for(family, tag_ids)
-    wanted = family.tags.where(id: Array(tag_ids).reject(&:blank?)).pluck(:id)
     mine = family.tags.select(:id)
 
     # A check-then-insert on a row every family shares. The unique index on
@@ -148,6 +147,12 @@ class Security < ApplicationRecord
     # of the same tag would fail one of them rather than both succeed. The
     # lock also reloads the record, so no stale association survives.
     with_lock do
+      # Read inside the lock and FOR SHARE: the security's row lock does not
+      # cover the tags, so without it a tag deleted between this read and the
+      # insert below would fail the insert. A concurrent delete of a wanted
+      # tag now waits for this write to commit.
+      wanted = family.tags.where(id: Array(tag_ids).reject(&:blank?)).lock("FOR SHARE").pluck(:id)
+
       taggings.where(tag_id: mine).where.not(tag_id: wanted).destroy_all
       already = taggings.where(tag_id: wanted).pluck(:tag_id)
       (wanted - already).each { |id| taggings.create!(tag_id: id) }
