@@ -36,6 +36,21 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_no_match(/translation missing/i, message)
   end
 
+  test "manual attach does not record the detected name as a new alias after a rename" do
+    @rent.update!(name: "Watson Rent", matcher_hints: { "detected_name" => "WATSON PROPERTY MGMT" })
+    entry = @account.entries.create!(
+      date: Date.current,
+      amount: 2000,
+      currency: "USD",
+      name: "WATSON PROPERTY MGMT",
+      entryable: Transaction.new
+    )
+
+    @allocator.allocate!(entry: entry)
+
+    assert_not_includes Array(@rent.reload.matcher_hints["name_aliases"]), "WATSON PROPERTY MGMT"
+  end
+
   test "a price rise does not re-target an occurrence that has already been paid against" do
     @occurrence.update!(expected_amount: nil) # inheriting from the series
     @allocator.allocate!(entry: entry_for(500))
