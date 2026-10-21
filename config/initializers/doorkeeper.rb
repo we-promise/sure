@@ -321,8 +321,12 @@ Doorkeeper.configure do
   # #call can be used in order to allow conditional checks (to allow non-SSL
   # redirects to localhost for example).
   #
-  # Allow custom URL schemes for mobile apps
-  force_ssl_in_redirect_uri false
+  # Doorkeeper only enforces this for the http scheme, so custom mobile schemes
+  # (sureapp://) are unaffected. Plain http stays allowed for loopback hosts
+  # (RFC 8252 native clients) and in development.
+  force_ssl_in_redirect_uri do |uri|
+    !Rails.env.development? && !uri.host.to_s.downcase.delete_prefix("[").delete_suffix("]").in?(OauthRegistrationController::LOOPBACK_HOSTS)
+  end
 
   # Specify what redirect URI's you want to block during Application creation.
   # Any redirect URI is allowed by default.

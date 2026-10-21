@@ -3,114 +3,122 @@ ru:
   family:
     up:
       create_up_item:
-        default_name: Up Connection
+        default_name: Подключение Up
   providers:
     up:
-      description: Connect Australian Up bank accounts via a personal access token
+      description: Подключайте счета австралийского банка Up с помощью персонального токена доступа
       name: Up
   up_account:
-    fallback: Up account
+    fallback: Счёт Up
   up_item:
     errors:
-      account_processing_failed: Could not sync Up account
-      account_sync_schedule_failed: Could not schedule Up account sync
-      sync_failed: Could not sync Up connection
-      transactions_failed: Could not fetch Up transactions
+      account_processing_failed: Не удалось синхронизировать счёт Up
+      account_sync_schedule_failed: Не удалось запланировать синхронизацию счёта Up
+      sync_failed: Не удалось синхронизировать подключение Up
+      transactions_failed: Не удалось получить операции Up
     institution_summary:
       count:
-        one: 1 institution
-        other: "%{count} institutions"
-      none: No institutions connected
-      one: 1 institution
+        one: '%{count} учреждение'
+        other: '%{count} учреждения'
+        few: '%{count} учреждения'
+        many: '%{count} учреждений'
+      none: Нет подключённых учреждений
+      one: 1 учреждение
     sync_status:
       all_synced:
-        one: 1 account synced
-        other: "%{count} accounts synced"
-      no_accounts: No accounts found
-      partial: "%{linked} synced, %{unlinked} need setup"
+        one: '%{count} счёт синхронизирован'
+        other: '%{count} счёта синхронизировано'
+        few: '%{count} счёта синхронизировано'
+        many: '%{count} счетов синхронизировано'
+      no_accounts: Счета не найдены
+      partial: 'Синхронизировано: %{linked}, требуют настройки: %{unlinked}'
   up_items:
     complete_account_setup:
-      all_skipped: No Up accounts were created.
-      creation_failed: Could not create Up accounts.
-      no_accounts: No Up accounts were selected.
+      all_skipped: Счета Up не были созданы.
+      creation_failed: Не удалось создать счета Up.
+      no_accounts: Не выбрано ни одного счёта Up.
       success:
-        one: Created 1 Up account.
-        other: Created %{count} Up accounts.
+        one: Создан %{count} счёт Up.
+        other: Создано %{count} счёта Up.
+        few: Создано %{count} счёта Up.
+        many: Создано %{count} счетов Up.
     create:
-      success: Up connection saved.
+      success: Подключение Up сохранено.
     destroy:
-      success: Scheduled Up connection for deletion.
-      unlink_failed: Could not disconnect Up connection
+      success: Подключение Up запланировано на удаление.
+      unlink_failed: Не удалось отключить подключение Up
     link_accounts:
-      link_failed: No accounts were linked.
-      no_accounts_selected: Select at least one account.
-      no_credentials_configured: Configure Up in provider settings first.
+      link_failed: Ни один счёт не был связан.
+      no_accounts_selected: Выберите хотя бы один счёт.
+      no_credentials_configured: Сначала настройте Up в настройках провайдеров.
       success:
-        one: Linked 1 Up account.
-        other: Linked %{count} Up accounts.
-      unsupported_account_type: Up does not support that account type.
+        one: Связан %{count} счёт Up.
+        other: Связано %{count} счёта Up.
+        few: Связано %{count} счёта Up.
+        many: Связано %{count} счетов Up.
+      unsupported_account_type: Up не поддерживает этот тип счёта.
     link_existing_account:
-      account_already_linked: This account is already linked to a provider.
-      no_account_selected: Select an Up account to link.
-      success: Linked Up account to %{account_name}.
-      up_account_already_linked: This Up account is already linked.
+      account_already_linked: Этот счёт уже связан с провайдером.
+      no_account_selected: Выберите счёт Up для связывания.
+      success: Счёт Up связан с %{account_name}.
+      up_account_already_linked: Этот счёт Up уже связан.
     provider_panel:
-      access_token_label: Personal Access Token
-      access_token_placeholder: Paste your Up personal access token
-      add_connection: Add Up connection
-      connection_name_label: Connection name
-      connection_name_placeholder: Main Up
-      default_connection_name: Up Connection
-      disconnect: Disconnect
-      disconnect_confirm: Are you sure you want to disconnect %{name}?
-      keep_access_token_placeholder: Leave blank to keep the existing token
-      setup_accounts: Setup accounts
-      sync: Sync
-      syncing: Syncing...
-      update_connection: Update connection
+      access_token_label: Персональный токен доступа
+      access_token_placeholder: Вставьте персональный токен доступа Up
+      add_connection: Добавить подключение Up
+      connection_name_label: Название подключения
+      connection_name_placeholder: Основной Up
+      default_connection_name: Подключение Up
+      disconnect: Отключить
+      disconnect_confirm: Вы уверены, что хотите отключить %{name}?
+      keep_access_token_placeholder: Оставьте пустым, чтобы сохранить текущий токен
+      setup_accounts: Настроить счета
+      sync: Синхронизировать
+      syncing: Синхронизация...
+      update_connection: Обновить подключение
     select_accounts:
-      cancel: Cancel
-      description: Choose the Up accounts to add.
-      link_accounts: Link accounts
-      no_accounts_found: No unlinked Up accounts were found.
-      no_credentials_configured: Configure Up in provider settings first.
-      title: Link Up accounts
+      cancel: Отмена
+      description: Выберите счета Up для добавления.
+      link_accounts: Связать счета
+      no_accounts_found: Несвязанные счета Up не найдены.
+      no_credentials_configured: Сначала настройте Up в настройках провайдеров.
+      title: Связать счета Up
     select_existing_account:
-      account_already_linked: This account is already linked to a provider.
-      cancel: Cancel
-      description: Choose an unlinked Up account to connect to this account.
-      link_account: Link account
-      no_accounts_found: No unlinked Up accounts were found.
-      no_credentials_configured: Configure Up in provider settings first.
-      title: Link Up account to %{account_name}
+      account_already_linked: Этот счёт уже связан с провайдером.
+      cancel: Отмена
+      description: Выберите несвязанный счёт Up, чтобы связать его с этим счётом.
+      link_account: Связать счёт
+      no_accounts_found: Несвязанные счета Up не найдены.
+      no_credentials_configured: Сначала настройте Up в настройках провайдеров.
+      title: Связать счёт Up с %{account_name}
     setup_accounts:
-      account_type_label: Account type
+      account_type_label: Тип счёта
       account_types:
-        depository: Cash
-        loan: Loan
-        skip: Skip
-      all_accounts_linked: All Up accounts are already linked.
-      api_error: Could not fetch Up accounts.
-      cancel: Cancel
-      choose_account_type: Choose an account type
-      choose_account_type_description: Skip accounts you do not want to track.
-      create_accounts: Create accounts
-      fetch_failed: Could not fetch accounts
-      no_accounts_to_setup: No accounts to set up
-      no_credentials: Configure Up credentials first.
-      subtitle: Choose how each Up account should appear in Sure.
-      title: Link Up Accounts
+        depository: Денежный счёт
+        loan: Кредит
+        skip: Пропустить
+      all_accounts_linked: Все счета Up уже связаны.
+      api_error: Не удалось получить счета Up.
+      cancel: Отмена
+      choose_account_type: Выберите тип счёта
+      choose_account_type_description: Пропустите счета, которые не хотите отслеживать.
+      create_accounts: Создать счета
+      fetch_failed: Не удалось получить счета
+      no_accounts_to_setup: Нет счетов для настройки
+      no_credentials: Сначала настройте учётные данные Up.
+      subtitle: Выберите, как каждый счёт Up будет отображаться в Sure.
+      title: Связать счета Up
     up_item:
-      delete: Delete
-      deletion_in_progress: Deletion in progress
-      error: Error
-      no_accounts_description: Fetch Up accounts and choose which ones to link.
-      no_accounts_title: No accounts imported yet
-      setup_action: Setup accounts
-      setup_description: "%{linked} of %{total} accounts linked."
-      setup_needed: Account setup needed
-      status_never: Never synced
-      status_with_summary: Synced %{timestamp} ago · %{summary}
-      syncing: Syncing
+      delete: Удалить
+      deletion_in_progress: Идёт удаление
+      error: Ошибка
+      no_accounts_description: Получите счета Up и выберите, какие из них связать.
+      no_accounts_title: Счета ещё не импортированы
+      setup_action: Настроить счета
+      setup_description: 'Связано счетов: %{linked} из %{total}.'
+      setup_needed: Требуется настройка счетов
+      status_never: Ещё не синхронизировалось
+      status_with_summary: Синхронизировано %{timestamp} назад · %{summary}
+      syncing: Синхронизация
     update:
-      success: Up connection updated.
+      success: Подключение Up обновлено.

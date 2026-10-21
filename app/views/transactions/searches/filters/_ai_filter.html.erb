@@ -1,0 +1,32 @@
+<%# locals: (form:) %>
+
+<div class="p-2 space-y-3">
+  <div class="flex items-center gap-3" data-filter-name="current">
+    <%= form.check_box :ai_status,
+                           {
+                             multiple: true,
+                             checked: @q[:ai_status]&.include?("current"),
+                             class: "checkbox checkbox--light"
+                           },
+                           "current",
+                           nil %>
+    <div>
+      <%= form.label :ai_status, t(".current"), value: "current", class: "text-sm text-primary" %>
+      <p class="text-xs text-secondary"><%= t(".current_description") %></p>
+    </div>
+  </div>
+  <div class="flex items-center gap-3" data-filter-name="history">
+    <%= form.check_box :ai_status,
+                           {
+                             multiple: true,
+                             checked: @q[:ai_status]&.include?("history"),
+                             class: "checkbox checkbox--light"
+                           },
+                           "history",
+                           nil %>
+    <div>
+      <%= form.label :ai_status, t(".history"), value: "history", class: "text-sm text-primary" %>
+      <p class="text-xs text-secondary"><%= t(".history_description") %></p>
+    </div>
+  </div>
+</div>

@@ -213,11 +213,14 @@ class PasskeySessionsControllerTest < ActionDispatch::IntegrationTest
     def register_webauthn_credential(origin: "http://www.example.com", rp_id: "www.example.com")
       client = WebAuthn::FakeClient.new(origin)
 
-      post options_settings_webauthn_credentials_path, as: :json
+      # A backup code confirms the registration so the current TOTP step stays
+      # free for the sign-in steps these tests go on to exercise.
+      code = @user.enable_mfa!.first
+      post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: code } }, as: :json
       options = JSON.parse(response.body)
       credential = client.create(challenge: options.fetch("challenge"), rp_id: rp_id)
       post settings_webauthn_credentials_path, params: {
-        webauthn_credential: { nickname: "MacBook Touch ID" },
+        webauthn_credential: { nickname: "MacBook Touch ID", code: code },
         credential: credential
       }, as: :json
       assert_response :success

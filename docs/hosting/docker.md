@@ -309,6 +309,8 @@ The official image ships with the memory tuning that makes 512 MB viable, so no 
 
 If you run your own process supervisor instead of the official image, set those same values.
 
+The worker splits `RAILS_MAX_THREADS` between its default and AI lanes (`RAILS_AI_MAX_THREADS`, default `1`), so keep the worker's value at `2` or more; see [Where AI jobs run](ai.md#where-ai-jobs-run-sidekiq-lanes).
+
 ### Operational note for the sample-data button
 
 If you want to load sample/demo data on a small host:

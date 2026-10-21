@@ -117,20 +117,693 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  private
+  test "resolves a holding to an exact exchange ticker and rematches this account only" do
+    Security.stubs(:search_provider).returns([])
 
-    def import_position(isin:, quantity:, price:, average_cost: nil)
-      @tr_account.update!(raw_positions_payload: [ position_payload(isin:, quantity:, price:, average_cost:) ])
+    isin = "DE000BASF111"
+    isin_security = Security.create!(ticker: isin, name: "BASF ISIN", offline: false)
+    other_account = @family.accounts.create!(
+      name: "Other TR Account",
+      balance: 0,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Investment.new
+    )
+    other_holding = other_account.holdings.create!(
+      security: isin_security,
+      date: Date.current,
+      qty: 1,
+      price: 40,
+      amount: 40,
+      currency: "EUR"
+    )
+    import_position(isin: isin, quantity: "5", price: "42.50")
+    holding = @account.holdings.find_by!(security: isin_security)
+    trade_entry = @account.entries.create!(
+      name: "BASF buy",
+      date: Date.current,
+      amount: -100,
+      currency: "EUR",
+      entryable: Trade.new(security: isin_security, qty: 2, price: 50, currency: "EUR")
+    )
+
+    @tr_account.update!(raw_positions_payload: [
+      position_payload(isin: isin, quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    resolved = Security.find_by!(ticker: "BAS", exchange_operating_mic: "XETR")
+    assert_equal false, resolved.offline?
+    assert_equal resolved.id, holding.reload.security_id
+    assert_equal resolved.id, trade_entry.reload.entryable.security_id
+    assert_equal isin_security.id, other_holding.reload.security_id
+    assert Security.exists?(id: isin_security.id)
+  end
+
+  test "existing exchange securities keep provider-managed offline states during position imports" do
+    [
+      [ "DE000BASF111", "BAS", "health_check_failed" ],
+      [ "DE000BASF222", "BAS2", "provider_disabled" ]
+    ].each do |isin, symbol, reason|
+      security = Security.create!(
+        ticker: symbol,
+        exchange_operating_mic: "XETR",
+        name: symbol,
+        offline: true,
+        offline_reason: reason
+      )
+
+      import_position(isin: isin, quantity: "5", price: "42.50", symbol: symbol, exchange_slug: "XETR")
+
+      holding = @account.holdings.find_by!(security: security)
+      assert_equal BigDecimal("42.50"), holding.price
+      assert security.reload.offline?
+      assert_equal reason, security.offline_reason
+    end
+  end
+
+  test "a ticker rematch uses a new online security while the failed ISIN security stays offline" do
+    Security.stubs(:search_provider).returns([])
+    isin = "DE000BASF111"
+
+    import_position(isin: isin, quantity: "5", price: "40")
+    old_security = Security.find_by!(ticker: isin)
+    old_security.update!(offline_reason: "health_check_failed")
+    holding = @account.holdings.find_by!(security: old_security)
+
+    import_position(isin: isin, quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+
+    new_security = Security.find_by!(ticker: "BAS", exchange_operating_mic: "XETR")
+    assert old_security.reload.offline?
+    assert_equal "health_check_failed", old_security.offline_reason
+    assert_not new_security.offline?
+    assert_equal new_security.id, holding.reload.security_id
+    assert_equal BigDecimal("42.50"), holding.price
+  end
+
+  test "a ticker rematch preserves an existing ticker security's offline state" do
+    Security.stubs(:search_provider).returns([])
+    isin = "DE000BASF111"
+
+    import_position(isin: isin, quantity: "5", price: "40")
+    old_security = Security.find_by!(ticker: isin)
+    holding = @account.holdings.find_by!(security: old_security)
+    ticker_security = Security.create!(
+      ticker: "BAS",
+      exchange_operating_mic: "XETR",
+      name: "BASF",
+      offline: true,
+      offline_reason: "health_check_failed"
+    )
+
+    import_position(isin: isin, quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+
+    assert ticker_security.reload.offline?
+    assert_equal "health_check_failed", ticker_security.offline_reason
+    assert_equal ticker_security.id, holding.reload.security_id
+    assert_equal BigDecimal("42.50"), holding.price
+  end
+
+  test "provider confirmation preserves an existing exchange security's offline state" do
+    security = Security.create!(
+      ticker: "BAS.DE",
+      exchange_operating_mic: "XETR",
+      name: "BASF",
+      offline: true,
+      offline_reason: "health_check_failed"
+    )
+    Security.stubs(:search_provider).returns([
+      Security.new(ticker: "BAS.DE", exchange_operating_mic: "XETR", name: "BASF")
+    ])
+    @tr_account.update!(raw_positions_payload: [
+      position_payload(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+    ])
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+    processor.stubs(:available_price_provider).returns("twelve_data")
+
+    processor.process
+
+    assert_equal security.id, @account.holdings.first.security_id
+    assert security.reload.offline?
+    assert_equal "health_check_failed", security.offline_reason
+    assert_equal "twelve_data", security.price_provider
+  end
+
+  test "exchange security creation path preserves an existing offline security" do
+    security = Security.create!(
+      ticker: "BAS",
+      exchange_operating_mic: "XETR",
+      name: "BASF",
+      offline: true,
+      offline_reason: "health_check_failed"
+    )
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+
+    resolved = processor.send(
+      :find_or_create_exchange_security!,
+      ticker: "BAS",
+      exchange_operating_mic: "XETR",
+      name: "BASF",
+      price_provider: "twelve_data"
+    )
+
+    assert_equal security.id, resolved.id
+    assert security.reload.offline?
+    assert_equal "health_check_failed", security.offline_reason
+    assert_equal "twelve_data", security.price_provider
+  end
+
+  test "a concurrent exchange security insert does not abort the account sync" do
+    winner = Security.create!(
+      ticker: "BAS", exchange_operating_mic: "XETR", name: "BASF",
+      offline: true, offline_reason: "health_check_failed"
+    )
+    duplicate = Security.new(ticker: "BAS", exchange_operating_mic: "XETR")
+    duplicate.stubs(:valid?).returns(true) # Let the database unique index reject the insert.
+    Security.stubs(:find_by_ticker_and_exchange).returns(nil, winner)
+    Security.stubs(:find_or_initialize_by_ticker_and_exchange).returns(duplicate)
+    Security.stubs(:search_provider).returns([])
+
+    ActiveRecord::Base.transaction do
+      import_position(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+
+      assert_equal winner.id, @account.holdings.first.security_id
+      @account.update!(name: "Sync continued")
+    end
+
+    assert_equal "Sync continued", @account.reload.name
+    assert_equal 1, Security.where(ticker: "BAS", exchange_operating_mic: "XETR").count
+    assert winner.reload.offline?
+    assert_equal "health_check_failed", winner.offline_reason
+  end
+
+  test "a concurrent provider-confirmed insert reuses the confirmed ticker" do
+    winner = Security.create!(
+      ticker: "BAS.DE", exchange_operating_mic: "XETR", name: "BASF",
+      offline: true, offline_reason: "health_check_failed"
+    )
+    duplicate = Security.new(ticker: "BAS.DE", exchange_operating_mic: "XETR")
+    duplicate.stubs(:valid?).returns(true) # Let the database unique index reject the insert.
+    Security.stubs(:search_provider).returns([
+      Security.new(ticker: "BAS.DE", exchange_operating_mic: "XETR", name: "BASF")
+    ])
+    Security.stubs(:find_or_initialize_by_ticker_and_exchange).returns(duplicate)
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+    processor.stubs(:available_price_provider).returns("twelve_data")
+
+    ActiveRecord::Base.transaction do
+      @tr_account.update!(raw_positions_payload: [
+        position_payload(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+      ])
+      processor.process
+
+      assert_equal winner.id, @account.holdings.first.security_id
+      @account.update!(name: "Sync continued")
+    end
+
+    assert_equal "Sync continued", @account.reload.name
+    assert_equal 1, Security.where(ticker: "BAS.DE", exchange_operating_mic: "XETR").count
+    assert_not Security.exists?(ticker: "BAS", exchange_operating_mic: "XETR")
+    assert winner.reload.offline?
+    assert_equal "health_check_failed", winner.offline_reason
+    assert_equal "twelve_data", winner.price_provider
+  end
+
+  test "a provider-confirmed ticker found by validation reuses the existing security" do
+    winner = Security.create!(ticker: "BAS.DE", exchange_operating_mic: "XETR", name: "BASF")
+    Security.stubs(:search_provider).returns([
+      Security.new(ticker: "BAS.DE", exchange_operating_mic: "XETR", name: "BASF")
+    ])
+    Security.stubs(:find_or_initialize_by_ticker_and_exchange).returns(
+      Security.new(ticker: "BAS.DE", exchange_operating_mic: "XETR")
+    )
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+    processor.stubs(:available_price_provider).returns("twelve_data")
+    @tr_account.update!(raw_positions_payload: [
+      position_payload(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+    ])
+
+    processor.process
+
+    assert_equal winner.id, @account.holdings.first.security_id
+    assert_equal "twelve_data", winner.reload.price_provider
+    assert_not Security.exists?(ticker: "BAS", exchange_operating_mic: "XETR")
+  end
+
+  test "rematch prefers exchange market values and merges cost basis on collision" do
+    Security.stubs(:search_provider).returns([])
+
+    isin = "DE000BASF111"
+    isin_security = Security.create!(ticker: isin, name: "BASF ISIN", offline: true)
+    prior_provider_security = Security.create!(ticker: "PRIOR_BAS", name: "Prior BASF", offline: true)
+    exchange_security = Security.create!(
+      ticker: "BAS",
+      exchange_operating_mic: "XETR",
+      name: "BASF",
+      offline: false
+    )
+
+    isin_holding = @account.holdings.create!(
+      security: isin_security,
+      date: Date.current,
+      qty: 3,
+      price: 40,
+      amount: 120,
+      cost_basis: 38,
+      cost_basis_source: "manual",
+      cost_basis_locked: true,
+      currency: "EUR",
+      external_id: "stale-isin-holding",
+      provider_security_id: prior_provider_security.id,
+      account_provider_id: @tr_account.account_provider.id
+    )
+    exchange_holding = @account.holdings.create!(
+      security: exchange_security,
+      date: Date.current,
+      qty: 5,
+      price: 42.5,
+      amount: 212.5,
+      currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_#{isin}_#{Date.current}",
+      account_provider_id: @tr_account.account_provider.id
+    )
+
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+    assert_difference "DebugLogEntry.count", 1 do
+      assert_nothing_raised do
+        processor.send(:rematch_account_from_isin!, isin, exchange_security)
+      end
+    end
+
+    assert_not Holding.exists?(isin_holding.id)
+    assert Holding.exists?(exchange_holding.id)
+    exchange_holding.reload
+    assert_equal exchange_security.id, exchange_holding.security_id
+    assert_equal BigDecimal("5"), exchange_holding.qty
+    assert_equal BigDecimal("212.5"), exchange_holding.amount
+    assert_equal BigDecimal("38"), exchange_holding.cost_basis
+    assert_equal "manual", exchange_holding.cost_basis_source
+    assert exchange_holding.cost_basis_locked
+    assert_equal prior_provider_security.id, exchange_holding.provider_security_id
+  end
+
+  test "falls back to an offline ISIN security without a usable exchange symbol" do
+    Security.stubs(:search_provider).returns([])
+
+    import_position(isin: "LU3176111881", quantity: "3", price: "10")
+
+    security = Security.find_by!(ticker: "LU3176111881")
+    holding = @account.holdings.find_by!(security: security)
+
+    assert security.offline?
+    assert_equal "LU3176111881", holding.security.ticker
+  end
+
+  test "a concurrent offline ISIN insert does not abort the account sync" do
+    isin = "LU3176111881"
+    winner = Security.create!(ticker: isin, name: "Existing ISIN", offline: true)
+    duplicate = Security.new(ticker: isin)
+    duplicate.stubs(:valid?).returns(true) # Let the database unique index reject the insert.
+    Security.stubs(:find_by).with(ticker: isin).returns(nil, winner)
+    Security.stubs(:search_provider).returns([])
+
+    ActiveRecord::Base.transaction do
+      import_position(isin: isin, quantity: "3", price: "10")
+
+      assert_equal winner.id, @account.holdings.first.security_id
+      @account.update!(name: "Sync continued")
+    end
+
+    assert_equal "Sync continued", @account.reload.name
+    assert_equal 1, Security.where(ticker: isin).count
+    assert winner.reload.offline?
+  end
+
+  test "new offline ISIN securities record why they are offline" do
+    Security.stubs(:search_provider).returns([])
+
+    import_position(isin: "LU3176111881", quantity: "3", price: "10")
+
+    security = Security.find_by!(ticker: "LU3176111881")
+    assert security.offline?
+    assert_equal "trade_republic_isin", security.offline_reason
+  end
+
+  test "an existing online ISIN security is reused without being taken offline" do
+    Security.stubs(:search_provider).returns([])
+    shared = Security.create!(ticker: "LU3176111881", name: "Shared ISIN", offline: false)
+
+    import_position(isin: "LU3176111881", quantity: "3", price: "10")
+
+    assert_equal shared.id, @account.holdings.first.security_id
+    assert_not shared.reload.offline?
+    assert_equal "Shared ISIN", shared.name
+  end
+
+  test "ISIN rematch runs once per processor and skips accounts without ISIN rows" do
+    Security.stubs(:search_provider).returns([])
+    Security.create!(ticker: "DE000BASF111", name: "BASF ISIN", offline: true)
+    @tr_account.update!(raw_positions_payload: [
+      position_payload(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR"),
+      position_payload(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+    ])
+
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+    processor.expects(:rematch_holdings_from_isin!).never
+    processor.process
+  end
+
+  test "provider security lookups run before the account processor transaction" do
+    baseline = ActiveRecord::Base.connection.open_transactions
+    lookup_depths = []
+    Security.stubs(:search_provider).with do |*|
+      lookup_depths << ActiveRecord::Base.connection.open_transactions
+      true
+    end.returns([])
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+    Security.stubs(:provider_for).returns(Object.new)
+    @tr_account.update!(
+      current_balance: 425,
+      raw_positions_payload: [
+        position_payload(isin: "DE000BASF111", quantity: "10", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+      ]
+    )
+
+    TradeRepublicAccount::Processor.new(@tr_account.reload).process
+
+    assert_equal [ baseline ], lookup_depths
+    assert_equal "BAS", @account.holdings.first.security.ticker
+  end
+
+  test "maps a Trade Republic Tradegate symbol to the Tradegate MIC" do
+    Security.stubs(:search_provider).returns([])
+
+    import_position(
+      isin: "DE000TRAD123",
+      quantity: "2",
+      price: "20",
+      symbol: "TRD",
+      exchange_slug: "TDG"
+    )
+
+    security = @account.holdings.first.security
+    assert_equal "TRD", security.ticker
+    assert_equal "TGAT", security.exchange_operating_mic
+  end
+
+  test "crypto positions resolve to the shared crypto security when crypto prices are enabled" do
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data binance_public])
+
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    security = @account.holdings.sole.security
+    assert_equal "CRYPTO:BTC", security.ticker
+    assert_equal "binance_public", security.price_provider
+    assert security.crypto?
+  end
+
+  test "crypto positions keep the offline ISIN security without a crypto price provider" do
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data])
+
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    security = @account.holdings.sole.security
+    assert_equal "XF000BTC0017", security.ticker
+    assert security.offline?
+  end
+
+  test "holdings move from the offline crypto ISIN once crypto prices are enabled" do
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data])
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data binance_public])
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    assert_equal [ "CRYPTO:BTC" ], @account.holdings.includes(:security).map { |holding| holding.security.ticker }
+  end
+
+  test "crypto positions move to the linked Crypto account" do
+    @tr_account.update!(
+      holdings_snapshot_complete: true,
+      current_balance: 270,
+      raw_positions_payload: [
+        position_payload(isin: "US0378331005", quantity: "2", price: "100"),
+        position_payload(isin: "XF000BTC0017", quantity: "0.001", price: "70000").merge("category" => "crypto_wallet")
+      ]
+    )
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+    assert_equal 2, @account.holdings.count
+
+    crypto = @item.trade_republic_accounts.create!(
+      name: "Crypto", kind: "crypto", trade_republic_account_id: "crypto:DEHOLD1", currency: "EUR", current_balance: 70
+    )
+    crypto_sure = @family.accounts.create!(
+      name: "Trade Republic Crypto", balance: 0, cash_balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "exchange")
+    )
+    crypto.ensure_account_provider!(crypto_sure)
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::HoldingsProcessor.new(crypto.reload).process
+
+    assert_equal [ "US0378331005" ], @account.holdings.map { |holding| holding.security.ticker }
+    assert_equal [ "XF000BTC0017" ], crypto_sure.holdings.map { |holding| holding.security.ticker }
+    assert_equal BigDecimal("200"), @tr_account.account_balance
+    assert_equal BigDecimal("70"), crypto.account_balance
+  end
+
+  test "bonds resolve by ISIN and leave the shared BOND listing" do
+    Security.stubs(:search_provider).returns([])
+    shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "Mai 2072")
+    provider_id = @tr_account.account_provider.id
+    # Earlier syncs put both bonds on the shared listing; the French bond
+    # overwrote today's Italian snapshot.
+    @account.holdings.create!(
+      security: shared, date: Date.current - 1, qty: 2677.95, price: 84.04, amount: 225054.92, currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_IT0005377152_#{Date.current - 1}", account_provider_id: provider_id
+    )
+    @account.holdings.create!(
+      security: shared, date: Date.current, qty: 1000, price: 48.5, amount: 48500, currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_FR0014001NN8_#{Date.current}", account_provider_id: provider_id
+    )
+
+    @tr_account.update!(raw_positions_payload: [
+      bond_position(isin: "IT0005377152", name: "ITALIEN 19/40", quantity: "2677.95", price: "0.8404"),
+      bond_position(isin: "FR0014001NN8", name: "FRANKREICH 21/72", quantity: "1000", price: "0.485")
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    assert_not @account.holdings.exists?(security: shared)
+
+    italy = Security.find_by!(ticker: "IT0005377152")
+    assert italy.offline?
+    assert_equal "ITALIEN 19/40", italy.name
+    assert_equal [ Date.current - 1, Date.current ], @account.holdings.where(security: italy).order(:date).pluck(:date)
+    assert_equal BigDecimal("2250.5492"), @account.holdings.find_by!(security: italy, date: Date.current).amount
+
+    france = Security.find_by!(ticker: "FR0014001NN8")
+    holding = @account.holdings.find_by!(security: france)
+    assert_equal BigDecimal("485"), holding.amount
+    assert_equal france.id, holding.provider_security_id
+  end
+
+  test "bond rematch keeps the bond's own holding and its cost basis on a date collision" do
+    shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
+    italy = Security.create!(ticker: "IT0005377152", name: "ITALIEN 19/40", offline: true)
+    provider_id = @tr_account.account_provider.id
+    date = Date.current - 1
+    own = @account.holdings.create!(
+      security: italy, date: date, qty: 2677.95, price: 0.8404, amount: 2250.55, currency: "EUR",
+      account_provider_id: provider_id
+    )
+    stale = @account.holdings.create!(
+      security: shared, date: date, qty: 2677.95, price: 84.04, amount: 225054.92, currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_IT0005377152_#{date}", account_provider_id: provider_id,
+      cost_basis: 0.9271, cost_basis_source: "manual", cost_basis_locked: true
+    )
+
+    @tr_account.update!(raw_positions_payload: [
+      bond_position(isin: "IT0005377152", name: "ITALIEN 19/40", quantity: "2677.95", price: "0.8404")
+    ])
+    assert_difference -> { DebugLogEntry.where(message: "Bond rematch collision kept the bond's own holding market values").count }, 1 do
       TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
     end
 
-    def position_payload(isin:, quantity:, price:, average_cost: nil)
+    assert_not Holding.exists?(stale.id)
+    own.reload
+    assert_equal BigDecimal("2250.55"), own.amount
+    assert_equal BigDecimal("0.9271"), own.cost_basis
+    assert own.cost_basis_locked?
+    assert_equal stale.external_id, own.external_id
+    assert_nil own.provider_security_id
+  end
+
+  test "positions on the legacy BOND listing resolve by ISIN" do
+    import_position(isin: "IT0005377152", quantity: "2677.95", price: "0.8404", symbol: "BOND", exchange_slug: "LSX")
+
+    security = @account.holdings.first.security
+    assert_equal "IT0005377152", security.ticker
+    assert_nil security.exchange_operating_mic
+  end
+
+  test "bond rematch leaves share positions alone" do
+    other = Security.create!(ticker: "OTHER", name: "Other")
+    holding = @account.holdings.create!(
+      security: other, date: Date.current - 1, qty: 1, price: 10, amount: 10, currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_US0378331005_#{Date.current - 1}",
+      account_provider_id: @tr_account.account_provider.id
+    )
+
+    import_position(isin: "US0378331005", quantity: "1", price: "183.94")
+
+    assert_equal other, holding.reload.security
+  end
+
+  test "the prefetcher does not look up the legacy BOND listing" do
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+    Security.stubs(:provider_for).returns(Object.new)
+    Security.expects(:search_provider).never
+    @tr_account.update!(
+      current_balance: 2250.55,
+      raw_positions_payload: [
+        position_payload(isin: "IT0005377152", quantity: "2677.95", price: "0.8404", symbol: "BOND", exchange_slug: "LSX")
+      ],
+      raw_timeline_payload: [
+        {
+          "id" => "evt_legacy_bond",
+          "timestamp" => "2025-11-18T11:19:31Z",
+          "category" => "orderExecution",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "detail" => {
+            "isin" => "IT0005377152", "quantity" => "2677.95", "price" => "0.9267", "amount" => "2498.31",
+            "currency" => "EUR", "symbol" => "BOND", "exchange_slug" => "LSX"
+          }
+        }
+      ]
+    )
+
+    TradeRepublicAccount::Processor.new(@tr_account.reload).process
+
+    assert_not Security.exists?(ticker: "BOND")
+    assert_equal "IT0005377152", @account.holdings.first.security.ticker
+  end
+
+  test "legacy BOND positions point provider_security_id at the bond's own security" do
+    shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
+    italy = Security.create!(ticker: "IT0005377152", name: "März 2040", offline: true, offline_reason: "trade_republic_isin")
+    # import_holding already moved today's row in an earlier sync, but kept
+    # the shared listing as the provider's security.
+    holding = @account.holdings.create!(
+      security: italy, provider_security: shared, date: Date.current, qty: 2677.95, price: 0.8404, amount: 2250.55,
+      currency: "EUR", external_id: "trade_republic_position_DEHOLD1_IT0005377152_#{Date.current}",
+      account_provider_id: @tr_account.account_provider.id
+    )
+
+    import_position(isin: "IT0005377152", quantity: "2677.95", price: "0.8404", symbol: "BOND", exchange_slug: "LSX")
+
+    assert_equal italy.id, holding.reload.provider_security_id
+    assert_not holding.security_remapped?
+  end
+
+  test "bond rematch keeps a holding the user remapped" do
+    shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
+    holding = @account.holdings.create!(
+      security: shared, date: Date.current - 1, qty: 10, price: 1, amount: 10, currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_IT0005377152_#{Date.current - 1}",
+      account_provider_id: @tr_account.account_provider.id, security_locked: true
+    )
+
+    @tr_account.update!(raw_positions_payload: [
+      bond_position(isin: "IT0005377152", name: "ITALIEN 19/40", quantity: "10", price: "0.8404")
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    assert_equal shared, holding.reload.security
+  end
+
+  test "removes holdings calculated on the shared BOND listing" do
+    Security.stubs(:search_provider).returns([])
+    shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
+    calculated = @account.holdings.create!(
+      security: shared, date: Date.current - 30, qty: 2677.95, price: 84.04, amount: 225054.92, currency: "EUR"
+    )
+    locked = @account.holdings.create!(
+      security: shared, date: Date.current - 31, qty: 2677.95, price: 84.04, amount: 225054.92, currency: "EUR",
+      security_locked: true
+    )
+    other_account = @family.accounts.create!(
+      name: "Other broker", balance: 0, currency: "EUR", accountable: Investment.new
+    )
+    other = other_account.holdings.create!(
+      security: shared, date: Date.current - 30, qty: 1, price: 1, amount: 1, currency: "EUR"
+    )
+    share = @account.holdings.create!(
+      security: Security.create!(ticker: "BAS", exchange_operating_mic: "XETR", name: "BASF"),
+      date: Date.current - 30, qty: 1, price: 1, amount: 1, currency: "EUR"
+    )
+    bond_ticker_elsewhere = @account.holdings.create!(
+      security: Security.create!(ticker: "BOND", exchange_operating_mic: "ARCX", name: "PIMCO Active Bond ETF"),
+      date: Date.current - 30, qty: 1, price: 1, amount: 1, currency: "EUR"
+    )
+
+    # A sold bond is no longer a position; its calculated rows go as well.
+    assert_difference -> { DebugLogEntry.where(provider_key: "trade_republic").count }, 1 do
+      import_position(isin: "IE00B5BMR087", quantity: "2", price: "511.96")
+    end
+
+    assert_not Holding.exists?(calculated.id)
+    assert Holding.exists?(locked.id)
+    assert Holding.exists?(other.id)
+    assert Holding.exists?(share.id)
+    assert Holding.exists?(bond_ticker_elsewhere.id)
+  end
+
+  test "bond rematch keeps the provider security of a locked holding already on the bond" do
+    shared = Security.create!(ticker: "BOND", exchange_operating_mic: "XHAM", name: "März 2040")
+    italy = Security.create!(ticker: "IT0005377152", name: "ITALIEN 19/40", offline: true,
+      offline_reason: "trade_republic_isin")
+    holding = @account.holdings.create!(
+      security: italy, provider_security: shared, date: Date.current - 1, qty: 10, price: 1, amount: 10,
+      currency: "EUR", external_id: "trade_republic_position_DEHOLD1_IT0005377152_#{Date.current - 1}",
+      account_provider_id: @tr_account.account_provider.id, security_locked: true
+    )
+
+    @tr_account.update!(raw_positions_payload: [
+      bond_position(isin: "IT0005377152", name: "ITALIEN 19/40", quantity: "10", price: "0.8404")
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    assert_equal shared.id, holding.reload.provider_security_id
+    assert_equal italy, holding.security
+  end
+
+  private
+
+    def import_position(isin:, quantity:, price:, average_cost: nil, symbol: nil, exchange_slug: nil)
+      @tr_account.update!(raw_positions_payload: [
+        position_payload(isin:, quantity:, price:, average_cost:, symbol:, exchange_slug:)
+      ])
+      TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+    end
+
+    def bond_position(isin:, name:, quantity:, price:)
+      {
+        "isin" => isin,
+        "name" => name,
+        "category" => "interest_products",
+        "instrument_type" => "bond",
+        "quantity" => quantity,
+        "price" => price
+      }
+    end
+
+    def position_payload(isin:, quantity:, price:, average_cost: nil, symbol: nil, exchange_slug: nil)
       {
         "isin" => isin,
         "name" => "Test Security",
         "quantity" => quantity,
         "price" => price,
-        "average_cost" => average_cost
+        "average_cost" => average_cost,
+        "symbol" => symbol,
+        "exchange_slug" => exchange_slug
       }.compact
     end
 end

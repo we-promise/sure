@@ -250,10 +250,16 @@ class RedbarkItem::Importer
         # through the API's row ceiling on busy accounts.
         (redbark_item.last_synced_at - 7.days).to_date
       elsif redbark_account.sync_start_date.present?
-        redbark_account.sync_start_date
+        # The stored date was validated against the rolling lookback window
+        # when it was set, but time passes between then and this first real
+        # fetch (a delayed initial sync, a long-stuck job). Clamp to today's
+        # window so an expired date doesn't get sent to Redbark and rejected
+        # outright -- the user still gets as much history as is still
+        # available, instead of nothing.
+        [ redbark_account.sync_start_date, RedbarkAccount::MAX_SYNC_START_DATE_LOOKBACK_DAYS.days.ago.to_date ].max
       else
-        # First sync for this account: pull a 90 day history
-        90.days.ago.to_date
+        # First sync for this account: pull the default history window
+        RedbarkAccount::DEFAULT_INITIAL_HISTORY_DAYS.days.ago.to_date
       end
     end
 

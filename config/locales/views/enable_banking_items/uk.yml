@@ -49,8 +49,10 @@ uk:
       delete: "Видалити"
       setup_needed: "Потрібне налаштування"
       setup_needed_description:
-        one: "1 рахунок, імпортований з Enable Banking, потребує налаштування"
+        one: "%{count} рахунок, імпортований з Enable Banking, потребує налаштування"
         other: "%{count} рахунків, імпортованих з Enable Banking, потребують налаштування"
+        few: '%{count} рахунки, імпортовані з Enable Banking, потребують налаштування'
+        many: '%{count} рахунків, імпортованих з Enable Banking, потребують налаштування'
       set_up_accounts: "Налаштувати рахунки"
       no_accounts_found: "Рахунків не знайдено"
       no_accounts_found_description: "З Enable Banking не знайдено жодного рахунку. Спробуйте синхронізувати ще раз."

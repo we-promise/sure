@@ -19,11 +19,43 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "gets new" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
     get new_import_url
 
     assert_response :success
 
     assert_select "turbo-frame#modal"
+    assert_select "form[data-turbo-frame=_top] input[type=file][onchange='this.form.requestSubmit()']", count: 2
+  end
+
+  # DS::Button with an href renders button_to, which POSTs unless given a
+  # method. revert only routes PUT, so Try again hit a routing error.
+  test "try again on a failed revert PUTs to revert" do
+    import = imports(:transaction)
+    import.update_columns(status: "revert_failed")
+    TransactionImport.any_instance.stubs(uploaded?: true, publishable?: true)
+
+    get import_url(import)
+
+    assert_response :success
+    assert_select "form[action=?]", revert_import_path(import) do
+      assert_select "input[name=_method][value=put]"
+    end
+  end
+
+  # POSTing to imports_path is create, which needs import params.
+  test "back to imports on an empty import is a link to the imports page" do
+    import = imports(:transaction)
+    TransactionImport.any_instance.stubs(uploaded?: true, publishable?: true)
+
+    get import_url(import)
+
+    assert_response :success
+    assert_select "a[href=?]", imports_path, text: I18n.t("imports.ready.back_to_imports")
+    assert_select "form[action=?]", imports_path, count: 0
   end
 
   test "cancel marks a lost import as failed" do
@@ -86,6 +118,26 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to import_upload_url(Import.all.ordered.first)
+  end
+
+  test "create with an empty request body redirects back with an alert" do
+    assert_no_difference "Import.count" do
+      post imports_url
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.missing_upload"), flash[:alert]
+  end
+
+  test "create with DocumentImport or SureImport type but no file redirects back with an alert" do
+    %w[DocumentImport SureImport].each do |type|
+      assert_no_difference "Import.count" do
+        post imports_url, params: { import: { type: type } }
+      end
+
+      assert_redirected_to new_import_url
+      assert_equal I18n.t("imports.create.missing_upload"), flash[:alert]
+    end
   end
 
   test "uploads supported non-pdf document for vector store without creating import" do
@@ -401,6 +453,92 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to import_path(import)
   end
 
+  test "member cannot publish import targeting a read only shared account" do
+    import = imports(:transaction)
+    import.update!(account: accounts(:credit_card))
+    TransactionImport.any_instance.expects(:publish_later).never
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "member cannot publish import with account mapping to an unshared account" do
+    import = imports(:transaction)
+    import.mappings.create!(type: "Import::AccountMapping", key: "Brokerage", mappable: accounts(:investment))
+    TransactionImport.any_instance.expects(:publish_later).never
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "member can publish import targeting a full control shared account" do
+    import = imports(:transaction)
+    import.update!(account: accounts(:depository))
+    import.mappings.create!(type: "Import::AccountMapping", key: "Checking", mappable: accounts(:depository))
+    TransactionImport.any_instance.expects(:publish_later).once
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.started"), flash[:notice]
+  end
+
+  test "member cannot revert import whose entries are in a read only shared account" do
+    import = imports(:transaction)
+    import.update!(status: :complete)
+    entries(:transaction).update!(import: import, account: accounts(:credit_card))
+    TransactionImport.any_instance.expects(:revert_later).never
+
+    sign_in users(:family_member)
+    put revert_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "member cannot delete import whose entries are in a read only shared account" do
+    import = imports(:transaction)
+    import.update!(status: :failed)
+    entries(:transaction).update!(import: import, account: accounts(:credit_card))
+
+    sign_in users(:family_member)
+    assert_no_difference([ "Import.count", "Entry.count" ]) do
+      delete import_url(import)
+    end
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "member cannot publish QIF import whose embedded account matches a read only shared account" do
+    import = qif_import_with_embedded_account(accounts(:credit_card).name)
+    QifImport.any_instance.expects(:publish_later).never
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "member can publish QIF import whose embedded account is new" do
+    import = qif_import_with_embedded_account("Brand New QIF Account")
+    QifImport.any_instance.expects(:publish_later).once
+
+    sign_in users(:family_member)
+    post publish_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("imports.publish.started"), flash[:notice]
+  end
+
   test "destroys import" do
     import = imports(:transaction)
 
@@ -434,6 +572,146 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.create.file_too_large", max_size: configured_limit / 1.megabyte), flash[:alert]
   end
 
+  test "shows a friendly warning when a Sure import's transactions reference merchants missing from the export (#3113)" do
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Account", data: {
+        id: "account-1", name: "Old Export Checking", balance: "1000.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } },
+      { type: "Transaction", data: {
+        id: "transaction-1", account_id: "account-1", merchant_id: "merchant-never-exported",
+        date: "2024-01-15", amount: "42.50", name: "Amazon purchase", currency: "USD"
+      } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("imports.ready.missing_merchant_warning_title")
+  end
+
+  test "does not show the missing merchant warning for a Sure import with no unresolved merchant references" do
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Account", data: {
+        id: "account-1", name: "Clean Export Checking", balance: "1000.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("imports.ready.missing_merchant_warning_title")
+  end
+
+  test "explains that unnamed recurring transactions with a missing merchant will be skipped" do
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Account", data: {
+        id: "account-1", name: "Checking", balance: "1000.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } },
+      { type: "RecurringTransaction", data: {
+        id: "recurring-1", account_id: "account-1", merchant_id: "merchant-never-exported",
+        amount: "11.99", currency: "USD", expected_day_of_month: 28,
+        last_occurrence_date: "2026-08-28", next_expected_date: "2026-09-28"
+      } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("imports.ready.missing_merchant_warning_title")
+    assert_includes response.body, I18n.t("imports.ready.skipped_recurring_description", count: 1).squish
+    assert_not_includes response.body, "merchant reference in this file"
+  end
+
+  test "shows a friendly notice when a Sure import reuses existing categories, tags or merchants by name (#3113)" do
+    @user.family.categories.create!(name: "Groceries", color: "#407706", lucide_icon: "shopping-basket")
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Category", data: { id: "category-1", name: "Groceries" } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("imports.ready.reused_taxonomy_notice_title")
+  end
+
+  test "does not show the reused taxonomy notice for a Sure import with no name collisions" do
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Category", data: { id: "category-1", name: "A Brand New Category Name" } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("imports.ready.reused_taxonomy_notice_title")
+  end
+
+  test "shows the differences when an existing provider merchant differs from the Sure import file" do
+    ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", website_url: "https://amazon.com")
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Account", data: {
+        id: "account-1", name: "Checking", balance: "1000.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } },
+      { type: "ProviderMerchant", data: { id: "pm-1", name: "AMZN MKTP", source: "plaid", website_url: "https://amazon.co.uk" } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("imports.ready.provider_merchant_diff_title")
+    assert_includes response.body, "AMZN MKTP"
+    assert_includes response.body, "keeping https://amazon.com, file has https://amazon.co.uk"
+  end
+
+  test "does not show the provider merchant differences notice without a difference" do
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Account", data: {
+        id: "account-1", name: "Checking", balance: "1000.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("imports.ready.provider_merchant_diff_title")
+  end
+
+  test "import ready notices use singular and plural wording" do
+    {
+      "imports.ready.missing_merchant_warning_description" => [ "1 merchant reference in this file", "2 merchant references in this file" ],
+      "imports.ready.reused_taxonomy_notice_description" => [ "1 category, tag or merchant", "2 categories, tags or merchants" ],
+      "imports.ready.provider_merchant_diff_description" => [ "1 merchant in this file", "2 merchants in this file" ]
+    }.each do |key, (singular, plural)|
+      assert_includes I18n.t(key, count: 1), singular
+      assert_includes I18n.t(key, count: 2), plural
+    end
+  end
+
   test "PDF import account select does not leak unshared family accounts (#1803)" do
     sign_in users(:family_member)
     pdf_import = imports(:pdf_with_rows)
@@ -451,4 +729,23 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select 'select[name="import[account_id]"] option', text: "IOU (personal debt to friend)", count: 0
     assert_select 'select[name="import[account_id]"] option', text: "Plaid Depository Account", count: 0
   end
+
+  private
+    def qif_import_with_embedded_account(name)
+      import = QifImport.create!(family: families(:dylan_family))
+      import.update!(raw_file_str: <<~QIF)
+        !Account
+        N#{name}
+        TBank
+        ^
+        !Type:Bank
+        D1/ 1'24
+        U-25.00
+        T-25.00
+        PCoffee Shop
+        ^
+      QIF
+      import.generate_rows_from_csv
+      import.reload
+    end
 end

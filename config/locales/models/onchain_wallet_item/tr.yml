@@ -1,0 +1,19 @@
+---
+tr:
+  onchain:
+    chains:
+      arbitrum: Arbitrum
+      base: Base
+      bitcoin: Bitcoin
+      cosmos: Cosmos Hub
+      ethereum: Ethereum
+      gnosis: Gnosis
+      optimism: Optimism
+      polkadot: Polkadot
+      polygon: Polygon
+      solana: Solana
+    institution_name: Gözetimsiz cüzdanlar
+  onchain_wallet_item:
+    movement:
+      received: '%{quantity} %{symbol} alındı'
+      sent: '%{quantity} %{symbol} gönderildi'

@@ -1,0 +1,102 @@
+---
+ca:
+  insights:
+    notification:
+      title: Nova observació financera
+      body: Obre Sure per revisar la teva darrera observació generada per IA.
+    index:
+      title: Observacions
+      subtitle: Què passa amb les teves finances, actualitzat cada nit.
+      refresh: Cerca noves observacions
+      empty:
+        title: Encara no hi ha observacions
+        description: Les observacions apareixen aquí quan hi ha prou activitat als teus comptes. S'actualitzen automàticament cada nit.
+    refresh:
+      queued: Estem generant observacions noves. Torna a mirar-ho d'aquí a un minut.
+      checking: Comprovant…
+    card:
+      acknowledged: Observació descartada
+      acknowledge: Entesos
+      acknowledge_title: Amaga-ho fins que canviïn les xifres
+      new: Nova
+    feed:
+      view_all: Veure totes les observacions
+      header: Més recents
+      header_new: Noves
+      acknowledge_aria: 'Entesos: %{title}'
+    types:
+      spending_anomaly: Despesa
+      cash_flow_warning: Flux de caixa
+      net_worth_milestone: Patrimoni net
+      subscription_audit: Subscripcions
+      savings_rate_change: Taxa d'estalvi
+      idle_cash: Efectiu inactiu
+      budget_at_risk: Pressupost
+      budget_on_track: Pressupost
+      maintained_goal_depleted: Reserva
+    meta:
+      next_n_days:
+        one: Pròxim dia
+        other: Pròxims %{count} dies
+      last_n_days:
+        one: Últim dia
+        other: Últims %{count} dies
+      date_range: Del %{from} al %{to}
+    figures:
+      vs_previous: vs. el mes anterior
+      today: avui
+      on_pace: al ritme actual
+      of_budget: del pressupost
+      need_attention: requereixen atenció
+      days_overdue:
+        one: '%{count} dia de retard'
+        other: '%{count} dies de retard'
+      idle_days:
+        one: inactiu %{count} dia
+        other: inactiu %{count} dies
+    actions:
+      spending_anomaly: Veure les transaccions de %{category}
+      cash_flow_warning: Revisa les transaccions recurrents
+      net_worth_milestone: Veure l'informe de patrimoni net
+      subscription_audit: Revisa les transaccions recurrents
+      savings_rate_change: Veure les transaccions d'aquell mes
+      idle_cash: Ves al compte
+      budget: Veure el pressupost
+      maintained_goal_depleted: Veure la reserva
+    titles:
+      spending_anomaly:
+        above: La despesa en %{category} va a l'alça
+        below: La despesa en %{category} va a la baixa
+      cash_flow_warning:
+        low: El teu saldo d'efectiu podria quedar baix
+        negative: El teu saldo d'efectiu podria quedar en negatiu
+      net_worth_milestone: 'Fita de patrimoni net: %{milestone}'
+      maintained_goal_depleted: '%{goal} ha baixat per sota del seu nivell'
+      subscription_audit: '%{name} encara està actiu?'
+      savings_rate_change:
+        up: La teva taxa d'estalvi ha millorat a %{month}
+        down: La teva taxa d'estalvi ha baixat a %{month}
+      idle_cash: Efectiu inactiu a %{account}
+      budget_at_risk:
+        one: Una categoria del teu pressupost requereix atenció
+        other: '%{count} categories del teu pressupost requereixen atenció'
+      budget_on_track: El teu pressupost va bé
+    templates:
+      spending_anomaly:
+        above: Al ritme actual gastaràs %{projected_spend} en %{category} aquest mes, un %{deviation_pct}% més que la teva mitjana mensual recent de %{baseline_spend}.
+        below: Al ritme actual gastaràs %{projected_spend} en %{category} aquest mes, un %{deviation_pct}% menys que la teva mitjana mensual recent de %{baseline_spend}.
+      cash_flow_warning:
+        low: Segons les teves properes transaccions recurrents i la teva despesa habitual, el teu saldo d'efectiu podria baixar fins a %{projected_low} cap al %{projected_low_date}.
+        negative: Segons les teves properes transaccions recurrents i la teva despesa habitual, el teu saldo d'efectiu podria caure fins a %{projected_low} cap al %{projected_low_date}.
+      net_worth_milestone: El teu patrimoni net ha superat %{milestone} i ara és de %{net_worth}.
+      maintained_goal_depleted: '%{goal} té %{saved} dels %{target} que ha de mantenir. Hi falten %{missing}.'
+      subscription_audit: '%{name} (%{amount}) no ha aparegut des que s''esperava el %{expected_on}. Potser s''ha cancel·lat o el càrrec s''ha mogut de data.'
+      savings_rate_change:
+        up: A %{month} vas estalviar el %{current_rate}% dels teus ingressos, %{change_pp} punts percentuals més que el %{previous_rate}% del mes anterior.
+        down: A %{month} vas estalviar el %{current_rate}% dels teus ingressos, %{change_pp} punts percentuals menys que el %{previous_rate}% del mes anterior.
+        down_negative: 'A %{month} vas gastar més del que vas ingressar: la teva taxa d''estalvi va baixar al %{current_rate}%, des del %{previous_rate}% del mes anterior.'
+      idle_cash: '%{account} té %{balance} sense cap moviment en els últims %{idle_days} dies.'
+      budget_at_risk:
+        over: '%{categories} han superat el pressupost aquest mes. Fins ara has fet servir el %{budget_spent_pct}% del teu pressupost total.'
+        near: '%{categories} són a prop del seu límit aquest mes. Fins ara has fet servir el %{budget_spent_pct}% del teu pressupost total.'
+      budget_on_track: Has gastat %{spent} dels %{budgeted} pressupostats (%{budget_spent_pct}%) i tot és dins del límit.

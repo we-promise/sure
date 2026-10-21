@@ -74,10 +74,12 @@ tr:
           holdings_value: Varlık değeri
           remaining_principal_balance: Kalan anapara bakiyesi
           total_account_value: Toplam hesap değeri
+          total_gains: Toplam kazanç
         views:
           cash: Nakit
           holdings: Varlıklar
           total_value: Toplam değer
+          gains: Kazanç / ROI
         vs_available_history: mevcut geçmişe göre
     period_picker:
       aria_label: 'Zaman aralığı: %{period}'
@@ -100,6 +102,9 @@ tr:
       avatar_default_label: Menüyü aç
     tooltip:
       trigger_label: Daha fazla bilgi
+    icon_picker:
+      no_matching_icons: Eşleşen simge yok
+      search_placeholder: Simge ara...
   provider_sync_summary:
     accounts:
       institutions: 'Kurumlar: %{count}'
@@ -110,13 +115,13 @@ tr:
     health:
       data_warnings: 'Veri uyarıları: %{count}'
       duplicate_suggestions:
-        one: "%{count} olası yinelenen işlem incelenmeli"
-        other: "%{count} olası yinelenen işlem incelenmeli"
+        one: "%{count} olası mükerrer işlem incelenmeli"
+        other: "%{count} olası mükerrer işlem incelenmeli"
       errors: 'Hatalar: %{count}'
       notices: 'Bildirimler: %{count}'
       pending_reconciled:
-        one: "%{count} yinelenen bekleyen işlem uzlaştırıldı"
-        other: "%{count} yinelenen bekleyen işlem uzlaştırıldı"
+        one: "%{count} mükerrer bekleyen işlem uzlaştırıldı"
+        other: "%{count} mükerrer bekleyen işlem uzlaştırıldı"
       rate_limited: "%{time_ago} önce hız sınırlamasına takıldı"
       recently: yakın zamanda
       stale_pending:
@@ -133,7 +138,7 @@ tr:
         other: "%{count} işlem"
       title: Sağlık
       view_data_quality: Veri kalitesi ayrıntılarını görüntüle
-      view_duplicate_suggestions: Önerilen yinelenenleri görüntüle
+      view_duplicate_suggestions: Önerilen mükerrer işlemleri görüntüle
       view_error_details: Hata ayrıntılarını görüntüle
       view_reconciled: Uzlaştırılan işlemleri görüntüle
       view_stale_pending: Etkilenen hesapları görüntüle

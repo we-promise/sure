@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class KrakenItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -28,11 +28,6 @@ class KrakenItem < ApplicationRecord
   scope :credentials_configured, -> { where.not(api_key: [ nil, "" ]).where.not(api_secret: nil) }
 
   before_validation :strip_credentials
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   def import_latest_kraken_data
     provider = kraken_provider

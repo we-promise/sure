@@ -10,7 +10,8 @@ class PlaidAccount::Liabilities::StudentLoanProcessor
       rate_type: "fixed",
       interest_rate: student_loan_data["interest_rate_percentage"],
       initial_balance: student_loan_data["origination_principal_amount"],
-      term_months: term_months
+      term_months: term_months,
+      start_date: start_date
     )
   end
 
@@ -21,10 +22,39 @@ class PlaidAccount::Liabilities::StudentLoanProcessor
       plaid_account.current_account
     end
 
+    # The date the loan was actually drawn down, which the payload has been
+    # carrying all along. Without it an imported loan looks originated the day
+    # it was imported, and everything measured from origination -- months
+    # elapsed, months remaining, which instalment the borrower is on -- reads
+    # the whole history of an old loan as its first month.
+    #
+    # Never overwrites a date already recorded: a borrower who corrected the
+    # drawdown by hand knows something the provider does not, and a sync is
+    # not the place to argue with them.
+    #
+    # Nor records one in the future: Loan rejects a start date after today, and
+    # a provider date that says otherwise would fail the whole sync with it.
+    def start_date
+      account.loan.start_date || recordable_origination_date
+    end
+
+    def recordable_origination_date
+      origination_date if origination_date && origination_date <= Date.current
+    end
+
+    # Counted in whole calendar months, as the schedule and Loan#months_elapsed
+    # count them: 30-day blocks made a 30-year loan 365 months long. A month
+    # counts once it is served in full, so a payoff less than a month after
+    # origination, or before it, is nil rather than zero: a term of no months
+    # is not a term, and it would make the loan look amortisable over a
+    # schedule that cannot exist.
     def term_months
       return nil unless origination_date && expected_payoff_date
 
-      ((expected_payoff_date - origination_date).to_i / 30).to_i
+      months = (expected_payoff_date.year * 12 + expected_payoff_date.month) -
+        (origination_date.year * 12 + origination_date.month)
+      months -= 1 if origination_date + months.months > expected_payoff_date
+      months.positive? ? months : nil
     end
 
     def origination_date

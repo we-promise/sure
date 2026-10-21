@@ -1,0 +1,257 @@
+---
+ca:
+  questrade_items:
+    default_name: Connexió de Questrade
+    sync_status:
+      no_accounts: No s'han trobat comptes
+      synced:
+        one: '%{count} compte sincronitzat'
+        other: '%{count} comptes sincronitzats'
+      synced_with_setup: '%{linked} sincronitzats, %{unlinked} per configurar'
+    institution_summary:
+      none: No hi ha entitats connectades
+      count:
+        one: '%{count} entitat'
+        other: '%{count} entitats'
+    errors:
+      provider_not_configured: El proveïdor Questrade no està configurat
+    sync:
+      status:
+        importing: S'estan important comptes de Questrade...
+        processing: S'estan processant les posicions i les activitats...
+        calculating: S'estan calculant els saldos...
+        importing_data: S'estan important les dades dels comptes...
+        checking_setup: S'està comprovant la configuració dels comptes...
+        needs_setup: '%{count} comptes necessiten configuració...'
+      success: Sincronització iniciada
+    panel:
+      eyebrow: Configuració · només a l'ordinador
+      help_text: Documentació de l'API de Questrade
+      disconnect: Desconnecta
+      disconnect_confirm: Vols desconnectar Questrade? Això elimina la connexió i desenllaça els comptes sincronitzats.
+      steps:
+        s1_html: Inicia sessió al <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">portal de Questrade</a> des d'un navegador d'ordinador. La configuració de l'API no està disponible a l'aplicació mòbil.
+        s2: Obre Settings i, a General settings, edita la configuració d'IQ API.
+        s3_html: A la finestra d'accés a l'API, fes clic a <strong>Manage</strong> a <strong>My applications</strong>.
+        s4: Registra una aplicació personal amb un nom i una descripció i desa-la.
+        s5: Afegeix un dispositiu nou i genera un token.
+        s6: Enganxa el token generat a continuació i desa.
+      setup_instructions: 'Instruccions de configuració:'
+      step_1: Visita el teu tauler de Questrade per obtenir les credencials
+      step_2: Introdueix les credencials a continuació i fes clic al botó Desa
+      step_3: Un cop connectat, ves a la pestanya Comptes per configurar els comptes nous
+      field_descriptions: 'Descripció dels camps:'
+      optional: (Opcional)
+      required: (obligatori)
+      optional_with_default: (opcional, per defecte %{default_value})
+      save_button: Desa la configuració
+      update_button: Actualitza la configuració
+      token_refresh_hint: Els tokens de Questrade es renoven automàticament cada vegada que se sincronitzen els comptes. Si una connexió no s'utilitza durant més de 7 dies i caduca, enganxa aquí un token nou per reactivar-la sense desconnectar-la.
+      status_configured_html: Configurat i a punt. Visita la pestanya <a href="%{accounts_path}" class="link">Comptes</a> per gestionar i configurar els comptes.
+      status_not_configured: No configurat
+      fields:
+        refresh_token:
+          label: Token d'actualització
+          description: El teu token d'actualització (refresh token) de Questrade
+          placeholder_new: Enganxa aquí el token d'actualització
+          placeholder_update: Introdueix un token d'actualització nou per actualitzar-lo
+        api_server:
+          label: Servidor de l'API
+          description: El teu servidor de l'API de Questrade
+          placeholder_new: Enganxa aquí el servidor de l'API
+          placeholder_update: Introdueix un servidor de l'API nou per actualitzar-lo
+    create:
+      success: La connexió amb Questrade s'ha creat correctament
+    update:
+      success: La connexió amb Questrade s'ha actualitzat
+    destroy:
+      success: La connexió amb Questrade s'ha eliminat
+    index:
+      title: Connexions de Questrade
+    loading:
+      loading_message: Carregant comptes de Questrade...
+      loading_title: Carregant
+    link_accounts:
+      all_already_linked:
+        one: El compte seleccionat (%{names}) ja està enllaçat
+        other: 'Tots els %{count} comptes seleccionats ja estan enllaçats: %{names}'
+      api_error: 'Error de l''API: %{message}'
+      invalid_account_names:
+        one: No es pot enllaçar un compte sense nom
+        other: No es poden enllaçar %{count} comptes sense nom
+      link_failed: No s'han pogut enllaçar els comptes
+      no_accounts_selected: Selecciona almenys un compte
+      no_api_key: No s'ha trobat la clau API de Questrade. Configura-la a la configuració del proveïdor.
+      partial_invalid: S'han enllaçat correctament %{created_count} compte(s), %{already_linked_count} ja estaven enllaçats, %{invalid_count} compte(s) tenien noms no vàlids
+      partial_success: 'S''han enllaçat correctament %{created_count} compte(s). %{already_linked_count} compte(s) ja estaven enllaçats: %{already_linked_names}'
+      success:
+        one: S'ha enllaçat correctament %{count} compte
+        other: S'han enllaçat correctament %{count} comptes
+    questrade_item:
+      kind: Corredoria
+      accounts_need_setup: Els comptes necessiten configuració
+      delete: Elimina la connexió
+      deletion_in_progress: eliminació en curs...
+      error: Error
+      more_accounts_available:
+        one: '%{count} compte més disponible'
+        other: '%{count} comptes més disponibles'
+      no_accounts_description: Aquesta connexió encara no té comptes enllaçats.
+      no_accounts_title: No hi ha comptes
+      provider_name: Questrade
+      requires_update: Cal actualitzar la connexió
+      setup_action: Configura els nous comptes
+      setup_description: '%{linked} de %{total} comptes enllaçats. Tria els tipus de compte per als teus nous comptes importats de Questrade.'
+      setup_needed: Nous comptes a punt per configurar
+      status: Sincronitzat fa %{timestamp}
+      status_never: Mai sincronitzat
+      status_with_summary: Darrera sincronització fa %{timestamp} - %{summary}
+      syncing: Sincronitzant...
+      total: Total
+      unlinked: Sense enllaç
+      update_credentials: Actualitza les credencials
+    select_accounts:
+      accounts_selected: comptes seleccionats
+      api_error: 'Error de l''API: %{message}'
+      cancel: Cancel·la
+      configure_name_in_provider: 'No es pot importar: configura el nom del compte a Questrade'
+      description: Selecciona els comptes que vols enllaçar al teu compte de %{product_name}.
+      link_accounts: Enllaça els comptes seleccionats
+      no_accounts_found: No s'han trobat comptes. Comprova la configuració de la clau API.
+      no_api_key: La clau API de Questrade no està configurada. Configura-la a la configuració.
+      no_credentials_configured: Configura primer les credencials de Questrade a la configuració del proveïdor.
+      no_name_placeholder: (Sense nom)
+      title: Selecciona comptes de Questrade
+    select_existing_account:
+      page_title: Enllaça un compte de Questrade
+      dialog_title: Enllaça amb un compte de Questrade
+      linking_label: S'està enllaçant
+      none_available: No hi ha comptes de Questrade sense enllaçar disponibles.
+      buttons:
+        cancel: Cancel·la
+        link: Enllaça
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor
+      all_accounts_already_linked: Tots els comptes de Questrade ja estan enllaçats
+      api_error: 'Error de l''API: %{message}'
+      balance_label: 'Saldo:'
+      cancel: Cancel·la
+      cancel_button: Cancel·la
+      configure_name_in_provider: 'No es pot importar: configura el nom del compte a Questrade'
+      connect_hint: Connecta un compte de Questrade per activar la sincronització automàtica.
+      description: Selecciona un compte de Questrade per enllaçar-lo amb aquest compte. Les transaccions es sincronitzaran i deduplicaran automàticament.
+      header: Enllaça amb Questrade
+      link_account: Enllaça el compte
+      link_button: Enllaça aquest compte
+      linking_to: 'S''enllaçarà amb:'
+      no_account_specified: No s'ha especificat cap compte
+      no_accounts: No s'han trobat comptes de Questrade sense enllaçar.
+      no_accounts_found: No s'han trobat comptes de Questrade. Comprova la configuració de la clau API.
+      no_api_key: La clau API de Questrade no està configurada. Configura-la a la configuració.
+      no_credentials_configured: Configura primer les credencials de Questrade a la configuració del proveïdor.
+      no_name_placeholder: (Sense nom)
+      settings_link: Ves a la configuració del proveïdor
+      subtitle: Connecta aquest compte amb un dels teus comptes de Questrade
+      title: Enllaça %{account_name} amb Questrade
+    link_existing_account:
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor
+      api_error: 'Error de l''API: %{message}'
+      invalid_account_name: No es pot enllaçar un compte sense nom
+      provider_account_already_linked: Aquest compte de Questrade ja està enllaçat a un altre compte
+      provider_account_not_found: No s'ha trobat el compte de Questrade
+      missing_parameters: Falten paràmetres obligatoris
+      no_api_key: No s'ha trobat la clau API de Questrade. Configura-la a la configuració del proveïdor.
+      success: S'ha enllaçat correctament %{account_name} amb Questrade
+    setup_accounts:
+      page_title: Configura els comptes de Questrade
+      dialog_title: Configura els teus comptes de Questrade
+      all_linked: Tots els comptes de Questrade ja estan enllaçats.
+      import_as: Importa com a
+      buttons:
+        cancel: Cancel·la
+        create: Crea els comptes
+        done: Fet
+      types:
+        investment: Inversió
+        depository: Efectiu / Dipòsit
+        skip: Omet aquest compte
+      account_type_label: 'Tipus de compte:'
+      accounts_count:
+        one: '%{count} compte disponible'
+        other: '%{count} comptes disponibles'
+      all_accounts_linked: Tots els teus comptes de Questrade ja s'han configurat.
+      api_error: 'Error de l''API: %{message}'
+      creating: Creant comptes...
+      fetch_failed: No s'han pogut obtenir els comptes
+      import_selected: Importa els comptes seleccionats
+      instructions: Selecciona els comptes que vols importar de Questrade. Pots triar-ne diversos.
+      no_accounts: No s'han trobat comptes sense enllaçar en aquesta connexió de Questrade.
+      no_accounts_to_setup: No hi ha comptes per configurar
+      no_api_key: La clau API de Questrade no està configurada. Revisa la configuració de la connexió.
+      select_all: Selecciona-ho tot
+      account_types:
+        skip: Omet aquest compte
+        depository: Compte corrent o d'estalvis
+        credit_card: Targeta de crèdit
+        investment: Compte d'inversió
+        crypto: Compte de criptomonedes
+        loan: Préstec o hipoteca
+        other_asset: Altre actiu
+      subtype_labels:
+        depository: 'Subtipus de compte:'
+        credit_card: ''
+        investment: 'Tipus d''inversió:'
+        crypto: ''
+        loan: 'Tipus de préstec:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Les targetes de crèdit es configuraran automàticament com a comptes de targeta de crèdit.
+        other_asset: No calen opcions addicionals per a altres actius.
+        crypto: Els comptes de criptomonedes es configuraran per fer el seguiment de les posicions i les transaccions.
+      subtypes:
+        depository:
+          checking: Compte corrent
+          savings: Estalvis
+          hsa: Compte d'estalvi per a salut
+          cd: Dipòsit a termini
+          money_market: Mercat monetari
+        investment:
+          brokerage: Corredoria
+          pension: Pensió
+          retirement: Jubilació
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: Pla d'estalvis de jubilació (TSP)
+          529_plan: Pla 529
+          hsa: Compte d'estalvi per a salut
+          mutual_fund: Fons d'inversió
+          ira: IRA tradicional
+          roth_ira: IRA Roth
+          angel: Inversió àngel
+        loan:
+          mortgage: Hipoteca
+          student: Préstec d'estudis
+          auto: Préstec d'automòbil
+          other: Altre préstec
+      balance: Saldo
+      cancel: Cancel·la
+      choose_account_type: 'Tria el tipus de compte correcte per a cada compte de Questrade:'
+      create_accounts: Crea els comptes
+      creating_accounts: Creant comptes...
+      historical_data_range: 'Rang de dades històriques:'
+      subtitle: Tria com vols importar cada compte
+      sync_start_date_help: Selecciona fins on vols sincronitzar l'historial de transaccions.
+      sync_start_date_label: 'Comença a sincronitzar transaccions des de:'
+      title: Configura els teus comptes de Questrade
+    setup_required:
+      title: Primer connecta Questrade
+      not_configured_title: Questrade encara no està connectat
+      not_configured_description: Afegeix la connexió de Questrade a la configuració del proveïdor i torna aquí per enllaçar els comptes.
+      go_to_provider_settings: Ves a la configuració del proveïdor
+    complete_account_setup:
+      all_skipped: S'han omès tots els comptes. No s'ha creat cap compte.
+      creation_failed: 'No s''han pogut crear els comptes: %{error}'
+      no_accounts: No hi ha comptes per configurar.
+      success: S'han creat correctament %{count} compte(s).
+    preload_accounts:
+      no_credentials_configured: Configura primer les credencials de Questrade a la configuració del proveïdor.

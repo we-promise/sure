@@ -1,0 +1,6 @@
+---
+ca:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: La identitat SSO ja pot tornar a iniciar sessió o crear un compte.

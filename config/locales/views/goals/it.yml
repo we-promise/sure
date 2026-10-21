@@ -267,7 +267,7 @@ it:
         notes_placeholder: Un promemoria per te in futuro…
         funding_accounts: Conti di finanziamento
         funding_accounts_hint: Il saldo di questo obiettivo è il saldo di questi conti.
-        whole_balance: Saldo intero
+        whole_balance: "Vuoto: tutto il saldo"
         earmark_for: Accantona un importo per %{account}
         earmark_hint: Lascia vuoto un importo per dedicare l'intero saldo di quel conto.
       subtypes:

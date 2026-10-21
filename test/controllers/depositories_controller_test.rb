@@ -8,6 +8,38 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:depository)
   end
 
+  # The provider link's visibility and the controller's gate are two
+  # expressions of one rule, and they disagreed. ConnectorAuthorizable requires
+  # `member_connectable? && Current.user&.member?`; the selector asked only
+  # `admin? || member_connectable`, so a GUEST was shown the link and refused
+  # on submit -- a control that looks broken rather than one that is absent.
+  #
+  # One user, one family, one variable: the role changes between the two
+  # requests and nothing else does, so a difference can only be the role.
+  test "a member-connectable provider is offered to a member and withheld from a guest" do
+    config = {
+      key: "test_provider",
+      name: "Test Provider",
+      member_connectable: true,
+      new_account_path: ->(_accountable_type, _return_to) { "/test-provider/new" }
+    }
+    Provider::Factory.stubs(:connection_configs_for_account_type).returns([ config ])
+
+    sign_in user = users(:family_member)
+
+    get new_depository_url(step: "method_select")
+    assert_response :success
+    assert_select "a[href='/test-provider/new']", { minimum: 1 },
+                  "a member may connect this provider and must be offered it"
+
+    user.update!(role: :guest)
+
+    get new_depository_url(step: "method_select")
+    assert_response :success
+    assert_select "a[href='/test-provider/new']", { count: 0 },
+                  "a guest was offered a link require_connector_create! refuses"
+  end
+
   test "create falls back to the stored return_to when no form param is present" do
     get new_account_path(return_to: transactions_path) # StoreLocation captures it into the session
 
@@ -64,5 +96,45 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     get edit_account_url(accounts(:depository))
     assert_response :success
     assert_select "input[name='account[enable_category_matcher]']", 0
+  end
+
+  # --- member-owned connections (issue #3579) ------------------------------
+
+  test "a member sees only member-connectable providers in the method selector" do
+    Provider::Registry.stubs(:plaid_provider_for_region).returns(stub("plaid"))
+    Family.any_instance.stubs(:can_connect_plaid_us?).returns(true)
+    Family.any_instance.stubs(:can_connect_plaid_eu?).returns(false)
+
+    sign_in users(:family_member)
+    get new_depository_path(step: "method_select")
+
+    assert_response :success
+    assert_select "a[href=?]", new_plaid_item_path(region: "us", accountable_type: "Depository"), count: 1
+    # SimpleFIN is tenant-wide, so it must not be offered to a member even
+    # when it is configured.
+    assert_select "a[href*=?]", "simplefin", count: 0
+  end
+
+  test "an admin still sees every configured provider in the method selector" do
+    Provider::Registry.stubs(:plaid_provider_for_region).returns(stub("plaid"))
+    Family.any_instance.stubs(:can_connect_plaid_us?).returns(true)
+    Family.any_instance.stubs(:can_connect_plaid_eu?).returns(false)
+
+    sign_in users(:family_admin)
+    get new_depository_path(step: "method_select")
+
+    assert_response :success
+    assert_select "a[href=?]", new_plaid_item_path(region: "us", accountable_type: "Depository"), count: 1
+  end
+
+  test "a member is offered manual entry even with no connectable providers" do
+    Family.any_instance.stubs(:can_connect_plaid_us?).returns(false)
+    Family.any_instance.stubs(:can_connect_plaid_eu?).returns(false)
+
+    sign_in users(:family_member)
+    get new_depository_path(step: "method_select")
+
+    assert_response :success
+    assert_select "a[href=?]", new_depository_path, count: 1
   end
 end

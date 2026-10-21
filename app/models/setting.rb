@@ -16,6 +16,14 @@ class Setting < RailsSettings::Base
   field :anthropic_base_url, type: :string, default: ENV["ANTHROPIC_BASE_URL"]
   field :llm_provider, type: :string, default: ENV.fetch("LLM_PROVIDER", "openai")
 
+  # Jev (TypeSafe) — a classification provider, not an LLM. Reachable either
+  # through OpenRouter's Decisions API (the default) or TypeSafe's own endpoint.
+  # Deliberately no OPENROUTER_API_KEY fallback: an operator holding that key
+  # for an unrelated purpose should not silently enable Jev.
+  field :jev_api_key, type: :string, default: ENV["JEV_API_KEY"]
+  field :jev_endpoint, type: :string, default: ENV["JEV_ENDPOINT"]
+  field :jev_model, type: :string, default: ENV["JEV_MODEL"]
+
   # LLM token budget (applies to every outbound LLM call: chat, auto-categorize,
   # merchant detection, enhance-merchants, PDF processing). Defaults track
   # Ollama's historical 2048-token baseline so local small-context models work
@@ -30,8 +38,14 @@ class Setting < RailsSettings::Base
   # generate would otherwise always trip the watchdog. Read via
   # `Chat.response_timeout`, which applies ENV > Setting > default precedence.
   field :ai_response_timeout, type: :integer, default: ENV["AI_RESPONSE_TIMEOUT"]&.to_i
+  # Per-request bound for the admin "Run checks" AI probes on System Health.
+  # The PDF probes do a full extraction round trip, which cloud models often
+  # can't finish inside the 5s default. Read via `AiHealth::Probe.timeout`,
+  # which applies ENV > Setting > default precedence.
+  field :ai_health_probe_timeout, type: :integer, default: ENV["AI_HEALTH_PROBE_TIMEOUT"]&.to_i
   field :external_assistant_url, type: :string
   field :external_assistant_token, type: :string
+  field :external_assistant_model, type: :string
   field :external_assistant_agent_id, type: :string
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
@@ -78,10 +92,14 @@ class Setting < RailsSettings::Base
   field :eodhd_api_key, type: :string, default: ENV["EODHD_API_KEY"]
   field :alpha_vantage_api_key, type: :string, default: ENV["ALPHA_VANTAGE_API_KEY"]
   field :tinkoff_invest_api_key, type: :string, default: ENV["TINKOFF_INVEST_API_KEY"]
+  # Mansa API (mansaapi.com) — African exchanges, including NGX (Nigeria),
+  # which none of the providers above cover. See Provider::Mansa.
+  field :mansa_api_key, type: :string, default: ENV["MANSA_API_KEY"]
 
   # Property valuation (AVM) provider API keys
   field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
   field :realie_api_key, type: :string, default: ENV["REALIE_API_KEY"]
+  field :chimnie_api_key, type: :string, default: ENV["CHIMNIE_API_KEY"]
 
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept
@@ -97,10 +115,13 @@ class Setting < RailsSettings::Base
       eodhd_api_key
       alpha_vantage_api_key
       tinkoff_invest_api_key
+      mansa_api_key
       rentcast_api_key
       realie_api_key
+      chimnie_api_key
       openai_access_token
       anthropic_access_token
+      jev_api_key
       external_assistant_token
     ].freeze
 
@@ -194,6 +215,9 @@ class Setting < RailsSettings::Base
   field :require_invite_for_signup, type: :boolean, default: false
   field :require_email_confirmation, type: :boolean, default: ENV.fetch("REQUIRE_EMAIL_CONFIRMATION", "true") == "true"
   field :invite_only_default_family_id, type: :string, default: nil
+  # Opt-in for self-hosted demo refresh. Managed hosting retains its scheduled behavior.
+  field :demo_family_refresh_enabled, type: :boolean, default: false
+  field :demo_family_refresh_family_id, type: :string, default: nil
 
   def self.validate_onboarding_state!(state)
     return if ONBOARDING_STATES.include?(state)
@@ -206,6 +230,12 @@ class Setting < RailsSettings::Base
     alias_method :raw_onboarding_state=, :onboarding_state=
     alias_method :raw_openai_model, :openai_model
     alias_method :raw_openai_model=, :openai_model=
+    alias_method :raw_llm_provider, :llm_provider
+
+    # The env var wins over a stored choice, like the other AI settings.
+    def llm_provider
+      ENV["LLM_PROVIDER"].presence || raw_llm_provider
+    end
 
     def onboarding_state
       value = raw_onboarding_state

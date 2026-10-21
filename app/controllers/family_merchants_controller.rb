@@ -1,4 +1,5 @@
 class FamilyMerchantsController < ApplicationController
+  before_action :require_non_guest!, except: %i[index]
   before_action :set_merchant, only: %i[edit update destroy]
 
   def index
@@ -69,17 +70,16 @@ class FamilyMerchantsController < ApplicationController
 
   def update
     if @merchant.is_a?(ProviderMerchant)
-      if merchant_params[:name].present? && merchant_params[:name] != @merchant.name
-        # Name changed — convert ProviderMerchant to FamilyMerchant for this family only
+      # A ProviderMerchant is shared by every family whose transactions use it,
+      # so changing its name or website converts it to a FamilyMerchant for this
+      # family only; editing the shared row would change it for all of them.
+      if provider_merchant_customized?
         @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, merchant_params)
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".converted_success") }
           format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
         end
       else
-        # Only website changed — update the ProviderMerchant directly
-        @merchant.update!(merchant_params.slice(:website_url))
-        @merchant.generate_logo_url_from_website!
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".success") }
           format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
@@ -110,9 +110,9 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def enhance
-    cache_key = "enhance_provider_merchants:#{Current.family.id}"
+    cache_key = EnhanceProviderMerchantsJob.lock_key(Current.family)
 
-    already_running = !Rails.cache.write(cache_key, true, expires_in: 10.minutes, unless_exist: true)
+    already_running = !Rails.cache.write(cache_key, true, expires_in: EnhanceProviderMerchantsJob::LOCK_TTL, unless_exist: true)
 
     if already_running
       return redirect_to family_merchants_path, alert: t(".already_running")
@@ -161,6 +161,14 @@ class FamilyMerchantsController < ApplicationController
       @merchant = Current.family.merchants.find_by(id: params[:id]) ||
                   Current.family.assigned_merchants.find(params[:id])
       @family_merchant = @merchant # For backwards compatibility with views
+    end
+
+    def provider_merchant_customized?
+      name_changed = merchant_params[:name].present? && merchant_params[:name] != @merchant.name
+      website_changed = merchant_params.key?(:website_url) &&
+        merchant_params[:website_url].to_s.strip != @merchant.website_url.to_s
+
+      name_changed || website_changed
     end
 
     def merchant_params

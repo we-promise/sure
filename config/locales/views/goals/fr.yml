@@ -68,7 +68,7 @@ fr:
         target_balance_pending: "Calculé à l'enregistrement"
         target_balance_hint: "D'après vos dépenses mensuelles médianes sur le nombre de mois ci-dessus. Recalculé chaque mois."
         target_date: Date cible
-        whole_balance: Solde total
+        whole_balance: "Vide : tout le solde"
       save: Enregistrer les modifications
       subtypes:
         cd: Compte à terme

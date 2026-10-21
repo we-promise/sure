@@ -6,11 +6,16 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
   NON_TEXT_FIELD_HELPERS = [ :label, :check_box, :checkbox, :radio_button, :fields_for, :fields, :hidden_field, :file_field ].freeze
   class_attribute :text_field_helpers, default: field_helpers - NON_TEXT_FIELD_HELPERS
 
+  # Options the builder handles itself instead of passing them to the input as
+  # HTML attributes. `required` is left out because it's both: the builder adds
+  # the label's asterisk and the input keeps the attribute.
+  BUILDER_OPTIONS = [ :label, :label_tooltip, :inline, :container_class, :help_text ].freeze
+
   text_field_helpers.each do |selector|
     class_eval <<-RUBY_EVAL, __FILE__, __LINE__ + 1
       def #{selector}(method, options = {})
-        form_options = options.slice(:label, :label_tooltip, :inline, :container_class, :required)
-        html_options = options.except(:label, :label_tooltip, :inline, :container_class)
+        form_options = options.slice(*BUILDER_OPTIONS, :required)
+        html_options = options.except(*BUILDER_OPTIONS)
 
         build_field(method, form_options, html_options) do |merged_options|
           super(method, merged_options)
@@ -25,6 +30,29 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
   def radio_button(method, tag_value, options = {})
     merged_options = { class: "form-field__radio" }.merge(options)
     super(method, tag_value, merged_options)
+  end
+
+  # The browser's own file button otherwise, unstyled beside every other
+  # control. Given a label, it sits in the same bordered field as the rest;
+  # the selector button is a compact chip, so the field keeps their height.
+  # Without a label it comes back bare, as the dropzones use it: they pass
+  # `hidden` and draw their own target, and the classes merge so that stays.
+  #
+  # The chip inherits its colour rather than taking `file:text-primary`: that
+  # utility's dark variant is a `:where()` selector, which cannot follow the
+  # pseudo-element, so the chip kept its light-mode text on a dark ground.
+  FILE_FIELD_CLASSES = "w-full text-sm text-primary cursor-pointer " \
+    "file:mr-2 file:px-2 file:rounded-md file:border-0 file:bg-container-inset " \
+    "file:font-medium file:cursor-pointer hover:file:bg-container-inset-hover".freeze
+
+  def file_field(method, options = {})
+    form_options = options.slice(:label, :label_tooltip, :container_class, :required)
+    html_options = options.except(:label, :label_tooltip, :container_class)
+    html_options[:class] = @template.class_names(FILE_FIELD_CLASSES, html_options[:class])
+
+    return super(method, html_options) unless form_options[:label]
+
+    build_field(method, form_options, html_options) { |merged_options| super(method, merged_options) }
   end
 
   def select(method, choices, options = {}, html_options = {})
@@ -106,8 +134,17 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
 
   private
     def build_field(method, options = {}, html_options = {}, &block)
+      if options[:help_text].present?
+        help_text_id = field_id(method, :help_text)
+        describedby = [ html_options.dig(:aria, :describedby), help_text_id ].compact.join(" ")
+        html_options = html_options.deep_merge(aria: { describedby: describedby })
+        help_text_element = @template.tag.p(options[:help_text], id: help_text_id, class: "text-xs text-secondary px-1")
+      end
+
+      # Bare fields keep their layout, so the hint follows the input unwrapped.
       if options[:inline] || options[:label] == false
-        return yield({ class: "form-field__input" }.merge(html_options))
+        field_element = yield({ class: "form-field__input" }.merge(html_options))
+        return help_text_element ? field_element + help_text_element : field_element
       end
 
       label_element = build_label(method, options)
@@ -115,7 +152,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
 
       container_classes = [ "form-field", options[:container_class] ].compact
 
-      @template.tag.div class: container_classes do
+      container = @template.tag.div class: container_classes do
         if options[:label_tooltip]
           @template.tag.div(class: "form-field__header") do
             label_element +
@@ -132,6 +169,10 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
           end
         end
       end
+
+      return container unless help_text_element
+
+      @template.tag.div(class: "space-y-1") { container + help_text_element }
     end
 
     def normalize_options(options, html_options)

@@ -19,6 +19,41 @@ class RedbarkAccount < ApplicationRecord
 
   validates :name, :currency, :redbark_account_id, presence: true
   validates :redbark_account_id, uniqueness: { scope: :redbark_item_id }
+  # Redbark rejects a `from` date 2555+ days back ("too far in the past -
+  # banking providers serve at most ~7 years of history"), confirmed
+  # empirically against the live API. That's a flat 7 * 365 day count with no
+  # leap-day adjustment, so `7.years.ago` (which Rails computes against actual
+  # calendar years, landing past 2555 days whenever a leap day falls in the
+  # range) is rejected every time. MAX_SYNC_START_DATE_LOOKBACK_DAYS stays a
+  # few days inside that boundary as margin against timezone/day-of-fetch
+  # drift between our `Date.current` and Redbark's.
+  MAX_SYNC_START_DATE_LOOKBACK_DAYS = 2550
+
+  # The window RedbarkItem::Importer pulls on an account's first sync when no
+  # sync_start_date was chosen. Named here (rather than left as a literal in
+  # both the setup view's default and the importer's fallback) so the two
+  # can't quietly drift apart.
+  DEFAULT_INITIAL_HISTORY_DAYS = 90
+
+  # Scoped to the change itself: this is a rolling window, so a date that was
+  # valid when set drifts outside it over time. Without the guard, every
+  # unrelated update! (upsert_from_redbark! touching balance, name, currency
+  # on a routine sync) would re-validate the unchanged sync_start_date and
+  # start failing once enough time passed -- blocking updates that have
+  # nothing to do with it.
+  validates :sync_start_date,
+    inclusion: { in: ->(_account) { MAX_SYNC_START_DATE_LOOKBACK_DAYS.days.ago.to_date..Date.current } },
+    allow_nil: true,
+    if: :will_save_change_to_sync_start_date?
+
+  # A nonblank value Rails couldn't parse (e.g. "foo") casts to nil before
+  # validation ever sees it, and allow_nil above would then quietly accept
+  # it -- silently clearing whatever was previously stored instead of
+  # rejecting the bad input. *_before_type_cast still has the raw value, so
+  # this distinguishes "the user explicitly cleared the field" (blank raw
+  # value, fine) from "the user's input didn't parse" (nonblank raw value,
+  # reject it).
+  validate :reject_unparseable_sync_start_date, if: :will_save_change_to_sync_start_date?
 
   # Scopes
   scope :with_linked, -> { joins(:account_provider) }
@@ -66,7 +101,6 @@ class RedbarkAccount < ApplicationRecord
       redbark_account_id: data[:id]&.to_s,
       connection_id: data[:connectionId]&.to_s,
       name: display_name,
-      account_number: data[:accountNumber],
       currency: extract_currency(data, fallback: parse_currency(currency) || "AUD"),
       account_status: connection[:status],
       account_type: data[:type],
@@ -88,6 +122,12 @@ class RedbarkAccount < ApplicationRecord
   end
 
   private
+
+    def reject_unparseable_sync_start_date
+      return unless sync_start_date.nil? && sync_start_date_before_type_cast.present?
+
+      errors.add(:sync_start_date, :invalid)
+    end
 
     def enqueue_connection_cleanup
       return unless redbark_item

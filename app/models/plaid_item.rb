@@ -1,5 +1,10 @@
 class PlaidItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, DestroyableLater, ProviderItemOwnable
+
+  # A Plaid access_token only covers the institution the user authenticated
+  # to through Link, so a household member may connect their own bank without
+  # gaining any visibility into anyone else's connections.
+  credential_scope :per_connection
 
   enum :plaid_region, { us: "us", eu: "eu" }
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -76,11 +81,6 @@ class PlaidItem < ApplicationRecord
     return unless active_sync&.reload&.in_progress?
 
     PlaidFollowUpSyncJob.set(wait: PlaidFollowUpSyncJob::RETRY_DELAY).perform_later(self, active_sync_id: active_sync.id)
-  end
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
   end
 
   def request_transactions_refresh_later
@@ -168,9 +168,10 @@ class PlaidItem < ApplicationRecord
     end
 
     def shared_transactions_refresh_cache?
+      # Compared by name: referencing MemCacheStore autoloads it, which raises
+      # LoadError without the dalli gem, and SolidCache isn't a dependency.
       shared_cache = Rails.cache.is_a?(ActiveSupport::Cache::RedisCacheStore) ||
-        Rails.cache.is_a?(ActiveSupport::Cache::MemCacheStore) ||
-        Rails.cache.class.name == "SolidCache::Store"
+        Rails.cache.class.name.in?(%w[ActiveSupport::Cache::MemCacheStore SolidCache::Store])
 
       Rails.logger.warn("Plaid transaction refresh requires a shared Rails cache store") unless shared_cache
       shared_cache

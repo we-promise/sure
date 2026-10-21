@@ -1,4 +1,6 @@
 class EnableBankingItem::Importer
+  include CurrencyNormalizable
+
   # Maximum number of pagination requests to prevent infinite loops
   # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
   MAX_PAGINATION_PAGES = 100
@@ -6,13 +8,45 @@ class EnableBankingItem::Importer
   # Prefer booked ledger balances for net worth/current_balance. Available balances
   # can include an arranged overdraft facility for some ASPSPs (for example CGD PT),
   # so they are only a last-resort fallback.
+  #
+  # OPBD/PRCD rank above XPCD despite being period-boundary snapshots (opening of
+  # the current period / closing of the previous one) rather than "instant" values:
+  # this mirrors CLBD outranking ITBD above, a reconciled booked figure is trusted
+  # over one that includes unconfirmed pending activity, even if it's up to a day
+  # older. That trade-off assumes the staleness is bounded to about a day, so
+  # select_current_balance below guards it with the optional `reference_date` field
+  # (see PERIOD_BOUNDARY_TYPES): if the same response also carries a materially
+  # newer XPCD/CLAV/ITAV, the fresher one wins instead.
   BALANCE_TYPE_PRIORITY = %w[
     CLBD closingBooked
     ITBD interimBooked
+    OPBD openingBooked
+    PRCD previouslyClosedBooked
     XPCD expected
     CLAV closingAvailable
     ITAV interimAvailable
   ].freeze
+
+  # With "Balance is available credit" on for a credit card, the bank's figure
+  # is the available credit, so available types come first. Some cards report
+  # the credit limit as the booked balance (mBank PL: ITBD = limit, ITAV =
+  # available credit). XPCD (expected) keeps its place after the booked types:
+  # it is a projected booked balance, not an available-credit figure.
+  AVAILABLE_CREDIT_BALANCE_TYPE_PRIORITY = (%w[
+    CLAV closingAvailable
+    ITAV interimAvailable
+  ] + BALANCE_TYPE_PRIORITY).uniq.freeze
+
+  PERIOD_BOUNDARY_TYPES = %w[opbd openingbooked prcd previouslyclosedbooked].freeze
+
+  # Only these types may outrank OPBD/PRCD on freshness (see fresher_balance) —
+  # the same accounting-semantics exclusion as BALANCE_TYPE_PRIORITY itself, so a
+  # forward-looking FWAV or an informational INFO/OTHR can't override a legitimate
+  # booked figure just by carrying a later reference_date. Compared against an
+  # already-normalized balance_type (see normalize_balance_type), so both ISO
+  # codes and Enable Banking's descriptive spellings are listed here pre-normalized,
+  # mirroring BALANCE_TYPE_PRIORITY's own XPCD/CLAV/ITAV entries above.
+  FRESHNESS_BALANCE_TYPES = %w[xpcd expected clav closingavailable itav interimavailable].freeze
 
   NETWORK_ERRORS = [
     ::SocketError,
@@ -210,7 +244,10 @@ class EnableBankingItem::Importer
         return false
       end
 
-      balance = select_current_balance(balances)
+      currency, kept, skipped = split_balances_by_currency(balances, enable_banking_account)
+      balance = select_current_balance(
+        kept, prefer_available: prefer_available_balance?(enable_banking_account)
+      )
 
       unless balance.present?
         mark_balance_unavailable(enable_banking_account)
@@ -218,7 +255,6 @@ class EnableBankingItem::Importer
       end
 
       amount = balance.dig(:balance_amount, :amount) || balance[:amount]
-      currency = balance.dig(:balance_amount, :currency) || balance[:currency]
 
       unless amount.present?
         mark_balance_unavailable(enable_banking_account)
@@ -234,8 +270,10 @@ class EnableBankingItem::Importer
 
       enable_banking_account.update!(
         current_balance: parsed_amount,
-        currency: currency.presence || enable_banking_account.currency
+        currency: balance_currency(balance) || enable_banking_account.currency
       )
+      # Only now is the chosen-currency balance known to be the one in use.
+      capture_skipped_currency_balances(enable_banking_account, currency, skipped)
 
       true
     rescue Provider::EnableBanking::EnableBankingError => e
@@ -252,15 +290,114 @@ class EnableBankingItem::Importer
       false
     end
 
-    def select_current_balance(balances)
-      by_type = balances.index_by { |balance| normalize_balance_type(balance[:balance_type]) }
+    # Multi-currency wallets such as PayPal report one balance per currency
+    # under the same balance type (EUR, CAD, USD, ...). Keep the balances in
+    # the currency the accounts endpoint reports for the account, else in the
+    # first currency listed, which is the wallet's primary one. Otherwise
+    # select_current_balance takes the last entry of each type, so an empty
+    # USD balance replaced the EUR one and switched the account to USD.
+    # Returns the chosen currency, the balances in it and the ones left out.
+    def split_balances_by_currency(balances, enable_banking_account)
+      currencies = balances.filter_map { |balance| balance_currency(balance) }.uniq
+      return [ currencies.first, balances, [] ] if currencies.size <= 1
 
-      BALANCE_TYPE_PRIORITY.each do |type|
-        balance = by_type[normalize_balance_type(type)]
-        return balance if balance.present?
+      account_currency = snapshot_currency(enable_banking_account)
+      currency = currencies.include?(account_currency) ? account_currency : currencies.first
+      kept, skipped = balances.partition { |balance| balance_currency(balance) == currency }
+      [ currency, kept, skipped ]
+    end
+
+    def balance_currency(balance)
+      parse_currency(balance.dig(:balance_amount, :currency) || balance[:currency])
+    end
+
+    # Read from the raw snapshot, not the stored column: the stored currency
+    # may already be the wrong one picked from a multi-currency response.
+    # PayPal reports XXX (no currency) for the wallet; parse_currency turns
+    # that into nil, so the first listed currency is used.
+    def snapshot_currency(enable_banking_account)
+      payload = enable_banking_account.raw_payload
+      parse_currency(payload.with_indifferent_access[:currency]) if payload.is_a?(Hash)
+    end
+
+    # A non-zero balance in another currency is money the account leaves out;
+    # make that visible to support instead of dropping it silently.
+    def capture_skipped_currency_balances(enable_banking_account, currency, skipped)
+      funded = skipped.filter_map do |balance|
+        amount = balance.dig(:balance_amount, :amount) || balance[:amount]
+        next if amount.blank? || amount.to_d.zero?
+
+        { currency: balance_currency(balance), balance_type: balance[:balance_type], amount: amount.to_s }
+      end
+      return if funded.empty?
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "info",
+        message: "Enable Banking account holds balances in other currencies; only the #{currency} balance is used",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          currency: currency,
+          other_balances: funded
+        }
+      )
+    end
+
+    # The flag only changes how a credit card's balance is read (see
+    # EnableBankingAccount::Processor#process_account!), so any other linked
+    # account stays booked-first even if the flag is still set from an earlier link.
+    def prefer_available_balance?(enable_banking_account)
+      enable_banking_account.treat_balance_as_available_credit? &&
+        enable_banking_account.current_account&.accountable_type == "CreditCard"
+    end
+
+    def select_current_balance(balances, prefer_available: false)
+      by_type = balances.index_by { |balance| normalize_balance_type(balance[:balance_type]) }
+      priority = prefer_available ? AVAILABLE_CREDIT_BALANCE_TYPE_PRIORITY : BALANCE_TYPE_PRIORITY
+
+      priority.each do |type|
+        normalized_type = normalize_balance_type(type)
+        balance = by_type[normalized_type]
+        next unless balance.present?
+
+        if PERIOD_BOUNDARY_TYPES.include?(normalized_type)
+          fresher = fresher_balance(balance, balances)
+          return fresher if fresher
+        end
+
+        return balance
       end
 
       balances.first
+    end
+
+    # Guards the OPBD/PRCD priority (see BALANCE_TYPE_PRIORITY) against picking a
+    # stale period-boundary snapshot when the same response also carries a balance
+    # with a strictly newer `reference_date` — an optional Enable Banking field, so
+    # absence on either side just skips the check rather than treating it as older.
+    def fresher_balance(period_boundary_balance, balances)
+      reference_date = parse_reference_date(period_boundary_balance[:reference_date])
+      return nil unless reference_date
+
+      balances
+        .select { |balance| FRESHNESS_BALANCE_TYPES.include?(normalize_balance_type(balance[:balance_type])) }
+        .filter_map { |balance| [ balance, parse_reference_date(balance[:reference_date]) ] }
+        .select { |_, date| date && date > reference_date }
+        .max_by { |_, date| date }
+        &.first
+    end
+
+    def parse_reference_date(value)
+      return nil if value.blank?
+      Date.parse(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
     end
 
     def normalize_balance_type(type)
@@ -412,16 +549,18 @@ class EnableBankingItem::Importer
       )
 
       if include_pending
-        # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG) with _pending: true
+        # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG or an unidentified hold) with _pending: true
         all_transactions = all_transactions.map do |tx|
           tx_ia = tx.with_indifferent_access
-          tx_ia[:status] == "PDNG" ? tx_ia.merge(_pending: true) : tx_ia
+          is_pending = tx_ia[:status] == "PDNG" || EnableBankingEntry::Processor.unidentified_hold?(tx_ia)
+          is_pending ? tx_ia.merge(_pending: true) : tx_ia
         end
       else
         # If include_pending is false, we must filter out any pending transactions
-        # that were returned (e.g. if the bank ignores transaction_status="BOOK").
+        # that were returned (e.g. if the bank ignores transaction_status="BOOK" or returns unfinalized holds).
         all_transactions = all_transactions.reject do |tx|
-          tx.with_indifferent_access[:status] == "PDNG"
+          tx_ia = tx.with_indifferent_access
+          tx_ia[:status] == "PDNG" || EnableBankingEntry::Processor.unidentified_hold?(tx_ia)
         end
       end
 
@@ -490,7 +629,7 @@ class EnableBankingItem::Importer
       unless include_pending
         removed_pending = existing_transactions.reject! do |tx|
           tx = tx.with_indifferent_access
-          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
         end
       end
 
@@ -516,7 +655,7 @@ class EnableBankingItem::Importer
         if include_pending
           removed_pending ||= existing_transactions.reject! do |tx|
             tx = tx.with_indifferent_access
-            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
             next false unless pending_flag
 
             fp = EnableBankingEntry::Processor.compute_external_id(tx)

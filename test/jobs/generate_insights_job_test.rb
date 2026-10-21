@@ -89,7 +89,23 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal 5000.0, insight.metadata["balance"]
   end
 
-  test "enqueues notifications for newly created insights" do
+  # The badge rides the family stream every layout subscribes to, so new unread
+  # insights bump the lightbulb count on whatever page is open.
+  test "broadcasts the unread badge alongside the refreshed list" do
+    stub_generated([ generated_insight ])
+    Turbo::StreamsChannel.stubs(:broadcast_replace_to)
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).with(
+      @family,
+      targets: "[data-insights-badge]",
+      partial: "layouts/shared/insights_badge",
+      locals: { count: @family.insights.active.count + 1 }
+    )
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+  end
+
+  test "enqueues notifications for newly created high priority insights" do
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
     opted_in_user, opted_out_user = @family.users.to_a
     set_preview_features(opted_out_user, false)
     subscription = opted_in_user.push_subscriptions.create!(
@@ -105,7 +121,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
       last_registered_at: Time.current
     )
     Apns::Client.stubs(:configured?).returns(true)
-    stub_generated([ generated_insight ])
+    stub_generated([ generated_insight(priority: "high") ])
 
     assert_enqueued_jobs 1, only: DeliverInsightNotificationJob do
       assert_enqueued_with(
@@ -265,6 +281,20 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_nil insight.read_at
   end
 
+  test "expires an insight hidden because its account is no longer shared with everyone" do
+    insight = @family.insights.create!(
+      insight_type: "idle_cash", priority: "low", status: "active", title: "Idle", body: "body",
+      metadata: { "account_id" => accounts(:connected).id }, dedup_key: "idle_cash:private",
+      generated_at: Time.current
+    )
+    assert_not @family.insights.visible.exists?(id: insight.id), "precondition: the row must be hidden, not just stale"
+    stub_generated([], succeeded_types: [ "idle_cash" ])
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert insight.reload.expired?, "a hidden row whose condition cleared must not come back stale once access returns"
+  end
+
   private
     def enable_preview_features(family)
       family.users.each { |user| set_preview_features(user, true) }
@@ -289,14 +319,14 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     # display_balance changes only the formatted facts, leaving metadata (the
     # material-change signal) untouched — mirrors a balance drifting slightly
     # between runs without crossing a bucket boundary.
-    def generated_insight(balance: 5000.0, display_balance: nil, title: "Idle cash in Test Checking")
+    def generated_insight(balance: 5000.0, display_balance: nil, priority: "low", title: "Idle cash in Test Checking")
       Insight::Generator::GeneratedInsight.new(
         insight_type: "idle_cash",
-        priority: "low",
+        priority: priority,
         title: title,
         template_key: "idle_cash",
         facts: { account: "Test Checking", balance: "$#{(display_balance || balance).to_i}", idle_days: 60 },
-        metadata: { account_id: "test-account", balance: balance },
+        metadata: { account_id: accounts(:depository).id, balance: balance },
         currency: "USD",
         period_start: nil,
         period_end: nil,

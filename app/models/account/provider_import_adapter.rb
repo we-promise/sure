@@ -1,16 +1,7 @@
 class Account::ProviderImportAdapter
-  # Matches a transaction any provider has flagged pending, for the lookups below that
-  # join `transactions` directly. Derived from Transaction::PENDING_PROVIDERS rather
-  # than spelled out, so a newly supported provider cannot silently drop out of
-  # pending→posted reconciliation. Frozen constant built from a frozen provider list:
-  # no user input reaches the SQL (same reasoning as Transaction::PENDING_CHECK_SQL).
-  PENDING_LOOKUP_SQL = Transaction::PENDING_PROVIDERS
-    .map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean = true" }
-    .join(" OR ")
-    .freeze
-
   attr_reader :account, :skipped_entries
 
+  # @param account [Account] the account every import through this adapter lands on
   def initialize(account)
     @account = account
     @skipped_entries = []
@@ -35,8 +26,15 @@ class Account::ProviderImportAdapter
   # @param pending_transaction_id [String, nil] Plaid's linking ID for pending→posted reconciliation
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
+  # @param allow_heuristic_matching [Boolean] Claim likely duplicates using amount/date matching
+  # @param replace_extra_namespaces [Array<String>] Top-level `extra` keys the provider owns
+  #   outright. Those branches are replaced rather than deep-merged, so a nested value the
+  #   provider stops sending is actually removed instead of lingering.
+  # @param name_extra_keys [Hash{String=>Array<String>}] Keys, per namespace, that `name`
+  #   was built from. When a protected entry keeps its name, these keep their stored values
+  #   too, so the name and the data it came from cannot drift apart.
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {})
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -56,14 +54,7 @@ class Account::ProviderImportAdapter
 
       # Determine early whether the incoming transaction is pending — needed by both
       # the protection check (pending→booked bypass) and the auto-claim path below.
-      incoming_pending = false
-      if extra.is_a?(Hash)
-        pending_extra = extra.with_indifferent_access
-        boolean_type = ActiveModel::Type::Boolean.new
-        incoming_pending = Transaction::PENDING_PROVIDERS.any? do |provider|
-          boolean_type.cast(pending_extra.dig(provider, "pending"))
-        end
-      end
+      incoming_pending = extra.is_a?(Hash) && Transaction.pending_extra?(extra.with_indifferent_access)
 
       # === PROTECTION CHECK: Skip entries that should not be overwritten ===
       # Check persisted Transaction entries for protection flags before making changes.
@@ -78,12 +69,37 @@ class Account::ProviderImportAdapter
           # through the auto-claim path. Without this, a user who categorised a pending entry
           # (setting user_modified=true) would see the pending badge stuck forever.
           # Excluded and import_locked entries are intentionally left untouched.
+          #
+          # Load-bearing even though the namespace refresh below usually rewrites the
+          # same branch: an entry that is both user_modified and import_locked reaches
+          # here (determine_skip_reason reports user_modified first) but is excluded
+          # from that refresh, so this is the only thing that clears its pending flag.
           if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
-            entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
-            if entry_is_pending
+            if entry.transaction.pending?
               entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
             end
           end
+          # Refresh the provider's own namespaces on a protected entry. Without this
+          # a user-modified entry keeps whatever payload it was created with, and a
+          # field the provider has since dropped shows in the drawer forever.
+          #
+          # Only the declared namespaces, never the whole payload. `extra` is not
+          # uniformly provider-owned: Transaction#exchange_rate reads and writes
+          # extra["exchange_rate"] at the top level, it is user-editable through the
+          # transaction form, and WiseEntry::Processor supplies one too — so merging
+          # the whole hash here would overwrite a rate the user typed and silently
+          # change how their balance converts. replace_extra_namespaces defaults to
+          # empty, so a provider that has not opted in changes nothing on this path.
+          #
+          # determine_skip_reason reports "user_modified" before it checks
+          # import_locked?, so an entry carrying both flags arrives here. Import
+          # ownership is the stronger claim, so those are left alone.
+          if skip_reason == "user_modified" && !entry.import_locked?
+            owned = extra.is_a?(Hash) ? extra.deep_stringify_keys.slice(*replace_extra_namespaces.map(&:to_s)) : nil
+            owned = keep_name_sources(entry, owned, name_extra_keys)
+            apply_provider_extra(entry, owned, replace_extra_namespaces)
+          end
+
           record_skip(entry, skip_reason)
           return entry
         end
@@ -93,7 +109,7 @@ class Account::ProviderImportAdapter
       # This handles the case where a user manually created or CSV imported a transaction
       # before linking their account to a provider
       # Note: We don't pass name here to allow matching even when provider formats names differently
-      if entry.new_record?
+      if entry.new_record? && allow_heuristic_matching
         duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
         if duplicate
           # Check if duplicate is protected - if so, link but don't modify
@@ -124,7 +140,7 @@ class Account::ProviderImportAdapter
 
         # PRIORITY 2: Fallback to EXACT amount match (for SimpleFIN and providers without linking IDs)
         # Only searches backward in time - pending date must be <= posted date
-        if pending_match.nil?
+        if pending_match.nil? && allow_heuristic_matching
           pending_match = find_pending_transaction(date: date, amount: amount, currency: currency, source: source)
           if pending_match
             Rails.logger.info("Reconciling pending→posted via exact amount match: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
@@ -159,7 +175,7 @@ class Account::ProviderImportAdapter
       # must clear the stale pending flag here before the final save.
       # (The auto-claim path already clears it in-memory, so this is a no-op there.)
       if !incoming_pending && entry.entryable.is_a?(Transaction)
-        if Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
+        if entry.transaction.pending?
           entry.transaction.extra = clear_pending_flags_from_extra(entry.transaction.extra)
         end
       end
@@ -182,11 +198,16 @@ class Account::ProviderImportAdapter
         date
       end
 
-      entry.assign_attributes(
-        amount: amount,
-        currency: currency,
-        date: effective_date
-      )
+      # A date or amount the user changed without marking the entry user_modified
+      # (an API PATCH, for example) is still locked by lock_saved_attributes!.
+      # Respect that lock the way enrich_attribute does for name and category.
+      # Amount and currency only make sense together, so a lock on either keeps both.
+      financial_attributes = { amount: amount, currency: currency, date: effective_date }
+      if entry.persisted?
+        financial_attributes.delete(:date) if entry.locked?(:date)
+        financial_attributes.except!(:amount, :currency) if entry.locked?(:amount) || entry.locked?(:currency)
+      end
+      entry.assign_attributes(financial_attributes)
 
       # Use enrichment pattern to respect user overrides
       entry.enrich_attribute(:name, name, source: source)
@@ -205,17 +226,12 @@ class Account::ProviderImportAdapter
       end
 
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
-      if extra.present? && entry.entryable.is_a?(Transaction)
-        existing = entry.transaction.extra || {}
-        incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
-        entry.transaction.extra = existing.deep_merge(incoming)
-        entry.transaction.save!
-      end
+      apply_provider_extra(entry, extra, replace_extra_namespaces)
 
       # Auto-detect investment activity labels for investment accounts
       detected_label = investment_activity_label
       if account.investment? && detected_label.nil? && entry.entryable.is_a?(Transaction)
-        detected_label = detect_activity_label(name, amount)
+        detected_label = detect_activity_label(name, entry.amount)
       end
 
       # Determine the transaction kind. Activity-label and account-type classification
@@ -232,7 +248,7 @@ class Account::ProviderImportAdapter
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
         auto_category = account.family.investment_contributions_category
-      elsif account.accountable_type == "Loan" && amount.negative?
+      elsif account.accountable_type == "Loan" && entry.amount.negative?
         auto_kind = "loan_payment"
       end
       auto_kind ||= kind.presence
@@ -243,8 +259,17 @@ class Account::ProviderImportAdapter
           entry.transaction.assign_attributes(investment_activity_label: detected_label)
         end
 
+        # A leg that is already matched to a Transfer takes its kind from the
+        # transfer, not from this row. Re-classifying it here, e.g. a negative
+        # amount on a Loan turning the matched inflow back into loan_payment,
+        # makes budgets and reports count the same payment as an expense on
+        # both legs. Deriving it from the transfer also repairs legs an earlier
+        # sync already overwrote. An unconfirmed auto-match gets its kinds only
+        # in Transfer#confirm!, so until then the leg keeps its own kind.
         if auto_kind.present?
-          entry.transaction.assign_attributes(kind: auto_kind)
+          transfer = matched_transfer_for(entry)
+          transfer = nil if transfer&.pending?
+          entry.transaction.assign_attributes(kind: transfer ? transfer.kind_for_leg(entry.transaction) : auto_kind)
         end
 
         if auto_category.present? && entry.transaction.category_id.blank?
@@ -270,7 +295,7 @@ class Account::ProviderImportAdapter
 
       # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
       # This handles tip adjustments where auto-matching is too risky
-      if is_new_posted
+      if is_new_posted && allow_heuristic_matching
         # PRIORITY 1: Try medium-confidence fuzzy match (≤30% amount difference)
         fuzzy_suggestion = find_pending_transaction_fuzzy(
           date: date,
@@ -464,7 +489,15 @@ class Account::ProviderImportAdapter
           account_provider_id: account_provider_id
         )
       else
-        holding = account.holdings.find_or_initialize_by(
+        # A remapped row sits on the user's chosen security, so a lookup by the
+        # incoming security alone misses it and the save hits the unique index.
+        # Match it by provider_security first, as fallback 1a does, scoped by
+        # account_provider_id so another provider's row is not claimed.
+        remapped_attrs = { provider_security: security, date: date, currency: currency }
+        remapped_attrs[:account_provider_id] = account_provider_id if account_provider_id.present?
+        holding = account.holdings.find_by(remapped_attrs)
+
+        holding ||= account.holdings.find_or_initialize_by(
           security: security,
           date: date,
           currency: currency
@@ -491,6 +524,10 @@ class Account::ProviderImportAdapter
         end
       end
 
+      # A new row for a later day starts without the user's corrections, which
+      # live on the earlier day's row. Carry them forward from that row.
+      carried = holding.new_record? ? previous_holding_for(security: security, currency: currency, date: date, account_provider_id: account_provider_id) : nil
+
       # Reconcile cost_basis to respect priority hierarchy
       reconciled = Holding::CostBasisReconciler.reconcile(
         existing_holding: holding.persisted? ? holding : nil,
@@ -510,7 +547,11 @@ class Account::ProviderImportAdapter
       }
 
       # Only update security if not locked by user
-      if holding.new_record? || holding.security_replaceable_by_provider?
+      if carried&.security_locked?
+        attributes[:security] = carried.security
+        attributes[:provider_security_id] = carried.provider_security_id || security.id
+        attributes[:security_locked] = true
+      elsif holding.new_record? || holding.security_replaceable_by_provider?
         attributes[:security] = security
         # Track the provider's original security so reset_security_to_provider! works
         # Only set if not already set (preserves original if user remapped then unlocked)
@@ -518,7 +559,11 @@ class Account::ProviderImportAdapter
       end
 
       # Only update cost_basis if reconciliation says to
-      if reconciled[:should_update]
+      if carried&.cost_basis_locked?
+        attributes[:cost_basis] = carried.cost_basis
+        attributes[:cost_basis_source] = carried.cost_basis_source
+        attributes[:cost_basis_locked] = true
+      elsif reconciled[:should_update]
         attributes[:cost_basis] = reconciled[:cost_basis]
         attributes[:cost_basis_source] = reconciled[:cost_basis_source]
       end
@@ -627,7 +672,7 @@ class Account::ProviderImportAdapter
   # @param security [Security] The security object
   # @param quantity [BigDecimal, Numeric] Number of shares (negative for sells, positive for buys)
   # @param price [BigDecimal, Numeric] Price per share
-  # @param amount [BigDecimal, Numeric] Total trade value
+  # @param amount [BigDecimal, Numeric] Total cash impact of the trade, fee included
   # @param currency [String] Currency code
   # @param date [Date, String] Trade date
   # @param name [String, nil] Optional custom name for the trade
@@ -635,8 +680,9 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @param exchange_rate [BigDecimal, Numeric, nil] Optional provider-supplied FX rate into the account currency
+  # @param fee [BigDecimal, Numeric, nil] Optional provider-reported transaction fee, already included in `amount`
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil, fee: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -677,6 +723,7 @@ class Account::ProviderImportAdapter
         investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
       }
       trade_attributes[:exchange_rate] = exchange_rate unless exchange_rate.nil?
+      trade_attributes[:fee] = fee unless fee.nil?
 
       entry.entryable.assign_attributes(trade_attributes)
 
@@ -804,7 +851,7 @@ class Account::ProviderImportAdapter
       .where(amount: amount)
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
-      .where(PENDING_LOOKUP_SQL)
+      .where(Transaction.pending_sql("transactions"))
       .order(date: :desc) # Prefer most recent pending transaction
 
     candidates.first
@@ -846,7 +893,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending ON or BEFORE posted
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(PENDING_LOOKUP_SQL)
+      .where(Transaction.pending_sql("transactions"))
 
     # If merchant_id is provided, prioritize matching by merchant
     if merchant_id.present?
@@ -911,7 +958,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date)
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(PENDING_LOOKUP_SQL)
+      .where(Transaction.pending_sql("transactions"))
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
     if merchant_id.present? && name.present?
@@ -1024,6 +1071,51 @@ class Account::ProviderImportAdapter
 
   private
 
+    # The latest earlier holding of the security the provider reports. A
+    # remapped row records that security in provider_security_id; an
+    # unremapped one has it as its own security. A provider that reports the
+    # user's chosen security instead still finds the row the user locked to
+    # it. Only the latest row counts, so a correction the user has since
+    # undone is not revived from an older day.
+    #
+    # Within that day, a row recording this provider security is the position
+    # it came from, and wins over a correction locked to it: with chained
+    # remaps (A onto B, B onto C) an incoming B matches both the B->C row and
+    # the A->B row on the same date. `id` settles anything left, so the pick
+    # never depends on the query plan.
+    def previous_holding_for(security:, currency:, date:, account_provider_id:)
+      scope = account.holdings
+        .where(currency: currency)
+        .where("holdings.date < ?", date)
+        .where(
+          "holdings.provider_security_id = :id OR (holdings.provider_security_id IS NULL AND holdings.security_id = :id) " \
+          "OR (holdings.security_locked AND holdings.security_id = :id)",
+          id: security.id
+        )
+      scope = scope.where(account_provider_id: account_provider_id) if account_provider_id.present?
+
+      match_rank = ActiveRecord::Base.sanitize_sql_array([
+        "CASE WHEN holdings.provider_security_id = :id THEN 0 " \
+        "WHEN holdings.provider_security_id IS NULL AND holdings.security_id = :id THEN 1 ELSE 2 END",
+        id: security.id
+      ])
+      scope.order(date: :desc).order(Arel.sql(match_rank)).order(:id).first
+    end
+
+    # Loads the transfer together with both legs, their entries and accounts in
+    # one joined query, so Transfer#kind_for_leg reads them without the lazy
+    # loads it would otherwise pay on every re-imported row. Looked up per row
+    # rather than memoized per adapter: most processors build an adapter per
+    # row, and some link or destroy transfers mid-sync (Trade Republic), so a
+    # memo would be both costlier and stale.
+    def matched_transfer_for(entry)
+      return nil unless entry.persisted?
+
+      transaction_id = entry.transaction.id
+      transfers = Transfer.eager_load(inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account })
+      transfers.where(inflow_transaction_id: transaction_id).or(transfers.where(outflow_transaction_id: transaction_id)).first
+    end
+
     # Memoized per adapter instance (which is per-account). Membership in
     # goal_accounts is stable across a sync batch.
     def account_linked_to_any_goal?
@@ -1032,6 +1124,66 @@ class Account::ProviderImportAdapter
       @account_linked_to_any_goal = account.goal_accounts.exists?
     end
 
+    # Writes provider-owned metadata onto the transaction.
+    #
+    # Namespaces named in replace_extra_namespaces are snapshots, not
+    # accumulations: the whole branch is dropped before merging, so a nested key
+    # the provider stopped sending disappears with it. deep_merge alone recurses
+    # into nested hashes, so a removed payment_meta.payee would otherwise survive
+    # forever and the drawer would keep showing it. Only namespaces the incoming
+    # payload actually carries are replaced.
+    #
+    # @param entry [Entry] the entry being imported
+    # @param extra [Hash, nil] provider metadata to apply
+    # @param replace_extra_namespaces [Array<String>] branches to replace wholesale
+    # @return [void]
+    def apply_provider_extra(entry, extra, replace_extra_namespaces)
+      return unless extra.present? && entry.entryable.is_a?(Transaction)
+
+      existing = entry.transaction.extra || {}
+      incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
+      replaced = replace_extra_namespaces.map(&:to_s).select { |ns| incoming.key?(ns) }
+
+      entry.transaction.extra = existing.except(*replaced).deep_merge(incoming)
+      entry.transaction.save!
+    end
+
+    # A protected entry keeps its name, so the values that name was built from have
+    # to stay as well. Rule::ConditionFilter::TransactionName rebuilds a Plaid name
+    # from the stored original_description; refreshing that value while the name
+    # stays put would make the rebuilt name disagree with the real one, and flip
+    # `=` and `!=` rules on the entry. The drawer shows the kept value too, so it
+    # agrees with the name the user sees.
+    #
+    # A key with nothing stored yet takes the incoming value: a row imported before
+    # the key existed was never combined, so there is nothing to keep in step.
+    #
+    # @param entry [Entry] the protected entry
+    # @param owned [Hash, nil] the incoming namespaces the provider owns
+    # @param name_extra_keys [Hash{String=>Array<String>}] keys the name was built from
+    # @return [Hash, nil] owned, with those keys carried over from what is stored
+    def keep_name_sources(entry, owned, name_extra_keys)
+      return owned if owned.blank? || name_extra_keys.blank?
+
+      stored = entry.transaction.extra || {}
+      name_extra_keys.each do |namespace, keys|
+        ns = namespace.to_s
+        next unless owned[ns].is_a?(Hash) && stored[ns].is_a?(Hash)
+
+        Array(keys).map(&:to_s).each do |key|
+          owned[ns][key] = stored[ns][key] if stored[ns].key?(key)
+        end
+      end
+
+      owned
+    end
+
+    # Removes the pending flag every provider writes under its own namespace,
+    # dropping a namespace that held nothing else. Used when a booked version of
+    # a transaction arrives and the stale flag would otherwise stick forever.
+    #
+    # @param extra [Hash, nil] the transaction's current extra
+    # @return [Hash] a copy with the pending flags removed
     def clear_pending_flags_from_extra(extra)
       ex = (extra || {}).deep_dup
       ex = {} unless ex.is_a?(Hash)

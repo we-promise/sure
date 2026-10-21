@@ -440,6 +440,8 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert rule_data["data"].key?("name")
       assert rule_data["data"].key?("resource_type")
       assert rule_data["data"].key?("active")
+      assert_equal @rule.position, rule_data["data"]["position"]
+      assert_equal false, rule_data["data"]["stop_processing"]
       assert rule_data["data"].key?("conditions")
       assert rule_data["data"].key?("actions")
     end
@@ -859,6 +861,92 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports provider merchants referenced by transactions in NDJSON" do
+    provider_merchant = ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn")
+    @account.entries.create!(
+      date: Date.parse("2024-05-02"),
+      amount: 42.50,
+      name: "Amazon purchase",
+      currency: "USD",
+      entryable: Transaction.new(merchant: provider_merchant)
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      provider_merchant_data = ndjson_records.find do |record|
+        record["type"] == "ProviderMerchant" && record.dig("data", "id") == provider_merchant.id
+      end
+
+      assert provider_merchant_data
+      assert_equal "AMZN MKTP", provider_merchant_data["data"]["name"]
+      assert_equal "plaid", provider_merchant_data["data"]["source"]
+      assert_equal "plaid_amzn", provider_merchant_data["data"]["provider_merchant_id"]
+    end
+  end
+
+  test "does not export a color for a provider merchant" do
+    provider_merchant = ProviderMerchant.create!(name: "Colorless", source: "plaid")
+    @account.entries.create!(
+      date: Date.parse("2024-05-02"), amount: 5, name: "Colorless purchase", currency: "USD",
+      entryable: Transaction.new(merchant: provider_merchant)
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      data = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        .find { |record| record["type"] == "ProviderMerchant" && record.dig("data", "id") == provider_merchant.id }["data"]
+
+      assert_not data.key?("color")
+    end
+  end
+
+  test "exports provider merchants referenced by recurring transactions in NDJSON" do
+    provider_merchant = ProviderMerchant.create!(name: "Recurring Provider Merchant", source: "ai")
+    @family.recurring_transactions.create!(
+      account: @account,
+      merchant: provider_merchant,
+      amount: -12.99,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.parse("2024-01-05"),
+      next_expected_date: Date.parse("2024-02-05")
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      assert ndjson_records.any? { |record| record["type"] == "ProviderMerchant" && record.dig("data", "id") == provider_merchant.id }
+    end
+  end
+
+  test "excludes provider merchants not referenced by the family from NDJSON" do
+    unreferenced = ProviderMerchant.create!(name: "Unrelated Provider Merchant", source: "plaid")
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      refute ndjson_records.any? { |record| record["type"] == "ProviderMerchant" && record.dig("data", "id") == unreferenced.id }
+    end
+  end
+
+  test "exports a user's choice to make an investment transfer a plain transfer" do
+    brokerage = @family.accounts.create!(name: "Brokerage", accountable: Investment.new, balance: 0, currency: "USD")
+    outflow = create_transaction_entry(@account, amount: 100, date: Date.parse("2024-01-15"), name: "To brokerage")
+    inflow = create_transaction_entry(brokerage, amount: -100, date: Date.parse("2024-01-15"), name: "From checking")
+    transfer = Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
+    assert transfer.update_investment_contribution!(false)
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      ndjson_records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      transfer_data = ndjson_records.find { |record| record["type"] == "Transfer" && record.dig("data", "id") == transfer.id }
+
+      assert_equal false, transfer_data["data"]["investment_contribution"]
+    end
+  end
+
   test "exports transfer decisions and rejected transfers in NDJSON" do
     destination_account = @family.accounts.create!(
       name: "Savings Account",
@@ -894,6 +982,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal transfer_outflow.entryable.id, transfer_data["data"]["outflow_transaction_id"]
       assert_equal "confirmed", transfer_data["data"]["status"]
       assert_equal "Confirmed by user", transfer_data["data"]["notes"]
+      assert_nil transfer_data["data"]["investment_contribution"]
 
       rejected_transfer_data = ndjson_records.find { |record| record["type"] == "RejectedTransfer" && record.dig("data", "id") == rejected_transfer.id }
       assert rejected_transfer_data

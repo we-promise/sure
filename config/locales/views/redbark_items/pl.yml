@@ -45,22 +45,14 @@ pl:
       loading_message: Ładowanie kont Redbark...
       loading_title: Ładowanie
     panel:
-      field_descriptions: 'Opisy pól:'
       fields:
         api_key:
-          description: Twój klucz API Redbark (zaczyna się od rbk_live_)
           label: Klucz API
           placeholder_new: rbk_live_...
           placeholder_update: Wpisz nowy klucz API, aby zaktualizować
       optional: "(Opcjonalne)"
       optional_with_default: "(opcjonalne, domyślnie %{default_value})"
-      required: "(wymagane)"
       save_button: Zapisz konfigurację
-      setup_instructions: 'Instrukcje konfiguracji:'
-      status_configured_html: Skonfigurowano i gotowe do użycia. Przejdź do zakładki
-        <a href="%{accounts_path}" class="link">Konta</a>, aby zarządzać kontami i
-        je skonfigurować.
-      status_not_configured: Nie skonfigurowano
       step_1: Utwórz klucz API na app.redbark.com w Ustawieniach
       step_2: Wpisz swój klucz API poniżej i kliknij przycisk Zapisz
       step_3: Po pomyślnym połączeniu przejdź do zakładki Konta, aby skonfigurować

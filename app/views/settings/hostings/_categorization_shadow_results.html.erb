@@ -1,0 +1,39 @@
+<%# Shadow mode exists so an operator can look at real disagreements before
+    switching provider. Leaving that in the database means reaching for a Rails
+    console, which defeats the point — so the summary lives here. %>
+<%
+  comparisons = Current.family.categorization_comparisons
+  sampled = comparisons.count
+  agreement = comparisons.agreement_rate
+  recent_disagreements = comparisons.disagreements.order(created_at: :desc).limit(5)
+%>
+
+<%= render DS::Note.new(title: t(".shadow_results_heading")) do %>
+  <% if sampled.zero? %>
+    <%# Not "0% agreement": no data and total disagreement look identical in a
+        bare percentage, and they mean opposite things. %>
+    <p><%= t(".shadow_results_empty") %></p>
+  <% else %>
+    <p><%= t(".shadow_results_summary", agreement: agreement, count: sampled) %></p>
+
+    <% if recent_disagreements.any? %>
+      <p class="font-medium text-primary pt-1"><%= t(".shadow_disagreements_heading") %></p>
+      <ul class="space-y-1">
+        <% recent_disagreements.each do |comparison| %>
+          <li>
+            <%= t(".shadow_disagreement_row",
+                  applied_provider: comparison.applied_provider,
+                  applied_category: comparison.applied_category_name.presence || t(".shadow_no_category"),
+                  shadow_provider: comparison.shadow_provider,
+                  shadow_category: comparison.shadow_category_name.presence || t(".shadow_no_category")) %>
+            <% if comparison.shadow_confidence.present? %>
+              <%= t(".shadow_disagreement_confidence", confidence: number_with_precision(comparison.shadow_confidence, precision: 2)) %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p><%= t(".shadow_no_disagreements") %></p>
+    <% end %>
+  <% end %>
+<% end %>

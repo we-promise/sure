@@ -10,13 +10,6 @@ class PlaidItem::SyncCompleteEvent
       account.broadcast_sync_complete
     end
 
-    plaid_item.broadcast_replace_to(
-      plaid_item.family,
-      target: "plaid_item_#{plaid_item.id}",
-      partial: "plaid_items/plaid_item",
-      locals: { plaid_item: plaid_item }
-    )
-
     plaid_item.family.broadcast_sync_complete
   end
 end
