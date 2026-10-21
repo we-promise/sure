@@ -91,6 +91,26 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
     end
   end
 
+  # The frames above only prove markup arrived. The regression these two
+  # tests pin down is one step later: the chart controller refused to draw
+  # into the sidebar's 32px-wide containers, so a "complete" frame stayed
+  # blank. The trendline is the only <path> the controller draws at these
+  # sizes (the empty state uses a dashed <line> + <circle>), so asserting
+  # the path proves a real series got rendered, not just an SVG element.
+  test "the group total sparkline draws its chart, not just its frame" do
+    visit root_path
+
+    assert_selector "#{GROUP_SPARKLINE_FRAME}[complete] [data-controller='time-series-chart'] svg path", minimum: 1
+  end
+
+  test "expanding a group draws the account sparklines, not just their frames" do
+    visit root_path
+
+    expand_first_group
+
+    assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] [data-controller='time-series-chart'] svg path", minimum: 1
+  end
+
   test "a request that never comes back still raises the timeout badge" do
     with_short_sparkline_timeout do
       visit root_path

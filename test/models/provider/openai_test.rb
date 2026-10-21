@@ -598,17 +598,31 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal "configured model: custom-model", custom_provider.supported_models_description
   end
 
-  test "upsert_langfuse_trace uses client trace upsert" do
-    trace = Struct.new(:id).new("trace_123")
-    fake_client = mock
-
-    fake_client.expects(:trace).with(id: "trace_123", output: { ok: true }, level: "ERROR")
-    @subject.stubs(:langfuse_client).returns(fake_client)
-
-    @subject.send(:upsert_langfuse_trace, trace: trace, output: { ok: true }, level: "ERROR")
+  test "finishes the root observation with output and error level" do
+    trace = mock
+    trace.expects(:end).with(output: { ok: true }, level: "ERROR")
+    @subject.send(:finish_langfuse_trace, trace: trace, output: { ok: true }, level: "ERROR")
   end
 
-  test "log_langfuse_generation upserts trace through client" do
+  test "configured tracing emits chat observations through the shared OpenTelemetry client" do
+    exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
+    tracing = LangfuseTracing.new(public_key: "pk-test", secret_key: "sk-test", host: "https://langfuse.test",
+      processor: OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(exporter))
+    Rails.configuration.x.stubs(:langfuse).returns(tracing)
+    with_env_overrides("LANGFUSE_PUBLIC_KEY" => "pk-test", "LANGFUSE_SECRET_KEY" => "sk-test") do
+      @subject.send(:log_langfuse_generation, name: "chat_response", model: "gpt-4.1", input: "Hi", output: "Hello",
+        usage: { "prompt_tokens" => 4, "completion_tokens" => 2 }, session_id: "chat-id", user_identifier: "hashed-id")
+    end
+    assert_equal 2, exporter.finished_spans.size
+    exporter.finished_spans.each do |span|
+      assert_equal "chat-id", span.attributes["langfuse.session.id"]
+      assert_equal "hashed-id", span.attributes["langfuse.user.id"]
+    end
+  ensure
+    tracing&.shutdown
+  end
+
+  test "log_langfuse_generation finishes generation and root observation" do
     trace = Struct.new(:id).new("trace_456")
     generation = mock
     fake_client = mock
@@ -616,7 +630,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject.stubs(:langfuse_client).returns(fake_client)
     @subject.stubs(:create_langfuse_trace).returns(trace)
 
-    fake_client.expects(:trace).with(id: "trace_456", output: "hello")
+    trace.expects(:end).with(output: "hello", level: nil)
     trace.expects(:generation).returns(generation)
     generation.expects(:end).with(output: "hello", usage: { "total_tokens" => 10 })
 
@@ -630,14 +644,14 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     )
   end
 
-  test "create_langfuse_trace logs full error details" do
+  test "create_langfuse_trace logs the error without its backtrace" do
     fake_client = mock
     error = StandardError.new("boom")
 
     @subject.stubs(:langfuse_client).returns(fake_client)
     fake_client.expects(:trace).raises(error)
 
-    Rails.logger.expects(:warn).with(regexp_matches(/Langfuse trace creation failed: boom.*test\/models\/provider\/openai_test\.rb/m))
+    Rails.logger.expects(:warn).with("Langfuse trace creation failed: StandardError: boom")
 
     @subject.send(:create_langfuse_trace, name: "openai.test", input: { foo: "bar" })
   end
@@ -666,7 +680,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 256, subject.system_prompt_reserve
       assert_equal 2048 - 512 - 256, subject.max_history_tokens
       assert_equal 2048 - 512 - 256, subject.max_input_tokens
-      assert_equal 25, subject.max_items_per_call
     end
   end
 
@@ -684,7 +697,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 512, subject.system_prompt_reserve
       assert_equal 4096, subject.max_history_tokens  # explicit overrides derived
       assert_equal 8192 - 1024 - 512, subject.max_input_tokens
-      assert_equal 50, subject.max_items_per_call
     end
   end
 
@@ -742,7 +754,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       subject = Provider::Openai.new("test-token")
       assert_equal 8192, subject.context_window
       assert_equal 1024, subject.max_response_tokens
-      assert_equal 40, subject.max_items_per_call
     end
   ensure
     Setting.llm_context_window = nil
@@ -774,8 +785,8 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     Setting.llm_context_window = nil
   end
 
-  test "auto_categorize fans out oversized batches into sequential sub-calls" do
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10") do
+  test "auto_categorize sends a batch that fits the context window as one call" do
+    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10", "LLM_CONTEXT_WINDOW" => "100000") do
       subject = Provider::Openai.new("test-token")
       transactions = Array.new(25) { |i| { id: i.to_s, name: "txn#{i}", amount: 10, classification: "expense" } }
       user_categories = [ { id: "cat1", name: "Groceries", is_subcategory: false, parent_id: nil, classification: "expense" } ]
@@ -793,7 +804,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       response = subject.auto_categorize(transactions: transactions, user_categories: user_categories)
 
       assert response.success?
-      assert_equal [ 10, 10, 5 ], seen_sizes
+      assert_equal [ 25 ], seen_sizes
     end
   end
 

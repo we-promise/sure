@@ -51,7 +51,7 @@ module AccountsHelper
   # account access moves both together.
   def account_sidebar_tabs_cache_key(family:, active_tab:, mobile:)
     [
-      family.build_cache_key("account_sidebar_tabs_v5", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v6", invalidate_on_data_updates: true),
       Current.user&.id,
       Current.account_share_version,
       active_tab,
@@ -62,7 +62,12 @@ module AccountsHelper
       # so toggling it in Settings busts the 12h fragment cache immediately
       # (this partial renders with skip_digest: true, so the template digest
       # would not otherwise reflect the change).
-      Current.user&.always_expanded_account_groups&.sort
+      Current.user&.always_expanded_account_groups&.sort,
+      # Changing the account order, or dragging an account in the manual
+      # order, must re-render the sidebar right away rather than after the
+      # 12h expiry.
+      Current.user&.default_account_order,
+      Current.user&.account_order&.manual? ? Digest::SHA256.hexdigest(Current.user.manual_account_order.to_json) : nil
     ]
   end
 
