@@ -16,7 +16,7 @@ class Provider::Anthropic < Provider
   # one), so a model released after this line still works. Matches anywhere in
   # the ID to cover Bedrock (`anthropic.claude-sonnet-4-5-…-v1:0`) and Vertex
   # (`claude-sonnet-4-5@…`) IDs.
-  FORCED_TOOL_CHOICE_MODELS = /claude-(?:3|(?:opus|sonnet|haiku)-4|haiku-5-5)(?!\d)/
+  FORCED_TOOL_CHOICE_MODELS = /claude-(?:3|(?:opus|sonnet|haiku)-4|haiku-5[-.]5)(?!\d)/
 
   def self.forced_tool_choice_supported?(model)
     model.to_s.match?(FORCED_TOOL_CHOICE_MODELS)
