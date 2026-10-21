@@ -1,4 +1,6 @@
 class PlaidAccount::Liabilities::StudentLoanProcessor
+  include PlaidAccount::Liabilities::LoanTermWriter
+
   def initialize(plaid_account)
     @plaid_account = plaid_account
   end
@@ -6,7 +8,7 @@ class PlaidAccount::Liabilities::StudentLoanProcessor
   def process
     return unless student_loan_data.present?
 
-    account.loan.update!(
+    write_loan_terms(
       rate_type: "fixed",
       interest_rate: student_loan_data["interest_rate_percentage"],
       initial_balance: student_loan_data["origination_principal_amount"],

@@ -1,4 +1,6 @@
 class PlaidAccount::Liabilities::MortgageProcessor
+  include PlaidAccount::Liabilities::LoanTermWriter
+
   def initialize(plaid_account)
     @plaid_account = plaid_account
   end
@@ -6,7 +8,7 @@ class PlaidAccount::Liabilities::MortgageProcessor
   def process
     return unless mortgage_data.present?
 
-    account.loan.update!(
+    write_loan_terms(
       rate_type: mortgage_data.dig("interest_rate", "type"),
       interest_rate: mortgage_data.dig("interest_rate", "percentage")
     )
