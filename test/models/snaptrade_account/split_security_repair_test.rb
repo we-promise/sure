@@ -42,6 +42,20 @@ class SnaptradeAccount::SplitSecurityRepairTest < ActiveSupport::TestCase
     assert_equal 2, result.trades_moved
   end
 
+  # Report caches key on Family#entries_cache_version (the latest entry
+  # updated_at). Moving trades with update_all touches no entry, so a figure
+  # cached before the repair would keep grouping the trades under the old row.
+  test "a live repair moves the family's entries cache version" do
+    seed_observed_split
+    before = @family.reload.entries_cache_version
+
+    travel 1.minute do
+      repair!
+    end
+
+    assert_not_equal before, @family.reload.entries_cache_version
+  end
+
   test "repair resolves to the row resolve_security keeps picking" do
     seed_observed_split
     resolver = SnaptradeAccount::HoldingsProcessor.new(@snaptrade_account)
