@@ -27,9 +27,6 @@ module Api::V1::TransactionLookup
     # query that loads no child rows. The transaction partial reads it for
     # `split_parent`.
     def split_parent_entry_ids_for(transactions)
-      entry_ids = transactions.map { |transaction| transaction.entry.id }
-      return Set.new if entry_ids.empty?
-
-      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
+      Entry.split_parent_ids_among(transactions.map { |transaction| transaction.entry.id })
     end
 end
