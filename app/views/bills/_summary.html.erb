@@ -8,19 +8,21 @@
 <div class="space-y-4">
   <%= render "bills/cancelled_notice", series: series %>
 
-  <%# Current state. %>
+  <%# Current state, at the size the payment drawer and a transaction's
+      drawer give their headline figure. At text-lg it matched the bill's name
+      above it, so the drawer had no figure to lead with. %>
   <% if current_occurrence %>
     <% expected = current_occurrence.resolved_expected_amount_money %>
     <% paid = current_occurrence.confirmed_allocated_money %>
     <div class="space-y-0.5">
-      <p class="text-lg font-medium text-primary privacy-sensitive">
+      <p class="text-2xl font-medium text-primary privacy-sensitive">
         <% if current_occurrence.paid? %>
           <%= t("bills.summary.paid_headline", amount: format_money(paid)) %>
         <% else %>
           <%= t("bills.summary.remaining", amount: format_money(current_occurrence.remaining_amount_money)) %>
         <% end %>
       </p>
-      <p class="text-xs <%= current_occurrence.overdue? ? "text-destructive" : "text-secondary" %>">
+      <p class="text-sm <%= current_occurrence.overdue? ? "text-destructive" : "text-secondary" %>">
         <span class="privacy-sensitive"><%= t("bills.partial_progress", paid: format_money(paid), expected: format_money(expected)) %></span>
         &middot; <%= occurrence_due_label(current_occurrence) %>
       </p>
@@ -36,10 +38,10 @@
     </div>
   <% else %>
     <div class="space-y-0.5">
-      <p class="text-lg font-medium text-primary privacy-sensitive">
+      <p class="text-2xl font-medium text-primary privacy-sensitive">
         <%= "~" if series.has_amount_variance? %><%= format_money(Money.new(series.amount.abs, series.currency)) %>
       </p>
-      <p class="text-xs text-secondary">
+      <p class="text-sm text-secondary">
         <%= series.next_expected_date.present? ? t("bills.detail.around", date: bills_upcoming_date(series.next_expected_date)) : t("bills.detail.next_payment") %>
       </p>
     </div>

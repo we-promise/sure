@@ -1,7 +1,13 @@
 class Rule::Action < ApplicationRecord
   belongs_to :rule, touch: true
 
-  validates :action_type, presence: true
+  SUPPORTED_ACTION_TYPES = Rule::Registry::TransactionResource.action_executor_keys.freeze
+
+  validates :action_type, presence: true, if: -> { action_type.to_s.valid_encoding? }
+  # A NUL or invalid encoding is reported by DatabaseTextValidator instead.
+  validates :action_type, inclusion: { in: SUPPORTED_ACTION_TYPES, allow_blank: true },
+    if: -> { DatabaseTextValidator.acceptable?(action_type) }
+  validates_with DatabaseTextValidator, attributes: %i[action_type value]
 
   # Pre-seed (watermark): when a send_email_notification action is created — on a
   # new rule OR added to an existing one — record all currently-matching
@@ -25,7 +31,13 @@ class Rule::Action < ApplicationRecord
   # actions don't require a schema change. A single scalar value round-trips
   # unchanged, which keeps existing single-value rows backward compatible.
   def value=(val)
-    val = val.reject(&:blank?).join(",") if val.is_a?(Array)
+    if val.is_a?(Array)
+      val = val.reject do |item|
+        next false if item.is_a?(String) && !item.valid_encoding?
+
+        item.blank?
+      end.join(",")
+    end
     super(val)
   end
 
@@ -52,6 +64,14 @@ class Rule::Action < ApplicationRecord
     executor.options
   end
 
+  def claimed_attributes
+    executor.claimed_attributes
+  end
+
+  def reserves_claimed_attributes?
+    executor.reserves_claimed_attributes? && executor.actionable?(value)
+  end
+
   def value_display
     return "" if value.blank?
 
@@ -73,10 +93,17 @@ class Rule::Action < ApplicationRecord
 
     def seed_notification_baseline
       return unless action_type == "send_email_notification"
+      return if rule.notification_baseline_taken_in_this_save?
 
       NotificationDelivery.record_for(
         rule_id: rule_id,
         transaction_ids: rule.matching_transaction_ids
       )
+    rescue Rule::SafeRegex::TimeoutError => e
+      # The action is already committed. With no baseline, leaving the rule on would
+      # email every past match on its next run, so it is switched off instead; the
+      # user can turn it back on after changing the pattern. Through the rule, so
+      # an update that saved this action reports the switch-off, not success.
+      rule.notification_baseline_timed_out!(e, source: self.class.name)
     end
 end
