@@ -89,6 +89,12 @@ class Security < ApplicationRecord
   has_many :trades, dependent: :nullify, class_name: "Trade"
   has_many :prices, dependent: :destroy
   has_many :splits, dependent: :destroy
+  # A security row is shared by every family that holds the instrument, but a
+  # Tag belongs to one family, so a tagging is reachable only through its
+  # owning family's tags. `tags` here spans every family; read one family's
+  # with `tags.where(family: family)` and write them with #set_tags_for.
+  has_many :taggings, as: :taggable, dependent: :destroy
+  has_many :tags, through: :taggings
 
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
@@ -124,6 +130,28 @@ class Security < ApplicationRecord
 
   def cash?
     kind == "cash"
+  end
+
+  # Replaces only `family`'s tags on this security.
+  #
+  # `security.tags = ...` would delete other families' taggings on the same
+  # instrument, because the row is shared. Ids are resolved through
+  # `family.tags` rather than `Tag`, so a tag this family does not own is
+  # never attached: that would show its name to every family holding the
+  # security.
+  def set_tags_for(family, tag_ids)
+    wanted = family.tags.where(id: Array(tag_ids).reject(&:blank?)).pluck(:id)
+    mine = family.tags.select(:id)
+
+    # A check-then-insert on a row every family shares. The unique index on
+    # taggings refuses a duplicate, so without the lock two concurrent saves
+    # of the same tag would fail one of them rather than both succeed. The
+    # lock also reloads the record, so no stale association survives.
+    with_lock do
+      taggings.where(tag_id: mine).where.not(tag_id: wanted).destroy_all
+      already = taggings.where(tag_id: wanted).pluck(:tag_id)
+      (wanted - already).each { |id| taggings.create!(tag_id: id) }
+    end
   end
 
   # True when this security represents a crypto asset. Today the only signal
