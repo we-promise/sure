@@ -185,6 +185,7 @@ class TransactionsTest < ApplicationSystemTestCase
   end
 
   test "keeps long auto-matched tablet and desktop rows contained" do
+    @user.update!(show_ai_sidebar: false)
     outflow = create_transaction("Bank of America online payment with a long bank descriptor", Date.current, 4321.09, tags: [ tags(:one), tags(:two) ])
     inflow = create_transaction("Payment received", Date.current, -4321.09, account: accounts(:credit_card))
     Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)

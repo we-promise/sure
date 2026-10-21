@@ -199,7 +199,7 @@
       </div>
 
       <div class="col-span-4 ml-auto lg:ml-0 md:flex-none flex lg:flex-wrap items-center justify-end gap-2 lg:gap-4 min-w-0">
-        <div class="hidden md:flex md:w-40 lg:w-auto lg:flex-1 min-w-7 items-center" data-tag-fit-bounds="1">
+        <div class="<%= class_names("hidden md:flex md:w-40 lg:w-auto lg:flex-1 min-w-7 items-center", "lg:hidden": transaction.transfer? && transaction.tags.empty?) %>" data-tag-fit-bounds="1">
           <%= render "tags/menu", entry: entry, transaction: transaction, variant: :desktop %>
         </div>
 

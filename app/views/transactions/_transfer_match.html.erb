@@ -23,21 +23,23 @@
       ) %>
     </span>
 
-    <%= render DS::Button.new(
-          variant: :icon, size: :sm, icon: "check",
-          href: transfer_path(transaction.transfer, transfer: { status: "confirmed" }),
-          method: :patch,
-          title: t("transactions.transfer_match.confirm_match"),
-          aria: { label: t("transactions.transfer_match.confirm_match") }
-        ) %>
+    <div class="flex items-center gap-1">
+      <%= render DS::Button.new(
+            variant: :icon, size: :sm, icon: "check",
+            href: transfer_path(transaction.transfer, transfer: { status: "confirmed" }),
+            method: :patch,
+            title: t("transactions.transfer_match.confirm_match"),
+            aria: { label: t("transactions.transfer_match.confirm_match") }
+          ) %>
 
-    <%= render DS::Button.new(
-          variant: :icon, size: :sm, icon: "x",
-          href: transfer_path(transaction.transfer, transfer: { status: "rejected" }),
-          method: :patch,
-          data: { turbo: false },
-          title: t("transactions.transfer_match.reject_match"),
-          aria: { label: t("transactions.transfer_match.reject_match") }
-        ) %>
+      <%= render DS::Button.new(
+            variant: :icon, size: :sm, icon: "x",
+            href: transfer_path(transaction.transfer, transfer: { status: "rejected" }),
+            method: :patch,
+            data: { turbo: false },
+            title: t("transactions.transfer_match.reject_match"),
+            aria: { label: t("transactions.transfer_match.reject_match") }
+          ) %>
+    </div>
   <% end %>
 </div>
