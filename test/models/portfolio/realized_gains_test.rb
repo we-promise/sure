@@ -182,6 +182,21 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
     assert_equal few, many, "2 disposals and 6 must cost the same number of queries"
   end
 
+  # The test above prices every disposal in the account's currency, which
+  # never needs a rate. A foreign-priced disposal converts its proceeds into
+  # the basis currency, and without Trade.preload_exchange_rates that is one
+  # rate lookup per disposal. The dates differ so each needs its own rate.
+  test "the query count does not grow with foreign-priced disposals" do
+    seed_disposals(2, currency: "EUR")
+    few = capture_sql_queries { measure_fully(realized) }.size
+
+    seed_disposals(4, currency: "EUR")
+    many = capture_sql_queries { measure_fully(realized) }.size
+
+    assert_equal 6, realized.trade_count, "every disposal must be measured, or this proves nothing"
+    assert_equal few, many, "2 foreign disposals and 6 must cost the same number of queries"
+  end
+
   # A disabled account stops contributing on its cut-off date.
   test "a disposal after an account's cut-off date does not count" do
     holding_snapshot account: @account, date: @march, cost_basis: 100
@@ -227,12 +242,16 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
       gains.net
     end
 
-    # n securities, each with a stored basis and one sale.
-    def seed_disposals(count)
+    # n securities, each with a stored basis and one sale. A foreign `currency`
+    # prices each sale on its own day, with that day's rate into the account's.
+    def seed_disposals(count, currency: nil)
+      @seeded ||= 0
       count.times do
         security = create_security
+        date = @march + (@seeded += 1)
         holding_snapshot account: @account, date: @march, cost_basis: 100, security: security
-        sell_trade account: @account, date: @march, qty: 1, price: 150, security: security
+        sell_trade account: @account, date: date, qty: 1, price: 150, security: security, currency: currency
+        set_rate from: currency, to: @account.currency, date: date, rate: 1.5 if currency
       end
     end
 
