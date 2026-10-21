@@ -71,7 +71,12 @@ class Account::MarketDataImporter
       next unless security
 
       security.import_provider_prices(start_date: window.start_date, end_date: window.end_date)
-      security.import_provider_details(include_classification: true)
+      # Classification and a fund's holdings ride the same `fetch_security_info`
+      # call, so asking for both never costs two requests. It is not free: a
+      # security that already has metadata and a classification skipped the
+      # fetch entirely, and under a provider that supplies constituents a nil
+      # `constituents_fetched_at` reopens it until one answer succeeds.
+      security.import_provider_details(include_classification: true, include_constituents: true)
     end
   end
 

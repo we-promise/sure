@@ -129,6 +129,11 @@ class Provider::YourProvider < Provider
     true
   end
 
+  # Only if fetch_security_info also returns `constituents:`, a fund's own
+  # holdings as [{ ticker:, name:, weight: }] with weight in percent of fund
+  # assets: declare `supplies_constituents?` true as well. Defaults to false,
+  # and the importers never ask a provider for holdings without it.
+
   # Optional: limit how far back the importer fetches history.
   # nil = unlimited. Free tiers often have limits.
   def max_history_days
@@ -190,7 +195,7 @@ All methods must return these exact types (wrapped in `with_provider_response`):
 ```ruby
 SecurityConcept::Security    = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :currency)
 SecurityConcept::SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic,
-                                            :sector, :industry) # sector and industry default to nil
+                                            :sector, :industry, :constituents) # these three default to nil
 SecurityConcept::Price       = Data.define(:symbol, :date, :price, :currency, :exchange_operating_mic)
 ```
 

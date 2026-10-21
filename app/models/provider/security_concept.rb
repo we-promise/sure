@@ -22,6 +22,12 @@ module Provider::SecurityConcept
   # defaults every one of them would raise at construction the day these
   # fields were added.
   #
+  # `constituents` is a fund's own holdings -- an array of
+  # `{ticker:, name:, weight:}`, weight being the provider's percentage of fund
+  # assets. Nil for anything that is not a fund, which is most securities, and
+  # nil rather than `[]` so "not a fund" and "a fund we could not read" are the
+  # same answer to the caller: neither is worth asking about again.
+  #
   # `fund_weights` is what a fund or ETF holds, keyed in this application's
   # vocabulary so the provider owns the mapping of its own labels:
   #   { asset_class: { "equity" => 99.1, ... },       # % of the fund
@@ -32,9 +38,9 @@ module Provider::SecurityConcept
   # Every key is optional. Nil for anything that is not a fund, or when the
   # provider has no breakdown.
   SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic,
-                             :sector, :industry, :fund_weights) do
+                             :sector, :industry, :constituents, :fund_weights) do
     def initialize(symbol:, name:, links:, logo_url:, description:, kind:, exchange_operating_mic:,
-                   sector: nil, industry: nil, fund_weights: nil)
+                   sector: nil, industry: nil, constituents: nil, fund_weights: nil)
       super
     end
   end
@@ -79,6 +85,17 @@ module Provider::SecurityConcept
   # Same shape as `max_history_days` below: declared on the concept, safely
   # defaulted, overridden by the providers it applies to.
   def supplies_classification?
+    false
+  end
+
+  # Whether this provider can answer for a fund's own holdings. Declared for the
+  # same reason as `supplies_classification?`, and defaulting to false for the
+  # same trade: the gate keys on `constituents_fetched_at`, so without a
+  # capability to consult, a security synced under a provider with nothing to
+  # give would be stamped with an empty table and never asked again, even after
+  # a capable provider is configured. A new provider that returns
+  # `constituents:` from `fetch_security_info` must override this.
+  def supplies_constituents?
     false
   end
 
