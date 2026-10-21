@@ -181,8 +181,17 @@ class SnaptradeAccount::SplitSecurityRepair
     def apply(plan)
       target_id = plan[:result].target_id
 
+      now = Time.current
       Holding.where(id: plan[:drops]).delete_all if plan[:drops].any?
-      Holding.where(id: plan[:moves]).update_all(security_id: target_id, updated_at: Time.current) if plan[:moves].any?
-      plan[:trades].update_all(security_id: target_id)
+      Holding.where(id: plan[:moves]).update_all(security_id: target_id, updated_at: now) if plan[:moves].any?
+
+      # Report caches key on the latest entry updated_at
+      # (Family#entries_cache_version), and update_all bypasses that, so the
+      # moved trades' entries are stamped too.
+      trade_ids = plan[:trades].pluck(:id)
+      return if trade_ids.empty?
+
+      Trade.where(id: trade_ids).update_all(security_id: target_id, updated_at: now)
+      Entry.where(entryable_type: "Trade", entryable_id: trade_ids).update_all(updated_at: now)
     end
 end
