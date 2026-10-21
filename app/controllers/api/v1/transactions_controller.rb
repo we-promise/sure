@@ -226,7 +226,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # (BudgetCategoriesController#show): Budget#transactions limits them to
     # the budget's period and to the accounts its spending is computed from
     # (the owner's report accounts for a personal budget, the caller's for
-    # the household one), minus the kinds budgets leave out.
+    # the household one), minus the kinds budgets leave out (plus investment
+    # contributions when the family does not count investing as spending,
+    # Family#analytics_excluded_kinds, as the drill-down does).
     #
     # A budget share does not grant access to the owner's accounts, so the
     # rows are also limited to accounts the caller can access, the same scope
@@ -237,7 +239,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       @budget.current_user = current_resource_owner
       @budget.transactions
         .where(entries: { account_id: accessible_account_ids })
-        .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
+        .where.not(transactions: { kind: current_resource_owner.family.analytics_excluded_kinds })
     end
 
     def set_report_filters

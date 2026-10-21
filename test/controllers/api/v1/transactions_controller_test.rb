@@ -220,6 +220,20 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 3, data["pagination"]["total_count"]
   end
 
+  test "budget_id leaves out investment contributions when the family does not count investing as spending" do
+    @user.family.update!(investment_contributions_as_spending: false)
+    budget = create_past_budget
+    in_period = budget.start_date + 3.days
+
+    counted = create_transaction(account: @account, amount: 30, date: in_period, name: "Groceries")
+    create_transaction(account: @account, amount: 150, date: in_period, name: "Contribution", kind: "investment_contribution")
+
+    get api_v1_transactions_url, params: { budget_id: budget.id, per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal [ counted.entryable_id ], JSON.parse(response.body)["transactions"].map { |row| row["id"] }
+  end
+
   test "budget_id on the household budget stays within the caller's accounts" do
     budget = create_past_budget
     in_period = budget.start_date + 3.days
