@@ -780,6 +780,19 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_match "$100.00", line
   end
 
+  # The gate widens rather than moves: an open investment account still shows
+  # the card in a period with no disposal at all.
+  test "the investment card still shows for an open investment account in a period with no disposals" do
+    period_start = 10.years.ago.to_date.beginning_of_month
+    assert_not @family.trades.joins(:entry).where(entries: { date: period_start..period_start.end_of_month }).exists?,
+               "the period must hold no trade, or this proves nothing"
+
+    get reports_path(period_type: :custom, start_date: period_start, end_date: period_start.end_of_month)
+    assert_response :ok
+
+    assert_select "[data-section-key='investment_performance']", count: 1
+  end
+
   test "the investment card stays hidden with no investment accounts and no disposals" do
     exclude_fixture_investment_accounts
 
