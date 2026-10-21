@@ -44,6 +44,14 @@ class MaskAccountNumbersInGeneratedAccountNamesMigrationTest < ActiveSupport::Te
     assert_equal "TFSA •••5678 (old)", @account.reload.name
   end
 
+  test "leaves a longer number that only contains the identifier alone" do
+    @account.update_column(:name, "TFSA (12345678) linked to 9912345678")
+
+    run_migration
+
+    assert_equal "TFSA (•••5678) linked to 9912345678", @account.reload.name
+  end
+
   test "masks a Fio default name" do
     fio_account = fio_accounts(:checking)
 

@@ -3,8 +3,9 @@
 # names show up in lists, reports, exports, the API and the assistant. New
 # names keep only the last 4 characters; this rewrites the existing ones.
 #
-# Only the exact full number is replaced, wherever it appears in a provider
-# record's or linked account's name, so any wording a user added is kept and
+# Only the exact full number is replaced, wherever it appears on its own in a
+# provider record's or linked account's name (a longer number that merely
+# contains it is left untouched), so any wording a user added is kept and
 # renamed accounts that no longer carry the number are left alone. An
 # Interactive Brokers provider record named after the bare number gets the
 # default name.
@@ -91,6 +92,7 @@ class MaskAccountNumbersInGeneratedAccountNames < ActiveRecord::Migration[8.1]
       masked = "#{PREFIX}#{identifier.last(4)}"
       return "Interactive Brokers (#{masked})" if style == :ibkr && name == identifier
 
-      name.gsub(identifier, masked) if name.include?(identifier)
+      pattern = /(?<![[:alnum:]])#{Regexp.escape(identifier)}(?![[:alnum:]])/
+      name.gsub(pattern, masked) if name.match?(pattern)
     end
 end
