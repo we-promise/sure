@@ -950,17 +950,26 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal categories(:one), chosen.category
   end
 
+  # The minority category sits at the newest entry of one series and the
+  # oldest of the other, so taking either end instead of the most common
+  # category fails one of them.
   test "mixed entry categories fill a blank detected series with the most common one" do
     account = @family.accounts.first
-    blank = create_detected_series(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    newest_minority = create_detected_series(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    oldest_minority = create_detected_series(account: account, name: "Pet Cover Plus", amount: 54.73, day: 5)
     create_name_pattern_entries(
       account: account, name: "Pet Cover", amount: 54.73, day: 5,
-      entry_categories: [ categories(:one), categories(:food_and_drink), categories(:one) ]
+      entry_categories: [ categories(:food_and_drink), categories(:one), categories(:one) ]
+    )
+    create_name_pattern_entries(
+      account: account, name: "Pet Cover Plus", amount: 54.73, day: 5,
+      entry_categories: [ categories(:one), categories(:one), categories(:food_and_drink) ]
     )
 
     @identifier.identify_recurring_patterns
 
-    assert_equal categories(:one), blank.reload.category
+    assert_equal categories(:one), newest_minority.reload.category
+    assert_equal categories(:one), oldest_minority.reload.category
   end
 
   # Manual rows are skipped by the claim loop and refreshed by the manual
@@ -975,17 +984,26 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal categories(:food_and_drink), blank.reload.category
   end
 
+  # The minority category sits at the newest entry of one series and the
+  # oldest of the other, so taking either end instead of the most common
+  # category fails one of them.
   test "mixed entry categories fill a blank manual series with the most common one" do
     account = @family.accounts.first
-    blank = create_detected_series(account: account, name: "Declared Cover", amount: 54.73, day: 5, manual: true)
+    newest_minority = create_detected_series(account: account, name: "Declared Cover", amount: 54.73, day: 5, manual: true)
+    oldest_minority = create_detected_series(account: account, name: "Declared Cover Plus", amount: 54.73, day: 5, manual: true)
     create_name_pattern_entries(
       account: account, name: "Declared Cover", amount: 54.73, day: 5,
-      entry_categories: [ categories(:one), categories(:food_and_drink), categories(:one) ]
+      entry_categories: [ categories(:food_and_drink), categories(:one), categories(:one) ]
+    )
+    create_name_pattern_entries(
+      account: account, name: "Declared Cover Plus", amount: 54.73, day: 5,
+      entry_categories: [ categories(:one), categories(:one), categories(:food_and_drink) ]
     )
 
     @identifier.identify_recurring_patterns
 
-    assert_equal categories(:one), blank.reload.category
+    assert_equal categories(:one), newest_minority.reload.category
+    assert_equal categories(:one), oldest_minority.reload.category
   end
 
   # No categorised entry means no category to take: the series stays blank and
