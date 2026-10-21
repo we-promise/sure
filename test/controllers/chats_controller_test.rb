@@ -34,6 +34,27 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "new chat prefills the Dig in with AI message for one of the family's insights" do
+    insight = insights(:spending_anomaly_dining)
+
+    assert_no_difference("Chat.count") do
+      get new_chat_url(insight_id: insight.id)
+    end
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]'][autofocus]", text: /#{Regexp.escape(insight.title)}/
+  end
+
+  test "new chat ignores another family's insight" do
+    insight = insights(:spending_anomaly_dining)
+    insight.update_columns(family_id: families(:empty).id)
+
+    get new_chat_url(insight_id: insight.id)
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]']", text: ""
+  end
+
   test "creates chat" do
     assert_difference("Chat.count") do
       post chats_url, params: { chat: { content: "Hello", ai_model: "gpt-4.1" } }
@@ -48,6 +69,16 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
 
   test "redirects to chats index instead of creating a chat if AI is disabled" do
     @user.update!(ai_enabled: false)
+
+    assert_no_difference("Chat.count") do
+      post chats_url, params: { chat: { content: "Hello", ai_model: "gpt-4.1" } }
+    end
+
+    assert_redirected_to chats_path
+  end
+
+  test "does not create a chat for a consenting user when the assistant type is mcp_only" do
+    @family.update!(assistant_type: "mcp_only")
 
     assert_no_difference("Chat.count") do
       post chats_url, params: { chat: { content: "Hello", ai_model: "gpt-4.1" } }
