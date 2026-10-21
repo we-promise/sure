@@ -7,28 +7,26 @@
   "full" => "w-full h-full"
 } %>
 
-<% initials = capture do %>
-  <%= render DS::FilledIcon.new(
-        variant: :text,
-        hex_color: color || account.accountable&.color,
-        text: account.name.to_s,
-        size: size,
-        rounded: true
-      ) %>
-<% end %>
+<% initials = {
+  variant: :text,
+  hex_color: color || account.accountable&.color,
+  text: account.name.to_s,
+  size: size,
+  rounded: true
+} %>
 
 <% if url.present? %>
-  <%# A logo the browser cannot show (an upload whose file is gone, a dead
-      favicon or Brandfetch URL) gives way to the initials, which are already
-      in the page, so the swap needs no other request. %>
-  <%= tag.span class: "inline-flex items-center justify-center shrink-0 #{size_classes[size]}", data: { controller: "image-fallback" } do %>
+  <%# The ProviderLogo recipe: the initials sit under the image, and a logo the
+      browser cannot show (an upload whose file is gone, a dead favicon or
+      Brandfetch URL) removes itself to reveal them. %>
+  <%= tag.span class: "relative block shrink-0 #{size_classes[size]}" do %>
+    <%= render DS::FilledIcon.new(**initials, class_name: "absolute inset-0 w-full! h-full!") %>
     <%= image_tag url,
-          class: "w-full h-full rounded-full object-contain",
+          class: "absolute inset-0 w-full h-full rounded-full object-contain bg-container",
+          alt: "",
           loading: "lazy",
-          data: { image_fallback_target: "image",
-                  action: "error->image-fallback#showFallback load->image-fallback#showImage" } %>
-    <%= tag.span initials, class: "hidden", data: { image_fallback_target: "fallback" } %>
+          onerror: ProviderLogo::REMOVE_ON_ERROR %>
   <% end %>
 <% else %>
-  <%= initials %>
+  <%= render DS::FilledIcon.new(**initials) %>
 <% end %>
