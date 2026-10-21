@@ -1038,6 +1038,34 @@ end
     assert_equal baseline_queries, expanded_queries
   end
 
+  test "index works out split_parent without loading the split children" do
+    create_transaction(account: @account, amount: 10, name: "Big split").split!(
+      [ { name: "Part a", amount: 4, category_id: nil }, { name: "Part b", amount: 6, category_id: nil } ]
+    )
+
+    queries = capture_sql_queries do
+      get api_v1_transactions_url, params: { per_page: 100 }, headers: api_headers(@api_key)
+    end
+    assert_response :success
+
+    assert_empty queries.grep(/SELECT "entries"\.\* FROM "entries" WHERE "entries"\."parent_entry_id"/),
+                 "split children should not be loaded just to compute split_parent"
+  end
+
+  test "excluded is false, not null, when the stored flag is null" do
+    entry = create_transaction(account: @account, amount: 20, name: "Null exclusion")
+    entry.update_column(:excluded, nil)
+
+    get api_v1_transaction_url(entry.transaction), headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal false, JSON.parse(response.body)["excluded"]
+
+    get api_v1_transactions_url, params: { per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+    row = JSON.parse(response.body)["transactions"].find { |t| t["id"] == entry.transaction.id }
+    assert_equal false, row["excluded"]
+  end
+
   private
 
     def api_headers(api_key)

@@ -26,7 +26,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     # Include necessary associations for efficient queries
     transactions_query = transactions_query.includes(
-      { entry: [ :account, :child_entries ] },
+      { entry: :account },
       :category, :merchant, :tags,
       transfer_as_outflow: { inflow_transaction: { entry: :account } },
       transfer_as_inflow: { outflow_transaction: { entry: :account } }
@@ -41,6 +41,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     # Make per_page available to the template
     @per_page = safe_per_page_param
+
+    # Which rows on this page are split parents, in one query, without loading
+    # their children (a split has no size cap). Mirrors the web index.
+    @split_parent_entry_ids = split_parent_entry_ids_for(@transactions)
 
     # Rails will automatically use app/views/api/v1/transactions/index.json.jbuilder
     render :index

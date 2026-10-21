@@ -35,11 +35,14 @@ json.classification transaction.entry.classification
 json.kind transaction.kind
 
 # Excluded entries are left out of budget and report totals, and splitting
-# marks the parent excluded. A split parent's amount is carried by its children, so a
-# client summing a list should skip the parent. Callers that render many rows
-# should preload entry: :child_entries to keep split_parent free of queries.
-json.excluded transaction.entry.excluded
-json.split_parent transaction.entry.child_entries.any?
+# marks the parent excluded. A split parent's amount is carried by its
+# children, so a client summing a list should skip the parent. entries.excluded
+# is nullable, so the predicate keeps the field a boolean. Callers that render
+# many rows pass split_parent_ids (the set of entry ids with children) so
+# split_parent costs no query per row; a single row falls back to an EXISTS.
+json.excluded transaction.entry.excluded?
+split_parent_ids = local_assigns[:split_parent_ids]
+json.split_parent split_parent_ids ? split_parent_ids.include?(transaction.entry.id) : transaction.entry.split_parent?
 
 # Account information
 json.account do
