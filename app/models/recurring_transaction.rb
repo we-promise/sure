@@ -76,6 +76,7 @@ class RecurringTransaction < ApplicationRecord
   after_commit :generate_occurrences, on: :create
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
+  after_commit :reconstruct_history_on_activation, on: :update, if: :activated_from_suggestion?
 
   # Form state for the frequency picker and the create-bill dialog;
   # FrequencyPreset and the controller translate these on save. Not persisted.
@@ -176,6 +177,38 @@ class RecurringTransaction < ApplicationRecord
 
   def generate_occurrences
     OccurrenceGenerator.new(self).generate!
+  end
+
+  # Links what a bill already paid before it was a bill. Every route that
+  # confirms a detection -- the review strip, the pause toggle, the API and
+  # the assistant's update_bill -- lands here through the status change.
+  # Generation is scoped to this series; the matcher pass inside stays
+  # family-wide on purpose (exact-tier, idempotent, and scoping it would need
+  # a parallel Matcher entry point). Returns false only when another pipeline
+  # holds the family lock.
+  def reconstruct_history!
+    return true if family.recurring_transactions_disabled?
+
+    Pipeline.with_family_lock(family_id) do
+      HistoryBackfiller.new(
+        family,
+        months: Pipeline::FIRST_RUN_BACKFILL_MONTHS,
+        series_scope: family.recurring_transactions.where(id: id)
+      ).run!
+    end
+  end
+
+  # Read from the saved change rather than the current status: update_bill
+  # assigns every field and saves once, so by now the series reads active
+  # whichever route it took.
+  def activated_from_suggestion?
+    saved_change_to_status?(from: "suggested", to: "active")
+  end
+
+  # Skipping under a held lock used to leave the bill without history for
+  # good, since the live matcher never looks behind the current cycle.
+  def reconstruct_history_on_activation
+    BackfillRecurringHistoryJob.perform_later(id) unless reconstruct_history!
   end
 
   # Regenerating rebuilds only scheduled, allocation-free, not-yet-due rows;

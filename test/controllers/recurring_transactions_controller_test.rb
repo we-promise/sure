@@ -1,6 +1,8 @@
 require "test_helper"
 
 class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+
   setup do
     sign_in @user = users(:family_admin)
     # The declare/edit/suggestion paths sit behind the Bills preview gate.
@@ -929,6 +931,69 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
       "confirming must close history a real entry anchors"
   end
 
+  test "confirming while a pipeline holds the family lock queues the history instead of dropping it" do
+    paid_on, suggestion, entry = suggested_bill_with_past_payment
+
+    with_family_lock_held_elsewhere do
+      assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ suggestion.id ]) do
+        post confirm_recurring_transaction_url(suggestion)
+      end
+    end
+
+    assert suggestion.reload.active?
+    assert_equal 0, suggestion.recurring_occurrences.paid.where(due_on: paid_on).count,
+      "nothing may run under another session's lock"
+
+    perform_enqueued_jobs(only: BackfillRecurringHistoryJob)
+
+    assert_equal 1, suggestion.recurring_occurrences.paid.where(due_on: paid_on).count
+    assert RecurringAllocation.where(entry_id: entry.id, state: "confirmed").exists?
+  end
+
+  # The backfill prunes unpaid past rows of whatever it is scoped to, so it
+  # must stay scoped to the bill being confirmed.
+  test "confirming a detected bill leaves other bills' past rows alone" do
+    _, suggestion, = suggested_bill_with_past_payment
+    other_row = @recurring_transaction.recurring_occurrences.create!(
+      family: @family, original_due_on: 3.months.ago.to_date, due_on: 3.months.ago.to_date, currency: "USD"
+    )
+
+    post confirm_recurring_transaction_url(suggestion)
+
+    assert suggestion.reload.active?
+    assert RecurringOccurrence.exists?(other_row.id), "another bill's history is not this confirm's to prune"
+  end
+
+  test "confirming an already-active bill queues nothing" do
+    assert @recurring_transaction.active?
+
+    assert_no_enqueued_jobs(only: BackfillRecurringHistoryJob) do
+      with_family_lock_held_elsewhere { post confirm_recurring_transaction_url(@recurring_transaction) }
+    end
+  end
+
+  # toggle_status reaches a detected bill too: the action only asks whether the
+  # series is active, and a suggestion is not.
+  test "toggling a detected bill on links its past payments" do
+    paid_on, suggestion, entry = suggested_bill_with_past_payment
+
+    assert_difference -> { suggestion.recurring_occurrences.paid.where(due_on: paid_on).count }, 1 do
+      post toggle_status_recurring_transaction_url(suggestion)
+    end
+    assert suggestion.reload.active?
+    assert RecurringAllocation.where(entry_id: entry.id, state: "confirmed").exists?
+  end
+
+  test "resuming a paused bill does not reconstruct its history" do
+    paid_on, suggestion, = suggested_bill_with_past_payment
+    suggestion.update_columns(status: "inactive")
+
+    assert_no_difference -> { suggestion.recurring_occurrences.where(due_on: paid_on).count } do
+      post toggle_status_recurring_transaction_url(suggestion)
+    end
+    assert suggestion.reload.active?
+  end
+
   test "confirming twice does not double anything" do
     suggestion = @family.recurring_transactions.create!(
       name: "CITY GAS", account: accounts(:depository), amount: 55, currency: "USD",
@@ -1307,5 +1372,37 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
         notes: notes, excluded: excluded,
         entryable: Transaction.new(**transaction_attrs)
       )
+    end
+
+    # A detected bill with a payment two cycles back: before the current cycle
+    # whatever day the suite runs, so only a history pass can link it.
+    def suggested_bill_with_past_payment
+      paid_on = Date.current.beginning_of_month + 8.days - 2.months
+      suggestion = @family.recurring_transactions.create!(
+        name: "CITY WATER", account: accounts(:depository), amount: 80, currency: "USD",
+        expected_day_of_month: 9, last_occurrence_date: paid_on,
+        next_expected_date: paid_on + 2.months, status: "suggested", manual: false
+      )
+      entry = accounts(:depository).entries.create!(
+        date: paid_on, amount: 80, currency: "USD", name: "CITY WATER",
+        entryable: Transaction.new
+      )
+
+      [ paid_on, suggestion, entry ]
+    end
+
+    # Transactional tests share one PG session, and a session can always
+    # re-take its own advisory lock, so this needs a genuinely separate one.
+    def with_family_lock_held_elsewhere
+      key = RecurringTransaction::Pipeline.advisory_lock_key(@family.id)
+      config = ActiveRecord::Base.connection_pool.db_config.configuration_hash
+      other = PG.connect({
+        dbname: config[:database], host: config[:host], port: config[:port],
+        user: config[:username], password: config[:password]
+      }.compact)
+      other.exec("SELECT pg_advisory_lock(#{key})")
+      yield
+    ensure
+      other&.close
     end
 end
