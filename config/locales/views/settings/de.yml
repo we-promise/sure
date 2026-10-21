@@ -20,6 +20,10 @@ de:
         merchant_detector:
           title: Händlererkennung
           subtitle: Die KI identifiziert und ergänzt Transaktionsdaten mit Händlerinformationen
+        insight_dig_in:
+          title: Analyse mit KI nachhaken
+          subtitle: Erste Chat-Nachricht, wenn du bei einer Analyse mit KI nachhakst
+          label: Nachricht zum Nachhaken
     payments:
       show:
         page_title: Zahlung
