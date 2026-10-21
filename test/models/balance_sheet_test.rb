@@ -184,6 +184,38 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_empty group.subgroups("unknown", user: users(:empty))
   end
 
+  test "a type group skips a second level its account type does not have" do
+    create_account(balance: 1000, accountable: Depository.new, subtype: "checking")
+    create_account(balance: 2000, accountable: Depository.new)
+    create_account(balance: 5000, accountable: Vehicle.new)
+    create_account(balance: 500, accountable: CreditCard.new)
+
+    balance_sheet = BalanceSheet.new(@family)
+    depositories = balance_sheet.assets.account_groups.find { |ag| ag.key == "depository" }
+    vehicles = balance_sheet.assets.account_groups.find { |ag| ag.key == "vehicle" }
+    credit_cards = balance_sheet.liabilities.account_groups.first
+
+    assert_equal [ Depository.long_subtype_label_for("checking"), I18n.t("account_grouping.none") ],
+                 depositories.subgroups("subtype", user: users(:empty)).map(&:name)
+    assert_empty vehicles.subgroups("subtype", user: users(:empty))
+    assert_empty credit_cards.subgroups("subtype", user: users(:empty))
+    assert_empty depositories.subgroups("tax_treatment", user: users(:empty))
+  end
+
+  test "a first-level type fallback behaves like a type group" do
+    create_account(balance: 1000, accountable: Investment.new, subtype: "brokerage")
+    create_account(balance: 5000, accountable: Vehicle.new)
+
+    groups = BalanceSheet.new(@family).assets.account_groups(by: "tax_treatment", user: users(:empty))
+    vehicles = groups.find { |group| group.name == Vehicle.display_name }
+
+    assert vehicles.type_group?
+    assert_equal "vehicle", vehicles.key
+    assert_equal Vehicle.color, vehicles.color
+    assert_empty vehicles.subgroups("subtype", user: users(:empty))
+    assert_equal 5000, vehicles.total
+  end
+
   test "groups accounts by another first level across account types" do
     create_account(balance: 1000, accountable: Depository.new, institution_name: "ING")
     create_account(balance: 2000, accountable: Investment.new, institution_name: "ing")

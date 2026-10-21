@@ -5,22 +5,45 @@
 # which one splits each first-level group again. Every dimension maps an
 # account to exactly one value, so group totals always add up to the total one
 # level above. Accounts without a value land in a trailing "Not set" group,
-# whose key is nil so it can never collide with a real value.
+# whose key is nil so it can never collide with a real value. A dimension that
+# an account type's form does not offer (a vehicle has no subtype) groups those
+# accounts by their account type instead, whatever value a provider or a
+# derived default holds, as "Not set" would ask for a value that cannot be
+# entered.
 class AccountGrouping
   VIEWS = %w[sidebar dashboard].freeze
   DEFAULT_PRIMARY = "account_type".freeze
   DIMENSIONS = %w[account_type subtype institution connection owner ownership currency tax_treatment custom_group].freeze
   CUSTOM_GROUP_MAX_LENGTH = 50
+  # Account types whose form offers the field; dimensions not listed apply to
+  # every type.
+  APPLICABLE_TYPES = {
+    "subtype" => %w[Depository Investment Crypto Property Loan],
+    "tax_treatment" => %w[Investment Crypto]
+  }.freeze
   # Colors for first-level groups that are not account types.
   COLORS = Category::COLORS
 
   Group = Data.define(:key, :name, :accounts)
+
+  # Key of a group formed by the account type because the dimension does not
+  # apply. Its own class, so no free-text value can ever match it.
+  TypeFallback = Data.define(:accountable_type) do
+    def to_s
+      "accountable_type_#{accountable_type.underscore}"
+    end
+  end
 
   attr_reader :dimension, :user
 
   class << self
     def valid_dimension?(key)
       DIMENSIONS.include?(key.to_s)
+    end
+
+    def applies_to?(dimension, accountable_type)
+      types = APPLICABLE_TYPES[dimension.to_s]
+      types.nil? || types.include?(accountable_type.to_s)
     end
 
     def dimension_label(key, user: nil)
@@ -65,6 +88,10 @@ class AccountGrouping
 
   private
     def value_key_for(account)
+      unless self.class.applies_to?(dimension, account.accountable_type)
+        return TypeFallback.new(accountable_type: account.accountable_type)
+      end
+
       value = case dimension
       when "account_type" then account.accountable_type.presence
       when "subtype" then account.subtype.presence
@@ -92,6 +119,7 @@ class AccountGrouping
 
     def name_for(key, account)
       return I18n.t("account_grouping.none") if key.nil?
+      return account.accountable_class.display_name if key.is_a?(TypeFallback)
 
       case dimension
       when "account_type" then Accountable.from_type(key).display_name

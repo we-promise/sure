@@ -68,6 +68,44 @@ class AccountGroupingTest < ActiveSupport::TestCase
     assert_equal I18n.t("account_grouping.ownership.mine"), groups.first.name
   end
 
+  test "groups accounts without the dimension by their account type" do
+    checking = create_account(subtype: "checking")
+    unset = create_account
+    vehicle = create_account(accountable: Vehicle.new)
+    other = create_account(accountable: OtherAsset.new)
+
+    groups = AccountGrouping.new("subtype", user: @user).group([ checking, unset, vehicle, other ])
+
+    assert_equal [ [ checking ], [ other ], [ vehicle ], [ unset ] ], groups.map(&:accounts)
+    assert_equal [ Vehicle.display_name ], groups.select { |group| group.accounts == [ vehicle ] }.map(&:name)
+    assert_equal I18n.t("account_grouping.none"), groups.last.name
+    assert_nil groups.last.key
+  end
+
+  test "groups a type without the form field by its type, whatever value it holds" do
+    hsa = create_account(subtype: "hsa")
+    checking = create_account(subtype: "checking")
+    linked_card = create_account(accountable: CreditCard.new, subtype: "credit_card")
+    manual_card = create_account(accountable: CreditCard.new)
+
+    tax_groups = AccountGrouping.new("tax_treatment", user: @user).group([ hsa, checking ])
+    subtype_groups = AccountGrouping.new("subtype", user: @user).group([ linked_card, manual_card ])
+
+    assert_equal [ [ hsa, checking ] ], tax_groups.map(&:accounts)
+    assert_equal [ Depository.display_name ], tax_groups.map(&:name)
+    assert_equal [ [ linked_card, manual_card ] ], subtype_groups.map(&:accounts)
+  end
+
+  test "keeps a type fallback apart from a free-text value spelled like its key" do
+    vehicle = create_account(accountable: Vehicle.new)
+    named = create_account(accountable: Investment.new, subtype: "brokerage")
+    grouping = AccountGrouping.new("subtype", user: @user)
+
+    keys = grouping.group([ vehicle, named ]).map(&:key)
+
+    assert_equal [ "brokerage", AccountGrouping::TypeFallback.new(accountable_type: "Vehicle") ], keys
+  end
+
   test "custom group is squished and limited in length" do
     account = create_account(custom_group: "  Kids   fund ")
     assert_equal "Kids fund", account.custom_group
