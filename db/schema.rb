@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2297,6 +2297,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
     t.string "asset_sub_class"
     t.boolean "classification_locked", default: false, null: false
     t.string "classification_source"
+    t.datetime "constituents_fetched_at"
     t.string "country_code"
     t.datetime "created_at", null: false
     t.string "exchange_acronym"
@@ -2328,6 +2329,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
     t.check_constraint "asset_sub_class::text = ANY (ARRAY['bond'::character varying::text, 'cash'::character varying::text, 'collectible'::character varying::text, 'commodity'::character varying::text, 'cryptocurrency'::character varying::text, 'etf'::character varying::text, 'loan'::character varying::text, 'mutual_fund'::character varying::text, 'precious_metal'::character varying::text, 'private_equity'::character varying::text, 'real_estate'::character varying::text, 'stock'::character varying::text])", name: "chk_securities_asset_sub_class"
     t.check_constraint "classification_source::text = ANY (ARRAY['provider'::character varying::text, 'manual'::character varying::text, 'ai'::character varying::text, 'default'::character varying::text])", name: "chk_securities_classification_source"
     t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
+  end
+
+  create_table "security_constituents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name"
+    t.uuid "security_id", null: false
+    t.string "ticker", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "weight", precision: 9, scale: 6
+    t.index ["security_id", "ticker"], name: "index_security_constituents_on_security_id_and_ticker", unique: true
+    t.index ["security_id"], name: "index_security_constituents_on_security_id"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3104,6 +3116,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
   add_foreign_key "rule_conditions", "rules"
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
+  add_foreign_key "security_constituents", "securities"
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify
