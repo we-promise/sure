@@ -6,7 +6,10 @@ import '../services/chat_service.dart';
 import '../services/log_service.dart';
 
 class ChatProvider with ChangeNotifier {
-  final ChatService _chatService = ChatService();
+  ChatProvider({ChatService? chatService})
+      : _chatService = chatService ?? ChatService();
+
+  final ChatService _chatService;
   final LogService _log = LogService.instance;
 
   List<Chat> _chats = [];
@@ -90,7 +93,11 @@ class ChatProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        _currentChat = result['chat'] as Chat;
+        _currentChat = await _loadRemainingPages(
+          accessToken: accessToken,
+          chatId: chatId,
+          firstPage: result,
+        );
         _errorMessage = null;
       } else {
         _errorMessage = result['error'] ?? 'Failed to fetch chat';
@@ -102,6 +109,57 @@ class ChatProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Fetches every remaining page of a chat's messages and merges them into a
+  /// single Chat. The API orders messages oldest-first and paginates them, so
+  /// [firstPage] only holds the oldest slice — without this, newer messages are
+  /// silently dropped once a conversation exceeds one page.
+  ///
+  /// Pages are appended in ascending order to preserve chronology, and messages
+  /// are de-duped by id so an overlapping or locally-injected message can't
+  /// render twice.
+  Future<Chat> _loadRemainingPages({
+    required String accessToken,
+    required String chatId,
+    required Map<String, dynamic> firstPage,
+  }) async {
+    final chat = firstPage['chat'] as Chat;
+    final pagination = firstPage['pagination'] as Map<String, dynamic>?;
+    final totalPages = (pagination?['total_pages'] as int?) ?? 1;
+
+    if (totalPages <= 1) return chat;
+
+    final allMessages = <Message>[...chat.messages];
+
+    for (var page = 2; page <= totalPages; page++) {
+      final pageResult = await _chatService.getChat(
+        accessToken: accessToken,
+        chatId: chatId,
+        page: page,
+      );
+
+      if (pageResult['success'] == true) {
+        allMessages.addAll((pageResult['chat'] as Chat).messages);
+      } else {
+        // Partial failure: keep the pages we have rather than losing the chat
+        // entirely. The user sees a truncated-but-chronological history.
+        _log.warning('ChatProvider', 'fetchChat page $page failed; stopping');
+        break;
+      }
+    }
+
+    return chat.copyWith(messages: _dedupeById(allMessages));
+  }
+
+  /// Returns the messages with duplicate ids removed, preserving first-seen order.
+  List<Message> _dedupeById(List<Message> messages) {
+    final seen = <String>{};
+    final deduped = <Message>[];
+    for (final message in messages) {
+      if (seen.add(message.id)) deduped.add(message);
+    }
+    return deduped;
   }
 
   /// Create a new chat
