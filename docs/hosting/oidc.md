@@ -53,6 +53,7 @@ OIDC_ISSUER="https://accounts.google.com"              # or your Keycloak/Authen
 OIDC_CLIENT_ID="your-oidc-client-id"
 OIDC_CLIENT_SECRET="your-oidc-client-secret"
 OIDC_REDIRECT_URI="https://yourdomain.com/auth/openid_connect/callback"
+# OIDC_TREAT_EMAIL_AS_VERIFIED="true"                    # optional, default false: see 6.7
 ```
 
 Restart the application after saving the variables.
@@ -293,6 +294,9 @@ providers:
     client_id: <%= ENV["OIDC_KEYCLOAK_CLIENT_ID"] %>
     client_secret: <%= ENV["OIDC_KEYCLOAK_CLIENT_SECRET"] %>
     redirect_uri: <%= ENV["OIDC_KEYCLOAK_REDIRECT_URI"] %>
+    # Optional: skip the email_verified check for this provider (see 6.7)
+    settings:
+      treat_email_as_verified: <%= ENV.fetch("OIDC_KEYCLOAK_TREAT_EMAIL_AS_VERIFIED", "false") %>
 
   # Second OIDC provider (e.g., Authentik)
   - id: "authentik"
@@ -464,13 +468,13 @@ JIT account creation and redeeming a pending invitation by email both trust the 
 | GitHub | The returned email is marked verified in the account's email list. |
 | SAML 2.0 | Always: SAML has no standard verification attribute, so the email the admin-configured IdP asserts is trusted. |
 
-A missing claim counts as **unverified**. Unverified users can still link an existing Sure account by entering that account's password, and token-based invitation links keep working. Blocked attempts are written to the audit log as `jit_blocked` with reason `email_not_verified`.
+A missing claim counts as **unverified**. Unverified users can still link an existing Sure account by entering that account's password, and token-based invitation links keep working. A sign-in that would have been offered account creation or an invitation, but whose email the IdP did not verify, is written to the audit log as `jit_blocked` with reason `email_not_verified` (a sign-in whose email already belongs to an account is not, since it can still link that account).
 
 **Microsoft Entra ID** does not send `email_verified` by default. Either add the optional `xms_edov` claim to the ID token in the app registration (Token configuration → Add optional claim), or use the opt-in below.
 
-**Treat emails from this provider as verified** (provider form at `/admin/sso_providers`, off by default) skips the check for one provider. Only turn it on for an IdP where users cannot set or change their own email address, such as a company directory you manage. On an IdP with self-service sign-up or editable emails, anyone could claim another person's invitation or pass `ALLOWED_OIDC_DOMAINS`. This setting is only available for database-backed providers.
+**Treat emails from this provider as verified** (provider form at `/admin/sso_providers`, off by default) skips the check for one provider. Only turn it on for an IdP where users cannot set or change their own email address, such as a company directory you manage. On an IdP with self-service sign-up or editable emails, anyone could claim another person's invitation or pass `ALLOWED_OIDC_DOMAINS`. For database-backed providers it is a toggle in the provider form. For YAML providers set `settings.treat_email_as_verified` on the provider entry; the default `oidc` entry reads it from `OIDC_TREAT_EMAIL_AS_VERIFIED` (`true` to enable, default `false`).
 
-> **Upgrading:** after this change, JIT sign-ups through an IdP that never sends `email_verified` (or `xms_edov`) stop with a message telling the user their email was not confirmed. Check `SsoAuditLog.by_event("jit_blocked")` and either configure the claim in the IdP or enable the opt-in for that provider.
+> **Upgrading:** after this change, JIT sign-ups through an IdP that never sends `email_verified` (or `xms_edov`) stop with a message telling the user their email was not confirmed. Pending invitations are affected the same way: invited users whose email is unverified can no longer accept through SSO until the claim is configured. Check `SsoAuditLog.by_event("jit_blocked")` and either configure the claim in the IdP or enable the opt-in for that provider (the provider form, or `OIDC_TREAT_EMAIL_AS_VERIFIED=true` for the default YAML provider).
 
 ---
 

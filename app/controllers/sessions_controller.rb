@@ -340,11 +340,13 @@ class SessionsController < ApplicationController
 
       # No existing OIDC identity - need to link to account
       # Store auth data in session and redirect to linking page
+      email_verified = SsoEmailVerification.verified?(auth)
+      log_unverified_jit_block(auth, email_verified)
       session[:pending_oidc_auth] = {
         provider: auth.provider,
         uid: auth.uid,
         email: auth.info&.email,
-        email_verified: SsoEmailVerification.verified?(auth),
+        email_verified: email_verified,
         name: auth.info&.name,
         first_name: auth.info&.first_name,
         last_name: auth.info&.last_name
@@ -491,6 +493,7 @@ class SessionsController < ApplicationController
       # JIT creation and invitation redemption trust the IdP's email, so they
       # require it to be verified. Linking an existing account does not.
       email_verified = SsoEmailVerification.verified?(auth)
+      log_unverified_jit_block(auth, email_verified)
 
       has_pending_invitation = email_verified && Invitation.pending.exists?(email: email)
       allow_creation = email_verified &&
@@ -523,6 +526,19 @@ class SessionsController < ApplicationController
         allow_account_creation: allow_creation,
         has_pending_invitation: has_pending_invitation
       )
+    end
+
+    # Record a sign-in that would have been offered account creation or an
+    # invitation if the IdP had verified the email. Users who already have an
+    # account can still link it, so they are not a blocked attempt.
+    def log_unverified_jit_block(auth, email_verified)
+      email = auth.info&.email
+      return if email.blank? || email_verified
+      return if User.exists?(email: email)
+      return unless Invitation.pending.exists?(email: email) ||
+        (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email))
+
+      SsoAuditLog.log_jit_blocked!(provider: auth.provider, request: request, reason: "email_not_verified")
     end
 
     def mobile_sso_redirect(params = {})

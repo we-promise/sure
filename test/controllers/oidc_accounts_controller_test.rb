@@ -179,6 +179,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_response :success
     assert_select "p", text: /Create New Account/
     assert_select "strong", text: new_user_auth["email"]
+    assert_select "div.bg-warning\\/10", count: 0
   end
 
   test "does not show create account button when JIT link-only mode" do
@@ -193,7 +194,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_select "p", text: /Create New Account/
     # No create account button rendered
     assert_select "button", text: "Create Account", count: 0
-    assert_select "p", text: /New account creation via single sign-on is disabled/
+    assert_select "div.bg-warning\\/10 p", text: /New account creation via single sign-on is disabled/
   end
 
   test "create_user redirects when JIT link-only mode" do
@@ -518,7 +519,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_response :success
     assert_select "form[action='#{create_user_oidc_account_path}']", count: 0
     assert_select "button", text: I18n.t("oidc_accounts.link.submit_accept_invitation"), count: 0
-    assert_select "p", text: I18n.t("oidc_accounts.link.email_not_verified")
+    assert_select "div.bg-warning\\/10 p", text: I18n.t("oidc_accounts.link.email_not_verified")
   end
 
   test "create_link still links an existing account when the email is unverified" do

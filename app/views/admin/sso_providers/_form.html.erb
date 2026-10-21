@@ -57,10 +57,10 @@
 
     <div class="flex items-center justify-between">
       <div class="space-y-1">
-        <p class="text-sm font-medium text-primary"><%= t("admin.sso_providers.form.enabled_label") %></p>
-        <p class="text-xs text-secondary"><%= t("admin.sso_providers.form.enabled_help") %></p>
+        <p id="sso_provider_enabled_label" class="text-sm font-medium text-primary"><%= t("admin.sso_providers.form.enabled_label") %></p>
+        <p id="sso_provider_enabled_help" class="text-xs text-secondary"><%= t("admin.sso_providers.form.enabled_help") %></p>
       </div>
-      <%= form.toggle :enabled %>
+      <%= form.toggle :enabled, aria: { labelledby: "sso_provider_enabled_label", describedby: "sso_provider_enabled_help" } %>
     </div>
   </div>
 
@@ -208,13 +208,17 @@
 
     <div class="flex items-center justify-between gap-4">
       <div class="space-y-1">
-        <p class="text-sm font-medium text-primary"><%= t("admin.sso_providers.form.treat_email_as_verified_label") %></p>
-        <p class="text-xs text-secondary"><%= t("admin.sso_providers.form.treat_email_as_verified_help") %></p>
+        <p id="sso_provider_treat_email_as_verified_label" class="text-sm font-medium text-primary"><%= t("admin.sso_providers.form.treat_email_as_verified_label") %></p>
+        <p id="sso_provider_treat_email_as_verified_help" class="text-xs text-secondary"><%= t("admin.sso_providers.form.treat_email_as_verified_help") %></p>
       </div>
       <%= render DS::Toggle.new(
             id: "sso_provider_settings_treat_email_as_verified",
             name: "sso_provider[settings][treat_email_as_verified]",
-            checked: ActiveModel::Type::Boolean.new.cast(sso_provider.settings&.dig("treat_email_as_verified")) || false
+            checked: ActiveModel::Type::Boolean.new.cast(sso_provider.settings&.dig("treat_email_as_verified")) || false,
+            aria: {
+              labelledby: "sso_provider_treat_email_as_verified_label",
+              describedby: "sso_provider_treat_email_as_verified_help"
+            }
           ) %>
     </div>
 

@@ -8,6 +8,8 @@ class SsoEmailVerificationTest < ActiveSupport::TestCase
       { name: "github", strategy: "github" },
       { name: "corp_saml", strategy: "saml" },
       { name: "corp_oidc", strategy: "openid_connect", settings: { "treat_email_as_verified" => "1" } },
+      { name: "yaml_oidc", strategy: "openid_connect", settings: { treat_email_as_verified: true } },
+      { name: "yaml_off_oidc", strategy: "openid_connect", settings: { treat_email_as_verified: false } },
       { name: "off_oidc", strategy: "openid_connect", settings: { "treat_email_as_verified" => "0" } },
       { name: "entra", strategy: "openid_connect", issuer: "https://login.microsoftonline.com/tenant-id/v2.0" },
       { name: "other_oidc", strategy: "openid_connect", issuer: "https://idp.example.com" }
@@ -80,6 +82,11 @@ class SsoEmailVerificationTest < ActiveSupport::TestCase
     assert SsoEmailVerification.verified?(auth(provider: "corp_oidc"))
     assert_not SsoEmailVerification.verified?(auth(provider: "off_oidc"))
     assert_not SsoEmailVerification.verified?(auth(provider: "corp_oidc", email: nil))
+  end
+
+  test "reads the opt-in from YAML settings as a boolean" do
+    assert SsoEmailVerification.verified?(auth(provider: "yaml_oidc"))
+    assert_not SsoEmailVerification.verified?(auth(provider: "yaml_off_oidc"))
   end
 
   test "trusts the email a SAML IdP asserts" do
