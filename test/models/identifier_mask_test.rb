@@ -71,7 +71,7 @@ class IdentifierMaskTest < ActiveSupport::TestCase
     masked = IdentifierMask.mask_identifiers({
       "counter_account" => { "accountId" => "12-3456-7890123-00" },
       "iban" => { "full" => "DE89370400440532013000" }, # pipelock:ignore IBAN
-      "card_number" => { "details" => { "number" => "4111111111111111", "brand" => "visa" } },
+      "card_number" => { "details" => { "number" => "4111111111111111", "brand" => "visa" } }, # pipelock:ignore Credit Card Number
       "other_account" => [ { "name" => "Jane Doe", "number" => "1234567890" } ]
     })
 
