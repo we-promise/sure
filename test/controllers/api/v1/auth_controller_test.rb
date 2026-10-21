@@ -1112,7 +1112,9 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
     assert_match "did not confirm your email", JSON.parse(response.body)["error"]
     assert_nil invitation.reload.accepted_at
-    assert_equal "email_not_verified", SsoAuditLog.by_event("jit_blocked").recent.first.metadata["reason"]
+    log = SsoAuditLog.by_event("jit_blocked").recent.first
+    assert_equal "email_not_verified", log.metadata["reason"]
+    assert_not_includes log.metadata.keys, "email"
   end
 
   test "should reject SSO create account with expired linking code" do

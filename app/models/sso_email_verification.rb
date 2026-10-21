@@ -10,6 +10,15 @@
 module SsoEmailVerification
   module_function
 
+  # Issuer hosts of Microsoft Entra ID (public, US government and China clouds,
+  # and the legacy v1 token issuer). Only these may vouch with xms_edov.
+  ENTRA_ISSUER_HOSTS = %w[
+    login.microsoftonline.com
+    login.microsoftonline.us
+    login.partner.microsoftonline.cn
+    sts.windows.net
+  ].freeze
+
   def verified?(auth)
     return false if auth.nil? || auth.info&.email.blank?
 
@@ -31,13 +40,28 @@ module SsoEmailVerification
       # (email domain owner verified) instead.
       claim = auth.info&.email_verified
       claim = raw_info_value(auth, "email_verified") if claim.nil?
-      claim = raw_info_value(auth, "xms_edov") if claim.nil?
+      claim = raw_info_value(auth, "xms_edov") if claim.nil? && entra_issuer?(config)
       true_claim?(claim)
     end
   end
 
   def provider_config_for(provider)
-    Rails.configuration.x.auth.sso_providers&.find { |p| p[:name].to_s == provider.to_s }
+    # Database-backed providers can be edited at runtime, so read the live
+    # configuration rather than the list built when the process booted.
+    providers = if ProviderLoader.use_database_providers?
+      ProviderLoader.load_providers.map(&:deep_symbolize_keys)
+    else
+      Rails.configuration.x.auth.sso_providers
+    end
+
+    providers&.find { |p| (p[:name] || p[:id]).to_s == provider.to_s }
+  end
+
+  def entra_issuer?(config)
+    host = URI.parse(config&.dig(:issuer).to_s).host
+    ENTRA_ISSUER_HOSTS.include?(host&.downcase)
+  rescue URI::InvalidURIError
+    false
   end
 
   def treat_email_as_verified?(config)

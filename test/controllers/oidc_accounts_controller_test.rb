@@ -501,6 +501,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal I18n.t("oidc_accounts.create_user.email_not_verified"), flash[:alert]
     log = SsoAuditLog.by_event("jit_blocked").recent.first
     assert_equal "email_not_verified", log.metadata["reason"]
+    assert_not_includes log.metadata.keys, "email"
   end
 
   test "link offers neither account creation nor the invitation for an unverified email" do

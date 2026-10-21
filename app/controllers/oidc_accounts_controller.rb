@@ -118,8 +118,7 @@ class OidcAccountsController < ApplicationController
       SsoAuditLog.log_jit_blocked!(
         provider: @pending_auth["provider"],
         request: request,
-        reason: "email_not_verified",
-        metadata: { email: email }
+        reason: "email_not_verified"
       )
       redirect_to new_session_path, alert: t(".email_not_verified")
       return

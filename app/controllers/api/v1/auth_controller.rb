@@ -259,7 +259,7 @@ module Api
             provider: cached[:provider],
             request: request,
             reason: "email_not_verified",
-            metadata: { email: email, client: "mobile" }
+            metadata: { client: "mobile" }
           )
           render json: { error: "Your identity provider did not confirm your email address, so no account can be created. Please contact an administrator." }, status: :forbidden
           return

@@ -460,7 +460,7 @@ JIT account creation and redeeming a pending invitation by email both trust the 
 
 | Strategy | Counts as verified |
 |---|---|
-| OpenID Connect, Google | `email_verified` claim is `true` (or `"true"`). If the claim is missing, Sure also accepts Microsoft Entra ID's optional `xms_edov` claim (email domain owner verified). |
+| OpenID Connect, Google | `email_verified` claim is `true` (or `"true"`). If the claim is missing, Sure also accepts Microsoft Entra ID's optional `xms_edov` claim (email domain owner verified), but only from a provider whose issuer is a Microsoft Entra ID endpoint (`login.microsoftonline.com`, `login.microsoftonline.us`, `login.partner.microsoftonline.cn` or `sts.windows.net`). |
 | GitHub | The returned email is marked verified in the account's email list. |
 | SAML 2.0 | Always: SAML has no standard verification attribute, so the email the admin-configured IdP asserts is trusted. |
 
