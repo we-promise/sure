@@ -16,7 +16,7 @@ class Provider::Anthropic::BillSetupSuggester
   end
 
   def suggest
-    span = langfuse_trace&.span(name: "suggest_bill_setup_api_call", input: {
+    span = langfuse_trace&.generation(name: "suggest_bill_setup_api_call", model: model, input: {
       model: model,
       charges: charges,
       configure_mode: current_config.present?
@@ -25,10 +25,10 @@ class Provider::Anthropic::BillSetupSuggester
     response = client.messages.create(
       model: model,
       max_tokens: max_tokens,
-      system_: instructions,
+      system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),
       messages: [ { role: "user", content: user_message } ],
       tools: [ output_tool ],
-      tool_choice: { type: "tool", name: TOOL_NAME, disable_parallel_tool_use: true }
+      tool_choice: Provider::Anthropic.structured_output_tool_choice(model, TOOL_NAME)
     )
 
     result = build_suggestion(extract_input(response))
@@ -128,7 +128,7 @@ class Provider::Anthropic::BillSetupSuggester
 
     def extract_input(response)
       tool_use = Array(response.content).find { |block| block_type(block) == :tool_use }
-      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME}" unless tool_use
+      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME} (stop_reason: #{response.stop_reason})" unless tool_use
 
       input = block_input(tool_use)
       input = JSON.parse(input) if input.is_a?(String)
@@ -165,14 +165,5 @@ class Provider::Anthropic::BillSetupSuggester
 
     def block_input(block)
       block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
-    end
-
-    def usage_hash(raw_usage)
-      return {} unless raw_usage
-      {
-        "input_tokens" => raw_usage.input_tokens.to_i,
-        "output_tokens" => raw_usage.output_tokens.to_i,
-        "total_tokens" => raw_usage.input_tokens.to_i + raw_usage.output_tokens.to_i
-      }
     end
 end

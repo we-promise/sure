@@ -1394,4 +1394,39 @@ class UserTest < ActiveSupport::TestCase
     @user.password_confirmation = "newpassword123"
     assert @user.valid?
   end
+
+  test "update_manual_account_order keeps other groups and only accessible accounts" do
+    @user.update_manual_account_order("credit_card", [ accounts(:credit_card).id ])
+    foreign = families(:empty).accounts.create!(name: "Foreign", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:empty))
+
+    assert @user.update_manual_account_order("depository", [ accounts(:connected).id, foreign.id, accounts(:depository).id, "not-a-uuid" ])
+
+    order = @user.reload.manual_account_order
+    assert_equal [ accounts(:connected).id, accounts(:depository).id ], order["depository"]
+    assert_equal [ accounts(:credit_card).id ], order["credit_card"]
+  end
+
+  test "update_manual_account_order drops family accounts not shared with the user" do
+    unshared = families(:dylan_family).accounts.create!(name: "Unshared", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:family_member))
+
+    assert @user.update_manual_account_order("depository", [ unshared.id, accounts(:depository).id ])
+
+    assert_equal [ accounts(:depository).id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "update_manual_account_order drops accounts from another group" do
+    @user.update_manual_account_order("depository", [ accounts(:credit_card).id, accounts(:depository).id ])
+
+    assert_equal [ accounts(:depository).id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "update_manual_account_order rejects account ids that are not a list" do
+    assert_not @user.update_manual_account_order("depository", { "0" => accounts(:depository).id })
+    assert_equal({}, @user.reload.manual_account_order)
+  end
+
+  test "update_manual_account_order rejects unknown groups" do
+    assert_not @user.update_manual_account_order("transactions", [ accounts(:depository).id ])
+    assert_equal({}, @user.reload.manual_account_order)
+  end
 end

@@ -37,7 +37,7 @@ Background jobs that classify transactions and detect merchants. These use the L
 
 If you use an external agent for chat, you still need an LLM provider configured (`OPENAI_ACCESS_TOKEN` or `ANTHROPIC_API_KEY`) for auto-categorization and merchant detection to work. The two systems are fully independent.
 
-With `mcp_only`, Sure also skips the features that need a user's AI consent: the LLM-written insight text and the bills AI shortcuts (review, smart fill, smart configuration).
+With `mcp_only`, Sure also skips the features that need a user's AI consent: the bills AI shortcuts (review, smart fill, smart configuration). Insights never use AI: their text comes from templates.
 
 ### Where AI jobs run (Sidekiq lanes)
 
@@ -46,10 +46,10 @@ AI work runs in the Sidekiq `worker`, in its own capsule ("lane"), so a slow mod
 | Lane | Queues | Threads | Jobs |
 |------|--------|---------|------|
 | default | `scheduled`, `high_priority`, `medium_priority`, `low_priority`, `default` | `RAILS_MAX_THREADS - RAILS_AI_MAX_THREADS` (3 - 1 = 2) | syncs, balances, rules, imports, scheduled jobs |
-| ai | `ai_high_priority`, then `ai_low_priority` (strict order) | `RAILS_AI_MAX_THREADS` (default `1`) | chat (`ai_high_priority`); auto-categorization, merchant detection and enhancement, PDF processing, insights (`ai_low_priority`) |
+| ai | `ai_high_priority`, then `ai_low_priority` (strict order) | `RAILS_AI_MAX_THREADS` (default `1`) | chat (`ai_high_priority`); auto-categorization, merchant detection and enhancement, PDF processing (`ai_low_priority`) |
 
 - `RAILS_MAX_THREADS` is the worker's total thread count, as before, and also sizes its database pool. It must be greater than `RAILS_AI_MAX_THREADS` (so at least `2` by default): a lane with 0 threads stops the worker from starting ("Concurrency of 0 is not supported"). Puma reads the same variable, so if you lower it for the web service to save memory, set the worker's separately.
-- **Strict order:** a waiting chat runs next, but it doesn't interrupt the AI job already running. Auto-categorization, merchant-detection and merchant-enhancement jobs make one LLM call each, of `LLM_MAX_ITEMS_PER_CALL` items (default `25`), or more if the batch doesn't fit the context window; PDF import, insight and chat jobs can make several. With one AI thread, a PDF import or other `ai_low_priority` job waits behind earlier ones, and continuous chat use pauses background AI work.
+- **Strict order:** a waiting chat runs next, but it doesn't interrupt the AI job already running. Auto-categorization, merchant-detection and merchant-enhancement jobs make one LLM call each, of `LLM_MAX_ITEMS_PER_CALL` items (default `25`), or more if the batch doesn't fit the context window; PDF import and chat jobs can make several. With one AI thread, a PDF import or other `ai_low_priority` job waits behind earlier ones, and continuous chat use pauses background AI work.
 - **Busy notice:** when a chat would wait behind another AI job (a chat has waited over 30 seconds, or, with one AI thread, background AI work has), its "Thinking" bubble says the system is busy until the chat's job starts. `AI_RESPONSE_TIMEOUT` includes that wait.
 - **One AI thread suits a model that serves one request at a time,** such as a local model on CPU: a chat turn's calls then run back to back, keeping the model's prompt cache warm. If your provider serves requests in parallel (hosted APIs, or a local server with several slots), raise `RAILS_AI_MAX_THREADS`, and `RAILS_MAX_THREADS` by the same amount so the default lane keeps its threads.
 - **The worker must load `config/sidekiq.yml`,** as `bundle exec sidekiq` does by default. A worker started with its own queue list (`sidekiq -q …`, a custom Helm `worker.command`) doesn't get the AI lane. If no worker polls `ai_high_priority` and `ai_low_priority`, **System health** (`/admin/system_health`) and the site-wide banner report "No worker is processing the AI queues", and the chat page warns that responses may not be delivered. Keep `-C config/sidekiq.yml`; adding `-q ai_high_priority -q ai_low_priority` also works, but AI jobs then share that worker's threads.
@@ -188,7 +188,7 @@ Or in the UI: **Settings** → **Self-Hosting** → **AI Provider** → **Anthro
 |----------|---------|--------------|
 | `LLM_PROVIDER` | `openai` | `anthropic` selects this provider. If the selected provider has no key, Sure uses the other one. While a custom OpenAI-compatible provider is configured (`OPENAI_URI_BASE` with an access token and model), chat still goes to it, so remove those settings when switching. |
 | `ANTHROPIC_API_KEY` | — | API key. `ANTHROPIC_ACCESS_TOKEN` also works and wins if both are set. |
-| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for chat and all background jobs. Must start with `claude` unless a base URL is set. Claude Opus 5.5, Sonnet 5.5 and Fable 5.1 work for chat only until [#4125](https://github.com/we-promise/sure/issues/4125) is fixed. |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for chat and all background jobs. Must start with `claude` unless a base URL is set. |
 | `ANTHROPIC_MAX_TOKENS` | `4096` | Reply limit, sent with every request (the Messages API requires one). |
 | `ANTHROPIC_REQUEST_TIMEOUT` | `600` | HTTP timeout per call, in seconds. |
 | `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Anthropic-compatible endpoint. Requires `ANTHROPIC_MODEL`. |
@@ -199,7 +199,7 @@ How it differs from the OpenAI-compatible provider:
   - **Every provider:** below `4096`, the chat's system prompt lists accounts and categories only as counts, and the model fetches them with tools.
   - **OpenAI-compatible:** it is also the budget, with `LLM_MAX_RESPONSE_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE`, for splitting auto-categorization and merchant batches, and for trimming chat history on Chat Completions endpoints (`LLM_MAX_HISTORY_TOKENS`). The native OpenAI Responses API keeps history on OpenAI's side, so nothing is trimmed there.
   - **Native Anthropic:** only the system-prompt check applies. History is sent whole, batches aren't split, and `LLM_MAX_RESPONSE_TOKENS`, `LLM_MAX_HISTORY_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE` are ignored. Set `LLM_CONTEXT_WINDOW` by env (e.g. `200000`) so the prompt lists accounts and categories; its UI field is in the OpenAI panel.
-- **The reply limit is always sent.** A reply that needs more than `ANTHROPIC_MAX_TOKENS` is cut off. Only bank statement extraction detects this (it logs a warning). Raise the limit if long answers or batch results come back incomplete.
+- **The reply limit is always sent.** A reply that needs more than `ANTHROPIC_MAX_TOKENS` is cut off, and on Claude 5 models the model's thinking counts toward it. Only bank statement extraction detects this (it logs a warning). Raise the limit if long answers or batch results come back incomplete.
 - **Batch size.** Auto-categorization, merchant detection and merchant enhancement send `LLM_MAX_ITEMS_PER_CALL` items per request (default `25`), with no splitting to fit the context window. Raise `ANTHROPIC_MAX_TOKENS` along with it, or replies are cut off (see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes)).
 - **Its own timeout.** `ANTHROPIC_REQUEST_TIMEOUT` replaces `OPENAI_REQUEST_TIMEOUT`. `AI_RESPONSE_TIMEOUT` still covers the whole chat turn. `OPENAI_EXTRA_HEADERS`, `LLM_JSON_MODE` and `OPENAI_SUPPORTS_*` don't apply.
 
@@ -1029,6 +1029,8 @@ Langfuse helps you:
    ```
 
 4. Restart Sure
+
+Sure sends completed observations through Langfuse's v4 OpenTelemetry ingestion path. Existing keys and host settings still apply. See the [Langfuse migration and validation notes](langfuse.md#langfuse-v4) before upgrading an existing project.
 
 All LLM operations will now be logged to Langfuse, including:
 - Chat messages and responses
