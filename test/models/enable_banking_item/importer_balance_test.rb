@@ -707,6 +707,24 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal "last_committed_transaction", DebugLogEntry.order(:created_at).last.metadata["stage"]
   end
 
+  test "a booking reference reused with different dates does not decide the tie" do
+    link_account(CreditCard.create!)
+    @enable_banking_account.update!(raw_transactions_payload: [
+      booked_tx("ref-a", 3.days.ago.to_date, "10.00"),
+      booked_tx("ref-b", 1.day.ago.to_date, "20.00"),
+      booked_tx("ref-a", Date.current, "30.00")
+    ])
+    stub_balances(
+      clbd("80.00", last_committed_transaction: "ref-b"),
+      clbd("100.00", last_committed_transaction: "ref-a")
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("80.00"), @enable_banking_account.reload.current_balance
+    assert_equal "first", DebugLogEntry.order(:created_at).last.metadata["stage"]
+  end
+
   test "duplicate balances pointing to the same booking fall through to later stages" do
     link_account(Depository.create!)
     @enable_banking_account.update!(raw_transactions_payload: [ booked_tx("ref-1", 1.day.ago.to_date, "10.00") ])
@@ -1062,6 +1080,18 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
 
     stub_balances(clbd("5800.00"), clbd("1200.00"))
     assert_difference -> { DebugLogEntry.count }, 1 do
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+    end
+  end
+
+  test "the same tie reported in a different order is not logged again" do
+    link_account(Depository.create!)
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      stub_balances(clbd("5834.56"), clbd("1234.56"))
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+      stub_balances(clbd("1234.56"), clbd("5834.56"))
       assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
     end
   end

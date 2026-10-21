@@ -466,14 +466,18 @@ class EnableBankingItem::Importer
       references = candidates.map { |balance| balance[:last_committed_transaction].presence }
       return nil if references.any?(&:nil?) || references.uniq.size != references.size
 
+      # A reference reused with different dates cannot say which booking is
+      # newer, and this stage counts as verified, so such a reference abstains.
       booking_dates = booked.each_with_object({}) do |tx, dates|
         reference = tx[:entry_reference].presence
         date = raw_transaction_date(tx)
-        dates[reference] = date if reference && date
+        (dates[reference] ||= Set.new) << date if reference && date
       end
 
-      dated = candidates.zip(references.map { |reference| booking_dates[reference] })
-      return nil if dated.any? { |_, date| date.nil? }
+      dates = references.map { |reference| booking_dates[reference] }
+      return nil unless dates.all? { |reference_dates| reference_dates&.one? }
+
+      dated = candidates.zip(dates.map(&:first))
 
       latest = dated.map(&:last).max
       newest = dated.select { |_, date| date == latest }
@@ -591,9 +595,11 @@ class EnableBankingItem::Importer
 
     # Banks that always report the duplicate would otherwise add the same warning
     # on every sync; log again only when the candidates or the outcome change.
+    # Amounts, not positions, so a bank reordering the same entries stays quiet.
     def capture_balance_tiebreak_debug_log(enable_banking_account, candidates, chosen, stage)
+      amount_key = ->(balance) { signed_balance_amount(balance)&.to_s("F").to_s }
       fingerprint = Digest::SHA256.hexdigest(
-        [ stage, candidates.index(chosen), candidates.map { |balance| signed_balance_amount(balance)&.to_s("F") } ].to_json
+        [ stage, amount_key.call(chosen), candidates.map(&amount_key).sort ].to_json
       )
       return if last_balance_tiebreak_fingerprint(enable_banking_account) == fingerprint
 
