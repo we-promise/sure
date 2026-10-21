@@ -1015,7 +1015,7 @@
   "cashFlowSavingsRate": "{rate} savings rate",
   "@cashFlowSavingsRate": {
     "description": "Savings rate shown under net savings, e.g. '18.2% savings rate'.",
-    "placeholders": { "rate": {"type": "String", "example": "18.2%"} }
+    "placeholders": { "rate": { "type": "String", "example": "18.2%" } }
   },
 
   "cashFlowExpensesByCategory": "Expenses by category",
@@ -1027,13 +1027,13 @@
   "cashFlowShareOfExpenses": "{percent} of expenses",
   "@cashFlowShareOfExpenses": {
     "description": "Category row subtitle with its share of total expenses.",
-    "placeholders": { "percent": {"type": "String", "example": "24.5%"} }
+    "placeholders": { "percent": { "type": "String", "example": "24.5%" } }
   },
 
   "cashFlowShareOfIncome": "{percent} of income",
   "@cashFlowShareOfIncome": {
     "description": "Category row subtitle with its share of total income.",
-    "placeholders": { "percent": {"type": "String", "example": "80%"} }
+    "placeholders": { "percent": { "type": "String", "example": "80%" } }
   },
 
   "cashFlowEmpty": "No income or expenses in this period",
