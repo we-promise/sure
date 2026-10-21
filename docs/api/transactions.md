@@ -150,6 +150,8 @@ Only uncategorized transactions on accounts the key's user may annotate are queu
 
 A `202` means the jobs were queued, not that categories were assigned. A job can fail, or the provider can find no match above the confidence threshold, so a queued transaction may stay uncategorized. Read the results back with `GET /api/v1/transactions/{id}` once the jobs have run.
 
+If the job queue refuses a batch, the response is `503` with `queued_count`, `transaction_ids` (the ones that were queued) and `unqueued_transaction_ids`; retry to queue the rest.
+
 ## Transfer transactions
 
 If a transaction is part of a transfer between accounts, the `transfer` field will be populated with details about the linked transaction:
