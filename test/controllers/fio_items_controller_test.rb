@@ -250,4 +250,15 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     selected_option = css_select("select[name='account_type'] option[selected='selected']").first
     assert_equal "Depository", selected_option["value"]
   end
+
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    FioItem.any_instance.stubs(:credentials_configured?).returns(false)
+
+    get select_accounts_fio_items_url, params: { fio_item_id: @fio_item.id }, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("fio_items.select_accounts.no_credentials_configured"), flash[:alert]
+  end
 end

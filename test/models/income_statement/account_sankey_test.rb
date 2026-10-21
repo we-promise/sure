@@ -47,6 +47,19 @@ class IncomeStatement::AccountSankeyTest < ActiveSupport::TestCase
     assert_balanced result
   end
 
+  test "money invested leaves each account for Invested when investing is not spending" do
+    @family.update!(investment_contributions_as_spending: false)
+    transaction(@checking, -1000, @salary)
+    transaction(@checking, 200, @shopping)
+    create_transaction(account: @checking, amount: 300, category: nil, date: @month, kind: "investment_contribution")
+    result = graph
+
+    assert_equal "300.0", result[:invested]
+    assert_link result, "account_#{@checking.id}", "invested_node", "300.0"
+    assert_link result, "account_#{@checking.id}", "surplus_node", "500.0"
+    assert_balanced result
+  end
+
   test "accounts without income or spending are left out, and an empty period is empty" do
     transaction(@checking, 50, @shopping)
     assert_nil node(graph, "account_#{@card.id}")

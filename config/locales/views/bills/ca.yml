@@ -230,12 +230,8 @@ ca:
       no_matches_title: Cap resultat
       no_matches_description: Prova de treure un filtre o la cerca.
       col_name: Nom
-      col_type: Tipus
-      col_frequency: Freqüència
       col_amount: Import
       col_next: Proper venciment
-      next_short: 'proper: %{date}'
-      col_status: Estat
       col_actions: Accions
       monthly_equivalent: '%{amount}/mes'
       types:

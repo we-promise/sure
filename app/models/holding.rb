@@ -41,6 +41,13 @@ class Holding < ApplicationRecord
     account.balance.zero? ? 1 : amount_in_account_currency / account.balance * 100
   end
 
+  # The stored per-share cost when it is a real value:
+  # - If locked (user-set), trust the value even if 0 (valid for airdrops)
+  # - Otherwise require positive since providers sometimes return 0 when unknown
+  def known_cost_basis
+    cost_basis if cost_basis.present? && (cost_basis_locked? || cost_basis.positive?)
+  end
+
   # Returns average cost per share, or nil if unknown.
   #
   # Uses pre-computed cost_basis if available (set during materialization),
@@ -51,16 +58,11 @@ class Holding < ApplicationRecord
     stored_avg_cost || calculate_avg_cost
   end
 
-  # The stored cost_basis as average cost per share, or nil when there is none
-  # to trust. Never queries, so a caller with a better fallback than replaying
+  # known_cost_basis as average cost per share, or nil when there is none to
+  # trust. Never queries, so a caller with a better fallback than replaying
   # through this holding's date (Trade#realized_gain_loss) can skip that replay.
-  #
-  # - If locked (user-set), trust the value even if 0 (valid for airdrops)
-  # - Otherwise require positive since providers sometimes return 0 when unknown
   def stored_avg_cost
-    return nil if cost_basis.nil?
-
-    Money.new(cost_basis, currency) if cost_basis_locked? || cost_basis.positive?
+    Money.new(known_cost_basis, currency) if known_cost_basis
   end
 
   # The weighted-average cost of the position immediately before `entry`,
