@@ -117,6 +117,70 @@ and change it to `true`
 RAILS_ASSUME_SSL: "true"
 ```
 
+#### Sending email (SMTP)
+
+Sure sends email, such as password resets and rule notifications, through an SMTP server that you provide. Email is sent by the background worker (the `worker` service), not by `web`, so the worker must have these settings.
+
+| Variable | What it does | Default when not set |
+|----------|--------------|----------------------|
+| `SMTP_ADDRESS` | Host name of your SMTP server, for example `smtp.example.com`. | None. Required to send email. |
+| `SMTP_PORT` | Port of your SMTP server. | `25` |
+| `SMTP_USERNAME` | User name for logging in to the SMTP server. | None (no login) |
+| `SMTP_PASSWORD` | Password for logging in to the SMTP server. | None |
+| `SMTP_TLS_ENABLED` | `true` uses TLS from the start of the connection (SMTPS, usually port 465). Any other value connects in plain text and switches to TLS with STARTTLS when the server offers it (usually port 587). | Off |
+| `SMTP_TLS_SKIP_VERIFY` | `true` turns off verification of the SMTP server's certificate. | Off (the certificate is verified) |
+| `SSL_CA_FILE` | Path inside the container to a CA certificate (PEM) for verifying a server with a self-signed or internal certificate. The file must be mounted into the containers; see [Self-signed certificate support](oidc.md#self-signed-certificate-support). | None |
+| `EMAIL_SENDER` | Address that emails are sent from, for example `sure@example.com`. | `sender@sure.local` |
+| `APP_DOMAIN` | Host name your instance is reached at, for example `sure.example.com`. Used to build links in emails. | None |
+
+A few things to watch:
+
+- `SMTP_TLS_ENABLED` and `SMTP_TLS_SKIP_VERIFY` are on only when the value is exactly the string `true`. `True`, `1` or `yes` all count as off.
+- If `EMAIL_SENDER` is not set, email goes out from `sender@sure.local`, which many mail servers reject. Set it to an address your SMTP server is allowed to send from.
+
+**Passing the settings to the containers**
+
+Docker Compose uses `.env` to fill in the `${...}` values in `compose.yml`. It does not pass `.env` to the containers as a whole. A variable set only in `.env` does not reach the app unless `compose.yml` lists it.
+
+Both `web` and `worker` merge the shared `x-rails-env` anchor, so add the keys there once and both services get them:
+
+```yaml
+x-rails-env: &rails_env
+  # ...existing keys...
+  APP_DOMAIN: ${APP_DOMAIN}
+  EMAIL_SENDER: ${EMAIL_SENDER}
+  SMTP_ADDRESS: ${SMTP_ADDRESS}
+  SMTP_PORT: ${SMTP_PORT:-465}
+  SMTP_USERNAME: ${SMTP_USERNAME}
+  SMTP_PASSWORD: ${SMTP_PASSWORD}
+  SMTP_TLS_ENABLED: ${SMTP_TLS_ENABLED:-true}
+```
+
+Then set the values in `.env`:
+
+```txt
+APP_DOMAIN="sure.example.com"
+EMAIL_SENDER="sure@example.com"
+SMTP_ADDRESS="smtp.example.com"
+SMTP_USERNAME="replacemewithyoursmtpusername"
+SMTP_PASSWORD="replacemewithyoursmtppassword"
+```
+
+Set every key you list in the anchor. Docker Compose passes a listed key that has no value in `.env` as an empty value, not as unset. An empty `EMAIL_SENDER` replaces the `sender@sure.local` fallback with an empty address, and an empty `SMTP_USERNAME` still makes the app try to log in. If your server needs no login, leave the `SMTP_USERNAME` and `SMTP_PASSWORD` lines out of the anchor.
+
+Pull request [#2811](https://github.com/we-promise/sure/pull/2811), which is still open, would pass `.env` to both services directly. If it is merged, listing the keys in the anchor is no longer needed.
+
+**Applying changes**
+
+Run `docker compose up -d` after changing `compose.yml` or `.env`. It recreates the containers whose settings changed. `docker compose restart` keeps the old environment, so new settings do not take effect.
+
+To check what the worker sees, without printing the password:
+
+```bash
+docker compose exec worker bin/rails runner 'p ActionMailer::Base.smtp_settings.slice(:address, :port, :user_name, :tls)'
+docker compose exec worker printenv EMAIL_SENDER APP_DOMAIN
+```
+
 #### WebAuthn MFA (passkeys and security keys)
 
 If you enable passkeys, Touch ID, Windows Hello, or hardware security keys as MFA credentials, pin the WebAuthn relying party settings in your `.env` file:
