@@ -303,7 +303,7 @@ class RecurringTransaction
         hints = series.matcher_hints.deep_dup
 
         if series.merchant_id.blank? && series.name.present?
-          known = ([ series.name ] + Array(hints["name_aliases"]))
+          known = ([ series.matcher_name ] + Array(hints["name_aliases"]))
                     .map { |name| Matcher.normalize_name(name) }
 
           unless known.include?(Matcher.normalize_name(entry.name))
