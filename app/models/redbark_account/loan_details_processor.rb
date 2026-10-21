@@ -266,9 +266,9 @@ class RedbarkAccount::LoanDetailsProcessor
     def write(attrs)
       return if attrs.blank?
 
-      # Enrichable logs the DataEnrichment before it saves, and a refused save
-      # does not roll that row back. The outer transaction does, so provenance
-      # never says Redbark supplied a value the loan rejected.
+      # Enrichable rolls back its own savepoint when the save is refused, so no
+      # DataEnrichment row says Redbark supplied a value the loan rejected.
+      # This outer rollback is a second guard on the same rule.
       ActiveRecord::Base.transaction do
         loan.enrich_attributes(attrs, source: SOURCE)
         raise ActiveRecord::Rollback if loan.errors.any?

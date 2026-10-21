@@ -88,18 +88,30 @@ module Enrichable
 
     return false if enrichable_attrs.empty?
 
+    # A new record's first save isn't technically an "enrichment", so it is
+    # not logged. Captured before saving, which clears new_record?.
+    was_new = new_record?
+
     was_modified = false
-    ActiveRecord::Base.transaction do
+    # requires_new: callers such as Account::ProviderImportAdapter already hold
+    # a transaction, and without a savepoint the Rollback below would be
+    # swallowed by the outer block and undo nothing.
+    ActiveRecord::Base.transaction(requires_new: true) do
       enrichable_attrs.each do |attr, value|
         self.send("#{attr}=", value)
+      end
 
-        # If it's a new record, this isn't technically an "enrichment".  No logging necessary.
-        unless self.new_record?
+      # A refused save leaves nothing behind: no provenance rows, and no join
+      # rows a virtual setter (tag_ids=) wrote before save ran. The block
+      # swallows Rollback, so the method returns false and errors stay set.
+      raise ActiveRecord::Rollback unless save
+
+      # Provenance is logged only once the save is known to have succeeded.
+      unless was_new
+        enrichable_attrs.each do |attr, value|
           log_enrichment(attribute_name: attr, attribute_value: value, source: source, metadata: metadata)
         end
       end
-
-      save
 
       # For virtual attributes (like tag_ids), previous_changes won't track them
       # So we need to check if the value actually changed by comparing before/after
