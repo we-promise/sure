@@ -5,9 +5,20 @@ import '../models/message.dart';
 import 'api_config.dart';
 
 class ChatService {
-  ChatService({http.Client? client}) : _client = client ?? http.Client();
+  ChatService({http.Client? client})
+      : _client = client ?? http.Client(),
+        _ownsClient = client == null;
 
   final http.Client _client;
+
+  /// Whether this service created [_client] itself. Injected clients stay the
+  /// caller's responsibility and must not be closed here.
+  final bool _ownsClient;
+
+  /// Closes the underlying HTTP client, but only when this service created it.
+  void close() {
+    if (_ownsClient) _client.close();
+  }
 
   /// Get list of chats with pagination
   Future<Map<String, dynamic>> getChats({

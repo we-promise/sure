@@ -7,9 +7,14 @@ import '../services/log_service.dart';
 
 class ChatProvider with ChangeNotifier {
   ChatProvider({ChatService? chatService})
-      : _chatService = chatService ?? ChatService();
+      : _chatService = chatService ?? ChatService(),
+        _ownsChatService = chatService == null;
 
   final ChatService _chatService;
+
+  /// Whether this provider created [_chatService] itself. An injected service
+  /// is owned by the caller and must not be closed on dispose.
+  final bool _ownsChatService;
   final LogService _log = LogService.instance;
 
   List<Chat> _chats = [];
@@ -40,6 +45,12 @@ class ChatProvider with ChangeNotifier {
   bool get isWaitingForResponse => _isWaitingForResponse;
   bool get isPolling => _pollingTimer != null;
   String? get errorMessage => _errorMessage;
+
+  /// True when the current chat could not load all of its message pages, so the
+  /// rendered history is a partial, older slice. The UI can surface a
+  /// "load more"/retry affordance without treating it as a hard error.
+  bool _hasIncompleteHistory = false;
+  bool get hasIncompleteHistory => _hasIncompleteHistory;
 
   /// Fetch list of chats
   Future<void> fetchChats({
@@ -93,11 +104,13 @@ class ChatProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        _currentChat = await _loadRemainingPages(
+        final loaded = await _loadRemainingPages(
           accessToken: accessToken,
           chatId: chatId,
           firstPage: result,
         );
+        _currentChat = loaded.chat;
+        _hasIncompleteHistory = !loaded.complete;
         _errorMessage = null;
       } else {
         _errorMessage = result['error'] ?? 'Failed to fetch chat';
@@ -119,7 +132,10 @@ class ChatProvider with ChangeNotifier {
   /// Pages are appended in ascending order to preserve chronology, and messages
   /// are de-duped by id so an overlapping or locally-injected message can't
   /// render twice.
-  Future<Chat> _loadRemainingPages({
+  ///
+  /// Returns the merged chat along with [complete], which is false when one or
+  /// more later pages failed to load so callers can flag a partial history.
+  Future<({Chat chat, bool complete})> _loadRemainingPages({
     required String accessToken,
     required String chatId,
     required Map<String, dynamic> firstPage,
@@ -128,9 +144,10 @@ class ChatProvider with ChangeNotifier {
     final pagination = firstPage['pagination'] as Map<String, dynamic>?;
     final totalPages = (pagination?['total_pages'] as int?) ?? 1;
 
-    if (totalPages <= 1) return chat;
+    if (totalPages <= 1) return (chat: chat, complete: true);
 
     final allMessages = <Message>[...chat.messages];
+    var complete = true;
 
     for (var page = 2; page <= totalPages; page++) {
       final pageResult = await _chatService.getChat(
@@ -143,13 +160,15 @@ class ChatProvider with ChangeNotifier {
         allMessages.addAll((pageResult['chat'] as Chat).messages);
       } else {
         // Partial failure: keep the pages we have rather than losing the chat
-        // entirely. The user sees a truncated-but-chronological history.
+        // entirely. The user sees a truncated-but-chronological history, and
+        // [complete] lets callers surface that it's incomplete.
         _log.warning('ChatProvider', 'fetchChat page $page failed; stopping');
+        complete = false;
         break;
       }
     }
 
-    return chat.copyWith(messages: _dedupeById(allMessages));
+    return (chat: chat.copyWith(messages: _dedupeById(allMessages)), complete: complete);
   }
 
   /// Returns the messages with duplicate ids removed, preserving first-seen order.
@@ -460,7 +479,17 @@ class ChatProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        final updatedChat = result['chat'] as Chat;
+        // Load every page before comparing. A long chat spans multiple server
+        // pages, and the newest assistant reply lands on the last page — so a
+        // page-1-only poll would never see it and its count/stability checks
+        // would compare against a stale slice of the full history.
+        final loaded = await _loadRemainingPages(
+          accessToken: accessToken,
+          chatId: chatId,
+          firstPage: result,
+        );
+        final updatedChat = loaded.chat;
+        _hasIncompleteHistory = !loaded.complete;
 
         if (_currentChat == null || _currentChat!.id != chatId) return;
 
@@ -563,6 +592,7 @@ class ChatProvider with ChangeNotifier {
   @override
   void dispose() {
     _stopPolling();
+    if (_ownsChatService) _chatService.close();
     super.dispose();
   }
 }

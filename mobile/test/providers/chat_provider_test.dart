@@ -67,6 +67,7 @@ void main() {
       final messages = provider.currentChat!.messages;
       expect(requestedPages, ['1', '2']);
       expect(messages.map((m) => m.id).toList(), ['1', '2', '3', '4']);
+      expect(provider.hasIncompleteHistory, isFalse);
     });
 
     test('de-dupes messages that overlap across pages', () async {
@@ -111,6 +112,8 @@ void main() {
         provider.currentChat!.messages.map((m) => m.id).toList(),
         ['1', '2'],
       );
+      // ...and the provider flags that the history is incomplete.
+      expect(provider.hasIncompleteHistory, isTrue);
     });
   });
 }
