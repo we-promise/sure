@@ -122,6 +122,7 @@ class Security < ApplicationRecord
   # One DELETE: a world fund lists thousands of rows, and Security::Constituent
   # has no callbacks for a per-row destroy to run.
   has_many :constituents, class_name: "Security::Constituent", dependent: :delete_all
+  has_many :classification_proposals, class_name: "Security::ClassificationProposal", dependent: :destroy
 
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
