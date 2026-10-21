@@ -1388,7 +1388,9 @@ class Family::DataImporter
           stop_processing: data["stop_processing"] || false
         )
 
-        rule.conditions.destroy_all unless created
+        # Marked rather than destroyed now, so the rule's save removes them and
+        # sees its conditions change (Rule re-seeds an email rule's baseline then).
+        rule.conditions.each(&:mark_for_destruction) unless created
         rule.actions.destroy_all unless created
 
         # Build conditions
