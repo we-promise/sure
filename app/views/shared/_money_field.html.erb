@@ -12,7 +12,7 @@
    amount_min = options[:min] || -99999999999999
    amount_max = options[:max] || 99999999999999 %>
 
-<div class="form-field group <%= options[:container_class] %>"
+<div class="form-field group/money-field <%= options[:container_class] %>"
      data-controller="money-field"
      data-money-field-separator-value="<%= currency.separator %>"
      data-money-field-separator-currency-value="<%= currency.iso_code %>"
@@ -111,7 +111,12 @@
         field has no +/-×÷ keys, so an expression can only be typed with a
         physical keyboard. This row gives touch users the same four
         operators; hidden until the field has focus so it doesn't clutter
-        every money field on the page. Bound to "mousedown"/"touchstart"
+        every money field on the page. The group is named: an unnamed
+        `group-focus-within` matches any `.group` ancestor, and every
+        DS::Disclosure (so every DS::Dialog section) is one, so focusing
+        e.g. the transaction's name showed the row too. Focus on the
+        currency select still counts, since Tab from the amount reaches
+        these buttons through it. Bound to "mousedown"/"touchstart"
         (not "click") so preventDefault in the controller stops the tap from
         blurring the input, which would otherwise dismiss the on-screen
         keyboard — touchstart matters on touch devices where the synthetic
@@ -132,7 +137,7 @@
         rather than as a separate floating card with its own border and
         gap, so out-of-flow positioning doesn't read as visually detached
         from the field it belongs to. %>
-    <div class="hidden group-focus-within:flex items-center gap-1 absolute left-0 right-0 top-full -mt-px z-10 bg-container border border-t-0 border-secondary rounded-b-md p-1">
+    <div class="hidden group-focus-within/money-field:flex items-center gap-1 absolute left-0 right-0 top-full -mt-px z-10 bg-container border border-t-0 border-secondary rounded-b-md p-1">
       <%= render DS::Button.new(text: "+", variant: :outline, size: :sm,
             data: { action: "mousedown->money-field#insertOperator touchstart->money-field#insertOperator keydown.enter->money-field#insertOperator keydown.space->money-field#insertOperator", "money-field-operator-param": "+" },
             aria: { label: t(".operator_add") }) %>
