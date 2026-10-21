@@ -66,6 +66,32 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_codes, @member.family.reload.enabled_currency_codes
   end
 
+  test "admin can stop counting investing as spending" do
+    patch user_url(@user), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @user.family.id, investment_contributions_as_spending: "0" }
+      }
+    }
+
+    assert_redirected_to settings_preferences_url
+    assert_not @user.family.reload.investment_contributions_as_spending?
+  end
+
+  test "non-admin cannot change whether investing counts as spending" do
+    sign_in @member = users(:family_member)
+
+    patch user_url(@member), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @member.family.id, investment_contributions_as_spending: "0" }
+      }
+    }
+
+    assert_redirected_to settings_profile_url
+    assert @member.family.reload.investment_contributions_as_spending?
+  end
+
   test "admin can reset family data" do
     account = accounts(:investment)
     category = categories(:income)

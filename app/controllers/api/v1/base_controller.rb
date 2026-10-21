@@ -221,6 +221,15 @@ class Api::V1::BaseController < ApplicationController
       authorize_scope!(:read)
     end
 
+    # Guests are read-only by design, so API credentials they hold must not
+    # change family-wide configuration either.
+    def reject_guest_writes!
+      return true unless current_resource_owner&.guest?
+
+      render_json({ error: "forbidden", message: "Guests cannot modify family configuration" }, status: :forbidden)
+      false
+    end
+
     # Consistent JSON response method
     def render_json(data, status: :ok)
       render json: data, status: status
