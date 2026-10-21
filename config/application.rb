@@ -76,5 +76,10 @@ module Sure
     # Handle OmniAuth/OIDC errors gracefully (must be before OmniAuth middleware)
     require_relative "../app/middleware/omniauth_error_handler"
     config.middleware.use OmniauthErrorHandler
+
+    # Bound a FinanceKit batch upload before Rails reads and parses it; see
+    # the class comment for why the controller's own size check is too late.
+    require_relative "../app/middleware/financekit_body_limit"
+    config.middleware.use FinancekitBodyLimit
   end
 end
