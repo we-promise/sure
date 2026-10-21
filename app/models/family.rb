@@ -59,6 +59,7 @@ class Family < ApplicationRecord
   has_many :holdings, through: :accounts
 
   has_many :tags, dependent: :destroy
+  has_many :security_classification_proposals, class_name: "Security::ClassificationProposal", dependent: :destroy
   has_many :categories, dependent: :destroy
   has_many :categorization_comparisons, dependent: :destroy
   has_many :merchants, dependent: :destroy, class_name: "FamilyMerchant"
