@@ -378,6 +378,24 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, title
   end
 
+  # The default trail ends on "Accounts", which is never a link, so an account's
+  # page had no way back to the accounts list.
+  test "show links the Accounts crumb back to the accounts list" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-breadcrumbs] a[href=?]", accounts_path, text: I18n.t("breadcrumbs.accounts")
+    assert_select "[data-breadcrumbs] > span:last-child", text: @account.name
+  end
+
+  test "the accounts list itself stays the unlinked current crumb" do
+    get accounts_url
+
+    assert_response :success
+    assert_select "[data-breadcrumbs] a[href=?]", accounts_path, count: 0
+    assert_select "[data-breadcrumbs] > span:last-child", text: I18n.t("breadcrumbs.accounts")
+  end
+
   test "index offers a QR login on a Trade Republic connection that needs one" do
     item = trade_republic_items(:configured_item)
     item.update!(session_blob: trade_republic_session_blob(expires_at: 1.minute.ago))
