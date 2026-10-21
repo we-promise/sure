@@ -23,7 +23,6 @@ tr:
               locked_after_linked: Hedef hesaplara bağlandıktan sonra para birimi
                 değiştirilemez.
             linked_accounts:
-              currency_mismatch: Bağlı tüm hesaplar aynı para birimini kullanmalıdır.
               must_be_fundable: Bağlı tüm hesaplar nakit veya yatırım hesabı olmalıdır.
               must_belong_to_family: Bağlı hesaplar, hedefle aynı aileye ait olmalıdır.
             target_mode:
