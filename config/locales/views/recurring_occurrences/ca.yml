@@ -39,7 +39,7 @@ ca:
       skip: Omet
       snooze_week: Ajorna una setmana
       reopen: Reobre
-      view_bill: Mostra la factura completa
+      view_bill: Mostra la factura
     mark_paid:
       success: Factura marcada com a pagada
     skip:

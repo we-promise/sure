@@ -110,6 +110,8 @@ class Security < ApplicationRecord
 
   has_many :trades, dependent: :nullify, class_name: "Trade"
   has_many :prices, dependent: :destroy
+  has_many :splits, dependent: :destroy
+  has_many :constituents, class_name: "Security::Constituent", dependent: :destroy
 
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
@@ -287,6 +289,24 @@ class Security < ApplicationRecord
     @current_price ||= find_or_fetch_price
     return nil if @current_price.nil?
     Money.new(@current_price.price, @current_price.currency)
+  end
+
+  # How many shares one share held at the close of `from` has become by the
+  # close of `to`: the product of the ratios of splits whose ex-date falls
+  # after `from` and on or before `to`. 1 when there are none.
+  def split_factor_between(from, to)
+    splits.where(ex_date: (from + 1)..to).reduce(Rational(1)) { |factor, split| factor * split.ratio }
+  end
+
+  # The fund expanded into what it actually holds, as fractions of the fund.
+  #
+  # A whole-fund list (summing to 99 or more) is normalised against its actual
+  # sum, so rounding drift does not under-report every constituent. A partial
+  # list is divided by 100 and its fractions sum to less than 1: the rest of the
+  # fund is unlisted, not the listed names' to carry. The rule lives in
+  # `Security::Constituent.fund_shares`.
+  def look_through_weights
+    Security::Constituent.fund_shares(constituents.where.not(weight: nil).to_a).listed
   end
 
   def to_combobox_option

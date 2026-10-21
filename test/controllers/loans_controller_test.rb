@@ -179,6 +179,79 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  # #3383: the opening anchor holds the original principal, so
+  # it belongs on the day the loan was drawn down, not on the form's separate
+  # opening balance date (which defaults to today minus two years).
+  test "a new loan's opening anchor is dated on its start date" do
+    account = create_loan(start_date: Date.new(2020, 1, 15))
+
+    anchor = account.valuations.opening_anchor.first.entry
+    assert_equal Date.new(2020, 1, 15), anchor.date
+    assert_equal 400_000, anchor.amount
+  end
+
+  test "a new loan's recorded balance opens on its principal at its start date" do
+    start_date = Date.new(2020, 1, 15)
+    account = create_loan(start_date: start_date)
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+
+    series = account.balance_series(
+      period: Period.custom(start_date: start_date, end_date: Date.current),
+      interval: "1 month"
+    )
+    assert_equal 400_000, series.values.first.value.amount
+    assert_equal start_date, account.balances.minimum(:date)
+  end
+
+  test "a new loan keeps its entered current balance" do
+    account = create_loan(start_date: Date.new(2020, 1, 15))
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+
+    today = account.entries.valuations.find_by(date: Date.current)
+    assert_not_nil today
+    assert_equal 399_600, today.amount
+    assert_equal 399_600, account.balances.find_by(date: Date.current).balance
+  end
+
+  test "a loan without a start date keeps the form's opening date" do
+    opening_balance_date = Date.current - 3.years # not the manager's own two-year default
+    account = create_loan(start_date: nil, opening_balance_date: opening_balance_date)
+
+    assert_equal opening_balance_date, account.valuations.opening_anchor.first.entry.date
+  end
+
+  test "a loan with a start date but no original balance keeps the form's opening date" do
+    # Without a principal the anchor holds the entered current balance, which
+    # was not the balance on the start date.
+    opening_balance_date = Date.current - 3.years
+    account = create_loan(start_date: Date.new(2020, 1, 15), initial_balance: nil,
+                          opening_balance_date: opening_balance_date)
+
+    anchor = account.valuations.opening_anchor.first.entry
+    assert_equal opening_balance_date, anchor.date
+    assert_equal 399_600, anchor.amount
+  end
+
+  # An anchor on or before Entry.min_supported_date would fail Entry's own
+  # validation and the form would re-render; the loan is created instead.
+  test "a loan started on the earliest supported entry date is created with the form's opening date" do
+    opening_balance_date = Date.current - 3.years
+    assert_difference "Account.count", 1 do
+      account = create_loan(start_date: Entry.min_supported_date, opening_balance_date: opening_balance_date)
+      assert_equal opening_balance_date, account.valuations.opening_anchor.first.entry.date
+    end
+  end
+
+  test "a loan started today has its opening anchor today and no reconciliation" do
+    account = create_loan(start_date: Date.current)
+
+    valuations = account.entries.valuations
+    assert_equal 1, valuations.count
+    assert_equal Date.current, valuations.first.date
+    assert_equal 400_000, valuations.first.amount
+    assert_equal "opening_anchor", valuations.first.entryable.kind
+  end
+
   test "updates with loan details" do
     assert_no_difference [ "Account.count", "Loan.count" ] do
       patch loan_path(@account), params: {
@@ -853,9 +926,58 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{loans_path}']", count: 1
     # Rebuilt from the submission, not a blank account: what was typed comes
     # back for correction.
+    assert_select "input[name='account[name]'][value='Loan With Bad Anchor']", count: 1
+    assert_select "input[name='account[accountable_attributes][interest_rate]'][value='6']", count: 1
+  end
+
+  # The submission that trips this rescue need not carry nested attributes at
+  # all. `accountable_type=` writes only the type column, so rebuilding from
+  # such a submission left `accountable` nil and the 422 form came back
+  # without a single one of the loan's own fields -- nothing for the borrower
+  # to correct, on a form whose whole purpose here is correction.
+  test "a late create failure renders the loan's fields even when the form sent none" do
+    invalid_entry = Entry.new.tap(&:validate)
+    Account::OpeningBalanceManager.any_instance.stubs(:set_opening_balance)
+      .raises(ActiveRecord::RecordInvalid.new(invalid_entry))
+
+    assert_no_difference "Account.count" do
+      post loans_path, params: { account: {
+        name: "Loan Without Nested Attributes", balance: 50_000, currency: "USD", accountable_type: "Loan"
+      } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "form[action='#{loans_path}']", count: 1
+    assert_select "input[name='account[name]'][value='Loan Without Nested Attributes']", count: 1
+    assert_select "input[name='account[accountable_attributes][interest_rate]']", minimum: 1
   end
 
   private
+    # Posts the new-loan form as a browser does: the "Opening balance date"
+    # field is always sent, defaulting to today minus two years.
+    def create_loan(start_date:, initial_balance: 400_000, opening_balance_date: Date.current - 2.years)
+      post loans_path, params: {
+        account: {
+          name: "Mortgage",
+          balance: 399_600,
+          currency: "USD",
+          accountable_type: "Loan",
+          opening_balance_date: opening_balance_date.iso8601,
+          accountable_attributes: {
+            subtype: "mortgage",
+            interest_rate: 5,
+            term_months: 360,
+            rate_type: "fixed",
+            initial_balance: initial_balance,
+            start_date: start_date&.iso8601
+          }
+        }
+      }
+      account = Account.order(:created_at).last
+      assert_redirected_to account
+      account
+    end
+
     # The payment cells of the Schedule tab's table, the only table on the page.
     def schedule_table_cells
       css_select("table tbody td").map { |cell| cell.text.strip }

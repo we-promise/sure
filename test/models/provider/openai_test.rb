@@ -666,7 +666,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 256, subject.system_prompt_reserve
       assert_equal 2048 - 512 - 256, subject.max_history_tokens
       assert_equal 2048 - 512 - 256, subject.max_input_tokens
-      assert_equal 25, subject.max_items_per_call
     end
   end
 
@@ -684,7 +683,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 512, subject.system_prompt_reserve
       assert_equal 4096, subject.max_history_tokens  # explicit overrides derived
       assert_equal 8192 - 1024 - 512, subject.max_input_tokens
-      assert_equal 50, subject.max_items_per_call
     end
   end
 
@@ -742,7 +740,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       subject = Provider::Openai.new("test-token")
       assert_equal 8192, subject.context_window
       assert_equal 1024, subject.max_response_tokens
-      assert_equal 40, subject.max_items_per_call
     end
   ensure
     Setting.llm_context_window = nil
@@ -774,8 +771,8 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     Setting.llm_context_window = nil
   end
 
-  test "auto_categorize fans out oversized batches into sequential sub-calls" do
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10") do
+  test "auto_categorize sends a batch that fits the context window as one call" do
+    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10", "LLM_CONTEXT_WINDOW" => "100000") do
       subject = Provider::Openai.new("test-token")
       transactions = Array.new(25) { |i| { id: i.to_s, name: "txn#{i}", amount: 10, classification: "expense" } }
       user_categories = [ { id: "cat1", name: "Groceries", is_subcategory: false, parent_id: nil, classification: "expense" } ]
@@ -793,7 +790,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       response = subject.auto_categorize(transactions: transactions, user_categories: user_categories)
 
       assert response.success?
-      assert_equal [ 10, 10, 5 ], seen_sizes
+      assert_equal [ 25 ], seen_sizes
     end
   end
 
@@ -926,6 +923,95 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
 
     tool_call = messages.find { |m| m[:role] == "assistant" }[:tool_calls].first
     assert_equal "{}", tool_call.dig(:function, :arguments)
+  end
+
+  test "build_generic_messages preserves extra_content on assistant tool_calls when present" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://generativelanguage.googleapis.com/v1beta/openai",
+      model: "gemini-3.8-flash"
+    )
+
+    extra = { "google" => { "thought_signature" => "sig_encrypted_token_123" } }
+    messages = provider.send(
+      :build_generic_messages,
+      prompt: "hi",
+      function_results: [
+        {
+          call_id: "call_1",
+          name: "get_net_worth",
+          arguments: "{}",
+          output: { "amount" => 10000 },
+          extra_content: extra
+        }
+      ]
+    )
+
+    assistant_message = messages.find { |m| m[:role] == "assistant" }
+    tool_call = assistant_message[:tool_calls].first
+    assert_equal extra, tool_call[:extra_content]
+  end
+
+  test "build_generic_messages omits extra_content on assistant tool_calls when nil" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://example.com/v1",
+      model: "test-model"
+    )
+
+    messages = provider.send(
+      :build_generic_messages,
+      prompt: "hi",
+      function_results: [
+        {
+          call_id: "call_1",
+          name: "get_net_worth",
+          arguments: "{}",
+          output: { "amount" => 10000 },
+          extra_content: nil
+        }
+      ]
+    )
+
+    assistant_message = messages.find { |m| m[:role] == "assistant" }
+    tool_call = assistant_message[:tool_calls].first
+    assert_not_includes tool_call.keys, :extra_content
+  end
+
+  test "build_generic_messages replays each tool round as its own assistant/tool pair" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://example.com/v1",
+      model: "test-model"
+    )
+
+    extra = { "google" => { "thought_signature" => "sig_round_2" } }
+    round_1 = [
+      { call_id: "call_a", name: "get_accounts", arguments: "{}", output: { "accounts" => [] }, round: 1 }
+    ]
+    round_2 = [
+      { call_id: "call_b", name: "get_categories", arguments: "{}", output: { "categories" => [] }, round: 2 },
+      { call_id: "call_c", name: "get_tags", arguments: "{}", output: { "tags" => [] }, extra_content: extra, round: 2 }
+    ]
+
+    build = ->(function_results) do
+      provider.send(:build_generic_messages, prompt: "hi", instructions: "system", function_results: function_results)
+    end
+    second_request = build.call(round_1)
+    third_request = build.call(round_1 + round_2)
+
+    # Each follow-up request must extend the previous one so prefix caches stay valid.
+    assert_equal second_request, third_request.first(second_request.size)
+
+    shape = third_request.map do |message|
+      message[:tool_calls] ? message[:tool_calls].map { |call| call[:id] } : message[:tool_call_id] || message[:role]
+    end
+    assert_equal [ "system", "user", [ "call_a" ], "call_a", [ "call_b", "call_c" ], "call_b", "call_c" ], shape
+
+    round_2_calls = third_request[4][:tool_calls]
+    assert_not round_2_calls.first.key?(:extra_content)
+    assert_equal extra, round_2_calls.last[:extra_content]
+    assert_not_includes third_request.to_json, "\"round\":", "the round tag must not leak into the request"
   end
 
   private

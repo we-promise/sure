@@ -45,6 +45,16 @@ class Insight::Generators::MaintainedGoalDepletedGeneratorTest < ActiveSupport::
     assert_empty generate
   end
 
+  test "says nothing about a reserve that only looks short for want of a rate" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    reserve = @family.goals.create!(name: "Euro pot", target_amount: 6_000, currency: "USD", kind: "maintained") do |g|
+      g.goal_accounts.build(account: fresh_account(6_000, currency: "EUR"))
+    end
+    assert_equal :depleted, Goal.find(reserve.id).status
+
+    assert_empty generate
+  end
+
   test "ignores one-off goals, however short they are" do
     account = fresh_account(0)
     @family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
@@ -84,10 +94,10 @@ class Insight::Generators::MaintainedGoalDepletedGeneratorTest < ActiveSupport::
     # A dedicated account each time: the fixtures already have goals claiming
     # `depository`, and a shared one would drag the pro-rata haircut into every
     # shortfall figure asserted here.
-    def fresh_account(balance)
+    def fresh_account(balance, currency: "USD")
       Account.create!(
         family: @family, accountable: Depository.new,
-        name: "Pot #{SecureRandom.hex(4)}", currency: "USD", balance: balance
+        name: "Pot #{SecureRandom.hex(4)}", currency: currency, balance: balance
       )
     end
 

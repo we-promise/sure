@@ -116,7 +116,7 @@ class FioItemsController < ApplicationController
     @fio_item = requested_fio_item
 
     unless @fio_item.credentials_configured?
-      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
+      frame_redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
 

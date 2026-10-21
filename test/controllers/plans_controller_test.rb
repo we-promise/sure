@@ -37,6 +37,22 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
                  "the depleted reserve's bar stayed neutral"
   end
 
+  test "goals missing an exchange rate share one warning line" do
+    2.times do |i|
+      account = @user.family.accounts.create!(name: "Euro reserve #{i}", accountable: Depository.new,
+                                             currency: "EUR", balance: 100)
+      @user.family.goals.create!(name: "Trip #{i}", target_amount: 1_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account)
+      end
+    end
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    get plan_url
+
+    assert_response :success
+    assert_equal 1, response.body.scan(I18n.t("plans.goals_card.currency_warning", count: 2, currencies: "EUR")).size
+  end
+
   test "redirects users without preview access to budgets" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
 

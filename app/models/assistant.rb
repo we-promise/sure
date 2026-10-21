@@ -35,6 +35,15 @@ module Assistant
     Function::RecordBillPayment
   ].freeze
 
+  # Guests may view family configuration but not change it, so these tools are
+  # left out of a guest's registry (chat and MCP alike).
+  FAMILY_CONFIG_FUNCTION_CLASSES = [
+    Function::CreateTag,
+    Function::UpdateTag,
+    Function::CreateCategory,
+    Function::UpdateCategory
+  ].freeze
+
   class << self
     def for_chat(chat)
       implementation_for(chat).for_chat(chat)
@@ -65,6 +74,9 @@ module Assistant
         Function::ImportBankStatement,
         Function::SearchFamilyFiles,
         Function::CreateGoal,
+        Function::SetOpeningBalance,
+        Function::UnmatchTransfer,
+        Function::UpdateTransfer,
         Function::GetTags,
         Function::CreateTag,
         Function::UpdateTag,
@@ -72,6 +84,12 @@ module Assistant
         Function::CreateCategory,
         Function::UpdateCategory,
         Function::GetMerchants,
+        Function::GetRules,
+        Function::GetRuleOptions,
+        Function::PreviewRule,
+        Function::CreateRule,
+        Function::UpdateRule,
+        Function::ApplyRule,
         Function::UpdateTransaction,
         Function::CreateTransaction,
         Function::DeleteTransaction,
@@ -79,6 +97,7 @@ module Assistant
       ]
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
+      classes -= FAMILY_CONFIG_FUNCTION_CLASSES if user&.guest?
       classes
     end
 
@@ -86,7 +105,7 @@ module Assistant
 
       def implementation_for(chat)
         raise Error, "chat is required" if chat.blank?
-        type = ENV["ASSISTANT_TYPE"].presence || chat.user&.family&.assistant_type.presence || "builtin"
+        type = chat.user&.family&.effective_assistant_type || "builtin"
         REGISTRY.fetch(type) { REGISTRY["builtin"] }
       end
   end

@@ -171,6 +171,9 @@ ca:
       category_search_placeholder: Cerca categories
       create_category: Crea "%{name}"
       create_category_error: No s'ha pogut crear la categoria
+      create_as_subcategory: Afegeix com a subcategoria…
+      choose_parent: 'Crea "%{name}" dins de:'
+      back_to_categories: Enrere
       create_merchant: Crea
       create_merchant_error: No s'ha pogut crear el comerç
       merchant_search_placeholder: Cerca o crea un comerç

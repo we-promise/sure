@@ -1,4 +1,4 @@
-<%# locals: (enable_banking_item:) %>
+<%# locals: (enable_banking_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(enable_banking_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -61,6 +61,23 @@
             <% end %>
 
             <%= render DS::Menu.new do |menu| %>
+              <% unless enable_banking_item.requires_update? %>
+                <%# Always-available manual reconnect, independent of the automatic
+                    requires_update detection above. Enable Banking sometimes rejects
+                    individual account requests (401 Invalid credentials or expired JWT)
+                    while the session-level check still reports valid, so syncs keep
+                    failing silently with no way to force a fresh consent short of
+                    disconnecting and re-adding the connection. %>
+                <% menu.with_item(
+                  variant: "button",
+                  text: t(".reconnect"),
+                  icon: "refresh-cw",
+                  href: reauthorize_enable_banking_item_path(enable_banking_item),
+                  method: :post,
+                  data: { turbo: false }
+                ) %>
+                <% menu.with_item(variant: "divider") %>
+              <% end %>
               <% menu.with_item(
                 variant: "button",
                 text: t(".delete"),
@@ -77,8 +94,8 @@
 
     <% unless enable_banking_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if enable_banking_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: enable_banking_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
@@ -98,7 +115,7 @@
         <% end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: enable_banking_item
+          provider_item: enable_banking_item, show_account_details: visible_accounts.size == enable_banking_item.accounts.size
         ) %>
 
         <% if enable_banking_item.unlinked_accounts_count > 0 %>
