@@ -210,14 +210,15 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       authorize_scope!(:read)
     end
 
-    def accessible_transactions
-      family = current_resource_owner.family
-      accessible_account_ids = family.accounts
+    def accessible_account_ids
+      current_resource_owner.family.accounts
         .accessible_by(current_resource_owner)
         .where.not(status: "pending_deletion")
         .select(:id)
+    end
 
-      family.transactions
+    def accessible_transactions
+      current_resource_owner.family.transactions
         .joins(:entry).where(entries: { account_id: accessible_account_ids })
     end
 
@@ -226,14 +227,22 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # the budget's period and to the accounts its spending is computed from
     # (the owner's report accounts for a personal budget, the caller's for
     # the household one), minus the kinds budgets leave out.
+    #
+    # A budget share does not grant access to the owner's accounts, so the
+    # rows are also limited to accounts the caller can access, the same scope
+    # as the unfiltered index and GET /api/v1/transactions/:id. Without that,
+    # a viewer of a shared personal budget would get full transaction details
+    # (notes, external ids, account) for accounts nobody shared with them.
     def budget_transactions
       @budget.current_user = current_resource_owner
-      @budget.transactions.where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
+      @budget.transactions
+        .where(entries: { account_id: accessible_account_ids })
+        .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
     end
 
     def set_report_filters
-      if params[:budget_id].present?
-        raise InvalidFilterError, "budget_id must be a valid UUID" unless valid_uuid?(params[:budget_id])
+      if params.key?(:budget_id)
+        raise InvalidFilterError, "budget_id must be a valid UUID" unless valid_uuid?(params[:budget_id].to_s)
 
         # Same visibility as GET /api/v1/budgets/:id: the household budget,
         # the caller's own, or one its owner shared with the caller.
@@ -252,9 +261,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       query
     end
 
-    # nil when the param is absent, so a filter can be left off entirely.
+    # nil only when the key is absent, so a filter can be left off entirely.
+    # A present but empty value (`?excluded=`) is invalid, not "off".
     def boolean_filter_param(key)
-      return nil if params[key].blank?
+      return nil unless params.key?(key)
 
       case params[key].to_s.downcase
       when "true", "1" then true

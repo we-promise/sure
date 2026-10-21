@@ -131,8 +131,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
       parameter name: :budget_id, in: :query, required: false,
                 description: "Only rows the budget's category drill-down on the web lists: transactions in the budget period, " \
                              "on the accounts its spending is computed from (the owner's report accounts for a personal budget, " \
-                             "the caller's for the household budget), excluding the funds_movement, cc_payment and one_time kinds. " \
-                             'Must be a budget the caller can see; returns 404 otherwise.',
+                             "the caller's for the household budget), excluding the funds_movement, cc_payment and one_time kinds, " \
+                             'and limited to accounts the caller can access. Must be a budget the caller can see; returns 404 otherwise.',
                 schema: { type: :string, format: :uuid }
       parameter name: :exclude_split_parents, in: :query, required: false,
                 description: 'When true, leave out transactions that have been split (their split children are still listed).',
