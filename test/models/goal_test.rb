@@ -202,11 +202,20 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal "balance", goal.reload.progress_basis
   end
 
-  test "a crypto account in another currency is still rejected" do
+  # Goals accept accounts in other currencies and convert their backing (#3974),
+  # and a crypto account follows the same rule as any other fundable account.
+  test "a crypto account in another currency is accepted and converted" do
     wallet = Account.create!(family: @family, accountable: Crypto.new, name: "Euro wallet", currency: "EUR", balance: 1_000)
-    new_goal = @family.goals.new(name: "BTC reserve", target_amount: 20_000, currency: "USD")
-    new_goal.goal_accounts.build(account: wallet)
-    assert_not new_goal.valid?
+    new_goal = @family.goals.create!(name: "BTC reserve", target_amount: 20_000, currency: "USD") do |goal|
+      goal.goal_accounts.build(account: wallet)
+    end
+
+    assert_equal 0, new_goal.current_balance, "with no rate the wallet cannot be counted"
+    assert_equal [ "EUR" ], new_goal.missing_exchange_rate_currencies.to_a
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.2, date: Date.current)
+
+    assert_equal 1_200, Goal.find(new_goal.id).current_balance
   end
 
   test "a crypto account in another family is still rejected" do
