@@ -20,44 +20,22 @@ class ConfigurationHealth::OptionalServices
   end
 
   def langfuse
-    result = environment_service(:langfuse, LANGFUSE_KEYS)
-    return result unless result.status == :configured
-
-    config = Langfuse.configuration
-    if config.public_key != ENV["LANGFUSE_PUBLIC_KEY"] || config.secret_key != ENV["LANGFUSE_SECRET_KEY"]
-      return service(:langfuse, :not_checked, notes: [ :restart_required ])
-    end
-    result
+    environment_service(:langfuse, LANGFUSE_KEYS)
   end
 
   def sentry
     config = Sentry.configuration
-    unless config&.dsn.present?
-      return service(:sentry, :not_checked, notes: [ :restart_required ]) if ENV["SENTRY_DSN"].present?
-      return service(:sentry, :not_configured)
-    end
+    return service(:sentry, :not_configured) unless config&.dsn.present?
     return service(:sentry, :disabled, notes: [ :environment_disabled ]) unless config.enabled_in_current_env?
 
     service(:sentry, :configured)
   end
 
   def skylight
-    # Match the installed Skylight 6.0.4 Railtie: an explicit case-insensitive
-    # "false" disables it; other supplied values override the environment list.
     if ENV["SKYLIGHT_ENABLED"]&.match?(/\Afalse\z/i)
       return service(:skylight, :disabled, notes: [ :explicitly_disabled ])
     end
-    if ENV["SKYLIGHT_AUTHENTICATION"].blank?
-      return environment_service(:skylight, %w[SKYLIGHT_AUTHENTICATION], intended: ENV["SKYLIGHT_ENABLED"].present?)
-    end
-    unless skylight_loaded?
-      return service(:skylight, :not_checked, notes: [ :skylight_not_loaded ])
-    end
-    unless ENV.key?("SKYLIGHT_ENABLED") || Array(Rails.application.config.skylight.environments).map(&:to_s).include?(Rails.env.to_s)
-      return service(:skylight, :disabled, notes: [ :environment_disabled ])
-    end
-
-    service(:skylight, :configured)
+    environment_service(:skylight, %w[SKYLIGHT_AUTHENTICATION], intended: ENV["SKYLIGHT_ENABLED"].present?)
   end
 
   def stripe
@@ -80,7 +58,7 @@ class ConfigurationHealth::OptionalServices
     else
       :configured
     end
-    browser_enabled = Rails.env.production? || (Rails.env.development? && config.development_enabled)
+    browser_enabled = config.browser_enabled?
     notes = browser_enabled ? [] : [ :browser_analytics_disabled ]
     if Rails.application.config.app_mode.self_hosted?
       notes << (browser_enabled && config.feedback_enabled ? :shared_feedback_configured : :shared_feedback_disabled)
@@ -112,9 +90,5 @@ class ConfigurationHealth::OptionalServices
         :incomplete
       end
       service(key, status, settings: status == :incomplete ? missing : [], notes: notes)
-    end
-
-    def skylight_loaded?
-      defined?(Skylight) && Rails.application.config.respond_to?(:skylight) && Rails.application.config.skylight.present?
     end
 end

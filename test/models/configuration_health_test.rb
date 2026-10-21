@@ -16,7 +16,7 @@ class ConfigurationHealthTest < ActiveSupport::TestCase
     check = ConfigurationHealth.new.smtp
 
     assert_equal :not_configured, check.status
-    assert_equal [ :address, :port ], check.issues
+    assert_equal [ :address ], check.issues
   end
 
   test "an unauthenticated SMTP relay is configured without requiring credentials" do
@@ -60,8 +60,14 @@ class ConfigurationHealthTest < ActiveSupport::TestCase
     end
   end
 
+  test "omitted SMTP port uses the SMTP default" do
+    ApplicationMailer.stubs(:smtp_settings).returns({ address: "smtp.example.test", port: nil })
+    assert_equal :configured, ConfigurationHealth.new.smtp.status
+    assert_empty ConfigurationHealth.new.smtp.issues
+  end
+
   test "SMTP port must be a valid port number" do
-    [ nil, "", "smtp", "0", "65536", -1 ].each do |port|
+    [ "", "smtp", "0", "65536", -1 ].each do |port|
       ApplicationMailer.stubs(:smtp_settings).returns({ address: "smtp.example.test", port: port })
       assert_includes ConfigurationHealth.new.smtp.issues, :port
     end
@@ -165,7 +171,8 @@ class ConfigurationHealthTest < ActiveSupport::TestCase
   test "exchange rates reject a provider from another concept" do
     ClimateControl.modify("EXCHANGE_RATE_PROVIDER" => "openai") do
       check = ConfigurationHealth.new.exchange_rates
-      assert_equal :incomplete, check.status
+      assert_equal :not_configured, check.status
+      assert_equal [ :invalid_provider ], check.issues
       assert_equal :unknown, check.providers.first.key
     end
   end

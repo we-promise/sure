@@ -31,8 +31,10 @@ class ConfigurationHealth
     settings = ApplicationMailer.smtp_settings.symbolize_keys
     issues = []
     issues << :address if settings[:address].blank?
-    port = Integer(settings[:port], exception: false)
-    issues << :port unless port && (1..65_535).cover?(port)
+    unless settings[:port].nil?
+      port = Integer(settings[:port], exception: false)
+      issues << :port unless port && (1..65_535).cover?(port)
+    end
     issues << :sender unless email_sender_configured?
     issues << :app_domain if ApplicationMailer.default_url_options[:host].blank?
     # Unauthenticated relays are supported; a half-configured credential pair
@@ -57,15 +59,16 @@ class ConfigurationHealth
   def exchange_rates
     selected = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
     providers = provider_statuses(:exchange_rates, [ selected ].compact_blank)
-    check(:exchange_rates, provider_status(providers), providers: providers)
+    invalid = providers.first&.status == :invalid
+    check(:exchange_rates, invalid ? :not_configured : provider_status(providers),
+      providers: providers, issues: invalid ? [ :invalid_provider ] : [])
   end
 
   def storage
-    # Read configuration without constructing a storage client: SDK credential
-    # discovery can contact metadata servers, even without a bucket operation.
+    # Let Rails load its configuration, including environment-specific storage files.
+    ActiveStorage::Blob
     name = Rails.application.config.active_storage.service.to_s
-    configurations = Rails.application.config.active_storage.service_configurations ||
-      ActiveSupport::ConfigurationFile.parse(Rails.root.join("config/storage.yml"))
+    configurations = Rails.application.config.active_storage.service_configurations
     settings = configurations.with_indifferent_access[name]
     backend = STORAGE_BACKENDS.key?(name) ? name.to_sym : :other
     return check(:storage, :not_configured, backend: backend) if settings.blank?

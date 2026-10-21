@@ -110,16 +110,14 @@ en:
         description: "Optional operator integrations. Unconfigured services are informational. These checks inspect settings only; they do not test connectivity, send test events, or change analytics consent. Expand a service for setup details."
         missing_settings: "Missing settings: %{settings}"
         statuses:
-          configured: Configured (not tested)
-          not_configured: Not configured (optional)
+          configured: Configured
+          not_configured: Not configured
           incomplete: Incomplete configuration
           disabled: Disabled in this process
           not_checked: Not verified
         notes:
-          restart_required: "Environment settings are present but do not match an initialized configuration in this process. Restart the affected web and worker services after changing their environment."
           environment_disabled: "The loaded integration is disabled for this Rails environment."
           explicitly_disabled: "SKYLIGHT_ENABLED explicitly disables instrumentation."
-          skylight_not_loaded: "Skylight is not loaded in this process. A token or SKYLIGHT_ENABLED alone does not load or start the SDK."
           self_hosted_checkout_disabled: "Subscription checkout and the billing portal are disabled in self-hosted mode. Stripe webhooks can still be configured; checkout price IDs are not required here."
           browser_analytics_disabled: "Browser analytics are disabled for this environment. This does not disable the separately configured server client."
           shared_feedback_configured: "Self-hosted feedback has a separate bundled project and is enabled by its configuration. It does not require an operator POSTHOG_KEY. Browser opt-out and SDK availability are not checked."
@@ -153,7 +151,7 @@ en:
       configuration:
         description: "Configuration visible to this web process. These checks do not send emails, contact providers, or upload or download files. Configured means settings are present, not that delivery, provider access, or storage access has been verified."
         statuses:
-          configured: Configured (not tested)
+          configured: Configured
           not_configured: Not configured
           incomplete: Incomplete configuration
           disabled: Disabled
@@ -161,7 +159,7 @@ en:
         settings_needed: Settings to review
         unknown_provider: Unrecognized provider selection
         provider_statuses:
-          configured: Configured (not tested)
+          configured: Configured
           not_configured: API key missing
           invalid: Invalid selection
         configure_providers: Open self-hosting settings
@@ -178,7 +176,7 @@ en:
           smtp:
             title: Email (SMTP)
             statuses:
-              configured: "SMTP settings are present. Email delivery has not been tested."
+              configured: "SMTP settings are present."
               not_configured: "SMTP is not configured. Password resets, invitations, and other system emails cannot be sent through SMTP."
               incomplete: "Some email settings are missing or incomplete. System emails or the links they contain may not work."
               disabled: "Email delivery is disabled in the running mailer configuration."
@@ -193,7 +191,7 @@ en:
           securities:
             title: Market prices
             statuses:
-              configured: "All enabled market-price providers have configuration. Credentials, coverage, and live lookups have not been tested."
+              configured: "All enabled market-price providers have configuration."
               not_configured: "The enabled market-price providers are missing their API keys. Automatic security searches and price lookups are unavailable through these providers."
               incomplete: "At least one enabled market-price provider has missing configuration or an invalid selection. Securities assigned to that provider may not receive price updates."
               disabled: "No market-price provider is enabled. Automatic security searches and price lookups are unavailable."
@@ -201,14 +199,15 @@ en:
           exchange_rates:
             title: Foreign exchange rates
             statuses:
-              configured: "The selected exchange-rate provider has configuration. Credentials, currency coverage, and live lookups have not been tested."
+              configured: "The selected exchange-rate provider has configuration."
               not_configured: "No usable exchange-rate provider is configured. Automatic currency conversion may be unavailable when a stored rate is missing."
-              incomplete: "The exchange-rate provider selection is not recognized. Automatic rate lookups are unavailable."
             guidance: "Choose an exchange-rate provider and add its API key if required in self-hosting settings, or configure it in the deployment environment. EXCHANGE_RATE_PROVIDER and provider API-key environment overrides take precedence."
+            issues:
+              invalid_provider: "The selected exchange-rate provider is not recognized. Automatic rate lookups fail until a supported provider is selected."
           storage:
             title: File uploads and storage
             statuses:
-              configured: "The selected backend has configuration. Local disk does not require cloud credentials. File access, permissions, and durability have not been tested."
+              configured: "Storage settings are present; local disk needs no cloud credentials."
               not_configured: "The selected storage backend has no matching configuration. File uploads may be unavailable."
               incomplete: "Required storage settings are missing or incomplete. File uploads or retrieval may not work."
               not_checked: "This backend uses external credential discovery or a custom configuration. Its access cannot be determined from these settings alone."
@@ -222,10 +221,10 @@ en:
       show:
         title: System health
         tabs:
-          hosted_usage: "Hosted usage"
-          background_jobs: Background jobs
-          ai: AI status
-          configuration: Configuration
+          hosted_usage: "Usage"
+          background_jobs: "Jobs"
+          ai: "AI"
+          configuration: "Config"
         alert:
           title: Background jobs aren't running
         status_section_title: Sidekiq status

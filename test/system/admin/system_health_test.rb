@@ -21,10 +21,10 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     with_openai_access_token do
       visit admin_system_health_path
 
-      click_button "AI status"
+      click_button "AI"
 
       assert_current_path admin_system_health_path(tab: "ai")
-      assert_selector "button[role='tab'][aria-selected='true']", text: "AI status"
+      assert_selector "button[role='tab'][aria-selected='true']", text: "AI"
       assert_text "Live check passed"
       assert_text "Live tool call succeeded"
       assert_text "PDF text-extraction path"
@@ -50,7 +50,7 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
   test "going back after switching tabs returns to system health" do
     with_openai_access_token do
       visit admin_system_health_path
-      click_button "AI status"
+      click_button "AI"
       assert_text "Live check passed"
 
       click_link "Preferences", match: :first
@@ -58,7 +58,7 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
       page.go_back
 
       assert_current_path admin_system_health_path(tab: "ai")
-      assert_selector "button[role='tab'][aria-selected='true']", text: "AI status"
+      assert_selector "button[role='tab'][aria-selected='true']", text: "AI"
     end
   end
 
@@ -69,7 +69,7 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
   test "queueing a worker check keeps the AI status on screen" do
     with_openai_access_token do
       visit admin_system_health_path
-      click_button "AI status"
+      click_button "AI"
       assert_text "Live check passed"
       page.execute_script(<<~JS)
         document.addEventListener("turbo:morph", () => {
@@ -90,7 +90,7 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     visit admin_system_health_path
     assert_selector "button[role='tab']", count: 3
-    assert_selector "button[role='tab'][aria-selected='true']", text: "Background jobs"
+    assert_selector "button[role='tab'][aria-selected='true']", text: "Jobs"
     assert_selector "h2", text: "Push notifications"
     assert_button "Send test push notification", disabled: true
     assert_text "Enable push notifications in the Sure iOS app"
@@ -133,19 +133,19 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     visit admin_system_health_path
 
     2.times do
-      click_button "Configuration"
+      click_button "Config"
       assert_current_path admin_system_health_path(tab: "configuration")
-      assert_selector "button[role='tab'][aria-selected='true']", text: "Configuration"
+      assert_selector "button[role='tab'][aria-selected='true']", text: "Config"
       assert_selector "h2", text: "Email (SMTP)"
       assert_selector "h2", text: "Market prices"
       assert_selector "h2", text: "Foreign exchange rates"
       assert_selector "h2", text: "File uploads and storage"
       assert_no_selector "[data-testid='configuration-health'] input"
-      click_button "Background jobs"
+      click_button "Jobs"
       assert_no_selector "[data-testid='configuration-health']"
     end
 
-    click_button "Configuration"
+    click_button "Config"
     click_link "Preferences", match: :first
     assert_no_selector "[data-testid='system-health-tabs']"
     page.go_back
@@ -155,7 +155,7 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     assert_no_selector "[data-testid='system-health-tabs']"
 
     visit admin_system_health_path(tab: "configuration")
-    assert_selector "button[role='tab'][aria-selected='true']", text: "Configuration"
+    assert_selector "button[role='tab'][aria-selected='true']", text: "Config"
     assert_selector "h2", text: "Email (SMTP)"
     within "[data-testid='optional-services']" do
       assert_selector "h2", text: "Optional services"
@@ -165,6 +165,23 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
       find("summary", text: "Langfuse").click
       assert_selector "details:not([open])", count: 6
     end
+    page.current_window.resize_to(390, 844)
+    %w[exchange_rates storage].each do |key|
+      header = find("[data-testid='configuration-#{key}'] h2").find(:xpath, "..")
+      bounds = header.evaluate_script(<<~JS)
+        (() => {
+          const title = this.querySelector("h2").getBoundingClientRect();
+          const pill = this.querySelector(".shrink-0").getBoundingClientRect();
+          const card = this.getBoundingClientRect();
+          return { titleRight: title.right, titleTop: title.top,
+            pillLeft: pill.left, pillTop: pill.top, pillRight: pill.right, cardRight: card.right };
+        })()
+      JS
+      assert_operator bounds["titleRight"], :<=, bounds["pillLeft"]
+      assert_in_delta bounds["titleTop"], bounds["pillTop"], 1
+      assert_operator bounds["pillRight"], :<=, bounds["cardRight"] + 1
+    end
+    page.save_screenshot("/tmp/pr3929-configuration-mobile.png")
     page.current_window.resize_to(1400, 2000)
     page.save_screenshot(Rails.root.join("tmp", "system-health-configuration.png"))
   end

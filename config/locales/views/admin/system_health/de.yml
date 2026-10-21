@@ -110,16 +110,14 @@ de:
         description: "Optionale Betreiber-Integrationen. Nicht konfigurierte Dienste sind Hinweise. Diese Prüfungen lesen nur Einstellungen; sie testen keine Verbindungen, senden keine Testereignisse und ändern keine Analytics-Einwilligung. Öffnen Sie einen Dienst für Einrichtungshinweise."
         missing_settings: "Fehlende Einstellungen: %{settings}"
         statuses:
-          configured: Konfiguriert (nicht getestet)
-          not_configured: Nicht konfiguriert (optional)
+          configured: Konfiguriert
+          not_configured: Nicht konfiguriert
           incomplete: Unvollständige Konfiguration
           disabled: In diesem Prozess deaktiviert
           not_checked: Nicht überprüft
         notes:
-          restart_required: "Umgebungseinstellungen sind vorhanden, stimmen aber nicht mit einer initialisierten Konfiguration in diesem Prozess überein. Starten Sie die betroffenen Web- und Worker-Dienste nach Umgebungsänderungen neu."
           environment_disabled: "Die geladene Integration ist für diese Rails-Umgebung deaktiviert."
           explicitly_disabled: "SKYLIGHT_ENABLED deaktiviert die Instrumentierung ausdrücklich."
-          skylight_not_loaded: "Skylight ist in diesem Prozess nicht geladen. Ein Token oder SKYLIGHT_ENABLED allein lädt oder startet das SDK nicht."
           self_hosted_checkout_disabled: "Abonnement-Checkout und Abrechnungsportal sind im Self-Hosting-Modus deaktiviert. Stripe-Webhooks können weiterhin konfiguriert werden; Checkout-Preis-IDs sind hier nicht erforderlich."
           browser_analytics_disabled: "Browser-Analytics sind für diese Umgebung deaktiviert. Dies deaktiviert den separat konfigurierten Server-Client nicht."
           shared_feedback_configured: "Self-Hosting-Feedback hat ein separates mitgeliefertes Projekt und ist laut Konfiguration aktiviert. Ein eigener POSTHOG_KEY ist nicht erforderlich. Browser-Opt-out und SDK-Verfügbarkeit werden nicht überprüft."
@@ -153,7 +151,7 @@ de:
       configuration:
         description: "Die für diesen Web-Prozess sichtbare Konfiguration. Diese Prüfungen versenden keine E-Mails, kontaktieren keine Anbieter und laden keine Dateien hoch oder herunter. Konfiguriert bedeutet, dass Einstellungen vorhanden sind. Zustellung, Anbieterzugriff und Speicherzugriff wurden damit nicht überprüft."
         statuses:
-          configured: Konfiguriert (nicht getestet)
+          configured: Konfiguriert
           not_configured: Nicht konfiguriert
           incomplete: Unvollständige Konfiguration
           disabled: Deaktiviert
@@ -161,7 +159,7 @@ de:
         settings_needed: Zu prüfende Einstellungen
         unknown_provider: Unbekannte Anbieterauswahl
         provider_statuses:
-          configured: Konfiguriert (nicht getestet)
+          configured: Konfiguriert
           not_configured: API-Schlüssel fehlt
           invalid: Ungültige Auswahl
         configure_providers: Self-Hosting-Einstellungen öffnen
@@ -178,7 +176,7 @@ de:
           smtp:
             title: E-Mail (SMTP)
             statuses:
-              configured: "SMTP-Einstellungen sind vorhanden. Die E-Mail-Zustellung wurde nicht getestet."
+              configured: "SMTP-Einstellungen sind vorhanden."
               not_configured: "SMTP ist nicht konfiguriert. Passwort-Zurücksetzungen, Einladungen und andere System-E-Mails können nicht über SMTP versendet werden."
               incomplete: "Einige E-Mail-Einstellungen fehlen oder sind unvollständig. System-E-Mails oder darin enthaltene Links funktionieren möglicherweise nicht."
               disabled: "Der E-Mail-Versand ist in der laufenden Mailer-Konfiguration deaktiviert."
@@ -193,7 +191,7 @@ de:
           securities:
             title: Marktpreise
             statuses:
-              configured: "Alle aktivierten Marktpreisanbieter sind konfiguriert. Zugangsdaten, Abdeckung und tatsächliche Abfragen wurden nicht getestet."
+              configured: "Alle aktivierten Marktpreisanbieter sind konfiguriert."
               not_configured: "Bei den aktivierten Marktpreisanbietern fehlen die API-Schlüssel. Automatische Wertpapiersuchen und Preisabfragen sind über diese Anbieter nicht verfügbar."
               incomplete: "Bei mindestens einem aktivierten Marktpreisanbieter fehlt die Konfiguration oder die Auswahl ist ungültig. Zugeordnete Wertpapiere erhalten möglicherweise keine Preisaktualisierungen."
               disabled: "Kein Marktpreisanbieter ist aktiviert. Automatische Wertpapiersuchen und Preisabfragen sind nicht verfügbar."
@@ -201,14 +199,15 @@ de:
           exchange_rates:
             title: Wechselkurse
             statuses:
-              configured: "Der ausgewählte Wechselkursanbieter ist konfiguriert. Zugangsdaten, Währungsabdeckung und tatsächliche Abfragen wurden nicht getestet."
+              configured: "Der ausgewählte Wechselkursanbieter ist konfiguriert."
               not_configured: "Kein nutzbarer Wechselkursanbieter ist konfiguriert. Automatische Währungsumrechnung ist möglicherweise nicht verfügbar, wenn ein gespeicherter Kurs fehlt."
-              incomplete: "Die Auswahl des Wechselkursanbieters ist unbekannt. Automatische Kursabfragen sind nicht verfügbar."
             guidance: "Wählen Sie einen Wechselkursanbieter und ergänzen Sie bei Bedarf dessen API-Schlüssel in den Self-Hosting-Einstellungen oder in der Bereitstellungsumgebung. EXCHANGE_RATE_PROVIDER und Umgebungsvariablen für API-Schlüssel haben Vorrang."
+            issues:
+              invalid_provider: "Der ausgewählte Wechselkursanbieter wird nicht erkannt. Automatische Kursabfragen schlagen fehl, bis ein unterstützter Anbieter ausgewählt wird."
           storage:
             title: Datei-Uploads und Speicher
             statuses:
-              configured: "Der ausgewählte Speicher ist konfiguriert. Lokaler Speicher benötigt keine Cloud-Zugangsdaten. Dateizugriff, Berechtigungen und dauerhafte Speicherung wurden nicht getestet."
+              configured: "Speichereinstellungen sind vorhanden; lokaler Speicher benötigt keine Cloud-Zugangsdaten."
               not_configured: "Für den ausgewählten Speicher ist keine passende Konfiguration vorhanden. Datei-Uploads sind möglicherweise nicht verfügbar."
               incomplete: "Erforderliche Speichereinstellungen fehlen oder sind unvollständig. Datei-Uploads oder Abrufe funktionieren möglicherweise nicht."
               not_checked: "Dieser Speicher verwendet eine externe Zugangsdatenquelle oder eine benutzerdefinierte Konfiguration. Der Zugriff lässt sich allein anhand dieser Einstellungen nicht beurteilen."
@@ -222,10 +221,10 @@ de:
       show:
         title: Systemstatus
         tabs:
-          hosted_usage: "Hosting-Nutzung"
-          background_jobs: Hintergrundaufgaben
-          ai: KI-Status
-          configuration: Konfiguration
+          hosted_usage: "Nutzung"
+          background_jobs: "Jobs"
+          ai: "KI"
+          configuration: "Konfig."
         alert:
           title: Hintergrundaufgaben werden nicht ausgeführt
         status_section_title: Sidekiq-Status

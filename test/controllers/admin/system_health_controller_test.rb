@@ -45,7 +45,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match(/Sidekiq status/, response.body)
     assert_match(/Healthy/, response.body)
-    assert_select "button[role='tab']", text: "AI status"
+    assert_select "button[role='tab']", text: "AI"
     # Nothing in the queue table takes focus, so on a narrow screen the scroll
     # area has to be a named tab stop of its own for a keyboard to scroll it.
     assert_select "[role='region'][aria-label='Queues']"
@@ -103,8 +103,8 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h1", text: "Systemstatus"
-    assert_select "button[role='tab'][aria-selected='true']", text: "Hintergrundaufgaben"
-    assert_select "button[role='tab']", text: "KI-Status"
+    assert_select "button[role='tab'][aria-selected='true']", text: "Jobs"
+    assert_select "button[role='tab']", text: "KI"
     assert_select "h2", text: "Sidekiq-Status"
     assert_select "h2", text: "Aufgabenstatistik"
     assert_select "h2", text: "Warteschlangen"
@@ -208,7 +208,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     AiHealth::Probe.any_instance.expects(:openai_vector_store).never
 
     with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
-      { "background_jobs" => "Background jobs", "ai" => "AI status", "configuration" => "Configuration" }.each do |tab, label|
+      { "background_jobs" => "Jobs", "ai" => "AI", "configuration" => "Config" }.each do |tab, label|
         get admin_system_health_url(tab: tab)
 
         assert_response :success
@@ -837,7 +837,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_select "button[role='tab'][aria-selected='true']", text: "Configuration"
+    assert_select "button[role='tab'][aria-selected='true']", text: "Config"
     assert_select "[data-testid='configuration-smtp']" do
       assert_select "h2", text: "Email (SMTP)"
       assert_select "li", text: "SMTP_ADDRESS"
@@ -853,6 +853,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       assert_select "span", text: "Not configured"
     end
     assert_select "[data-testid='configuration-storage']"
+    assert_select "[data-testid='configuration-smtp'] code", text: "SMTP_USERNAME"
     assert_no_match(/smtp-secret/, response.body)
   end
 
@@ -877,8 +878,8 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     get admin_system_health_url(tab: "configuration")
 
     assert_response :success
-    assert_select "[data-testid='configuration-smtp'] span", text: "Configured (not tested)"
-    assert_select "[data-testid='configuration-storage'] span", text: "Configured (not tested)"
+    assert_select "[data-testid='configuration-smtp'] span", text: "Configured"
+    assert_select "[data-testid='configuration-storage'] span", text: "Configured"
     assert_no_match(/private-|smtp.private.test/, response.body)
   end
 
@@ -888,12 +889,11 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     get admin_system_health_url(tab: "configuration", locale: :de)
 
     assert_response :success
-    assert_select "button[role='tab'][aria-selected='true']", text: "Konfiguration"
+    assert_select "button[role='tab'][aria-selected='true']", text: "Konfig."
     assert_select "[data-testid='configuration-smtp'] h2", text: "E-Mail (SMTP)"
     assert_select "[data-testid='configuration-securities'] h2", text: "Marktpreise"
     assert_select "[data-testid='configuration-exchange_rates'] h2", text: "Wechselkurse"
     assert_select "[data-testid='configuration-storage'] h2", text: "Datei-Uploads und Speicher"
-    assert_no_match(/translation missing/, response.body)
   end
 
   test "optional services are at the bottom with neutral absent statuses and collapsed guidance" do
@@ -922,7 +922,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     PostHog::Client.expects(:new).never
     Sentry.expects(:capture_exception).never
     Logtail::Logger.expects(:create_default_logger).never
-    posthog = Rails.configuration.x.posthog.dup
+    posthog = Rails.configuration.x.posthog.clone
     posthog.api_key = "optional-posthog-secret"
     posthog.host = "https://optional-private-host.test"
     Rails.configuration.x.stubs(:posthog).returns(posthog)
@@ -940,8 +940,8 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "[data-testid='optional-services']" do |section|
       assert_no_match(/optional-.*?(secret|host)/, section.first.to_html)
-      assert_select "[data-testid='optional-service-langfuse'] summary", text: /Configured \(not tested\)/
-      assert_select "[data-testid='optional-service-stripe'] summary", text: /Configured \(not tested\)/
+      assert_select "[data-testid='optional-service-langfuse'] summary", text: /Configured/
+      assert_select "[data-testid='optional-service-stripe'] summary", text: /Configured/
     end
   end
 
@@ -953,7 +953,42 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "[data-testid='optional-services'] h2", text: "Optionale Dienste"
     assert_select "[data-testid='optional-service-stripe'] p", text: /STRIPE_WEBHOOK_SECRET/
-    assert_no_match(/translation missing/, response.body)
+  end
+
+  test "configuration translations exist in German without English fallback" do
+    paths = lambda do |tree, prefix|
+      tree.flat_map do |key, value|
+        path = "#{prefix}.#{key}"
+        value.is_a?(Hash) ? paths.call(value, path) : [ path ]
+      end
+    end
+    %w[configuration optional_services].each do |section|
+      prefix = "admin.system_health.#{section}"
+      paths.call(I18n.t(prefix, locale: :en), prefix).each do |key|
+        assert_kind_of String, I18n.t(key, locale: :de, fallback: false, default: nil), key
+      end
+    end
+  end
+
+  test "provider settings links belong only to the two provider cards in self hosted mode" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    Rails.application.config.stubs(:app_mode).returns("self_hosted".inquiry)
+    ClimateControl.modify("EXCHANGE_RATE_PROVIDER" => "private-invalid-provider") do
+      get admin_system_health_url(tab: "configuration")
+    end
+    %w[securities exchange_rates].each do |key|
+      assert_select "[data-testid='configuration-#{key}'] a[href=?]", settings_hosting_path, count: 1
+    end
+    assert_select "[data-testid='configuration-health'] a[href=?]", settings_hosting_path, count: 2
+    assert_select "[data-testid='configuration-exchange_rates']" do
+      assert_select "span", text: "Not configured"
+      assert_select "li", text: /Automatic rate lookups fail/
+    end
+    assert_no_match(/private-invalid-provider/, response.body)
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
+    get admin_system_health_url(tab: "configuration")
+    assert_select "[data-testid='configuration-health'] a[href=?]", settings_hosting_path, count: 0
   end
 
   test "configuration tab preserves super admin authorization" do

@@ -3,9 +3,9 @@
 
   <% health.checks.each do |check| %>
     <%= render DS::Card.new(class: "gap-4", data: { testid: "configuration-#{check.key}" }) do %>
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 class="text-lg font-semibold text-primary"><%= t(".checks.#{check.key}.title") %></h2>
-        <%= render DS::Pill.new(label: t(".statuses.#{check.status}"), tone: check.tone, marker: false) %>
+      <div class="flex items-start justify-between gap-2">
+        <h2 class="min-w-0 text-lg font-semibold text-primary"><%= t(".checks.#{check.key}.title") %></h2>
+        <div class="shrink-0"><%= render DS::Pill.new(label: t(".statuses.#{check.status}"), tone: check.tone, marker: false) %></div>
       </div>
       <p class="text-sm text-secondary"><%= t(".checks.#{check.key}.statuses.#{check.status}") %></p>
 
@@ -18,7 +18,7 @@
           <p class="font-medium text-primary"><%= t(".settings_needed") %></p>
           <ul class="list-disc pl-5 text-secondary">
             <% check.issues.each do |issue| %>
-              <li><%= t(".checks.#{check.key}.issues.#{issue}") %></li>
+              <li><%= configuration_health_text(t(".checks.#{check.key}.issues.#{issue}")) %></li>
             <% end %>
           </ul>
         </div>
@@ -27,20 +27,19 @@
       <% if check.providers.any? %>
         <dl class="space-y-2 text-sm">
           <% check.providers.each do |provider| %>
-            <div class="flex flex-wrap justify-between gap-2">
-              <dt class="text-primary"><%= provider.key == :unknown ? t(".unknown_provider") : t("settings.hostings.provider_selection.providers.#{provider.key}") %></dt>
-              <dd class="text-secondary"><%= t(".provider_statuses.#{provider.status}") %></dd>
-            </div>
+            <%= render DS::DetailRow.new(
+                  label: provider.key == :unknown ? t(".unknown_provider") : t("settings.hostings.provider_selection.providers.#{provider.key}"),
+                  value: t(".provider_statuses.#{provider.status}"),
+                  align: :center) %>
           <% end %>
         </dl>
       <% end %>
 
-      <p class="text-sm text-secondary"><%= t(".checks.#{check.key}.guidance") %></p>
+      <p class="text-sm text-secondary"><%= configuration_health_text(t(".checks.#{check.key}.guidance")) %></p>
+      <% if self_hosted? && check.key.in?(%i[securities exchange_rates]) %>
+        <%= render DS::Link.new(text: t(".configure_providers"), href: settings_hosting_path) %>
+      <% end %>
     <% end %>
-  <% end %>
-
-  <% if self_hosted? %>
-    <%= link_to t(".configure_providers"), settings_hosting_path, class: "text-sm text-link underline" %>
   <% end %>
 
   <%= render "optional_services", services: health.optional_services %>

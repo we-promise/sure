@@ -11,7 +11,7 @@ class ConfigurationHealth::OptionalServicesTest < ActiveSupport::TestCase
   setup do
     @health = ConfigurationHealth::OptionalServices.new
     @langfuse = OpenStruct.new(public_key: nil, secret_key: nil)
-    @posthog = ActiveSupport::OrderedOptions.new
+    @posthog = Rails.configuration.x.posthog.clone
     @posthog.api_key = nil
     @posthog.host = "https://us.i.posthog.com"
     @posthog.development_enabled = false
@@ -56,23 +56,11 @@ class ConfigurationHealth::OptionalServicesTest < ActiveSupport::TestCase
     end
   end
 
-  test "Langfuse uses the boot configuration as well as its runtime environment gate" do
+  test "Langfuse reports both environment keys without initializing a client" do
+    Langfuse.expects(:new).never
     with_environment("LANGFUSE_PUBLIC_KEY" => "private-public", "LANGFUSE_SECRET_KEY" => "private-secret") do
-      assert_equal :not_checked, @health.langfuse.status
-      @langfuse.public_key = "private-public"
-      @langfuse.secret_key = "private-secret"
       assert_equal :configured, @health.langfuse.status
-      @langfuse.secret_key = "previous-secret"
-      assert_equal [ :restart_required ], @health.langfuse.notes
-    end
-  end
-
-  test "Sentry settings without an initialized SDK remain unverified" do
-    with_environment("SENTRY_DSN" => "https://private-key@private-host.test/123") do
-      check = @health.sentry
-      assert_equal :not_checked, check.status
-      assert_equal [ :restart_required ], check.notes
-      assert_no_match(/private-/, check.inspect)
+      assert_no_match(/private-/, @health.langfuse.inspect)
     end
   end
 
@@ -105,27 +93,10 @@ class ConfigurationHealth::OptionalServicesTest < ActiveSupport::TestCase
     end
   end
 
-  test "Skylight token and flag do not imply the SDK was loaded" do
-    @health.stubs(:skylight_loaded?).returns(false)
-    with_environment("SKYLIGHT_AUTHENTICATION" => "private-token", "SKYLIGHT_ENABLED" => "true") do
-      assert_equal :not_checked, @health.skylight.status
-      assert_equal [ :skylight_not_loaded ], @health.skylight.notes
-    end
-  end
-
-  test "loaded Skylight respects its environment list and the SDK flag override" do
-    @health.stubs(:skylight_loaded?).returns(true)
-    Rails.application.config.stubs(:skylight).returns(OpenStruct.new(environments: [ "production" ]))
+  test "Skylight reports configuration presence without reproducing SDK activation" do
     with_environment("SKYLIGHT_AUTHENTICATION" => "private-token") do
-      assert_equal :disabled, @health.skylight.status
-      Rails.stubs(:env).returns("production".inquiry)
       assert_equal :configured, @health.skylight.status
-    end
-    Rails.stubs(:env).returns("development".inquiry)
-    %w[true 0].each do |flag|
-      with_environment("SKYLIGHT_AUTHENTICATION" => "private-token", "SKYLIGHT_ENABLED" => flag) do
-        assert_equal :configured, @health.skylight.status
-      end
+      assert_no_match(/private-token/, @health.skylight.inspect)
     end
   end
 

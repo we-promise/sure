@@ -11,18 +11,20 @@
           <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform" %>
           <span class="font-medium text-sm text-primary"><%= t(".services.#{service.key}.title") %></span>
         </div>
-        <%= render DS::Pill.new(label: t(".statuses.#{service.status}"), tone: service.tone, marker: false) %>
+        <% unless service.status == :not_configured %>
+          <%= render DS::Pill.new(label: t(".statuses.#{service.status}"), tone: service.tone, marker: false) %>
+        <% end %>
       <% end %>
 
       <div class="space-y-2 px-3 text-sm text-secondary">
         <p><%= t(".services.#{service.key}.description") %></p>
         <% service.notes.each do |note| %>
-          <p><%= t(".notes.#{note}") %></p>
+          <p><%= configuration_health_text(t(".notes.#{note}")) %></p>
         <% end %>
         <% if service.settings.any? %>
-          <p><%= t(".missing_settings", settings: service.settings.join(", ")) %></p>
+          <p><%= configuration_health_text(t(".missing_settings", settings: service.settings.join(", "))) %></p>
         <% end %>
-        <p><%= t(".services.#{service.key}.guidance") %></p>
+        <p><%= configuration_health_text(t(".services.#{service.key}.guidance")) %></p>
       </div>
     <% end %>
   <% end %>

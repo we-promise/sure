@@ -22,8 +22,8 @@ class Admin::SystemHealthHostedUsageControllerTest < ActionDispatch::Integration
           get admin_system_health_path(tab: tab)
 
           assert_response :success
-          assert_select "button[role='tab'][data-id='configuration']", text: "Configuration"
-          assert_select "button[role='tab'][data-id='hosted_usage']", text: "Hosted usage"
+          assert_select "button[role='tab'][data-id='configuration']", text: "Config"
+          assert_select "button[role='tab'][data-id='hosted_usage']", text: "Usage"
           assert_select "button[role='tab'][aria-selected='true'][data-id='#{tab}']"
           assert_select "turbo-frame#hosted_usage[loading='lazy'][src='#{hosted_usage_admin_system_health_path}']"
           assert_select "[data-testid='hosted-usage-report']", count: 0
@@ -191,7 +191,7 @@ class Admin::SystemHealthHostedUsageControllerTest < ActionDispatch::Integration
   test "the hosted frame preserves valid locale overrides and drops invalid ones" do
     ClimateControl.modify("APP_DOMAIN" => "app.sure.am") do
       get admin_system_health_path(tab: "hosted_usage", locale: "de")
-      assert_select "button[role='tab'][aria-selected='true']", text: "Hosting-Nutzung"
+      assert_select "button[role='tab'][aria-selected='true']", text: "Nutzung"
       assert_select "turbo-frame#hosted_usage[src='#{hosted_usage_admin_system_health_path(locale: "de")}']"
 
       [ "xx", { "x" => "de" } ].each do |locale|
