@@ -710,6 +710,38 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "connection refused", entry.metadata["error_message"]
   end
 
+  # The edit form resubmits every condition and action id with its current
+  # values, so these tests submit exactly what the rendered form holds (read back
+  # from the edit page) rather than a hand-picked subset.
+  test "editing an email rule's condition through the form does not email existing matches" do
+    rule, tea = email_rule_with_baseline
+
+    fields = edit_form_fields(rule)
+    condition_value = fields.keys.find { |name| name.match?(/\Arule\[conditions_attributes\]\[\d+\]\[value\]\z/) }
+    assert_equal "coffee", fields[condition_value]
+    patch rule_url(rule), params: fields.merge(condition_value => "house")
+    assert_redirected_to rules_url
+
+    emailed = emailed_ids(rule) { perform_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) } }
+
+    assert_equal [], emailed
+    assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), tea.id
+  end
+
+  test "saving the form with unchanged conditions does not re-seed" do
+    rule, _tea = email_rule_with_baseline
+    coffee_bar = Entry.create!(account: @baseline_account, name: "Coffee bar", date: Date.current, amount: 5, currency: "USD", entryable: Transaction.new).transaction
+
+    assert_no_difference -> { NotificationDelivery.where(rule: rule).count } do
+      patch rule_url(rule), params: edit_form_fields(rule)
+    end
+    assert_redirected_to rules_url
+
+    emailed = emailed_ids(rule) { perform_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) } }
+
+    assert_equal [ coffee_bar.id ], emailed, "a match that arrived since the last run is still emailed"
+  end
+
   private
     # A regex condition, so a stubbed timeout reaches the baseline query, and one
     # matching transaction, so a recorded baseline is visible as a delivery.
@@ -737,5 +769,58 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
       )
       create_transaction(date: Date.current, account: account, name: "Baseline match zq")
       rule
+    end
+
+    # An active email rule matching "Coffee shop", with its baseline taken, and a
+    # "Tea house" transaction it does not match yet.
+    def email_rule_with_baseline
+      family = @user.family
+      @baseline_account = family.accounts.create!(name: "Baseline test", balance: 1000, currency: "USD", accountable: Depository.new)
+      Entry.create!(account: @baseline_account, name: "Coffee shop", date: 90.days.ago.to_date, amount: 10, currency: "USD", entryable: Transaction.new)
+      tea = Entry.create!(account: @baseline_account, name: "Tea house", date: 60.days.ago.to_date, amount: 20, currency: "USD", entryable: Transaction.new).transaction
+
+      rule = family.rules.create!(
+        resource_type: "transaction",
+        active: true,
+        conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ],
+        actions_attributes: [ { action_type: "send_email_notification" } ]
+      )
+      # Rule::Action's create-time seed does not run today (its after_update_commit
+      # names the same method and replaces it), so take that baseline here.
+      rule.actions.first.send(:seed_notification_baseline)
+
+      [ rule, tea ]
+    end
+
+    # The name/value pairs the browser would submit from the rule's edit form:
+    # every input and select outside the Stimulus <template>s, checked radios
+    # only, and a select's selected option.
+    def edit_form_fields(rule)
+      get edit_rule_url(rule)
+      assert_response :success
+
+      form = Nokogiri::HTML(response.body).at_css("form[action='#{rule_path(rule)}']")
+      form.css("input, select").each_with_object({}) do |field, fields|
+        next if field.ancestors("template").any? || field["name"].blank?
+        next if %w[_method authenticity_token commit].include?(field["name"])
+        next if field["type"] == "radio" && !field.has_attribute?("checked")
+
+        fields[field["name"]] = if field.name == "select"
+          (field.at_css("option[selected]") || field.at_css("option"))&.[]("value")
+        else
+          field["value"].to_s
+        end
+      end
+    end
+
+    def emailed_ids(rule)
+      before = enqueued_jobs.size
+      yield
+      enqueued_jobs.drop(before)
+        .select { |job| job[:job] == RuleEmailNotificationJob }
+        .map { |job| ActiveJob::Arguments.deserialize(job[:args]) }
+        .select { |rule_id, _| rule_id == rule.id }
+        .flat_map(&:second)
+        .sort
     end
 end
