@@ -548,6 +548,8 @@ class RecurringTransaction < ApplicationRecord
       next_expected_date: next_expected,
       status: "active",
       bill_type: entry.amount.negative? ? "income" : "bill",
+      # Income stays uncategorised, as detection leaves it.
+      category_id: entry.amount.negative? ? nil : transaction.category_id,
       occurrence_count: matching_amounts.size,
       manual: true,
       expected_amount_min: expected_min,

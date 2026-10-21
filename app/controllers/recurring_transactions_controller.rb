@@ -264,6 +264,7 @@ class RecurringTransactionsController < ApplicationController
       @recurring_transaction.account_id = entry.account_id
       # A negative entry is an inflow: pre-fill as income, not as a bill.
       @recurring_transaction.is_income = true if entry.amount.negative?
+      @recurring_transaction.category_id = entry.entryable.try(:category_id) unless entry.amount.negative?
       @recurring_transaction.first_due_on =
         RecurringTransaction::Schedule.new(expected_day_of_month: entry.date.day).next_occurrence_from_today
     end
@@ -377,7 +378,7 @@ class RecurringTransactionsController < ApplicationController
       params.require(:recurring_transaction).permit(
         :name, :amount, :currency, :account_id, :first_due_on, :frequency_preset,
         :frequency_interval, :frequency_interval_unit,
-        :payment_url, :autopay, :notes, :is_income
+        :payment_url, :autopay, :notes, :is_income, :category_id
       )
     end
 

@@ -325,6 +325,30 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match "184.37", response.body
   end
 
+  test "new prefills the category of the transaction it starts from" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current - 20, amount: 54.73, currency: "USD", name: "PET COVER",
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "input[name=?][value=?]", "recurring_transaction[category_id]", categories(:food_and_drink).id
+  end
+
+  test "new offers no category for a paycheck" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current - 10, amount: -1840, currency: "USD", name: "ACME PAYROLL",
+      entryable: Transaction.new(category: categories(:income))
+    )
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "[name=?]", "recurring_transaction[category_id]", count: 0
+  end
+
   # Sharing is per account, so a family scope is not an access check. Prefilling
   # reads the entry's name, amount and account straight back into the form.
   test "new ignores a transaction from an account the user was never given" do
@@ -514,6 +538,50 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal due.day, detection.day_of_month
     assert bill.recurring_occurrences.reload.exists?(due_on: due),
            "the declared bill's occurrence must materialize immediately"
+  end
+
+  test "create keeps the category chosen on the add form" do
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Pet Cover", amount: "54.73", account_id: accounts(:depository).id,
+        first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+        category_id: categories(:food_and_drink).id
+      }
+    }
+
+    assert_redirected_to bills_path
+    assert_equal categories(:food_and_drink), @family.recurring_transactions.order(:created_at).last.category
+  end
+
+  test "create leaves a declared paycheck uncategorised" do
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Acme Payroll", amount: "1840", account_id: accounts(:depository).id, is_income: "1",
+        first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+        category_id: categories(:income).id
+      }
+    }
+
+    bill = @family.recurring_transactions.order(:created_at).last
+    assert_equal "Acme Payroll", bill.name
+    assert bill.typed_income?
+    assert_nil bill.category_id
+  end
+
+  test "create rejects another family's category" do
+    foreign = families(:empty).categories.create!(name: "Foreign Category")
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Pet Cover", amount: "54.73", account_id: accounts(:depository).id,
+          first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+          category_id: foreign.id
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
   end
 
   test "create with a non-monthly preset writes explicit rules" do

@@ -41,6 +41,9 @@ class RecurringTransaction
         name: attrs[:name],
         amount: amount,
         bill_type: is_income ? "income" : "bill",
+        # A paycheck is not spend, so it carries no category. Ownership of the
+        # id is checked by the model's category_belongs_to_family validation.
+        category_id: is_income ? nil : attrs[:category_id].presence,
         account: account,
         currency: chosen_currency || account&.currency || family.currency,
         payment_url: attrs[:payment_url],
