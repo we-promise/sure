@@ -188,14 +188,24 @@ class Holding < ApplicationRecord
           merge_attrs[:account_provider_id] ||= holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
           merge_attrs[:security_locked] = true # Lock merged holding to prevent provider overwrites
 
-          existing.update!(merge_attrs)
+          # Holdings are derived rows the materializer rebuilds (with
+          # upsert_all, skipping validations), and a merged qty or amount can
+          # legitimately be negative, e.g. after a full in-kind transfer out.
+          # The >= 0 validations guard user edits and must not veto the merge,
+          # so write only these columns. update_columns skips updated_at,
+          # which update! set and other readers rely on, so set it here.
+          existing.update_columns(merge_attrs.merge(updated_at: Time.current))
           holding.destroy!
         else
-          # No collision: update to new security
-          holding.provider_security_id ||= old_security.id
-          holding.security = new_security
-          holding.security_locked = true
-          holding.save!
+          # No collision: update to new security. Write only the columns this
+          # remap owns, for the same reason as the merge above: a negative
+          # derived row must still move.
+          holding.update_columns(
+            security_id: new_security.id,
+            security_locked: true,
+            provider_security_id: holding.provider_security_id || old_security.id,
+            updated_at: Time.current
+          )
         end
       end
 
@@ -231,11 +241,14 @@ class Holding < ApplicationRecord
       account.trades.where(security: current_security).update_all(security_id: original_security.id)
 
       # Reset ALL holdings that were remapped from this provider_security
+      # Write only the columns the reset owns, so a negative derived row
+      # still moves back (see remap_security!).
       account.holdings.where(security: current_security, provider_security: original_security).find_each do |holding|
-        holding.update!(
-          security: original_security,
+        holding.update_columns(
+          security_id: original_security.id,
           security_locked: false,
-          provider_security_id: nil
+          provider_security_id: nil,
+          updated_at: Time.current
         )
       end
     end

@@ -85,17 +85,30 @@ class HoldingsController < ApplicationController
     new_security.failed_fetch_count = 0
     new_security.failed_fetch_at = nil
 
-    new_security.save!
+    begin
+      # Saving the security, moving the holdings and trades, and
+      # re-materializing run as one transaction, so a failure at any step
+      # leaves nothing changed and the alert below is true.
+      ActiveRecord::Base.transaction do
+        new_security.save!
 
-    @holding.remap_security!(new_security)
+        @holding.remap_security!(new_security)
 
-    # Re-materialize holdings with the new security's prices.
-    # Reload account to avoid stale associations from remap_security!.
-    # The around_action :switch_timezone already sets the family timezone
-    # for this request, so Date.current is correct here.
-    account = Account.find(@holding.account_id)
-    strategy = account.linked? ? :reverse : :forward
-    Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
+        # Re-materialize holdings with the new security's prices.
+        # Reload account to avoid stale associations from remap_security!.
+        # The around_action :switch_timezone already sets the family timezone
+        # for this request, so Date.current is correct here.
+        account = Account.find(@holding.account_id)
+        strategy = account.linked? ? :reverse : :forward
+        Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
+      end
+    rescue StandardError => e
+      Rails.logger.warn("remap_security failed for holding #{@holding.id}: #{e.class}: #{e.message}")
+      Rails.error.report(e, handled: true, context: { holding_id: @holding.id, action: "remap_security" })
+      flash[:alert] = t(".failed")
+      redirect_to account_path(@holding.account, tab: "holdings")
+      return
+    end
 
     flash[:notice] = t(".success")
 
@@ -144,7 +157,18 @@ class HoldingsController < ApplicationController
   end
 
   def reset_security
-    @holding.reset_security_to_provider!
+    begin
+      # reset_security_to_provider! writes in one transaction, which a
+      # failure rolls back.
+      @holding.reset_security_to_provider!
+    rescue StandardError => e
+      Rails.logger.warn("reset_security failed for holding #{@holding.id}: #{e.class}: #{e.message}")
+      Rails.error.report(e, handled: true, context: { holding_id: @holding.id, action: "reset_security" })
+      flash[:alert] = t(".failed")
+      redirect_to account_path(@holding.account, tab: "holdings")
+      return
+    end
+
     flash[:notice] = t(".success")
 
     respond_to do |format|
