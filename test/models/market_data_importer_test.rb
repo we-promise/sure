@@ -4,11 +4,11 @@ require "ostruct"
 class MarketDataImporterTest < ActiveSupport::TestCase
   include ProviderTestHelper
 
-  SNAPSHOT_START_DATE       = MarketDataImporter::SNAPSHOT_DAYS.days.ago.to_date
   SECURITY_PRICE_BUFFER     = Security::Price::Importer::PROVISIONAL_LOOKBACK_DAYS.days
   EXCHANGE_RATE_BUFFER      = 5.days
 
   setup do
+    travel_to Time.current
     Security::Price.delete_all
     ExchangeRate.delete_all
     Trade.delete_all
@@ -32,15 +32,15 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     # Seed stale rate so only the next missing day is fetched
     ExchangeRate.create!(from_currency: "CAD",
                          to_currency: "USD",
-                         date: SNAPSHOT_START_DATE,
+                         date: snapshot_start_date,
                          rate: 2.0)
 
     ExchangeRate.create!(from_currency: "USD",
                          to_currency: "CAD",
-                         date: SNAPSHOT_START_DATE,
+                         date: snapshot_start_date,
                          rate: 0.5)
 
-    expected_start_date = (SNAPSHOT_START_DATE + 1.day) - EXCHANGE_RATE_BUFFER
+    expected_start_date = (snapshot_start_date + 1.day) - EXCHANGE_RATE_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
     # Only the forward pair (CAD→USD) should be fetched; inverse (USD→CAD) is computed automatically
@@ -50,7 +50,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
                    start_date: expected_start_date,
                    end_date: end_date)
              .returns(provider_success_response([
-               OpenStruct.new(from: "CAD", to: "USD", date: SNAPSHOT_START_DATE, rate: 1.5)
+               OpenStruct.new(from: "CAD", to: "USD", date: snapshot_start_date, rate: 1.5)
              ]))
 
     before = ExchangeRate.count
@@ -103,7 +103,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     account.entries.create!(name: "Buy AAPL", date: 40.days.ago.to_date, amount: 100, currency: "USD", entryable: trade)
     account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD")
 
-    expected_start_date = SNAPSHOT_START_DATE - SECURITY_PRICE_BUFFER
+    expected_start_date = snapshot_start_date - SECURITY_PRICE_BUFFER
     end_date            = Date.current.in_time_zone("America/New_York").to_date
 
     @provider.expects(:fetch_security_prices)
@@ -113,7 +113,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
                    end_date: end_date)
              .returns(provider_success_response([
                OpenStruct.new(security: security,
-                              date: SNAPSHOT_START_DATE,
+                              date: snapshot_start_date,
                               price: 100,
                               currency: "USD")
              ]))
@@ -127,7 +127,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
 
     MarketDataImporter.new(mode: :snapshot).import_security_prices
 
-    assert_equal 1, Security::Price.where(security: security, date: SNAPSHOT_START_DATE).count
+    assert_equal 1, Security::Price.where(security: security, date: snapshot_start_date).count
   end
 
   test "fetches no prices for online securities without holdings or trades" do
@@ -239,4 +239,9 @@ class MarketDataImporterTest < ActiveSupport::TestCase
 
     MarketDataImporter.new(mode: :full).import_security_prices
   end
+
+  private
+    def snapshot_start_date
+      MarketDataImporter::SNAPSHOT_DAYS.days.ago.to_date
+    end
 end
