@@ -16,5 +16,5 @@ json.currency @entry.currency
 # rest back unchanged. The transaction partial carries the exact
 # `amount_decimal` and the `excluded` flag that needs.
 json.children @children do |child|
-  json.partial! "api/v1/transactions/transaction", transaction: child
+  json.partial! "api/v1/transactions/transaction", transaction: child, split_parent_ids: @split_parent_entry_ids
 end

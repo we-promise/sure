@@ -135,12 +135,14 @@ class Api::V1::SplitsController < Api::V1::BaseController
         .joins(:entry)
         .where(entries: { parent_entry_id: @entry.id })
         .preload(
-          { entry: [ :account, :child_entries ] },
+          { entry: :account },
           :category, :merchant, :tags,
           transfer_as_outflow: { inflow_transaction: { entry: :account } },
           transfer_as_inflow: { outflow_transaction: { entry: :account } }
         )
         .order("entries.created_at")
+        .to_a
+      @split_parent_entry_ids = split_parent_entry_ids_for(@children)
 
       render :show, status: status
     end
