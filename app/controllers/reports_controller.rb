@@ -542,7 +542,7 @@ class ReportsController < ApplicationController
 
       # Inject preloaded holdings into trades for realized_gain_loss calculation
       sell_trades.each do |trade|
-        trade.instance_variable_set(:@preloaded_holdings, holdings_by_account[trade.entry.account_id] || [])
+        trade.preloaded_holdings = holdings_by_account[trade.entry.account_id] || []
       end
 
       # The rates the proceeds conversion needs, in one query rather than one
