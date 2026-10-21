@@ -1309,6 +1309,22 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
   end
 
+  test "logs a failed market data schedule sync to the debug log" do
+    with_self_hosting do
+      MarketDataScheduler.stubs(:sync!).raises(StandardError, "cron create failed")
+
+      assert_difference -> { DebugLogEntry.where(category: "market_data_schedule").count }, 1 do
+        patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1" } }
+      end
+
+      assert_redirected_to settings_hosting_url
+      entry = DebugLogEntry.where(category: "market_data_schedule").last
+      assert_equal "Settings::HostingsController", entry.source
+      assert_equal users(:family_admin), entry.user
+      assert_equal "cron create failed", entry.metadata["exception_message"]
+    end
+  end
+
   private
     def enable_preview_features!
       @user = users(:family_admin)

@@ -77,6 +77,7 @@ Sidekiq.configure_server do |config|
     Rails.logger.info("[MarketDataScheduler] Initialized import_market_data cron job")
   rescue => e
     Rails.logger.error("[MarketDataScheduler] Failed to initialize: #{e.message}")
+    MarketDataScheduler.capture_sync_failure(e, source: "Sidekiq startup")
   end
 end
 

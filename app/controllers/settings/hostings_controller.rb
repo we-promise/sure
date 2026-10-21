@@ -522,6 +522,7 @@ class Settings::HostingsController < ApplicationController
     rescue StandardError => error
       Rails.logger.error("[MarketDataScheduler] Failed to sync scheduler: #{error.message}")
       Rails.logger.error(error.backtrace.join("\n"))
+      MarketDataScheduler.capture_sync_failure(error, source: self.class.name, user: Current.user)
       flash[:alert] = t(".scheduler_sync_failed")
     end
 

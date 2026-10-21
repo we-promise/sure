@@ -90,4 +90,28 @@ class MarketDataSchedulerTest < ActiveSupport::TestCase
       end
     end
   end
+
+  test "capture_sync_failure writes an error entry to the debug log" do
+    Setting.stubs(:market_data_sync_time).returns("18:30")
+    Setting.stubs(:market_data_sync_timezone).returns("Europe/Berlin")
+
+    assert_difference -> { DebugLogEntry.where(category: "market_data_schedule").count }, 1 do
+      MarketDataScheduler.capture_sync_failure(StandardError.new("redis down"), source: "Sidekiq startup")
+    end
+
+    entry = DebugLogEntry.where(category: "market_data_schedule").last
+    assert_equal "error", entry.level
+    assert_equal "Sidekiq startup", entry.source
+    assert_equal "redis down", entry.metadata["exception_message"]
+    assert_equal "18:30", entry.metadata["time"]
+    assert_equal "Europe/Berlin", entry.metadata["timezone"]
+  end
+
+  test "capture_sync_failure never raises when the settings cannot be read" do
+    Setting.stubs(:market_data_sync_time).raises(ActiveRecord::ConnectionNotEstablished)
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert_nil MarketDataScheduler.capture_sync_failure(StandardError.new("boom"), source: "Sidekiq startup")
+    end
+  end
 end
