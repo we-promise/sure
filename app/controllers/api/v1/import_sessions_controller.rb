@@ -3,6 +3,8 @@
 class Api::V1::ImportSessionsController < Api::V1::BaseController
   before_action :ensure_read_scope, only: [ :show ]
   before_action :ensure_write_scope, only: [ :create, :create_chunk, :publish ]
+  # Import sessions only carry Sure imports, which write family configuration.
+  before_action :reject_guest_writes!, only: [ :create, :create_chunk, :publish ]
   before_action :set_import_session, only: [ :show, :create_chunk, :publish ]
 
   def create

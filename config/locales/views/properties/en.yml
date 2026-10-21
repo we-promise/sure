@@ -108,10 +108,16 @@ en:
         edit_account_details: "Edit account details"
         refresh_valuation: "Refresh valuation"
         valuation_source: "Valued by %{provider}, last updated %{date}"
+        link_valuation: "Update value automatically with %{provider}"
+        link_valuation_description: "This property's value is only updated manually."
     refresh_valuation:
       queued: "The valuation refresh has started. The new value will appear shortly."
       not_linked: "This property isn't linked to a valuation provider."
       not_configured: "%{provider} isn't configured. Add its API key in Settings → Self-Hosting to refresh this valuation."
+    link_valuation:
+      linked: "Linked to %{provider} and updated the property's value."
+      link_failed: "%{provider} couldn't value this property, so it wasn't linked. Check that the address is correct, then try again."
+      not_linkable: "This property can't be linked to that provider. Check that its address is complete and in a supported country, and that the account currency matches the provider."
     subtypes:
       apartment:
         short: Apartment
