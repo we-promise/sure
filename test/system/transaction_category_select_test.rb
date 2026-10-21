@@ -57,6 +57,35 @@ class TransactionCategorySelectTest < ApplicationSystemTestCase
     assert_nil transaction.reload.category_id
   end
 
+  test "saving the date keeps a category a rule set while the drawer was open" do
+    transaction = transactions(:one)
+    transaction.update!(category: nil)
+    entry = transaction.entry
+
+    visit transactions_url
+
+    page.execute_script <<~JS
+      const frame = document.querySelector("turbo-frame#drawer")
+      frame.src = "#{transaction_url(entry)}"
+    JS
+
+    within "turbo-frame#drawer", visible: :all do
+      assert_selector "[data-controller='category-select']"
+    end
+
+    # What an immediate rule does in the background after the drawer loaded.
+    transaction.update!(category: categories(:food_and_drink))
+    new_date = entry.date - 1.day
+
+    within "turbo-frame#drawer", visible: :all do
+      find("input[name='entry[date]']").set(new_date)
+    end
+
+    assert_selector "##{ActionView::RecordIdentifier.dom_id(entry)}", text: "Food & Drink"
+    assert_equal new_date, entry.reload.date
+    assert_equal categories(:food_and_drink), transaction.reload.category
+  end
+
   test "can create a subcategory from the transaction form" do
     parent = categories(:food_and_drink)
     visit new_transaction_url

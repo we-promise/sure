@@ -2018,6 +2018,27 @@ end
     assert_enqueued_with(job: ApplyImmediateRulesJob, args: [ @user.family, { transaction_ids: [ @entry.entryable_id ] } ])
   end
 
+  # A rule can change these fields while the drawer is open. Sharing a form
+  # with another field would send the drawer's stale value back on the next
+  # save of that field, undoing the rule's result and locking it.
+  test "the drawer sends each field that rules can set in a form of its own" do
+    rule_fields = %w[entry[name] entry[entryable_attributes][category_id] entry[entryable_attributes][merchant_id] entry[entryable_attributes][tag_ids][]]
+    form_meta = %w[authenticity_token _method grouped entry[entryable_attributes][id]]
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+    assert_response :success
+
+    seen = css_select("form[action='#{transaction_path(@entry)}']").filter_map do |form|
+      names = form.css("input[name], select[name], textarea[name]").reject { |field| field["disabled"] }.map { |field| field["name"] }.uniq - form_meta
+      next if (names & rule_fields).empty?
+
+      assert_equal 1, names.size, "#{names.inspect} share one form"
+      names.first
+    end
+
+    assert_equal rule_fields.sort, seen.sort
+  end
+
   test "does not offer guests to create a rule through a transaction update" do
     category = categories(:income)
     @entry.update!(name: "AMZN Mktp UK")
