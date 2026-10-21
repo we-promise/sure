@@ -513,15 +513,22 @@ class Family < ApplicationRecord
   # the rule action does, and returns the ids that were queued. The jobs run
   # through AutoCategorizeJob, so the family's categorization provider and
   # confidence threshold apply exactly as they do for rules.
+  #
+  # Returns [queued_ids, unqueued_ids]. perform_later can return false when
+  # the adapter refuses a job, so a batch only counts as queued when it was
+  # actually enqueued; after the first refused batch the rest are left unqueued.
   def queue_auto_categorization(transactions)
     batch_size = Provider::LlmConcept.max_items_per_call
     ids = transactions.order(:id).pluck(:id)
+    queued = []
 
     ids.each_slice(batch_size) do |batch_ids|
-      AutoCategorizeJob.perform_later(self, transaction_ids: batch_ids)
+      break unless AutoCategorizeJob.perform_later(self, transaction_ids: batch_ids)
+
+      queued.concat(batch_ids)
     end
 
-    ids
+    [ queued, ids - queued ]
   end
 
   # The LLM only: Bayes is its own rule (Category classifier), so what it
