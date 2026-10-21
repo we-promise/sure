@@ -1041,6 +1041,73 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(accounts(:credit_card))
   end
 
+  test "logo_options shows the icons found and Brandfetch inside the logo frame without saving" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    @account.update!(institution_domain: "krungsri.com")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "krungsri.com.png",
+                         metadata: { "logo_source" => "yandex", "logo_key" => "yandex", "logo_auto" => true })
+    icons = [ logo_icon("appstore:123", "appstore", 512, name: "krungsri"),
+              logo_icon("yandex", "yandex", 120, body: file_fixture("square-placeholder.png").binread) ]
+    Account::LogoFetcher.any_instance.stubs(:candidates).returns(icons)
+
+    get logo_options_account_url(@account), headers: { "Turbo-Frame" => dom_id(@account, :logo_field) }
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(@account, :logo_field)}"
+    assert_select "button[type=button][data-account-logo-picker-choice-param='appstore:123'][title=krungsri]"
+    assert_select "button[type=button][data-account-logo-picker-choice-param=brandfetch]"
+    assert_select "button[type=button][data-account-logo-picker-choice-param]", 2, "the current icon only resets the choice"
+    assert_select "button[type=submit]:not([form])", 0, "choosing an icon saves nothing"
+    assert_select "img[src^='data:image/png;base64,']", 2
+  end
+
+  test "logo_options searches the domain typed in the form without saving it" do
+    @account.update!(institution_domain: "tbank.ru")
+    Account::LogoFetcher.expects(:new).with { |account| account.institution_domain == "krungsri.com" && account.institution_name == "Krungsri" }
+      .returns(stub(candidates: []))
+
+    get logo_options_account_url(@account), params: { institution_domain: "https://www.krungsri.com/", institution_name: "Krungsri" },
+                                            headers: { "Turbo-Frame" => dom_id(@account, :logo_field) }
+
+    assert_response :success
+    assert_equal "tbank.ru", @account.reload.institution_domain
+  end
+
+  test "logo_options for a new account searches the typed domain" do
+    Account::LogoFetcher.expects(:new).with { |account| account.new_record? && account.institution_domain == "krungsri.com" }
+      .returns(stub(candidates: []))
+
+    get logo_options_accounts_url, params: { institution_domain: "krungsri.com", institution_name: "Krungsri" },
+                                   headers: { "Turbo-Frame" => "logo_field_account" }
+
+    assert_response :success
+    assert_select "turbo-frame#logo_field_account"
+  end
+
+  test "logo_options keeps an icon selectable when its source now serves a different image" do
+    @account.update!(institution_domain: "krungsri.com")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "krungsri.com.png",
+                         metadata: { "logo_source" => "yandex", "logo_key" => "yandex", "logo_auto" => true })
+    Account::LogoFetcher.any_instance.stubs(:candidates).returns([ logo_icon("yandex", "yandex", 120) ])
+
+    get logo_options_account_url(@account), headers: { "Turbo-Frame" => dom_id(@account, :logo_field) }
+
+    assert_select "button[data-account-logo-picker-choice-param=yandex]"
+  end
+
+  test "logo_options outside the frame goes to the account" do
+    get logo_options_account_url(@account)
+
+    assert_redirected_to account_url(@account)
+  end
+
+  test "logo_options requires write permission" do
+    sign_in users(:family_member)
+
+    get logo_options_account_url(accounts(:credit_card))
+    assert_redirected_to account_url(accounts(:credit_card))
+  end
+
   test "select_provider shows available providers" do
     get select_provider_account_url(@account)
     assert_response :success
@@ -1245,6 +1312,10 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def logo_icon(key, source, size, name: nil, body: "\x89PNG".b)
+      Account::LogoFetcher::Icon.new(key:, source:, name:, body:, size:, content_type: "image/png", extension: "png")
+    end
+
     # #3630. Links a shared and an unshared account to +item+ through two fresh
     # provider rows built by the block, and returns them in that order. Shares
     # are reset first so the member's access is exactly the one granted here.

@@ -67,7 +67,55 @@ module AccountsHelper
       # so toggling it in Settings busts the 12h fragment cache immediately
       # (this partial renders with skip_digest: true, so the template digest
       # would not otherwise reflect the change).
-      Current.user&.always_expanded_account_groups&.sort
+      Current.user&.always_expanded_account_groups&.sort,
+      # Brandfetch logo URLs carry the client id and the logo size, so
+      # changing either in Settings must bust the cached sidebar too.
+      Digest::SHA256.hexdigest(Setting.brand_fetch_client_id.to_s),
+      Setting.brand_fetch_logo_size
     ]
+  end
+
+  # Where the icon shown for the account comes from, for the account form.
+  def account_logo_caption(account)
+    key = if account.prefer_brandfetch_logo? && account.brandfetch_logo_url then "brandfetch"
+    elsif account.stored_logo_url then account.logo_source || "uploaded"
+    elsif account.brandfetch_logo_url then "brandfetch"
+    else "none"
+    end
+
+    name = account.logo.blob.metadata["logo_name"] if key == account.logo_source
+    [ t("accounts.logo_caption.#{key}"), name ].compact.join(" · ")
+  end
+
+  LogoOption = Data.define(:source, :src, :label, :detail, :title, :current)
+
+  # Tiles of the logo picker: the icons found for the domain, the stored logo
+  # while Brandfetch is shown instead, and Brandfetch when configured.
+  # `source` is what Account#choose_logo receives when the form is saved.
+  def account_logo_options(account, candidates)
+    shows_stored = !account.prefer_brandfetch_logo?
+
+    options = candidates.map do |icon|
+      LogoOption.new(
+        source: icon.key,
+        src: "data:#{icon.content_type};base64,#{Base64.strict_encode64(icon.body)}",
+        label: t("accounts.logo_options.sources.#{icon.source}"),
+        detail: t("accounts.logo_options.size", size: icon.size),
+        title: icon.name,
+        current: shows_stored && account.stored_logo?(icon.key, body: icon.body)
+      )
+    end
+
+    if !shows_stored && account.stored_logo_url
+      options.unshift(LogoOption.new(source: "stored", src: account.stored_logo_url, label: t("accounts.logo_options.stored"),
+                                     detail: nil, title: nil, current: false))
+    end
+
+    if account.brandfetch_logo_url
+      options << LogoOption.new(source: "brandfetch", src: account.brandfetch_logo_url, label: t("accounts.logo_options.sources.brandfetch"),
+                                detail: nil, title: nil, current: !shows_stored || !account.logo.attached?)
+    end
+
+    options
   end
 end
