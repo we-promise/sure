@@ -838,6 +838,82 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-section-key='investment_performance']", count: 0
   end
 
+  # The card lists only what this user counts in their finances. When the
+  # user's own closed account opens the card, another member's account that
+  # is not shared with them must not be listed beside it.
+  test "the investment card does not list another member's unshared disposal" do
+    exclude_fixture_investment_accounts
+    date = Date.current.beginning_of_month
+    _, own = closed_account_with_disposal(date: date)
+    _, theirs = closed_account_with_disposal(date: date, owner: users(:family_member))
+
+    get reports_path
+    assert_response :ok
+
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text)
+    assert lines.any? { |text| text.include?(own.ticker) }, "the user's own disposal must be listed"
+    assert lines.none? { |text| text.include?(theirs.ticker) },
+           "another member's unshared disposal must not be listed"
+  end
+
+  # The same holds when an open investment account of the user's is what
+  # shows the card, and when the other member's account is open too.
+  test "the investment card does not list another member's unshared disposal beside an open account" do
+    exclude_fixture_investment_accounts
+    date = Date.current.beginning_of_month
+    _, own = closed_account_with_disposal(date: date, close: false)
+    _, theirs = closed_account_with_disposal(date: date, owner: users(:family_member), close: false)
+
+    get reports_path
+    assert_response :ok
+
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text)
+    assert lines.any? { |text| text.include?(own.ticker) }, "the user's own disposal must be listed"
+    assert lines.none? { |text| text.include?(theirs.ticker) },
+           "another member's unshared disposal must not be listed"
+  end
+
+  # A member's account shared with the user and included in their finances
+  # is the user's to see, so its disposal is listed and opens the card.
+  test "the investment card lists a disposal from a member's account shared into the user's finances" do
+    exclude_fixture_investment_accounts
+    account, theirs = closed_account_with_disposal(date: Date.current.beginning_of_month, owner: users(:family_member))
+    account.account_shares.create!(user: @user, permission: "read_only", include_in_finances: true)
+
+    get reports_path
+    assert_response :ok
+
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text)
+    assert lines.any? { |text| text.include?(theirs.ticker) },
+           "a disposal from an account shared into the user's finances must be listed"
+  end
+
+  # An excluded trade is left out of reports, as investment totals leave it
+  # out; it is not a disposal for the card's gate or its list.
+  test "an excluded disposal from a closed account does not show the investment card" do
+    exclude_fixture_investment_accounts
+    closed_account_with_disposal(date: Date.current.beginning_of_month, excluded: true)
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "[data-section-key='investment_performance']", count: 0
+  end
+
+  test "the investment card does not list an excluded disposal" do
+    exclude_fixture_investment_accounts
+    date = Date.current.beginning_of_month
+    _, kept = closed_account_with_disposal(date: date, close: false)
+    _, excluded = closed_account_with_disposal(date: date, close: false, excluded: true)
+
+    get reports_path
+    assert_response :ok
+
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text)
+    assert lines.any? { |text| text.include?(kept.ticker) }, "the kept disposal must be listed"
+    assert lines.none? { |text| text.include?(excluded.ticker) }, "the excluded disposal must not be listed"
+  end
+
   # POSTing to settings_api_keys_path is create, which needs api_key params.
   test "google sheets instructions link to the API keys page" do
     get google_sheets_instructions_reports_url
@@ -857,18 +933,19 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     # An investment account holding 5 shares at a basis of 100, with 2 sold at
     # 150 on +date+ (a gain of $100.00), then closed.
-    def closed_account_with_disposal(date:, label: "Sell", owner: @user)
+    # +close: false+ leaves it open; +excluded: true+ marks the sale excluded.
+    def closed_account_with_disposal(date:, label: "Sell", owner: @user, close: true, excluded: false)
       account = @family.accounts.create!(name: "Closed brokerage", balance: 0, currency: "USD",
                                          accountable: Investment.new, owner: owner)
       security = Security.create!(ticker: "CLS#{SecureRandom.hex(3)}", name: "Closed Position")
       account.holdings.create!(security: security, date: date, qty: 5, price: 150,
                                amount: BigDecimal(750), currency: "USD", cost_basis: 100)
       account.entries.create!(
-        date: date, name: "out #{label}", amount: -300, currency: "USD",
+        date: date, name: "out #{label}", amount: -300, currency: "USD", excluded: excluded,
         entryable: Trade.new(security: security, qty: -2, price: 150, currency: "USD",
                              investment_activity_label: label)
       )
-      account.disable!
+      account.disable! if close
       [ account, security ]
     end
 

@@ -495,7 +495,7 @@ class ReportsController < ApplicationController
       # every account included in reports, disabled ones too, while
       # `investment_accounts` is visible accounts only -- so a family whose only
       # brokerage account is closed used to get no card at all.
-      return { has_investments: false } unless investment_accounts.any? || period_disposals_in_finances?
+      return { has_investments: false } unless investment_accounts.any? || period_sell_trades.exists?
 
       period_totals = investment_statement.totals(period: @period)
       {
@@ -624,11 +624,17 @@ class ReportsController < ApplicationController
 
     # The period's disposals, as the realised-gains half of the investment
     # card lists them. The card's gate asks the same relation, so the two
-    # cannot disagree about what counts as a disposal.
+    # cannot disagree about what counts as a disposal. Scoped to the accounts
+    # this user includes in their finances -- the per-user scope
+    # `investment_accounts` applies -- so another member's unshared account
+    # is neither listed nor opens the card.
     def period_sell_trades
       Current.family.trades
         .joins(entry: :account)
-        .where(entries: { date: @period.date_range })
+        # An excluded trade is left out of reports, as InvestmentStatement::Totals
+        # leaves it out of the same card's contributions and withdrawals.
+        .where(entries: { date: @period.date_range, excluded: false })
+        .where(entries: { account_id: Current.user.finance_accounts.select(:id) })
         .merge(Account.included_in_reports)
         .where("trades.qty < 0")
         # A transfer out has the same negative quantity as a sale and would be
@@ -637,15 +643,6 @@ class ReportsController < ApplicationController
           "trades.investment_activity_label IS NULL OR trades.investment_activity_label NOT IN (?)",
           Trade::INTERNAL_MOVEMENT_LABELS
         )
-    end
-
-    # Whether the period holds a disposal on an account this user includes in
-    # their finances -- the same per-user scope `investment_accounts` applies --
-    # so another member's account never opens the card for this user.
-    def period_disposals_in_finances?
-      period_sell_trades
-        .where(entries: { account_id: Current.family.accounts.included_in_finances_for(Current.user).select(:id) })
-        .exists?
     end
 
     def build_net_worth_metrics
