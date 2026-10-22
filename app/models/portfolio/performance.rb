@@ -18,7 +18,7 @@ class Portfolio::Performance
   # Bumped whenever the meaning of a cached figure changes, so warm caches stop
   # serving the old interpretation under the same name (the pattern #3350 used
   # for totals_query/v2).
-  CACHE_VERSION = "v8".freeze
+  CACHE_VERSION = "v9".freeze
 
   # The balance rows are calendar daily, so the series includes weekends and
   # holidays as structural zeros. Annualising that by the trading-day convention
