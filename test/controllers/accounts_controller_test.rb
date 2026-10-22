@@ -4,6 +4,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
   include OnchainTestHelper
   include EntriesTestHelper
+  include TradeRepublicSessionTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -375,6 +376,31 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     get accounts_url
     assert_includes response.body, title
+  end
+
+  test "index offers a QR login on a Trade Republic connection that needs one" do
+    item = trade_republic_items(:configured_item)
+    item.update!(session_blob: trade_republic_session_blob(expires_at: 1.minute.ago))
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)} [data-trade-republic-qr-initiate-url-value='#{initiate_qr_login_trade_republic_item_path(item)}']"
+    assert_select "##{dom_id(item)} [data-trade-republic-qr-return-url-value='#{accounts_path}']"
+    # Until then a sync can only fail.
+    assert_select "##{dom_id(item)} form[action='#{sync_trade_republic_item_path(item)}'] button[disabled]"
+  end
+
+  test "index shows when a Trade Republic login expires" do
+    item = trade_republic_items(:configured_item)
+    item.update!(session_blob: trade_republic_session_blob(expires_at: 5.hours.from_now))
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("trade_republic_items.trade_republic_item.session_expires_in",
+                                          time: "about 5 hours", at: I18n.l(item.reload.session_expires_at, format: :short))
+    assert_select "##{dom_id(item)} [data-controller='trade-republic-qr']", count: 0
   end
 
   test "index renders trading212 items" do
@@ -837,6 +863,46 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Depository account scheduled for deletion", flash[:notice]
   end
 
+  test "destroy reports failure and keeps the account listed when the enqueue raises" do
+    DestroyJob.queue_adapter.stubs(:enqueue).raises(RedisClient::CannotConnectError, "Connection refused")
+
+    delete account_url(@account)
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.destroy.failed"), flash[:alert]
+    assert_equal "active", @account.reload.status
+
+    get accounts_url
+    assert_select "turbo-frame##{dom_id(@account)}"
+  end
+
+  test "destroy reports failure when the enqueue is rejected" do
+    DestroyJob.queue_adapter.stubs(:enqueue).raises(ActiveJob::EnqueueError, "rejected")
+
+    delete account_url(@account)
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.destroy.failed"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_equal "active", @account.reload.status
+  end
+
+  # The second request of a double submit finds the account already pending
+  # deletion. It reports failure rather than erroring, enqueues nothing more,
+  # and leaves the first request's mark in place.
+  test "a second destroy of an account pending deletion reports failure" do
+    delete account_url(@account)
+    assert_equal "pending_deletion", @account.reload.status
+
+    assert_no_enqueued_jobs(only: DestroyJob) do
+      delete account_url(@account)
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.destroy.failed"), flash[:alert]
+    assert_equal "pending_deletion", @account.reload.status
+  end
+
   test "syncing linked account triggers sync for all provider items" do
     plaid_account = plaid_accounts(:one)
     AccountProvider.create!(account: @account, provider: plaid_account)
@@ -1176,6 +1242,40 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
+  end
+
+  test "reorder saves the manual order of one account group" do
+    # Same shape as the sidebar's sortable-list: group in the URL, ids in the body.
+    patch reorder_accounts_url(group: "depository"), params: { account_ids: [ accounts(:connected).id, @account.id ] }, as: :json
+
+    assert_response :success
+    assert_equal [ accounts(:connected).id, @account.id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "reorder drops accounts from another family" do
+    foreign = families(:empty).accounts.create!(name: "Foreign", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:empty))
+
+    patch reorder_accounts_url, params: { group: "depository", account_ids: [ foreign.id, @account.id ] }, as: :json
+
+    assert_response :success
+    assert_equal [ @account.id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "reorder rejects an unknown group" do
+    patch reorder_accounts_url, params: { group: "not_a_type", account_ids: [ @account.id ] }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_nil @user.reload.manual_account_order["not_a_type"]
+  end
+
+  test "sidebar shows drag handles only with the manual account order" do
+    get account_url(@account)
+    assert_select "[data-controller~='sortable-list']", count: 0
+
+    @user.update!(default_account_order: "manual")
+    get account_url(@account)
+    assert_select "[data-controller~='sortable-list'][data-sortable-list-url-value=?]", reorder_accounts_path(group: "depository")
+    assert_select "[data-sortable-list-target='item'][data-sortable-list-id=?]", @account.id
   end
 
   private

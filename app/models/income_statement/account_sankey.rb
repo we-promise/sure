@@ -23,7 +23,8 @@ class IncomeStatement::AccountSankey
     flows = account_flows
     income = flows.sum { |flow| flow[:income] }.to_d
     spending = flows.sum { |flow| flow[:spending] }.to_d
-    capacity = [ income, spending ].max
+    invested = flows.sum { |flow| flow[:invested] }.to_d
+    capacity = [ income, spending + invested ].max
     unless capacity.zero?
       subcategory_flows = Hash.new(0.to_d)
       funding = transfer_funding(flows)
@@ -31,7 +32,7 @@ class IncomeStatement::AccountSankey
       add_transfers(funding, capacity)
       add_subcategories(subcategory_flows)
     end
-    { basis: "net_by_account", income: decimal(income), spending: decimal(spending),
+    { basis: "net_by_account", income: decimal(income), spending: decimal(spending), invested: decimal(invested),
       net_savings: decimal(income - spending), nodes: @nodes.map { |node| serialize(node) }, links: @links }
   end
 
@@ -44,15 +45,17 @@ class IncomeStatement::AccountSankey
         groups = IncomeStatement::CategoryNetting.new(statement, period: @period).groups
         income = groups.sum { |group| side_total(group, :income) }.to_d
         spending = groups.sum { |group| side_total(group, :expense) }.to_d
-        next if income.zero? && spending.zero?
+        # Zero unless the family stops counting investing as spending (#3952).
+        invested = statement.invested_total(period: @period).amount.to_d
+        next if income.zero? && spending.zero? && invested.zero?
 
-        { account: account, groups: groups, income: income, spending: spending }
+        { account: account, groups: groups, income: income, spending: spending, invested: invested }
       end
     end
 
     def add_account(flow, income, spending, capacity, subcategory_flows, funding)
       account = flow[:account]
-      size = [ flow[:income], flow[:spending] ].max
+      size = [ flow[:income], flow[:spending] + flow[:invested] ].max
       center = node("account_#{account.id}", account.name, :account, color: ACCOUNT_COLOR)
       center[:value] = size
       center[:percentage] = percentage(size, capacity)
@@ -74,8 +77,15 @@ class IncomeStatement::AccountSankey
         end
       end
 
+      if flow[:invested].positive?
+        node_invested = node("invested_node", "Invested", :invested, color: IncomeStatement::Sankey::INVESTED_COLOR)
+        node_invested[:value] += flow[:invested]
+        node_invested[:percentage] = percentage(node_invested[:value], capacity)
+        link(center, node_invested, flow[:invested], percentage(flow[:invested], capacity))
+      end
+
       id = account.id
-      net = flow[:income] - flow[:spending] +
+      net = flow[:income] - flow[:spending] - flow[:invested] +
         funding.sum { |(_, to), value| to == id ? value : 0 } -
         funding.sum { |(from, _), value| from == id ? value : 0 }
       return if net.zero?
@@ -96,7 +106,7 @@ class IncomeStatement::AccountSankey
     # links only run from surplus to deficit accounts, which keeps the graph
     # acyclic.
     def transfer_funding(flows)
-      balance = flows.to_h { |flow| [ flow[:account].id, flow[:income] - flow[:spending] ] }
+      balance = flows.to_h { |flow| [ flow[:account].id, flow[:income] - flow[:spending] - flow[:invested] ] }
       surplus = balance.select { |_, net| net.positive? }
       deficit = balance.select { |_, net| net.negative? }.transform_values(&:abs)
       return {} if surplus.empty? || deficit.empty?

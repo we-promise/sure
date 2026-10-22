@@ -41,8 +41,22 @@
       text: t(".refresh_valuation"),
       href: refresh_valuation_property_path(account),
       variant: "outline",
-      icon: "refresh-cw"
+      icon: "refresh-cw",
+      data: { turbo_frame: "_top" }
     ) %>
+  </div>
+<% elsif (linkable_providers = account.property.linkable_avm_providers).any? %>
+  <div class="flex flex-col items-center gap-2 pt-8">
+    <p class="text-sm text-secondary"><%= t(".link_valuation_description") %></p>
+    <% linkable_providers.each do |provider_key| %>
+      <%= render DS::Button.new(
+        text: t(".link_valuation", provider: t("properties.avm_providers.#{provider_key}")),
+        href: link_valuation_property_path(account, avm_provider: provider_key),
+        variant: "outline",
+        icon: "link",
+        data: { turbo_frame: "_top" }
+      ) %>
+    <% end %>
   </div>
 <% end %>
 

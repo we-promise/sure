@@ -111,6 +111,34 @@ class IncomeStatement::AccountSankeyTest < ActiveSupport::TestCase
     assert_balanced result
   end
 
+  test "money invested leaves each account for Invested when investing is not spending" do
+    @family.update!(investment_contributions_as_spending: false)
+    transaction(@checking, -1000, @salary)
+    transaction(@checking, 200, @shopping)
+    create_transaction(account: @checking, amount: 300, category: nil, date: @month, kind: "investment_contribution")
+    result = graph
+
+    assert_equal "300.0", result[:invested]
+    assert_link result, "account_#{@checking.id}", "invested_node", "300.0"
+    assert_link result, "account_#{@checking.id}", "surplus_node", "500.0"
+    assert_balanced result
+  end
+
+  test "money invested comes out of an account's surplus before it can fund another account" do
+    @family.update!(investment_contributions_as_spending: false)
+    transaction(@checking, -1000, @salary)
+    transaction(@card, 250, @shopping)
+    create_transaction(account: @checking, amount: 900, category: nil, date: @month, kind: "investment_contribution")
+    create_transfer(from_account: @checking, to_account: @card, amount: 250, date: @month + 5)
+    result = graph
+
+    assert_link result, "account_#{@checking.id}", "invested_node", "900.0"
+    assert_link result, "account_#{@checking.id}", "account_#{@card.id}", "100.0"
+    assert_link result, "deficit_node", "account_#{@card.id}", "150.0"
+    assert_nil node(result, "surplus_node")
+    assert_balanced result
+  end
+
   test "accounts without income or spending are left out, and an empty period is empty" do
     transaction(@checking, 50, @shopping)
     assert_nil node(graph, "account_#{@card.id}")
