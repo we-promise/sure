@@ -219,4 +219,18 @@ class Provider::ChimnieTest < ActiveSupport::TestCase
     assert_not Provider::Rentcast.lookup_ready?(address.merge(country: "GB"))
     assert_equal "USD", Provider::Rentcast.new("key").valuation_currency
   end
+
+  test "accepts country names typed into manually entered addresses" do
+    us_address = { line1: "123 Main Street", locality: "Los Angeles", region: "CA", postal_code: "90001" }
+    uk_address = { line1: "1 High Street", postal_code: "CH1 1MN" }
+
+    [ "United States", "united states of america", "U.S.A.", " USA " ].each do |country|
+      assert Provider::Rentcast.lookup_ready?(us_address.merge(country: country)), "expected #{country.inspect} to match US"
+    end
+    [ "United Kingdom", "Great Britain", "U.K." ].each do |country|
+      assert Provider::Chimnie.lookup_ready?(uk_address.merge(country: country), "999000000001"), "expected #{country.inspect} to match GB"
+    end
+    assert_not Provider::Rentcast.lookup_ready?(us_address.merge(country: "United Kingdom"))
+    assert_not Provider::Rentcast.lookup_ready?(us_address.merge(country: "Canada"))
+  end
 end
