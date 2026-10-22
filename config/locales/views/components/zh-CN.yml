@@ -73,6 +73,11 @@ zh-CN:
           holdings: 持仓
           total_value: 总价值
         vs_available_history: 与可用历史相比
+        net_contributions:
+          difference: 差额
+          incomplete: 净投入可能不完整：有一笔存入或取出无法估值。
+          label: 净投入
+          legend: 图表系列
       activity_date:
         balance_tooltip: 当日结束余额，已包含所有交易和调整
         no_balance_data: 此日期没有余额数据
