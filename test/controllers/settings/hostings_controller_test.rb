@@ -574,9 +574,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   # A gateway endpoint can carry its key in the userinfo or the query string,
   # and `show` has no admin gate: any member who turns on preview features sees
-  # this panel once the family's provider is Jev. Signed in as that member
-  # rather than the admin, because that is who the endpoint must not reach.
-  test "the jev panel shows a member the endpoint without its credentials" do
+  # the categorization panel once the family's provider is Jev. The Jev
+  # connection is an instance setting, so a member gets no field for it, and
+  # whoever manages it sees the endpoint without its credentials.
+  test "the jev panel shows a member neither the endpoint field nor its credentials" do
     with_self_hosting do
       Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
       member = users(:family_member)
@@ -587,8 +588,22 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       get settings_hosting_url
 
       assert_response :success
-      assert_select "input[name='setting[jev_endpoint]']", 1
-      assert_select "input[name='setting[jev_endpoint]'][value='https://gw.example.com/v1/jev']"
+      assert_select "input[name='setting[jev_endpoint]']", 0
+      assert_no_match(/gw-secret|qk-secret|gw-user/, response.body)
+    end
+  end
+
+  test "the jev panel shows the instance settings manager the endpoint without its credentials" do
+    with_self_hosting do
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      admin = users(:family_admin)
+      admin.family.update!(categorization_provider: "jev")
+      admin.update!(preferences: (admin.preferences || {}).merge("preview_features_enabled" => true))
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[jev_endpoint]'][value='https://gw.example.com/v1/jev']", 1
       assert_no_match(/gw-secret|qk-secret|gw-user/, response.body)
     end
   end
