@@ -19,7 +19,6 @@ zh-TW:
               at_least_one_linked_account_required: 請至少選擇一個帳戶來支應這個目標。
             linked_accounts:
               must_be_fundable: 所有已連結的帳戶都必須是現金或投資帳戶。
-              currency_mismatch: 所有已連結的帳戶必須使用相同的幣別。
               must_belong_to_family: 已連結的帳戶必須和這個目標屬於同一個家庭。
             currency:
               locked_after_linked: 目標連結帳戶之後就不能再更改幣別了。

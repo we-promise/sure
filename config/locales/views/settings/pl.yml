@@ -435,6 +435,7 @@ pl:
         application_id_placeholder_update: Wpisz nowe ID, aby zaktualizować
         callback_url_instruction: Dla URL callback użyj %{callback_url}.
         client_certificate_label: Certyfikat klienta (z kluczem prywatnym)
+        keep_client_certificate_hint: "Pozostaw puste, aby zachować bieżący certyfikat"
         config_locked_message: Rozłącz wszystkie połączone banki, zanim zmienisz te
           dane uwierzytelniające.
         config_locked_title: Konfiguracja zablokowana
@@ -595,6 +596,8 @@ pl:
           one: Wymagana ponowna zgoda za 1 dzień
           other: Wymagana ponowna zgoda za %{count} dni
         reconsent_required: Wymagana ponowna zgoda
+        login_required: "Wymagane logowanie"
+        login_expires_soon: "Logowanie wygasa za %{time} (%{at})"
         sync_error: Błąd synchronizacji
       monobank_panel:
         step_1_html: Przejdź do %{link}, zaloguj się aplikacją Monobank i wygeneruj
@@ -690,7 +693,7 @@ pl:
         mercury: Synchronizuj automatycznie swoje firmowe konta bankowe Mercury.
         monobank: Synchronizuj ukraińskie karty i skarbonki Monobank za pomocą osobistego
           tokenu API.
-        onchain_wallet: Śledź portfele Bitcoin, EVM i Solana z samodzielną kontrolą
+        onchain_wallet: Śledź portfele Bitcoin, EVM, Solana, Cosmos i Polkadot z samodzielną kontrolą
           kluczy na podstawie ich publicznych adresów.
         plaid: Połącz tysiące amerykańskich instytucji finansowych przez Plaid.
         plaid_eu: Połącz europejskie instytucje finansowe przez Plaid (PSD2 / otwarta
@@ -756,7 +759,9 @@ pl:
         qr_back_to_credentials: Wróć do numeru telefonu i PIN-u lub hasła
         qr_cancel: Anuluj logowanie kodem QR
         qr_error: Nie udało się rozpocząć logowania kodem QR. Spróbuj ponownie.
-        qr_instruction: Zeskanuj kod QR aplikacją Trade Republic i zatwierdź logowanie.
+        requires_update: "Zaloguj się ponownie, aby wznowić synchronizację."
+        session_expires_in: "Logowanie wygasa za %{time} (%{at})."
+        qr_instruction: Zeskanuj kod QR aparatem telefonu, a następnie zatwierdź logowanie w aplikacji Trade Republic.
         qr_loading: Przygotowywanie kodu QR…
         qr_login: Zaloguj się kodem QR
         qr_success: Logowanie zatwierdzone. Sure odświeża stronę dostawcy.

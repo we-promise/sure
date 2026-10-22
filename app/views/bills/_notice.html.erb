@@ -1,6 +1,6 @@
 <%# locals: (notice:, urgent: false) %>
 
-<div class="flex items-center justify-between gap-3 <%= urgent ? "px-4 py-2.5" : "py-2" %>">
+<div class="flex items-center justify-between gap-3 px-4 py-2.5">
   <p class="<%= urgent ? "text-sm text-primary font-medium" : "text-sm text-secondary" %>">
     <% case notice.kind %>
     <% when :trial %>
@@ -24,6 +24,8 @@
         text: t("bills.manage"),
         variant: :default,
         href: bill_path(notice.series),
+        frame: :drawer,
+        data: { turbo_prefetch: false },
         class: "text-xs shrink-0"
       ) %>
 </div>

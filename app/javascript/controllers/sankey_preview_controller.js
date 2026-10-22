@@ -81,9 +81,11 @@ export default class extends Controller {
       this.comparisonDone = false;
     }
     this.state = detail.state;
-    this.comparisonResult = detail.graph
-      ? compareSankeyData(this.legacyDataValue, detail.graph)
-      : null;
+    // The legacy chart is by category only, so only that view can be compared.
+    this.comparisonResult =
+      detail.graph?.basis === "net_by_category"
+        ? compareSankeyData(this.legacyDataValue, detail.graph)
+        : null;
     this.element.dataset.sankeyComparison = this.comparisonResult || "";
     this.expandButtonTarget.disabled = !detail.ready;
     this.trackDisplay();
@@ -123,9 +125,7 @@ export default class extends Controller {
 
   expand() {
     if (this.state !== "content" || this.expandedDialogTarget.open) return;
-    this.section = this.element.closest(
-      "[data-dashboard-sortable-target='section']",
-    );
+    this.section = this.element.closest("[data-sortable-list-target='item']");
     this.originalDraggable = this.section?.getAttribute("draggable");
     this.section?.setAttribute("draggable", "false");
     this.expandedDialogTarget.showModal();

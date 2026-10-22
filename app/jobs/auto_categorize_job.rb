@@ -1,5 +1,5 @@
 class AutoCategorizeJob < ApplicationJob
-  queue_as :medium_priority
+  queue_as :ai_low_priority
 
   def perform(family, transaction_ids: [], rule_run_id: nil)
     rule_run = RuleRun.find_by(id: rule_run_id) if rule_run_id.present?

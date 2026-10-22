@@ -1,6 +1,6 @@
 # Interface for automated valuation model (AVM) providers that can look up a
-# US property record and return both its attributes and an estimated value in
-# a single request.
+# property record and return both its attributes and an estimated value in a
+# single request.
 #
 # Includers must define:
 # - `MAX_REQUESTS_PER_MONTH` (Integer) — the provider's monthly request budget
@@ -8,17 +8,86 @@
 module Provider::PropertyValuationConcept
   extend ActiveSupport::Concern
 
-  PropertyValuation = Data.define(:valuation, :currency, :property_type, :year_built, :area_value, :area_unit)
+  # Addresses entered by hand store the country as typed, so full names
+  # ("United States") must match as well as codes. Compared after
+  # upcasing and removing periods ("U.S.A." → "USA").
+  COUNTRY_ALIASES = {
+    "US" => [ "US", "USA", "UNITED STATES", "UNITED STATES OF AMERICA" ],
+    "GB" => [ "GB", "UK", "GBR", "UNITED KINGDOM", "GREAT BRITAIN" ]
+  }.freeze
 
-  def fetch_property_valuation(line1:, locality: nil, region: nil, postal_code: nil)
+  # `external_id` is the provider's own identifier for the property (e.g. a
+  # UK UPRN). The range and confidence are optional; not every provider
+  # returns them.
+  PropertyValuation = Data.define(
+    :valuation, :currency, :property_type, :year_built, :area_value, :area_unit,
+    :external_id, :valuation_low, :valuation_high, :confidence
+  ) do
+    def initialize(external_id: nil, valuation_low: nil, valuation_high: nil, confidence: nil, **rest)
+      super
+    end
+  end
+
+  # The provider class for a registered property valuation provider key, for
+  # checking its capabilities (country, required fields, refresh interval)
+  # without building an instance or needing an API key.
+  def self.provider_class(key)
+    return nil unless Provider::Registry.for_concept(:property_valuations).provider_keys.map(&:to_s).include?(key.to_s)
+
+    "Provider::#{key.to_s.camelize}".safe_constantize
+  end
+
+  # Capabilities are class-level so eligibility can be checked before a
+  # provider instance (and its API key) is resolved. Providers override
+  # these with `def self.…`.
+  class_methods do
+    # Currency of the valuations this provider returns.
+    def valuation_currency
+      "USD"
+    end
+
+    # ISO 3166-1 alpha-2 code of the country the provider covers.
+    def supported_country
+      "US"
+    end
+
+    # Whether lookups need the provider's own property identifier (passed as
+    # `external_id:`) rather than the address.
+    def requires_external_id?
+      false
+    end
+
+    def required_address_fields
+      %i[line1 locality region postal_code]
+    end
+
+    # Minimum time between automatic refreshes of the same property.
+    def refresh_interval
+      1.day
+    end
+
+    # Whether a lookup can be made for this address/identifier — checked
+    # before spending a request, both when creating a property and when
+    # refreshing.
+    def lookup_ready?(address, external_id = nil)
+      return false if address.nil?
+      return false if required_address_fields.any? { |field| address[field].blank? }
+      return false if requires_external_id? && external_id.blank?
+
+      country = address[:country].to_s.delete(".").squish.upcase
+      country.blank? || COUNTRY_ALIASES.fetch(supported_country, [ supported_country ]).include?(country)
+    end
+  end
+
+  # `external_id:` is only passed to providers that `requires_external_id?`.
+  def fetch_property_valuation(line1:, locality: nil, region: nil, postal_code: nil, external_id: nil)
     raise NotImplementedError, "Subclasses must implement #fetch_property_valuation"
   end
 
-  # Currency of the valuations this provider returns. Both supported
-  # providers are US-based and always price in USD; the daily refresh job
-  # checks this against the account currency before spending a request.
+  # The refresh job checks this against the account currency before
+  # spending a request.
   def valuation_currency
-    "USD"
+    self.class.valuation_currency
   end
 
   # Whether the provider still has monthly request budget left. Checked by

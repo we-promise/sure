@@ -13,7 +13,7 @@
       end
     elsif occurrence.skipped? || occurrence.missed?
       "bg-surface-inset text-subdued line-through"
-    elsif occurrence.derived_state == :overdue
+    elsif occurrence.overdue?
       "bg-destructive/10 text-destructive"
     else
       "bg-surface-inset text-primary"
