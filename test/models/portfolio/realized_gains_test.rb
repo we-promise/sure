@@ -210,6 +210,46 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
     assert_equal BigDecimal(50), gains.net, "the March sale counts and the April one does not"
   end
 
+  # Balance::ChartSeriesBuilder takes its cut-off dates as Dates or ISO
+  # strings, since it hands them to SQL as JSON. Compared raw, a String
+  # cut-off raised on the first disposal.
+  test "a cut-off date given as an ISO string is honoured" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade account: @account, date: @march, qty: 1, price: 150
+    sell_trade account: @account, date: @april, qty: 2, price: 150
+
+    gains = Portfolio::RealizedGains.new(
+      accounts: [ @account ], period: @period, currency: "USD", active_until_dates: { @account.id => @march.iso8601 }
+    )
+
+    assert_equal BigDecimal(50), gains.net, "the March sale counts and the April one does not"
+  end
+
+  # An excluded entry is left out of reports: InvestmentStatement::Totals and
+  # the Reports card's realised list both filter entries.excluded = false.
+  # The kept sale shows the excluded one would otherwise have added 100.
+  test "an excluded disposal is not realised" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade(account: @account, date: @march, qty: 2, price: 150).update!(excluded: true)
+    sell_trade account: @account, date: @april, qty: 1, price: 130
+
+    assert_equal [ Date.new(2026, 4, 1) ], realized.buckets.map(&:month)
+    assert_equal BigDecimal(30), realized.net
+    assert_empty realized.excluded_trades, "an excluded entry is not a disposal this class failed to measure"
+  end
+
+  # A provider-synced holding often carries no cost_basis; its average cost
+  # then comes from the buy trades behind it (Holding#calculate_avg_cost).
+  # 5 bought at 100, 2 sold at 150: a gain of 100, not gain_unknown.
+  test "a holding with no stored cost basis measures its gain from the buys behind it" do
+    buy_trade account: @account, date: @march - 30, qty: 5, price: 100
+    holding_snapshot account: @account, date: @march, cost_basis: nil
+    sell_trade account: @account, date: @march, qty: 2, price: 150
+
+    assert_equal BigDecimal(100), realized.net
+    assert_empty realized.excluded_trades
+  end
+
   test "a disposal outside the period does not count" do
     holding_snapshot account: @account, date: Date.new(2025, 11, 1), cost_basis: 100
     sell_trade account: @account, date: Date.new(2025, 11, 4), qty: 2, price: 150
@@ -277,6 +317,16 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
         entryable: Trade.new(
           security: security || security_under_test, qty: -qty.abs, price: price,
           currency: currency, investment_activity_label: label
+        )
+      )
+    end
+
+    def buy_trade(account:, date:, qty:, price:, security: nil)
+      account.entries.create!(
+        name: "Buy", date: date, amount: BigDecimal((qty * price).to_s), currency: account.currency,
+        entryable: Trade.new(
+          security: security || security_under_test, qty: qty, price: price,
+          currency: account.currency, investment_activity_label: "Buy"
         )
       )
     end
