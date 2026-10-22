@@ -1417,6 +1417,55 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name=allow_duplicate]", count: 0
   end
 
+  # Two submissions from the same transaction could both see no covering bill
+  # and both save. The check and the save run while the source entry is
+  # locked, so the second waits and then sees the first one's bill.
+  test "create checks for a covering bill and saves while holding the source entry" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+    connection = ActiveRecord::Base.connection
+    outside = connection.open_transactions
+    depths = {}
+
+    RecurringTransactionsController.any_instance.stubs(:covering_series_for)
+      .with { depths[:check] = connection.open_transactions; true }.returns(nil)
+    RecurringTransaction::DeclaredBill.stubs(:save)
+      .with { depths[:save] = connection.open_transactions; true }.returns(true)
+    Entry.any_instance.expects(:lock!).once.returns(true)
+
+    post recurring_transactions_url, params: covered_create_params(entry)
+
+    assert_redirected_to bills_path
+    assert_operator depths[:check], :>, outside, "the covering check ran outside the lock"
+    assert_operator depths[:save], :>, outside, "the save ran outside the lock"
+  end
+
+  # The save now runs inside the lock's transaction, so a unique-index
+  # collision must still come back as a 422, not abort that transaction.
+  test "create under the lock still reports an existing bill with the same identity" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+    @family.recurring_transactions.create!(
+      account: accounts(:depository), name: "Household Plan", amount: 100, currency: "USD",
+      dedup_scope: BigDecimal("100").to_s("F"), expected_day_of_month: Date.current.day,
+      last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current,
+      status: "active", manual: true, occurrence_count: 0
+    )
+    params = covered_create_params(entry)
+    params[:recurring_transaction][:name] = "Household Plan"
+
+    assert_no_difference "RecurringTransaction.count" do
+      post recurring_transactions_url, params: params
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("recurring_transactions.create.already_exists"), response.body
+  end
+
   private
 
     def covering_merchant
