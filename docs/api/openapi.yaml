@@ -107,7 +107,35 @@ components:
             type: string
             format: uuid
           description: 'Requested transactions that were not queued: already categorized,
-            category locked, a transfer or split parent, or not writable by this key'
+            category locked, a transfer or split parent, or not one this key may annotate'
+    TransactionAutoCategorizationPartial:
+      type: object
+      required:
+      - error
+      - message
+      - queued_count
+      - transaction_ids
+      - unqueued_transaction_ids
+      properties:
+        error:
+          type: string
+          example: service_unavailable
+        message:
+          type: string
+        queued_count:
+          type: integer
+        transaction_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Transactions that were queued before the queue refused the rest
+        unqueued_transaction_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Transactions the queue refused; retry to queue them
     Split:
       type: object
       required:
@@ -9925,6 +9953,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '503':
+          description: the job queue refused some or all of the batch
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/TransactionAutoCategorizationPartial"
       requestBody:
         content:
           application/json:
