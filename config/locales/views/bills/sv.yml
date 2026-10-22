@@ -111,8 +111,9 @@ sv:
         one: 1 dag efter förfallodatum
         other: "%{count} dagar efter förfallodatum"
     attention:
+      paused: Pausad
       needs_review: Matchning behöver granskas
-      partial: "Delvis · %{amount} kvar"
+      partial: Delvis betald
       amount_changed: Beloppet har ändrats
       overdue:
         one: 1 dag försenad
@@ -124,7 +125,7 @@ sv:
     cancelled_still_scheduled: "Du markerade denna som avbruten %{date}, men den är fortfarande schemalagd, så framtida räkningar fortsätter att dyka upp."
     paid_over: "Betalade %{paid}, mer än förväntat"
     remaining_label: kvar
-    debt_payment: "· skuldbetalning"
+    debt_payment: Skuldbetalning
     paid_from: "från %{account}"
     amount_range: "sträcker sig från %{min} till %{max}"
     possible_duplicate: Möjlig dubblett
@@ -276,6 +277,7 @@ sv:
         one: Vi hittade 1 återkommande betalning i dina transaktioner. Gå igenom den så att summorna här stämmer med vad du faktiskt betalar.
         other: Vi hittade %{count} återkommande betalningar i dina transaktioner. Gå igenom dem så att summorna här stämmer med vad du faktiskt betalar.
       detected_review_action: Granska dem
+      notices_heading: Ändringar
       needs_review: Behöver granskas
       notice_trial: "%{name}s provperiod slutar %{date}"
       notice_renewal: "%{name} förnyas %{date}"
@@ -309,7 +311,7 @@ sv:
       this_month: Denna månad
       later: Efter denna månad
       paid_this_month: Betalt denna månad
-      dormant: Vilande
+      dormant: Pausad
       kpi_remaining: Kvar denna månad
       kpi_paid: Betalt denna månad
       kpi_next_seven: Förfaller nästa 7 dagar
