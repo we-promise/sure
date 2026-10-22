@@ -403,7 +403,17 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_empty result.index_series
   end
 
-  test "time weighted figures are withheld when one account among several has one balance day" do
+  # A new brokerage synced today: its first balance row is the period's last
+  # day. Since composition flows, DailyReturns prices that arrival inside the
+  # aggregate, so it is not a reason to withhold the whole scope's figures:
+  #
+  #   day two: value_open 1,000, arrival +500, value_close 1,010 + 550
+  #   r = 1,560 / (1,000 + 500) - 1 = 4%
+  #
+  # Withheld, every period ending today showed no return for the whole
+  # portfolio until tomorrow's sync. (Before composition flows the arrival read
+  # as a 56% day, which is what the veto was guarding against.)
+  test "an account synced today with one balance day does not withhold the scope's time weighted figures" do
     one_row = create_portfolio_account(family: @family)
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
     lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_010, market_flow: 10
@@ -411,9 +421,13 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
 
     result = performance(account_ids: [ @account.id, one_row.id ])
 
-    assert_nil result.twr, "one unsupported account withholds the aggregate (was 56%)"
-    assert_nil result.volatility
-    assert_empty result.index_series
+    assert_in_delta 0.04, result.twr.to_f, 0.000001
+    assert_not_nil result.volatility
+    assert_equal 2, result.index_series.size
+    # Its flows over that one day are not known to be trades, so the
+    # money-weighted figure stays withheld (ReturnScope cannot classify an
+    # account with fewer than two balance days).
+    assert_nil result.mwr
   end
 
   # The empty-account carve-out below must not swallow the whole scope. With
@@ -598,7 +612,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     # The other call site, not the same one twice: this is what proves the two
     # share a resolution rather than each memoising its own.
     shared = ActiveRecord::Base.uncached do
-      capture_sql_queries { subject.send(:money_weighted_supported?, [ :row, :row ]) }
+      capture_sql_queries { subject.send(:money_weighted_supported?, Array.new(2) { Struct.new(:unvalued_journal).new(false) }) }
     end
 
     assert_operator first.size, :<=, 4
@@ -756,6 +770,96 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
 
     payload = Marshal.dump(result.send(:compute)).bytesize
     assert_operator payload, :<, 250_000, "730 days of metrics must not cache megabytes"
+  end
+
+  # The ids are resolved through the family. An account of another family
+  # contributes nothing and is not in the cache key, so a caller passing
+  # request-supplied ids cannot value, or cache under this family, someone
+  # else's balances.
+  test "an account of another family is left out of the figures and the cache key" do
+    foreign = create_portfolio_account(family: families(:dylan_family))
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: foreign, date: @day_one, opening: 9_000, closing: 9_000
+    lay_balance account: foreign, date: @day_two, opening: 9_000, closing: 18_000, market_flow: 9_000
+
+    result = performance(account_ids: [ @account.id, foreign.id ])
+
+    assert_equal [ @account.id.to_s ], result.account_ids
+    assert_equal BigDecimal("1000"), result.drivers[:value_close]
+    assert_in_delta 0.0, result.twr.to_f, 0.000001
+    assert_equal performance.cache_key, result.cache_key
+  end
+
+  # A journal the series could not value leaves its flow out while its value
+  # is in the close. The chained return skips the day; the money-weighted
+  # return sums flows, so it read 1,000 -> 1,500 with nothing paid in as a 50%
+  # gain for a portfolio that earned nothing.
+  test "the money weighted return is withheld when a journal in the period could not be valued" do
+    buy_trade account: @account, date: @day_one - 30, qty: 1, price: 1
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5
+
+    result = performance
+
+    assert result.daily_returns.rows.last.unvalued_journal, "the fixture must be an unvalued journal day"
+    assert_nil result.mwr
+    assert_nil result.annualized_mwr
+  end
+
+  # The other side: a day suppressed for its denominator (the portfolio held
+  # nothing yet) has every flow, so the money-weighted return is still quoted.
+  test "the money weighted return is still quoted over a day suppressed for an empty opening" do
+    day_three = @day_two + 1.day
+    buy_trade account: @account, date: @day_one - 30, qty: 1, price: 1
+    lay_balance account: @account, date: @day_one, opening: 0, closing: 0
+    lay_balance account: @account, date: @day_two, opening: 0, closing: 1_000, cash_flow: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_100, market_flow: 100
+    deposit account: @account, date: @day_two, amount: 1_000
+
+    result = performance(end_date: day_three)
+
+    assert result.daily_returns.rows.first.suppressed
+    assert_not_nil result.mwr
+  end
+
+  # #444: a whole position journalled out on a day with no price is valued
+  # from the day before, so the money-weighted return sees the giveaway as
+  # the outflow it was, not as a 500 loss.
+  test "a position journalled out on an unpriced day gives a zero money weighted return" do
+    buy_trade account: @account, date: @day_one - 30, qty: 1, price: 1
+    holding_snapshot account: @account, date: @day_one, qty: 5, price: 100, cost_basis: 100
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    security_journal account: @account, date: @day_two, qty: -5, price: 0
+
+    result = performance
+
+    assert_in_delta 0.0, result.mwr.to_f, 0.000001
+    assert_in_delta 0.0, result.twr.to_f, 0.000001
+  end
+
+  # A transfer to an account past its cut-off left the scope (#443). At the
+  # metric surface that is a zero return, not a 40% loss.
+  test "a transfer to an account past its cut off is not a loss at the metric surface" do
+    day_three = @day_two + 1.day
+    closed = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 600, cash_flow: -400
+    Transfer::Creator.new(
+      family: @family, source_account_id: @account.id, destination_account_id: closed.id,
+      date: day_three, amount: 400
+    ).create
+
+    result = Portfolio::Performance.new(
+      family: @family, account_ids: [ @account.id, closed.id ],
+      period: Period.custom(start_date: @day_one, end_date: day_three),
+      active_until_dates: { closed.id => @day_two }
+    )
+
+    assert_in_delta 0.0, result.twr.to_f, 0.000001
   end
 
   private

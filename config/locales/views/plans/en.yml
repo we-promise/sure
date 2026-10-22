@@ -18,6 +18,9 @@ en:
       set_up: Set up this month's budget
     goals_card:
       title: Your goals
+      currency_warning:
+        one: "1 goal leaves out %{currencies} balances (no exchange rate yet)."
+        other: "%{count} goals leave out %{currencies} balances (no exchange rate yet)."
       new_goal: New goal
       active_count:
         one: 1 active

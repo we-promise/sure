@@ -13,13 +13,9 @@ pl:
       any_type: Dowolny typ
       col_actions: Akcje
       col_amount: Kwota
-      col_frequency: Częstotliwość
       col_name: Nazwa
       col_next: Następny termin
-      col_status: Status
-      col_type: Typ
       monthly_equivalent: "%{amount}/mies."
-      next_short: następny %{date}
       no_matches_description: Spróbuj wyczyścić filtr lub wyszukiwanie.
       no_matches_title: Brak wyników
       search_placeholder: Szukaj rachunków
