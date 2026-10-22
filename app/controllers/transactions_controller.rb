@@ -33,8 +33,9 @@ class TransactionsController < ApplicationController
                          # - outflow rows need inflow_transaction (to_account) for both
                          #   counterpart display and Transfer#categorizable?/#payment?
                          # - inflow rows need outflow_transaction (from_account) for
-                         #   counterpart display, and inflow_transaction (to_account)
-                         #   for the category menu on the same row
+                         #   counterpart display, inflow_transaction (to_account)
+                         #   for the category menu on the same row, and the
+                         #   outflow's category, which the inflow row shows
                          {
                            transfer_as_outflow: {
                              inflow_transaction: { entry: :account }
@@ -43,7 +44,7 @@ class TransactionsController < ApplicationController
                          {
                            transfer_as_inflow: {
                              inflow_transaction: { entry: :account },
-                             outflow_transaction: { entry: :account }
+                             outflow_transaction: [ :category, { entry: :account } ]
                            }
                          }
                        )
@@ -75,8 +76,10 @@ class TransactionsController < ApplicationController
       Set.new
     end
 
+    # Counts what the categorize wizard can act on, so read-only shares don't
+    # keep the "Categorize" menu item visible.
     @uncategorized_count = Rails.cache.fetch(uncategorized_count_cache_key) do
-      Current.accessible_entries.uncategorized_transactions.count
+      Current.annotatable_entries.uncategorized_transactions.count
     end
 
     # Load projected recurring transactions for next 10 days. Only the IDs are
@@ -183,6 +186,7 @@ class TransactionsController < ApplicationController
 
   def update
     if @entry.update(permitted_entry_params)
+      sync_needed = @entry.saved_changes_affect_balances?
       transaction = @entry.transaction
       transaction.record_category_usage!
 
@@ -197,7 +201,7 @@ class TransactionsController < ApplicationController
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.sync_account_later
+      @entry.sync_account_later if sync_needed
 
       notes_changed = @entry.saved_change_to_notes?
 
@@ -261,7 +265,6 @@ class TransactionsController < ApplicationController
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
     @entry.transaction.lock_attr!(:tag_ids)
-    @entry.sync_account_later
 
     respond_to do |format|
       # JSON stays first so Accept: */* callers keep the original response.
@@ -329,13 +332,14 @@ class TransactionsController < ApplicationController
     redirect_back_or_to transactions_path
   end
 
+  # Offer transaction conversion only for account types that can own trades.
   def convert_to_trade
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
 
     return unless require_account_permission!(@entry.account)
 
-    unless @entry.account.investment?
+    unless @entry.account.supports_trades?
       flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
@@ -344,6 +348,7 @@ class TransactionsController < ApplicationController
     render :convert_to_trade
   end
 
+  # Lock and recheck the source entry before creating a trade and excluding the transaction.
   def create_trade_from_transaction
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
@@ -351,7 +356,7 @@ class TransactionsController < ApplicationController
     return unless require_account_permission!(@entry.account)
 
     # Pre-transaction validations
-    unless @entry.account.investment?
+    unless @entry.account.supports_trades?
       flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
@@ -367,15 +372,25 @@ class TransactionsController < ApplicationController
     security = resolve_security_for_conversion
     return if performed? # Early exit if redirect already happened
 
-    # Validate and calculate qty/price before transaction
-    qty, price = calculate_qty_and_price
-    return if performed? # Early exit if redirect already happened
-
     activity_label = params[:investment_activity_label].presence
-    # Infer sell from amount sign: negative amount = money coming in = sell
-    is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount < 0)
-
+    # Serialize replacements on the source, including requests already in flight.
     ActiveRecord::Base.transaction do
+      # Entry#transaction is its delegated transaction record, so use an
+      # explicit DB transaction rather than ActiveRecord's instance with_lock.
+      @entry.lock!
+      if @entry.excluded?
+        flash[:alert] = t("transactions.convert_to_trade.errors.already_converted")
+        redirect_back_or_to transactions_path
+        next
+      end
+
+      # Infer missing values from the locked source amount, including edits
+      # committed while the security was being resolved.
+      qty, price = calculate_qty_and_price
+      next if performed?
+
+      # Infer sell from the refreshed source: negative amount means money in.
+      is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount < 0)
       # For trades: positive qty = buy (money out), negative qty = sell (money in)
       signed_qty = is_sell ? -qty : qty
       trade_amount = qty * price
@@ -412,6 +427,8 @@ class TransactionsController < ApplicationController
       # Mark original transaction as excluded (soft delete)
       @entry.update!(excluded: true)
     end
+
+    return if performed?
 
     flash[:notice] = t("transactions.convert_to_trade.success")
     redirect_to account_path(@entry.account), status: :see_other
@@ -517,7 +534,7 @@ class TransactionsController < ApplicationController
     # active status (AccountsController#toggle_active) doesn't touch `entries`
     # or `AccountShare`, so it wouldn't otherwise bust this cache.
     def uncategorized_count_cache_key
-      "transactions_uncategorized_count/v4/#{Current.family.id}/#{Current.user.id}/" \
+      "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 
@@ -593,6 +610,7 @@ class TransactionsController < ApplicationController
     end
 
     def needs_rule_notification?(transaction)
+      return false if Current.user.guest?
       return false if Current.user.rule_prompts_disabled
 
       if Current.user.rule_prompt_dismissed_at.present?
@@ -694,28 +712,39 @@ class TransactionsController < ApplicationController
     # read_write users can only annotate (category, tags, notes, merchant).
     # read_only users cannot update anything.
     def permitted_entry_params
-      case entry_permission
+      permitted = case entry_permission
       when :owner, :full_control
         entry_params
       when :read_write
         # Annotate only: category, tags, merchant, notes
-        ep = entry_params.slice(:notes)
+        ep = entry_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES)
         if entry_params[:entryable_attributes].present?
-          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :merchant_id, :tag_ids)
+          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES)
         end
         ep
       else
         {} # read_only — no edits allowed
       end
+
+      # A matched transfer's category lives on its outflow leg; a category
+      # sent for the inflow leg would look saved but never reach a budget.
+      if permitted[:entryable_attributes]&.key?(:category_id) && @entry.transaction.category_set_on_transfer_outflow?
+        permitted[:entryable_attributes] = permitted[:entryable_attributes].except(:category_id)
+      end
+
+      permitted
     end
 
+    # Permitted search filters from the q param, with blank values and
+    # unsupported ai_status / attachment_status values dropped.
     def search_params
       cleaned_params = params.fetch(:q, {})
               .permit(
                 :start_date, :end_date, :search, :amount,
                 :amount_operator, :active_accounts_only,
                 accounts: [], account_ids: [],
-                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: []
+                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: [],
+                attachment_status: []
               )
               .to_h
               .compact_blank
@@ -725,6 +754,11 @@ class TransactionsController < ApplicationController
       if cleaned_params[:ai_status]
         cleaned_params[:ai_status] &= Transaction::Search::AI_STATUSES
         cleaned_params.delete(:ai_status) if cleaned_params[:ai_status].empty?
+      end
+
+      if cleaned_params[:attachment_status]
+        cleaned_params[:attachment_status] &= Transaction::Search::ATTACHMENT_STATUSES
+        cleaned_params.delete(:attachment_status) if cleaned_params[:attachment_status].empty?
       end
 
       cleaned_params
@@ -760,6 +794,7 @@ class TransactionsController < ApplicationController
 
     # Helper methods for convert_to_trade
 
+    # Resolve the allowed ticker/provider before locking the source, avoiding network calls under its lock.
     def resolve_security_for_conversion
       user_country = Current.family.country
 
@@ -828,6 +863,7 @@ class TransactionsController < ApplicationController
       end
     end
 
+    # Validate submitted trade values and infer a missing value from the locked amount.
     def calculate_qty_and_price
       amount = @entry.amount.abs
       qty = params[:qty].present? ? params[:qty].to_d.abs : nil

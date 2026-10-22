@@ -24,7 +24,7 @@ class ReportsTest < ApplicationSystemTestCase
   end
 
   test "the arrow keys leave section moves and dialogs alone" do
-    find("section[data-section-key]", match: :first).send_keys(:enter)
+    find("section[data-sortable-list-id]", match: :first).send_keys(:enter)
     page.send_keys(:arrow_left)
     assert_empty clicked_hotkeys
     page.send_keys(:escape)
@@ -48,6 +48,19 @@ class ReportsTest < ApplicationSystemTestCase
     JS
 
     assert_equal %w[ArrowLeft], clicked_hotkeys
+  end
+
+  test "a section moved with the keyboard keeps its new place" do
+    first, second = all("section[data-section-key]").first(2).map { |section| section["data-section-key"] }
+    record_saved_section_order
+
+    find("section[data-section-key='#{first}']").send_keys(:enter)
+    page.send_keys(:arrow_down)
+    page.send_keys(:enter)
+
+    assert_selector "html[data-order-saved='200']"
+    saved_order = users(:family_admin).reload.reports_section_order
+    assert_operator saved_order.index(second), :<, saved_order.index(first)
   end
 
   private

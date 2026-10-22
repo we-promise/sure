@@ -114,34 +114,108 @@ class Transaction < ApplicationRecord
   # Providers that support pending transaction flags
   PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark financekit].freeze
 
+  # Slice size for the entry touch in reassign_category! — bounds the UPDATE
+  # statement size when a merge or category destroy hits many transactions.
+  REASSIGN_TOUCH_BATCH_SIZE = 5_000
+
   # DataEnrichment sources that represent automatic category assignment
   AUTO_CATEGORY_SOURCES = %w[ai bayes].freeze
 
-  # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
-  # Stored as a constant so static analysis can verify it contains no user input.
-  PENDING_CHECK_SQL = PENDING_PROVIDERS
-    .map { |p| "(t.extra -> '#{p}' ->> 'pending')::boolean = true" }
-    .join(" OR ")
-    .freeze
+  # Stored flag values that do not mark a transaction pending: the strings
+  # ActiveModel::Type::Boolean casts to false, plus "" (which it casts to nil).
+  # Any other present value is pending, as #pending? decides.
+  PENDING_FLAG_FALSE_VALUES = (ActiveModel::Type::Boolean::FALSE_VALUES.grep(String) + [ "" ]).uniq.freeze
+  PENDING_FLAG_TYPE = ActiveModel::Type::Boolean.new.freeze
+
+  # PENDING_FLAG_FALSE_VALUES as a list of SQL string literals. Built from the
+  # constant alone, so class loading needs no database connection, and shared by
+  # pending_sql and PENDING_CHECK_SQL so the two cannot quote the values
+  # differently.
+  PENDING_FLAG_FALSE_VALUES_SQL = PENDING_FLAG_FALSE_VALUES.map { |value| "'#{value.gsub("'", "''")}'" }.join(", ").freeze
+
+  # Canonical reusable SQL form of the pending? decision. Callers that inspect
+  # only provider namespaces they own can pass that subset in `providers:`.
+  #
+  # Deliberately not `(... ->> 'pending')::boolean`. PostgreSQL raises
+  # PG::InvalidTextRepresentation on a value it cannot parse ("maybe"), which
+  # aborts the whole query rather than one row, and it reads "no", "False" and
+  # "Off" as false where ActiveModel reads them as true. Providers write JSON
+  # booleans, which ->> renders as 'true', 'false' or NULL and both rules
+  # classify alike, so only other values are affected.
+  #
+  # COALESCE maps a missing flag or JSON null to "", a false value, so no
+  # provider's term is ever NULL and NOT (...) is exact.
+  #
+  # A JSON number 0.0 renders as '0.0' and is pending here; #pending? agrees,
+  # because FALSE_VALUES is a Set keyed by eql? and 0.0 is not eql? to 0. The
+  # parity test carries the case.
+  def self.pending_sql(table_alias = "transactions", providers: PENDING_PROVIDERS)
+    quoted_table = connection.quote_table_name(table_alias)
+    selected_providers = Array(providers).map(&:to_s).uniq & PENDING_PROVIDERS
+    return "FALSE" if selected_providers.empty?
+
+    selected_providers
+      .map do |provider|
+        "COALESCE(#{quoted_table}.extra -> #{connection.quote(provider)} ->> #{connection.quote("pending")}, #{connection.quote("")}) NOT IN (#{PENDING_FLAG_FALSE_VALUES_SQL})"
+      end
+      .join(" OR ")
+      .then { |predicate| "(#{predicate})" }
+  end
+
+  # Fixed-alias fragment for correlated SQL. Build from model constants without
+  # borrowing a database connection during class loading.
+  PENDING_CHECK_SQL = begin
+    PENDING_PROVIDERS
+      .map do |provider|
+        "COALESCE(t.extra -> '#{provider}' ->> 'pending', '') NOT IN (#{PENDING_FLAG_FALSE_VALUES_SQL})"
+      end
+      .join(" OR ")
+      .then { |predicate| "(#{predicate})" }
+      .freeze
+  end
+
+  # The negation of pending_sql, for queries that must leave pending rows out.
+  def self.not_pending_sql(table_alias = "transactions", providers: PENDING_PROVIDERS)
+    "NOT (#{pending_sql(table_alias, providers: providers)})"
+  end
+
+  # The Ruby form of the same decision, over a provider metadata hash rather
+  # than a record. #pending? is this method; the import adapter also needs it
+  # before any record exists, for the payload it is about to write.
+  #
+  # Reads keys as strings, so pass string-keyed metadata or a
+  # HashWithIndifferentAccess. A provider key holding anything but an object
+  # says nothing about that provider and is skipped, as pending_sql skips it:
+  # Hash#dig would instead raise on a scalar and take the whole caller with it.
+  def self.pending_extra?(extra)
+    return false unless extra.is_a?(Hash)
+
+    PENDING_PROVIDERS.any? do |provider|
+      provider_data = extra[provider]
+      provider_data.is_a?(Hash) && PENDING_FLAG_TYPE.cast(provider_data["pending"])
+    end
+  rescue StandardError
+    false
+  end
 
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
-  scope :pending, -> {
-    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean = true" }
-    where(conditions.join(" OR "))
-  }
+  scope :pending, -> { where(Transaction.pending_sql) }
 
-  scope :excluding_pending, -> {
-    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true" }
-    where(conditions.join(" AND "))
-  }
+  scope :excluding_pending, -> { where(Transaction.not_pending_sql) }
 
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.
-  def self.pending_providers_sql(table_alias = "t")
-    PENDING_PROVIDERS.map do |provider|
-      "AND (#{table_alias}.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true"
-    end.join("\n")
+  #
+  # Emits a LEADING `AND`, so it appends to a WHERE that already has at least
+  # one condition -- which is how all three callers use it
+  # (IncomeStatement::FamilyStats, ::CategoryStats, ::ScopedTransactionsQuery),
+  # interpolating it after their own `AND` clauses. As the first condition in a
+  # WHERE it produces `WHERE AND NOT (...)`, a syntax error. Use
+  # `not_pending_sql` for that position; this method is only the `AND`-prefixed
+  # form of it.
+  def self.pending_providers_sql(table_alias = "t", providers: PENDING_PROVIDERS)
+    "AND #{not_pending_sql(table_alias, providers: providers)}"
   end
 
   # Family-scoped query for Enrichable#clear_ai_cache
@@ -149,9 +223,87 @@ class Transaction < ApplicationRecord
     joins(entry: :account).where(accounts: { family_id: family.id })
   end
 
+  # Bulk category reassignment that still busts entry-keyed report caches.
+  # update_all skips callbacks, so the `has_one :entry, touch: true` bump that
+  # every normal save relies on (Family#entries_cache_version) never happens.
+  # Expects a relation without eager loading so reselect(:id) produces
+  # a single-column subquery for the IN clause.
+  def self.reassign_category!(scope, category_id)
+    transaction do
+      # Lock inside the scope so a concurrent category edit is rechecked before
+      # its ID reaches the UPDATE, rather than overwriting the new category.
+      sql = <<~SQL
+        UPDATE #{quoted_table_name}
+        SET category_id = #{connection.quote(category_id)}
+        WHERE id IN (#{scope.reselect(:id).lock("FOR UPDATE OF transactions").to_sql})
+        RETURNING id
+      SQL
+
+      # Execute the write without read-query memoization and clear cached
+      # reads before selecting the affected entries.
+      updated_ids = connection.exec_query(sql, "Transaction Reassign Category").rows.flatten
+      connection.clear_query_cache
+
+      next 0 if updated_ids.empty?
+
+      # Touch exactly the rows the UPDATE reassigned (RETURNING), so a
+      # transaction entering the scope mid-merge can't be updated without its
+      # entry being touched. Locks are taken transactions-first, matching a
+      # normal save; sliced to bound the entries UPDATE on large merges.
+      updated_ids.each_slice(REASSIGN_TOUCH_BATCH_SIZE) do |batch|
+        Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
+      end
+
+      updated_ids.size
+    end
+  end
+
   # Overarching grouping method for all transfer-type transactions
   def transfer?
     TRANSFER_KINDS.include?(kind)
+  end
+
+  # Whether the user can assign a category (and merchant/tags) to this
+  # transaction. Regular transactions always qualify. For transfers:
+  #   - No Transfer record yet (e.g. an unmatched provider-imported leg):
+  #     stay editable, same as a regular transaction, since there's no
+  #     counterpart to defer to and no other way for the user to fix a
+  #     provider mislabel.
+  #   - Once matched, the category belongs to the outflow leg, the one
+  #     budgets and reports count. Only that leg is editable, and only when
+  #     Transfer#categorizable?, which is based on the (stable) destination
+  #     account rather than either leg's kind, so it stays correct even if
+  #     an older provider sync left a stale kind on this transaction. The
+  #     inflow leg shows the outflow's category instead (see
+  #     #category_set_on_transfer_outflow?), since a category picked there
+  #     would look saved but never reach a budget.
+  def category_editable?
+    return false if category_set_on_transfer_outflow?
+    return true unless transfer?
+    return true unless transfer
+
+    transfer.categorizable? && transfer.outflow_transaction_id == id
+  end
+
+  # The inflow leg of a categorizable transfer: its category is the
+  # outflow's, shown read-only. Decided by the Transfer record rather than
+  # this leg's kind, so editing the kind (e.g. to standard) cannot bypass
+  # the outflow's ownership.
+  def category_set_on_transfer_outflow?
+    transfer_as_inflow.present? && transfer_as_inflow.categorizable?
+  end
+
+  # Whether this non-editable transfer leg is a liability payment (shown
+  # with the "Payment" badge instead of "Transfer"). Defers to the attached
+  # Transfer when one exists, since a matched transaction's own kind can be
+  # stale (rows a provider sync overwrote before the import adapter derived
+  # matched legs from their Transfer), which would otherwise let a stale
+  # "cc_payment" kind override a transfer that isn't actually a payment.
+  # Only falls back to the transaction's own kind when there's no Transfer
+  # record yet (e.g. a provider-imported cc_payment leg whose counterpart
+  # hasn't been matched), the same pattern category_editable? uses.
+  def payment?
+    transfer ? transfer.payment? : kind == "cc_payment"
   end
 
   def set_category!(category)
@@ -186,12 +338,7 @@ class Transaction < ApplicationRecord
   end
 
   def pending?
-    extra_data = extra.is_a?(Hash) ? extra : {}
-    PENDING_PROVIDERS.any? do |provider|
-      ActiveModel::Type::Boolean.new.cast(extra_data.dig(provider, "pending"))
-    end
-  rescue StandardError
-    false
+    self.class.pending_extra?(extra)
   end
 
   def activity_security_id
@@ -308,6 +455,15 @@ class Transaction < ApplicationRecord
       # cannot race on reading/writing extra (e.g., the manual_merge array).
       posted_tx = posted_entry.entryable
       posted_tx.lock! if posted_tx.is_a?(Transaction)
+
+      # Moving the attachments bypasses validation, so refuse a merge that would
+      # leave the posted transaction over the limit instead of dropping files.
+      if posted_tx.is_a?(Transaction) && pending_entry.entryable.is_a?(Transaction) &&
+          attachment_count_after_merge(from: pending_entry.entryable, to: posted_tx) > MAX_ATTACHMENTS_PER_TRANSACTION
+        Rails.logger.info("merge_with_duplicate! rejected: merging pending entry #{pending_entry_id} would exceed #{MAX_ATTACHMENTS_PER_TRANSACTION} attachments")
+        raise ActiveRecord::Rollback
+      end
+
       if posted_tx.is_a?(Transaction)
         tx_attrs = {}
 
@@ -340,14 +496,26 @@ class Transaction < ApplicationRecord
         end
 
         posted_tx.update!(tx_attrs) if tx_attrs.any?
+
+        # Keep what the user added to the pending transaction (e.g. a receipt attached
+        # before the bank booked it); destroying the pending entry would purge it.
+        pending_transaction = pending_entry.entryable
+        carry_over_user_additions(from: pending_transaction, to: posted_tx) if pending_transaction.is_a?(Transaction)
       end
 
       # Date inheritance on the Entry row — separate from the Transaction update above.
+      entry_attrs = {}
       unless posted_entry.protected_from_sync?
         # Date: pending dates reflect actual transaction initiation time
-        posted_entry.update!(date: pending_entry_date) if posted_entry.date != pending_entry_date
+        entry_attrs[:date] = pending_entry_date if posted_entry.date != pending_entry_date
         # Name + Merchant intentionally NOT inherited — booked values are canonical
       end
+
+      # Notes are the user's own text, so they are kept even on a protected entry.
+      notes = merged_notes(posted_entry.notes, pending_entry.notes)
+      entry_attrs[:notes] = notes if notes != posted_entry.notes
+
+      posted_entry.update!(entry_attrs) if entry_attrs.any?
 
       # Lock the posted entry so future syncs cannot overwrite the merged state
       posted_entry.mark_user_modified!
@@ -392,19 +560,48 @@ class Transaction < ApplicationRecord
     currency = entry.currency
 
     # Find recent posted transactions from the same account
-    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS NOT TRUE" }
-
     account.entries
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where.not(id: entry.id)
       .where(currency: currency)
-      .where(conditions.join(" AND "))
+      .where(Transaction.not_pending_sql)
       .order(date: :desc, created_at: :desc)
       .limit(limit)
       .offset(offset)
   end
 
   private
+    # Moves the pending transaction's attachments (the attachment rows themselves, so the
+    # blobs are not purged with the pending entry) and adds its tags to the posted one.
+    def carry_over_user_additions(from:, to:)
+      if from.attachments.attached?
+        # A blob already attached to the posted transaction would collide with the
+        # unique index on attachments once re-pointed, and is kept there anyway.
+        from.attachments_attachments.where(blob_id: to.attachments_attachments.select(:blob_id)).delete_all
+        from.attachments_attachments.update_all(record_id: to.id)
+      end
+
+      new_tags = from.tags.where.not(id: to.tags.select(:id))
+      to.tags << new_tags if new_tags.any?
+    end
+
+    def attachment_count_after_merge(from:, to:)
+      to_blob_ids = to.attachments_attachments.pluck(:blob_id)
+      to_blob_ids.size + from.attachments_attachments.where.not(blob_id: to_blob_ids).count
+    end
+
+    # Notes merged earlier are joined by blank lines, so look for the pending
+    # note's paragraphs, in order, among the posted note's: "Order 123" is not
+    # already in "Order 1234", and a multi-paragraph note is not split apart.
+    def merged_notes(posted_notes, pending_notes)
+      return posted_notes if pending_notes.blank?
+      return pending_notes if posted_notes.blank?
+      posted_parts = posted_notes.split(/\n{2,}/).map(&:strip)
+      pending_parts = pending_notes.split(/\n{2,}/).map(&:strip)
+      return posted_notes if posted_parts.each_cons(pending_parts.size).include?(pending_parts)
+
+      "#{posted_notes}\n\n#{pending_notes}"
+    end
 
     def validate_attachments
       # Check attachment count limit

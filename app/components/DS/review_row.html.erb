@@ -1,0 +1,14 @@
+<div class="@container">
+  <div class="flex flex-col items-start gap-3 @md:flex-row @md:items-center @md:justify-between @md:gap-4 px-4 py-3">
+    <%# wrap-anywhere lets an unspaced bank descriptor break, and shrinks the
+        column's min-content width so it can't push past the card. %>
+    <div class="min-w-0 max-w-full wrap-anywhere">
+      <%= content %>
+    </div>
+    <% if actions? %>
+      <div class="flex items-center gap-2 shrink-0">
+        <%= actions %>
+      </div>
+    <% end %>
+  </div>
+</div>
