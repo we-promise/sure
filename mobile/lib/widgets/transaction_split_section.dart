@@ -242,7 +242,11 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
     // Same direction as the parent reads as a plain amount; a part that goes
     // the other way gets a minus sign, matching the editor's convention.
     final sign = split.amountUnits.isNegative ? BigInt.from(-1) : BigInt.one;
-    final decimals = SplitMath.inputDecimals(split.currency, split.amountUnits);
+    final decimals = SplitMath.inputDecimals(
+      split.currency,
+      split.amountUnits,
+      childUnits: split.children.map((c) => c.amountUnits),
+    );
     return MoneyMasker.mask(
       SplitMath.formatMoney(
         child.amountUnits * sign,

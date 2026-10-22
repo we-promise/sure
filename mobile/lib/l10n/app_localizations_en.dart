@@ -1170,4 +1170,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get splitEditorOffline =>
       'You\'re offline. Splits can only be saved while connected.';
+
+  @override
+  String get transactionsListSplitDeleteBlocked =>
+      'Unsplit this transaction before deleting it.';
 }
