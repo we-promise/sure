@@ -263,6 +263,8 @@ hu:
         sync_error: Szinkronizálási hiba
         no_recent_sync: Szinkronizálás lejárt
         reconsent_required: Újrahozzájárulás szükséges
+        login_required: "Bejelentkezés szükséges"
+        login_expires_soon: "A bejelentkezés %{time} múlva lejár (%{at})"
         reconsent_needed:
           one: Újrahozzájárulás szükséges 1 napon belül
           other: Újrahozzájárulás szükséges %{count} napon belül
@@ -372,6 +374,7 @@ hu:
         application_id_placeholder_new: "Add meg az alkalmazásazonosítót"
         application_id_placeholder_update: "Add meg az új azonosítót a frissítéshez"
         client_certificate_label: "Ügyfél-tanúsítvány (privát kulccsal)"
+        keep_client_certificate_hint: "Hagyd üresen az aktuális tanúsítvány megtartásához"
         save_and_connect: "Mentés és csatlakozás"
         update_connection: "Kapcsolat frissítése"
         connected_bank: "Csatlakoztatott bank"

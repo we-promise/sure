@@ -27,9 +27,10 @@ class PagesController < ApplicationController
   MONEY_FLOW_CHART_MONTHS = 6
 
   # Query params that shape what the dashboard shows without being saved
-  # anywhere. Customize mode carries them through its links and hide/add
-  # buttons so the widgets don't jump back to their defaults.
-  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [] } ].freeze
+  # anywhere. Customize mode, the period picker and each widget's own month
+  # links and filter forms carry them along, so changing one control doesn't
+  # jump the other widgets back to their defaults.
+  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [], spending_category_ids: [] } ].freeze
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -47,9 +48,9 @@ class PagesController < ApplicationController
     @investment_statement = Current.family.investment_statement
     @accounts = Current.user.accessible_accounts.visible.with_attached_logo
 
+    @dashboard_view_params = dashboard_view_params
     @dashboard_sections, @hidden_dashboard_sections = build_dashboard_sections
     @customizing_dashboard = params[:customize].present?
-    @dashboard_view_params = dashboard_view_params
     @just_hidden_section = params[:hidden_section]
     @just_shown_section = params[:shown_section]
 
@@ -73,13 +74,16 @@ class PagesController < ApplicationController
     return head :not_found unless DASHBOARD_SECTION_LAYOUTS.key?(section_key)
 
     hidden = ActiveModel::Type::Boolean.new.cast(params[:hidden])
+    # Resolved before the change: hiding the spending widget would otherwise
+    # skip resolving its own filter on the way out.
+    view_params = dashboard_view_params
     Current.user.update_dashboard_section_hidden(section_key, hidden)
     # Two param names rather than one, so hiding a widget and adding it back
     # never redirect to the same URL: Turbo morphs a same-URL visit as a
     # refresh, and a morph doesn't apply the autofocus that keeps keyboard
     # users on the widget they just changed.
     changed = hidden ? { hidden_section: section_key } : { shown_section: section_key }
-    redirect_to root_path(dashboard_view_params.merge(customize: true, **changed)), status: :see_other
+    redirect_to root_path(view_params.merge(customize: true, **changed)), status: :see_other
   end
 
   def changelog
@@ -124,11 +128,23 @@ class PagesController < ApplicationController
         permitted["collapsed_sections"] = prefs[:collapsed_sections].to_unsafe_h if prefs[:collapsed_sections].respond_to?(:to_unsafe_h)
         permitted["section_order"] = prefs[:section_order] if prefs[:section_order].is_a?(Array)
         permitted["dashboard_section_layout"] = prefs[:dashboard_section_layout].to_unsafe_h if prefs[:dashboard_section_layout].respond_to?(:to_unsafe_h)
+        permitted["cashflow_sankey_group_by"] = prefs[:cashflow_sankey_group_by] if User::CASHFLOW_SANKEY_GROUPINGS.include?(prefs[:cashflow_sankey_group_by])
       end
     end
 
+    # The spending filter is carried as the widget resolved it: a selection
+    # that covers every category with spending is the unfiltered state, so it
+    # is dropped here rather than re-sent by every other control, where it
+    # would pin today's list and leave out categories another month or
+    # period adds. While the widget is hidden its ids are only checked
+    # against the family's categories, so its queries still never run.
     def dashboard_view_params
-      params.permit(*DASHBOARD_VIEW_PARAMS).to_h
+      view_params = params.permit(*DASHBOARD_VIEW_PARAMS).to_h
+      if view_params.key?(:spending_category_ids)
+        category_ids = Current.user.dashboard_hidden_sections.include?("spending_trend") ? spending_trend_category_ids_param : spending_trend_filter.category_ids
+        category_ids ? view_params[:spending_category_ids] = category_ids : view_params.delete(:spending_category_ids)
+      end
+      view_params
     end
 
     # Each widget builds its own data, so a hidden widget's builder is never
@@ -161,6 +177,7 @@ class PagesController < ApplicationController
               # to this broader set, not `accounts`, so the view needs it to
               # know when the drill-down links can safely omit account_ids.
               accessible_account_ids: Current.user.accessible_accounts.pluck(:id).map(&:to_s),
+              view_params: @dashboard_view_params,
               col_span: section_layout("money_flow")[:col_span]
             },
             visible: @accounts.any?,
@@ -173,7 +190,10 @@ class PagesController < ApplicationController
             title: "pages.dashboard.spending_trend.title",
             partial: "pages/dashboard/spending_trend",
             layout: section_layout("spending_trend"),
-            locals: { spending_trend_data: build_spending_trend_data(dashboard_income_statement, spending_trend_month_param) },
+            locals: {
+              spending_trend_data: build_spending_trend_data(dashboard_income_statement, spending_trend_month_param, spending_trend_filter),
+              view_params: @dashboard_view_params
+            },
             visible: @accounts.any?,
             collapsible: true
           }
@@ -261,7 +281,8 @@ class PagesController < ApplicationController
         dashboard_net_totals,
         dashboard_income_statement.income_totals(period: @period),
         dashboard_income_statement.expense_totals(period: @period),
-        Current.family.currency
+        Current.family.currency,
+        invested_total: dashboard_income_statement.invested_total(period: @period)
       )
     end
 
@@ -330,7 +351,7 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency)
+    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, invested_total: nil)
       nodes = []
       links = []
       node_indices = {}
@@ -344,9 +365,12 @@ class PagesController < ApplicationController
 
       total_income = net_totals.total_net_income.to_f.round(2)
       total_expense = net_totals.total_net_expense.to_f.round(2)
+      total_invested = invested_total&.amount.to_f.round(2)
 
-      # Central Cash Flow node
-      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", total_income, 100.0, "var(--color-success)")
+      # Central Cash Flow node, sized to whichever side is larger so a deficit
+      # (outflows above income) still balances, as IncomeStatement::Sankey does
+      capacity = [ total_income, (total_expense + total_invested).round(2) ].max
+      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", capacity, 100.0, "var(--color-success)")
 
       # Build netted subcategory data from raw totals
       net_subcategories_by_parent = build_net_subcategories(expense_totals, income_totals)
@@ -375,12 +399,24 @@ class PagesController < ApplicationController
         flow_direction: :outbound
       )
 
+      # Money moved into investments, for a family that does not count it as spending
+      if total_invested.positive?
+        percentage = capacity.zero? ? 0 : (total_invested / capacity * 100).round(1)
+        idx = add_node.call("invested_node", t("pages.dashboard.cashflow_preview.node_labels.invested"), total_invested, percentage, IncomeStatement::Sankey::INVESTED_COLOR)
+        links << { source: cash_flow_idx, target: idx, value: total_invested, color: IncomeStatement::Sankey::INVESTED_COLOR, percentage: percentage }
+      end
+
       # Surplus/Deficit
-      net = (total_income - total_expense).round(2)
+      net = (total_income - total_expense - total_invested).round(2)
       if net.positive?
         percentage = total_income.zero? ? 0 : (net / total_income * 100).round(1)
         idx = add_node.call("surplus_node", "Surplus", net, percentage, "var(--color-success)")
         links << { source: cash_flow_idx, target: idx, value: net, color: "var(--color-success)", percentage: percentage }
+      elsif net.negative?
+        deficit = net.abs
+        percentage = capacity.zero? ? 0 : (deficit / capacity * 100).round(1)
+        idx = add_node.call("deficit_node", t("pages.dashboard.cashflow_preview.node_labels.deficit"), deficit, percentage, "var(--color-destructive)")
+        links << { source: idx, target: cash_flow_idx, value: deficit, color: "var(--color-destructive)", percentage: percentage }
       end
 
       { nodes: nodes, links: links, currency_symbol: Money::Currency.new(currency).symbol }
@@ -551,59 +587,99 @@ class PagesController < ApplicationController
       current_month
     end
 
+    # Category ids (and the uncategorized sentinel) from the family's own
+    # categories. Not narrowed to the categories with spending this month, so
+    # a selection survives switching to a month where some of it is empty.
+    # nil means every category (the widget's default, unfiltered state).
+    def spending_trend_category_ids_param
+      ids = Array(params[:spending_category_ids]).reject(&:blank?).map(&:to_s)
+      return nil if ids.empty?
+
+      ids &= [ *Current.family.categories.pluck(:id), Category::UNCATEGORIZED_FILTER_VALUE ]
+      ids.presence
+    end
+
+    # The selected month (capped at today while it's in progress) and the
+    # period the widget compares it against: the dashboard's time period.
+    # Memoized: the filter and the widget both need them.
+    def spending_trend_periods(selected_month)
+      month_start = selected_month.beginning_of_month
+      (@spending_trend_periods ||= {})[month_start] ||= begin
+        current_period = Period.custom(start_date: month_start, end_date: [ month_start.end_of_month, Date.current ].min)
+        [ current_period, @period ]
+      end
+    end
+
+    # The widget's category filter (IncomeStatement::ExpenseCategoryFilter).
+    # Memoized: the view params and the widget both read it.
+    def spending_trend_filter
+      @spending_trend_filter ||= IncomeStatement::ExpenseCategoryFilter.new(
+        dashboard_income_statement,
+        periods: spending_trend_periods(spending_trend_month_param),
+        category_ids: spending_trend_category_ids_param
+      )
+    end
+
     # Cumulative daily spending for the selected month (capped at today while
-    # the month is in progress) against the previous month's full curve, so
-    # the two lines share one day-of-month axis. The header totals compare the
-    # same number of elapsed days; only the chart draws the previous month out
-    # to its final day.
-    def build_spending_trend_data(income_statement, selected_month)
+    # the month is in progress) against an average month drawn from the
+    # dashboard's time period (IncomeStatement#average_month_expense_series:
+    # MTD retraces this month, LM is last month's curve, 7D covers only its
+    # own days and leaves the rest blank), so the two lines share one
+    # day-of-month axis. The header compares the same number of elapsed days;
+    # only the chart draws the comparison out to its last day.
+    #
+    # The category filter (an IncomeStatement::ExpenseCategoryFilter) narrows
+    # both lines to the same categories, so the comparison stays
+    # like-for-like.
+    def build_spending_trend_data(income_statement, selected_month, category_filter)
       month_start = selected_month.beginning_of_month
       month_end = month_start.end_of_month
-      current_period = Period.custom(start_date: month_start, end_date: [ month_end, Date.current ].min)
+      current_period, comparison_period = spending_trend_periods(month_start)
+      category_ids = category_filter.category_ids
 
-      previous_month_start = (month_start - 1.month).beginning_of_month
-      previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
+      current_daily = income_statement.daily_expense_series(period: current_period, category_ids: category_ids).index_by(&:date)
 
-      current_daily = income_statement.daily_expense_series(period: current_period).index_by(&:date)
-      previous_daily = income_statement.daily_expense_series(period: previous_period).index_by(&:date)
-
-      # The selected month always owns the axis: when the previous month is
-      # longer, its extra days fold into the final visible point so the curve
-      # still ends at the full-month total without the axis rolling into
-      # previous-month dates (e.g. a September view ends at "Sep 30", not
-      # "Aug 31").
+      # The selected month always owns the axis: days of the month past its
+      # end (an average's day 31 in a 30-day month) fold into the final
+      # visible point, so the curve still ends at the full average.
       axis_days = month_end.day
+      axis_labels = spending_trend_axis_labels(month_start, axis_days)
 
       current_series = cumulative_spending_series(current_period, current_daily)
-      previous_header_series = cumulative_spending_series(previous_period, previous_daily)
+      previous_header_series = income_statement.average_month_expense_series(period: comparison_period, category_ids: category_ids)
+        .map { |average_day| { day: average_day.day, value: average_day.total&.to_f&.round(2) } }
       previous_series = fold_extra_days(previous_header_series, axis_days)
+        .map { |point| point.merge(date_formatted: axis_labels[point[:day] - 1]) }
 
+      # While the selected month is running, compare the same elapsed days;
+      # once it's over, the whole average. The comparison may have no point
+      # on that day (a 7D period, or YTD in January), so take its last point
+      # on or before it.
       current_total = current_series.last&.fetch(:value) || 0
-      comparison_days = if month_start == Date.current.beginning_of_month
-        [ current_series.size, previous_header_series.size ].min
-      else
-        previous_header_series.size
-      end
-      previous_total = comparison_days.positive? ? previous_header_series[comparison_days - 1][:value] : 0
-      previous_comparison_day = comparison_days if comparison_days.positive? && comparison_days < previous_header_series.size
+      compare_through = month_start == Date.current.beginning_of_month ? current_series.size : previous_header_series.size
+      compared_point = previous_header_series.first(compare_through).reverse.find { |point| point[:value] }
+      previous_total = compared_point ? compared_point[:value] : 0
+      final_point = previous_header_series.reverse.find { |point| point[:value] }
+      previous_comparison_day = compared_point[:day] if compared_point && compared_point != final_point
       currency = income_statement.family.currency
-
 
       {
         month: month_start,
         current_period: current_period,
-        previous_period: previous_period,
         days: axis_days,
         current_days: month_end.day,
-        axis_labels: spending_trend_axis_labels(month_start, axis_days),
+        axis_labels: axis_labels,
         current: current_series,
         previous: previous_series,
         current_total: Money.new(current_total, currency),
         previous_total: Money.new(previous_total, currency),
         delta: Money.new(current_total - previous_total, currency),
-        previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
+        previous_label: t("pages.dashboard.spending_trend.average_label", period: comparison_period.key ? comparison_period.label : comparison_period.label_range),
         previous_comparison_day: previous_comparison_day,
-        date_range_short: spending_trend_compact_date_range(current_period)
+        date_range_short: spending_trend_compact_date_range(current_period),
+        category_options: category_filter.options,
+        selected_category_count: category_filter.selected_count,
+        category_ids: category_ids
       }
     end
 
@@ -632,21 +708,16 @@ class PagesController < ApplicationController
       end
     end
 
-    # A longer previous month's curve is clipped to the axis, with the extra
-    # days' spend folded into the final visible point, so the curve still
-    # ends at the full-month total shown in the header. The folded point
-    # keeps its axis slot (day) for positioning but carries the true
-    # endpoint's date metadata, so the tooltip says what the value actually
-    # contains (e.g. "Jan 31" and the total through Jan 31).
+    # A comparison running past the axis (day 31 against a 30-day month) is
+    # clipped to it, with the rest folded into the final visible point, so
+    # the curve still ends at the full total shown in the header. A final
+    # point the period doesn't reach stays blank rather than carrying days
+    # beyond the axis.
     def fold_extra_days(series, axis_days)
       return series if series.size <= axis_days
 
       series.first(axis_days).tap do |folded|
-        folded[-1] = folded[-1].merge(
-          value: series.last[:value],
-          date: series.last[:date],
-          date_formatted: series.last[:date_formatted]
-        )
+        folded[-1] = folded[-1].merge(value: series.last[:value]) unless folded[-1][:value].nil?
       end
     end
 

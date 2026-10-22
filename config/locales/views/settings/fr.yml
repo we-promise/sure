@@ -344,6 +344,7 @@ fr:
         application_id_placeholder_update: Saisissez le nouvel identifiant pour mettre à jour
         callback_url_instruction: Pour l'URL de rappel, utilisez %{callback_url}.
         client_certificate_label: Certificat client (avec clé privée)
+        keep_client_certificate_hint: "Laissez vide pour conserver le certificat actuel"
         config_locked_message: Déconnectez toutes les banques liées avant de modifier ces identifiants.
         config_locked_title: Configuration verrouillée
         configured: Configuré
@@ -477,6 +478,8 @@ fr:
           one: Consentement requis dans 1 jour
           other: Consentement requis dans %{count} jours
         reconsent_required: Consentement requis
+        login_required: "Connexion requise"
+        login_expires_soon: "La connexion expire dans %{time} (%{at})"
         sync_error: Erreur de synchro
       not_authorized: Non autorisé
       not_found: Fournisseur non trouvé.
@@ -551,7 +554,7 @@ fr:
         kraken: Synchronisez vos soldes Kraken et transactions spot à l'aide d'une clé API en lecture seule.
         lunchflow: Connectez plus de 20k banques dans plus de 40 pays (UK, UE, USA, etc.)
         mercury: Synchronisez automatiquement vos comptes professionnels Mercury.
-        onchain_wallet: Suivez vos portefeuilles Bitcoin, EVM et Solana en autoconservation à partir de leurs adresses publiques.
+        onchain_wallet: Suivez vos portefeuilles Bitcoin, EVM, Solana, Cosmos et Polkadot en autoconservation à partir de leurs adresses publiques.
         plaid: Connectez des milliers d'institutions financières américaines via Plaid.
         plaid_eu: Connectez des institutions financières européennes via Plaid (PSD2 / Open Banking).
         questrade: Synchronisez directement vos comptes d'investissement Questrade via l'API Questrade.
@@ -603,7 +606,9 @@ fr:
         qr_back_to_credentials: Revenir au numéro de téléphone et au code PIN ou mot de passe
         qr_cancel: Annuler la connexion par QR code
         qr_error: La connexion par QR code n'a pas pu être lancée. Veuillez réessayer.
-        qr_instruction: Scannez le QR code avec votre application Trade Republic et approuvez la connexion.
+        requires_update: "Reconnectez-vous pour reprendre la synchronisation."
+        session_expires_in: "La connexion expire dans %{time} (%{at})."
+        qr_instruction: Scannez le QR code avec l'appareil photo de votre téléphone, puis approuvez la connexion dans l'application Trade Republic.
         qr_loading: Préparation du QR code …
         qr_login: Se connecter avec un QR code
         qr_success: Connexion approuvée. Sure actualise la page du fournisseur.

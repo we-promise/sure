@@ -67,7 +67,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '403', 'invite code required or invalid' do
+      response '403', 'registration refused: the instance is closed to new registrations, or an invite code is required or invalid' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
@@ -124,6 +124,11 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '401', 'invalid credentials, MFA required, or account deactivated' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+
+      response '403', 'local login is disabled: the instance is SSO-only, and this account is not a super admin using the emergency override' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
