@@ -23,7 +23,7 @@ ca:
           final_principal: Capital final del dia
           final_value: Valor final del dia
           market_changes: Variacions de mercat
-          net_cash_flow: Flux net d'efectiu
+          net_cash_flow: Flux de caixa net
           net_principal_change: Variació neta del capital
           net_value_change: Variació neta del valor
           payments: Pagaments
@@ -75,11 +75,15 @@ ca:
           holdings_value: Valor de les posicions
           remaining_principal_balance: Capital pendent
           total_account_value: Valor total del compte
+          total_gains: Guanys totals
         views:
           cash: Efectiu
           holdings: Posicions
           total_value: Valor total
+          gains: Guanys / ROI
         vs_available_history: vs. historial disponible
+    period_picker:
+      aria_label: 'Període: %{period}'
   ds:
     alert:
       variants:
@@ -93,13 +97,22 @@ ca:
     pill:
       aria_label: "%{label}"
       default_label: Experimental
+    popover:
+      avatar_default_label: Obre el menú
+    tooltip:
+      trigger_label: Més informació
+    link:
+      opens_in_new_tab: (s'obre en una pestanya nova)
+    icon_picker:
+      no_matching_icons: No hi ha icones que coincideixin
+      search_placeholder: Cerca icones...
   provider_sync_summary:
     accounts:
-      institutions: 'Institucions: %{count}'
-      linked: 'Vinculats: %{count}'
+      institutions: 'Entitats: %{count}'
+      linked: 'Enllaçats: %{count}'
       title: Comptes
       total: 'Total: %{count}'
-      unlinked: 'Desvinculats: %{count}'
+      unlinked: 'Desenllaçats: %{count}'
     health:
       data_warnings: 'Avisos de dades: %{count}'
       duplicate_suggestions:
@@ -110,8 +123,8 @@ ca:
       pending_reconciled:
         one: "%{count} transacció pendent duplicada conciliada"
         other: "%{count} transaccions pendents duplicades conciliades"
-      rate_limited: Sota límit de %{time_ago}
-      recently: recentment
+      rate_limited: Límit de peticions assolit fa %{time_ago}
+      recently: poc
       stale_pending:
         one: "%{count} transacció pendent obsoleta (exclosa dels pressupostos)"
         other: "%{count} transaccions pendents obsoletes (excloses dels pressupostos)"

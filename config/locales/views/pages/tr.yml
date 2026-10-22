@@ -9,6 +9,18 @@ tr:
           cash_flow: "Nakit akışı"
           surplus: "Fazla"
           deficit: "Açık"
+        title: Yeni Sankey grafiği
+        preview: Önizleme
+        preview_tooltip: Bu grafik, mobil Swift istemcisiyle ortak kullanılan yeni bir API'ye dayandığı için yukarıdaki görselleştirmenin yerini alacak.
+        feedback_prompt: Bu grafiği yukarıdaki orijinaliyle karşılaştırın ve sıralama dışında farklı görünüyorsa bize bildirin.
+        positive: Doğru görünüyor
+        negative: Bir şeyler yanlış görünüyor
+        feedback_title: Nakit akışı grafiği geri bildirimi
+        feedback_loading: Geri bildirim formu yükleniyor…
+        feedback_unavailable: Geri bildirim şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.
+        feedback_thanks: Grafiği geliştirmemize yardımcı olduğunuz için teşekkürler!
+        feedback_privacy: Yanıtınız PostHog'a gönderilir. Sorunu hesap numaraları, bakiyeler veya diğer özel finansal bilgiler olmadan açıklayın.
+        feedback_submit: Geri bildirim gönder
       balance_sheet:
         add_accounts: Tam bir döküm görmek için %{name} hesaplarınızı ekleyin
         add_asset_accounts: Tam bir döküm görmek için varlık hesaplarınızı ekleyin
@@ -24,6 +36,8 @@ tr:
         title: Bilanço
         value: Değer
         weight: Ağırlık
+        expand_all: Tümünü genişlet
+        collapse_all: Tümünü daralt
       cashflow_sankey:
         add_transaction: İşlem ekle
         no_data_description: Nakit akışı verilerini görüntülemek için işlem ekleyin
@@ -31,6 +45,9 @@ tr:
         no_data_title: Bu zaman aralığı için nakit akışı verisi yok
         title: Nakit Akışı
         zoom_out: Tam nakit akışına dön
+        loading: Nakit akışı yükleniyor…
+        load_error: Nakit akışı yüklenemedi. Lütfen tekrar deneyin.
+        retry: Tekrar dene
       drag_to_reorder: Bölümü yeniden sıralamak için sürükleyin
       insights_feed:
         title: İçgörüler
@@ -79,6 +96,28 @@ tr:
         label: Boyutu ayarla
         tall: Uzun
         width_label: Genişlik
+      money_flow:
+        title: Para Girişi / Çıkışı
+        date_range: '%{start_date} - %{end_date}'
+        month_picker_aria_label: Ay seçin
+        filter_accounts: Hesapları filtrele (%{count})
+        filter_accounts_all: Tüm hesaplar
+        period_scope_hint: Burada seçtiğiniz ayları gösterir — üstteki gösterge paneli zaman aralığından bağımsızdır.
+        search_accounts: Hesaplarda ara
+        apply: Uygula
+        balance: İşlem bakiyesi
+        chart_span: Son %{count} ay
+        income: Gelir
+        expenses: Giderler
+      spending_trend:
+        title: Harcama
+        date_range: '%{start_date} - %{end_date}'
+        date_range_short: '%{start_date} - %{end_day}, %{year}'
+        date_range_short_single: '%{date} %{year}'
+        month_picker_aria_label: Ay seçin
+        period_scope_hint: Burada seçtiğiniz ayı gösterir — üstteki gösterge paneli zaman aralığından bağımsızdır.
+        no_data: Bu ay için harcama verisi yok
+        previous_comparison_days: (1-%{end_day})
     feedback:
       bug_report: Hata bildirimi gönder
       description: Belirli bir geri bildiriminiz varsa bize bildirin. Video veya ekran

@@ -4,8 +4,9 @@ import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 
 // Cumulative spending chart for the dashboard "spending" widget: the selected
 // month's running total (green, ending today while the month is in progress)
-// overlaid on the previous month's complete curve (gray), sharing one
-// day-of-month axis. Lifecycle mirrors bar_chart/time_series_chart
+// overlaid on an average month from the dashboard's time period (gray),
+// sharing one day-of-month axis. Days the period never reaches have a null
+// value and leave a gap in the gray line. Lifecycle mirrors bar_chart/time_series_chart
 // (install/teardown, ResizeObserver, turbo:load reinstall, page-relative
 // tooltip positioning).
 const CURRENT_COLOR = "var(--color-success)";
@@ -91,11 +92,12 @@ export default class extends Controller {
 
     const line = d3
       .line()
+      .defined((d) => d.value !== null)
       .x((d) => x(d.day))
       .y((d) => y(d.value))
       .curve(d3.curveMonotoneX);
 
-    // Previous month first so the current month always draws on top.
+    // Comparison first so the current month always draws on top.
     if (previous.length > 0) {
       group
         .append("path")
@@ -210,7 +212,9 @@ export default class extends Controller {
       .attr("class", `${CHART_TOOLTIP_CLASSES} opacity-0 top-0`);
 
     const currentByDay = new Map(current.map((d) => [d.day, d]));
-    const previousByDay = new Map(previous.map((d) => [d.day, d]));
+    const previousByDay = new Map(
+      previous.filter((d) => d.value !== null).map((d) => [d.day, d]),
+    );
     const hoverDays = [
       ...new Set([...currentByDay.keys(), ...previousByDay.keys()]),
     ].sort((a, b) => a - b);

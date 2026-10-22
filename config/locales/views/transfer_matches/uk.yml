@@ -12,7 +12,7 @@ uk:
       to_account_named: "На рахунок: %{name}"
       outflow_transaction: Вихідна транзакція
       inflow_transaction: Вхідна транзакція
-      create_transfer_match: Створити відповідність переказу
+      create_transfer_match: Створити зіставлення переказу
     matching_fields:
       select_method: Виберіть метод для зіставлення ваших транзакцій.
       match_existing_recommended: Зіставити існуючу транзакцію (рекомендовано)

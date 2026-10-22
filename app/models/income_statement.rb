@@ -26,11 +26,13 @@ class IncomeStatement
 
     total_income = result.select { |t| t.classification == "income" }.sum(&:total)
     total_expense = result.select { |t| t.classification == "expense" }.sum(&:total)
+    total_invested = result.select { |t| t.classification == "investment" }.sum(&:total)
 
     ScopeTotals.new(
       transactions_count: result.sum(&:transactions_count),
       income_money: Money.new(total_income, family.currency),
-      expense_money: Money.new(total_expense, family.currency)
+      expense_money: Money.new(total_expense, family.currency),
+      invested_money: Money.new(total_invested, family.currency)
     )
   end
 
@@ -59,6 +61,14 @@ class IncomeStatement
       date_range: period.date_range
     ).map { |row| row.with(total: -row.total) }
     @refund_totals_by_period[key] = build_period_total(classification: "expense", period: period, rows: rows)
+  end
+
+  # Money moved into investment accounts during the period, for a family that
+  # does not count it as spending. Zero for everyone else: their
+  # contributions are already part of expense_totals.
+  def invested_total(period: Period.current_month)
+    total = totals_for_period(period).select { |t| t.classification == "investment" }.sum(&:total)
+    Money.new(total, family.currency)
   end
 
   def net_category_totals(period: Period.current_month)
@@ -132,19 +142,44 @@ class IncomeStatement
   # periods and account combinations in one request.
   # Per-day expense totals (in family currency) across a period, powering the
   # dashboard's cumulative spending chart. Same scoping as `expense_totals`.
-  def daily_expense_series(period:)
-    Rails.cache.fetch([
-      "income_statement", "daily_expense_series", "v2", family.id, user&.id,
-      included_account_ids_hash, period.start_date, period.end_date,
-      *cache_freshness_key
-    ]) do
-      DailyExpenseTotals.new(
-        family,
-        transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
-        date_range: period.date_range,
-        included_account_ids: included_account_ids
-      ).call
+  # `category_ids` narrows the series to those categories: category ids,
+  # plus Category::UNCATEGORIZED_FILTER_VALUE for uncategorized spending. As
+  # in the transactions category filter, a parent category also covers its
+  # subcategories. nil means every category.
+  def daily_expense_series(period:, category_ids: nil)
+    return unfiltered_daily_expense_series(period) if category_ids.nil?
+
+    matches = expense_category_matcher(category_ids)
+    daily_expense_by_category(period)
+      .select { |row| matches.call(row.category_id) }
+      .group_by(&:date)
+      .map { |date, rows| DailyExpenseTotals::DailyTotal.new(date: date, total: rows.sum { |row| row.total.to_d }) }
+  end
+
+  # An average month of spending over `period`, to compare one month's
+  # cumulative spend against: for each day of the month, the average spend
+  # on the period's dates that fall on that day, accumulated across the
+  # month. A day of the month the period never reaches has a nil total, so
+  # a one-month period gives that month's own cumulative curve and a short
+  # one (a week, say) covers only its own days. `category_ids` filters as in
+  # daily_expense_series.
+  def average_month_expense_series(period:, category_ids: nil)
+    daily = daily_expense_series(period: period, category_ids: category_ids).index_by(&:date)
+    dates_by_day = period.date_range.group_by(&:day)
+    cumulative = 0.to_d
+
+    (1..dates_by_day.keys.max).map do |day|
+      dates = dates_by_day[day]
+      cumulative += dates.sum { |date| daily[date] ? daily[date].total.to_d : 0 } / dates.size if dates
+      AverageMonthDay.new(day: day, total: dates && cumulative)
     end
+  end
+
+  # Categories with spending in the period's daily series, nil standing for
+  # uncategorized spending. These are the categories a filter on that series
+  # can usefully offer.
+  def daily_expense_category_ids(period:)
+    daily_expense_by_category(period).map(&:category_id).uniq
   end
 
   def totals_for(period, account_ids: nil)
@@ -191,7 +226,8 @@ class IncomeStatement
   end
 
   private
-    ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money)
+    ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money, :invested_money)
+    AverageMonthDay = Data.define(:day, :total)
     PeriodTotal = Data.define(:classification, :total, :currency, :category_totals)
     CategoryTotal = Data.define(:category, :total, :currency, :weight)
     NetCategoryTotals = Data.define(:net_expense_categories, :net_income_categories, :total_net_expense, :total_net_income, :currency)
@@ -259,17 +295,67 @@ class IncomeStatement
         )
     end
 
+    def unfiltered_daily_expense_series(period)
+      Rails.cache.fetch([
+        "income_statement", "daily_expense_series", "v2", family.id, user&.id,
+        included_account_ids_hash, period.start_date, period.end_date,
+        *cache_freshness_key
+      ]) do
+        DailyExpenseTotals.new(
+          family,
+          transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
+          date_range: period.date_range,
+          included_account_ids: included_account_ids
+        ).call
+      end
+    end
+
+    # Cached per period and never per filter: every category selection is
+    # answered from these rows, so the filter doesn't belong in the key. Rows
+    # carry only the category id, not its parent, so moving a subcategory
+    # under another parent takes effect without busting the cache.
+    def daily_expense_by_category(period)
+      @daily_expense_by_category ||= {}
+      @daily_expense_by_category[period_cache_key(period)] ||= Rails.cache.fetch([
+        "income_statement", "daily_expense_by_category", "v2", family.id, user&.id,
+        included_account_ids_hash, period.start_date, period.end_date,
+        *cache_freshness_key
+      ]) do
+        DailyExpenseTotals.new(
+          family,
+          transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
+          date_range: period.date_range,
+          included_account_ids: included_account_ids,
+          by_category: true
+        ).call
+      end
+    end
+
+    # A predicate over a row's category_id for the given selection, expanding
+    # each selected parent to its current subcategories (categories nest only
+    # one level deep). Memoized per selection, since one request filters
+    # several periods the same way.
+    def expense_category_matcher(category_ids)
+      key = category_ids.map(&:to_s).sort
+      (@expense_category_matchers ||= {})[key] ||= begin
+        selected = key.to_set
+        selected.merge(categories.filter_map { |c| c.id.to_s if selected.include?(c.parent_id.to_s) })
+
+        ->(category_id) { selected.include?(category_id.nil? ? Category::UNCATEGORIZED_FILTER_VALUE : category_id.to_s) }
+      end
+    end
+
     def family_stats(interval: "month")
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "family_stats", "v2", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+        "income_statement", "family_stats", "v2", family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
       ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", "v2", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+        "income_statement", "category_stats", "v2", family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
       ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
@@ -287,11 +373,15 @@ class IncomeStatement
 
     # An IncomeStatement is a request-scoped reporting snapshot, like its memoized
     # period totals. Share these aggregate reads across totals and daily series.
-    # Rates and target currency can change without touching entries or accounts.
+    # Rates, target currency and whether investing counts as spending can
+    # change without touching entries or accounts.
     def cache_freshness_key
       @cache_freshness_key ||= [
-        family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i,
-        family.currency, ExchangeRate.maximum(:updated_at)&.to_i
+        family.entries_cache_version,
+        family.accounts_status_version,
+        family.currency,
+        ExchangeRate.maximum(:updated_at)&.to_i,
+        family.investment_contributions_as_spending?
       ]
     end
 

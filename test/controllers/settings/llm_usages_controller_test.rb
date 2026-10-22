@@ -5,6 +5,7 @@ class Settings::LlmUsagesControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     get settings_llm_usage_path
     assert_response :success
+    assert_includes response.body, I18n.l(LlmUsage::PRICING_VERIFIED_ON)
   end
 
   test "non-admin member cannot view family LLM usage" do

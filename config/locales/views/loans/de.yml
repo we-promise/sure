@@ -7,6 +7,14 @@ de:
       interest_rate: Zinssatz
       interest_rate_placeholder: '5,25'
       initial_balance: Ursprünglicher Kreditbetrag
+      day_count_convention: Zinsberechnungsmethode
+      day_count_convention_actual_365: Taggenau/365
+      day_count_convention_actual_actual: Taggenau/taggenau
+      day_count_convention_hint: Wie Ihr Kreditgeber jede Periode gegen ein Jahr
+        misst. Taggenau/365 berechnet nach der Länge des Monats und ist bei
+        britischen und australischen Hypotheken üblich. 30/360 berechnet ein
+        glattes Zwölftel, die Grundlage, die Sure bisher immer verwendet hat.
+      day_count_convention_thirty_360: 30/360 (glattes Zwölftel)
       rate_type: Zinssatztyp
       term_months: Laufzeit (Monate)
       term_months_placeholder: '360'
@@ -43,8 +51,11 @@ de:
         description: Hochgerechnet aus ursprünglicher Kreditsumme, Zinssatz und Laufzeit, beginnend am %{start_date}. Sondertilgungen sind nicht berücksichtigt.
         variable_rate_notice: Der Zinssatz dieses Kredits ändert sich im Laufe der Zeit. Der Tilgungsplan wird bei jeder erfassten Änderung neu berechnet; das ursprüngliche Ablösedatum bleibt, die Rate passt sich an. Eine noch nicht erfasste Änderung verschiebt diese Zahlen.
         opening_payment: Anfangsrate
+        forecasted_payoff_date: Voraussichtliches Ablösedatum
+        forecasted_payoff_not_converged: Mit der aktuellen Rate nicht getilgt
         interest: Zinsen
         monthly_payment: Monatsrate
+        not_applicable: "–"
         number: "Nr."
         payment: Rate
         principal: Tilgung

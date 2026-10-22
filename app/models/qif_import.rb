@@ -102,6 +102,16 @@ class QifImport < Import
     qif_accounts.any?
   end
 
+  # Embedded QIF accounts and per-row account names are matched to existing
+  # family accounts by name when publishing (see find_or_create_qif_account).
+  def preexisting_target_account_ids
+    names = qif_accounts.map(&:name) + rows.where.not(account: [ nil, "" ]).distinct.pluck(:account)
+    names = names.compact_blank.uniq
+    return [] if names.empty?
+
+    family.accounts.where(name: names).pluck(:id)
+  end
+
   # Unique categories used across all rows (blank entries excluded).
   def row_categories
     (rows.distinct.pluck(:category) + selected_split_categories).reject(&:blank?).uniq.sort

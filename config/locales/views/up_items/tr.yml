@@ -19,13 +19,13 @@ tr:
       transactions_failed: Up işlemleri getirilemedi
     institution_summary:
       count:
-        one: 1 kurum
+        one: "%{count} kurum"
         other: "%{count} kurum"
       none: Bağlı kurum yok
       one: 1 kurum
     sync_status:
       all_synced:
-        one: 1 hesap eşitlendi
+        one: "%{count} hesap eşitlendi"
         other: "%{count} hesap eşitlendi"
       no_accounts: Hesap bulunamadı
       partial: "%{linked} eşitlendi, %{unlinked} kurulum gerektiriyor"
@@ -35,7 +35,7 @@ tr:
       creation_failed: Up hesapları oluşturulamadı.
       no_accounts: Hiçbir Up hesabı seçilmedi.
       success:
-        one: 1 Up hesabı oluşturuldu.
+        one: "%{count} Up hesabı oluşturuldu."
         other: "%{count} Up hesabı oluşturuldu."
     create:
       success: Up bağlantısı kaydedildi.
@@ -47,7 +47,7 @@ tr:
       no_accounts_selected: En az bir hesap seçin.
       no_credentials_configured: Önce Up'ı sağlayıcı ayarlarında yapılandırın.
       success:
-        one: 1 Up hesabı bağlandı.
+        one: "%{count} Up hesabı bağlandı."
         other: "%{count} Up hesabı bağlandı."
       unsupported_account_type: Up bu hesap türünü desteklemiyor.
     link_existing_account:

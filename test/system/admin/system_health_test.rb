@@ -18,18 +18,13 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
   end
 
   test "selecting AI status runs live probes" do
-    ClimateControl.modify(
-      "OPENAI_ACCESS_TOKEN" => "test-token",
-      "OPENAI_URI_BASE" => nil,
-      "OPENAI_MODEL" => nil,
-      "VECTOR_STORE_PROVIDER" => nil
-    ) do
+    with_openai_access_token do
       visit admin_system_health_path
 
-      click_button "AI status"
+      click_button "AI"
 
       assert_current_path admin_system_health_path(tab: "ai")
-      assert_selector "button[role='tab'][aria-selected='true']", text: "AI status"
+      assert_selector "button[role='tab'][aria-selected='true']", text: "AI"
       assert_text "Live check passed"
       assert_text "Live tool call succeeded"
       assert_text "PDF text-extraction path"
@@ -39,13 +34,63 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     end
   end
 
+  test "running the checks again stays on the AI tab and forces fresh probes" do
+    with_openai_access_token do
+      visit admin_system_health_path(tab: "ai")
+      assert_text "Live check passed"
+
+      click_on "Run checks again"
+
+      assert_current_path admin_system_health_path(tab: "ai", refresh_ai_health: "1")
+      assert_selector "turbo-frame#ai_status[src$='?refresh_ai_health=1']"
+      assert_text "Live check passed"
+    end
+  end
+
+  test "going back after switching tabs returns to system health" do
+    with_openai_access_token do
+      visit admin_system_health_path
+      click_button "AI"
+      assert_text "Live check passed"
+
+      click_link "Preferences", match: :first
+      assert_no_selector "[data-testid='system-health-tabs']"
+      page.go_back
+
+      assert_current_path admin_system_health_path(tab: "ai")
+      assert_selector "button[role='tab'][aria-selected='true']", text: "AI"
+    end
+  end
+
+  # The redirect comes back to this page, which the button's `replace` action
+  # turns into a morphing refresh even after a tab switch. The button has to
+  # leave the frame for the flash to show, and the frame has to keep its status
+  # through the morph instead of taking the new page's loading placeholder.
+  test "queueing a worker check keeps the AI status on screen" do
+    with_openai_access_token do
+      visit admin_system_health_path
+      click_button "AI"
+      assert_text "Live check passed"
+      page.execute_script(<<~JS)
+        document.addEventListener("turbo:morph", () => {
+          window.aiStatusAfterMorph = document.getElementById("ai_status").textContent
+        }, { once: true })
+      JS
+
+      click_button "Verify worker configuration"
+
+      assert_text "Worker check queued"
+      assert_match "Live check passed", page.evaluate_script("window.aiStatusAfterMorph")
+    end
+  end
+
   test "hosted super admin enables the test button by registering an iOS device" do
     Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
     Apns::Client.stubs(:configured?).returns(true)
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     visit admin_system_health_path
-    assert_selector "button[role='tab']", count: 2
-    assert_selector "button[role='tab'][aria-selected='true']", text: "Background jobs"
+    assert_selector "button[role='tab']", count: 3
+    assert_selector "button[role='tab'][aria-selected='true']", text: "Jobs"
     assert_selector "h2", text: "Push notifications"
     assert_button "Send test push notification", disabled: true
     assert_text "Enable push notifications in the Sure iOS app"
@@ -75,7 +120,83 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     end
   end
 
+  test "configuration tab supports repeated selection and navigation without running AI probes" do
+    ApplicationMailer.stubs(:perform_deliveries).returns(true)
+    ApplicationMailer.stubs(:delivery_method).returns(:smtp)
+    ApplicationMailer.stubs(:smtp_settings).returns({ address: nil, port: 465 })
+    ApplicationMailer.stubs(:default).returns({ from: "Sure <sender@sure.local>" })
+    Rails.application.config.active_storage.stubs(:service).returns(:local)
+    Rails.application.config.active_storage.stubs(:service_configurations).returns({
+      local: { service: "Disk", root: Rails.root.join("storage") }
+    })
+    AiHealth.expects(:new).never
+    visit admin_system_health_path
+
+    2.times do
+      click_button "Config"
+      assert_current_path admin_system_health_path(tab: "configuration")
+      assert_selector "button[role='tab'][aria-selected='true']", text: "Config"
+      assert_selector "h2", text: "Email (SMTP)"
+      assert_selector "h2", text: "Market prices"
+      assert_selector "h2", text: "Foreign exchange rates"
+      assert_selector "h2", text: "File uploads and storage"
+      assert_no_selector "[data-testid='configuration-health'] input"
+      click_button "Jobs"
+      assert_no_selector "[data-testid='configuration-health']"
+    end
+
+    click_button "Config"
+    click_link "Preferences", match: :first
+    assert_no_selector "[data-testid='system-health-tabs']"
+    page.go_back
+    assert_current_path admin_system_health_path(tab: "configuration")
+    assert_selector "h2", text: "File uploads and storage"
+    page.go_forward
+    assert_no_selector "[data-testid='system-health-tabs']"
+
+    visit admin_system_health_path(tab: "configuration")
+    assert_selector "button[role='tab'][aria-selected='true']", text: "Config"
+    assert_selector "h2", text: "Email (SMTP)"
+    within "[data-testid='optional-services']" do
+      assert_selector "h2", text: "Optional services"
+      assert_selector "details:not([open])", count: 6
+      find("summary", text: "Langfuse").click
+      assert_text "LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY"
+      find("summary", text: "Langfuse").click
+      assert_selector "details:not([open])", count: 6
+    end
+    page.current_window.resize_to(390, 844)
+    %w[exchange_rates storage].each do |key|
+      header = find("[data-testid='configuration-#{key}'] h2").find(:xpath, "..")
+      bounds = header.evaluate_script(<<~JS)
+        (() => {
+          const title = this.querySelector("h2").getBoundingClientRect();
+          const pill = this.querySelector(".shrink-0").getBoundingClientRect();
+          const card = this.getBoundingClientRect();
+          return { titleRight: title.right, titleTop: title.top,
+            pillLeft: pill.left, pillTop: pill.top, pillRight: pill.right, cardRight: card.right };
+        })()
+      JS
+      assert_operator bounds["titleRight"], :<=, bounds["pillLeft"]
+      assert_in_delta bounds["titleTop"], bounds["pillTop"], 1
+      assert_operator bounds["pillRight"], :<=, bounds["cardRight"] + 1
+    end
+    page.save_screenshot("/tmp/pr3929-configuration-mobile.png")
+    page.current_window.resize_to(1400, 2000)
+    page.save_screenshot(Rails.root.join("tmp", "system-health-configuration.png"))
+  end
+
   private
+    def with_openai_access_token(&block)
+      ClimateControl.modify(
+        "OPENAI_ACCESS_TOKEN" => "test-token",
+        "OPENAI_URI_BASE" => nil,
+        "OPENAI_MODEL" => nil,
+        "VECTOR_STORE_PROVIDER" => nil,
+        &block
+      )
+    end
+
     def probe_result(status)
       AiHealth::Probe::Result.new(
         status: status,

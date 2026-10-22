@@ -25,7 +25,7 @@
       <ul class="space-y-2" aria-label="<%= t("settings.providers.financekit.accounts") %>">
         <% connection[:accounts].each do |account| %>
           <li class="flex flex-wrap items-center justify-between gap-2 text-sm">
-            <%= link_to account.name, account_path(account), class: "text-primary underline", data: { turbo_frame: "_top" } %>
+            <%= link_to account.name, account_path(account), class: "text-primary underline" %>
             <span class="text-secondary"><%= format_money(account.balance_money) %></span>
           </li>
         <% end %>

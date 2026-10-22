@@ -16,13 +16,11 @@
             Family::DATE_FORMATS,
             { label: t(".date_format") },
             { data: { auto_submit_form_target: "auto" } } %>
-        <%= form.select :default_account_order,
-            AccountOrder.all.map { |order| [ order.label, order.key ] },
-            { label: t(".default_account_order") },
-            { data: { auto_submit_form_target: "auto" } } %>
-        <%= family_form.select :country,
+        <%= family_form.collection_select :country,
             country_options,
-            { label: t(".country") },
+            :last,
+            :first,
+            { label: t(".country"), searchable: true },
             { data: { auto_submit_form_target: "auto" } } %>
         <p class="text-xs italic pl-2 text-secondary"><%= t(".translations_notice") %></p>
       <% end %>
@@ -40,6 +38,17 @@
             { data: { auto_submit_form_target: "auto" } } %>
         <% if @user.family.uses_custom_month_start? %>
           <%= render DS::Alert.new(message: t(".month_start_day_warning"), variant: :warning) %>
+        <% end %>
+        <% if Current.user.admin? %>
+          <div class="flex items-center justify-between gap-4">
+            <div class="space-y-1">
+              <p class="text-sm" id="investment_contributions_as_spending_label"><%= t(".investment_contributions_as_spending") %></p>
+              <p class="text-secondary text-sm"><%= t(".investment_contributions_as_spending_hint") %></p>
+            </div>
+            <%= family_form.toggle :investment_contributions_as_spending,
+                "aria-labelledby": "investment_contributions_as_spending_label",
+                data: { auto_submit_form_target: "auto" } %>
+          </div>
         <% end %>
         <% if Current.user.admin? && preview_features_enabled? %>
           <div class="flex items-center justify-between">
