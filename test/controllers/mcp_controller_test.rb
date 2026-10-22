@@ -51,80 +51,88 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "authenticates a token issued to a dynamically registered MCP client" do
-    post "/register",
-      params: {
-        client_name: "Claude",
-        redirect_uris: [ "https://claude.ai/callback" ],
-        grant_types: [ "authorization_code" ],
-        response_types: [ "code" ],
-        token_endpoint_auth_method: "none"
-      }.to_json,
-      headers: { "Content-Type" => "application/json" }
-
-    assert_response :created
-    app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
-    assert_equal "mcp", app.scopes.to_s
-
-    sign_in(@user)
-    verifier = SecureRandom.urlsafe_base64(64)
-    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
-
-    post "/oauth/authorize", params: {
-      client_id: app.uid,
-      redirect_uri: app.redirect_uri,
-      response_type: "code",
-      code_challenge: challenge,
-      code_challenge_method: "S256"
-    }
-
-    assert_response :redirect
-    code = Rack::Utils.parse_query(URI.parse(response.location).query)["code"]
-    assert code.present?, "Authorization response should contain a code"
-
-    post "/oauth/token", params: {
-      grant_type: "authorization_code",
-      client_id: app.uid,
-      redirect_uri: app.redirect_uri,
-      code: code,
-      code_verifier: verifier
-    }
-
-    assert_response :success
-    token_response = JSON.parse(response.body)
-    assert_equal "mcp", token_response["scope"]
+    app = register_mcp_client
+    token = authorize_mcp_client(app, expected_scope: "mcp")
 
     post "/mcp", params: jsonrpc_request("initialize").to_json,
-         headers: mcp_headers(token_response["access_token"])
+         headers: mcp_headers(token)
 
     assert_response :ok
     assert_mcp_initialize_response(JSON.parse(response.body)["result"])
   end
 
   test "dynamically registered MCP token cannot access JSON API" do
-    post "/register",
-      params: {
-        client_name: "Claude",
-        redirect_uris: [ "https://claude.ai/callback" ],
-        grant_types: [ "authorization_code" ],
-        response_types: [ "code" ],
-        token_endpoint_auth_method: "none"
-      }.to_json,
-      headers: { "Content-Type" => "application/json" }
+    app = register_mcp_client
+    token = authorize_mcp_client(app, expected_scope: "mcp")
 
-    assert_response :created
-    app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
-
-    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
-      application: app,
-      resource_owner_id: @user.id,
-      scopes: "mcp",
-      expires_in: 1.year
-    )
-
-    delete "/api/v1/users/me", headers: { "Authorization" => "Bearer #{token.token}" }
+    assert_no_difference "User.count" do
+      delete "/api/v1/users/me", headers: { "Authorization" => "Bearer #{token}" }
+    end
 
     assert_response :unauthorized
     assert_equal "unauthorized", JSON.parse(response.body)["error"]
+  end
+
+  test "legacy MCP registration can reauthorize without an explicit scope" do
+    app = Doorkeeper::Application.create!(
+      name: "Legacy MCP Client",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false,
+      scopes: "read_write"
+    )
+    Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: @user.id,
+      scopes: "read_write",
+      revoked_at: Time.current,
+      expires_in: 1.year
+    )
+
+    token = authorize_mcp_client(app, expected_scope: "read_write")
+
+    post "/mcp", params: jsonrpc_request("initialize").to_json,
+         headers: mcp_headers(token)
+
+    assert_response :ok
+    assert_mcp_initialize_response(JSON.parse(response.body)["result"])
+  end
+
+  test "new MCP registration cannot request the global API scope" do
+    app = register_mcp_client
+    sign_in(@user)
+
+    assert_no_difference "Doorkeeper::AccessGrant.count" do
+      post "/oauth/authorize", params: {
+        client_id: app.uid,
+        redirect_uri: app.redirect_uri,
+        response_type: "code",
+        scope: "read_write",
+        code_challenge: Base64.urlsafe_encode64(Digest::SHA256.digest(SecureRandom.urlsafe_base64(64)), padding: false),
+        code_challenge_method: "S256"
+      }
+    end
+
+    assert_response :redirect
+    query = Rack::Utils.parse_query(URI.parse(response.location).query)
+    assert_equal "invalid_scope", query["error"]
+    assert_nil query["code"]
+  end
+
+  test "MCP consent screen describes the permission being granted" do
+    app = register_mcp_client
+    sign_in(@user)
+
+    get "/oauth/authorize", params: {
+      client_id: app.uid,
+      redirect_uri: app.redirect_uri,
+      response_type: "code",
+      code_challenge: Base64.urlsafe_encode64(Digest::SHA256.digest(SecureRandom.urlsafe_base64(64)), padding: false),
+      code_challenge_method: "S256"
+    }
+
+    assert_response :ok
+    assert_select "li span", text: "Access your financial data and use tools through MCP"
+    assert_select "input[name=scope][value=mcp]"
   end
 
   test "rejects token with read-only scope" do
@@ -738,6 +746,54 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def register_mcp_client
+      post "/register",
+        params: {
+          client_name: "Claude",
+          redirect_uris: [ "https://claude.ai/callback" ],
+          grant_types: [ "authorization_code" ],
+          response_types: [ "code" ],
+          token_endpoint_auth_method: "none"
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+
+      assert_response :created
+      app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
+      assert_equal "mcp", app.scopes.to_s
+      app
+    end
+
+    def authorize_mcp_client(app, expected_scope:)
+      sign_in(@user)
+      verifier = SecureRandom.urlsafe_base64(64)
+      challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+
+      post "/oauth/authorize", params: {
+        client_id: app.uid,
+        redirect_uri: app.redirect_uri,
+        response_type: "code",
+        code_challenge: challenge,
+        code_challenge_method: "S256"
+      }
+
+      assert_response :redirect
+      code = Rack::Utils.parse_query(URI.parse(response.location).query)["code"]
+      assert code.present?, "Authorization response should contain a code"
+
+      post "/oauth/token", params: {
+        grant_type: "authorization_code",
+        client_id: app.uid,
+        redirect_uri: app.redirect_uri,
+        code: code,
+        code_verifier: verifier
+      }
+
+      assert_response :success
+      token_response = JSON.parse(response.body)
+      assert_equal expected_scope, token_response["scope"]
+      token_response.fetch("access_token")
+    end
 
     def with_mcp_env(&block)
       with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block) # pipelock:ignore
