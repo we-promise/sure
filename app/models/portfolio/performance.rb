@@ -133,6 +133,10 @@ class Portfolio::Performance
   # #drivers is, because it is cached and an object would not survive the round
   # trip.
   #
+  # `by_security` is a PERIOD total, not by month: its rows add up to the
+  # period's total, not to any one month's bucket, so it cannot be placed
+  # under a bar.
+  #
   # Its OWN cache entry rather than part of #metrics, and computed only when
   # asked. The by-security figures cost a query, and a caller that builds a
   # Performance only to read index_series or the returns never needs them:

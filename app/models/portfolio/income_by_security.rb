@@ -60,6 +60,9 @@ class Portfolio::IncomeBySecurity
       return [] if amounts.empty?
 
       # Ids that are not UUIDs are dropped by the cast and simply find nothing.
+      # Not scoped to a family because securities are global; the ids come
+      # from this family's own entries. A per-family securities table would
+      # need a scope here.
       Security.where(id: amounts.keys).to_a
     end
 end
