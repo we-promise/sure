@@ -426,6 +426,8 @@ uk:
         no_recent_sync: Синхронізація прострочена
         registration_needed: Потрібна реєстрація
         reconsent_required: Потрібна повторна згода
+        login_required: "Потрібен вхід"
+        login_expires_soon: "Вхід завершиться через %{time} (%{at})"
         reconsent_needed:
           one: Повторна згода потрібна через %{count} день
           other: Повторна згода потрібна через %{count} днів
@@ -743,9 +745,11 @@ uk:
         qr_cancel: Скасувати вхід за QR-кодом
         qr_back_to_credentials: Назад до номера телефону та PIN-коду або пароля
         qr_loading: Підготовка QR-коду…
-        qr_instruction: Відскануйте QR-код у застосунку Trade Republic і підтвердьте вхід.
+        qr_instruction: Відскануйте QR-код камерою телефона, а потім підтвердьте вхід у застосунку Trade Republic.
         qr_success: Вхід підтверджено. Sure оновлює сторінку постачальника.
         qr_error: Не вдалося розпочати вхід за QR-кодом. Спробуйте ще раз.
+        requires_update: "Увійдіть знову, щоб відновити синхронізацію."
+        session_expires_in: "Вхід завершиться через %{time} (%{at})."
         add_account: "Додати ще одне підключення"
         save_configuration: Зберегти й увійти
         update_configuration: Оновити конфігурацію

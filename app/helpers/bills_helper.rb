@@ -7,6 +7,26 @@ module BillsHelper
     l(date, format: date.year == Date.current.year ? :short : :short_with_year)
   end
 
+  # What an All bills row says under the name: its schedule, led by its kind
+  # when the kind is not the plain "bill" that most rows are, so a subscription
+  # or an income still reads as one now that the list has no Type column.
+  def bills_series_subline(series)
+    kind = t("bills.all.types.#{series.bill_type}") unless series.typed_bill?
+    [ kind, frequency_label(series) ].compact.join(" · ")
+  end
+
+  # Only a live series is owed or expected, so only a live one carries full
+  # weight. A paused or dismissed one recedes through the text, as an autopaying
+  # bill does on the overview: opacity on the row would sink the secondary text
+  # below 3:1.
+  def bills_series_tone(series)
+    series.active? ? "text-primary" : "text-secondary"
+  end
+
+  def bills_series_amount_tone(series)
+    series.active? && series.typed_income? ? "text-success" : bills_series_tone(series)
+  end
+
   # The date a bill row is about. The subline leads with it below @lg, and the
   # rail prints it from there up (bills_rail_date). Snooze-aware, like
   # derived_state and Next up.
@@ -70,7 +90,8 @@ module BillsHelper
   def bills_matcher_hints(series)
     {
       aliases: Array(series.matcher_hints["name_aliases"]).compact_blank,
-      learned_pct: series.matcher_hints["learned_tolerance_pct"].to_f
+      learned_pct: series.matcher_hints["learned_tolerance_pct"].to_f,
+      detected_name: series.merchant_id.blank? ? series.matcher_hints["detected_name"].presence : nil
     }
   end
 

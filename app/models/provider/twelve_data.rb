@@ -297,7 +297,9 @@ class Provider::TwelveData < Provider
       # charged to the minute the request actually fires in, not a stale minute
       # we slept through (which would undercount the new minute's usage).
       minute_key = "twelve_data:credits:#{Time.current.to_i / 60}"
-      current_count = Rails.cache.read(minute_key).to_i
+      # `increment` stores a raw integer (Redis INCRBY), so it must be read back
+      # with `raw: true`; a plain `read` returns nil on RedisCacheStore.
+      current_count = Rails.cache.read(minute_key, raw: true).to_i
 
       if current_count + credits > max_requests_per_minute
         wait_seconds = 60 - (Time.current.to_i % 60) + 1

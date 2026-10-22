@@ -532,6 +532,8 @@ ru:
           one: Повторное согласие требуется через %{count} день
           other: Повторное согласие требуется через %{count} дня
         reconsent_required: Требуется повторное согласие
+        login_required: "Требуется вход"
+        login_expires_soon: "Вход истекает через %{time} (%{at})"
         sync_error: Ошибка синхронизации
       not_authorized: Не авторизован
       not_found: Провайдер не найден.
@@ -701,9 +703,11 @@ ru:
         qr_cancel: Отменить вход по QR-коду
         qr_back_to_credentials: Вернуться к номеру телефона и PIN-коду или паролю
         qr_loading: Подготовка QR-кода…
-        qr_instruction: Отсканируйте QR-код в приложении Trade Republic и подтвердите вход.
+        qr_instruction: Отсканируйте QR-код камерой телефона, затем подтвердите вход в приложении Trade Republic.
         qr_success: Вход подтверждён. Sure обновляет страницу провайдера.
         qr_error: Не удалось начать вход по QR-коду. Пожалуйста, попробуйте снова.
+        requires_update: "Войдите снова, чтобы возобновить синхронизацию."
+        session_expires_in: "Вход истекает через %{time} (%{at})."
         add_account: "Добавить ещё одно подключение"
         save_configuration: Сохранить и войти
         update_configuration: Обновить конфигурацию

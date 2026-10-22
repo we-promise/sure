@@ -338,6 +338,8 @@ it:
         no_recent_sync: Sincronizzazione in ritardo
         registration_needed: Registrazione richiesta
         reconsent_required: Nuovo consenso richiesto
+        login_required: "Accesso richiesto"
+        login_expires_soon: "L'accesso scade tra %{time} (%{at})"
         reconsent_needed:
           one: Nuovo consenso richiesto tra 1 giorno
           other: Nuovo consenso richiesto tra %{count} giorni

@@ -67,6 +67,16 @@ class DS::TableTest < ViewComponent::TestCase
     assert_selector "tbody tr.bg-container-inset", count: 1, text: "Rent"
   end
 
+  test "adds row attributes from the row_opts proc" do
+    opts = ->(row) { { data: { controller: "clickable-row", name: row[:name] } } }
+    render_inline(DS::Table.new(rows: ROWS, row_opts: opts)) do |table|
+      table.with_column("Name") { |row| row[:name] }
+    end
+
+    assert_selector "tbody tr[data-controller='clickable-row'][data-name='Rent']"
+    assert_selector "tbody tr[data-controller='clickable-row'][data-name='Internet']"
+  end
+
   test "stands alone as a card by default and sits in an inset frame on request" do
     render_table
     assert_selector "div.table-scroll.rounded-xl.shadow-border-xs"

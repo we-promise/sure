@@ -218,6 +218,33 @@ class Transaction < ApplicationRecord
     "AND #{not_pending_sql(table_alias, providers: providers)}"
   end
 
+  # Transactions whose category is still the one an automatic source (e.g.
+  # "ai", "bayes") set.
+  scope :category_from, ->(*sources, since: nil, metadata: nil) { where(category_from_sql(*sources, since:, metadata:)) }
+
+  def self.category_from_sql(*sources, **options)
+    enriched_from_sql("category_id", *sources, **options)
+  end
+
+  # Transactions whose attribute (category_id, merchant_id; internal callers
+  # only) is still the value an automatic source set: that source's
+  # enrichment holds the current value. since: only enrichments written
+  # after it; metadata: only those whose metadata contains it.
+  def self.enriched_from_sql(attribute, *sources, since: nil, metadata: nil)
+    sql = +<<~SQL.squish
+      EXISTS (
+        SELECT 1 FROM data_enrichments de
+        WHERE de.enrichable_type = 'Transaction'
+          AND de.enrichable_id = transactions.id
+          AND de.attribute_name = :attribute
+          AND de.source IN (:sources)
+          AND de.value = to_jsonb(transactions.#{attribute}::text)
+    SQL
+    sql << " AND de.updated_at > :since" if since
+    sql << " AND de.metadata @> CAST(:metadata AS jsonb)" if metadata
+    sanitize_sql_array([ "#{sql})", { attribute: attribute, sources: sources.flatten.map(&:to_s), since: since, metadata: metadata&.to_json } ])
+  end
+
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
     joins(entry: :account).where(accounts: { family_id: family.id })
@@ -455,6 +482,15 @@ class Transaction < ApplicationRecord
       # cannot race on reading/writing extra (e.g., the manual_merge array).
       posted_tx = posted_entry.entryable
       posted_tx.lock! if posted_tx.is_a?(Transaction)
+
+      # Moving the attachments bypasses validation, so refuse a merge that would
+      # leave the posted transaction over the limit instead of dropping files.
+      if posted_tx.is_a?(Transaction) && pending_entry.entryable.is_a?(Transaction) &&
+          attachment_count_after_merge(from: pending_entry.entryable, to: posted_tx) > MAX_ATTACHMENTS_PER_TRANSACTION
+        Rails.logger.info("merge_with_duplicate! rejected: merging pending entry #{pending_entry_id} would exceed #{MAX_ATTACHMENTS_PER_TRANSACTION} attachments")
+        raise ActiveRecord::Rollback
+      end
+
       if posted_tx.is_a?(Transaction)
         tx_attrs = {}
 
@@ -487,14 +523,26 @@ class Transaction < ApplicationRecord
         end
 
         posted_tx.update!(tx_attrs) if tx_attrs.any?
+
+        # Keep what the user added to the pending transaction (e.g. a receipt attached
+        # before the bank booked it); destroying the pending entry would purge it.
+        pending_transaction = pending_entry.entryable
+        carry_over_user_additions(from: pending_transaction, to: posted_tx) if pending_transaction.is_a?(Transaction)
       end
 
       # Date inheritance on the Entry row — separate from the Transaction update above.
+      entry_attrs = {}
       unless posted_entry.protected_from_sync?
         # Date: pending dates reflect actual transaction initiation time
-        posted_entry.update!(date: pending_entry_date) if posted_entry.date != pending_entry_date
+        entry_attrs[:date] = pending_entry_date if posted_entry.date != pending_entry_date
         # Name + Merchant intentionally NOT inherited — booked values are canonical
       end
+
+      # Notes are the user's own text, so they are kept even on a protected entry.
+      notes = merged_notes(posted_entry.notes, pending_entry.notes)
+      entry_attrs[:notes] = notes if notes != posted_entry.notes
+
+      posted_entry.update!(entry_attrs) if entry_attrs.any?
 
       # Lock the posted entry so future syncs cannot overwrite the merged state
       posted_entry.mark_user_modified!
@@ -550,6 +598,37 @@ class Transaction < ApplicationRecord
   end
 
   private
+    # Moves the pending transaction's attachments (the attachment rows themselves, so the
+    # blobs are not purged with the pending entry) and adds its tags to the posted one.
+    def carry_over_user_additions(from:, to:)
+      if from.attachments.attached?
+        # A blob already attached to the posted transaction would collide with the
+        # unique index on attachments once re-pointed, and is kept there anyway.
+        from.attachments_attachments.where(blob_id: to.attachments_attachments.select(:blob_id)).delete_all
+        from.attachments_attachments.update_all(record_id: to.id)
+      end
+
+      new_tags = from.tags.where.not(id: to.tags.select(:id))
+      to.tags << new_tags if new_tags.any?
+    end
+
+    def attachment_count_after_merge(from:, to:)
+      to_blob_ids = to.attachments_attachments.pluck(:blob_id)
+      to_blob_ids.size + from.attachments_attachments.where.not(blob_id: to_blob_ids).count
+    end
+
+    # Notes merged earlier are joined by blank lines, so look for the pending
+    # note's paragraphs, in order, among the posted note's: "Order 123" is not
+    # already in "Order 1234", and a multi-paragraph note is not split apart.
+    def merged_notes(posted_notes, pending_notes)
+      return posted_notes if pending_notes.blank?
+      return pending_notes if posted_notes.blank?
+      posted_parts = posted_notes.split(/\n{2,}/).map(&:strip)
+      pending_parts = pending_notes.split(/\n{2,}/).map(&:strip)
+      return posted_notes if posted_parts.each_cons(pending_parts.size).include?(pending_parts)
+
+      "#{posted_notes}\n\n#{pending_notes}"
+    end
 
     def validate_attachments
       # Check attachment count limit
