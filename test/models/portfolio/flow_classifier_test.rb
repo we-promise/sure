@@ -403,6 +403,30 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal %w[Fee], Portfolio::FlowClassifier.labels_for(:fee)
   end
 
+  # An account past its cut-off has left the scope, so a transfer to it after
+  # that date is external, in both forms; on the cut-off date it is still in.
+  test "a transfer to an account past its cut off is external in both forms" do
+    cut_off = Date.new(2026, 3, 2)
+    windowed = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], active_until_dates: { @ira.id => cut_off })
+    after = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400, date: cut_off + 1.day)
+    on = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 300, date: cut_off)
+    security = create_portfolio_security
+    security_out, = create_security_transfer(security: security, from: @brokerage, to: @ira, qty: 2, price: 50, date: cut_off + 1.day)
+
+    after_out = after.outflow_transaction.entry
+    on_out = on.outflow_transaction.entry
+
+    assert_equal :external_outflow, windowed.classify(after_out)
+    assert_equal :internal, windowed.classify(on_out)
+    assert_equal :external_outflow, windowed.classify(security_out)
+    assert_equal :internal, @family_scope.classify(after_out), "without a cut-off the same transfer is internal"
+
+    sql = windowed.classify_ids([ after_out.id, on_out.id, security_out.id ])
+    assert_equal :external_outflow, sql.fetch(after_out.id)
+    assert_equal :internal, sql.fetch(on_out.id)
+    assert_equal :external_outflow, sql.fetch(security_out.id)
+  end
+
   test "scope_account_ids is required" do
     assert_raises(ArgumentError) { Portfolio::FlowClassifier.new }
   end

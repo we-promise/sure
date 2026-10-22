@@ -592,6 +592,54 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), second.unexplained
   end
 
+  # Balance::SyncCache converts an entry through ExchangeRate.find_or_fetch_rate:
+  # the entry's own date, else the nearest stored rate up to five days back,
+  # else the provider. Anything older, or only a later rate, and the entry is
+  # dropped from the balance. The flow has to be found the same way, or a
+  # deposit the balance never applied joins the denominator and the day reads
+  # as a loss of the whole deposit. Here the only EUR rate is six days old and
+  # there is no provider in test, so the balance did not move.
+  test "a foreign flow whose only rate is more than five days old is flagged, as the balance dropped it" do
+    set_rate from: "EUR", to: "USD", date: @day_two - 6.days, rate: 1.1
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    deposit account: @account, date: @day_two, amount: 500, currency: "EUR"
+
+    returns = daily_returns
+
+    assert returns.rate_missing?, "the balance could not convert the deposit, so neither can the flow"
+    assert_equal BigDecimal("0"), returns.rows.last.external_flow
+  end
+
+  # The other side of the window: five days back is still a rate to SyncCache,
+  # so the deposit moved the balance and is the flow.
+  test "a foreign flow converts at a rate up to five days old, as the balance did" do
+    set_rate from: "EUR", to: "USD", date: @day_two - 5.days, rate: 1.1
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_550, cash_flow: 550
+    deposit account: @account, date: @day_two, amount: 500, currency: "EUR"
+
+    returns = daily_returns
+
+    refute returns.rate_missing?
+    assert_equal BigDecimal("550"), returns.rows.last.external_flow
+    assert_equal BigDecimal("0"), returns.rows.last.unexplained
+  end
+
+  # SyncCache never carries a rate back, so a deposit dated before the pair's
+  # first stored rate was dropped from the balance too.
+  test "a foreign flow with only a later rate is flagged, as the balance cannot carry a rate back" do
+    set_rate from: "EUR", to: "USD", date: @day_two + 1.day, rate: 1.1
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    deposit account: @account, date: @day_two, amount: 500, currency: "EUR"
+
+    returns = daily_returns
+
+    assert returns.rate_missing?
+    assert_equal BigDecimal("0"), returns.rows.last.external_flow
+  end
+
   # An entry can carry its own rate (extra["exchange_rate"]), which
   # Balance::SyncCache prefers to the table's. The flow must use it too.
   test "a flow carrying its own exchange rate converts at that rate" do
@@ -714,6 +762,55 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-400"), second.external_flow
     assert_in_delta 0.0, daily_returns.returns.last.last.to_f, 0.000001,
                     "moving money out of the series is not a loss"
+  end
+
+  # An account past its cut-off is outside the scope from the next day on, for
+  # the flows as for the balances. Classified against the static ids, a
+  # transfer from a live account to it was internal, the cut-off account's leg
+  # was dropped by the flow window, and the live account's 400 drop read as a
+  # 40% loss.
+  test "a transfer to an account past its cut off is a flow out of the series" do
+    day_three = @day_two + 1.day
+    closed = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 600, cash_flow: -400
+    Transfer::Creator.new(
+      family: @family, source_account_id: @account.id, destination_account_id: closed.id,
+      date: day_three, amount: 400
+    ).create
+
+    returns = Portfolio::DailyReturns.new(
+      account_ids: [ @account.id, closed.id ], currency: @family.currency,
+      period: Period.custom(start_date: @day_one, end_date: day_three),
+      active_until_dates: { closed.id => @day_two }
+    )
+
+    assert_equal BigDecimal("-400"), returns.rows.last.external_flow
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
+  end
+
+  # The boundary's other side: on the cut-off date itself both accounts are in
+  # the scope, so the same transfer is internal and moves nothing.
+  test "a transfer to an account on its cut off date is still internal" do
+    closed = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 600, cash_flow: -400
+    lay_balance account: closed, date: @day_one, opening: 0, closing: 0
+    lay_balance account: closed, date: @day_two, opening: 0, closing: 400, cash_flow: 400
+    Transfer::Creator.new(
+      family: @family, source_account_id: @account.id, destination_account_id: closed.id,
+      date: @day_two, amount: 400
+    ).create
+
+    returns = Portfolio::DailyReturns.new(
+      account_ids: [ @account.id, closed.id ], currency: @family.currency,
+      period: Period.custom(start_date: @day_one, end_date: @day_two),
+      active_until_dates: { closed.id => @day_two }
+    )
+
+    assert_equal BigDecimal("0"), returns.rows.last.external_flow
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
   end
 
   # There is no second, wider "inside" to pass, and no guard of the class's
