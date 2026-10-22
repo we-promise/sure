@@ -62,6 +62,9 @@
 
             <div class="flex items-center gap-1 shrink-0">
               <%= render "transactions/badges", entry: entry, transaction: transaction, in_split_group: in_split_group, drawer_params: drawer_params %>
+              <% if transaction.transfer.present? %>
+                <%= render "transactions/transfer_match", transaction: transaction %>
+              <% end %>
             </div>
           </div>
           <%# Keep the stream target mounted while labels remain hidden in mobile-style rows. %>

@@ -19,7 +19,9 @@ class Assistant::Function::CreateGoal < Assistant::Function
         Constraints:
         - The goal must link to at least one of the user's Depository
           accounts (checking, savings, HSA, CD, money-market).
-        - All linked accounts must share the same currency.
+        - The target is in the family's primary currency. Accounts in other
+          currencies are converted to it; earmarks stay in each account's
+          own currency.
         - Use account names exactly as listed in the user's Depository
           accounts.
 
@@ -44,7 +46,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         },
         target_amount: {
           type: "number",
-          description: "Total amount to save, in the linked accounts' currency."
+          description: "Total amount to save, in the family's primary currency."
         },
         target_date: {
           type: "string",
@@ -57,7 +59,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         },
         earmarks: {
           type: "object",
-          description: "Optional map of account name to the amount to reserve from that account, e.g. {\"Livret A\": 2000}. Required for an account already claimed in full by another goal — the available accounts list says which, and how much room is left. Accounts left out of this map reserve whatever the account has spare.",
+          description: "Optional map of account name to the amount to reserve from that account, in that account's currency, e.g. {\"Livret A\": 2000}. Required for an account already claimed in full by another goal — the available accounts list says which, and how much room is left. Accounts left out of this map reserve whatever the account has spare.",
           additionalProperties: { type: "number" }
         },
         notes: {
@@ -115,14 +117,6 @@ class Assistant::Function::CreateGoal < Assistant::Function
 
     matched = linked_account_names.map { |name| grouped[name].first }
 
-    currencies = matched.map(&:currency).uniq
-    if currencies.size > 1
-      return error(
-        "currency_mismatch",
-        "All linked accounts must share the same currency. Found: #{currencies.join(', ')}."
-      )
-    end
-
     # Named before the save, so the assistant gets a reason it can act on
     # rather than a generic validation failure it can only relay. Claiming an
     # account in full is exclusive; joining one that is already claimed needs
@@ -144,7 +138,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         name: name,
         target_amount: target_amount,
         target_date: target_date,
-        currency: currencies.first,
+        currency: family.primary_currency_code,
         notes: notes.presence,
         color: Goal::COLORS.sample
       )

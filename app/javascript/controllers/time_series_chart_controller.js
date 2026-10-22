@@ -83,15 +83,12 @@ export default class extends Controller {
   }
 
   _draw() {
-    // Guard against invalid dimensions (e.g., when container is collapsed or not yet rendered)
-    const minWidth = 50;
-    const minHeight = 50;
-
-    if (
-      this._d3ContainerWidth < minWidth ||
-      this._d3ContainerHeight < minHeight
-    ) {
-      // Skip rendering if dimensions are invalid
+    // Guard against unmeasurable dimensions (e.g., when the container is
+    // collapsed or not yet rendered). A hidden container measures 0x0, and the
+    // ResizeObserver re-installs the chart as soon as layout gives it a real
+    // size, so skipping here only ever defers hidden charts. Small-but-real
+    // containers like the 32px-wide sidebar sparklines still render.
+    if (this._d3ContainerWidth <= 0 || this._d3ContainerHeight <= 0) {
       return;
     }
 

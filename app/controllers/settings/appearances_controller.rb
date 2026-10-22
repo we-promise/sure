@@ -11,9 +11,7 @@ class Settings::AppearancesController < ApplicationController
   # keys; preferences omitted from the form are preserved as-is.
   def update
     @user = Current.user
-    @user.transaction do
-      @user.lock!
-      updated_prefs = (@user.preferences || {}).deep_dup
+    @user.with_locked_preferences do |updated_prefs|
       updated_prefs["show_split_grouped"] = params.dig(:user, :show_split_grouped) == "1" if params.dig(:user, :show_split_grouped)
       updated_prefs["dashboard_two_column"] = params.dig(:user, :dashboard_two_column) == "1" if params.dig(:user, :dashboard_two_column)
       updated_prefs["disable_modal_click_outside"] = params.dig(:user, :disable_modal_click_outside) == "1" if params.dig(:user, :disable_modal_click_outside)
@@ -50,7 +48,9 @@ class Settings::AppearancesController < ApplicationController
         updated_prefs["transactions_per_page"] = per_page if allowed.include?(per_page)
       end
 
-      @user.update!(preferences: updated_prefs)
+      # Account order is a column, not a preference; unknown keys are ignored.
+      account_order = params.dig(:user, :default_account_order)
+      @user.default_account_order = account_order if AccountOrder::ORDERS.key?(account_order.to_s)
     end
     redirect_to settings_appearance_path
   end

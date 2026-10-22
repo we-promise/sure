@@ -54,6 +54,42 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
     end
   end
 
+  test "compact transfer controls confirm and reject matches without changing the row layout" do
+    @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
+
+    [ 375, 2400 ].each do |width|
+      page.current_window.resize_to(width, 900)
+      %w[confirm reject].each do |action|
+        outflow = create_transaction(name: "Compact match #{width} #{action}", amount: 25)
+        inflow = create_transaction(account: accounts(:credit_card), amount: -25)
+        transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction)
+        match_id = dom_id(outflow.transaction, :transfer_match)
+        visit transactions_url(q: { search: outflow.name })
+
+        within "turbo-frame##{dom_id(outflow)}" do
+          assert_selector "##{match_id}", count: 1
+          within "##{match_id}" do
+            click_button I18n.t("transactions.transfer_match.#{action}_match")
+          end
+        end
+
+        if action == "confirm"
+          assert_no_selector "##{match_id} button"
+          assert transfer.reload.confirmed?
+          within "turbo-frame##{dom_id(outflow)}" do
+            assert_selector "[role='row'][data-controller='clickable-row']"
+            assert_selector "##{match_id}", count: 1
+          end
+        else
+          assert_no_selector "##{match_id}"
+          assert_not Transfer.exists?(transfer.id)
+          assert Entry.exists?(outflow.id)
+          assert Entry.exists?(inflow.id)
+        end
+      end
+    end
+  end
+
   test "toggling checkboxes on mobile reveals the row selection checkbox in flat (ungrouped) view" do
     @user.update!(preferences: @user.preferences.merge("transactions_group_by_date" => false))
     page.current_window.resize_to(375, 800)

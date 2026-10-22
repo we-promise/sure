@@ -14,7 +14,7 @@ class Provider::Anthropic::ProviderMerchantEnhancer
   end
 
   def enhance_merchants
-    span = langfuse_trace&.span(name: "enhance_provider_merchants_api_call", input: {
+    span = langfuse_trace&.generation(name: "enhance_provider_merchants_api_call", model: model, input: {
       model: model,
       merchants: merchants
     })
@@ -22,10 +22,10 @@ class Provider::Anthropic::ProviderMerchantEnhancer
     response = client.messages.create(
       model: model,
       max_tokens: max_tokens,
-      system_: instructions,
+      system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),
       messages: [ { role: "user", content: user_message } ],
       tools: [ output_tool ],
-      tool_choice: { type: "tool", name: TOOL_NAME, disable_parallel_tool_use: true }
+      tool_choice: Provider::Anthropic.structured_output_tool_choice(model, TOOL_NAME)
     )
 
     enhanced = extract_enhancements(response)
@@ -108,7 +108,7 @@ class Provider::Anthropic::ProviderMerchantEnhancer
 
     def extract_enhancements(response)
       tool_use = Array(response.content).find { |block| block_type(block) == :tool_use }
-      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME}" unless tool_use
+      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME} (stop_reason: #{response.stop_reason})" unless tool_use
 
       input = block_input(tool_use)
       input = JSON.parse(input) if input.is_a?(String)
@@ -141,14 +141,5 @@ class Provider::Anthropic::ProviderMerchantEnhancer
 
     def block_input(block)
       block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
-    end
-
-    def usage_hash(raw_usage)
-      return {} unless raw_usage
-      {
-        "input_tokens" => raw_usage.input_tokens.to_i,
-        "output_tokens" => raw_usage.output_tokens.to_i,
-        "total_tokens" => raw_usage.input_tokens.to_i + raw_usage.output_tokens.to_i
-      }
     end
 end

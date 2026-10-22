@@ -102,7 +102,7 @@
         </div>
       </div>
 
-      <div class="hidden md:flex min-w-0 items-center gap-1 col-span-3 pr-2">
+      <div class="hidden md:flex md:shrink-0 min-w-0 items-center gap-1 col-span-3 pr-2">
         <% if entry.account.supports_trades? && !transaction.transfer? %>
           <%# For investment/crypto accounts, show activity label instead of category %>
           <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: transaction, view_ctx: view_ctx, is_filtered: is_filtered %>
@@ -111,23 +111,31 @@
         <% end %>
       </div>
 
-      <div class="hidden md:flex md:w-1/5 md:shrink-0 lg:w-auto min-w-0 items-center col-span-2 pr-2" data-tag-fit-bounds="1">
-        <%= render "tags/menu", entry: entry, transaction: transaction, variant: :desktop %>
-      </div>
+      <div class="col-span-4 ml-auto lg:ml-0 md:flex-none flex lg:flex-wrap items-center justify-end gap-2 lg:gap-4 min-w-0">
+        <div class="<%= class_names("hidden md:flex md:w-40 lg:w-auto lg:flex-1 min-w-7 items-center", "lg:hidden": transaction.transfer? && transaction.tags.empty?) %>" data-tag-fit-bounds="1">
+          <%= render "tags/menu", entry: entry, transaction: transaction, variant: :desktop %>
+        </div>
 
-      <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2 <%= "opacity-50" if entry.excluded %>">
-        <%# Protection indicator - shows on hover when entry is protected from sync %>
-        <% if entry.protected_from_sync? && !entry.excluded? %>
-          <%= link_to entry_path(entry, drawer_params),
-                data: { turbo_frame: "drawer", turbo_prefetch: false },
-                class: "invisible group-hover:visible transition-opacity",
-                title: t("entries.protection.tooltip") do %>
-            <%= icon "lock", size: "sm", class: "text-secondary" %>
+        <div class="<%= class_names("flex justify-end min-w-0", transaction.transfer&.pending? ? "flex-col-reverse items-end gap-1 lg:flex-row lg:flex-wrap lg:items-center lg:gap-2" : "items-center gap-2 lg:gap-4") %>">
+          <% if transaction.transfer.present? %>
+            <%= render "transactions/transfer_match", transaction: transaction %>
           <% end %>
-        <% end %>
-        <%= content_tag :p,
-            transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
-            class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>
+
+          <div class="shrink-0 ml-auto flex items-center justify-end gap-2 <%= "opacity-50" if entry.excluded %>">
+            <%# Protection indicator - shows on hover when entry is protected from sync %>
+            <% if entry.protected_from_sync? && !entry.excluded? %>
+              <%= link_to entry_path(entry, drawer_params),
+                    data: { turbo_frame: "drawer", turbo_prefetch: false },
+                    class: "invisible group-hover:visible transition-opacity",
+                    title: t("entries.protection.tooltip") do %>
+                <%= icon "lock", size: "sm", class: "text-secondary" %>
+              <% end %>
+            <% end %>
+            <%= content_tag :p,
+                transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
+                class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>
+          </div>
+        </div>
       </div>
     </div>
   <% end %>

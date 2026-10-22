@@ -744,6 +744,29 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(@entry.entryable, "tag_summary_mobile")}", text: /#{tags(:one).name}/
   end
 
+  test "transfer controls render once in standard and compact rows" do
+    outflow = create_transaction(name: "Transfer placement regression", amount: 25)
+    inflow = create_transaction(account: accounts(:credit_card), amount: -25)
+    Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction)
+    match_id = dom_id(outflow.transaction, :transfer_match)
+
+    [ false, true ].each do |compact|
+      @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true, "transactions_compact" => compact))
+
+      [ transactions_url(q: { search: outflow.name }), account_url(outflow.account, tab: "activity") ].each do |url|
+        get url
+
+        assert_response :success
+        assert_select "turbo-frame##{dom_id(outflow)}" do
+          assert_select "##{match_id}", count: 1
+          assert_select "##{match_id} button[aria-label=?]", I18n.t("transactions.transfer_match.confirm_match"), count: 1
+          assert_select "##{match_id} button[aria-label=?]", I18n.t("transactions.transfer_match.reject_match"), count: 1
+          assert_select "[data-tag-fit-bounds='0.5'] ##{match_id}", count: 0 unless compact
+        end
+      end
+    end
+  end
+
   test "split parent rows mark amount as privacy-sensitive" do
     entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
 
@@ -1273,7 +1296,7 @@ end
     get new_transaction_url(duplicate_entry_id: @entry.id)
     assert_response :success
     assert_select "input[name='entry[name]'][value=?]", @entry.name
-    assert_select "input[type='number'][name='entry[amount]']" do |elements|
+    assert_select "input[type='text'][name='entry[amount]']" do |elements|
       assert_equal sprintf("%.2f", @entry.amount.abs), elements.first["value"]
     end
     assert_select "input[type='hidden'][name='entry[entryable_attributes][merchant_id]']"

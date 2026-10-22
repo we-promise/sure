@@ -30,6 +30,14 @@
 
 <%= settings_section title: t(".dashboard_title"), subtitle: t(".dashboard_subtitle") do %>
   <div>
+    <%= styled_form_with model: @user, url: settings_appearance_path, method: :patch,
+          class: "p-3",
+          data: { controller: "auto-submit-form" } do |form| %>
+      <%= form.select :default_account_order,
+          AccountOrder.all.map { |order| [ order.label, order.key ] },
+          { label: t("settings.preferences.show.default_account_order"), help_text: t("settings.preferences.show.default_account_order_hint") },
+          { data: { auto_submit_form_target: "auto" } } %>
+    <% end %>
     <%= form_with url: settings_appearance_path, method: :patch,
           class: "p-3 space-y-4",
           data: { controller: "auto-submit-form" } do |f| %>

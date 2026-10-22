@@ -18,6 +18,3 @@
     <%= render DS::Tooltip.new(text: t("transactions.transaction.split_child_tooltip"), icon: "corner-down-right", size: "sm", as: :span) %>
   <% end %>
 <% end %>
-<% if transaction.transfer.present? %>
-  <%= render "transactions/transfer_match", transaction: transaction %>
-<% end %>

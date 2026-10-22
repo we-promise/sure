@@ -251,6 +251,15 @@ class AccountsController < ApplicationController
     end
   end
 
+  # Saves the drag-and-drop order of one account group for the current user.
+  def reorder
+    if Current.user.update_manual_account_order(params[:group], params[:account_ids])
+      head :ok
+    else
+      head :unprocessable_entity
+    end
+  end
+
   def toggle_active
     if @account.active?
       @account.disable!
