@@ -429,14 +429,39 @@ class SnaptradeAccount::SplitSecurityRepairTest < ActiveSupport::TestCase
     Balance::Materializer.any_instance.stubs(:materialize_balances).raises(StandardError, "boom")
     SnaptradeAccount::SplitSecurityRepair.stubs(:accounts).returns(Account.where(id: @account.id))
 
-    error = assert_raises(SystemExit) do
-      with_env("DRY_RUN" => "false") do
-        capture_io { Rake::Task["snaptrade:repair_split_securities"].invoke }
-      end
-    end
+    output, error = invoke_task_expecting_exit("DRY_RUN" => "false")
 
     assert_not error.success?
+    assert_match(/Account #{@account.id}: failed, rolled back: StandardError: boom/, output)
     assert_equal [ @row_a.id ], @account.trades.distinct.pluck(:security_id), "the failed account rolled back"
+  end
+
+  # The repair's transaction has committed by the time the task reports on
+  # it, so a failure while reporting must not claim a rollback.
+  test "a failure while reporting a live repair does not claim a rollback" do
+    holding = seed_observed_split
+    SnaptradeAccount::SplitSecurityRepair.stubs(:accounts).returns(Account.where(id: @account.id))
+    SnaptradeAccount::SplitSecurityRepair.any_instance.stubs(:conflicts).raises(StandardError, "report boom")
+
+    output, error = invoke_task_expecting_exit("DRY_RUN" => "false")
+
+    assert_not error.success?
+    assert_equal Money.new(150, "USD"), holding.reload.avg_cost, "the repair committed before reporting failed"
+    assert_match(/Account #{@account.id}: repair applied, but reporting failed: StandardError: report boom/, output)
+    assert_no_match(/rolled back/, output)
+  end
+
+  test "a failure while reporting a dry run says nothing was written" do
+    holding = seed_observed_split
+    SnaptradeAccount::SplitSecurityRepair.stubs(:accounts).returns(Account.where(id: @account.id))
+    SnaptradeAccount::SplitSecurityRepair.any_instance.stubs(:conflicts).raises(StandardError, "report boom")
+
+    output, error = invoke_task_expecting_exit("DRY_RUN" => nil)
+
+    assert_not error.success?
+    assert_nil holding.reload.avg_cost
+    assert_match(/Account #{@account.id}: reporting failed, nothing written: StandardError: report boom/, output)
+    assert_no_match(/rolled back/, output)
   end
 
   test "the rake dry run names each row's exchange and the conflicting tickers" do
@@ -458,6 +483,19 @@ class SnaptradeAccount::SplitSecurityRepairTest < ActiveSupport::TestCase
   end
 
   private
+    # Runs the task for every account and returns its stdout and stderr
+    # together, with the SystemExit its abort raises.
+    def invoke_task_expecting_exit(env)
+      original_stdout, original_stderr = $stdout, $stderr
+      $stdout = $stderr = StringIO.new
+      error = assert_raises(SystemExit) do
+        with_env(env) { Rake::Task["snaptrade:repair_split_securities"].invoke }
+      end
+      [ $stdout.string, error ]
+    ensure
+      $stdout, $stderr = original_stdout, original_stderr
+    end
+
 
     def repair!(allow_price_gaps: false)
       SnaptradeAccount::SplitSecurityRepair.new(@account, dry_run: false, allow_price_gaps: allow_price_gaps).run

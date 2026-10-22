@@ -15,7 +15,9 @@ namespace :snaptrade do
   # check only, and only with an account id:
   #   DRY_RUN=false ALLOW_PRICE_GAPS=true bin/rails "snaptrade:repair_split_securities[ACCOUNT_ID]"
   #
-  # The task exits non-zero when any account failed and was rolled back.
+  # The task exits non-zero when any account failed. A failure inside the
+  # repair rolls that account back; one while reporting on it comes after the
+  # repair has committed, and says so.
   desc "Repair SnapTrade holdings and trades split across duplicate security rows (dry run unless DRY_RUN=false)"
   task :repair_split_securities, [ :account_id ] => :environment do |_, args|
     dry_run = ENV["DRY_RUN"].to_s.strip.downcase != "false"
@@ -41,7 +43,9 @@ namespace :snaptrade do
     failures = []
     accounts.find_each do |account|
       repair = SnaptradeAccount::SplitSecurityRepair.new(account, dry_run: dry_run, allow_price_gaps: allow_price_gaps)
+      repair_returned = false
       results = repair.run
+      repair_returned = true
       securities = Security.where(id: results.flat_map { |result| [ result.target_id, *result.source_ids ] }).index_by(&:id)
 
       if results.empty? && repair.conflicts.empty?
@@ -76,11 +80,16 @@ namespace :snaptrade do
     rescue SnaptradeAccount::SplitSecurityRepair::Refused => e
       puts "Account #{account.id} (#{account.name}): refused, nothing written: #{e.message}"
     rescue StandardError => e
-      puts "Account #{account.id}: failed, rolled back: #{e.class}: #{e.message}"
+      outcome = if repair_returned
+        dry_run ? "reporting failed, nothing written" : "repair applied, but reporting failed"
+      else
+        dry_run ? "failed, nothing written" : "failed, rolled back"
+      end
+      puts "Account #{account.id}: #{outcome}: #{e.class}: #{e.message}"
       Rails.logger.error("SnapTrade split security repair failed for account #{account.id}\n#{e.full_message(highlight: false)}")
       failures << account.id
     end
 
-    abort "Failed and rolled back: #{failures.size} account(s): #{failures.join(', ')}" if failures.any?
+    abort "Failed: #{failures.size} account(s): #{failures.join(', ')}" if failures.any?
   end
 end
