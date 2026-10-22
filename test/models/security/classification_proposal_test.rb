@@ -338,14 +338,100 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
     assert_equal "ai", @security.reload.classification_source
   end
 
+  # The security is classified differently from the proposal first, so a
+  # `reject!` that wrote the proposal's answer would show up as a change.
   test "rejecting leaves the security untouched" do
-    proposal = propose(asset_class: "equity", asset_sub_class: "stock")
+    proposal = propose(asset_class: "equity", asset_sub_class: "stock", sector: "Technology", region: "europe")
+    @security.update!(asset_class: "fixed_income", asset_sub_class: nil, sector: "Utilities",
+                      region: "north_america", classification_source: "provider")
+    before = @security.reload.attributes.slice(*%w[asset_class asset_sub_class sector region classification_source classification_locked])
 
-    proposal.reject!
+    assert proposal.reject!
 
     assert proposal.reload.rejected?
-    assert_nil @security.reload.asset_class
-    assert_nil @security.classification_source
+    assert_equal before, @security.reload.attributes.slice(*before.keys)
+  end
+
+  # A hand classification after the proposal stops it being approved, and must
+  # not stop the person clearing it out of the queue either.
+  test "a proposal can still be rejected after the security is classified by hand" do
+    proposal = propose(asset_class: "equity")
+    @security.update!(asset_class: "fixed_income", classification_source: "manual")
+
+    assert proposal.reject!
+    assert proposal.reload.rejected?
+  end
+
+  # -------------------------------------------------- the review's findings
+
+  # `proposed_attributes` writes a sub-class only beside a class, so a
+  # sub-class alone was valid, approvable, marked approved and wrote nothing.
+  test "a sub-class without an asset class is refused" do
+    proposal = Security::ClassificationProposal.new(security: @security, family: @family, asset_sub_class: "etf")
+
+    assert_not proposal.valid?
+    assert_includes proposal.errors[:asset_sub_class], "needs an asset class beside it"
+  end
+
+  test "an approval never reports success while writing no classification column" do
+    columns = %w[asset_class asset_sub_class sector region classification_source]
+    [ { asset_class: "equity" }, { sector: "Technology" }, { region: "europe" },
+      { asset_class: "equity", asset_sub_class: "stock" } ].each do |answer|
+      Security::ClassificationProposal.delete_all
+      @security.update_columns(asset_class: nil, asset_sub_class: nil, sector: nil, region: nil,
+                               classification_source: nil, classification_locked: false)
+      before = @security.reload.attributes.slice(*columns)
+
+      assert propose(**answer).approve!, "#{answer} was not approved"
+      assert_not_equal before, @security.reload.attributes.slice(*columns), "#{answer} approved as a no-op"
+    end
+  end
+
+  # Replacing means the second proposal is the whole answer, not a patch on
+  # the first: otherwise a region-only proposer approves someone else's asset
+  # class, stamped "ai".
+  test "re-proposing fewer fields clears the ones the new proposal left out" do
+    propose(asset_class: "equity", asset_sub_class: "stock", sector: "Technology", rationale: "First")
+    propose(region: "europe")
+
+    proposal = Security::ClassificationProposal.sole
+    assert_equal "europe", proposal.region
+    assert_nil proposal.asset_class
+    assert_nil proposal.asset_sub_class
+    assert_nil proposal.sector
+    assert_nil proposal.rationale
+  end
+
+  test "re-proposing after the security is classified by hand is refused, and the stored row is unchanged" do
+    first = propose(asset_class: "equity")
+    first.reject!
+    @security.update!(asset_class: "fixed_income", classification_source: "manual")
+
+    assert_raises(ActiveRecord::RecordInvalid) { propose(asset_class: "commodity") }
+
+    stored = first.reload
+    assert stored.rejected?
+    assert_equal "equity", stored.asset_class
+  end
+
+  test "re-proposing after the security is locked is refused" do
+    propose(asset_class: "equity")
+    @security.update!(classification_locked: true)
+
+    assert_raises(ActiveRecord::RecordInvalid) { propose(asset_class: "commodity") }
+    assert_equal "equity", Security::ClassificationProposal.sole.asset_class
+  end
+
+  # Two first proposals for one pair: both miss `find_by`, and the loser's
+  # INSERT hits the unique index.
+  test "a first proposal that loses the insert race updates the winner's row instead" do
+    winner = propose(asset_class: "equity")
+    Security::ClassificationProposal.stubs(:find_by).returns(nil).then.returns(winner)
+
+    assert_no_difference "Security::ClassificationProposal.count" do
+      Security::ClassificationProposal.propose!(security: @security, family: @family, asset_class: "commodity")
+    end
+    assert_equal "commodity", winner.reload.asset_class
   end
 
   private
