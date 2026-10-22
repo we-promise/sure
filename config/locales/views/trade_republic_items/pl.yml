@@ -209,6 +209,7 @@ pl:
       no_accounts_discovered_description: Zakończ logowanie i uruchom synchronizację,
         aby wykryć rachunek.
       requires_update: Wymagana ponowna autoryzacja
+      session_expires_in: "Logowanie wygasa za %{time} (%{at})."
       setup_accounts: Skonfiguruj rachunki
       synced: Zsynchronizowano %{time} temu. %{summary}.
       syncing: Synchronizowanie

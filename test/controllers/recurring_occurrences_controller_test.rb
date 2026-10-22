@@ -39,6 +39,16 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # DS::Button renders type="button" unless told otherwise, so Record payment
+  # did nothing when clicked; only Enter in a field submitted the form.
+  test "record payment submits the manual payment form" do
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_select "form[action=?]", recurring_occurrence_allocations_path(@occurrence) do
+      assert_select "button[type=submit]", text: /Record payment/
+    end
+  end
+
   # A whole-unit currency steps by 1. With a 0.01 minimum as the step base,
   # every whole amount was off-step and the browser refused to submit it.
   test "the manual payment steps from its minimum in the bill's currency" do
@@ -46,7 +56,9 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
 
     get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
 
-    assert_select "input[name=amount][step='1.0'][min='1.0']"
+    # The amount is a text field (it accepts expressions), so the minimum is
+    # enforced by money_field_controller rather than a native min attribute.
+    assert_select ".form-field[data-money-field-min-value='1.0'] input[name=amount][step='1.0']"
   end
 
   # Turbo caches the page as it was left, so a drawer still open when the user
@@ -391,6 +403,39 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal 0, @occurrence.allocations.count
     assert_equal I18n.t("recurring_allocations.over_allocation"), flash[:alert]
+  end
+
+  # The picker keeps offering entries other cycles have used up (one charge
+  # can pay two bills), so linking one must say why it is refused.
+  test "linking a transaction another cycle already used up says so" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 10, currency: "USD", name: "Netflix charge",
+      entryable: Transaction.new(merchant: merchants(:netflix))
+    )
+    earlier = @series.recurring_occurrences.create!(
+      family: @family, original_due_on: Date.current - 25, due_on: Date.current - 25, currency: "USD"
+    )
+    RecurringTransaction::Allocator.new(earlier).allocate!(entry: entry, amount: 10)
+
+    post recurring_occurrence_allocations_url(@occurrence, entry_id: entry.id)
+
+    assert_equal 0, @occurrence.allocations.count
+    assert_equal I18n.t("recurring_allocations.entry_exhausted"), flash[:alert]
+  end
+
+  # A double submit, or a tab left open after the first link went through.
+  test "linking again a transaction this cycle already used up says it is on this bill" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 10, currency: "USD", name: "Netflix charge",
+      entryable: Transaction.new(merchant: merchants(:netflix))
+    )
+    post recurring_occurrence_allocations_url(@occurrence, entry_id: entry.id)
+    assert_equal 1, @occurrence.allocations.count
+
+    post recurring_occurrence_allocations_url(@occurrence, entry_id: entry.id)
+
+    assert_equal 1, @occurrence.allocations.count
+    assert_equal I18n.t("recurring_allocations.already_allocated"), flash[:alert]
   end
 
   # Sharing is per account. A member with no share on the brokerage must not be

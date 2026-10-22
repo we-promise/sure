@@ -30,7 +30,7 @@ module InsightsHelper
   /x
 
   # Insight titles and bodies are stored as finished prose with the amounts
-  # already interpolated (by the i18n template or the LLM writer), so unlike
+  # already interpolated by the i18n template, so unlike
   # the rest of the app the figures can't be tagged where they're formatted.
   # This wraps each numeric fragment in a privacy-sensitive span at render
   # time so privacy mode blurs the numbers but the sentence stays readable.
@@ -124,6 +124,29 @@ module InsightsHelper
       account = insight.family.accounts.visible.find_by(id: metadata["account_id"])
       account && { text: t("insights.actions.negative_position"), href: account_path(account, tab: "holdings") }
     end
+  end
+
+  # "Dig in with AI" opens a chat about the insight (#4031). Gated per family,
+  # not per user, because cards are also rendered in broadcasts without a
+  # Current.user; chats#new asks a user without AI consent to opt in.
+  def insight_dig_in_available?(insight)
+    family = insight.family
+    return false unless family.assistant_enabled?
+
+    family.effective_assistant_type == "external" ? Assistant::External.configured? : Provider::Registry.preferred_llm_provider.present?
+  end
+
+  # Fills only these placeholders, so a mistyped one in an override stays as typed.
+  def insight_dig_in_prompt(insight)
+    values = {
+      "title" => insight.title,
+      "body" => insight.body,
+      "period" => insight.period_start && insight.period_end ? "#{l(insight.period_start)} – #{l(insight.period_end)}" : "–",
+      "facts" => (insight.facts || {}).map { |key, value| "- #{key.to_s.humanize}: #{value}" }.join("\n")
+    }
+    template = insight.family.ai_prompt(:insight_dig_in) || t("insights.dig_in.prompt")
+
+    template.gsub(/%\{(#{values.keys.join("|")})\}/) { values[$1] }
   end
 
   # Sentiment picks the color; priority only orders the feed. The two are

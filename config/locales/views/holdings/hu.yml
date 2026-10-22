@@ -29,10 +29,9 @@ hu:
     cost_basis_cell:
       unknown: "--"
       set: Megadás
-      set_cost_basis_header: "Bekerülési érték megadása: %{ticker} (%{qty} részvény)"
+      set_cost_basis_header: "Bekerülési érték megadása: %{ticker}"
       total_cost_basis_label: Teljes bekerülési érték
-      or_per_share_label: "Vagy add meg részvényenként:"
-      per_share: részvényenként
+      per_share_label: "Részvényenként"
       cancel: Mégse
       save: Mentés
       overwrite_confirm_title: Felülírja a bekerülési értéket?
