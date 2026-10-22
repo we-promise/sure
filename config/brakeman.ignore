@@ -214,7 +214,7 @@
       },
       "user_input": ":account_id",
       "confidence": "High",
-      "note": "account_id is never mass-assigned: build_declared_bill resolves it through Current.user.accessible_accounts.find_by, so a foreign id degrades to no account rather than an association write. category_id is checked by RecurringTransaction#category_belongs_to_family, which rejects another family's category."
+      "note": "account_id is never mass-assigned: build_declared_bill resolves it through Account.writable_by(user).find_by; a foreign or read-only id adds account_invalid and the controller returns 422 rather than creating a bill. An omitted account stays nil. category_id is checked by RecurringTransaction#category_belongs_to_family, which rejects another family's category."
     }
   ],
   "brakeman_version": "7.1.0"
