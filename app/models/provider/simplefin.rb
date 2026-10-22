@@ -27,7 +27,43 @@ class Provider::Simplefin
     EOFError
   ].freeze
 
+  # Address ranges for the SimpleFIN URL check (see ensure_allowed_url!).
+  # Always blocked besides link-local: unspecified, multicast and reserved
+  # addresses, and cloud metadata endpoints outside the link-local range
+  # (AWS IPv6 in fc00::/7, Alibaba Cloud in the CGNAT range).
+  ALWAYS_BLOCKED_NETWORKS = %w[
+    0.0.0.0/8 224.0.0.0/4 240.0.0.0/4 ::/128 ff00::/8
+    fd00:ec2::254/128 100.100.100.200/32
+  ].map { |range| IPAddr.new(range) }.freeze
+  # Blocked on managed instances besides loopback and private ranges:
+  # carrier-grade NAT, IETF protocol assignments and benchmarking ranges.
+  MANAGED_BLOCKED_NETWORKS = %w[100.64.0.0/10 192.0.0.0/24 198.18.0.0/15].map { |range| IPAddr.new(range) }.freeze
+
+  # Connects to the address that ensure_allowed_url! checked instead of
+  # resolving the host a second time, so DNS rebinding cannot swap in an
+  # internal address. TLS (SNI, certificate) and the Host header still use
+  # the hostname. Through an HTTP proxy, https requests are pinned too
+  # (Net::HTTP sends CONNECT to the pinned address); plain http requests
+  # skip the proxy (see guarded_request_options).
+  class PinnedConnectionAdapter < HTTParty::ConnectionAdapter
+    def connection
+      http = super
+      pinned_address = options.dig(:connection_adapter_options, :ipaddr)
+      http.ipaddr = pinned_address if pinned_address
+      http
+    end
+  end
+
   def initialize
+  end
+
+  # Checks a setup token's claim URL without claiming it, so callers that
+  # claim later (in a job) can reject a bad token right away.
+  def validate_setup_token!(setup_token)
+    ensure_allowed_url!(Base64.decode64(setup_token))
+    nil
+  rescue SocketError
+    raise SimplefinError.new("SimpleFIN host could not be resolved", :network_error)
   end
 
   def claim_access_url(setup_token)
@@ -36,15 +72,22 @@ class Provider::Simplefin
 
     # Use retry logic for transient network failures during token claim
     # Claim should be fast; keep request-path latency bounded.
-    # Use self.class.post to inherit class-level SSL and timeout defaults
-    response = with_retries("POST /claim", max_retries: 1, backoff: false) do
-      self.class.post(claim_url, timeout: 15)
+    # Use self.class.post to inherit class-level SSL and timeout defaults.
+    # The setup token is user input, so it must not point the server at
+    # internal services (cloud metadata, localhost, private networks).
+    response = with_retries("POST /claim", max_retries: 1, backoff: false) do |attempt|
+      self.class.post(claim_url, timeout: 15, **guarded_request_options(claim_url, attempt: attempt))
     end
 
     case response.code
     when 200
-      # The response body contains the access URL with embedded credentials
-      response.body.strip
+      # The response body contains the access URL with embedded credentials.
+      # It comes from the same untrusted bridge. The token is used up now, so
+      # only check what needs no DNS lookup; a transient lookup failure must not
+      # lose the URL. get_accounts runs the full check before every request.
+      access_url = response.body.strip
+      ensure_allowed_url!(access_url, resolve: false)
+      access_url
     when 403
       raise SimplefinError.new("Setup token may be compromised, expired, or already used", :token_compromised)
     else
@@ -54,7 +97,7 @@ class Provider::Simplefin
 
   def get_accounts(access_url, start_date: nil, end_date: nil, pending: nil)
     # Build query parameters
-    query_params = {}
+    query_params = { "version" => "2" }
 
     # SimpleFin expects Unix timestamps for dates
     if start_date
@@ -79,8 +122,9 @@ class Provider::Simplefin
     # The access URL already contains HTTP Basic Auth credentials
     # Use retry logic with exponential backoff for transient network failures
     # Use self.class.get to inherit class-level SSL and timeout defaults
-    response = with_retries("GET /accounts") do
-      self.class.get(accounts_url)
+    # The stored access URL came from the bridge; re-check it on every request.
+    response = with_retries("GET /accounts") do |attempt|
+      self.class.get(accounts_url, **guarded_request_options(access_url, attempt: attempt))
     end
 
     case response.code
@@ -88,7 +132,7 @@ class Provider::Simplefin
       JSON.parse(response.body, symbolize_names: true)
     when 400
       Rails.logger.error "SimpleFin API: Bad request - #{response.body}"
-      raise SimplefinError.new("Bad request to SimpleFin API: #{response.body}", :bad_request)
+      raise SimplefinError.new("Bad request to SimpleFin API", :bad_request)
     when 403
       raise SimplefinError.new("Access URL is no longer valid", :access_forbidden)
     when 402
@@ -101,13 +145,13 @@ class Provider::Simplefin
       raise SimplefinError.new("SimpleFin server error (#{response.code}). Please try again later.", :server_error)
     else
       Rails.logger.error "SimpleFin API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
-      raise SimplefinError.new("Failed to fetch accounts: #{response.code} #{response.message} - #{response.body}", :fetch_failed)
+      raise SimplefinError.new("Failed to fetch accounts: #{response.code} #{response.message}", :fetch_failed)
     end
   end
 
   def get_info(base_url)
     # Use self.class.get to inherit class-level SSL and timeout defaults
-    response = self.class.get("#{base_url}/info")
+    response = self.class.get("#{base_url}/info", **guarded_request_options(base_url))
 
     case response.code
     when 200
@@ -127,6 +171,86 @@ class Provider::Simplefin
   end
 
   private
+    # Checks the URL, then pins the connection to one of the checked
+    # addresses; each retry moves on to the next one, like the resolver
+    # fallback of an unpinned connection. No redirects: a redirect target
+    # would bypass the check. A proxy would resolve a plain http host itself,
+    # so plain http (self-hosted only) connects directly.
+    def guarded_request_options(url, attempt: 0)
+      addresses = ensure_allowed_url!(url)
+      options = {
+        follow_redirects: false,
+        connection_adapter: PinnedConnectionAdapter,
+        connection_adapter_options: { ipaddr: addresses[attempt % addresses.size] }
+      }
+      options[:http_proxyaddr] = nil if URI.parse(url.to_s).scheme == "http"
+      options
+    end
+
+    # Link-local covers cloud metadata endpoints (169.254.169.254) and is
+    # never a valid bridge address. Managed instances additionally block
+    # loopback and private networks; self-hosters may run a bridge on their
+    # own network, so those stay allowed there.
+    #
+    # Returns the checked addresses, IPv4 first. With resolve: false only an
+    # IP literal host is checked. A failed lookup raises SocketError, so
+    # with_retries retries it and reports :network_error, not :invalid_url.
+    def ensure_allowed_url!(url, resolve: true)
+      uri = URI.parse(url.to_s)
+      raise SimplefinError.new("SimpleFIN URL must use http or https", :invalid_url) unless uri.is_a?(URI::HTTP) && uri.host.present?
+      raise SimplefinError.new("SimpleFIN URL must use https", :invalid_url) if managed_mode? && uri.scheme != "https"
+
+      addresses = resolve ? resolve_addresses(uri.hostname) : ip_literal_addresses(uri.hostname)
+      raise SocketError, "SimpleFIN host could not be resolved" if resolve && addresses.empty?
+
+      if addresses.any? { |address| disallowed_address?(address) }
+        raise SimplefinError.new("SimpleFIN URL points to a disallowed network address", :invalid_url)
+      end
+
+      # IPv4-mapped IPv6 addresses connect as plain IPv4. Prefer IPv4: many
+      # self-hosted Docker setups have no IPv6 route.
+      addresses.map { |address| normalize_address(address) }.uniq
+        .sort_by.with_index { |address, index| [ IPAddr.new(address).ipv4? ? 0 : 1, index ] }
+    rescue URI::InvalidURIError
+      raise SimplefinError.new("SimpleFIN URL is invalid", :invalid_url)
+    end
+
+    # Uses the system resolver, like the HTTP request itself (mDNS, hosts file).
+    def resolve_addresses(host)
+      Addrinfo.getaddrinfo(host, nil, nil, :STREAM).map(&:ip_address).uniq
+    end
+
+    def normalize_address(address)
+      ip = IPAddr.new(address)
+      ip.ipv4_mapped? ? ip.native.to_s : address
+    end
+
+    def ip_literal_addresses(host)
+      IPAddr.new(host)
+      [ host ]
+    rescue IPAddr::InvalidAddressError
+      []
+    end
+
+    def disallowed_address?(address)
+      ip = embedded_ipv4(IPAddr.new(address))
+      return true if ip.link_local? || ALWAYS_BLOCKED_NETWORKS.any? { |network| network.include?(ip) }
+      return false unless managed_mode?
+
+      ip.loopback? || ip.private? || MANAGED_BLOCKED_NETWORKS.any? { |network| network.include?(ip) }
+    rescue IPAddr::InvalidAddressError
+      true
+    end
+
+    # IPv4-mapped, IPv4-compatible, NAT64 and 6to4 addresses reach the IPv4
+    # address they carry, so they are checked as that address.
+    def embedded_ipv4(ip)
+      NetworkAddress.embedded_ipv4(ip)
+    end
+
+    def managed_mode?
+      Rails.application.config.app_mode.managed?
+    end
 
     # Execute a block with retry logic and exponential backoff for transient network errors.
     # This helps handle temporary network issues that cause autosync failures while
@@ -135,7 +259,7 @@ class Provider::Simplefin
       retries = 0
 
       begin
-        yield
+        yield retries
       rescue *RETRYABLE_ERRORS => e
         retries += 1
 

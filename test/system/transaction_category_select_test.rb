@@ -158,6 +158,24 @@ class TransactionCategorySelectTest < ApplicationSystemTestCase
     end
   end
 
+  test "Enter in the category search picks the match while categories are locked" do
+    @user.family.update!(categories_locked: true)
+    visit new_transaction_url(account_id: accounts(:depository).id)
+    fill_in "entry[name]", with: "Locked picker"
+    find("input[name='entry[amount]']").set("12.34")
+
+    assert_no_difference "Entry.count" do
+      find("[data-controller='category-select'] button").click
+
+      within "[data-controller='category-select']" do
+        fill_in "Search categories", with: "Food"
+        find_field("Search categories").send_keys(:enter)
+
+        assert_selector "[data-category-select-target='selectionContainer']", text: "Food & Drink"
+      end
+    end
+  end
+
   test "a new subcategory is listed under its parent straight away" do
     parent = categories(:food_and_drink)
     visit new_transaction_url
@@ -199,6 +217,23 @@ class TransactionCategorySelectTest < ApplicationSystemTestCase
       assert_selector "[role='alert']", text: "taken", wait: 10
       assert_no_selector "[data-category-select-target='parentPicker']", visible: true
     end
+    assert_keyboard_back_in_search
+  end
+
+  test "a failed top-level create keeps focus in the menu" do
+    visit new_transaction_url
+    find("[data-controller='category-select'] button").click
+
+    within "[data-controller='category-select']" do
+      fill_in "Search categories", with: "Late Top Level"
+    end
+    Category.create!(family: users(:family_admin).family, name: "Late Top Level", color: "#e99537")
+
+    within "[data-controller='category-select']" do
+      find("[data-category-select-target='createForm']").click
+      assert_selector "[role='alert']", text: "taken", wait: 10
+    end
+    assert_keyboard_back_in_search
   end
 
   test "a top-level category created inline is offered as a parent without reloading" do
@@ -231,5 +266,14 @@ class TransactionCategorySelectTest < ApplicationSystemTestCase
 
     def send_escape
       page.driver.browser.action.send_keys(:escape).perform
+    end
+
+    # Focus is back in the search, so Escape closes the menu, not the
+    # New transaction dialog around it.
+    def assert_keyboard_back_in_search
+      assert_equal "search", active_element_attribute("data-category-select-target")
+      send_escape
+      assert_no_selector "[data-category-select-target='menu']", visible: true
+      assert_selector "dialog[open]"
     end
 end

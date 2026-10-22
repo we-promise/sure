@@ -17,12 +17,13 @@ class Assistant::Function::GetRuleOptionsTest < ActiveSupport::TestCase
     assert_includes amount[:operators].map { |o| o[:value] }, "="
 
     tag = result[:conditions].find { |c| c[:condition_type] == "transaction_tag" }
-    assert_equal %w[= is_null], tag[:operators].map { |o| o[:value] }
+    assert_equal %w[= != is_null is_not_null].sort, tag[:operators].map { |o| o[:value] }.sort
 
     action_types = result[:actions].map { |a| a[:action_type] }
     assert_includes action_types, "set_transaction_category"
     assert_not_includes action_types, "auto_categorize"
     assert_not_includes action_types, "auto_detect_merchants"
+    assert_not_includes action_types, "split_transaction"
   end
 
   test "inlines fixed value lists and points id values at their tools" do
