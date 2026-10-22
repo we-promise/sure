@@ -60,8 +60,8 @@ class Api::V1::Financekit::BatchesBodyLimitTest < ActionDispatch::IntegrationTes
     assert_equal 0, input.bytes_read, "no part of an oversized body should be read"
   end
 
-  # Cut off at the limit, the body is not valid JSON, and Rails' parameter
-  # parsing would answer 400 before the controller's own size check ran.
+  # Cut off at the limit, the body is not valid JSON; the middleware answers
+  # before Rails' parameter parsing or the controller sees it.
   test "an oversized chunked upload is refused with the documented 413" do
     input = upload(@path, @oversized, @json, chunked: true)
 
@@ -120,27 +120,6 @@ class FinancekitBodyLimitTest < ActiveSupport::TestCase
     @body = "b" * (Financekit::MAX_BYTES + 10)
   end
 
-  # gets has no length argument under the Rack input contract, so an endless
-  # line must not be pulled from the stream whole before the cap applies.
-  test "gets reads no further than the limit on a line with no newline" do
-    io = StringIO.new("c" * (Financekit::MAX_BYTES * 3))
-    input = FinancekitBodyLimit::LimitedInput.new(io, Financekit::MAX_BYTES + 1)
-
-    line = input.gets
-
-    assert_equal Financekit::MAX_BYTES + 1, line.bytesize
-    assert_operator io.pos, :<=, Financekit::MAX_BYTES + 1, "the underlying stream was read past the cap"
-    assert_nil input.gets, "nothing more is returned once the cap is reached"
-  end
-
-  test "gets still returns whole lines under the limit" do
-    input = FinancekitBodyLimit::LimitedInput.new(StringIO.new("one\ntwo\n"), 100)
-
-    assert_equal "one\n", input.gets
-    assert_equal "two\n", input.gets
-    assert_nil input.gets
-  end
-
   test "leaves a body within the limit untouched" do
     body = "{\"ok\":true}"
     status, = @app.call(env_for("/api/v1/financekit/publishers/abc/batches", body))
@@ -172,14 +151,37 @@ class FinancekitBodyLimitTest < ActiveSupport::TestCase
     assert_equal @body.bytesize, @seen.bytesize
   end
 
-  test "caps a chunked body one byte past the limit so the controller can refuse it" do
-    env = env_for("/api/v1/financekit/publishers/abc/batches", @body)
+  # The 413 must not depend on the app: cut off at the limit the body is not
+  # valid JSON, and anything that reads params before the controller's own
+  # size check would answer 400 instead.
+  test "refuses a chunked body over the limit itself, without calling the app" do
+    app_called = false
+    app = FinancekitBodyLimit.new(->(_env) { app_called = true; [ 200, {}, [ "ok" ] ] })
+    io = StringIO.new(@body)
+    env = env_for("/api/v1/financekit/publishers/abc/batches", "")
+    env.delete("CONTENT_LENGTH")
+    env["HTTP_TRANSFER_ENCODING"] = "chunked"
+    env["rack.input"] = io
+
+    status, headers, body = app.call(env)
+
+    assert_equal 413, status
+    assert_equal "application/json", headers["content-type"]
+    assert_equal({ "error" => "payload_too_large" }, JSON.parse(body.join))
+    assert_not app_called, "the app should never see an oversized body"
+    assert_equal Financekit::MAX_BYTES + 1, io.pos, "the body was read past one byte over the limit"
+  end
+
+  test "hands a chunked body within the limit to the app whole" do
+    body = "c" * Financekit::MAX_BYTES
+    env = env_for("/api/v1/financekit/publishers/abc/batches", body)
     env.delete("CONTENT_LENGTH")
     env["HTTP_TRANSFER_ENCODING"] = "chunked"
 
-    @app.call(env)
+    status, = @app.call(env)
 
-    assert_equal Financekit::MAX_BYTES + 1, @seen.bytesize
+    assert_equal 200, status
+    assert_equal body, @seen
   end
 
   private
