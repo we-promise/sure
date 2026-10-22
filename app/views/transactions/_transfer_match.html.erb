@@ -1,6 +1,6 @@
 <%# locals: (transaction:) %>
 
-<div id="<%= dom_id(transaction, "transfer_match") %>" class="flex items-center gap-1">
+<div id="<%= dom_id(transaction, "transfer_match") %>" class="flex flex-wrap items-center justify-end gap-1 min-w-0 max-w-full">
   <% if transaction.transfer.confirmed? %>
     <span title="<%= transaction.transfer.payment? ? t("transactions.transfer_match.payment_confirmed") : t("transactions.transfer_match.transfer_confirmed") %>">
       <%= icon "link-2", size: "sm", class: "text-secondary" %>
@@ -23,19 +23,23 @@
       ) %>
     </span>
 
-    <%= button_to transfer_path(transaction.transfer, transfer: { status: "confirmed" }),
-                    method: :patch,
-                    class: "text-secondary flex items-center justify-center cursor-pointer",
-                    title: t("transactions.transfer_match.confirm_match") do %>
-      <%= icon "check", size: "sm", class: "text-secondary hover:text-primary" %>
-    <% end %>
+    <div class="flex items-center gap-1">
+      <%= render DS::Button.new(
+            variant: :icon, size: :sm, icon: "check",
+            href: transfer_path(transaction.transfer, transfer: { status: "confirmed" }),
+            method: :patch,
+            title: t("transactions.transfer_match.confirm_match"),
+            aria: { label: t("transactions.transfer_match.confirm_match") }
+          ) %>
 
-    <%= button_to transfer_path(transaction.transfer, transfer: { status: "rejected" }),
-                    method: :patch,
-                    data: { turbo: false },
-                    class: "text-secondary hover:text-primary flex items-center justify-center cursor-pointer",
-                    title: t("transactions.transfer_match.reject_match") do %>
-      <%= icon "x", size: "sm", class: "text-subdued hover:text-primary" %>
-    <% end %>
+      <%= render DS::Button.new(
+            variant: :icon, size: :sm, icon: "x",
+            href: transfer_path(transaction.transfer, transfer: { status: "rejected" }),
+            method: :patch,
+            data: { turbo: false },
+            title: t("transactions.transfer_match.reject_match"),
+            aria: { label: t("transactions.transfer_match.reject_match") }
+          ) %>
+    </div>
   <% end %>
 </div>
