@@ -194,6 +194,28 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
                  "an incapable provider emptied the table and stamped the emptiness as fact"
   end
 
+  # A world tracker reports thousands of holdings, and this runs inside the
+  # account sync. Per-row `destroy`/`create!` cost a DELETE per stored row and
+  # a uniqueness SELECT plus an INSERT per new one; the write is now one DELETE
+  # and one INSERT, so the statement count does not grow with the list.
+  test "replacing a fund's holdings costs the same statements for a long list as a short one" do
+    provider = capable_provider("provider")
+    @security.stubs(:price_data_provider).returns(provider)
+
+    short = [ constituent("AAA", "A", 60), constituent("BBB", "B", 40) ]
+    long = (1..50).map { |i| constituent("T#{i}", "Holding #{i}", 2) }
+
+    @security.send(:store_constituents, long)
+    short_count = sql_statements { @security.send(:store_constituents, short) }
+    @security.send(:store_constituents, short)
+    long_count = sql_statements { @security.send(:store_constituents, long) }
+
+    assert_equal short_count, long_count, "the write grows with the number of holdings"
+    assert_equal 50, @security.reload.constituents.count
+    assert_equal BigDecimal("2"), @security.constituents.find_by!(ticker: "T7").weight
+    assert_equal "Holding 7", @security.constituents.find_by!(ticker: "T7").name
+  end
+
   # -------------------------------------------------------- malformed lists
   #
   # One row the table refuses would raise out of `store_constituents`, roll
@@ -358,6 +380,13 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
   end
 
   private
+    def sql_statements(&block)
+      count = 0
+      counter = ->(*, payload) { count += 1 unless payload[:name].in?([ "SCHEMA", "TRANSACTION" ]) || payload[:sql].match?(/\A\s*(BEGIN|COMMIT|SAVEPOINT|RELEASE|ROLLBACK)/i) }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record", &block)
+      count
+    end
+
     def holdings_log_count
       DebugLogEntry.where(category: "security_holdings").count
     end

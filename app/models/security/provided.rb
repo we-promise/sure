@@ -387,7 +387,7 @@ module Security::Provided
   # of the gate above: "asked, nothing there" has to be distinguishable from
   # "never asked", and only a stamp can say so.
   #
-  # `destroy_all` runs before that, so this must only ever be reached for a
+  # The delete runs before that, so this must only ever be reached for a
   # provider that can actually answer. The caller gates the ask on
   # `supplies_constituents?`, and this guard is a second lock on the same door:
   # an incapable provider reaching here would wipe a stored set it was never in
@@ -401,9 +401,14 @@ module Security::Provided
 
     rows, skipped = constituent_rows_from(list)
 
+    # One DELETE and one INSERT rather than a statement or two per holding: a
+    # world tracker lists thousands, and this runs inside the account sync.
+    # `constituent_rows_from` has already applied every rule the model and the
+    # column would, so skipping validation here refuses nothing they would
+    # accept. `Security::Constituent` has no callbacks for `delete_all` to skip.
     transaction do
-      constituents.destroy_all
-      rows.each { |row| constituents.create!(row) }
+      Security::Constituent.where(security_id: id).delete_all
+      Security::Constituent.insert_all!(rows.map { |row| row.merge(security_id: id) }) if rows.any?
       update_column(:constituents_fetched_at, Time.current)
     end
 
