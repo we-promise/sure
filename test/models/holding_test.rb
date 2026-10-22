@@ -547,7 +547,38 @@ class HoldingTest < ActiveSupport::TestCase
     @amzn.remap_security!(new_security)
 
     target.reload
-    assert_equal [ 0, 0, 0 ], [ target.qty, target.amount, target.price ].map(&:to_i)
+    assert_equal [ BigDecimal("0"), BigDecimal("0"), BigDecimal("0") ], [ target.qty, target.amount, target.price ]
+  end
+
+  # Two rows priced differently can sum to a qty and an amount of opposite
+  # signs, where amount / qty would be a negative price. The materializer
+  # prices the row at the target security's own price for that date, so the
+  # merge keeps the target's price.
+  test "remap_security! keeps the target's price when a merge nets to opposite signs" do
+    new_security = create_security("GOOGOPP", prices: [ { date: Date.current, price: 136.3636 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 0, price: 136.3636, amount: 0.0, currency: "USD")
+    target.update_columns(qty: -22, amount: -3000.0)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    # -22 + the moved row's 15, and -3000 + its 3240.
+    assert_equal BigDecimal("-7"), target.qty
+    assert_equal BigDecimal("240"), target.amount
+    assert_equal BigDecimal("136.3636"), target.price
+  end
+
+  test "remap_security! keeps the target's price when a merge nets to a positive qty and negative amount" do
+    new_security = create_security("GOOGOPQ", prices: [ { date: Date.current, price: 4.5 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 22, price: 4.5, amount: 99.0, currency: "USD")
+    @amzn.update_columns(qty: -15, amount: -3240.0)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    assert_equal BigDecimal("7"), target.qty
+    assert_equal BigDecimal("-3141"), target.amount
+    assert_equal BigDecimal("4.5"), target.price
   end
 
   test "reset_security_to_provider! moves a negative-qty holding back without raising" do

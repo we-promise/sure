@@ -175,14 +175,26 @@ class Holding < ApplicationRecord
             existing.cost_basis # Keep existing if we can't calculate weighted average
           end
 
+          # amount / qty, as the calculators write amount = qty x price with
+          # a positive price; that holds for a negative merged row too. Two
+          # rows priced differently can net to a qty and an amount of opposite
+          # signs, where that ratio would be negative. The materializer prices
+          # this row at the target security's own price for the date, so keep
+          # the target's price then.
+          merged_price = if merged_qty.zero?
+            0
+          elsif (merged_amount.negative? && merged_qty.positive?) || (merged_amount.positive? && merged_qty.negative?)
+            existing.price
+          else
+            merged_amount / merged_qty
+          end
+
           # Preserve provider tracking from the holding being destroyed
           # so subsequent syncs can find the merged holding
           merge_attrs = {
             qty: merged_qty,
             amount: merged_amount,
-            # amount / qty, as the calculators write amount = qty x price with
-            # a positive price; that holds for a negative merged row too.
-            price: merged_qty.zero? ? 0 : merged_amount / merged_qty,
+            price: merged_price,
             cost_basis: merged_cost_basis
           }
           merge_attrs[:external_id] ||= holding.external_id if existing.external_id.blank? && holding.external_id.present?
