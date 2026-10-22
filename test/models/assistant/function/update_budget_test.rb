@@ -88,6 +88,25 @@ class Assistant::Function::UpdateBudgetTest < ActiveSupport::TestCase
     assert_equal true, result[:success]
     created = @family.budgets.find_by(start_date: target)
     assert_equal 1000, created.budgeted_spending
+    assert_equal 0, created.expected_income
+  end
+
+  test "setting spending alone fills a missing expected income with zero" do
+    @budget.update!(expected_income: nil)
+
+    result = @function.call("budgeted_spending" => 4000)
+
+    assert_equal true, result[:success]
+    @budget.reload
+    assert_equal 4000, @budget.budgeted_spending
+    assert_equal 0, @budget.expected_income
+  end
+
+  test "setting spending alone keeps an existing expected income" do
+    result = @function.call("budgeted_spending" => 4000)
+
+    assert_equal true, result[:success]
+    assert_equal 7000, @budget.reload.expected_income
   end
 
   test "rejects a category outside the family and rolls back totals from the same call" do

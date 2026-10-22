@@ -258,12 +258,8 @@ uk:
       no_matches_title: Нічого не знайдено
       no_matches_description: Спробуйте скинути фільтр або пошук.
       col_name: Назва
-      col_type: Тип
-      col_frequency: Частота
       col_amount: Сума
       col_next: Наступний строк
-      next_short: наступний %{date}
-      col_status: Статус
       col_actions: Дії
       monthly_equivalent: '%{amount}/міс.'
       types:
