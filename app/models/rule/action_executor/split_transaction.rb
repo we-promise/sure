@@ -154,7 +154,7 @@ class Rule::ActionExecutor::SplitTransaction < Rule::ActionExecutor
       end
 
       if has_percentage && errors.empty? && (total_percentage - 100).abs > PERCENTAGE_TOTAL_TOLERANCE
-        errors << [ :percentages_must_total_100, { total: total_percentage } ]
+        errors << [ :percentages_must_total_100, { total: ActiveSupport::NumberHelper.number_to_rounded(total_percentage, precision: 2, strip_insignificant_zeros: true) } ]
       end
 
       errors

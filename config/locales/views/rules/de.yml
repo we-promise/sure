@@ -14,10 +14,9 @@ de:
         share_label: Betrag oder Prozentsatz des Splits
         category_label: Kategorie des Splits
         merchant_label: Händler des Splits
-        no_merchant: Händler der Hauptbuchung
         tags_label: "Tags des Splits"
         remove_split: "Split entfernen"
-        hint: "Feste Beträge werden zuerst als exakte Summen abgezogen. Prozent-Splits verteilen anschließend den verbleibenden Betrag. Wenn hier ausschließlich feste Beträge verwendet werden, füge zusätzlich eine Bedingung mit einem exakten Transaktionsbetrag hinzu (z. B. Betrag = 42,00), da jede passende Transaktion denselben Gesamtbetrag haben muss, damit die festen Beträge aufgehen."
+        hint: "Feste Beträge werden zuerst als exakte Summen abgezogen. Prozent-Splits verteilen anschließend den verbleibenden Betrag. Wenn hier ausschließlich feste Beträge verwendet werden, füge zusätzlich eine Bedingung mit einem exakten Transaktionsbetrag hinzu (z. B. Betrag = 42,00), da jede passende Transaktion denselben Gesamtbetrag haben muss, damit die festen Beträge aufgehen. Eine Regel mit Aufteilung darf keine weiteren Aktionen haben."
         fixed_summary_label: fest
         summary:
           one: "%{count} Split"
