@@ -52,7 +52,9 @@ class RedbarkAccount::LoanDetailsProcessor
       fetched_at = redbark_account.account_details_fetched_at
       return false if fetched_at.blank?
 
-      fetched_at.to_date == as_of.to_date
+      # In the family's zone, as the syncer derives `as_of`; the stamp itself
+      # reads back in the app's zone.
+      redbark_account.redbark_item.family.local_date(fetched_at) == as_of.to_date
     end
 
     def account

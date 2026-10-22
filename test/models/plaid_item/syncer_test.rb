@@ -21,6 +21,24 @@ class PlaidItem::SyncerTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 1, 15), dated
   end
 
+  # A background job runs in UTC. At 06:00 on 16 Jan in Sydney it is still the
+  # 15th in UTC, and a rate change dated the 15th would be charged from a period
+  # before the user saw it.
+  test "the sync's date is the family's date, not the job's" do
+    @plaid_item.family.update!(timezone: "Australia/Sydney")
+    dated = nil
+
+    travel_to Time.utc(2026, 1, 15, 19, 0, 0) do
+      @plaid_item.stubs(:import_latest_plaid_data)
+      @plaid_item.stubs(:schedule_account_syncs)
+      @plaid_item.expects(:process_accounts).with { |**kwargs| dated = kwargs[:as_of] }
+
+      PlaidItem::Syncer.new(@plaid_item).perform_sync(stub_sync)
+    end
+
+    assert_equal Date.new(2026, 1, 16), dated
+  end
+
   test "process_accounts hands its date to every account's processor" do
     date = Date.new(2026, 1, 15)
     processor = mock("processor")

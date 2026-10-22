@@ -8,8 +8,10 @@ class PlaidItem::Syncer
   end
 
   def perform_sync(sync)
-    # The one "today" for this sync, handed to every account's processing.
-    as_of = Date.current
+    # The one "today" for this sync, handed to every account's processing. It
+    # is the family's date, not the job's: a sync at 06:00 in Sydney is still
+    # the previous day in UTC.
+    as_of = plaid_item.family.local_date
 
     # Phase 1: Import data from Plaid API
     sync.update!(status_text: "Importing accounts from Plaid...") if sync.respond_to?(:status_text)

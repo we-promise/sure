@@ -286,6 +286,17 @@ class RedbarkAccount::LoanDetailsProcessorTest < ActiveSupport::TestCase
     assert_equal({ "2026-09-21" => BigDecimal("6.75") }, rates)
   end
 
+  # The syncer dates a sync in the family's zone. A snapshot stamped at 19:00
+  # UTC on the 20th was fetched on the 21st in Sydney, so it is this sync's.
+  test "a snapshot is judged fresh on the family's calendar" do
+    @family.update!(timezone: "Australia/Sydney")
+    detail lendingRate: "0.0675", fetched_at: Time.utc(2026, 9, 20, 19, 0, 0)
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.75") }, rates)
+  end
+
   # A bank reporting an end date centuries out is reporting a placeholder. The
   # term is not stored, and the rate still lands.
   test "an implausible term is not stored and does not cost the loan its rate" do

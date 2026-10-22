@@ -65,7 +65,14 @@ module PlaidAccount::Liabilities::LoanTermWriter
     # swallows ITEM_LOGIN_REQUIRED and marks the item, and the sync still
     # processes, so this payload is the previous sync's. Its rate is not a
     # change the bank reported on `as_of`, and dating it would route around a
-    # base rate the user has since corrected and locked.
+    # base rate the user has since corrected and locked. The status means
+    # "this import" because PlaidItem::Importer#import puts it back to good
+    # after a fetch that succeeds.
+    #
+    # The guard sits after the fixed branch on purpose: a stale fixed rate is
+    # the value the last sync already wrote, and a user's correction to it is
+    # locked, so rewriting it changes nothing. Only the variable path would
+    # turn the stale rate into a new dated row.
     def rate_update(loan, rate)
       return { interest_rate: rate } unless loan.variable_rate_type?
       return nil if plaid_account.plaid_item.requires_update?
