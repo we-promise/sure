@@ -453,6 +453,26 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://test.example.com", session[:pending_oidc_auth].fetch("issuer")
   end
 
+  test "an issuerless SSO-only identity requires administrator recovery" do
+    identity = oidc_identities(:sso_only_identity)
+    identity.update!(issuer: nil)
+    identity.user.sessions.destroy_all
+    setup_omniauth_mock(
+      provider: identity.provider, uid: identity.uid,
+      email: identity.user.email, name: identity.user.display_name
+    )
+
+    assert_no_difference [ "Session.count", -> { SsoAuditLog.by_event("login").count } ] do
+      get "/auth/openid_connect/callback"
+    end
+
+    assert_redirected_to link_oidc_account_path
+    assert session[:pending_oidc_legacy_relink]
+    assert_equal I18n.t("sessions.openid_connect.legacy_issuer_relink_required"), flash[:alert]
+    assert_nil identity.reload.issuer
+    assert_not identity.user.has_local_password?
+  end
+
   test "a fresh OIDC sign-in clears an abandoned legacy relink" do
     legacy_identity = oidc_identities(:bob_google)
     legacy_identity.update!(issuer: nil)
