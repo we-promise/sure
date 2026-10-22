@@ -18,6 +18,8 @@ module Assistant::Function::RuleSupport
   # AI-backed actions cost money per transaction; the web UI shows a cost
   # estimate before applying them, which this surface cannot do yet.
   BLOCKED_ACTION_TYPES = %w[auto_categorize auto_detect_merchants].freeze
+  # Actions whose value this surface can't describe yet (the split editor builds a JSON config).
+  SETTINGS_ONLY_ACTION_TYPES = %w[split_transaction].freeze
 
   # Ids are resolved to names by these lookups, keyed by condition or action type.
   ACCOUNT_KEYS = %w[transaction_account set_as_transfer_or_payment].freeze
@@ -199,6 +201,7 @@ module Assistant::Function::RuleSupport
 
       type = attrs["action_type"].to_s
       return [ "#{path}: #{type} calls an AI model and is not available here; add it in Settings > Rules." ] if BLOCKED_ACTION_TYPES.include?(type)
+      return [ "#{path}: #{type} is not available here; add it in Settings > Rules." ] if SETTINGS_ONLY_ACTION_TYPES.include?(type)
 
       executor = rule.action_executors.find { |e| e.key == type }
       return [ "#{path}: unknown action_type '#{type}'. See get_rule_options." ] unless executor
