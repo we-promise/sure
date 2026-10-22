@@ -207,8 +207,16 @@ class RecurringTransaction < ApplicationRecord
 
   # Skipping under a held lock used to leave the bill without history for
   # good, since the live matcher never looks behind the current cycle.
+  #
+  # The activation has committed by now, so a failure here must not fail the
+  # caller's own write (a toggle, an API update, the assistant's update_bill).
+  # It is reported and handed to the job, which retries; the backfill is
+  # re-runnable by construction.
   def reconstruct_history_on_activation
     BackfillRecurringHistoryJob.perform_later(id) unless reconstruct_history!
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
+    BackfillRecurringHistoryJob.perform_later(id)
   end
 
   # Regenerating rebuilds only scheduled, allocation-free, not-yet-due rows;

@@ -984,6 +984,22 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert RecurringAllocation.where(entry_id: entry.id, state: "confirmed").exists?
   end
 
+  # The status change has committed by the time the reconstruction runs, so a
+  # failure in it must not turn the user's own action into an error: it is
+  # reported and handed to the job, which retries.
+  test "toggling a detected bill on succeeds when reconstructing its history fails" do
+    _, suggestion, = suggested_bill_with_past_payment
+    RecurringTransaction::HistoryBackfiller.any_instance.stubs(:run!).raises(ActiveRecord::Deadlocked)
+    Rails.error.expects(:report).with(instance_of(ActiveRecord::Deadlocked), has_entry(handled: true))
+
+    assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ suggestion.id ]) do
+      post toggle_status_recurring_transaction_url(suggestion)
+    end
+
+    assert_redirected_to recurring_transactions_url
+    assert suggestion.reload.active?
+  end
+
   test "resuming a paused bill does not reconstruct its history" do
     paid_on, suggestion, = suggested_bill_with_past_payment
     suggestion.update_columns(status: "inactive")
