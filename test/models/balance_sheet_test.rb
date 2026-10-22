@@ -174,6 +174,7 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_includes depository_group.accounts.map(&:id), excluded_account.id
     assert_equal 1000, depository_group.total
     assert_equal assets.total, assets.account_groups.sum(&:total)
+    assert_equal depository_group.total, depository_group.subgroups("institution", user: member).sum(&:total)
   end
 
   test "calculates asset group totals" do

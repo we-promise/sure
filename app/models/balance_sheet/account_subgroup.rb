@@ -15,7 +15,7 @@ class BalanceSheet::AccountSubgroup
   end
 
   def total
-    accounts.reject { |a| a.respond_to?(:exclude_from_reports?) && a.exclude_from_reports? }.sum(&:converted_balance)
+    BalanceSheet::ClassificationGroup.counted_accounts(accounts).sum(&:converted_balance)
   end
 
   # Share of the whole classification (all assets or all debts), in percent,
