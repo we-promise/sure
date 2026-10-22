@@ -386,6 +386,23 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     refute_selector "[data-net-contributions-legend]"
   end
 
+  # The controller draws the dashed line only when the comparison has points,
+  # so the legend naming it must follow the same condition, not the value
+  # line's.
+  test "no legend when the net contributions comparison has no points" do
+    values = @account.balance_series(view: "balance").values
+    assert values.any?, "the value line must have points, or this asserts nothing"
+    original = @account.method(:balance_series)
+    @account.define_singleton_method(:balance_series) do |**kwargs|
+      kwargs[:view].to_s == "net_contributions" ? Struct.new(:values).new([]) : original.call(**kwargs)
+    end
+
+    render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
+
+    assert_equal [], JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"]
+    refute_selector "[data-net-contributions-legend]"
+  end
+
   test "the chart says when net contributions are incomplete" do
     @account.stubs(:net_contributions_incomplete?).returns(true)
     render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
