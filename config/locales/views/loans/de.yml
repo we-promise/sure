@@ -68,6 +68,7 @@ de:
           zero: Im selben Monat getilgt
           one: "%{count} Monat früher"
           other: "%{count} Monate früher"
+        no_scheduled_repayments: Für diesen Kredit sind keine planmäßigen Raten mehr vorgesehen, aber es ist noch ein Saldo offen. Daher gibt es keine Rate, zu der du einen Zusatzbetrag zahlen kannst.
         not_applicable: Auf diesen Kredit ist nichts mehr zu tilgen, daher gibt es keine Sondertilgung zu berechnen.
         payoff_with_extra: Tilgung mit Zusatzbetrag
         total_cost: Gesamtkosten ab heute

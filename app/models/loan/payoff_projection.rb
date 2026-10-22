@@ -54,6 +54,13 @@ class Loan
         contracted_payment&.positive? || false
     end
 
+    # True when nothing is owed. Only one of the reasons applicable? can be
+    # false: a loan past its last scheduled repayment with a balance still
+    # owing is not settled, and the Extra repayments tab says so differently.
+    def settled?
+      !current_balance.amount.positive?
+    end
+
     def currency
       loan.account.currency
     end

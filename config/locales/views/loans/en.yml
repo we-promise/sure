@@ -75,6 +75,7 @@ en:
           zero: Paid off in the same month
           one: "%{count} month sooner"
           other: "%{count} months sooner"
+        no_scheduled_repayments: No scheduled repayments remain on this loan, but a balance is still owing, so there is no repayment to add an extra to.
         not_applicable: There is nothing left to repay on this loan, so there is no extra repayment to model.
         payoff_with_extra: Payoff with extra
         total_cost: Total cost from today

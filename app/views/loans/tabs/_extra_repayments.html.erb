@@ -103,6 +103,8 @@
       <p class="text-xs text-secondary"><%= t(".variable_rate_notice") %></p>
     <% end %>
   <% else %>
-    <p class="text-sm text-secondary"><%= t(".not_applicable") %></p>
+    <%# Repaid, or past the last scheduled repayment with a balance still
+        owing: the second is not repaid and must not read as if it were. %>
+    <p class="text-sm text-secondary" data-testid="extra-not-applicable"><%= t(projection.settled? ? ".not_applicable" : ".no_scheduled_repayments") %></p>
   <% end %>
 </div>

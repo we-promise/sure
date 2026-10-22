@@ -162,6 +162,26 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_not matured.payoff_projection(as_of: Date.new(2040, 1, 1)).applicable?
   end
 
+  # Two reasons a projection does not apply, which the Extra repayments tab
+  # words differently: nothing is owed, or something is owed with no
+  # scheduled repayment left to pay it. Both sides of zero.
+  test "settled only when nothing is owed, not when the schedule has run out" do
+    loan = build_loan(term_months: 24)
+
+    { 0 => true, -1 => true, BigDecimal("0.01") => false, 500_000 => false }.each do |balance, settled|
+      loan.account.update_columns(balance: balance)
+      assert_equal settled, loan.reload.payoff_projection(as_of: @today).settled?, "balance #{balance}"
+    end
+
+    loan.account.update_columns(balance: nil)
+    assert loan.reload.payoff_projection(as_of: @today).settled?, "no balance yet reads as zero"
+
+    loan.account.update_columns(balance: 500_000)
+    matured = loan.reload.payoff_projection(as_of: Date.new(2040, 1, 1))
+    assert_not matured.applicable?
+    assert_not matured.settled?, "past maturity with a balance still owing is not settled"
+  end
+
 
   # A variable loan's CONTRACT resizes the repayment at each rate change.
   # Holding one figure to maturity projects a repayment the lender will never

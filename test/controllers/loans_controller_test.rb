@@ -1176,6 +1176,32 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-testid='extra-not-cleared']", text: I18n.t("loans.tabs.extra_repayments.extra_not_cleared")
   end
 
+  # The tab says why there is nothing to model. A repaid loan has nothing
+  # left to repay; a loan past its last scheduled repayment with a balance
+  # still owing has no repayment to add an extra to, and must not be told
+  # it is repaid.
+  test "the extra repayments tab tells a repaid loan from one past maturity with a balance owing" do
+    # The opening valuation keeps the loan amortizable, and so its tab shown,
+    # once the balance is zero.
+    draw_down_loan_two_years_ago
+    @account.update_columns(balance: 0)
+    assert @account.loan.reload.amortizable?, "the tab must still be offered"
+    get account_path(@account, tab: "extra_repayments")
+
+    assert_response :success
+    assert_select "[data-testid='extra-not-applicable']", text: I18n.t("loans.tabs.extra_repayments.not_applicable")
+    assert_select "input[name='extra_payment[amount]']", count: 0
+
+    @account.update_columns(balance: 500_000)
+    @account.loan.update!(start_date: Date.current - 3.years, term_months: 24)
+    assert_not @account.loan.reload.payoff_projection(as_of: Date.current).applicable?, "the fixture must be past maturity"
+    get account_path(@account, tab: "extra_repayments")
+
+    assert_response :success
+    assert_select "[data-testid='extra-not-applicable']", text: I18n.t("loans.tabs.extra_repayments.no_scheduled_repayments")
+    assert_select "input[name='extra_payment[amount]']", count: 0
+  end
+
   # The page rebuilds an extra only from its params, and picking a chart
   # period reloads the page. Each period link carries the applied extra and
   # the tab it was applied from, so the extra line, the cards and the tab
