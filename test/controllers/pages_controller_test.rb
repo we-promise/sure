@@ -359,6 +359,56 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
   end
 
+  test "dashboard sankey shows investment contributions as invested when they are not spending" do
+    @family.update!(investment_contributions_as_spending: false)
+    category = @family.categories.create!(name: "Shopping", color: "#FF5733")
+    income_category = @family.categories.create!(name: "Salary", color: "#33FF57")
+    create_transaction(account: @family.accounts.first, name: "Payday", amount: -1000, category: income_category)
+    create_transaction(account: @family.accounts.first, name: "Shopping trip", amount: 100, category: category)
+    create_transaction(account: @family.accounts.first, name: "To ISA", amount: 400, category: nil, kind: "investment_contribution")
+
+    get root_path
+    assert_response :ok
+
+    chart = css_select("[data-controller='sankey-chart']").first
+    nodes = JSON.parse(chart["data-sankey-chart-data-value"]).fetch("nodes").index_by { |node| node.fetch("id") }
+
+    assert_equal 400.0, nodes.fetch("invested_node").fetch("value")
+    assert_equal I18n.t("pages.dashboard.cashflow_preview.node_labels.invested"), nodes.fetch("invested_node").fetch("name")
+    assert nodes.keys.none? { |id| id.start_with?("expense_") && nodes[id].fetch("value") == 400.0 }
+  end
+
+  test "dashboard sankey balances a deficit when outflows exceed income" do
+    @family.update!(investment_contributions_as_spending: false)
+    category = @family.categories.create!(name: "Shopping", color: "#FF5733")
+    income_category = @family.categories.create!(name: "Salary", color: "#33FF57")
+    create_transaction(account: @family.accounts.first, name: "Payday", amount: -1000, category: income_category)
+    create_transaction(account: @family.accounts.first, name: "Shopping trip", amount: 700, category: category)
+    create_transaction(account: @family.accounts.first, name: "To ISA", amount: 500, category: nil, kind: "investment_contribution")
+
+    get root_path
+    assert_response :ok
+
+    data = JSON.parse(css_select("[data-controller='sankey-chart']").first["data-sankey-chart-data-value"])
+    nodes = data.fetch("nodes")
+    index = nodes.each_with_index.to_h { |node, i| [ node.fetch("id"), i ] }
+    links = data.fetch("links")
+    center = index.fetch("cash_flow_node")
+
+    assert_not index.key?("surplus_node")
+    deficit = nodes[index.fetch("deficit_node")]
+    assert_equal I18n.t("pages.dashboard.cashflow_preview.node_labels.deficit"), deficit.fetch("name")
+    inflow = links.select { |link| link.fetch("target") == center }.sum { |link| link.fetch("value") }
+    outflow = links.select { |link| link.fetch("source") == center }.sum { |link| link.fetch("value") }
+    assert_in_delta outflow, inflow, 0.01, "the Cash Flow node must balance"
+    assert links.any? { |link| link.fetch("source") == index.fetch("deficit_node") && link.fetch("target") == center },
+      "the deficit flows into Cash Flow"
+    assert_operator deficit.fetch("value"), :>=, 200.0, "at least the 200 by which this month's new outflows exceed the payday"
+    capacity = nodes[center].fetch("value")
+    assert_in_delta (500 / capacity * 100).round(1), nodes[index.fetch("invested_node")].fetch("percentage"), 0.05,
+      "invested is a share of the Cash Flow node, which outflows size when they exceed income"
+  end
+
   test "dashboard sankey nodes carry a stable filter_value, including opposite-direction subcategories" do
     parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
     subcategory = @family.categories.create!(name: "Rebate Program", parent: parent_category, color: "#33FF57")
@@ -623,6 +673,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dashboard spending trend widget accumulates the selected month against the previous one" do
+    # A top period of exactly the previous month averages that one month, so
+    # the comparison is its own curve.
     account = @family.accounts.create!(name: "Spending Trend Test Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
     # A fully past month: fixture transactions are dated relative to today and
     # would otherwise leak into the expected totals.
@@ -633,7 +685,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: account, name: "Selected month again", amount: 25, date: selected_month + 1.day)
     create_transaction(account: account, name: "Previous month", amount: 200, date: previous_month)
 
-    get root_path, params: { spending_month: selected_month.iso8601 }
+    get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(previous_month) }
 
     assert_response :ok
     chart = spending_trend_chart_data
@@ -684,7 +736,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: account, name: "Spend", amount: 10, date: selected_month)
     create_transaction(account: account, name: "Prior spend", amount: 10, date: previous_month)
 
-    get root_path, params: { spending_month: selected_month.iso8601 }
+    get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(previous_month) }
 
     assert_response :ok
     chart = spending_trend_chart_data
@@ -709,7 +761,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: account, name: "Jan extra day", amount: 40, date: Date.new(2026, 1, 31))
     create_transaction(account: account, name: "Feb spend", amount: 25, date: Date.new(2026, 2, 10))
 
-    get root_path, params: { spending_month: selected_month.iso8601 }
+    get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(Date.new(2026, 1, 1)) }
 
     assert_response :ok
     chart = spending_trend_chart_data
@@ -725,8 +777,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       .sum { |row| row.total.to_d }.to_f.round(2)
     assert_equal 140.0, expected_total # sanity: no fixture transactions leaked into January
     assert_equal expected_total, previous.last.fetch("value")
-    assert_equal "2026-01-31", previous.last.fetch("date")
-    assert_equal I18n.l(Date.new(2026, 1, 31), format: :short), previous.last.fetch("date_formatted")
+    # Averaged points sit on the selected month's axis, so they carry its labels.
+    assert_equal I18n.l(Date.new(2026, 2, 28), format: :short), previous.last.fetch("date_formatted")
     assert_equal 25.0, chart.fetch("current").last.fetch("value")
 
     labels = chart.fetch("axis_labels")
@@ -743,7 +795,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: account, name: "May extra day", amount: 60, date: Date.new(2026, 5, 31))
     create_transaction(account: account, name: "Jun spend", amount: 15, date: Date.new(2026, 6, 5))
 
-    get root_path, params: { spending_month: selected_month.iso8601 }
+    get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(Date.new(2026, 5, 1)) }
 
     assert_response :ok
     chart = spending_trend_chart_data
@@ -758,21 +810,24 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal (1..30).map { |d| I18n.l(Date.new(2026, 6, d), format: :short) }, labels
   end
 
-  test "dashboard spending trend names the compared month in the comparison header" do
+  test "dashboard spending trend names the averaged period in the comparison header" do
     account = @family.accounts.create!(name: "Spending Trend Label Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
     selected_month = 2.months.ago.beginning_of_month.to_date
-    previous_month = 3.months.ago.beginning_of_month.to_date
     create_transaction(account: account, name: "Spend", amount: 10, date: selected_month)
 
-    get root_path, params: { spending_month: selected_month.iso8601 }
+    get root_path, params: { spending_month: selected_month.iso8601, period: "last_90_days" }
 
     assert_response :ok
-    # The real month name replaces the generic "Previous month" label, which
-    # truncated on mobile ("Previous mon…").
-    expected_label = I18n.l(previous_month, format: :month_year).capitalize
-    assert_select "#spending-trend-section p", text: expected_label
+    expected_label = I18n.t("pages.dashboard.spending_trend.average_label", period: Period.from_key("last_90_days").label)
+    assert_select "#spending-trend-section p span", text: expected_label
     chart_element = css_select("[data-controller='spending-chart']").first
     assert_equal expected_label, chart_element["data-spending-chart-previous-label-value"]
+
+    # A custom range (e.g. drag-selected on a chart) is named by its dates.
+    range = Period.custom(start_date: 4.months.ago.to_date, end_date: 3.months.ago.to_date)
+    get root_path, params: { spending_month: selected_month.iso8601, start_date: range.start_date.iso8601, end_date: range.end_date.iso8601 }
+    assert_select "#spending-trend-section p span",
+      text: I18n.t("pages.dashboard.spending_trend.average_label", period: range.label_range)
   end
 
   test "dashboard spending trend renders a compact date range for mobile" do
@@ -817,7 +872,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       create_transaction(account: account, name: "Prev late", amount: 999, date: previous_month.end_of_month)
       create_transaction(account: account, name: "Current", amount: 7, date: Date.current)
 
-      get root_path, params: { spending_month: Date.current.beginning_of_month.iso8601 }
+      get root_path, params: { spending_month: Date.current.beginning_of_month.iso8601, **month_period_params(previous_month) }
       assert_response :ok
 
       chart = spending_trend_chart_data
@@ -843,8 +898,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     travel_to Date.current.beginning_of_month + 14.days do
       account = @family.accounts.create!(name: "Spending Trend Label Days Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
       create_transaction(account: account, name: "Spend", amount: 10, date: Date.current)
+      previous_month = Date.current.beginning_of_month - 1.month
 
-      get root_path, params: { spending_month: Date.current.beginning_of_month.iso8601 }
+      get root_path, params: { spending_month: Date.current.beginning_of_month.iso8601, **month_period_params(previous_month) }
       assert_response :ok
 
       assert_select "#spending-trend-section span",
@@ -864,13 +920,13 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       create_transaction(account: account, name: "Prev extra day", amount: 999, date: previous_month.end_of_month)
       create_transaction(account: account, name: "Current", amount: 7, date: Date.current)
 
-      get root_path, params: { spending_month: selected_month.iso8601 }
+      get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(previous_month) }
       assert_response :ok
 
       previous_series = spending_trend_chart_data.fetch("previous")
       _current_total, previous_total = spending_trend_header_totals
 
-      assert_equal previous_month.end_of_month.iso8601, previous_series.last.fetch("date")
+      assert_equal 1110.0, previous_series.last.fetch("value")
       assert_equal money_text(111), previous_total
       refute_equal money_text(previous_series.last.fetch("value")), previous_total
       assert_select "#spending-trend-section span",
@@ -887,7 +943,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: account, name: "Previous early", amount: 111, date: previous_month)
     create_transaction(account: account, name: "Previous late", amount: 999, date: previous_month.end_of_month)
 
-    get root_path, params: { spending_month: selected_month.iso8601 }
+    get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(previous_month) }
     assert_response :ok
 
     previous_series = spending_trend_chart_data.fetch("previous")
@@ -913,7 +969,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: account, name: "Previous early", amount: 111, date: previous_month)
     create_transaction(account: account, name: "Previous last day", amount: 999, date: previous_month.end_of_month)
 
-    get root_path, params: { spending_month: selected_month.iso8601 }
+    get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(previous_month) }
     assert_response :ok
 
     previous_series = spending_trend_chart_data.fetch("previous")
@@ -921,7 +977,6 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     # Both months are over, so both are compared whole - the selected month
     # being shorter must not truncate the previous month's total.
-    assert_equal previous_month.end_of_month.iso8601, previous_series.last.fetch("date")
     assert_equal 1110.0, previous_series.last.fetch("value")
     assert_equal money_text(previous_series.last.fetch("value")), previous_total
     assert_select "#spending-trend-section span",
@@ -946,7 +1001,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       assert_operator Date.current.day, :>, previous_month.end_of_month.day
       assert_operator Date.current, :<, selected_month.end_of_month
 
-      get root_path, params: { spending_month: selected_month.iso8601 }
+      get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(previous_month) }
       assert_response :ok
 
       previous_series = spending_trend_chart_data.fetch("previous")
@@ -960,6 +1015,84 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "dashboard spending trend compares against an average month over the dashboard period" do
+    account = @family.accounts.create!(name: "Spending Trend Average Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    create_transaction(account: account, name: "Jun 1", amount: 100, date: Date.new(2026, 6, 1))
+    create_transaction(account: account, name: "Jul 1", amount: 300, date: Date.new(2026, 7, 1))
+    create_transaction(account: account, name: "Jul 31", amount: 50, date: Date.new(2026, 7, 31))
+    create_transaction(account: account, name: "Aug 2", amount: 10, date: Date.new(2026, 8, 2))
+
+    get root_path, params: { spending_month: "2026-08-01", start_date: "2026-06-01", end_date: "2026-07-31" }
+    assert_response :ok
+
+    previous = spending_trend_chart_data.fetch("previous")
+    # Day 1 averages June's and July's day 1; day 31 exists only in July, so
+    # it averages July alone.
+    assert_equal 200.0, previous.first.fetch("value")
+    assert_equal 200.0, previous.fetch(29).fetch("value")
+    assert_equal 250.0, previous.last.fetch("value")
+    assert_equal [ money_text(10), money_text(250) ], spending_trend_header_totals
+  end
+
+  test "dashboard spending trend leaves the last axis day blank when the period only covers later days" do
+    account = @family.accounts.create!(name: "Spending Trend Late Days Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    create_transaction(account: account, name: "Feb spend", amount: 10, date: Date.new(2026, 2, 3))
+    create_transaction(account: account, name: "Mar 31", amount: 70, date: Date.new(2026, 3, 31))
+
+    # A 28-day axis against a period of only March 30-31: nothing to draw.
+    get root_path, params: { spending_month: "2026-02-01", start_date: "2026-03-30", end_date: "2026-03-31" }
+    assert_response :ok
+
+    previous = spending_trend_chart_data.fetch("previous")
+    assert_equal 28, previous.size
+    assert previous.all? { |point| point["value"].nil? }
+  end
+
+  test "dashboard spending trend lines match when the dashboard period is month to date" do
+    travel_to Date.current.beginning_of_month + 14.days do
+      account = @family.accounts.create!(name: "Spending Trend MTD Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+      create_transaction(account: account, name: "Early", amount: 20, date: Date.current.beginning_of_month)
+      create_transaction(account: account, name: "Today", amount: 5, date: Date.current)
+
+      get root_path, params: { spending_month: Date.current.beginning_of_month.iso8601, period: "current_month" }
+      assert_response :ok
+
+      chart = spending_trend_chart_data
+      assert_equal chart.fetch("current").map { |point| point.fetch("value") }, chart.fetch("previous").map { |point| point.fetch("value") }
+      assert_equal money_text(0), spending_trend_header_delta
+    end
+  end
+
+  test "dashboard spending trend truncates the average to the days the dashboard period reaches" do
+    # YTD in January: only days 1 to today exist to average.
+    travel_to Date.new(2027, 1, 11) do
+      account = @family.accounts.create!(name: "Spending Trend YTD Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+      create_transaction(account: account, name: "Spend", amount: 30, date: Date.new(2027, 1, 3))
+
+      get root_path, params: { spending_month: "2027-01-01", period: "current_year" }
+      assert_response :ok
+
+      previous = spending_trend_chart_data.fetch("previous")
+      assert_equal 11, previous.size
+      assert_equal 30.0, previous.last.fetch("value")
+    end
+  end
+
+  test "dashboard spending trend leaves days outside a short dashboard period blank" do
+    travel_to Date.current.beginning_of_month + 14.days do
+      account = @family.accounts.create!(name: "Spending Trend 7D Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+      create_transaction(account: account, name: "Spend", amount: 12, date: Date.current)
+
+      get root_path, params: { spending_month: Date.current.beginning_of_month.iso8601, period: "last_7_days" }
+      assert_response :ok
+
+      previous = spending_trend_chart_data.fetch("previous")
+      period_days = Period.from_key("last_7_days").date_range.map(&:day)
+      assert_equal period_days.sort, previous.reject { |point| point["value"].nil? }.map { |point| point.fetch("day") }
+      assert_nil previous.first.fetch("value")
+    end
+  end
+
   test "dashboard spending trend category filter narrows both months and the header totals" do
     account, selected_month, previous_month = spending_trend_filter_setup
     food = @family.categories.create!(name: "Spending Filter Food")
@@ -970,7 +1103,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: account, name: "Food before", amount: 20, date: previous_month, category: food)
     create_transaction(account: account, name: "Rent before", amount: 500, date: previous_month + 1.day, category: rent)
 
-    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: [ food.id ] }
+    get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(previous_month), spending_category_ids: [ food.id ] }
     assert_response :ok
 
     chart = spending_trend_chart_data
@@ -1015,7 +1148,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: account, name: "No category", amount: 5, date: selected_month)
     create_transaction(account: account, name: "Paycheck", amount: -900, date: selected_month, category: salary)
 
-    get root_path, params: { spending_month: selected_month.iso8601 }
+    get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(previous_month) }
     assert_response :ok
 
     offered = spending_trend_category_values
@@ -1038,16 +1171,16 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: account, name: "Food", amount: 30, date: selected_month, category: food)
     create_transaction(account: account, name: "No category", amount: 5, date: previous_month)
 
-    get root_path, params: { spending_month: selected_month.iso8601 }
+    get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(previous_month) }
     unfiltered = spending_trend_chart_data
     every_option = spending_trend_category_values
 
-    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: every_option }
+    get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(previous_month), spending_category_ids: every_option }
 
     assert_equal unfiltered, spending_trend_chart_data
     assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.filter_categories_all")
     # Nothing is pinned, so another month's categories aren't left out.
-    assert_select "#spending-trend-section a[href='#{root_path(spending_month: (selected_month - 1.month).iso8601)}']"
+    assert_select "#spending-trend-section a[href='#{root_path(**month_period_params(previous_month), spending_month: (selected_month - 1.month).iso8601)}']"
   end
 
   test "dashboard spending trend filters uncategorized spending" do
@@ -1129,7 +1262,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: account, name: "Food", amount: 30, date: selected_month, category: food)
     create_transaction(account: account, name: "No category", amount: 5, date: previous_month)
 
-    get root_path, params: { spending_month: selected_month.iso8601, spending_category_ids: [ food.id, Category::UNCATEGORIZED_FILTER_VALUE ] }
+    get root_path, params: { spending_month: selected_month.iso8601, **month_period_params(previous_month), spending_category_ids: [ food.id, Category::UNCATEGORIZED_FILTER_VALUE ] }
     assert_response :ok
 
     # Every category with spending is picked, which is the unfiltered state,
@@ -1168,10 +1301,11 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     create_transaction(account: account, name: "No category", amount: 5, date: previous_month)
 
     patch dashboard_section_hidden_path("spending_trend"), params: {
-      hidden: true, spending_month: selected_month.iso8601, spending_category_ids: [ food.id, Category::UNCATEGORIZED_FILTER_VALUE ]
+      hidden: true, spending_month: selected_month.iso8601, **month_period_params(previous_month),
+      spending_category_ids: [ food.id, Category::UNCATEGORIZED_FILTER_VALUE ]
     }
 
-    assert_redirected_to root_path(spending_month: selected_month.iso8601, customize: true, hidden_section: "spending_trend")
+    assert_redirected_to root_path(spending_month: selected_month.iso8601, **month_period_params(previous_month), customize: true, hidden_section: "spending_trend")
   end
 
   private
@@ -1185,6 +1319,12 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     def dashboard_link_params(selector)
       Rack::Utils.parse_nested_query(URI.parse(css_select(selector).first["href"]).query)
+    end
+
+    # A custom dashboard period covering exactly one month, whose average
+    # month is that month's own curve.
+    def month_period_params(month)
+      { start_date: month.beginning_of_month.iso8601, end_date: month.end_of_month.iso8601 }
     end
 
     def spending_trend_category_values
