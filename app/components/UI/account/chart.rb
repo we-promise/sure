@@ -180,25 +180,13 @@ class UI::Account::Chart < ApplicationComponent
   # difference as a percentage of net contributions. Rounded as the value
   # line's own points are, so the tooltip's three figures agree.
   def net_contributions_comparison
-    values_by_date = series.values.index_by(&:date)
+    @net_contributions_comparison ||= build_net_contributions_comparison
+  end
 
-    points = account.balance_series(period: period, view: :net_contributions).values.filter_map do |point|
-      value_point = values_by_date[point.date]
-      next unless value_point
-
-      contributions = point.value.for_display
-      {
-        date: point.date,
-        value: contributions,
-        difference: Trend.new(current: value_point.value.for_display, previous: contributions)
-      }
-    end
-
-    {
-      label: I18n.t("UI.account.chart.net_contributions.label"),
-      difference_label: I18n.t("UI.account.chart.net_contributions.difference"),
-      values: points
-    }
+  # The legend names a dashed line, so it shows only when there is one to
+  # draw: the controller skips the line when the comparison has no points.
+  def show_net_contributions_legend?
+    show_net_contributions? && series.any? && net_contributions_comparison[:values].any?
   end
 
   # A flow the line counts could not be valued (no exchange rate, or a
@@ -263,6 +251,28 @@ class UI::Account::Chart < ApplicationComponent
   end
 
   private
+    def build_net_contributions_comparison
+      values_by_date = series.values.index_by(&:date)
+
+      points = account.balance_series(period: period, view: :net_contributions).values.filter_map do |point|
+        value_point = values_by_date[point.date]
+        next unless value_point
+
+        contributions = point.value.for_display
+        {
+          date: point.date,
+          value: contributions,
+          difference: Trend.new(current: value_point.value.for_display, previous: contributions)
+        }
+      end
+
+      {
+        label: I18n.t("UI.account.chart.net_contributions.label"),
+        difference_label: I18n.t("UI.account.chart.net_contributions.difference"),
+        values: points
+      }
+    end
+
     # Prefixes positive gains with "+"; other views keep plain Money formatting.
     def signed_format(money)
       return money.format unless view == "gains" && money.amount.positive?
