@@ -1119,6 +1119,21 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
                  "a suppressed day contributes nothing, not the phantom gain"
   end
 
+  # Suppressed for a journal is told apart from suppressed for a denominator,
+  # because only the first leaves a flow out of the sums.
+  test "a day suppressed for an unvalued journal says so, and one suppressed for its denominator does not" do
+    lay_balance account: @account, date: @day_one, opening: 0, closing: 0
+    lay_balance account: @account, date: @day_two, opening: 0, closing: 500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+
+    first, second = daily_returns.rows
+
+    assert first.suppressed
+    assert_not first.unvalued_journal, "an empty opening is a denominator, not a journal"
+    assert second.suppressed
+    assert second.unvalued_journal
+  end
+
   test "a journal with no holding row at all suppresses the day" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
     lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500
