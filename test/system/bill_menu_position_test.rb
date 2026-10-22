@@ -27,7 +27,7 @@ class BillMenuPositionTest < ApplicationSystemTestCase
   end
 
   test "on a phone, the All bills menu opens directly against its button" do
-    page.driver.browser.manage.window.resize_to(375, 812)
+    page.current_window.resize_to(375, 812)
     button, menu = open_first_menu
 
     # The full-width branch sets left and width itself, so only the top comes
