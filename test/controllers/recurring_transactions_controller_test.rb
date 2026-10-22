@@ -600,6 +600,34 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil @recurring_transaction.anchor_date
   end
 
+  # The bill form moves a due day through the frequency picker, which rewrites
+  # the rule and regenerates on save. Two moves in a row (27, 24, 22) must
+  # leave the paid October cycle with its one occurrence.
+  test "moving a paid bill's due day twice keeps its cycle to one occurrence" do
+    travel_to Date.new(2026, 10, 28) do
+      sign_in @user
+      october = Date.new(2026, 10, 1)..Date.new(2026, 10, 31)
+
+      patch recurring_transaction_url(@recurring_transaction),
+            params: { recurring_transaction: { frequency_preset: "monthly", frequency_day_of_month: "27" } }
+      paid = @recurring_transaction.recurring_occurrences.find_by!(due_on: Date.new(2026, 10, 27))
+      paid.allocations.create!(allocated_amount: 5, currency: "USD", source: "user_created")
+
+      [ 24, 22 ].each do |day|
+        patch recurring_transaction_url(@recurring_transaction),
+              params: { recurring_transaction: { frequency_preset: "monthly", frequency_day_of_month: day.to_s } }
+
+        assert_redirected_to recurring_transactions_url
+        assert_equal [ paid.id ], @recurring_transaction.recurring_occurrences.where(due_on: october).pluck(:id),
+                     "moving the due day to the #{day.ordinalize} adds no second October occurrence"
+        assert_includes @recurring_transaction.recurring_occurrences.pluck(:due_on), Date.new(2026, 11, day)
+      end
+
+      assert_equal 22, @recurring_transaction.reload.expected_day_of_month
+      assert_not_includes @recurring_transaction.recurring_occurrences.pluck(:due_on), Date.new(2026, 11, 24)
+    end
+  end
+
   test "update with an unchanged frequency does not rewrite the rules" do
     patch recurring_transaction_url(@recurring_transaction),
           params: { recurring_transaction: { frequency_preset: "weekly", frequency_weekday: "3" } }

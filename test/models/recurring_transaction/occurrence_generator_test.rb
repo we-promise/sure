@@ -195,4 +195,46 @@ class RecurringTransaction::OccurrenceGeneratorTest < ActiveSupport::TestCase
       assert_includes dues, Date.new(2026, 11, 5)
     end
   end
+
+  # #4300 is reached by a hand edit of the due day too, and the reporter moved
+  # it twice (27, then 24, then 22). The second edit must not resurrect a row
+  # beside the paid cycle either, and the later cycles follow the latest day.
+  # update! of the column is the API's edit; the bill form's is in the
+  # controller test.
+  test "two successive due-day edits keep a paid cycle to one occurrence" do
+    travel_to Date.new(2026, 10, 28) do
+      @series.update!(expected_day_of_month: 27)
+      paid = @series.recurring_occurrences.reload.find_by!(due_on: Date.new(2026, 10, 27))
+      paid.allocations.create!(allocated_amount: 5, currency: "USD", source: "user_created")
+      october = Date.new(2026, 10, 1)..Date.new(2026, 10, 31)
+
+      @series.update!(expected_day_of_month: 24)
+      assert_equal [ paid.id ], @series.recurring_occurrences.reload.where(due_on: october).pluck(:id),
+                   "the first edit adds no Oct 24 row beside the paid Oct 27 one"
+      assert_includes @series.recurring_occurrences.pluck(:due_on), Date.new(2026, 11, 24)
+
+      @series.update!(expected_day_of_month: 22)
+      assert_equal [ paid.id ], @series.recurring_occurrences.reload.where(due_on: october).pluck(:id),
+                   "the second edit adds no Oct 22 or Oct 24 row beside the paid Oct 27 one"
+      dues = @series.recurring_occurrences.pluck(:due_on)
+      assert_includes dues, Date.new(2026, 11, 22)
+      assert_not_includes dues, Date.new(2026, 11, 24), "the first edit's future rows are rebuilt on the new day"
+    end
+  end
+
+  test "two successive due-day edits keep an unpaid past-due cycle to one occurrence" do
+    travel_to Date.new(2026, 10, 28) do
+      @series.update!(expected_day_of_month: 27)
+      past_due = @series.recurring_occurrences.reload.find_by!(due_on: Date.new(2026, 10, 27))
+      october = Date.new(2026, 10, 1)..Date.new(2026, 10, 31)
+
+      @series.update!(expected_day_of_month: 24)
+      @series.update!(expected_day_of_month: 22)
+
+      assert_equal [ past_due.id ], @series.recurring_occurrences.reload.where(due_on: october).pluck(:id)
+      dues = @series.recurring_occurrences.pluck(:due_on)
+      assert_includes dues, Date.new(2026, 11, 22)
+      assert_not_includes dues, Date.new(2026, 11, 24)
+    end
+  end
 end
