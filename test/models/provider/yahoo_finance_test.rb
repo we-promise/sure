@@ -383,6 +383,33 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   #      Exchange Rate Tests
   # ================================
 
+  test "fetch_exchange_rates rejects a quote Yahoo gives no currency for" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("GELRUB=X", anything)
+             .returns("chart" => { "error" => { "code" => "Not Found" } })
+    # Live on that date: GEL per 100 RUB, with no currency.
+    @provider.stubs(:fetch_authenticated_chart).with("RUBGEL=X", anything).returns(fx_chart(date, nil, 3.1481))
+
+    response = @provider.fetch_exchange_rates(from: "GEL", to: "RUB", start_date: date, end_date: date)
+
+    assert_not response.success?
+  end
+
+  test "fetch_exchange_rates takes a quote in the pair's currency as is and inverts the reverse quote" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("EURUSD=X", anything).returns(fx_chart(date, "USD", 1.12))
+    @provider.stubs(:fetch_authenticated_chart).with("USDEUR=X", anything)
+             .returns("chart" => { "error" => { "code" => "Not Found" } })
+
+    eur_usd = @provider.fetch_exchange_rates(from: "EUR", to: "USD", start_date: date, end_date: date)
+    usd_eur = @provider.fetch_exchange_rates(from: "USD", to: "EUR", start_date: date, end_date: date)
+
+    assert_in_delta 1.12, eur_usd.data.first.rate.to_f
+    assert_in_delta 1 / 1.12, usd_eur.data.first.rate.to_f, 1e-9
+  end
+
   test "fetch_exchange_rate returns 1.0 for same currency" do
     date = Date.parse("2024-01-15")
     response = @provider.fetch_exchange_rate(from: "USD", to: "USD", date: date)
@@ -1137,6 +1164,14 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
       auth_client = mock
       auth_client.expects(:get).times(responses.length).returns(*responses)
       provider.stubs(:health_auth_client).returns(auth_client)
+    end
+
+    def fx_chart(date, currency, close)
+      { "chart" => { "result" => [ {
+        "meta" => { "currency" => currency },
+        "timestamp" => [ date.to_time.utc.to_i ],
+        "indicators" => { "quote" => [ { "close" => [ close ] } ] }
+      } ] } }
     end
 
     def stub_health_chart_responses(*responses, provider: @provider)

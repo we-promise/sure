@@ -805,7 +805,7 @@ class Provider::YahooFinance < Provider
 
     def fetch_currency_pair_data(from, to, start_date, end_date)
       symbol = "#{from}#{to}=X"
-      fetch_chart_data(symbol, start_date, end_date) do |timestamp, close_rate|
+      fetch_chart_data(symbol, start_date, end_date, currency: to) do |timestamp, close_rate|
         Rate.new(
           date: Time.at(timestamp).utc.to_date,
           from: from,
@@ -817,7 +817,7 @@ class Provider::YahooFinance < Provider
 
     def fetch_inverse_currency_pair_data(from, to, start_date, end_date)
       symbol = "#{to}#{from}=X"
-      rates = fetch_chart_data(symbol, start_date, end_date) do |timestamp, close_rate|
+      rates = fetch_chart_data(symbol, start_date, end_date, currency: from) do |timestamp, close_rate|
         Rate.new(
           date: Time.at(timestamp).utc.to_date,
           from: from,
@@ -874,7 +874,9 @@ class Provider::YahooFinance < Provider
       data
     end
 
-    def fetch_chart_data(symbol, start_date, end_date, &block)
+    # `currency` is what the quote must be in. Yahoo leaves it blank on some
+    # scaled crosses: RUBGEL=X is GEL per 100 RUB, a 100x error once inverted.
+    def fetch_chart_data(symbol, start_date, end_date, currency:, &block)
       period1 = start_date.to_time.utc.to_i
       period2 = end_date.end_of_day.to_time.utc.to_i
 
@@ -894,6 +896,7 @@ class Provider::YahooFinance < Provider
 
         chart_data = data.dig("chart", "result", 0)
         return nil unless chart_data
+        return nil unless chart_data.dig("meta", "currency") == currency
 
         timestamps = chart_data.dig("timestamp") || []
         quotes = chart_data.dig("indicators", "quote", 0) || {}
