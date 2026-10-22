@@ -34,13 +34,20 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
     def description
       <<~INSTRUCTIONS
         Prepares a CSV of investment trades (buys and sells) from a broker for import,
-        and stops before anything is imported. Pass the CSV text as csv_content.
+        and stops before anything is imported. Pass the CSV text as csv_content,
+        exactly as the user gave it: do not retype, reorder or drop any line.
 
         It works out which column holds the date, ticker, quantity, price and, when
         present, currency, exchange MIC, name and account, detects the date format,
         and checks every row. The result lists the mapping it chose, the rows that
         will not import and why, and a sample of the parsed rows. Nothing is written
         to the user's accounts: the import is left pending for the user to review.
+
+        When date_format_ambiguous is true, every date in the file reads under more
+        than one format (for example 05/03/2026 as 5 March or 3 May). Ask the user
+        which is right before they publish, and call again with that date_format if
+        it is one of date_format_alternatives. Ask the user to check rows_count
+        against the number of trades in their file.
 
         Pass column_mapping to correct a column the detection got wrong, using the
         CSV's own header names. Positive quantities are buys and negative are sells
@@ -96,11 +103,14 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
 
     # One transaction, so a refusal raised while the rows are generated (the
     # import's own header check, for one) leaves no pending import behind.
+    date_format = params["date_format"].presence || detect_date_format(parsed, mapping["date"])
+    date_format_alternatives = params["date_format"].present? ? [] : other_readings(parsed, mapping["date"], date_format)
+
     import = Import.transaction do
       family.imports.create!(
         type: "TradeImport",
         account: account,
-        date_format: params["date_format"].presence || detect_date_format(parsed, mapping["date"]),
+        date_format: date_format,
         number_format: params["number_format"].presence,
         signage_convention: params["signage_convention"].presence || "inflows_positive",
         col_sep: col_sep,
@@ -112,7 +122,7 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
       end
     end
 
-    summary(import, mapping, headers)
+    summary(import, mapping, headers, date_format_alternatives)
   rescue ActiveRecord::RecordInvalid => e
     error("import_invalid", e.record.errors.full_messages.to_sentence)
   rescue CSV::MalformedCSVError => e
@@ -152,7 +162,7 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
       mapping
     end
 
-    def summary(import, mapping, headers)
+    def summary(import, mapping, headers, date_format_alternatives)
       rows = import.rows.ordered.to_a
       invalid = rows.reject(&:valid?)
 
@@ -163,6 +173,8 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
         column_mapping: mapping,
         unmapped_headers: headers - mapping.values,
         date_format: import.date_format,
+        date_format_ambiguous: date_format_alternatives.any?,
+        date_format_alternatives: date_format_alternatives,
         number_format: import.number_format,
         signage_convention: import.signage_convention,
         rows_count: rows.size,
@@ -189,8 +201,43 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
     end
 
     def detect_date_format(parsed, date_header)
-      samples = parsed.first(50).map { |row| row[date_header] }
-      Import.detect_date_format(samples, candidates: Family::DATE_FORMATS.map(&:last) + Import::CSV_ONLY_DATE_FORMATS.map(&:last), fallback: family.date_format)
+      Import.detect_date_format(date_samples(parsed, date_header), candidates: date_format_candidates, fallback: family.date_format)
+    end
+
+    # The other formats that read every sample date, as different dates from
+    # the chosen format (so %e/%m/%Y beside %d/%m/%Y is not an alternative).
+    # Import.detect_date_format breaks a tie by candidate order, which is
+    # a guess when, say, every day in the file is 12 or under.
+    def other_readings(parsed, date_header, chosen)
+      samples = date_samples(parsed, date_header).map(&:to_s).compact_blank.uniq
+      chosen_dates = read_all(samples, chosen)
+      return [] if samples.empty? || chosen_dates.nil?
+
+      date_format_candidates.each_with_object({}) do |format, by_dates|
+        dates = read_all(samples, format)
+        by_dates[dates] ||= format if dates && dates != chosen_dates
+      end.values
+    end
+
+    # Date.strptime accepts trailing text (05/03/2026 under %d/%m/%y is
+    # 5 March 2020), so a reading must use the whole sample.
+    def read_all(samples, format)
+      samples.map do |sample|
+        parts = Date._strptime(sample, format)
+        return nil if parts.nil? || parts.key?(:leftover)
+
+        Date.strptime(sample, format)
+      end
+    rescue Date::Error, ArgumentError
+      nil
+    end
+
+    def date_samples(parsed, date_header)
+      parsed.first(50).map { |row| row[date_header] }
+    end
+
+    def date_format_candidates
+      Family::DATE_FORMATS.map(&:last) + Import::CSV_ONLY_DATE_FORMATS.map(&:last)
     end
 
     def error(key, message, **details)

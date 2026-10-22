@@ -55,6 +55,37 @@ class Assistant::Function::PrepareTradeImportTest < ActiveSupport::TestCase
     assert_equal "%d/%m/%Y", result[:date_format]
   end
 
+  test "a US-dated file is detected as month first" do
+    result = @fn.call("csv_content" => BROKER_CSV.sub("05/03/2026", "03/25/2026"), "account_id" => @account.id)
+
+    assert_equal "%m/%d/%Y", result[:date_format]
+    assert_equal false, result[:date_format_ambiguous]
+  end
+
+  # Every day in BROKER_CSV is 12 or under, so day first and month first
+  # both read every date, as different dates.
+  test "a file whose dates read both day first and month first says so" do
+    result = @fn.call("csv_content" => BROKER_CSV, "account_id" => @account.id)
+
+    assert_equal "%d/%m/%Y", result[:date_format]
+    assert_equal true, result[:date_format_ambiguous]
+    assert_equal [ "%m/%d/%Y" ], result[:date_format_alternatives]
+  end
+
+  test "a file with a day over 12 is not ambiguous" do
+    result = @fn.call("csv_content" => BROKER_CSV.sub("05/03/2026", "25/03/2026"), "account_id" => @account.id)
+
+    assert_equal false, result[:date_format_ambiguous]
+    assert_equal [], result[:date_format_alternatives]
+  end
+
+  test "a date format the caller passes is not reported as ambiguous" do
+    result = @fn.call("csv_content" => BROKER_CSV, "account_id" => @account.id, "date_format" => "%m/%d/%Y")
+
+    assert_equal "%m/%d/%Y", result[:date_format]
+    assert_equal false, result[:date_format_ambiguous]
+  end
+
   test "nothing reaches the user's accounts: no entry, trade or security is written" do
     assert_no_difference [ "Entry.count", "Trade.count", "Security.count" ] do
       assert_difference "Import.count", 1 do
