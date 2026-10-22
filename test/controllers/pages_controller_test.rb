@@ -1066,6 +1066,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   test "dashboard spending trend truncates the average to the days the dashboard period reaches" do
     # YTD in January: only days 1 to today exist to average.
     travel_to Date.new(2027, 1, 11) do
+      # The setup session was signed in at the real clock and counts as idle
+      # past Session::INACTIVITY_TIMEOUT on this date.
+      sign_in @user
       account = @family.accounts.create!(name: "Spending Trend YTD Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
       create_transaction(account: account, name: "Spend", amount: 30, date: Date.new(2027, 1, 3))
 
