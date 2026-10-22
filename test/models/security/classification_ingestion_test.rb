@@ -171,12 +171,35 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
     assert_equal "Technology", @security.sector, "sector is still carried through"
   end
 
+  # The security is classified first, so an empty answer that wrote nil over
+  # those values would show up as a change rather than nil landing on nil.
   test "a provider that returns no classification writes nothing" do
-    import(info)
+    @security.update_columns(sector: "Existing", industry: "Existing", asset_class: "fixed_income",
+                             asset_sub_class: nil, classification_source: "provider")
 
-    assert_nil @security.reload.sector
-    assert_nil @security.industry
-    assert_nil @security.asset_class
+    import(info, force: true)
+
+    assert_equal "Existing", @security.reload.sector
+    assert_equal "Existing", @security.industry
+    assert_equal "fixed_income", @security.asset_class
+    assert_equal "provider", @security.classification_source
+  end
+
+  # `update` runs Security's validations, and a row can hold a value the model
+  # now refuses (`region` has no check constraint). The stamp used to be written
+  # anyway, so the gate closed for good on an answer that was never stored.
+  test "an answer the security could not store is not recorded, so the next sync asks again" do
+    @security.update_columns(region: "atlantis")
+    provider = stub_provider(info(sector: "Technology"))
+    @security.stubs(:price_data_provider).returns(provider)
+
+    @security.import_provider_details(include_classification: true)
+
+    assert_nil @security.reload.sector, "precondition: the write was refused"
+    assert_nil @security.classification_fetched_at, "a refused write was recorded as an answer"
+
+    provider.expects(:fetch_security_info).once.returns(provider_success_response(info(sector: "Technology")))
+    @security.import_provider_details(include_classification: true)
   end
 
   # ---------------------------------------------------------- precedence
@@ -398,8 +421,8 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
       provider
     end
 
-    def import(data)
+    def import(data, force: false)
       @security.stubs(:price_data_provider).returns(stub_provider(data))
-      @security.import_provider_details(include_classification: true)
+      @security.import_provider_details(include_classification: true, clear_cache: force)
     end
 end

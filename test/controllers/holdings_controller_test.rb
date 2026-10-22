@@ -277,6 +277,16 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("holdings.sync_prices.success"), flash[:notice]
   end
 
+  # The one caller of import_provider_details that must not ask for a
+  # classification: a manual price refresh is not a classification sync.
+  test "sync_prices does not ask for a classification" do
+    Security.any_instance.stubs(:import_provider_prices).returns([ 31, nil ])
+    Security.any_instance.expects(:import_provider_details).with(Not(has_entry(include_classification: true))).once
+    Balance::Materializer.stubs(:new).returns(stub(materialize_balances: true))
+
+    post sync_prices_holding_path(@holding)
+  end
+
   test "sync_prices shows provider error inline when provider returns no prices" do
     Security.any_instance.stubs(:import_provider_prices).returns([ 0, "Yahoo Finance rate limit exceeded" ])
     Security.any_instance.stubs(:import_provider_details)

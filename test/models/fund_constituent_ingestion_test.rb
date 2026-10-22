@@ -113,6 +113,12 @@ class FundConstituentIngestionTest < ActiveSupport::TestCase
     fund = Security.create!(id: "00000000-0000-0000-0000-000000000001", ticker: "BADF", exchange_operating_mic: "XLON")
     stock = Security.create!(id: "ffffffff-ffff-ffff-ffff-ffffffffffff", ticker: "GOOD", exchange_operating_mic: "XNAS")
     assert_equal fund.id, Security.online.order(:id).first.id, "precondition: the fund is not first in the importer's loop"
+    # Holdings are only asked for securities an account holds.
+    [ fund, stock ].each do |security|
+      accounts(:investment).holdings.create!(
+        security: security, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD"
+      )
+    end
     assert_nil stock.name
 
     provider = capable_provider("provider")
