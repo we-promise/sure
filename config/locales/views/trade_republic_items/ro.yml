@@ -15,6 +15,7 @@ ro:
     trade_republic_item:
       syncing: "Se sincronizează"
       requires_update: "Este necesară reautentificarea"
+      session_expires_in: "Autentificarea expiră în %{time} (%{at})."
       error: "Eroare"
       synced: "Sincronizat acum %{time}. %{summary}."
       setup_accounts: "Configurează conturile"

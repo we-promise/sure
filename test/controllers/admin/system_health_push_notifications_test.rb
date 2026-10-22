@@ -12,7 +12,7 @@ class Admin::SystemHealthPushNotificationsTest < ActionDispatch::IntegrationTest
   test "button is disabled until this super admin registers a device" do
     get admin_system_health_url(tab: "background_jobs")
     assert_response :success
-    assert_select "button[role='tab']", count: 2
+    assert_select "button[role='tab']", count: 3
     assert_select "button[disabled][aria-describedby='push-notification-help']", text: "Send test push notification"
     assert_match "Enable push notifications in the Sure iOS app", response.body
 

@@ -1,5 +1,5 @@
 class GenerateInsightsJob < ApplicationJob
-  queue_as :ai_low_priority
+  queue_as :scheduled
   sidekiq_options lock: :until_executed, on_conflict: :log
 
   # Without args (cron): fans out one job per family.
@@ -16,7 +16,7 @@ class GenerateInsightsJob < ApplicationJob
     # Insights are a preview feature, so the nightly sweep only visits families
     # with an opted-in member. Unlike a job that moves existing data around,
     # this one manufactures data per family — seven generators over the income
-    # statement and balance sheet, plus paid LLM narration — so running it for
+    # statement and balance sheet — so running it for
     # families who can't see the result is pure waste. Scoped in SQL rather
     # than checked per family to keep the fan-out a single indexed query.
     def fan_out
@@ -49,7 +49,7 @@ class GenerateInsightsJob < ApplicationJob
       # Outside the lock on purpose: even a lock-skipped run re-broadcasts the
       # current state, so a subscribed /insights page (waiting on its manual
       # refresh) always gets its list and button restored.
-      broadcast_feed(family)
+      I18n.with_locale(family.locale) { broadcast_feed(family) }
       Array(notifiable_insights).each { |insight| DeliverInsightNotificationJob.enqueue_for(insight) }
     end
 
@@ -93,7 +93,7 @@ class GenerateInsightsJob < ApplicationJob
     end
 
     def upsert_insights(family, generated_insights)
-      writer = Insight::BodyWriter.new(family)
+      writer = Insight::BodyWriter.new
 
       generated_insights.filter_map do |generated|
         metadata = normalize_json(generated.metadata)
@@ -140,8 +140,8 @@ class GenerateInsightsJob < ApplicationJob
                            generated_at: Time.current, read_at: nil)
           existing
         else
-          # Same signal, same numbers: don't rewrite the body (avoids an LLM
-          # call) and don't undo the user's read/dismissed state. Facts still
+          # Same signal, same numbers: don't rewrite the body and don't undo
+          # the user's read/dismissed state. Facts still
           # refresh — they're display values (key figure, link labels), and
           # keeping them current is exactly why they're not part of the
           # material-change comparison.
