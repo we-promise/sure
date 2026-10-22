@@ -33,7 +33,7 @@
             <%= t("bills.detail.rule_aliases", names: hints[:aliases].to_sentence) %>
           </p>
         <% end %>
-        <% if hints[:detected_name].present? && hints[:detected_name] != series.display_name %>
+        <% if hints[:detected_name].present? && hints[:detected_name] != (series.merchant&.name.presence || series.name) %>
           <p class="text-xs text-secondary">
             <%= t("bills.detail.rule_detected", name: hints[:detected_name]) %>
           </p>
