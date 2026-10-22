@@ -533,7 +533,21 @@ class HoldingTest < ActiveSupport::TestCase
     # -22 + the moved row's 15, and -4000 + its 3240: both still negative.
     assert_equal BigDecimal("-7"), target.qty
     assert_equal BigDecimal("-760"), target.amount
+    # The calculators write amount = qty x price with a positive price, so a
+    # negative row's price is still amount / qty.
+    assert_in_delta BigDecimal("108.5714"), target.price, BigDecimal("0.0001")
     assert target.security_locked?
+  end
+
+  test "remap_security! gives a merged row that nets to zero a zero price" do
+    new_security = create_security("GOOGZERO", prices: [ { date: Date.current, price: 100.0 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 0, price: 100.0, amount: 0.0, currency: "USD")
+    target.update_columns(qty: -@amzn.qty, amount: -@amzn.amount)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    assert_equal [ 0, 0, 0 ], [ target.qty, target.amount, target.price ].map(&:to_i)
   end
 
   test "reset_security_to_provider! moves a negative-qty holding back without raising" do

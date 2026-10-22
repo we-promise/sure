@@ -180,7 +180,9 @@ class Holding < ApplicationRecord
           merge_attrs = {
             qty: merged_qty,
             amount: merged_amount,
-            price: merged_qty.positive? ? merged_amount / merged_qty : 0,
+            # amount / qty, as the calculators write amount = qty x price with
+            # a positive price; that holds for a negative merged row too.
+            price: merged_qty.zero? ? 0 : merged_amount / merged_qty,
             cost_basis: merged_cost_basis
           }
           merge_attrs[:external_id] ||= holding.external_id if existing.external_id.blank? && holding.external_id.present?
