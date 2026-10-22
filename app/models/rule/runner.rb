@@ -172,7 +172,14 @@ class Rule::Runner
         message: "Rule run failed: #{error_message}",
         source: self.class.name,
         family: rule.family,
-        metadata: { rule_id: rule.id, rule_name: rule.name, execution_type: execution_type, error_class: error.class.name, error_message: error.message }
+        metadata: {
+          rule_id: rule.id,
+          rule_name: rule.name,
+          execution_type: execution_type,
+          error_class: error.class.name,
+          error_message: error.message,
+          backtrace: Array(error.backtrace).first(10)
+        }
       )
 
       if rule_run

@@ -62,6 +62,16 @@ components:
                   category_id:
                     type: string
                     nullable: true
+                  merchant_id:
+                    type: string
+                    nullable: true
+                    description: Omitted or null, the child takes the parent's merchant
+                  tag_ids:
+                    type: array
+                    items:
+                      type: string
+                    nullable: true
+                    description: No tags when omitted
                   excluded:
                     type: boolean
                     nullable: true
@@ -9271,7 +9281,9 @@ paths:
       security:
       - apiKeyAuth: []
       description: Replaces the children of an existing split. The previous children
-        are destroyed, so anything set on them afterwards is not carried over.
+        are destroyed, so anything set on them afterwards is not carried over. Send
+        each child in full, including its merchant_id and tag_ids. A child without
+        a merchant_id takes the parent's merchant.
       parameters: []
       responses:
         '200':

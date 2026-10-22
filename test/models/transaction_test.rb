@@ -564,6 +564,26 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
   end
 
+  test "category_from finds categories still set by a given source" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Category from", balance: 0, currency: "USD", accountable: Depository.new)
+    coffee = family.categories.create!(name: "Coffee")
+    tea = family.categories.create!(name: "Tea")
+    ai_guess = create_transaction(account: account, name: "Guess").transaction
+    ai_guess.enrich_attribute(:category_id, coffee.id, source: "ai", metadata: { confidence: 0.9 })
+    changed = create_transaction(account: account, name: "Changed").transaction
+    changed.enrich_attribute(:category_id, coffee.id, source: "ai")
+    changed.update!(category: tea)
+    scope = family.transactions
+
+    assert_equal [ ai_guess.id ], scope.category_from("ai").pluck(:id)
+    assert_equal [ ai_guess.id ], scope.category_from("bayes", "ai").pluck(:id)
+    assert_empty scope.category_from("bayes").pluck(:id)
+    assert_empty scope.category_from("ai", since: 1.minute.from_now).pluck(:id)
+    assert_equal [ ai_guess.id ], scope.category_from("ai", metadata: { confidence: 0.9 }).pluck(:id)
+    assert_empty scope.category_from("ai", metadata: { confidence: 0.5 }).pluck(:id)
+  end
+
   private
     # Whether each SQL form of "is this transaction pending?" says it is.
     def sql_pending_answers(transaction)
