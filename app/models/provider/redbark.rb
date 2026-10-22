@@ -11,6 +11,8 @@ class Provider::Redbark
   # Server-side maximums for limit/offset pagination
   ACCOUNTS_PAGE_SIZE = 200
   TRANSACTIONS_PAGE_SIZE = 500
+  # The documented cap on `accountIds`, applied after server-side dedup.
+  ACCOUNT_DETAILS_BATCH_SIZE = 100
 
   class Error < StandardError
     attr_reader :error_type
@@ -65,6 +67,39 @@ class Provider::Redbark
         query: { accountIds: Array(account_ids).join(",") }
       )
       handle_response(response)[:data] || []
+    end
+  end
+
+  # Returns product details for the given account ids: the bank's own view of
+  # the product behind the account, including its rates (we-promise/sure#3891).
+  #
+  # Response items: { accountId, productName, depositRate, depositRates,
+  # lendingRate, lendingRates, fees, features, loanDetails }. Rates are decimal
+  # STRINGS expressed as fractions -- "0.0419" is 4.19% -- and carry no
+  # effective date, which is why a detected change is dated the day it was
+  # seen rather than a date the bank supplied.
+  #
+  # Batched at 100 ids, the documented cap, which the API applies AFTER
+  # deduplicating the list. The whole request fails on an id the key does not
+  # own (404) or an account of the wrong category (400), so callers filter
+  # first, the way `get_balances` does; an account the provider has no detail
+  # for is omitted from `data` rather than erroring.
+  #
+  # Responses may be served from a server-side cache for up to 15 minutes, so
+  # two syncs inside that window can legitimately return the same rate.
+  def get_account_details(account_ids:)
+    ids = Array(account_ids).compact.map(&:to_s).uniq
+    return [] if ids.empty?
+
+    ids.each_slice(ACCOUNT_DETAILS_BATCH_SIZE).flat_map do |batch|
+      with_retries("get_account_details") do
+        response = self.class.get(
+          "#{BASE_URL}/account-details",
+          headers: auth_headers,
+          query: { accountIds: batch.join(",") }
+        )
+        handle_response(response)[:data] || []
+      end
     end
   end
 
