@@ -180,7 +180,8 @@ class Holding < ApplicationRecord
           # rows priced differently can net to a qty and an amount of opposite
           # signs, where that ratio would be negative. The materializer prices
           # this row at the target security's own price for the date, so keep
-          # the target's price then.
+          # the target's price then. A merge that nets to zero units gets a
+          # zero price even if the amounts leave a remainder, as before.
           merged_price = if merged_qty.zero?
             0
           elsif (merged_amount.negative? && merged_qty.positive?) || (merged_amount.positive? && merged_qty.negative?)
@@ -208,8 +209,11 @@ class Holding < ApplicationRecord
           # The >= 0 validations guard user edits and must not veto the merge,
           # so write only these columns. update_columns skips updated_at,
           # which update! set and other readers rely on, so set it here.
-          existing.update_columns(merge_attrs.merge(updated_at: Time.current))
+          # Destroy the source row first: its external_id is under a unique
+          # index on (account_id, external_id) and is being moved onto
+          # existing.
           holding.destroy!
+          existing.update_columns(merge_attrs.merge(updated_at: Time.current))
         else
           # No collision: update to new security. Write only the columns this
           # remap owns, for the same reason as the merge above: a negative

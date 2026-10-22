@@ -452,6 +452,21 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal 0, @account.holdings.where(security: amzn_security).count
   end
 
+  # Provider holdings carry an external_id under a partial unique index on
+  # (account_id, external_id), so the merge must free it on the source row
+  # before writing it onto the target.
+  test "remap_security! merges a provider holding with an external_id into a calculated row on the same date" do
+    new_security = create_security("GOOGEXT", prices: [ { date: Date.current, price: 100.0 } ])
+    target = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: @amzn.currency)
+    assert_nil target.external_id
+    @amzn.update_columns(external_id: "simplefin-holding-amzn")
+
+    @amzn.remap_security!(new_security)
+
+    assert_equal "simplefin-holding-amzn", target.reload.external_id
+    assert_equal 1, @account.holdings.where(external_id: "simplefin-holding-amzn").count
+  end
+
   test "reset_security_to_provider! restores original security" do
     old_security = @amzn.security
     new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
