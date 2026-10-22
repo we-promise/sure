@@ -127,6 +127,41 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(BigDecimal("265")), @amzn.avg_cost
   end
 
+  # Holding#avg_cost is Money in the holding's own currency, which a provider
+  # can set to something other than the account's, so the replay converts the
+  # trades into that currency rather than the account's.
+  test "the fallback carries a foreign-currency holding's cost in its own currency" do
+    security = create_security("ASML", prices: [ { date: Date.current, price: 120 } ])
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 1.day.ago.to_date, rate: 1.5)
+    create_trade(security, account: @account, qty: 10, price: 100, date: 1.day.ago.to_date, currency: "EUR")
+    holding = @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 120,
+                                        amount: 1200, currency: "EUR", cost_basis: nil)
+
+    assert_equal Money.new(BigDecimal("100"), "EUR"), holding.avg_cost
+  end
+
+  test "the fallback converts a trade in the account's currency into the holding's" do
+    security = create_security("ASML", prices: [ { date: Date.current, price: 120 } ])
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: 1.day.ago.to_date, rate: 0.5)
+    create_trade(security, account: @account, qty: 10, price: 150, date: 1.day.ago.to_date, currency: "USD")
+    holding = @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 120,
+                                        amount: 1200, currency: "EUR", cost_basis: nil)
+
+    assert_equal Money.new(BigDecimal("75"), "EUR"), holding.avg_cost
+  end
+
+  # A rate a trade carries converts into the account's currency (IBKR's
+  # fx_rate_to_base), so it says nothing about a holding in another one.
+  test "the fallback does not apply a trade's own rate to a holding in another currency" do
+    security = create_security("ASML", prices: [ { date: Date.current, price: 120 } ])
+    entry = create_trade(security, account: @account, qty: 10, price: 100, date: 1.day.ago.to_date, currency: "GBP")
+    entry.entryable.update!(exchange_rate: 1.25)
+    holding = @account.holdings.create!(security: security, date: Date.current, qty: 10, price: 120,
+                                        amount: 1200, currency: "EUR", cost_basis: nil)
+
+    assert_nil holding.avg_cost
+  end
+
   test "the fallback ignores a rate string that is not a plain decimal" do
     entry = create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
 

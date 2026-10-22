@@ -387,14 +387,19 @@ class Holding < ApplicationRecord
     # [date, qty, unit cost, internal movement?, replayed?]. Both sets are a
     # prefix of that order, so the replayed rows lead and one query serves the
     # walk back to the opening position and the replay.
-    # Unit cost is in the account's currency and includes the fee on a
-    # purchase (Holding::TradeCalculatorHelpers#effective_trade_price); it is
-    # nil when a foreign trade has no usable rate for its day, which the
-    # tracker treats as an unknown cost until the position closes.
+    # Unit cost is in this holding's currency -- the one `avg_cost` is labelled
+    # with, and the account's for every holding the calculators write -- and
+    # includes the fee on a purchase
+    # (Holding::TradeCalculatorHelpers#effective_trade_price); it is nil when
+    # a foreign trade has no usable rate for its day, which the tracker
+    # treats as an unknown cost until the position closes.
     def avg_cost_trade_rows(through:, before:)
       # The rate a trade carries itself (extra["exchange_rate"], e.g. IBKR's
       # fx_rate_to_base) comes before the table's, as in the calculators and
-      # Balance::SyncCache; a trade in the account's own currency converts at 1.
+      # Balance::SyncCache; a trade in the holding's own currency converts at 1.
+      # That rate is into the account's currency, so it only applies to a
+      # holding in that currency; one a provider holds in another currency
+      # converts at the table's rate alone.
       # Trade#exchange_rate= stores a number, but a row written to `extra`
       # directly can hold the same rate as a string, which Trade's validation
       # and Money#exchange_to both accept -- so a plain decimal string counts
@@ -402,17 +407,22 @@ class Holding < ApplicationRecord
       # cast, so it cannot overflow numeric and fail the query. A rate of zero
       # or less converts nothing, so it counts as missing, as it does in
       # Money#exchange_to.
-      rate = <<~SQL.squish
-        COALESCE(
-          CASE jsonb_typeof(trades.extra->'exchange_rate')
-            WHEN 'number' THEN (trades.extra->>'exchange_rate')::numeric
-            WHEN 'string' THEN CASE WHEN trades.extra->>'exchange_rate' ~ '^[[:space:]]*[+-]?([0-9]{1,20}([.][0-9]{0,20})?|[.][0-9]{1,20})[[:space:]]*$'
-                                    THEN (trades.extra->>'exchange_rate')::numeric END
-          END,
-          exchange_rates.rate
-        )
-      SQL
-      foreign = ActiveRecord::Base.sanitize_sql_array([ "trades.currency <> ?", account.currency ])
+      rate =
+        if currency == account.currency
+          <<~SQL.squish
+            COALESCE(
+              CASE jsonb_typeof(trades.extra->'exchange_rate')
+                WHEN 'number' THEN (trades.extra->>'exchange_rate')::numeric
+                WHEN 'string' THEN CASE WHEN trades.extra->>'exchange_rate' ~ '^[[:space:]]*[+-]?([0-9]{1,20}([.][0-9]{0,20})?|[.][0-9]{1,20})[[:space:]]*$'
+                                        THEN (trades.extra->>'exchange_rate')::numeric END
+              END,
+              exchange_rates.rate
+            )
+          SQL
+        else
+          "exchange_rates.rate"
+        end
+      foreign = ActiveRecord::Base.sanitize_sql_array([ "trades.currency <> ?", currency ])
       factor = "CASE WHEN #{foreign} THEN CASE WHEN #{rate} > 0 THEN #{rate} END ELSE 1 END"
       unit_cost = "CASE WHEN trades.qty > 0 THEN (trades.price + COALESCE(trades.fee, 0) / trades.qty) * #{factor} END"
       internal_movement = ActiveRecord::Base.sanitize_sql_array([
@@ -435,7 +445,7 @@ class Holding < ApplicationRecord
             exchange_rates.date = entries.date AND
             exchange_rates.from_currency = trades.currency AND
             exchange_rates.to_currency = ?
-          )", account.currency
+          )", currency
         ]))
         .where(security_id: security_id)
         .where("(#{cutoff}) OR entries.date <= ?", date)

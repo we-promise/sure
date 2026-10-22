@@ -186,6 +186,24 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(300), gain.value.amount
   end
 
+  # A provider can hold a position in the security's currency rather than the
+  # account's, and the replayed cost is then in that currency too. 10 bought
+  # at 100 EUR and sold at 130 EUR is a 300 EUR gain; costing the units in
+  # USD (150 each at 1.5) but labelling them EUR reported a 200 EUR loss.
+  test "a closing sale of a position held in another currency realises its gain in that currency" do
+    account, security = cross_currency_account
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.new(2026, 3, 2), rate: 1.5)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100, currency: "EUR")
+    sell = create_trade(security, account: account, qty: -10, date: Date.new(2026, 3, 4), price: 130, currency: "EUR").entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 4), qty: 0, price: 0,
+                             amount: 0, currency: "EUR", cost_basis: nil)
+
+    gain = sell.realized_gain_loss
+
+    assert_equal Money.new(BigDecimal(1000), "EUR"), gain.previous
+    assert_equal Money.new(BigDecimal(300), "EUR"), gain.value
+  end
+
   # A split applies at the open of its ex-date, before that day's trades. 10
   # bought at 100 become 20 at 50 on a 2-for-1 split; all 20 sold that day at
   # 70 is 1,400 against 1,000, a 400 gain. Pricing the 20 units at the
