@@ -33,7 +33,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 5
+  CURRENT_BACKFILL_VERSION = 6
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -104,7 +104,7 @@ module ActiveRecordEncryptionConfig
     kraken_accounts: [ "KrakenAccount", %i[raw_payload raw_transactions_payload] ],
     onchain_wallet_accounts: [ "OnchainWalletAccount", %i[raw_payload raw_movements_payload] ],
     questrade_accounts: [ "QuestradeAccount", %i[raw_payload raw_holdings_payload raw_activities_payload raw_balances_payload] ],
-    redbark_accounts: [ "RedbarkAccount", %i[raw_payload raw_transactions_payload] ],
+    redbark_accounts: [ "RedbarkAccount", %i[raw_payload raw_transactions_payload raw_account_details_payload] ],
     sophtron_accounts: [ "SophtronAccount", %i[raw_payload raw_transactions_payload] ],
     trade_republic_accounts: [ "TradeRepublicAccount", %i[raw_positions_payload raw_timeline_payload] ],
     trading212_accounts: [ "Trading212Account", %i[raw_positions_payload raw_orders_payload raw_dividends_payload raw_transactions_payload] ],

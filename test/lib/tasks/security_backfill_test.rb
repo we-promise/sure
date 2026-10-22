@@ -203,7 +203,8 @@ class SecurityBackfillTest < ActiveSupport::TestCase
   # add its digest here.
   BACKFILL_MANIFEST_DIGESTS = {
     4 => "9630168637fae661a583b828adb447e990416c8eae8b5f12eeaf1dad428acfb2",
-    5 => "aef59eef15fde2bc5f8e12079235e86b586564755fa86f7459c7fd087c27ce71"
+    5 => "aef59eef15fde2bc5f8e12079235e86b586564755fa86f7459c7fd087c27ce71",
+    6 => "8a7848cc0f0f829ebf0c9a54d349640696bb4e24f7f1e1e4b8bd5827e6f1fdd1"
   }.freeze
 
   test "backfill manifest changes come with a CURRENT_BACKFILL_VERSION bump" do
