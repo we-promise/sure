@@ -29,7 +29,9 @@ module Family::AiPromptable
     categorizer_openai: -> { Provider::Openai::AutoCategorizer.new(nil, custom_provider: custom_openai_provider?).instructions },
     categorizer_anthropic: -> { Provider::Anthropic::AutoCategorizer.new(nil, model: "").instructions },
     merchant_openai: -> { Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: [], custom_provider: custom_openai_provider?).instructions },
-    merchant_anthropic: -> { Provider::Anthropic::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions }
+    merchant_anthropic: -> { Provider::Anthropic::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions },
+    # The visible first chat message of "Dig in with AI", not instructions.
+    insight_dig_in: -> { I18n.t("insights.dig_in.prompt") }
   }.freeze
 
   KEYS = DEFAULTS.keys.freeze
