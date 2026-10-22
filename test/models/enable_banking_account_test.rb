@@ -207,16 +207,23 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
   end
 
   test "does not propagate an iban to a linked account type without one" do
+    # Account#clear_unsupported_iban would drop the value on save anyway, so
+    # the IBAN alone can't tell whether the sync skipped the vehicle. A family
+    # account holding the same IBAN can: without the type check the sync runs
+    # its conflict check for the vehicle and logs a bogus support warning.
+    @family.accounts.create!(name: "Other account", balance: 0, currency: "USD", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
     linked_account = accounts(:vehicle)
     AccountProvider.create!(provider: @account, account: linked_account)
 
-    @account.upsert_enable_banking_snapshot!({
-      uid: "uid_uuid_123",
-      identification_hash: "hash_abc123",
-      currency: "EUR",
-      cash_account_type: "CACC",
-      iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
-    })
+    assert_no_difference [ "DebugLogEntry.count", -> { DataEnrichment.where(enrichable: linked_account).count } ] do
+      @account.upsert_enable_banking_snapshot!({
+        uid: "uid_uuid_123",
+        identification_hash: "hash_abc123",
+        currency: "USD",
+        cash_account_type: "CACC",
+        iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+      })
+    end
 
     assert_nil linked_account.reload.iban
   end
