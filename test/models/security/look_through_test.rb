@@ -116,6 +116,28 @@ class Security::LookThroughTest < ActiveSupport::TestCase
     assert_not @security.constituents.new(ticker: "SHORT", weight: -0.01).valid?
   end
 
+  # `weight` is numeric(9,6). A model that accepted 1000 would pass `valid?`
+  # and then raise at the INSERT, so the two must refuse the same values.
+  test "the model refuses a weight the column cannot hold, and accepts the largest it can" do
+    assert @security.constituents.new(ticker: "MAX", weight: BigDecimal("999.999999")).valid?
+    assert_not @security.constituents.new(ticker: "OVER", weight: 1000).valid?
+  end
+
+  test "a fund with no weighted rows reports a decimal nothing unlisted" do
+    assert_kind_of BigDecimal, Security::Constituent.fund_shares([]).unlisted
+  end
+
+  test "destroying a security removes its constituents in one statement" do
+    fund = Security.create!(ticker: "FUND2", name: "Fund")
+    3.times { |i| fund.constituents.create!(ticker: "T#{i}", weight: 10) }
+
+    deletes = 0
+    counter = ->(*, payload) { deletes += 1 if payload[:sql].match?(/\ADELETE FROM "security_constituents"/) }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { fund.destroy! }
+
+    assert_equal 1, deletes, "each constituent was loaded and deleted on its own"
+  end
+
   test "a negligible holding reported as zero does not disturb the rest of the fund" do
     hold("MSFT", 60.0)
     hold("TINY", 0)
