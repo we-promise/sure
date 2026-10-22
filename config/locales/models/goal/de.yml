@@ -22,3 +22,5 @@ de:
             linked_accounts:
               must_be_fundable: Alle verknüpften Konten müssen Bank- oder Investmentkonten sein.
               must_belong_to_family: Verknüpfte Konten müssen zur selben Familie gehören wie das Ziel.
+            progress_basis:
+              locked_once_completed: Öffne dieses Ziel wieder, bevor du änderst, was dafür zählt.

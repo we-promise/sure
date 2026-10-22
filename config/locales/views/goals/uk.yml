@@ -189,6 +189,12 @@ uk:
         market_value: Ринкова вартість %{amount}
         aria_label: Ціль виконано на %{percent}%. Накопичено %{amount} з %{target}.
         aria_label_with_used: Ціль виконано на %{percent}%. %{amount} з %{target}, включно з уже використаними %{used}.
+        basis:
+          balance: Враховується поточна вартість рахунків
+          contributions: Враховуються лише ваші внески
+        basis_at_completion:
+          balance: Враховувалася вартість рахунків на момент завершення цілі
+          contributions: Враховувалися лише ваші внески на момент завершення цілі
       projection:
         heading: Прогноз
         legend_saved: Накопичено
@@ -356,6 +362,7 @@ uk:
         whole_balance: "Порожньо: весь баланс"
         earmark_for: Сума, яку відкласти з %{account}
         earmark_hint: Залиште суму порожньою, щоб використати весь баланс рахунку.
+        progress_basis: Що зараховується до цієї цілі
       subtypes:
         checking: Поточні
         savings: Ощадні
@@ -363,3 +370,11 @@ uk:
         cd: Строкові депозити
         money_market: Грошовий ринок
         other: Інші
+      progress_basis_locked: Ця ціль завершена. Щоб змінити, що до неї зараховується, спершу знову відкрийте її.
+      progress_bases:
+        balance:
+          label: Поточна вартість рахунків
+          hint: Ринкова вартість. Інвестиційні прибутки й збитки зараховуються до цілі.
+        contributions:
+          label: Лише мої внески
+          hint: Чисті внески. Ринкові прибутки й збитки не враховуються.

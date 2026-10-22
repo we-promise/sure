@@ -33,3 +33,5 @@ fr:
             linked_accounts:
               must_be_fundable: Tous les comptes liés doivent être des comptes de trésorerie ou d'investissement.
               must_belong_to_family: Les comptes liés doivent appartenir au même foyer que l'objectif.
+            progress_basis:
+              locked_once_completed: Rouvrez cet objectif avant de changer ce qui est pris en compte.

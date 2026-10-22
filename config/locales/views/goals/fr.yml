@@ -69,6 +69,7 @@ fr:
         target_balance_hint: "D'après vos dépenses mensuelles médianes sur le nombre de mois ci-dessus. Recalculé chaque mois."
         target_date: Date cible
         whole_balance: "Vide : tout le solde"
+        progress_basis: Ce qui compte pour cet objectif
       save: Enregistrer les modifications
       subtypes:
         cd: Compte à terme
@@ -79,6 +80,14 @@ fr:
         savings: Épargne
       suggested_no_date: Définissez une date cible pour projeter la fin.
       suggested_with_date: Épargnez {monthly}/mois sur {accounts} pour l'atteindre à temps.
+      progress_basis_locked: Cet objectif est terminé. Rouvrez-le pour changer ce qui est pris en compte.
+      progress_bases:
+        balance:
+          label: La valeur actuelle des comptes
+          hint: Valeur de marché. Les gains et pertes des investissements comptent pour l'objectif.
+        contributions:
+          label: Uniquement ce que j'ai versé
+          hint: Apports nets. Les gains et pertes de marché sont exclus.
     goal_card:
       including_used: "Dont %{amount} déjà utilisés"
       accounts:
@@ -316,6 +325,12 @@ fr:
         of_target: de l'objectif
         saved: Épargné
         to_go: "%{amount} restant(s)"
+        basis:
+          balance: Prend en compte la valeur actuelle des comptes
+          contributions: Prend en compte uniquement ce que vous avez versé
+        basis_at_completion:
+          balance: A pris en compte la valeur des comptes au moment où l'objectif a été terminé
+          contributions: A pris en compte uniquement ce que vous aviez versé au moment où l'objectif a été terminé
       status_callout:
         depleted: "il manque %{amount} — complétez pour ramener la réserve à son solde cible"
         behind: épargnez %{amount}/mois de plus pour rattraper le retard

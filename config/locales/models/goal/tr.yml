@@ -35,3 +35,5 @@ tr:
               locked_once_consumed: Bu hedefte zaten harcanmış olarak kaydedilen para var, bu yüzden rezerve dönüştürülemez.
             target_amount:
               below_consumed: Hedef, bu hedefte harcanmış olarak kaydedilen tutarın altına ayarlanamaz.
+            progress_basis:
+              locked_once_completed: Nelerin sayılacağını değiştirmeden önce bu hedefi yeniden açın.

@@ -144,6 +144,12 @@ zh-TW:
         of_target: 佔目標比例
         market_value: 市值 %{amount}
         aria_label: 目標已完成 %{percent}%。目標 %{target} 中已存 %{amount}。
+        basis:
+          balance: 計入帳戶目前的價值
+          contributions: 僅計入你投入的資金
+        basis_at_completion:
+          balance: 依目標完成時帳戶的價值計入
+          contributions: 僅計入目標完成時你已投入的資金
       projection:
         heading: 預測
         legend_saved: 已存
@@ -270,6 +276,7 @@ zh-TW:
         whole_balance: "留空即全部餘額"
         earmark_for: 為 %{account} 指定金額
         earmark_hint: 把金額留白，就會把該帳戶的全部餘額都投入這個目標。
+        progress_basis: 此目標計入什麼
       subtypes:
         checking: 支票帳戶 (Checking)
         savings: 儲蓄帳戶 (Savings)
@@ -277,3 +284,11 @@ zh-TW:
         cd: 定期存款 (CD)
         money_market: 貨幣市場帳戶
         other: 其他
+      progress_basis_locked: 此目標已完成。重新開啟後才能變更計入方式。
+      progress_bases:
+        balance:
+          label: 帳戶目前的價值
+          hint: 市值。投資收益與虧損計入目標。
+        contributions:
+          label: 僅我投入的資金
+          hint: 淨投入。不計市場收益與虧損。
