@@ -60,8 +60,15 @@ module PlaidAccount::Liabilities::LoanTermWriter
     # A fixed loan's rate is its base rate, as before. A variable loan's is
     # decided by the loan: a first sighting sets the base rate, an unchanged
     # rate writes nothing, a change is a row dated `as_of`.
+    #
+    # Not from an import that stopped for a fresh login: PlaidItem::Importer
+    # swallows ITEM_LOGIN_REQUIRED and marks the item, and the sync still
+    # processes, so this payload is the previous sync's. Its rate is not a
+    # change the bank reported on `as_of`, and dating it would route around a
+    # base rate the user has since corrected and locked.
     def rate_update(loan, rate)
       return { interest_rate: rate } unless loan.variable_rate_type?
+      return nil if plaid_account.plaid_item.requires_update?
 
       loan.variable_rate_update_for(rate, as_of: as_of)
     end
