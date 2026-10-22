@@ -43,6 +43,11 @@ namespace :snaptrade do
     failures = []
     accounts.find_each do |account|
       repair = SnaptradeAccount::SplitSecurityRepair.new(account, dry_run: dry_run, allow_price_gaps: allow_price_gaps)
+      unless repair.snaptrade_linked?
+        puts "Account #{account.id} (#{account.name}): not a SnapTrade-linked account"
+        next
+      end
+
       repair_returned = false
       results = repair.run
       repair_returned = true
@@ -60,6 +65,11 @@ namespace :snaptrade do
         puts "    trades moved: #{result.trades_moved}, holdings moved: #{result.holdings_moved}, " \
              "holdings dropped (target already had the date): #{result.holdings_dropped}, " \
              "calculated target holdings replaced by a SnapTrade snapshot: #{result.holdings_replaced}"
+
+        if result.dropped_snapshots.any?
+          dropped = result.dropped_snapshots.map { |date, cost_basis| "#{date.iso8601} (cost basis #{cost_basis || 'none'})" }
+          puts "    SnapTrade snapshots dropped: #{dropped.join(', ')}"
+        end
 
         if result.unmatched_split_dates.any?
           puts "    split history: source splits the target lacks, on #{result.unmatched_split_dates.map(&:iso8601).join(', ')}"

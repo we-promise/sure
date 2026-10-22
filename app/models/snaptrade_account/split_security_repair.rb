@@ -32,8 +32,8 @@ class SnaptradeAccount::SplitSecurityRepair
 
   Result = Data.define(
     :account, :ticker, :target_id, :target_source, :source_ids,
-    :trades_moved, :holdings_moved, :holdings_dropped, :holdings_replaced, :price_gap_dates,
-    :unmatched_split_dates
+    :trades_moved, :holdings_moved, :holdings_dropped, :holdings_replaced, :dropped_snapshots,
+    :price_gap_dates, :unmatched_split_dates
   )
 
   def self.accounts
@@ -48,6 +48,10 @@ class SnaptradeAccount::SplitSecurityRepair
 
   def dry_run?
     @dry_run
+  end
+
+  def snaptrade_linked?
+    snaptrade_provider_id.present?
   end
 
   # { "TICKER" => [[security_id, exchange], ...] } for tickers the last run
@@ -146,6 +150,7 @@ class SnaptradeAccount::SplitSecurityRepair
           holdings_moved: moves.size,
           holdings_dropped: drops.size,
           holdings_replaced: replaced.size,
+          dropped_snapshots: dropped_snapshots(drops),
           price_gap_dates: price_gap_dates(target_id, source_ids),
           unmatched_split_dates: unmatched_split_dates(target_id, source_ids)
         )
@@ -197,6 +202,12 @@ class SnaptradeAccount::SplitSecurityRepair
         end
 
       [ moves, drops, replaced ]
+    end
+
+    # [date, cost_basis] of the SnapTrade snapshots a same-day collision
+    # drops, so a dry run shows which provider cost basis a live run discards.
+    def dropped_snapshots(drop_ids)
+      Holding.where(id: drop_ids, account_provider_id: snaptrade_provider_id).order(:date, :id).pluck(:date, :cost_basis)
     end
 
     # Dates in the account's history with a price on another row and none on

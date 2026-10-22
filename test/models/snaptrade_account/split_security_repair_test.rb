@@ -100,6 +100,36 @@ class SnaptradeAccount::SplitSecurityRepairTest < ActiveSupport::TestCase
     assert_equal 1, result.holdings_dropped
   end
 
+  # Two SnapTrade snapshots on one date: the target's survives, so the dry run
+  # names the source snapshot it would drop, with its cost basis.
+  test "a same-day collision between two SnapTrade snapshots keeps the target's and reports the dropped one" do
+    seed_observed_split
+    yesterday = 1.day.ago.to_date
+    kept = snaptrade_holding(@row_b, date: yesterday, qty: 20)
+    kept.update!(cost_basis: 0, cost_basis_source: "provider")
+    dropped = snaptrade_holding(@row_a, date: yesterday, qty: 20)
+    dropped.update!(cost_basis: 150, cost_basis_source: "provider")
+
+    planned = SnaptradeAccount::SplitSecurityRepair.new(@account).run.sole
+    assert_equal [ [ yesterday, BigDecimal("150") ] ], planned.dropped_snapshots
+
+    repair!
+    assert_equal [ kept.id ], @account.holdings.where(date: yesterday).pluck(:id)
+    assert_not Holding.exists?(dropped.id)
+  end
+
+  test "a dropped calculated holding is not reported as a SnapTrade snapshot" do
+    seed_observed_split
+    yesterday = 1.day.ago.to_date
+    snaptrade_holding(@row_b, date: yesterday, qty: 20)
+    @account.holdings.create!(security: @row_a, date: yesterday, qty: 20, price: 300, amount: 6000, currency: "USD")
+
+    result = SnaptradeAccount::SplitSecurityRepair.new(@account).run.sole
+
+    assert_equal 1, result.holdings_dropped
+    assert_empty result.dropped_snapshots
+  end
+
   # A calculated row is rebuilt from the trades by the re-materialization; a
   # SnapTrade snapshot is the only record of that day's provider cost basis.
   test "a calculated target row gives way to the SnapTrade snapshot on a same-day collision" do
@@ -291,6 +321,30 @@ class SnaptradeAccount::SplitSecurityRepairTest < ActiveSupport::TestCase
       capture_io { Rake::Task["snaptrade:repair_split_securities"].invoke(@account.id) }
     end
     assert_equal Money.new(150, "USD"), holding.reload.avg_cost
+  end
+
+  test "the rake task says when the account is not SnapTrade-linked" do
+    manual = @family.accounts.create!(name: "Manual", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+
+    output, = with_env("DRY_RUN" => nil) do
+      capture_io { Rake::Task["snaptrade:repair_split_securities"].invoke(manual.id) }
+    end
+
+    assert_match(/Account #{manual.id} \(Manual\): not a SnapTrade-linked account/, output)
+    assert_no_match(/no split securities/, output)
+  end
+
+  test "the rake dry run lists the SnapTrade snapshots it would drop" do
+    seed_observed_split
+    yesterday = 1.day.ago.to_date
+    snaptrade_holding(@row_b, date: yesterday, qty: 20)
+    snaptrade_holding(@row_a, date: yesterday, qty: 20).update!(cost_basis: 150, cost_basis_source: "provider")
+
+    output, = with_env("DRY_RUN" => nil) do
+      capture_io { Rake::Task["snaptrade:repair_split_securities"].invoke(@account.id) }
+    end
+
+    assert_match(/SnapTrade snapshots dropped: #{yesterday.iso8601} \(cost basis 150\.0\)/, output)
   end
 
   test "the rake task refuses a live repair with price gaps unless ALLOW_PRICE_GAPS names one account" do
