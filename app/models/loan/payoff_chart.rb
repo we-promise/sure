@@ -197,16 +197,19 @@ class Loan
       end
 
       # A series is worth a legend entry when it draws a line inside the
-      # domain: two of its points fall inside, or it enters on one side and
-      # leaves on the other. One point on the boundary -- the projection's
-      # opening point sits exactly on the end of every period but "All" -- is
-      # not a line, and the legend must not promise one.
+      # domain. The chart draws every point and clips to the domain, so that
+      # is any series of two or more points that starts before the domain
+      # ends and finishes after it starts: two points inside, one inside with
+      # a neighbour beyond either edge (the final repayment entering a
+      # window), or a line crossing it from side to side. One point is not a
+      # line, and a series that only touches an edge -- the projection's
+      # opening point sits exactly on the end of every period but "All" --
+      # draws nothing inside, so the legend must not promise one.
       def visible?(points)
-        dates = points.map { |point| Date.iso8601(point[:date]) }
-        return false if dates.empty?
+        return false if points.size < 2
 
-        inside = dates.count { |date| date.between?(domain_start, domain_end) }
-        inside >= 2 || (dates.first < domain_start && dates.last > domain_end)
+        dates = points.map { |point| Date.iso8601(point[:date]) }
+        dates.first < domain_end && dates.last > domain_start
       end
 
       # The chart controller reads `interactive_chart` for the SVG's
