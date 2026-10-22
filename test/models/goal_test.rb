@@ -1323,6 +1323,29 @@ class GoalTest < ActiveSupport::TestCase
     assert_nil list[2][:label]
   end
 
+  # Without a target date nothing caps the date, so a tiny pace dated a
+  # milestone in a year like 106192. Fifty years out is the bound, with or
+  # without a target date.
+  test "a milestone a tiny pace would reach only in the distant future has no date" do
+    goal = milestone_goal(pace: BigDecimal("0.01"))
+    assert_nil goal.target_date, "the cap must not come from a target date, or this asserts nothing"
+
+    list = goal.milestones(as_of: Date.new(2026, 3, 15))
+
+    assert_equal [ [ nil, false, nil ], [ nil, false, nil ] ], list.drop(1).map { |m| m.values_at(:date, :reached, :label) }
+  end
+
+  test "a milestone exactly fifty years out keeps its date and one a month later has none" do
+    # At 0.10 a month: 50% is 60 away from 440, so 600 months; from 439.90
+    # it is 60.10 away, so 601.
+    goal = milestone_goal(pace: BigDecimal("0.1"))
+    goal.stubs(:current_balance).returns(BigDecimal("440"))
+    assert_equal "2076-03-15", goal.milestones(as_of: Date.new(2026, 3, 15))[1][:date]
+
+    goal.stubs(:current_balance).returns(BigDecimal("439.9"))
+    assert_nil goal.milestones(as_of: Date.new(2026, 3, 15))[1][:date]
+  end
+
   test "a milestone on the target date itself keeps its date" do
     goal = milestone_goal
     goal.stubs(:target_date).returns(Date.new(2026, 10, 15))

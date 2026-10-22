@@ -867,12 +867,17 @@ class Goal < ApplicationRecord
   end
 
   MILESTONE_PERCENTS = [ 25, 50, 75 ].freeze
+  # How far ahead a milestone can be dated. Past this it is undated: a goal
+  # with no target date has nothing else to stop a tiny pace dating one
+  # thousands of years out.
+  MILESTONE_HORIZON_MONTHS = 600
 
   # The quarter, half and three-quarter marks on the way to the target. One
   # already saved past is `reached`; one ahead is dated by the whole months
   # it takes at the current pace, the arithmetic the "on track" callout
-  # uses, and undated when the pace is not positive. The reference date is
-  # handed in: the projection payload passes the one it stamps as `today`.
+  # uses, and undated when the pace is not positive or the mark is more than
+  # MILESTONE_HORIZON_MONTHS away. The reference date is handed in: the
+  # projection payload passes the one it stamps as `today`.
   def milestones(as_of:)
     target = target_amount.to_d
     return [] unless target.positive?
@@ -883,7 +888,8 @@ class Goal < ApplicationRecord
     MILESTONE_PERCENTS.map do |percent|
       amount = target * percent / 100
       reached = saved >= amount
-      date = as_of >> ((amount - saved) / monthly).ceil if !reached && monthly.positive?
+      months = ((amount - saved) / monthly).ceil if !reached && monthly.positive?
+      date = as_of >> months if months && months <= MILESTONE_HORIZON_MONTHS
       # The chart stops at the target date, so a milestone the pace reaches
       # only after it is left undated rather than dated centuries out.
       date = nil if date && target_date && date > target_date
