@@ -65,7 +65,7 @@ class HoldingsController < ApplicationController
     # Validate ticker is present (form has required: true, but can be bypassed)
     if parsed[:ticker].blank?
       flash[:alert] = t(".security_not_found")
-      redirect_to account_path(@holding.account, tab: "holdings")
+      redirect_to_holdings_tab
       return
     end
 
@@ -106,16 +106,12 @@ class HoldingsController < ApplicationController
       Rails.logger.warn("remap_security failed for holding #{@holding.id}: #{e.class}: #{e.message}")
       Rails.error.report(e, handled: true, context: { holding_id: @holding.id, action: "remap_security" })
       flash[:alert] = t(".failed")
-      redirect_to account_path(@holding.account, tab: "holdings")
+      redirect_to_holdings_tab
       return
     end
 
     flash[:notice] = t(".success")
-
-    respond_to do |format|
-      format.html { redirect_to account_path(@holding.account, tab: "holdings") }
-      format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account, tab: "holdings")) }
-    end
+    redirect_to_holdings_tab
   end
 
   def sync_prices
@@ -165,16 +161,12 @@ class HoldingsController < ApplicationController
       Rails.logger.warn("reset_security failed for holding #{@holding.id}: #{e.class}: #{e.message}")
       Rails.error.report(e, handled: true, context: { holding_id: @holding.id, action: "reset_security" })
       flash[:alert] = t(".failed")
-      redirect_to account_path(@holding.account, tab: "holdings")
+      redirect_to_holdings_tab
       return
     end
 
     flash[:notice] = t(".success")
-
-    respond_to do |format|
-      format.html { redirect_to account_path(@holding.account, tab: "holdings") }
-      format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account, tab: "holdings")) }
-    end
+    redirect_to_holdings_tab
   end
 
   private
@@ -198,6 +190,20 @@ class HoldingsController < ApplicationController
         }
       end
     end
+
+    # The drawer's forms submit inside its turbo-frame. A plain redirect is
+    # followed in that frame, which the account page doesn't have, so the
+    # drawer shows "Content missing" and the flash never appears. A
+    # turbo-stream request gets a redirect action, which visits the page.
+    def redirect_to_holdings_tab
+      url = account_path(@holding.account, tab: "holdings")
+
+      respond_to do |format|
+        format.html { redirect_to url }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, url) }
+      end
+    end
+
     def set_holding
       @holding = Current.family.holdings
                    .joins(:account)

@@ -326,6 +326,26 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal old_security_id, @holding.reload.security_id
   end
 
+  # The drawer's remap form submits as a turbo-stream inside the drawer's
+  # turbo-frame, where a plain redirect lands as "Content missing".
+  test "remap_security failure answers a turbo-stream request with a redirect action" do
+    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(StandardError, "forced test failure")
+
+    assert_error_reported(StandardError) do
+      patch remap_security_holding_path(@holding), params: { security_id: "MSFT|XNAS" }, as: :turbo_stream
+    end
+
+    assert_turbo_stream_redirect_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.failed"), flash[:alert]
+  end
+
+  test "remap_security without a ticker answers a turbo-stream request with a redirect action" do
+    patch remap_security_holding_path(@holding), params: { security_id: "" }, as: :turbo_stream
+
+    assert_turbo_stream_redirect_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.security_not_found"), flash[:alert]
+  end
+
   test "reset_security rolls the reset back when a holding write fails" do
     original = @holding.security
     remapped = securities(:msft)
@@ -348,4 +368,12 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal remapped.id, @holding.reload.security_id
     assert_equal trades_on_remapped, @account.trades.where(security: remapped).count
   end
+
+  private
+    def assert_turbo_stream_redirect_to(url)
+      assert_response :success
+      assert_equal "text/vnd.turbo-stream.html", response.media_type
+      assert_includes response.body, %(action="redirect")
+      assert_includes response.body, %(target="#{ERB::Util.html_escape(url)}")
+    end
 end
