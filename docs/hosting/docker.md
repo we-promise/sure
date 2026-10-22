@@ -127,7 +127,7 @@ On a self-hosted instance, Sure sends these emails:
 - A confirmation link when a user changes their email address, but only when **Require email confirmation** is on under Settings > Self-Hosting. When it is off, the new address is saved straight away and nothing is sent.
 - Rule notifications, from rules with a "Send email notification" action.
 - The follow-up email after a PDF import is processed.
-- A daily summary to every super admin after the demo family is refreshed, but only when **Enable daily demo family refresh** is on under Settings > Self-Hosting. It is off by default.
+- A daily summary to every super admin after the demo family is refreshed, but only when **Enable daily demo family refresh** is on under Settings > Self-Hosting and a demo family has been selected for it. It is off by default.
 
 Invitations are never emailed on a self-hosted instance, even with SMTP set up. After you add a member, copy the invitation link from Settings > Profile Info and send it to them yourself.
 
@@ -164,9 +164,13 @@ x-rails-env: &rails_env
   SMTP_USERNAME: ${SMTP_USERNAME}
   SMTP_PASSWORD: ${SMTP_PASSWORD}
   SMTP_TLS_ENABLED: ${SMTP_TLS_ENABLED:-true}
+  # Only for a server whose certificate cannot be verified:
+  # SMTP_TLS_SKIP_VERIFY: ${SMTP_TLS_SKIP_VERIFY:-false}
 ```
 
-The table above lists the app's own defaults. This snippet sets different ones for Compose: port 465 with TLS from the start of the connection (SMTPS). For a server that uses STARTTLS on port 587, set `SMTP_PORT` and `SMTP_TLS_ENABLED` in `.env` as shown below.
+Any other variable from the table reaches the app only if you add it to the anchor the same way. `SMTP_TLS_SKIP_VERIFY` is shown commented out because turning off certificate checks is a last resort; prefer `SSL_CA_FILE` (see **Using a custom CA certificate** below).
+
+The table above lists the app's own defaults. This snippet sets different ones for Compose: port 465 with TLS from the start of the connection (SMTPS), the same values `.env.example` ships with. For a server that uses STARTTLS on port 587, set `SMTP_PORT` and `SMTP_TLS_ENABLED` in `.env` as shown below.
 
 Then set the values in `.env`:
 
