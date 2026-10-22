@@ -1384,6 +1384,39 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to bills_path
   end
 
+  # "Create a separate bill anyway" is a choice the user already made. A
+  # validation error on that submission must not drop it, or fixing the error
+  # and resubmitting is refused again behind the warning.
+  test "a failed create keeps the separate-bill choice on the re-render" do
+    entry, = covered_entry_and_detected_bill
+    params = covered_create_params(entry).merge(allow_duplicate: "1")
+    params[:recurring_transaction][:first_due_on] = ""
+
+    assert_no_difference "RecurringTransaction.count" do
+      post recurring_transactions_url, params: params
+    end
+
+    assert_response :unprocessable_entity
+    assert_match ERB::Util.html_escape(I18n.t("recurring_transactions.create.due_date_required")), response.body
+    assert_select "input[type=hidden][name=entry_id][value=?]", entry.id
+    assert_select "input[type=hidden][name=allow_duplicate][value=1]"
+  end
+
+  test "a failed create that never chose a separate bill does not gain the choice" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+    params = covered_create_params(entry)
+    params[:recurring_transaction][:first_due_on] = ""
+
+    post recurring_transactions_url, params: params
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=hidden][name=entry_id][value=?]", entry.id
+    assert_select "input[name=allow_duplicate]", count: 0
+  end
+
   private
 
     def covering_merchant

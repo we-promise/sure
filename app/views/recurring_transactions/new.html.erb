@@ -111,8 +111,10 @@
         </div>
       <% end %>
     <% else %>
+      <%# A failed save after "anyway" keeps that choice for the resubmit. %>
       <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0,
-                         source_entry_id: @source_entry&.id %>
+                         source_entry_id: @source_entry&.id,
+                         allow_duplicate: params[:allow_duplicate].present? %>
     <% end %>
   <% end %>
 <% end %>
