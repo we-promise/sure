@@ -83,6 +83,11 @@ class RetirementPlan::MonteCarlo
 
   # The first year whose success rate reaches `target`, or nil if none does
   # before the end age.
+  #
+  # Costly: a full run of every path for each candidate year, with no cap and
+  # no early exit, because lasting is not monotonic in the year (a later start
+  # can fail where an earlier one lasts). Keep it off the request cycle; call
+  # it from a job and cache the answer.
   def confident_year(target)
     target = target.to_f
     (first_year..last_year).detect { |year| success_rate(retirement_year: year) >= target }

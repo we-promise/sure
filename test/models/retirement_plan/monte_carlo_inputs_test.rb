@@ -69,12 +69,31 @@ class RetirementPlan::MonteCarloInputsTest < ActiveSupport::TestCase
     assert_equal 2065, @plan.monte_carlo(as_of: AS_OF).retirement_year, "retiring in the end-age year"
   end
 
+  # Born 1980 with an end age of 85, the end-age year is 2065. 1,000,000 a
+  # year of spending against 400,000 and no income lasts from no year, so the
+  # solver finds none; the run still answers, retiring in the end-age year,
+  # rather than reading as "nothing to run".
+  test "in FIRE mode a plan that never lasts is run retiring in its end-age year" do
+    @plan.update!(mode: "fire")
+    @plan.streams.create!(kind: "expense", name: "Everything", annual_amount: 1_000_000)
+
+    assert_nil @plan.solve(as_of: AS_OF).retirement_year
+    mc = @plan.monte_carlo(as_of: AS_OF)
+    assert_not_nil mc, "a plan that never lasts still has a run"
+    assert_equal 2065, mc.retirement_year
+    assert_operator mc.success_rate, :<, @plan.success_target
+  end
+
   test "the result carries the run's figures as plain values" do
+    mc = @plan.monte_carlo(as_of: AS_OF)
     result = @plan.monte_carlo_result(as_of: AS_OF)
 
-    assert_equal @plan.monte_carlo(as_of: AS_OF).success_rate, result[:success_rate]
-    assert_equal RetirementPlan::MonteCarlo::PERCENTILES, result[:percentiles].keys
-    assert_equal 5, result[:heatmap].size
+    assert_equal %i[as_of retirement_year success_rate stress_success_rate confident_year percentiles heatmap expected_annual_return savings_rate].sort,
+                 result.keys.sort
+    assert_equal [ AS_OF, 2040, nil ], result.values_at(:as_of, :retirement_year, :confident_year)
+    assert_equal [ mc.success_rate, mc.stress_success_rate, mc.percentiles, mc.heatmap ],
+                 result.values_at(:success_rate, :stress_success_rate, :percentiles, :heatmap)
+    assert_equal [ mc.expected_annual_return, mc.savings_rate ], result.values_at(:expected_annual_return, :savings_rate)
   end
 
   # The confident year is a search over retirement years, each a full run of
