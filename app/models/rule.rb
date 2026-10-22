@@ -435,7 +435,7 @@ class Rule < ApplicationRecord
 
     def seed_notification_baseline
       @notification_baseline_timed_out = false
-      return unless actions.exists?(action_type: "send_email_notification")
+      return unless actions.email_notifications.exists?
 
       @notification_baseline_taken = true
       NotificationDelivery.record_for(rule_id: id, transaction_ids: matching_transaction_ids)

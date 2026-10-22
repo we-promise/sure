@@ -33,7 +33,7 @@ class Rule::Action < ApplicationRecord
   before_validation :build_split_value, if: -> { action_type == "split_transaction" && split_rows.present? }
   validate :split_config_valid, if: -> { action_type == "split_transaction" }
 
-  # Pre-seed (watermark): when a send_email_notification action is created — on a
+  # Pre-seed (watermark): when an EMAIL_NOTIFICATION action is created — on a
   # new rule OR added to an existing one — record all currently-matching
   # transactions as already-delivered WITHOUT sending, so the rule only ever
   # emails about transactions that appear AFTER the action exists.
@@ -44,7 +44,7 @@ class Rule::Action < ApplicationRecord
   #
   # The update event covers the edit flow: the action_type select is editable
   # for persisted actions (see rules_controller#rule_params), so an existing
-  # action can be CHANGED to send_email_notification. Without re-seeding, the
+  # action can be CHANGED to EMAIL_NOTIFICATION. Without re-seeding, the
   # next apply/sync would email every historical match. Guard on the type change
   # so we only watermark when an action actually becomes email-notify; on create
   # the type changes from nil, so the same guard admits every new action.
