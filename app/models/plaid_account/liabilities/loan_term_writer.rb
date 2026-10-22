@@ -53,23 +53,8 @@ module PlaidAccount::Liabilities::LoanTermWriter
       loan.reload
       loan.errors.clear
 
-      # `enrich_attributes` saves with `save`, so a refusal returns false where
-      # `update!` raised into PlaidAccount::Processor#process_liabilities's
-      # rescue. Without this the failure would be silent. Logged after the
-      # rollback so the entry is not rolled back with it.
-      DebugLogEntry.capture(
-        category: "provider_sync",
-        level: "warn",
-        message: "Plaid loan terms refused by the model",
-        source: self.class.name,
-        provider_key: "plaid",
-        account: account,
-        metadata: {
-          plaid_account_id: plaid_account.id,
-          attributes: present.keys.map(&:to_s),
-          errors: refusal
-        }
-      )
+      # Logged after the rollback so the entry is not rolled back with it.
+      report_refusal(loan, present.keys.map(&:to_s), refusal)
     end
 
     # A fixed loan's rate is its base rate, as before. A variable loan's is
@@ -89,5 +74,35 @@ module PlaidAccount::Liabilities::LoanTermWriter
 
       loan.enrich_attributes(attrs, source: "plaid")
       loan.errors.empty? ? nil : loan.errors.full_messages
+    end
+
+    # `enrich_attributes` saves with `save`, so a refusal returns false where
+    # `update!` raised into PlaidAccount::Processor#process_liabilities's
+    # rescue, which sent it to Sentry. Both are kept: the debug log for support,
+    # filtered by the connection, and Sentry so a refusal that recurs every
+    # sync still shows in error monitoring. The errors are passed in because
+    # the loan has been reloaded by the time this runs.
+    def report_refusal(loan, attributes, errors)
+      message = "Plaid loan terms refused by the model"
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: message,
+        source: self.class.name,
+        provider_key: "plaid",
+        account: account,
+        account_provider: plaid_account.account_provider,
+        metadata: {
+          plaid_account_id: plaid_account.id,
+          attributes: attributes,
+          errors: errors
+        }
+      )
+
+      Sentry.capture_message(message, level: :warning) do |scope|
+        scope.set_tags(plaid_account_id: plaid_account.id)
+        scope.set_context("plaid_loan_terms", { loan_id: loan.id, attributes: attributes, errors: errors })
+      end
     end
 end

@@ -155,6 +155,42 @@ class PlaidAccount::Liabilities::MortgageProcessorTest < ActiveSupport::TestCase
     assert_equal 4.5, loan.interest_rate.to_f, "a refused batch was partly stored"
   end
 
+  # Support filters /settings/debug by connection, and DebugLogEntry does not
+  # derive the link from the account, so the row must carry it.
+  test "a refusal is logged against the Plaid connection" do
+    link = AccountProvider.create!(account: @plaid_account.current_account, provider: @plaid_account)
+    loan_refusing_variable
+    payload(type: "arm", percentage: 5.2)
+
+    process
+
+    entry = DebugLogEntry.where(provider_key: "plaid").order(:created_at).last
+    assert_equal link.id, entry.account_provider_id, "the refusal was logged without its connection"
+  end
+
+  # Before the write went through Enrichable, a refusal raised into
+  # PlaidAccount::Processor#process_liabilities's rescue and reached Sentry.
+  # A refusal that keeps recurring must stay visible in error monitoring.
+  test "a refusal is reported to Sentry" do
+    loan_refusing_variable
+    payload(type: "arm", percentage: 5.2)
+
+    Sentry.expects(:capture_message).with("Plaid loan terms refused by the model", level: :warning).once
+
+    process
+  end
+
+  # The other side: a write that changes nothing is not a refusal.
+  test "a locked or unchanged write is not reported to Sentry" do
+    loan = loan_with(interest_rate: 4.5, rate_type: "fixed")
+    loan.lock_attr!(:interest_rate)
+    payload(type: "fixed", percentage: 5.2)
+
+    Sentry.expects(:capture_message).never
+
+    process
+  end
+
   # A refused write must not attribute the rejected value to Plaid. Enrichable
   # writes the DataEnrichment before it saves, and reuses the row an earlier
   # accepted write made, so only the stored value shows this.
