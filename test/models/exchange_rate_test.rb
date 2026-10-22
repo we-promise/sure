@@ -68,6 +68,21 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_nil ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
   end
 
+  test "derives a pair the provider lacks from its USD legs and caches it" do
+    ExchangeRate.delete_all
+    date = Date.current
+    window = { start_date: date - ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS, end_date: date }
+
+    @provider.expects(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("no KZT/RUB")))
+    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "USD", **window)
+             .returns(provider_success_response([ OpenStruct.new(from: "KZT", to: "USD", date: date, rate: 0.002) ]))
+    @provider.expects(:fetch_exchange_rates).with(from: "USD", to: "RUB", **window)
+             .returns(provider_success_response([ OpenStruct.new(from: "USD", to: "RUB", date: date, rate: 80) ]))
+
+    assert_equal 0.16, ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: date).rate.to_f
+    assert_equal 0.16, ExchangeRate.find_by!(from_currency: "KZT", to_currency: "RUB", date: date).rate.to_f
+  end
+
   test "reuses nearest cached rate within lookback window instead of calling provider" do
     # Simulate a rate saved under Friday's date when Saturday is requested
     friday = 1.day.ago.to_date
