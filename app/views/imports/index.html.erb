@@ -74,7 +74,9 @@
               </td>
               <td class="px-2 py-3 text-right">
                 <div class="flex items-center justify-end gap-2">
-                  <% if import.complete? || import.revert_failed? %>
+                  <% if Current.user&.guest? && import.family_config? %>
+                    <%# Guests may view family configuration imports but not undo or delete them. %>
+                  <% elsif import.complete? || import.revert_failed? %>
                     <%= button_to revert_import_path(import),
                                   method: :put,
                                   class: "flex items-center gap-2",
