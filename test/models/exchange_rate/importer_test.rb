@@ -274,6 +274,32 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_not ExchangeRate.exists?(from_currency: "XYZ", to_currency: "BTC")
   end
 
+  test "imports a pair the provider lacks from its USD legs" do
+    ExchangeRate.delete_all
+    window = { start_date: get_provider_fetch_start_date(1.day.ago.to_date), end_date: Date.current }
+
+    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "RUB", **window)
+             .returns(provider_error_response(StandardError.new("no KZT/RUB")))
+    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "USD", **window)
+             .returns(provider_success_response([
+               OpenStruct.new(from: "KZT", to: "USD", date: 1.day.ago.to_date, rate: 0.002),
+               OpenStruct.new(from: "KZT", to: "USD", date: Date.current, rate: 0.0022)
+             ]))
+    @provider.expects(:fetch_exchange_rates).with(from: "USD", to: "RUB", **window)
+             .returns(provider_success_response([ OpenStruct.new(from: "USD", to: "RUB", date: 1.day.ago.to_date, rate: 80) ]))
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "KZT",
+      to: "RUB",
+      start_date: 1.day.ago.to_date,
+      end_date: Date.current
+    ).import_provider_rates
+
+    rates = ExchangeRate.where(from_currency: "KZT", to_currency: "RUB").order(:date).pluck(:rate).map(&:to_f)
+    assert_equal [ 0.16, 0.176 ], rates
+  end
+
   test "handles rate limit error gracefully" do
     ExchangeRate.delete_all
 
