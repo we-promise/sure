@@ -210,12 +210,12 @@ class BalanceSheetTest < ActiveSupport::TestCase
     user.update!(default_account_order: "manual")
     checking = create_account(name: "Checking", balance: 0, accountable: Depository.new, owner: user)
     savings = create_account(name: "Savings", balance: 0, accountable: Depository.new, owner: user)
-    create_account(name: "Brokerage", balance: 0, accountable: Depository.new, owner: user)
-    create_account(name: "Another", balance: 0, accountable: Depository.new, owner: user)
     card = create_account(name: "Card", balance: 0, accountable: CreditCard.new, owner: user)
-
     user.update_manual_account_order("depository", [ savings.id, checking.id ])
     user.update_manual_account_order("credit_card", [ card.id ])
+
+    create_account(name: "Brokerage", balance: 0, accountable: Depository.new, owner: user)
+    create_account(name: "Another", balance: 0, accountable: Depository.new, owner: user)
 
     balance_sheet = BalanceSheet.new(@family, user: user)
 

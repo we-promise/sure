@@ -26,7 +26,7 @@ class AccountsHelperTest < ActionView::TestCase
     assert_not_equal before, sidebar_key
   end
 
-  test "the sidebar is sortable only when grouped by account type alone" do
+  test "the sidebar is sortable only when grouped by account type first" do
     @user.update!(default_account_order: "manual")
     assert account_sidebar_sortable?
 
@@ -34,7 +34,7 @@ class AccountsHelperTest < ActionView::TestCase
       "preview_features_enabled" => true,
       "account_grouping" => { "sidebar" => "institution" }
     ))
-    assert_not account_sidebar_sortable?, "a second level splits a type into parts"
+    assert account_sidebar_sortable?, "each subgroup is reordered within its type"
 
     @user.update!(preferences: @user.preferences.merge(
       "account_grouping" => {},

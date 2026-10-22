@@ -601,19 +601,31 @@ class User < ApplicationRecord
     order.is_a?(Hash) ? order : {}
   end
 
-  # Stores the order of one account group. Ids the user cannot access are
-  # dropped so the stored preference never references foreign accounts.
+  # Stores a new order for some or all accounts of one account group. The
+  # given accounts take the positions they already hold in the group's
+  # current order (saved order first, then the rest by name, as displayed),
+  # so a subgroup can be reordered on its own without moving the others.
+  # Ids the user cannot access are dropped so the stored preference never
+  # references foreign accounts.
   def update_manual_account_order(group_key, account_ids)
     group_key = group_key.to_s
     return false unless Accountable::TYPES.map(&:underscore).include?(group_key)
     return false unless account_ids.is_a?(Array)
 
     requested_ids = account_ids.map(&:to_s).uniq.first(MANUAL_ACCOUNT_ORDER_LIMIT)
-    accessible_ids = accessible_accounts.where(id: requested_ids, accountable_type: group_key.camelize).pluck(:id).to_set
-    ordered_ids = requested_ids.select { |id| accessible_ids.include?(id) }
 
     with_locked_preferences do |prefs|
-      prefs["manual_account_order"] = manual_account_order.merge(group_key => ordered_ids)
+      group_ids = accessible_accounts.where(accountable_type: group_key.camelize).pluck(:id, :name)
+        .sort_by { |id, name| [ name.to_s.downcase, id.to_s ] }.map(&:first)
+      saved_ids = Array(manual_account_order[group_key]) & group_ids
+      current_ids = saved_ids + (group_ids - saved_ids)
+
+      moved_ids = requested_ids & current_ids
+      moved_set = moved_ids.to_set
+      remaining = moved_ids.each
+      ordered_ids = current_ids.map { |id| moved_set.include?(id) ? remaining.next : id }
+
+      prefs["manual_account_order"] = manual_account_order.merge(group_key => ordered_ids.first(MANUAL_ACCOUNT_ORDER_LIMIT))
     end
   end
 

@@ -39,9 +39,13 @@ class BalanceSheet::AccountSubgroup
     account_group.color
   end
 
+  # Keys can be free text in any script, so hash them for a safe, unique id.
+  def token
+    Digest::SHA256.hexdigest(key.to_s).first(12)
+  end
+
   def dom_id(tab: nil, mobile: false)
-    # Keys can be free text in any script, so hash them for a safe, unique id.
-    "#{account_group.dom_id(tab: tab, mobile: mobile)}_#{Digest::SHA256.hexdigest(key.to_s).first(12)}"
+    "#{account_group.dom_id(tab: tab, mobile: mobile)}_#{token}"
   end
 
   private

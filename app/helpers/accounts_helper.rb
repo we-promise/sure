@@ -118,12 +118,12 @@ module AccountsHelper
   end
 
   # Accounts can be dragged into a manual order only where every group is
-  # one account type, because the order is stored per type. Other groupings
+  # one account type, because the order is stored per type; with a second
+  # level, each subgroup is reordered within its type. Other first levels
   # still show that order but offer no sort mode.
   def account_sidebar_sortable?
     Current.user&.account_order&.manual? &&
-      account_grouping_primary(:sidebar) == AccountGrouping::DEFAULT_PRIMARY &&
-      account_grouping_dimension(:sidebar).nil?
+      account_grouping_primary(:sidebar) == AccountGrouping::DEFAULT_PRIMARY
   end
 
   # Subgroups to render inside a first-level group for the given view, or
