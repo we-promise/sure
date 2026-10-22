@@ -134,6 +134,24 @@ class Assistant::Function::UpdateCategoryTest < ActiveSupport::TestCase
     assert_equal "invalid_parent", result[:error]
   end
 
+  test "null parent_id leaves the hierarchy unchanged" do
+    sub = categories(:subcategory)
+
+    result = @fn.call("id" => sub.id, "parent_id" => nil)
+
+    assert_equal "no_changes", result[:error]
+    assert_equal categories(:food_and_drink).id, sub.reload.parent_id
+  end
+
+  test "whitespace-only parent_id does not promote" do
+    sub = categories(:subcategory)
+
+    result = @fn.call("id" => sub.id, "parent_id" => "   ")
+
+    assert_equal "parent_not_found", result[:error]
+    assert_equal categories(:food_and_drink).id, sub.reload.parent_id
+  end
+
   test "soft error when parent not found" do
     result = @fn.call("id" => @category.id, "parent_id" => "00000000-0000-0000-0000-000000000000")
 

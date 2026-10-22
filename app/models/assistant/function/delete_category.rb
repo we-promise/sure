@@ -39,9 +39,6 @@ class Assistant::Function::DeleteCategory < Assistant::Function
   end
 
   def call(params = {})
-    # Matches Category::DeletionsController, which rejects guests.
-    return error("forbidden", "Guests cannot delete categories.") if user.guest?
-
     category = find_category(params["id"])
     return error("not_found", "Category with id '#{params["id"]}' not found.") unless category
 

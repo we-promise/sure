@@ -1530,9 +1530,9 @@ Read and analysis:
 
 Write:
 - `update_transaction`, `update_budget`, `create_goal`
-- `create_tag` / `update_tag`, `create_category` / `update_category` / `delete_category`
 - `unmatch_transfer` - Unlink a wrongly matched transfer
 - `update_transfer` - Count a transfer into an investment account as spending or as a plain transfer
+- `create_tag` / `update_tag`, `create_category` / `update_category` / `delete_category`
 
 Documents:
 - `import_bank_statement` - Import bank statement data

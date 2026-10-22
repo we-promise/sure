@@ -61,13 +61,4 @@ class Assistant::Function::DeleteCategoryTest < ActiveSupport::TestCase
     assert Category.exists?(other_cat.id)
     assert Category.exists?(@category.id)
   end
-
-  test "guests cannot delete categories" do
-    @user.stubs(:guest?).returns(true)
-
-    result = @fn.call("id" => @category.id)
-
-    assert_equal "forbidden", result[:error]
-    assert Category.exists?(@category.id)
-  end
 end

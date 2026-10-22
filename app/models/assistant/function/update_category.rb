@@ -62,15 +62,15 @@ class Assistant::Function::UpdateCategory < Assistant::Function
     attrs[:lucide_icon] = params["icon"].to_s.strip if params["icon"].present?
 
 
-    if params.key?("parent_id")
-      if params["parent_id"].present?
-        parent = family.categories.find_by(id: params["parent_id"]) if valid_uuid?(params["parent_id"])
-        return error("parent_not_found", "Parent category with id '#{params["parent_id"]}' not found.") unless parent
-        return error("invalid_parent", "A category cannot be its own parent.") if parent == category
-        attrs[:parent] = parent
-      else
-        attrs[:parent] = nil
-      end
+    # Only an empty string promotes to top-level; null counts as omitted, and
+    # any other value must be the id of a category in the family.
+    if params["parent_id"] == ""
+      attrs[:parent] = nil
+    elsif !params["parent_id"].nil?
+      parent = family.categories.find_by(id: params["parent_id"]) if valid_uuid?(params["parent_id"])
+      return error("parent_not_found", "Parent category with id '#{params["parent_id"]}' not found.") unless parent
+      return error("invalid_parent", "A category cannot be its own parent.") if parent == category
+      attrs[:parent] = parent
     end
 
     return error("no_changes", "Provide at least one of name, color, icon, or parent_id to update.") if attrs.empty?
