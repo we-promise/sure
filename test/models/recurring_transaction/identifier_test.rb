@@ -1034,6 +1034,33 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal categories(:one), chosen.category
   end
 
+  # The identifier loads every series up front and writes much later. A
+  # category the user saves in between must survive: the blank check is made
+  # against the row at write time, not against the copy loaded at the start.
+  test "a category chosen while detection runs is not overwritten" do
+    account = @family.accounts.first
+    detected = create_detected_series(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    create_name_pattern_entries(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    save_category_after_load(:preload_series_to_refresh, detected, categories(:one))
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal 3, detected.reload.occurrence_count, "detection must have claimed the series"
+    assert_equal categories(:one), detected.category
+  end
+
+  test "a category chosen while the manual pass runs is not overwritten" do
+    account = @family.accounts.first
+    manual = create_detected_series(account: account, name: "Declared Cover", amount: 54.73, day: 5, manual: true)
+    create_name_pattern_entries(account: account, name: "Declared Cover", amount: 54.73, day: 5)
+    save_category_after_load(:matching_entries_by_manual_recurring_id, manual, categories(:one))
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal 3, manual.reload.occurrence_count, "the manual pass must have matched the entries"
+    assert_equal categories(:one), manual.category
+  end
+
   test "a manual income series is never given a category" do
     account = @family.accounts.first
     paycheck = create_detected_series(account: account, name: "Acme Payroll", amount: -1840, day: 5, manual: true, bill_type: "income")
@@ -1046,6 +1073,18 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
   end
 
   private
+    # Simulates a bill edit landing between the identifier's load of the
+    # series and its write: once the named step (which runs after the load)
+    # is reached, the row gets a category behind the loaded copy's back.
+    def save_category_after_load(step, recurring, category)
+      identifier = @identifier
+      original = identifier.method(step)
+      identifier.define_singleton_method(step) do |*args, **kwargs|
+        RecurringTransaction.where(id: recurring.id).update_all(category_id: category.id)
+        original.call(*args, **kwargs)
+      end
+    end
+
     def create_name_pattern_entries(account:, name:, amount:, day:, entry_categories: [ categories(:food_and_drink) ] * 3)
       [ 0, 1, 2 ].each do |months_ago|
         transaction = Transaction.create!(

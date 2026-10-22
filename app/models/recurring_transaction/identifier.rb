@@ -177,8 +177,6 @@ class RecurringTransaction
         matching_amounts = matching_entries.map(&:amount)
         last_entry = matching_entries.max_by(&:date)
 
-        fill_blank_category(recurring, modal_category_id(matching_entries))
-
         # Recalculate variance from all occurrences (including identical amounts)
         # The series' own schedule computes the next date so a manual row
         # with weekly or other non-monthly rules advances on its real
@@ -191,6 +189,8 @@ class RecurringTransaction
           last_occurrence_date: last_entry.date,
           next_expected_date: recurring.schedule.next_occurrence_after(last_entry.date)
         )
+
+        fill_blank_category(recurring, modal_category_id(matching_entries))
       end
     end
 
@@ -374,11 +374,6 @@ class RecurringTransaction
           sync_monthly_rule_day(recurring, pattern[:expected_day_of_month])
         end
 
-        if fillable_category?(recurring)
-          classification = Classifier.classify(name: pattern[:name] || pattern[:entries].first.name, entries: pattern[:entries])
-          fill_blank_category(recurring, classification.category_id)
-        end
-
         recurring.update!(
           last_occurrence_date: pattern[:last_occurrence_date],
           next_expected_date: recurring.schedule.next_occurrence_after(pattern[:last_occurrence_date]),
@@ -387,6 +382,11 @@ class RecurringTransaction
           expected_amount_max: pattern[:expected_amount_max],
           expected_amount_avg: pattern[:expected_amount_avg]
         )
+
+        if fillable_category?(recurring)
+          classification = Classifier.classify(name: pattern[:name] || pattern[:entries].first.name, entries: pattern[:entries])
+          fill_blank_category(recurring, classification.category_id)
+        end
       end
 
       # A series' category is classified once, when detection creates it, so
@@ -394,10 +394,22 @@ class RecurringTransaction
       # from what its transactions now carry; a category already on the series
       # (the user's, or an earlier fill) is never overwritten, and income stays
       # uncategorised as it is at creation.
+      #
+      # The series was loaded at the start of the run, so a category the user
+      # saved since is not on this copy. The blank check is therefore repeated
+      # in the UPDATE itself, against the row as it stands, and the write
+      # touches nothing else. It runs after the bookkeeping update! so that
+      # save never carries a category of its own.
       def fill_blank_category(recurring, category_id)
         return if category_id.blank? || !fillable_category?(recurring)
 
+        filled = RecurringTransaction
+          .where(id: recurring.id, category_id: nil)
+          .update_all(category_id: category_id, updated_at: Time.current)
+        return unless filled == 1
+
         recurring.category_id = category_id
+        recurring.clear_attribute_changes([ :category_id ])
       end
 
       def fillable_category?(recurring)
