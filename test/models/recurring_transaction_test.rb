@@ -763,6 +763,23 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_nil @family.recurring_transactions.covering(entry)
   end
 
+  # "Not this one" on a suggested match records the pair so the matcher never
+  # proposes it again. The same answer has to free the payment here, or it
+  # could never become a bill of its own. The rejection names one payment, so
+  # the bill still covers the next one.
+  test "covering skips a bill the user rejected for this payment" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 100, merchant: @merchant)
+    next_payment = create_transaction(account: @account, amount: 100, merchant: @merchant)
+    rejected = covering_series(merchant: @merchant, amount: 100, manual: false, status: "suggested")
+    assert_equal rejected, @family.recurring_transactions.covering(entry), "precondition: the bill covers the payment before the rejection"
+
+    RecurringMatchRejection.create!(recurring_transaction: rejected, entry: entry)
+
+    assert_nil @family.recurring_transactions.covering(entry)
+    assert_equal rejected, @family.recurring_transactions.covering(next_payment)
+  end
+
   # A merchant-keyed bill matches on the merchant, as the matcher does: a
   # merchant-less charge that only shares the text is not its payment.
   test "covering does not match a merchant-keyed bill on name alone" do

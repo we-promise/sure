@@ -514,7 +514,9 @@ class RecurringTransaction < ApplicationRecord
   # entry's own text, or its merchant's name, which is what "Create bill"
   # names a bill after), and an amount inside the variance band, so a second
   # price tier stays creatable. The band is signed, so an inflow never lands
-  # inside a bill's band, nor an outflow inside income's.
+  # inside a bill's band, nor an outflow inside income's. A series the user
+  # rejected for this entry ("Not this one") is skipped, as the matcher skips
+  # it, so the rejected payment can still become a bill of its own.
   def self.covering(entry)
     scope = where(family_id: entry.account.family_id).where.not(status: "ended")
 
@@ -527,6 +529,7 @@ class RecurringTransaction < ApplicationRecord
     names = [ entry.name, merchant&.name ].compact_blank.map { |name| Matcher.normalize_name(name) }
 
     scope.where(currency: entry.currency, account_id: [ entry.account_id, nil ], destination_account_id: nil)
+         .where.not(id: RecurringMatchRejection.where(entry_id: entry.id).select(:recurring_transaction_id))
          .order(:created_at)
          .find do |series|
            next false unless amount_within_variance_band?(entry.amount, series.amount)
