@@ -209,6 +209,16 @@ void main() {
     expect(log[1].url.queryParameters['end_date'], '2026-11-30');
   });
 
+  test('an uninitialized budget lists every category', () async {
+    final provider = buildProvider(budgets: [budgetJson(initialized: false)]);
+
+    await provider.loadMonth(accessToken: 'token');
+
+    expect(provider.showsAllCategories, isTrue);
+    expect(provider.visibleGroups.map((g) => g.parent.name),
+        containsAll(['Food', 'Transport', 'Gifts']));
+  });
+
   test('uses the in-memory copy unless forced', () async {
     final log = <http.Request>[];
     final provider = buildProvider(log: log);
