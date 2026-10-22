@@ -1,6 +1,7 @@
 require "test_helper"
 
 class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
+  include FamilyLockTestHelper
   include ActiveJob::TestHelper
 
   setup do
@@ -934,7 +935,7 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
   test "confirming while a pipeline holds the family lock queues the history instead of dropping it" do
     paid_on, suggestion, entry = suggested_bill_with_past_payment
 
-    with_family_lock_held_elsewhere do
+    with_family_lock_held_elsewhere(@family.id) do
       assert_enqueued_with(job: BackfillRecurringHistoryJob, args: [ suggestion.id ]) do
         post confirm_recurring_transaction_url(suggestion)
       end
@@ -968,7 +969,7 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert @recurring_transaction.active?
 
     assert_no_enqueued_jobs(only: BackfillRecurringHistoryJob) do
-      with_family_lock_held_elsewhere { post confirm_recurring_transaction_url(@recurring_transaction) }
+      with_family_lock_held_elsewhere(@family.id) { post confirm_recurring_transaction_url(@recurring_transaction) }
     end
   end
 
@@ -1405,20 +1406,5 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
       )
 
       [ paid_on, suggestion, entry ]
-    end
-
-    # Transactional tests share one PG session, and a session can always
-    # re-take its own advisory lock, so this needs a genuinely separate one.
-    def with_family_lock_held_elsewhere
-      key = RecurringTransaction::Pipeline.advisory_lock_key(@family.id)
-      config = ActiveRecord::Base.connection_pool.db_config.configuration_hash
-      other = PG.connect({
-        dbname: config[:database], host: config[:host], port: config[:port],
-        user: config[:username], password: config[:password]
-      }.compact)
-      other.exec("SELECT pg_advisory_lock(#{key})")
-      yield
-    ensure
-      other&.close
     end
 end
