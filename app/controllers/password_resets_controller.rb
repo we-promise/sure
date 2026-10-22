@@ -39,7 +39,8 @@ class PasswordResetsController < ApplicationController
 
     if @user.update(password_params)
       # The reset proves only control of the email; end every session the old password opened.
-      @user.sessions.destroy_all
+      # A blank submission saves without touching the digest and must not sign anyone out.
+      @user.sessions.destroy_all if @user.saved_change_to_password_digest?
       redirect_to new_session_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity

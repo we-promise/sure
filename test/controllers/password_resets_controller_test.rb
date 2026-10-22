@@ -58,6 +58,15 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     assert_not Session.exists?(session_record.id)
   end
 
+  test "update with a blank password keeps the user's web sessions" do
+    session_record = @user.sessions.create!
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "", password_confirmation: "" } }
+
+    assert Session.exists?(session_record.id)
+  end
+
   test "all actions redirect when password features are disabled" do
     AuthConfig.stubs(:password_features_enabled?).returns(false)
 
