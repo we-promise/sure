@@ -71,6 +71,10 @@ class Portfolio::DailyReturns
   # leaves the denominator alone while the money leaves the close, and the
   # source account's drop reads as a loss.
   #
+  # Tenancy is the caller's: the ids are read as given, with no family filter,
+  # as Portfolio::FlowClassifier's are. Pass only accounts already scoped to
+  # one family (Portfolio::Performance resolves them through family.accounts).
+  #
   # Asset accounts only. The levels are multiplied by flows_factor, but the
   # flows (-entries.amount, a journal's value) are not, so on a liability they
   # would carry the wrong sign against its balance and nothing would flag it.
@@ -228,9 +232,12 @@ class Portfolio::DailyReturns
       }
     end
 
-    # Mirrors Balance::ChartSeriesBuilder's structure deliberately: the same
-    # LATERAL LOCF over balances, the same two-way LOCF over exchange_rates, and
-    # the same active-until windowing. The FX half is why -- the older pattern in
+    # Mirrors Balance::ChartSeriesBuilder's rate lookup and balance LOCF
+    # deliberately: the same LATERAL LOCF over balances, the same two-way LOCF
+    # over exchange_rates for balance levels, and the same active-until
+    # windowing. The builder has since gained strict currency conversion and a
+    # missing_currency column; those are not mirrored here, where a missing
+    # rate raises Row#rate_missing instead. The FX half is why -- the older pattern in
     # InvestmentStatement#period_return_trend joins `er.date = b.date` and
     # COALESCEs a miss to 1, silently converting at parity on every weekend and
     # holiday.
@@ -421,15 +428,17 @@ class Portfolio::DailyReturns
           #{fragment(:flow_class_joins)}
           -- Two steps, the same two the balance takes. First into the
           -- ACCOUNT's currency on the entry's own date, preferring a rate the
-          -- entry carries itself, exactly as Balance::SyncCache converts it
-          -- before the calculators apply it -- so the flow is the amount the
-          -- balance actually moved by.
+          -- entry carries itself, as Balance::SyncCache converts it before the
+          -- calculators apply it -- so the flow is the amount the balance
+          -- actually moved by. A stored rate is found the way SyncCache finds
+          -- it (see #entry_rate_lookup), so an entry the balance dropped for
+          -- want of a rate is NULL here too, and flagged.
           LEFT JOIN LATERAL (
             SELECT CASE
               WHEN COALESCE(entries.currency, entry_accounts.currency) = entry_accounts.currency THEN 1::numeric
               WHEN #{fragment(:entry_custom_rate)} IS NOT NULL
                 THEN CASE WHEN #{fragment(:entry_custom_rate)} > 0 THEN #{fragment(:entry_custom_rate)} END
-              ELSE #{rate_lookup('entries.currency', 'entries.date', to: 'entry_accounts.currency')}
+              ELSE #{entry_rate_lookup('entries.currency', 'entries.date', to: 'entry_accounts.currency')}
             END AS rate
           ) entry_fx ON TRUE
           -- Then into the family's currency at the PREVIOUS day's rate,
@@ -500,6 +509,27 @@ class Portfolio::DailyReturns
       SQL
     end
 
+    # A stored rate as Balance::SyncCache finds one for an entry, through
+    # ExchangeRate.find_or_fetch_rate: the entry's own date, else the nearest
+    # rate up to NEAREST_RATE_LOOKBACK_DAYS before it. Never carried further
+    # forward and never back, unlike #rate_lookup: past that window SyncCache
+    # asks the provider, and when the provider has nothing (or there is none,
+    # as on some self-hosted instances) it drops the entry from the balance.
+    # Whatever the provider did return it stored, so it is in the table.
+    # Money#exchange_to refuses a non-positive rate, so that is NULL too.
+    def entry_rate_lookup(currency_expression, date_expression, to:)
+      <<~SQL.squish
+        CASE
+          WHEN #{currency_expression} = #{to} THEN 1::numeric
+          ELSE (SELECT CASE WHEN r.rate > 0 THEN r.rate END FROM exchange_rates r
+                 WHERE r.from_currency = #{currency_expression}
+                   AND r.to_currency = #{to}
+                   AND r.date BETWEEN #{date_expression} - #{ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS} AND #{date_expression}
+                 ORDER BY r.date DESC LIMIT 1)
+        END
+      SQL
+    end
+
     # The rate an entry carries itself (extra["exchange_rate"] on its Trade or
     # Transaction), which Balance::SyncCache prefers to the table's. Stored as
     # a number by Trade#exchange_rate= and Transaction#exchange_rate=, but a
@@ -526,14 +556,14 @@ class Portfolio::DailyReturns
     # include_excluded, because an excluded entry still moved the balance
     # (see the flows' WHERE).
     #
-    # A known limit: the classifier's scope is a static set of account ids and
-    # knows nothing of active_until_dates. A transfer between a live account
-    # and one past its cut-off still classifies as internal, while the
-    # cut-off account's leg is dropped from the flows, so the live account's
-    # leg leaves the denominator unchanged and its move reads as a return. No
-    # caller passes active_until_dates yet; the change that first does must
-    # make the classifier window-aware, with a test for that transfer.
+    # active_until_dates, because an account past its cut-off is outside the
+    # scope: a transfer to it after that date is external, or the live
+    # account's leg would stay out of the denominator while the cut-off
+    # account's leg is dropped by the flow window, and the move would read as
+    # a loss.
     def flow_classifier
-      @flow_classifier ||= Portfolio::FlowClassifier.new(scope_account_ids: account_ids, include_excluded: true)
+      @flow_classifier ||= Portfolio::FlowClassifier.new(
+        scope_account_ids: account_ids, include_excluded: true, active_until_dates: active_until_dates
+      )
     end
 end
