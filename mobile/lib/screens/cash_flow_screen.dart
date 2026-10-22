@@ -75,7 +75,10 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
   bool _loading = false;
   bool _offline = false;
   bool _failed = false;
-  int _requestId = 0;
+  // Per period, so a response for one period is never dropped because the
+  // user switched to another while it was in flight.
+  final Map<CashFlowPeriod, int> _requestIds = {};
+  final Set<CashFlowPeriod> _inFlight = {};
 
   @override
   void initState() {
@@ -109,7 +112,9 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
         _reportRanges[period] == range) {
       return;
     }
-    final requestId = ++_requestId;
+    final requestId = (_requestIds[period] ?? 0) + 1;
+    _requestIds[period] = requestId;
+    _inFlight.add(period);
     setState(() {
       _loading = true;
       _failed = false;
@@ -127,17 +132,21 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
       // A failed token refresh (or storage error) is a failed load.
       result = null;
     }
-    if (!mounted || requestId != _requestId) return;
+    if (!mounted || requestId != _requestIds[period]) return;
+    _inFlight.remove(period);
 
     setState(() {
-      _loading = false;
+      final visible = period == _period;
+      if (visible) _loading = false;
       if (result != null && result['success'] == true) {
         _reports[period] = result['report'] as CashFlowReport;
         _reportRanges[period] = range;
         _stale.remove(period);
       } else {
-        _offline = offline;
-        _failed = !offline;
+        if (visible) {
+          _offline = offline;
+          _failed = !offline;
+        }
         if (_reports.containsKey(period)) _stale.add(period);
       }
     });
@@ -145,7 +154,12 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
 
   void _selectPeriod(CashFlowPeriod period) {
     if (period == _period) return;
-    setState(() => _period = period);
+    setState(() {
+      _period = period;
+      _loading = _inFlight.contains(period);
+      _failed = false;
+      _offline = false;
+    });
     _load();
   }
 

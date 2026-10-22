@@ -11,6 +11,7 @@ import '../services/transactions_service.dart';
 import '../theme/sure_colors.dart';
 import '../theme/sure_spacing.dart';
 import '../theme/sure_tokens.dart';
+import '../utils/amount_parser.dart';
 import '../utils/money_masker.dart';
 import '../widgets/money_text.dart';
 import '../widgets/sure_button.dart';
@@ -253,7 +254,14 @@ class _CashFlowCategoryTransactionsScreenState
     // The API's `amount` is a formatted string whose sign follows Sure's
     // ledger convention; present it by classification instead.
     final isIncome = transaction.isIncome;
-    final magnitude = transaction.amount.replaceFirst(RegExp(r'^\s*[-−]'), '');
+    // AmountParser's display text drops hyphen/en/em/figure dashes, minus
+    // signs and accounting parentheses.
+    String magnitude;
+    try {
+      magnitude = AmountParser.parse(transaction.amount).displayText;
+    } on FormatException {
+      magnitude = transaction.amount;
+    }
     return MoneyText(
       MoneyMasker.mask('${isIncome ? '+' : '-'}$magnitude', hidden: hidden),
       trend: isIncome ? MoneyTrend.inflow : MoneyTrend.outflow,
