@@ -499,7 +499,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     search = Transaction::Search.new(@family)
     stale = Transaction::Search::Totals.new(
-      count: 9, income_money: Money.new(999, "USD"), expense_money: Money.new(999, "USD"),
+      count: 9, transfer_count: 0, income_money: Money.new(999, "USD"), expense_money: Money.new(999, "USD"),
       transfer_inflow_money: Money.new(0, "USD"), transfer_outflow_money: Money.new(0, "USD")
     )
     cache.write("transaction_search_totals/v3/#{search.cache_key_base}", stale)
@@ -532,6 +532,20 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     assert_equal Money.new(50, "USD"), totals.transfer_inflow_money
     assert_equal Money.new(70, "USD"), totals.transfer_outflow_money
+  end
+
+  test "totals counts transfers whether or not they are excluded" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    create_transaction(account: @checking_account, amount: -50, kind: "funds_movement")
+    create_transaction(account: @checking_account, amount: -300, kind: "funds_movement", excluded: true)
+
+    totals = Transaction::Search.new(@family).totals
+    transfer_totals = Transaction::Search.new(@family, filters: { "types" => [ "transfer" ] }).totals
+
+    assert_equal 2, totals.transfer_count
+    assert_equal 3, totals.count
+    assert_equal 2, transfer_totals.transfer_count
+    assert_equal transfer_totals.count, transfer_totals.transfer_count
   end
 
   test "totals treats a null excluded as live" do

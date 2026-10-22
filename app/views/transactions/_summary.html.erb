@@ -1,10 +1,11 @@
 <%# locals: (totals:) %>
-<%# Show Inflow/Outflow labels only when the result set contains exclusively transfers
-    (income and expense are both $0). For mixed filters (e.g. Expense+Transfer),
-    we keep Income/Expenses labels — transfer amounts aren't included in the summary
-    bar in that case, though the transaction list still shows both types. %>
-<% show_transfers = totals.income_money.zero? && totals.expense_money.zero? &&
-   (totals.transfer_inflow_money.amount > 0 || totals.transfer_outflow_money.amount > 0) %>
+<%# Show Inflow/Outflow labels only when the result set contains exclusively transfers.
+    This is decided by count, not by the sums: the sums leave excluded entries out, so an
+    excluded transfer (or an excluded expense) would otherwise flip the labels. For mixed
+    filters (e.g. Expense+Transfer), we keep Income/Expenses labels — transfer amounts
+    aren't included in the summary bar in that case, though the transaction list still
+    shows both types. %>
+<% show_transfers = totals.count.positive? && totals.transfer_count == totals.count %>
 <div class="grid grid-cols-1 md:grid-cols-3 bg-container rounded-xl shadow-border-xs md:divide-x divide-y md:divide-y-0 divide-alpha-black-100 theme-dark:divide-alpha-white-200">
   <div class="p-4 space-y-2">
     <p class="text-sm text-secondary"><%= t("transactions.summary.total_transactions") %></p>

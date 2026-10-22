@@ -75,7 +75,9 @@ class Transaction::Search
         scope = scope.where.not(accounts: { id: tax_advantaged_ids }) if tax_advantaged_ids.present?
 
         # The list shows excluded entries; the sums leave them out, as the
-        # reports do. COUNT stays unfiltered so it matches the list.
+        # reports do. The counts stay unfiltered so they match the list, and
+        # transfer_count lets the summary tell a transfer-only result set
+        # from one whose sums are all zero because its entries are excluded.
         # entries.excluded is nullable and a NULL row is live, hence
         # IS NOT TRUE rather than = false.
         result = scope
@@ -96,6 +98,10 @@ class Transaction::Search
                       "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind IN (?) AND entries.excluded IS NOT TRUE THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as transfer_outflow_total",
                       Transaction::TRANSFER_KINDS
                     ]),
+                    ActiveRecord::Base.sanitize_sql_array([
+                      "COUNT(CASE WHEN transactions.kind IN (?) THEN entries.id END) as transfer_count",
+                      Transaction::TRANSFER_KINDS
+                    ]),
                     "COUNT(entries.id) as transactions_count"
                   )
                   .joins(
@@ -108,6 +114,7 @@ class Transaction::Search
 
         Totals.new(
           count: result&.transactions_count.to_i,
+          transfer_count: result&.transfer_count.to_i,
           income_money: Money.new((result&.income_total || 0), family.currency),
           expense_money: Money.new((result&.expense_total || 0), family.currency),
           transfer_inflow_money: Money.new((result&.transfer_inflow_total || 0), family.currency),
@@ -130,7 +137,7 @@ class Transaction::Search
   end
 
   private
-    Totals = Data.define(:count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
+    Totals = Data.define(:count, :transfer_count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
 
     # Filter query to include only active accounts if requested
     def apply_active_accounts_filter(query, active_accounts_only_filter)
