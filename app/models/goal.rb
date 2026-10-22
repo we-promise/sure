@@ -36,7 +36,7 @@ class Goal < ApplicationRecord
   validates :currency, presence: true
   # before_save (not before_validation) so it only mutates on persistence, not
   # on every valid? call — a goal can be inspected without its basis flipping.
-  before_save :default_progress_basis_for_investment
+  before_save :default_progress_basis_for_market_accounts
   # A reserve measured in months is derived, not typed: computing it only in
   # the monthly job would leave a brand-new one wrong until the 1st, so the
   # feature's first impression would be its least convincing moment. Fired on
@@ -102,7 +102,7 @@ class Goal < ApplicationRecord
   monetize :target_amount
 
   # Account types that can back a goal (see linked_accounts_must_be_fundable).
-  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment].freeze
+  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment Crypto].freeze
 
   # States in which a goal has let go of the money it was holding, and so
   # drops out of the shared pool. `completed` belongs here: reaching a goal
@@ -1367,18 +1367,19 @@ class Goal < ApplicationRecord
 
     def linked_accounts_must_be_fundable
       offending = goal_accounts.reject(&:marked_for_destruction?).reject do |sga|
-        sga.account&.depository? || sga.account&.investment?
+        FUNDABLE_ACCOUNT_TYPES.include?(sga.account&.accountable_type)
       end
       return if offending.empty?
 
       errors.add(:linked_accounts, :must_be_fundable)
     end
 
-    # Goals funded by an investment account default to the contributions basis
-    # (so a market swing doesn't move them); depository-only goals stay on the
-    # balance basis. Only auto-set when the basis is still the default.
-    def default_progress_basis_for_investment
-      return unless goal_accounts.any? { |ga| ga.account&.investment? }
+    # Goals funded by an investment or crypto account default to the
+    # contributions basis (so a market swing doesn't move them); depository-only
+    # goals stay on the balance basis. Only auto-set when the basis is still the
+    # default.
+    def default_progress_basis_for_market_accounts
+      return unless goal_accounts.any? { |ga| ga.account&.investment? || ga.account&.crypto? }
       return unless progress_basis.blank? || progress_basis == "balance"
 
       self.progress_basis = "contributions"
