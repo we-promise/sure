@@ -22,8 +22,14 @@ class Security::ClassificationProposal < ApplicationRecord
   validates :asset_class, inclusion: { in: Security::ASSET_CLASSES }, allow_nil: true
   validates :asset_sub_class, inclusion: { in: Security::ASSET_SUB_CLASSES }, allow_nil: true
   validates :region, inclusion: { in: Security::REGION_KEYS }, allow_nil: true
-  validate :security_is_open_to_a_proposal, on: :create
+  # On every save that leaves the proposal pending, not on create only:
+  # `propose!` revives an existing row through `update!`, and that path must
+  # meet the same veto. An approval or a rejection is not a new proposal, so
+  # it is not checked: a hand classification must not stop the person
+  # clearing the proposal out of the queue.
+  validate :security_is_open_to_a_proposal, if: :pending?
   validate :answers_something
+  validate :sub_class_has_a_class
 
   scope :pending, -> { where(status: "pending") }
 
@@ -31,15 +37,35 @@ class Security::ClassificationProposal < ApplicationRecord
     define_method("#{state}?") { status == state }
   end
 
+  ANSWER_COLUMNS = %i[asset_class asset_sub_class sector region rationale].freeze
+
   # Replaces any existing proposal for this pair rather than accumulating, so a
   # review screen can never show one security twice with two different answers.
   # The unique index on (family_id, security_id) is what makes that a guarantee
   # rather than a convention.
+  #
+  # Replaces, not merges: every answer column the new proposal leaves out is
+  # cleared, or a region-only proposal would revive someone else's asset class
+  # and approve it as "ai".
+  #
+  # Two first proposals for one pair can both miss `find_by`; the loser's
+  # INSERT hits the unique index, and it replaces the winner's row instead.
   def self.propose!(security:, family:, **attrs)
-    existing = find_by(security: security, family: family)
-    return existing.tap { |p| p.update!(status: "pending", **attrs) } if existing
+    answer = ANSWER_COLUMNS.index_with(nil).merge(attrs)
+    attempts = 0
 
-    create!(security: security, family: family, **attrs)
+    begin
+      existing = find_by(security: security, family: family)
+      return existing.tap { |p| p.update!(status: "pending", **answer) } if existing
+
+      # A savepoint, so the unique violation does not poison a caller's
+      # transaction before the retry reads the winner's row.
+      transaction(requires_new: true) { create!(security: security, family: family, **answer) }
+    rescue ActiveRecord::RecordNotUnique
+      attempts += 1
+      retry if attempts == 1
+      raise
+    end
   end
 
   # Returns false rather than raising when the security has been answered since
@@ -63,8 +89,9 @@ class Security::ClassificationProposal < ApplicationRecord
     with_lock do
       next unless pending?
 
+      # `with_lock` reloads the row under FOR UPDATE, so the veto reads what
+      # is committed now.
       security.with_lock do
-        security.reload
         next if security.classification_locked? || security.classification_source == "manual"
 
         security.update!(proposed_attributes.merge(source_attributes))
@@ -138,6 +165,14 @@ class Security::ClassificationProposal < ApplicationRecord
       return if [ asset_class, asset_sub_class, sector, region ].any?(&:present?)
 
       errors.add(:base, "must propose at least one classification")
+    end
+
+    # `proposed_attributes` writes a sub-class only beside a class, so a
+    # sub-class alone would be approved, marked approved, and write nothing.
+    def sub_class_has_a_class
+      return if asset_sub_class.blank? || asset_class.present?
+
+      errors.add(:asset_sub_class, "needs an asset class beside it")
     end
 
     def security_is_open_to_a_proposal
