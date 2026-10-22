@@ -1305,6 +1305,10 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match I18n.t("recurring_transactions.new.covered_suggested_title"), response.body
     assert_no_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    # Confirming links payments within the bill's tolerance, not necessarily
+    # this one: covering accepts 0.5x to 2x. The copy must not promise it.
+    assert_select "p", text: I18n.t("recurring_transactions.new.covered_suggested_body", name: suggested.display_name)
+    assert_no_match "track this payment", response.body
     assert_select "a[href=?][data-turbo-method=post][data-turbo-frame=_top]",
                   confirm_recurring_transaction_path(suggested),
                   text: I18n.t("recurring_transactions.new.covered_confirm")

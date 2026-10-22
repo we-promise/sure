@@ -67,7 +67,7 @@ en:
       covered_body: "%{name} already tracks this payment, so a new bill would count it twice."
       covered_open: Open bill
       covered_suggested_title: Sure already suggested a bill for this payment
-      covered_suggested_body: "%{name} is waiting in your suggestions. Confirm it to track this payment, so a new bill does not count it twice."
+      covered_suggested_body: "%{name} is waiting in your suggestions. Confirm it to start tracking it, so a new bill does not count this payment twice. Matching payments are linked automatically, and you can link this one from the bill."
       covered_confirm: Confirm bill
       covered_create_anyway: Create a separate bill anyway
     smart_fills:
