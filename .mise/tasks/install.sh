@@ -17,6 +17,7 @@ fi
 
 bundle check >/dev/null 2>&1 || bundle install
 npm install
+npm run tokens:build
 
 if [ "${SKIP_DB_SETUP:-0}" != "1" ]; then
   bin/rails db:prepare
