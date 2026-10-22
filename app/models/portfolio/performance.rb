@@ -50,14 +50,22 @@ class Portfolio::Performance
   # return is shown to.
   CHAIN_PRECISION = 20
 
-  attr_reader :family, :account_ids, :period, :user, :active_until_dates
+  attr_reader :family, :period, :user, :active_until_dates
 
   def initialize(family:, account_ids:, period:, user: nil, active_until_dates: {})
     @family = family
-    @account_ids = Array(account_ids).compact.map(&:to_s)
+    @requested_account_ids = Array(account_ids).compact.map(&:to_s)
     @period = period
     @user = user
     @active_until_dates = active_until_dates || {}
+  end
+
+  # The requested ids that belong to the family, and only those. Neither
+  # DailyReturns nor FlowClassifier filters by family, so this is where the
+  # scoping happens: an id from another family is dropped before anything is
+  # valued, or keyed in the cache under this family.
+  def account_ids
+    @account_ids ||= accounts.map { |account| account.id.to_s }
   end
 
   # Chained daily returns, as a BigDecimal fraction (0.21 == 21%).
@@ -143,7 +151,8 @@ class Portfolio::Performance
     metrics[:rate_missing]
   end
 
-  # Days whose denominator was zero or negative.
+  # Days that contribute no return: a zero or negative denominator, or a
+  # journal the series could not value (Portfolio::DailyReturns::Row#unvalued_journal).
   def suppressed_dates
     metrics[:suppressed_dates]
   end
@@ -179,6 +188,9 @@ class Portfolio::Performance
   # already the strings DailyReturns keyed its own query on, so a `to_date`
   # round trip would only re-parse them.
   #
+  # No figure reads `user`; it is in the key only to keep each user's entry
+  # apart, so identical figures are cached once per user.
+  #
   # The digest only shortens the key; nothing depends on it being secret.
   # SHA-256 rather than MD5 so code scanning does not flag account ids fed to a
   # broken hash.
@@ -199,6 +211,11 @@ class Portfolio::Performance
   end
 
   private
+    # Loaded once: the ids and the eligibility resolution both read it.
+    def accounts
+      @accounts ||= @requested_account_ids.empty? ? [] : family.accounts.where(id: @requested_account_ids).to_a
+    end
+
     def metrics
       @metrics ||= Rails.cache.fetch(cache_key) { compute }
     end
@@ -215,8 +232,8 @@ class Portfolio::Performance
       # caller can see which part is unexplained -- but nothing is expressed as
       # a percentage of a value we could not convert.
       #
-      # Applied to the whole scope: an account with a single day of balance
-      # history supports no return, so it withholds every time-weighted figure.
+      # Applied to the whole scope: see #time_weighted_supported? and
+      # #money_weighted_supported?.
       withhold_time_weighted = rate_missing || !time_weighted_supported?
       chained = withhold_time_weighted ? nil : chain(returns)
       money_weighted_result = rate_missing || !money_weighted_supported?(rows) ? nil : money_weighted(rows)
@@ -264,6 +281,9 @@ class Portfolio::Performance
       returns.reduce(BigDecimal(1)) { |acc, (_date, r)| compound(acc, r) } - 1
     end
 
+    # Float for the fractional root, as Portfolio::Xirr is for its solve:
+    # BigDecimal has no non-integer power. The figure is shown to 0.01%, far
+    # inside a Float's precision.
     def annualize(chained)
       return nil if chained.nil?
       return nil if period.days < MIN_DAYS_FOR_ANNUALISATION
@@ -284,8 +304,14 @@ class Portfolio::Performance
     # withholds the figure. An account with no balance rows in the period
     # contributes nothing and does not block it, the same rule a missing rate
     # follows. A period of fewer than two days has no duration to annualise.
+    #
+    # A day suppressed for a journal the series could not value withholds it
+    # too: that journal's flow is missing from the sum while its value moved
+    # the close, so the rate would read the position as return. A day
+    # suppressed for its denominator alone has every flow and does not.
     def money_weighted_supported?(rows)
       return false if rows.size < 2
+      return false if rows.any?(&:unvalued_journal)
 
       return_scopes.values.all? do |scope|
         scope.balance_days.zero? || scope.supports_money_weighted_return?
@@ -303,24 +329,24 @@ class Portfolio::Performance
     # count towards the days that support a return.
     def return_scopes
       @return_scopes ||= Portfolio::ReturnScope.resolve_all(
-        accounts: Account.where(id: account_ids),
+        accounts: accounts,
         period: period,
         active_until_dates: daily_returns.active_until_dates
       )
     end
 
-    # Eligibility applied to the whole scope for the time-weighted figures, mirroring
-    # #money_weighted_supported?: an account with exactly one day of balance
-    # history has no return to contribute, so it withholds the aggregate. An
-    # account with no balance rows in the period contributes nothing and does
-    # not block it -- but some account has to hold a balance on two days, or
-    # the scope as a whole held nothing and its calendar rows of zeros would
-    # chain into a 0% return.
+    # Eligibility applied to the whole scope for the time-weighted figures:
+    # some account has to hold a balance on two days, or the scope as a whole
+    # held nothing and its calendar rows of zeros would chain into a 0% return.
+    #
+    # An account with a single balance day does not withhold the aggregate.
+    # DailyReturns prices its arrival (or departure) as a composition flow, so
+    # the day it appears is measured like any other; a new brokerage synced
+    # today used to blank every period ending today for the whole portfolio.
+    # The money-weighted figure still treats it as unsupported, because
+    # ReturnScope cannot tell from one day whether its flows are known.
     def time_weighted_supported?
-      scopes = return_scopes.values
-
-      scopes.none? { |scope| scope.balance_days == 1 } &&
-        scopes.any? { |scope| scope.balance_days >= 2 }
+      return_scopes.values.any? { |scope| scope.balance_days >= 2 }
     end
 
     # The opening value is the investor's first outlay; every flow
@@ -373,6 +399,7 @@ class Portfolio::Performance
       nil
     end
 
+    # Float for the square root, as #annualize is for its fractional root.
     def annualized_volatility(returns)
       values = returns.map { |(_date, r)| r.to_f }
       return nil if values.size < 2

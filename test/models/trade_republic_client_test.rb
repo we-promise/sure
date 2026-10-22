@@ -659,6 +659,13 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "qr_pending", @client.login_stage(pending_login_b64: encoded)
   end
 
+  test "an abandoned QR login is expired once its challenge lapsed" do
+    pending = { "challenge_id" => "challenge-1", "session_blob" => "session=1", "expires_at" => 1.minute.ago.iso8601 }
+    encoded = Base64.strict_encode64(JSON.generate(pending))
+
+    assert_raises(Provider::TradeRepublicClient::LoginExpired) { @client.login_stage(pending_login_b64: encoded) }
+  end
+
   test "rotates the QR payload and token expiry while polling" do
     response_class = Struct.new(:code, :body) do
       def is_a?(klass)
@@ -2795,6 +2802,26 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       events.map { |event| event.dig("detail", "instrument_name") }
   end
 
+  test "a WAF rejection of the account request is not an expired session" do
+    session = mock
+    session.expects(:get).with("/api/v2/auth/account").returns(waf_rejection)
+    @client.define_singleton_method(:new_session) { |**| session }
+
+    assert_raises(Provider::TradeRepublicClient::WafRequired) do
+      @client.sync(session_txt: '{"tr_session":"s"}')
+    end
+  end
+
+  test "a rejected account request without an error object is an expired session" do
+    [ "null", "[]" ].each do |body|
+      session = mock
+      session.expects(:get).with("/api/v2/auth/account").returns(rejection("403", body))
+      @client.define_singleton_method(:new_session) { |**| session }
+
+      assert_equal "session_expired", @client.sync(session_txt: '{"tr_session":"s"}').data["status"]
+    end
+  end
+
   private
 
     # Same shape as bond_purchase_detail, in English, as Sure receives it.
@@ -2947,5 +2974,20 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
           { "items" => [], "cursors" => {} }
         end
       end
+    end
+
+    def waf_rejection
+      rejection("403", { "errorCode" => "WAF_TOKEN_REQUIRED" }.to_json)
+    end
+
+    def rejection(code, body)
+      response_class = Struct.new(:code, :body) do
+        def is_a?(klass)
+          klass == Net::HTTPSuccess ? false : super
+        end
+
+        def [](_header) = nil
+      end
+      response_class.new(code, body)
     end
 end
