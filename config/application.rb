@@ -79,7 +79,8 @@ module Sure
 
     # Bound a FinanceKit batch upload before Rails reads and parses it; see
     # the class comment for why the controller's own size check is too late.
+    # Ahead of Rack::MethodOverride, the first middleware that reads a body.
     require_relative "../app/middleware/financekit_body_limit"
-    config.middleware.use FinancekitBodyLimit
+    config.middleware.insert_before Rack::MethodOverride, FinancekitBodyLimit
   end
 end

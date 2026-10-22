@@ -2,46 +2,115 @@ require "test_helper"
 require_relative "../../../../support/financekit_test_helper"
 
 # The batch upload endpoint is unauthenticated until the action runs, and
-# Rails parses a JSON body before any action code: Instrumentation logs
-# `request.filtered_parameters`, and a chunked request's `content_length` is
-# its fully read `raw_post`. These tests measure how much of an oversized body
-# reaches the JSON parser, not only the status code, because the controller
-# already answered 413 while the whole body had been read and parsed first.
+# Rails reads a body before any action code: Rack::MethodOverride parses a
+# form-encoded one, Instrumentation logs `request.filtered_parameters`, and a
+# chunked request's `content_length` is its fully read `raw_post`. These tests
+# count the bytes anything reads from the request body, not only the status
+# code, because the controller already answered 413 while the whole body had
+# been read and parsed first. Nothing is stubbed: Rails' own JSON parsing runs.
 class Api::V1::Financekit::BatchesBodyLimitTest < ActionDispatch::IntegrationTest
   include FinancekitTestHelper
+
+  # Counts what is read through it, whoever reads it.
+  class CountingInput
+    attr_reader :bytes_read
+
+    def initialize(body)
+      @io = StringIO.new(body)
+      @bytes_read = 0
+    end
+
+    def read(*args)
+      data = @io.read(*args)
+      @bytes_read += data.bytesize if data
+      data
+    end
+
+    def gets
+      line = @io.gets
+      @bytes_read += line.bytesize if line
+      line
+    end
+
+    def each
+      while (chunk = read(16.kilobytes))
+        yield chunk
+      end
+    end
+
+    def rewind
+      @io.rewind
+    end
+
+    def close; end
+  end
 
   setup do
     financekit_setup
     @path = "/api/v1/financekit/publishers/#{@item.publisher_id}/batches"
     @oversized = JSON.generate({ "padding" => "a" * (2 * Financekit::MAX_BYTES) })
-    @decoded_sizes = []
-    decoded_sizes = @decoded_sizes
-    real_decode = ActiveSupport::JSON.method(:decode)
-    ActiveSupport::JSON.stubs(:decode).with do |raw, *|
-      decoded_sizes << raw.to_s.bytesize
-      true
-    end.returns({})
-    @real_decode = real_decode
+    @json = { "Authorization" => "Bearer invalid", "Content-Type" => "application/json" }
   end
 
-  test "an oversized upload with a Content-Length is refused before any of it is parsed" do
-    post @path, params: @oversized,
-      headers: { "Authorization" => "Bearer invalid", "Content-Type" => "application/json" }
+  test "an oversized upload with a Content-Length is refused before any of it is read" do
+    input = upload(@path, @oversized, @json)
 
     assert_response :payload_too_large
-    assert_equal({ "error" => "payload_too_large" }, @real_decode.call(response.body))
-    assert_empty @decoded_sizes, "no part of an oversized body should reach the JSON parser"
+    assert_equal({ "error" => "payload_too_large" }, response.parsed_body)
+    assert_equal 0, input.bytes_read, "no part of an oversized body should be read"
   end
 
-  test "a chunked upload is read no further than the limit" do
-    post @path, params: @oversized,
-      headers: { "Authorization" => "Bearer invalid", "Content-Type" => "application/json" },
-      env: { "HTTP_TRANSFER_ENCODING" => "chunked", "CONTENT_LENGTH" => nil }
+  # Cut off at the limit, the body is not valid JSON, and Rails' parameter
+  # parsing would answer 400 before the controller's own size check ran.
+  test "an oversized chunked upload is refused with the documented 413" do
+    input = upload(@path, @oversized, @json, chunked: true)
 
     assert_response :payload_too_large
-    assert @decoded_sizes.all? { |size| size <= Financekit::MAX_BYTES + 1 },
-      "parsed #{@decoded_sizes.max} bytes of a #{@oversized.bytesize}-byte body"
+    assert_equal({ "error" => "payload_too_large" }, response.parsed_body)
+    assert_operator input.bytes_read, :<=, Financekit::MAX_BYTES + 1,
+      "read #{input.bytes_read} bytes of a #{@oversized.bytesize}-byte body"
   end
+
+  test "a chunked upload within the limit is accepted whole" do
+    payload = financekit_payload
+    raw = JSON.generate(payload)
+    headers = { "Authorization" => "Bearer #{@credential}", "Content-Type" => "application/json",
+                "X-Sure-Payload-SHA256" => Digest::SHA256.hexdigest(raw), "Idempotency-Key" => payload.fetch("batch_id") }
+    ApiRateLimiter.stubs(:limit).returns(nil)
+
+    upload(@path, raw, headers, chunked: true)
+
+    assert_response :accepted
+    assert_equal raw, FinancekitBatch.sole.payload
+  end
+
+  # Rails squeezes repeated slashes and strips a trailing one before routing,
+  # so these reach the same action.
+  test "a trailing or repeated slash does not step around the limit" do
+    [ "#{@path}/", "/#{@path}", @path.sub("/financekit/", "//financekit/") ].each do |path|
+      input = upload(path, @oversized, @json)
+
+      assert_response :payload_too_large, path
+      assert_equal 0, input.bytes_read, "#{path} read #{input.bytes_read} bytes"
+    end
+  end
+
+  # Rack::MethodOverride parses a form-encoded POST to look for `_method`.
+  test "a form-encoded oversized upload is refused before any of it is read" do
+    input = upload(@path, @oversized, @json.merge("Content-Type" => "application/x-www-form-urlencoded"))
+
+    assert_response :payload_too_large
+    assert_equal 0, input.bytes_read, "read #{input.bytes_read} bytes before the limit applied"
+  end
+
+  private
+    def upload(path, body, headers, chunked: false)
+      input = CountingInput.new(body)
+      env = { "rack.input" => input }
+      env.merge!("HTTP_TRANSFER_ENCODING" => "chunked", "CONTENT_LENGTH" => nil) if chunked
+      post path, params: body, headers: headers, env: env
+      input
+    end
 end
 
 class FinancekitBodyLimitTest < ActiveSupport::TestCase

@@ -10,9 +10,11 @@
 # `raw_post`. Left alone, an unauthenticated client could make the server
 # buffer and parse a body of any size.
 #
-# A declared Content-Length over the limit is refused here. A chunked body is
-# read no further than one byte past the limit, which is enough for the
-# controller's own size check to see it is too large and answer 413.
+# It runs ahead of Rack::MethodOverride, which parses a form-encoded POST to
+# look for `_method`. A declared Content-Length over the limit is refused
+# here. A chunked body is read no further than one byte past the limit, which
+# is enough for the controller's own size check to see it is too large and
+# answer 413.
 class FinancekitBodyLimit
   PATH = %r{\A/api/v1/financekit/publishers/[^/]+/batches(?:\.[^./?]+)?\z}
 
@@ -21,7 +23,7 @@ class FinancekitBodyLimit
   end
 
   def call(env)
-    return @app.call(env) unless env["REQUEST_METHOD"] == "POST" && env["PATH_INFO"].to_s.match?(PATH)
+    return @app.call(env) unless env["REQUEST_METHOD"] == "POST" && upload_path?(env["PATH_INFO"])
 
     limit = Financekit::MAX_BYTES
     if env["CONTENT_LENGTH"].to_i > limit
@@ -91,4 +93,12 @@ class FinancekitBodyLimit
       @io.close if @io.respond_to?(:close)
     end
   end
+
+  private
+    # Matched as the router will see it. Rails squeezes repeated slashes and
+    # strips a trailing one before routing, so `/batches/` and `//api/...`
+    # reach the upload action too.
+    def upload_path?(path_info)
+      ActionDispatch::Journey::Router::Utils.normalize_path(path_info.to_s).match?(PATH)
+    end
 end
