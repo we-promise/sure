@@ -1,8 +1,24 @@
+min_version = "2026.10.17"
+
 [tools]
 ruby = "3.4.9"
 node = "24"
 postgres = "16"
 redis = "7"
+"conda:libvips" = "8.16"
 
-[hooks]
-postinstall = "mise run install"
+[env]
+BUNDLE_PATH = "{{ config_root }}/vendor/bundle"
+BUNDLE_USER_HOME = "{{ config_root }}/.bundle/user"
+npm_config_cache = "{{ config_root }}/tmp/cache/npm"
+BUNDLE_JOBS = { default = "4" }
+DB_HOST = { default = "127.0.0.1" }
+DB_PORT = { default = "55432" }
+POSTGRES_USER = { default = "sure" }
+SURE_REDIS_PORT = { default = "56379" }
+REDIS_URL = { default = "redis://127.0.0.1:56379/1" }
+SURE_MANAGED_SERVICES = { default = "1" }
+SURE_SERVICE_DIR = "{{ config_root }}/storage/development-services"
+SURE_PG_PREFIX = { value = "{{ tools.postgres.path }}", tools = true }
+SURE_VIPS_PREFIX = { value = "{{ tools['conda:libvips'].path }}", tools = true }
+_.source = { path = ".mise/env.sh", tools = true }

@@ -80,19 +80,43 @@ The instructions below are for developers to get started with contributing to th
 - Redis > 5.4 (latest stable version recommended)
 
 ### Getting Started
+
+Install [mise](https://mise.jdx.dev/getting-started.html) 2026.10.17 or newer,
+Git, curl, and a C/C++ build toolchain (`build-essential` on Debian/Ubuntu,
+Xcode Command Line Tools on macOS). On Linux with glibc and macOS, mise installs
+Ruby, Node, PostgreSQL, Redis, and libvips without requiring system-wide services.
+
 ```sh
 cd sure
-cp .env.local.example .env.local
+mise trust
 mise install
-bin/dev
+mise run install
+mise run dev
+
+# From another terminal, verify the running app
+mise run check
 
 # Optionally, load demo data
-rake demo_data:default
+mise exec -- bundle exec rake demo_data:default
 ```
 
-`mise install` sets up Ruby/Node/Postgres/Redis and runs the project install task
-(creates `.env.local` if missing, then bundle, npm, and db:prepare). If you prefer
-the legacy setup, use `bin/setup`.
+The explicit install task preserves existing `.env.local` and `.env.test` files,
+installs locked dependencies, starts local services, prepares development and test
+databases, and builds Tailwind. It does not rewrite lockfiles, design tokens, or
+`db/schema.rb`. Setup failures return a nonzero status; there is no automatic
+post-install hook. Rerun `mise run install` after dependency or migration changes.
+
+Services use loopback ports 55432 (PostgreSQL) and 56379 (Redis), with data under
+ignored `storage/development-services`. These development services use local
+trust authentication; do not expose them on a public interface. `mise run dev`
+starts Rails, Sidekiq, and a Tailwind watcher that also works without a terminal.
+PostgreSQL and Redis stay running when you stop the application.
+
+Use `mise exec -- bin/rails test` for tests, or activate mise in your shell before
+using the usual Rails commands. See [the mise development guide](docs/mise.md)
+for custom ports, external services, cloud setup, and stopping services.
+If you already manage Ruby and the services yourself, `bin/setup` / `bin/dev`
+remain available as the legacy workflow.
 
 Visit http://localhost:3000 to view the app.
 
