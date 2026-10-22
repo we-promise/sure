@@ -59,25 +59,48 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
     assert listed.dig(:goal_funding, :free_to_earmark).present?
   end
 
-  test "accepts investment funding accounts" do
+  test "allows accessible investment funding" do
     account = create_account(name: "Brokerage", type: Investment)
 
-    result = @fn.call(goal_params(account, mode: "whole_account"))
+    result = @fn.call(goal_params(account, mode: "fixed_amount", amount: 250))
 
     assert result[:success]
     assert_equal account.id, Goal.find(result[:goal_id]).goal_accounts.first.account_id
   end
 
-  test "rejects missing inaccessible and cross-currency funding accounts" do
-    assert_equal "no_funding_accounts", @fn.call("name" => "X", "target_amount" => 100, "funding_accounts" => [])[:error]
+  test "rejects missing and inaccessible accounts" do
+    no_funding = @fn.call("name" => "X", "target_amount" => 100, "funding_accounts" => [])
+    assert_equal "no_funding_accounts", no_funding[:error]
+
+    inaccessible = create_account(name: "Hidden", type: Depository)
+    inaccessible.update!(status: "disabled")
+
+    hidden = @fn.call(goal_params(inaccessible, mode: "whole_account"))
+    assert_equal "unknown_accounts", hidden[:error]
+    assert_equal [ inaccessible.id.to_s ], hidden[:unknown_ids]
 
     unknown = @fn.call("name" => "X", "target_amount" => 100, "funding_accounts" => [ funding_item(SecureRandom.uuid) ])
     assert_equal "unknown_accounts", unknown[:error]
+  end
 
+  test "supports mixed-currency funding in the family currency" do
     usd = create_account(name: "USD", type: Depository, currency: "USD")
     eur = create_account(name: "EUR", type: Depository, currency: "EUR")
-    mixed = @fn.call("name" => "X", "target_amount" => 100, "funding_accounts" => [ funding_item(usd.id), funding_item(eur.id) ])
-    assert_equal "currency_mismatch", mixed[:error]
+
+    result = @fn.call(
+      "name" => "Mixed",
+      "target_amount" => 100,
+      "funding_accounts" => [
+        funding_item(usd.id, mode: "whole_account"),
+        funding_item(eur.id, mode: "fixed_amount", amount: 50)
+      ]
+    )
+
+    assert result[:success]
+    assert_equal @family.primary_currency_code, result[:currency]
+    links = Goal.find(result[:goal_id]).goal_accounts.index_by(&:account_id)
+    assert_nil links.fetch(usd.id).allocated_amount
+    assert_equal 50, links.fetch(eur.id).allocated_amount.to_d
   end
 
   test "rejects malformed allocation strategies" do
@@ -92,9 +115,36 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
     assert_equal "invalid_allocation", amount_on_whole[:error]
   end
 
+  test "returns soft validation errors for missing name and invalid target" do
+    account = create_account(name: "Savings", type: Depository)
+
+    missing_name = @fn.call(goal_params(account, mode: "whole_account").except("name"))
+    invalid_target = @fn.call(goal_params(account, mode: "whole_account").merge("target_amount" => 0))
+
+    assert_equal "name_required", missing_name[:error]
+    assert_equal "target_amount_invalid", invalid_target[:error]
+  end
+
+  test "allows fixed allocations above current balance for pro-rata goal funding" do
+    account = create_account(name: "Shared savings", type: Depository, balance: 1_000)
+    @family.goals.create!(name: "First", target_amount: 900, currency: "USD") do |goal|
+      goal.goal_accounts.build(account: account, allocated_amount: 700)
+    end
+
+    result = @fn.call(goal_params(account, mode: "fixed_amount", amount: 400))
+
+    assert result[:success]
+    assert_equal 400, Goal.find(result[:goal_id]).goal_accounts.first.allocated_amount.to_d
+  end
+
   private
-    def create_account(name:, type:, balance: 2_000, currency: "USD")
-      @family.accounts.create!(owner: @user, accountable: type.new, name: name, currency: currency, balance: balance)
+    def goal_params(account, mode:, amount: nil)
+      {
+        "name" => "Vacation",
+        "target_amount" => 2_000,
+        "target_date" => 6.months.from_now.to_date.iso8601,
+        "funding_accounts" => [ funding_item(account.id, mode:, amount:) ]
+      }
     end
 
     def funding_item(account_id, mode: "whole_account", amount: nil)
@@ -103,12 +153,13 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
       { "account_id" => account_id, "allocation" => allocation }
     end
 
-    def goal_params(account, mode:, amount: nil)
-      {
-        "name" => "Vacation",
-        "target_amount" => 1_500,
-        "target_date" => 3.months.from_now.to_date.iso8601,
-        "funding_accounts" => [ funding_item(account.id, mode: mode, amount: amount) ]
-      }
+    def create_account(name:, type:, balance: 1_000, currency: "USD")
+      @family.accounts.create!(
+        owner: @user,
+        name:,
+        accountable: type.new,
+        balance:,
+        currency:
+      )
     end
 end

@@ -18,7 +18,7 @@ class Assistant::Function::GoalFundingSelection
       type: "array",
       minItems: 1,
       uniqueItems: true,
-      description: "Complete funding list. Each item identifies an accessible Depository or Investment account and explicitly chooses a whole-account claim or a fixed allocation.",
+      description: "Complete funding list. Each item identifies an accessible Depository or Investment account and explicitly chooses a whole-account claim or a fixed allocation in that account's currency.",
       items: {
         type: "object",
         required: %w[account_id allocation],
@@ -31,7 +31,7 @@ class Assistant::Function::GoalFundingSelection
             additionalProperties: false,
             properties: {
               mode: { type: "string", enum: MODES, description: "whole_account claims the unallocated account; fixed_amount reserves one amount" },
-              amount: { type: "number", exclusiveMinimum: 0, description: "Required only for fixed_amount; omit for whole_account" }
+              amount: { type: "number", exclusiveMinimum: 0, description: "Required positive amount in this account's currency for fixed_amount mode" }
             }
           }
         }
@@ -58,9 +58,6 @@ class Assistant::Function::GoalFundingSelection
     raise Invalid.new("unknown_accounts", "One or more funding account IDs are unavailable.", unknown_ids: missing_ids, available_accounts: available_payload) if missing_ids.any?
 
     accounts = ids.map { |id| accounts_by_id.fetch(id) }
-    currencies = accounts.map(&:currency).uniq
-    raise Invalid.new("currency_mismatch", "All funding accounts must share one currency. Found: #{currencies.join(', ')}.") unless currencies.one?
-
     availability = Goal::FundingAvailability.for(family:, accounts:, excluding_goal: goal)
     claimed_ids = specs.filter_map do |spec|
       next unless spec.dig(:allocation, :mode) == "whole_account"

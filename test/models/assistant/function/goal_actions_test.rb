@@ -38,6 +38,24 @@ class Assistant::Function::GoalActionsTest < ActiveSupport::TestCase
     assert @goal.paused?
   end
 
+  test "updates goal funding across account currencies" do
+    usd = @family.accounts.create!(owner: @user, name: "Goal USD", accountable: Depository.new, balance: 1_000, currency: "USD")
+    eur = @family.accounts.create!(owner: @user, name: "Goal EUR", accountable: Depository.new, balance: 1_000, currency: "EUR")
+
+    result = Assistant::Function::UpdateGoal.new(@user).call(
+      "id" => @goal.id,
+      "funding_accounts" => [
+        { "account_id" => usd.id, "allocation" => { "mode" => "whole_account" } },
+        { "account_id" => eur.id, "allocation" => { "mode" => "fixed_amount", "amount" => 250 } }
+      ]
+    )
+
+    assert result[:success]
+    links = @goal.reload.goal_accounts.index_by(&:account_id)
+    assert_nil links.fetch(usd.id).allocated_amount
+    assert_equal 250, links.fetch(eur.id).allocated_amount.to_d
+  end
+
   test "deletes an archived goal" do
     @goal.update!(state: "archived")
 

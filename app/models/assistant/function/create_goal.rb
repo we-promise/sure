@@ -6,9 +6,15 @@ class Assistant::Function::CreateGoal < Assistant::Function
       <<~INSTRUCTIONS
         Creates a goal backed by accessible Depository or Investment accounts.
 
-        Use get_accounts first. Pass one complete funding_accounts list using stable
-        account IDs. Each account must explicitly use either whole_account or
-        fixed_amount allocation. Accounts already claimed in full require fixed_amount.
+        Use when the user describes a target they want to save toward. Before
+        calling, confirm the name, target amount, optional target date, and the
+        accounts that will fund it.
+
+        Use get_accounts first. Pass one complete funding_accounts list using
+        stable account IDs. Each account must explicitly use either whole_account
+        or fixed_amount allocation. Accounts already claimed in full require
+        fixed_amount. The goal target is in the family's primary currency; a
+        fixed allocation is in that funding account's own currency.
       INSTRUCTIONS
     end
   end
@@ -20,7 +26,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
       required: %w[name target_amount funding_accounts],
       properties: {
         name: { type: "string", description: "Short goal name" },
-        target_amount: { type: "number", exclusiveMinimum: 0, description: "Total target in the funding accounts' currency" },
+        target_amount: { type: "number", exclusiveMinimum: 0, description: "Total target in the family's primary currency" },
         target_date: { type: [ "string", "null" ], format: "date", description: "Optional target date in YYYY-MM-DD format" },
         funding_accounts: Assistant::Function::GoalFundingSelection.schema,
         notes: { type: [ "string", "null" ], description: "Optional notes" }
@@ -47,18 +53,11 @@ class Assistant::Function::CreateGoal < Assistant::Function
         .pluck(:id)
       raise Account::MutationAccess::Denied unless fundable_ids.size == locked_funding_accounts.size
 
-      currencies = locked_funding_accounts.map(&:currency).uniq
-      unless currencies.one?
-        raise Assistant::Function::GoalFundingSelection::Invalid.new(
-          "currency_mismatch",
-          "All funding accounts must share one currency. Found: #{currencies.join(', ')}."
-        )
-      end
       created = family.goals.new(
         name:,
         target_amount:,
         target_date:,
-        currency: currencies.first,
+        currency: family.primary_currency_code,
         notes: params["notes"].presence,
         color: Goal::COLORS.sample
       )

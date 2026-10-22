@@ -97,10 +97,6 @@ class Assistant::Function::UpdateGoal < Assistant::Function
       raise Account::MutationAccess::Denied if (selection.accounts.map(&:id) - fundable_ids).any?
 
       locked_funding_accounts = selection.accounts.map { |account| locked.fetch(account.id.to_s) }
-      currencies = locked_funding_accounts.map(&:currency).uniq
-      unless currencies == [ goal.currency ]
-        raise ActiveRecord::RecordInvalid.new(goal.tap { |record| record.errors.add(:base, "funding accounts must use #{goal.currency}") })
-      end
 
       desired_ids = locked_funding_accounts.map(&:id)
       goal.goal_accounts.each do |link|

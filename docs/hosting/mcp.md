@@ -157,7 +157,7 @@ At the time of writing, `tools/list` includes:
 | `create_category` / `update_category` | Manage categories |
 | `delete_category` | Delete a category, optionally reassigning its transactions |
 | `create_transaction` / `delete_transaction` | Create and delete standard income and expense transactions |
-| `get_transfers` / `create_transfer` / `update_transfer` / `delete_transfer` | List and manage transfers between writable accounts |
+| `get_transfers` / `create_transfer` / `update_transfer` / `delete_transfer` | List and manage transfers between writable accounts. `update_transfer` accepts a stable transfer ID (or either transaction ID), edits amount/date/notes/rate, and can switch confirmed cash-to-Investment/Crypto transfers between spending and plain-transfer treatment with an optional dry-run. |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
 | `update_budget` | Update budget allocations for a month |
 | `get_rules` / `get_rule_options` | Transaction rules in readable form (ids resolved to names, latest run; paginated, with a text search), and the condition and action types a rule can use |

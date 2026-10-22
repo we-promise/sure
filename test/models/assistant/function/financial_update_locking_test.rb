@@ -53,14 +53,24 @@ class Assistant::Function::FinancialUpdateLockingTest < ActiveSupport::TestCase
       "date" => Date.current.iso8601,
       "external_id" => "locking-#{SecureRandom.uuid}"
     )
-    Transfer.any_instance.expects(:lock!).once
     Entry.any_instance.expects(:lock!).twice
 
-    result = Assistant::Function::UpdateTransfer.new(@user).call(
-      "id" => created.dig(:transfer, :id),
-      "amount" => 30
-    )
+    lock_queries = []
+    result = ActiveSupport::Notifications.subscribed(
+      ->(*args) { lock_queries << args.last[:sql] if args.last[:sql].include?("FOR UPDATE") },
+      "sql.active_record"
+    ) do
+      Assistant::Function::UpdateTransfer.new(@user).call(
+        "id" => created.dig(:transfer, :id),
+        "amount" => 30
+      )
+    end
 
     assert_equal true, result[:success]
+    account_lock = lock_queries.index { |sql| sql.include?('FROM "accounts"') }
+    transfer_lock = lock_queries.index { |sql| sql.include?('FROM "transfers"') }
+    assert_not_nil account_lock
+    assert_not_nil transfer_lock
+    assert_operator account_lock, :<, transfer_lock
   end
 end
