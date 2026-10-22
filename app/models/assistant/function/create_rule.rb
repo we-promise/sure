@@ -61,5 +61,7 @@ class Assistant::Function::CreateRule < Assistant::Function
       preview: preview(rule, sample_size: resolved_sample_size(params)),
       message: "Rule saved inactive. Check the preview, then call apply_rule with its preview_token to activate it."
     }
+  rescue Rule::SafeRegex::TimeoutError
+    regex_timeout_error(rule, "The rule was saved inactive.")
   end
 end

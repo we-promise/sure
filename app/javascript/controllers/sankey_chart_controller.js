@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import { sankey } from "d3-sankey";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
+import { hiddenSankeyLabels } from "utils/sankey_labels";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
 import {
   buildCategoryTransactionsUrl,
@@ -47,6 +48,14 @@ export default class extends Controller {
     this.#createTooltip();
     this.#syncZoomControls();
     this.#draw();
+
+    // Labels are measured to keep them off neighbouring bars; measure again
+    // once the page font has replaced the fallback.
+    if (document.fonts?.status === "loading") {
+      document.fonts.ready.then(() => {
+        if (this.connected) this.#draw();
+      });
+    }
   }
 
   dataValueChanged() {
@@ -290,7 +299,7 @@ export default class extends Controller {
       .attr("fill", (d) => d.color || this.constructor.DEFAULT_COLOR)
       .attr("stroke", (d) => (d.color ? "none" : "var(--color-gray-500)"));
 
-    const hiddenLabels = this.#addNodeLabels(nodeGroups, width, nodes);
+    const hiddenLabels = this.#addNodeLabels(svg, nodeGroups, width, nodes);
 
     return { nodeGroups, hiddenLabels };
   }
@@ -347,81 +356,83 @@ export default class extends Controller {
             L ${x0},${y1} Z`;
   }
 
-  #addNodeLabels(nodeGroups, width, nodes) {
+  #addNodeLabels(svg, nodeGroups, width, nodes) {
     const controller = this;
-    const hiddenLabels = this.#calculateHiddenLabels(nodes);
+    const hiddenLabels = this.#calculateHiddenLabels(
+      nodes,
+      this.#measureLabels(svg, nodes, width),
+    );
 
     nodeGroups
       .append("text")
-      .attr("x", (d) => (d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6))
-      .attr("y", (d) => (d.y1 + d.y0) / 2)
-      .attr("dy", "-0.2em")
-      .attr("text-anchor", (d) => (d.x0 < width / 2 ? "start" : "end"))
       .attr(
         "class",
         "text-xs font-medium text-primary fill-current select-none",
       )
       .style("cursor", "default")
       .style("opacity", (d) => (hiddenLabels.has(d.index) ? 0 : 1))
+      // A hidden label can sit over another node's bar; it must not take
+      // that bar's hovers and clicks, even while hover reveals it.
+      .style("pointer-events", (d) =>
+        hiddenLabels.has(d.index) ? "none" : null,
+      )
       .style("transition", "opacity 0.2s ease")
       .each(function (d) {
-        const textEl = d3.select(this);
-        textEl.selectAll("tspan").remove();
-
-        textEl.append("tspan").text(d.name);
-
-        textEl
-          .append("tspan")
-          .attr("x", textEl.attr("x"))
-          .attr("dy", "1.2em")
-          .attr("class", "font-mono text-secondary")
-          .style("font-size", "0.65rem")
-          .text(controller.#formatCurrency(d.value));
+        controller.#writeLabel(d3.select(this), d, width);
       });
 
     return hiddenLabels;
   }
 
+  // Name above amount, beside the bar on the side facing the chart's middle.
+  #writeLabel(textEl, d, width) {
+    const x = d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6;
+
+    textEl
+      .attr("x", x)
+      .attr("y", (d.y1 + d.y0) / 2)
+      .attr("dy", "-0.2em")
+      .attr("text-anchor", d.x0 < width / 2 ? "start" : "end");
+
+    textEl.selectAll("tspan").remove();
+    textEl.append("tspan").text(d.name);
+    textEl
+      .append("tspan")
+      .attr("x", x)
+      .attr("dy", "1.2em")
+      .attr("class", "font-mono text-secondary")
+      .style("font-size", "0.65rem")
+      .text(this.#formatCurrency(d.value));
+  }
+
+  // Where each label lands at this width, measured with an invisible probe
+  // before the real labels are drawn, so the overlap rule can see a label
+  // that reaches into the next column.
+  #measureLabels(svg, nodes, width) {
+    const probe = svg
+      .append("text")
+      .attr("class", "text-xs font-medium select-none")
+      .style("visibility", "hidden");
+
+    const boxes = new Map();
+    nodes.forEach((d) => {
+      this.#writeLabel(probe, d, width);
+      const { x, y, width: boxWidth, height } = probe.node().getBBox();
+      boxes.set(d.index, { x, y, width: boxWidth, height });
+    });
+
+    probe.remove();
+    return boxes;
+  }
+
   // Calculate which labels should be hidden to prevent overlap
-  #calculateHiddenLabels(nodes) {
-    const hiddenLabels = new Set();
+  #calculateHiddenLabels(nodes, labelBoxes) {
     const height = this.#chartElement().clientHeight || 400;
-    const isLargeGraph = height > 600;
-    const minSpacing = isLargeGraph
-      ? this.constructor.MIN_LABEL_SPACING * 0.7
-      : this.constructor.MIN_LABEL_SPACING;
-
-    // Group nodes by column (using depth which d3-sankey assigns)
-    const columns = new Map();
-    nodes.forEach((node) => {
-      const depth = node.depth;
-      if (!columns.has(depth)) columns.set(depth, []);
-      columns.get(depth).push(node);
+    return hiddenSankeyLabels(nodes, {
+      height,
+      minSpacing: this.constructor.MIN_LABEL_SPACING,
+      labelBoxes,
     });
-
-    // For each column, check for overlapping labels
-    columns.forEach((columnNodes) => {
-      // Sort by vertical position
-      columnNodes.sort((a, b) => (a.y0 + a.y1) / 2 - (b.y0 + b.y1) / 2);
-
-      let lastVisibleY = Number.NEGATIVE_INFINITY;
-
-      columnNodes.forEach((node) => {
-        const nodeY = (node.y0 + node.y1) / 2;
-        const nodeHeight = node.y1 - node.y0;
-
-        if (isLargeGraph && nodeHeight > minSpacing * 1.5) {
-          lastVisibleY = nodeY;
-        } else if (nodeY - lastVisibleY < minSpacing) {
-          // Too close to previous visible label, hide this one
-          hiddenLabels.add(node.index);
-        } else {
-          lastVisibleY = nodeY;
-        }
-      });
-    });
-
-    return hiddenLabels;
   }
 
   #attachHoverEvents(linkPaths, nodeGroups, sankeyData, hiddenLabels) {
