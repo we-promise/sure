@@ -427,10 +427,11 @@ class Portfolio::DailyReturns
             -- The price comes from the same `holdings` row that
             -- Balance::BaseCalculator#market_value_change_on_date reads, so the
             -- numerator and the denominator move by one number rather than two
-            -- independently derived ones.
+            -- independently derived ones. See #journal_value_sql for a journal
+            -- out on a day with no price.
             COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')
                               THEN CASE WHEN #{fragment(:journal_predicate)}
-                                        THEN COALESCE(trades.qty * journal_holdings.price * journal_fx.rate, 0)
+                                        THEN COALESCE(#{journal_value_sql}, 0)
                                         ELSE -entries.amount * entry_fx.rate * fx.rate
                                    END
                               ELSE 0 END), 0) AS external_flow,
@@ -443,7 +444,7 @@ class Portfolio::DailyReturns
             -- here so the final SELECT can take it back out of `market`.
             COALESCE(SUM(CASE WHEN #{fragment(:journal_predicate)}
                               AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')
-                              THEN COALESCE(trades.qty * journal_holdings.price * journal_fx.rate, 0)
+                              THEN COALESCE(#{journal_value_sql}, 0)
                               ELSE 0 END), 0) AS journal_flow,
             COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} = 'income'
                               THEN -entries.amount * entry_fx.rate * fx.rate ELSE 0 END), 0) AS income,
@@ -473,6 +474,11 @@ class Portfolio::DailyReturns
                              OR (journal_fx.rate IS NULL
                                  AND journal_holdings.currency IS NOT NULL
                                  AND #{fragment(:journal_predicate)}
+                                 AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))
+                             OR (journal_prior_fx.rate IS NULL
+                                 AND journal_prior.currency IS NOT NULL
+                                 AND #{journal_out_unpriced_sql}
+                                 AND #{fragment(:journal_predicate)}
                                  AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))), false) AS flow_rate_missing,
             -- The journal suppression condition, and it keys on the PRICE rather
             -- than on the row. Holding::PortfolioCache deliberately keeps zero-price
@@ -499,11 +505,19 @@ class Portfolio::DailyReturns
             -- between two selected accounts on an unpriced day leaves the
             -- source at its value and lands in the destination at zero, so
             -- the day reads as a loss of the whole position.
+            --
+            -- The one unpriced journal that is complete is an outbound one
+            -- that emptied the position: #journal_value_sql values it from the
+            -- previous day's row, and with nothing left there is no unit at
+            -- the zero price to misread. Part of a position leaving still
+            -- suppresses the day, for the units that stayed.
             COALESCE(BOOL_OR(#{fragment(:journal_predicate)}
                              AND (trades.qty IS NULL
-                                  OR journal_holdings.price IS NULL
-                                  OR journal_holdings.price <= 0
-                                  OR journal_fx.rate IS NULL)), false) AS journal_unpriced
+                                  OR NOT COALESCE((journal_holdings.price > 0 AND journal_fx.rate IS NOT NULL)
+                                                  OR (#{journal_out_unpriced_sql}
+                                                      AND journal_holdings.qty = 0
+                                                      AND journal_prior.price IS NOT NULL
+                                                      AND journal_prior_fx.rate IS NOT NULL), false))), false) AS journal_unpriced
           FROM entries
           JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
           -- The same active-until window the balances use: a flow dated after
@@ -551,7 +565,7 @@ class Portfolio::DailyReturns
           -- the alphabetically first currency so the choice is deterministic
           -- rather than whatever the planner returns.
           LEFT JOIN LATERAL (
-            SELECT h.price, h.currency
+            SELECT h.price, h.currency, h.qty
             FROM holdings h
             WHERE entries.entryable_type = 'Trade'
               AND h.account_id = entries.account_id
@@ -566,6 +580,24 @@ class Portfolio::DailyReturns
           LEFT JOIN LATERAL (
             SELECT #{rate_lookup('journal_holdings.currency', 'entries.date - 1')} AS rate
           ) journal_fx ON TRUE
+          -- The account's last row for the security BEFORE the entry's date:
+          -- the price the balance carried the position at going into the day.
+          -- Read only for a journal out on a day with no price (see
+          -- #journal_value_sql). Any price, zero included: a position the
+          -- balance carried at nothing left at nothing.
+          LEFT JOIN LATERAL (
+            SELECT h.price, h.currency
+            FROM holdings h
+            WHERE entries.entryable_type = 'Trade'
+              AND h.account_id = entries.account_id
+              AND h.security_id = trades.security_id
+              AND h.date < entries.date
+            ORDER BY h.date DESC, (h.currency = COALESCE(entries.currency, entry_accounts.currency)) DESC, h.currency
+            LIMIT 1
+          ) journal_prior ON TRUE
+          LEFT JOIN LATERAL (
+            SELECT #{rate_lookup('journal_prior.currency', 'entries.date - 1')} AS rate
+          ) journal_prior_fx ON TRUE
           WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
             AND entries.date BETWEEN :start_date AND :end_date
             AND (flow_windows.active_until_date IS NULL OR entries.date <= flow_windows.active_until_date)
@@ -592,7 +624,15 @@ class Portfolio::DailyReturns
         --
         -- Internal legs too: the matching outbound leg's loss sat on the
         -- suppressed journal day, so the destination's re-pricing is not a
-        -- gain either. An outbound leg needs no carry; its position left.
+        -- gain either.
+        --
+        -- Inbound only. What the series tracks is the value, and an outbound
+        -- journal's value left the balance on its own day, through
+        -- net_market_flows; #journal_value_sql books it there.
+        --
+        -- Capped at what the first priced row still holds: units that arrived
+        -- and left again before any price never reached the balance at a
+        -- value, so they cannot arrive on the first priced day.
         --
         -- Valued from the same holdings row the calculator read that day, in
         -- its currency, at the previous day's rate like every start-of-day
@@ -600,7 +640,7 @@ class Portfolio::DailyReturns
         carried_journals_by_date AS (
           SELECT
             first_priced.date AS date,
-            COALESCE(SUM(trades.qty * first_priced.price * carry_fx.rate), 0) AS carried_flow,
+            COALESCE(SUM(LEAST(trades.qty, first_priced.qty) * first_priced.price * carry_fx.rate), 0) AS carried_flow,
             BOOL_OR(carry_fx.rate IS NULL) AS carry_rate_missing
           FROM entries
           JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id
@@ -616,7 +656,7 @@ class Portfolio::DailyReturns
             LIMIT 1
           ) journal_day ON TRUE
           JOIN LATERAL (
-            SELECT h.date, h.price, h.currency
+            SELECT h.date, h.price, h.currency, h.qty
             FROM holdings h
             WHERE h.account_id = entries.account_id
               AND h.security_id = trades.security_id
@@ -752,6 +792,30 @@ class Portfolio::DailyReturns
       @flow_classifier ||= Portfolio::FlowClassifier.new(
         scope_account_ids: account_ids, include_excluded: true, active_until_dates: active_until_dates
       )
+    end
+
+    # A journal's value, as the flow it is. Priced on its own day, qty times
+    # that day's holding price.
+    #
+    # A journal OUT on a day with no price is valued from the day before.
+    # Holding::PortfolioCache keeps the journal trade's zero price, so the
+    # forward calculator writes the day's row at price 0, and the balance drops
+    # by what it carried the units at the day before; that drop is in
+    # net_market_flows. Valued at the zero price instead, the departing value
+    # stayed in `market` as a loss. NULL when there is no earlier row, and the
+    # day is then suppressed (journal_unpriced). A journal in on such a day is
+    # carried to its first priced day instead (carried_journals_by_date).
+    def journal_value_sql
+      <<~SQL.squish
+        CASE
+          WHEN journal_holdings.price > 0 THEN trades.qty * journal_holdings.price * journal_fx.rate
+          WHEN #{journal_out_unpriced_sql} THEN trades.qty * journal_prior.price * journal_prior_fx.rate
+        END
+      SQL
+    end
+
+    def journal_out_unpriced_sql
+      "(trades.qty < 0 AND (journal_holdings.price IS NULL OR journal_holdings.price <= 0))"
     end
 
     # A security journal: a Transfer-labelled trade with no cash amount.
