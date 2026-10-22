@@ -110,9 +110,9 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def enhance
-    cache_key = "enhance_provider_merchants:#{Current.family.id}"
+    cache_key = EnhanceProviderMerchantsJob.lock_key(Current.family)
 
-    already_running = !Rails.cache.write(cache_key, true, expires_in: 10.minutes, unless_exist: true)
+    already_running = !Rails.cache.write(cache_key, true, expires_in: EnhanceProviderMerchantsJob::LOCK_TTL, unless_exist: true)
 
     if already_running
       return redirect_to family_merchants_path, alert: t(".already_running")
