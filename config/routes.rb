@@ -2,6 +2,15 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :saxo_items, only: %i[new create show destroy] do
+    get :callback, on: :collection
+    member do
+      post :reconnect
+      post :sync
+      post :link_account
+    end
+  end
+
   resources :web_push_subscriptions, only: [ :create, :show, :destroy ] do
     post :test_notification, on: :member
   end

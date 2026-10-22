@@ -282,12 +282,32 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   # Saves and errors from a row or the drawer re-render the panel by replacing
   # "<turbo_id>-providers-panel". SnapTrade never streams to it.
   test "every streamed panel renders the root its streams replace" do
+    user = users(:family_admin)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
     Settings::ProvidersController::FAMILY_PANELS.reject { |panel| panel[:key] == "snaptrade" }.each do |panel|
       get connect_form_settings_providers_url(provider_key: panel[:key])
 
       assert_response :success
       assert_select "##{panel[:turbo_id]}-providers-panel", 1, "#{panel[:key]} panel root"
     end
+  end
+
+  test "Saxo stays hidden and unusable without Preview" do
+    users(:family_admin).update!(preferences: (users(:family_admin).preferences || {}).merge("preview_features_enabled" => false))
+    item = families(:dylan_family).saxo_items.create!(refresh_token: "refresh")
+
+    get settings_providers_url
+    assert_response :success
+    assert_select "a[href=?]", connect_form_settings_providers_path(provider_key: "saxo"), count: 0
+    assert_select "details#saxo-connection", count: 0
+
+    get connect_form_settings_providers_url(provider_key: "saxo")
+    assert_redirected_to root_path
+
+    SaxoItem.any_instance.expects(:sync_later).never
+    post sync_provider_settings_providers_url(provider_key: "saxo")
+    assert_redirected_to root_path
+    assert item.reload.good?
   end
 
   test "lists Wise and CoinSpot as available when the family has no connections" do

@@ -228,11 +228,12 @@ namespace :security do
   # Safely read a field value, handling both encrypted and plaintext data.
   # When encryption is configured but the value is plaintext, the getter
   # raises ActiveRecord::Encryption::Errors::Decryption. In this case,
-  # we fall back to reading the raw database value. For json/jsonb columns
-  # the raw value is the JSON text, not the deserialized Array/Hash the
-  # encrypted setter expects, so parse it first — otherwise the backfill
-  # encrypts the JSON text itself and the column thereafter decrypts to a
-  # String, breaking every consumer of the payload.
+  # we fall back to reading the raw database value. For json/jsonb columns,
+  # and text columns serialized with the JSON coder, the raw value is the
+  # JSON text, not the deserialized Array/Hash the encrypted setter expects,
+  # so parse it first — otherwise the backfill encrypts the JSON text itself
+  # and the column thereafter decrypts to a String, breaking every consumer
+  # of the payload.
   def safe_read_field(record, field)
     record.send(field)
   rescue ActiveRecord::Encryption::Errors::Base, NoMethodError, TypeError
@@ -240,8 +241,7 @@ namespace :security do
     # envelope, so plaintext like {"p": 1, "h": "x"} can fail with
     # NoMethodError or TypeError instead of a Decryption error.
     raw = record.read_attribute_before_type_cast(field)
-    column = record.class.columns_hash[field.to_s]
-    if raw.is_a?(String) && [ :json, :jsonb ].include?(column&.type)
+    if raw.is_a?(String) && json_attribute?(record.class, field)
       begin
         JSON.parse(raw)
       rescue JSON::ParserError
@@ -250,6 +250,14 @@ namespace :security do
     else
       raw
     end
+  end
+
+  def json_attribute?(model_class, field)
+    return true if [ :json, :jsonb ].include?(model_class.columns_hash[field.to_s]&.type)
+
+    type = model_class.type_for_attribute(field.to_s)
+    type = type.cast_type if type.is_a?(ActiveRecord::Encryption::EncryptedAttributeType)
+    type.is_a?(ActiveRecord::Type::Serialized) && type.coder.is_a?(ActiveRecord::Coders::JSON)
   end
 
   # Hashes legacy session IP addresses into ip_address_digest. The encrypted

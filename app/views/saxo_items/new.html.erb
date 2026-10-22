@@ -1,0 +1,18 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t("saxo.title")) %>
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <%= render DS::Pill.new(label: t("saxo.preview")) %>
+        <p class="text-sm text-secondary"><%= t("saxo.description") %></p>
+        <p class="text-sm text-secondary"><%= t("saxo.market_data_setup") %></p>
+        <% if Provider::Saxo.configured? %>
+          <%= render DS::Button.new(text: t("saxo.connect"), href: saxo_items_path, method: :post, form: { data: { turbo: false } }) %>
+        <% else %>
+          <%= render DS::Alert.new(message: t("saxo.configuration_required"), variant: :warning) %>
+          <%= render DS::Link.new(text: t("saxo.configure"), href: settings_hosting_path, variant: :primary, data: { turbo_frame: "_top" }) %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

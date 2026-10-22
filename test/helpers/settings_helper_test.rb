@@ -27,6 +27,25 @@ class SettingsHelperTest < ActionView::TestCase
     assert_equal({ status: :ok, last_synced_at: nil }, provider_summary("snaptrade"))
   end
 
+  test "provider_summary for saxo is off without connections" do
+    @saxo_items = []
+
+    assert_equal({ status: :off }, provider_summary("saxo"))
+  end
+
+  test "provider_summary for saxo asks to reconnect an expired connection" do
+    @saxo_items = [ SaxoItem.new(status: :requires_update) ]
+
+    assert_equal({ status: :warn, meta: I18n.t("saxo.reconnect_required") }, provider_summary("saxo"))
+  end
+
+  test "provider_summary for saxo reports sync-based status when connected" do
+    @saxo_items = [ SaxoItem.new(status: :good) ]
+    @provider_sync_health = {}
+
+    assert_equal({ status: :ok, last_synced_at: nil }, provider_summary("saxo"))
+  end
+
   test "provider_summary for trading212 reports sync-based status when connected" do
     @trading212_items = [ OpenStruct.new ]
     @provider_sync_health = {}

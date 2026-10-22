@@ -4,7 +4,8 @@ class Api::V1::ProviderConnectionsController < Api::V1::BaseController
   before_action :ensure_read_scope
 
   def index
-    @provider_connections = ProviderConnectionStatus.for_family(current_resource_owner.family)
+    hidden = ProviderConnectionStatus.hidden_provider_keys(preview_enabled: current_resource_owner.preview_features_enabled?)
+    @provider_connections = ProviderConnectionStatus.for_family(current_resource_owner.family, except: hidden)
     render :index
   rescue StandardError => e
     Rails.logger.error "ProviderConnectionsController#index error: #{e.message}"

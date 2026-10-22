@@ -9,6 +9,10 @@ module PreviewGateable
     Current.user&.preview_features_enabled? == true
   end
 
+  def preview_provider_hidden?(provider_key)
+    ProviderConnectionStatus.hidden_provider_keys(preview_enabled: preview_features_enabled?).include?(provider_key.to_s)
+  end
+
   # Use as a `before_action` on controllers that gate a preview feature.
   # Redirects users without preview access to the dashboard with a flash
   # explaining the feature is opt-in. Self-served via Settings → Preferences.

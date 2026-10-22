@@ -17,6 +17,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "a Saxo connection is listed only with Preview" do
+    item = @user.family.saxo_items.create!
+
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    get accounts_url
+    assert_select "##{dom_id(item)}"
+
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => false))
+    get accounts_url
+    assert_select "##{dom_id(item)}", count: 0
+  end
+
   test "account reconciliation indicator renders only on the account page" do
     create_transaction(account: @account, name: "Unreconciled", amount: 10)
 
