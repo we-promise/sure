@@ -4,7 +4,9 @@ en:
     property_valuation:
       not_configured: This property data provider is not configured.
       missing_fields: Please provide a name and a complete US address (street, city, state, and ZIP code).
+      missing_fields_gb: Please provide a name, the street address and postcode, and the property's UPRN.
       preview_expired: This property preview has expired — please look up the address again.
+      entry_name: "%{provider} valuation"
     rentcast:
       errors:
         no_valuation: RentCast did not return a value estimate for this address.
@@ -15,3 +17,11 @@ en:
         no_valuation: Realie did not return a valuation for this property.
         not_found: Realie could not find a property matching this address.
         location_mismatch: Realie matched a property in a different city or ZIP code. Please double-check the address.
+    chimnie:
+      errors:
+        invalid_uprn: A UPRN is a number of up to 12 digits. Please check the UPRN and try again.
+        no_estimate: Chimnie does not have a value estimate for this property.
+        not_found: Chimnie could not find a property with this UPRN.
+        unsupported_property: Chimnie only values residential properties; this UPRN belongs to a commercial or mixed-use property.
+        unauthorized: Chimnie rejected the API key. Check the key in Settings → Self-Hosting.
+        insufficient_balance: Your Chimnie account balance is too low for this request.

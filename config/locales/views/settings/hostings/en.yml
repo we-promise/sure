@@ -69,10 +69,12 @@ en:
           mansa: Mansa
       assistant_settings:
         title: AI Assistant
-        description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
+        description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP. None in app removes the in-app chat and keeps MCP available for your own agents.
         type_label: Assistant type
         type_builtin: Builtin (direct LLM)
         type_external: External (remote agent)
+        type_mcp_only: None in app (connect your own agent via MCP)
+        mcp_only_help: The in-app assistant is off for everyone in this household. Bills AI shortcuts and AI-written insight text also stop. MCP and background categorization stay available; connect external agents in Settings > MCP.
         external_status: External assistant endpoint
         external_configured: Configured
         external_not_configured: Not configured. Enter the URL and token below, or set EXTERNAL_ASSISTANT_URL and EXTERNAL_ASSISTANT_TOKEN environment variables.
@@ -128,6 +130,8 @@ en:
         not_configured_hint: "Add a %{provider} API key below to activate it."
         data_retention_heading: Data handling
         data_retention: API inputs are not used to train models by default; the providers' hosted APIs retain data for ~30 days for trust & safety. Custom or self-hosted endpoints follow your own policy.
+        max_items_per_call_label: Max Items Per Batch (Optional)
+        max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. With OpenAI-compatible providers, larger batches are auto-sliced to fit the context window."
       anthropic_settings:
         title: Anthropic (Claude)
         description: Enter your Anthropic API key. Optionally point Base URL at AWS Bedrock or GCP Vertex.
@@ -200,14 +204,14 @@ en:
         context_window_help: "Total tokens the model will accept. Default: 2048 — raise to 8192+ for cloud OpenAI or large-context local models."
         max_response_tokens_label: Max Response Tokens (Optional)
         max_response_tokens_help: "Tokens reserved for the model's reply. Default: 512. Lower to free up room for longer history."
-        max_items_per_call_label: Max Items Per Batch (Optional)
-        max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. Larger batches are auto-sliced to fit the context window."
         timeout_heading: Timeouts
         timeout_description: Controls how long OpenAI-compatible model calls may run before Sure gives up. Raise these if you run a local model on slow hardware.
         openai_request_timeout_label: Request Timeout in Seconds (Optional)
         openai_request_timeout_help: "Default: 60. Applies to each OpenAI-compatible HTTP request, including auto-categorization, merchant detection, chat, PDF processing, and vector-store calls. OPENAI_REQUEST_TIMEOUT overrides this field."
         ai_response_timeout_label: Response Timeout in Seconds (Optional)
         ai_response_timeout_help: "Default: 90. Applies only to chat's whole-turn watchdog, so size it as a sum: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × request timeout, plus tool execution and queue time. AI_RESPONSE_TIMEOUT overrides this field."
+        ai_health_probe_timeout_label: Health Check Timeout in Seconds (Optional)
+        ai_health_probe_timeout_help: "Default: 5. Applies only to the live AI checks under Settings → System health, never to real AI calls. Raise it if the PDF checks report a timeout with a cloud model. AI_HEALTH_PROBE_TIMEOUT overrides this field."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
@@ -233,6 +237,13 @@ en:
         env_configured_message: Successfully configured through the REALIE_API_KEY environment variable.
         label: API Key
         placeholder: Enter your Realie API key here
+        usage: "%{used} of %{limit} monthly requests used"
+      chimnie_settings:
+        title: Chimnie
+        description: Enter your Chimnie API key to value UK residential properties by their UPRN. Create a free key at dashboard.chimnie.com (sign-up requires a business or custom-domain email address; Gmail, Outlook and similar addresses are not accepted). UPRN valuations are free and refreshed monthly; Sure caps them at 1,000 requests per month, which you can change with the CHIMNIE_MAX_REQUESTS_PER_MONTH environment variable.
+        env_configured_message: Successfully configured through the CHIMNIE_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your Chimnie API key here
         usage: "%{used} of %{limit} monthly requests used"
       tiingo_settings:
         title: Tiingo

@@ -121,6 +121,17 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty padded, "short_with_year pads the day for: #{padded.join(", ")}"
   end
 
+  # The bills overview's notices card heads with this. Fallbacks would show the
+  # English "Changes", so check each bills locale file without them.
+  def test_bills_notices_heading_exists_for_each_bills_locale
+    locales = Dir[File.expand_path("../config/locales/views/bills/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    missing = locales.sort.reject do |locale|
+      I18n.t("bills.index.notices_heading", locale: locale, fallback: false, default: nil)
+    end
+
+    assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
+  end
+
   def test_trade_republic_activity_labels_exist_for_each_locale
     required_labels = %w[
       contribution withdrawal interest dividend card_payment cash_withdrawal

@@ -172,6 +172,9 @@ tr:
       category_search_placeholder: Kategori ara
       create_category: '"%{name}" oluştur'
       create_category_error: Kategori oluşturulamadı
+      create_as_subcategory: Alt kategori olarak ekle…
+      choose_parent: '"%{name}" şunun altında oluştur:'
+      back_to_categories: Geri
       create_merchant: Oluştur
       create_merchant_error: Satıcı oluşturulamadı
       merchant_search_placeholder: Satıcı ara veya oluştur
