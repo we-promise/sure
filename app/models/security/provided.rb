@@ -283,8 +283,11 @@ module Security::Provided
         attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
         attrs[:website_url] = response.data.links   if response.data.links.present?
         attrs.merge!(classification_attributes_from(response.data))
-        update(attrs) if attrs.any?
-        update_column(:classification_fetched_at, Time.current) if wants_classification
+        stored = attrs.empty? || update(attrs)
+        # Recorded only when the answer was stored. `update` runs the model's
+        # validations, and a row can hold a value they now refuse; stamping
+        # anyway would close the gate on an answer that never landed.
+        update_column(:classification_fetched_at, Time.current) if wants_classification && stored
       else
         Rails.logger.warn("Failed to fetch security info for #{ticker} from #{price_data_provider.class.name}: #{response.error.message}")
         DebugLogEntry.capture(
