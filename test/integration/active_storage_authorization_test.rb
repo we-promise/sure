@@ -285,7 +285,194 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "family admin can access their own family export" do
+    export = attach_family_export(@user_a.family)
+
+    sign_in @user_a
+
+    get rails_blob_path(export.export_file)
+
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+  end
+
+  test "user cannot access family export from a different family" do
+    export = attach_family_export(@user_a.family)
+
+    sign_in @user_b
+
+    get rails_blob_path(export.export_file)
+
+    assert_response :not_found
+  end
+
+  test "non-admin family member cannot access family export" do
+    export = attach_family_export(@user_a.family)
+
+    sign_in users(:family_member)
+
+    get rails_blob_path(export.export_file)
+
+    assert_response :not_found
+  end
+
+  test "user can access pdf import file within their own family" do
+    import = imports(:pdf)
+    import.pdf_file.attach(io: StringIO.new("%PDF-1.4 Family A Import"), filename: "import.pdf", content_type: "application/pdf")
+
+    sign_in @user_a
+
+    get rails_blob_path(import.pdf_file)
+
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+  end
+
+  test "user cannot access pdf import file from a different family" do
+    import = imports(:pdf)
+    import.pdf_file.attach(io: StringIO.new("%PDF-1.4 Family A Import"), filename: "import.pdf", content_type: "application/pdf")
+
+    sign_in @user_b
+
+    get rails_blob_path(import.pdf_file)
+
+    assert_response :not_found
+  end
+
+  test "user cannot access pdf import file linked to a statement they cannot view" do
+    statement = AccountStatement.create_from_upload!(
+      family: @user_a.family,
+      account: accounts(:other_asset),
+      file: uploaded_file(
+        filename: "private_import_statement.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 Private Import Statement"
+      )
+    )
+    import = imports(:pdf)
+    import.update!(account_statement: statement)
+    import.pdf_file.attach(io: StringIO.new("%PDF-1.4 Private Import"), filename: "import.pdf", content_type: "application/pdf")
+
+    sign_in users(:family_member)
+
+    get rails_blob_path(import.pdf_file)
+
+    assert_response :not_found
+  end
+
+  test "user can access pdf import file linked to a statement they can view" do
+    statement = AccountStatement.create_from_upload!(
+      family: @user_a.family,
+      account: accounts(:depository),
+      file: uploaded_file(
+        filename: "viewable_import_statement.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 Viewable Import Statement"
+      )
+    )
+    import = imports(:pdf)
+    import.update!(account_statement: statement)
+    import.pdf_file.attach(io: StringIO.new("%PDF-1.4 Viewable Import"), filename: "import.pdf", content_type: "application/pdf")
+
+    sign_in @user_a
+
+    get rails_blob_path(import.pdf_file)
+
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+  end
+
+  test "member can access pdf import file linked to a statement on an account shared with them" do
+    statement = AccountStatement.create_from_upload!(
+      family: @user_a.family,
+      account: accounts(:credit_card),
+      file: uploaded_file(
+        filename: "shared_import_statement.pdf",
+        content_type: "application/pdf",
+        content: "%PDF-1.4 Shared Import Statement"
+      )
+    )
+    import = imports(:pdf)
+    import.update!(account_statement: statement)
+    import.pdf_file.attach(io: StringIO.new("%PDF-1.4 Shared Import"), filename: "import.pdf", content_type: "application/pdf")
+
+    sign_in users(:family_member)
+
+    get rails_blob_path(import.pdf_file)
+
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+  end
+
+  test "user cannot access sure import file from a different family" do
+    import = SureImport.create!(family: @user_a.family)
+    import.ndjson_file.attach(io: StringIO.new("{}\n"), filename: "import.ndjson", content_type: "application/x-ndjson")
+
+    sign_in @user_b
+
+    get rails_blob_path(import.ndjson_file)
+
+    assert_response :not_found
+  end
+
+  test "user can access family document within their own family" do
+    document = family_documents(:tax_return)
+    document.file.attach(io: StringIO.new("Family A Tax Return"), filename: "tax.pdf", content_type: "application/pdf")
+
+    sign_in @user_a
+
+    get rails_blob_path(document.file)
+
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+  end
+
+  test "user cannot access family document from a different family" do
+    document = family_documents(:tax_return)
+    document.file.attach(io: StringIO.new("Family A Tax Return"), filename: "tax.pdf", content_type: "application/pdf")
+
+    sign_in @user_b
+
+    get rails_blob_path(document.file)
+
+    assert_response :not_found
+  end
+
+  test "every attachment is either access-checked or intentionally public" do
+    # Logos and avatars are not sensitive. Archived exports have no owning family;
+    # ArchivedExportsController releases them by download token.
+    public_attachments = %w[User#profile_image ArchivedExport#export_file Account#logo]
+
+    Rails.application.eager_load!
+    unchecked = ActiveRecord::Base.descendants.reject(&:abstract_class?).flat_map do |model|
+      # Only the app's own models; framework records (Active Storage, Action Text, ...) are not served here.
+      next [] unless Object.const_source_location(model.name)&.first.to_s.start_with?(Rails.root.join("app").to_s)
+
+      model.reflect_on_all_attachments.filter_map do |reflection|
+        record_type = model.base_class.name
+        next if record_type.in?(ActiveStorageAttachmentAuthorization::PROTECTED_RECORD_TYPES)
+        next if reflection.name == :logo && record_type.end_with?("Item")
+
+        attachment = "#{record_type}##{reflection.name}"
+        attachment unless attachment.in?(public_attachments)
+      end
+    end
+
+    assert_empty unchecked.uniq, "Add new attachment owners to PROTECTED_RECORD_TYPES or mark them public here"
+  end
+
   private
+
+    def attach_family_export(family)
+      export = family.family_exports.create!(status: :completed)
+      export.export_file.attach(io: StringIO.new("zip"), filename: "export.zip", content_type: "application/zip")
+      export
+    end
 
     def sign_out(user)
       # Deleting through the controller de-authenticates mid-loop and later

@@ -1,0 +1,16 @@
+<%# locals: (sortable:) %>
+
+<% if sortable %>
+  <%= tag.div class: "flex items-center gap-2 rounded-lg bg-container px-3 py-2",
+        style: "display:none",
+        data: { account_sort_mode_target: "bar" } do %>
+    <p class="grow text-xs text-secondary"><%= t("accounts.sidebar.sort_mode.hint") %></p>
+    <%= render DS::Button.new(
+      variant: :outline,
+      size: :sm,
+      text: t("accounts.sidebar.sort_mode.done"),
+      class: "shrink-0",
+      data: { action: "account-sort-mode#stop" }
+    ) %>
+  <% end %>
+<% end %>

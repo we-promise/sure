@@ -95,5 +95,7 @@ class Assistant::Function::UpdateRule < Assistant::Function
       preview: preview(rule, sample_size: resolved_sample_size(params)),
       message: message
     }
+  rescue Rule::SafeRegex::TimeoutError
+    regex_timeout_error(rule, was_active && !rule.active ? "The rule was updated and deactivated." : "The rule was updated.")
   end
 end
