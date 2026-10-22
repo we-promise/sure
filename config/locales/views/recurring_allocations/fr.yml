@@ -8,6 +8,7 @@ fr:
       success: Paiement affecté
     destroy:
       success: Paiement délié
+    entry_exhausted: Le montant de cette transaction est déjà entièrement affecté à d'autres échéances
     invalid: Le paiement n'a pas pu être enregistré
     missing_rate: Aucun taux de change disponible ; saisissez le montant explicitement
     over_allocation: Cela affecterait plus que le montant de la transaction
