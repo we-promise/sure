@@ -34,6 +34,8 @@ export default class extends Controller {
     // The set last saved from here; the server applies only the difference,
     // so tags something else (e.g. a rule) set in the meantime survive.
     this.savedIds = new Set(this.selectedIds);
+    // Tags a failed save tried to change: it may still have been applied.
+    this.unconfirmedIds = new Set();
     this.renderSelection();
     this.observeMenuResize();
   }
@@ -241,30 +243,44 @@ export default class extends Controller {
   }
 
   async saveSelection() {
-    const tagIds = Array.from(this.selectedIds);
-    const previousIds = Array.from(this.savedIds);
-    if (
-      tagIds.length === previousIds.length &&
-      tagIds.every((id) => this.savedIds.has(id))
-    ) {
-      return;
-    }
-
-    const response = await fetch(this.updateUrlValue, {
-      method: "PATCH",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "X-CSRF-Token": this.csrfToken,
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      body: JSON.stringify({
-        tag_ids: tagIds,
-        previous_tag_ids: previousIds,
-      }),
-      credentials: "same-origin",
+    const selected = new Set(this.selectedIds);
+    // Unconfirmed tags are sent as changes again, whatever their saved state.
+    const previous = new Set(this.savedIds);
+    this.unconfirmedIds.forEach((id) => {
+      if (selected.has(id)) previous.delete(id);
+      else previous.add(id);
     });
-    if (response.ok) this.savedIds = new Set(tagIds);
+    const changedIds = [
+      ...[...selected].filter((id) => !previous.has(id)),
+      ...[...previous].filter((id) => !selected.has(id)),
+    ];
+    if (changedIds.length === 0) return;
+
+    let saved = false;
+    try {
+      const response = await fetch(this.updateUrlValue, {
+        method: "PATCH",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": this.csrfToken,
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({
+          tag_ids: [...selected],
+          previous_tag_ids: [...previous],
+        }),
+        credentials: "same-origin",
+      });
+      saved = response.ok;
+    } finally {
+      if (saved) {
+        this.savedIds = selected;
+        this.unconfirmedIds.clear();
+      } else {
+        changedIds.forEach((id) => this.unconfirmedIds.add(id));
+      }
+    }
   }
 
   handleKeydown(event) {

@@ -66,14 +66,37 @@ class TransactionDrawerRuleChangesTest < ApplicationSystemTestCase
 
     # Both saves have landed once the second request is done; wait for the
     # page's queue rather than the database, which already matches at first.
-    page.evaluate_async_script(<<~JS)
-      const done = arguments[arguments.length - 1]
-      const element = document.querySelector("turbo-frame#drawer [data-controller='tag-select']")
-      const controller = window.Stimulus.getControllerForElementAndIdentifier(element, "tag-select")
-      Promise.resolve(controller.saveQueue).then(() => done(), () => done())
-    JS
+    wait_for_tag_saves
 
     assert_equal [ tags(:one).id ], transaction.reload.tag_ids
+  end
+
+  test "unpicking a tag whose save failed after applying still takes it off" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+    entry = transaction.entry
+
+    open_drawer(entry)
+
+    # The tags are saved, then the request fails (e.g. the job queue is down).
+    Rule.stubs(:apply_immediately_later).raises(RuntimeError, "queue down").then.returns(nil)
+
+    within "turbo-frame#drawer", visible: :all do
+      find("summary", text: /details/i).click
+      find("[data-controller='tag-select'] [data-tag-select-target='button']").click
+      option = find("[data-tag-select-target='option'][data-tag-id='#{tags(:two).id}']")
+      option.click
+      wait_for_tag_saves
+      assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
+
+      option.click
+    end
+    wait_for_tag_saves
+
+    assert_equal [ tags(:one).id ], transaction.reload.tag_ids
+  ensure
+    # The failure is the point of this test, not an error of the app.
+    page.server.reset_error!
   end
 
   private
@@ -88,6 +111,16 @@ class TransactionDrawerRuleChangesTest < ApplicationSystemTestCase
       within "turbo-frame#drawer", visible: :all do
         assert_selector "[data-controller='category-select']"
       end
+    end
+
+    # Waits until every save the drawer's tag picker has queued is done.
+    def wait_for_tag_saves
+      page.evaluate_async_script(<<~JS)
+        const done = arguments[arguments.length - 1]
+        const element = document.querySelector("turbo-frame#drawer [data-controller='tag-select']")
+        const controller = window.Stimulus.getControllerForElementAndIdentifier(element, "tag-select")
+        Promise.resolve(controller.saveQueue).then(() => done(), () => done())
+      JS
     end
 
     # The tag picker saves with fetch, so there's no page change to wait on.
