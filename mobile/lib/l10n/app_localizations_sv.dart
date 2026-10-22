@@ -1181,4 +1181,8 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get splitEditorOffline =>
       'Du är offline. Uppdelningar kan bara sparas när du är ansluten.';
+
+  @override
+  String get transactionsListSplitDeleteBlocked =>
+      'Dela upp transaktionen igen innan du tar bort den.';
 }

@@ -146,7 +146,30 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     });
   }
 
+  /// Split parents and children can't be deleted like plain transactions: the
+  /// server refuses a child, and deleting a parent cascades to its children,
+  /// which this list would keep showing. Point the user at "Unsplit" instead.
+  bool _blockSplitDelete(String? transactionId) {
+    if (transactionId == null) return false;
+    final splits =
+        Provider.of<TransactionSplitsProvider>(context, listen: false);
+    if (!splits.isSplitParent(transactionId) &&
+        !splits.isSplitChild(transactionId)) {
+      return false;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).transactionsListSplitDeleteBlocked),
+      ),
+    );
+    return true;
+  }
+
   void _toggleTransactionSelection(String transactionId) {
+    if (!_selectedTransactions.contains(transactionId) &&
+        _blockSplitDelete(transactionId)) {
+      return;
+    }
     setState(() {
       if (_selectedTransactions.contains(transactionId)) {
         _selectedTransactions.remove(transactionId);
@@ -288,6 +311,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
   Future<bool> _confirmAndDeleteTransaction(Transaction transaction) async {
     if (transaction.id == null) return false;
+    if (_blockSplitDelete(transaction.id)) return false;
 
     // Show confirmation dialog
     // Capture providers and localizations before async gap

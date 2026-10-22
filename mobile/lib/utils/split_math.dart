@@ -116,12 +116,20 @@ class SplitMath {
 
   /// Decimal places a split row may use: the currency's precision, widened
   /// only when the stored parent amount itself carries finer precision (so
-  /// the rows can still add up to it exactly).
-  static int inputDecimals(String currency, BigInt parentUnits) {
-    final currencyDigits = currencyDecimals(currency);
+  /// the rows can still add up to it exactly), or when an existing child
+  /// ([childUnits]) already needs finer precision than the parent.
+  static int inputDecimals(
+    String currency,
+    BigInt parentUnits, {
+    Iterable<BigInt> childUnits = const [],
+  }) {
+    var digits = currencyDecimals(currency);
     final parentDigits = decimalsUsed(parentUnits);
-    final digits =
-        parentDigits > currencyDigits ? parentDigits : currencyDigits;
+    if (parentDigits > digits) digits = parentDigits;
+    for (final units in childUnits) {
+      final used = decimalsUsed(units);
+      if (used > digits) digits = used;
+    }
     return digits > scale ? scale : digits;
   }
 

@@ -1106,5 +1106,8 @@
   "@splitEditorSaveFailed": { "description": "Fallback snackbar when saving a split fails." },
 
   "splitEditorOffline": "You're offline. Splits can only be saved while connected.",
-  "@splitEditorOffline": { "description": "Shown in the split editor while offline." }
+  "@splitEditorOffline": { "description": "Shown in the split editor while offline." },
+
+  "transactionsListSplitDeleteBlocked": "Unsplit this transaction before deleting it.",
+  "@transactionsListSplitDeleteBlocked": { "description": "Snackbar when deleting a split parent or child directly." }
 }

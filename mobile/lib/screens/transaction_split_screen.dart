@@ -103,8 +103,12 @@ class _TransactionSplitScreenState extends State<TransactionSplitScreen> {
 
   SplitEditorTarget get _target => widget.target;
   bool get _isEditing => widget.existing != null;
-  int get _decimals =>
-      SplitMath.inputDecimals(_target.currency, _target.amountUnits);
+  int get _decimals => SplitMath.inputDecimals(
+        _target.currency,
+        _target.amountUnits,
+        childUnits: widget.existing?.children.map((c) => c.amountUnits) ??
+            const [],
+      );
 
   @override
   void initState() {

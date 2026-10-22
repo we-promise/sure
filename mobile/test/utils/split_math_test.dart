@@ -67,6 +67,14 @@ void main() {
       expect(SplitMath.inputDecimals('JPY', u('1500')), 0);
     });
 
+    test('widens input precision for a finer existing child', () {
+      expect(
+        SplitMath.inputDecimals('USD', u('100.00'),
+            childUnits: [u('33.3333'), u('66.6667')]),
+        4,
+      );
+    });
+
     test('validateAmount reports the first problem', () {
       expect(
         SplitMath.validateAmount('', decimals: 2, locale: 'en'),
