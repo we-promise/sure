@@ -336,12 +336,12 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     bill = create_bill(name: "Netflix", amount: 15)
     bill.update!(matcher_hints: { "detected_name" => "NETFLIX.COM" })
 
-    get_bill_drawer(bill)
+    get_bill_history(bill)
 
     assert_select "p.text-xs.text-secondary", text: I18n.t("bills.detail.rule_detected", name: "NETFLIX.COM"), count: 1
 
     bill.update!(name: "NETFLIX.COM")
-    get_bill_drawer(bill)
+    get_bill_history(bill)
 
     assert_select "p.text-xs.text-secondary", text: I18n.t("bills.detail.rule_detected", name: "NETFLIX.COM"), count: 0
   end
