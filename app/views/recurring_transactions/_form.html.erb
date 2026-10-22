@@ -10,6 +10,21 @@
       <%= render "shared/form_errors", model: recurring_transaction %>
     <% end %>
 
+    <% if recurring_transaction.financed? %>
+      <div class="space-y-1 rounded-lg border border-primary bg-surface-inset p-3">
+        <p class="text-sm font-medium text-primary"><%= t(".financed_terms_title") %></p>
+        <p class="text-xs text-secondary">
+          <%= recurring_transaction.financed_terms_editable? ? t(".financed_terms_hint") : t(".financed_terms_locked_hint") %>
+        </p>
+        <% if recurring_transaction.financed_terms_editable? %>
+          <%= link_to t(".financed_terms_edit"),
+                edit_bill_installment_plan_path(recurring_transaction),
+                class: "text-sm font-medium text-primary hover:underline",
+                data: { turbo_frame: :modal } %>
+        <% end %>
+      </div>
+    <% end %>
+
     <%# What a bill is called, what it costs and where it is paid from all
         outlive their first version, so they are editable. They used to be
         create-only, which left delete-and-recreate as the only way to record
@@ -56,16 +71,24 @@
               disable_currency: true,
               step: RecurringTransaction.amount_step(recurring_transaction.currency),
               min: 0,
+              disabled: recurring_transaction.financed?,
               required: true %>
         <p class="text-xs text-secondary"><%= income ? t(".income_amount_edit_hint") : t(".amount_edit_hint") %></p>
       </div>
     <% end %>
 
-    <%= f.collection_select :account_id,
-          Current.user.accessible_accounts.visible.alphabetically,
-          :id, :name,
-          { label: income ? t(".income_account_label") : t(".account_label"), include_blank: t(".account_blank"),
-            variant: :logo, searchable: true } %>
+    <% if recurring_transaction.financed? %>
+      <%= f.text_field :account_name,
+            label: income ? t(".income_account_label") : t(".account_label"),
+            value: recurring_transaction.account&.name || t(".account_blank"),
+            disabled: true %>
+    <% else %>
+      <%= f.collection_select :account_id,
+            Current.user.accessible_accounts.visible.alphabetically,
+            :id, :name,
+            { label: income ? t(".income_account_label") : t(".account_label"), include_blank: t(".account_blank"),
+              variant: :logo, searchable: true } %>
+    <% end %>
 
     <%# Which kind this is was decided by the entry point that opened the
         dialog, so the form only has to carry the answer. Offering it as a
@@ -80,7 +103,9 @@
         bills. How often used to render below the payment link and the
         autopay toggle, so the fourth thing anyone needs sat under two
         things most people never set. %>
-    <div class="space-y-2" data-controller="frequency-fields">
+    <fieldset class="space-y-2 min-w-0 border-0 p-0 m-0"
+              <%= "disabled" if recurring_transaction.financed? %>
+              data-controller="frequency-fields">
       <%= f.select :frequency_preset,
             frequency_preset_options(recurring_transaction),
             { label: income ? t(".income_frequency_label") : t(".frequency_label") },
@@ -128,14 +153,15 @@
         <%# A new series' day details derive from its first date. %>
         <p class="text-xs text-secondary"><%= income ? t(".income_frequency_new_hint") : t(".frequency_new_hint") %></p>
       <% end %>
-    </div>
+    </fieldset>
 
     <% if recurring_transaction.persisted? && %w[bill subscription installment other].include?(recurring_transaction.bill_type) %>
       <div class="grid grid-cols-2 gap-3" data-controller="frequency-fields">
         <%= f.select :bill_type,
               %w[bill subscription installment other].map { |type| [ t("bills.all.types.#{type}"), type ] },
               { label: t(".bill_type_label") },
-              { data: { frequency_fields_target: "preset", action: "change->frequency-fields#update" } } %>
+              { disabled: recurring_transaction.financed?,
+                data: { frequency_fields_target: "preset", action: "change->frequency-fields#update" } } %>
         <%= render DS::CategorySelect.new(
               form: f,
               categories: Current.family.categories.alphabetically_by_hierarchy.to_a,
@@ -146,7 +172,8 @@
         <div data-frequency-fields-target="group" data-presets="installment" class="hidden col-span-2">
           <%= f.number_field :end_after_count,
                 label: t(".installment_count_label"),
-                min: 2, step: 1 %>
+                min: 2, step: 1,
+                disabled: recurring_transaction.financed? %>
           <p class="text-xs text-secondary mt-1"><%= t(".installment_count_hint") %></p>
         </div>
       </div>

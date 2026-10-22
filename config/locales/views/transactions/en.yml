@@ -71,6 +71,10 @@ en:
       loan_payment: Loan Payment
       mark_recurring: Mark as Recurring
       create_bill: Create a bill
+      installment_plan_title: Installment plan
+      installment_plan_description: Replace this card purchase with fixed monthly charges, including the issuer's interest.
+      installment_plan_action: Set up plan
+      installment_plan_locked: "Cannot delete: this purchase is owned by an installment plan."
       mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
       mark_recurring_title: Recurring Transaction
       applied_to_title: Bills this paid

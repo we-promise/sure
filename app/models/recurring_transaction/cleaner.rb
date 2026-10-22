@@ -30,7 +30,13 @@ class RecurringTransaction
         recent_matches = recurring_transaction.matching_transactions.select { |entry| entry.date >= threshold }
 
         if recent_matches.empty?
-          recurring_transaction.mark_inactive!
+          # A stale plan is over, not paused: ending it releases an uncharged
+          # purchase and keeps a charged one out of the balance.
+          if recurring_transaction.financed?
+            recurring_transaction.update!(status: "ended")
+          else
+            recurring_transaction.mark_inactive!
+          end
           stale_count += 1
         end
       end

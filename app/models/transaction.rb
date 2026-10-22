@@ -24,6 +24,7 @@ class Transaction < ApplicationRecord
   ].freeze
 
   validate :validate_attachments, if: -> { attachments.attached? }
+  validate :planned_purchase_terms_locked
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
@@ -63,6 +64,17 @@ class Transaction < ApplicationRecord
           errors.add(:exchange_rate, "must be greater than 0")
         end
       end
+    end
+
+    # The plan owns the purchase's category and kind. The entry-level lock
+    # guards the financial fields; this guards the fields on the entryable.
+    def planned_purchase_terms_locked
+      return unless will_save_change_to_category_id? ||
+                    will_save_change_to_merchant_id? ||
+                    will_save_change_to_kind?
+      return unless entry&.installment_plan_locked?
+
+      errors.add(:base, :installment_plan_locked)
     end
 
   public

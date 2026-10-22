@@ -76,11 +76,22 @@ class RecurringTransaction
           .where(date: allocation.paid_on)
           .where(amount: amounts)
           .where.not(id: RecurringAllocation.where.not(entry_id: nil).select(:entry_id))
+          .excluding_split_parents
+          .excluding_split_children
           .then { |scope| series.account_id.present? ? scope.where(account_id: series.account_id) : scope }
           .includes(:entryable)
           .find { |entry| repair_identity?(series, entry) }
 
-        allocation.update!(entry: replacement) if replacement
+        next unless replacement
+
+        allocation.update!(entry: replacement)
+
+        if allocation.allocation_confirmed?
+          FinancedChargeSplitter.new(
+            occurrence: allocation.recurring_occurrence,
+            entry: replacement
+          ).split!
+        end
       end
     end
 
@@ -264,6 +275,7 @@ class RecurringTransaction
         family.entries
               .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
               .where(entryable_type: "Transaction")
+              .excluding_split_children
               .where(excluded: false)
               .where(date: window_min..window_max)
               .where("transactions.kind NOT IN (?) OR transactions.id IN (?)", Transaction::TRANSFER_KINDS, transfer_destinations.keys)

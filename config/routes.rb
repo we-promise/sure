@@ -556,6 +556,9 @@ Rails.application.routes.draw do
     resource :split, only: %i[new create edit update destroy]
     resource :transfer_match, only: %i[new create]
     resource :pending_duplicate_merges, only: %i[new create]
+    resource :installment_plan, only: %i[new create] do
+      get :preview
+    end
     resource :category, only: :update, controller: :transaction_categories
     resources :attachments, only: %i[show create destroy], controller: :transaction_attachments
 
@@ -575,6 +578,10 @@ Rails.application.routes.draw do
   end
 
   resources :bills, only: %i[index show] do
+    resource :installment_plan, only: %i[edit update], controller: "installment_plans" do
+      get :preview
+    end
+
     # POST for the same reason recurring_transactions#identify is: detection
     # mutates (creates suggested series and occurrences), so it stays behind
     # CSRF protection rather than a plain URL.

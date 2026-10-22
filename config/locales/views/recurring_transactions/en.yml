@@ -126,6 +126,10 @@ en:
       trial_ends_on_label: Trial ends
       amount_edit_hint: Applies to bills due from now on. Anything already due keeps the amount it was.
       income_amount_edit_hint: Applies to paydays from now on. Anything already due keeps the amount it was.
+      financed_terms_title: Installment plan terms
+      financed_terms_hint: The plan's amount, account and schedule come from its loan terms. Change them before the first payment.
+      financed_terms_locked_hint: A payment is already matched, so the plan's amount, account and schedule cannot change here.
+      financed_terms_edit: Edit plan terms
       cancelled_on_label: Cancelled
       cancelled_on_hint: Recording the date is for your own reference. Pause the bill to stop future ones appearing.
       category_blank: No category

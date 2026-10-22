@@ -6,6 +6,7 @@
     </div>
   <% end %>
   <% dialog.with_body do %>
+    <% plan_locked = @entry.installment_plan_locked? %>
     <%# Potential duplicate alert %>
     <% if @entry.transaction.has_potential_duplicate? %>
       <% potential_match = @entry.transaction.potential_duplicate_entry %>
@@ -54,6 +55,9 @@
         <% split_locked = @entry.split_child? || @entry.split_parent? %>
         <% edit_locked = !can_edit_entry? %>
         <% annotate_locked = !can_annotate_entry? %>
+        <% if plan_locked %>
+          <p class="px-3 pb-2 text-xs text-secondary"><%= t(".installment_plan_locked") %></p>
+        <% end %>
         <%= styled_form_with model: @entry,
               url: transaction_path(@entry),
               class: "space-y-2",
@@ -61,26 +65,26 @@
           <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
           <%= f.text_field :name,
                 label: t(".name_label"),
-                disabled: @entry.split_child? || edit_locked,
+                disabled: @entry.split_child? || edit_locked || plan_locked,
                 "data-auto-submit-form-target": "auto" %>
           <%= f.date_field :date,
                 label: t(".date_label"),
                 max: Date.current,
-                disabled: @entry.linked? || split_locked || edit_locked,
+                disabled: @entry.linked? || split_locked || edit_locked || plan_locked,
                 "data-auto-submit-form-target": "auto" %>
           <% unless @entry.transaction.transfer? %>
             <div class="flex items-center gap-2">
               <%= f.select :nature,
                     [[t("shared.transaction_tabs.expense"), "outflow"], [t("shared.transaction_tabs.income"), "inflow"]],
                     { container_class: "w-1/3", label: t(".nature"), selected: @entry.amount.negative? ? "inflow" : "outflow" },
-                    { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? || split_locked || edit_locked } %>
+                    { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? || split_locked || edit_locked || plan_locked } %>
               <%= f.money_field :amount, label: t(".amount"),
                     container_class: "w-2/3",
                     auto_submit: true,
                     min: 0,
                     value: @entry.amount.abs,
-                    disabled: @entry.linked? || split_locked || edit_locked,
-                    disable_currency: @entry.linked? || split_locked || edit_locked %>
+                    disabled: @entry.linked? || split_locked || edit_locked || plan_locked,
+                    disable_currency: @entry.linked? || split_locked || edit_locked || plan_locked %>
             </div>
           <% end %>
           <% if @entry.transaction.category_editable? %>
@@ -89,7 +93,7 @@
                     form: ef,
                     categories: Current.family.categories.alphabetically_by_hierarchy,
                     selected_id: ef.object.category_id,
-                    disabled: @entry.split_child? || annotate_locked,
+                    disabled: @entry.split_child? || annotate_locked || plan_locked,
                     auto_submit: true,
                     blank_label: t(".uncategorized"),
                     locked: Current.family.categories_locked?
@@ -137,7 +141,7 @@
                     selected_id: ef.object.merchant_id,
                     include_blank: t(".none"),
                     label: t(".merchant_label"),
-                    disabled: @entry.split_child? || !can_annotate_entry?,
+                    disabled: @entry.split_child? || !can_annotate_entry? || plan_locked,
                     auto_submit: true
                   ) %>
               <%= render DS::TagSelect.new(
@@ -286,7 +290,7 @@
 
     <% if can_edit_entry? %>
       <% dialog.with_section(title: t(".settings")) do %>
-        <% unless @entry.split_parent? %>
+        <% unless @entry.split_parent? || @entry.installment_plan_locked? %>
           <div class="pb-4">
             <%= styled_form_with model: @entry,
                   url: transaction_path(@entry),
@@ -329,7 +333,7 @@
             <% end %>
           </div>
         <% end %>
-        <% unless @entry.split_child? %>
+        <% unless @entry.split_child? || plan_locked %>
           <div class="pb-4">
             <%= styled_form_with model: @entry,
                   url: transaction_path(@entry),
@@ -352,7 +356,7 @@
           </div>
         <% end %>
         <%# Split Transaction %>
-        <% if @entry.transaction.splittable? %>
+        <% if @entry.transaction.splittable? && !plan_locked %>
           <div class="flex items-center justify-between gap-4 p-3">
             <div class="text-sm space-y-1">
               <h4 class="text-primary"><%= t("splits.show.button_title") %></h4>
@@ -368,19 +372,23 @@
           </div>
         <% end %>
         <% unless @entry.split_child? %>
-          <div class="flex items-center justify-between gap-4 p-3">
-            <div class="text-sm space-y-1">
-              <h4 class="text-primary"><%= t(".transfer_or_debt_payment") %></h4>
-              <p class="text-secondary"><%= t(".transfer_matcher_description") %></p>
+          <%# A plan-owned purchase is already represented by its plan, so the
+              generic transfer and recurring actions would duplicate it. %>
+          <% unless @entry.installment_plan_locked? %>
+            <div class="flex items-center justify-between gap-4 p-3">
+              <div class="text-sm space-y-1">
+                <h4 class="text-primary"><%= t(".transfer_or_debt_payment") %></h4>
+                <p class="text-secondary"><%= t(".transfer_matcher_description") %></p>
+              </div>
+              <%= render DS::Link.new(
+                text: t(".open_matcher"),
+                icon: "arrow-left-right",
+                variant: "outline",
+                href: new_transaction_transfer_match_path(@entry),
+                frame: :modal
+              ) %>
             </div>
-            <%= render DS::Link.new(
-              text: t(".open_matcher"),
-              icon: "arrow-left-right",
-              variant: "outline",
-              href: new_transaction_transfer_match_path(@entry),
-              frame: :modal
-            ) %>
-          </div>
+          <% end %>
           <!-- Pending Duplicate Merger -->
           <% if @entry.entryable.is_a?(Transaction) && @entry.entryable.pending? %>
             <div class="flex items-center justify-between gap-4 p-3">
@@ -443,11 +451,31 @@
             </div>
           <% end %>
 
+          <%# Turning a card purchase into a plan replaces the purchase, so it
+              sits above the general recurring action rather than beside it. %>
+          <% if installment_plan_available?(@entry) %>
+            <div class="flex items-center justify-between gap-2 p-3">
+              <div class="text-sm space-y-1">
+                <h4 class="text-primary"><%= t(".installment_plan_title") %></h4>
+                <p class="text-secondary"><%= t(".installment_plan_description") %></p>
+              </div>
+              <%= render DS::Link.new(
+                text: t(".installment_plan_action"),
+                icon: "credit-card",
+                variant: "outline",
+                href: new_transaction_installment_plan_path(@entry),
+                frame: :modal
+              ) %>
+            </div>
+          <% end %>
+
           <!-- Mark as Recurring Form -->
-          <%= render "transactions/mark_recurring", entry: @entry %>
+          <% unless @entry.installment_plan_locked? %>
+            <%= render "transactions/mark_recurring", entry: @entry %>
+          <% end %>
         <% end %>
-        <%# Delete Transaction Form - hidden for split children %>
-        <% unless @entry.split_child? %>
+        <%# Delete Transaction Form - hidden for split children and plan-owned purchases %>
+        <% unless @entry.split_child? || plan_locked %>
           <div class="flex items-center justify-between gap-2 p-3">
             <div class="text-sm space-y-1">
               <h4 class="text-primary"><%= t(".delete_title") %></h4>

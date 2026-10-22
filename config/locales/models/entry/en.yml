@@ -6,5 +6,8 @@ en:
         entry:
           attributes:
             base:
+              installment_plan_locked: cannot delete or change this purchase while an installment plan owns it
               invalid_sell_quantity: cannot sell %{sell_qty} shares of %{ticker} because
                 you only own %{current_qty} shares
+            excluded:
+              cannot_unexclude_planned_purchase: cannot be toggled off while an installment plan owns this purchase

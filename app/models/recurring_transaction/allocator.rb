@@ -33,7 +33,7 @@ class RecurringTransaction
     # a cross-currency entry converts at its own date's rate, or requires an
     # explicit amount when no rate exists.
     def allocate!(amount: nil, entry: nil, paid_on: nil, source: nil, cap_at_remaining: false)
-      occurrence.with_lock do
+      allocation = occurrence.with_lock do
         with_entry_lock(entry) do
           allocated, source_amount, source_currency = resolve_amounts(amount, entry)
           guard_entry_capacity!(entry, source_amount) if entry
@@ -67,24 +67,32 @@ class RecurringTransaction
           allocation
         end
       end
+
+      split_financed_charge(allocation)
+      allocation
     end
 
     def unallocate!(allocation)
+      entry = allocation.entry
+      was_confirmed = allocation.allocation_confirmed?
+
       occurrence.with_lock do
-        with_entry_lock(allocation.entry) do
+        with_entry_lock(entry) do
           allocation.destroy!
           refresh_close_state!
         end
       end
+
+      unsplit_financed_charge(entry) if was_confirmed
     end
 
     # The Matcher's write path: confirmed at the exact tier, suggested at the
     # high tier. Suggestions never move close state.
     def allocate_matched!(entry:, state:, confidence:, signals:)
-      occurrence.with_lock do
+      allocation = occurrence.with_lock do
         with_entry_lock(entry) do
           allocated, source_amount, source_currency = resolve_amounts(nil, entry)
-          return nil unless allocated.positive?
+          next nil unless allocated.positive?
 
           guard_entry_capacity!(entry, source_amount)
           freeze_expected_amount! if state == "confirmed"
@@ -106,33 +114,45 @@ class RecurringTransaction
           allocation
         end
       end
+
+      split_financed_charge(allocation) if allocation
+      allocation
     end
 
     # Accepting a suggestion makes it a real payment.
     def confirm_suggestion!(allocation)
-      occurrence.with_lock do
+      allocation = occurrence.with_lock do
         with_entry_lock(allocation.entry) do
           freeze_expected_amount!
           allocation.update!(state: "confirmed", source: "user_confirmed")
           refresh_close_state!
+          allocation
         end
       end
+
+      split_financed_charge(allocation)
+      allocation
     end
 
     # Records the (series, entry) pair so the matcher never proposes it again.
     def reject_suggestion!(allocation)
+      entry = allocation.entry
+      was_confirmed = allocation.allocation_confirmed?
+
       occurrence.with_lock do
-        with_entry_lock(allocation.entry) do
-          if allocation.entry
+        with_entry_lock(entry) do
+          if entry
             RecurringMatchRejection.find_or_create_by!(
               recurring_transaction: occurrence.recurring_transaction,
-              entry: allocation.entry
+              entry: entry
             )
           end
 
           allocation.destroy!
         end
       end
+
+      unsplit_financed_charge(entry) if was_confirmed
     end
 
     # Settles the remainder with no transaction, as a user decision, so it
@@ -172,6 +192,34 @@ class RecurringTransaction
     end
 
     private
+      # Splitting is reporting, not payment. If it fails, the allocation still
+      # stands and the charge stays whole; logging is enough.
+      def split_financed_charge(allocation)
+        return if allocation.blank? || !allocation.allocation_confirmed?
+        return if allocation.entry.blank?
+
+        FinancedChargeSplitter.new(
+          occurrence: occurrence,
+          entry: allocation.entry
+        ).split!
+      rescue StandardError => e
+        Rails.logger.error(
+          "[Allocator] split failed for entry=#{allocation.entry_id} " \
+          "occurrence=#{occurrence.id}: #{e.class}: #{e.message}"
+        )
+      end
+
+      def unsplit_financed_charge(entry)
+        return if entry.blank?
+
+        FinancedChargeSplitter.new(occurrence: occurrence, entry: entry).unsplit!
+      rescue StandardError => e
+        Rails.logger.error(
+          "[Allocator] unsplit failed for entry=#{entry.id} " \
+          "occurrence=#{occurrence.id}: #{e.class}: #{e.message}"
+        )
+      end
+
       # Serializes every write touching this entry, whichever occurrence it
       # targets. Always taken inside the occurrence row lock, so the ordering is
       # occurrence then entry and no pair can deadlock.

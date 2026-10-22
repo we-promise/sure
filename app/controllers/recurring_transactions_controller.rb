@@ -236,8 +236,10 @@ class RecurringTransactionsController < ApplicationController
     # already leaves, and the Identifier will not claim or recreate one.
     #
     # A hand-declared bill has no pattern behind it, so nothing would bring it
-    # back and it is deleted outright.
-    if @recurring_transaction.manual?
+    # back and it is deleted outright. An installment plan that already took a
+    # payment is the exception: its charges replaced the purchase, so it is
+    # retired instead, to keep the link that hides the purchase.
+    if @recurring_transaction.manual? && !@recurring_transaction.financed_charges_recorded?
       @recurring_transaction.destroy!
     else
       @recurring_transaction.update!(status: "ended")
