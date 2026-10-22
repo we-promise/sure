@@ -2,15 +2,21 @@
 class DailyUsage
   EVENTS = %w[web_ui_served_daily ai_assistant_served_daily job_served_daily].freeze
 
-  def self.capture(event, user: nil, date: nil, ip: nil)
-    return unless EVENTS.include?(event)
+  def self.enabled?(event)
+    return false unless EVENTS.include?(event)
 
     config = Rails.configuration.x.posthog
-    return unless Rails.env.production? || (Rails.env.development? && config.development_enabled)
-    return unless config.feedback_enabled && $posthog_feedback
+    return false unless Rails.env.production? || (Rails.env.development? && config.development_enabled)
+    return false unless config.feedback_enabled && $posthog_feedback
+
+    event != "web_ui_served_daily" || !Rails.cache.is_a?(ActiveSupport::Cache::NullStore)
+  end
+
+  def self.capture(event, user: nil, date: nil, ip: nil)
+    return unless enabled?(event)
 
     web = event == "web_ui_served_daily"
-    return if web && (!user || !date || Rails.cache.is_a?(ActiveSupport::Cache::NullStore))
+    return if web && (!user || !date)
 
     # Preserve the web event's user/family-local identity and the installation
     # events' shared UTC identity, including their existing HMAC salts.

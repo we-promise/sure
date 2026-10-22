@@ -82,6 +82,14 @@ class DailyUsageTest < ActiveSupport::TestCase
     assert_empty @events
   end
 
+  test "a null Rails cache disables web capture while installation events stay enabled" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::NullStore.new)
+
+    assert_not DailyUsage.enabled?("web_ui_served_daily")
+    assert DailyUsage.enabled?("ai_assistant_served_daily")
+    assert DailyUsage.enabled?("job_served_daily")
+  end
+
   test "UTC rollover is independent of thread or family timezone" do
     Time.use_zone("Pacific/Auckland") { DailyUsage.capture("job_served_daily") }
     Time.use_zone("America/Los_Angeles") { DailyUsage.capture("job_served_daily") }
