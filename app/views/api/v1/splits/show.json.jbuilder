@@ -12,8 +12,9 @@ amount_money = @entry.amount_money
 json.amount_cents (amount_money.amount * amount_money.currency.minor_unit_conversion).round(0).to_i.abs
 
 json.currency @entry.currency
+refund_details = Transaction::RefundDetails.new(transactions: @children, user: current_resource_owner)
 json.children @children do |child|
-  json.partial! "api/v1/transactions/transaction", transaction: child
+  json.partial! "api/v1/transactions/transaction", transaction: child, refund_details: refund_details
 
   # PATCH replaces every child, so a client editing one field has to send the
   # rest back unchanged. The transaction partial carries neither of these: its
