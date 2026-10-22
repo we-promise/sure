@@ -22,6 +22,11 @@ class RetirementPlan::Milestones
 
   # `year` is nil when the milestone was already passed or is never reached
   # within the plan; `reached_already` tells the two apart.
+  #
+  # The four FI milestones are always present. Coast FI is left out entirely,
+  # not given a nil year, when there is no retirement year or it is already
+  # past: there is no saving year to coast from. A caller must read a missing
+  # `coast` as "not applicable", never as reached.
   Milestone = Data.define(:key, :year, :age, :reached_already)
 
   def initialize(rows:, current_assets:, fi_number:, expected_annual_return:, inflation_rate:, retirement_year:, first_year:, birth_year:, path_retirement_year: nil)
@@ -34,6 +39,11 @@ class RetirementPlan::Milestones
     # be before the plan's date. The Coast target still runs to the plan's.
     @saving_until = [ retirement_year, path_retirement_year ].compact.min
     @first_year = first_year
+    # Required: every milestone reached in a year carries the age it is
+    # reached at. RetirementPlan#milestones only calls this for a plannable
+    # plan, which has one.
+    raise ArgumentError, "birth_year is required" if birth_year.nil?
+
     @birth_year = birth_year
   end
 

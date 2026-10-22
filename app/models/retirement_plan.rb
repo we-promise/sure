@@ -120,6 +120,10 @@ class RetirementPlan < ApplicationRecord
   # quarters and all of #projection's FI number, and Coast FI measured to the
   # plan's retirement date. The page hands in the simulation it draws, so in
   # FIRE mode they follow the path to the solved retirement year.
+  #
+  # Coast FI needs the plan's saved retirement date. A FIRE plan that leaves
+  # the date blank and relies on the solver gets the four FI milestones and
+  # no Coast FI; the page should say why rather than show nothing.
   def milestones(as_of:, simulation: self.simulation(as_of: as_of))
     return [] if simulation.nil?
 

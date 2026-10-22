@@ -101,8 +101,24 @@ class RetirementPlan::MilestonesTest < ActiveSupport::TestCase
     assert_equal %w[fi_25 fi_50 fi_75 fi_100], list.map(&:key)
   end
 
+  # Retiring this year, the target is the FI number itself (no years left to
+  # grow) and there are no saving years left: 400,000 against 300,000 is
+  # reached already; 100,000 is not, and has no year to reach it in.
   test "a retirement year that is this year still has Coast FI" do
-    assert find(milestones(retirement_year: 2026, current_assets: 400_000).all, "coast")
+    reached = find(milestones(retirement_year: 2026, current_assets: 400_000).all, "coast")
+    short = find(milestones(retirement_year: 2026, current_assets: 100_000).all, "coast")
+
+    assert_equal [ true, nil ], [ reached&.reached_already, reached&.year ]
+    assert_equal [ false, nil ], [ short&.reached_already, short&.year ]
+  end
+
+  test "milestones need a birth year to give an age" do
+    assert_raises(ArgumentError) do
+      RetirementPlan::Milestones.new(
+        rows: [], current_assets: 100_000, fi_number: 300_000, expected_annual_return: BigDecimal("0.05"),
+        inflation_rate: 0, retirement_year: 2046, first_year: 2026, birth_year: nil
+      )
+    end
   end
 
   test "a portfolio that could already coast is reached, with no year" do
