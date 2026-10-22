@@ -453,6 +453,35 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://test.example.com", session[:pending_oidc_auth].fetch("issuer")
   end
 
+  test "a fresh OIDC sign-in clears an abandoned legacy relink" do
+    legacy_identity = oidc_identities(:bob_google)
+    legacy_identity.update!(issuer: nil)
+    @user.sessions.destroy_all
+    setup_omniauth_mock(
+      provider: legacy_identity.provider, uid: legacy_identity.uid,
+      email: @user.email, name: "Bob Dylan"
+    )
+    get "/auth/openid_connect/callback"
+    assert session[:pending_oidc_legacy_relink]
+
+    user = users(:new_email)
+    setup_omniauth_mock(
+      provider: legacy_identity.provider, uid: "fresh-identity-after-legacy",
+      email: user.email, name: "New User"
+    )
+    get "/auth/openid_connect/callback"
+
+    assert_redirected_to link_oidc_account_path
+    assert_nil session[:pending_oidc_legacy_relink]
+    assert_equal "fresh-identity-after-legacy", session[:pending_oidc_auth].fetch("uid")
+
+    post create_link_oidc_account_path, params: { email: user.email, password: user_password_test }
+
+    assert_redirected_to root_path
+    assert_equal user.id, OidcIdentity.find_by!(uid: "fresh-identity-after-legacy").user_id
+    assert_nil legacy_identity.reload.issuer
+  end
+
   test "rejects an SSO identity that an administrator permanently removed" do
     oidc_identity = oidc_identities(:bob_google)
     SsoIdentityBlock.block_all!(OidcIdentity.where(id: oidc_identity.id), identity_label: @user.email)
