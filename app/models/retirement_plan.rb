@@ -108,6 +108,11 @@ class RetirementPlan < ApplicationRecord
       @assets_as_of[as_of] ||= asset_total(as_of, finance_accounts)
     end
 
+    # `exchange_to` goes through ExchangeRate.find_or_fetch_rate, the repo-wide
+    # path: with no rate stored within five days of the date it asks the
+    # provider and stores the answer, so a page view can make one call and one
+    # write per foreign-currency account. ConversionError is rescued only after
+    # that.
     def asset_total(as_of, accounts)
       currency = user.family.currency
       total = BigDecimal("0")

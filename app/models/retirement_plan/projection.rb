@@ -16,6 +16,11 @@ class RetirementPlan::Projection
   # How far the chart runs when the user has not set a retirement date.
   DEFAULT_HORIZON_YEARS = 30
 
+  # BigDecimal bounds, because `clamp` returns the bound itself when it applies
+  # and an Integer bound would hand callers an Integer.
+  ZERO = BigDecimal("0")
+  ONE = BigDecimal("1")
+
   attr_reader :as_of, :annual_expenses, :annual_income, :current_assets,
               :safe_withdrawal_rate, :expected_annual_return, :savings_rate, :retirement_date
 
@@ -32,7 +37,9 @@ class RetirementPlan::Projection
 
   # The portfolio that would fund a year's spending at the withdrawal rate.
   # Nil, rather than zero, when there is no spending to measure: a zero FI
-  # number would read as "already independent".
+  # number would read as "already independent". Unrounded (40,000 / 0.035 does
+  # not end at the cent); rounding is the view's job, so compare it with a
+  # tolerance or after rounding, never with `==`.
   def fi_number
     return nil unless annual_expenses.positive? && safe_withdrawal_rate.positive?
 
@@ -48,7 +55,7 @@ class RetirementPlan::Projection
   end
 
   def bar_progress
-    progress&.clamp(0, 1)
+    progress&.clamp(ZERO, ONE)
   end
 
   def financially_independent?
@@ -61,13 +68,13 @@ class RetirementPlan::Projection
   # not model.
   def effective_savings_rate
     return savings_rate if savings_rate
-    return 0 unless annual_income.positive?
+    return ZERO unless annual_income.positive?
 
-    ((annual_income - annual_expenses) / annual_income).clamp(0, 1)
+    ((annual_income - annual_expenses) / annual_income).clamp(ZERO, ONE)
   end
 
   def annual_contribution
-    return 0 unless annual_income.positive?
+    return ZERO unless annual_income.positive?
 
     annual_income * effective_savings_rate
   end

@@ -112,6 +112,22 @@ class RetirementPlan::ProjectionTest < ActiveSupport::TestCase
   # Date-sensitive models take the reference date as an argument and never
   # derive it. Scanning the source is the only test that fails the moment
   # someone reaches for the clock inside a method body.
+  # Integer#clamp hands back the bound itself, so a clamped or guarded zero
+  # comes out as an Integer unless the bounds are BigDecimal.
+  test "a zero or clamped rate and amount are still BigDecimal" do
+    overspending = projection(annual_income: 30_000)
+    no_income = projection(annual_income: 0)
+    past_fi = projection(current_assets: 1_120_000)
+    below_zero = projection(current_assets: -10_000)
+
+    assert_kind_of BigDecimal, overspending.effective_savings_rate
+    assert_kind_of BigDecimal, overspending.annual_contribution
+    assert_kind_of BigDecimal, no_income.effective_savings_rate
+    assert_kind_of BigDecimal, no_income.annual_contribution
+    assert_kind_of BigDecimal, past_fi.bar_progress
+    assert_kind_of BigDecimal, below_zero.bar_progress
+  end
+
   test "nothing under the retirement plan reads the clock or the current request" do
     sources = [ Rails.root.join("app/models/retirement_plan.rb"), *Dir[Rails.root.join("app/models/retirement_plan/**/*.rb")] ]
     offenders = sources.flat_map do |path|
