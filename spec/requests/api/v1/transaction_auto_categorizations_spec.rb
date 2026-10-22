@@ -93,6 +93,15 @@ RSpec.describe 'API V1 Transaction Auto-Categorization', type: :request do
         let(:body) { { transaction_ids: [ 'not-a-uuid' ] } }
         run_test!
       end
+
+      response '503', 'the job queue refused some or all of the batch' do
+        schema '$ref' => '#/components/schemas/TransactionAutoCategorizationPartial'
+        before do
+          allow_any_instance_of(Family).to receive(:queue_auto_categorization)
+            .and_return([ [], [ transaction.id ] ])
+        end
+        run_test!
+      end
     end
   end
 end

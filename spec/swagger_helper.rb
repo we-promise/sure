@@ -108,7 +108,26 @@ RSpec.configure do |config|
                 type: :array,
                 items: { type: :string, format: :uuid },
                 description: 'Requested transactions that were not queued: already categorized, ' \
-                             'category locked, a transfer or split parent, or not writable by this key'
+                             'category locked, a transfer or split parent, or not one this key may annotate'
+              }
+            }
+          },
+          TransactionAutoCategorizationPartial: {
+            type: :object,
+            required: %w[error message queued_count transaction_ids unqueued_transaction_ids],
+            properties: {
+              error: { type: :string, example: 'service_unavailable' },
+              message: { type: :string },
+              queued_count: { type: :integer },
+              transaction_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Transactions that were queued before the queue refused the rest'
+              },
+              unqueued_transaction_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Transactions the queue refused; retry to queue them'
               }
             }
           },

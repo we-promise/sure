@@ -80,14 +80,20 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
       return nil unless params.key?(:transaction_ids)
 
       raw = params[:transaction_ids]
-      unless raw.is_a?(Array) && raw.any? && raw.all? { |id| id.is_a?(String) && valid_uuid?(id) }
+      unless raw.is_a?(Array) && raw.any?
         render_validation_error("transaction_ids must be a non-empty array of transaction IDs")
         return nil
       end
 
-      # The limit applies to the list as sent, duplicates included.
+      # The limit applies to the list as sent, duplicates included. Checked
+      # before the per-element format pass so an oversized payload fails fast.
       if raw.size > MAX_TRANSACTION_IDS
         render_validation_error("transaction_ids accepts at most #{MAX_TRANSACTION_IDS} IDs")
+        return nil
+      end
+
+      unless raw.all? { |id| id.is_a?(String) && valid_uuid?(id) }
+        render_validation_error("transaction_ids must be a non-empty array of transaction IDs")
         return nil
       end
 
