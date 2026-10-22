@@ -359,7 +359,7 @@ class Rule::ActionTest < ActiveSupport::TestCase
     )
 
     assert_not action.valid?
-    assert_includes action.errors[:value], "percentages must add up to 100 (got 90.0)"
+    assert_includes action.errors[:value], "percentages must add up to 100 (got 90)"
   end
 
   test "split_transaction rejects a non-positive share" do
