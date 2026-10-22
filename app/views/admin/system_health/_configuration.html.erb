@@ -1,0 +1,46 @@
+<div class="space-y-4" data-testid="configuration-health">
+  <p class="text-sm text-secondary"><%= t(".description") %></p>
+
+  <% health.checks.each do |check| %>
+    <%= render DS::Card.new(class: "gap-4", data: { testid: "configuration-#{check.key}" }) do %>
+      <div class="flex items-start justify-between gap-2">
+        <h2 class="min-w-0 text-lg font-semibold text-primary"><%= t(".checks.#{check.key}.title") %></h2>
+        <div class="shrink-0"><%= render DS::Pill.new(label: t(".statuses.#{check.status}"), tone: check.tone, marker: false) %></div>
+      </div>
+      <p class="text-sm text-secondary"><%= t(".checks.#{check.key}.statuses.#{check.status}") %></p>
+
+      <% if check.backend %>
+        <p class="text-sm text-primary"><%= t(".storage_backend", backend: t(".storage_backends.#{check.backend}")) %></p>
+      <% end %>
+
+      <% if check.issues.any? %>
+        <div class="space-y-2 text-sm">
+          <p class="font-medium text-primary"><%= t(".settings_needed") %></p>
+          <ul class="list-disc pl-5 text-secondary">
+            <% check.issues.each do |issue| %>
+              <li><%= configuration_health_text(t(".checks.#{check.key}.issues.#{issue}")) %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <% if check.providers.any? %>
+        <dl class="space-y-2 text-sm">
+          <% check.providers.each do |provider| %>
+            <%= render DS::DetailRow.new(
+                  label: provider.key == :unknown ? t(".unknown_provider") : t("settings.hostings.provider_selection.providers.#{provider.key}"),
+                  value: t(".provider_statuses.#{provider.status}"),
+                  align: :center) %>
+          <% end %>
+        </dl>
+      <% end %>
+
+      <p class="text-sm text-secondary"><%= configuration_health_text(t(".checks.#{check.key}.guidance")) %></p>
+      <% if self_hosted? && check.key.in?(%i[securities exchange_rates]) %>
+        <%= render DS::Link.new(text: t(".configure_providers"), href: settings_hosting_path) %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= render "optional_services", services: health.optional_services %>
+</div>

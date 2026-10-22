@@ -36,6 +36,21 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_no_match(/translation missing/i, message)
   end
 
+  test "manual attach does not record the detected name as a new alias after a rename" do
+    @rent.update!(name: "Watson Rent", matcher_hints: { "detected_name" => "WATSON PROPERTY MGMT" })
+    entry = @account.entries.create!(
+      date: Date.current,
+      amount: 2000,
+      currency: "USD",
+      name: "WATSON PROPERTY MGMT",
+      entryable: Transaction.new
+    )
+
+    @allocator.allocate!(entry: entry)
+
+    assert_not_includes Array(@rent.reload.matcher_hints["name_aliases"]), "WATSON PROPERTY MGMT"
+  end
+
   test "a price rise does not re-target an occurrence that has already been paid against" do
     @occurrence.update!(expected_amount: nil) # inheriting from the series
     @allocator.allocate!(entry: entry_for(500))
@@ -180,6 +195,32 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_raises Allocator::OverAllocationError do
       Allocator.new(september).allocate!(entry: lump, amount: 500)
     end
+  end
+
+  test "an entry another occurrence already uses up is refused as exhausted" do
+    lump = entry_for(500)
+    @allocator.allocate!(entry: lump)
+    free_date = (Date.current + 2.months).beginning_of_month + 9
+    september = @rent.recurring_occurrences.create!(
+      family: @family, original_due_on: free_date, due_on: free_date, currency: "USD"
+    )
+
+    # With no amount the default is what the entry has left, which is zero.
+    # That used to reach the allocation's "greater than 0" validation instead.
+    assert_raises Allocator::EntryExhaustedError do
+      Allocator.new(september).allocate!(entry: lump)
+    end
+    assert_empty september.allocations
+  end
+
+  test "relinking an entry this occurrence already uses up is a duplicate, not exhaustion" do
+    lump = entry_for(500)
+    @allocator.allocate!(entry: lump)
+
+    assert_raises Allocator::AlreadyAllocatedError do
+      @allocator.allocate!(entry: lump)
+    end
+    assert_equal 1, @occurrence.allocations.where(entry: lump).count
   end
 
   test "the same entry cannot be allocated twice to one occurrence" do
