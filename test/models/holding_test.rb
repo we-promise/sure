@@ -546,7 +546,7 @@ class HoldingTest < ActiveSupport::TestCase
       Trade::INTERNAL_MOVEMENT_LABELS.each do |label|
         holding.account.trades.each { |trade| trade.update!(investment_activity_label: label) }
 
-        assert_nil holding.avg_cost,
+        assert_nil holding.reload.avg_cost,
           "a position moved by #{label} has no cost basis this app can know"
       end
     end
