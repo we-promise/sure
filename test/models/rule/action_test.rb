@@ -2,6 +2,7 @@ require "test_helper"
 
 class Rule::ActionTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include GoalPledgeTestHelper
 
   setup do
     @family = families(:dylan_family)
@@ -314,14 +315,4 @@ class Rule::ActionTest < ActiveSupport::TestCase
     end
     assert_equal 2, Transfer.where(outflow_transaction_id: [ @txn1.id, @txn3.id ]).count
   end
-
-
-  private
-    # An open transfer pledge on an account linked to a goal.
-    def open_transfer_pledge(account, amount:)
-      goal = goals(:vacation_italy)
-      goal.goal_accounts.find_or_create_by!(account: account)
-      GoalPledge.create!(goal: goal, account: account, amount: amount, currency: "USD", kind: "transfer",
-                         status: "open", expires_at: 7.days.from_now)
-    end
 end

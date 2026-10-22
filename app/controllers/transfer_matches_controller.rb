@@ -24,7 +24,7 @@ class TransferMatchesController < ApplicationController
     # account, which can resolve its transfer pledge. Matching two existing
     # entries books nothing new.
     if transfer_match_params[:method] == "new" && @entry.amount.positive?
-      GoalPledge::Reconciler.new(@transfer.inflow_transaction.entry).run
+      GoalPledge::Reconciler.run_after_commit(@transfer.inflow_transaction.entry)
     end
 
     redirect_back_or_to transactions_path, notice: t(".success")

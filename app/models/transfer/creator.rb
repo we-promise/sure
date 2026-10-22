@@ -66,9 +66,10 @@ class Transfer::Creator
     source_account.sync_later
     destination_account.sync_later
 
-    # After commit, so a reconcile error can never roll back the transfer.
-    # Only the inflow can resolve a transfer pledge.
-    GoalPledge::Reconciler.new(transfer.inflow_transaction.entry).run
+    # After commit, including a caller's own transaction, so a reconcile
+    # error can never roll back the transfer. Only the inflow can resolve a
+    # transfer pledge.
+    GoalPledge::Reconciler.run_after_commit(transfer.inflow_transaction.entry)
 
     transfer
   rescue ActiveRecord::RecordNotUnique

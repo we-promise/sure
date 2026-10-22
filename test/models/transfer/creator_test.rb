@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Transfer::CreatorTest < ActiveSupport::TestCase
+  include GoalPledgeTestHelper
+
   setup do
     @family = families(:dylan_family)
     @source_account = accounts(:depository)
@@ -378,6 +380,41 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_nil transfer.outflow_transaction.reload.extra.dig("goal", "pledge_id")
   end
 
+  # The API wraps trade creation, and so this, in its own transaction. The
+  # pledge must wait for that to commit: resolving it inside would let a
+  # rescued database error in the reconciler abort the caller's transaction.
+  test "pledge reconciliation waits for the caller's transaction to commit" do
+    pledge = goal_pledges(:open_transfer)
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+
+    ApplicationRecord.transaction do
+      Transfer::Creator.new(
+        family: @family, source_account_id: source.id, destination_account_id: pledge.account_id,
+        date: Date.current, amount: 200
+      ).create
+
+      assert_equal "open", pledge.reload.status
+    end
+
+    assert_equal "matched", pledge.reload.status
+  end
+
+  test "a rolled-back caller transaction leaves the pledge open" do
+    pledge = goal_pledges(:open_transfer)
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+
+    ApplicationRecord.transaction do
+      Transfer::Creator.new(
+        family: @family, source_account_id: source.id, destination_account_id: pledge.account_id,
+        date: Date.current, amount: 200
+      ).create
+      raise ActiveRecord::Rollback
+    end
+
+    assert_equal "open", pledge.reload.status
+    assert_nil pledge.matched_transaction_id
+  end
+
   test "a reconcile failure does not undo the transfer" do
     pledge = goal_pledges(:open_transfer)
     source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
@@ -394,14 +431,4 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert transfer.persisted?
     assert_equal "open", pledge.reload.status
   end
-
-
-  private
-    # An open transfer pledge on an account linked to a goal.
-    def open_transfer_pledge(account, amount:)
-      goal = goals(:vacation_italy)
-      goal.goal_accounts.find_or_create_by!(account: account)
-      GoalPledge.create!(goal: goal, account: account, amount: amount, currency: "USD", kind: "transfer",
-                         status: "open", expires_at: 7.days.from_now)
-    end
 end

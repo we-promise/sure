@@ -19,9 +19,8 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     target_account = family.accounts.find_by_id(value)
     return 0 unless target_account
     scope = transaction_scope.with_entry
-    # Checked once per run, not per transaction: only a goal-linked account
-    # can hold a pledge.
-    reconcile_pledges = target_account.goal_accounts.exists?
+    # Checked once per run, not per transaction.
+    reconcile_pledges = target_account.linked_to_goal?
 
     count_modified_resources(scope) do |txn|
       entry = txn.entry
@@ -34,7 +33,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
 
         transfer.sync_account_later
         # An outflow's new counterpart is a deposit on the target account.
-        GoalPledge::Reconciler.new(transfer.inflow_transaction.entry).run if reconcile_pledges && entry.amount.positive?
+        GoalPledge::Reconciler.run_after_commit(transfer.inflow_transaction.entry) if reconcile_pledges && entry.amount.positive?
       end
     end
   end

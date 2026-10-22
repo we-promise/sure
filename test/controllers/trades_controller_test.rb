@@ -2,6 +2,7 @@ require "test_helper"
 
 class TradesControllerTest < ActionDispatch::IntegrationTest
   include EntryableResourceInterfaceTest
+  include GoalPledgeTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -570,13 +571,5 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
       @investment = accounts(:investment)
       @investment.account_shares.create!(user: users(:family_member), permission: "full_control")
       sign_in users(:family_member)
-    end
-
-    # An open transfer pledge on an account linked to a goal.
-    def open_transfer_pledge(account, amount:)
-      goal = goals(:vacation_italy)
-      goal.goal_accounts.find_or_create_by!(account: account)
-      GoalPledge.create!(goal: goal, account: account, amount: amount, currency: "USD", kind: "transfer",
-                         status: "open", expires_at: 7.days.from_now)
     end
 end

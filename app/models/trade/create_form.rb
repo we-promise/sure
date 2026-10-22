@@ -194,7 +194,7 @@ class Trade::CreateForm
       if entry.save
         entry.lock_saved_attributes!
         account.sync_later
-        GoalPledge::Reconciler.new(entry).run if signed_amount.negative?
+        GoalPledge::Reconciler.run_after_commit(entry) if signed_amount.negative?
       end
 
       entry
