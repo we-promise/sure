@@ -1,8 +1,14 @@
 class Provider::Openai < Provider
   include LlmConcept
+  include LangfuseTraceable
 
   # Subclass so errors caught in this provider are raised as Provider::Openai::Error
   Error = Class.new(Provider::Error)
+
+  # Raised when a successful HTTP response can't be parsed into the expected
+  # structure; used by Auto JSON mode to decide whether to retry without
+  # response_format.
+  ResponseFormatError = Class.new(Error)
 
   DEFAULT_MODEL = "gpt-4.1".freeze
   DEFAULT_REQUEST_TIMEOUT = 60
@@ -213,9 +219,12 @@ class Provider::Openai < Provider
         ).auto_categorize
       end
 
-      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
@@ -238,9 +247,12 @@ class Provider::Openai < Provider
         family: family
       ).suggest
 
-      upsert_langfuse_trace(trace: trace, output: result.to_h)
+      finish_langfuse_trace(trace: trace, output: result.to_h)
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
@@ -268,9 +280,12 @@ class Provider::Openai < Provider
         ).auto_detect_merchants
       end
 
-      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
@@ -297,9 +312,12 @@ class Provider::Openai < Provider
         ).enhance_merchants
       end
 
-      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
@@ -349,9 +367,12 @@ class Provider::Openai < Provider
         json_mode: json_mode
       ).process
 
-      upsert_langfuse_trace(trace: trace, output: result.to_h)
+      finish_langfuse_trace(trace: trace, output: result.to_h)
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
@@ -371,9 +392,12 @@ class Provider::Openai < Provider
         json_mode: json_mode
       ).extract
 
-      upsert_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })
+      finish_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
@@ -510,6 +534,8 @@ class Provider::Openai < Provider
 
         input_payload = chat_config.build_input(prompt: prompt)
 
+        start_time = Time.current
+
         begin
           request_params = {
             model: model,
@@ -547,7 +573,8 @@ class Provider::Openai < Provider
               output: response.messages.map(&:output_text).join("\n"),
               usage: usage,
               session_id: session_id,
-              user_identifier: user_identifier
+              user_identifier: user_identifier,
+              start_time: start_time
             )
             record_llm_usage(family: family, model: model, operation: "chat", usage: usage)
             response
@@ -561,7 +588,8 @@ class Provider::Openai < Provider
               output: parsed.messages.map(&:output_text).join("\n"),
               usage: raw_response["usage"],
               session_id: session_id,
-              user_identifier: user_identifier
+              user_identifier: user_identifier,
+              start_time: start_time
             )
             record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
             parsed
@@ -573,7 +601,8 @@ class Provider::Openai < Provider
             input: input_payload,
             error: e,
             session_id: session_id,
-            user_identifier: user_identifier
+            user_identifier: user_identifier,
+            start_time: start_time
           )
           record_llm_usage(family: family, model: model, operation: "chat", error: e)
           raise
@@ -615,6 +644,8 @@ class Provider::Openai < Provider
         params[:tool_choice] = "none" if tool_choice == :none && tools.present?
         params[:max_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
+        start_time = Time.current
+
         begin
           raw_response = session_client.chat(parameters: params)
 
@@ -627,7 +658,8 @@ class Provider::Openai < Provider
             output: parsed.messages.map(&:output_text).join("\n"),
             usage: raw_response["usage"],
             session_id: session_id,
-            user_identifier: user_identifier
+            user_identifier: user_identifier,
+            start_time: start_time
           )
 
           record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
@@ -654,7 +686,8 @@ class Provider::Openai < Provider
             input: messages,
             error: e,
             session_id: session_id,
-            user_identifier: user_identifier
+            user_identifier: user_identifier,
+            start_time: start_time
           )
           record_llm_usage(family: family, model: model, operation: "chat", error: e)
           raise
@@ -750,41 +783,22 @@ class Provider::Openai < Provider
       end
     end
 
-    def langfuse_client
-      return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
-
-      @langfuse_client = Langfuse.new
-    end
-
-    def create_langfuse_trace(name:, input:, session_id: nil, user_identifier: nil)
-      return unless langfuse_client
-
-      langfuse_client.trace(
-        name: name,
-        input: input,
-        session_id: session_id,
-        user_id: user_identifier,
-        environment: Rails.env
-      )
-    rescue => e
-      Rails.logger.warn("Langfuse trace creation failed: #{e.message}\n#{e.full_message}")
-      nil
-    end
-
-    def log_langfuse_generation(name:, model:, input:, output: nil, usage: nil, error: nil, session_id: nil, user_identifier: nil)
+    def log_langfuse_generation(name:, model:, input:, output: nil, usage: nil, error: nil, session_id: nil, user_identifier: nil, start_time: nil)
       return unless langfuse_client
 
       trace = create_langfuse_trace(
         name: "openai.#{name}",
         input: input,
         session_id: session_id,
-        user_identifier: user_identifier
+        user_identifier: user_identifier,
+        start_time: start_time
       )
 
       generation = trace&.generation(
         name: name,
         model: model,
-        input: input
+        input: input,
+        start_time: start_time
       )
 
       if error
@@ -792,32 +806,17 @@ class Provider::Openai < Provider
           output: { error: error.message, details: error.respond_to?(:details) ? error.details : nil },
           level: "ERROR"
         )
-        upsert_langfuse_trace(
+        finish_langfuse_trace(
           trace: trace,
           output: { error: error.message },
           level: "ERROR"
         )
       else
         generation&.end(output: output, usage: usage)
-        upsert_langfuse_trace(trace: trace, output: output)
+        finish_langfuse_trace(trace: trace, output: output)
       end
     rescue => e
       Rails.logger.warn("Langfuse logging failed: #{e.message}\n#{e.full_message}")
-    end
-
-    def upsert_langfuse_trace(trace:, output:, level: nil)
-      return unless langfuse_client && trace&.id
-
-      payload = {
-        id: trace.id,
-        output: output
-      }
-      payload[:level] = level if level.present?
-
-      langfuse_client.trace(**payload)
-    rescue => e
-      Rails.logger.warn("Langfuse trace upsert failed for trace_id=#{trace&.id}: #{e.message}\n#{e.full_message}")
-      nil
     end
 
     def record_llm_usage(family:, model:, operation:, usage: nil, error: nil)

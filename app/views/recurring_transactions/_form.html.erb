@@ -131,7 +131,10 @@
     </div>
 
     <% if recurring_transaction.persisted? && %w[bill subscription installment other].include?(recurring_transaction.bill_type) %>
-      <div class="grid grid-cols-2 gap-3" data-controller="frequency-fields">
+      <%# One field per row: the category picker opens a menu that holds a
+          search field and the whole category list, and half a dialog is too
+          narrow for either. %>
+      <div class="space-y-3" data-controller="frequency-fields">
         <%= f.select :bill_type,
               %w[bill subscription installment other].map { |type| [ t("bills.all.types.#{type}"), type ] },
               { label: t(".bill_type_label") },
@@ -140,10 +143,11 @@
               form: f,
               categories: Current.family.categories.alphabetically_by_hierarchy.to_a,
               selected_id: recurring_transaction.category_id,
-              blank_label: t(".category_blank")
+              blank_label: t(".category_blank"),
+              locked: Current.family.categories_locked?
             ) %>
 
-        <div data-frequency-fields-target="group" data-presets="installment" class="hidden col-span-2">
+        <div data-frequency-fields-target="group" data-presets="installment" class="hidden">
           <%= f.number_field :end_after_count,
                 label: t(".installment_count_label"),
                 min: 2, step: 1 %>

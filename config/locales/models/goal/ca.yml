@@ -25,7 +25,6 @@ ca:
               only_with_months_mode: Els mesos de despeses només s'apliquen quan l'objectiu es defineix d'aquesta manera.
             linked_accounts:
               must_be_fundable: Tots els comptes enllaçats han de ser comptes d'efectiu o d'inversió.
-              currency_mismatch: Tots els comptes enllaçats han de tenir la mateixa moneda.
               must_belong_to_family: Els comptes enllaçats han de pertànyer a la mateixa família que l'objectiu.
             kind:
               locked_while_released: Torna a obrir aquest objectiu abans de convertir-lo en una reserva.

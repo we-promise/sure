@@ -404,6 +404,16 @@ Rails.application.routes.draw do
       delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
     end
     resource :ai_prompts, only: %i[show update]
+    resource :classifier, only: %i[show update] do
+      patch :rule
+      post :add_rule
+      post :run
+      post :clear_locks
+      post :evaluate
+      post :find_best
+      post :remember_weight
+      patch :apply_best
+    end
     resource :llm_usage, only: :show
     resource :guides, only: :show
     get "bank_sync", to: redirect("/settings/providers", status: 301)
@@ -442,6 +452,7 @@ Rails.application.routes.draw do
     get :merge, on: :collection
     post :perform_merge, on: :collection
     post :bootstrap, on: :collection
+    patch :toggle_lock, on: :collection
     delete :destroy_all, on: :collection
   end
 
@@ -676,6 +687,7 @@ Rails.application.routes.draw do
 
     collection do
       post :sync_all
+      patch :reorder
     end
 
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
