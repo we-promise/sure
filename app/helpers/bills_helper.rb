@@ -90,7 +90,8 @@ module BillsHelper
   def bills_matcher_hints(series)
     {
       aliases: Array(series.matcher_hints["name_aliases"]).compact_blank,
-      learned_pct: series.matcher_hints["learned_tolerance_pct"].to_f
+      learned_pct: series.matcher_hints["learned_tolerance_pct"].to_f,
+      detected_name: series.merchant_id.blank? ? series.matcher_hints["detected_name"].presence : nil
     }
   end
 

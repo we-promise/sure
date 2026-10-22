@@ -42,6 +42,7 @@ en:
       rule_named: "%{name}"
       rule_amount_range: "from %{min} to %{max}"
       rule_aliases: "Also matches %{names}"
+      rule_detected: "Matches transactions named %{name}"
       rule_learned_tolerance: "Amounts within %{percent} of the usual amount match this bill"
       history_title: Last 12 months
       history_aria: Payments over the last twelve months
