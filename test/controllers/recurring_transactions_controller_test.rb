@@ -1001,6 +1001,43 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert suggestion.reload.active?
   end
 
+  # Activation changes status, a schedule-shaping column, so regeneration runs
+  # in the same after_commit chain. A raise there stops the callbacks after
+  # it, so the history reconstruction must not sit behind it.
+  test "toggling a detected bill on still links its past payments when regenerating its future fails" do
+    paid_on, suggestion, entry = suggested_bill_with_past_payment
+    RecurringTransaction::OccurrenceGenerator.any_instance.stubs(:regenerate_future!).raises(RuntimeError, "regeneration failed")
+
+    assert_raises(RuntimeError) { post toggle_status_recurring_transaction_url(suggestion) }
+
+    assert suggestion.reload.active?
+    assert_equal 1, suggestion.recurring_occurrences.paid.where(due_on: paid_on).count
+    assert RecurringAllocation.where(entry_id: entry.id, state: "confirmed").exists?
+  end
+
+  # The history pass matches against every open occurrence, so the upcoming
+  # one must exist by then: a payment made a couple of days early belongs to
+  # it, not to the unpaid cycle before.
+  test "toggling a detected bill on links an early payment to the upcoming occurrence" do
+    travel_to Date.new(2026, 10, 14) do
+      suggestion = @family.recurring_transactions.create!(
+        name: "CITY POWER", account: accounts(:depository), amount: 95, currency: "USD",
+        expected_day_of_month: 16, last_occurrence_date: Date.new(2026, 9, 16),
+        next_expected_date: Date.new(2026, 10, 16), status: "suggested", manual: false
+      )
+      entry = accounts(:depository).entries.create!(
+        date: Date.new(2026, 10, 14), amount: 95, currency: "USD", name: "CITY POWER",
+        entryable: Transaction.new
+      )
+
+      post toggle_status_recurring_transaction_url(suggestion)
+
+      upcoming = suggestion.recurring_occurrences.find_by!(due_on: Date.new(2026, 10, 16))
+      assert RecurringAllocation.where(recurring_occurrence: upcoming, entry_id: entry.id).exists?,
+        "the early payment belongs to the occurrence it was paid ahead of"
+    end
+  end
+
   test "resuming a paused bill does not reconstruct its history" do
     paid_on, suggestion, = suggested_bill_with_past_payment
     suggestion.update_columns(status: "inactive")

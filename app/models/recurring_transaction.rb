@@ -74,9 +74,13 @@ class RecurringTransaction < ApplicationRecord
   attr_accessor :rules_rewritten
 
   after_commit :generate_occurrences, on: :create
+  # Ahead of regeneration: activation changes status, so both run, and with
+  # load_defaults 7.1+ these run in the order defined. An exception in one
+  # stops the rest, so a failed regeneration must not cost the bill its
+  # history; reconstruct_history! generates the upcoming rows itself.
+  after_commit :reconstruct_history_on_activation, on: :update, if: :activated_from_suggestion?
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
-  after_commit :reconstruct_history_on_activation, on: :update, if: :activated_from_suggestion?
 
   # Form state for the frequency picker and the create-bill dialog;
   # FrequencyPreset and the controller translate these on save. Not persisted.
@@ -190,10 +194,19 @@ class RecurringTransaction < ApplicationRecord
     return true if family.recurring_transactions_disabled?
 
     Pipeline.with_family_lock(family_id) do
+      series_scope = family.recurring_transactions.where(id: id)
+
+      # The current cycle and the upcoming occurrences first, as Pipeline#run!
+      # does, so the history pass can match an early payment to the occurrence
+      # it was paid ahead of. Idempotent, and it no longer relies on the
+      # activation's regeneration having run. Freshly loaded, like the
+      # backfiller's, so a pause that committed since this record was read
+      # is respected.
+      series_scope.find_each { |series| OccurrenceGenerator.new(series).generate! }
       HistoryBackfiller.new(
         family,
         months: Pipeline::FIRST_RUN_BACKFILL_MONTHS,
-        series_scope: family.recurring_transactions.where(id: id)
+        series_scope: series_scope
       ).run!
     end
   end
