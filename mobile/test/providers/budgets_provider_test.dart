@@ -284,6 +284,28 @@ void main() {
     expect(provider.budget?.actualSpending, r'$10.00');
   });
 
+  test('switching budgets does not refetch the month list', () async {
+    final log = <http.Request>[];
+    final provider = buildProvider(
+      log: log,
+      budgets: [
+        budgetJson(id: 'budget_oct'),
+        budgetJson(id: 'budget_oct_personal', actualCents: 1000),
+      ],
+    );
+    await provider.loadMonth(accessToken: 'token');
+    log.clear();
+
+    await provider.selectBudget(
+      accessToken: 'token',
+      budgetId: 'budget_oct_personal',
+    );
+    expect(provider.budget?.id, 'budget_oct_personal');
+    expect(provider.monthBudgets, hasLength(2));
+    expect(log.where((r) => r.url.path.endsWith('/api/v1/budgets')), isEmpty);
+    expect(log, isNotEmpty);
+  });
+
   test('401 surfaces as unauthorized', () async {
     final provider = buildProvider(statusCode: 401);
     await provider.loadMonth(accessToken: 'token');
