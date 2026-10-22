@@ -24,6 +24,12 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     assert User.exists?(@user.id)
   end
 
+  test "reset removes pending Saxo authorizations" do
+    state = SaxoAuthorization.begin!(user: @user, item: nil, redirect_uri: "https://example.test/callback")
+    Family::FinancialDataReset.new(user: @user, dry_run: false, confirmed: true).call
+    assert_raises(ActiveRecord::RecordNotFound) { SaxoAuthorization.consume!(state: state, user: @user) }
+  end
+
   test "provider item associations are limited to explicit syncable family associations" do
     associations = Family::FinancialDataReset.provider_item_associations
 

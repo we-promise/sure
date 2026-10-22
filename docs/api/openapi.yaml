@@ -8499,7 +8499,8 @@ paths:
       summary: Lists provider connection status summaries
       description: List safe provider connection status metadata for the authenticated
         user's family without exposing credentials, raw provider payloads, or raw
-        sync errors.
+        sync errors. Saxo connections are included only when Preview is enabled for
+        the user.
       tags:
       - Provider Connections
       security:

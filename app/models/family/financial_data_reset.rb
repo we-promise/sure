@@ -59,6 +59,7 @@ class Family::FinancialDataReset
     plaid_items
     questrade_items
     redbark_items
+    saxo_items
     simplefin_items
     snaptrade_items
     sophtron_items
@@ -164,6 +165,7 @@ class Family::FinancialDataReset
       scope(:categories).destroy_all
       scope(:tags).destroy_all
       scope(:merchants).destroy_all
+      family.saxo_authorizations.delete_all
       delete_provider_items!
       family.financekit_account_lineages.destroy_all
       scope(:accounts).destroy_all

@@ -1,0 +1,12 @@
+<div class="space-y-4">
+  <h2 class="font-medium text-primary"><%= t("saxo.application_title") %></h2>
+  <p class="text-sm text-secondary"><%= t("saxo.application_help") %></p>
+  <p class="text-sm text-secondary"><%= t("saxo.callback_url", url: callback_saxo_items_url) %></p>
+  <%= styled_form_with model: Setting.new, url: settings_hosting_path, method: :patch do |form| %>
+    <%= form.text_field :saxo_app_key, label: t("saxo.app_key"), type: "password",
+          value: Setting.saxo_app_key.present? ? "********" : "", autocomplete: "off" %>
+    <%= form.text_field :saxo_app_secret, label: t("saxo.app_secret"), type: "password",
+          value: Setting.saxo_app_secret.present? ? "********" : "", autocomplete: "new-password" %>
+    <%= form.submit t("saxo.save_application") %>
+  <% end %>
+</div>

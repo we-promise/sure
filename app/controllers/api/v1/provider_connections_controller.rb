@@ -5,6 +5,7 @@ class Api::V1::ProviderConnectionsController < Api::V1::BaseController
 
   def index
     @provider_connections = ProviderConnectionStatus.for_family(current_resource_owner.family)
+    @provider_connections.reject! { |connection| connection[:provider] == "saxo" } unless current_resource_owner.preview_features_enabled?
     render :index
   rescue StandardError => e
     Rails.logger.error "ProviderConnectionsController#index error: #{e.message}"
