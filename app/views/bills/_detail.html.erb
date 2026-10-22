@@ -33,6 +33,11 @@
             <%= t("bills.detail.rule_aliases", names: hints[:aliases].to_sentence) %>
           </p>
         <% end %>
+        <% if hints[:detected_name].present? && hints[:detected_name] != series.display_name %>
+          <p class="text-xs text-secondary">
+            <%= t("bills.detail.rule_detected", name: hints[:detected_name]) %>
+          </p>
+        <% end %>
         <% if hints[:learned_pct].positive? %>
           <p class="text-xs text-secondary">
             <%= t("bills.detail.rule_learned_tolerance", percent: number_to_percentage(hints[:learned_pct], precision: 1, format: "%n%")) %>
