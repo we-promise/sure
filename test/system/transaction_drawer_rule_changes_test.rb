@@ -49,6 +49,33 @@ class TransactionDrawerRuleChangesTest < ApplicationSystemTestCase
     assert_equal expected, transaction.reload.tag_ids.sort
   end
 
+  test "picking and quickly unpicking a tag leaves it off" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+    entry = transaction.entry
+
+    open_drawer(entry)
+
+    within "turbo-frame#drawer", visible: :all do
+      find("summary", text: /details/i).click
+      find("[data-controller='tag-select'] [data-tag-select-target='button']").click
+      option = find("[data-tag-select-target='option'][data-tag-id='#{tags(:two).id}']")
+      option.click
+      option.click
+    end
+
+    # Both saves have landed once the second request is done; wait for the
+    # page's queue rather than the database, which already matches at first.
+    page.evaluate_async_script(<<~JS)
+      const done = arguments[arguments.length - 1]
+      const element = document.querySelector("turbo-frame#drawer [data-controller='tag-select']")
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(element, "tag-select")
+      Promise.resolve(controller.saveQueue).then(() => done(), () => done())
+    JS
+
+    assert_equal [ tags(:one).id ], transaction.reload.tag_ids
+  end
+
   private
     def open_drawer(entry)
       visit transactions_url

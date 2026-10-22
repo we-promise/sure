@@ -756,7 +756,7 @@ RSpec.configure do |config|
               effective_date: { type: :string, format: :date, nullable: true },
               position: { type: :integer, description: 'Run order within the family; rules run from the lowest position up and the top rule wins per attribute' },
               stop_processing: { type: :boolean, description: 'When true, rules further down do not change transactions this rule matches' },
-              apply_immediately: { type: :boolean, description: 'When true, the rule also runs right after a transaction is created or changed by hand, in a bulk edit or via the API; otherwise it only runs on the nightly and sync runs' },
+              apply_immediately: { type: :boolean, description: 'When true, the rule also runs right after a transaction is created or edited by hand, in a bulk edit, in Categorize, via the API or by the assistant (splits, transfers and conversions to trades wait for the nightly run); otherwise it only runs on the nightly and sync runs' },
               conditions: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/RuleCondition' }

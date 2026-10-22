@@ -1346,8 +1346,9 @@ components:
         apply_immediately:
           type: boolean
           description: When true, the rule also runs right after a transaction is
-            created or changed by hand, in a bulk edit or via the API; otherwise it
-            only runs on the nightly and sync runs
+            created or edited by hand, in a bulk edit, in Categorize, via the API
+            or by the assistant (splits, transfers and conversions to trades wait
+            for the nightly run); otherwise it only runs on the nightly and sync runs
         conditions:
           type: array
           items:

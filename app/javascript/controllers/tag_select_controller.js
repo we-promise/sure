@@ -39,7 +39,6 @@ export default class extends Controller {
   }
 
   disconnect() {
-    if (this.submitAbortController) this.submitAbortController.abort();
     this.stopAutoUpdate();
     if (this.resizeObserver) this.resizeObserver.disconnect();
   }
@@ -228,40 +227,44 @@ export default class extends Controller {
     if (this.isOpen && !this.element.contains(event.target)) this.close();
   }
 
-  async submitForm() {
+  submitForm() {
     if (!this.autoSubmitValue) return;
     if (!this.hasUpdateUrlValue || !this.updateUrlValue) return;
 
-    if (this.submitAbortController) this.submitAbortController.abort();
+    // Saves run one after another, never aborted: an aborted request may
+    // still have been applied, and the next save's previous_tag_ids would
+    // then miss it, so undoing a tag quickly would not undo it.
+    this.saveQueue = (this.saveQueue || Promise.resolve())
+      .catch(() => {})
+      .then(() => this.saveSelection());
+    return this.saveQueue;
+  }
 
-    const abortController = new AbortController();
-    this.submitAbortController = abortController;
+  async saveSelection() {
     const tagIds = Array.from(this.selectedIds);
-
-    try {
-      const response = await fetch(this.updateUrlValue, {
-        method: "PATCH",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "X-CSRF-Token": this.csrfToken,
-          "X-Requested-With": "XMLHttpRequest",
-        },
-        body: JSON.stringify({
-          tag_ids: tagIds,
-          previous_tag_ids: Array.from(this.savedIds),
-        }),
-        credentials: "same-origin",
-        signal: abortController.signal,
-      });
-      if (response.ok) this.savedIds = new Set(tagIds);
-    } catch (error) {
-      if (error.name !== "AbortError") throw error;
-    } finally {
-      if (this.submitAbortController === abortController) {
-        this.submitAbortController = null;
-      }
+    const previousIds = Array.from(this.savedIds);
+    if (
+      tagIds.length === previousIds.length &&
+      tagIds.every((id) => this.savedIds.has(id))
+    ) {
+      return;
     }
+
+    const response = await fetch(this.updateUrlValue, {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-CSRF-Token": this.csrfToken,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: JSON.stringify({
+        tag_ids: tagIds,
+        previous_tag_ids: previousIds,
+      }),
+      credentials: "same-origin",
+    });
+    if (response.ok) this.savedIds = new Set(tagIds);
   }
 
   handleKeydown(event) {
