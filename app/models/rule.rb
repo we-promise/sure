@@ -31,6 +31,7 @@ class Rule < ApplicationRecord
   # Every rule must have at least 1 action
   validate :min_actions
   validate :no_duplicate_actions
+  validate :split_is_only_action
 
   # Switching a rule on records the transactions it already matches as delivered,
   # so an email action only reports what appears afterwards. Rule::Action seeds the
@@ -125,6 +126,14 @@ class Rule < ApplicationRecord
   # (e.g. the notification baseline pre-seed).
   def matching_transaction_ids
     matching_scope.pluck(:id)
+  end
+
+  # Holds the family's rule positions until the transaction ends. with_connection
+  # is the transaction's own connection and isn't leased to the thread for good.
+  def self.lock_positions!(family)
+    with_connection do |connection|
+      connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family.id.to_s ]))
+    end
   end
 
   # Sets the run order of all rules of a family. ordered_ids must list every
@@ -310,9 +319,7 @@ class Rule < ApplicationRecord
     def assign_next_position
       return if position.to_i.positive?
 
-      self.class.connection.execute(
-        self.class.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family_id.to_s ])
-      )
+      self.class.lock_positions!(family)
       self.position = family.rules.maximum(:position).to_i + 1
     end
 
@@ -328,6 +335,14 @@ class Rule < ApplicationRecord
       action_types = actions.reject(&:marked_for_destruction?).map(&:action_type)
 
       errors.add(:base, :duplicate_actions, types: action_types.inspect) if action_types.uniq.count != action_types.count
+    end
+
+    # Actions after a split find the parent hidden, and actions before it change only the
+    # hidden parent, so a split rule can't usefully do anything else.
+    def split_is_only_action
+      action_types = actions.reject(&:marked_for_destruction?).map(&:action_type)
+
+      errors.add(:base, :split_not_alone) if action_types.include?("split_transaction") && action_types.size > 1
     end
 
     # Validation: To keep rules simple and easy to understand, we don't allow nested compound conditions.
