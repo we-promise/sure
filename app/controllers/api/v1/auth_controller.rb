@@ -145,6 +145,7 @@ module Api
         end
       end
 
+      # Redeem a single-use mobile SSO code for its cached credentials and user payload.
       def sso_exchange
         code = sso_exchange_params
 
@@ -185,6 +186,7 @@ module Api
         }
       end
 
+      # Link trusted pending SSO authentication to a password-verified local account.
       def sso_link
         linking_code = params[:linking_code]
         cached = validate_linking_code(linking_code)
@@ -462,10 +464,12 @@ module Api
           params.require(:device).permit(:device_id, :device_name, :device_type, :os_version, :app_version)
         end
 
+        # Require the mobile authorization code submitted for credential exchange.
         def sso_exchange_params
           params.require(:code)
         end
 
+        # Serialize the user fields returned with mobile authentication credentials.
         def mobile_user_payload(user)
           {
             id: user.id,
@@ -487,6 +491,7 @@ module Api
           false
         end
 
+        # Reconstruct the cached provider identity without losing its authenticated issuer.
         def build_omniauth_hash(cached)
           OpenStruct.new(
             provider: cached[:provider],
@@ -533,6 +538,7 @@ module Api
           cached
         end
 
+        # Reject mobile authentication for an identity removed by an administrator.
         def render_removed_identity
           render json: { error: "SSO identity was removed by an administrator" }, status: :forbidden
         end

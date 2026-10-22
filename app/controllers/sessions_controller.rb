@@ -366,10 +366,12 @@ class SessionsController < ApplicationController
       # No existing OIDC identity - need to link to account.
       # Preserve the verified issuer across the local-password step.
       session[:pending_oidc_auth] = pending_oidc_auth(auth, verified_issuer)
+      session.delete(:pending_oidc_legacy_relink)
       redirect_to link_oidc_account_path
     end
   end
 
+  # Normalize provider failures and return to the matching web or mobile login flow.
   def failure
     # Sanitize reason to known values only
     known_reasons = %w[sso_provider_unavailable sso_invalid_response sso_failed]
@@ -462,6 +464,7 @@ class SessionsController < ApplicationController
       end
     end
 
+    # Issue mobile credentials behind a short-lived, single-use exchange code.
     def handle_mobile_sso_callback(user)
       # openid_connect already checked user.active? before dispatching here,
       # but record_authentication!/sync_user_attributes!/audit logging run in
@@ -517,6 +520,7 @@ class SessionsController < ApplicationController
       mobile_sso_redirect(code: authorization_code)
     end
 
+    # Hand the desktop app a short-lived authorization code bound to its PKCE challenge.
     def handle_desktop_sso_callback(user)
       context = (session.delete(:desktop_sso) || {}).with_indifferent_access
       code_challenge = context[:code_challenge]
@@ -574,6 +578,7 @@ class SessionsController < ApplicationController
       )
     end
 
+    # Return a mobile SSO result through the application callback URI.
     def mobile_sso_redirect(params = {})
       redirect_to "sureapp://oauth/callback?#{params.to_query}", allow_other_host: true
     end
@@ -588,10 +593,12 @@ class SessionsController < ApplicationController
       false
     end
 
+    # Scope session management to the currently authenticated user.
     def set_session
       @session = Current.user.sessions.find(params[:id])
     end
 
+    # Record use of the emergency local-login override for a super administrator.
     def log_super_admin_override_login(user)
       # Only log when local login is globally disabled but an emergency
       # super-admin override is enabled.
@@ -608,6 +615,7 @@ class SessionsController < ApplicationController
       demo["hosts"].include?(request.host)
     end
 
+    # Resolve the linked provider logout endpoint and build its logout redirect.
     def build_idp_logout_url(oidc_identity, id_token)
       # Find the provider configuration using unified loader (supports both YAML and DB providers)
       provider_config = ProviderLoader.load_providers.find do |p|
@@ -649,6 +657,7 @@ class SessionsController < ApplicationController
       end
     end
 
+    # Build the standard discovery URL while preserving an issuer trailing slash.
     def discovery_url_for(issuer)
       if issuer.end_with?("/")
         "#{issuer}.well-known/openid-configuration"
