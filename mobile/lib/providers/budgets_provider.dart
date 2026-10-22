@@ -135,7 +135,13 @@ class BudgetsProvider with ChangeNotifier {
     final key = _monthKey(_month);
     if (_cache[key]?.selected?.id == budgetId) return;
     _selectedBudgetByMonth[key] = budgetId;
-    await loadMonth(accessToken: accessToken, forceRefresh: true);
+    // The month's budget list is already known; only the chosen budget's
+    // detail and categories need fetching.
+    await _loadMonth(
+      accessToken: accessToken,
+      forceRefresh: true,
+      knownBudgets: _cache[key]?.budgets,
+    );
   }
 
   /// Shows the session-expired state, e.g. when no access token is available.
@@ -152,6 +158,13 @@ class BudgetsProvider with ChangeNotifier {
   Future<void> loadMonth({
     required String accessToken,
     bool forceRefresh = false,
+  }) =>
+      _loadMonth(accessToken: accessToken, forceRefresh: forceRefresh);
+
+  Future<void> _loadMonth({
+    required String accessToken,
+    bool forceRefresh = false,
+    List<Budget>? knownBudgets,
   }) async {
     if (!_currentPeriodResolved && !_isOffline()) {
       // Show the spinner while the current period resolves; every branch
@@ -191,7 +204,11 @@ class BudgetsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final data = await _fetchMonth(accessToken, month);
+      final data = await _fetchMonth(
+        accessToken,
+        month,
+        knownBudgets: knownBudgets,
+      );
       if (generation != _generation) return;
       _cache[key] = data;
       _log.info(
@@ -245,7 +262,14 @@ class BudgetsProvider with ChangeNotifier {
     }
   }
 
-  Future<_MonthData> _fetchMonth(String accessToken, DateTime month) async {
+  Future<_MonthData> _fetchMonth(
+    String accessToken,
+    DateTime month, {
+    List<Budget>? knownBudgets,
+  }) async {
+    if (knownBudgets != null) {
+      return _fetchSelected(accessToken, month, knownBudgets);
+    }
     // A family with a custom month start has budgets that begin mid-month and
     // end in the next one, so widen the window and match on the start month.
     final listResult = await _service.getBudgets(
@@ -264,6 +288,14 @@ class BudgetsProvider with ChangeNotifier {
         )
         .toList();
 
+    return _fetchSelected(accessToken, month, budgets);
+  }
+
+  Future<_MonthData> _fetchSelected(
+    String accessToken,
+    DateTime month,
+    List<Budget> budgets,
+  ) async {
     if (budgets.isEmpty) {
       return _MonthData(budgets: budgets);
     }
