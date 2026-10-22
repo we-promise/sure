@@ -148,6 +148,25 @@ class Portfolio::IncomeTest < ActiveSupport::TestCase
     assert_in_delta 10 / expected_average, income.fee_ratio, BigDecimal("1e-12")
   end
 
+  # A "Fee" rebate is a :fee with a negative amount, so it nets the period's
+  # fees and the ratio below zero rather than being counted as a charge. Pins
+  # the sign convention documented on #fees.
+  test "a fee rebate makes fees and the fee ratio negative" do
+    fee_entry account: @account, date: @feb + 1, amount: -4
+    lay_balance account: @account, date: @feb, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @feb + 1, opening: 1_000, closing: 1_004, cash_flow: 4
+
+    income = Portfolio::Income.new(
+      Portfolio::DailyReturns.new(
+        account_ids: [ @account.id ], currency: @family.currency,
+        period: Period.custom(start_date: @feb, end_date: @feb + 1)
+      )
+    )
+
+    assert_equal BigDecimal(-4), income.fees
+    assert_in_delta(-4 / BigDecimal("1002"), income.fee_ratio, BigDecimal("1e-12"))
+  end
+
   # No value to divide by is no ratio -- not a ratio of zero.
   test "the fee ratio is nil when the period holds no value" do
     lay_flat_balances cash_by_date: {}, balance: 0
