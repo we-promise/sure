@@ -7,6 +7,8 @@ class Oauth::AuthorizationsController < Doorkeeper::AuthorizationsController
       return if params[:scope].present?
 
       application = Doorkeeper::Application.find_by(uid: params[:client_id])
-      params[:scope] = "mcp" if application&.scopes.to_s.split == [ "mcp" ]
+      # Existing MCP registrations retain read_write; new registrations use mcp.
+      scopes = application&.scopes.to_s.split
+      params[:scope] = scopes.first if scopes == [ "mcp" ] || scopes == [ "read_write" ]
     end
 end

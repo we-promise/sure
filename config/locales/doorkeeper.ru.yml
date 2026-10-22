@@ -19,6 +19,9 @@ ru:
             scopes:
               not_match_configured: не соответствует настроенному на сервере.
   doorkeeper:
+    scopes:
+      mcp: "Получать доступ к вашим финансовым данным и использовать инструменты через MCP"
+
     applications:
       buttons:
         authorize: Авторизовать

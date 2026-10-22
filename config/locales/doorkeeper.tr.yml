@@ -19,6 +19,9 @@ tr:
             scopes:
               not_match_configured: sunucuda yapılandırılan ile eşleşmiyor.
   doorkeeper:
+    scopes:
+      mcp: "Finansal verilerinize erişmek ve MCP üzerinden araçları kullanmak"
+
     applications:
       buttons:
         authorize: Yetkilendir
