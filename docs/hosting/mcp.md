@@ -23,7 +23,7 @@ This is the best option for Claude.ai and other MCP clients that support OAuth. 
 - `/.well-known/oauth-authorization-server`
 - `POST /register` for dynamic client registration
 
-These endpoints let compatible MCP clients register a public OAuth client, redirect you back to Sure for sign-in, and receive a bearer token with the `read_write` scope.
+These endpoints let compatible MCP clients register a public OAuth client, redirect you back to Sure for sign-in, and receive a bearer token with the MCP-only `mcp` scope.
 
 ### 2. Static bearer token via environment variables
 
@@ -105,6 +105,11 @@ request the advertised MCP scope, and send the resulting access token as a
 Bearer token. Dynamically registered clients are assigned the MCP-only `mcp`
 scope so their tokens can authenticate to MCP without granting global JSON API
 write access.
+
+Clients registered before the MCP-only scope was introduced retain their
+`read_write` scope. They can continue to reauthorize without an explicit scope,
+and their tokens remain accepted by `/mcp`. To use the MCP-only scope, register
+a new client.
 
 For self-hosted deployments or clients without OAuth support, requests may use
 the legacy `MCP_API_TOKEN` as a Bearer token:
@@ -264,7 +269,7 @@ The authorization-server metadata includes:
 - `authorization_endpoint`: `https://your-sure-instance/oauth/authorize`
 - `token_endpoint`: `https://your-sure-instance/oauth/token`
 - `registration_endpoint`: `https://your-sure-instance/register`
-- `scopes_supported`: `["read_write"]`
+- `scopes_supported`: `["mcp"]`
 
 ### Call a Tool
 

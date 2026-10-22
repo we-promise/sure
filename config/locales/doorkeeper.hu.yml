@@ -18,6 +18,9 @@ hu:
             scopes:
               not_match_configured: "nem egyezik a szerveren beállítottal."
   doorkeeper:
+    scopes:
+      mcp: "Hozzáférés a pénzügyi adataidhoz és eszközök használata MCP-n keresztül"
+
     applications:
       confirmations:
         destroy: 'Biztosan törlöd?'
