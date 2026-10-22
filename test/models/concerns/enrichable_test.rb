@@ -89,6 +89,26 @@ class EnrichableTest < ActiveSupport::TestCase
     end
   end
 
+  # No stub: the record's own validation refuses the write, so the savepoint
+  # really rolls back and ActiveRecord restores the record's transaction
+  # state. Callers such as RedbarkAccount::LoanDetailsProcessor#write read
+  # errors afterwards, inside their own transaction, to decide whether to
+  # roll back too, so the errors must survive that restore.
+  test "a save refused by validation returns false and keeps its errors" do
+    stored_name = @enrichable.name
+
+    result = nil
+    assert_no_difference "DataEnrichment.count" do
+      Account.transaction do
+        result = @enrichable.enrich_attribute(:name, "", source: "plaid")
+      end
+    end
+
+    assert_equal false, result
+    assert_includes @enrichable.errors.attribute_names, :name
+    assert_equal stored_name, Account.find(@enrichable.id).name
+  end
+
   test "does not log enrichment for a new record that a real save persists" do
     # The record crosses from new to persisted inside enrich_attributes, so
     # the log decision must use the state captured before the save.
