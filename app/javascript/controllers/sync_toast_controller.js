@@ -111,6 +111,11 @@ export default class extends Controller {
   }
 
   #userIsInteracting() {
+    // A grabbed list item (sortable-list) is only saved when it is released;
+    // a morph would drop the move. Focus may have left it, so look it up in
+    // the whole document.
+    if (document.querySelector("[aria-grabbed='true']")) return true;
+
     const el = document.activeElement;
     if (!el || el === document.body || el === document.documentElement)
       return false;

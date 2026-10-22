@@ -16,9 +16,12 @@ class RecurringTransaction
   #     they sum to the full expected amount.
   class Allocator
     class OverAllocationError < StandardError; end
-    # Linking a transaction with nothing left of it. A subclass, so every
-    # existing rescue of OverAllocationError still catches it.
-    class FullyAllocatedError < OverAllocationError; end
+    # Nothing of the entry is left: other allocations already take all of it.
+    # Subclasses, so every caller that refuses over-allocation refuses these
+    # too. AlreadyAllocatedError is the case where this occurrence is the one
+    # holding the entry.
+    class EntryExhaustedError < OverAllocationError; end
+    class AlreadyAllocatedError < OverAllocationError; end
     class MissingRateError < StandardError; end
 
     # Postgres keeps single-key and two-key advisory locks in separate spaces,
@@ -39,12 +42,6 @@ class RecurringTransaction
       occurrence.with_lock do
         with_entry_lock(entry) do
           allocated, source_amount, source_currency = resolve_amounts(amount, entry)
-          # A defaulted amount is bounded by what the entry has left, so an
-          # exhausted entry resolves to zero. Say so, rather than fail the
-          # allocation's own positive-amount validation.
-          if entry && amount.blank? && !allocated.positive?
-            raise FullyAllocatedError, I18n.t("recurring_transactions.allocator.fully_allocated")
-          end
           guard_entry_capacity!(entry, source_amount) if entry
           freeze_expected_amount!
 
@@ -312,7 +309,7 @@ class RecurringTransaction
         hints = series.matcher_hints.deep_dup
 
         if series.merchant_id.blank? && series.name.present?
-          known = ([ series.name ] + Array(hints["name_aliases"]))
+          known = ([ series.matcher_name ] + Array(hints["name_aliases"]))
                     .map { |name| Matcher.normalize_name(name) }
 
           unless known.include?(Matcher.normalize_name(entry.name))
@@ -359,6 +356,21 @@ class RecurringTransaction
         end
 
         capacity = entry_capacity(entry, entry.amount.abs)
+
+        # The default amount is bounded by what the entry has left, so an
+        # exhausted entry defaults to zero. Zero passes the comparison below
+        # and used to surface only as the allocation's own "greater than 0"
+        # validation, which the user read as an unexplained failure.
+        unless capacity.positive?
+          # Used up by THIS occurrence means a repeated link (a double submit,
+          # a stale tab). With capacity left the unique index reports that as
+          # already allocated, and "other payments due" would be untrue here.
+          if occurrence.allocations.exists?(entry: entry)
+            raise AlreadyAllocatedError, I18n.t("recurring_transactions.allocator.already_allocated")
+          end
+
+          raise EntryExhaustedError, I18n.t("recurring_transactions.allocator.entry_exhausted")
+        end
 
         if source_amount > capacity + RecurringOccurrence::CLOSE_EPSILON
           raise OverAllocationError, I18n.t("recurring_transactions.allocator.over_allocated",

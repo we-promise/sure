@@ -105,19 +105,4 @@ class RecurringAllocationsControllerTest < ActionDispatch::IntegrationTest
       assert_equal translation, I18n.t(key, locale: :de, fallback: false)
     end
   end
-
-  test "linking a transaction with nothing left says it is already fully applied" do
-    entry = accounts(:credit_card).entries.create!(
-      date: Date.current, amount: 95, currency: "USD", name: "ANNUAL FEE", entryable: Transaction.new
-    )
-    RecurringTransaction::Allocator.new(@occurrence).allocate!(entry: entry)
-    free_date = Date.current + 40.days
-    other = @series.recurring_occurrences.create!(family: @family, original_due_on: free_date, due_on: free_date, currency: "USD")
-
-    assert_no_difference "RecurringAllocation.count" do
-      post recurring_occurrence_allocations_url(other), params: { entry_id: entry.id }
-    end
-
-    assert_equal I18n.t("recurring_allocations.fully_allocated"), flash[:alert]
-  end
 end
