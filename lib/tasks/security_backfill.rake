@@ -100,31 +100,40 @@ namespace :security do
         next if dry_run
 
         begin
-          # Read plaintext values safely
-          plaintext_values = {}
-          fields.each do |field|
-            value = safe_read_field(record, field)
-            plaintext_values[field] = value unless value.nil?
+          # Read and write under a row lock: an app write between the read
+          # and update_columns (a new last_psu_ip, or DataCleanerJob clearing
+          # it) would otherwise be overwritten with the stale value.
+          written = record.with_lock do
+            # Read plaintext values safely
+            plaintext_values = {}
+            fields.each do |field|
+              value = safe_read_field(record, field)
+              plaintext_values[field] = value unless value.nil?
+            end
+
+            next false if plaintext_values.empty?
+
+            # Use a temporary instance to encrypt values (avoids triggering
+            # validations/callbacks that might read other encrypted fields)
+            encryptor = model_class.new
+            plaintext_values.each do |field, value|
+              encryptor.send("#{field}=", value)
+            end
+
+            # Extract the encrypted values from the temporary instance
+            encrypted_attrs = {}
+            plaintext_values.keys.each do |field|
+              encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
+            end
+
+            # Write directly to database, bypassing callbacks/validations
+            record.update_columns(encrypted_attrs)
+            true
           end
-
-          next if plaintext_values.empty?
-
-          # Use a temporary instance to encrypt values (avoids triggering
-          # validations/callbacks that might read other encrypted fields)
-          encryptor = model_class.new
-          plaintext_values.each do |field, value|
-            encryptor.send("#{field}=", value)
-          end
-
-          # Extract the encrypted values from the temporary instance
-          encrypted_attrs = {}
-          plaintext_values.keys.each do |field|
-            encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
-          end
-
-          # Write directly to database, bypassing callbacks/validations
-          record.update_columns(encrypted_attrs)
-          updated += 1
+          updated += 1 if written
+        rescue ActiveRecord::RecordNotFound
+          # Deleted since the batch was loaded; nothing left to encrypt.
+          next
         rescue => e
           failed << { id: record.id, error: e.class.name, message: e.message }
         end

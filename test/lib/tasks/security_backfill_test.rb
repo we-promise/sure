@@ -73,6 +73,26 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     refute_includes akahu_account.read_attribute_before_type_cast(:formatted_account).to_s, "7654321"
   end
 
+  # The backfill loads a batch, then encrypts each row. DataCleanerJob may
+  # clear last_psu_ip in between; writing the value read before that would
+  # put the IP back. The filter block runs on the loaded record before the
+  # write, so it stands in for that concurrent clear.
+  test "backfill does not restore a value cleared after the batch was loaded" do
+    eb_item = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "Backfill EB race", country_code: "FI", application_id: "app", client_certificate: "cert"
+    )
+    connection = ActiveRecord::Base.connection
+    connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE enable_banking_items SET last_psu_ip = ? WHERE id = ?", "203.0.113.9", eb_item.id ]))
+
+    backfill_model(EnableBankingItem.where(id: eb_item.id), %i[last_psu_ip], 500, false) do |record|
+      record.class.where(id: record.id).update_all(last_psu_ip: nil)
+      true
+    end
+
+    assert_nil eb_item.reload.read_attribute_before_type_cast(:last_psu_ip)
+  end
+
   # Guards the task's field list: dropping :account_number from the
   # SnaptradeAccount entry would leave the model-level encryption test green
   # while pre-encryption rows stayed plaintext.
