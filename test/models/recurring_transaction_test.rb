@@ -674,6 +674,18 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal renamed, @family.recurring_transactions.covering(entry)
   end
 
+  # A rename keeps the bank text as the detected name, so the bill still
+  # covers the transaction it was made from.
+  test "covering finds a renamed bill through its detected name" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 40, name: "CITY WATER 0042")
+    bill = covering_series(name: "CITY WATER 0042", amount: 40)
+    bill.update!(name: "Water")
+    assert_equal "CITY WATER 0042", bill.reload.matcher_hints["detected_name"], "precondition: the rename kept the detected name"
+
+    assert_equal bill, @family.recurring_transactions.covering(entry)
+  end
+
   test "covering finds an accountless bill from any account" do
     setup_covering_family
     entry = create_transaction(account: @account, amount: 100, merchant: @merchant)
