@@ -163,6 +163,18 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[data-controller=cost-basis-form][data-turbo=false]", count: 0
   end
 
+  test "cost basis overwrite confirmation labels its button in the user's language" do
+    users(:family_admin).update!(locale: "de")
+    @holding.update!(qty: 10, cost_basis: 12.5, cost_basis_locked: true)
+
+    get holding_path(@holding)
+
+    form = css_select("form[data-controller=cost-basis-form]").first
+    confirmation = JSON.parse(form["data-turbo-confirm"])
+    assert_equal I18n.t("holdings.cost_basis_cell.overwrite_confirm_title", locale: :de), confirmation["title"]
+    assert_equal I18n.t("shared.custom_confirm.default_btn_text", locale: :de), confirmation["confirmText"]
+  end
+
   test "cost basis editor shows a stored zero basis instead of placeholders" do
     @holding.update!(qty: 10, cost_basis: 0, cost_basis_locked: true)
 
