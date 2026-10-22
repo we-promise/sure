@@ -1,11 +1,12 @@
 class Provider::Openai::PdfProcessor
   include Provider::Openai::Concerns::UsageRecorder
+  include Provider::Openai::Concerns::JsonMode
 
   attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens,
-              :processing_mode
+              :processing_mode, :json_mode
 
   def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil,
-                 max_response_tokens:, processing_mode: :auto)
+                 max_response_tokens:, processing_mode: :auto, json_mode: nil)
     @client = client
     @model = model
     @pdf_content = pdf_content
@@ -14,17 +15,18 @@ class Provider::Openai::PdfProcessor
     @family = family
     @max_response_tokens = max_response_tokens
     @processing_mode = processing_mode
+    @json_mode = json_mode || default_json_mode
   end
 
   def process
-    span = langfuse_trace&.span(name: "process_pdf_api_call", input: {
+    span = langfuse_trace&.generation(name: "process_pdf_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
       model: model.presence || Provider::Openai::DEFAULT_MODEL,
       pdf_size: pdf_content&.bytesize
     })
 
     # Try text extraction first (works with all models)
     # Fall back to vision API with images if text extraction fails (for scanned PDFs)
-    response = case processing_mode
+    response, usage = case processing_mode
     when :text
       process_with_text_extraction
     when :vision
@@ -40,7 +42,7 @@ class Provider::Openai::PdfProcessor
       raise ArgumentError, "Unknown PDF processing mode: #{processing_mode.inspect}"
     end
 
-    span&.end(output: response.to_h)
+    span&.end(output: response.to_h, usage: usage)
     response
   rescue => e
     span&.end(output: { error: e.message, error_detail: safe_error_detail(e) }, level: "ERROR")
@@ -125,10 +127,11 @@ class Provider::Openai::PdfProcessor
             role: "user",
             content: "Please analyze the following document text and provide a structured summary:\n\n#{pdf_text}"
           }
-        ],
-        response_format: { type: "json_object" }
+        ]
       }
       params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
+
+      apply_json_mode(params, mode: json_mode)
 
       response = client.chat(parameters: params)
 
@@ -255,7 +258,7 @@ class Provider::Openai::PdfProcessor
       raw = response.dig("choices", 0, "message", "content")
       parsed = parse_json_flexibly(raw)
 
-      build_result(parsed)
+      [ build_result(parsed), response["usage"] ]
     end
 
     def build_result(parsed)

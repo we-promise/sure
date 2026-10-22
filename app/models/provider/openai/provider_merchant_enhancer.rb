@@ -1,5 +1,6 @@
 class Provider::Openai::ProviderMerchantEnhancer
   include Provider::Openai::Concerns::UsageRecorder
+  include Provider::Openai::Concerns::JsonMode
 
   attr_reader :client, :model, :merchants, :custom_provider, :langfuse_trace, :family, :json_mode
 
@@ -11,18 +12,6 @@ class Provider::Openai::ProviderMerchantEnhancer
     @langfuse_trace = langfuse_trace
     @family = family
     @json_mode = json_mode || default_json_mode
-  end
-
-  VALID_JSON_MODES = Provider::Openai::AutoMerchantDetector::VALID_JSON_MODES
-
-  def default_json_mode
-    env_mode = ENV["LLM_JSON_MODE"]
-    return env_mode if env_mode.present? && VALID_JSON_MODES.include?(env_mode)
-
-    setting_mode = Setting.openai_json_mode
-    return setting_mode if setting_mode.present? && VALID_JSON_MODES.include?(setting_mode)
-
-    Provider::Openai::AutoMerchantDetector::JSON_MODE_AUTO
   end
 
   def enhance_merchants
@@ -98,7 +87,7 @@ class Provider::Openai::ProviderMerchantEnhancer
   private
 
     def enhance_merchants_native
-      span = langfuse_trace&.span(name: "enhance_provider_merchants_api_call", input: {
+      span = langfuse_trace&.generation(name: "enhance_provider_merchants_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         merchants: merchants
       })
@@ -139,7 +128,7 @@ class Provider::Openai::ProviderMerchantEnhancer
     end
 
     def enhance_merchants_generic
-      if json_mode == Provider::Openai::AutoMerchantDetector::JSON_MODE_AUTO
+      if json_mode == JSON_MODE_AUTO
         enhance_merchants_with_auto_mode
       else
         enhance_merchants_with_mode(json_mode)
@@ -147,9 +136,9 @@ class Provider::Openai::ProviderMerchantEnhancer
     rescue Faraday::BadRequestError => e
       # Auto mode handles rejection of its strict attempt inside its own helper.
       # A 400 can reject the response format or reasoning effort; drop both.
-      if json_mode == Provider::Openai::AutoMerchantDetector::JSON_MODE_STRICT
+      if json_mode == JSON_MODE_STRICT
         Rails.logger.warn("Strict JSON mode failed for merchant enhancement, falling back to none mode: #{e.message}")
-        enhance_merchants_with_mode(Provider::Openai::AutoMerchantDetector::JSON_MODE_NONE, with_reasoning_effort: false)
+        enhance_merchants_with_mode(JSON_MODE_NONE, with_reasoning_effort: false)
       else
         raise
       end
@@ -157,11 +146,11 @@ class Provider::Openai::ProviderMerchantEnhancer
 
     def enhance_merchants_with_auto_mode
       result = begin
-        enhance_merchants_with_mode(Provider::Openai::AutoMerchantDetector::JSON_MODE_STRICT)
+        enhance_merchants_with_mode(JSON_MODE_STRICT)
       rescue Faraday::BadRequestError => e
         # Rescue only the strict attempt so a failed fallback propagates.
-        Rails.logger.warn("Auto mode: strict JSON mode rejected by provider for merchant enhancement (#{e.message}), retrying with none mode")
-        return enhance_merchants_with_mode(Provider::Openai::AutoMerchantDetector::JSON_MODE_NONE, with_reasoning_effort: false)
+        Rails.logger.warn("Auto mode: strict JSON mode rejected for merchant enhancement (#{e.message}), retrying with none mode")
+        return enhance_merchants_with_mode(JSON_MODE_NONE, with_reasoning_effort: false)
       end
 
       null_count = result.count { |r| r.business_url.nil? }
@@ -171,14 +160,14 @@ class Provider::Openai::ProviderMerchantEnhancer
 
       if failed_ratio > Provider::Openai::AutoMerchantDetector::AUTO_MODE_NULL_THRESHOLD
         Rails.logger.info("Auto mode: #{(failed_ratio * 100).round}% failed in strict mode for merchant enhancement, retrying with none mode")
-        enhance_merchants_with_mode(Provider::Openai::AutoMerchantDetector::JSON_MODE_NONE)
+        enhance_merchants_with_mode(JSON_MODE_NONE)
       else
         result
       end
     end
 
     def enhance_merchants_with_mode(mode, with_reasoning_effort: true)
-      span = langfuse_trace&.span(name: "enhance_provider_merchants_api_call", input: {
+      span = langfuse_trace&.generation(name: "enhance_provider_merchants_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         merchants: merchants,
         json_mode: mode
@@ -192,19 +181,11 @@ class Provider::Openai::ProviderMerchantEnhancer
         ]
       }
 
-      case mode
-      when Provider::Openai::AutoMerchantDetector::JSON_MODE_STRICT
-        params[:response_format] = {
-          type: "json_schema",
-          json_schema: {
-            name: "enhance_provider_merchants",
-            strict: true,
-            schema: json_schema
-          }
-        }
-      when Provider::Openai::AutoMerchantDetector::JSON_MODE_OBJECT
-        params[:response_format] = { type: "json_object" }
-      end
+      apply_json_mode(params, mode: mode, schema: {
+        name: "enhance_provider_merchants",
+        strict: true,
+        schema: json_schema
+      })
       params = Provider::Openai.apply_reasoning_effort(params, api: :chat) if with_reasoning_effort
 
       response = client.chat(parameters: params)
