@@ -43,7 +43,7 @@
 
       <%= row.select :merchant_id,
             merchants,
-            { selected: split["merchant_id"], include_blank: t("rules.actions.split.no_merchant"), container_class: "min-w-0" },
+            { selected: split["merchant_id"], include_blank: t("splits.new.no_merchant"), container_class: "min-w-0" },
             aria: { label: t("rules.actions.split.merchant_label") } %>
     </div>
 
