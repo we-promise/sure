@@ -72,9 +72,8 @@ class RecurringTransaction
       def upsert_window(from, through)
         schedule = series.schedule
         pairs = schedule.occurrence_pairs_between(from, through)
-        leftover_due_ons = leftover_due_ons(schedule, from, through)
-        half_cycle = half_cycle(schedule)
-        pairs = pairs.reject { |pair| leftover_due_ons.any? { |due_on| (due_on - pair.due_on).abs <= half_cycle } }
+        stood_in = stood_in_for(schedule, from, through)
+        pairs = pairs.reject { |pair| stood_in.include?(pair.original_due_on) }
         return 0 if pairs.empty?
 
         now = Time.current
@@ -95,21 +94,33 @@ class RecurringTransaction
         result.rows.size
       end
 
-      # Rows a schedule edit kept from the previous rule: paid or past-due
+      # Rows a schedule edit kept from the previous rule are paid or past-due
       # occurrences the current schedule no longer produces. Each already is
-      # its cycle, so a new occurrence within half a cycle of one (a due day
-      # moved by detection) would be a second row for the same cycle. A row
-      # the current schedule produces never counts, so two close days of one
-      # schedule (a semimonthly 1st and 5th) both stay.
-      def leftover_due_ons(schedule, from, through)
+      # its cycle, so a new occurrence beside one (a due day moved by
+      # detection) would be a second row for the same cycle. Each kept row
+      # stands in for ONE occurrence: the nearest within half a cycle, so the
+      # other day of a close semimonthly pair (the 2nd and 5th, after the 1st
+      # moved to the 2nd) is still generated. A row the current schedule
+      # produces never counts, so two close days of one schedule both stay.
+      #
+      # Returns the original_due_ons of the occurrences stood in for. Searched
+      # beyond the window, so a kept row's nearest occurrence just outside it
+      # is not mistaken for a farther one inside.
+      def stood_in_for(schedule, from, through)
         reach = half_cycle(schedule)
-        current = schedule.occurrence_pairs_between(from - reach, through + reach).map(&:original_due_on).to_set
+        nearby = schedule.occurrence_pairs_between(from - reach, through + reach)
+        current = nearby.map(&:original_due_on).to_set
 
         series.recurring_occurrences
               .where(due_on: (from - reach)..(through + reach))
               .pluck(:original_due_on, :due_on)
               .reject { |original_due_on, _due_on| current.include?(original_due_on) }
-              .map(&:last)
+              .filter_map do |_original_due_on, due_on|
+                nearby.select { |pair| (due_on - pair.due_on).abs <= reach }
+                      .min_by { |pair| [ (due_on - pair.due_on).abs, pair.due_on ] }
+                      &.original_due_on
+              end
+              .to_set
       end
 
       # Just under half the cycle length, as RecurringTransaction::Matcher's

@@ -173,4 +173,26 @@ class RecurringTransaction::OccurrenceGeneratorTest < ActiveSupport::TestCase
       assert_equal 0, Generator.new(@series).generate!, "steady state inserts nothing"
     end
   end
+
+  # A kept row stands in for one occurrence, the nearest, not for every
+  # occurrence within half a cycle: semimonthly days a few days apart are both
+  # within reach of it.
+  test "a due-day shift on a close semimonthly bill keeps the other day" do
+    travel_to Date.new(2026, 10, 3) do
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "semimonthly", day_of_month: "1", second_day_of_month: "5")
+      @series.save!
+      paid = @series.recurring_occurrences.reload.find_by!(due_on: Date.new(2026, 10, 1))
+      paid.allocations.create!(allocated_amount: 5, currency: "USD", source: "user_created")
+      assert_includes @series.recurring_occurrences.pluck(:due_on), Date.new(2026, 10, 5)
+
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "semimonthly", day_of_month: "2", second_day_of_month: "5")
+      @series.save!
+
+      dues = @series.recurring_occurrences.reload.pluck(:due_on)
+      assert_not_includes dues, Date.new(2026, 10, 2), "the kept Oct 1 row already is this occurrence"
+      assert_includes dues, Date.new(2026, 10, 5), "the unchanged second day is rebuilt"
+      assert_includes dues, Date.new(2026, 11, 2)
+      assert_includes dues, Date.new(2026, 11, 5)
+    end
+  end
 end
