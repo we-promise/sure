@@ -1176,7 +1176,42 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-testid='extra-not-cleared']", text: I18n.t("loans.tabs.extra_repayments.extra_not_cleared")
   end
 
+  # The page rebuilds an extra only from its params, and picking a chart
+  # period reloads the page. Each period link carries the applied extra and
+  # the tab it was applied from, so the extra line, the cards and the tab
+  # survive the pick.
+  test "the chart's period links keep an applied extra and its tab" do
+    get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "100", frequency: "weekly" })
+
+    assert_response :success
+    queries = period_link_queries
+    assert_not_empty queries
+    queries.each do |query|
+      assert_equal({ "amount" => "100", "frequency" => "weekly" }, query["extra_payment"])
+      assert_equal "extra_repayments", query["tab"]
+    end
+  end
+
+  # Nothing to keep: no amount, a zero or a refused one. The links stay as
+  # they were before the tab existed, a period and nothing else.
+  test "the chart's period links carry nothing when no extra applies" do
+    [ nil, { amount: "0" }, { amount: "abc" }, { amount: "100", frequency: "daily" } ].each do |extra_payment|
+      get account_path(@account, tab: "extra_repayments", extra_payment: extra_payment)
+
+      assert_response :success
+      queries = period_link_queries
+      assert_not_empty queries
+      queries.each { |query| assert_equal [ "period" ], query.keys, "for #{extra_payment.inspect}" }
+    end
+  end
+
   private
+    # The query of every period link in the chart card's picker.
+    def period_link_queries
+      chart_card = "##{ActionView::RecordIdentifier.dom_id(@account, :chart)}"
+      css_select("#{chart_card} a[href*='period=']").map { |link| Rack::Utils.parse_nested_query(URI(link["href"]).query) }
+    end
+
     # Posts the new-loan form as a browser does: the "Opening balance date"
     # field is always sent, defaulting to today minus two years.
     def create_loan(start_date:, initial_balance: 400_000, opening_balance_date: Date.current - 2.years)

@@ -41,6 +41,12 @@ class Loan
       amount.present?
     end
 
+    # The params the form submitted, for a link that reloads the page and
+    # must keep the extra: the account page rebuilds it only from these.
+    def to_params
+      { amount: input, frequency: frequency }
+    end
+
     # What the amount field shows: the typed amount when it is a plain decimal,
     # sign allowed, so a refused "-1" comes back as typed. nil otherwise: "abc"
     # cannot sit in a number field, and "1e3" or "Infinity" would come back as

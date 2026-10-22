@@ -8,12 +8,14 @@ class UI::Account::Chart < ApplicationComponent
   # (title, hero figure, trend, period picker, Turbo frame) is unchanged. Every
   # other account type takes the branch it always took.
   # The page's reference date travels inside the payload (`today`), so the
-  # component takes no date of its own.
-  def initialize(account:, period: nil, view: nil, loan_chart: nil)
+  # component takes no date of its own. `extra_repayment` is the Extra
+  # repayments tab's Loan::ExtraRepayment, which the period picker keeps.
+  def initialize(account:, period: nil, view: nil, loan_chart: nil, extra_repayment: nil)
     @account = account
     @period = period
     @view = view
     @loan_chart = loan_chart
+    @extra_repayment = extra_repayment
   end
 
   def loan_chart?
@@ -180,6 +182,16 @@ class UI::Account::Chart < ApplicationComponent
   # (Loan::PayoffChart::WINDOW_KEYS); every other chart offers every period.
   def period_picker_options
     Loan::PayoffChart.window_options if loan_chart?
+  end
+
+  # What each period link carries besides the period. Picking one reloads
+  # the page, which rebuilds an applied extra only from its params, so the
+  # links keep it, and the tab it was applied from.
+  def period_picker_extra_params
+    return { chart_view: view } if account.supports_trades?
+    return {} unless @extra_repayment&.applied?
+
+    { tab: "extra_repayments", extra_payment: @extra_repayment.to_params }
   end
 
   # A saved period the loan chart does not offer shows the whole life, so its
