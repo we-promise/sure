@@ -251,8 +251,67 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     end
   end
 
+  # `BigDecimal("NaN")` and `BigDecimal("Infinity")` do not raise, so a rescue
+  # alone let them through to `create!` (NaN fails `>= 0`) or to the column
+  # (Infinity overflows it), and either rolled the fund back unstamped.
+  test "a non-finite weight skips that row and stores the rest" do
+    [ "NaN", "Infinity", "-Infinity" ].each do |weight|
+      @security.update_columns(constituents_fetched_at: nil)
+
+      assert_difference -> { holdings_log_count }, 1, "for weight #{weight}" do
+        import(info(constituents: [ constituent("AAA", "Odd", weight), constituent("BBB", "Other", 2) ]))
+      end
+
+      assert_not_nil @security.reload.constituents_fetched_at, "unstamped for weight #{weight}"
+      assert_equal %w[BBB], @security.constituents.pluck(:ticker), "for weight #{weight}"
+      assert_equal "non_numeric_weight", last_holdings_log.metadata["reason"]
+    end
+  end
+
+  # `weight` is numeric(9,6), so 1000 passes the model and is refused by
+  # Postgres. Both sides of the boundary are pinned, and the largest value the
+  # column holds is still stored.
+  test "a weight the column cannot hold skips that row and stores the rest" do
+    [ 1000, "1e3", "999.9999995" ].each do |weight|
+      @security.update_columns(constituents_fetched_at: nil)
+
+      assert_difference -> { holdings_log_count }, 1, "for weight #{weight}" do
+        import(info(constituents: [ constituent("AAA", "Huge", weight), constituent("BBB", "Other", 2) ]))
+      end
+
+      assert_not_nil @security.reload.constituents_fetched_at, "unstamped for weight #{weight}"
+      assert_equal %w[BBB], @security.constituents.pluck(:ticker), "for weight #{weight}"
+      assert_equal "out_of_range_weight", last_holdings_log.metadata["reason"]
+    end
+
+    @security.update_columns(constituents_fetched_at: nil)
+    assert_no_difference -> { holdings_log_count } do
+      import(info(constituents: [ constituent("AAA", "Largest", "999.999999") ]))
+    end
+    assert_equal BigDecimal("999.999999"), @security.reload.constituents.find_by!(ticker: "AAA").weight
+  end
+
+  test "an entry that is not a hash skips that entry and stores the rest" do
+    assert_difference -> { holdings_log_count }, 1 do
+      import(info(constituents: [ "AAA", constituent("BBB", "Other", 2) ]))
+    end
+
+    assert_not_nil @security.reload.constituents_fetched_at, "the fund was left unstamped"
+    assert_equal %w[BBB], @security.constituents.pluck(:ticker)
+    assert_equal "malformed_entry", last_holdings_log.metadata["reason"]
+    assert_equal "AAA", last_holdings_log.metadata["entry"]
+  end
+
+  test "a padded name is stored stripped" do
+    import(info(constituents: [ constituent("AAA", "  Padded Inc  ", 5) ]))
+
+    assert_equal "Padded Inc", @security.reload.constituents.find_by!(ticker: "AAA").name
+  end
+
   # Duplicates are compared as the uniqueness validation compares them: after
-  # the strip, and case-sensitively.
+  # the strip, and case-sensitively. `securities` compares tickers without
+  # case, so a reader resolving these rows to securities sees `AAA` and `aaa`
+  # as one instrument; merging them is that reader's decision, not storage's.
   test "a padded ticker is stored stripped, and tickers differing in case are both kept" do
     assert_no_difference -> { holdings_log_count } do
       import(info(constituents: [ constituent(" AAA ", "Padded", 5), constituent("aaa", "Lower", 3) ]))
