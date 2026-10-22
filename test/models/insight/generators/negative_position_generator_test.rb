@@ -74,7 +74,7 @@ class Insight::Generators::NegativePositionGeneratorTest < ActiveSupport::TestCa
     oversell_msft
 
     generated = I18n.with_locale(:de) { generate.first }
-    body = I18n.with_locale(:de) { Insight::BodyWriter.new(@family).write(generated) }
+    body = I18n.with_locale(:de) { Insight::BodyWriter.new.write(generated) }
 
     assert_equal "Bestand in Robinhood Brokerage Account unter null", generated.title
     assert_match "Microsoft (MSFT)", body
