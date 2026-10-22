@@ -93,7 +93,7 @@ class Loan
         # the not-converged notice can quote.
         balloon: projection.applicable? && !projection.converged? ? projection.balloon_amount.amount.to_f : nil,
         labels: labels,
-        aria_description: aria_description(actual: series[:actual])
+        aria_description: aria_description(actual: series[:actual], scheduled: series[:scheduled])
       }
     end
 
@@ -220,8 +220,9 @@ class Loan
       end
 
       # Every series the chart draws is named here, with its payoff date, and
-      # the principal and interest split the tooltip adds.
-      def aria_description(actual:)
+      # the principal and interest split the tooltip adds when the window holds
+      # a scheduled payment to split.
+      def aria_description(actual:, scheduled:)
         description = I18n.t(
           "UI.account.chart.loan.aria_description",
           current_balance: projection.current_balance.format,
@@ -238,12 +239,24 @@ class Loan
         end
 
         # The tooltip's split of each scheduled payment is not drawn anywhere
-        # else, so the description says it is there.
+        # else, so the description says it is there. A window with no payment
+        # in it -- one past the last scheduled repayment -- has no split to
+        # show: the tooltip then stops at plotted dates that carry none.
+        return description unless payment_in_window?(scheduled)
+
         [ description, I18n.t(
           "UI.account.chart.loan.aria_composition",
           principal: I18n.t("loans.tabs.schedule.principal"),
           interest: I18n.t("loans.tabs.schedule.interest")
         ) ].join(" ")
+      end
+
+      # The split rides on the payment points only; the opening point is the
+      # amount borrowed and carries none.
+      def payment_in_window?(scheduled)
+        scheduled.any? do |point|
+          point.key?(:principal) && Date.iso8601(point[:date]).between?(domain_start, domain_end)
+        end
       end
 
       def long_date(date, fallback)
