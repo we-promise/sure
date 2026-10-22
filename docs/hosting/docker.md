@@ -127,6 +127,7 @@ On a self-hosted instance, Sure sends these emails:
 - A confirmation link when a user changes their email address, but only when **Require email confirmation** is on under Settings > Self-Hosting. When it is off, the new address is saved straight away and nothing is sent.
 - Rule notifications, from rules with a "Send email notification" action.
 - The follow-up email after a PDF import is processed.
+- A daily summary to every super admin after the demo family is refreshed, but only when **Enable daily demo family refresh** is on under Settings > Self-Hosting. It is off by default.
 
 Invitations are never emailed on a self-hosted instance, even with SMTP set up. After you add a member, copy the invitation link from Settings > Profile Info and send it to them yourself.
 
@@ -138,7 +139,7 @@ Invitations are never emailed on a self-hosted instance, even with SMTP set up. 
 | `SMTP_PASSWORD` | Password for logging in to the SMTP server. | None |
 | `SMTP_TLS_ENABLED` | `true` uses TLS from the start of the connection (SMTPS, usually port 465). Any other value connects in plain text and switches to TLS with STARTTLS when the server offers it (usually port 587). | Off |
 | `SMTP_TLS_SKIP_VERIFY` | `true` turns off verification of the SMTP server's certificate. | Off (the certificate is verified) |
-| `SSL_CA_FILE` | Path inside the container to a CA certificate (PEM) for verifying a server with a self-signed or internal certificate. The file must be mounted into the containers; see [Self-signed certificate support](oidc.md#self-signed-certificate-support). | None |
+| `SSL_CA_FILE` | Path inside the container to a CA certificate (PEM) for verifying a server with a self-signed or internal certificate. The file must be mounted into the containers; see **Using a custom CA certificate** below. | None |
 | `EMAIL_SENDER` | Address that emails are sent from, for example `sure@example.com`. | `sender@sure.local` |
 | `APP_DOMAIN` | Host name your instance is reached at, for example `sure.example.com`. Used to build links in emails. | None |
 
@@ -151,7 +152,7 @@ A few things to watch:
 
 Docker Compose uses `.env` to fill in the `${...}` values in `compose.yml`. It does not pass `.env` to the containers as a whole. A variable set only in `.env` does not reach the app unless `compose.yml` lists it.
 
-Both `web` and `worker` merge the shared `x-rails-env` anchor, so add the keys there once and both services get them:
+Both `web` and `worker` merge the shared `x-rails-env` anchor, so add the keys there once and both services get them. If you run the AI setup from `compose.ai.yml` (see [Using the AI compose file](#using-the-ai-compose-file) below), that file has its own `x-rails-env` anchor with no SMTP keys, so add the same keys there instead:
 
 ```yaml
 x-rails-env: &rails_env
@@ -180,7 +181,29 @@ SMTP_PASSWORD="replacemewithyoursmtppassword"
 # SMTP_TLS_ENABLED="false"
 ```
 
-Set every key you list in the anchor. Docker Compose passes a listed key that has no value in `.env` as an empty value, not as unset. An empty `EMAIL_SENDER` replaces the `sender@sure.local` fallback with an empty address, and an empty `SMTP_USERNAME` still makes the app try to log in. If your server needs no login, leave the `SMTP_USERNAME` and `SMTP_PASSWORD` lines out of the anchor.
+Set every key you list in the anchor in the plain `${VAR}` form. Docker Compose passes such a key that has no value in `.env` as an empty value, not as unset. An empty `EMAIL_SENDER` replaces the `sender@sure.local` fallback with an empty address, and an empty `SMTP_USERNAME` still makes the app try to log in. If your server needs no login, leave the `SMTP_USERNAME` and `SMTP_PASSWORD` lines out of the anchor. Keys written as `${VAR:-default}`, such as `SMTP_PORT` and `SMTP_TLS_ENABLED` above, are different: Compose uses the default when the `.env` value is unset or empty.
+
+**Using a custom CA certificate**
+
+If your SMTP server's certificate is signed by an internal CA or is self-signed, mount the CA certificate into the containers and point `SSL_CA_FILE` at it. Add `SSL_CA_FILE` to the anchor, and the volume to both `web` and `worker`, since both merge the anchor:
+
+```yaml
+x-rails-env: &rails_env
+  # ...existing keys...
+  SSL_CA_FILE: /certs/my-ca.crt
+
+services:
+  web:
+    volumes:
+      - app-storage:/rails/storage
+      - ./my-ca.crt:/certs/my-ca.crt:ro
+  worker:
+    volumes:
+      - app-storage:/rails/storage
+      - ./my-ca.crt:/certs/my-ca.crt:ro
+```
+
+The worker is the service that sends email, so it is the one that must have the file. The same setting is also used for other outbound HTTPS connections; see [Self-signed certificate support](oidc.md#self-signed-certificate-support) for the certificate format and troubleshooting.
 
 Pull request [#2811](https://github.com/we-promise/sure/pull/2811), which is still open, would pass `.env` to both services directly. If it is merged, listing the keys in the anchor is no longer needed.
 
