@@ -442,6 +442,7 @@ Rails.application.routes.draw do
     get :merge, on: :collection
     post :perform_merge, on: :collection
     post :bootstrap, on: :collection
+    patch :toggle_lock, on: :collection
     delete :destroy_all, on: :collection
   end
 
@@ -676,6 +677,7 @@ Rails.application.routes.draw do
 
     collection do
       post :sync_all
+      patch :reorder
     end
 
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"

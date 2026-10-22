@@ -117,6 +117,36 @@ class Provider::Anthropic::BankStatementExtractorTest < ActiveSupport::TestCase
     assert_equal true, result[:truncated]
   end
 
+  test "sends tool_choice auto to a model that rejects a forced tool" do
+    fake_response = build_response(content: [
+      tool_use_block(
+        id: "toolu_4",
+        name: "report_bank_statement",
+        input: {
+          "bank_name" => "Bank of Example",
+          "transactions" => [ { "date" => "2026-03-05", "description" => "Coffee", "amount" => -4.5 } ]
+        }
+      )
+    ])
+    messages = mock
+    messages.expects(:create).with do |params|
+      assert_equal({ type: "auto", disable_parallel_tool_use: true }, params[:tool_choice])
+      assert_includes params[:system_], "calling the report_bank_statement tool"
+      true
+    end.returns(fake_response)
+    client = mock
+    client.stubs(:messages).returns(messages)
+
+    result = Provider::Anthropic::BankStatementExtractor.new(
+      client: client,
+      model: "claude-sonnet-5-5",
+      pdf_content: @pdf_content
+    ).extract
+
+    assert_equal "Bank of Example", result[:bank_name]
+    assert_equal "Coffee", result[:transactions].first[:name]
+  end
+
   private
     def stub_client(response)
       messages = mock

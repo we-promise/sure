@@ -62,6 +62,22 @@ class Family::SyncerTest < ActiveSupport::TestCase
     assert_no_enqueued_jobs(only: RuleJob)
   end
 
+  # Issue #2925: merchants whose website arrived before Brandfetch was
+  # configured get their logo on the next sync.
+  test "backfills provider merchant logos after sync" do
+    @family.expects(:backfill_provider_merchant_logos).once
+
+    Family::Syncer.new(@family).perform_post_sync
+  end
+
+  test "a logo backfill failure does not stop rules from being applied" do
+    ProviderMerchant.stubs(:backfill_logos).raises(StandardError, "boom")
+
+    assert_enqueued_with(job: ApplyRulesJob, args: [ @family ]) do
+      Family::Syncer.new(@family).perform_post_sync
+    end
+  end
+
   private
     def syncable_item_associations
       Family.reflect_on_all_associations(:has_many).select do |association|
