@@ -221,7 +221,7 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
     end
   end
 
-  # jaysbeekay/sure#479: the area under the scheduled line is split by each
+  # The area under the scheduled line is split by each
   # repayment's shares, principal from the bottom and interest above it up to
   # the line. Measured from the drawn paths at every scheduled payment, against
   # the y-axis's own ticks. The interest part's top must sit on the line: drawn

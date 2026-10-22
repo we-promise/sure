@@ -400,7 +400,7 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
     assert_equal I18n.t("loans.tabs.schedule.interest"), payload[:labels][:interest]
   end
 
-  # jaysbeekay/sure#479: the shading under the scheduled line splits it by each
+  # The shading under the scheduled line splits it by each
   # repayment's interest and principal share. The description says the same in
   # words, from the schedule's own rows: interest over what was paid, across
   # the first twelve payments and the last twelve.

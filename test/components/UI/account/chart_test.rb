@@ -117,7 +117,7 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_includes principal, "var(--color-info)"
   end
 
-  # jaysbeekay/sure#479: the shares are shaded under the scheduled line, so
+  # The shares are shaded under the scheduled line, so
   # without that line the legend must not name them.
   test "the legend names the interest and principal shares only with the scheduled line" do
     loan_account = accounts(:loan)
