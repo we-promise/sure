@@ -285,6 +285,29 @@ class LoanTest < ActiveSupport::TestCase
     assert_nil loan.variable_rate_update_for(5.2, as_of: Date.new(2026, 1, 15))
   end
 
+  # The form rejects a rate outside 0..MAX_INTEREST_RATE, and nothing in the
+  # model checks a schedule written any other way, so the rule every provider
+  # shares carries the same bound.
+  test "variable_rate_update_for records nothing for a rate outside the form's bounds" do
+    as_of = Date.new(2026, 1, 15)
+    moved = Loan.new(rate_type: "variable", interest_rate: 4.5)
+    first = Loan.new(rate_type: "variable", interest_rate: nil)
+
+    [ -0.001, Loan::MAX_INTEREST_RATE + 0.001, BigDecimal("Infinity"), BigDecimal("NaN") ].each do |rate|
+      assert_nil moved.variable_rate_update_for(rate, as_of: as_of), "#{rate} was dated as a change"
+      assert_nil first.variable_rate_update_for(rate, as_of: as_of), "#{rate} was set as the base rate"
+    end
+  end
+
+  test "variable_rate_update_for accepts both ends of the form's bounds" do
+    as_of = Date.new(2026, 1, 15)
+    loan = Loan.new(rate_type: "variable", interest_rate: 4.5)
+
+    assert_equal({ "2026-01-15" => "0.0" }, loan.variable_rate_update_for(0, as_of: as_of)[:variable_rate_schedule])
+    assert_equal({ "2026-01-15" => "100.0" },
+                 loan.variable_rate_update_for(Loan::MAX_INTEREST_RATE, as_of: as_of)[:variable_rate_schedule])
+  end
+
   private
     # A loan imported part way through its life: the principal it was written
     # for is recorded, and the only valuation the account carries is the
