@@ -27,8 +27,17 @@ class Portfolio::DailyReturns
   Row = Data.define(
     :date, :value_open, :value_close, :external_flow, :composition_flow,
     :income, :fees, :market, :revaluations, :fx_effect,
-    :rate_missing, :suppressed
+    :rate_missing, :suppressed, :unvalued_journal
   ) do
+    # unvalued_journal says WHY a day is suppressed when the reason is a
+    # journal the series could not value, as opposed to a non-positive
+    # denominator: its flow is missing while its value moved, which matters
+    # to a reader that sums flows (a money-weighted return), not only to one
+    # that chains returns. Defaults to false for a Row built by hand.
+    def initialize(unvalued_journal: false, **fields)
+      super
+    end
+
     # Flows are start-of-day: the day's start-of-day capital is the opening value plus every
     # flow that joined it -- external flows, and the value an account brought
     # into or carried out of the scope.
@@ -140,7 +149,8 @@ class Portfolio::DailyReturns
           # could not be valued is suppressed rather than returned. Its flow is
           # missing from the denominator while its value is present in the
           # close, so the day would read as return the portfolio did not earn.
-          suppressed: !denominator.positive? || raw["journal_unpriced"] == true
+          suppressed: !denominator.positive? || raw["journal_unpriced"] == true,
+          unvalued_journal: raw["journal_unpriced"] == true
         )
       end
     end
