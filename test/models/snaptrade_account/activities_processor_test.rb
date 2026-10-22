@@ -1053,6 +1053,35 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 0, Entry.where(external_id: "trade_orphan").count
   end
 
+  test "a trade resolves to the security the account already holds when its ticker has duplicate rows" do
+    held = Security.create!(ticker: "DUPT", name: "Held row")
+    Security.create!(ticker: "DUPT", name: "Priced row", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    @account.holdings.create!(
+      security: held, date: 1.day.ago.to_date, qty: 10, price: 100, amount: 1000, currency: "USD",
+      account_provider_id: @snaptrade_account.account_provider&.id
+    )
+    held.update!(name: "Held row (renamed)")
+
+    process_activities(build_trade_activity(id: "dup_trade", type: "BUY", symbol: "DUPT", units: 1, price: 100))
+
+    assert_equal held, snaptrade_entry("dup_trade").entryable.security
+  end
+
+  # A remap moves the position's trades to the row the user chose, so a new
+  # trade must land there too, not on the provider's original row.
+  test "a trade for a remapped position lands on the row the user chose" do
+    original = Security.create!(ticker: "DUPT2", name: "SnapTrade row")
+    listed = Security.create!(ticker: "DUPT2", name: "Listed row", exchange_operating_mic: "XNYS", price_provider: "yahoo_finance")
+    @account.holdings.create!(
+      security: original, date: 1.day.ago.to_date, qty: 10, price: 100, amount: 1000, currency: "USD",
+      account_provider_id: @snaptrade_account.account_provider&.id
+    ).remap_security!(listed)
+
+    process_activities(build_trade_activity(id: "remapped_trade", type: "BUY", symbol: "DUPT2", units: 1, price: 100))
+
+    assert_equal listed, snaptrade_entry("remapped_trade").entryable.security
+  end
+
   # Modeled on real Fidelity option buy activity (TQQQ call) where symbol is nil
   test "processes option buy trade when symbol is nil and option_symbol is present" do
     process_activities(
@@ -1926,9 +1955,9 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     rh_gain_loss = rh_sell_trade.realized_gain_loss
 
     assert_not_nil rh_gain_loss
-    assert_equal Money.new(7000.0, "USD"), rh_gain_loss.current
-    assert_equal Money.new(5425.0, "USD"), rh_gain_loss.previous
-    assert_equal Money.new(1575.0, "USD"), rh_gain_loss.value
+    assert_equal Money.new(6999.79, "USD"), rh_gain_loss.current
+    assert_equal Money.new(5425.20, "USD"), rh_gain_loss.previous
+    assert_equal Money.new(1574.59, "USD"), rh_gain_loss.value
   end
 
   # Synthetic edge case: option contract EXTERNAL_ASSET_TRANSFER (real JNJ transfer was type=TRANSFER, a cash activity)

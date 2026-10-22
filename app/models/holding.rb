@@ -46,6 +46,13 @@ class Holding < ApplicationRecord
     super
   end
 
+  # The stored per-share cost when it is a real value:
+  # - If locked (user-set), trust the value even if 0 (valid for airdrops)
+  # - Otherwise require positive since providers sometimes return 0 when unknown
+  def known_cost_basis
+    cost_basis if cost_basis.present? && (cost_basis_locked? || cost_basis.positive?)
+  end
+
   # Returns average cost per share, or nil if unknown.
   #
   # Uses pre-computed cost_basis if available (set during materialization),
@@ -53,13 +60,7 @@ class Holding < ApplicationRecord
   # basis cannot be determined (no trades and no provider cost_basis).
   def avg_cost
     # Use stored cost_basis if available (eliminates N+1 queries)
-    # - If locked (user-set), trust the value even if 0 (valid for airdrops)
-    # - Otherwise require positive since providers sometimes return 0 when unknown
-    if cost_basis.present?
-      if cost_basis_locked? || cost_basis.positive?
-        return Money.new(cost_basis, currency)
-      end
-    end
+    return Money.new(known_cost_basis, currency) if known_cost_basis
 
     # Fallback to calculation for holdings without pre-computed cost_basis
     calculate_avg_cost
