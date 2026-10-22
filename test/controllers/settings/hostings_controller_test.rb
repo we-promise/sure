@@ -104,8 +104,18 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_includes I18n.t("settings.hostings.openai_settings.uri_base_local_help"), "http://localhost:11434/v1"
       assert_includes I18n.t("settings.hostings.openai_settings.uri_base_local_help"), "http://ollama:11434/v1"
 
-      I18n.available_locales.each do |locale|
-        next unless I18n.exists?("settings.hostings.openai_settings.uri_base_local_help", locale, fallback: false)
+      # Every locale that translates this form translates both lines, so none
+      # falls back to English for them while the rest of the panel is local.
+      translated = I18n.available_locales.select do |locale|
+        I18n.exists?("settings.hostings.openai_settings", locale, fallback: false)
+      end
+      assert_operator translated.size, :>, 1, "no translated locale was checked"
+
+      translated.each do |locale|
+        %w[uri_base_local_help model_required_help].each do |key|
+          assert I18n.exists?("settings.hostings.openai_settings.#{key}", locale, fallback: false),
+            "#{locale} has an openai_settings block but no #{key}"
+        end
 
         help = I18n.t("settings.hostings.openai_settings.uri_base_local_help", locale: locale)
         assert_includes help, "http://localhost:11434/v1", "#{locale} help lost the bare-metal address"
