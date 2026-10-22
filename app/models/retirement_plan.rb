@@ -131,6 +131,10 @@ class RetirementPlan < ApplicationRecord
   # reference date. The row lock reloads the plan, so two saves that race
   # here seed once between them.
   def seed_streams!(as_of:)
+    # with_lock reloads the row; a new record has none, and would either fail
+    # on streams.create! or be saved here as a side effect.
+    raise ArgumentError, "seed_streams! needs a saved plan" if new_record?
+
     with_lock do
       next if streams_seeded_on.present?
 
@@ -164,6 +168,11 @@ class RetirementPlan < ApplicationRecord
       birth_year.present? && birth_year <= as_of.year && birth_year + end_age >= as_of.year
     end
 
+    # Two spending windows, on purpose. The contribution before retirement is
+    # #projection's: income less the median month over all history, without
+    # contributions. Living costs after it are the seeded stream: the median
+    # of the last 12 whole months, without contributions or loan payments
+    # (each loan seeds its own stream). Not a mismatch to reconcile.
     def simulation_inputs(as_of:)
       {
         as_of: as_of,
@@ -217,6 +226,7 @@ class RetirementPlan < ApplicationRecord
         payment = account.accountable.amortization_schedule&.payment_in_force(as_of)
         next if payment.nil?
 
+        # Twelve: AmortizationSchedule#payment_schedule is monthly.
         annual = payment.exchange_to(user.family.currency, date: as_of).amount * 12
         streams.create!(kind: "expense", source: "seeded_loan", indexed: false, account: account,
                         name: account.name, annual_amount: annual, end_year: projection.payoff_date.year)

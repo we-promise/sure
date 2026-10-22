@@ -51,6 +51,32 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     assert_equal [ "expense", true, nil, nil ], [ living.kind, living.indexed, living.start_year, living.end_year ]
   end
 
+  # Seeded on 15 March 2026, the window is 1 March 2025 to 28 February 2026.
+  # Spending on both of those days counts (1,000 and 3,000, a median of 2,000);
+  # spending the day before or the day after does not (9,000 would make it
+  # 3,000).
+  test "living costs take in the window's first and last days and neither day outside it" do
+    checking = own_account(amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2025, 3, 1), amount: 1_000)
+    create_transaction(account: checking, date: Date.new(2026, 2, 28), amount: 3_000)
+    create_transaction(account: checking, date: Date.new(2025, 2, 28), amount: 9_000)
+    create_transaction(account: checking, date: Date.new(2026, 3, 1), amount: 9_000)
+
+    @plan.seed_streams!(as_of: AS_OF)
+
+    assert_equal BigDecimal("24000"), @plan.streams.find_by!(source: "seeded_living_costs").annual_amount
+  end
+
+  # with_lock reloads the row, which a new record does not have: it would
+  # either fail on streams.create! or save the plan as a side effect.
+  test "an unsaved plan refuses to seed and saves nothing" do
+    plan = RetirementPlan.new(user: @admin, birth_year: 1980)
+
+    assert_no_difference [ "RetirementPlan.count", "RetirementPlan::Stream.count" ] do
+      assert_raises(ArgumentError) { plan.seed_streams!(as_of: AS_OF) }
+    end
+  end
+
   test "no spending on record seeds no living-costs stream" do
     own_account(amount: 1_000)
 
@@ -178,6 +204,33 @@ class RetirementPlan::PlannerInputsTest < ActiveSupport::TestCase
     admins = Account.create!(family: @family, owner: @admin, accountable: Depository.new, name: "Admin's", currency: "USD", balance: 1)
 
     assert_not @plan.funding_links.new(account: admins).valid?
+  end
+
+  # The same tenancy rule as a funding link, without the type limit: a stream
+  # points at the loan it was seeded from.
+  test "a stream's account must be one the user counts in their finances" do
+    loan = own_loan(balance: 45_000, term_months: 60)
+    admins = Account.create!(family: @family, owner: @admin, accountable: Depository.new, name: "Admin's", currency: "USD", balance: 1)
+    elsewhere = Account.create!(family: families(:empty), owner: users(:empty), accountable: Depository.new, name: "Elsewhere", currency: "USD", balance: 1)
+    stream = ->(account) { @plan.streams.new(kind: "expense", name: "Repayment", annual_amount: 1, account: account) }
+
+    assert stream.call(loan).valid?
+    assert stream.call(nil).valid?
+    assert_not stream.call(admins).valid?, "another member's unshared account"
+    assert_not stream.call(elsewhere).valid?, "another family's account"
+  end
+
+  # The check runs only when the account changes, so a form that resubmits the
+  # account a stream already holds still saves after the account stops being
+  # shared.
+  test "a stream whose account has left the user's finances can still be edited" do
+    admins = Account.create!(family: @family, owner: @admin, accountable: Loan.new, name: "Admin's loan", currency: "USD", balance: 1)
+    share = AccountShare.create!(account: admins, user: @member, permission: "read_only", include_in_finances: true)
+    stream = @plan.streams.create!(kind: "expense", name: "Repayment", annual_amount: 1, account: admins)
+
+    share.update!(include_in_finances: false)
+
+    assert stream.update(name: "Old repayment", account_id: admins.id)
   end
 
   # The funding total counts only cash, investment and crypto balances, so a

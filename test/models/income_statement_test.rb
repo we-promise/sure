@@ -548,6 +548,21 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 9000.0, default, "the same instance must not reuse the bounded figure"
   end
 
+  # Both ends of the period are in it, and the day either side is not. Months
+  # in: March 2025 (1,000) and February 2026 (3,000), a median of 2,000. Losing
+  # either end day leaves one month (1,000 or 3,000); taking in either outside
+  # day adds a 9,000 month and the median becomes 3,000.
+  test "a period takes in its first and last days and neither day outside it" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, date: Date.new(2025, 3, 1))
+    create_transaction(account: @checking_account, amount: 3000, date: Date.new(2026, 2, 28))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2025, 2, 28))
+    create_transaction(account: @checking_account, amount: 9000, date: Date.new(2026, 3, 1))
+    period = Period.custom(start_date: Date.new(2025, 3, 1), end_date: Date.new(2026, 2, 28))
+
+    assert_equal 2000.0, IncomeStatement.new(@family).median_expense(interval: "month", period: period)
+  end
+
   test "the bounded and default medians are cached under different keys" do
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
