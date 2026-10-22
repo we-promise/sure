@@ -92,14 +92,15 @@ Locales:
 
 A goal records a name, target amount, optional target date, color, optional
 icon, optional notes, currency, and an AASM `state` (`active` / `paused` /
-`completed` / `archived`). It links cash and investment accounts via the join
-table `goal_accounts`.
+`completed` / `archived`). It links cash, investment and crypto accounts via the
+join table `goal_accounts`.
 
 The goal's *progress* is its allocated share of linked accounts, converted to
 its currency at request time. `Goal#current_balance` preserves native account
-allocations and shared-pool limits before conversion. Investment-backed goals
-default to contribution progress, excluding cumulative market gains from their
-backing; `market_value_money` separately shows the current market value.
+allocations and shared-pool limits before conversion. Investment- and
+crypto-backed goals default to contribution progress, excluding cumulative
+market gains from their backing; `market_value_money` separately shows the
+current market value.
 
 A `GoalPledge` is an intent: amount, account, kind, status, expires_at.
 The status enum is `open` / `matched` / `cancelled` / `expired`. The kind
@@ -108,9 +109,9 @@ the selected account's connection state.
 
 ## Currencies and account allocations
 
-A goal can link cash and investment accounts in different currencies. New goals
-use the family's display currency, matching the target field; an existing goal's
-currency remains locked. Target, progress, consumed amount and pledges use goal
+A goal can link cash, investment and crypto accounts in different currencies.
+New goals use the family's display currency, matching the target field; an
+existing goal's currency remains locked. Target, progress, consumed amount and pledges use goal
 currency. Each `GoalAccount#allocated_amount` remains in its account's currency.
 Shared-pool allocation and pro-rata scaling happen before conversion, so goals
 with different currencies cannot double-count the same account.
