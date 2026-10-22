@@ -230,6 +230,12 @@ class Setting < RailsSettings::Base
     alias_method :raw_onboarding_state=, :onboarding_state=
     alias_method :raw_openai_model, :openai_model
     alias_method :raw_openai_model=, :openai_model=
+    alias_method :raw_llm_provider, :llm_provider
+
+    # The env var wins over a stored choice, like the other AI settings.
+    def llm_provider
+      ENV["LLM_PROVIDER"].presence || raw_llm_provider
+    end
 
     def onboarding_state
       value = raw_onboarding_state

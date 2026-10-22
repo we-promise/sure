@@ -2,6 +2,7 @@
 
 class Api::V1::FamilyExportsController < Api::V1::BaseController
   include Pagy::Backend
+  include ActiveStorage::Streaming
 
   before_action :ensure_read_scope, only: [ :index, :show, :download ]
   before_action :ensure_write_scope, only: [ :create ]
@@ -68,10 +69,14 @@ class Api::V1::FamilyExportsController < Api::V1::BaseController
       return
     end
 
-    redirect_to rails_blob_url(@family_export.export_file, disposition: "attachment"), allow_other_host: true
+    # API keys carry no session, which the blob routes require, so the file is sent here.
+    send_blob_stream @family_export.export_file.blob, disposition: :attachment
   rescue StandardError => e
     Rails.logger.error "FamilyExportsController#download error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
+    # send_blob_stream has already answered with a bare 500; rendering JSON on
+    # top of it would raise DoubleRenderError.
+    return if performed?
 
     render json: {
       error: "internal_server_error",
