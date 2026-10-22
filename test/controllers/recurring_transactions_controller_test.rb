@@ -337,6 +337,27 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name=?][value=?]", "recurring_transaction[category_id]", categories(:food_and_drink).id
   end
 
+  # CategoriesController refuses to create a category while they are locked,
+  # so neither bill form may offer inline creation then. The flag is read by
+  # the category-select controller from this data attribute.
+  test "the add and edit category selects follow the family's category lock" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current - 20, amount: 54.73, currency: "USD", name: "PET COVER",
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+    locked_select = "[data-category-select-locked-value=?]"
+
+    [ false, true ].each do |locked|
+      @family.update!(categories_locked: locked)
+
+      get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+      assert_select locked_select, locked.to_s, count: 1
+
+      get edit_recurring_transaction_url(@recurring_transaction), headers: { "Turbo-Frame" => "modal" }
+      assert_select locked_select, locked.to_s, count: 1
+    end
+  end
+
   test "new offers no category for a paycheck" do
     entry = accounts(:depository).entries.create!(
       date: Date.current - 10, amount: -1840, currency: "USD", name: "ACME PAYROLL",

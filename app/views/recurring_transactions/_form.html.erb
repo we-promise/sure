@@ -174,7 +174,8 @@
             form: f,
             categories: Current.family.categories.alphabetically_by_hierarchy.to_a,
             selected_id: recurring_transaction.category_id,
-            blank_label: t(".category_blank")
+            blank_label: t(".category_blank"),
+            locked: Current.family.categories_locked?
           ) %>
     <% end %>
 
