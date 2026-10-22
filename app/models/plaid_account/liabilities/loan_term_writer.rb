@@ -34,29 +34,45 @@ module PlaidAccount::Liabilities::LoanTermWriter
       end
       return if loan.errors.empty?
 
-      # `enrich_attributes` saves with `save`, so a refusal returns false where
-      # `update!` raised into PlaidAccount::Processor#process_liabilities's
-      # rescue. Without this the failure would be silent. `false` alone is not
-      # a refusal: Enrichable also returns it when every attribute was locked
-      # or unchanged, so only populated errors are reported.
-      DebugLogEntry.capture(
-        category: "provider_sync",
-        level: "warn",
-        message: "Plaid loan terms refused by the model",
-        source: self.class.name,
-        provider_key: "plaid",
-        account: account,
-        metadata: {
-          plaid_account_id: plaid_account.id,
-          attributes: present.keys.map(&:to_s),
-          errors: loan.errors.full_messages
-        }
-      )
+      names = present.keys.map(&:to_s)
+      report_refusal(loan, names)
 
       # A refusal leaves the rejected values assigned and the errors populated
       # on the in-memory loan. Left there, the next write in the same sync is
       # refused for them, and a later no-op write reports them again.
-      loan.restore_attributes(present.keys.map(&:to_s))
+      loan.restore_attributes(names)
       loan.errors.clear
+    end
+
+    # `enrich_attributes` saves with `save`, so a refusal returns false where
+    # `update!` raised into PlaidAccount::Processor#process_liabilities's
+    # rescue, which sent it to Sentry. Both are kept: the debug log for support,
+    # filtered by the connection, and Sentry so a refusal that recurs every
+    # sync still shows in error monitoring. `false` alone is not a refusal:
+    # Enrichable also returns it when every attribute was locked or unchanged,
+    # so only populated errors are reported.
+    def report_refusal(loan, attributes)
+      message = "Plaid loan terms refused by the model"
+      errors = loan.errors.full_messages
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: message,
+        source: self.class.name,
+        provider_key: "plaid",
+        account: account,
+        account_provider: plaid_account.account_provider,
+        metadata: {
+          plaid_account_id: plaid_account.id,
+          attributes: attributes,
+          errors: errors
+        }
+      )
+
+      Sentry.capture_message(message, level: :warning) do |scope|
+        scope.set_tags(plaid_account_id: plaid_account.id)
+        scope.set_context("plaid_loan_terms", { loan_id: loan.id, attributes: attributes, errors: errors })
+      end
     end
 end
