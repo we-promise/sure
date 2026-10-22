@@ -176,9 +176,6 @@ class BillsMobileTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
-  # A green overflow assertion proves nothing unless it can go red, and this
-  # one measures a property that is zero on most pages by accident. So: force
-  # an overflow and confirm the measurement sees it.
   test "the last All bills row menu opens next to its button without clipping or scrolling" do
     2.times do |i|
       @family.recurring_transactions.create!(
@@ -247,6 +244,9 @@ class BillsMobileTest < ApplicationSystemTestCase
     assert_equal scroll_before, page.evaluate_script("window.scrollY"), "opening the menu must not scroll the page"
   end
 
+  # A green overflow assertion proves nothing unless it can go red, and this
+  # one measures a property that is zero on most pages by accident. So: force
+  # an overflow and confirm the measurement sees it.
   test "the overflow check actually detects overflow" do
     visit bills_url
     assert_no_horizontal_scroll("the overview")
