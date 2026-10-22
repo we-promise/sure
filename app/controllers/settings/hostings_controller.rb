@@ -2,8 +2,9 @@ class Settings::HostingsController < ApplicationController
   layout "settings"
 
   # Minimum accepted value for each configurable numeric LLM field. Mirrors the
-  # `min:` attribute on the form inputs in `_openai_settings.html.erb` so the
-  # controller rejects what the browser-side validator would reject.
+  # `min:` attribute on the form inputs in `_openai_settings.html.erb` and
+  # `_llm_provider_selector.html.erb`, so the controller rejects what the
+  # browser-side validator would reject.
   LLM_NUMERIC_MINIMUMS = {
     llm_context_window: 256,
     llm_max_response_tokens: 64,
@@ -245,7 +246,12 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:jev_endpoint)
       raw_endpoint = hosting_params[:jev_endpoint].to_s.strip
-      if raw_endpoint.blank?
+      stored_endpoint = Setting.jev_endpoint
+      if stored_endpoint.present? && raw_endpoint == Provider::Jev.redacted_endpoint(stored_endpoint)
+        # The field shows the stored endpoint redacted, and auto-submits on
+        # blur, so this is the page echoing it back, not a change. Saving it
+        # would strip the credentials the operator put in the URL.
+      elsif raw_endpoint.blank?
         Setting.jev_endpoint = nil
       else
         # Provider::Jev owns the rule so settings, JEV_ENDPOINT and eval-time
@@ -271,7 +277,8 @@ class Settings::HostingsController < ApplicationController
       end
       parsed = Integer(raw, 10) rescue nil
       if parsed.nil? || parsed < minimum
-        label = t("settings.hostings.openai_settings.#{key}_label")
+        scope = key == :llm_max_items_per_call ? "llm_provider_selector" : "openai_settings"
+        label = t("settings.hostings.#{scope}.#{key.to_s.delete_prefix("llm_")}_label")
         raise Setting::ValidationError, t(".invalid_llm_budget", field: label, minimum: minimum)
       end
       Setting.public_send("#{key}=", parsed)

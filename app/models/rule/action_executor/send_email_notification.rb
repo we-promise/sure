@@ -6,6 +6,11 @@ class Rule::ActionExecutor::SendEmailNotification < Rule::ActionExecutor
   # rule_run is accepted for interface compatibility but unused: the digest email
   # is fire-and-forget and is not tracked as part of RuleRun accounting.
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+    # "Apply all" runs inactive rules too, for their transaction changes. A rule
+    # the user has switched off must not email, and its matches stay unrecorded
+    # so they are handled when the rule is switched back on.
+    return 0 unless rule.active?
+
     candidate_ids = transaction_scope.pluck(:id)
 
     # record_for atomically inserts and returns ONLY the ids this run actually
