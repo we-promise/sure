@@ -1856,7 +1856,7 @@ RSpec.configure do |config|
               name: { type: :string }, color: { type: :string, nullable: true },
               filter_value: { type: :string, description: 'Value for the transactions category filter' },
               total: { type: :string, description: 'Net spending in the period (expense minus refunds), at least zero' },
-              normal: { type: :string, nullable: true, description: 'Net spending over the baseline period, scaled to the period length. Null without enough history' },
+              normal: { type: :string, nullable: true, description: 'Finished period: net spending over the baseline period, scaled to the period length. Unfinished period (in_progress): average net spending over the same number of days from earlier month starts. Null without enough history' },
               change: { type: :string, nullable: true, description: 'total minus normal' },
               ratio: { type: :string, nullable: true, description: 'Fractional change against normal (0.5 = 50% more). Null without a positive normal' },
               direct: { type: :boolean, description: 'Present on subcategories only: true for the parent\'s own spending, booked on the parent rather than a subcategory' },

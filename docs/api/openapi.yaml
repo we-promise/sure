@@ -3497,8 +3497,10 @@ components:
         normal:
           type: string
           nullable: true
-          description: Net spending over the baseline period, scaled to the period
-            length. Null without enough history
+          description: 'Finished period: net spending over the baseline period, scaled
+            to the period length. Unfinished period (in_progress): average net spending
+            over the same number of days from earlier month starts. Null without enough
+            history'
         change:
           type: string
           nullable: true
@@ -9323,9 +9325,12 @@ paths:
       tags:
       - Reports
       description: 'Net spending per category in a period, compared with each category''s
-        normal: its net spending over the year before the period, scaled to the period
-        length. The data behind the Reports section "Spending vs normal". Uses the
-        authenticated user''s finance accounts and Sure reporting rules. Experimental:
+        normal. For a finished period, normal is its net spending over the year before
+        the period, scaled to the period length. An unfinished period (in_progress)
+        is cut to today and compared with the average of the same number of days from
+        each of up to 12 earlier month starts, counting only windows that end before
+        the period. The data behind the Reports section "Spending vs normal". Uses
+        the authenticated user''s finance accounts and Sure reporting rules. Experimental:
         the section is a preview feature, and how normal is defined may still change.'
       parameters:
       - name: start_date

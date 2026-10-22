@@ -25,6 +25,15 @@ class ReportsHelperSpendingTest < ActionView::TestCase
     assert_equal "No earlier history to compare against", direct[:description].second
   end
 
+  test "a category drawn as a single box isn't described as its own parent" do
+    create_transaction(account: @account, date: Date.new(2026, 9, 6), amount: 50, category: @food)
+
+    box = nodes.sole[:children].sole
+
+    assert_equal "Food", box[:name]
+    assert_equal "Food: $50.00", box[:description].first
+  end
+
   test "describes the change with an interpolated percent, and skips one under 1" do
     12.times { |i| create_transaction(account: @account, date: Date.new(2025, 9, 4) + i.months, amount: 100, category: @groceries) }
     create_transaction(account: @account, date: Date.new(2026, 9, 5), amount: 200, category: @groceries)

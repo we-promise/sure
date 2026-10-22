@@ -40,5 +40,9 @@ class ReportsSpendingVsNormalTest < ApplicationSystemTestCase
     section.find("g.leaf[aria-label^='Treemap Coffee']").send_keys(:enter)
 
     assert_current_path(/\/transactions\?/)
+
+    # Turbo restores the page as it was when Enter navigated away
+    page.go_back
+    assert_selector "section[data-section-key='spending_vs_normal'][aria-grabbed='false']"
   end
 end

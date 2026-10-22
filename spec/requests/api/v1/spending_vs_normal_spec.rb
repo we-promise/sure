@@ -36,7 +36,7 @@ RSpec.describe 'API V1 Spending vs Normal', type: :request do
   path '/api/v1/spending_vs_normal' do
     get 'Show spending per category against normal' do
       tags 'Reports'
-      description 'Net spending per category in a period, compared with each category\'s normal: its net spending over the year before the period, scaled to the period length. The data behind the Reports section "Spending vs normal". Uses the authenticated user\'s finance accounts and Sure reporting rules. Experimental: the section is a preview feature, and how normal is defined may still change.'
+      description 'Net spending per category in a period, compared with each category\'s normal. For a finished period, normal is its net spending over the year before the period, scaled to the period length. An unfinished period (in_progress) is cut to today and compared with the average of the same number of days from each of up to 12 earlier month starts, counting only windows that end before the period. The data behind the Reports section "Spending vs normal". Uses the authenticated user\'s finance accounts and Sure reporting rules. Experimental: the section is a preview feature, and how normal is defined may still change.'
       parameter name: :start_date, in: :query, required: false, schema: { type: :string, format: :date }, description: 'Inclusive ISO date. Requires end_date; both omitted means the current month to date.'
       parameter name: :end_date, in: :query, required: false, schema: { type: :string, format: :date }, description: 'Inclusive ISO date at or after start_date.'
       security [ { apiKeyAuth: [] } ]

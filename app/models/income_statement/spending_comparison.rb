@@ -40,15 +40,16 @@ class IncomeStatement::SpendingComparison
 
   # The first transaction these totals could count, filtered as
   # IncomeStatement::Totals filters: in the statement's eligible accounts, not
-  # excluded, not pending, and not a kind budgets skip (transfers and card
-  # payments). Opening-balance valuations, an early transfer or an excluded
+  # excluded, not pending, and not a kind analytics skip (transfers, card
+  # payments, and investment contributions when investing isn't counted as
+  # spending). Opening-balance valuations, an early transfer or an excluded
   # entry can predate real spending by years, and would dilute "normal" with
   # empty months.
   def self.history_start(income_statement)
     Entry.joins("JOIN transactions ON transactions.id = entries.entryable_id")
          .where(account_id: income_statement.eligible_accounts.select(:id), entryable_type: "Transaction", excluded: false)
          .merge(Transaction.excluding_pending)
-         .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
+         .where.not(transactions: { kind: income_statement.family.analytics_excluded_kinds })
          .minimum(:date)
   end
 
@@ -217,7 +218,9 @@ class IncomeStatement::SpendingComparison
     def baseline_windows
       @baseline_windows ||= (1..12).filter_map do |i|
         start = period.start_date - i.months
-        Period.custom(start_date: start, end_date: start + (period_days - 1).days) if start >= baseline_period.start_date
+        finish = start + (period_days - 1).days
+        # A window that runs into the period would count the spending it's compared with
+        Period.custom(start_date: start, end_date: finish) if start >= baseline_period.start_date && finish <= baseline_period.end_date
       end
     end
 

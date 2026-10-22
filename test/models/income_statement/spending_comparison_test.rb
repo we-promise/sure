@@ -85,6 +85,17 @@ class IncomeStatement::SpendingComparisonTest < ActiveSupport::TestCase
     assert_in_delta 0, travel.ratio, 0.01
   end
 
+  test "an unfinished quarter compares only with days before it" do
+    # 10 a day for the year before the quarter, 30 a day in it: three times normal
+    quarter = Period.custom(start_date: Date.new(2026, 10, 1), end_date: Date.new(2026, 12, 31))
+    (Date.new(2025, 10, 1)...quarter.start_date).each { |d| create_transaction(account: @account, date: d, amount: 10, category: @travel) }
+    (quarter.start_date..Date.new(2026, 12, 20)).each { |d| create_transaction(account: @account, date: d, amount: 30, category: @travel) }
+
+    result = IncomeStatement::SpendingComparison.new(IncomeStatement.new(@family), period: quarter, history_start: Date.new(2025, 10, 1), as_of: Date.new(2026, 12, 20))
+
+    assert_in_delta 2, result.rows.find { |r| r.category == @travel }.ratio, 0.01
+  end
+
   test "a bill paid on the 1st reads as normal early in the month" do
     12.times { |i| create_transaction(account: @account, date: Date.new(2025, 9, 1) + i.months, amount: 1000, category: @travel) }
     create_transaction(account: @account, date: Date.new(2026, 9, 1), amount: 1000, category: @travel)
@@ -101,6 +112,16 @@ class IncomeStatement::SpendingComparisonTest < ActiveSupport::TestCase
     create_transaction(account: @account, date: Date.new(2026, 3, 2), amount: 25, category: @food)
 
     assert_equal Date.new(2026, 3, 2), IncomeStatement::SpendingComparison.history_start(IncomeStatement.new(@family))
+  end
+
+  test "history skips early investment contributions when investing isn't spending" do
+    create_transaction(account: @account, date: Date.new(2024, 1, 10), amount: 500, kind: "investment_contribution")
+    create_transaction(account: @account, date: Date.new(2026, 3, 2), amount: 25, category: @food)
+
+    assert_equal Date.new(2024, 1, 10), IncomeStatement::SpendingComparison.history_start(IncomeStatement.new(@family))
+
+    @family.update!(investment_contributions_as_spending: false)
+    assert_equal Date.new(2026, 3, 2), IncomeStatement::SpendingComparison.history_start(IncomeStatement.new(@family.reload))
   end
 
   test "changes list the parents that moved by at least 1, most increased first" do

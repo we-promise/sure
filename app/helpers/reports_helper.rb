@@ -86,7 +86,7 @@ module ReportsHelper
         ratio: row.ratio&.to_f,
         change_sign: row.change && (row.change.negative? ? -1 : 1),
         has_normal: comparison.comparable? && !row.normal.nil?,
-        description: spending_description(comparison, row, parent ? t("reports.spending_vs_normal.tooltip.path", parent: parent.category.name, category: name) : name),
+        description: spending_description(comparison, row, parent && name != parent.category.name ? t("reports.spending_vs_normal.tooltip.path", parent: parent.category.name, category: name) : name),
         href: spending_category_href(row.category, start_date:, end_date:)
       )
     end
