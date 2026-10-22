@@ -47,12 +47,17 @@
       <% if frequency_invalid %>
         <p id="<%= dom_id(account, :extra_frequency_error) %>" class="text-xs text-destructive" data-testid="extra-frequency-error"><%= extra_repayment.errors[:frequency].first %></p>
       <% end %>
-      <div class="flex items-center gap-2">
-        <%= render DS::Button.new(text: t(".apply"), type: "submit", variant: "outline") %>
-        <% if extra_repayment.input.present? %>
+      <%# The design system's form actions: Apply alone is the form's
+          full-width submit; with Clear it is a right-aligned pair, Clear
+          first. %>
+      <% if extra_repayment.input.present? %>
+        <div class="flex justify-end gap-2">
           <%= render DS::Link.new(text: t(".clear"), href: account_path(account, tab: "extra_repayments"), variant: "ghost") %>
-        <% end %>
-      </div>
+          <%= render DS::Button.new(text: t(".apply"), type: :submit) %>
+        </div>
+      <% else %>
+        <%= f.submit t(".apply") %>
+      <% end %>
     <% end %>
 
     <div class="grid grid-cols-1 @lg:grid-cols-3 gap-2" data-testid="extra-cards">

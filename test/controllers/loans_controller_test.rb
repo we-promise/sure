@@ -1176,6 +1176,30 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-testid='extra-not-cleared']", text: I18n.t("loans.tabs.extra_repayments.extra_not_cleared")
   end
 
+  # The design system's form actions: one action is the form's full-width
+  # primary submit; Clear and Apply are a right-aligned pair, Clear first as
+  # a ghost link and Apply the primary submit.
+  test "the extra repayments form ends in the design system's form actions" do
+    clear_href = account_path(@account, tab: "extra_repayments")
+    form = "form[method='get'][action='#{account_path(@account)}']"
+
+    get account_path(@account, tab: "extra_repayments")
+    assert_select "#{form} button[type='submit']", count: 1 do |buttons|
+      assert_includes buttons.first["class"], "w-full", "a single action is full width"
+      assert_includes buttons.first["class"], "bg-inverse", "and primary, not outline"
+    end
+    assert_select "#{form} a[href='#{clear_href}']", count: 0
+
+    get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "500" })
+    assert_select "#{form} div.justify-end", count: 1 do
+      assert_select "> a[href='#{clear_href}'] + button[type='submit']", count: 1
+    end
+    assert_select "#{form} button[type='submit']", count: 1 do |buttons|
+      assert_not_includes buttons.first["class"], "w-full", "a pair keeps natural widths"
+      assert_includes buttons.first["class"], "bg-inverse", "Apply stays the primary"
+    end
+  end
+
   # The tab says why there is nothing to model. A repaid loan has nothing
   # left to repay; a loan past its last scheduled repayment with a balance
   # still owing has no repayment to add an extra to, and must not be told

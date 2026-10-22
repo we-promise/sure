@@ -56,7 +56,7 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
       assert_no_selector "[data-controller='loan-payoff-chart'] svg path[data-series='extra']"
 
       # Laid out as the Bills form is: the amount and how often side by side,
-      # Apply on its own row below them at the form's left edge, and nothing
+      # Apply below them as the form's one full-width action, and nothing
       # wider than the tab.
       field = find_field(I18n.t("loans.tabs.extra_repayments.amount_label"))
       field_box = bounding_box(field.find(:xpath, "ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' form-field ')][1]"))
@@ -67,13 +67,24 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
       assert_in_delta field_box["top"], select_box["top"], 2, "the amount and how often must share a row"
       assert_operator select_box["left"], :>=, field_box["right"], "how often sits to the amount's right"
       assert_operator apply_box["top"], :>=, field_box["bottom"], "Apply sits below the fields"
-      assert_in_delta field_box["left"], apply_box["left"], 2, "at the form's left edge"
+      assert_in_delta form_box["left"], apply_box["left"], 2, "Apply alone spans the form, from its left edge"
+      assert_in_delta form_box["right"], apply_box["right"], 2, "to its right edge"
       assert_operator select_box["right"], :<=, form_box["right"] + 1, "and nothing overflows the form"
 
       field.fill_in with: "1000"
       select I18n.t("loans.tabs.extra_repayments.frequencies.weekly"), from: I18n.t("loans.tabs.extra_repayments.frequency_label")
       click_button I18n.t("loans.tabs.extra_repayments.apply")
       assert_field I18n.t("loans.tabs.extra_repayments.frequency_label"), with: "weekly"
+
+      # With an amount entered, Clear joins Apply as a right-aligned pair:
+      # Clear first, Apply at the form's right edge, both at natural width.
+      apply_box = bounding_box(find_button(I18n.t("loans.tabs.extra_repayments.apply")))
+      clear_box = bounding_box(find_link(I18n.t("loans.tabs.extra_repayments.clear")))
+      form_box = bounding_box(find_field(I18n.t("loans.tabs.extra_repayments.amount_label")).find(:xpath, "ancestor::form[1]"))
+      assert_in_delta form_box["right"], apply_box["right"], 2, "Apply ends the pair at the form's right edge"
+      assert_operator clear_box["right"], :<=, apply_box["left"], "Clear comes before Apply"
+      assert_in_delta clear_box["top"], apply_box["top"], 2, "on one row"
+      assert_operator apply_box["left"], :>, form_box["left"] + (form_box["right"] - form_box["left"]) / 2, "at natural width, not spanning the form"
 
       # Each card's figure fits inside its card, at the width the page has with
       # both side panels open. Three across only when the tab has room.
