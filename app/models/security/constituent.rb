@@ -21,7 +21,7 @@ class Security::Constituent < ApplicationRecord
   # `listed` maps each ticker to its fraction of the fund; `unlisted` is the
   # fraction no row names, zero for a whole-fund list.
   FundShares = Data.define(:listed, :unlisted)
-  NO_SHARES = FundShares.new(listed: {}.freeze, unlisted: 0)
+  NO_SHARES = FundShares.new(listed: {}.freeze, unlisted: BigDecimal("0"))
 
   belongs_to :security
 
@@ -31,7 +31,10 @@ class Security::Constituent < ApplicationRecord
   # rounded `Assets_%` and returns 0 for a position too small to round up to
   # 0.01. Refusing zero would fail that one row, and with it the import that
   # stores the rest of the fund alongside it.
-  validates :weight, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  #
+  # The upper bound is the column's: `weight` is numeric(9,6), so 1000 would
+  # pass a bare `>= 0` and then raise at the INSERT.
+  validates :weight, numericality: { greater_than_or_equal_to: 0, less_than: 1000 }, allow_nil: true
 
   # Rows with a nil weight say nothing about the fund's split and are skipped.
   # A list whose weights sum to zero declines to answer rather than dividing

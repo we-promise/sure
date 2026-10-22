@@ -89,7 +89,9 @@ class Security < ApplicationRecord
   has_many :trades, dependent: :nullify, class_name: "Trade"
   has_many :prices, dependent: :destroy
   has_many :splits, dependent: :destroy
-  has_many :constituents, class_name: "Security::Constituent", dependent: :destroy
+  # One DELETE: a world fund lists thousands of rows, and Security::Constituent
+  # has no callbacks for a per-row destroy to run.
+  has_many :constituents, class_name: "Security::Constituent", dependent: :delete_all
 
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
