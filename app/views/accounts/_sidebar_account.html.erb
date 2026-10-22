@@ -1,8 +1,9 @@
-<%# locals: (account:, color:) %>
+<%# locals: (account:, color:, link_class: nil) %>
 
 <%= link_to account_path(account),
           class: class_names(
             "block flex items-center gap-2 px-3 py-2 rounded-lg",
+            link_class,
             page_active?(account_path(account)) ? "bg-container" : "hover:bg-surface-hover"
           ),
           data: page_active?(account_path(account)) ? { active_account: true } : {},

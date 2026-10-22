@@ -152,6 +152,12 @@ en:
       new_account_group: "New %{account_group}"
       expand_all: Expand all
       collapse_all: Collapse all
+      reorder_account: "Move %{account}"
+      reorder_hint: Drag to reorder. With the keyboard, press Enter, then the arrow keys.
+      sort_mode:
+        start: Sort accounts
+        hint: Drag accounts by their handle to reorder them.
+        done: Done
     types:
       depository: Cash
       investment: Investment

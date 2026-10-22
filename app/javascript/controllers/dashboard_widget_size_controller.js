@@ -21,7 +21,7 @@ export default class extends Controller {
   }
 
   // Keep Enter/Space/arrow keydowns inside the menu from bubbling to the
-  // section-level dashboard-sortable handler, which would otherwise hijack them
+  // section-level sortable-list handler, which would otherwise hijack them
   // to toggle keyboard reorder mode.
   stopKeydown(event) {
     event.stopPropagation();

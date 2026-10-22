@@ -729,4 +729,142 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "form[action='#{refresh_valuation_property_path(@account)}']"
   end
+
+  test "link_valuation links a manual property after its first valuation succeeds" do
+    @account.property.update!(avm_provider: nil, avm_last_synced_on: 1.year.ago.to_date)
+    @account.property.address.update!(country: "United States")
+    Provider::Registry.stubs(:rentcast).returns(rentcast_provider_returning(Provider::Response.new(success?: true, data: valuation_data(612_000), error: nil)))
+
+    post link_valuation_property_path(@account, avm_provider: "rentcast")
+
+    assert_redirected_to account_path(@account)
+    assert_equal "Linked to RentCast and updated the property's value.", flash[:notice]
+    assert_equal "rentcast", @account.property.reload.avm_provider
+    assert_equal Date.current, @account.property.avm_last_synced_on
+    assert_equal 612_000, @account.reload.balance
+  end
+
+  test "link_valuation keeps the property unlinked when the first valuation fails" do
+    @account.property.update!(avm_provider: nil)
+    error = Provider::Rentcast::Error.new("No property found")
+    Provider::Registry.stubs(:rentcast).returns(rentcast_provider_returning(Provider::Response.new(success?: false, data: nil, error: error)))
+
+    post link_valuation_property_path(@account, avm_provider: "rentcast")
+
+    assert_redirected_to account_path(@account)
+    assert_equal "RentCast couldn't value this property, so it wasn't linked. Check that the address is correct, then try again.", flash[:alert]
+    assert_nil @account.property.reload.avm_provider
+    assert_equal 550_000, @account.reload.balance
+  end
+
+  test "link_valuation keeps the property unlinked when the provider budget is spent" do
+    @account.property.update!(avm_provider: nil)
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(false)
+    provider.expects(:fetch_property_valuation).never
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    post link_valuation_property_path(@account, avm_provider: "rentcast")
+
+    assert_nil @account.property.reload.avm_provider
+    assert flash[:alert].present?
+  end
+
+  test "link_valuation refuses an unconfigured provider" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:rentcast).returns(nil)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_redirected_to account_path(@account)
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "link_valuation refuses providers that need a property identifier" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:chimnie).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "chimnie")
+    end
+
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "link_valuation refuses addresses outside the provider's country" do
+    @account.property.update!(avm_provider: nil)
+    @account.property.address.update!(country: "Canada")
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "link_valuation requires a known country" do
+    @account.property.update!(avm_provider: nil)
+    @account.property.address.update!(country: "")
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "link_valuation does not replace an existing provider" do
+    @account.property.update!(avm_provider: "realie")
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_equal "realie", @account.property.reload.avm_provider
+  end
+
+  test "link_valuation is scoped to the current family" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:rentcast).returns(mock)
+    sign_in users(:empty)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post link_valuation_property_path(@account, avm_provider: "rentcast")
+    end
+
+    assert_response :not_found
+    assert_nil @account.property.reload.avm_provider
+  end
+
+  test "overview offers linking a manual property to a configured provider" do
+    @account.property.update!(avm_provider: nil)
+    Provider::Registry.stubs(:rentcast).returns(mock)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "form[action='#{link_valuation_property_path(@account, avm_provider: "rentcast")}']"
+    assert_select "form[action*='avm_provider=chimnie']", count: 0
+  end
+
+  private
+    def valuation_data(valuation)
+      Provider::PropertyValuationConcept::PropertyValuation.new(
+        valuation: valuation, currency: "USD", property_type: "single_family_home",
+        year_built: 2002, area_value: 1000, area_unit: "sqft"
+      )
+    end
+
+    def rentcast_provider_returning(response)
+      provider = mock
+      provider.stubs(:requests_remaining?).returns(true)
+      provider.stubs(:valuation_currency).returns("USD")
+      provider.stubs(:fetch_property_valuation).returns(response)
+      provider
+    end
 end

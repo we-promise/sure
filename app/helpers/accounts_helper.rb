@@ -68,6 +68,11 @@ module AccountsHelper
       # (this partial renders with skip_digest: true, so the template digest
       # would not otherwise reflect the change).
       Current.user&.always_expanded_account_groups&.sort,
+      # Changing the account order, or dragging an account in the manual
+      # order, must re-render the sidebar right away rather than after the
+      # 12h expiry.
+      Current.user&.default_account_order,
+      Current.user&.account_order&.manual? ? Digest::SHA256.hexdigest(Current.user.manual_account_order.to_json) : nil,
       account_grouping_primary(:sidebar),
       account_grouping_dimension(:sidebar)
     ]
@@ -110,6 +115,15 @@ module AccountsHelper
     return nil unless Current.user&.preview_features_enabled?
 
     Current.user&.account_grouping_for(view)
+  end
+
+  # Accounts can be dragged into a manual order only where every group is
+  # one account type, because the order is stored per type. Other groupings
+  # still show that order but offer no sort mode.
+  def account_sidebar_sortable?
+    Current.user&.account_order&.manual? &&
+      account_grouping_primary(:sidebar) == AccountGrouping::DEFAULT_PRIMARY &&
+      account_grouping_dimension(:sidebar).nil?
   end
 
   # Subgroups to render inside a first-level group for the given view, or

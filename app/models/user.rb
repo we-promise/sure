@@ -515,6 +515,25 @@ class User < ApplicationRecord
     end
   end
 
+  # Same answer as verify_otp, but spends nothing: lets a passkey registration
+  # refuse a bad code before the browser creates a credential the server would
+  # then throw away. The code is still consumed by verify_otp when it is saved.
+  def otp_code_status(code)
+    return :invalid if otp_secret.blank?
+
+    normalized_code = normalize_mfa_code(code)
+    return :invalid if normalized_code.blank?
+
+    return :accepted if totp.verify(normalized_code, drift_behind: 15, after: otp_last_used_at)
+
+    if backup_code_input?(normalized_code)
+      matched = Array(otp_backup_codes).any? { |stored_code| backup_code_matches?(stored_code, normalized_code) }
+      return matched ? :accepted : :invalid
+    end
+
+    totp.verify(normalized_code, drift_behind: 15) ? :replayed : :invalid
+  end
+
   def verify_otp?(code)
     verify_otp(code) == :accepted
   end
@@ -571,6 +590,44 @@ class User < ApplicationRecord
 
   def account_order
     AccountOrder.find(default_account_order) || AccountOrder.default
+  end
+
+  MANUAL_ACCOUNT_ORDER_LIMIT = 500
+
+  # Drag-and-drop order of accounts per account group, keyed by accountable
+  # key (e.g. "depository") with account ids in display order.
+  def manual_account_order
+    order = preferences&.dig("manual_account_order")
+    order.is_a?(Hash) ? order : {}
+  end
+
+  # Stores the order of one account group. Ids the user cannot access are
+  # dropped so the stored preference never references foreign accounts.
+  def update_manual_account_order(group_key, account_ids)
+    group_key = group_key.to_s
+    return false unless Accountable::TYPES.map(&:underscore).include?(group_key)
+    return false unless account_ids.is_a?(Array)
+
+    requested_ids = account_ids.map(&:to_s).uniq.first(MANUAL_ACCOUNT_ORDER_LIMIT)
+    accessible_ids = accessible_accounts.where(id: requested_ids, accountable_type: group_key.camelize).pluck(:id).to_set
+    ordered_ids = requested_ids.select { |id| accessible_ids.include?(id) }
+
+    with_locked_preferences do |prefs|
+      prefs["manual_account_order"] = manual_account_order.merge(group_key => ordered_ids)
+    end
+  end
+
+  # Locked read-modify-write of the preferences JSONB: yields a copy of the
+  # current preferences (re-read under a row lock) to change in place, then
+  # saves it, so concurrent updates of other keys are not lost. Attributes set
+  # on the user inside the block are saved with it.
+  def with_locked_preferences
+    transaction do
+      lock!
+      updated_prefs = (preferences || {}).deep_dup
+      yield updated_prefs
+      update!(preferences: updated_prefs)
+    end
   end
 
   def default_account_for_transactions
@@ -639,12 +696,10 @@ class User < ApplicationRecord
   # Adds or removes one key rather than taking the whole list, so a stale tab
   # hiding one widget can't bring back another hidden elsewhere.
   def update_dashboard_section_hidden(section_key, hidden)
-    transaction do
-      lock!
-
+    with_locked_preferences do |prefs|
       keys = dashboard_hidden_sections - [ section_key ]
       keys << section_key if hidden
-      update!(preferences: (preferences || {}).merge("hidden_sections" => keys))
+      prefs["hidden_sections"] = keys
     end
   end
 
@@ -669,12 +724,8 @@ class User < ApplicationRecord
   # laid_out_order is the order the dashboard laid its widgets out in, which
   # also places widgets the saved order doesn't list yet.
   def update_dashboard_preferences(prefs, laid_out_order: nil)
-    # Use pessimistic locking to ensure atomic read-modify-write
-    # This prevents race conditions when multiple sections are collapsed quickly
-    transaction do
-      lock! # Acquire row-level lock (SELECT FOR UPDATE)
-
-      updated_prefs = (preferences || {}).deep_dup
+    # Locked so sections collapsed in quick succession don't overwrite each other.
+    with_locked_preferences do |updated_prefs|
       if prefs["section_order"]
         prefs = prefs.merge("section_order" => keep_hidden_sections_in_order(prefs["section_order"], laid_out_order || dashboard_section_order))
       end
@@ -688,8 +739,6 @@ class User < ApplicationRecord
           updated_prefs[key] = value
         end
       end
-
-      update!(preferences: updated_prefs)
     end
   end
 
@@ -703,11 +752,7 @@ class User < ApplicationRecord
   end
 
   def update_reports_preferences(prefs)
-    # Use pessimistic locking to ensure atomic read-modify-write
-    transaction do
-      lock!
-
-      updated_prefs = (preferences || {}).deep_dup
+    with_locked_preferences do |updated_prefs|
       prefs.each do |key, value|
         if value.is_a?(Hash)
           updated_prefs[key] ||= {}
@@ -716,8 +761,6 @@ class User < ApplicationRecord
           updated_prefs[key] = value
         end
       end
-
-      update!(preferences: updated_prefs)
     end
   end
 

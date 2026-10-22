@@ -42,8 +42,10 @@ class BalanceSheet::AccountGroup
     accountable_type.present?
   end
 
+  # Counts the same accounts as the classification total and net worth, so the
+  # group weights add up and the sidebar sparkline matches this figure.
   def total
-    accounts.reject { |a| a.respond_to?(:exclude_from_reports?) && a.exclude_from_reports? }.sum(&:converted_balance)
+    BalanceSheet::ClassificationGroup.counted_accounts(accounts).sum(&:converted_balance)
   end
 
   # Total of all assets or all debts this group belongs to.
@@ -70,11 +72,13 @@ class BalanceSheet::AccountGroup
   # Splits the group's accounts by a second dimension (see AccountGrouping).
   # Every group shows the level, even when all its accounts share one value,
   # so the list reads the same in every group. Unknown dimensions, and
-  # dimensions this group's account type does not offer (their only subgroup
-  # would repeat the group name), return an empty array.
+  # dimensions this group's account type does not offer, return an empty
+  # array. So does the account type inside a type group (e.g. the type
+  # fallback of another first level): its only subgroup would repeat the
+  # group name.
   def subgroups(dimension, user:)
     return [] unless AccountGrouping.valid_dimension?(dimension)
-    return [] if type_group? && !AccountGrouping.applies_to?(dimension, accountable_type)
+    return [] if type_group? && (dimension.to_s == AccountGrouping::DEFAULT_PRIMARY || !AccountGrouping.applies_to?(dimension, accountable_type))
 
     AccountGrouping.new(dimension, user: user).group(accounts).map do |group|
       BalanceSheet::AccountSubgroup.new(key: group.key, name: group.name, accounts: group.accounts, account_group: self)
