@@ -72,10 +72,17 @@ class BudgetsProvider with ChangeNotifier {
 
   List<BudgetCategory> get categories => _current?.categories ?? const [];
 
+  /// True while the selected budget is not initialized yet: the web page then
+  /// shows every category rather than only the budgeted ones.
+  bool get showsAllCategories => budget != null && !budget!.initialized;
+
   /// Parent categories with their subcategories, limited to the lines the web
   /// budget page shows (budgeted, or with spending).
   List<BudgetCategoryGroup> get visibleGroups {
     final groups = BudgetCategoryGroup.build(categories);
+    // Web: `budget.initialized? ? visible_on_track? : true`. A budget that
+    // hasn't been set up yet lists every category so it can be configured.
+    if (showsAllCategories) return groups;
     final visible = <BudgetCategoryGroup>[];
     for (final group in groups) {
       final children = group.children.where((c) => c.isVisible).toList();
