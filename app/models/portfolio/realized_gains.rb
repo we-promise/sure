@@ -28,6 +28,17 @@
 #    the proceeds cannot be converted into the basis currency; folding that to
 #    0 drags a total toward zero with no sign that anything is missing. Those
 #    disposals are excluded and counted.
+#
+# A disposal is a sell trade on an entry that is not excluded: an excluded
+# entry is left out of reports, as InvestmentStatement::Totals and the
+# Reports card's realised list leave it out. The gain is the one
+# Trade#realized_gain_loss gives, against the holding's average cost at the
+# time of the sale, not a FIFO or specific-lot basis.
+#
+# Rates are read for the exact sale date (rule 3), with no carry-forward: a
+# disposal on a day with no stored rate (a weekend, if the rate import skips
+# them) is reported in #excluded_trades rather than valued at a neighbouring
+# day's.
 class Portfolio::RealizedGains
   # One calendar month of realised activity. `losses` is a positive
   # magnitude; `net` carries the sign.
@@ -50,11 +61,13 @@ class Portfolio::RealizedGains
   # `active_until_dates` is `{ account_id => last_active_date }` for disabled
   # accounts, the shape Balance::ChartSeriesBuilder takes as
   # `account_active_until_dates`: a disposal after that date does not count.
+  # Values may be anything with `to_date` (a Date or an ISO string): the
+  # builder accepts both, as it hands them to SQL as JSON.
   def initialize(accounts:, period:, currency:, active_until_dates: {})
     @accounts = Array(accounts)
     @period = period
     @currency = currency
-    @active_until_dates = (active_until_dates || {}).compact
+    @active_until_dates = (active_until_dates || {}).compact.transform_keys(&:to_s).transform_values(&:to_date)
   end
 
   # Months with realised activity, oldest first. A month with no disposals is
@@ -153,7 +166,7 @@ class Portfolio::RealizedGains
 
       trades = Trade
         .joins(:entry)
-        .where(entries: { account_id: account_ids, date: period.date_range })
+        .where(entries: { account_id: account_ids, date: period.date_range, excluded: false })
         .where("trades.qty < 0")
         # Rule 1, in SQL so these are never loaded. Trade#realized_gain_loss
         # independently returns nil for them; neither check is load-bearing
@@ -173,7 +186,7 @@ class Portfolio::RealizedGains
     # A disabled account stops contributing on its cut-off date, as it stops
     # contributing to the balance series.
     def after_cutoff?(trade)
-      cutoff = active_until_dates[trade.entry.account_id]
+      cutoff = active_until_dates[trade.entry.account_id.to_s]
       cutoff.present? && trade.entry.date > cutoff
     end
 
