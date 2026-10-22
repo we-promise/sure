@@ -142,7 +142,9 @@ class Api::V1::SplitsController < Api::V1::BaseController
         )
         .order("entries.created_at")
         .to_a
-      @split_parent_entry_ids = split_parent_entry_ids_for(@children)
+      # Children can never be split parents themselves (splittable? refuses
+      # split children), so skip the lookup query.
+      @split_parent_entry_ids = Set.new
 
       render :show, status: status
     end
