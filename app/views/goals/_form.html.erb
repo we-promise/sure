@@ -27,15 +27,10 @@
         not have. %>
     <div class="grid grid-cols-2 gap-2">
       <% Goal::KINDS.each do |kind| %>
-        <label class="flex items-start gap-2 rounded-lg border border-primary p-3 cursor-pointer has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
-          <%= f.radio_button :kind, kind,
-                             class: "radio mt-0.5 shrink-0",
-                             data: { goal_kind_target: "radio", action: "change->goal-kind#refresh" } %>
-          <span class="min-w-0">
-            <span class="block text-sm font-medium text-primary"><%= t("goals.form.kinds.#{kind}.label") %></span>
-            <span class="block text-xs text-secondary"><%= t("goals.form.kinds.#{kind}.hint") %></span>
-          </span>
-        </label>
+        <%= render "goals/radio_card", form: f, attribute: :kind, value: kind,
+                   label: t("goals.form.kinds.#{kind}.label"),
+                   hint: t("goals.form.kinds.#{kind}.hint"),
+                   radio_options: { data: { goal_kind_target: "radio", action: "change->goal-kind#refresh" } } %>
       <% end %>
     </div>
 
@@ -213,16 +208,11 @@
       <legend class="block text-sm font-medium text-primary"><%= t("goals.form.fields.progress_basis") %></legend>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1.5">
         <% Goal::PROGRESS_BASES.each do |basis| %>
-          <label class="flex items-start gap-2 rounded-lg border border-primary p-3 <%= basis_locked ? "cursor-not-allowed opacity-60" : "cursor-pointer" %> has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
-            <%= f.radio_button :progress_basis, basis,
-                               checked: basis == (basis_locked ? goal.progress_basis_in_database : goal.progress_basis),
-                               disabled: basis_locked,
-                               class: "radio mt-0.5 shrink-0" %>
-            <span class="min-w-0">
-              <span class="block text-sm font-medium text-primary"><%= t("goals.form.progress_bases.#{basis}.label") %></span>
-              <span class="block text-xs text-secondary"><%= t("goals.form.progress_bases.#{basis}.hint") %></span>
-            </span>
-          </label>
+          <%= render "goals/radio_card", form: f, attribute: :progress_basis, value: basis,
+                     label: t("goals.form.progress_bases.#{basis}.label"),
+                     hint: t("goals.form.progress_bases.#{basis}.hint"),
+                     radio_options: { checked: basis == (basis_locked ? goal.progress_basis_in_database : goal.progress_basis) },
+                     disabled: basis_locked %>
         <% end %>
       </div>
       <% if basis_locked %>
