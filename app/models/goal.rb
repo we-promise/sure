@@ -954,7 +954,7 @@ class Goal < ApplicationRecord
   end
 
   # "I just transferred" when any linked account resolves pledges via a transfer
-  # (synced accounts AND investment accounts, per default_pledge_kind); "I just
+  # (synced accounts AND investment/crypto accounts, per default_pledge_kind); "I just
   # saved" only for manual cash accounts. Keyed off default_pledge_kind so the
   # copy matches the kind actually saved — a manual brokerage uses transfer, not
   # manual_save, so it must not show the "update your manual balance" path.

@@ -894,6 +894,12 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal "transfer", accounts(:investment).default_pledge_kind
   end
 
+  test "manual crypto accounts default to transfer pledge kind, never manual_save" do
+    crypto = accounts(:crypto)
+    assert crypto.manual?
+    assert_equal "transfer", crypto.default_pledge_kind
+  end
+
   test "adding an investment account via update flips a depository goal to contributions" do
     goal = goals(:emergency_fund)
     assert_equal "balance", goal.progress_basis
