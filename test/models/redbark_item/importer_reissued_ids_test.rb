@@ -88,6 +88,75 @@ class RedbarkItem::ImporterReissuedIdsTest < ActiveSupport::TestCase
     assert_not_includes snapshot_ids, "bank_tx_s_X"
   end
 
+  # While the generated id is the only row served, its payload is the
+  # current one, so it reaches the kept entry under the kept id.
+  test "a generated id's payload reaches the kept entry while it is the only row served" do
+    entry = import_original(row("A", "FALLS RESTAURANT 94.06"))
+
+    sync([ row("bank_tx_s_X", "FALLS RESTAURANT 94.06 ZA") ])
+    assert_equal "FALLS RESTAURANT 94.06 ZA", entry.reload.notes
+    assert_equal [ "A" ], snapshot_ids
+
+    assert_no_difference -> { @account.entries.count } do
+      sync([ row("bank_tx_s_X", "FALLS RESTAURANT 94.06 ZAR", amount: "51.00") ])
+    end
+    entry.reload
+    assert_equal "redbark_A", entry.external_id
+    assert_equal "FALLS RESTAURANT 94.06 ZAR", entry.notes
+    assert_equal(-51, entry.amount.to_i)
+    assert_equal [ "A" ], snapshot_ids
+  end
+
+  test "the restored id's payload wins over an aliased id served beside it" do
+    entry = import_original(row("A", "FALLS RESTAURANT 94.06"))
+    sync([ row("bank_tx_s_X", "FALLS RESTAURANT 94.06") ])
+
+    sync([ row("A", "FALLS RESTAURANT RESTORED"), row("bank_tx_s_X", "FALLS RESTAURANT 94.06 ZA") ])
+
+    assert_equal "FALLS RESTAURANT RESTORED", entry.reload.notes
+    assert_equal [ "A" ], snapshot_ids
+  end
+
+  test "an aliased id is dropped once its kept entry is re-keyed" do
+    entry = import_original(row("A", "TRANSFER 1000000001 FROM 000-111-222333"))
+    sync([ row("bank_tx_s_X", "TRANSFER 1000000001 FROM 000-111-222333") ])
+
+    assert_no_difference -> { @account.entries.count } do
+      sync([ row("bank_tx_s_X", "TRANSFER 1000000001 FROM 000-111-222333"), row("B", "TRANSFER 1000000001 FROM 000-111-222") ])
+      sync([ row("bank_tx_s_X", "TRANSFER 1000000001 FROM 000-111-222333"), row("B", "TRANSFER 1000000001 FROM 000-111-222") ])
+    end
+    assert_equal "redbark_B", entry.reload.external_id
+    assert_equal [ "B" ], snapshot_ids
+  end
+
+  test "the alias survives the processor's next import of the entry" do
+    entry = import_original(row("A", "FALLS RESTAURANT 94.06"))
+    sync([ row("bank_tx_s_X", "FALLS RESTAURANT 94.06") ])
+    sync([ row("A", "FALLS RESTAURANT 94.06") ])
+
+    assert_equal [ "bank_tx_s_X" ], entry.reload.transaction.extra.dig("redbark", "alias_ids")
+  end
+
+  test "a reference Redbark stops sending is cleared from the transaction" do
+    entry = import_original(row("A", ORIGINAL, reference: "75400000000000000000001"))
+    assert_equal "75400000000000000000001", entry.transaction.extra.dig("redbark", "reference"), "precondition"
+
+    sync([ row("A", ORIGINAL) ])
+
+    assert_not entry.reload.transaction.extra["redbark"].key?("reference")
+  end
+
+  test "a reference Redbark stops sending is cleared from a user-modified transaction" do
+    entry = import_original(row("A", ORIGINAL, reference: "75400000000000000000001"))
+    entry.update!(name: "Card repayment", user_modified: true)
+
+    sync([ row("A", ORIGINAL) ])
+
+    entry.reload
+    assert_equal "Card repayment", entry.name
+    assert_not entry.transaction.extra["redbark"].key?("reference")
+  end
+
   test "a generated id with no entry to alias is imported" do
     @redbark_account.update!(raw_transactions_payload: [ row("A", "FALLS RESTAURANT 94.06") ])
 

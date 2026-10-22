@@ -155,11 +155,11 @@ class RedbarkItem::Importer
           stored = redbark_account.raw_transactions_payload || []
 
           RedbarkAccount.transaction do
-            dropped_stored_ids, dropped_fetched_ids = apply_reissued_ids(redbark_account, stored, transactions_hashes, start_date)
+            dropped_stored_ids, kept_ids_by_alias = apply_reissued_ids(redbark_account, stored, transactions_hashes, start_date)
 
             merged = merge_transactions(
               stored.reject { |t| dropped_stored_ids.include?(transaction_key(t)) },
-              transactions_hashes.reject { |t| dropped_fetched_ids.include?(transaction_key(t)) },
+              fold_aliases(transactions_hashes, kept_ids_by_alias, dropped_stored_ids),
               window_start: start_date
             )
             redbark_account.upsert_redbark_transactions_snapshot!(merged)
@@ -364,9 +364,9 @@ class RedbarkItem::Importer
     end
 
     # Points existing entries at the ids a bank re-issued (see
-    # RedbarkAccount::TransactionIdReissue) and returns the stored and fetched
-    # ids to leave out of the snapshot, so the processor can't import the old
-    # or generated row as a second entry.
+    # RedbarkAccount::TransactionIdReissue). Returns the stored ids to leave
+    # out of the snapshot, so the processor can't import the old row as a
+    # second entry, and { generated id => kept id } for fold_aliases.
     #
     # A re-key moves only external_id: a protected entry keeps everything
     # else, and an unprotected one is refreshed from the new row by the
@@ -375,26 +375,28 @@ class RedbarkItem::Importer
     # such entry it is handled like any other new id.
     def apply_reissued_ids(redbark_account, stored, fetched, window_start)
       entries = redbark_account.current_account&.entries&.where(source: "redbark")
-      return [ Set.new, Set.new ] if entries.nil?
+      return [ Set.new, {} ] if entries.nil?
 
-      known_alias_ids = Transaction.where(id: entries.where(entryable_type: "Transaction").select(:entryable_id))
+      kept_ids_by_alias = entries.where(entryable_type: "Transaction")
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
         .where("transactions.extra -> 'redbark' -> 'alias_ids' IS NOT NULL")
-        .pluck(Arel.sql("transactions.extra -> 'redbark' -> 'alias_ids'"))
-        .flatten.map(&:to_s).to_set
+        .pluck(:external_id, Arel.sql("transactions.extra -> 'redbark' -> 'alias_ids'"))
+        .each_with_object({}) do |(external_id, alias_ids), map|
+          Array(alias_ids).each { |alias_id| map[alias_id.to_s] = external_id.delete_prefix("redbark_") }
+        end
 
       result = RedbarkAccount::TransactionIdReissue.new(
-        stored: stored, fetched: fetched, window_start: window_start, known_alias_ids: known_alias_ids
+        stored: stored, fetched: fetched, window_start: window_start, known_alias_ids: kept_ids_by_alias.keys
       ).call
 
       dropped_stored_ids = Set.new
-      dropped_fetched_ids = known_alias_ids.dup
 
       result.aliases.each do |kept_id, generated_id|
         entry = entries.find_by(external_id: "redbark_#{kept_id}", entryable_type: "Transaction")
 
         if entry
           record_alias(entry.entryable, generated_id)
-          dropped_fetched_ids << generated_id
+          kept_ids_by_alias[generated_id] = kept_id
         else
           dropped_stored_ids << kept_id
         end
@@ -421,7 +423,24 @@ class RedbarkItem::Importer
           .update_all(external_id: "redbark_#{new_id}", updated_at: Time.current)
       end
 
-      [ dropped_stored_ids, dropped_fetched_ids ]
+      [ dropped_stored_ids, kept_ids_by_alias ]
+    end
+
+    # A generated id stands in for its kept id. While it is the only row of
+    # the two served, its payload is the current one, so it goes into the
+    # snapshot under the kept id and the processor refreshes the kept entry
+    # from it. It is dropped once the kept id is served again, or when the
+    # kept row left the snapshot this sync (re-keyed away).
+    def fold_aliases(fetched, kept_ids_by_alias, dropped_stored_ids)
+      fetched_ids = fetched.map { |t| transaction_key(t) }.to_set
+
+      fetched.filter_map do |t|
+        kept_id = kept_ids_by_alias[transaction_key(t)]
+        next t unless kept_id
+        next if fetched_ids.include?(kept_id) || dropped_stored_ids.include?(kept_id)
+
+        t.merge(t.key?(:id) ? { id: kept_id } : { "id" => kept_id })
+      end
     end
 
     def record_alias(transaction, generated_id)

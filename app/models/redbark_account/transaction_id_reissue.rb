@@ -10,14 +10,19 @@
 #
 # Within one sync, a stored posted row that vanished from the fetch window is
 # paired with a newly seen row only when the two agree on amount, sit at most
-# MAX_DATE_GAP days apart, are related (equal real references, or else one
-# description is a prefix of the other) and each is the other's only candidate.
+# MAX_DATE_GAP days apart, are related (equal real references, or else equal
+# descriptions, or one at least MIN_PREFIX_LENGTH long that prefixes the
+# other) and each is the other's only candidate.
 # Anything ambiguous is left alone, so the worst case is today's duplicate.
 class RedbarkAccount::TransactionIdReissue
   include RedbarkAccount::DataHelpers
 
   GENERATED_ID_PREFIX = "bank_tx_s_"
   MAX_DATE_GAP = 3
+  # A shorter description prefixes too many unrelated ones ("FEE" of "FEE
+  # REVERSAL"). The truncations seen keep the transfer number and most of
+  # the account, well past this.
+  MIN_PREFIX_LENGTH = 16
   # "0" is a placeholder on provisional rows, never a real reference
   PLACEHOLDER_REFERENCES = [ "0" ].freeze
 
@@ -92,8 +97,8 @@ class RedbarkAccount::TransactionIdReissue
       if a[:reference] && b[:reference]
         a[:reference] == b[:reference]
       else
-        x, y = a[:description], b[:description]
-        x.present? && y.present? && (x.start_with?(y) || y.start_with?(x))
+        x, y = [ a[:description], b[:description] ].sort_by(&:length)
+        x.present? && (x == y || (x.length >= MIN_PREFIX_LENGTH && y.start_with?(x)))
       end
     end
 
@@ -108,22 +113,10 @@ class RedbarkAccount::TransactionIdReissue
       {
         id: t[:id].to_s,
         status: t[:status].to_s,
-        date: safe_date(t[:date] || t[:postDate]),
-        amount: safe_decimal(t[:amount]),
+        date: parse_date(t[:date] || t[:postDate]),
+        amount: parse_decimal(t[:amount]),
         description: t[:description].to_s.squish.downcase,
         reference: reference.blank? || PLACEHOLDER_REFERENCES.include?(reference) ? nil : reference
       }
-    end
-
-    def safe_decimal(value)
-      parse_decimal(value)
-    rescue ArgumentError
-      nil
-    end
-
-    def safe_date(value)
-      parse_date(value)
-    rescue ArgumentError
-      nil
     end
 end

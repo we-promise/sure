@@ -55,6 +55,24 @@ class RedbarkAccount::TransactionIdReissueTest < ActiveSupport::TestCase
     assert_no_pairs detect(stored, fetched)
   end
 
+  # A short description is a prefix of too many others: "FEE" of
+  # "FEE REVERSAL", "UBER" of "UBER EATS".
+  test "leaves a short description that prefixes a longer one alone" do
+    assert_no_pairs detect([ row("A", "FEE") ], [ row("B", "FEE REVERSAL") ])
+    assert_no_pairs detect([ row("A", "UBER EATS SYDNEY") ], [ row("B", "UBER") ])
+  end
+
+  test "pairs a prefix at the minimum length and not one character shorter" do
+    shorter = "a" * RedbarkAccount::TransactionIdReissue::MIN_PREFIX_LENGTH
+
+    assert_equal [ %w[A B] ], detect([ row("A", "#{shorter} more") ], [ row("B", shorter) ]).re_keys
+    assert_no_pairs detect([ row("A", "#{shorter} more") ], [ row("B", shorter.chop) ])
+  end
+
+  test "pairs equal short descriptions" do
+    assert_equal [ %w[A B] ], detect([ row("A", "FEE") ], [ row("B", "FEE") ]).re_keys
+  end
+
   test "leaves a vanished row with no new candidate alone" do
     assert_no_pairs detect([ row("A", "TRANSFER 1") ], [ row("Z", "SOMETHING ELSE", amount: "-1.00") ])
   end
