@@ -193,6 +193,36 @@ class IncomeStatementTest < ActiveSupport::TestCase
     IncomeStatement.new(@family).daily_expense_series(period: period, category_ids: [ @food_category.id ])
   end
 
+  test "average month series averages each day of the month over the period" do
+    june_1 = Date.new(2026, 6, 1)
+    create_transaction(account: @checking_account, amount: 100, date: june_1, category: @groceries_category)
+    create_transaction(account: @checking_account, amount: 300, date: Date.new(2026, 7, 1), category: @groceries_category)
+    create_transaction(account: @checking_account, amount: 50, date: Date.new(2026, 7, 31))
+
+    series = IncomeStatement.new(@family).average_month_expense_series(period: Period.custom(start_date: june_1, end_date: Date.new(2026, 7, 31)))
+
+    assert_equal (1..31).to_a, series.map(&:day)
+    # Day 1 averages June's and July's; day 31 exists only in July.
+    assert_equal 200, series.first.total
+    assert_equal 200, series[29].total
+    assert_equal 250, series.last.total
+  end
+
+  test "average month series leaves days the period never reaches blank, and filters by category" do
+    create_transaction(account: @checking_account, amount: 40, date: Date.new(2026, 6, 10), category: @groceries_category)
+    create_transaction(account: @checking_account, amount: 9, date: Date.new(2026, 6, 11))
+    period = Period.custom(start_date: Date.new(2026, 6, 9), end_date: Date.new(2026, 6, 12))
+    statement = IncomeStatement.new(@family)
+
+    series = statement.average_month_expense_series(period: period)
+    assert_equal (1..12).to_a, series.map(&:day)
+    assert_equal [ nil ] * 8, series.first(8).map(&:total)
+    assert_equal [ 0, 40, 49, 49 ], series.last(4).map(&:total)
+
+    filtered = statement.average_month_expense_series(period: period, category_ids: [ @food_category.id ])
+    assert_equal [ 0, 40, 40, 40 ], filtered.last(4).map(&:total)
+  end
+
   test "calculates totals for transactions" do
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)

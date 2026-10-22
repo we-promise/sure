@@ -178,6 +178,7 @@ en:
         filter_categories_all: "All categories"
         search_categories: "Search categories"
         apply: "Apply"
-        period_scope_hint: "Shows the month you pick here — independent of the dashboard's time period at the top."
+        period_scope_hint: "Shows the month you pick here, against an average month from the dashboard's time period at the top."
+        average_label: "Avg. %{period}"
         no_data: "No spending data for this month"
         previous_comparison_days: "(1-%{end_day})"

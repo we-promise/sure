@@ -156,6 +156,25 @@ class IncomeStatement
       .map { |date, rows| DailyExpenseTotals::DailyTotal.new(date: date, total: rows.sum { |row| row.total.to_d }) }
   end
 
+  # An average month of spending over `period`, to compare one month's
+  # cumulative spend against: for each day of the month, the average spend
+  # on the period's dates that fall on that day, accumulated across the
+  # month. A day of the month the period never reaches has a nil total, so
+  # a one-month period gives that month's own cumulative curve and a short
+  # one (a week, say) covers only its own days. `category_ids` filters as in
+  # daily_expense_series.
+  def average_month_expense_series(period:, category_ids: nil)
+    daily = daily_expense_series(period: period, category_ids: category_ids).index_by(&:date)
+    dates_by_day = period.date_range.group_by(&:day)
+    cumulative = 0.to_d
+
+    (1..dates_by_day.keys.max).map do |day|
+      dates = dates_by_day[day]
+      cumulative += dates.sum { |date| daily[date] ? daily[date].total.to_d : 0 } / dates.size if dates
+      AverageMonthDay.new(day: day, total: dates && cumulative)
+    end
+  end
+
   # Categories with spending in the period's daily series, nil standing for
   # uncategorized spending. These are the categories a filter on that series
   # can usefully offer.
@@ -208,6 +227,7 @@ class IncomeStatement
 
   private
     ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money, :invested_money)
+    AverageMonthDay = Data.define(:day, :total)
     PeriodTotal = Data.define(:classification, :total, :currency, :category_totals)
     CategoryTotal = Data.define(:category, :total, :currency, :weight)
     NetCategoryTotals = Data.define(:net_expense_categories, :net_income_categories, :total_net_expense, :total_net_income, :currency)

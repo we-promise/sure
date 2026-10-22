@@ -14,7 +14,7 @@ class Provider::Anthropic::ProviderMerchantEnhancer
   end
 
   def enhance_merchants
-    span = langfuse_trace&.span(name: "enhance_provider_merchants_api_call", input: {
+    span = langfuse_trace&.generation(name: "enhance_provider_merchants_api_call", model: model, input: {
       model: model,
       merchants: merchants
     })
@@ -141,14 +141,5 @@ class Provider::Anthropic::ProviderMerchantEnhancer
 
     def block_input(block)
       block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
-    end
-
-    def usage_hash(raw_usage)
-      return {} unless raw_usage
-      {
-        "input_tokens" => raw_usage.input_tokens.to_i,
-        "output_tokens" => raw_usage.output_tokens.to_i,
-        "total_tokens" => raw_usage.input_tokens.to_i + raw_usage.output_tokens.to_i
-      }
     end
 end
