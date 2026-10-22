@@ -335,7 +335,9 @@ class Family::DataImporter
           status: importable_account_status(data["status"])
         )
         # Older or hand-built files omit iban; don't clear an existing one.
-        if data.key?("iban")
+        # Types without an IBAN (vehicle, property, ...) ignore it, like
+        # Account#clear_unsupported_iban does on every save.
+        if data.key?("iban") && account.supports_iban?
           assign_imported_iban(account, data["iban"], @family.accounts.where(currency: account.currency), "AccountIban")
         end
 

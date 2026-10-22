@@ -189,6 +189,38 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_equal "NL91ABNA0417164300", linked_account.reload.iban # pipelock:ignore IBAN
   end
 
+  test "propagates the iban without logging it in plaintext to data_enrichments" do
+    linked_account = accounts(:depository)
+    AccountProvider.create!(provider: @account, account: linked_account)
+
+    assert_no_difference -> { DataEnrichment.where(enrichable: linked_account).count } do
+      @account.upsert_enable_banking_snapshot!({
+        uid: "uid_uuid_123",
+        identification_hash: "hash_abc123",
+        currency: "EUR",
+        cash_account_type: "CACC",
+        iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+      })
+    end
+
+    assert_equal "NL91ABNA0417164300", linked_account.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "does not propagate an iban to a linked account type without one" do
+    linked_account = accounts(:vehicle)
+    AccountProvider.create!(provider: @account, account: linked_account)
+
+    @account.upsert_enable_banking_snapshot!({
+      uid: "uid_uuid_123",
+      identification_hash: "hash_abc123",
+      currency: "EUR",
+      cash_account_type: "CACC",
+      iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+    })
+
+    assert_nil linked_account.reload.iban
+  end
+
   test "does not overwrite an already-present account iban on sync" do
     linked_account = accounts(:depository)
     linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
@@ -289,11 +321,11 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     # #with_lock only serializes writers to the target row; it can't stop a
     # DIFFERENT blank-iban account in the family from concurrently passing
     # the same Rails-level uniqueness check and then losing at the raw DB
-    # index on commit -- surfacing as RecordNotUnique, which enrich_attribute's
-    # plain `save` does not rescue on its own.
+    # index on commit -- surfacing as RecordNotUnique, which a plain
+    # `update` does not rescue on its own.
     linked_account = accounts(:depository)
     AccountProvider.create!(provider: @account, account: linked_account)
-    Account.any_instance.stubs(:enrich_attribute).raises(
+    Account.any_instance.stubs(:update).raises(
       ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
     )
 

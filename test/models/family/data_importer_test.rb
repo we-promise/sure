@@ -99,6 +99,23 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 1, result[:summary].dig("account_ibans", "skipped")
   end
 
+  test "ignores an iban on an account type without one, even when it is taken" do
+    account_data = {
+      balance: "100.00",
+      currency: "USD",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    }
+
+    result = Family::DataImporter.new(@family, build_ndjson([
+      { type: "Account", data: account_data.merge(id: "old-account-1", name: "Checking", accountable_type: "Depository", accountable: { subtype: "checking" }) },
+      { type: "Account", data: account_data.merge(id: "old-account-2", name: "Car", accountable_type: "Vehicle", accountable: {}) }
+    ])).import!
+
+    accounts = result[:accounts].index_by(&:name)
+    assert_nil accounts["Car"].reload.iban
+    assert_nil result[:summary].dig("account_ibans", "skipped")
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {
