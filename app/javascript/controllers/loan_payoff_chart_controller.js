@@ -212,28 +212,43 @@ export default class extends Controller {
       .x((d) => x(d.date))
       .y((d) => y(d.balance))
       .curve(d3.curveMonotoneX);
-    // The scheduled payments' shares, for the shading. The opening point is
-    // the amount borrowed, not a payment, so it has no split and is skipped.
-    // A share is clamped to 0..1 so a payment that adds to the balance cannot
-    // draw outside the area under the line.
-    const shares = series.some((s) => s.key === "scheduled")
-      ? (data.scheduled || [])
-          .map(toPoint)
-          .filter(
-            (p) =>
-              p.principal != null &&
-              p.interest != null &&
-              p.principal + p.interest > 0,
-          )
-          .map((p) => ({
-            date: p.date,
-            balance: p.balance,
-            principalShare: Math.min(
-              1,
-              Math.max(0, p.principal / (p.principal + p.interest)),
-            ),
-          }))
+    // The scheduled payments' shares, for the shading. A share is clamped to
+    // 0..1 so a payment that adds to the balance cannot draw outside the area
+    // under the line.
+    const scheduledPoints = series.some((s) => s.key === "scheduled")
+      ? (data.scheduled || []).map(toPoint)
       : [];
+    const paymentShares = scheduledPoints
+      .filter(
+        (p) =>
+          p.principal != null &&
+          p.interest != null &&
+          p.principal + p.interest > 0,
+      )
+      .map((p) => ({
+        date: p.date,
+        balance: p.balance,
+        principalShare: Math.min(
+          1,
+          Math.max(0, p.principal / (p.principal + p.interest)),
+        ),
+      }));
+    // The opening point is the amount borrowed, not a payment, so it has no
+    // split of its own. It anchors the shading's left end with the first
+    // payment's share, so the area under the line is shaded from origination
+    // and a loan of one repayment still has an interval to shade.
+    const opening = scheduledPoints[0];
+    const shares =
+      opening && opening.principal == null && paymentShares.length > 0
+        ? [
+            {
+              date: opening.date,
+              balance: opening.balance,
+              principalShare: paymentShares[0].principalShare,
+            },
+            ...paymentShares,
+          ]
+        : paymentShares;
     const principalTop = (d) => y(d.balance * d.principalShare);
     const principalArea = d3
       .area()
