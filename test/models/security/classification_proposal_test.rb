@@ -422,6 +422,17 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
     assert_equal "equity", Security::ClassificationProposal.sole.asset_class
   end
 
+  test "an over-long sector or rationale is refused, and the longest allowed is kept" do
+    { sector: 255, rationale: 2000 }.each do |field, limit|
+      too_long = Security::ClassificationProposal.new(security: @security, family: @family, asset_class: "equity", field => "x" * (limit + 1))
+      assert_not too_long.valid?, "#{field} accepted #{limit + 1} characters"
+      assert too_long.errors[field].any?
+
+      longest = Security::ClassificationProposal.new(security: @security, family: @family, asset_class: "equity", field => "x" * limit)
+      assert longest.valid?, "#{field} refused #{limit} characters"
+    end
+  end
+
   # Two first proposals for one pair: both miss `find_by`, and the loser's
   # INSERT hits the unique index.
   test "a first proposal that loses the insert race updates the winner's row instead" do

@@ -22,6 +22,10 @@ class Security::ClassificationProposal < ApplicationRecord
   validates :asset_class, inclusion: { in: Security::ASSET_CLASSES }, allow_nil: true
   validates :asset_sub_class, inclusion: { in: Security::ASSET_SUB_CLASSES }, allow_nil: true
   validates :region, inclusion: { in: Security::REGION_KEYS }, allow_nil: true
+  # Free text from the model or an `/mcp` client, read by a person on a review
+  # screen. Bounded so one entry cannot store megabytes in front of them.
+  validates :sector, length: { maximum: 255 }
+  validates :rationale, length: { maximum: 2000 }
   # On every save that leaves the proposal pending, not on create only:
   # `propose!` revives an existing row through `update!`, and that path must
   # meet the same veto. An approval or a rejection is not a new proposal, so
