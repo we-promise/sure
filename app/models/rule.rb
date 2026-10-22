@@ -39,13 +39,29 @@ class Rule < ApplicationRecord
   # (by the toggle, the form, Apply or an import) would otherwise email every match
   # from before, including those from while it was off.
   #
+  # The baseline also describes the match set of the conditions and effective date it
+  # was taken under. An edit that changes them can bring older transactions into
+  # range, and the next run would email them as new, so the baseline is taken
+  # again. Active or not: Apply all runs inactive rules too, and the action's own
+  # seed does not check `active` either.
+  #
+  # The change is noted before the update, while nested attributes still hold it
+  # in memory: once autosave has run, a destroyed condition is gone from the
+  # association and a saved one no longer reports a pending change.
+  #
+  # A condition reporting a change is then checked against the stored criteria,
+  # one query, since the importers replace every condition on each re-import. An
+  # identical re-import must not re-seed: that would record a match still waiting
+  # for the next run as delivered, and it would never be emailed.
+  #
   # after_update, not after_update_commit: it runs inside the save's transaction,
-  # after the nested conditions and actions are written, so the baseline is taken
-  # from the conditions as saved and is committed together with `active`. Nothing
-  # can see the rule switched on without its baseline. Declared after the nested
-  # attributes so it runs after their autosave. A new rule needs no callback:
-  # creating its email action seeds the baseline.
-  after_update :seed_notification_baseline, if: :switched_on?
+  # after the nested conditions and actions are written (it is declared after
+  # accepts_nested_attributes_for, so it runs after their autosave), and reads
+  # them on the same connection as saved. The new baseline commits together with
+  # the edit, so nothing can see the new conditions without it, and if writing it
+  # fails the edit rolls back rather than leaving a stale baseline behind.
+  before_update :note_match_criteria_change
+  after_update :seed_notification_baseline, if: :notification_baseline_out_of_date?
 
   # Set when this save's after_update took the baseline, or tried to and timed
   # out. Rule::Action's commit callback for an email action added in the same
@@ -57,8 +73,9 @@ class Rule < ApplicationRecord
     @notification_baseline_taken == true
   end
 
-  # True when the last save asked to switch the rule on, or gave it an email
-  # action, but the baseline query timed out, so the rule was left off.
+  # True when the last save asked to switch the rule on, changed what it matches,
+  # or gave it an email action, but the baseline query timed out, so the rule was
+  # left off.
   def notification_baseline_timed_out?
     @notification_baseline_timed_out == true
   end
@@ -333,6 +350,63 @@ class Rule < ApplicationRecord
           end
         end
       end
+    end
+
+    def note_match_criteria_change
+      @match_criteria_changed = will_save_change_to_effective_date? ||
+        (association(:conditions).target.any?(&:match_criteria_changing?) && condition_criteria_changing?)
+    end
+
+    # Whether the criteria this save leaves differ from the stored ones. The
+    # importers replace every condition, so each one reads as changing even when
+    # the new set holds the same criteria; only a different set re-seeds.
+    #
+    # Compares two signatures: the conditions as stored (one query), and the same
+    # rows with this save's pending changes laid over them. Order does not count
+    # (top-level conditions all apply, and a group's and/or reads its members
+    # either way), and neither does nil against "" (see
+    # Rule::Condition#match_criteria_changing?).
+    def condition_criteria_changing?
+      top_level_ids = Rule::Condition.where(rule_id: id).select(:id)
+      stored = Rule::Condition.where(rule_id: id).or(Rule::Condition.where(parent_id: top_level_ids)).to_a
+      stored_children = stored.group_by(&:parent_id)
+      stored_top_level = stored.select { |condition| condition.rule_id == id }
+
+      before = criteria_signature(stored_top_level) { |condition| stored_children[condition.id].to_a }
+      after = criteria_signature(pending_conditions(stored_top_level, association(:conditions).target)) do |condition|
+        stored_for_condition = condition.new_record? ? [] : stored_children[condition.id].to_a
+        pending_conditions(stored_for_condition, condition.association(:sub_conditions).target)
+      end
+
+      before != after
+    end
+
+    # The stored conditions as this save leaves them: in-memory copies replace
+    # their stored rows, new ones join, and those marked for destruction drop out.
+    def pending_conditions(stored, in_memory)
+      in_memory_by_id = in_memory.reject(&:new_record?).index_by(&:id)
+
+      (stored.map { |condition| in_memory_by_id.fetch(condition.id, condition) } + in_memory.select(&:new_record?))
+        .reject(&:marked_for_destruction?)
+    end
+
+    def criteria_signature(conditions, &children)
+      conditions.map do |condition|
+        [
+          condition.condition_type.to_s,
+          condition.operator.to_s,
+          condition.value.presence.to_s,
+          criteria_signature(children.call(condition)) { [] }
+        ]
+      end.sort
+    end
+
+    def match_criteria_changed?
+      @match_criteria_changed == true
+    end
+
+    def notification_baseline_out_of_date?
+      switched_on? || match_criteria_changed?
     end
 
     def switched_on?

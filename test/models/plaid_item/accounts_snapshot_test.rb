@@ -94,6 +94,40 @@ class PlaidItem::AccountsSnapshotTest < ActiveSupport::TestCase
     @snapshot.get_account_data("123")
   end
 
+  test "keeps securities for an investment account with holdings but no investment transactions" do
+    @plaid_item.update!(available_products: [ "investments" ], billed_products: [])
+    @snapshot.stubs(:accounts).returns([ OpenStruct.new(account_id: "123", type: "investment") ])
+
+    security = OpenStruct.new(security_id: "sec_1", ticker_symbol: "VTI")
+    @plaid_provider.expects(:get_item_investments).with(@plaid_item.access_token).returns(
+      OpenStruct.new(
+        holdings: [ OpenStruct.new(account_id: "123", security_id: "sec_1") ],
+        transactions: [],
+        securities: [ security ]
+      )
+    )
+
+    investments = @snapshot.get_account_data("123").investments_data
+
+    assert_equal [ "sec_1" ], investments.holdings.map(&:security_id)
+    assert_equal [ security ], investments.securities
+  end
+
+  test "has no securities for an investment account with neither holdings nor transactions" do
+    @plaid_item.update!(available_products: [ "investments" ], billed_products: [])
+    @snapshot.stubs(:accounts).returns([ OpenStruct.new(account_id: "123", type: "investment") ])
+
+    @plaid_provider.expects(:get_item_investments).with(@plaid_item.access_token).returns(
+      OpenStruct.new(
+        holdings: [ OpenStruct.new(account_id: "other", security_id: "sec_1") ],
+        transactions: [],
+        securities: [ OpenStruct.new(security_id: "sec_1") ]
+      )
+    )
+
+    assert_empty @snapshot.get_account_data("123").investments_data.securities
+  end
+
   test "does not fetch investments if no investment accounts" do
     @plaid_item.update!(available_products: [ "investments" ], billed_products: [])
 
