@@ -97,6 +97,47 @@ class OmniauthProviderRegistryTest < ActiveSupport::TestCase
     assert_equal "super_admin", providers.first.dig(:settings, :default_role)
   end
 
+  test "non-OIDC providers are listed only after their named strategy is registered" do
+    FeatureFlags.stubs(:db_sso_providers?).returns(true)
+    providers = [
+      { name: "new_google", strategy: "google_oauth2", client_id: "client-id", client_secret: "client-secret" },
+      { name: "new_github", strategy: "github", client_id: "client-id", client_secret: "client-secret" },
+      { name: "new_saml", strategy: "saml", settings: { idp_sso_url: "https://idp.example.com/saml" } }
+    ]
+
+    providers.each do |provider|
+      ProviderLoader.stubs(:load_providers).returns([ provider ])
+      Rails.configuration.x.auth.sso_providers = [ custom_oidc_provider ]
+      assert_empty AuthConfig.sso_providers, "#{provider[:strategy]} needs a registered route"
+
+      Rails.configuration.x.auth.sso_providers = [ provider ]
+      assert_equal [ provider[:name] ], AuthConfig.sso_providers.map { |config| config[:name] }
+    end
+  end
+
+  test "auth config excludes unconfigured strategies from database YAML fallback" do
+    Rails.env.stubs(:test?).returns(false)
+    FeatureFlags.stubs(:db_sso_providers?).returns(true)
+    SsoProvider.stubs(:enabled).returns(SsoProvider.none)
+    Rails.application.stubs(:config_for).with(:auth).returns(
+      "providers" => [
+        custom_oidc_provider.deep_stringify_keys,
+        { "name" => "google_oauth2", "strategy" => "google_oauth2" },
+        { "name" => "github", "strategy" => "github" }
+      ]
+    )
+    ProviderLoader.clear_cache
+
+    with_env_overrides(
+      GOOGLE_OAUTH_CLIENT_ID: nil, GOOGLE_OAUTH_CLIENT_SECRET: nil,
+      GITHUB_CLIENT_ID: nil, GITHUB_CLIENT_SECRET: nil
+    ) do
+      assert_equal [ "authentik" ], AuthConfig.sso_providers.map { |provider| provider[:name] }
+    end
+  ensure
+    ProviderLoader.clear_cache
+  end
+
   test "dynamic OIDC route supports YAML providers returned by the active provider loader" do
     FeatureFlags.stubs(:db_sso_providers?).returns(true)
     ProviderLoader.stubs(:load_providers).returns([ custom_oidc_provider.deep_stringify_keys ])
