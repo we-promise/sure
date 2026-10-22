@@ -41,7 +41,7 @@ class Assistant::External::Client
 
     begin
       http = build_http(uri)
-      DailyInstallationUsage.capture("ai_assistant_served_daily")
+      DailyUsage.capture("ai_assistant_served_daily")
       model = stream_response(http, request) do |content|
         streaming_started = true
         block.call(content)

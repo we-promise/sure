@@ -2,7 +2,7 @@ require "test_helper"
 
 # Opt in against a disposable Redis configured through REDIS_URL. No collector
 # requests are sent: the fake collector records accepted captures in Redis.
-class DailyInstallationUsageRedisTest < ActiveSupport::TestCase
+class DailyUsageRedisTest < ActiveSupport::TestCase
   test "independent worker processes share atomic claims for both events" do
     skip "Set DAILY_USAGE_REDIS_TESTS=1 with disposable REDIS_URL" unless ENV["DAILY_USAGE_REDIS_TESTS"] == "1"
     skip "Requires fork" unless Process.respond_to?(:fork)
@@ -15,7 +15,8 @@ class DailyInstallationUsageRedisTest < ActiveSupport::TestCase
     Rails.application.key_generator.stubs(:generate_key).with("daily-installation-usage").returns(secret)
     results_key = "daily-usage-test:#{SecureRandom.hex(16)}"
     daily_id = OpenSSL::HMAC.hexdigest("SHA256", secret, "2031-01-01")
-    claim_keys = DailyInstallationUsage::EVENTS.map { |event| "daily-installation-usage:#{event}:#{daily_id}" }
+    expected_events = %w[ai_assistant_served_daily job_served_daily]
+    claim_keys = expected_events.map { |event| "daily-installation-usage:#{event}:#{daily_id}" }
     $posthog_feedback = Object.new
     $posthog_feedback.define_singleton_method(:capture) do |event|
       Sidekiq.redis { |redis| redis.call("RPUSH", results_key, event.to_json) }
@@ -28,7 +29,7 @@ class DailyInstallationUsageRedisTest < ActiveSupport::TestCase
         reader.read(1)
         10.times do
           DailyJobUsageTracking.new.call(nil, {}, nil) { true }
-          DailyInstallationUsage.capture("ai_assistant_served_daily")
+          DailyUsage.capture("ai_assistant_served_daily")
         end
         exit! 0
       rescue StandardError
@@ -40,12 +41,12 @@ class DailyInstallationUsageRedisTest < ActiveSupport::TestCase
     writer.close
     pids.each { |pid| assert Process.wait2(pid).last.success? }
     events = Sidekiq.redis { |redis| redis.call("LRANGE", results_key, 0, -1) }.map { |json| JSON.parse(json) }
-    assert_equal DailyInstallationUsage::EVENTS.sort, events.map { |event| event["event"] }.sort
+    assert_equal expected_events.sort, events.map { |event| event["event"] }.sort
     assert_equal [ daily_id ], events.map { |event| event["distinct_id"] }.uniq
     travel_to Time.utc(2031, 1, 2)
     next_id = OpenSSL::HMAC.hexdigest("SHA256", secret, "2031-01-02")
-    claim_keys.concat(DailyInstallationUsage::EVENTS.map { |event| "daily-installation-usage:#{event}:#{next_id}" })
-    2.times { DailyInstallationUsage::EVENTS.each { |event| DailyInstallationUsage.capture(event) } }
+    claim_keys.concat(expected_events.map { |event| "daily-installation-usage:#{event}:#{next_id}" })
+    2.times { expected_events.each { |event| DailyUsage.capture(event) } }
     events = Sidekiq.redis { |redis| redis.call("LRANGE", results_key, 0, -1) }.map { |json| JSON.parse(json) }
     assert_equal 4, events.size
     assert_equal [ daily_id, next_id ].sort, events.map { |event| event["distinct_id"] }.uniq.sort

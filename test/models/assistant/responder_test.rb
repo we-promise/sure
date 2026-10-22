@@ -27,7 +27,7 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
   end
 
   test "an actual provider attempt captures daily use even when the provider fails" do
-    DailyInstallationUsage.expects(:capture).with("ai_assistant_served_daily").once
+    DailyUsage.expects(:capture).with("ai_assistant_served_daily").once
     @llm.expects(:chat_response).raises(IOError)
     assert_raises(IOError) { @responder.respond }
   end

@@ -36,7 +36,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
   end
 
   test "raises on non-200 response" do
-    DailyInstallationUsage.expects(:capture).with("ai_assistant_served_daily").once
+    DailyUsage.expects(:capture).with("ai_assistant_served_daily").once
     mock_http_error_response(503, "Service Unavailable")
 
     assert_raises(Assistant::Error) do
