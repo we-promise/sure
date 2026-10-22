@@ -160,6 +160,61 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
     assert_equal [ "AAPL" ], result[:skipped].map { |entry| entry[:ticker] }
   end
 
+  # `ticker` is unique per exchange only. Holding the same ticker on two
+  # exchanges used to attach the proposal to whichever row Postgres returned,
+  # and approval would then classify the wrong global security.
+  test "a ticker held on two exchanges is skipped unless the exchange is named" do
+    london = Security.create!(ticker: "AAPL", exchange_operating_mic: "XLON", country_code: "GB")
+    accounts(:investment).holdings.create!(
+      security: london, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD"
+    )
+
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "region" => "europe" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/XLON/, result[:skipped].first[:reason])
+    assert_match(/XNAS/, result[:skipped].first[:reason])
+
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "exchange_operating_mic" => "xlon", "region" => "europe" } ])
+
+    assert_equal 1, result[:recorded]
+    assert_equal london, Security::ClassificationProposal.sole.security
+  end
+
+  test "an exchange that does not match the held listing is skipped" do
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "exchange_operating_mic" => "XLON", "region" => "europe" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_match(/not held/i, result[:skipped].first[:reason])
+  end
+
+  # #539 approves a sub-class alone as a no-op, so the model refuses it and
+  # the tool reports why rather than counting it as recorded.
+  test "a sub-class without an asset class is skipped, with a reason" do
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "asset_sub_class" => "etf" } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/asset class/i, result[:skipped].first[:reason])
+  end
+
+  test "an over-long rationale is skipped, with a reason" do
+    result = @function.call("proposals" => [ { "ticker" => "AAPL", "asset_class" => "equity", "rationale" => "x" * 2001 } ])
+
+    assert_equal 0, result[:recorded]
+    assert_empty Security::ClassificationProposal.all
+    assert_match(/rationale/i, result[:skipped].first[:reason])
+  end
+
+  test "an entry that is not an object is skipped rather than costing the batch" do
+    result = @function.call("proposals" => [ "AAPL", { "ticker" => "AAPL", "asset_class" => "equity" } ])
+
+    assert_equal 1, result[:recorded]
+    assert_equal 1, result[:skipped].size
+    assert_match(/object/i, result[:skipped].first[:reason])
+  end
+
   test "the tool is offered to preview users only" do
     assert_includes Assistant::PREVIEW_FUNCTION_CLASSES,
                     Assistant::Function::SuggestSecurityClassification

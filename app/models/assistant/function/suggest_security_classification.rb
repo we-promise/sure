@@ -16,9 +16,13 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
         until they approve it.
 
         Propose only what you can justify from the instrument itself -- its name,
-        ticker, exchange and type. Say why in `rationale`; the user reads it when
-        deciding. Leave a field out rather than guessing it: a proposal that only
-        names the region is more useful than one that invents an asset class.
+        ticker, exchange and type. Say why in `rationale`, for the person who
+        reviews the proposal. Leave a field out rather than guessing it: a
+        proposal that only names the region is more useful than one that invents
+        an asset class. A sub-class needs its asset class beside it.
+
+        If the user holds the same ticker on more than one exchange, name the
+        exchange in `exchange_operating_mic`; otherwise the entry is skipped.
 
         Securities the user has already classified by hand, or locked, are skipped
         and reported back in `skipped`.
@@ -31,8 +35,8 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
             {
               ticker: "VWRA",
               asset_class: "equity",
-              region: "north_america",
-              rationale: "Accumulating global equity ETF, majority US-weighted."
+              asset_sub_class: "etf",
+              rationale: "Accumulating global equity ETF; no single region."
             }
           ]
         })
@@ -57,8 +61,9 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
             type: "object",
             properties: {
               ticker: { type: "string", description: "Ticker of a security the user holds" },
+              exchange_operating_mic: { type: "string", description: "The listing's exchange MIC; needed only when the ticker is held on more than one exchange" },
               asset_class: { enum: Security::ASSET_CLASSES },
-              asset_sub_class: { enum: Security::ASSET_SUB_CLASSES },
+              asset_sub_class: { enum: Security::ASSET_SUB_CLASSES, description: "Only together with asset_class" },
               sector: { type: "string", description: "Free text, as the data providers supply it" },
               region: { enum: Security::REGION_KEYS },
               rationale: { type: "string", description: "Why, in one sentence, for the user to read" }
@@ -75,17 +80,35 @@ class Assistant::Function::SuggestSecurityClassification < Assistant::Function
     skipped = []
 
     Array(params["proposals"]).each do |entry|
-      ticker = entry["ticker"].to_s
-      security = held_securities.find { |s| s.ticker.casecmp?(ticker) }
+      unless entry.is_a?(Hash)
+        skipped << { ticker: nil, reason: "each proposal must be an object" }
+        next
+      end
 
+      ticker = entry["ticker"].to_s
+      mic = entry["exchange_operating_mic"].presence
       # Resolved within the user's own holdings rather than across the whole
       # `securities` table. This tool is registered in `function_classes`, which
       # also serves `/mcp`, so an external caller must not be able to queue a
       # proposal against an instrument this user does not hold.
-      if security.nil?
+      #
+      # A ticker is unique per exchange only, so the same ticker held on two
+      # exchanges is two securities. Picking one would attach the proposal to
+      # whichever row the database returned, and approval would classify the
+      # wrong global security.
+      matches = held_securities.select { |s| s.ticker.casecmp?(ticker) }
+      matches = matches.select { |s| s.exchange_operating_mic.to_s.casecmp?(mic) } if mic
+
+      if matches.empty?
         skipped << { ticker: ticker, reason: "not held by this family" }
         next
+      elsif matches.size > 1
+        exchanges = matches.map(&:exchange_operating_mic).compact.sort.join(", ")
+        skipped << { ticker: ticker, reason: "held on more than one exchange (#{exchanges}); name one in exchange_operating_mic" }
+        next
       end
+
+      security = matches.first
 
       # Mapped once, so a field cannot be added to the check and not to the
       # write.
