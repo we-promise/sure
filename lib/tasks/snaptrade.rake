@@ -8,9 +8,14 @@ namespace :snaptrade do
   #   bin/rails "snaptrade:repair_split_securities[ACCOUNT_ID]" # dry run, one account
   #   DRY_RUN=false bin/rails snaptrade:repair_split_securities # writes
   #
-  # A live run refuses an account whose target row lacks prices its source rows
-  # have. ALLOW_PRICE_GAPS=true overrides that, and only with an account id:
+  # A ticker whose rows name different exchanges is two listings, so it is
+  # skipped and listed for review. A live run refuses an account whose target
+  # row lacks a split its source rows have, and one whose target row lacks
+  # prices its source rows have. ALLOW_PRICE_GAPS=true overrides the price
+  # check only, and only with an account id:
   #   DRY_RUN=false ALLOW_PRICE_GAPS=true bin/rails "snaptrade:repair_split_securities[ACCOUNT_ID]"
+  #
+  # The task exits non-zero when any account failed and was rolled back.
   desc "Repair SnapTrade holdings and trades split across duplicate security rows (dry run unless DRY_RUN=false)"
   task :repair_split_securities, [ :account_id ] => :environment do |_, args|
     dry_run = ENV["DRY_RUN"].to_s.strip.downcase != "false"
@@ -27,19 +32,34 @@ namespace :snaptrade do
 
     puts dry_run ? "DRY RUN: nothing will be written. Set DRY_RUN=false to apply." : "Applying repairs."
 
+    describe = lambda do |securities, id|
+      security = securities[id]
+      exchange = security && (security.exchange_operating_mic.presence || security.exchange_mic.presence)
+      "#{id} (#{exchange || 'no exchange'}, #{security&.name})"
+    end
+
+    failures = []
     accounts.find_each do |account|
-      results = SnaptradeAccount::SplitSecurityRepair.new(account, dry_run: dry_run, allow_price_gaps: allow_price_gaps).run
-      if results.empty?
+      repair = SnaptradeAccount::SplitSecurityRepair.new(account, dry_run: dry_run, allow_price_gaps: allow_price_gaps)
+      results = repair.run
+      securities = Security.where(id: results.flat_map { |result| [ result.target_id, *result.source_ids ] }).index_by(&:id)
+
+      if results.empty? && repair.conflicts.empty?
         puts "Account #{account.id} (#{account.name}): no split securities"
         next
       end
 
       puts "Account #{account.id} (#{account.name}):"
       results.each do |result|
-        puts "  #{result.ticker}: target #{result.target_id} (#{result.target_source}), from #{result.source_ids.join(', ')}"
+        sources = result.source_ids.map { |id| describe.call(securities, id) }.join(", ")
+        puts "  #{result.ticker}: target #{describe.call(securities, result.target_id)} [#{result.target_source}], from #{sources}"
         puts "    trades moved: #{result.trades_moved}, holdings moved: #{result.holdings_moved}, " \
              "holdings dropped (target already had the date): #{result.holdings_dropped}, " \
              "calculated target holdings replaced by a SnapTrade snapshot: #{result.holdings_replaced}"
+
+        if result.unmatched_split_dates.any?
+          puts "    split history: source splits the target lacks, on #{result.unmatched_split_dates.map(&:iso8601).join(', ')}"
+        end
 
         gaps = result.price_gap_dates
         next if gaps.empty?
@@ -48,10 +68,19 @@ namespace :snaptrade do
         shown += ", ..." if gaps.size > 10
         puts "    price gap: #{gaps.size} date(s) priced on another row but not the target: #{shown}"
       end
-    rescue SnaptradeAccount::SplitSecurityRepair::PriceGapsRefused => e
+
+      repair.conflicts.each do |ticker, rows|
+        listed = rows.map { |id, exchange| "#{id} (#{exchange || 'no exchange'})" }.join(", ")
+        puts "  #{ticker}: skipped, rows on different exchanges are separate listings: #{listed}"
+      end
+    rescue SnaptradeAccount::SplitSecurityRepair::Refused => e
       puts "Account #{account.id} (#{account.name}): refused, nothing written: #{e.message}"
     rescue StandardError => e
       puts "Account #{account.id}: failed, rolled back: #{e.class}: #{e.message}"
+      Rails.logger.error("SnapTrade split security repair failed for account #{account.id}\n#{e.full_message(highlight: false)}")
+      failures << account.id
     end
+
+    abort "Failed and rolled back: #{failures.size} account(s): #{failures.join(', ')}" if failures.any?
   end
 end
