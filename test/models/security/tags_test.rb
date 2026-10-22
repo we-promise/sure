@@ -19,7 +19,7 @@ class Security::TagsTest < ActiveSupport::TestCase
       @security.set_tags_for(@family, [ @tag.id ])
     end
 
-    assert_equal [ @tag ], @security.tags.to_a
+    assert_equal [ @tag ], @security.tags_for(@family).to_a
     assert_equal [ @security ], @tag.securities.to_a
   end
 
@@ -30,17 +30,17 @@ class Security::TagsTest < ActiveSupport::TestCase
       @security.set_tags_for(@family, [ @other_tag.id ])
     end
 
-    assert_empty @security.reload.tags
+    assert_empty all_tags_on(@security)
   end
 
-  # security.tags spans every family, so a wholesale `tags =` assignment
+  # The security row is shared, so a wholesale replace of its taggings
   # would remove the other family's tagging along with this family's.
   test "set_tags_for leaves another family's tags on the security alone" do
     @security.taggings.create!(tag: @other_tag)
 
     @security.set_tags_for(@family, [ @tag.id ])
 
-    assert_equal [ @other_tag, @tag ].sort_by(&:id), @security.reload.tags.sort_by(&:id)
+    assert_equal [ @other_tag, @tag ].sort_by(&:id), all_tags_on(@security).sort_by(&:id)
   end
 
   test "an empty selection clears this family's tags but not another family's" do
@@ -49,7 +49,7 @@ class Security::TagsTest < ActiveSupport::TestCase
 
     @security.set_tags_for(@family, [ "" ])
 
-    assert_equal [ @other_tag ], @security.reload.tags.to_a
+    assert_equal [ @other_tag ], all_tags_on(@security).to_a
   end
 
   test "a tag left out of the selection is removed and the kept one is untouched" do
@@ -75,12 +75,11 @@ class Security::TagsTest < ActiveSupport::TestCase
   test "already loaded associations reflect the write without a reload" do
     @security.taggings.create!(tag: @tag)
     @security.taggings.load
-    @security.tags.load
 
     @security.set_tags_for(@family, [ @second_tag.id ])
 
     assert_equal [ @second_tag.id ], @security.taggings.map(&:tag_id)
-    assert_equal [ @second_tag ], @security.tags.to_a
+    assert_equal [ @second_tag ], @security.tags_for(@family).to_a
   end
 
   test "destroying a tag removes its security taggings and keeps the security" do
@@ -141,4 +140,31 @@ class Security::TagsTest < ActiveSupport::TestCase
   ensure
     ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
   end
+
+  # There is no family-blind writer to reach for: `tags=`, `tag_ids=` and
+  # `tags <<` would each delete or attach taggings across every family that
+  # holds the instrument.
+  test "the security has no family-blind tag writer" do
+    %i[tags tags= tag_ids tag_ids=].each do |method|
+      assert_not @security.respond_to?(method), "Security##{method} is back, and it does not know about families"
+    end
+  end
+
+  test "tags_for reads only the given family's tags" do
+    @security.taggings.create!(tag: @tag)
+    @security.taggings.create!(tag: @other_tag)
+
+    assert_equal [ @tag ], @security.tags_for(@family).to_a
+    assert_equal [ @other_tag ], @security.tags_for(@other_family).to_a
+  end
+
+  test "tagging an unsaved security says so instead of failing on the lock" do
+    error = assert_raises(ArgumentError) { Security.new(ticker: "NEW").set_tags_for(@family, [ @tag.id ]) }
+    assert_match(/save/i, error.message)
+  end
+
+  private
+    def all_tags_on(security)
+      Tag.where(id: security.taggings.select(:tag_id))
+    end
 end
