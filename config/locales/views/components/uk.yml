@@ -77,6 +77,11 @@ uk:
           total_value: "Загальна вартість"
           gains: Прибуток / ROI
         vs_available_history: "проти доступної історії"
+        net_contributions:
+          difference: Різниця
+          incomplete: "Чисті внески можуть бути неповними: не вдалося оцінити поповнення або зняття."
+          label: Чисті внески
+          legend: Ряди графіка
       activity_date:
         balance_tooltip: "Баланс на кінець дня, після всіх транзакцій та коригувань"
         no_balance_data: "Немає даних про баланс за цю дату"

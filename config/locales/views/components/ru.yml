@@ -81,6 +81,11 @@ ru:
           total_value: Общая стоимость
           gains: Доходность / ROI
         vs_available_history: по сравнению с доступной историей
+        net_contributions:
+          difference: Разница
+          incomplete: "Чистые пополнения могут быть неполными: не удалось оценить зачисление или снятие."
+          label: Чистые пополнения
+          legend: Ряды графика
     period_picker:
       aria_label: "Период: %{period}"
   ds:
