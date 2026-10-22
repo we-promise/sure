@@ -1,0 +1,18 @@
+<%# locals: (key:, label:, hint:, settings: nil, name: "bayes_settings[#{key}]", checked: settings.public_send(key)) %>
+<%# One switch row of Settings → Classifier, for a setting that changes what's
+    stored, inside a section's auto-submitting form; a rule's switch passes
+    its own name and state (rule_toggle). DS::Toggle submits its own off
+    value. %>
+<div class="flex items-center justify-between gap-x-4">
+  <span class="min-w-0">
+    <span class="text-sm text-primary"><%= label %></span>
+    <span class="block text-xs text-secondary"><%= hint %></span>
+  </span>
+  <%= render DS::Toggle.new(
+    id: "bayes_settings_#{key}",
+    name: name,
+    checked: checked,
+    aria: { label: label },
+    data: { auto_submit_form_target: "auto" }
+  ) %>
+</div>

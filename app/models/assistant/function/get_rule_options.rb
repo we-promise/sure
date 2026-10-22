@@ -39,7 +39,7 @@ class Assistant::Function::GetRuleOptions < Assistant::Function
     {
       success: true,
       conditions: rule.condition_filters.map { |filter| describe_filter(filter) } + [ compound_option ],
-      actions: rule.action_executors.reject { |e| BLOCKED_ACTION_TYPES.include?(e.key) }.map { |executor| describe_executor(executor) }
+      actions: rule.action_executors.reject { |e| (BLOCKED_ACTION_TYPES + SETTINGS_ONLY_ACTION_TYPES).include?(e.key) }.map { |executor| describe_executor(executor) }
     }
   end
 

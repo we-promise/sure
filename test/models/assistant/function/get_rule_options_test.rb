@@ -23,6 +23,7 @@ class Assistant::Function::GetRuleOptionsTest < ActiveSupport::TestCase
     assert_includes action_types, "set_transaction_category"
     assert_not_includes action_types, "auto_categorize"
     assert_not_includes action_types, "auto_detect_merchants"
+    assert_not_includes action_types, "split_transaction"
   end
 
   test "inlines fixed value lists and points id values at their tools" do

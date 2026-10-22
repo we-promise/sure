@@ -332,6 +332,20 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "var(--color-destructive)", response.body
   end
 
+  test "the drawer names the detected bill only when it differs from the bill's name" do
+    bill = create_bill(name: "Netflix", amount: 15)
+    bill.update!(matcher_hints: { "detected_name" => "NETFLIX.COM" })
+
+    get_bill_history(bill)
+
+    assert_select "p.text-xs.text-secondary", text: I18n.t("bills.detail.rule_detected", name: "NETFLIX.COM"), count: 1
+
+    bill.update!(name: "NETFLIX.COM")
+    get_bill_history(bill)
+
+    assert_select "p.text-xs.text-secondary", text: I18n.t("bills.detail.rule_detected", name: "NETFLIX.COM"), count: 0
+  end
+
   # The row drops Autopay once a bill is paused, and the drawer's schedule
   # line still claimed it.
   test "a paused bill's drawer schedule leaves out autopay" do

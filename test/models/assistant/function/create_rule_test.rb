@@ -38,6 +38,22 @@ class Assistant::Function::CreateRuleTest < ActiveSupport::TestCase
     assert_equal 1, result[:preview][:match_count]
   end
 
+  test "points split actions at the rules settings" do
+    split = { splits: [ { type: "percentage", name: "A", share: "50" }, { type: "percentage", name: "B", share: "50" } ] }
+
+    result = nil
+    assert_no_difference "@family.rules.count" do
+      result = @fn.call(
+        "name" => "Split",
+        "conditions" => [ { "condition_type" => "transaction_name", "operator" => "like", "value" => "zxq" } ],
+        "actions" => [ { "action_type" => "split_transaction", "value" => split.to_json } ]
+      )
+    end
+
+    assert_not result[:success]
+    assert_match "add it in Settings > Rules", result[:problems].join
+  end
+
   test "ignores an attempt to create an active rule" do
     result = @fn.call(
       "active" => true,
