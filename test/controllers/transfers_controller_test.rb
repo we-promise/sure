@@ -762,13 +762,24 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show drawer renders context fields on each form without duplicate ids" do
-    get transfer_url(transfers(:one), view_ctx: "account", is_filtered: "0")
+    transfer = create_confirmed_transfer(to: accounts(:investment))
+    get transfer_url(transfer, view_ctx: "account", is_filtered: "0")
 
     assert_response :success
-    assert_select "input[type='hidden'][name='view_ctx'][value='account']", minimum: 1
-    assert_select "input[type='hidden'][name='is_filtered'][value='0']", minimum: 1
+    assert_select "input[type='hidden'][name='view_ctx'][value='account']", count: 2
+    assert_select "input[type='hidden'][name='is_filtered'][value='0']", count: 2
     assert_select "input#view_ctx", count: 0
     assert_select "input#is_filtered", count: 0
+
+    forms = css_select("form[action='#{transfer_path(transfer)}']").select do |form|
+      form.at_css("input[name='_method'][value='patch']")
+    end
+    assert_equal 3, forms.size
+    forms.each do |form|
+      expected_count = form.at_css("input[name='transfer[investment_contribution]']") ? 0 : 1
+      assert_select form, "input[name='view_ctx']", count: expected_count
+      assert_select form, "input[name='is_filtered']", count: expected_count
+    end
   end
 
   test "turbo_stream update replaces both legs with the full-size partial when compact preview is disabled" do
