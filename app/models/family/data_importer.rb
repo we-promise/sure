@@ -1368,6 +1368,7 @@ class Family::DataImporter
         position = Integer(record.dig("data", "position"), exception: false)
         [ position || Float::INFINITY, index ]
       end.map(&:first)
+      with_stored_email_action = Rule.ids_with_stored_email_notification_action(@family.rules)
 
       records.each do |record|
         data = record["data"]
@@ -1389,6 +1390,11 @@ class Family::DataImporter
         # Exports made before this setting existed don't carry it; keep the stored value then.
         rule.apply_immediately = data["apply_immediately"] || false if data.key?("apply_immediately")
 
+        # An email action replacing the rule's own keeps the baseline it recorded
+        # (see Rule::Action#keep_notification_baseline), as stored before this
+        # import: not one an earlier record of it wrote.
+        had_email_action = rule.persisted? && with_stored_email_action.include?(rule.id)
+
         # Marked rather than destroyed now, so the rule's save removes them and
         # sees its conditions change (Rule re-seeds an email rule's baseline then).
         rule.conditions.each(&:mark_for_destruction) unless created
@@ -1401,7 +1407,7 @@ class Family::DataImporter
 
         # Build actions
         (data["actions"] || []).each do |action_data|
-          build_rule_action(rule, action_data)
+          build_rule_action(rule, action_data).keep_notification_baseline = had_email_action
         end
 
         rule.save!

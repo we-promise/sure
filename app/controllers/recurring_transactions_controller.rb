@@ -36,24 +36,12 @@ class RecurringTransactionsController < ApplicationController
   # real, active bill; dismissing tombstones it as `ended`, which the
   # Identifier treats as "never suggest this again".
   def confirm
-    first_confirmation = @recurring_transaction.suggested?
-    @recurring_transaction.update!(status: "active")
-
     # A just-confirmed bill shows its lived history rather than starting
-    # blank. Guarded so a replayed POST does not re-run the backfill; the
-    # matcher pass inside is family-wide on purpose (exact-tier, idempotent,
-    # and scoping it would need a parallel Matcher entry point). Taken under
-    # the family lock so it cannot interleave with a running pipeline; when
-    # the lock is held the backfill is skipped and the confirm still succeeds.
-    if first_confirmation
-      RecurringTransaction::Pipeline.with_family_lock(Current.family.id) do
-        RecurringTransaction::HistoryBackfiller.new(
-          Current.family,
-          months: RecurringTransaction::Pipeline::FIRST_RUN_BACKFILL_MONTHS,
-          series_scope: Current.family.recurring_transactions.where(id: @recurring_transaction.id)
-        ).run!
-      end
-    end
+    # blank: the status change reconstructs it (RecurringTransaction#
+    # reconstruct_history_on_activation), queued when a pipeline holds the
+    # family lock. Only the change from suggested does, so a replayed POST
+    # reconstructs nothing twice.
+    @recurring_transaction.update!(status: "active")
 
     flash[:notice] = t(@recurring_transaction.typed_income? ? "recurring_transactions.confirmed_income" : "recurring_transactions.confirmed")
     redirect_back_or_to recurring_transactions_path
