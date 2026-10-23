@@ -78,6 +78,23 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_no_match "Should not appear", response.body
   end
 
+  test "smart fill on a transaction a bill already covers still warns" do
+    detected = @family.recurring_transactions.create!(
+      account: accounts(:depository), name: "GYM MEMBERSHIP", amount: 40, currency: "USD",
+      expected_day_of_month: Date.current.day, last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current, status: "active", manual: false, occurrence_count: 2
+    )
+    stub_provider(raw(name: "Gym Membership", amount: 40.0, frequency: "monthly", confidence: 0.9))
+
+    post smart_fill_recurring_transactions_url(entry_id: @entry.id),
+         headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    assert_select "a[href=?]", bill_path(detected)
+    assert_select "input[type=hidden][name=entry_id][value=?]", @entry.id
+  end
+
   private
 
     def raw(**overrides)

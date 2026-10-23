@@ -116,7 +116,10 @@ class RecurringTransaction
         return false
       end
 
-      recurring.save
+      # Its own savepoint: a caller may hold a transaction open around this
+      # (the add-bill form locks the source entry), and a unique violation
+      # inside that one would abort it before the rescue below could answer.
+      RecurringTransaction.transaction(requires_new: true) { recurring.save }
     rescue ActiveRecord::RecordNotUnique
       recurring.errors.add(:base, I18n.t("recurring_transactions.create.already_exists"))
       false

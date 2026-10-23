@@ -19,6 +19,8 @@ class RecurringTransactionsController < ApplicationController
   before_action :set_recurring_transaction, only: %i[edit update toggle_status destroy confirm dismiss]
   before_action :ensure_series_writable, only: %i[update toggle_status destroy confirm dismiss]
 
+  helper_method :series_writable?, :separate_bill_chosen?
+
   def index
     scope = Current.family.recurring_transactions
                   .accessible_by(Current.user)
@@ -142,7 +144,27 @@ class RecurringTransactionsController < ApplicationController
   def create
     @recurring_transaction = build_declared_bill
 
-    if @recurring_transaction.errors.none? && save_declared_bill
+    # The posted fields carry only a name, and a detected bill is keyed by
+    # merchant with no name, so whether this duplicates a bill is asked of the
+    # transaction the dialog was opened from. The dialog already said so; this
+    # catches a stale dialog or a direct POST. The check and the save hold the
+    # entry lock the Allocator takes, so neither a second submission, an
+    # allocation of this transaction nor a "Mark as recurring" on it can slip
+    # in between them. The lock is transaction-scoped, so it is taken inside
+    # the class-level transaction (Entry#transaction is the delegated-type
+    # reader, not ActiveRecord's).
+    @source_entry = Current.accessible_entries.find_by(id: params[:entry_id])
+    saved = if @source_entry && !separate_bill_chosen?
+      Entry.transaction do
+        RecurringTransaction::Allocator.lock_entry!(@source_entry)
+        @covering_series = covering_series_for(@source_entry)
+        @covering_series.nil? && @recurring_transaction.errors.none? && save_declared_bill
+      end
+    else
+      @recurring_transaction.errors.none? && save_declared_bill
+    end
+
+    if saved
       flash[:notice] = @recurring_transaction.typed_income? ? t(".success_income") : t(".success")
 
       respond_to do |format|
@@ -246,6 +268,8 @@ class RecurringTransactionsController < ApplicationController
     # smart-fill path, so a failed suggestion still leaves the user exactly
     # where the plain prefill would have.
     def prefill_recurring_from_entry(entry)
+      @source_entry = entry
+      @covering_series = covering_series_for(entry)
       @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name
       @recurring_transaction.amount = entry.amount.abs
       @recurring_transaction.currency = entry.currency
@@ -257,6 +281,19 @@ class RecurringTransactionsController < ApplicationController
     end
 
   private
+
+    # "Create a separate bill anyway" posts allow_duplicate=1, and only that
+    # counts as the choice: a "0" or "false" from a direct POST does not.
+    def separate_bill_chosen?
+      params[:allow_duplicate] == "1"
+    end
+
+    # Only a bill this user can open is worth naming in the dialog.
+    def covering_series_for(entry)
+      return unless entry.transaction?
+
+      Current.family.recurring_transactions.accessible_by(Current.user).covering(entry)
+    end
 
     # Sign-filtered detected patterns not yet covered by any series, mapped
     # to what the picker renders. Each candidate carries its latest entry's
@@ -342,10 +379,11 @@ class RecurringTransactionsController < ApplicationController
     # Accountless series carry no account gate. Same contract as
     # RecurringOccurrencesController#ensure_series_writable.
     def ensure_series_writable
-      return if @recurring_transaction.account_id.nil?
-      return if Account.writable_by(Current.user).where(id: @recurring_transaction.account_id).exists?
+      raise ActiveRecord::RecordNotFound unless series_writable?(@recurring_transaction)
+    end
 
-      raise ActiveRecord::RecordNotFound
+    def series_writable?(series)
+      series.account_id.nil? || Account.writable_by(Current.user).where(id: series.account_id).exists?
     end
 
     # name, amount and account are handled by apply_editable_identity rather
