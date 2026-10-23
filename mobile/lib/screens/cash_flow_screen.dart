@@ -134,6 +134,8 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
     }
     if (!mounted || requestId != _requestIds[period]) return;
     _inFlight.remove(period);
+    // Connectivity may have dropped while the request was in flight.
+    final wentOffline = offline || (_connectivity()?.isOffline ?? false);
 
     setState(() {
       final visible = period == _period;
@@ -144,8 +146,8 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
         _stale.remove(period);
       } else {
         if (visible) {
-          _offline = offline;
-          _failed = !offline;
+          _offline = wentOffline;
+          _failed = !wentOffline;
         }
         if (_reports.containsKey(period)) _stale.add(period);
       }
