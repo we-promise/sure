@@ -114,6 +114,8 @@ class Api::V1::Financekit::BatchesBodyLimitTest < ActionDispatch::IntegrationTes
 end
 
 class FinancekitBodyLimitTest < ActiveSupport::TestCase
+  UPLOAD = "/api/v1/financekit/publishers/abc/batches"
+
   setup do
     @seen = nil
     @app = FinancekitBodyLimit.new(->(env) { @seen = env["rack.input"].read; [ 200, {}, [ "ok" ] ] })
@@ -184,7 +186,82 @@ class FinancekitBodyLimitTest < ActiveSupport::TestCase
     assert_equal body, @seen
   end
 
+  # Puma spools a body and sets CONTENT_LENGTH (decoding a chunked one
+  # first), and Rails then reads exactly that many bytes, so a declared length
+  # within the limit needs no copy of the body.
+  test "hands a declared body within the limit to the app as the same input, unread" do
+    io = StringIO.new("{\"ok\":true}")
+    env = env_for(UPLOAD, "")
+    env["CONTENT_LENGTH"] = io.string.bytesize.to_s
+    env["rack.input"] = io
+    seen = nil
+    app = FinancekitBodyLimit.new(->(e) { seen = [ e["rack.input"].equal?(io), io.pos ]; [ 200, {}, [ "ok" ] ] })
+
+    status, = app.call(env)
+
+    assert_equal 200, status
+    assert_equal [ true, 0 ], seen, "the app should get the original input, with nothing read from it"
+  end
+
+  test "refuses a declared body over the limit without reading it or calling the app" do
+    io = StringIO.new(@body)
+    env = env_for(UPLOAD, "")
+    env["CONTENT_LENGTH"] = @body.bytesize.to_s
+    env["rack.input"] = io
+    app_called = false
+    app = FinancekitBodyLimit.new(->(_env) { app_called = true; [ 200, {}, [ "ok" ] ] })
+
+    status, = app.call(env)
+
+    assert_equal 413, status
+    assert_not app_called
+    assert_equal 0, io.pos
+  end
+
+  test "refuses an undeclared body over the limit, with or without Transfer-Encoding" do
+    [ nil, "chunked" ].each do |transfer_encoding|
+      io = StringIO.new(@body)
+      status, = @app.call(undeclared_env(io, transfer_encoding))
+
+      assert_equal 413, status, "Transfer-Encoding: #{transfer_encoding.inspect}"
+      assert_equal Financekit::MAX_BYTES + 1, io.pos
+      assert_nil @seen
+    end
+  end
+
+  test "hands an undeclared body within the limit to the app intact, with or without Transfer-Encoding" do
+    body = "c" * Financekit::MAX_BYTES
+    [ nil, "chunked" ].each do |transfer_encoding|
+      @seen = nil
+      status, = @app.call(undeclared_env(StringIO.new(body), transfer_encoding))
+
+      assert_equal 200, status
+      assert_equal body, @seen
+    end
+  end
+
+  # With Transfer-Encoding set, Rails reads the body to EOF rather than
+  # CONTENT_LENGTH bytes, so a declared length is no bound there.
+  test "still bounds a body that declares a small length alongside Transfer-Encoding" do
+    io = StringIO.new(@body)
+    env = undeclared_env(io, "chunked")
+    env["CONTENT_LENGTH"] = "10"
+
+    status, = @app.call(env)
+
+    assert_equal 413, status
+    assert_nil @seen
+  end
+
   private
+    def undeclared_env(io, transfer_encoding)
+      env = env_for(UPLOAD, "")
+      env.delete("CONTENT_LENGTH")
+      env["HTTP_TRANSFER_ENCODING"] = transfer_encoding if transfer_encoding
+      env["rack.input"] = io
+      env
+    end
+
     def env_for(path, body, method: "POST")
       Rack::MockRequest.env_for(path, method: method, input: body)
     end

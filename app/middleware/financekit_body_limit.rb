@@ -13,10 +13,11 @@
 #
 # It runs ahead of Rack::MethodOverride, which parses a form-encoded POST to
 # look for `_method`. A declared Content-Length over the limit is refused
-# without reading. Any other body is read no further than one byte past the
-# limit: if it overflows, it is refused here too, so a chunked oversize gets
-# the same 413 whatever the app would do with a truncated body. A body within
-# the limit is handed on as read.
+# without reading, and one within the limit is handed on untouched. A body
+# with no declared length is read no further than one byte past the limit: if
+# it overflows, it is refused here too, so a chunked oversize gets the same
+# 413 whatever the app would do with a truncated body. A body within the
+# limit is handed on as read.
 class FinancekitBodyLimit
   PATH = %r{\A/api/v1/financekit/publishers/[^/]+/batches(?:\.[^./?]+)?\z}
   CHUNK = 16.kilobytes
@@ -30,6 +31,7 @@ class FinancekitBodyLimit
 
     limit = Financekit::MAX_BYTES
     return payload_too_large if env["CONTENT_LENGTH"].to_i > limit
+    return @app.call(env) if declared_length?(env)
 
     if (input = env["rack.input"])
       body = read_at_most(input, limit + 1)
@@ -44,6 +46,14 @@ class FinancekitBodyLimit
     # The same response BatchesController#protocol_error gives.
     def payload_too_large
       [ 413, { "content-type" => "application/json" }, [ { error: "payload_too_large" }.to_json ] ]
+    end
+
+    # Rails reads exactly CONTENT_LENGTH bytes unless Transfer-Encoding is
+    # set, when it reads to EOF (ActionDispatch::Request#read_body_stream).
+    # Puma decodes a chunked body, sets CONTENT_LENGTH and drops the header,
+    # so behind Puma every upload takes this path and is never copied.
+    def declared_length?(env)
+      env["CONTENT_LENGTH"].to_s.match?(/\A\d+\z/) && !env.key?("HTTP_TRANSFER_ENCODING")
     end
 
     def read_at_most(input, max)
