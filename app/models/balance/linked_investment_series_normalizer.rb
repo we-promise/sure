@@ -2,24 +2,26 @@ class Balance::LinkedInvestmentSeriesNormalizer
   attr_reader :account, :series, :view
 
   class << self
-    def aggregate_accounts(accounts:, currency:, period:, favorable_direction:, interval: "1 day")
+    def aggregate_accounts(accounts:, currency:, period:, favorable_direction:, interval: "1 day", user: nil)
       aggregate_account_ids(
         account_ids: Array(accounts).map(&:id),
         currency: currency,
         period: period,
         favorable_direction: favorable_direction,
-        interval: interval
+        interval: interval,
+        user: user
       )
     end
 
-    def aggregate_account_ids(account_ids:, currency:, period:, favorable_direction:, interval: "1 day")
+    def aggregate_account_ids(account_ids:, currency:, period:, favorable_direction:, interval: "1 day", user: nil)
       account_ids = Array(account_ids).compact
       series = Balance::ChartSeriesBuilder.new(
         account_ids: account_ids,
         currency: currency,
         period: period,
         favorable_direction: favorable_direction,
-        interval: interval
+        interval: interval,
+        user: user
       ).balance_series
 
       common_start_date = common_supported_history_start_date(account_ids)
