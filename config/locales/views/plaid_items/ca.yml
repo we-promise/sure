@@ -28,6 +28,9 @@ ca:
       status_never: Cal sincronitzar dades
       syncing: Sincronitzant...
       update: Actualitza
+      add_accounts: Afegeix comptes
+      deletion_in_progress: (eliminació en curs...)
+      provider_name: Plaid
     select_existing_account:
       cancel: Cancel·la
       description: Selecciona un compte Plaid per enllaçar-lo al teu compte existent
@@ -35,3 +38,6 @@ ca:
       no_available_accounts: No hi ha comptes Plaid disponibles per enllaçar. Primer
         connecta un compte Plaid nou.
       title: Enllaça %{account_name} amb Plaid
+    errors:
+      link_token_generic: Ara mateix no hem pogut obrir Plaid. Torna-ho a provar i, si el problema continua, consulta els registres del servidor per obtenir-ne els detalls.
+      link_token_with_message: 'Plaid no ha pogut obrir la connexió: %{message}'

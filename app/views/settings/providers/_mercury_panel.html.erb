@@ -1,10 +1,9 @@
 <div id="mercury-providers-panel" class="space-y-4">
   <% active_items = local_assigns[:mercury_items] || @mercury_items || Current.family.mercury_items.active.ordered %>
-  <% credentialed_items = active_items.select(&:credentials_configured?) %>
 
   <%= render "settings/providers/setup_steps",
              steps: [
-               t("mercury_items.provider_panel.instructions.sign_in_html", link: link_to("Mercury", "https://mercury.com", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")).html_safe,
+               t("mercury_items.provider_panel.instructions.sign_in_html", link: link_to("Mercury", "https://mercury.com", target: "_blank", rel: "noopener noreferrer", class: "text-link underline")).html_safe,
                t("mercury_items.provider_panel.instructions.open_tokens"),
                t("mercury_items.provider_panel.instructions.create_token"),
                t("mercury_items.provider_panel.instructions.whitelist_ip_html").html_safe,
@@ -23,9 +22,7 @@
           <% disclosure.with_summary_content do %>
             <div class="flex items-center justify-between gap-2 w-full">
               <div class="flex items-center gap-3">
-                <div class="flex items-center justify-center h-8 w-8 bg-surface rounded-full">
-                  <p class="text-primary text-xs font-medium"><%= item.name.to_s.first.to_s.upcase %></p>
-                </div>
+                <%= render ProviderLogo.new(provider_key: :mercury) %>
                 <div>
                   <p class="font-medium text-primary"><%= item.name %></p>
                   <p class="text-xs text-secondary"><%= item.sync_status_summary %></p>
@@ -36,19 +33,24 @@
 
           <div class="mt-4 space-y-4">
             <div class="flex items-center gap-2">
-              <%= button_to sync_mercury_item_path(item),
-                            method: :post,
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
-                            disabled: item.syncing? do %>
-                <%= icon "refresh-cw", size: "sm" %>
-                <%= t("mercury_items.provider_panel.sync") %>
-              <% end %>
-              <%= button_to mercury_item_path(item),
-                            method: :delete,
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                            data: { turbo_confirm: t("mercury_items.provider_panel.disconnect_confirm", name: item.name) } do %>
-                <%= icon "trash-2", size: "sm" %>
-              <% end %>
+              <%= render DS::Button.new(
+                text: t("mercury_items.provider_panel.sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                size: :sm,
+                href: sync_mercury_item_path(item, source: "panel"),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
+              <%= render DS::Button.new(
+                text: t("mercury_items.provider_panel.disconnect"),
+                icon: "trash-2",
+                variant: :outline_destructive,
+                size: :sm,
+                href: mercury_item_path(item),
+                method: :delete,
+                data: { turbo_confirm: t("mercury_items.provider_panel.disconnect_confirm", name: item.name) }
+              ) %>
             </div>
 
             <%= styled_form_with model: item,
@@ -91,10 +93,7 @@
 
   <% mercury_item = Current.family.mercury_items.build(name: t("mercury_items.provider_panel.default_connection_name")) %>
   <% if active_items.any? %>
-    <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
-      <%= icon "plus", size: "sm" %>
-      <%= t("mercury_items.provider_panel.add_connection") %>
-    </h3>
+    <%= render "settings/providers/add_connection_heading", label: t("mercury_items.provider_panel.add_connection") %>
   <% end %>
   <%= styled_form_with model: mercury_item,
                        url: mercury_items_path,

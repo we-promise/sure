@@ -39,6 +39,7 @@ When you arrive at the main dashboard, showing **No accounts yet**, you're all s
 > - [**Lunch Flow**](https://www.lunchflow.app/)
 > - [**Enable Banking**](https://enablebanking.com/) (beta)
 > - [**Monobank**](https://github.com/we-promise/sure/blob/main/docs/hosting/monobank.md) (Ukrainian cards and jars)
+> - [**Fio banka**](https://github.com/we-promise/sure/blob/main/docs/hosting/fio.md) (Czech bank)
 > - [**Redbark**](https://github.com/we-promise/sure/blob/main/docs/hosting/redbark.md) (Australian banks)
 > - [**Up**](https://up.com.au/) (Australian bank)
 > - [**Akahu**](https://www.akahu.nz/) (New Zealand banks)
@@ -154,6 +155,18 @@ To add a transaction:
 You will now see the transaction you added in your **transaction history**, as well as the **net worth chart** updating accordingly.
 
 <img width="566" height="587" alt="Filled-out expense form" src="assets/guide-expense-form.png" />
+
+### Uploading statements
+
+You can keep your bank's statements next to an account and let Sure check its balances against them. Open an account and upload the PDF, CSV or XLSX files in **Statements**, or use **Settings → Statement Vault** to upload first and link later.
+
+Sure needs each statement's **period** to show which months are covered and to compare balances. It finds the period in this order:
+
+1. **Inside the PDF**, when the statement states its period: as a date range, e.g. `01 Apr 2026 - 30 Apr 2026` or `01.04.2026 – 30.04.2026`, or as the dates of its opening and closing balance, e.g. "Saldo iniziale al 01.07.2025" and "Saldo finale al 30.09.2025". Sure also reads the opening and closing balance when the statement shows them in a balance summary or next to labels such as "Opening balance" and "Closing balance". Month names and labels are recognised in English, Italian, German, French, Spanish, Dutch and Portuguese. A file name without a date, like Trade Republic's `Account statement.pdf`, then doesn't matter.
+2. **Dates in the filename**, for everything else, e.g. `2026-04`, `2026-04-30` or `Apr 2026`.
+3. **Manually**: open the statement and enter the period and balances yourself.
+
+If your bank names every file the same way, add the month to the filename before uploading, e.g. `Statement 2026-04.pdf`.
 
 ## 8. Managing Investment Accounts
 

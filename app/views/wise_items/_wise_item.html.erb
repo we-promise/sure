@@ -1,4 +1,4 @@
-<%# locals: (wise_item:) %>
+<%# locals: (wise_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(wise_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -7,9 +7,7 @@
         <div class="flex items-center gap-2">
           <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-          <div class="flex items-center justify-center h-8 w-8 bg-container-inset rounded-full">
-            <p class="text-primary text-xs font-bold">WI</p>
-          </div>
+          <%= render ProviderLogo.new(provider_key: :wise) %>
 
           <div class="pl-1 text-sm">
             <div class="flex items-center gap-2">
@@ -66,8 +64,8 @@
 
     <% unless wise_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if wise_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: wise_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <% unlinked = wise_item.unlinked_accounts_count %>

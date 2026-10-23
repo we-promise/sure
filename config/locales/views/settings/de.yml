@@ -20,6 +20,10 @@ de:
         merchant_detector:
           title: Händlererkennung
           subtitle: Die KI identifiziert und ergänzt Transaktionsdaten mit Händlerinformationen
+        insight_dig_in:
+          title: Analyse mit KI nachhaken
+          subtitle: Erste Chat-Nachricht, wenn du bei einer Analyse mit KI nachhakst
+          label: Nachricht zum Nachhaken
     payments:
       show:
         page_title: Zahlung
@@ -45,6 +49,7 @@ de:
         general_title: Allgemein
         default_period: Standardzeitraum
         default_account_order: Standardreihenfolge der Konten
+        default_account_order_hint: Bei „Manuell“ ziehst du die Konten in der Seitenleiste in die gewünschte Reihenfolge.
         language: Sprache
         language_auto: Browsersprache
         page_title: Einstellungen
@@ -244,6 +249,7 @@ de:
         connect_button: Coinbase verbinden
         syncing: Wird synchronisiert…
         sync: Synchronisieren
+        disconnect: Trennen
         disconnect_confirm: Bist du sicher, dass du diese Coinbase-Verbindung trennen möchtest? Deine synchronisierten Konten werden zu manuellen Konten.
       enable_banking_panel:
         callback_url_instruction: "Für die Callback-URL, verwende %{callback_url}."
@@ -253,6 +259,7 @@ de:
         application_id_placeholder_new: Application ID eintragen
         application_id_placeholder_update: Neue ID eintragen, um sie zu ändern
         client_certificate_label: Client-Zertifikat (mit Private Key)
+        keep_client_certificate_hint: "Leer lassen, um das aktuelle Zertifikat beizubehalten"
         config_locked_message: Trenn alle verknüpften Banken, bevor du diese Zugangsdaten änderst.
         config_locked_title: Konfiguration gesperrt
         configured: Eingerichtet
@@ -288,6 +295,7 @@ de:
         api_secret_label: API-Secret
         api_secret_placeholder: Binance-API-Secret einfügen
         connect_button: Binance verbinden
+        disconnect: Trennen
         disconnect_confirm: Verbindung zu Binance wirklich trennen?
         historical_import: Einstellungen für den Verlaufsimport
         ip_hint_body: 'Trag die ausgehende IP-Adresse des App-Servers in die Whitelist des Binance-API-Keys ein:'
@@ -418,6 +426,8 @@ de:
           one: Erneute Zustimmung in 1 Tag nötig
           other: Erneute Zustimmung in %{count} Tagen nötig
         reconsent_required: Erneute Zustimmung nötig
+        login_required: "Anmeldung erforderlich"
+        login_expires_soon: "Anmeldung läuft in %{time} ab (%{at})"
         sync_error: Sync-Fehler
       not_authorized: Nicht berechtigt
       not_found: Anbieter nicht gefunden.
@@ -513,15 +523,15 @@ de:
           title: Verschlüsselung ist nicht konfiguriert
           message: Trade-Republic-Zugangsdaten und Sitzungsdaten können erst sicher gespeichert werden, wenn Active-Record-Verschlüsselung konfiguriert ist.
         steps:
-          step_1: Gib die Telefonnummer und PIN deiner Trade-Republic-App ein und speichere sie.
+          step_1: Gib die Telefonnummer und die PIN oder das Passwort deiner Trade-Republic-App ein und speichere sie.
           step_2: Gib den Code deiner Authenticator-App ein, wenn du dazu aufgefordert wirst.
           step_3: Bestätige den Login in deiner Trade-Republic-App, wenn du dazu aufgefordert wirst.
         phone_number_label: Telefonnummer
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Leer lassen, um die aktuelle Telefonnummer zu behalten
-        pin_label: PIN
-        pin_placeholder_new: PIN deiner Trade-Republic-App
-        pin_placeholder_existing: Leer lassen, um die aktuelle PIN zu behalten
+        pin_label: PIN oder Passwort
+        pin_placeholder_new: PIN oder Passwort deiner Trade-Republic-App
+        pin_placeholder_existing: Leer lassen, um die aktuelle PIN bzw. das aktuelle Passwort zu behalten
         currency_label: Kontowährung
         connect: Einloggen
         confirm_login: Login prüfen
@@ -543,16 +553,23 @@ de:
           close: Fertig
         qr_login: Mit QR-Code einloggen
         qr_cancel: QR-Login abbrechen
-        qr_back_to_credentials: Zurück zu Telefonnummer und PIN
+        qr_back_to_credentials: Zurück zu Telefonnummer und PIN oder Passwort
         qr_loading: QR-Code wird vorbereitet …
-        qr_instruction: Scanne den QR-Code mit deiner Trade-Republic-App und bestätige die Anmeldung.
+        qr_instruction: Scanne den QR-Code mit der Kamera deines Smartphones und bestätige die Anmeldung anschließend in der Trade-Republic-App.
         qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
         qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
+        requires_update: "Melde dich erneut an, um die Synchronisierung fortzusetzen."
+        session_expires_in: "Anmeldung läuft in %{time} ab (%{at})."
+        add_account: Weitere Verbindung hinzufügen
         save_configuration: Speichern und Login starten
         update_configuration: Konfiguration aktualisieren
         sync: Sync
+        syncing: Wird synchronisiert...
         disconnect: Trade Republic trennen
         disconnect_confirm: Trade Republic trennen? Deine synchronisierten Konten werden zu manuellen Konten.
+        disconnect_confirm_with_identifier: "Die Trade-Republic-Verbindung mit den Endziffern %{last4} trennen? Deine synchronisierten Konten werden zu manuellen Konten."
+        identifier_phone: Telefon
+        identifier_account: Konto
         status_configured_prefix: "Verbunden. Im Reiter"
         accounts_tab: Konten
         setup_accounts: Konten einrichten
@@ -659,7 +676,7 @@ de:
         completion: Antwort
         cost_by_model: Kosten nach Modell
         cost_by_operation: Kosten nach Vorgang
-        cost_estimates_description: Die Kosten sind aus den veröffentlichten Preisen der Anbieter geschätzt, für OpenAI mit Stand Juli 2026. Die tatsächlichen Kosten können abweichen. Die Preise gelten je 1 Million Tokens und unterscheiden sich je Modell. Eigene oder selbst gehostete Modelle zeigen „N/A“ und fließen nicht in die Gesamtkosten ein.
+        cost_estimates_description: Die Kosten werden anhand der veröffentlichten Anbieterpreise geschätzt, zuletzt geprüft am %{date}. Die tatsächlichen Kosten können abweichen. Die Preise gelten je 1 Million Tokens und unterscheiden sich je Modell. Eigene oder selbst gehostete Modelle zeigen „N/A“ und fließen nicht in die Gesamtkosten ein.
         cost_estimates_title: Zur Kostenschätzung
         end_date: Enddatum
         failed: Fehler

@@ -48,8 +48,8 @@ tr:
       update: Güncelle
     link_existing_account:
       errors:
-        different_provider: Bu hesap başka bir sağlayıcıya bağlı. Önce onu o sağlayıcıdan
-          koparın, ardından SimpleFIN'a bağlayın.
+        different_provider: Bu hesap başka bir sağlayıcıya bağlı. Önce o sağlayıcıyla bağlantısını
+          kesin, ardından SimpleFIN'a bağlayın.
         invalid_simplefin_account: Geçersiz SimpleFIN hesabı seçildi
         only_manual: Yalnızca manuel hesaplar bağlanabilir
       success: Hesap SimpleFIN'a başarıyla bağlandı
@@ -61,8 +61,8 @@ tr:
       title: SimpleFIN'a Bağlan
     reconciled_status:
       message:
-        one: "%{count} yinelenen bekleyen işlem uzlaştırıldı"
-        other: "%{count} yinelenen bekleyen işlem uzlaştırıldı"
+        one: "%{count} mükerrer bekleyen işlem uzlaştırıldı"
+        other: "%{count} mükerrer bekleyen işlem uzlaştırıldı"
     replacement_prompt:
       confirm_body: "“%{account_name}”, “%{new_name}” hesabına bağlanacak. İşlem geçmişiniz
         korunur; gelecekteki işlemler yeni karttan gelir."
@@ -81,10 +81,11 @@ tr:
       link_account: Hesabı bağla
       no_accounts_found: Bu %{moniker} için SimpleFIN hesabı bulunamadı.
       title: "%{account_name} hesabını SimpleFIN'a bağla"
-      unlink_to_move: Bir bağlantıyı taşımak için önce onu hesabın eylem menüsünden
-        koparın.
+      unlink_to_move: Bir bağlantıyı taşımak için önce hesabın eylem menüsünden bağlantısını
+        kesin.
       wait_for_sync: Henüz bağladıysanız veya senkronize ettiyseniz, senkronizasyon
         tamamlandıktan sonra tekrar deneyin.
+      check_provider_health: SimpleFIN bağlantınızın sorunsuz çalıştığını Ayarlar → Sağlayıcılar bölümünden kontrol edin.
     setup_accounts:
       account_card:
         balance: Bakiye
@@ -93,22 +94,22 @@ tr:
       account_type_credit_card: Kredi Kartı
       account_type_credit_card_desc: Kredi kartı hesapları
       account_type_investment: Yatırım
-      account_type_investment_desc: Aracılık, 401(k), IRA hesapları
+      account_type_investment_desc: Aracı kurum, 401(k), IRA hesapları
       account_type_label: 'Hesap Türü:'
-      account_type_loan: Kredi veya İpotek
+      account_type_loan: Kredi veya Konut Kredisi
       account_type_loan_desc: Borç hesapları
       account_type_other_asset: Diğer Varlık
       account_type_other_asset_desc: Diğer her şey
       activity:
         days_ago:
-          one: 1 gün önce
+          one: "%{count} gün önce"
           other: "%{count} gün önce"
         dormant: "%{days} gündür hareket yok"
         empty: Henüz içe aktarılmış işlem yok
         likely_closed: Yakın tarihli hareket yok ve bakiye sıfır — bu kapalı veya
           değiştirilmiş bir kart olabilir
         recent:
-          one: '1 işlem • son: %{when}'
+          one: "%{count} işlem • son: %{when}"
           other: "%{count} işlem • son: %{when}"
         today: bugün
         yesterday: dün
@@ -154,7 +155,7 @@ tr:
       no_accounts_description: Bu bağlantıda henüz senkronize edilmiş hesap yok.
       no_accounts_title: Hesap bulunamadı
       rate_limited_ago: Hız sınırı aşıldı (%{time} önce)
-      rate_limited_recently: Yakında hız sınırı aşıldı
+      rate_limited_recently: Yakın zamanda hız sınırı aşıldı
       reconciled_details_note: "(ayrıntılar için senkronizasyon özetine bakın)"
       requires_update: Yeniden bağlan
       setup_accounts_menu: Hesapları Kur
@@ -180,3 +181,21 @@ tr:
         token_compromised: Kurulum anahtarı tehlikeye girmiş, süresi dolmuş veya zaten
           kullanılmış olabilir. Lütfen yeni bir tane oluşturun.
         unexpected: Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.
+    sync_status:
+      no_accounts: Hesap bulunamadı
+      synced:
+        one: '%{count} hesap senkronize edildi'
+        other: '%{count} hesap senkronize edildi'
+      partial_setup:
+        one: '%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor'
+        other: '%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor'
+    institution_summary:
+      none: Bağlı kurum yok
+      count:
+        one: '%{count} kurum'
+        other: '%{count} kurum'
+    rate_limited:
+      daily_refresh: SimpleFIN'in günlük yenileme sınırına ulaştınız. Lütfen köprü yenilendikten sonra tekrar deneyin (24 saate kadar sürebilir).
+    stale_sync:
+      last_successful: Son başarılı senkronizasyon %{count} gün önceydi. SimpleFIN bağlantınızla ilgilenmeniz gerekebilir.
+      no_transactions: '%{count} gündür yeni işlem yok. Banka bağlantılarınızın etkin olduğundan emin olmak için SimpleFIN panelinizi kontrol edin.'

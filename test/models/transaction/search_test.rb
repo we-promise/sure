@@ -453,6 +453,45 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), totals.income_money
   end
 
+  test "totals cache invalidates when family currency changes" do
+    create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink),
+      kind: "standard"
+    )
+
+    search_usd = Transaction::Search.new(@family, filters: {})
+    before_key = search_usd.cache_key_base
+    totals_usd = search_usd.totals
+
+    assert_equal Money.new(100, "USD"), totals_usd.expense_money
+
+    @family.update!(currency: "EUR")
+    search_eur = Transaction::Search.new(@family.reload, filters: {})
+    after_key = search_eur.cache_key_base
+    totals_eur = search_eur.totals
+
+    assert_not_equal before_key, after_key
+    assert_equal "EUR", totals_eur.expense_money.currency.iso_code
+  end
+
+  test "totals is served from cache when nothing has changed" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+
+    search1 = Transaction::Search.new(@family)
+    key1 = search1.cache_key_base
+    result1 = search1.totals
+
+    search2 = Transaction::Search.new(@family.reload)
+    key2 = search2.cache_key_base
+
+    assert_equal key1, key2
+    assert_not_nil cache.read("transaction_search_totals/v3/#{key2}")
+    assert_equal result1, search2.totals
+  end
+
   test "category filter includes subcategories" do
     # Create a transaction with the parent category
     parent_entry = create_transaction(
@@ -1009,4 +1048,203 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal 1, totals.count, "a single transaction tagged with all three must be counted once"
     assert_equal Money.new(42, "USD"), totals.expense_money
   end
+
+  test "ai_status current returns transactions whose auto-assigned category still applies" do
+    tx_a = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    tx_a.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "ai")
+
+    tx_b = create_transaction(account: @checking_account, amount: 50, kind: "standard").entryable
+    tx_b.enrich_attribute(:category_id, categories(:income).id, source: "bayes")
+
+    tx_c = create_transaction(account: @checking_account, amount: 25, kind: "standard").entryable
+    tx_c.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    tx_c.update!(category: categories(:food_and_drink))
+
+    tx_d = create_transaction(account: @checking_account, amount: 10, kind: "standard").entryable
+
+    result_ids = Transaction::Search.new(@family, filters: { ai_status: [ "current" ] })
+                                  .transactions_scope.pluck(:id)
+
+    assert_equal [ tx_a.id, tx_b.id ].sort, result_ids.sort
+    assert_not_includes result_ids, tx_c.id, "a changed-afterwards category is history, not current"
+    assert_not_includes result_ids, tx_d.id
+  end
+
+  test "ai_status history returns transactions changed after auto-categorization" do
+    tx_a = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    tx_a.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "ai")
+
+    tx_c = create_transaction(account: @checking_account, amount: 25, kind: "standard").entryable
+    tx_c.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    tx_c.update!(category: categories(:food_and_drink))
+
+    tx_d = create_transaction(account: @checking_account, amount: 10, kind: "standard").entryable
+
+    result_ids = Transaction::Search.new(@family, filters: { ai_status: [ "history" ] })
+                                  .transactions_scope.pluck(:id)
+
+    assert_equal [ tx_c.id ], result_ids
+    assert_not_includes result_ids, tx_a.id, "a still-current assignment is not history"
+    assert_not_includes result_ids, tx_d.id
+  end
+
+  test "ai_status with both values returns any automatic enrichment" do
+    tx_a = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    tx_a.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "ai")
+
+    tx_c = create_transaction(account: @checking_account, amount: 25, kind: "standard").entryable
+    tx_c.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    tx_c.update!(category: categories(:food_and_drink))
+
+    tx_d = create_transaction(account: @checking_account, amount: 10, kind: "standard").entryable
+
+    result_ids = Transaction::Search.new(@family, filters: { ai_status: [ "current", "history" ] })
+                                  .transactions_scope.pluck(:id)
+
+    assert_equal [ tx_a.id, tx_c.id ].sort, result_ids.sort
+    assert_not_includes result_ids, tx_d.id
+  end
+
+  test "ai_status empty or absent leaves the scope unchanged" do
+    tx = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+
+    assert_equal [ tx.id ], Transaction::Search.new(@family).transactions_scope.pluck(:id)
+    assert_equal [ tx.id ], Transaction::Search.new(@family, filters: { ai_status: [] }).transactions_scope.pluck(:id)
+  end
+
+  test "ai_status ignores values outside the whitelist" do
+    tx = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+
+    result_ids = Transaction::Search.new(@family, filters: { ai_status: [ "bogus" ] })
+                                  .transactions_scope.pluck(:id)
+
+    assert_equal [ tx.id ], result_ids
+  end
+
+  test "a transaction with matching ai and bayes rows is returned and counted once" do
+    tx = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    tx.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "ai")
+    tx.update!(category: categories(:income))
+    tx.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "bayes")
+
+    search = Transaction::Search.new(@family, filters: { ai_status: [ "current" ] })
+
+    assert_equal [ tx.id ], search.transactions_scope.pluck(:id)
+    assert_equal 1, search.totals.count, "two matching enrichment rows must not double-count (see #3174)"
+  end
+
+  test "ai_status composes with the categories filter" do
+    tx_a = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    tx_a.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "ai")
+
+    tx_b = create_transaction(account: @checking_account, amount: 50, kind: "standard").entryable
+    tx_b.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    result_ids = Transaction::Search.new(@family, filters: { ai_status: [ "current" ], categories: [ "Food & Drink" ] })
+                                  .transactions_scope.pluck(:id)
+
+    assert_equal [ tx_a.id ], result_ids
+  end
+
+  test "clearing the category after auto-categorization counts as history" do
+    tx = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    tx.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "ai")
+    tx.update!(category: nil)
+
+    history_ids = Transaction::Search.new(@family, filters: { ai_status: [ "history" ] })
+                                   .transactions_scope.pluck(:id)
+    current_ids = Transaction::Search.new(@family, filters: { ai_status: [ "current" ] })
+                                   .transactions_scope.pluck(:id)
+
+    assert_equal [ tx.id ], history_ids
+    assert_empty current_ids
+  end
+
+  test "attachment_status with returns only transactions that have a file" do
+    with_file = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    attach_file(with_file)
+
+    without_file = create_transaction(account: @checking_account, amount: 50, kind: "standard").entryable
+
+    result_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "with" ] })
+                                  .transactions_scope.pluck(:id)
+
+    assert_equal [ with_file.id ], result_ids
+    assert_not_includes result_ids, without_file.id
+  end
+
+  test "attachment_status without returns only transactions that have no file" do
+    with_file = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    attach_file(with_file)
+
+    without_file = create_transaction(account: @checking_account, amount: 50, kind: "standard").entryable
+
+    result_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "without" ] })
+                                  .transactions_scope.pluck(:id)
+
+    assert_equal [ without_file.id ], result_ids
+  end
+
+  test "attachment_status with both, no or unknown values leaves the scope unchanged" do
+    with_file = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    attach_file(with_file)
+
+    without_file = create_transaction(account: @checking_account, amount: 50, kind: "standard").entryable
+
+    expected = [ with_file.id, without_file.id ].sort
+
+    [ [ "with", "without" ], [], [ "bogus" ] ].each do |statuses|
+      result_ids = Transaction::Search.new(@family, filters: { attachment_status: statuses })
+                                    .transactions_scope.pluck(:id)
+
+      assert_equal expected, result_ids.sort, "attachment_status #{statuses.inspect} must not filter"
+    end
+  end
+
+  test "a transaction with several files is returned and counted once" do
+    tx = create_transaction(account: @checking_account, amount: 100, kind: "standard").entryable
+    attach_file(tx, filename: "invoice.pdf")
+    attach_file(tx, filename: "receipt.pdf")
+
+    search = Transaction::Search.new(@family, filters: { attachment_status: [ "with" ] })
+
+    assert_equal [ tx.id ], search.transactions_scope.pluck(:id)
+    assert_equal 1, search.totals.count
+  end
+
+  test "split children count as attached when the file is on their parent" do
+    parent = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    attach_file(parent.entryable)
+    child_ids = parent.split!([ { name: "Part one", amount: 60 }, { name: "Part two", amount: 40 } ]).map(&:entryable_id)
+
+    plain = create_transaction(account: @checking_account, amount: 25, kind: "standard").entryable
+
+    with_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "with" ] })
+                                .transactions_scope.pluck(:id)
+    without_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "without" ] })
+                                   .transactions_scope.pluck(:id)
+
+    assert_equal child_ids.sort, with_ids.sort
+    assert_equal [ plain.id ], without_ids
+  end
+
+  test "a split child's own file does not mark its siblings as attached" do
+    parent = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    with_file, without_file = parent.split!([ { name: "Part one", amount: 60 }, { name: "Part two", amount: 40 } ]).map(&:entryable)
+    attach_file(with_file)
+
+    with_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "with" ] })
+                                .transactions_scope.pluck(:id)
+    without_ids = Transaction::Search.new(@family, filters: { attachment_status: [ "without" ] })
+                                   .transactions_scope.pluck(:id)
+
+    assert_equal [ with_file.id ], with_ids
+    assert_equal [ without_file.id ], without_ids
+  end
+
+  private
+    # Attaches a small PDF to the transaction.
+    def attach_file(transaction, filename: "invoice.pdf")
+      transaction.attachments.attach(io: StringIO.new("invoice"), filename: filename, content_type: "application/pdf")
+    end
 end

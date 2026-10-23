@@ -17,23 +17,45 @@ Sure has **two separate AI systems** that operate independently. Understanding t
 
 ### 1. Chat Assistant (conversational)
 
-The interactive chat where users ask questions about their finances. Routes through one of two backends:
+The interactive chat where users ask questions about their finances. Routes through one of two backends, or is turned off:
 
-- **Builtin** (default): Uses the OpenAI-compatible provider configured via `OPENAI_ACCESS_TOKEN` / `OPENAI_URI_BASE` / `OPENAI_MODEL`. Calls Sure's function tools directly (get_accounts, get_transactions, etc.).
+- **Builtin** (default): Uses the LLM provider selected by `LLM_PROVIDER`: the OpenAI-compatible provider (`OPENAI_ACCESS_TOKEN` / `OPENAI_URI_BASE` / `OPENAI_MODEL`, the default) or the [native Anthropic provider](#anthropic-native). Calls Sure's function tools directly (get_accounts, get_transactions, etc.).
 - **External**: Delegates the entire conversation to a remote AI agent. The agent calls back to Sure via MCP to access financial data. Set `ASSISTANT_TYPE=external` as a global override, or configure each family's assistant type in Settings.
+- **None in app** (`mcp_only`): Removes the in-app chat for the household: the right-hand chat sidebar and its toggle, the mobile Assistant tab, and the buttons that start a chat. Bring your own agent and connect it through [MCP](mcp.md), which keeps working. Set `ASSISTANT_TYPE=mcp_only` to remove the chat for every family.
 
 ### 2. Auto-Categorization and Merchant Detection (background)
 
-Background jobs that classify transactions and detect merchants. These **always** use the OpenAI-compatible provider (`OPENAI_ACCESS_TOKEN`), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.
+Background jobs that classify transactions and detect merchants. These use the LLM provider selected by `LLM_PROVIDER` (OpenAI-compatible or native Anthropic; categorization uses Jev instead when it's selected), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.
 
 ### What this means in practice
 
 | Setting | Chat assistant | Auto-categorization |
 |---------|---------------|---------------------|
-| `ASSISTANT_TYPE=builtin` (default) | Uses OpenAI provider | Uses OpenAI provider |
-| `ASSISTANT_TYPE=external` | Uses external agent | Still uses OpenAI provider |
+| `ASSISTANT_TYPE=builtin` (default) | Uses the LLM provider | Uses the LLM provider |
+| `ASSISTANT_TYPE=external` | Uses external agent | Still uses the LLM provider |
+| `ASSISTANT_TYPE=mcp_only` | None in app; connect your own agent via MCP | Unchanged; uses the configured categorization provider |
 
-If you use an external agent for chat, you still need `OPENAI_ACCESS_TOKEN` set for auto-categorization and merchant detection to work. The two systems are fully independent.
+If you use an external agent for chat, you still need an LLM provider configured (`OPENAI_ACCESS_TOKEN` or `ANTHROPIC_API_KEY`) for auto-categorization and merchant detection to work. The two systems are fully independent.
+
+With `mcp_only`, Sure also skips the features that need a user's AI consent: the bills AI shortcuts (review, smart fill, smart configuration). Insights never use AI: their text comes from templates.
+
+### Where AI jobs run (Sidekiq lanes)
+
+AI work runs in the Sidekiq `worker`, in its own capsule ("lane"), so a slow model can't hold up syncs, balance recalculation and scheduled jobs. Both lanes are defined in `config/sidekiq.yml`:
+
+| Lane | Queues | Threads | Jobs |
+|------|--------|---------|------|
+| default | `scheduled`, `high_priority`, `medium_priority`, `low_priority`, `default` | `RAILS_MAX_THREADS - RAILS_AI_MAX_THREADS` (3 - 1 = 2) | syncs, balances, rules, imports, scheduled jobs |
+| ai | `ai_high_priority`, then `ai_low_priority` (strict order) | `RAILS_AI_MAX_THREADS` (default `1`) | chat (`ai_high_priority`); auto-categorization, merchant detection and enhancement, PDF processing (`ai_low_priority`) |
+
+- `RAILS_MAX_THREADS` is the worker's total thread count, as before, and also sizes its database pool. It must be greater than `RAILS_AI_MAX_THREADS` (so at least `2` by default): a lane with 0 threads stops the worker from starting ("Concurrency of 0 is not supported"). Puma reads the same variable, so if you lower it for the web service to save memory, set the worker's separately.
+- **Strict order:** a waiting chat runs next, but it doesn't interrupt the AI job already running. Auto-categorization, merchant-detection and merchant-enhancement jobs make one LLM call each, of `LLM_MAX_ITEMS_PER_CALL` items (default `25`), or more if the batch doesn't fit the context window; PDF import and chat jobs can make several. With one AI thread, a PDF import or other `ai_low_priority` job waits behind earlier ones, and continuous chat use pauses background AI work.
+- **Busy notice:** when a chat would wait behind another AI job (a chat has waited over 30 seconds, or, with one AI thread, background AI work has), its "Thinking" bubble says the system is busy until the chat's job starts. `AI_RESPONSE_TIMEOUT` includes that wait.
+- **One AI thread suits a model that serves one request at a time,** such as a local model on CPU: a chat turn's calls then run back to back, keeping the model's prompt cache warm. If your provider serves requests in parallel (hosted APIs, or a local server with several slots), raise `RAILS_AI_MAX_THREADS`, and `RAILS_MAX_THREADS` by the same amount so the default lane keeps its threads.
+- **The worker must load `config/sidekiq.yml`,** as `bundle exec sidekiq` does by default. A worker started with its own queue list (`sidekiq -q …`, a custom Helm `worker.command`) doesn't get the AI lane. If no worker polls `ai_high_priority` and `ai_low_priority`, **System health** (`/admin/system_health`) and the site-wide banner report "No worker is processing the AI queues", and the chat page warns that responses may not be delivered. Keep `-C config/sidekiq.yml`; adding `-q ai_high_priority -q ai_low_priority` also works, but AI jobs then share that worker's threads.
+- **System health:** AI backlog doesn't count towards "queue backed up" (a large merchant-detection run can queue for hours), but "Oldest job age" still includes it. Check the queue table or `/sidekiq` to see which queue is waiting.
+- **Upgrading:** AI jobs moved from `high_priority` (chat), `medium_priority` and `scheduled` to the AI queues. Jobs already queued under the old names still run once, in the default lane.
+- **Large batches:** Sure doesn't limit `LLM_MAX_ITEMS_PER_CALL`. OpenAI-compatible providers split a batch that doesn't fit the context window; with the native Anthropic provider, raise `ANTHROPIC_MAX_TOKENS` (default `4096`) along with it, or replies are cut off.
 
 ## Quickstart: OpenAI Token
 
@@ -124,20 +146,96 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 ```
 
 **Recommended models:**
+- `gpt-6.1-sol` - Latest Sol model for complex financial analysis; assistant tools require the native Responses API
+- `gpt-6-sol` - Strong reasoning for multi-step financial analysis; use the native OpenAI provider and Responses API for reasoning with function tools
 - `gpt-4.1` - Default, best balance of speed and quality
-- `gpt-5` - Latest model, highest quality (more expensive)
+- `gpt-5` - Earlier-generation reasoning model
 - `gpt-4o-mini` - Cheaper, good quality
 
 **Pricing:** See [OpenAI Pricing](https://openai.com/api/pricing/)
 
-### Google Gemini (via OpenRouter)
+GPT-6.1 Sol and GPT-6 Sol use the native Responses API for assistant tools.
+Leave the custom Base URL setting empty when connecting directly to OpenAI.
+GPT-6.1 Sol does not support tool calling in Chat Completions, or the `none`
+and `minimal` reasoning efforts. See the [model documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+Native GPT-6.1 Sol, GPT-6 Sol,
+`o1`, and `o3` PDF vision requests use `max_completion_tokens`, which includes
+reasoning and visible output, when an output limit is explicitly configured.
+Set `LLM_MAX_RESPONSE_TOKENS` to a positive value to bound each such request;
+the default 512-token context reserve is not sent as a provider limit.
+Text extraction keeps its existing request behavior. Custom endpoints retain
+their existing token parameters. Increase the LLM context budget for cloud
+reasoning models; the default 2048-token context is intended for small local models.
+
+### Anthropic (native)
+
+Sure talks to Anthropic's Messages API directly. It serves chat (streamed), auto-categorization, merchant detection and enhancement, bill setup suggestions, and PDF imports (Claude reads the PDF itself; no vision setting needed).
+
+```bash
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your-anthropic-api-key # pipelock:ignore
+
+# Optional
+# ANTHROPIC_MODEL=claude-sonnet-4-6
+# ANTHROPIC_MAX_TOKENS=4096
+# ANTHROPIC_REQUEST_TIMEOUT=600
+# ANTHROPIC_BASE_URL=
+```
+
+Or in the UI: **Settings** → **Self-Hosting** → **AI Provider** → **Anthropic (Claude)**, then API Key, Base URL and Default Model. An env var disables its field; `LLM_PROVIDER` locks the provider choice.
+
+| Variable | Default | What it does |
+|----------|---------|--------------|
+| `LLM_PROVIDER` | `openai` | `anthropic` selects this provider. If the selected provider has no key, Sure uses the other one. While a custom OpenAI-compatible provider is configured (`OPENAI_URI_BASE` with an access token and model), chat still goes to it, so remove those settings when switching. |
+| `ANTHROPIC_API_KEY` | — | API key. `ANTHROPIC_ACCESS_TOKEN` also works and wins if both are set. |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for chat and all background jobs. Must start with `claude` unless a base URL is set. |
+| `ANTHROPIC_MAX_TOKENS` | `4096` | Reply limit, sent with every request (the Messages API requires one). |
+| `ANTHROPIC_REQUEST_TIMEOUT` | `600` | HTTP timeout per call, in seconds. |
+| `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Anthropic-compatible endpoint. Requires `ANTHROPIC_MODEL`. |
+
+How it differs from the OpenAI-compatible provider:
+
+- **No token budget.** `LLM_CONTEXT_WINDOW` (default `2048`) does less here:
+  - **Every provider:** below `4096`, the chat's system prompt lists accounts and categories only as counts, and the model fetches them with tools.
+  - **OpenAI-compatible:** it is also the budget, with `LLM_MAX_RESPONSE_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE`, for splitting auto-categorization and merchant batches, and for trimming chat history on Chat Completions endpoints (`LLM_MAX_HISTORY_TOKENS`). The native OpenAI Responses API keeps history on OpenAI's side, so nothing is trimmed there.
+  - **Native Anthropic:** only the system-prompt check applies. History is sent whole, batches aren't split, and `LLM_MAX_RESPONSE_TOKENS`, `LLM_MAX_HISTORY_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE` are ignored. Set `LLM_CONTEXT_WINDOW` by env (e.g. `200000`) so the prompt lists accounts and categories; its UI field is in the OpenAI panel.
+- **The reply limit is always sent.** A reply that needs more than `ANTHROPIC_MAX_TOKENS` is cut off, and on Claude 5 models the model's thinking counts toward it. Only bank statement extraction detects this (it logs a warning). Raise the limit if long answers or batch results come back incomplete.
+- **Batch size.** Auto-categorization, merchant detection and merchant enhancement send `LLM_MAX_ITEMS_PER_CALL` items per request (default `25`), with no splitting to fit the context window. Raise `ANTHROPIC_MAX_TOKENS` along with it, or replies are cut off (see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes)).
+- **Its own timeout.** `ANTHROPIC_REQUEST_TIMEOUT` replaces `OPENAI_REQUEST_TIMEOUT`. `AI_RESPONSE_TIMEOUT` still covers the whole chat turn. `OPENAI_EXTRA_HEADERS`, `LLM_JSON_MODE` and `OPENAI_SUPPORTS_*` don't apply.
+
+**Bedrock, Vertex and proxies:** `ANTHROPIC_BASE_URL` can point at any endpoint that speaks the Anthropic Messages API, such as a gateway in front of AWS Bedrock or Google Vertex AI. Set `ANTHROPIC_MODEL` to that endpoint's model ID (for Bedrock, e.g. `anthropic.claude-sonnet-4-5-20250929-v1:0`); the `claude` prefix check is skipped. Sure sends the key as an Anthropic API key (`x-api-key`) and doesn't sign AWS or Google requests itself.
+
+### Google Gemini
+
+You can connect to Google Gemini either directly via Google AI Studio's OpenAI-compatible endpoint or via OpenRouter.
+
+**Recommended Gemini models:**
+
+- `gemini-4-argon` - Flagship frontier reasoning model; 1M token context, native multimodal and deep multi-step reasoning for complex financial analysis, code execution, and agentic workflows
+- `gemini-3.8-flash` - Best all-around choice; fast, strong reasoning, and reliable tool calling for chat and finance tools
+- `gemini-3.5-flash-lite` - Ultra-low cost and fast; ideal for background categorization and merchant detection
+- `gemini-3.1-pro-preview` - Best for complex financial analysis, portfolio queries, and multi-year trends
+- `gemini-2.5-flash` - Previous-generation budget model; fast and dependable fallback
+- `gemini-2.5-pro` - Previous-generation model for complex financial analysis
+
+#### Direct via Google AI Studio
+
+[Google AI Studio](https://aistudio.google.com/) provides direct API access to Gemini models with a free tier and an OpenAI-compatible endpoint:
+
+```bash
+OPENAI_ACCESS_TOKEN=your-google-ai-studio-api-key # pipelock:ignore
+OPENAI_URI_BASE=https://generativelanguage.googleapis.com/v1beta/openai
+OPENAI_MODEL=gemini-3.8-flash
+```
+
+#### Via OpenRouter
 
 [OpenRouter](https://openrouter.ai/) provides access to many models including Gemini:
 
 ```bash
 OPENAI_ACCESS_TOKEN=your-openrouter-api-key
 OPENAI_URI_BASE=https://openrouter.ai/api/v1
-OPENAI_MODEL=google/gemini-2.0-flash-exp
+OPENAI_MODEL=google/gemini-3.8-flash
 ```
 
 **Why OpenRouter?**
@@ -146,11 +244,9 @@ OPENAI_MODEL=google/gemini-2.0-flash-exp
 - Automatic fallbacks
 - Usage tracking
 
-**Recommended Gemini models via OpenRouter:**
-- `google/gemini-2.5-flash` - Fast and capable
-- `google/gemini-2.5-pro` - High quality, good for complex queries
+### Anthropic Claude via OpenRouter (OpenAI-compatible)
 
-### Anthropic Claude (via OpenRouter)
+This route uses the OpenAI-compatible provider and its token budget. To call Anthropic directly, use the [native Anthropic provider](#anthropic-native).
 
 ```bash
 OPENAI_ACCESS_TOKEN=your-openrouter-api-key
@@ -277,6 +373,7 @@ AI_DEBUG_MODE=true
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
 - If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits. You can also set this in **Settings → Self-Hosting → OpenAI → Request Timeout** when the environment variable is not configured.
 - Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait — a sum, not simply a larger number than the per-call limit
+- AI jobs run one at a time by default (`RAILS_AI_MAX_THREADS=1`), which suits a local model with one slot; see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes) before raising it
 
 ### Docker Compose Example
 
@@ -361,13 +458,13 @@ Similar requirements to categorization:
 For self-hosted deployments, you can configure AI settings through the web interface:
 
 1. Go to **Settings** → **Self-Hosting**
-2. Scroll to the **AI Provider** section
-3. Configure the provider:
+2. Scroll to the **AI Provider** section and choose **OpenAI** or **Anthropic (Claude)**
+3. Configure the provider (OpenAI fields shown; for Anthropic see [Anthropic (native)](#anthropic-native)):
    - **Access Token** - Your API key
    - **API Base URL** - Custom endpoint (leave blank for OpenAI)
    - **Model** - Model name (required for custom endpoints)
    - **JSON Mode** - Structured-output format; `Auto` suits most models
-4. Optionally tune **Token Budget** — Context Window, Max Response Tokens and Max Items Per Batch. The defaults are conservative so small-context local models work out of the box; raise them for cloud or large-context models.
+4. Optionally set **Max Items Per Batch** under the provider choice; it applies to every provider. For OpenAI-compatible endpoints, also tune **Token Budget** — Context Window and Max Response Tokens. The defaults are conservative so small-context local models work out of the box; raise them for cloud or large-context models.
 5. Optionally set **Chat Response Timeout** — how long the chat waits for a whole turn before showing a "no response" error (default 90s). Raise it for slow local models; see [Chat Errors While the Model Is Still Generating](#chat-errors-while-the-model-is-still-generating).
 
 **Note:** Environment variables take precedence over UI settings. When an env var is set, the corresponding UI field is disabled.
@@ -933,6 +1030,8 @@ Langfuse helps you:
 
 4. Restart Sure
 
+Sure sends completed observations through Langfuse's v4 OpenTelemetry ingestion path. Existing keys and host settings still apply. See the [Langfuse migration and validation notes](langfuse.md#langfuse-v4) before upgrading an existing project.
+
 All LLM operations will now be logged to Langfuse, including:
 - Chat messages and responses
 - Auto-categorization requests
@@ -1034,16 +1133,75 @@ Good test queries that exercise different capabilities:
 
 ### Cloud Costs
 
-Typical costs for OpenAI (as of early 2025):
+**Pricing table last updated and verified: October 17, 2026.** Every model
+listed in [`LlmUsage::PRICING`](../../app/models/llm_usage.rb) was checked against
+official sources. `PRICING_VERIFIED_ON` supplies the verification date shown on
+the LLM usage screen. This is a manual review date, not a claim that providers
+changed every price that day.
 
-- **gpt-4.1:** ~$5-15 per 1M input tokens, ~$15-60 per 1M output tokens
-- **gpt-5:** ~2-3x more expensive than gpt-4.1
-- **gpt-4o-mini:** ~$0.15 per 1M input tokens (very cheap)
+Rates are USD per million tokens at the Standard tier. The source coverage is:
+
+| Models in the code | Official pricing source |
+| --- | --- |
+| GPT-6 Sol/6.1 Sol, GPT-5.6, GPT-5.5, GPT-5.4, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1, o3, o4-mini (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
+| GPT-5.2/5.1 Chat aliases | [GPT-5.2 Chat](https://developers.openai.com/api/docs/models/gpt-5.2-chat-latest), [GPT-5.1 Chat](https://developers.openai.com/api/docs/models/gpt-5.1-chat-latest) |
+| o1-mini | [o1-mini](https://developers.openai.com/api/docs/models/o1-mini) |
+| Gemini 4 Argon, 3.8/3.7/3.6/3.5 Flash, 3.5/3.1 Flash-Lite, 3.1 Pro, 3 Flash, 2.5 Pro/Flash | [Google pricing](https://ai.google.dev/gemini-api/docs/pricing) |
+| Claude Opus 4.6/4.7, Sonnet 4.5/4.6, Haiku 4.5 | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
+
+#### Dated pricing changes
+
+| Model | Input / output | Latest relevant published date found |
+| --- | --- | --- |
+| Gemini 4 Argon | $2 / $10 | October 2026: launch promotional pricing through November 30, 2026 ($4 / $20 standard starting December 1, 2026) |
+| GPT-6.1 Sol | $2 / $10 | September 29, 2026: launch pricing |
+| GPT-6 Sol | $2 / $10 | September 22, 2026: launch pricing |
+| GPT-5.6 Sol | $4 / $20 | August 21, 2026: price reduction; promotion available at least through November 21, 2026 |
+| GPT-5.6 Terra | $2 / $12 | July 30, 2026: price reduction |
+| GPT-5.6 Luna | $0.20 / $1.20 | July 30, 2026: price reduction |
+| Claude Opus 4.7 | $5 / $25 | April 16, 2026: published launch rate; corrects Sure's erroneous $15 / $75 |
+| Claude Opus 4.6 | $5 / $25 | February 5, 2026: published base launch rate; corrects Sure's erroneous $15 / $75 |
+
+Dates above come from the [OpenAI changelog](https://developers.openai.com/api/docs/changelog),
+the [Gemini API documentation](https://ai.google.dev/gemini-api/docs/pricing),
+and the [Opus 4.7](https://www.anthropic.com/news/claude-opus-4-7) and
+[Opus 4.6](https://www.anthropic.com/news/claude-opus-4-6) announcements.
+For other listed rates, the latest price-change date was **not established**;
+their current prices were verified on October 17. Google's pricing page lists
+launch promotional pricing for Gemini 4 Argon ($2.00 / $10.00) through November 30, 2026,
+and Gemini 3.8, 3.7, and 3.6 Flash through December 31, 2026.
+
+#### Context tiers and estimate limits
+
+OpenAI's listed GPT-6 Sol, GPT-6.1 Sol, GPT-5.6, GPT-5.5/Pro and GPT-5.4/Pro
+rates increase above 272,000 input tokens: input doubles and output increases
+by 50% for the entire request. GPT-5.4 mini/nano retain their flat rates.
+Gemini 4 Argon is $2.00 / $10.00 through November 2026 ($4.00 / $20.00 standard starting
+December 2026) across its 1,048,576 token (1M) unified context window.
+Gemini 2.5 Pro changes from $1.25 / $10 to $2.50 / $15 above 200,000 input
+tokens. Gemini 3.1 Pro (and 3.1 Pro Preview) changes from $2.00 / $12.00 to
+$4.00 / $18.00 above 200,000 input tokens. Gemini 3.8 Flash, 3.7 Flash, and
+3.6 Flash are $0.75 / $3.75 through 2026 ($1.50 / $7.50 starting 2027).
+Gemini 3.5 Flash is $1.50 / $9.00, Gemini 3.5 Flash-Lite is $0.30 / $2.50,
+Gemini 3.1 Flash-Lite is $0.25 / $1.50, Gemini 3 Flash is $0.50 / $3.00,
+and Gemini 2.5 Flash remains $0.30 / $2.50.
+Claude 4.6/4.7 use standard rates throughout their context window.
+
+Sure estimates individual requests using these tiers. Aggregate categorization
+previews assume short requests. Saved usage costs are historical estimates and
+are not recalculated by this update. Estimates exclude regional premiums,
+alternative service tiers, tool charges and audio-specific rates. Anthropic
+five-minute cache writes and reads are included when reported; OpenAI and Gemini
+cache discounts and cache-write/storage charges are not currently modeled.
+Custom endpoints may charge different rates.
+
+For comparison, GPT-4.1 is $2 input / $8 output, GPT-5 is $1.25 / $10,
+and GPT-4o mini is $0.15 / $0.60.
 
 **Typical usage:**
 - Chat message: 500-2000 tokens (input) + 100-500 tokens (output)
 - Auto-categorization: 1000-3000 tokens per 25 transactions
-- Cost per chat message: $0.01-0.05 for gpt-4.1
+- Cost per chat message: about $0.0018-0.008 for GPT-4.1 at the token counts above
 
 **Optimization tips:**
 1. Use `gpt-4o-mini` for categorization
@@ -1191,7 +1349,7 @@ Then restart both `web` and `worker` so the new env var is loaded. If you are us
 
 - `OPENAI_REQUEST_TIMEOUT` (default `60`) — applies to **each HTTP call** to the model, on its own.
 - `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` (default `8`) — how many chained tool-call rounds one turn may make. A turn costs up to `1 + this` model calls. On the final permitted round the model is offered no tools, so it answers in text instead of erroring.
-- `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**, and its clock starts when the message is queued, so Sidekiq queue time counts against it.
+- `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**, and its clock starts when the message is queued, so Sidekiq queue time counts against it. With one AI thread, that includes waiting for the AI job already running (see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes)).
 
 Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated. Worse, the assistant only shows text once a response actually contains some — a tool-call-only response produces nothing to display — so a turn that chains several tool calls sits on "Thinking…" through all of them. At the defaults the worst case is nine sequential model calls plus eight tool-round executions.
 
@@ -1372,6 +1530,8 @@ Read and analysis:
 
 Write:
 - `update_transaction`, `update_budget`, `create_goal`
+- `unmatch_transfer` - Unlink a wrongly matched transfer
+- `update_transfer` - Count a transfer into an investment account as spending or as a plain transfer
 - `create_tag` / `update_tag`, `create_category` / `update_category`
 
 Documents:
@@ -1684,6 +1844,29 @@ throttle('chats/create', limit: 10, period: 1.minute) do |req|
 end
 ```
 
+## External chat assistant
+
+The External assistant delegates chat to a remote OpenAI-compatible agent gateway. It is separate from the Builtin LLM provider described above.
+
+Configure it in **Settings → Self-Hosting → AI Assistant**, or with:
+
+```bash
+ASSISTANT_TYPE=external
+EXTERNAL_ASSISTANT_URL=https://your-agent-host/v1/chat/completions
+EXTERNAL_ASSISTANT_TOKEN=your-gateway-token # pipelock:ignore
+EXTERNAL_ASSISTANT_MODEL=openclaw/main
+```
+
+Configuration behavior:
+
+- `EXTERNAL_ASSISTANT_URL` is the full chat-completions endpoint. Sure sends requests to this URL verbatim; it does not append `/v1/chat/completions`.
+- The Settings form requires an agent selection. After the URL and token are saved, Sure requests the sibling `/v1/models` endpoint and shows the returned entries as agent choices. If you change the endpoint or token and the previously selected agent is not offered there, Sure saves the new connection and asks you to pick an agent again.
+- The selected value is sent as the OpenAI-compatible `model` routing value, such as `openclaw/main`. This selects an external agent. It does not select or change the LLM configured behind that agent.
+- The gateway must return standard streaming chat-completion events (`choices[0].delta.content`) followed by `data: [DONE]`.
+- An authentication, endpoint, or agent-selection failure comes from the external gateway. Check the gateway's response and logs when Sure reports an HTTP error.
+
+Upgrading: deployments that set only the URL and token keep working. When no agent is selected, Sure uses `openclaw/main`, which matches the previous implicit `main` agent. `EXTERNAL_ASSISTANT_AGENT_ID` is still read for existing deployments and maps to `openclaw/<id>` until an agent is selected. Once a model is selected in Settings or with `EXTERNAL_ASSISTANT_MODEL`, the agent routing header always follows that model. New configurations should use `EXTERNAL_ASSISTANT_MODEL`.
+
 ## Resources
 
 - [OpenAI Documentation](https://platform.openai.com/docs)
@@ -1705,4 +1888,4 @@ For issues with AI features:
 
 ---
 
-**Last Updated:** August 2026
+**Last Updated:** September 2026

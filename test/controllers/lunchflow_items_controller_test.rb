@@ -5,6 +5,34 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user = users(:family_admin)
   end
 
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch lunchflow_item_url(lunchflow_items(:one)),
+          params: { lunchflow_item: { name: "Renamed Lunch Flow" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "lunchflow-providers-panel"
+    assert_includes response.body, %(id="lunchflow-providers-panel")
+    assert_equal "Renamed Lunch Flow", lunchflow_items(:one).reload.name
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post lunchflow_items_url,
+         params: { lunchflow_item: { name: "Second Lunch Flow", api_key: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "lunchflow-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Api key can't be blank")
+  end
+
+  test "invalid non-Turbo update redirects back instead of rendering a missing template" do
+    patch lunchflow_item_url(lunchflow_items(:one)),
+          params: { lunchflow_item: { name: "" } },
+          headers: { "HTTP_REFERER" => settings_providers_url }
+
+    assert_redirected_to settings_providers_url
+    assert_match "Name can't be blank", flash[:alert]
+  end
+
   test "setup accounts renders German subtype options without English fallbacks" do
     ensure_tailwind_build
     @user.update!(locale: "de")
@@ -121,6 +149,34 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "Ein unerwarteter Fehler ist aufgetreten. Versuch es später noch einmal."
   end
 
+  test "select accounts masks the iban to the last 4 characters" do
+    provider = mock("lunchflow_provider")
+    provider.stubs(:get_accounts).returns(accounts: [
+      { id: "acc_1", name: "Checking", iban: "DE89370400440532013000", institution_name: "Test Bank", currency: "EUR", status: "active" } # pipelock:ignore IBAN
+    ])
+    Provider::LunchflowAdapter.stubs(:build_provider).returns(provider)
+
+    get select_accounts_lunchflow_items_url
+
+    assert_response :success
+    assert_includes response.body, "•3000"
+    refute_includes response.body, "DE89370400440532013000" # pipelock:ignore IBAN
+  end
+
+  test "select existing account masks the iban to the last 4 characters" do
+    provider = mock("lunchflow_provider")
+    provider.stubs(:get_accounts).returns(accounts: [
+      { id: "acc_1", name: "Checking", iban: "DE89370400440532013000", institution_name: "Test Bank", currency: "EUR", status: "active" } # pipelock:ignore IBAN
+    ])
+    Provider::LunchflowAdapter.stubs(:build_provider).returns(provider)
+
+    get select_existing_account_lunchflow_items_url(account_id: accounts(:depository).id)
+
+    assert_response :success
+    assert_includes response.body, "•3000"
+    refute_includes response.body, "DE89370400440532013000" # pipelock:ignore IBAN
+  end
+
   test "invalid non-Turbo create redirects instead of rendering a missing template" do
     assert_no_difference "LunchflowItem.count" do
       post lunchflow_items_url, params: {
@@ -131,7 +187,38 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    assert_redirected_to accounts_path
+    assert_redirected_to settings_providers_path
     assert_match "Api key can't be blank", flash[:alert]
   end
+
+  test "complete_account_setup's stream lists only the manual accounts the viewer can access" do
+    own, shared, private_account = create_manual_accounts_for_scope_test
+
+    post complete_account_setup_lunchflow_item_url(lunchflow_items(:one)),
+         params: {},
+         headers: { "Turbo-Frame" => "modal" }
+
+    assert_turbo_stream action: "update", target: "manual-accounts"
+    assert_includes response.body, own.name
+    assert_includes response.body, shared.name
+    assert_not_includes response.body, private_account.name
+  end
+
+  private
+    # The #manual-accounts list rebuilt in this response must match /accounts
+    # for the viewer: their own manual accounts and those shared with them,
+    # never a member's account that was not shared.
+    def create_manual_accounts_for_scope_test
+      admin = users(:family_admin)
+      member = users(:family_member)
+      build = ->(name, owner) {
+        Account.create!(family: families(:dylan_family), owner: owner, name: name, currency: "USD", balance: 0,
+                        accountable: Depository.create!(subtype: "checking"))
+      }
+      own = build.call("Admin Own Manual Marker", admin)
+      shared = build.call("Member Shared Manual Marker", member)
+      shared.account_shares.create!(user: admin, permission: "read_only")
+      private_account = build.call("Member Private Manual Marker", member)
+      [ own, shared, private_account ]
+    end
 end

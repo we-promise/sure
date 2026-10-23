@@ -94,8 +94,6 @@ de:
         budget_heading: Token-Budget
         context_window_help: 'Gesamtzahl der Tokens, die das Modell annimmt. Standard: 2048 – für OpenAI in der Cloud oder lokale Modelle mit großem Kontext auf 8192 oder mehr anheben.'
         context_window_label: Kontextfenster (optional)
-        max_items_per_call_help: 'Obergrenze für Stapel bei automatischer Kategorisierung und Händlererkennung. Standard: 25. Größere Stapel werden automatisch so zerlegt, dass sie ins Kontextfenster passen.'
-        max_items_per_call_label: Maximale Einträge pro Stapel (optional)
         max_response_tokens_help: 'Tokens, die für die Antwort des Modells reserviert sind. Standard: 512. Niedriger ansetzen, um Platz für längere Verläufe zu schaffen.'
         max_response_tokens_label: Maximale Antwort-Tokens (optional)
         timeout_heading: Zeitlimits
@@ -104,6 +102,8 @@ de:
         openai_request_timeout_help: 'Standard: 60. Gilt für jede OpenAI-kompatible HTTP-Anfrage, einschließlich automatischer Kategorisierung, Händlererkennung, Chat, PDF-Verarbeitung und Vektorspeicher-Aufrufen. OPENAI_REQUEST_TIMEOUT überschreibt dieses Feld.'
         ai_response_timeout_label: Antwortzeitlimit in Sekunden (optional)
         ai_response_timeout_help: 'Standard: 90. Gilt nur für das Zeitlimit der gesamten Chat-Runde. Setz den Wert daher als Summe an: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × Anfragezeitlimit, plus Ausführungszeit der Tools und Wartezeit in der Warteschlange. AI_RESPONSE_TIMEOUT überschreibt dieses Feld.'
+        ai_health_probe_timeout_label: Zeitlimit für Systemstatus-Prüfungen in Sekunden (optional)
+        ai_health_probe_timeout_help: 'Standard: 5. Gilt nur für die KI-Live-Prüfungen unter Einstellungen → Systemstatus, nie für echte KI-Aufrufe. Erhöhe den Wert, wenn die PDF-Prüfungen mit einem Cloud-Modell ein Zeitlimit melden. AI_HEALTH_PROBE_TIMEOUT überschreibt dieses Feld.'
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance bietet kostenlosen Zugriff auf Aktienkurse, Wechselkurse und Finanzdaten – ganz ohne API-Schlüssel.
@@ -231,6 +231,8 @@ de:
         provider_label: Aktiver LLM-Anbieter
         provider_openai: OpenAI
         title: KI-Anbieter
+        max_items_per_call_help: "Obergrenze für Stapel bei automatischer Kategorisierung und Händlererkennung. Standard: 25. Bei OpenAI-kompatiblen Anbietern werden größere Stapel automatisch so zerlegt, dass sie ins Kontextfenster passen."
+        max_items_per_call_label: Maximale Einträge pro Stapel (optional)
       realie_settings:
         description: Trag deinen Realie-API-Key ein, um beim Anlegen einer Immobilie US-Objektdaten und Wertschätzungen abzurufen. Der kostenlose Tarif erlaubt 25 Anfragen pro Monat, geteilt zwischen Objektsuchen und täglichen Wertaktualisierungen. In einem Bezahltarif hebst du die Grenze über die Umgebungsvariable REALIE_MAX_REQUESTS_PER_MONTH an.
         env_configured_message: Über die Umgebungsvariable REALIE_API_KEY eingerichtet.

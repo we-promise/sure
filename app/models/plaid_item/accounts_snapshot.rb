@@ -48,7 +48,10 @@ class PlaidItem::AccountsSnapshot
 
       transactions = investments_data.transactions.select { |t| t.account_id == account_id }
       holdings = investments_data.holdings.select { |h| h.account_id == account_id }
-      securities = transactions.count > 0 && holdings.count > 0 ? investments_data.securities : []
+      # Holdings and investment transactions each resolve their security_id
+      # through this metadata, so either one needs it; an account with holdings
+      # but no investment transactions is common.
+      securities = transactions.any? || holdings.any? ? investments_data.securities : []
 
       InvestmentsData.new(
         transactions: transactions,
@@ -93,7 +96,11 @@ class PlaidItem::AccountsSnapshot
     def can_fetch_liabilities?
       plaid_item.supports_product?("liabilities") &&
       accounts.any? do |a|
-        a.type == "credit" && a.subtype == "credit card" ||
+        # Plaid's `credit` type has two subtypes: "credit card" and "paypal".
+        # Liabilities covers both, so match on the type rather than allow-listing
+        # a single subtype -- otherwise a PayPal Credit account leaves
+        # `liabilities` in billed_products (i.e. billed) but never fetched.
+        a.type == "credit" ||
         a.type == "loan" && (a.subtype == "mortgage" || a.subtype == "student")
       end
     end

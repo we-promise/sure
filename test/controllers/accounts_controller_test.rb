@@ -4,6 +4,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
   include OnchainTestHelper
   include EntriesTestHelper
+  include TradeRepublicSessionTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -14,6 +15,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
     assert_response :success
     assert_select "p.ml-auto.privacy-sensitive"
+  end
+
+  test "show filters account activity to uncategorized transactions" do
+    uncategorized = create_transaction(account: @account, name: "Uncategorized Filter Target", category: nil)
+    categorized = create_transaction(account: @account, name: "Categorized Filter Decoy", category: categories(:food_and_drink))
+
+    get account_url(@account, q: { uncategorized: "1" })
+
+    assert_response :success
+    assert_select "input#q_uncategorized[checked]"
+    assert_match uncategorized.name, response.body
+    assert_no_match categorized.name, response.body
   end
 
   test "index delegates whole-row account clicks to the account link" do
@@ -100,6 +113,296 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     unregister_fake_chain!
   end
 
+  # #3630. A provider card is admitted for a member as soon as ONE of its
+  # accounts is shared with them, so the card must list only the accounts this
+  # viewer may see. The unshared account is renamed to something no other part
+  # of the page can print, so its absence proves the card filtered it.
+  test "a partially shared member sees only their account on a Plaid card" do
+    shared, unshared = link_two_accounts_to(plaid_items(:one)) do |item, index|
+      item.plaid_accounts.create!(
+        name: "Second Plaid Account", plaid_id: "acc_235_#{index}", plaid_type: "investment",
+        currency: "USD", current_balance: 10
+      )
+    end
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(plaid_items(:one))}"
+    assert_select "turbo-frame##{dom_id(shared)}", count: 1
+    assert_select "turbo-frame##{dom_id(unshared)}", count: 0
+    assert_not_includes response.body, unshared.name
+  end
+
+  test "an admin still sees every account on a Plaid card" do
+    shared, unshared = link_two_accounts_to(plaid_items(:one)) do |item, index|
+      item.plaid_accounts.create!(
+        name: "Second Plaid Account", plaid_id: "acc_235_#{index}", plaid_type: "investment",
+        currency: "USD", current_balance: 10
+      )
+    end
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(shared)}", count: 1
+    assert_select "turbo-frame##{dom_id(unshared)}", count: 1
+  end
+
+  test "a partially shared member sees only their account on a SimpleFIN card" do
+    item = SimplefinItem.create!(family: families(:dylan_family), name: "Conn 235", access_url: "https://example.com/access")
+    shared, unshared = link_two_accounts_to(item) do |sf_item, index|
+      sf_item.simplefin_accounts.create!(
+        name: "SF #{index}", account_id: "sf_235_#{index}", currency: "USD",
+        current_balance: 1, account_type: "depository"
+      )
+    end
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_select "turbo-frame##{dom_id(shared)}", count: 1
+    assert_select "turbo-frame##{dom_id(unshared)}", count: 0
+    assert_not_includes response.body, unshared.name
+  end
+
+  # The card's other name-bearing lists. The sync summary's detail rows come
+  # from the connection's last sync and name the accounts and transactions
+  # involved, so they follow the same rule as the account list: shown only to
+  # a viewer who can see every account on the connection. Counts stay.
+  test "a partially shared member does not see account names in a card's sync summary" do
+    item = plaid_items(:one)
+    _shared, unshared = link_two_accounts_to(item) do |p_item, index|
+      p_item.plaid_accounts.create!(
+        name: "Second Plaid Account", plaid_id: "acc_235_#{index}", plaid_type: "investment",
+        currency: "USD", current_balance: 10
+      )
+    end
+    item.syncs.create!(status: "completed", sync_stats: {
+      "tx_seen" => 1, "tx_skipped" => 1,
+      "skip_details" => [ { "name" => "Secret Txn 235", "reason" => "excluded", "account_name" => unshared.name } ],
+      "total_errors" => 1,
+      "errors" => [ { "name" => unshared.name, "message" => "Import failed 235" } ]
+    })
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_not_includes response.body, unshared.name
+    assert_not_includes response.body, "Secret Txn 235"
+  end
+
+  test "an admin still sees the account names in a card's sync summary" do
+    item = plaid_items(:one)
+    link_two_accounts_to(item) do |p_item, index|
+      p_item.plaid_accounts.create!(
+        name: "Second Plaid Account", plaid_id: "acc_235_#{index}", plaid_type: "investment",
+        currency: "USD", current_balance: 10
+      )
+    end
+    item.syncs.create!(status: "completed", sync_stats: {
+      "tx_seen" => 1, "tx_skipped" => 1,
+      "skip_details" => [ { "name" => "Secret Txn 235", "reason" => "excluded", "account_name" => "x" } ]
+    })
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, "Secret Txn 235"
+  end
+
+  test "a partially shared member does not see unshared names in SimpleFIN's stale-pending and replacement banners" do
+    item = SimplefinItem.create!(family: families(:dylan_family), name: "Conn 235", access_url: "https://example.com/access")
+    _shared, unshared = link_two_accounts_to(item) do |sf_item, index|
+      sf_item.simplefin_accounts.create!(
+        name: "SF #{index}", account_id: "sf_235_#{index}", currency: "USD",
+        current_balance: 1, account_type: "depository"
+      )
+    end
+    SimplefinItem.any_instance.stubs(:stale_pending_status)
+                 .returns({ count: 2, message: "2 pending", accounts: [ unshared.name ] })
+    item.syncs.create!(status: "completed", sync_stats: {
+      "replacement_suggestions" => [ {
+        "dormant_sfa_id" => item.simplefin_accounts.find_by!(account_id: "sf_235_1").id,
+        "active_sfa_id" => item.simplefin_accounts.find_by!(account_id: "sf_235_0").id,
+        "sure_account_id" => unshared.id
+      } ]
+    })
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_not_includes response.body, unshared.name
+  end
+
+  # The card header names the connected institution when there is only one.
+  # That institution is the unshared account's as much as the shared one's,
+  # so it follows the same rule as the other names on the card.
+  test "a partially shared member does not see the connection's institution name" do
+    item = SimplefinItem.create!(family: families(:dylan_family), name: "Conn 235", access_url: "https://example.com/access")
+    link_two_accounts_to(item) do |sf_item, index|
+      sf_item.simplefin_accounts.create!(
+        name: "SF #{index}", account_id: "sf_235_#{index}", currency: "USD",
+        current_balance: 1, account_type: "depository"
+      )
+    end
+    SimplefinItem.any_instance.stubs(:connected_institutions).returns([ { "name" => "Hidden Bank 235" } ])
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_not_includes response.body, "Hidden Bank 235"
+  end
+
+  test "an admin still sees the connection's institution name" do
+    item = SimplefinItem.create!(family: families(:dylan_family), name: "Conn 235", access_url: "https://example.com/access")
+    link_two_accounts_to(item) do |sf_item, index|
+      sf_item.simplefin_accounts.create!(
+        name: "SF #{index}", account_id: "sf_235_#{index}", currency: "USD",
+        current_balance: 1, account_type: "depository"
+      )
+    end
+    SimplefinItem.any_instance.stubs(:connected_institutions).returns([ { "name" => "Hidden Bank 235" } ])
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, "Hidden Bank 235"
+  end
+
+  # The SnapTrade card's brokerage line is built from every
+  # account on the connection. With one brokerage it prints that brokerage's
+  # name, so a member shared only the nameless account would read the other's.
+  test "a partially shared member does not see a SnapTrade connection's brokerage" do
+    item = snaptrade_items(:configured_item)
+    # The fixture accounts name two brokerages, which makes the line a count.
+    # Cleared so the only brokerage left is the unshared account's.
+    item.snaptrade_accounts.update_all(brokerage_name: nil)
+    link_two_accounts_to(item) do |st_item, index|
+      st_item.snaptrade_accounts.create!(
+        name: "ST #{index}", snaptrade_account_id: "st_235_#{index}", currency: "USD",
+        current_balance: 1, brokerage_name: (index.zero? ? nil : "Hidden Broker 235")
+      )
+    end
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_not_includes response.body, "Hidden Broker 235"
+  end
+
+  test "an admin still sees a SnapTrade connection's brokerage" do
+    item = snaptrade_items(:configured_item)
+    # The fixture accounts name two brokerages, which makes the line a count.
+    # Cleared so the only brokerage left is the unshared account's.
+    item.snaptrade_accounts.update_all(brokerage_name: nil)
+    link_two_accounts_to(item) do |st_item, index|
+      st_item.snaptrade_accounts.create!(
+        name: "ST #{index}", snaptrade_account_id: "st_235_#{index}", currency: "USD",
+        current_balance: 1, brokerage_name: (index.zero? ? nil : "Hidden Broker 235")
+      )
+    end
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, "Hidden Broker 235"
+  end
+
+  test "a partially shared member sees only their account on a Kraken card" do
+    item = kraken_items(:one)
+    shared, unshared = link_two_accounts_to(item) do |k_item, index|
+      k_item.kraken_accounts.create!(
+        name: "Kraken #{index}", account_id: "kraken_235_#{index}", account_type: "combined",
+        currency: "USD", current_balance: 1, extra: {}
+      )
+    end
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_select "turbo-frame##{dom_id(shared)}", count: 1
+    assert_select "turbo-frame##{dom_id(unshared)}", count: 0
+  end
+
+  test "a partially shared member does not see stale-rate warnings for an unshared Kraken account" do
+    item = kraken_items(:one)
+    shared, unshared = link_two_accounts_to(item) do |k_item, index|
+      k_item.kraken_accounts.create!(
+        name: "Kraken #{index}", account_id: "kraken_stale_#{index}", account_type: "combined",
+        currency: "USD", current_balance: 1,
+        extra: index.zero? ? {} : { "kraken" => { "stale_rate" => "true", "rate_target_date" => "2001-02-03" } }
+      )
+    end
+
+    sign_in users(:family_member)
+    get accounts_url
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_not_includes response.body, "2001-02-03"
+
+    sign_in users(:family_admin)
+    get accounts_url
+    assert_includes response.body, "2001-02-03"
+  end
+
+  test "a partially shared member does not see a Trade Republic connection's data-quality totals" do
+    item = trade_republic_items(:configured_item)
+    # The fixture item already has one portfolio and one cash account, and
+    # the database allows one of each kind per connection.
+    link_two_accounts_to(item) do |_item, index|
+      trade_republic_accounts(index.zero? ? :main_account : :cash_account)
+    end
+    title = I18n.t("trade_republic_items.trade_republic_item.data_quality.title")
+
+    sign_in users(:family_member)
+    get accounts_url
+    assert_response :success
+    assert_select "##{dom_id(item)}"
+    assert_not_includes response.body, title
+
+    sign_in users(:family_admin)
+    get accounts_url
+    assert_includes response.body, title
+  end
+
+  test "index offers a QR login on a Trade Republic connection that needs one" do
+    item = trade_republic_items(:configured_item)
+    item.update!(session_blob: trade_republic_session_blob(expires_at: 1.minute.ago))
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item)} [data-trade-republic-qr-initiate-url-value='#{initiate_qr_login_trade_republic_item_path(item)}']"
+    assert_select "##{dom_id(item)} [data-trade-republic-qr-return-url-value='#{accounts_path}']"
+    # Until then a sync can only fail.
+    assert_select "##{dom_id(item)} form[action='#{sync_trade_republic_item_path(item)}'] button[disabled]"
+  end
+
+  test "index shows when a Trade Republic login expires" do
+    item = trade_republic_items(:configured_item)
+    item.update!(session_blob: trade_republic_session_blob(expires_at: 5.hours.from_now))
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("trade_republic_items.trade_republic_item.session_expires_in",
+                                          time: "about 5 hours", at: I18n.l(item.reload.session_expires_at, format: :short))
+    assert_select "##{dom_id(item)} [data-controller='trade-republic-qr']", count: 0
+  end
+
   test "index renders trading212 items" do
     trading212_item = trading212_items(:configured_item)
     get accounts_url
@@ -168,6 +471,13 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # checked option instead of the custom row.
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
+  end
+
+  test "show renders without missing translations" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_empty response.body.scan(/translation missing: [\w.]+/).uniq
   end
 
   test "sync all requests fresh Plaid transactions before syncing the family" do
@@ -423,6 +733,20 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p", text: I18n.t("UI.account.chart.title.total_gains")
   end
 
+  # The chart and the Schedule tab's forecast card read one projection. The
+  # chart used to build one and the Schedule partial a second, for the same
+  # date, on every render of a loan's page.
+  test "a loan account page builds its payoff projection once for the chart and the Schedule tab" do
+    loan_account = accounts(:loan)
+    projection = loan_account.loan.payoff_projection(as_of: Date.current)
+    Loan.any_instance.expects(:payoff_projection).once.returns(projection)
+
+    get account_url(loan_account)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("loans.tabs.schedule.forecasted_payoff_date")
+  end
+
   test "remembers selected per_page across account navigation" do
     other_account = accounts(:credit_card)
 
@@ -537,6 +861,46 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
     assert_enqueued_with job: DestroyJob
     assert_equal "Depository account scheduled for deletion", flash[:notice]
+  end
+
+  test "destroy reports failure and keeps the account listed when the enqueue raises" do
+    DestroyJob.queue_adapter.stubs(:enqueue).raises(RedisClient::CannotConnectError, "Connection refused")
+
+    delete account_url(@account)
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.destroy.failed"), flash[:alert]
+    assert_equal "active", @account.reload.status
+
+    get accounts_url
+    assert_select "turbo-frame##{dom_id(@account)}"
+  end
+
+  test "destroy reports failure when the enqueue is rejected" do
+    DestroyJob.queue_adapter.stubs(:enqueue).raises(ActiveJob::EnqueueError, "rejected")
+
+    delete account_url(@account)
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.destroy.failed"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_equal "active", @account.reload.status
+  end
+
+  # The second request of a double submit finds the account already pending
+  # deletion. It reports failure rather than erroring, enqueues nothing more,
+  # and leaves the first request's mark in place.
+  test "a second destroy of an account pending deletion reports failure" do
+    delete account_url(@account)
+    assert_equal "pending_deletion", @account.reload.status
+
+    assert_no_enqueued_jobs(only: DestroyJob) do
+      delete account_url(@account)
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.destroy.failed"), flash[:alert]
+    assert_equal "pending_deletion", @account.reload.status
   end
 
   test "syncing linked account triggers sync for all provider items" do
@@ -789,6 +1153,151 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     ActionView::Base.logger = original_view_logger
     Rails.logger = original_rails_logger
   end
+
+  # --- member-owned connections (issue #3579) ------------------------------
+
+  test "an owner is not shown a connection carrying an account they cannot see" do
+    # Ownership must not widen exposure: the card renders the item's accounts
+    # unfiltered (and is re-rendered by a viewer-less broadcast), so the whole
+    # card is withheld rather than shown with a filtered list.
+    member = users(:family_member)
+    family = families(:dylan_family)
+    item = PlaidItem.create!(
+      family: family, plaid_id: "item_card_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Owned Bank", owner: member
+    )
+    hidden = Account.create!(
+      family: family, owner: users(:family_admin), name: "Not Shared With Member",
+      balance: 100, currency: "USD", accountable: Depository.new
+    )
+    hidden.account_shares.destroy_all
+    plaid_account = PlaidAccount.create!(
+      plaid_item: item, name: "Hidden Feed", plaid_id: "acct_card_#{SecureRandom.hex(4)}",
+      plaid_type: "depository", plaid_subtype: "checking", currency: "USD",
+      current_balance: 100, available_balance: 100
+    )
+    AccountProvider.create!(account: hidden, provider: plaid_account)
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{ActionView::RecordIdentifier.dom_id(item)}", count: 0
+    assert_no_match(/Not Shared With Member/, response.body)
+  end
+
+  test "an owner is shown their freshly connected item before it has any accounts" do
+    # The case ownership visibility exists for: just connected, nothing synced.
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_fresh_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Fresh Bank", owner: member
+    )
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{ActionView::RecordIdentifier.dom_id(item)}", count: 1
+  end
+
+
+  test "an owner sees the management controls on their own connection card" do
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_ctrl_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Controls Bank", owner: member
+    )
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 1
+  end
+
+  test "a member demoted to guest loses the controls on a connection they own" do
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_demote_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Demoted Bank", owner: member
+    )
+    member.update!(role: :guest)
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
+  end
+
+  test "a member sees no controls on a connection someone else owns" do
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_noctrl_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Admin Bank", owner: users(:family_admin)
+    )
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
+  end
+
+  test "reorder saves the manual order of one account group" do
+    # Same shape as the sidebar's sortable-list: group in the URL, ids in the body.
+    patch reorder_accounts_url(group: "depository"), params: { account_ids: [ accounts(:connected).id, @account.id ] }, as: :json
+
+    assert_response :success
+    assert_equal [ accounts(:connected).id, @account.id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "reorder drops accounts from another family" do
+    foreign = families(:empty).accounts.create!(name: "Foreign", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:empty))
+
+    patch reorder_accounts_url, params: { group: "depository", account_ids: [ foreign.id, @account.id ] }, as: :json
+
+    assert_response :success
+    assert_equal [ @account.id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "reorder rejects an unknown group" do
+    patch reorder_accounts_url, params: { group: "not_a_type", account_ids: [ @account.id ] }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_nil @user.reload.manual_account_order["not_a_type"]
+  end
+
+  test "sidebar shows drag handles only with the manual account order" do
+    get account_url(@account)
+    assert_select "[data-controller~='sortable-list']", count: 0
+
+    @user.update!(default_account_order: "manual")
+    get account_url(@account)
+    assert_select "[data-controller~='sortable-list'][data-sortable-list-url-value=?]", reorder_accounts_path(group: "depository")
+    assert_select "[data-sortable-list-target='item'][data-sortable-list-id=?]", @account.id
+  end
+
+  private
+    # #3630. Links a shared and an unshared account to +item+ through two fresh
+    # provider rows built by the block, and returns them in that order. Shares
+    # are reset first so the member's access is exactly the one granted here.
+    def link_two_accounts_to(item)
+      admin = users(:family_admin)
+      member = users(:family_member)
+      shared = accounts(:depository)
+      unshared = accounts(:investment)
+      unshared.update!(name: "Unshared Brokerage 235")
+
+      [ shared, unshared ].each_with_index do |account, index|
+        account.update!(owner: admin)
+        account.account_shares.destroy_all
+        AccountProvider.create!(account: account, provider: yield(item, index))
+      end
+      shared.account_shares.create!(user: member, permission: "read_only")
+
+      [ shared, unshared ]
+    end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest

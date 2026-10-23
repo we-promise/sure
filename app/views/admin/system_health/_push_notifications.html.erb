@@ -1,0 +1,52 @@
+<%= render DS::Card.new(id: "push-notifications", class: "gap-4", data: { testid: "push-notification-status" },
+      aria: { labelledby: "push-notifications-title" }) do %>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="space-y-1">
+      <h2 id="push-notifications-title" class="text-lg font-semibold text-primary"><%= t("admin.system_health.push_notifications.title") %></h2>
+      <% if latest_test %>
+        <p class="text-sm text-secondary"><%= t("admin.system_health.push_notifications.requested_at", time: l(latest_test[:created_at], format: :long)) %></p>
+      <% end %>
+    </div>
+    <%= render DS::Button.new(
+      href: send_test_push_admin_system_health_path,
+      method: :post,
+      variant: :outline,
+      size: :sm,
+      icon: "bell-ring",
+      text: t("admin.system_health.push_notifications.send_test"),
+      disabled: disabled_reason.present?,
+      class: "disabled:opacity-50",
+      aria: { describedby: "push-notification-help" },
+      data: { turbo_submits_with: t("admin.system_health.push_notifications.queueing") }
+    ) %>
+  </div>
+
+  <p id="push-notification-help" class="text-sm text-secondary">
+    <%= t("admin.system_health.push_notifications.messages.#{disabled_reason || :ready}") %>
+  </p>
+
+  <% if latest_test %>
+    <div class="space-y-3">
+      <p class="text-sm text-secondary"><%= t("admin.system_health.push_notifications.result_help") %></p>
+      <%= render DS::Table.new(rows: results, inset: true, label: t("admin.system_health.push_notifications.results_label")) do |table| %>
+        <% table.with_column(t("admin.system_health.push_notifications.columns.device"), row_header: true) do |_result, index| %>
+          <%= t("admin.system_health.push_notifications.device", number: index + 1) %>
+        <% end %>
+        <% table.with_column(t("admin.system_health.push_notifications.columns.environment")) do |result| %>
+          <%= t("admin.system_health.push_notifications.environments.#{result[:environment]}") %>
+        <% end %>
+        <% table.with_column(t("admin.system_health.push_notifications.columns.status")) do |result| %>
+          <%= t("admin.system_health.push_notifications.statuses.#{result[:status]}") %>
+        <% end %>
+        <% table.with_column(t("admin.system_health.push_notifications.columns.checked_at")) do |result| %>
+          <%= result[:checked_at] ? l(result[:checked_at], format: :long) : t("admin.system_health.push_notifications.pending") %>
+        <% end %>
+      <% end %>
+      <%= render DS::Link.new(
+        href: admin_system_health_path(tab: "background_jobs", anchor: "push-notifications"),
+        variant: :outline, size: :sm, icon: "refresh-cw",
+        text: t("admin.system_health.push_notifications.refresh")
+      ) %>
+    </div>
+  <% end %>
+<% end %>

@@ -5,3 +5,28 @@ tr:
       models:
         recurring_transaction:
           merchant_or_name_required: Satıcı veya ad bilgisinden biri mutlaka bulunmalıdır
+          attributes:
+            payment_url:
+              invalid_scheme: geçerli bir http:// veya https:// adresi olmalıdır
+            anchor_date:
+              required_for_intervals: kural 2 veya daha fazla dönemde bir tekrarlandığında zorunludur
+            bill_type:
+              transfer_shape_mismatch: yalnızca bir hedef hesap belirlendiğinde transfer olabilir
+            expected_amount_min:
+              greater_than_max: beklenen en yüksek tutardan büyük olamaz
+            account:
+              required_for_transfer: yinelenen bir transferde bulunmalıdır
+              wrong_family: bu aileye ait olmalıdır
+            destination_account:
+              same_as_source: kaynak hesapla aynı olamaz
+              family_mismatch: kaynak hesapla aynı aileye ait olmalıdır
+              wrong_family: bu aileye ait olmalıdır
+    attributes:
+      recurring_transaction:
+        payment_url: Ödeme bağlantısı
+  recurring_transactions:
+    allocator:
+      missing_rate: '%{from} para biriminden %{to} para birimine döviz kuru yok; tutarı elle girin'
+      unmeasurable: bu işlemde %{currency} para birimine çevrilemeyen bir dağıtım var, bu yüzden işlemin kalan kısmı ölçülemiyor. %{date} için bir döviz kuru ekleyin veya önce mevcut ödemeyi kaldırın
+      over_allocated: '%{amount} dağıtmak, işlemin kalan %{capacity} %{currency} tutarını aşıyor'
+      exceeds_remaining: '%{amount}, bu dönemde kalan %{remaining} tutarını aşıyor'

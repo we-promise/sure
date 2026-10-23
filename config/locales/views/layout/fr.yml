@@ -29,6 +29,10 @@ fr:
       footer:
         privacy_policy: Politique de confidentialité
         terms_of_service: Conditions d'utilisation
+      notification_tray:
+        download_complete: Téléchargement terminé
+        download_failed: Le téléchargement a échoué. Veuillez réessayer.
+        download_location: Le fichier se trouve dans votre dossier Téléchargements.
     trial:
       contribute: Contribuer
       data_deleted_in_days: Les données seront supprimées dans %{days} jours

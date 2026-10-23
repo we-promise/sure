@@ -42,7 +42,7 @@ class RecurringTransaction
         amount: amount,
         bill_type: is_income ? "income" : "bill",
         account: account,
-        currency: account&.currency || family.currency,
+        currency: chosen_currency || account&.currency || family.currency,
         payment_url: attrs[:payment_url],
         autopay: ActiveModel::Type::Boolean.new.cast(attrs[:autopay]) || false,
         notes: attrs[:notes],
@@ -51,6 +51,8 @@ class RecurringTransaction
         occurrence_count: 0
       )
       recurring.frequency_preset = attrs[:frequency_preset]
+      recurring.frequency_interval = attrs[:frequency_interval]
+      recurring.frequency_interval_unit = attrs[:frequency_interval_unit]
       recurring.first_due_on = attrs[:first_due_on]
 
       # A chosen account that does not resolve to something writable is said
@@ -63,6 +65,12 @@ class RecurringTransaction
 
       if amount.nil?
         recurring.errors.add(:base, I18n.t("recurring_transactions.create.amount_invalid"))
+        return recurring
+      end
+
+      # Checked on the input: assigning it already rounded to the column.
+      unless RecurringTransaction.storable_amount?(amount)
+        recurring.errors.add(:base, I18n.t("recurring_transactions.create.amount_too_precise"))
         return recurring
       end
 
@@ -81,7 +89,9 @@ class RecurringTransaction
         preset: attrs[:frequency_preset],
         day_of_month: due.day,
         weekday: due.wday,
-        month_of_year: due.month
+        month_of_year: due.month,
+        interval: attrs[:frequency_interval],
+        interval_unit: attrs[:frequency_interval_unit]
       )
 
       recurring
@@ -129,5 +139,17 @@ class RecurringTransaction
         scope.exists?(name: recurring.name, merchant_id: nil)
       end
     end
+
+    private
+      # A currency picked on the form wins, the way a transaction's does: a USD
+      # subscription charged to a EUR card is a USD bill. With none, the bill
+      # takes its account's currency. A code the app doesn't know is ignored
+      # rather than saved, since formatting it would raise later.
+      def chosen_currency
+        code = attrs[:currency].to_s.strip.presence
+        Money::Currency.new(code).iso_code if code
+      rescue Money::Currency::UnknownCurrencyError
+        nil
+      end
   end
 end

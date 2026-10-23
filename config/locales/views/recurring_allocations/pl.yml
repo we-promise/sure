@@ -1,0 +1,15 @@
+---
+pl:
+  recurring_allocations:
+    already_allocated: Ta transakcja jest już przypisana do tego rachunku
+    confirm:
+      success: Płatność przypisana do rachunku
+    create:
+      success: Płatność przypisana
+    destroy:
+      success: Płatność odłączona
+    invalid: Nie udało się zapisać płatności
+    missing_rate: Brak dostępnego kursu wymiany; wpisz kwotę ręcznie
+    over_allocation: To przypisałoby więcej niż wynosi kwota transakcji
+    reject:
+      success: Odrzucono. Ta transakcja nie będzie już sugerowana dla tego rachunku.

@@ -16,10 +16,164 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "a destroy that raises leaves a pending_deletion account disabled" do
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    error = assert_raises(StandardError) { @account.destroy }
+
+    assert_equal "destroy failed", error.message
+    assert_equal "disabled", @account.reload.status
+  end
+
+  test "a disabled account can be scheduled for deletion again after a failed destroy" do
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+    assert_raises(StandardError) { @account.destroy }
+    @account.unstub(:cleanup_transfers)
+    @account.reload
+
+    assert_enqueued_with(job: DestroyJob, args: [ @account ]) do
+      @account.destroy_later
+    end
+    assert_equal "pending_deletion", @account.reload.status
+  end
+
+  test "a failed direct destroy still disables an active account" do
+    assert @account.active?
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    assert_raises(StandardError) { @account.destroy }
+
+    assert_equal "disabled", @account.reload.status
+  end
+
+  test "disable from active is unchanged" do
+    assert @account.active?
+
+    @account.disable!
+
+    assert_equal "disabled", @account.reload.status
+  end
+
+  test "no event other than the failed-deletion recovery leaves pending_deletion" do
+    @account.mark_for_deletion!
+
+    assert_not @account.may_activate?
+    assert_not @account.may_enable?
+    assert_not @account.may_disable?
+    assert_not @account.may_mark_for_deletion?
+    permitted = @account.aasm.events(permitted: true).map(&:name)
+    assert_equal [ :restore_after_failed_deletion ], permitted
+  end
+
+  test "the failed-deletion recovery only fires from pending_deletion" do
+    assert @account.active?
+    assert_not @account.aasm.may_fire_event?(:restore_after_failed_deletion)
+
+    @account.disable!
+    assert_not @account.aasm.may_fire_event?(:restore_after_failed_deletion)
+  end
+
+  # disabled_at is the net-worth cutoff for a disabled account
+  # (NetWorthSeriesBuilder, NetWorthBreakdownSeriesBuilder). A failed delete
+  # must not move it to the failure, which would count the account's balances
+  # for the whole time it was already disabled.
+  test "a failed destroy of a disabled account keeps its original disabled_at" do
+    disabled_at = 40.days.ago.change(usec: 0)
+    @account.update_columns(status: "disabled", disabled_at: disabled_at)
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    assert_raises(StandardError) { @account.destroy }
+
+    @account.reload
+    assert_equal "disabled", @account.status
+    assert_equal disabled_at, @account.disabled_at
+  end
+
+  # The other side: an account deleted from active has no cutoff yet, so the
+  # failure is when it stopped counting. One disabled and enabled again earlier
+  # must not inherit that old cutoff.
+  test "a failed destroy of an account that was active stamps disabled_at at the failure" do
+    @account.disable!
+    @account.enable!
+    @account.mark_for_deletion!
+    @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    failed_at = 3.days.from_now.change(usec: 0)
+    travel_to(failed_at) { assert_raises(StandardError) { @account.destroy } }
+
+    @account.reload
+    assert_equal "disabled", @account.status
+    assert_equal failed_at, @account.disabled_at
+  end
+
+  # An account disabled and enabled again before enable cleared disabled_at
+  # still carries that date while active or draft. Deleting it must drop the
+  # stale date, so a failed destroy stamps the failure instead of reviving it
+  # as the account's net-worth cutoff.
+  test "a failed destroy of an active or draft account with a stale disabled_at stamps the failure" do
+    stale = 1.year.ago.change(usec: 0)
+    failed_at = 3.days.from_now.change(usec: 0)
+
+    results = %w[active draft].index_with do |status|
+      @account.update_columns(status: status, disabled_at: stale)
+      @account.reload.mark_for_deletion!
+      @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+      travel_to(failed_at) { assert_raises(StandardError) { @account.destroy } }
+      @account.unstub(:cleanup_transfers)
+
+      @account.reload
+      [ @account.status, @account.disabled_at ]
+    end
+
+    assert_equal({ "active" => [ "disabled", failed_at ], "draft" => [ "disabled", failed_at ] }, results)
+  end
+
+  test "marking an active or draft account for deletion clears a stale disabled_at" do
+    results = %w[active draft].index_with do |status|
+      @account.update_columns(status: status, disabled_at: 1.year.ago)
+      @account.reload.mark_for_deletion!
+      @account.reload.disabled_at
+    end
+
+    assert_equal({ "active" => nil, "draft" => nil }, results)
+  end
+
+  test "marking a disabled account for deletion keeps its disabled_at" do
+    disabled_at = 40.days.ago.change(usec: 0)
+    @account.update_columns(status: "disabled", disabled_at: disabled_at)
+
+    @account.reload.mark_for_deletion!
+
+    assert_equal disabled_at, @account.reload.disabled_at
+  end
+
+  test "enabling an account clears disabled_at" do
+    @account.disable!
+    assert_not_nil @account.reload.disabled_at
+
+    @account.enable!
+    assert_nil @account.reload.disabled_at
+
+    @account.disable!
+    @account.activate!
+    assert_nil @account.reload.disabled_at
+  end
+
   test "default owner prefers a family admin before a super admin" do
     family = families(:empty)
     admin = users(:empty)
     super_admin = users(:sure_support_staff)
+
+    # Fixtures stamp every row with one `created_at`, and this family holds a
+    # second admin (`sso_only`), so "the earliest admin" is only meaningful
+    # once the timestamps differ. Without this the assertion below rides on
+    # whichever admin the query plan happens to return first.
+    family.users.update_all(created_at: 1.hour.ago)
+    admin.update!(created_at: 2.hours.ago)
 
     Current.reset
 
@@ -32,6 +186,43 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_equal admin, account.owner
     assert_not_equal super_admin, account.owner
+  end
+
+  test "default owner is stable when two admins share a created_at" do
+    family = families(:empty)
+    family.users.where(role: "admin").update_all(created_at: 1.hour.ago)
+
+    Current.reset
+
+    owners = 2.times.map do |i|
+      family.accounts.create!(
+        name: "Unowned tie-break account #{i}",
+        balance: 0,
+        currency: "USD",
+        accountable: Depository.new
+      ).owner
+    end
+
+    # `id` breaks the tie, so the winner is the tied admin with the lowest id.
+    # Asserting only that the two calls agree would pass without the
+    # tie-breaker whenever the database returned the same tied row twice.
+    expected_owner = family.users.where(role: "admin").order(:id).first
+
+    assert_equal expected_owner, owners.first
+    assert_equal expected_owner, owners.last
+  end
+
+  test "set_current_balance schedules an account sync by default" do
+    @account.expects(:sync_later).once
+
+    assert @account.set_current_balance(1234).success?
+  end
+
+  test "set_current_balance skips the account sync when the caller schedules it" do
+    @account.expects(:sync_later).never
+
+    assert @account.set_current_balance(1234, schedule_sync: false).success?
+    assert_equal 1234, @account.reload.current_anchor_balance
   end
 
   test "create_and_sync calls sync_later by default" do
@@ -182,6 +373,114 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_equal 0, account.valuations.opening_anchor.first.entry.amount
     assert_equal 8_000, account.entries.valuations.find_by(date: Date.current)&.amount
+  end
+
+  # #3383: only a loan's start date moves the opening anchor.
+  test "create_and_sync dates a loan's opening anchor on its start date" do
+    Account.any_instance.stubs(:sync_later)
+    opening_balance_date = Date.current - 2.years
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Mortgage",
+        balance: 399_600,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: 400_000, start_date: Date.new(2020, 1, 15),
+                                  rate_type: "fixed", interest_rate: 5, term_months: 360 }
+      },
+      skip_initial_sync: true,
+      opening_balance_date: opening_balance_date
+    )
+
+    assert_equal Date.new(2020, 1, 15), account.valuations.opening_anchor.first.entry.date
+    assert_equal 399_600, account.entries.valuations.find_by(date: Date.current)&.amount
+  end
+
+  # The anchor is dated on the start date only because Loan rejects a future
+  # one: an anchor after today would skip today's reconciliation and leave the
+  # account with no balance for today.
+  # Entry rejects a date on or before Entry.min_supported_date, so a loan drawn
+  # down that long ago keeps the form's opening date, as before the start date
+  # moved the anchor. Both sides of the boundary.
+  test "a loan whose start date is on the earliest supported entry date keeps the form's opening date" do
+    Account.any_instance.stubs(:sync_later)
+    opening_balance_date = Date.current - 2.years
+    start_date = Entry.min_supported_date
+
+    account = create_loan_with_start_date(start_date, opening_balance_date)
+
+    assert_equal start_date, account.accountable.start_date
+    assert_equal opening_balance_date, account.valuations.opening_anchor.first.entry.date
+  end
+
+  test "a loan started the day after the earliest supported date is anchored on its start date" do
+    Account.any_instance.stubs(:sync_later)
+    start_date = Entry.min_supported_date + 1.day
+
+    account = create_loan_with_start_date(start_date, Date.current - 2.years)
+
+    assert_equal start_date, account.valuations.opening_anchor.first.entry.date
+  end
+
+  test "create_and_sync rejects a loan with a future start date and writes no anchor" do
+    Account.any_instance.stubs(:sync_later)
+
+    assert_no_difference [ "Account.count", "Entry.count" ] do
+      assert_raises ActiveRecord::RecordInvalid do
+        Account.create_and_sync(
+          {
+            family: @family,
+            owner: @admin,
+            name: "Mortgage",
+            balance: 399_600,
+            currency: "USD",
+            accountable_type: "Loan",
+            accountable_attributes: { initial_balance: 400_000, start_date: Date.current + 1.month,
+                                      rate_type: "fixed", interest_rate: 5, term_months: 360 }
+          },
+          skip_initial_sync: true,
+          opening_balance_date: Date.current - 3.years
+        )
+      end
+    end
+  end
+
+  test "create_and_sync keeps a depository account's opening balance date" do
+    Account.any_instance.stubs(:sync_later)
+    opening_balance_date = Date.new(2020, 1, 15)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Checking",
+        balance: 1_000,
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable_attributes: {}
+      },
+      skip_initial_sync: true,
+      opening_balance_date: opening_balance_date
+    )
+
+    assert_equal opening_balance_date, account.valuations.opening_anchor.first.entry.date
+  end
+
+  test "a provider-created loan keeps the default opening date" do
+    item = SimplefinItem.create!(family: @family, name: "SF Conn", access_url: "https://example.com/access")
+    simplefin_account = SimplefinAccount.create!(
+      simplefin_item: item, name: "My Loan", account_id: "acct_424",
+      currency: "USD", account_type: "loan", current_balance: 5_000
+    )
+
+    account = Account.create_from_simplefin_account(simplefin_account, "Loan")
+
+    assert_nil account.accountable.start_date
+    assert_equal 2.years.ago.to_date, account.valuations.opening_anchor.first.entry.date
+    assert_equal 1, account.entries.valuations.count
   end
 
   test "create_and_sync uses provided opening balance date" do
@@ -679,4 +978,243 @@ class AccountTest < ActiveSupport::TestCase
     assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
     assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
   end
+
+  test "history_start_date resolves to the earliest of opening anchor, entries, and balances" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "History Test Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    assert_nil account.history_start_date
+
+    anchor_date = 30.days.ago.to_date
+    account.set_opening_anchor_balance(balance: 100, date: anchor_date)
+    assert_equal anchor_date, account.history_start_date
+
+    earlier_entry_date = 45.days.ago.to_date
+    account.entries.create!(
+      name: "Past Entry",
+      date: earlier_entry_date,
+      amount: 50,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+    assert_equal earlier_entry_date, account.history_start_date
+  end
+
+  test "history_start_date returns nil when account has no opening anchor, entries, or balances" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Empty History Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    assert_nil account.history_start_date
+  end
+
+  test "history_start_date resolves to transaction date when there is no opening valuation" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Transaction Only Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    trade_date = 2.years.ago.to_date
+    account.entries.create!(
+      name: "Old Trade",
+      date: trade_date,
+      amount: 500,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    assert_equal trade_date, account.history_start_date
+  end
+
+  test "history_start_date resolves to balance date when there are no entries or opening valuation" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Balance Only Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    balance_date = 1.year.ago.to_date
+    account.balances.create!(
+      date: balance_date,
+      balance: 1000,
+      currency: "USD"
+    )
+
+    assert_equal balance_date, account.history_start_date
+  end
+
+  test "history_start_date prefers earlier transaction when valuation is added much later" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Late Valuation Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    trade_date = 2.years.ago.to_date
+    account.entries.create!(
+      name: "Initial Buy",
+      date: trade_date,
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    # Later reconciliation valuation added 6 months ago
+    account.set_opening_anchor_balance(balance: 500, date: 6.months.ago.to_date)
+
+    assert_equal trade_date, account.history_start_date
+  end
+
+  test "history_start_date handles transaction from 10 years ago" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Decade Old Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    ten_years_ago = 10.years.ago.to_date
+    account.entries.create!(
+      name: "Decade Ago Trade",
+      date: ten_years_ago,
+      amount: 250,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    assert_equal ten_years_ago, account.history_start_date
+  end
+
+  test "history_start_date ignores pending transactions" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Pending Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    posted_date = 5.days.ago.to_date
+    account.entries.create!(
+      name: "Posted Entry",
+      date: posted_date,
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    account.entries.create!(
+      name: "Pending Entry",
+      date: 10.days.ago.to_date,
+      amount: 50,
+      currency: "USD",
+      entryable: Transaction.new(extra: { "plaid" => { "pending" => true } })
+    )
+
+    assert_equal posted_date, account.history_start_date
+  end
+
+  test "history_start_date on linked investment account resolves to provider activity ignoring default anchor" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Linked Investment Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new,
+      plaid_account: plaid_accounts(:one)
+    )
+    assert account.linked?
+
+    default_anchor_date = 2.years.ago.to_date
+    account.set_opening_anchor_balance(balance: 0, date: default_anchor_date)
+
+    recent_trade_date = 14.days.ago.to_date
+    account.entries.create!(
+      name: "Recent Provider Trade",
+      date: recent_trade_date,
+      amount: 100,
+      currency: "USD",
+      source: "plaid",
+      entryable: Transaction.new
+    )
+
+    assert_equal recent_trade_date, account.history_start_date
+  end
+
+  test "history_start_date on linked investment account returns nil when no provider activity exists" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Fresh Linked Investment",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new,
+      plaid_account: plaid_accounts(:one)
+    )
+    assert account.linked?
+
+    default_anchor_date = 2.years.ago.to_date
+    account.set_opening_anchor_balance(balance: 0, date: default_anchor_date)
+
+    assert_nil account.history_start_date
+  end
+
+  test "annotatable_by includes owned and annotate-tier shares but not read-only ones" do
+    member = users(:family_member)
+    ids = Account.annotatable_by(member).pluck(:id)
+
+    assert_includes ids, accounts(:depository).id, "full_control share"
+    assert_not_includes ids, accounts(:credit_card).id, "read_only share"
+
+    accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
+    assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
+  end
+
+  private
+    def create_loan_with_start_date(start_date, opening_balance_date)
+      Account.create_and_sync(
+        {
+          family: @family,
+          owner: @admin,
+          name: "Mortgage",
+          balance: 399_600,
+          currency: "USD",
+          accountable_type: "Loan",
+          accountable_attributes: { initial_balance: 400_000, start_date: start_date,
+                                    rate_type: "fixed", interest_rate: 5, term_months: 360 }
+        },
+        skip_initial_sync: true,
+        opening_balance_date: opening_balance_date
+      )
+    end
 end

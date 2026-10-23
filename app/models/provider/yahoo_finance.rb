@@ -573,11 +573,33 @@ class Provider::YahooFinance < Provider
     # MIC code to its Yahoo-specific symbol suffix, the default currency when
     # Yahoo omits one, and an optional dual-listing group with a preference
     # rank (lower = preferred).  Adding a new market is a one-line hash entry.
+    # A MIC missing here means the symbol is sent to Yahoo bare, which for any
+    # non-US listing is a 404: the security then accumulates failed fetches and
+    # never gets a price, with nothing telling the user why.
     EXCHANGE_CONFIG = {
       "XNSE" => { yahoo_suffix: ".NS", default_currency: "INR", dual_list_group: :india, preference_rank: 0 },
       "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 },
       "XBOG" => { yahoo_suffix: ".CL", default_currency: "COP" },
-      "XIDX" => { yahoo_suffix: ".JK", default_currency: "IDR" }
+      "XIDX" => { yahoo_suffix: ".JK", default_currency: "IDR" },
+      # Europe. Yahoo quotes London in pence (GBp), which
+      # normalize_currency_and_price already converts.
+      "XETR" => { yahoo_suffix: ".DE", default_currency: "EUR" }, # Xetra
+      "XFRA" => { yahoo_suffix: ".F",  default_currency: "EUR" }, # Frankfurt floor
+      "XMUN" => { yahoo_suffix: ".MU", default_currency: "EUR" }, # Munich
+      "XSTU" => { yahoo_suffix: ".SG", default_currency: "EUR" }, # Stuttgart
+      "XLON" => { yahoo_suffix: ".L",  default_currency: "GBP" },
+      "XPAR" => { yahoo_suffix: ".PA", default_currency: "EUR" },
+      "XAMS" => { yahoo_suffix: ".AS", default_currency: "EUR" },
+      "XBRU" => { yahoo_suffix: ".BR", default_currency: "EUR" },
+      "XLIS" => { yahoo_suffix: ".LS", default_currency: "EUR" },
+      "XMAD" => { yahoo_suffix: ".MC", default_currency: "EUR" },
+      "XMIL" => { yahoo_suffix: ".MI", default_currency: "EUR" },
+      "XSWX" => { yahoo_suffix: ".SW", default_currency: "CHF" },
+      "XSTO" => { yahoo_suffix: ".ST", default_currency: "SEK" },
+      "XCSE" => { yahoo_suffix: ".CO", default_currency: "DKK" },
+      "XHEL" => { yahoo_suffix: ".HE", default_currency: "EUR" },
+      "XOSL" => { yahoo_suffix: ".OL", default_currency: "NOK" },
+      "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }  # Vienna
     }.freeze
 
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)
@@ -811,19 +833,37 @@ class Provider::YahooFinance < Provider
     # If Yahoo returns a stale-crumb error (200 OK with Unauthorized body),
     # clears the crumb cache and retries once with fresh credentials.
     def fetch_authenticated_chart(symbol, params)
-      cookie, crumb = fetch_cookie_and_crumb
-      response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-        params.each { |k, v| req.params[k] = v }
-        req.params["crumb"] = crumb
+      # The /v8/finance/chart endpoint does NOT require cookie/crumb auth, and
+      # Yahoo rate-limits AUTHENTICATED chart requests far more aggressively than
+      # anonymous ones (verified live: cookie+crumb => 429, same symbol/IP with
+      # no auth => 200). Use the plain client for price/chart data. Cookie+crumb
+      # remains scoped to quoteSummary (fetch_security_info), which needs it.
+      begin
+        response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+          params.each { |k, v| req.params[k] = v }
+        end
+        data = JSON.parse(response.body)
+        needs_auth = data.dig("chart", "error", "code") == "Unauthorized"
+      rescue Faraday::UnauthorizedError
+        # Hard HTTP 401 (raised by client's :raise_error) -- fall through to the
+        # authenticated retry below, same as a soft Unauthorized body code.
+        needs_auth = true
       end
-      data = JSON.parse(response.body)
 
-      if data.dig("chart", "error", "code") == "Unauthorized"
+      # Rare fallback: if Yahoo demands auth for a specific symbol (a hard 401
+      # or a 200 OK with an Unauthorized body), retry once with FRESH cookie+
+      # crumb. Clear any cached crumb first so a stale-but-shape-valid one
+      # isn't reused.
+      if needs_auth
         clear_crumb_cache
         cookie, crumb = fetch_cookie_and_crumb
-        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-          params.each { |k, v| req.params[k] = v }
-          req.params["crumb"] = crumb
+        begin
+          response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+            params.each { |k, v| req.params[k] = v }
+            req.params["crumb"] = crumb
+          end
+        rescue Faraday::UnauthorizedError
+          raise AuthenticationError, "Yahoo Finance authentication failed after crumb refresh"
         end
         data = JSON.parse(response.body)
         if data.dig("chart", "error", "code") == "Unauthorized"

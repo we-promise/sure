@@ -364,7 +364,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Current.family.analytics_excluded_kinds)
         .includes(entry: :account, category: :parent)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
@@ -490,7 +490,12 @@ class ReportsController < ApplicationController
       investment_statement = Current.family.investment_statement
       investment_accounts = investment_statement.investment_accounts
 
-      return { has_investments: false } unless investment_accounts.any?
+      # Shown when there is something to show: an investment account in scope,
+      # or a disposal in the period for the realised-gains half. That half reads
+      # every account included in reports, disabled ones too, while
+      # `investment_accounts` is visible accounts only -- so a family whose only
+      # brokerage account is closed used to get no card at all.
+      return { has_investments: false } unless investment_accounts.any? || period_sell_trades.exists?
 
       period_totals = investment_statement.totals(period: @period)
       {
@@ -518,17 +523,7 @@ class ReportsController < ApplicationController
 
       # Get sell trades in period with realized gains
       # Eager-load security, account, and accountable to avoid N+1
-      sell_trades = Current.family.trades
-        .joins(entry: :account)
-        .where(entries: { date: @period.date_range })
-        .merge(Account.included_in_reports)
-        .where("trades.qty < 0")
-        # A transfer out has the same negative quantity as a sale and would be
-        # counted and listed as one. Nothing was sold, so it belongs in neither.
-        .where(
-          "trades.investment_activity_label IS NULL OR trades.investment_activity_label NOT IN (?)",
-          Trade::INTERNAL_MOVEMENT_LABELS
-        )
+      sell_trades = period_sell_trades
         .includes(:security, entry: { account: :accountable })
         .to_a
 
@@ -544,6 +539,10 @@ class ReportsController < ApplicationController
       sell_trades.each do |trade|
         trade.instance_variable_set(:@preloaded_holdings, holdings_by_account[trade.entry.account_id] || [])
       end
+
+      # The rates the proceeds conversion needs, in one query rather than one
+      # per foreign disposal.
+      Trade.preload_exchange_rates(sell_trades)
 
       trades_by_treatment = sell_trades.group_by { |t| t.entry.account.tax_treatment || :taxable }
 
@@ -564,7 +563,17 @@ class ReportsController < ApplicationController
       # Realized gains are locked at trade time, so convert each at its own
       # entry-date FX. Mirrors InvestmentStatement::Totals, which also uses
       # entry-date rates for contributions/withdrawals on this same card.
-      foreign_trade_currencies = sell_trades.map(&:currency).compact.uniq.reject { |c| c == currency }
+      # A realised figure arrives in the currency the POSITION is held in, not
+      # the one the disposal was priced in: Trade#realized_gain_loss converts
+      # the proceeds into the basis's currency before subtracting, so that the
+      # two sides are comparable. All three sets are needed -- the accounts',
+      # which is what a gain usually carries, the trades' own, and the
+      # holdings', for a position carried in a third currency.
+      foreign_trade_currencies = (
+        sell_trades.map(&:currency) +
+        sell_trades.map { |t| t.entry.account.currency } +
+        holdings_by_account.values.flatten.map(&:currency)
+      ).compact.uniq.reject { |c| c == currency }
       rates_by_trade_date = sell_trades.map { |t| t.entry.date }.uniq.each_with_object({}) do |date, memo|
         memo[date] = ExchangeRate.rates_for(foreign_trade_currencies, to: currency, date: date)
       end
@@ -584,11 +593,17 @@ class ReportsController < ApplicationController
           trend ? convert_current.call(trend.value, h.currency) : 0
         end
 
-        # Sum realized gains from sell trades
-        realized = trades.sum do |t|
+        # Sum realized gains from sell trades, each converted from the currency
+        # its own figure carries.
+        realized_by_trade = trades.each_with_object({}) do |t, memo|
           gain = t.realized_gain_loss
-          gain ? convert_trade.call(gain.value, t.currency, t.entry.date) : 0
+          next if gain.nil?
+
+          converted = convert_trade.call(gain.value, gain.value.currency.iso_code, t.entry.date)
+          memo[t.id] = Money.new(converted, currency)
         end
+
+        realized = realized_by_trade.values.sum(Money.new(0, currency)).amount
 
         # Only include treatment groups that have some activity
         next if holdings.empty? && trades.empty?
@@ -598,9 +613,36 @@ class ReportsController < ApplicationController
           sell_trades: trades,
           unrealized_gain: Money.new(unrealized, currency),
           realized_gain: Money.new(realized, currency),
+          # Per-trade figures in family currency, so the lines under the card
+          # and the card's own total are the same arithmetic. The partial used
+          # to re-label `gain.value` as family currency without converting it.
+          realized_gain_by_trade: realized_by_trade,
           total_gain: Money.new(unrealized + realized, currency)
         }
       end
+    end
+
+    # The period's disposals, as the realised-gains half of the investment
+    # card lists them. The card's gate asks the same relation, so the two
+    # cannot disagree about what counts as a disposal. Scoped to the accounts
+    # this user includes in their finances -- the per-user scope
+    # `investment_accounts` applies -- so another member's unshared account
+    # is neither listed nor opens the card.
+    def period_sell_trades
+      Current.family.trades
+        .joins(entry: :account)
+        # An excluded trade is left out of reports, as InvestmentStatement::Totals
+        # leaves it out of the same card's contributions and withdrawals.
+        .where(entries: { date: @period.date_range, excluded: false })
+        .where(entries: { account_id: Current.user.finance_accounts.select(:id) })
+        .merge(Account.included_in_reports)
+        .where("trades.qty < 0")
+        # A transfer out has the same negative quantity as a sale and would be
+        # counted and listed as one. Nothing was sold, so it belongs in neither.
+        .where(
+          "trades.investment_activity_label IS NULL OR trades.investment_activity_label NOT IN (?)",
+          Trade::INTERNAL_MOVEMENT_LABELS
+        )
     end
 
     def build_net_worth_metrics
@@ -714,7 +756,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Current.family.analytics_excluded_kinds)
         .includes(entry: :account, category: [])
       transactions = exclude_tax_advantaged_accounts(transactions)
 
@@ -753,7 +795,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Current.family.analytics_excluded_kinds)
         .includes(entry: :account, category: [])
       transactions = exclude_tax_advantaged_accounts(transactions)
 

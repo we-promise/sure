@@ -12,7 +12,7 @@
 # @attr [Boolean] scheduled_for_deletion Whether the item is scheduled for deletion
 # @attr [DateTime] last_synced_at When the last successful sync occurred
 class SophtronItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, DestroyableLater
 
   INITIAL_LOAD_LOOKBACK_DAYS = 120
   MAX_TRANSACTION_HISTORY_YEARS = 3
@@ -53,11 +53,6 @@ class SophtronItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   # Imports the latest account and transaction data from Sophtron.
   #

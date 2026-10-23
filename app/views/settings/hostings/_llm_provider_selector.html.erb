@@ -54,8 +54,24 @@
     <p class="text-xs text-warning"><%= t(".not_configured_hint", provider: t(".provider_#{active}")) %></p>
   <% end %>
 
-  <div class="rounded-md border border-secondary p-3 bg-container-inset text-xs text-secondary space-y-1">
-    <p class="font-medium text-primary"><%= t(".data_retention_heading") %></p>
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.number_field :llm_max_items_per_call,
+                          label: t(".max_items_per_call_label"),
+                          placeholder: "25",
+                          value: Setting.llm_max_items_per_call,
+                          min: 1,
+                          disabled: ENV["LLM_MAX_ITEMS_PER_CALL"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+    <p class="text-xs text-secondary mt-1"><%= t(".max_items_per_call_help") %></p>
+  <% end %>
+
+  <%= render DS::Note.new(title: t(".data_retention_heading")) do %>
     <p><%= t(".data_retention") %></p>
-  </div>
+  <% end %>
 </div>

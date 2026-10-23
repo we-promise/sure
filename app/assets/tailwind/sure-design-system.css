@@ -4,6 +4,11 @@
  * Element resets, components, and prose overrides remain hand-written.
  */
 
+/*
+ * Nested inside a pseudo-element (`&::placeholder { @variant theme-dark { ... } }`,
+ * `placeholder:theme-dark:`), this compiles to `::placeholder:where()` and never
+ * matches. Put the pseudo-element inside the variant instead.
+ */
 @custom-variant theme-dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 @import './sure-design-system/_generated.css';

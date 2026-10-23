@@ -3,7 +3,7 @@ uk:
     account_sharings: Спільний доступ до рахунків
     account_statements: Сховище виписок
     accounts: Рахунки
-    ai_prompts: AI-промпти
+    ai_prompts: Промпти ШІ
     api_key: API-ключ
     api_keys: API-ключі
     appearance: Зовнішній вигляд
@@ -27,7 +27,7 @@ uk:
     enable_banking_items: Enable Banking
     exports: Експорт
     family_exports: Експорт
-    family_merchants: Торговці
+    family_merchants: Продавці
     guides: Посібники
     holdings: Портфель
     home: Головна
@@ -46,7 +46,7 @@ uk:
     loans: Позики
     lunchflow_items: Lunch Flow
     mcp: MCP-сервер
-    merchants: Торговці
+    merchants: Продавці
     mercury_items: Mercury
     messages: Повідомлення
     mfa: Двофакторна автентифікація
@@ -63,11 +63,11 @@ uk:
     properties: Нерухомість
     providers: Постачальники
     questrade_items: Questrade
-    recurring_transactions: Рекурентні
+    recurring_transactions: Повторювані
     registrations: Реєстрація
     reports: Звіти
     rules: Правила
-    securities: Цінні папери
+    securities: "Цінні папери"
     security: Безпека
     self_hosting: Self-Hosting
     sessions: Вхід
@@ -76,13 +76,19 @@ uk:
     sophtron_items: Sophtron
     splits: Розділення
     sso_identities: SSO-з'єднання
-    sso_providers: SSO-провайдери
+    sso_providers: Постачальники SSO
     subscriptions: Підписка
     tags: Теги
-    trades: Операції
+    trades: Угоди
     transactions: Транзакції
-    transfer_matches: Співпадіння переказів
+    transfer_matches: Зіставлення переказів
     transfers: Перекази
     users: Користувачі
     valuations: Оцінки
     vehicles: Транспорт
+    changelog: Що нового
+    feedback: Відгук
+    monobank_items: Monobank
+    plan: План
+    redbark_items: Redbark
+    system_health: Стан системи

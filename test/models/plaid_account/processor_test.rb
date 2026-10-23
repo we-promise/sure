@@ -43,6 +43,26 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "PlaidAccount", account.account_providers.first.provider_type
   end
 
+  test "a new account inherits the owner of the item that produced it" do
+    # Accounts are created inside the sync job, where Current.user is nil. If
+    # the owner were left to Account#assign_default_owner it would fall back to
+    # the family's first admin, quietly taking a member's own connection away
+    # from them (issue #3579).
+    Account.destroy_all
+    member = users(:family_member)
+    @plaid_account.plaid_item.update!(owner: member)
+
+    expect_default_subprocessor_calls
+
+    Current.reset
+
+    assert_difference "Account.count" do
+      PlaidAccount::Processor.new(@plaid_account).process
+    end
+
+    assert_equal member, Account.order(created_at: :desc).first.owner
+  end
+
   test "processing is idempotent with updates and enrichments" do
     expect_default_subprocessor_calls
 
@@ -100,8 +120,8 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
   test "calculates balance using BalanceCalculator for investment accounts" do
     @plaid_account.update!(plaid_type: "investment")
 
-    # Balance is called twice: once for account.balance and once for set_current_balance
-    PlaidAccount::Investments::BalanceCalculator.any_instance.expects(:balance).returns(1000).twice
+    # Balance is computed once and used for both account.balance and the anchor
+    PlaidAccount::Investments::BalanceCalculator.any_instance.expects(:balance).returns(1000).once
     PlaidAccount::Investments::BalanceCalculator.any_instance.expects(:cash_balance).returns(1000).once
 
     PlaidAccount::Processor.new(@plaid_account).process
@@ -123,6 +143,23 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     expect_depository_product_processor_calls
 
     @plaid_account.update!(plaid_type: "credit", plaid_subtype: "credit card")
+
+    PlaidAccount::Liabilities::CreditProcessor.any_instance.expects(:process).once
+    PlaidAccount::Liabilities::MortgageProcessor.any_instance.expects(:process).never
+    PlaidAccount::Liabilities::StudentLoanProcessor.any_instance.expects(:process).never
+
+    PlaidAccount::Processor.new(@plaid_account).process
+  end
+
+  test "processes credit liability data for non-credit-card subtypes" do
+    # Plaid reports PayPal Credit as credit/paypal. Dispatching only on
+    # ["credit", "credit card"] left these accounts with a stored liabilities
+    # payload but no minimum_payment or apr.
+    expect_investment_product_processor_calls
+    expect_no_investment_balance_calculator_calls
+    expect_depository_product_processor_calls
+
+    @plaid_account.update!(plaid_type: "credit", plaid_subtype: "paypal")
 
     PlaidAccount::Liabilities::CreditProcessor.any_instance.expects(:process).once
     PlaidAccount::Liabilities::MortgageProcessor.any_instance.expects(:process).never
@@ -194,6 +231,116 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 1500, current_anchor.entry.amount
     assert_equal Date.current, current_anchor.entry.date
     assert_equal "Current balance", current_anchor.entry.name
+  end
+
+  test "an investment anchor is dated on the holdings' price date, not today" do
+    expect_investment_product_processor_calls
+    expect_depository_product_processor_calls
+    expect_no_liability_processor_calls
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:balance).returns(1000)
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:cash_balance).returns(100)
+
+    price_date = Date.current - 1
+    @plaid_account.update!(
+      plaid_type: "investment",
+      raw_holdings_payload: { "holdings" => [
+        { "security_id" => "sec_1", "quantity" => "10", "institution_price" => "90", "institution_price_as_of" => price_date.to_s },
+        { "security_id" => "sec_2", "quantity" => "1", "institution_price" => "10", "institution_price_as_of" => (price_date - 3).to_s }
+      ] }
+    )
+
+    PlaidAccount::Processor.new(@plaid_account).process
+
+    account = @plaid_account.current_account
+    current_anchor = account.valuations.current_anchor.first
+    assert_equal price_date, current_anchor.entry.date, "the newest price date the holdings carry"
+    assert_equal 1000, current_anchor.entry.amount
+    assert_equal 1000, account.balance
+    assert_equal 100, account.cash_balance
+  end
+
+  test "one holding dated ahead of today does not pull the anchor off the others' date" do
+    expect_investment_product_processor_calls
+    expect_depository_product_processor_calls
+    expect_no_liability_processor_calls
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:balance).returns(1000)
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:cash_balance).returns(100)
+
+    price_date = Date.current - 1
+    @plaid_account.update!(
+      plaid_type: "investment",
+      raw_holdings_payload: { "holdings" => [
+        { "security_id" => "sec_1", "quantity" => "10", "institution_price" => "90", "institution_price_as_of" => price_date.to_s },
+        { "security_id" => "sec_2", "quantity" => "1", "institution_price" => "10", "institution_price_as_of" => (Date.current + 1).to_s }
+      ] }
+    )
+
+    PlaidAccount::Processor.new(@plaid_account).process
+
+    current_anchor = @plaid_account.current_account.valuations.current_anchor.first
+    assert_equal price_date, current_anchor.entry.date
+  end
+
+  test "an investment anchor falls back to today without a usable price date" do
+    expect_investment_product_processor_calls
+    expect_depository_product_processor_calls
+    expect_no_liability_processor_calls
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:balance).returns(1000)
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:cash_balance).returns(100)
+
+    @plaid_account.update!(
+      plaid_type: "investment",
+      raw_holdings_payload: { "holdings" => [
+        { "security_id" => "sec_1", "quantity" => "10", "institution_price" => "90", "institution_price_as_of" => nil },
+        { "security_id" => "sec_2", "quantity" => "1", "institution_price" => "10", "institution_price_as_of" => "not a date" },
+        { "security_id" => "sec_3", "quantity" => "1", "institution_price" => "10", "institution_price_as_of" => (Date.current + 1).to_s }
+      ] }
+    )
+
+    PlaidAccount::Processor.new(@plaid_account).process
+
+    current_anchor = @plaid_account.current_account.valuations.current_anchor.first
+    assert_equal Date.current, current_anchor.entry.date
+  end
+
+  test "an investment snapshot dated behind the anchor is recorded on its own date and leaves the anchor alone" do
+    PlaidAccount::Investments::TransactionsProcessor.any_instance.stubs(:process)
+    PlaidAccount::Investments::HoldingsProcessor.any_instance.stubs(:process)
+    PlaidAccount::Transactions::Processor.any_instance.stubs(:process)
+    expect_no_liability_processor_calls
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:balance).returns(1000)
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:cash_balance).returns(100)
+
+    @plaid_account.update!(
+      plaid_type: "investment",
+      raw_holdings_payload: { "holdings" => [ { "security_id" => "sec_1", "quantity" => "10", "institution_price" => "90", "institution_price_as_of" => Date.current.to_s } ] }
+    )
+    PlaidAccount::Processor.new(@plaid_account).process
+    account = @plaid_account.current_account
+    anchor = account.valuations.current_anchor.first
+
+    # The next snapshot is dated behind the anchor, carries an older total,
+    # and reports a different currency.
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:balance).returns(900)
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:cash_balance).returns(50)
+    @plaid_account.update!(
+      currency: "EUR",
+      raw_holdings_payload: { "holdings" => [ { "security_id" => "sec_1", "quantity" => "10", "institution_price" => "85", "institution_price_as_of" => (Date.current - 1).to_s } ] }
+    )
+
+    assert_difference "account.valuations.reconciliation.count", 1 do
+      PlaidAccount::Processor.new(@plaid_account).process
+    end
+
+    anchor.reload
+    account.reload
+    assert_equal Date.current, anchor.entry.date
+    assert_equal 1000, anchor.entry.amount, "the anchor still describes now"
+    assert_equal 1000, account.balance
+    assert_equal 100, account.cash_balance
+    assert_equal "USD", account.currency, "the cached figures keep the denomination they were written in"
+    historical = account.valuations.reconciliation.joins(:entry).find_by(entries: { date: Date.current - 1 })
+    assert_equal 900, historical.entry.amount
   end
 
   test "updates existing current balance anchor when reprocessing" do

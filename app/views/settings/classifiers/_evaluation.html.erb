@@ -1,0 +1,119 @@
+<%# locals: (evaluation:, settings:, running:, weight:) %>
+<%# Replaced over the family's Turbo stream when BayesEvaluationJob finishes,
+    so translation keys are absolute (no request to resolve "." against). %>
+<div id="classifier_evaluation" class="space-y-4">
+  <%# In the order of the table's columns. %>
+  <div class="flex flex-wrap items-center gap-2">
+    <%= render DS::Button.new(text: t("settings.classifiers.evaluation.run"), href: evaluate_settings_classifier_path,
+                              method: :post, variant: :outline, icon: "flask-conical", disabled: running) %>
+    <%= render DS::Button.new(text: t("settings.classifiers.evaluation.find_best"), href: find_best_settings_classifier_path,
+                              method: :post, icon: "search", disabled: running) %>
+    <%= render DS::Button.new(text: t("settings.classifiers.evaluation.reset"), href: settings_classifier_path, method: :patch,
+                              variant: :outline, icon: "rotate-ccw", params: { reset: "1" },
+                              confirm: t("settings.classifiers.evaluation.reset_confirm"), disabled: running) %>
+    <%= render DS::Tooltip.new(text: t("settings.classifiers.evaluation.buttons_hint", tuning: Family::BayesEvaluation::MONTHS - Family::BayesEvaluation::HOLDOUT_MONTHS),
+                               placement: "top-start") %>
+  </div>
+
+  <% if running %>
+    <%# One line, its height kept while empty and long changes cut short,
+        so the page doesn't move as the progress changes. %>
+    <div class="text-sm text-secondary">
+      <p><%= t("settings.classifiers.evaluation.running") %></p>
+      <p id="classifier_evaluation_progress" class="h-5 truncate"></p>
+    </div>
+  <% end %>
+
+  <% if evaluation %>
+    <% stale = evaluation["digest"] != settings.digest %>
+    <% best = evaluation["best"] %>
+    <% changes = Family::BayesEvaluation.apply_changes(evaluation, settings, weight) %>
+    <% matcher_columns = Family::BayesEvaluation.matcher_columns(evaluation, settings, weight) %>
+    <% if stale %>
+      <%= render DS::Alert.new(message: t("settings.classifiers.evaluation.stale"), variant: :warning) %>
+    <% end %>
+    <% if evaluation["short_history"] %>
+      <%= render DS::Alert.new(message: t("settings.classifiers.evaluation.short_history", months: Family::BayesEvaluation::MONTHS), variant: :warning) %>
+    <% end %>
+
+    <p class="text-xs text-secondary">
+      <%= t("settings.classifiers.evaluation.ran_at",
+            time: time_ago_in_words(Time.zone.parse(evaluation["ran_at"])),
+            count: evaluation.dig("current", "n"),
+            months: evaluation["months"].values_at(0, -1).uniq.join(" – ")) %>
+    </p>
+
+    <% columns = [ [ t("settings.classifiers.evaluation.current"), evaluation["current"] ] ] %>
+    <% columns << [ t("settings.classifiers.evaluation.best"), best["report"] ] if best %>
+    <% columns << [ t("settings.classifiers.evaluation.defaults"), evaluation["defaults"] ] %>
+    <h3 class="text-sm font-medium text-primary"><%= t("settings.classifiers.evaluation.categories_heading") %></h3>
+    <%= render "settings/classifiers/sweep_table", columns: columns, weight: weight %>
+    <p class="text-xs text-secondary"><%= t("settings.classifiers.evaluation.description", months: Family::BayesEvaluation::HOLDOUT_MONTHS) %></p>
+
+    <% if matcher_columns %>
+      <%# Like the category table: your cutoff and number agreeing, the best
+          found for the cost of a mistake (of every cutoff and number scored)
+          and the defaults', each with its best similarity in bold. Apply sets
+          the best found's. %>
+      <h3 class="text-sm font-medium text-primary"><%= t("settings.classifiers.evaluation.merchants_heading") %></h3>
+      <%= render "settings/classifiers/sweep_table", label: t("settings.classifiers.evaluation.similarity"),
+            weight: weight, columns: matcher_columns.map { |column, _, _, sweep| [ t("settings.classifiers.evaluation.#{column}"), { "sweep" => sweep } ] } %>
+      <p class="text-xs text-secondary">
+        <%= t("settings.classifiers.evaluation.matcher_description", count: evaluation.dig("matcher", "n"), months: Family::BayesEvaluation::HOLDOUT_MONTHS) %>
+      </p>
+    <% end %>
+
+    <div class="space-y-2">
+      <% if best && !evaluation["short_history"] && Family::BayesEvaluation.best_changes(evaluation, weight).empty? %>
+        <p class="text-sm text-secondary"><%= t("settings.classifiers.evaluation.best_no_changes") %></p>
+      <% end %>
+      <% if changes.any? %>
+        <p class="text-sm text-primary"><%= t("settings.classifiers.evaluation.best_changes") %></p>
+        <ul class="text-sm text-secondary space-y-0.5">
+          <% changes.each do |key, value| %>
+            <li>
+              <%= t("settings.classifiers.#{Family::BayesEvaluation.section_for(key)}.#{key}") %>:
+              <span class="text-primary"><%= Family::BayesEvaluation.value_label(key, value) %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+      <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <%# Changing the cost saves it and reloads, moving the bold rows and what Apply sets. %>
+        <%= form_with url: remember_weight_settings_classifier_path, method: :post, class: "flex items-center gap-2",
+                      data: { controller: "auto-submit-form" } do |form| %>
+          <label for="weight_trigger" class="text-sm text-primary whitespace-nowrap"><%= t("settings.classifiers.evaluation.weight") %></label>
+          <div class="w-40">
+            <%= render DS::Select.new(form: form, method: :weight, selected: weight,
+                                      items: Family::BayesEvaluation::WEIGHTS.map { |w| { value: w, label: t("settings.classifiers.evaluation.weight_option", count: w) } }) %>
+          </div>
+          <%= render DS::Tooltip.new(text: t("settings.classifiers.evaluation.weight_hint"), placement: "top-start") %>
+        <% end %>
+        <%= render DS::Button.new(text: t("settings.classifiers.evaluation.apply_best"), href: apply_best_settings_classifier_path,
+                                  method: :patch, icon: "check", disabled: running || stale || changes.empty?) %>
+      </div>
+    </div>
+
+    <% column, report, threshold = Family::BayesEvaluation.mistakes(evaluation, weight) %>
+    <% mistakes = report.dig("confusions", threshold) || [] %>
+    <% uncategorized = report.dig("uncategorized", threshold) || [] %>
+    <% column_name = t("settings.classifiers.evaluation.#{column}") %>
+    <%= render "settings/classifiers/mistakes",
+          confusions_title: t("settings.classifiers.evaluation.confusions", column: column_name, threshold: threshold),
+          confusions: mistakes, no_confusions: t("settings.classifiers.evaluation.no_confusions"),
+          left_title: t("settings.classifiers.evaluation.uncategorized", column: column_name, threshold: threshold),
+          left: uncategorized, no_left: t("settings.classifiers.evaluation.no_uncategorized") %>
+
+    <% matcher_column, similarity, matcher_row = Family::BayesEvaluation.matcher_mistakes(evaluation, settings, weight) %>
+    <% if matcher_column %>
+      <% matcher_column_name = t("settings.classifiers.evaluation.#{matcher_column}") %>
+      <%= render "settings/classifiers/mistakes",
+            confusions_title: t("settings.classifiers.evaluation.matcher_confusions", column: matcher_column_name, similarity: similarity),
+            confusions: matcher_row["confusions"], no_confusions: t("settings.classifiers.evaluation.no_matcher_confusions"),
+            left_title: t("settings.classifiers.evaluation.unfilled", column: matcher_column_name, similarity: similarity),
+            left: matcher_row["unfilled"], no_left: t("settings.classifiers.evaluation.no_unfilled") %>
+    <% end %>
+  <% elsif !running %>
+    <p class="text-sm text-secondary"><%= t("settings.classifiers.evaluation.none") %></p>
+  <% end %>
+</div>

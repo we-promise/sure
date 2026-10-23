@@ -3,12 +3,10 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     base_label = "Auto-categorize transactions with AI"
 
     if rule.family.self_hoster?
-      # Use the same provider determination logic as Family::AutoCategorizer
-      llm_provider = Provider::Registry.get_provider(:openai)
+      selected_model = rule.family.categorization_model_name
 
-      if llm_provider
+      if selected_model.present?
         # Estimate cost for typical batch of 20 transactions
-        selected_model = Provider::Openai.effective_model
         estimated_cost = LlmUsage.estimate_auto_categorize_cost(
           transaction_count: 20,
           category_count: rule.family.categories.count,
@@ -22,11 +20,21 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
           end
         "#{base_label}#{suffix}"
       else
-        "#{base_label} (no LLM provider configured)"
+        "#{base_label} (no categorization provider configured)"
       end
     else
       base_label
     end
+  end
+
+  def claimed_attributes
+    [ :category_id ]
+  end
+
+  # The AI runs later and only fills fields it can classify, so it leaves
+  # them to rules further down, as it did before rules had an order.
+  def reserves_claimed_attributes?
+    false
   end
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
@@ -44,7 +52,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
       return 0
     end
 
-    batch_size = 20
+    batch_size = Provider::LlmConcept.max_items_per_call
     jobs_count = 0
 
     enrichable_transactions.in_batches(of: batch_size).each_with_index do |transactions, idx|
@@ -70,12 +78,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     end
 
     def cached_transaction_ids(protected_scope)
-      protected_scope
-        .joins(:data_enrichments)
-        .where(data_enrichments: { attribute_name: "category_id", source: "ai" })
-        .where(Arel.sql("data_enrichments.value = to_jsonb(transactions.category_id::text)"))
-        .distinct
-        .pluck(:id)
+      protected_scope.category_from("ai").pluck(:id)
     end
 
     def log_cache_usage(transaction_ids)

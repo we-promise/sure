@@ -155,9 +155,30 @@ jobs:
       - name: Unit and integration tests
         run: bin/rails test
 
+      # Encryption tests skip unless Active Record encryption is configured
+      # through ENV or credentials (Encryptable.encryption_ready?), so the run
+      # above never exercises them. Rerun every test file that checks
+      # encryption_ready? with throwaway keys, so new encryption tests are
+      # picked up without a hand-kept list. The whole suite is not run with
+      # keys because unrelated tests assume encryption is off.
+      - name: Encryption tests
+        if: ${{ !cancelled() }}
+        env:
+          ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: test
+          ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: test
+          ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: test
+        run: |
+          mapfile -t files < <(grep -rl --include='*_test.rb' 'encryption_ready?' test | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No encryption tests found" >&2
+            exit 1
+          fi
+          printf '%s\n' "${files[@]}"
+          bin/rails test "${files[@]}"
+
   test_system:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     env:
       PLAID_CLIENT_ID: foo
@@ -184,7 +205,14 @@ jobs:
 
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y google-chrome-stable curl libvips postgresql-client libpq-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            google-chrome-stable curl libvips postgresql-client libpq-dev
+          # The runner image ships a chromedriver that lags google-chrome-stable.
+          # Drop it so Selenium Manager resolves a driver matching the Chrome we
+          # just installed, instead of the stale one in PATH.
+          sudo rm -f /usr/bin/chromedriver
 
       - name: Checkout code
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1

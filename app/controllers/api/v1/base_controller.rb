@@ -24,6 +24,10 @@ class Api::V1::BaseController < ApplicationController
   before_action :force_json_format
   # Use our custom authentication that supports both OAuth and API keys
   before_action :authenticate_request!
+  # Localize registers this before API authentication in ApplicationController.
+  # Resolve the family zone only after the API identity has populated Current.
+  skip_around_action :switch_timezone
+  around_action :switch_timezone
   before_action :check_api_key_rate_limit
   before_action :log_api_access
 
@@ -215,6 +219,15 @@ class Api::V1::BaseController < ApplicationController
 
     def ensure_read_scope
       authorize_scope!(:read)
+    end
+
+    # Guests are read-only by design, so API credentials they hold must not
+    # change family-wide configuration either.
+    def reject_guest_writes!
+      return true unless current_resource_owner&.guest?
+
+      render_json({ error: "forbidden", message: "Guests cannot modify family configuration" }, status: :forbidden)
+      false
     end
 
     # Consistent JSON response method

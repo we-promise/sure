@@ -34,6 +34,27 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "new chat prefills the Dig in with AI message for one of the family's insights" do
+    insight = insights(:spending_anomaly_dining)
+
+    assert_no_difference("Chat.count") do
+      get new_chat_url(insight_id: insight.id)
+    end
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]'][autofocus]", text: /#{Regexp.escape(insight.title)}/
+  end
+
+  test "new chat ignores another family's insight" do
+    insight = insights(:spending_anomaly_dining)
+    insight.update_columns(family_id: families(:empty).id)
+
+    get new_chat_url(insight_id: insight.id)
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]']", text: ""
+  end
+
   test "creates chat" do
     assert_difference("Chat.count") do
       post chats_url, params: { chat: { content: "Hello", ai_model: "gpt-4.1" } }
@@ -44,6 +65,70 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to chat_path(chat, thinking: true)
     assert_equal "Hello", chat.title
     assert_equal "Hello", chat.messages.find_by!(type: "UserMessage").content
+  end
+
+  test "redirects to chats index instead of creating a chat if AI is disabled" do
+    @user.update!(ai_enabled: false)
+
+    assert_no_difference("Chat.count") do
+      post chats_url, params: { chat: { content: "Hello", ai_model: "gpt-4.1" } }
+    end
+
+    assert_redirected_to chats_path
+  end
+
+  test "does not create a chat for a consenting user when the assistant type is mcp_only" do
+    @family.update!(assistant_type: "mcp_only")
+
+    assert_no_difference("Chat.count") do
+      post chats_url, params: { chat: { content: "Hello", ai_model: "gpt-4.1" } }
+    end
+
+    assert_redirected_to chats_path
+  end
+
+  test "index shows the AI consent screen instead of the compose form when AI is disabled" do
+    @user.update!(ai_enabled: false)
+    @user.chats.destroy_all
+
+    get chats_url
+
+    assert_response :success
+    assert_select "h3", text: I18n.t("chats.ai_consent.title")
+    assert_select "form textarea", count: 0
+  end
+
+  test "index shows the AI consent screen next to existing chats when AI is disabled" do
+    @user.update!(ai_enabled: false)
+    assert @user.chats.any?, "fixture user should have chats so the list branch renders"
+
+    get chats_url
+
+    assert_response :success
+    # Scoped to the composer's wrapper: the layout's own consent overlay sits
+    # in the desktop-only sidebar, which the mobile Assistant entry never shows.
+    assert_select "div.max-w-sm h3", text: I18n.t("chats.ai_consent.title")
+    assert_select "form textarea", count: 0
+  end
+
+  test "new shows the AI consent screen instead of the compose form when AI is disabled" do
+    @user.update!(ai_enabled: false)
+
+    get new_chat_url
+
+    assert_response :success
+    assert_select "h3", text: I18n.t("chats.ai_consent.title")
+    assert_select "form textarea", count: 0
+  end
+
+  test "show shows the AI consent screen instead of the compose form when AI is disabled" do
+    @user.update!(ai_enabled: false)
+
+    get chat_url(chats(:one))
+
+    assert_response :success
+    assert_select "h3", text: I18n.t("chats.ai_consent.title")
+    assert_select "form textarea", count: 0
   end
 
   test "shows chat" do
@@ -64,6 +149,36 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to chats_url
   end
 
+  test "retries last user message" do
+    last_viewed_chat = @user.chats.create!(title: "Last Viewed Chat")
+    @user.update!(last_viewed_chat: last_viewed_chat)
+
+    chat = chats(:one)
+    chat.messages.destroy_all
+    # UserMessage's own after_create_commit already calls ask_assistant_later
+    # once (creating the pending AssistantMessage reply); clear that out so
+    # the user message is the last one left for retry to act on.
+    user_message = chat.messages.create!(type: "UserMessage", content: "Hello", ai_model: "gpt-4.1")
+    chat.messages.where.not(id: user_message.id).destroy_all
+
+    Chat.any_instance.expects(:ask_assistant_later).with(user_message).once
+
+    post retry_chat_url(chat)
+
+    assert_redirected_to chat_path(chat)
+  end
+
+  test "redirects to the chat instead of retrying if AI is disabled" do
+    @user.update!(ai_enabled: false)
+    chat = chats(:one)
+
+    Chat.any_instance.expects(:ask_assistant_later).never
+
+    post retry_chat_url(chat)
+
+    assert_redirected_to chat_path(chat)
+  end
+
   test "should not allow access to other user's chats" do
     other_user = users(:family_member)
     other_chat = Chat.create!(user: other_user, title: "Other User's Chat")
@@ -72,6 +187,9 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
 
     delete chat_url(other_chat)
+    assert_response :not_found
+
+    post retry_chat_url(other_chat)
     assert_response :not_found
   end
 end
