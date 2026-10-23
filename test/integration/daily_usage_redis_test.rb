@@ -3,7 +3,7 @@ require "test_helper"
 # Opt in against a disposable Redis configured through REDIS_URL. No collector
 # requests are sent: the fake collector records accepted captures in Redis.
 class DailyUsageRedisTest < ActiveSupport::TestCase
-  test "independent worker processes share atomic claims for both events" do
+  test "independent worker processes share atomic claims for installation events" do
     skip "Set DAILY_USAGE_REDIS_TESTS=1 with disposable REDIS_URL" unless ENV["DAILY_USAGE_REDIS_TESTS"] == "1"
     skip "Requires fork" unless Process.respond_to?(:fork)
 
@@ -15,7 +15,7 @@ class DailyUsageRedisTest < ActiveSupport::TestCase
     Rails.application.key_generator.stubs(:generate_key).with("daily-installation-usage").returns(secret)
     results_key = "daily-usage-test:#{SecureRandom.hex(16)}"
     daily_id = OpenSSL::HMAC.hexdigest("SHA256", secret, "2031-01-01")
-    expected_events = %w[ai_assistant_served_daily job_served_daily]
+    expected_events = %w[ai_assistant_served_daily job_served_daily mcp_call_served_daily]
     claim_keys = expected_events.map { |event| "daily-installation-usage:#{event}:#{daily_id}" }
     $posthog_feedback = Object.new
     $posthog_feedback.define_singleton_method(:capture) do |event|
@@ -30,6 +30,7 @@ class DailyUsageRedisTest < ActiveSupport::TestCase
         10.times do
           DailyJobUsageTracking.new.call(nil, {}, nil) { true }
           DailyUsage.capture("ai_assistant_served_daily")
+          DailyUsage.capture("mcp_call_served_daily")
         end
         exit! 0
       rescue StandardError
@@ -48,7 +49,7 @@ class DailyUsageRedisTest < ActiveSupport::TestCase
     claim_keys.concat(expected_events.map { |event| "daily-installation-usage:#{event}:#{next_id}" })
     2.times { expected_events.each { |event| DailyUsage.capture(event) } }
     events = Sidekiq.redis { |redis| redis.call("LRANGE", results_key, 0, -1) }.map { |json| JSON.parse(json) }
-    assert_equal 4, events.size
+    assert_equal 6, events.size
     assert_equal [ daily_id, next_id ].sort, events.map { |event| event["distinct_id"] }.uniq.sort
     claim_keys.each do |key|
       ttl = Sidekiq.redis { |redis| redis.call("TTL", key) }

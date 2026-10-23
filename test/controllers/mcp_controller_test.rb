@@ -233,6 +233,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "tools/call sent as notification does not execute" do
+    DailyUsage.expects(:capture).with("mcp_call_served_daily").never
     with_mcp_env do
       post "/mcp", params: jsonrpc_notification("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
            headers: mcp_headers(@token)
@@ -444,6 +445,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   # -- tools/call --
 
   test "tools/call rejects a preview tool for a user without preview features" do
+    DailyUsage.expects(:capture).with("mcp_call_served_daily").never
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
 
     with_mcp_env do
@@ -458,6 +460,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "tools/call returns error for unknown tool with request id preserved" do
+    DailyUsage.expects(:capture).with("mcp_call_served_daily").never
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("tools/call", { name: "nonexistent_tool", arguments: {} }, id: 99).to_json,
            headers: mcp_headers(@token)
@@ -471,6 +474,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "tools/call executes get_balance_sheet" do
+    DailyUsage.expects(:capture).with("mcp_call_served_daily").once
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("tools/call", {
         name: "get_balance_sheet",
@@ -596,6 +600,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "tools/call wraps function errors as isError response" do
+    DailyUsage.expects(:capture).with("mcp_call_served_daily").once
     with_mcp_env do
       # Force a function error by stubbing
       Assistant::Function::GetBalanceSheet.any_instance.stubs(:call).raises(StandardError, "test error")
@@ -619,6 +624,52 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_equal "The tool failed to run", inner["error"]
       assert_equal "get_balance_sheet", inner["tool"]
       assert_no_match(/test error/, response.body)
+    end
+  end
+
+  # -- Daily usage --
+
+  test "OAuth-authenticated tools/call records daily usage without tool metadata" do
+    app = Doorkeeper::Application.create!(
+      name: "Test MCP Usage Client",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: @user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+    DailyUsage.expects(:capture).with("mcp_call_served_daily").once
+    Assistant::Function::GetBalanceSheet.any_instance.expects(:call).with({}).returns({ success: true })
+
+    post "/mcp", params: jsonrpc_request("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
+         headers: mcp_headers(token.token)
+
+    assert_response :ok
+    result = JSON.parse(response.body)["result"]
+    assert_equal true, JSON.parse(result["content"][0]["text"])["success"]
+  end
+
+  test "protocol messages and rejected calls do not record daily MCP usage" do
+    DailyUsage.expects(:capture).with("mcp_call_served_daily").never
+    call = jsonrpc_request("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json
+
+    with_mcp_env do
+      [ "initialize", "tools/list" ].each do |method|
+        post "/mcp", params: jsonrpc_request(method).to_json, headers: mcp_headers(@token)
+        assert_response :ok
+      end
+
+      post "/mcp", params: call, headers: mcp_headers("wrong-token")
+      assert_response :unauthorized
+
+      post "/mcp", params: call, headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => "2099-01-01")
+      assert_response :bad_request
+
+      post "/mcp", params: call, headers: mcp_headers(@token).merge("Mcp-Session-Id" => SecureRandom.uuid)
+      assert_response :not_found
     end
   end
 
