@@ -40,10 +40,23 @@ class PlaidAccount::Investments::HoldingsProcessor
         delete_future_holdings: false  # Plaid doesn't allow holdings deletion
       )
     end
+
+    retire_rows_after(snapshot_date)
   end
 
   private
     attr_reader :plaid_account, :security_resolver
+
+    # A snapshot can be dated before the last one (that sync had no usable
+    # price date and landed on today). Plaid's own rows after it would stay the
+    # newest provider date and hide this snapshot, so they go once it is
+    # written. Other providers' rows, and rows with no provider, are kept.
+    def retire_rows_after(snapshot_date)
+      account_provider_id = plaid_account.account_provider&.id
+      return if account.nil? || account_provider_id.nil?
+
+      account.holdings.where(account_provider_id: account_provider_id).where("date > ?", snapshot_date).delete_all
+    end
 
     # A price date that cannot be read is left out of the snapshot date, and
     # with nothing else usable the sync lands on today. Recorded once per sync,

@@ -71,10 +71,10 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal 1.day.ago.to_date, holdings.second.date
   end
 
-  # Plaid does not delete future holdings because it doesn't support holdings deletion
-  # (PlaidAdapter#can_delete_holdings? returns false). This test verifies that future
-  # holdings are NOT deleted when processing Plaid holdings data.
-  test "does not delete future holdings when processing Plaid holdings" do
+  # Users cannot delete Plaid holdings (PlaidAdapter#can_delete_holdings? is
+  # false), but a sync retires Plaid's own rows dated after its snapshot: they
+  # would stay the newest provider date and hide the snapshot just written.
+  test "retires Plaid's own holdings later than the snapshot" do
     account = @plaid_account.current_account
 
     # Create account_provider
@@ -86,7 +86,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     # Create a third security for testing
     third_security = Security.create!(ticker: "GOOGL", name: "Google", exchange_operating_mic: "XNAS", country_code: "US")
 
-    # Create a future AAPL holding that should NOT be deleted
+    # A later AAPL row from an earlier sync whose snapshot was today
     future_aapl_holding = account.holdings.create!(
       security: securities(:aapl),
       date: Date.current,
@@ -98,7 +98,7 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     )
 
     # Plaid returns holdings priced one and two days ago, so the snapshot is
-    # yesterday's and today's holding is later than it - it should remain
+    # yesterday's and today's holding is later than it
     test_investments_payload = {
       securities: [],
       holdings: [
@@ -145,11 +145,9 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     processor = PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver)
     processor.process
 
-    # Should have created 3 new holdings PLUS the existing future holding (total 4)
-    assert_equal 4, account.holdings.count
-
-    # Future AAPL holding should still exist (NOT deleted)
-    assert account.holdings.exists?(future_aapl_holding.id)
+    assert_equal 3, account.holdings.count
+    assert_not account.holdings.exists?(future_aapl_holding.id)
+    assert_equal 1.day.ago.to_date, account.latest_provider_holdings_snapshot_date
 
     # Should have the correct holdings from Plaid
     assert account.holdings.exists?(security: securities(:msft), date: 1.day.ago.to_date, qty: 50)
@@ -494,6 +492,54 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
                  { "quantity" => 3, "institution_price_as_of" => (Date.current + 1).to_s } ]
       )
     end
+  end
+
+  # A sync can be dated before the last one: one with no usable price date
+  # lands on today, and the next, dated, sync goes on its newest price date.
+  test "a snapshot dated before the last sync becomes the current one" do
+    snapshot_date = Date.current - 1
+    a, b = securities(:aapl), securities(:msft)
+    link_account_provider!
+
+    process_holdings("a" => [ a, { "quantity" => 10 } ], "b" => [ b, { "quantity" => 5 } ])
+    assert_equal Date.current, account.latest_provider_holdings_snapshot_date
+
+    process_holdings(
+      "a" => [ a, { "quantity" => 12, "institution_price_as_of" => snapshot_date.to_s } ],
+      "b" => [ b, { "quantity" => 7, "institution_price_as_of" => snapshot_date.to_s } ]
+    )
+
+    assert_equal snapshot_date, account.latest_provider_holdings_snapshot_date
+    assert_equal({ a.id => 12, b.id => 7 }, account.current_holdings.to_h { |holding| [ holding.security_id, holding.qty.to_i ] })
+  end
+
+  test "later rows of another provider or with no provider are kept" do
+    snapshot_date = Date.current - 1
+    link_account_provider!
+    item = SimplefinItem.create!(family: account.family, name: "SF", access_url: "https://example.com/access")
+    simplefin_account = SimplefinAccount.create!(simplefin_item: item, name: "Broker", account_id: "sf_1",
+                                                 currency: "USD", account_type: "investment", current_balance: 0)
+    other_provider = AccountProvider.create!(account: account, provider: simplefin_account)
+    google = Security.create!(ticker: "GOOGL", name: "Google", exchange_operating_mic: "XNAS", country_code: "US")
+    other = account.holdings.create!(security: google, date: Date.current, qty: 3, price: 50, amount: 150,
+                                     currency: "USD", account_provider_id: other_provider.id)
+    calculated = account.holdings.create!(security: google, date: Date.current + 1, qty: 3, price: 50, amount: 150, currency: "USD")
+
+    process_holdings("a" => [ securities(:aapl), { "quantity" => 10, "institution_price_as_of" => snapshot_date.to_s } ])
+
+    assert account.holdings.exists?(other.id)
+    assert account.holdings.exists?(calculated.id)
+  end
+
+  # Without an account provider the rows are written with none, like
+  # calculated rows; nothing later may be removed by matching a nil provider.
+  test "with no account provider no later row is removed" do
+    google = Security.create!(ticker: "GOOGL", name: "Google", exchange_operating_mic: "XNAS", country_code: "US")
+    calculated = account.holdings.create!(security: google, date: Date.current, qty: 3, price: 50, amount: 150, currency: "USD")
+
+    process_holdings("a" => [ securities(:aapl), { "quantity" => 10, "institution_price_as_of" => (Date.current - 1).to_s } ])
+
+    assert account.holdings.exists?(calculated.id)
   end
 
   private

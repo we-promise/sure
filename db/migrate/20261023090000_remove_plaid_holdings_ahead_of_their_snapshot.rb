@@ -10,12 +10,12 @@
 # current holdings takes the provider rows on that one date, so it would show
 # only the stale row, at its old quantity, and hide the whole new snapshot
 # until the price dates caught up -- for good, for a row priced far ahead.
-# Plaid does not delete holdings at sync (`PlaidAdapter#can_delete_holdings?`
-# is false), so nothing else would remove it.
+# The processor now retires its own rows after the snapshot as it syncs, but
+# only on an account's next sync; this clears every account at once.
 #
 # Removed: rows owned by a Plaid account provider and dated after the snapshot
-# date of that Plaid account's stored payload. That is exactly the set the
-# processor can no longer write and the readers would otherwise pick. Rows of
+# date of that Plaid account's stored payload. That is the set the processor
+# retires at each sync and the readers would otherwise pick. Rows of
 # other providers, and rows with no provider (calculated or manual), are left
 # alone. Running it again removes nothing more.
 #
