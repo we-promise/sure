@@ -168,6 +168,27 @@ class EnrichableTest < ActiveSupport::TestCase
     assert_equal tags_before, Transaction.find(txn.id).tag_ids.sort
   end
 
+  test "a refused virtual setter write leaves the instance reading the stored tags" do
+    # The rollback removes the join rows, but tag_ids= also filled the
+    # in-memory association. Left alone, the same instance would report the
+    # refused tags as current, and a retry would be skipped as unchanged.
+    txn = transactions(:one)
+    tag = tags(:three)
+    tags_before = txn.tag_ids.sort
+    taggings_before = txn.taggings.map(&:tag_id).sort
+    wanted = tags_before + [ tag.id ]
+
+    txn.stubs(:save).returns(false)
+    assert_equal false, txn.enrich_attribute(:tag_ids, wanted, source: "rule")
+
+    assert_equal tags_before, txn.tag_ids.sort
+    assert_equal taggings_before, txn.taggings.map(&:tag_id).sort
+
+    txn.unstub(:save)
+    assert txn.enrich_attribute(:tag_ids, wanted, source: "rule")
+    assert_equal wanted.sort, Transaction.find(txn.id).tag_ids.sort
+  end
+
   test "enriches a virtual attribute (tag_ids) and logs it after save" do
     # transactions(:one) already carries tags one and two; tag three is new.
     txn = transactions(:one)

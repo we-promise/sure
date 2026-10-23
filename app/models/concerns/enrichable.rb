@@ -93,6 +93,7 @@ module Enrichable
     was_new = new_record?
 
     was_modified = false
+    saved = false
     # requires_new: callers such as Account::ProviderImportAdapter already hold
     # a transaction, and without a savepoint the Rollback below would be
     # swallowed by the outer block and undo nothing.
@@ -105,6 +106,7 @@ module Enrichable
       # rows a virtual setter (tag_ids=) wrote before save ran. The block
       # swallows Rollback, so the method returns false and errors stay set.
       raise ActiveRecord::Rollback unless save
+      saved = true
 
       # Provenance is logged only once the save is known to have succeeded.
       unless was_new
@@ -137,6 +139,8 @@ module Enrichable
         end
       end
     end
+
+    reset_collection_caches(enrichable_attrs.map(&:first)) unless saved
 
     # Return whether any attributes were actually saved
     was_modified
@@ -200,6 +204,22 @@ module Enrichable
   end
 
   private
+    # The rollback removes the join rows a collection setter such as tag_ids=
+    # inserted, but not the records it loaded into the association. Resetting
+    # makes the next read go to the database, so the instance stops reporting
+    # the refused ids as current. Errors and plain attributes are untouched.
+    def reset_collection_caches(attr_names)
+      attr_names.each do |attr_name|
+        reflection = self.class.reflect_on_all_associations.find do |r|
+          r.collection? && "#{r.name.to_s.singularize}_ids" == attr_name.to_s
+        end
+        next unless reflection
+
+        association(reflection.name).reset
+        association(reflection.through_reflection.name).reset if reflection.through_reflection?
+      end
+    end
+
     def log_enrichment(attribute_name:, attribute_value:, source:, metadata: {})
       de = DataEnrichment.find_or_create_by(
         enrichable: self,
