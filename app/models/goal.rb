@@ -35,8 +35,9 @@ class Goal < ApplicationRecord
   validates :target_amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
   # What progress counts: "balance" is what the linked accounts are worth
-  # today, "contributions" only what was put in (market gains taken out). The
-  # user chooses; nothing re-bases a goal behind their back (#3964).
+  # today, "contributions" only what was put in (market gains and losses
+  # taken out). The user chooses; nothing re-bases a goal behind their back
+  # (#3964).
   PROGRESS_BASES = %w[balance contributions].freeze
   validates :progress_basis, inclusion: { in: PROGRESS_BASES }
   # A reserve measured in months is derived, not typed: computing it only in

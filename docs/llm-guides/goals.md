@@ -107,9 +107,10 @@ converted to the goal's currency at request time.
 `progress_basis` says what each account's figure counts before that share
 is taken, and the user chooses it on the form: `balance` (the default) is
 the account's balance, what it is worth today; `contributions` is the
-balance minus the account's cumulative market gain (the sum of its
-`balances.net_market_flows`), floored at zero. Nothing re-bases a goal on
-save or when an account is linked, so an explicit choice is kept (#3964).
+balance minus the account's cumulative market gain or loss (the sum of
+its signed `balances.net_market_flows`, so a loss adds back), floored at
+zero. Nothing re-bases a goal on save or when an account is linked, so an
+explicit choice is kept (#3964).
 `market_value_money` separately shows the backing's current market value,
 whatever the basis.
 
