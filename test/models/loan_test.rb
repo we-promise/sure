@@ -299,6 +299,31 @@ class LoanTest < ActiveSupport::TestCase
     end
   end
 
+  # The bound is checked before the three-place rounding, which would
+  # otherwise carry a reading just outside it onto 0 or 100.
+  test "variable_rate_update_for checks the bound before rounding" do
+    as_of = Date.new(2026, 1, 15)
+    moved = Loan.new(rate_type: "variable", interest_rate: 4.5)
+    first = Loan.new(rate_type: "variable", interest_rate: nil)
+
+    [ BigDecimal("-0.0004"), BigDecimal("100.0004") ].each do |rate|
+      assert_nil moved.variable_rate_update_for(rate, as_of: as_of), "#{rate.to_s("F")} was dated as a change"
+      assert_nil first.variable_rate_update_for(rate, as_of: as_of), "#{rate.to_s("F")} was set as the base rate"
+    end
+  end
+
+  # A reading inside the bound that rounds onto it is still a rate.
+  test "variable_rate_update_for rounds an in-bound reading after checking it" do
+    as_of = Date.new(2026, 1, 15)
+
+    assert_equal({ "2026-01-15" => "100.0" },
+                 Loan.new(rate_type: "variable", interest_rate: 4.5)
+                     .variable_rate_update_for(BigDecimal("99.9996"), as_of: as_of)[:variable_rate_schedule])
+    assert_equal({ interest_rate: BigDecimal("100") },
+                 Loan.new(rate_type: "variable", interest_rate: nil)
+                     .variable_rate_update_for(BigDecimal("99.9996"), as_of: as_of))
+  end
+
   # A provider's rate is external input. One that is not a number is ignored
   # like one out of bounds, rather than raising and costing the sync the
   # other terms it reported.

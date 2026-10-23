@@ -170,15 +170,19 @@ class Loan < ApplicationRecord
   # nothing checks a schedule written any other way, so a provider reporting
   # -1% or 150% has sent something other than a rate. So has one that is not
   # a number at all, which gets nil too rather than raising out of the sync.
+  # The bound is checked before rounding, which would otherwise carry -0.0004
+  # or 100.0004 onto 0 or 100.
   def variable_rate_update_for(reported_rate, as_of:)
     return nil if reported_rate.nil? || !variable_rate_type?
 
     rate = begin
-      BigDecimal(reported_rate.to_s).round(3)
+      BigDecimal(reported_rate.to_s)
     rescue ArgumentError, TypeError, FloatDomainError
       nil
     end
     return nil unless rate&.finite? && rate.between?(0, MAX_INTEREST_RATE)
+
+    rate = rate.round(3)
     return { interest_rate: rate } if interest_rate.blank?
 
     in_force = current_variable_rate(as_of)
