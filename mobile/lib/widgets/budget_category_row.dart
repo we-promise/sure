@@ -48,6 +48,7 @@ class BudgetCategoryRow extends StatelessWidget {
       trailing = '';
     } else if (bc.inheritsParentBudget) {
       trailing = l.budgetsSharedBudget;
+      if (over) trailingColor = palette.destructive;
     } else if (!bc.isBudgeted) {
       trailing = l.budgetsNoLimit;
       if (over) trailingColor = palette.destructive;
