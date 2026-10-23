@@ -165,7 +165,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
     def opening_point(date:, date_formatted:, value:)
       Series::Value.new(
         date: date,
-        date_formatted: date_formatted || I18n.l(date, format: :long),
+        date_formatted: date_formatted || Series.format_date(date),
         value: value,
         trend: Trend.new(
           current: value,

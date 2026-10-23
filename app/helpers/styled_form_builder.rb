@@ -86,6 +86,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
         label: options[:label],
         container_class: options[:container_class],
         label_tooltip: options[:label_tooltip],
+        scoped_ids: options.fetch(:scoped_ids, false),
         html_options: html_options
       )
     )

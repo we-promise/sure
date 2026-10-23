@@ -6,7 +6,7 @@ import { Controller } from "@hotwired/stimulus";
 // single-column mode it clears the spans and normal block flow takes over.
 //
 // The DOM stays a single flat list of <section data-section-key> children, so
-// the dashboard-sortable controller (drag / keyboard reorder) is unaffected —
+// the sortable-list controller (drag / keyboard reorder) is unaffected —
 // reordering just moves a node and the CSS re-packs.
 export default class extends Controller {
   connect() {
