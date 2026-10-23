@@ -1974,6 +1974,52 @@ end
     assert_not_includes response.body, "action_type=set_transaction_category"
   end
 
+  # The dashboard money-flow drill-down filters by account id. Its chips must
+  # read as account names, not UUIDs (#4298).
+  test "an account_ids filter chip shows the account name, not its id" do
+    account = accounts(:depository)
+
+    get transactions_url(q: { account_ids: [ account.id ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: account.name
+    assert_select "#transaction-search-filters li p", text: account.id, count: 0
+  end
+
+  test "an account_ids chip for an account the user can't access does not show its name" do
+    other = families(:empty).accounts.create!(name: "Someone Else's Savings", balance: 0, currency: "USD", accountable: Depository.new)
+
+    get transactions_url(q: { account_ids: [ other.id ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "Unknown account"
+    assert_no_match other.name, response.body
+    assert_select "#transaction-search-filters li p", text: other.id, count: 0
+  end
+
+  # The initial's circle uses the info token, which follows the theme; a raw
+  # palette class keeps the light-mode shade in dark mode.
+  test "an account chip's initial uses the info token, by name or by id" do
+    account = accounts(:depository)
+
+    [ { account_ids: [ account.id ] }, { accounts: [ account.name ] } ].each do |q|
+      get transactions_url(q: q)
+
+      assert_response :success
+      assert_select "#transaction-search-filters li div[class~='bg-info/10']", text: account.name[0].upcase
+      assert_select "#transaction-search-filters li [class*='bg-blue-600']", count: 0
+    end
+  end
+
+  test "an account_ids chip is still removed by its id" do
+    account = accounts(:depository)
+
+    get transactions_url(q: { account_ids: [ account.id ] })
+
+    assert_select "#transaction-search-filters form[action*=?]", "param_key=account_ids"
+    assert_select "#transaction-search-filters form[action*=?]", "param_value=#{account.id}"
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }

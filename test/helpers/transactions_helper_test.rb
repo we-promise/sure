@@ -153,4 +153,26 @@ class TransactionsHelperTest < ActionView::TestCase
   test "investment_activity_label_name falls back to the stored label when it has no translation" do
     assert_equal "Legacy Label", investment_activity_label_name("Legacy Label")
   end
+
+  test "account_filter_label resolves every account_ids chip with one query" do
+    Current.session = sessions(:one)
+    accounts = Current.user.accessible_accounts.limit(3).to_a
+    assert_equal 3, accounts.size, "the fixture user needs three accessible accounts"
+    ids = accounts.map(&:id)
+
+    # Uncached, so a lookup per chip is counted rather than served from the
+    # query cache.
+    labels = nil
+    ActiveRecord::Base.uncached do
+      assert_queries_count(1) do
+        labels = ids.map { |id| account_filter_label("account_ids", id, filter_account_ids: ids) }
+      end
+    end
+
+    assert_equal accounts.map(&:name), labels
+  end
+
+  test "account_filter_label leaves an accounts chip's name as it is" do
+    assert_equal "Checking", account_filter_label("accounts", "Checking")
+  end
 end
