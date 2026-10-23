@@ -485,6 +485,29 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert recurring.next_expected_date >= Date.current
   end
 
+  test "create_from_transaction takes the transaction's category" do
+    transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 2.months.ago, amount: 50.00, currency: "USD", name: "Test Transaction", entryable: transaction
+    )
+
+    recurring = RecurringTransaction.create_from_transaction(transaction)
+
+    assert_equal categories(:food_and_drink), recurring.category
+  end
+
+  test "create_from_transaction leaves an inflow uncategorised" do
+    transaction = Transaction.create!(merchant: @merchant, category: categories(:income))
+    @account.entries.create!(
+      date: 2.months.ago, amount: -1840.00, currency: "USD", name: "Payroll", entryable: transaction
+    )
+
+    recurring = RecurringTransaction.create_from_transaction(transaction)
+
+    assert_equal "income", recurring.bill_type
+    assert_nil recurring.category_id
+  end
+
   test "create_from_transaction automatically calculates amount variance from history" do
     # Create multiple historical transactions with varying amounts on the same day of month
     amounts = [ 90.00, 100.00, 110.00, 120.00 ]

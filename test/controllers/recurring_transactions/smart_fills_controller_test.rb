@@ -27,6 +27,19 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_select "input[name=?][value=?]", "recurring_transaction[amount]", "42.00"
   end
 
+  # Smart fill starts from the same prefill as the plain dialog, so the
+  # transaction's category reaches the form here too.
+  test "keeps the category of the transaction it starts from" do
+    @entry.entryable.update!(category: categories(:food_and_drink))
+    stub_provider(raw(name: "Gym Membership", amount: 42.0, frequency: "monthly", confidence: 0.9))
+
+    post smart_fill_recurring_transactions_url(entry_id: @entry.id),
+         headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "input[name=?][value=?]", "recurring_transaction[category_id]", categories(:food_and_drink).id
+  end
+
   test "a provider failure keeps the plain prefill and explains" do
     provider = Object.new
     provider.define_singleton_method(:suggest_bill_setup) do |**|

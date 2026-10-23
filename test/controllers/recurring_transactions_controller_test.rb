@@ -328,6 +328,51 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match "184.37", response.body
   end
 
+  test "new prefills the category of the transaction it starts from" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current - 20, amount: 54.73, currency: "USD", name: "PET COVER",
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "input[name=?][value=?]", "recurring_transaction[category_id]", categories(:food_and_drink).id
+  end
+
+  # CategoriesController refuses to create a category while they are locked,
+  # so neither bill form may offer inline creation then. The flag is read by
+  # the category-select controller from this data attribute.
+  test "the add and edit category selects follow the family's category lock" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current - 20, amount: 54.73, currency: "USD", name: "PET COVER",
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+    locked_select = "[data-category-select-locked-value=?]"
+
+    [ false, true ].each do |locked|
+      @family.update!(categories_locked: locked)
+
+      get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+      assert_select locked_select, locked.to_s, count: 1
+
+      get edit_recurring_transaction_url(@recurring_transaction), headers: { "Turbo-Frame" => "modal" }
+      assert_select locked_select, locked.to_s, count: 1
+    end
+  end
+
+  test "new offers no category for a paycheck" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current - 10, amount: -1840, currency: "USD", name: "ACME PAYROLL",
+      entryable: Transaction.new(category: categories(:income))
+    )
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "[name=?]", "recurring_transaction[category_id]", count: 0
+  end
+
   # Sharing is per account, so a family scope is not an access check. Prefilling
   # reads the entry's name, amount and account straight back into the form.
   test "new ignores a transaction from an account the user was never given" do
@@ -517,6 +562,83 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal due.day, detection.day_of_month
     assert bill.recurring_occurrences.reload.exists?(due_on: due),
            "the declared bill's occurrence must materialize immediately"
+  end
+
+  test "create keeps the category chosen on the add form" do
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Pet Cover", amount: "54.73", account_id: accounts(:depository).id,
+        first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+        category_id: categories(:food_and_drink).id
+      }
+    }
+
+    assert_redirected_to bills_path
+    assert_equal categories(:food_and_drink), @family.recurring_transactions.order(:created_at).last.category
+  end
+
+  test "create leaves a declared paycheck uncategorised" do
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Acme Payroll", amount: "1840", account_id: accounts(:depository).id, is_income: "1",
+        first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+        category_id: categories(:income).id
+      }
+    }
+
+    bill = @family.recurring_transactions.order(:created_at).last
+    assert_equal "Acme Payroll", bill.name
+    assert bill.typed_income?
+    assert_nil bill.category_id
+  end
+
+  test "create rejects another family's category" do
+    foreign = families(:empty).categories.create!(name: "Foreign Category")
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Pet Cover", amount: "54.73", account_id: accounts(:depository).id,
+          first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+          category_id: foreign.id
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  # The uuid column casts a malformed id to nil, which the ownership validation
+  # then skips, so without its own check the bill saved uncategorised.
+  test "create rejects a category id that is not an id" do
+    assert_no_difference "@family.recurring_transactions.count" do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Pet Cover", amount: "54.73", account_id: accounts(:depository).id,
+          first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+          category_id: "not-a-category"
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("recurring_transactions.create.category_invalid"), response.body
+  end
+
+  # A paycheck never takes a category, so whatever was posted for one is
+  # ignored rather than refused.
+  test "create ignores a malformed category id on a declared paycheck" do
+    assert_difference "@family.recurring_transactions.count", 1 do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Acme Payroll", amount: "1840", account_id: accounts(:depository).id, is_income: "1",
+          first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+          category_id: "not-a-category"
+        }
+      }
+    end
+
+    assert_nil @family.recurring_transactions.order(:created_at).last.category_id
   end
 
   test "create with a non-monthly preset writes explicit rules" do
