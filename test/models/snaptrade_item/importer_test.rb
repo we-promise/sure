@@ -55,4 +55,25 @@ class SnaptradeItem::ImporterTest < ActiveSupport::TestCase
 
     assert_not @snaptrade_account.reload.activities_fetch_pending?
   end
+
+  # A refused enqueue raises nothing, so support only learns of it from
+  # /settings/debug.
+  test "a refused fetch is logged against this connection" do
+    family = families(:dylan_family)
+    account = family.accounts.create!(name: "Linked 401k", balance: 0, currency: "USD", accountable: Investment.new)
+    @snaptrade_account.ensure_account_provider!(account)
+    @snaptrade_account.reload
+
+    queue = mock("configured_job")
+    queue.stubs(:perform_later).returns(false)
+    SnaptradeActivitiesFetchJob.stubs(:set).returns(queue)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade", level: "error").count }, 1 do
+      @importer.send(:import_activities, @snaptrade_account)
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal [ "SnaptradeItem::Importer", "provider_sync", family, @snaptrade_account.account_provider, @snaptrade_account.id ],
+                 [ entry.source, entry.category, entry.family, entry.account_provider, entry.metadata["snaptrade_account_id"] ]
+  end
 end

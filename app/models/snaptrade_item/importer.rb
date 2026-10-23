@@ -226,7 +226,16 @@ class SnaptradeItem::Importer
 
           unless queued
             snaptrade_account.update!(activities_fetch_pending: false)
-            Rails.logger.error "SnaptradeItem::Importer - Could not queue the background activities fetch for account #{snaptrade_account.id}"
+            DebugLogEntry.capture(
+              category: "provider_sync",
+              level: "error",
+              message: "Could not queue the background SnapTrade activities fetch",
+              source: self.class.name,
+              provider_key: "snaptrade",
+              family: snaptrade_item.family,
+              account_provider: snaptrade_account.account_provider,
+              metadata: { snaptrade_account_id: snaptrade_account.id, start_date: start_date.to_s }
+            )
           end
         end
       end
