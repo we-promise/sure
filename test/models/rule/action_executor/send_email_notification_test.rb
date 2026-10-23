@@ -6,6 +6,9 @@ class Rule::ActionExecutor::SendEmailNotificationTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
     @rule = rules(:one)
+    # The fixture rule is inactive by the column default, and an inactive rule
+    # sends nothing. Switch it on so these tests exercise the sending path.
+    @rule.update_columns(active: true)
     @account = @family.accounts.create!(name: "Notify test", balance: 1000, currency: "USD", accountable: Depository.new)
     @txn1 = create_transaction(date: Date.current, account: @account, amount: 100, name: "Coffee").transaction
     @scope = @account.transactions
@@ -58,12 +61,26 @@ class Rule::ActionExecutor::SendEmailNotificationTest < ActiveSupport::TestCase
     assert_equal 2, recorded.size
   end
 
+  test "an inactive rule records and enqueues nothing" do
+    @rule.update_columns(active: false)
+
+    result = nil
+    assert_no_difference -> { NotificationDelivery.where(rule: @rule).count } do
+      assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+        result = action.apply(@scope)
+      end
+    end
+
+    assert_equal 0, result
+  end
+
   test "pre-seed watermark records existing matches without sending so history never emails" do
     # after_create_commit does not fire under transactional tests (the wrapping
     # transaction never commits), so invoke the seeding path directly to verify
     # the watermark behavior the callback performs in production.
     rule = @family.rules.create!(
       resource_type: "transaction",
+      active: true,
       actions_attributes: [ { action_type: "send_email_notification" } ]
     )
     seed_action = rule.actions.first

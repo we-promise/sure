@@ -3,15 +3,26 @@ require "application_system_test_case"
 class AccountsSyncUiTest < ApplicationSystemTestCase
   setup do
     @user = users(:family_admin)
-    Sync.for_family(@user.family).incomplete.destroy_all
+    # These tests control sync state explicitly; login must not start a new
+    # sync when fixtures were loaded before midnight.
+    @user.family.update!(auto_sync_on_login: false)
+    Sync.incomplete.for_family(@user.family).destroy_all
+    # Exercise the previous-day fixture boundary without waiting for midnight.
+    @user.family.syncs.update_all(created_at: 1.day.ago)
     sign_in @user
+    # Guard against background syncs enqueued during the login flow even when auto_sync_on_login is false
+    Sync.incomplete.for_family(@user.family).destroy_all
+  end
+
+  teardown do
+    Sync.incomplete.destroy_all
   end
 
   test "idle state shows a plain refresh trigger with no cancel control" do
     visit accounts_path
 
     within "#accounts-sync-controls" do
-      assert_selector "button[aria-label='#{I18n.t("accounts.index.sync")}']"
+      assert_selector "button:not([disabled])[aria-label='#{I18n.t("accounts.index.sync")}']"
       assert_no_text I18n.t("accounts.index.cancel_sync")
     end
   end

@@ -425,6 +425,8 @@ uk:
         no_recent_sync: Синхронізація прострочена
         registration_needed: Потрібна реєстрація
         reconsent_required: Потрібна повторна згода
+        login_required: "Потрібен вхід"
+        login_expires_soon: "Вхід завершиться через %{time} (%{at})"
         reconsent_needed:
           one: Повторна згода потрібна через %{count} день
           other: Повторна згода потрібна через %{count} днів
@@ -460,7 +462,7 @@ uk:
         redbark: Синхронізуйте австралійські банківські рахунки через open banking Redbark.
         fio: Синхронізуйте рахунок у Fio banka за допомогою токена API лише для читання.
         coinspot: Синхронізуйте баланси CoinSpot, вартість в AUD, перекази, поповнення, виведення коштів та історію ордерів за допомогою ключа API лише для читання.
-        onchain_wallet: Відстежуйте некастодіальні гаманці Bitcoin, EVM і Solana за їхніми публічними адресами.
+        onchain_wallet: Відстежуйте некастодіальні гаманці Bitcoin, EVM, Solana, Cosmos і Polkadot за їхніми публічними адресами.
         trading212: Синхронізуйте свій інвестиційний портфель Trading 212 за допомогою ключа API лише для читання.
         trade_republic: Синхронізуйте свій інвестиційний рахунок Trade Republic через захищений вхід у вебверсію лише для читання.
       search_filters:
@@ -548,6 +550,7 @@ uk:
         application_id_placeholder_new: "Введіть ідентифікатор програми"
         application_id_placeholder_update: "Введіть новий ID для оновлення"
         client_certificate_label: "Сертифікат клієнта (з приватним ключем)"
+        keep_client_certificate_hint: "Залиште порожнім, щоб зберегти поточний сертифікат"
         save_and_connect: "Зберегти та підключити"
         update_connection: "Оновити з'єднання"
         connected_bank: "Підключений банк"
@@ -741,9 +744,11 @@ uk:
         qr_cancel: Скасувати вхід за QR-кодом
         qr_back_to_credentials: Назад до номера телефону та PIN-коду або пароля
         qr_loading: Підготовка QR-коду…
-        qr_instruction: Відскануйте QR-код у застосунку Trade Republic і підтвердьте вхід.
+        qr_instruction: Відскануйте QR-код камерою телефона, а потім підтвердьте вхід у застосунку Trade Republic.
         qr_success: Вхід підтверджено. Sure оновлює сторінку постачальника.
         qr_error: Не вдалося розпочати вхід за QR-кодом. Спробуйте ще раз.
+        requires_update: "Увійдіть знову, щоб відновити синхронізацію."
+        session_expires_in: "Вхід завершиться через %{time} (%{at})."
         add_account: "Додати ще одне підключення"
         save_configuration: Зберегти й увійти
         update_configuration: Оновити конфігурацію
