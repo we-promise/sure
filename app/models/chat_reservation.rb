@@ -6,6 +6,7 @@ module ChatReservation
   KEY = "chat_reservation".freeze
   STARTED_KEY = "chat_reservation:started".freeze
   CHAT_KEY = "chat_reservation:chat_running".freeze
+  TARGETS = ".chat-reservation".freeze
   TTL = 60.seconds
   CAP = 15.minutes
 
@@ -36,7 +37,15 @@ module ChatReservation
     Sidekiq.redis { |conn| conn.call("SET", CHAT_KEY, "1", "EX", Chat.response_timeout.to_i) }
     yield
   ensure
-    Sidekiq.redis { |conn| conn.call("DEL", CHAT_KEY) }
+    begin
+      Sidekiq.redis { |conn| conn.call("DEL", CHAT_KEY) }
+    rescue => e
+      Rails.logger.warn("ChatReservation chat flag not cleared: #{e.class}: #{e.message}")
+    end
+  end
+
+  def self.held?
+    Sidekiq.redis { |conn| conn.call("EXISTS", KEY) } == 1
   end
 
   def self.chat_active?
@@ -48,7 +57,7 @@ module ChatReservation
   def self.bubble(seconds)
     return if seconds.nil? || chat_active?
 
-    busy = BackgroundJobHealth.ai_busy?
+    busy = BackgroundJobHealth.ai_busy?(queues: [ "ai_low_priority" ])
     { seconds: seconds, busy: busy } if busy || Sidekiq::Queue.new("ai_low_priority").size.positive?
   end
 end

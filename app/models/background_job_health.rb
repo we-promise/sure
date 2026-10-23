@@ -38,8 +38,8 @@ class BackgroundJobHealth
     end
 
     # With one AI thread, a chat sent now waits for any running AI job.
-    def ai_busy?
-      one_ai_thread? && Sidekiq::WorkSet.new.any? { |_process, _thread, work| AI_QUEUES.include?(work.queue) }
+    def ai_busy?(queues: AI_QUEUES)
+      one_ai_thread? && Sidekiq::WorkSet.new.any? { |_process, _thread, work| queues.include?(work.queue) }
     rescue => e
       Rails.logger.warn("BackgroundJobHealth busy check failed: #{e.class}: #{e.message}")
       false

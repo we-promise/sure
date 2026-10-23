@@ -47,10 +47,16 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
     with_env_overrides("RAILS_AI_MAX_THREADS" => nil) { assert BackgroundJobHealth.ai_busy? }
   end
 
-  test "waiting AI jobs or other running jobs aren't busy" do
+  test "other running jobs aren't busy" do
     stub_running("default")
 
     with_env_overrides("RAILS_AI_MAX_THREADS" => nil) { assert_not BackgroundJobHealth.ai_busy? }
+  end
+
+  test "busy can be limited to some AI queues" do
+    stub_running("ai_high_priority")
+
+    with_env_overrides("RAILS_AI_MAX_THREADS" => nil) { assert_not BackgroundJobHealth.ai_busy?(queues: [ "ai_low_priority" ]) }
   end
 
   test "with several AI threads, a running ai_low_priority job isn't busy" do

@@ -6,7 +6,7 @@ en:
     thinking: "Thinking ..."
     ai_busy: "Just finishing off a background task, then I'll get straight onto your message."
     reservation:
-      ready_html: "I've put off some background tasks so I can get straight onto your message. They'll sneak back in %{countdown}, so keep typing!"
+      ready_html: "I've put off some background tasks so I can get straight onto your message. They'll sneak back in %{countdown} s, so keep typing!"
       busy: "Just finishing off a background task, then I'm all yours. Keep typing!"
     worker_unhealthy_warning: "AI responses may not be delivered right now — the background worker appears to be down or backed up. Check that your Sidekiq worker is running."
     ai_greeting:

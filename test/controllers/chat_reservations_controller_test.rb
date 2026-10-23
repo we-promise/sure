@@ -3,7 +3,7 @@ require "test_helper"
 class ChatReservationsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in users(:family_admin)
-    BackgroundJobHealth.stubs(:ai_busy?).returns(false)
+    BackgroundJobHealth.stubs(:ai_busy?).with(queues: [ "ai_low_priority" ]).returns(false)
     ChatReservation.stubs(:chat_active?).returns(false)
     stub_waiting_jobs(1)
   end
@@ -14,7 +14,7 @@ class ChatReservationsControllerTest < ActionDispatch::IntegrationTest
     post chat_reservation_url, as: :turbo_stream
 
     assert_response :success
-    assert_select "turbo-stream[action=update][target=chat_reservation] template", text: /put off some background tasks/
+    assert_select "turbo-stream[action=update][targets='.chat-reservation'] template", text: /put off some background tasks/
   end
 
   test "no bubble when no background AI job waits" do
@@ -23,17 +23,17 @@ class ChatReservationsControllerTest < ActionDispatch::IntegrationTest
 
     post chat_reservation_url, as: :turbo_stream
 
-    assert_select "turbo-stream[action=update][target=chat_reservation] template", text: ""
+    assert_select "turbo-stream[action=update][targets='.chat-reservation'] template", text: ""
   end
 
   test "the bubble says busy while a background AI job runs" do
     ChatReservation.expects(:hold!).returns(60)
-    BackgroundJobHealth.stubs(:ai_busy?).returns(true)
+    BackgroundJobHealth.stubs(:ai_busy?).with(queues: [ "ai_low_priority" ]).returns(true)
     stub_waiting_jobs(0)
 
     post chat_reservation_url, as: :turbo_stream
 
-    assert_select "turbo-stream[target=chat_reservation] template", text: /#{Regexp.escape(I18n.t("chats.reservation.busy"))}/
+    assert_select "turbo-stream[targets='.chat-reservation'] template", text: /#{Regexp.escape(I18n.t("chats.reservation.busy"))}/
   end
 
   test "forbidden without AI consent" do

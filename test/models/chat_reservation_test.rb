@@ -44,14 +44,14 @@ class ChatReservationTest < ActiveSupport::TestCase
 
   test "the bubble says busy while a background AI job runs, ready while some wait, else nothing" do
     ChatReservation.stubs(:chat_active?).returns(false)
-    BackgroundJobHealth.stubs(:ai_busy?).returns(false)
+    BackgroundJobHealth.stubs(:ai_busy?).with(queues: [ "ai_low_priority" ]).returns(false)
     Sidekiq::Queue.stubs(:new).with("ai_low_priority").returns(stub(size: 0))
     assert_nil ChatReservation.bubble(60)
 
     Sidekiq::Queue.stubs(:new).with("ai_low_priority").returns(stub(size: 2))
     assert_equal({ seconds: 60, busy: false }, ChatReservation.bubble(60))
 
-    BackgroundJobHealth.stubs(:ai_busy?).returns(true)
+    BackgroundJobHealth.stubs(:ai_busy?).with(queues: [ "ai_low_priority" ]).returns(true)
     assert_equal({ seconds: 60, busy: true }, ChatReservation.bubble(60))
     assert_nil ChatReservation.bubble(nil)
   end
@@ -72,21 +72,51 @@ class ChatReservationTest < ActiveSupport::TestCase
     assert_raises(RuntimeError) { ChatReservation.while_chat_runs { raise "boom" } }
   end
 
+  test "a reply isn't failed by a Redis error while clearing the chat flag" do
+    conn = mock
+    conn.stubs(:call).with("SET", ChatReservation::CHAT_KEY, "1", "EX", Chat.response_timeout.to_i)
+    conn.stubs(:call).with("DEL", ChatReservation::CHAT_KEY).raises(RedisClient::ConnectionError)
+    Sidekiq.stubs(:redis).yields(conn)
+
+    assert_equal :reply, ChatReservation.while_chat_runs { :reply }
+  end
+
   test "the AI capsule skips ai_low_priority while a reservation is held" do
     fetch = fetch_for(%w[ai_high_priority ai_low_priority])
 
-    stub_reservation(fetch, held: false)
+    ChatReservation.stubs(:held?).returns(false)
     assert_equal %w[queue:ai_high_priority queue:ai_low_priority], fetch.queues_cmd
 
-    stub_reservation(fetch, held: true)
+    ChatReservation.stubs(:held?).returns(true)
     assert_equal %w[queue:ai_high_priority], fetch.queues_cmd
   end
 
   test "other capsules' queues are left alone" do
     fetch = fetch_for(%w[high_priority default])
-    fetch.expects(:redis).never
+    ChatReservation.expects(:held?).never
 
     assert_equal %w[queue:high_priority queue:default], fetch.queues_cmd
+  end
+
+  test "an AI capsule with several threads ignores the reservation" do
+    fetch = fetch_for(%w[ai_high_priority ai_low_priority], concurrency: 2)
+    ChatReservation.stubs(:held?).returns(true)
+
+    assert_equal %w[queue:ai_high_priority queue:ai_low_priority], fetch.queues_cmd
+  end
+
+  test "an ai_low_priority job popped after a hold started goes back to its queue" do
+    fetch = fetch_for(%w[ai_high_priority ai_low_priority])
+    work = Sidekiq::BasicFetch::UnitOfWork.new("queue:ai_low_priority", "{}", nil)
+    Sidekiq::BasicFetch.any_instance.stubs(:retrieve_work).returns(work)
+
+    ChatReservation.stubs(:held?).returns(true)
+    work.expects(:requeue)
+    assert_nil fetch.retrieve_work
+
+    ChatReservation.stubs(:held?).returns(false)
+    work.expects(:requeue).never
+    assert_equal work, fetch.retrieve_work
   end
 
   private
@@ -123,15 +153,10 @@ class ChatReservationTest < ActiveSupport::TestCase
       end
     end
 
-    def fetch_for(queues)
+    def fetch_for(queues, concurrency: 1)
       capsule = Sidekiq::Capsule.new("test", Sidekiq.default_configuration)
       capsule.queues = queues
+      capsule.concurrency = concurrency
       ChatReservation::Fetch.new(capsule)
-    end
-
-    def stub_reservation(fetch, held:)
-      conn = mock
-      conn.expects(:call).with("EXISTS", ChatReservation::KEY)
-      fetch.expects(:redis).yields(conn).returns(held ? 1 : 0)
     end
 end

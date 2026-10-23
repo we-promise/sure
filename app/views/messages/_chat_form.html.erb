@@ -3,7 +3,7 @@
 <div id="chat-form" class="space-y-2"
      data-controller="chat-reservation"
      data-chat-reservation-url-value="<%= chat_reservation_path %>">
-  <div id="chat_reservation"></div>
+  <div class="chat-reservation" role="status" aria-live="polite"></div>
 
   <% model = chat && chat.persisted? ? [chat, Message.new] : Chat.new %>
 

@@ -41,6 +41,6 @@ export default class extends Controller {
   #tick() {
     const seconds = Math.ceil((this.endsAt - Date.now()) / 1000);
     if (seconds <= 0 || !this.hasBubbleTarget) return this.hide();
-    if (this.hasCountdownTarget) this.countdownTarget.textContent = `${seconds} s`;
+    if (this.hasCountdownTarget) this.countdownTarget.textContent = seconds;
   }
 }
