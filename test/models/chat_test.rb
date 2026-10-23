@@ -68,6 +68,17 @@ class ChatTest < ActiveSupport::TestCase
     chat.ask_assistant(user_message, assistant_message: pending)
   end
 
+  test "a finished reply holds the reservation and refreshes the bubble" do
+    chat = chats(:one)
+    user_message = chat.messages.where(type: "UserMessage").first
+    UserMessage.any_instance.stubs(:request_response)
+    ChatReservation.expects(:hold!).returns(60)
+    ChatReservation.expects(:bubble).with(60).returns(seconds: 60, busy: false)
+    Turbo::StreamsChannel.expects(:broadcast_update_to).with(chat, target: "chat_reservation", partial: "chats/reservation", locals: { bubble: { seconds: 60, busy: false } })
+
+    AssistantResponseJob.perform_now(user_message)
+  end
+
   test "creates with default model when model is nil" do
     prompt = "Test prompt"
 

@@ -35,21 +35,26 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
     assert_not BackgroundJobHealth.healthy?
   end
 
-  test "a chat waiting behind another AI job is busy, not unhealthy" do
-    stub_sidekiq(processes: [ { "queues" => [ "high_priority", "ai_high_priority" ] } ], latency: 0.0, ai_high: 45.0)
-
-    assert BackgroundJobHealth.healthy?
-    assert BackgroundJobHealth.ai_busy?
-  end
-
-  test "with one AI thread, an ai_low_priority backlog is busy" do
-    stub_sidekiq(processes: [ { "queues" => [ "high_priority", "ai_high_priority" ] } ], latency: 0.0, ai_low: 45.0)
+  test "with one AI thread, a running ai_low_priority job is busy" do
+    stub_running("ai_low_priority")
 
     with_env_overrides("RAILS_AI_MAX_THREADS" => nil) { assert BackgroundJobHealth.ai_busy? }
   end
 
-  test "with several AI threads, an ai_low_priority backlog isn't busy" do
-    stub_sidekiq(processes: [ { "queues" => [ "high_priority", "ai_high_priority" ] } ], latency: 0.0, ai_low: 45.0)
+  test "with one AI thread, a running chat is busy for the next one" do
+    stub_running("ai_high_priority")
+
+    with_env_overrides("RAILS_AI_MAX_THREADS" => nil) { assert BackgroundJobHealth.ai_busy? }
+  end
+
+  test "waiting AI jobs or other running jobs aren't busy" do
+    stub_running("default")
+
+    with_env_overrides("RAILS_AI_MAX_THREADS" => nil) { assert_not BackgroundJobHealth.ai_busy? }
+  end
+
+  test "with several AI threads, a running ai_low_priority job isn't busy" do
+    stub_running("ai_low_priority")
 
     with_env_overrides("RAILS_AI_MAX_THREADS" => "2") { assert_not BackgroundJobHealth.ai_busy? }
   end
@@ -62,14 +67,16 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
   end
 
   private
-    def stub_sidekiq(processes:, latency:, ai_high: 0.0, ai_low: 0.0)
+    def stub_sidekiq(processes:, latency:)
       process_set = mock("ProcessSet")
       process_set.stubs(:size).returns(processes.size)
       process_set.stubs(:flat_map).returns(processes.flat_map { |p| p["queues"] })
       Sidekiq::ProcessSet.stubs(:new).returns(process_set)
 
-      { "high_priority" => latency, "ai_high_priority" => ai_high, "ai_low_priority" => ai_low }.each do |name, wait|
-        Sidekiq::Queue.stubs(:new).with(name).returns(stub(latency: wait))
-      end
+      Sidekiq::Queue.stubs(:new).with("high_priority").returns(stub(latency: latency))
+    end
+
+    def stub_running(queue)
+      Sidekiq::WorkSet.stubs(:new).returns([ [ "worker:1", "tid", stub(queue: queue) ] ])
     end
 end

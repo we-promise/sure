@@ -63,6 +63,9 @@ end
 Sidekiq.configure_server do |config|
   config.redis = redis_config
 
+  # At startup: app classes aren't loadable yet when this file runs.
+  config.on(:startup) { config[:fetch_class] = ChatReservation::Fetch }
+
   # Initialize auto-sync scheduler when Sidekiq server starts
   config.on(:startup) do
     AutoSyncScheduler.sync!

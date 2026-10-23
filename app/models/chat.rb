@@ -141,6 +141,12 @@ class Chat < ApplicationRecord
     assistant.respond_to(message, assistant_message: assistant_message)
   end
 
+  # Not broadcast_update: it adds `chat` to the locals and drops a nil bubble.
+  def hold_reservation
+    Turbo::StreamsChannel.broadcast_update_to self, target: "chat_reservation", partial: "chats/reservation",
+                                              locals: { bubble: ChatReservation.bubble(ChatReservation.hold!) }
+  end
+
   # The pending bubble says "busy" while the response waits behind another AI
   # job, and "Thinking" once its job starts.
   def broadcast_pending_status(assistant_message, busy: false)

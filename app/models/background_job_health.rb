@@ -11,12 +11,8 @@ class BackgroundJobHealth
   # Syncs and imports run here; chat runs on ai_high_priority.
   CRITICAL_QUEUE = "high_priority".freeze
   CHAT_QUEUE = "ai_high_priority".freeze
+  AI_QUEUES = [ CHAT_QUEUE, "ai_low_priority" ].freeze
   LATENCY_WARN_SECONDS = 60
-
-  # A chat waiting this long is behind another AI job: normal with one AI
-  # thread and a slow model, so it's "busy", not unhealthy. With one thread,
-  # an ai_low_priority backlog means a chat sent now waits too.
-  AI_BUSY_SECONDS = 30
 
   CACHE_KEY = "background_job_health".freeze
   CACHE_TTL = 15.seconds
@@ -37,8 +33,16 @@ class BackgroundJobHealth
       current
     end
 
+    def one_ai_thread?
+      ENV.fetch("RAILS_AI_MAX_THREADS", 1).to_i == 1
+    end
+
+    # With one AI thread, a chat sent now waits for any running AI job.
     def ai_busy?
-      current[:ai_busy]
+      one_ai_thread? && Sidekiq::WorkSet.new.any? { |_process, _thread, work| AI_QUEUES.include?(work.queue) }
+    rescue => e
+      Rails.logger.warn("BackgroundJobHealth busy check failed: #{e.class}: #{e.message}")
+      false
     end
 
     def summary
@@ -55,13 +59,8 @@ class BackgroundJobHealth
         polls_chat = polled_queues.include?(CHAT_QUEUE)
         latency = Sidekiq::Queue.new(CRITICAL_QUEUE).latency
 
-        ai_queues = [ CHAT_QUEUE ]
-        ai_queues << "ai_low_priority" if ENV.fetch("RAILS_AI_MAX_THREADS", 1).to_i == 1
-        ai_latency = ai_queues.map { |q| Sidekiq::Queue.new(q).latency }.max
-
         {
           healthy: workers.positive? && polls_critical && polls_chat && latency < LATENCY_WARN_SECONDS,
-          ai_busy: ai_latency > AI_BUSY_SECONDS,
           workers: workers,
           polls_critical_queue: polls_critical,
           polls_chat_queue: polls_chat,
@@ -71,7 +70,7 @@ class BackgroundJobHealth
       end
 
       def fail_open
-        { healthy: true, ai_busy: false, workers: nil, polls_critical_queue: nil, polls_chat_queue: nil, latency: nil, checked_at: Time.current, error: true }
+        { healthy: true, workers: nil, polls_critical_queue: nil, polls_chat_queue: nil, latency: nil, checked_at: Time.current, error: true }
       end
   end
 end
