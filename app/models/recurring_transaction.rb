@@ -145,6 +145,15 @@ class RecurringTransaction < ApplicationRecord
     name.presence || merchant&.name
   end
 
+  # Every name this series answers to, normalised: its own, the name the
+  # detector matched on, and the bank texts it has learned. The one place a
+  # series' names are compared, so the matcher and the covering check below
+  # cannot drift apart.
+  def known_names
+    ([ name, matcher_name ] + Array(matcher_hints["name_aliases"]))
+      .compact.map { |known| RecurringTransaction::Matcher.normalize_name(known) }.to_set
+  end
+
   # The name the detector matched on, kept apart from the user-facing name
   # so renaming a bill does not orphan it from its bank transactions.
   def matcher_name
@@ -546,6 +555,77 @@ class RecurringTransaction < ApplicationRecord
     candidate_amount.between?(low, high)
   end
 
+  # The series in this scope that an entry already belongs to, if any. Guards
+  # both ways of turning a transaction into a bill ("Create bill" and "Mark as
+  # recurring"), so it sees what the matcher sees: detected series as well as
+  # hand-made ones. A declared bill is keyed by name and a detected one by
+  # merchant, so the unique indexes never collide between the two.
+  #
+  # An entry with a confirmed allocation is covered by that series, whatever
+  # its identity. Otherwise a non-ended series covers it when it shares the
+  # currency and account (an accountless series takes any account), the
+  # merchant when the series has one, or else a name the series knows (the
+  # entry's own text, or its merchant's name, which is what "Create bill"
+  # names a bill after), and an amount inside the variance band, so a second
+  # price tier stays creatable. The band is signed, so an inflow never lands
+  # inside a bill's band, nor an outflow inside income's. A series the user
+  # rejected for this entry ("Not this one") is skipped, as the matcher skips
+  # it, so the rejected payment can still become a bill of its own.
+  #
+  # Identity covers ordinary charges only. The matcher never pays a bill with
+  # a transfer leg, and a recurring transfer is keyed by its account pair and
+  # has its own "mark as recurring" path, so a transfer leg is covered only
+  # through an allocation.
+  def self.covering(entry)
+    scope = where(family_id: entry.account.family_id).where.not(status: "ended")
+
+    allocated = scope.joins(recurring_occurrences: :allocations)
+                     .merge(RecurringAllocation.confirmed)
+                     .find_by(recurring_allocations: { entry_id: entry.id })
+    return allocated if allocated
+    return if entry.entryable.try(:transfer?)
+
+    merchant = entry.entryable.try(:merchant)
+    names = [ entry.name, merchant&.name ].compact_blank.map { |name| Matcher.normalize_name(name) }
+
+    scope.where(currency: entry.currency, account_id: [ entry.account_id, nil ], destination_account_id: nil)
+         .where.not(id: RecurringMatchRejection.where(entry_id: entry.id).select(:recurring_transaction_id))
+         .order(:created_at)
+         .find do |series|
+           next false unless amount_within_variance_band?(entry.amount, series.amount)
+
+           if series.merchant_id.present?
+             series.merchant_id == merchant&.id
+           else
+             series.known_names.intersect?(names)
+           end
+         end
+  end
+
+  # The row create_from_transaction would collide with, whatever its status.
+  # The partial unique indexes ignore status, so an ended series still holds
+  # its key after covering has stopped returning it. Mirrors the identity
+  # written below: merchant when the transaction has one (the merchant index
+  # ignores name), else the entry's name, with the amount as dedup_scope.
+  def self.identity_taken_by(transaction)
+    entry = transaction.entry
+    key = {
+      family_id: entry.account.family_id,
+      account_id: entry.account_id,
+      destination_account_id: nil,
+      amount: entry.amount,
+      currency: entry.currency,
+      dedup_scope: entry.amount.to_d.to_s("F")
+    }
+    key = if transaction.merchant_id.present?
+      key.merge(merchant_id: transaction.merchant_id)
+    else
+      key.merge(merchant_id: nil, name: entry.name)
+    end
+
+    find_by(key)
+  end
+
   # Create a manual recurring transaction from an existing transaction
   # Automatically calculates amount variance from past 6 months of matching transactions
   def self.create_from_transaction(transaction, date_variance: 2)
@@ -602,6 +682,8 @@ class RecurringTransaction < ApplicationRecord
       next_expected_date: next_expected,
       status: "active",
       bill_type: entry.amount.negative? ? "income" : "bill",
+      # Income stays uncategorised, as detection leaves it.
+      category_id: entry.amount.negative? ? nil : transaction.category_id,
       occurrence_count: matching_amounts.size,
       manual: true,
       expected_amount_min: expected_min,

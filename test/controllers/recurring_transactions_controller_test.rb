@@ -328,6 +328,51 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match "184.37", response.body
   end
 
+  test "new prefills the category of the transaction it starts from" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current - 20, amount: 54.73, currency: "USD", name: "PET COVER",
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "input[name=?][value=?]", "recurring_transaction[category_id]", categories(:food_and_drink).id
+  end
+
+  # CategoriesController refuses to create a category while they are locked,
+  # so neither bill form may offer inline creation then. The flag is read by
+  # the category-select controller from this data attribute.
+  test "the add and edit category selects follow the family's category lock" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current - 20, amount: 54.73, currency: "USD", name: "PET COVER",
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+    locked_select = "[data-category-select-locked-value=?]"
+
+    [ false, true ].each do |locked|
+      @family.update!(categories_locked: locked)
+
+      get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+      assert_select locked_select, locked.to_s, count: 1
+
+      get edit_recurring_transaction_url(@recurring_transaction), headers: { "Turbo-Frame" => "modal" }
+      assert_select locked_select, locked.to_s, count: 1
+    end
+  end
+
+  test "new offers no category for a paycheck" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current - 10, amount: -1840, currency: "USD", name: "ACME PAYROLL",
+      entryable: Transaction.new(category: categories(:income))
+    )
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "[name=?]", "recurring_transaction[category_id]", count: 0
+  end
+
   # Sharing is per account, so a family scope is not an access check. Prefilling
   # reads the entry's name, amount and account straight back into the form.
   test "new ignores a transaction from an account the user was never given" do
@@ -517,6 +562,83 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal due.day, detection.day_of_month
     assert bill.recurring_occurrences.reload.exists?(due_on: due),
            "the declared bill's occurrence must materialize immediately"
+  end
+
+  test "create keeps the category chosen on the add form" do
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Pet Cover", amount: "54.73", account_id: accounts(:depository).id,
+        first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+        category_id: categories(:food_and_drink).id
+      }
+    }
+
+    assert_redirected_to bills_path
+    assert_equal categories(:food_and_drink), @family.recurring_transactions.order(:created_at).last.category
+  end
+
+  test "create leaves a declared paycheck uncategorised" do
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Acme Payroll", amount: "1840", account_id: accounts(:depository).id, is_income: "1",
+        first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+        category_id: categories(:income).id
+      }
+    }
+
+    bill = @family.recurring_transactions.order(:created_at).last
+    assert_equal "Acme Payroll", bill.name
+    assert bill.typed_income?
+    assert_nil bill.category_id
+  end
+
+  test "create rejects another family's category" do
+    foreign = families(:empty).categories.create!(name: "Foreign Category")
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Pet Cover", amount: "54.73", account_id: accounts(:depository).id,
+          first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+          category_id: foreign.id
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  # The uuid column casts a malformed id to nil, which the ownership validation
+  # then skips, so without its own check the bill saved uncategorised.
+  test "create rejects a category id that is not an id" do
+    assert_no_difference "@family.recurring_transactions.count" do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Pet Cover", amount: "54.73", account_id: accounts(:depository).id,
+          first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+          category_id: "not-a-category"
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("recurring_transactions.create.category_invalid"), response.body
+  end
+
+  # A paycheck never takes a category, so whatever was posted for one is
+  # ignored rather than refused.
+  test "create ignores a malformed category id on a declared paycheck" do
+    assert_difference "@family.recurring_transactions.count", 1 do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Acme Payroll", amount: "1840", account_id: accounts(:depository).id, is_income: "1",
+          first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+          category_id: "not-a-category"
+        }
+      }
+    end
+
+    assert_nil @family.recurring_transactions.order(:created_at).last.category_id
   end
 
   test "create with a non-monthly preset writes explicit rules" do
@@ -1461,7 +1583,299 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://pay.example/theirs", read_only_sibling.reload.payment_url
   end
 
+  # "Create bill" from a transaction used to save a second bill for a payment
+  # that was already paying one (#4368): the declared bill is keyed by name,
+  # the detected one by merchant, so no unique index could ever collide.
+  test "new from a transaction a bill already covers names that bill and links to it" do
+    entry, detected = covered_entry_and_detected_bill
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    assert_select "a[href=?]", bill_path(detected), text: I18n.t("recurring_transactions.new.covered_open")
+    assert_select "input[type=hidden][name=entry_id][value=?]", entry.id
+    assert_select "input[type=hidden][name=allow_duplicate][value=1]"
+    assert_select "a[href=?]", confirm_recurring_transaction_path(detected), count: 0
+  end
+
+  # An inflow is covered by a recurring income, not a bill, and the dialog
+  # around it is already the income one, so the warning speaks of income too.
+  test "new from a deposit a recurring income covers speaks of income" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: -1840, currency: "USD", name: "ACME PAYROLL",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+    income = @family.recurring_transactions.create!(
+      account: accounts(:depository), merchant: covering_merchant, name: nil, bill_type: "income",
+      amount: -1840, currency: "USD", expected_day_of_month: Date.current.day,
+      last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current,
+      status: "active", manual: false, occurrence_count: 2
+    )
+
+    { "active" => %w[covered_income_title covered_title], "suggested" => %w[covered_income_suggested_title covered_suggested_title] }.each do |status, (income_title, bill_title)|
+      income.update!(status: status)
+
+      get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+      assert_response :success
+      assert_match I18n.t("recurring_transactions.new.#{income_title}"), response.body
+      assert_no_match I18n.t("recurring_transactions.new.#{bill_title}"), response.body
+      assert_select "a[href=?]", bill_path(income), text: I18n.t("recurring_transactions.new.covered_income_open")
+      assert_match I18n.t("recurring_transactions.new.covered_income_create_anyway"), response.body
+    end
+    assert_select "a[href=?]", confirm_recurring_transaction_path(income), text: I18n.t("recurring_transactions.new.covered_income_confirm")
+  end
+
+  # A suggestion is a bill Sure found and is waiting on. Saving a separate one
+  # now would only become a duplicate when the suggestion is confirmed, so the
+  # dialog offers the confirm instead, with the separate bill still behind it.
+  test "new from a transaction a suggested bill covers offers to confirm it" do
+    entry, suggested = covered_entry_and_detected_bill(status: "suggested")
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.covered_suggested_title"), response.body
+    assert_no_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    # Confirming links payments within the bill's tolerance, not necessarily
+    # this one: covering accepts 0.5x to 2x. The copy must not promise it.
+    assert_select "p", text: I18n.t("recurring_transactions.new.covered_suggested_body", name: suggested.display_name)
+    assert_no_match "track this payment", response.body
+    assert_select "a[href=?][data-turbo-method=post][data-turbo-frame=_top]",
+                  confirm_recurring_transaction_path(suggested),
+                  text: I18n.t("recurring_transactions.new.covered_confirm")
+    assert_select "a[href=?]", bill_path(suggested), text: I18n.t("recurring_transactions.new.covered_open")
+    assert_select "input[type=hidden][name=allow_duplicate][value=1]"
+  end
+
+  # The confirm action 404s for a read-only share, so the dialog must not
+  # offer a button that can only fail.
+  test "a read-only share is told about the suggestion but not offered the confirm" do
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    # The credit card fixture is shared with the member read_only.
+    entry, suggested = covered_entry_and_detected_bill(status: "suggested", account: accounts(:credit_card))
+
+    sign_in member
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_match I18n.t("recurring_transactions.new.covered_suggested_title"), response.body
+    assert_select "a[href=?]", confirm_recurring_transaction_path(suggested), count: 0
+    assert_select "a[href=?]", bill_path(suggested)
+  end
+
+  test "new from a transaction no bill covers shows no warning" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+
+    get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_no_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    assert_select "input[type=hidden][name=entry_id][value=?]", entry.id
+    assert_select "input[name=allow_duplicate]", count: 0
+  end
+
+  # The submitted fields carry only a name; the detected bill has a merchant
+  # and no name. Identity has to come from the posted entry, or this passes.
+  test "create refuses a second bill for a transaction a merchant-keyed bill covers" do
+    entry, detected = covered_entry_and_detected_bill
+
+    assert_no_difference "RecurringTransaction.count" do
+      post recurring_transactions_url, params: covered_create_params(entry)
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    assert_select "a[href=?]", bill_path(detected)
+  end
+
+  test "create makes the separate bill when asked to" do
+    entry, = covered_entry_and_detected_bill
+
+    assert_difference "RecurringTransaction.count", 1 do
+      post recurring_transactions_url, params: covered_create_params(entry).merge(allow_duplicate: "1")
+    end
+
+    assert_redirected_to bills_path
+  end
+
+  # The dialog only ever posts "1". Anything else, such as the "0" or "false"
+  # a direct POST might send, is not the separate-bill choice.
+  test "create refuses a covered transaction when allow_duplicate is anything but 1" do
+    entry, = covered_entry_and_detected_bill
+
+    [ "0", "false" ].each do |value|
+      assert_no_difference "RecurringTransaction.count", "allow_duplicate=#{value} skipped the check" do
+        post recurring_transactions_url, params: covered_create_params(entry).merge(allow_duplicate: value)
+      end
+
+      assert_response :unprocessable_entity
+      assert_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    end
+  end
+
+  test "a failed create does not turn another allow_duplicate value into the choice" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+    params = covered_create_params(entry).merge(allow_duplicate: "0")
+    params[:recurring_transaction][:first_due_on] = ""
+
+    post recurring_transactions_url, params: params
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=hidden][name=entry_id][value=?]", entry.id
+    assert_select "input[name=allow_duplicate]", count: 0
+  end
+
+  test "create from a transaction no bill covers still saves" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+
+    assert_difference "RecurringTransaction.count", 1 do
+      post recurring_transactions_url, params: covered_create_params(entry)
+    end
+
+    assert_redirected_to bills_path
+  end
+
+  # "Create a separate bill anyway" is a choice the user already made. A
+  # validation error on that submission must not drop it, or fixing the error
+  # and resubmitting is refused again behind the warning.
+  test "a failed create keeps the separate-bill choice on the re-render" do
+    entry, = covered_entry_and_detected_bill
+    params = covered_create_params(entry).merge(allow_duplicate: "1")
+    params[:recurring_transaction][:first_due_on] = ""
+
+    assert_no_difference "RecurringTransaction.count" do
+      post recurring_transactions_url, params: params
+    end
+
+    assert_response :unprocessable_entity
+    assert_match ERB::Util.html_escape(I18n.t("recurring_transactions.create.due_date_required")), response.body
+    assert_select "input[type=hidden][name=entry_id][value=?]", entry.id
+    assert_select "input[type=hidden][name=allow_duplicate][value=1]"
+  end
+
+  test "a failed create that never chose a separate bill does not gain the choice" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+    params = covered_create_params(entry)
+    params[:recurring_transaction][:first_due_on] = ""
+
+    post recurring_transactions_url, params: params
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=hidden][name=entry_id][value=?]", entry.id
+    assert_select "input[name=allow_duplicate]", count: 0
+  end
+
+  # Two submissions from the same transaction could both see no covering bill
+  # and both save, and so could a submission racing an allocation of that
+  # transaction or a "Mark as recurring" on it. The check and the save hold
+  # the entry lock the Allocator takes, so each waits for the other.
+  test "create checks for a covering bill and saves while holding the entry lock" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+    connection = ActiveRecord::Base.connection
+    outside = connection.open_transactions
+    seen = {}
+
+    RecurringTransactionsController.any_instance.stubs(:covering_series_for)
+      .with { seen[:check] = [ connection.open_transactions, entry_lock_held?(entry) ]; true }.returns(nil)
+    RecurringTransaction::DeclaredBill.stubs(:save)
+      .with { seen[:save] = [ connection.open_transactions, entry_lock_held?(entry) ]; true }.returns(true)
+    assert_not entry_lock_held?(entry), "precondition: nothing holds the entry lock before the request"
+
+    post recurring_transactions_url, params: covered_create_params(entry)
+
+    assert_redirected_to bills_path
+    assert_operator seen[:check].first, :>, outside, "the covering check ran outside a transaction"
+    assert_operator seen[:save].first, :>, outside, "the save ran outside a transaction"
+    assert seen[:check].last, "the covering check ran without the entry lock"
+    assert seen[:save].last, "the save ran without the entry lock"
+  end
+
+  # The save now runs inside the lock's transaction, so a unique-index
+  # collision must still come back as a 422, not abort that transaction.
+  test "create under the lock still reports an existing bill with the same identity" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+    @family.recurring_transactions.create!(
+      account: accounts(:depository), name: "Household Plan", amount: 100, currency: "USD",
+      dedup_scope: BigDecimal("100").to_s("F"), expected_day_of_month: Date.current.day,
+      last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current,
+      status: "active", manual: true, occurrence_count: 0
+    )
+    params = covered_create_params(entry)
+    params[:recurring_transaction][:name] = "Household Plan"
+
+    assert_no_difference "RecurringTransaction.count" do
+      post recurring_transactions_url, params: params
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("recurring_transactions.create.already_exists"), response.body
+  end
+
   private
+
+    # The Allocator's two-key advisory lock on this entry, held by this session.
+    def entry_lock_held?(entry)
+      ActiveRecord::Base.connection.select_value(ActiveRecord::Base.sanitize_sql_array([ <<~SQL, RecurringTransaction::Allocator::ENTRY_LOCK_NAMESPACE, RecurringTransaction::Allocator.entry_lock_id(entry) ]))
+        SELECT EXISTS (
+          SELECT 1 FROM pg_locks
+          WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted
+            AND classid = ? AND objid = ? AND objsubid = 2
+        )
+      SQL
+    end
+
+    def covering_merchant
+      @covering_merchant ||= @family.merchants.create!(name: "Betashares")
+    end
+
+    def covered_entry_and_detected_bill(status: "active", account: accounts(:depository))
+      entry = account.entries.create!(
+        date: Date.current, amount: 100, currency: account.currency, name: "BETASHARES DIRECT DEBIT",
+        entryable: Transaction.new(merchant: covering_merchant)
+      )
+      detected = @family.recurring_transactions.create!(
+        account: account, merchant: covering_merchant, name: nil,
+        amount: 100, currency: account.currency, expected_day_of_month: Date.current.day,
+        last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current,
+        status: status, manual: false, occurrence_count: 2
+      )
+      [ entry, detected ]
+    end
+
+    # What the prefilled dialog posts: the merchant's name, never its id.
+    def covered_create_params(entry)
+      {
+        entry_id: entry.id,
+        recurring_transaction: {
+          name: "Betashares",
+          amount: "100",
+          account_id: accounts(:depository).id,
+          first_due_on: (Date.current + 1.month).iso8601,
+          frequency_preset: "monthly"
+        }
+      }
+    end
 
     def create_series(name:, account: accounts(:depository), merchant: nil, status: "active", payment_url: nil,
                       amount: 25, bill_type: "bill")
