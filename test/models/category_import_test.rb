@@ -92,4 +92,24 @@ class CategoryImportTest < ActiveSupport::TestCase
     error = assert_raises(ActiveRecord::RecordInvalid) { import.generate_rows_from_csv }
     assert_includes error.message, "Missing required columns: name"
   end
+
+  test "imports categories even when the family is locked" do
+    @family.update!(categories_locked: true)
+
+    csv = <<~CSV
+      name,color,parent_category,icon
+      Locked Root,#f97316,,house
+      Locked Child,#407706,Locked Root,plug
+    CSV
+
+    import = @family.imports.create!(type: "CategoryImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { @family.categories.count }, 2 do
+      import.send(:import!)
+    end
+
+    assert_equal Category.find_by!(family: @family, name: "Locked Root"),
+                 Category.find_by!(family: @family, name: "Locked Child").parent
+  end
 end

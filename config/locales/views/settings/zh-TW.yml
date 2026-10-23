@@ -385,6 +385,8 @@ zh-TW:
         sync_error: 同步錯誤
         no_recent_sync: 同步逾期
         reconsent_required: 需要重新授權
+        login_required: "需要登入"
+        login_expires_soon: "登入將在 %{time}後過期（%{at}）"
         reconsent_needed:
           one: 1 天後需要重新授權
           other: '%{count} 天後需要重新授權'
@@ -501,6 +503,7 @@ zh-TW:
         application_id_placeholder_new: 輸入 Application ID
         application_id_placeholder_update: 輸入新的 ID 以更新
         client_certificate_label: Client Certificate（含私密金鑰）
+        keep_client_certificate_hint: "留空以保留目前的憑證"
         save_and_connect: 儲存並連線
         update_connection: 更新連線
         connected_bank: 已連結的銀行

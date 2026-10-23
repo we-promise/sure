@@ -125,11 +125,27 @@ class Chat < ApplicationRecord
   def ask_assistant_later(message)
     clear_error
     pending = messages.create!(type: "AssistantMessage", content: "", ai_model: message.ai_model, status: :pending)
+    broadcast_pending_status(pending, busy: true) if BackgroundJobHealth.ai_busy?
     AssistantResponseJob.perform_later(message, pending)
   end
 
   def ask_assistant(message, assistant_message: nil)
+    # The assistant can be turned off while a response is still queued. Drop
+    # the pending "Thinking…" bubble rather than calling a provider.
+    unless user.family.assistant_enabled?
+      assistant_message&.destroy
+      return
+    end
+
+    broadcast_pending_status(assistant_message) if assistant_message
     assistant.respond_to(message, assistant_message: assistant_message)
+  end
+
+  # The pending bubble says "busy" while the response waits behind another AI
+  # job, and "Thinking" once its job starts.
+  def broadcast_pending_status(assistant_message, busy: false)
+    broadcast_update target: ActionView::RecordIdentifier.dom_id(assistant_message, :status),
+                     html: I18n.t(busy ? "chats.ai_busy" : "chats.thinking")
   end
 
   # How long a pending "Thinking…" bubble may wait before the browser watchdog
@@ -224,7 +240,7 @@ class Chat < ApplicationRecord
       DebugLogEntry.capture(
         category: "assistant",
         level: "error",
-        message: "Assistant response not delivered — background worker likely down or not polling the high_priority queue",
+        message: "Assistant response not delivered — background worker likely down or not polling the AI queues",
         source: "chat.delivery_timeout",
         metadata: {
           chat_id: id,

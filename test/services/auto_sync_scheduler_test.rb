@@ -13,6 +13,7 @@ class AutoSyncSchedulerTest < ActiveSupport::TestCase
       name: AutoSyncScheduler::JOB_NAME,
       cron: cron,
       class: "SyncAllJob",
+      active_job: true,
       queue: "scheduled",
       description: "Syncs all accounts for all families"
     ).returns(job)
@@ -23,5 +24,14 @@ class AutoSyncSchedulerTest < ActiveSupport::TestCase
     assert_equal "Europe/London", schedule.zone
     assert_equal Time.utc(2026, 1, 1, 6, 30), schedule.next_time(Time.utc(2026, 1, 1)).to_t.utc
     assert_equal Time.utc(2026, 7, 1, 5, 30), schedule.next_time(Time.utc(2026, 7, 1)).to_t.utc
+  end
+
+  # https://github.com/we-promise/sure/issues/1442
+  test "registers the sync_all_accounts cron job as an ActiveJob" do
+    Sidekiq::Cron::Job.expects(:create)
+      .with(has_entries(name: AutoSyncScheduler::JOB_NAME, class: "SyncAllJob", active_job: true))
+      .returns(stub(valid?: true))
+
+    AutoSyncScheduler.upsert_job
   end
 end

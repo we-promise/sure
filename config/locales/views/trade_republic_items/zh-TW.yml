@@ -15,6 +15,7 @@ zh-TW:
     trade_republic_item:
       syncing: "正在同步"
       requires_update: "需要重新驗證"
+      session_expires_in: "登入將在 %{time}後過期（%{at}）。"
       error: "錯誤"
       synced: "%{time}前同步。%{summary}。"
       setup_accounts: "設定帳戶"

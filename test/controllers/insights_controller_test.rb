@@ -16,6 +16,23 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
     assert @insight.reload.read?
   end
 
+  test "insight cards offer Dig in with AI, which opens a new chat about the insight" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(mock)
+
+    get insights_url
+
+    assert_select "##{ActionView::RecordIdentifier.dom_id(@insight)} a[href='#{new_chat_path(insight_id: @insight.id)}']",
+      text: I18n.t("insights.card.dig_in")
+  end
+
+  test "insight cards hide Dig in with AI without an LLM provider" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    get insights_url
+
+    assert_select "a[href^='#{new_chat_path}']", count: 0
+  end
+
   test "turbo prefetch requests do not mark insights read" do
     get insights_url, headers: { "X-Sec-Purpose" => "prefetch" }
 
@@ -240,6 +257,22 @@ class InsightsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
     assert other_insight.reload.active?
+  end
+
+  test "an insight about an account not everyone can see is neither shown nor changed" do
+    hidden = @user.family.insights.create!(
+      insight_type: "idle_cash", priority: "low", status: "active", title: "Idle cash in Private",
+      body: "Body", metadata: { "account_id" => accounts(:connected).id },
+      dedup_key: "idle_cash:private:2026-07", generated_at: Time.current
+    )
+
+    get insights_url
+    assert_no_match "Idle cash in Private", response.body
+    assert hidden.reload.active?, "viewing the feed does not mark a hidden row read"
+
+    patch acknowledge_insight_url(hidden), as: :turbo_stream
+    assert_response :not_found
+    assert hidden.reload.active?
   end
 
   test "refresh enqueues insight generation for the family" do
