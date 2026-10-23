@@ -17,6 +17,8 @@ export default class extends Controller {
     this.reportedUrls = new Set();
     this.inFlightUrls = new Set();
     this.#configureAutoScroll();
+    // Grow the box to fit a prefilled message (e.g. "Dig in with AI").
+    if (this.hasInputTarget) this.autoResize();
     this.#updateSubmitState();
     this.#startUndeliveredWatchdog();
   }

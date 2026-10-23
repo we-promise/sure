@@ -163,7 +163,13 @@ class Loan
           # A projection that cannot clear the balance must SAY so. Settling the
           # final payment regardless would manufacture a payoff date for a loan
           # the contract no longer pays off.
-          settle_at_schedule_end: false
+          settle_at_schedule_end: false,
+          # Charged on the same basis as the schedule it is compared with. Left
+          # to the simulator's default, a loan on actual/365 would be projected
+          # on a flat twelfth beside a schedule that is not, and a borrower
+          # exactly on contract would be quoted interest saved or lost that
+          # only the difference in basis produced.
+          day_count_convention: loan.day_count_convention
         ).run
       end
 
