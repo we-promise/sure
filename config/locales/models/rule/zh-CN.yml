@@ -5,5 +5,6 @@ zh-CN:
       models:
         rule:
           min_actions: 至少必须有一个动作
+          conflicting_note_actions: "规则不能同时设置并追加交易备注"
           duplicate_actions: 规则不能有重复动作 %{types}
           nested_conditions: 复合条件不能嵌套
