@@ -74,7 +74,7 @@
         <div class="space-y-2">
           <% @statistics[:by_operation].each do |operation, cost| %>
             <div class="flex justify-between items-center">
-              <span class="text-sm text-primary"><%= operation.humanize %></span>
+              <span class="text-sm text-primary"><%= t(".operations.#{operation}", default: operation) %></span>
               <span class="text-sm font-medium text-primary">$<%= sprintf("%.4f", cost) %></span>
             </div>
           <% end %>
@@ -122,7 +122,7 @@
                   <%= usage.created_at.strftime("%b %d, %Y %I:%M %p") %>
                 </td>
                 <td class="px-4 py-3 text-sm text-primary">
-                  <%= usage.operation.humanize %>
+                  <%= t(".operations.#{usage.operation}", default: usage.operation) %>
                 </td>
                 <td class="px-4 py-3 text-sm text-primary font-mono">
                   <%= usage.model %>
@@ -137,7 +137,7 @@
                       <div role="tooltip" data-tooltip-target="tooltip" class="tooltip bg-inverse text-sm p-2 rounded-md w-64 text-left break-words whitespace-normal hidden">
                         <div class="text-inverse">
                           <% if usage.http_status_code.present? %>
-                            <p class="text-xs mt-1 text-inverse opacity-70">HTTP Status: <%= usage.http_status_code %></p>
+                            <p class="text-xs mt-1 text-inverse opacity-70"><%= t(".http_status", status: usage.http_status_code) %></p>
                           <% end %>
                           <p class="text-xs"><%= usage.error_message %></p>
                         </div>
@@ -151,7 +151,7 @@
                   <% end %>
                 </td>
                 <td class="px-4 py-3 text-sm font-medium text-primary text-right whitespace-nowrap">
-                  <%= usage.formatted_cost %>
+                  <%= usage.estimated_cost.nil? ? t(".not_available") : usage.formatted_cost %>
                 </td>
               </tr>
             <% end %>

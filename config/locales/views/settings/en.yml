@@ -108,7 +108,18 @@ en:
         col_tokens: "Tokens"
         col_cost: "Cost"
         failed: "Failed"
+        http_status: "HTTP status: %{status}"
         no_usage_data: "No usage data found for the selected period"
+        not_available: "N/A"
+        operations:
+          auto_categorize: "Auto-categorize transactions"
+          auto_detect_merchants: "Detect merchants"
+          chat: "Chat"
+          enhance_provider_merchants: "Enhance provider merchants"
+          extract_bank_statement: "Extract bank statement"
+          process_pdf: "Process PDF"
+          process_pdf_vision: "Process PDF with vision"
+          suggest_bill_setup: "Suggest bill setup"
         cost_estimates_title: "About Cost Estimates"
         cost_estimates_description: "Costs are estimated from published provider pricing last verified on %{date}. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
     ai_prompts:
