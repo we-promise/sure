@@ -55,20 +55,22 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
       processor.process
     end
 
-    holdings = Holding.where(account: @plaid_account.current_account).order(:date)
+    # Both rows share the snapshot's date, so they are found by security
+    # rather than by their position in a date order
+    holdings = Holding.where(account: @plaid_account.current_account)
+    dated = holdings.find_by!(security: securities(:aapl))
+    undated = holdings.find_by!(security: securities(:msft))
 
-    assert_equal 100, holdings.first.qty
-    assert_equal 100, holdings.first.price
-    assert_equal "USD", holdings.first.currency
-    assert_equal securities(:aapl), holdings.first.security
-    assert_equal 1.day.ago.to_date, holdings.first.date
+    assert_equal 100, dated.qty
+    assert_equal 100, dated.price
+    assert_equal "USD", dated.currency
+    assert_equal 1.day.ago.to_date, dated.date
 
-    assert_equal 200, holdings.second.qty
-    assert_equal 200, holdings.second.price
-    assert_equal "USD", holdings.second.currency
-    assert_equal securities(:msft), holdings.second.security
+    assert_equal 200, undated.qty
+    assert_equal 200, undated.price
+    assert_equal "USD", undated.currency
     # The undated entry is written on the snapshot's date, not on today
-    assert_equal 1.day.ago.to_date, holdings.second.date
+    assert_equal 1.day.ago.to_date, undated.date
   end
 
   # Users cannot delete Plaid holdings (PlaidAdapter#can_delete_holdings? is
