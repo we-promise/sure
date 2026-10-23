@@ -203,7 +203,7 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
     @amzn.account
 
-    queries = capture_sql_queries { @amzn.avg_cost }
+    queries = ActiveRecord::Base.uncached { capture_sql_queries { @amzn.avg_cost } }
 
     assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
     assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }

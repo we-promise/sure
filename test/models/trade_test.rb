@@ -253,7 +253,8 @@ class TradeTest < ActiveSupport::TestCase
     sell.entry.account
 
     gain = nil
-    queries = capture_sql_queries { gain = sell.realized_gain_loss }
+    # Uncached, so a second replay counts rather than hitting the query cache.
+    queries = ActiveRecord::Base.uncached { capture_sql_queries { gain = sell.realized_gain_loss } }
 
     assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
     assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }
