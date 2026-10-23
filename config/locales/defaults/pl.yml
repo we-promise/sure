@@ -198,6 +198,7 @@ pl:
       update: Aktualizuj %{model}
   mcp:
     errors:
+      insufficient_scope: "Ten token nie zapewnia dostępu do MCP. Autoryzuj ponownie z zakresem mcp lub dodaj ten konektor ponownie."
       invalid_session_id: Nieprawidłowy identyfikator sesji MCP
       unsupported_protocol_version: 'Nieobsługiwana wersja protokołu MCP: %{version}'
   number:

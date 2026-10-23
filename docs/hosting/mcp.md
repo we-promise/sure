@@ -453,6 +453,17 @@ MCP does not depend on the in-app assistant. To use only your own agent, set the
 - The user exists in the database
 - There are no typos or extra spaces
 
+### "insufficient_scope" error
+
+**Symptom:** Requests return HTTP 403 with `insufficient_scope`.
+
+**Fix:** The bearer token is valid but does not grant MCP access. Reauthorize
+with the `mcp` scope. If the existing client registration does not allow that
+scope, remove and re-add the connector to register a new MCP-only client.
+The `WWW-Authenticate` header advertises the required scope and the protected
+resource metadata URL. Missing, expired, revoked, or otherwise invalid
+credentials continue to return HTTP 401.
+
 ### Pipelock connection refused
 
 **Symptom:** AI assistant cannot connect to Pipelock's MCP proxy (port 8889)
