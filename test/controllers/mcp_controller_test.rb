@@ -1,4 +1,5 @@
 require "test_helper"
+require Rails.root.join("db/migrate/20261023000000_migrate_public_oauth_applications_to_mcp_scope")
 
 class McpControllerTest < ActionDispatch::IntegrationTest
   MCP_PROTOCOL_VERSION = "2025-06-18"
@@ -28,25 +29,27 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert response.headers["WWW-Authenticate"].present?
   end
 
-  test "authenticates via Doorkeeper bearer token" do
-    app = Doorkeeper::Application.create!(
-      name: "Test MCP Client #{SecureRandom.hex(4)}",
-      redirect_uri: "https://claude.ai/callback",
-      confidential: false
-    )
-    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
-      application: app,
-      resource_owner_id: @user.id,
-      scopes: "read_write",
-      expires_in: 1.year
-    )
+  test "authenticates via legacy Doorkeeper bearer token before the deadline" do
+    travel_to McpController::LEGACY_READ_WRITE_SCOPE_DEADLINE - 1.second do
+      app = Doorkeeper::Application.create!(
+        name: "Test MCP Client #{SecureRandom.hex(4)}",
+        redirect_uri: "https://claude.ai/callback",
+        confidential: false
+      )
+      token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+        application: app,
+        resource_owner_id: @user.id,
+        scopes: "read_write",
+        expires_in: 1.year
+      )
 
-    post "/mcp", params: jsonrpc_request("initialize").to_json,
-         headers: mcp_headers(token.token)
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(token.token)
 
-    assert_response :ok
-    result = JSON.parse(response.body)["result"]
-    assert_mcp_initialize_response(result)
+      assert_response :ok
+      result = JSON.parse(response.body)["result"]
+      assert_mcp_initialize_response(result)
+    end
   end
 
   test "authenticates a token issued to a dynamically registered MCP client" do
@@ -72,28 +75,114 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal "unauthorized", JSON.parse(response.body)["error"]
   end
 
-  test "legacy MCP registration can reauthorize without an explicit scope" do
+  test "migrated MCP registration can reauthorize after the deadline without registering again" do
     app = Doorkeeper::Application.create!(
       name: "Legacy MCP Client",
       redirect_uri: "https://claude.ai/callback",
       confidential: false,
       scopes: "read_write"
     )
-    Doorkeeper::AccessToken.create!( # pipelock:ignore
-      application: app,
-      resource_owner_id: @user.id,
-      scopes: "read_write",
-      revoked_at: Time.current,
-      expires_in: 1.year
+    client_id = app.uid
+    ActiveRecord::Migration.suppress_messages { MigratePublicOauthApplicationsToMcpScope.new.up }
+    assert_equal "mcp", app.reload.scopes.to_s
+    assert_equal client_id, app.uid
+
+    travel_to McpController::LEGACY_READ_WRITE_SCOPE_DEADLINE do
+      token = authorize_mcp_client(app, expected_scope: "mcp")
+
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(token)
+
+      assert_response :ok
+      assert_mcp_initialize_response(JSON.parse(response.body)["result"])
+
+      delete "/api/v1/users/me", headers: { "Authorization" => "Bearer #{token}" }
+
+      assert_response :unauthorized
+    end
+  end
+
+  test "migrated clients can refresh legacy tokens during the deprecation window" do
+    travel_to McpController::LEGACY_READ_WRITE_SCOPE_DEADLINE - 1.day do
+      app = Doorkeeper::Application.create!(
+        name: "Legacy MCP Client",
+        redirect_uri: "https://claude.ai/callback",
+        confidential: false,
+        scopes: "read_write"
+      )
+      token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+        application: app,
+        resource_owner_id: @user.id,
+        scopes: "read_write",
+        expires_in: 1.year,
+        use_refresh_token: true
+      )
+      ActiveRecord::Migration.suppress_messages { MigratePublicOauthApplicationsToMcpScope.new.up }
+
+      post "/oauth/token", params: {
+        grant_type: "refresh_token",
+        client_id: app.uid,
+        refresh_token: token.plaintext_refresh_token
+      }
+
+      assert_response :ok
+      token_response = JSON.parse(response.body)
+      assert_equal "read_write", token_response["scope"]
+
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(token_response.fetch("access_token"))
+
+      assert_response :ok
+      assert_mcp_initialize_response(JSON.parse(response.body)["result"])
+    end
+  end
+
+  test "rejects legacy tokens at and after the deadline with insufficient_scope" do
+    app = Doorkeeper::Application.create!(
+      name: "Legacy MCP Client",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false,
+      scopes: "mcp"
     )
 
-    token = authorize_mcp_client(app, expected_scope: "read_write")
+    [ McpController::LEGACY_READ_WRITE_SCOPE_DEADLINE, McpController::LEGACY_READ_WRITE_SCOPE_DEADLINE + 1.second ].each do |time|
+      travel_to time do
+        token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+          application: app,
+          resource_owner_id: @user.id,
+          scopes: "read_write",
+          expires_in: 1.year
+        )
 
-    post "/mcp", params: jsonrpc_request("initialize").to_json,
-         headers: mcp_headers(token)
+        post "/mcp", params: jsonrpc_request("initialize").to_json,
+             headers: mcp_headers(token.plaintext_token)
 
-    assert_response :ok
-    assert_mcp_initialize_response(JSON.parse(response.body)["result"])
+        assert_response :forbidden
+        assert_equal "insufficient_scope", JSON.parse(response.body)["error"]
+        assert_includes response.headers["WWW-Authenticate"], 'scope="mcp"'
+      end
+    end
+  end
+
+  test "tokens containing mcp remain valid after the legacy scope deadline" do
+    app = register_mcp_client
+
+    travel_to McpController::LEGACY_READ_WRITE_SCOPE_DEADLINE + 1.day do
+      [ "mcp", "mcp read_write" ].each do |scope|
+        token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+          application: app,
+          resource_owner_id: @user.id,
+          scopes: scope,
+          expires_in: 1.year
+        )
+
+        post "/mcp", params: jsonrpc_request("initialize").to_json,
+             headers: mcp_headers(token.plaintext_token)
+
+        assert_response :ok
+        assert_mcp_initialize_response(JSON.parse(response.body)["result"])
+      end
+    end
   end
 
   test "new MCP registration cannot request the global API scope" do
@@ -227,12 +316,14 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     inactive_user&.update!(active: true)
   end
 
-  test "env-var token still works as fallback" do
-    with_mcp_env do
-      post "/mcp", params: jsonrpc_request("initialize").to_json,
-           headers: mcp_headers(@token)
+  test "env-var token still works after the legacy OAuth scope deadline" do
+    travel_to McpController::LEGACY_READ_WRITE_SCOPE_DEADLINE + 1.day do
+      with_mcp_env do
+        post "/mcp", params: jsonrpc_request("initialize").to_json,
+             headers: mcp_headers(@token)
 
-      assert_response :ok
+        assert_response :ok
+      end
     end
   end
 
