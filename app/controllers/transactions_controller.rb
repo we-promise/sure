@@ -531,46 +531,21 @@ class TransactionsController < ApplicationController
   end
 
   private
-    # Scoped by user (not just family) because Current.accessible_entries is
-    # user-scoped for family sharing (see Current#accessible_entries).
-    #
-    # Includes Family#accounts_status_version because `uncategorized_transactions`
-    # filters on account status (draft/active), and toggling an account's
-    # active status (AccountsController#toggle_active) doesn't touch `entries`
-    # or `AccountShare`, so it wouldn't otherwise bust this cache.
     def uncategorized_count_cache_key
       "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 
-    # Scoped additionally by Date.current since the "next 10 days" window is
-    # date-dependent and would otherwise return a stale window on a cache hit
-    # from an earlier day.
-    #
-    # Includes Family#recurring_transaction_merchants_version because the
-    # cached records are preloaded with :merchant and rendered with its
-    # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
-    # doesn't touch `recurring_transactions`.
     def projected_recurring_cache_key
       "transactions_projected_recurring/v6/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
         "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
         "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
     end
 
-    # The "Mark as Recurring" block is only ever rendered under these same
-    # conditions (see transactions/show.html.erb), so skip the extra query
-    # entirely when it won't be used — this runs on every show/failed-update
-    # render, including read-only viewers and split-child transactions.
-    # Scoped to what this user can open, as RecurringTransactionsController's
-    # own check is: sharing is per account, so a bill on an account the user
-    # was never given is not theirs to learn about.
     def covering_series_for(entry)
       Current.family.recurring_transactions.accessible_by(Current.user).covering(entry)
     end
 
-    # Why "Mark as recurring" cannot go ahead, or nil when it can: a series
-    # already covers the payment, or one the user ended still holds the key
-    # the create would write.
     def mark_recurring_blocked_message(transaction)
       if covering_series_for(transaction.entry)
         t("recurring_transactions.already_covered")
