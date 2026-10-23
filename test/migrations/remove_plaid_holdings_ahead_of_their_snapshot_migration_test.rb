@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require Rails.root.join("db/migrate/20261020090000_remove_plaid_holdings_ahead_of_their_snapshot")
+require Rails.root.join("db/migrate/20261023090000_remove_plaid_holdings_ahead_of_their_snapshot")
 
 # The old Plaid holdings processor dated each row by its own price date, or
 # today when it had none. A row it left later than the snapshot the processor
