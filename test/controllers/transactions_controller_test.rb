@@ -1022,6 +1022,30 @@ end
     assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
   end
 
+  # The covering series may be income, or only a suggestion, so the message
+  # must not tell the user a bill is tracking the payment.
+  test "mark_as_recurring does not call a suggested income a bill" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Acme Payroll"
+    entry = create_transaction(account: account, amount: -1840, merchant: merchant)
+    family.recurring_transactions.create!(
+      account: account, merchant: merchant, amount: -1840, currency: "USD", bill_type: "income",
+      expected_day_of_month: entry.date.day, last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now, status: "suggested", manual: false, occurrence_count: 2
+    )
+
+    get transaction_url(entry)
+    disabled = css_select("button[disabled]").find { |button| button.text.include?("Mark as Recurring") }
+    assert disabled, "the covering income must disable the button"
+    assert_no_match(/\bbill\b/i, disabled["title"])
+
+    post mark_as_recurring_transaction_path(entry.entryable)
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
+    assert_no_match(/\bbill\b/i, flash[:alert])
+  end
+
   # An ended series no longer covers the payment, but the unique index still
   # holds its key, so the create would fail. The button says so up front
   # instead of failing after the POST.

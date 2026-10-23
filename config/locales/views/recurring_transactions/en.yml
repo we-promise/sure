@@ -183,7 +183,7 @@ en:
     confirm_delete_income: "Remove %{name} as income? Your transactions stay exactly as they are. This only removes the income and its schedule."
     marked_as_recurring: Transaction marked as recurring
     already_exists: A manual recurring transaction already exists for this pattern
-    already_covered: A bill already tracks this payment
+    already_covered: This transaction already matches a recurring transaction
     creation_failed: Failed to create recurring transaction. Please check the transaction details and try again.
     unexpected_error: An unexpected error occurred while creating the recurring transaction
     amount_range: "Range: %{min} to %{max}"
