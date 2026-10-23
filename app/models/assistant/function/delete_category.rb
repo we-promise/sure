@@ -43,7 +43,9 @@ class Assistant::Function::DeleteCategory < Assistant::Function
     return error("not_found", "Category with id '#{params["id"]}' not found.") unless category
 
     replacement = nil
-    if params["replacement_id"].present?
+    # Only an omitted or null replacement_id uncategorizes the transactions; any
+    # other value, blank included, must be the id of a category in the family.
+    unless params["replacement_id"].nil?
       replacement = find_category(params["replacement_id"])
       return error("replacement_not_found", "Replacement category with id '#{params["replacement_id"]}' not found.") unless replacement
       return error("invalid_replacement", "A category cannot replace itself.") if replacement == category

@@ -45,6 +45,23 @@ class Assistant::Function::DeleteCategoryTest < ActiveSupport::TestCase
     assert_equal "not_found", result[:error]
   end
 
+  test "blank replacement_id is rejected instead of uncategorizing" do
+    [ "", "   " ].each do |blank|
+      result = @fn.call("id" => @category.id, "replacement_id" => blank)
+
+      assert_equal "replacement_not_found", result[:error]
+    end
+    assert Category.exists?(@category.id)
+    assert_equal @category, transactions(:one).reload.category
+  end
+
+  test "null replacement_id uncategorizes like an omitted one" do
+    result = @fn.call("id" => @category.id, "replacement_id" => nil)
+
+    assert result[:success]
+    assert_nil transactions(:one).reload.category_id
+  end
+
   test "soft error when replacement is the category itself" do
     result = @fn.call("id" => @category.id, "replacement_id" => @category.id)
 

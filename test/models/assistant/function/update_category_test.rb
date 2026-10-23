@@ -109,6 +109,7 @@ class Assistant::Function::UpdateCategoryTest < ActiveSupport::TestCase
 
     assert result[:success]
     assert_equal parent.id, result[:category][:parent_id]
+    assert_equal parent.id, categories(:one).reload.parent_id
     assert_equal parent.color, categories(:one).reload.color
   end
 
