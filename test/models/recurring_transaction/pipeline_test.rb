@@ -1,6 +1,7 @@
 require "test_helper"
 
 class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
+  include FamilyLockTestHelper
   Pipeline = RecurringTransaction::Pipeline
 
   def setup
@@ -114,22 +115,9 @@ class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
   end
 
   test "run_with_lock! refuses to stack on a held family lock" do
-    key = Pipeline.advisory_lock_key(@family.id)
-    # Transactional tests hand every checkout the same shared fixture
-    # connection, and a session can always re-take its own advisory lock, so
-    # holding the lock needs a genuinely separate PG session.
-    config = ActiveRecord::Base.connection_pool.db_config.configuration_hash
-    other = PG.connect({
-      dbname: config[:database], host: config[:host], port: config[:port],
-      user: config[:username], password: config[:password]
-    }.compact)
-    other.exec("SELECT pg_advisory_lock(#{key})")
-
-    result = Pipeline.new(@family).run_with_lock!
+    result = with_family_lock_held_elsewhere(@family.id) { Pipeline.new(@family).run_with_lock! }
 
     assert_nil result, "a held lock reports nil rather than running"
-  ensure
-    other&.close
   end
 
   test "run! preloads recurrence rules for occurrence generation instead of querying per series" do

@@ -427,6 +427,32 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_outflow, sql.fetch(security_out.id)
   end
 
+  # A linked transfer's legs can be days apart, and DailyReturns keeps or
+  # drops each leg by its OWN date against its account's cut-off. So whether
+  # the counterpart is still in scope is decided on the counterpart's date,
+  # not this leg's: a leg landing after its account left the scope is dropped,
+  # and the leg that sent it is an external flow; a leg sent while its account
+  # was in scope stays, and the leg receiving it is internal.
+  test "a transfer is resolved against the cut off on the counterpart leg's own date" do
+    cut_off = Date.new(2026, 3, 2)
+    windowed = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], active_until_dates: { @ira.id => cut_off })
+
+    lands_late = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400, date: cut_off - 3.days)
+    lands_late.inflow_transaction.entry.update!(date: cut_off + 2.days)
+    sent_in_time = create_linked_transfer(family: @family, from: @ira, to: @brokerage, amount: 300, date: cut_off)
+    sent_in_time.inflow_transaction.entry.update!(date: cut_off + 3.days)
+
+    sender = lands_late.outflow_transaction.entry.reload
+    receiver = sent_in_time.inflow_transaction.entry.reload
+
+    assert_equal :external_outflow, windowed.classify(sender), "its counterpart lands after the IRA's cut-off"
+    assert_equal :internal, windowed.classify(receiver), "its counterpart left the IRA on the cut-off date"
+
+    sql = windowed.classify_ids([ sender.id, receiver.id ])
+    assert_equal :external_outflow, sql.fetch(sender.id)
+    assert_equal :internal, sql.fetch(receiver.id)
+  end
+
   test "scope_account_ids is required" do
     assert_raises(ArgumentError) { Portfolio::FlowClassifier.new }
   end
