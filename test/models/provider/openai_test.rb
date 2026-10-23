@@ -130,8 +130,8 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
-  test "reasoning_effort drops unsupported values without raising" do
-    with_env_overrides("OPENAI_REASONING_EFFORT" => "turbo") do
+  test "reasoning_effort drops malformed values without raising" do
+    with_env_overrides("OPENAI_REASONING_EFFORT" => "very high") do
       assert_nil Provider::Openai.reasoning_effort
     end
   end
@@ -150,11 +150,15 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
-  test "normalize_reasoning_effort accepts supported values case-insensitively and rejects others" do
+  test "normalize_reasoning_effort accepts well-formed values case-insensitively and rejects malformed ones" do
     assert_equal "low", Provider::Openai.normalize_reasoning_effort(" Low ")
-    assert_nil Provider::Openai.normalize_reasoning_effort("turbo")
-    assert_nil Provider::Openai.normalize_reasoning_effort(nil)
+    assert_equal "xhigh", Provider::Openai.normalize_reasoning_effort("xhigh")
+    assert_equal "turbo", Provider::Openai.normalize_reasoning_effort("turbo")
+    assert_nil Provider::Openai.normalize_reasoning_effort("very high")
+    assert_nil Provider::Openai.normalize_reasoning_effort("high!")
+    assert_nil Provider::Openai.normalize_reasoning_effort("a" * 33)
     assert_nil Provider::Openai.normalize_reasoning_effort("")
+    assert_nil Provider::Openai.normalize_reasoning_effort(nil)
   end
 
   test "apply_reasoning_effort raises on an unknown api" do

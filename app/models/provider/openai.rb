@@ -15,7 +15,8 @@ class Provider::Openai < Provider
   MIN_REQUEST_TIMEOUT = 1
   SUPPORTED_MODELS = %w[gpt-4 gpt-5 gpt-6 o1 o3].freeze
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 gpt-6 o1 o3].freeze
-  REASONING_EFFORTS = %w[none minimal low medium high].freeze
+  REASONING_EFFORT_SUGGESTIONS = %w[none minimal low medium high xhigh max].freeze
+  REASONING_EFFORT_FORMAT = /\A[a-z][a-z0-9_-]{0,31}\z/
   PDF_COMPLETION_LIMIT_MODEL_PREFIXES = %w[gpt-6 o1 o3].freeze
 
   # Keep the provider's response budget and the PDF request parameter in sync.
@@ -50,21 +51,21 @@ class Provider::Openai < Provider
 
   # Effective reasoning effort for OpenAI-compatible requests. ENV > Setting > nil.
   # nil means "don't send the parameter" so existing installs/providers see no change.
-  # Unknown values are dropped with a warning rather than forwarded.
+  # Malformed values are dropped with a warning rather than forwarded.
   def self.reasoning_effort
     raw = ENV["OPENAI_REASONING_EFFORT"].presence || Setting.openai_reasoning_effort.presence
     return nil if raw.nil?
 
     normalize_reasoning_effort(raw) || begin
-      Rails.logger.warn("Ignoring unsupported OPENAI_REASONING_EFFORT #{raw.inspect}; expected one of #{REASONING_EFFORTS.join(', ')}")
+      Rails.logger.warn("Ignoring malformed OPENAI_REASONING_EFFORT #{raw.inspect}; expected a single lowercase word such as low, medium or high")
       nil
     end
   end
 
-  # Normalizes a user/ENV-supplied effort value; nil when blank or unsupported.
+  # Normalizes a user/ENV-supplied effort value; nil when blank or malformed.
   def self.normalize_reasoning_effort(raw)
     value = raw.to_s.strip.downcase
-    value if REASONING_EFFORTS.include?(value)
+    value if REASONING_EFFORT_FORMAT.match?(value)
   end
 
   # Merges the configured effort into a request params hash. api: :chat adds

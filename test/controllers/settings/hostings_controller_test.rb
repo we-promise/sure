@@ -1320,9 +1320,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
           get settings_hosting_url
 
           assert_response :success
-          assert_select "select[name='setting[openai_reasoning_effort]'][disabled]" do
-            assert_select "option[selected][value='high']", count: 1
-          end
+          assert_select "input[name='setting[openai_reasoning_effort]'][disabled][value='high']", count: 1
         end
       end
     ensure
@@ -1338,9 +1336,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         get settings_hosting_url
 
         assert_response :success
-        assert_select "select[name='setting[openai_reasoning_effort]']:not([disabled])" do
-          assert_select "option[selected][value='low']", count: 1
-        end
+        assert_select "input[name='setting[openai_reasoning_effort]']:not([disabled])[value='low']", count: 1
       end
     end
   ensure
@@ -1355,8 +1351,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         get settings_hosting_url
 
         assert_response :success
-        assert_select "select[name='setting[openai_reasoning_effort]']:not([disabled])" do
-          assert_select "option[selected][value='']", count: 1
+        assert_select "input[name='setting[openai_reasoning_effort]']:not([disabled])" do |inputs|
+          assert_includes [ nil, "" ], inputs.first["value"]
         end
       end
     end
@@ -1400,11 +1396,40 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       Setting.openai_reasoning_effort = nil
 
-      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: "turbo" } }
+      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: "very high" } }
 
       assert_response :unprocessable_entity
-      assert_match(/Reasoning effort must be one of/, flash[:alert])
+      assert_match(/Reasoning effort must be a single word/, flash[:alert])
       assert_nil Setting.openai_reasoning_effort
+    end
+  end
+
+  test "can update openai reasoning effort with a value outside the suggestions" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: "xhigh" } }
+
+      assert_equal "xhigh", Setting.openai_reasoning_effort
+    end
+  ensure
+    Setting.openai_reasoning_effort = nil
+  end
+
+  test "rejected openai reasoning effort re-renders the input with the submitted value" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: "very high" } }
+
+      assert_response :unprocessable_entity
+      assert_select "input[name='setting[openai_reasoning_effort]'][value='very high']", count: 1
+    end
+  end
+
+  test "reasoning effort input offers suggestions through a datalist" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[openai_reasoning_effort]'][list='openai_reasoning_effort_suggestions']", count: 1
+      assert_select "datalist#openai_reasoning_effort_suggestions option[value='xhigh']", count: 1
     end
   end
 
@@ -1424,11 +1449,11 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         openai_uri_base: "https://new.example.com/v1",
         openai_model: "new-model",
         openai_json_mode: "none",
-        openai_reasoning_effort: "turbo"
+        openai_reasoning_effort: "very high"
       } }
 
       assert_response :unprocessable_entity
-      assert_match(/Reasoning effort must be one of/, flash[:alert])
+      assert_match(/Reasoning effort must be a single word/, flash[:alert])
       Setting.clear_cache
       original_settings.each do |key, value|
         assert_equal value, Setting.public_send(key), "#{key} changed after rejected update"
@@ -1468,11 +1493,11 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         brand_fetch_client_id: "new-brand-client",
         auto_sync_enabled: "1",
         securities_providers: [ "twelve_data", "yahoo_finance" ],
-        openai_reasoning_effort: "turbo"
+        openai_reasoning_effort: "very high"
       } }
 
       assert_response :unprocessable_entity
-      assert_match(/Reasoning effort must be one of/, flash[:alert])
+      assert_match(/Reasoning effort must be a single word/, flash[:alert])
       Setting.clear_cache
       original_settings.each do |key, value|
         assert_equal value, Setting.public_send(key), "#{key} changed after rejected update"

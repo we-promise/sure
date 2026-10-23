@@ -70,14 +70,22 @@
                     data: { "auto-submit-form-target": "auto" } } %>
   <p class="text-xs text-secondary mt-1"><%= t(".json_mode_help") %></p>
 
-  <%= form.select :openai_reasoning_effort,
-                  options_for_select(
-                    [[t(".reasoning_effort_default"), ""]] + Provider::Openai::REASONING_EFFORTS.map { |e| [t(".reasoning_effort_#{e}"), e] },
-                    Provider::Openai.reasoning_effort || ""
-                  ),
-                  { label: t(".reasoning_effort_label") },
-                  { disabled: ENV["OPENAI_REASONING_EFFORT"].present?,
-                    data: { "auto-submit-form-target": "auto" } } %>
+  <%= form.text_field :openai_reasoning_effort,
+                      label: t(".reasoning_effort_label"),
+                      placeholder: t(".reasoning_effort_placeholder"),
+                      value: @openai_reasoning_effort_input || Provider::Openai.reasoning_effort,
+                      list: "openai_reasoning_effort_suggestions",
+                      autocomplete: "off",
+                      autocapitalize: "none",
+                      spellcheck: "false",
+                      inputmode: "text",
+                      disabled: ENV["OPENAI_REASONING_EFFORT"].present?,
+                      data: { "auto-submit-form-target": "auto" } %>
+  <datalist id="openai_reasoning_effort_suggestions">
+    <% Provider::Openai::REASONING_EFFORT_SUGGESTIONS.each do |effort| %>
+      <option value="<%= effort %>">
+    <% end %>
+  </datalist>
   <p class="text-xs text-secondary mt-1"><%= t(".reasoning_effort_help") %></p>
 
   <div class="pt-4 border-t border-secondary">

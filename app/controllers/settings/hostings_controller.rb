@@ -311,6 +311,7 @@ class Settings::HostingsController < ApplicationController
     # be wiped because the view reads from the unchanged Setting.* values.
     @openai_uri_base_input = hosting_params[:openai_uri_base] if hosting_params.key?(:openai_uri_base)
     @openai_model_input = hosting_params[:openai_model] if hosting_params.key?(:openai_model)
+    @openai_reasoning_effort_input = hosting_params[:openai_reasoning_effort] if hosting_params.key?(:openai_reasoning_effort)
     @anthropic_base_url_input = hosting_params[:anthropic_base_url] if hosting_params.key?(:anthropic_base_url)
     @anthropic_model_input = hosting_params[:anthropic_model] if hosting_params.key?(:anthropic_model)
     @jev_endpoint_input = hosting_params[:jev_endpoint] if hosting_params.key?(:jev_endpoint)
