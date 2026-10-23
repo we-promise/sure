@@ -419,15 +419,19 @@ class Holding < ApplicationRecord
       # directly can hold the same rate as a string, which Trade's validation
       # and Money#exchange_to both accept -- so a plain decimal string counts
       # too. Anything else, an exponent or an absurd length included, is not
-      # cast, so it cannot overflow numeric and fail the query. A rate of zero
-      # or less converts nothing, so it counts as missing, as it does in
-      # Money#exchange_to.
+      # cast, so it cannot overflow numeric and fail the query. A number is
+      # numeric already, but one written to `extra` directly can be long enough
+      # to overflow once multiplied by the price, so it is held to the same 20
+      # integer digits -- by size, not by the string's format, which a small
+      # Float exceeds in decimal places. A rate of zero or less converts
+      # nothing, so it counts as missing, as it does in Money#exchange_to.
       rate =
         if currency == account.currency
           <<~SQL.squish
             COALESCE(
               CASE jsonb_typeof(trades.extra->'exchange_rate')
-                WHEN 'number' THEN (trades.extra->>'exchange_rate')::numeric
+                WHEN 'number' THEN CASE WHEN abs((trades.extra->>'exchange_rate')::numeric) < 1e20
+                                        THEN (trades.extra->>'exchange_rate')::numeric END
                 WHEN 'string' THEN CASE WHEN trades.extra->>'exchange_rate' ~ '^[[:space:]]*[+-]?([0-9]{1,20}([.][0-9]{0,20})?|[.][0-9]{1,20})[[:space:]]*$'
                                         THEN (trades.extra->>'exchange_rate')::numeric END
               END,

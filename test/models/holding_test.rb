@@ -168,8 +168,33 @@ class HoldingTest < ActiveSupport::TestCase
     [ "n/a", "1e999999" ].each do |rate|
       entry.entryable.update_column(:extra, { "exchange_rate" => rate })
 
-      assert_nil @amzn.avg_cost, rate
+      # A fresh instance each time: the holding remembers its replayed cost.
+      assert_nil @amzn.reload.avg_cost, rate
     end
+  end
+
+  # Trade#exchange_rate= only stores a finite Float, but a number written to
+  # `extra` directly can be as long as numeric allows, and multiplying it by the
+  # price would overflow numeric and fail the query. Past the 20 integer digits
+  # a rate string may have, it is not used either.
+  test "the fallback ignores a numeric rate too large to convert" do
+    entry = create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+
+    [ 10**131071, 10**20 ].each do |rate|
+      entry.entryable.update_column(:extra, { "exchange_rate" => rate })
+
+      assert_nil @amzn.reload.avg_cost, rate.to_s.length
+    end
+  end
+
+  # The bound is on size, not on the string format: a small Float rate is stored
+  # with more than the 20 decimal places a rate string may have, and still counts.
+  test "the fallback converts at a small numeric rate with many decimal places" do
+    entry = create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+    entry.entryable.update!(exchange_rate: 1.2345678901234567e-05)
+
+    # 212 CAD at 0.000012345678901234567 is 0.00261728..., 0.0026 at cost_basis's scale
+    assert_equal Money.new(BigDecimal("0.0026")), @amzn.avg_cost
   end
 
   # The missing-rate check rides on the totals query instead of adding a round
