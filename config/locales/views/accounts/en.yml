@@ -151,6 +151,7 @@ en:
       new_account_group: "New %{account_group}"
       expand_all: Expand all
       collapse_all: Collapse all
+      ownership_share: You count %{percentage} of this account
     types:
       depository: Cash
       investment: Investment

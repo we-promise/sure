@@ -14,6 +14,36 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "sidebar badges the accounts the viewer counts in part" do
+    accounts(:depository).update!(ownership_percentage: 60)
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#account-sidebar-tabs span[title=?]", I18n.t("accounts.sidebar.ownership_share", percentage: "60%"), minimum: 1
+  end
+
+  test "sidebar shows no ownership badge when every account is fully owned" do
+    get root_path
+
+    assert_response :ok
+    assert_select "#account-sidebar-tabs", minimum: 1
+    assert_select "#account-sidebar-tabs span[title*=?]", "You count", count: 0
+  end
+
+  test "sidebar shows a co-owner their own percentage" do
+    member = users(:family_member)
+    accounts(:depository).update!(ownership_percentage: 60)
+    accounts(:depository).account_shares.find_by!(user: member).update!(ownership_percentage: 40)
+    sign_in member
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#account-sidebar-tabs span[title=?]", I18n.t("accounts.sidebar.ownership_share", percentage: "40%"), minimum: 1
+    assert_select "#account-sidebar-tabs span[title=?]", I18n.t("accounts.sidebar.ownership_share", percentage: "60%"), count: 0
+  end
+
   test "dashboard renders the net worth chart as drag-selectable, opting it out of card drag-and-drop" do
     get root_path
 
