@@ -182,6 +182,36 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  test "a clamped position that the provider brings back above its trades is unclamped" do
+    travel_to TODAY do
+      build_reverse_fixture
+      materialize(:reverse)
+      lot = HoldingLot.opening.find_by!(security: @gapped)
+      assert_equal [ 0, true ], [ lot.qty, lot.clamped ]
+
+      @account.holdings.find_by!(security: @gapped, date: d(10)).update!(qty: 12, amount: 360)
+      materialize(:reverse)
+
+      lot.reload
+      assert_equal [ 2, false ], [ lot.qty, lot.clamped ], "12 reported against 10 traded"
+    end
+  end
+
+  test "an unclamped position that the provider drops below its trades is clamped" do
+    travel_to TODAY do
+      build_reverse_fixture
+      materialize(:reverse)
+      lot = HoldingLot.opening.find_by!(security: @opening)
+      assert_equal [ BigDecimal("1.333333333333333333"), false ], [ lot.qty, lot.clamped ]
+
+      @account.holdings.find_by!(security: @opening, date: d(10)).update!(qty: 5, amount: 150)
+      materialize(:reverse)
+
+      lot.reload
+      assert_equal [ 0, true ], [ lot.qty, lot.clamped ], "5 reported against 8 traded"
+    end
+  end
+
   test "deleting a trade deletes its derived lot" do
     travel_to TODAY do
       setup_account
