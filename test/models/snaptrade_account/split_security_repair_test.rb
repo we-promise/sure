@@ -347,12 +347,15 @@ class SnaptradeAccount::SplitSecurityRepairTest < ActiveSupport::TestCase
   # alongside the repair can write to a source row after the check above.
   # Each SnapTrade writer is visible before it starts: an incomplete Sync on
   # the connection or the account, or the activities fetch flag.
+  # Each case asserts its own reason: every refusal message ends "run it
+  # again once the sync has finished", so matching /sync/ alone would pass
+  # whichever writer was detected.
   {
-    "the SnapTrade connection has a sync running" => ->(test) { test.snaptrade_item.syncs.create!(status: "syncing") },
-    "the SnapTrade connection has a sync pending" => ->(test) { test.snaptrade_item.syncs.create!(status: "pending") },
-    "the account has a sync pending" => ->(test) { test.account.syncs.create!(status: "pending") },
-    "an activities fetch is pending" => ->(test) { test.snaptrade_account.update!(activities_fetch_pending: true) }
-  }.each do |situation, arrange|
+    "the SnapTrade connection has a sync running" => [ ->(test) { test.snaptrade_item.syncs.create!(status: "syncing") }, "the SnapTrade connection has a sync pending or running" ],
+    "the SnapTrade connection has a sync pending" => [ ->(test) { test.snaptrade_item.syncs.create!(status: "pending") }, "the SnapTrade connection has a sync pending or running" ],
+    "the account has a sync pending" => [ ->(test) { test.account.syncs.create!(status: "pending") }, "the account has a sync pending or running" ],
+    "an activities fetch is pending" => [ ->(test) { test.snaptrade_account.update!(activities_fetch_pending: true) }, "an activities fetch is pending" ]
+  }.each do |situation, (arrange, reason)|
     test "a live repair is refused, writing nothing, when #{situation}" do
       holding = seed_observed_split
       arrange.call(self)
@@ -362,7 +365,7 @@ class SnaptradeAccount::SplitSecurityRepairTest < ActiveSupport::TestCase
         assert_raises(SnaptradeAccount::SplitSecurityRepair::SyncInProgress) { repair!(allow_price_gaps: true) }
       end
 
-      assert_match(/sync/i, error.message)
+      assert_equal "#{reason}; run it again once the sync has finished", error.message
       assert_equal before, account_state
       assert_nil holding.reload.avg_cost
     end
