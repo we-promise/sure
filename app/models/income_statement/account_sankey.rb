@@ -20,13 +20,14 @@ class IncomeStatement::AccountSankey
     flows = account_flows
     income = flows.sum { |flow| flow[:income] }.to_d
     spending = flows.sum { |flow| flow[:spending] }.to_d
-    capacity = [ income, spending ].max
+    invested = flows.sum { |flow| flow[:invested] }.to_d
+    capacity = [ income, spending + invested ].max
     unless capacity.zero?
       subcategory_flows = Hash.new(0.to_d)
       flows.each { |flow| add_account(flow, income, spending, capacity, subcategory_flows) }
       add_subcategories(subcategory_flows)
     end
-    { basis: "net_by_account", income: decimal(income), spending: decimal(spending),
+    { basis: "net_by_account", income: decimal(income), spending: decimal(spending), invested: decimal(invested),
       net_savings: decimal(income - spending), nodes: @nodes.map { |node| serialize(node) }, links: @links }
   end
 
@@ -39,15 +40,17 @@ class IncomeStatement::AccountSankey
         groups = IncomeStatement::CategoryNetting.new(statement, period: @period).groups
         income = groups.sum { |group| side_total(group, :income) }.to_d
         spending = groups.sum { |group| side_total(group, :expense) }.to_d
-        next if income.zero? && spending.zero?
+        # Zero unless the family stops counting investing as spending (#3952).
+        invested = statement.invested_total(period: @period).amount.to_d
+        next if income.zero? && spending.zero? && invested.zero?
 
-        { account: account, groups: groups, income: income, spending: spending }
+        { account: account, groups: groups, income: income, spending: spending, invested: invested }
       end
     end
 
     def add_account(flow, income, spending, capacity, subcategory_flows)
       account = flow[:account]
-      size = [ flow[:income], flow[:spending] ].max
+      size = [ flow[:income], flow[:spending] + flow[:invested] ].max
       center = node("account_#{account.id}", account.name, :account, color: ACCOUNT_COLOR)
       center[:value] = size
       center[:percentage] = percentage(size, capacity)
@@ -69,7 +72,14 @@ class IncomeStatement::AccountSankey
         end
       end
 
-      net = flow[:income] - flow[:spending]
+      if flow[:invested].positive?
+        node_invested = node("invested_node", "Invested", :invested, color: IncomeStatement::Sankey::INVESTED_COLOR)
+        node_invested[:value] += flow[:invested]
+        node_invested[:percentage] = percentage(node_invested[:value], capacity)
+        link(center, node_invested, flow[:invested], percentage(flow[:invested], capacity))
+      end
+
+      net = flow[:income] - flow[:spending] - flow[:invested]
       return if net.zero?
 
       kind = net.positive? ? :surplus : :deficit

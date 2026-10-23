@@ -26,11 +26,13 @@ class IncomeStatement
 
     total_income = result.select { |t| t.classification == "income" }.sum(&:total)
     total_expense = result.select { |t| t.classification == "expense" }.sum(&:total)
+    total_invested = result.select { |t| t.classification == "investment" }.sum(&:total)
 
     ScopeTotals.new(
       transactions_count: result.sum(&:transactions_count),
       income_money: Money.new(total_income, family.currency),
-      expense_money: Money.new(total_expense, family.currency)
+      expense_money: Money.new(total_expense, family.currency),
+      invested_money: Money.new(total_invested, family.currency)
     )
   end
 
@@ -47,6 +49,14 @@ class IncomeStatement
     @income_totals_by_period ||= {}
     return @income_totals_by_period[key] if @income_totals_by_period.key?(key)
     @income_totals_by_period[key] = build_period_total(classification: "income", period: period)
+  end
+
+  # Money moved into investment accounts during the period, for a family that
+  # does not count it as spending. Zero for everyone else: their
+  # contributions are already part of expense_totals.
+  def invested_total(period: Period.current_month)
+    total = totals_for_period(period).select { |t| t.classification == "investment" }.sum(&:total)
+    Money.new(total, family.currency)
   end
 
   def net_category_totals(period: Period.current_month)
@@ -133,6 +143,25 @@ class IncomeStatement
       .map { |date, rows| DailyExpenseTotals::DailyTotal.new(date: date, total: rows.sum { |row| row.total.to_d }) }
   end
 
+  # An average month of spending over `period`, to compare one month's
+  # cumulative spend against: for each day of the month, the average spend
+  # on the period's dates that fall on that day, accumulated across the
+  # month. A day of the month the period never reaches has a nil total, so
+  # a one-month period gives that month's own cumulative curve and a short
+  # one (a week, say) covers only its own days. `category_ids` filters as in
+  # daily_expense_series.
+  def average_month_expense_series(period:, category_ids: nil)
+    daily = daily_expense_series(period: period, category_ids: category_ids).index_by(&:date)
+    dates_by_day = period.date_range.group_by(&:day)
+    cumulative = 0.to_d
+
+    (1..dates_by_day.keys.max).map do |day|
+      dates = dates_by_day[day]
+      cumulative += dates.sum { |date| daily[date] ? daily[date].total.to_d : 0 } / dates.size if dates
+      AverageMonthDay.new(day: day, total: dates && cumulative)
+    end
+  end
+
   # Categories with spending in the period's daily series, nil standing for
   # uncategorized spending. These are the categories a filter on that series
   # can usefully offer.
@@ -184,7 +213,8 @@ class IncomeStatement
   end
 
   private
-    ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money)
+    ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money, :invested_money)
+    AverageMonthDay = Data.define(:day, :total)
     PeriodTotal = Data.define(:classification, :total, :currency, :category_totals)
     CategoryTotal = Data.define(:category, :total, :currency, :weight)
     NetCategoryTotals = Data.define(:net_expense_categories, :net_income_categories, :total_net_expense, :total_net_income, :currency)
@@ -305,14 +335,14 @@ class IncomeStatement
     def family_stats(interval: "month")
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "family_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+        "income_statement", "family_stats", family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
       ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+        "income_statement", "category_stats", family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
       ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
@@ -330,11 +360,15 @@ class IncomeStatement
 
     # An IncomeStatement is a request-scoped reporting snapshot, like its memoized
     # period totals. Share these aggregate reads across totals and daily series.
-    # Rates and target currency can change without touching entries or accounts.
+    # Rates, target currency and whether investing counts as spending can
+    # change without touching entries or accounts.
     def cache_freshness_key
       @cache_freshness_key ||= [
-        family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i,
-        family.currency, ExchangeRate.maximum(:updated_at)&.to_i
+        family.entries_cache_version,
+        family.accounts_status_version,
+        family.currency,
+        ExchangeRate.maximum(:updated_at)&.to_i,
+        family.investment_contributions_as_spending?
       ]
     end
 

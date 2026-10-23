@@ -10,7 +10,7 @@
 class Api::V1::SplitsController < Api::V1::BaseController
   include Api::V1::TransactionLookup
 
-  AlreadySplit = Class.new(StandardError)
+  NotSplittable = Class.new(StandardError)
   NotSplit = Class.new(StandardError)
 
   # entries.amount is decimal(19,4). Children are rounded independently on
@@ -42,24 +42,19 @@ class Api::V1::SplitsController < Api::V1::BaseController
     splits = build_splits
     return if performed?
 
-    # Explicit transaction + lock!, NOT Entry#with_lock: on Rails 8.1 the
-    # with_lock form silently discards the whole split -- no children, no
-    # exception. Verified against real data before relying on this.
-    Entry.transaction do
-      @entry.lock!
-      # Re-check inside the lock: two concurrent POSTs can both clear the
-      # check above, and split! validates only its own amounts, so both sets
-      # of children would be inserted and the transaction counted twice.
-      raise AlreadySplit if @entry.split_parent?
-
-      @entry.split!(splits)
-    end
+    # Two concurrent POSTs can both clear the check above; split_once! locks
+    # the parent and re-checks, so only one set of children is inserted.
+    raise NotSplittable unless @entry.split_once!(splits)
     @entry.sync_account_later
     @entry.reload
 
     render_split status: :created
-  rescue AlreadySplit
-    render_unprocessable("Transaction cannot be split", [ "Transaction is already split" ])
+  rescue NotSplittable
+    # Reload so the reason reflects what the other caller or a sync did in the meantime
+    # (split, excluded, pending, transfer), not the state checked before the lock.
+    @entry.reload
+    @transaction.reload
+    render_unprocessable("Transaction cannot be split", [ not_splittable_reason ])
   rescue ActiveRecord::RecordInvalid => e
     render_unprocessable(e.message)
   end
@@ -75,16 +70,9 @@ class Api::V1::SplitsController < Api::V1::BaseController
     splits = build_splits
     return if performed?
 
-    Entry.transaction do
-      @entry.lock!
-      # The split_parent? test above runs before the lock, so a concurrent
-      # DELETE can unsplit in between; without this the replacement would
-      # resurrect a split the other caller just removed.
-      raise NotSplit unless @entry.split_parent?
-
-      @entry.unsplit!
-      @entry.split!(splits)
-    end
+    # The split_parent? test above runs before the lock, so a concurrent DELETE can unsplit in
+    # between; resplit! re-checks under the lock instead of resurrecting the split.
+    raise NotSplit unless @entry.resplit!(splits)
     @entry.sync_account_later
     @entry.reload
 
@@ -99,12 +87,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
   def destroy
     return render_not_split unless @entry.split_parent?
 
-    Entry.transaction do
-      @entry.lock!
-      raise NotSplit unless @entry.split_parent?
-
-      @entry.unsplit!
-    end
+    raise NotSplit unless @entry.unsplit_once!
     @entry.sync_account_later
 
     head :no_content
@@ -192,10 +175,25 @@ class Api::V1::SplitsController < Api::V1::BaseController
           return nil
         end
 
-        s = s.permit(:name, :amount, :category_id, :excluded)
-        category_id = s[:category_id].presence
-        if category_id && !family_category_ids.include?(category_id)
-          render_unprocessable("Unknown category: #{category_id}")
+        unless s[:tag_ids].nil? || (s[:tag_ids].is_a?(Array) && s[:tag_ids].all?(String))
+          render_unprocessable("tag_ids must be an array of tag ids")
+          return nil
+        end
+        # permit would silently drop a non-scalar id, storing the child without it.
+        %i[category_id merchant_id].each do |key|
+          next if s[key].nil? || s[key].is_a?(String)
+
+          render_unprocessable("#{key} must be an id")
+          return nil
+        end
+
+        s = s.permit(:name, :amount, :category_id, :merchant_id, :excluded, tag_ids: [])
+        references = { category_id: s[:category_id], merchant_id: s[:merchant_id], tag_ids: s[:tag_ids] }
+
+        unknown = split_references.unknown(**references)
+        if unknown.any?
+          kind, id = unknown.first
+          render_unprocessable("Unknown #{kind}: #{id}")
           return nil
         end
 
@@ -213,8 +211,10 @@ class Api::V1::SplitsController < Api::V1::BaseController
           # validates presence, so apply the default rather than 422 on it.
           name: s[:name].presence || @entry.name,
           amount: amount,
-          category_id: category_id,
-          excluded: s[:excluded]
+          excluded: s[:excluded],
+          # Nothing is dropped here (unknown ids were rejected above); scope only normalizes.
+          # Without a merchant_id the child keeps the parent's merchant (Entry#split!).
+          **split_references.scope(**references)
         }
       end
     rescue ArgumentError, TypeError
@@ -222,10 +222,11 @@ class Api::V1::SplitsController < Api::V1::BaseController
       nil
     end
 
-    # belongs_to :category is unscoped, so a known UUID from another family
-    # would be accepted and then serialized back to the caller.
-    def family_category_ids
-      @family_category_ids ||= current_resource_owner.family.categories.pluck(:id).to_set
+    # Transaction's belongs_to :category and :merchant are unscoped, so a known UUID from another
+    # family would be accepted and then serialized back to the caller. The same rules as the web
+    # split editor apply: family categories and tags, and any merchant the user can see.
+    def split_references
+      @split_references ||= Entry::SplitReferences.for_user(current_resource_owner.family, current_resource_owner)
     end
 
     def not_splittable_reason
