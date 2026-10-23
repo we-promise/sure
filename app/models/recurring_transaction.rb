@@ -74,6 +74,11 @@ class RecurringTransaction < ApplicationRecord
   attr_accessor :rules_rewritten
 
   after_commit :generate_occurrences, on: :create
+  # Ahead of regeneration: activation changes status, so both run, and with
+  # load_defaults 7.1+ these run in the order defined. An exception in one
+  # stops the rest, so a failed regeneration must not cost the bill its
+  # history; reconstruct_history! generates the upcoming rows itself.
+  after_commit :reconstruct_history_on_activation, on: :update, if: :activated_from_suggestion?
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
   before_save :preserve_detected_name, if: -> { name_changed? && name_was.present? && matcher_hints.to_h["detected_name"].blank? }
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
@@ -188,6 +193,55 @@ class RecurringTransaction < ApplicationRecord
 
   def generate_occurrences
     OccurrenceGenerator.new(self).generate!
+  end
+
+  # Links what a bill already paid before it was a bill. Every route that
+  # confirms a detection -- the review strip, the pause toggle, the API and
+  # the assistant's update_bill -- lands here through the status change.
+  # Generation is scoped to this series; the matcher pass inside stays
+  # family-wide on purpose (exact-tier, idempotent, and scoping it would need
+  # a parallel Matcher entry point). Returns false only when another pipeline
+  # holds the family lock.
+  def reconstruct_history!
+    return true if family.recurring_transactions_disabled?
+
+    Pipeline.with_family_lock(family_id) do
+      series_scope = family.recurring_transactions.where(id: id)
+
+      # The current cycle and the upcoming occurrences first, as Pipeline#run!
+      # does, so the history pass can match an early payment to the occurrence
+      # it was paid ahead of. Idempotent, and it no longer relies on the
+      # activation's regeneration having run. Freshly loaded, like the
+      # backfiller's, so a pause that committed since this record was read
+      # is respected.
+      series_scope.find_each { |series| OccurrenceGenerator.new(series).generate! }
+      HistoryBackfiller.new(
+        family,
+        months: Pipeline::FIRST_RUN_BACKFILL_MONTHS,
+        series_scope: series_scope
+      ).run!
+    end
+  end
+
+  # Read from the saved change rather than the current status: update_bill
+  # assigns every field and saves once, so by now the series reads active
+  # whichever route it took.
+  def activated_from_suggestion?
+    saved_change_to_status?(from: "suggested", to: "active")
+  end
+
+  # Skipping under a held lock used to leave the bill without history for
+  # good, since the live matcher never looks behind the current cycle.
+  #
+  # The activation has committed by now, so a failure here must not fail the
+  # caller's own write (a toggle, an API update, the assistant's update_bill).
+  # It is reported and handed to the job, which retries; the backfill is
+  # re-runnable by construction.
+  def reconstruct_history_on_activation
+    BackfillRecurringHistoryJob.perform_later(id) unless reconstruct_history!
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
+    BackfillRecurringHistoryJob.perform_later(id)
   end
 
   # Regenerating rebuilds only scheduled, allocation-free, not-yet-due rows;
