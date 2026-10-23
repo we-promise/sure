@@ -166,13 +166,35 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports the owner's ownership percentage in the accounts CSV" do
+    @account.update!(ownership_percentage: 60)
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      row = CSV.parse(zip.read("accounts.csv"), headers: true).find { |r| r["id"] == @account.id }
+
+      assert_equal 60, BigDecimal(row["ownership_percentage"])
+    end
+  end
+
+  test "an export restores the owner's ownership percentage on import" do
+    @account.update!(ownership_percentage: 60)
+
+    ndjson = nil
+    Zip::File.open_buffer(@exporter.generate_export) { |zip| ndjson = zip.read("all.ndjson") }
+    result = Family::DataImporter.new(@other_family, ndjson).import!
+
+    restored = result[:accounts].find { |account| account.name == @account.name }
+    assert_not_nil restored, "the exported account should be imported"
+    assert_equal 60, restored.ownership_percentage
+  end
+
   test "generates valid CSV files" do
     zip_data = @exporter.generate_export
 
     Zip::File.open_buffer(zip_data) do |zip|
       # Check accounts.csv
       accounts_csv = zip.read("accounts.csv")
-      assert_equal [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ],
+      assert_equal [ "id", "name", "type", "subtype", "balance", "currency", "created_at", "ownership_percentage" ],
                    CSV.parse(accounts_csv, headers: true).headers
 
       # Check version marker
