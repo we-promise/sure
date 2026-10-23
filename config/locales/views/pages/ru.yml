@@ -24,14 +24,14 @@ ru:
       balance_sheet:
         add_accounts: Добавьте счета %{name}, чтобы увидеть разбивку
         add_asset_accounts: Добавьте счета активов
-        add_liability_accounts: Добавьте счета обязательств
+        add_liability_accounts: Добавьте кредиты, кредитные карты или другие долги
         classifications:
           asset: Активы
-          liability: Обязательства
+          liability: Долги
         name: Название
         no_asset: Пока нет активов
         no_items: Пока нет %{name}
-        no_liability: Пока нет обязательств
+        no_liability: Пока нет долгов
         title: Баланс
         value: Сумма
         weight: Доля
@@ -102,7 +102,7 @@ ru:
         period_scope_hint: Показывает месяцы, выбранные здесь, — независимо от периода панели вверху.
         search_accounts: Поиск счетов
         apply: Применить
-        balance: Сальдо операций
+        balance: Итог
         chart_span:
           one: Последний %{count} месяц
           few: Последние %{count} месяца

@@ -24,7 +24,7 @@ ru:
     dashboard: Панель управления
     debug: Отладка
     debugs: Отладка
-    depositories: Денежные счета
+    depositories: Счета и наличные
     enable_banking_items: Enable Banking
     exports: Экспорт
     family_exports: Экспорт
@@ -54,7 +54,7 @@ ru:
     oidc_accounts: Учетные записи SSO
     onboardings: Онбординг
     other_assets: Прочие активы
-    other_liabilities: Прочие обязательства
+    other_liabilities: Прочие долги
     payments: Оплата
     pending_duplicate_merges: Обзор дубликатов
     plaid_items: Plaid

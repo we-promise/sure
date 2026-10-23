@@ -1,6 +1,16 @@
 require "test_helper"
 
 class SeriesTest < ActiveSupport::TestCase
+  test "serializes the active locale for chart labels" do
+    series = Series.new(start_date: Date.current, end_date: Date.current, interval: "1 day", values: [])
+
+    %i[ru en de].each do |locale|
+      I18n.with_locale(locale) do
+        assert_equal locale.to_s, series.as_json[:locale]
+      end
+    end
+  end
+
   test "formats chart dates using the family's preferred format" do
     family = families(:empty)
     family.update!(date_format: "%d/%m/%Y")

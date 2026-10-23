@@ -97,8 +97,7 @@ ru:
       no_providers: В настоящее время провайдеры не настроены
       title: Выберите провайдера для связи
     set_default:
-      depository_only: По умолчанию можно установить только денежные счета и счета
-        кредитных карт.
+      depository_only: Счётом по умолчанию может быть банковский счёт, наличные или кредитная карта.
     show:
       activity:
         amount: Сумма
@@ -199,21 +198,21 @@ ru:
     types:
       credit_card: Кредитная карта
       crypto: Крипто
-      depository: Денежный счёт
+      depository: Счёт или наличные
       investment: Инвестиция
       loan: Кредит
       other_asset: Другой актив
-      other_liability: Другое обязательство
+      other_liability: Прочий долг
       property: Недвижимость
       vehicle: Транспорт
     types_plural:
       credit_card: Кредитные карты
       crypto: Крипто
-      depository: Денежные счета
+      depository: Счета и наличные
       investment: Инвестиции
       loan: Кредиты
       other_asset: Другие активы
-      other_liability: Другие обязательства
+      other_liability: Прочие долги
       property: Недвижимость
       vehicle: Транспорт
     unlink:

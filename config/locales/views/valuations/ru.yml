@@ -10,7 +10,7 @@ ru:
       credit_card_balance: баланс кредитной карты
       crypto_balance: баланс криптовалюты
       holdings_value: Стоимость активов
-      liability_balance: баланс обязательств
+      liability_balance: сумму долга
       loan_balance: баланс по кредиту
       'on': на
       property_value: стоимость недвижимости

@@ -117,14 +117,14 @@ ru:
       weight: Доля
       withdrawals: Выводы за период
     net_worth:
-      assets_vs_liabilities: Активы и обязательства
+      assets_vs_liabilities: Активы и долги
       current_net_worth: 'Текущий капитал'
       no_assets: Нет активов
-      no_liabilities: Нет обязательств
+      no_liabilities: Пока нет долгов
       period_change: Изменение за период
       title: 'Капитал'
       total_assets: Активы
-      total_liabilities: Обязательства
+      total_liabilities: Долги
     print:
       document_title: Финансовый отчёт
       generated_on: Создан %{date}
@@ -144,8 +144,8 @@ ru:
       net_worth:
         assets: Активы
         current_balance: Текущий баланс
-        liabilities: Обязательства
-        no_liabilities: Нет обязательств
+        liabilities: Долги
+        no_liabilities: Пока нет долгов
         this_period: за этот период
         title: 'Капитал'
       spending:
