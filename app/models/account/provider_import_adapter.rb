@@ -1074,11 +1074,53 @@ class Account::ProviderImportAdapter
 
     target = previous_holding_for(security: from.provider_security || from.security, currency: from.currency,
                                   date: date + 1, account_provider_id: from.account_provider_id)
-    target&.update!(corrections)
-    target
+    return if target.nil?
+
+    # A remap onto a security the target's date already holds would break the
+    # unique (account, security, date, currency) index. The target folds into
+    # that row instead, as Holding#remap_security! merges a collision.
+    collision = corrections.key?(:security) &&
+      account.holdings.where.not(id: target.id)
+        .find_by(security: corrections[:security], date: target.date, currency: target.currency)
+    return target.tap { |row| row.update!(corrections) } unless collision
+
+    target.assign_attributes(corrections.except(:security, :provider_security_id, :security_locked))
+    merge_holding_into!(target, collision)
   end
 
   private
+    # Folds `holding` into `existing`, a row of another security on the same
+    # date and currency, with the arithmetic of Holding#remap_security!'s
+    # collision merge: quantities and amounts add, cost basis is the weighted
+    # average when both have one, and the provider tracking moves across.
+    # Returns `existing`.
+    def merge_holding_into!(holding, existing)
+      merged_qty = existing.qty + holding.qty
+      merged_amount = existing.amount + holding.amount
+      merged_cost_basis = if existing.cost_basis.present? && holding.cost_basis.present? && merged_qty.positive?
+        ((existing.cost_basis * existing.qty) + (holding.cost_basis * holding.qty)) / merged_qty
+      else
+        existing.cost_basis
+      end
+
+      merge_attrs = {
+        qty: merged_qty,
+        amount: merged_amount,
+        price: merged_qty.positive? ? merged_amount / merged_qty : 0,
+        cost_basis: merged_cost_basis,
+        security_locked: true
+      }
+      merge_attrs[:external_id] = holding.external_id if existing.external_id.blank? && holding.external_id.present?
+      merge_attrs[:provider_security_id] = holding.provider_security_id || holding.security_id if existing.provider_security_id.blank?
+      merge_attrs[:account_provider_id] = holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
+
+      Holding.transaction(requires_new: true) do
+        holding.destroy!
+        existing.update!(merge_attrs)
+      end
+      existing
+    end
+
     # The user's corrections a row holds: a remapped security and a locked
     # cost basis, as attributes for the row that takes them over.
     def corrections_from(holding, provider_security_id:)

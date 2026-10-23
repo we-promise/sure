@@ -544,6 +544,27 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
                  [ holding.date, holding.security_id, holding.provider_security_id, holding.security_locked, holding.qty.to_i ]
   end
 
+  # The snapshot date can already hold a row of the chosen security. The
+  # snapshot row is then merged into it, as remap_security! merges, instead
+  # of taking the same security and date and failing the sync on the index.
+  test "a remap carried onto a date that already holds the chosen security merges into it" do
+    snapshot_date = Date.current - 1
+    msft = securities(:msft)
+    chosen = Security.create!(ticker: "MSFT2", name: "Chosen", exchange_operating_mic: "XNAS", country_code: "US")
+    link_account_provider!
+    process_holdings("b" => [ msft, { "quantity" => 5 } ])
+    account.holdings.find_by!(security: msft, date: Date.current).remap_security!(chosen)
+    existing = account.holdings.create!(security: chosen, date: snapshot_date, qty: 3, price: 50, amount: 150, currency: "USD")
+
+    process_holdings("b" => [ msft, { "quantity" => 7, "institution_price_as_of" => snapshot_date.to_s } ])
+
+    on_snapshot = account.holdings.where(date: snapshot_date)
+    assert_equal [ existing.id ], on_snapshot.pluck(:id)
+    existing.reload
+    assert_equal [ chosen.id, 10, 500, msft.id, true ],
+                 [ existing.security_id, existing.qty.to_i, existing.amount.to_i, existing.provider_security_id, existing.security_locked ]
+  end
+
   test "of several retired rows, the latest correction wins" do
     snapshot_date = Date.current - 2
     a = securities(:aapl)
