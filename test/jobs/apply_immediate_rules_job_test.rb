@@ -100,13 +100,15 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
   test "leaves the emails of rules above to the nightly run" do
     email = create_rule("Email", action: Rule::Action.new(action_type: "send_email_notification"))
     create_rule("Immediate", category: @groceries, apply_immediately: true)
+    # Created after the email rule, so it is not part of that rule's baseline.
+    added = create_transaction(account: @account, name: "Whole Foods").transaction
 
     assert_no_enqueued_jobs(only: RuleEmailNotificationJob) do
-      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
+      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ added.id ])
     end
 
-    assert_equal @groceries, @changed.reload.category
-    assert_empty NotificationDelivery.where(rule_id: email.id)
+    assert_equal @groceries, added.reload.category
+    assert_not NotificationDelivery.exists?(rule_id: email.id, transaction_id: added.id)
     assert_empty email.rule_runs
   end
 
@@ -122,9 +124,11 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
 
   test "an immediate rule sends its own email right away" do
     email = create_rule("Email", action: Rule::Action.new(action_type: "send_email_notification"), apply_immediately: true)
+    # Created after the rule, so it is not part of the rule's baseline.
+    added = create_transaction(account: @account, name: "Whole Foods").transaction
 
-    assert_enqueued_with(job: RuleEmailNotificationJob, args: [ email.id, [ @changed.id ] ]) do
-      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
+    assert_enqueued_with(job: RuleEmailNotificationJob, args: [ email.id, [ added.id ] ]) do
+      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ added.id ])
     end
   end
 
