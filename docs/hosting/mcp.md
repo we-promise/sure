@@ -106,10 +106,22 @@ Bearer token. Dynamically registered clients are assigned the MCP-only `mcp`
 scope so their tokens can authenticate to MCP without granting global JSON API
 write access.
 
-Clients registered before the MCP-only scope was introduced retain their
-`read_write` scope. They can continue to reauthorize without an explicit scope,
-and their tokens remain accepted by `/mcp`. To use the MCP-only scope, register
-a new client.
+On upgrade, a data migration changes public applications whose scope is exactly
+`read_write` to `mcp`. Client IDs and redirect URIs stay the same, so existing
+connectors can reauthorize with `mcp` without registering again. Clients that
+omit the scope receive `mcp` automatically; clients that explicitly request
+`read_write` must request `mcp` when reauthorizing.
+
+Existing tokens are not changed by the migration. `/mcp` accepts tokens with
+only the legacy `read_write` scope until **January 20, 2027 at 00:00 UTC**.
+At that instant and afterward, they receive HTTP 403 `insufficient_scope`;
+reauthorize the existing connector with `mcp` to restore access. Tokens with
+`mcp` continue to work, including tokens that also contain `read_write`.
+
+Existing `read_write` tokens retain their JSON API permissions, and refreshing
+them can preserve that scope. To remove those permissions, revoke the existing
+tokens or authorizations and reauthorize with `mcp`. The MCP cutoff does not
+revoke tokens or change JSON API authorization.
 
 For self-hosted deployments or clients without OAuth support, requests may use
 the legacy `MCP_API_TOKEN` as a Bearer token:
