@@ -181,6 +181,7 @@ en:
       show:
         page_title: Appearance
         theme_title: Theme
+        theme_preview_alt: "%{theme} theme preview"
         theme_subtitle: Choose a preferred theme for the app
         theme_dark: Dark
         theme_light: Light
@@ -417,7 +418,7 @@ en:
       change: Change photo
     providers:
       update:
-        failed: "Couldn't update provider settings. Please try again."
+        failed: "Failed to update provider settings. Please try again."
         updated_successfully: Provider settings updated successfully
         no_changes: No changes were made
       not_authorized: Not authorized

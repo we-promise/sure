@@ -118,7 +118,7 @@ ru:
       account_type_label: Тип счёта
       account_types:
         skip: Пропустить
-        depository: Денежный счёт
+        depository: Счёт или наличные
       create_accounts: Создать счета
       cancel: Отмена
     complete_account_setup:

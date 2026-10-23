@@ -380,7 +380,7 @@ module LanguagesHelper
     COUNTRY_MAPPING.map do |code, default_label|
       country = ISO3166::Country.new(code)
       if country
-        label = country.translation(I18n.locale).presence || country.common_name
+        label = I18n.t("countries.#{code}", default: country.translation(I18n.locale).presence || country.common_name)
         [ "#{country.emoji_flag} #{label}", country.alpha2 ]
       else
         emoji, fallback_name = default_label.split(" ", 2)

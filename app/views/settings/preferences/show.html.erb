@@ -220,7 +220,7 @@
                     "bg-surface-inset": base_currency,
                     "cursor-default": base_currency
                   ) %>"
-                         data-filter-name="<%= "#{currency.iso_code} #{currency.name}" %>">
+                         data-filter-name="<%= "#{currency.iso_code} #{currency.localized_name}" %>">
                     <%= check_box_tag "user[family_attributes][enabled_currencies][]",
                                       currency.iso_code,
                                       checked,
@@ -239,7 +239,7 @@
                               <%= render DS::Pill.new(label: t(".base_currency_badge"), tone: :neutral, marker: false) %>
                             <% end %>
                           </div>
-                          <p class="mt-0.5 text-sm text-secondary"><%= currency.name %></p>
+                          <p class="mt-0.5 text-sm text-secondary"><%= currency.localized_name %></p>
                         </div>
                       </div>
                     </div>

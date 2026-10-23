@@ -88,7 +88,7 @@
                                  { data: { action: "onboarding#setLocale" } } %>
 
           <%= family_form.select :currency,
-                                 Money::Currency.as_options.map { |currency| [ "#{currency.name} (#{currency.iso_code})", currency.iso_code ] },
+                                 Money::Currency.as_options.map { |currency| [ "#{currency.localized_name} (#{currency.iso_code})", currency.iso_code ] },
                                  { label: t(".currency"), required: true, selected: selected_currency },
                                  { data: { action: "onboarding#setCurrency", onboarding_target: "currencyField" } } %>
 

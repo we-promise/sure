@@ -35,6 +35,37 @@ class SettingsTest < ApplicationSystemTestCase
     end
   end
 
+  test "Russian settings localize option labels without changing their stored values" do
+    @user.update!(locale: "ru")
+    @user.family.update!(moniker: "Family")
+
+    [ 1400, 390 ].each do |width|
+      page.current_window.resize_to(width, 900)
+      visit settings_preferences_path
+      assert_selector "html[lang='ru']"
+      assert_selector "select#user_locale option[value='ru']", text: "Русский (ru)", visible: :all
+      assert_selector "select#user_family_attributes_timezone option[value='Europe/Moscow']", text: "Москва", visible: :all
+      assert_selector "select#user_family_attributes_month_start_day option[value='1']", text: "1-е число", visible: :all
+      assert_selector "select#user_family_attributes_month_start_day option[value='28']", text: "28-е число", visible: :all
+      assert_text "Считать переводы в инвестиции расходами"
+      assert_text "Доллар США"
+      assert page.evaluate_script("document.documentElement.scrollWidth <= document.documentElement.clientWidth"), "preferences must fit the viewport"
+
+      visit settings_profile_path
+      assert_field "Название семьи", placeholder: "Введите название семьи"
+      assert_text "Сброс и удаление"
+      assert_no_text "Домохозяйство"
+      assert_no_text "Опасная зона"
+      assert page.evaluate_script("document.documentElement.scrollWidth <= document.documentElement.clientWidth"), "settings must fit the viewport"
+    end
+
+    visit settings_preferences_path
+    page.scroll_to(find("#user_family_attributes_month_start_day", visible: :all), align: :center)
+    select "20-е число", from: "user_family_attributes_month_start_day"
+    assert_selector "select#user_family_attributes_month_start_day option[value='20'][selected]", visible: :all
+    assert_equal 20, @user.family.reload.month_start_day
+  end
+
   test "can access settings from sidebar" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       open_settings_from_sidebar

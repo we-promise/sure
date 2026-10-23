@@ -201,7 +201,7 @@ module ApplicationHelper
 
   def currency_label(currency_or_code)
     currency = currency_or_code.is_a?(Money::Currency) ? currency_or_code : Money::Currency.new(currency_or_code)
-    "#{currency.name} (#{currency.iso_code})"
+    "#{currency.localized_name} (#{currency.iso_code})"
   end
 
   def show_super_admin_bar?

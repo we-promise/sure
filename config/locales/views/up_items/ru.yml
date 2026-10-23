@@ -94,7 +94,7 @@ ru:
     setup_accounts:
       account_type_label: Тип счёта
       account_types:
-        depository: Денежный счёт
+        depository: Счёт или наличные
         loan: Кредит
         skip: Пропустить
       all_accounts_linked: Все счета Up уже связаны.

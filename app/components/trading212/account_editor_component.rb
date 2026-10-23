@@ -31,7 +31,7 @@ class Trading212::AccountEditorComponent < ApplicationComponent
   end
 
   def currency_options
-    Money::Currency.as_options.map { |currency| [ "#{currency.name} (#{currency.iso_code})", currency.iso_code ] }
+    Money::Currency.as_options.map { |currency| [ "#{currency.localized_name} (#{currency.iso_code})", currency.iso_code ] }
   end
 
   def translation(key, **options)

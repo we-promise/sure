@@ -245,11 +245,6 @@ class LlmUsage < ApplicationRecord
     }
   end
 
-  # Format cost as currency
-  def formatted_cost
-    estimated_cost.nil? ? "N/A" : "$#{estimated_cost.round(4)}"
-  end
-
   # Check if this usage record represents a failed API call
   def failed?
     metadata.present? && metadata["error"].present?

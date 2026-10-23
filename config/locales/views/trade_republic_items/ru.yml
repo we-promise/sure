@@ -90,7 +90,7 @@ ru:
       available_accounts:
         title: Доступный счёт
         account_type_investment: Инвестиционный портфель
-        account_type_cash: Денежный счёт
+        account_type_cash: Расчётный счёт
         account_summary: '%{account_type} • Баланс: %{balance}'
         account_id: 'ID счёта: %{account_id}'
         account_type_crypto: 'Криптовалютный счёт'

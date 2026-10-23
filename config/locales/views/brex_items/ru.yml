@@ -77,7 +77,7 @@ ru:
       one: "%{name}"
     kinds:
       card: Карта
-      cash: Денежный счёт
+      cash: Счёт Brex Cash
     link_accounts:
       all_already_linked:
         few: "%{count} выбранных счёта уже связаны: %{names}"

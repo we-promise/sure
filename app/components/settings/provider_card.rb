@@ -43,6 +43,8 @@ class Settings::ProviderCard < ApplicationComponent
   end
 
   def localized_metadata(group, value)
+    return value if I18n.locale == :en
+
     I18n.t("settings.providers.#{group}.#{value.to_s.downcase}", default: value)
   end
 
