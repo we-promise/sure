@@ -857,6 +857,7 @@ class Goal < ApplicationRecord
       avg_monthly: pace.to_f,
       required_monthly: monthly_target_amount&.to_f,
       currency: currency,
+      locale: I18n.locale.to_s,
       status: status.to_s,
       projection_end_value: proj_end.to_f,
       projection_end_label: Money.new(proj_end, currency).format(precision: 0),

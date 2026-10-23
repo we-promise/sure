@@ -10,6 +10,12 @@ class GoalTest < ActiveSupport::TestCase
     @goal = goals(:vacation_italy)
   end
 
+  test "projection payload carries the active locale" do
+    I18n.with_locale(:ru) do
+      assert_equal "ru", @goal.projection_payload[:locale]
+    end
+  end
+
   test "valid fixture goal saves" do
     assert @goal.valid?
   end

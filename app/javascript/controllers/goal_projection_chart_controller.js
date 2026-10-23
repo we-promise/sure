@@ -436,7 +436,7 @@ export default class extends Controller {
     // Full 4-digit year so the terminal "Jan 2027" reads as the year, not
     // as "Jan 27" (which scans as January 27th). Slightly wider per tick;
     // the de-dupe logic below keeps the count sane.
-    const tickFmt = d3.timeFormat("%b %Y");
+    const tickFmt = new Intl.DateTimeFormat(data.locale, { month: "short", year: "numeric" }).format;
     const tickCount = Math.min(5, Math.max(2, Math.round(innerWidth / 80)));
     const ticks = x.ticks(tickCount);
     const tickGroup = svg.append("g");
@@ -544,7 +544,7 @@ export default class extends Controller {
       .style("cursor", "crosshair");
 
     const bisectDate = d3.bisector((d) => d.date).left;
-    const dateFmt = d3.timeFormat("%b %d, %Y");
+    const dateFmt = new Intl.DateTimeFormat(data.locale, { day: "numeric", month: "short", year: "numeric" }).format;
     const todayTs = today.getTime();
     const targetTs = target ? target.getTime() : null;
     const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
