@@ -10,7 +10,7 @@ ru:
           surplus: "Профицит"
           deficit: "Дефицит"
         title: Новая диаграмма Sankey
-        preview: Предпросмотр
+        preview: 'Предварительный просмотр'
         preview_tooltip: Эта диаграмма заменит визуализацию выше, так как использует новый общий API с мобильным клиентом на Swift.
         feedback_prompt: Сравните эту диаграмму с исходной выше и сообщите нам, если она отличается чем-то, кроме сортировки.
         positive: Всё верно
@@ -62,7 +62,7 @@ ru:
         withdrawals: Выводы
       net_worth_chart:
         data_not_available: Нет данных за выбранный период
-        title: Чистая стоимость
+        title: 'Капитал'
       new: Новое
       no_account_empty_state:
         new_account: Новый счёт
@@ -70,7 +70,7 @@ ru:
         no_account_title: Пока нет счетов
       no_accounts:
         add_account: Добавить счёт
-        description: Добавьте счета, чтобы увидеть чистую стоимость
+        description: 'Добавьте счета, чтобы увидеть капитал'
         title: Пока нет счетов
       outflows_donut:
         categories: Категории
@@ -146,7 +146,7 @@ ru:
       refresh_page: Обновить
       setup_guide_hint: Следуйте руководству по настройке Docker для конфигурации
         Redis
-      subheading: Для self-hosted версии Sure необходимо настроить Redis.
+      subheading: 'Для самостоятельно развёрнутой версии Sure необходимо правильно настроить Redis.'
       view_setup_guide: Открыть руководство
       why_required_body: Sure использует Redis для фоновых задач Sidekiq — синхронизации
         счетов, обработки импорта и других операций, поддерживающих актуальность данных.

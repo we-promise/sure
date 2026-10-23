@@ -33,10 +33,10 @@ ru:
       title: Подключения Lunch Flow
     link_accounts:
       all_already_linked:
-        few: "%{count} выбранных счёта уже связаны: %{names}"
-        many: "%{count} выбранных счетов уже связаны: %{names}"
+        few: 'Все %{count} выбранных счёта уже связаны: %{names}'
+        many: 'Все %{count} выбранных счетов уже связаны: %{names}'
         one: Выбранный счёт (%{names}) уже связан
-        other: "%{count} выбранных счёта уже связаны: %{names}"
+        other: 'Все %{count} выбранных счёта уже связаны: %{names}'
       api_error: 'Ошибка API: %{message}'
       invalid_account_names:
         few: Невозможно связать %{count} счёта с пустыми именами

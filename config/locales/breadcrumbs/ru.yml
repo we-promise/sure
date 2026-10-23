@@ -34,7 +34,7 @@ ru:
     home: Главная
     hostings: Самостоятельный хостинг
     ibkr_items: Interactive Brokers
-    impersonation_sessions: Сеансы имитации
+    impersonation_sessions: 'Вход от имени другого пользователя'
     imports: Импорт
     indexa_capital_items: Indexa Capital
     intro: Введение
@@ -92,3 +92,4 @@ ru:
     plan: Планирование
     redbark_items: Redbark
     system_health: Состояние системы
+    classifier: 'Классификатор'

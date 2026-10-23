@@ -10,7 +10,7 @@ ru:
       apr_placeholder: '15.99'
       available_credit: Доступный кредит
       available_credit_placeholder: '10000'
-      expiration_date: Дата окончания
+      expiration_date: 'Срок действия'
       minimum_payment: Минимальный платёж
       minimum_payment_placeholder: '100'
       simplefin_balance_sign_auto: Автоматически
@@ -20,5 +20,12 @@ ru:
       simplefin_balance_sign_label: Значение баланса SimpleFIN
       treat_balance_as_available_credit_description: Включите, если ваш банк передаёт баланс этой карты как оставшийся доступный кредит, а не как сумму задолженности. Тогда задолженность рассчитывается из кредитного лимита, который сообщает банк, или из поля «Доступный кредит», если банк его не передаёт.
       treat_balance_as_available_credit_label: Баланс — это доступный кредит
+      sophtron_balance_sign_auto: 'Автоматически'
+      sophtron_balance_sign_credit: 'Переплата (банк должен вам)'
+      sophtron_balance_sign_debt: 'Задолженность (вы должны банку)'
+      sophtron_balance_sign_description: 'Меняйте настройку, только если Sophtron передаёт неоднозначный знак баланса. В автоматическом режиме остатки по кредитной карте учитываются со знаком минус.'
+      sophtron_balance_sign_label: 'Значение баланса Sophtron'
     new:
       title: Введите данные кредитной карты
+    update:
+      sophtron_balance_sign_error: 'Не удалось применить выбранное значение баланса Sophtron. Предыдущее значение сохранено. Попробуйте ещё раз.'

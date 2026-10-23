@@ -14,7 +14,7 @@ ru:
     trade_republic_item:
       syncing: "Синхронизация"
       requires_update: "Требуется повторная аутентификация"
-      session_expires_in: "Вход истекает через %{time} (%{at})."
+      session_expires_in: 'Срок действия сеанса истекает через %{time} (%{at}).'
       error: "Ошибка"
       synced: "Синхронизировано %{time} назад. %{summary}."
       setup_accounts: "Настроить счета"
@@ -56,7 +56,7 @@ ru:
           few: '%{count} траты за последние 30 дней (%{amount})'
           many: '%{count} трат за последние 30 дней (%{amount})'
           other: '%{count} траты за последние 30 дней (%{amount})'
-        reconciliation: 'Сверено балансов счетов: %{matched}/%{total}'
+        reconciliation: 'Сверено %{matched} из %{total} балансов по счетам.'
         sync_history: Последние синхронизации
         sync_status:
           completed: Завершена
@@ -93,6 +93,7 @@ ru:
         account_type_cash: Денежный счёт
         account_summary: '%{account_type} • Баланс: %{balance}'
         account_id: 'ID счёта: %{account_id}'
+        account_type_crypto: 'Криптовалютный счёт'
       link_existing:
         description: Или свяжите найденный счёт Trade Republic с существующим ручным инвестиционным счётом.
         manual_account_option: '%{name} (%{balance})'
@@ -166,7 +167,7 @@ ru:
         card_fee: Комиссия по карте
         card_refund: Возврат на карту
         tax_refund: Налоговый возврат
-        round_up: Round up
+        round_up: 'Округление'
     duplicate_connection: "Этот счёт Trade Republic уже подключён. Новое подключение удалено."
     defaults:
       name: Trade Republic

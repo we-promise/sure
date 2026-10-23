@@ -21,7 +21,7 @@ ru:
       type_dividend: Дивиденды
       type_interest: Проценты
       type_sell: Продажа
-      type_withdrawal: Снятие
+      type_withdrawal: 'Вывод средств'
     header:
       buy: Покупка
       current_market_price_label: Текущая рыночная цена

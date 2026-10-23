@@ -69,3 +69,14 @@ ru:
     confirm_update:
       title: Обновить баланс
       update: Обновить
+    names:
+      current_account_value: 'Текущая стоимость счёта'
+      current_balance: 'Текущий баланс'
+      current_loan_balance: 'Текущий баланс по кредиту'
+      current_market_value: 'Текущая рыночная стоимость'
+      manual_balance_update: 'Ручное обновление баланса'
+      manual_principal_update: 'Ручное обновление основной суммы долга'
+      manual_value_update: 'Ручное обновление стоимости'
+      opening_account_value: 'Начальная стоимость счёта'
+      original_principal: 'Первоначальная сумма основного долга'
+      original_purchase_price: 'Первоначальная цена покупки'

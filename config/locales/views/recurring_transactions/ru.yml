@@ -75,6 +75,11 @@ ru:
       semiannual: Раз в 6 месяцев
       annual: Ежегодно
       custom: Особое расписание
+      interval: 'Произвольный интервал'
+    frequency_interval_units:
+      weekly: 'нед.'
+      monthly: 'мес.'
+      yearly: 'г.'
     frequency:
       monthly: 'Ежемесячно, день: %{day}'
       weekly: 'Еженедельно, день недели: %{weekday}'
@@ -83,6 +88,9 @@ ru:
       quarterly: 'Ежеквартально, день: %{day}'
       semiannual: 'Раз в 6 месяцев, день: %{day}'
       annual: 'Ежегодно, %{month}, день: %{day}'
+      every_n_weeks: 'Раз в %{interval} нед., день недели: %{weekday}'
+      every_n_months: 'Раз в %{interval} мес., день: %{day}'
+      every_n_years: 'Раз в %{interval} г., %{month}, день: %{day}'
       custom: Особое расписание
       last_day: последний день
     actions:
@@ -179,6 +187,8 @@ ru:
       category_blank: Без категории
       frequency_new_hint: Дни берутся из даты оплаты выше. Расписание можно уточнить после сохранения.
       frequency_label: Периодичность
+      frequency_interval_label: 'Повторять каждые'
+      frequency_interval_unit_label: 'Единица'
       frequency_hint: Как часто наступает срок оплаты. Выберите дни в соответствии с вашей выпиской.
       frequency_day_label: День
       frequency_second_day_label: И день
@@ -210,3 +220,9 @@ ru:
       dismiss: Это не платёж
     confirmed: Платёж добавлен в регулярные операции
     dismissed: Отклонено. Этот шаблон больше не будет предлагаться.
+    confirmed_income: 'Доход добавлен в регулярные операции.'
+
+    suggested_income:
+      title: 'Возможные новые доходы'
+      confirm: 'Добавить доход'
+      dismiss: 'Это не доход'

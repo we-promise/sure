@@ -20,9 +20,9 @@ ru:
         account_statement:
           attributes:
             checksum:
-              duplicate_statement_file: уже загружен для этой семьи
+              duplicate_statement_file: 'совпадает с уже загруженной выпиской этой семьи'
             content_sha256:
-              duplicate_statement_file: уже загружен для этой семьи
+              duplicate_statement_file: 'совпадает с уже загруженной выпиской этой семьи'
             original_file:
               invalid_format: должен быть в формате PDF, CSV или XLSX
               too_large: слишком большой. Максимальный размер %{max_mb}MB

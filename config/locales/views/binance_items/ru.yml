@@ -3,16 +3,16 @@ ru:
   binance_item:
     syncer:
       accounts_need_setup:
-        few: "%{count} подключения требуют настройки"
-        many: "%{count} подключений требуют настройки"
-        one: "%{count} подключение требует настройки"
-        other: "%{count} подключения требуют настройки"
+        few: '%{count} счёта требуют настройки'
+        many: '%{count} счетов требуют настройки'
+        one: '%{count} счёт требует настройки'
+        other: '%{count} счёта требуют настройки'
       calculating_balances: Расчёт балансов...
       checking_configuration: Проверка конфигурации подключения...
-      checking_credentials: Проверка данных...
+      checking_credentials: 'Проверка учётных данных...'
       credentials_invalid: Недействительные API-данные. Пожалуйста, проверьте ваш
         API-ключ и секрет.
-      importing_accounts: Импортирование счетов из Binance...
+      importing_accounts: 'Импорт счетов из Binance...'
       processing_accounts: Обработка данных счёта...
   binance_items:
     binance_item:
@@ -38,8 +38,7 @@ ru:
           one: Синхронизирован %{count} счёт
           other: Синхронизированы %{count} счёта
         no_accounts: Счета не найдены
-        partial_sync: "%{linked_count} синхронизировано, %{unlinked_count} требуют
-          настройки"
+        partial_sync: 'Синхронизировано: %{linked_count}; осталось настроить: %{unlinked_count}'
       syncing: Синхронизация...
       update_credentials: Обновить данные
     complete_account_setup:
@@ -60,7 +59,7 @@ ru:
       errors:
         invalid_binance_account: Недействительный счёт Binance
         only_manual: Только ручные счета могут быть связаны с Binance
-      success: Успешно связано с счётом Binance
+      success: 'Счёт успешно связан со счётом Binance.'
     select_existing_account:
       cancel: Отмена
       check_provider_health: Проверьте, действительны ли ваши API-данные Binance
@@ -87,3 +86,7 @@ ru:
       title: Импортировать счёт Binance
     update:
       success: Конфигурация Binance успешно обновлена.
+    select_accounts:
+      connection_unavailable: 'Это подключение Binance недоступно. Выберите подключение в настройках провайдеров.'
+      no_credentials_configured: 'Перед добавлением счетов подключите Binance в настройках провайдеров.'
+      select_connection: 'Выберите подключение Binance в настройках провайдеров.'

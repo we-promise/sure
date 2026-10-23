@@ -2,7 +2,7 @@
 ru:
   plans:
     show:
-      title: Планирование
+      title: 'План'
       subtitle: Решите, куда пойдут ваши деньги — сколько тратить и сколько откладывать.
     budget_card:
       title: Этот месяц
@@ -22,16 +22,16 @@ ru:
       title: Ваши цели
       new_goal: Новая цель
       active_count:
-        one: '%{count} активная'
-        few: '%{count} активные'
-        many: '%{count} активных'
-        other: '%{count} активной'
+        one: '%{count} активная цель'
+        few: '%{count} активные цели'
+        many: '%{count} активных целей'
+        other: '%{count} активной цели'
       of_targets: из %{total} по всем целям
       behind_count:
-        one: '%{count} отстаёт от графика'
-        few: '%{count} отстают от графика'
-        many: '%{count} отстают от графика'
-        other: '%{count} отстают от графика'
+        one: '%{count} цель отстаёт от графика'
+        few: '%{count} цели отстают от графика'
+        many: '%{count} целей отстают от графика'
+        other: '%{count} цели отстают от графика'
       pending_count:
         one: '%{count} ожидаемое пополнение'
         few: '%{count} ожидаемых пополнения'
@@ -42,3 +42,8 @@ ru:
       pending_marker: ожидается
       runway: '%{months} мес. запаса · %{pace}/мес.'
       all_goals: Все цели
+      currency_warning:
+        one: '%{count} цель не учитывает балансы в %{currencies}: для них пока нет обменного курса.'
+        few: '%{count} цели не учитывают балансы в %{currencies}: для них пока нет обменного курса.'
+        many: '%{count} целей не учитывают балансы в %{currencies}: для них пока нет обменного курса.'
+        other: '%{count} цели не учитывают балансы в %{currencies}: для них пока нет обменного курса.'

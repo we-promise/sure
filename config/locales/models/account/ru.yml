@@ -13,6 +13,9 @@ ru:
     name_desc:
       label: Имя (Я-А)
       label_short: Имя ↓
+    manual:
+      label: 'Вручную (перетащите, чтобы изменить порядок)'
+      label_short: 'Вручную'
   activerecord:
     attributes:
       account:

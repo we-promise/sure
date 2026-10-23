@@ -28,8 +28,7 @@ ru:
         client_secret_placeholder_new: ваш-client-secret
         copy_button: Копировать
         create_provider: Создать поставщика
-        default_role_help: Роль, назначаемая пользователям, созданным через JIT предоставление
-          учётных записей SSO. По умолчанию — Участник.
+        default_role_help: 'Роль, назначаемая пользователям, созданным через JIT-создание учётных записей SSO. По умолчанию — участник.'
         default_role_label: Роль по умолчанию для новых пользователей
         enabled_help: Пользователи могут войти через этого поставщика, когда он включён
         enabled_label: Включить этого поставщика
@@ -74,11 +73,11 @@ ru:
         oauth_configuration: Конфигурация OAuth/OIDC
         prompt_consent: Принудительное согласие (повторное разрешение)
         prompt_default: По умолчанию (решает IdP)
-        prompt_help: Управляет тем, как IdP запрашивает пользователя во время аутентификации.
+        prompt_help: 'Определяет, какой запрос IdP показывает пользователю при аутентификации.'
         prompt_label: Запрос аутентификации
         prompt_login: Принудительный вход (повторная аутентификация)
         prompt_none: Без запроса (тихая аутентификация)
-        prompt_select_account: Выбор учётной записи (выбор учётной записи)
+        prompt_select_account: 'Выбор учётной записи'
         provisioning_title: Предоставление пользователей
         redirect_uri_help: Настройте этот URL у вашего поставщика идентификации
         redirect_uri_label: URL обратного вызова
@@ -90,7 +89,7 @@ ru:
           чтобы использовать роль по умолчанию выше.
         role_mapping_title: Сопоставление группы с ролью (необязательно)
         role_member: Участник
-        role_super_admin: Супер Администратор
+        role_super_admin: 'Суперадминистратор'
         saml_configuration: Конфигурация SAML
         saml_sp_callback_url_help: Настройте этот URL как URL службы потребления утверждений
           у вашего IdP
@@ -98,10 +97,10 @@ ru:
         scopes_help: Список областей OIDC, разделённых пробелами. Оставьте пустым
           для значений по умолчанию (openid email profile). Добавьте 'groups', чтобы
           получить утверждения группы.
-        scopes_label: Пользовательские области
+        scopes_label: 'Пользовательские области доступа'
         strategy_github: GitHub
         strategy_google_oauth2: Google OAuth2
-        strategy_help: Стратегия аутентификации для использования
+        strategy_help: 'Используемая стратегия аутентификации'
         strategy_label: Стратегия
         strategy_openid_connect: OpenID Connect
         strategy_saml: SAML 2.0

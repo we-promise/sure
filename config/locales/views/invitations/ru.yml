@@ -4,7 +4,7 @@ ru:
     accept_choice:
       create_account: Создать новую учетную запись
       joined_household: Вы присоединились к домохозяйству.
-      message: "%{inviter} пригласил вас присоединиться в качестве %{role}."
+      message: '%{inviter} приглашает вас присоединиться как %{role}.'
       sign_in_existing: У меня уже есть учетная запись
       title: Присоединиться к %{family}
     create:

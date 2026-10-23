@@ -13,7 +13,7 @@ ru:
       subtype_prompt: Выберите тип кредита
       term_months: Срок (месяцы)
       term_months_placeholder: '360'
-      rate_type_adjustable: Пересматриваемая
+      rate_type_adjustable: 'Регулируемая'
       rate_type_fixed: Фиксированная
       rate_type_variable: Плавающая
       rate_changes: Изменения ставки
@@ -24,7 +24,7 @@ ru:
       rate_change_add: Добавить изменение ставки
       rate_change_remove: Удалить
       start_date: Дата выдачи
-      start_date_hint: Когда кредит был выдан. Оставьте пустым, чтобы использовать дату открытия счёта.
+      start_date_hint: 'Дата выдачи кредита. Для нового кредита история баланса начинается с этой даты, а не с даты начального остатка. Оставьте поле пустым, чтобы использовать дату начального остатка.'
     new:
       title: Введите детали кредита
     overview:
