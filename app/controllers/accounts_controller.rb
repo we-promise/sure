@@ -209,6 +209,15 @@ class AccountsController < ApplicationController
     end
   end
 
+  # Saves the drag-and-drop order of one account group for the current user.
+  def reorder
+    if Current.user.update_manual_account_order(params[:group], params[:account_ids])
+      head :ok
+    else
+      head :unprocessable_entity
+    end
+  end
+
   def toggle_active
     if @account.active?
       @account.disable!
@@ -246,8 +255,11 @@ class AccountsController < ApplicationController
       redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_linked")
     else
       begin
-        @account.destroy_later
-        redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+        if @account.destroy_later == false
+          redirect_to accounts_path, alert: t("accounts.destroy.failed")
+        else
+          redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+        end
       rescue => e
         Rails.logger.error "Failed to schedule account #{@account.id} for deletion: #{e.message}"
         redirect_to accounts_path, alert: t("accounts.destroy.failed")
