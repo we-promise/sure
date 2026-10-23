@@ -804,6 +804,26 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_nil RecurringTransaction.covering(entry)
   end
 
+  # The matcher never pays an ordinary bill with a transfer leg, so neither
+  # does this check by name or merchant. A leg already allocated to a series
+  # is still covered by it.
+  test "covering does not match a transfer leg to a bill by identity" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 50, name: "Netflix")
+    bill = covering_series(name: "Netflix", amount: 50)
+    assert_equal bill, @family.recurring_transactions.covering(entry), "precondition: the ordinary charge is covered"
+
+    entry.entryable.update!(kind: "funds_movement")
+
+    assert_nil @family.recurring_transactions.covering(entry.reload)
+
+    bill.recurring_occurrences.order(:due_on).first.allocations.create!(
+      entry: entry, allocated_amount: 50, currency: "USD", source: "user_created"
+    )
+
+    assert_equal bill, @family.recurring_transactions.covering(entry)
+  end
+
   # A recurring transfer is identified by its account pair, never by name, as
   # in the matcher, so a same-named charge is not its payment.
   test "covering ignores a recurring transfer" do

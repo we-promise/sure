@@ -517,6 +517,11 @@ class RecurringTransaction < ApplicationRecord
   # inside a bill's band, nor an outflow inside income's. A series the user
   # rejected for this entry ("Not this one") is skipped, as the matcher skips
   # it, so the rejected payment can still become a bill of its own.
+  #
+  # Identity covers ordinary charges only. The matcher never pays a bill with
+  # a transfer leg, and a recurring transfer is keyed by its account pair and
+  # has its own "mark as recurring" path, so a transfer leg is covered only
+  # through an allocation.
   def self.covering(entry)
     scope = where(family_id: entry.account.family_id).where.not(status: "ended")
 
@@ -524,6 +529,7 @@ class RecurringTransaction < ApplicationRecord
                      .merge(RecurringAllocation.confirmed)
                      .find_by(recurring_allocations: { entry_id: entry.id })
     return allocated if allocated
+    return if entry.entryable.try(:transfer?)
 
     merchant = entry.entryable.try(:merchant)
     names = [ entry.name, merchant&.name ].compact_blank.map { |name| Matcher.normalize_name(name) }
