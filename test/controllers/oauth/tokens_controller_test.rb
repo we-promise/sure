@@ -12,7 +12,8 @@ class Oauth::TokensControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "expired access tokens retain their scope when refreshed after application migration" do
-    @token.update!(expires_in: -1.second)
+    @token.update!(created_at: 2.years.ago)
+    assert @token.expired?
 
     refresh
 
