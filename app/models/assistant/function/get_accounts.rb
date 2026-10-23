@@ -8,6 +8,10 @@ class Assistant::Function::GetAccounts < Assistant::Function
       <<~INSTRUCTIONS
         Use this to see what accounts the user has along with their current balances.
 
+        Balances (and balance series) are the full value of each account, not the
+        user's share. When an account is co-owned the user's share is smaller;
+        get_balance_sheet totals already count only the user's share.
+
         Returns account ids. Use them for account_ids filters in other tools.
 
         Pass include_balance_series: true only when the user asks about balance

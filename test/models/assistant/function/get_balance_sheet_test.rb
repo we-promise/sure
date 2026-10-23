@@ -12,6 +12,10 @@ class Assistant::Function::GetBalanceSheetTest < ActiveSupport::TestCase
     assert_equal "get_balance_sheet", @fn.name
   end
 
+  test "description says totals count only the user's ownership share" do
+    assert_match(/ownership\s+share/i, @fn.description)
+  end
+
   test "is not in strict mode" do
     refute @fn.to_definition[:strict]
   end

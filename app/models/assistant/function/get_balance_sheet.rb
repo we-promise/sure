@@ -17,6 +17,10 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
         - What is the user's net worth?  What is it composed of?
         - How has the user's wealth changed over time?
 
+        Net worth, assets, liabilities and their history count only the user's
+        ownership share of each account. A co-owned account contributes less than
+        its full balance, which is what get_accounts returns.
+
         For "net worth over time" questions, pass a named period (or a custom
         start_date and end_date) and an interval to control the granularity of
         the history series. The default is the last 5 years at 1 month.

@@ -11,6 +11,11 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     assert_equal "get_accounts", @fn.name
   end
 
+  test "description says balances are the full account value" do
+    assert_match(/full value/i, @fn.description)
+    assert_match(/not the\s+user's share/i, @fn.description)
+  end
+
   test "has a description" do
     assert_not_empty @fn.description
   end
