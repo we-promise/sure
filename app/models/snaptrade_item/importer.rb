@@ -206,14 +206,15 @@ class SnaptradeItem::Importer
             "dispatching background fetch job (SnapTrade may still be syncing)"
           )
 
+          # Mark the account as having pending activities before queueing the
+          # job, so the job never runs unflagged if this write fails. The job
+          # clears the flag when done; SyncCleanerJob clears one left stuck.
+          snaptrade_account.update!(activities_fetch_pending: true)
+
           SnaptradeActivitiesFetchJob.set(wait: 10.seconds).perform_later(
             snaptrade_account,
             start_date: start_date
           )
-
-          # Mark the account as having pending activities
-          # The background job will clear this flag when done
-          snaptrade_account.update!(activities_fetch_pending: true)
         end
       end
 
