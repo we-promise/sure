@@ -100,12 +100,15 @@ its currency at request time. `Goal#current_balance` preserves native account
 allocations and shared-pool limits before conversion. Investment- and
 crypto-backed goals default to contribution progress, excluding cumulative
 market gains from their backing; `market_value_money` separately shows the
-current market value.
+current market value. Market gains come from `balances.net_market_flows`,
+which is derived from holdings, so an account synced as a bare balance with
+no holdings (common for crypto wallets) has none: its contribution progress
+equals its balance and price moves still show up.
 
 A `GoalPledge` is an intent: amount, account, kind, status, expires_at.
 The status enum is `open` / `matched` / `cancelled` / `expired`. The kind
-enum is `transfer` / `manual_save`; kind is decided at create time from
-the selected account's connection state.
+enum is `transfer` / `manual_save`; kind is decided at create time by
+`Account#default_pledge_kind` (see "Connected vs manual accounts").
 
 ## Currencies and account allocations
 
@@ -213,14 +216,16 @@ would otherwise touch `updated_at` on every matched pledge and reset the
 `account_providers` association rows, no `plaid_account_id`, and no
 `simplefin_account_id`. This mirrors the `Account.manual` query scope.
 
-`Goal#any_connected_account?` returns true when *any* linked account is
-not manual. It drives the modal-title copy: connected accounts get
-"I just transferred…", manual-only goals get "I just saved…"
+`Account#default_pledge_kind` is per-account: manual cash accounts get
+`manual_save`; connected accounts and every investment or crypto account
+(`balance_type == :investment`, manual or not) get `transfer`, because a
+positive valuation delta there is usually a market move, not a deposit. A
+goal with one manual and one connected linked account works correctly; the
+kind reflects the specific account the user picked, not the goal as a whole.
 
-`GoalPledgesController#kind_for_account(account)` is per-account:
-manual → `manual_save`, connected → `transfer`. A goal with one manual
-and one connected linked account works correctly; the kind reflects the
-specific account the user picked, not the goal as a whole.
+`Goal#pledge_action_label_key` picks the modal copy from the same method:
+"I just transferred…" when any linked account uses `transfer`, "I just
+saved…" otherwise.
 
 ## Color map
 
