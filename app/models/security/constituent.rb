@@ -32,6 +32,13 @@ class Security::Constituent < ApplicationRecord
   # 0.01. Refusing zero would fail that one row, and with it the import that
   # stores the rest of the fund alongside it.
   #
+  # A negative weight is refused on purpose. It is how a provider reports a
+  # short position, and look-through models long holdings only: summed in,
+  # a short would cut the total that `.fund_shares` divides by and inflate
+  # every long name's share of the fund. Ingestion skips such a row and logs
+  # it, and the rest of the fund is stored. Modelling shorts would be its own
+  # change, with its own reader.
+  #
   # The upper bound is the column's: `weight` is numeric(9,6), so 1000 would
   # pass a bare `>= 0` and then raise at the INSERT.
   validates :weight, numericality: { greater_than_or_equal_to: 0, less_than: 1000 }, allow_nil: true
