@@ -225,6 +225,34 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
     )
   end
 
+  # The tooltip on each scheduled payment splits it into principal and interest
+  # (#4006), so a screen reader is told the same detail exists.
+  test "the accessible description says each scheduled payment's tooltip splits principal and interest" do
+    payload = Loan::PayoffChart.new(on_contract_loan, as_of: @today).payload
+
+    composition = composition_sentence
+    assert_match(/Principal.*Interest/, composition)
+    assert_includes payload[:aria_description], composition
+  end
+
+  # The tooltip stops at plotted dates with no split when no scheduled payment
+  # falls in the window, so the description must not promise one there.
+  test "the accessible description does not mention the split for a window past the last scheduled payment" do
+    loan = build_loan
+    as_of = loan.amortization_schedule.payoff_date + 45
+    window = Period.new(key: "current_month", start_date: as_of.beginning_of_month, end_date: as_of)
+
+    payload = Loan::PayoffChart.new(loan, as_of: as_of, period: window).payload
+
+    assert_empty payload[:scheduled].select { |point|
+      point.key?(:principal) && Date.iso8601(point[:date]).between?(Date.iso8601(payload[:domain_start]), Date.iso8601(payload[:domain_end]))
+    }, "the window must hold no scheduled payment for this test to mean anything"
+    assert_not_includes payload[:aria_description], composition_sentence
+
+    whole_life = Loan::PayoffChart.new(loan, as_of: as_of).payload
+    assert_includes whole_life[:aria_description], composition_sentence
+  end
+
   test "the accessible description dates recorded history when it starts after origination" do
     loan = on_contract_loan
     first_recorded_date = loan.origination_date >> 6
@@ -401,6 +429,14 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
   end
 
   private
+    # The description's sentence saying each payment's tooltip splits it into
+    # principal and interest.
+    def composition_sentence
+      I18n.t("UI.account.chart.loan.aria_composition",
+             principal: I18n.t("loans.tabs.schedule.principal"),
+             interest: I18n.t("loans.tabs.schedule.interest"))
+    end
+
     # Each bounded window the loan chart offers, with the start date the
     # shared Period gives it on @today. All is handled by @all_time.
     def window_starts
