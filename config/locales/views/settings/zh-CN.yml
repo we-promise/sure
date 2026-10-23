@@ -305,6 +305,8 @@ zh-CN:
         sync_error: 同步错误
         no_recent_sync: 同步已逾期
         reconsent_required: 需要重新授权
+        login_required: "需要登录"
+        login_expires_soon: "登录将在 %{time}后过期（%{at}）"
         reconsent_needed:
           one: 1 天后需要重新授权
           other: "%{count} 天后需要重新授权"

@@ -76,8 +76,10 @@ class TransactionsController < ApplicationController
       Set.new
     end
 
+    # Counts what the categorize wizard can act on, so read-only shares don't
+    # keep the "Categorize" menu item visible.
     @uncategorized_count = Rails.cache.fetch(uncategorized_count_cache_key) do
-      Current.accessible_entries.uncategorized_transactions.count
+      Current.annotatable_entries.uncategorized_transactions.count
     end
 
     # Load projected recurring transactions for next 10 days. Only the IDs are
@@ -452,19 +454,24 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(transaction.entry.account)
 
-    # Check if a recurring transaction already exists for this pattern.
-    # The UI disables the button ahead of time using the same lookup, but this
-    # guard remains as the authoritative check (e.g. stale page, direct POST).
-    existing = transaction.existing_manual_recurring_transaction
-
-    if existing
-      flash[:alert] = t("recurring_transactions.already_exists")
-      redirect_back_or_to transactions_path
-      return
-    end
-
     begin
-      recurring_transaction = RecurringTransaction.create_from_transaction(transaction)
+      # Check if a recurring transaction already exists for this pattern.
+      # The UI disables the button ahead of time using the same lookup, but
+      # this guard remains as the authoritative check (e.g. stale page, direct
+      # POST). The check and the create hold the entry lock the Allocator and
+      # the add-bill form take, so neither can slip in between them.
+      blocked = nil
+      Entry.transaction do
+        RecurringTransaction::Allocator.lock_entry!(transaction.entry)
+        blocked = mark_recurring_blocked_message(transaction)
+        RecurringTransaction.create_from_transaction(transaction) unless blocked
+      end
+
+      if blocked
+        flash[:alert] = blocked
+        redirect_back_or_to transactions_path
+        return
+      end
 
       respond_to do |format|
         format.html do
@@ -524,47 +531,40 @@ class TransactionsController < ApplicationController
   end
 
   private
-    # Scoped by user (not just family) because Current.accessible_entries is
-    # user-scoped for family sharing (see Current#accessible_entries).
-    #
-    # Includes Family#accounts_status_version because `uncategorized_transactions`
-    # filters on account status (draft/active), and toggling an account's
-    # active status (AccountsController#toggle_active) doesn't touch `entries`
-    # or `AccountShare`, so it wouldn't otherwise bust this cache.
     def uncategorized_count_cache_key
-      "transactions_uncategorized_count/v4/#{Current.family.id}/#{Current.user.id}/" \
+      "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 
-    # Scoped additionally by Date.current since the "next 10 days" window is
-    # date-dependent and would otherwise return a stale window on a cache hit
-    # from an earlier day.
-    #
-    # Includes Family#recurring_transaction_merchants_version because the
-    # cached records are preloaded with :merchant and rendered with its
-    # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
-    # doesn't touch `recurring_transactions`.
     def projected_recurring_cache_key
       "transactions_projected_recurring/v6/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
         "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
         "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
     end
 
-    # The "Mark as Recurring" block is only ever rendered under these same
-    # conditions (see transactions/show.html.erb), so skip the extra query
-    # entirely when it won't be used — this runs on every show/failed-update
-    # render, including read-only viewers and split-child transactions.
+    def covering_series_for(entry)
+      Current.family.recurring_transactions.accessible_by(Current.user).covering(entry)
+    end
+
+    def mark_recurring_blocked_message(transaction)
+      if covering_series_for(transaction.entry)
+        t("recurring_transactions.already_covered")
+      elsif RecurringTransaction.identity_taken_by(transaction)
+        t("recurring_transactions.already_exists")
+      end
+    end
+
     def assign_mark_recurring_state
       return unless can_edit_entry? && !@entry.split_child?
 
-      existing = @entry.transaction.existing_manual_recurring_transaction
+      blocked = mark_recurring_blocked_message(@entry.transaction)
 
       @mark_recurring_href = mark_as_recurring_transaction_path(@entry.transaction)
-      @mark_recurring_subtitle_class = existing ? "text-subdued" : "text-secondary"
-      @mark_recurring_subtitle = existing ? t("recurring_transactions.already_exists") : t("transactions.show.mark_recurring_subtitle")
-      @mark_recurring_disabled = existing.present?
-      @mark_recurring_title = existing ? t("recurring_transactions.already_exists") : nil
-      @mark_recurring_button_class = existing ? "disabled:opacity-50" : nil
+      @mark_recurring_subtitle_class = blocked ? "text-subdued" : "text-secondary"
+      @mark_recurring_subtitle = blocked || t("transactions.show.mark_recurring_subtitle")
+      @mark_recurring_disabled = blocked.present?
+      @mark_recurring_title = blocked
+      @mark_recurring_button_class = blocked ? "disabled:opacity-50" : nil
     end
 
     def accessible_transactions
@@ -608,6 +608,7 @@ class TransactionsController < ApplicationController
     end
 
     def needs_rule_notification?(transaction)
+      return false if Current.user.guest?
       return false if Current.user.rule_prompts_disabled
 
       if Current.user.rule_prompt_dismissed_at.present?
@@ -714,9 +715,9 @@ class TransactionsController < ApplicationController
         entry_params
       when :read_write
         # Annotate only: category, tags, merchant, notes
-        ep = entry_params.slice(:notes)
+        ep = entry_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES)
         if entry_params[:entryable_attributes].present?
-          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :merchant_id, :tag_ids)
+          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES)
         end
         ep
       else

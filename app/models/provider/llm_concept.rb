@@ -1,6 +1,11 @@
 module Provider::LlmConcept
   extend ActiveSupport::Concern
 
+  # Items per LLM call for AI rule jobs and evals: ENV > Setting > 25.
+  def self.max_items_per_call
+    [ ENV["LLM_MAX_ITEMS_PER_CALL"], Setting.llm_max_items_per_call, 25 ].map(&:to_i).find(&:positive?)
+  end
+
   AutoCategorization = Data.define(:transaction_id, :category_name)
 
   def auto_categorize(transactions)
