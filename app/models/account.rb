@@ -1,5 +1,5 @@
 class Account < ApplicationRecord
-  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
+  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Liquidity
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
 
@@ -869,6 +869,12 @@ class Account < ApplicationRecord
   end
 
   private
+    # Account::Liquidity locks `liquidity` itself, only when the user picks a
+    # level. Locking it whenever it changed would freeze the subtype default
+    # written on create as if the user had chosen it.
+    def ignored_enrichable_attributes
+      super + %w[liquidity locked_attributes]
+    end
 
     # perform_later raises (the Sidekiq adapter re-raises RedisClient errors) or
     # returns false (ActiveJob::EnqueueError). Either way the status goes back.

@@ -1,0 +1,59 @@
+<%# locals: (account:) %>
+<%# The rules that apply to this account and where each comes from
+    (Account::RuleDetails). Preview only. %>
+<% details = Account::RuleDetails.new(account) %>
+<div class="bg-container shadow-border-xs rounded-xl p-4 space-y-4" data-testid="account-rule-details">
+  <div class="flex items-center gap-2">
+    <h3 class="font-medium text-primary"><%= t("accounts.liquidity.details.title") %></h3>
+    <%= render DS::Pill.new(label: t("accounts.liquidity.preview")) %>
+  </div>
+  <p class="text-sm text-secondary">
+    <% if details.subtype_label.present? %>
+      <%= t("accounts.liquidity.details.intro_subtype", subtype: details.subtype_label) %>
+    <% else %>
+      <%= t("accounts.liquidity.details.intro_type", type: account.accountable_class.singular_display_name) %>
+    <% end %>
+  </p>
+
+  <dl class="divide-y divide-subdued">
+    <% details.rows.each do |row| %>
+      <div class="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between">
+        <dt class="text-sm text-secondary"><%= t("accounts.liquidity.details.rows.#{row.key}") %></dt>
+        <dd class="text-sm text-primary sm:text-right">
+          <p>
+            <% case row.key %>
+            <% when :liquidity %>
+              <%= t("accounts.liquidity.levels.#{row.value}") %>
+            <% when :release %>
+              <% if row.value %>
+                <%= l(row.value, format: :long) %>
+                <% if account.auto_renew? %>
+                  <span class="text-secondary"><%= t("accounts.liquidity.details.renews", count: account.renewal_term_months) %></span>
+                <% end %>
+              <% else %>
+                <%= t("accounts.liquidity.details.no_release_date") %>
+              <% end %>
+            <% when :tax_treatment %>
+              <%= t("accounts.tax_treatments.#{row.value}") %>
+            <% when :counts_in_budget, :counts_as_budget_cash %>
+              <%= row.value ? t("accounts.liquidity.details.yes") : t("accounts.liquidity.details.no") %>
+            <% end %>
+          </p>
+          <p class="text-xs text-secondary">
+            <%= t("accounts.liquidity.details.sources.#{row.source}", subtype: details.subtype_label, type: account.accountable_class.singular_display_name) %>
+          </p>
+        </dd>
+      </div>
+    <% end %>
+  </dl>
+
+  <% if account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
+    <%= render DS::Link.new(
+      text: t("accounts.liquidity.details.edit"),
+      href: edit_account_path(account),
+      variant: :outline,
+      size: :sm,
+      frame: :modal
+    ) %>
+  <% end %>
+</div>

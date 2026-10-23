@@ -8,6 +8,16 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:vehicle)
   end
 
+  test "the form offers no availability choice for a vehicle" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get edit_account_url(@account)
+
+    assert_response :success
+    assert_select "select[name='account[liquidity_choice]']", 0
+    assert_select "input[name='account[available_on]']", 0
+  end
+
   test "creates with vehicle details" do
     assert_difference -> { Account.count } => 1,
       -> { Vehicle.count } => 1,

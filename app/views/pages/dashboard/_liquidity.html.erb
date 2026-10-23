@@ -1,0 +1,74 @@
+<%# locals: (balance_sheet:, period:, **args) %>
+
+<% overview = balance_sheet.liquidity %>
+<% series = balance_sheet.available_net_worth_series(period: period) %>
+
+<div id="liquidity-overview" class="space-y-6">
+  <% unless Current.user.liquidity_review_dismissed? %>
+    <div class="px-4" id="liquidity-review">
+      <%= render DS::Alert.new(title: t(".review.title"), variant: :info) do %>
+        <p><%= t(".review.body") %></p>
+        <%= render DS::Button.new(
+          text: t(".review.dismiss"),
+          variant: "outline",
+          size: "sm",
+          href: dashboard_liquidity_review_path,
+          method: :patch
+        ) %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="px-4 space-y-2">
+    <p class="text-sm text-secondary"><%= t(".available_net_worth") %></p>
+    <p class="text-primary -space-x-0.5 text-3xl font-medium privacy-sensitive <%= "animate-pulse" if balance_sheet.syncing? %>">
+      <%= format_money(overview.available_net_worth) %>
+    </p>
+    <% if series.trend.present? %>
+      <%= render partial: "shared/trend_change", locals: { trend: series.trend, comparison_label: period.comparison_label } %>
+    <% end %>
+
+    <dl class="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+      <div class="flex gap-1">
+        <dt class="text-secondary"><%= t(".available_assets") %>:</dt>
+        <dd class="text-primary privacy-sensitive"><%= format_money(overview.available_assets, precision: 0) %> (<%= number_to_percentage(overview.available_share, precision: 0) %>)</dd>
+      </div>
+      <div class="flex gap-1">
+        <dt class="text-secondary"><%= t(".bound_assets") %>:</dt>
+        <dd class="text-primary privacy-sensitive"><%= format_money(overview.bound_assets, precision: 0) %> (<%= number_to_percentage(overview.bound_share, precision: 0) %>)</dd>
+      </div>
+      <% if overview.short_term_liabilities.positive? %>
+        <div class="flex gap-1">
+          <dt class="text-secondary"><%= t(".short_term_liabilities") %>:</dt>
+          <dd class="text-primary privacy-sensitive">&minus;<%= format_money(overview.short_term_liabilities, precision: 0) %></dd>
+        </div>
+      <% end %>
+    </dl>
+  </div>
+
+  <% if series.values.size >= 2 %>
+    <div
+      id="availableNetWorthChart"
+      class="w-full h-40 privacy-sensitive"
+      data-controller="time-series-chart"
+      data-time-series-chart-data-value="<%= series.to_json %>"
+      draggable="false"></div>
+  <% end %>
+
+  <div class="px-4">
+    <%= render "liquidity/levels", overview: overview %>
+  </div>
+
+  <div class="px-4 pb-4 space-y-3">
+    <%= render "liquidity/release_timeline", overview: overview %>
+
+    <%= render DS::Link.new(
+      text: t(".view_report"),
+      variant: "ghost",
+      size: "sm",
+      icon: "arrow-right",
+      icon_position: "right",
+      href: reports_path(anchor: "liquidity")
+    ) %>
+  </div>
+</div>
