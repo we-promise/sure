@@ -29,6 +29,12 @@ class AkahuAccount < ApplicationRecord
     account
   end
 
+  # NZ account numbers come formatted as "12-3456-7890123-00"; without the
+  # dashes the last 4 are account digits instead of "3-00".
+  def masked_account_number
+    IdentifierMask.last4(formatted_account, strip_dashes: true)
+  end
+
   def suggested_account_type
     AKAHU_ACCOUNT_TYPE_MAP[account_type.to_s.upcase]&.fetch(:accountable_type)
   end

@@ -52,8 +52,8 @@
                       <%= t("indexa_capital_items.setup_accounts.balance") %>:
                       <%= number_to_currency(indexa_capital_account.current_balance || 0, unit: Money::Currency.new(indexa_capital_account.currency || "EUR").symbol) %>
                     </p>
-                    <% if indexa_capital_account.account_number.present? %>
-                      <p class="text-xs text-secondary"><%= indexa_capital_account.account_number %></p>
+                    <% if indexa_capital_account.indexa_capital_account_id.present? %>
+                      <p class="text-xs text-secondary"><%= mask_last4(indexa_capital_account.indexa_capital_account_id) %></p>
                     <% end %>
                   </label>
                 </div>

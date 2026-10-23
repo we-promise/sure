@@ -56,7 +56,6 @@ class TradeRepublic::ConnectionCardComponent < ApplicationComponent
     end
 
     def last4(value)
-      cleaned = value.to_s.delete(" ")
-      cleaned.last(4) if cleaned.size >= 4
+      IdentifierMask.last4_chars(value, strip_whitespace: true, hide_short: true)
     end
 end

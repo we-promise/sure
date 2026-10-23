@@ -88,7 +88,10 @@ class MercuryEntry::Processor
       # Combine note and details if present
       note_parts = []
       note_parts << data[:note] if data[:note].present?
-      note_parts << data[:details] if data[:details].present?
+      # Mercury's details is normally an object carrying the counterparty's
+      # routing info (account and routing numbers, IBAN), so only a plain
+      # string is kept.
+      note_parts << data[:details] if data[:details].is_a?(String) && data[:details].present?
       note_parts.any? ? note_parts.join(" - ") : nil
     end
 
