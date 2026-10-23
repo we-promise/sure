@@ -212,6 +212,23 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # Unlinking an account turns its syncs forward, and the forward calculator
+  # knows nothing of units held before the trades.
+  test "a forward sync after unlinking leaves the opening lots alone" do
+    travel_to TODAY do
+      build_reverse_fixture
+      materialize(:reverse)
+      opening_ids = HoldingLot.opening.order(:id).pluck(:id)
+      assert_equal 3, opening_ids.size
+
+      @account_provider.destroy!
+      materialize(:forward)
+
+      assert_equal opening_ids, HoldingLot.opening.order(:id).pluck(:id)
+      assert_equal 4, HoldingLot.derived.count, "the derived lots are still the forward path's"
+    end
+  end
+
   test "deleting a trade deletes its derived lot" do
     travel_to TODAY do
       setup_account
