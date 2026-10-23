@@ -67,4 +67,17 @@ class CommodityStatementTest < ActiveSupport::TestCase
     assert_equal %w[Gold Silver], point[:groups].map { |g| g[:name] }
     assert_in_delta 2499.75 + 96.36, point[:value].amount, 0.01
   end
+
+  test "value series leaves out dates without a known price instead of plotting zero" do
+    Commodity::Price.where(code: "XAG").delete_all
+    create_commodity_price(code: "XAG", date: 2.days.ago.to_date, price: 30)
+    @gold.update!(purchase_date: 5.days.ago.to_date)
+    @silver.update!(purchase_date: 5.days.ago.to_date)
+    create_commodity_price(code: "XAU", date: 5.days.ago.to_date, price: 2500)
+
+    values = @statement.value_series(period: Period.custom(start_date: 5.days.ago.to_date, end_date: Date.current))[:values]
+
+    assert_equal (2.days.ago.to_date..Date.current).to_a, values.map { |v| v[:date] }
+    assert values.all? { |v| v[:value].amount > 2500 }
+  end
 end

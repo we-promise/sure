@@ -182,11 +182,14 @@ class CommodityStatement
     dates << end_date unless dates.last == end_date
 
     previous = nil
-    values = dates.map do |d|
-      groups = by_code_held_on(d).map do |code, ozt|
-        metal = Commodity.metal(code)
-        price = prices.price_on(code, d)
-        { name: metal.name, color: metal.color, classification: "asset", value: Money.new(price ? (price * ozt).round(2) : 0, currency) }
+    values = dates.filter_map do |d|
+      held = by_code_held_on(d).map { |code, ozt| [ Commodity.metal(code), prices.price_on(code, d), ozt ] }
+      # A date where a held metal has no known price (or rate) is left out
+      # rather than plotted as worth zero.
+      next if held.any? { |_, price, _| price.nil? }
+
+      groups = held.map do |metal, price, ozt|
+        { name: metal.name, color: metal.color, classification: "asset", value: Money.new((price * ozt).round(2), currency) }
       end
       total = Money.new(groups.sum { |g| g[:value].amount }, currency)
       point = {
@@ -201,6 +204,8 @@ class CommodityStatement
       previous = total
       point
     end
+
+    return nil if values.empty?
 
     { start_date: start_date, end_date: end_date, interval: period.interval, trend: Trend.new(current: values.last[:value], previous: values.first[:value]), values: values }
   end
