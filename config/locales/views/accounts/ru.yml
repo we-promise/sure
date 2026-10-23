@@ -37,6 +37,7 @@ ru:
         провайдером
       warning_title: Что это значит
       warning_transactions_kept: Все существующие операции и балансы будут сохранены
+      warning_wallet_connection: 'Все счета в этом подключении Apple Wallet будут отвязаны. Их операции и балансы сохранятся. Вы сможете подключить их снова в приложении Sure для iOS, создав новое подключение Wallet.'
     create:
       success: Счёт %{type} создан
     destroy:
@@ -71,6 +72,8 @@ ru:
       new_account: Новый счёт
       sync: Синхронизировать все
       cancel_sync: Отменить синхронизацию
+      financekit_accounts:
+        description: 'Управляйте подключениями Apple Wallet и синхронизацией в приложении Sure для iOS.'
     new:
       container:
         close: Закрыть
@@ -90,7 +93,7 @@ ru:
     not_authorized: У вас нет прав для управления этим счётом
     select_provider:
       already_linked: Счёт уже связан с провайдером
-      description: Выберите, какого провайдера вы хотите использовать для связи %{account_name}
+      description: 'Выберите провайдера, с которым хотите связать %{account_name}.'
       no_providers: В настоящее время провайдеры не настроены
       title: Выберите провайдера для связи
     set_default:
@@ -118,6 +121,8 @@ ru:
         search_placeholder: Поиск записей по названию
         status: Статус
         title: Активность
+        category: 'Категория'
+        uncategorized_only: 'Только без категории'
       chart:
         balance: Баланс
         owed: Сумма задолженности
@@ -165,6 +170,12 @@ ru:
         debts: Долги
       expand_all: Развернуть все
       collapse_all: Свернуть все
+      reorder_account: 'Переместить %{account}'
+      reorder_hint: 'Перетащите счёт, чтобы изменить порядок. С клавиатуры нажмите Enter, затем клавиши со стрелками.'
+      sort_mode:
+        start: 'Изменить порядок счетов'
+        hint: 'Перетаскивайте счета за маркер, чтобы изменить их порядок.'
+        done: 'Готово'
     subtype_regions:
       au: Австралия
       ca: Канада
@@ -177,12 +188,12 @@ ru:
       syncing: Синхронизация счетов...
     tax_treatment_descriptions:
       tax_advantaged: Специальные налоговые льготы с условиями
-      tax_deferred: Взносы вычитаются, облагаются налогом при снятии
+      tax_deferred: 'Взносы вычитаются из налогооблагаемого дохода, а выплаты облагаются налогом.'
       tax_exempt: Взносы после налогообложения, доходы не облагаются налогом
       taxable: Доходы облагаются налогом при реализации
     tax_treatments:
-      tax_advantaged: Налоговые льготы
-      tax_deferred: Отложенный налог
+      tax_advantaged: 'Налоговый режим с льготами'
+      tax_deferred: 'Отсрочка налогообложения'
       tax_exempt: Не облагаемый налогом
       taxable: Облагаемый налогом
     types:
@@ -215,5 +226,4 @@ ru:
   email_confirmations:
     new:
       invalid_token: Неверная или истекшая ссылка подтверждения.
-      success_login: Ваш email подтверждён. Пожалуйста, войдите с вашим новым адресом
-        электронной почты.
+      success_login: 'Адрес электронной почты подтверждён. Войдите с новым адресом электронной почты.'

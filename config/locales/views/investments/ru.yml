@@ -36,7 +36,7 @@ ru:
         long: Корпоративная облигация
         short: Корпоративная облигация
       fd:
-        long: Фиксированный депозит
+        long: 'Срочный депозит'
         short: FD
       g_sec:
         long: Государственные ценные бумаги (G-Secs)
@@ -54,8 +54,8 @@ ru:
         long: Счёт медицинских сбережений (Health Savings Account)
         short: HSA
       indian_equity:
-        long: Индийский капитал
-        short: Индийский капитал
+        long: 'Индийские долевые инструменты'
+        short: 'Долевые инструменты Индии'
       indian_etf:
         long: Индийский ETF
         short: Индийский ETF
@@ -64,7 +64,7 @@ ru:
         short: Индийские акции
       infrastructure_bond:
         long: Инфраструктурная облигация
-        short: Инфра облигация
+        short: 'Инфраструктурная облигация'
       ira:
         long: Традиционный IRA
         short: IRA
@@ -165,8 +165,8 @@ ru:
         long: Супераннуэйшн
         short: Супер
       tax_free_bond:
-        long: Безналоговая облигация
-        short: Безналоговая облигация
+        long: 'Не облагаемая налогом облигация'
+        short: 'Не облагаемая налогом облигация'
       tfsa:
         long: Счёт сбережений без налога (Tax-Free Savings Account)
         short: TFSA

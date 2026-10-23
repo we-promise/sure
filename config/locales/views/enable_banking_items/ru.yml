@@ -23,7 +23,7 @@ ru:
       all_skipped: Все счета были пропущены. Вы можете настроить их позже на странице
         счетов.
       no_accounts: Нет доступных счетов для настройки.
-      success: Успешно создано %{count} счетов!
+      success: 'Создано счетов: %{count}.'
     create:
       success: Конфигурация Enable Banking успешно выполнена.
     destroy:
@@ -59,7 +59,7 @@ ru:
       no_accounts_selected: Счета не выбраны.
       no_session: Нет активного подключения Enable Banking. Пожалуйста, сначала подключитесь
         к банку.
-      success: Успешно связаны %{count} счетов.
+      success: 'Связано счетов: %{count}.'
     link_existing_account:
       errors:
         invalid_enable_banking_account: Выбран недействительный счёт Enable Banking
@@ -125,7 +125,7 @@ ru:
       creating_accounts: Создание счетов...
       header_subtitle: Выберите правильные типы счетов для ваших импортированных счетов
       historical_data_range: 'Диапазон исторических данных:'
-      psd2_savings_notice: Уведомление о сберегательных счетах Psd2
+      psd2_savings_notice: 'По правилам PSD2 для некоторых сберегательных счетов может потребоваться дополнительная авторизация.'
       sync_start_date_help: Выберите, насколько далеко назад вы хотите синхронизировать
         историю операций. Максимум доступно 2 года истории.
       sync_start_date_label: 'Начать синхронизацию операций с:'

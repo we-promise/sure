@@ -55,10 +55,10 @@ ru:
       status_not_configured: Не настроено
       fields:
         refresh_token:
-          label: Refresh-токен
-          description: Ваш refresh-токен Questrade
-          placeholder_new: Вставьте refresh-токен сюда
-          placeholder_update: Введите новый refresh-токен для обновления
+          label: 'Токен обновления'
+          description: 'Ваш токен обновления Questrade'
+          placeholder_new: 'Вставьте токен обновления'
+          placeholder_update: 'Введите новый токен обновления'
         api_server:
           label: API-сервер
           description: Ваш API-сервер Questrade

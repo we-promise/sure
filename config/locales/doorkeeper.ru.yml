@@ -115,7 +115,7 @@ ru:
         invalid_redirect_uri: Запрашиваемый URI перенаправления некорректен или не
           соответствует URI перенаправления клиента.
         invalid_request:
-          invalid_code_challenge: Требуется код вызова.
+          invalid_code_challenge: Требуется параметр code_challenge.
           missing_param: 'Отсутствует обязательный параметр: %{value}.'
           request_not_authorized: Запрос должен быть авторизован. Отсутствует или
             недействителен обязательный параметр для авторизации запроса.

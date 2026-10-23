@@ -44,7 +44,7 @@ ru:
         few: Синхронизированы %{count} счёта
         many: Синхронизировано %{count} счетов
         other: Синхронизированы %{count} счёта
-      partial: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+      partial: 'Синхронизировано %{linked}; осталось настроить %{unlinked}.'
     institution_summary:
       none: Нет подключённых учреждений
       one: 1 учреждение
@@ -138,7 +138,7 @@ ru:
       status_never: Ещё не синхронизировалось
       delete: Удалить
       setup_needed: Требуется настройка счетов
-      setup_description: 'Связано счетов: %{linked} из %{total}.'
+      setup_description: '%{linked} из %{total} счетов связано.'
       setup_action: Настроить счета
       no_accounts_title: Счета ещё не импортированы
       no_accounts_description: Загрузите счета Monobank и выберите, какие из них связать.

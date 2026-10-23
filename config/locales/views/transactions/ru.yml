@@ -14,7 +14,7 @@ ru:
       sweep_in: Автоперевод (зачисление)
       sweep_out: Автоперевод (списание)
       transfer: Перевод
-      withdrawal: Снятие
+      withdrawal: 'Вывод средств'
     attachments:
       attachment_deleted: Вложение успешно удалено
       browse_to_add: Выберите файлы для добавления
@@ -32,8 +32,7 @@ ru:
         существующий файл, чтобы загрузить другой.
       no_attachments: Пока нет вложений
       no_files_selected: Файлы для загрузки не выбраны
-      select_up_to: Выберите до %{count} файлов (изображения или PDF, макс. %{size}МБ
-        каждый) • %{used} из %{count} использовано
+      select_up_to: 'Выберите до %{count} файлов (изображения или PDF, макс. %{size} МБ каждый) • %{used} из %{count} использовано'
       upload: Загрузить
       upload_failed: Не удалось загрузить вложение. Пожалуйста, попробуйте снова или
         свяжитесь с поддержкой.
@@ -186,6 +185,7 @@ ru:
       create_merchant: Создать
       create_merchant_error: Не удалось создать продавца
       merchant_search_placeholder: Найдите или создайте продавца
+      no_matching_categories: 'Нет подходящих категорий'
     header:
       edit_categories: Редактировать категории
       edit_imports: Редактировать импорты
@@ -243,6 +243,8 @@ ru:
         status: Статус
         tag: Тег
         type: Тип
+        ai: 'ИИ'
+        attachment: 'Вложение'
     searches:
       filters:
         account_filter:
@@ -260,6 +262,10 @@ ru:
           on_or_before: не позднее %{date}
           pending: В ожидании
           transfer: Перевод
+          ai_current: 'ИИ'
+          ai_history: 'История ИИ'
+          attachment_with: 'С вложением'
+          attachment_without: 'Без вложения'
         category_filter:
           filter_category: Фильтр по категориям
         date_filter:
@@ -276,6 +282,14 @@ ru:
           expense: Расход
           income: Доход
           transfer: Перевод
+        ai_filter:
+          current: 'ИИ'
+          current_description: 'Категория по-прежнему назначена автоматически (ИИ или Байесом).'
+          history: 'История ИИ'
+          history_description: 'Категория была назначена автоматически, но затем её изменили.'
+        attachment_filter:
+          with: 'С вложением'
+          without: 'Без вложения'
       form:
         filter: Фильтр
         search_placeholder: Поиск операций ...
@@ -350,7 +364,7 @@ ru:
         как и проведенная ниже. Если это так, объедините их, чтобы избежать двойного
         учета.
       potential_duplicate_title: Обнаружен возможный дубликат
-      provider_extras: Дополнения провайдера
+      provider_extras: 'Дополнительные данные провайдера'
       settings: Настройки
       tab_transactions: Операции
       tab_upcoming: Предстоящие
@@ -363,6 +377,26 @@ ru:
       applied_to_title: Платежи, оплаченные этой операцией
       applied_to_detail: '%{amount} в счёт платежа со сроком %{date}'
       applied_to_unreviewed: Требует проверки
+      category_set_on_hidden_outflow: 'Это входящая часть перевода. Её категория задаётся для исходящей части на счёте, к которому у вас нет доступа, и изменить её можно только там.'
+      category_set_on_outflow: 'Это входящая часть перевода. Её категория задаётся для исходящей части, и изменить её можно только там, чтобы перевод учитывался в бюджете один раз.'
+      original_description: 'Исходное описание'
+      payment_channel: 'Канал оплаты'
+      transaction_code: 'Код операции'
+      plaid_payment_meta_label: 'Платёжные сведения · %{name}'
+      plaid_counterparty_label: 'Контрагент %{index}'
+      provider_extra_fields:
+        confidence_level: 'Уровень уверенности'
+        entity_id: 'ID объекта'
+        logo_url: 'URL логотипа'
+        name: 'Название'
+        payee: 'Получатель'
+        payer: 'Плательщик'
+        phone_number: 'Номер телефона'
+        reason: 'Причина'
+        type: 'Тип'
+        website: 'Веб-сайт'
+        by_order_of: 'По поручению'
+        reference_number: 'Номер операции'
     split_parent_row:
       split_label: Разделена
     summary:
@@ -395,3 +429,5 @@ ru:
     unknown_name: Неизвестная операция
     update:
       updated: Операция обновлена
+    transaction_category:
+      set_on_outflow: 'Категория задана для исходящей части этого перевода; изменить её можно только там.'

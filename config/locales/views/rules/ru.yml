@@ -7,7 +7,7 @@ ru:
         all: все
         and_prefix: и
         any: любые
-        match: совпадение
+        match: 'совпадают'
         of_the_following_conditions: из следующих условий
       condition:
         value_placeholder: Введите значение

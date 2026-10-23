@@ -26,10 +26,10 @@ ru:
       sandbox_note_html: Для тестирования используйте базовый URL <strong>песочницы</strong> (<code>https://api.sandbox.transferwise.tech</code>). Задайте <code>WISE_BASE_URL</code> в окружении.
       encryption_warning:
         title: Шифрование базы данных не настроено
-        message: Настройте ключи шифрования Active Record, прежде чем добавлять токены Wise в production. Без шифрования токены хранятся в открытом виде.
+        message: 'Настройте ключи шифрования Active Record, прежде чем добавлять токены Wise в рабочей среде. Без шифрования токены хранятся в открытом виде.'
       sca:
         title: Строгая аутентификация клиента (SCA)
-        description: Чтобы читать полные выписки, включая входящие платежи, Wise требует подписать одноразовый токен-запрос (challenge). Сгенерируйте здесь пару ключей и зарегистрируйте открытый ключ в Wise, чтобы включить эту функцию.
+        description: 'Чтобы читать полные выписки, включая входящие платежи, Wise требует подписать проверочный запрос с одноразовым токеном (challenge). Сгенерируйте здесь пару ключей и зарегистрируйте открытый ключ в Wise, чтобы включить эту функцию.'
         public_key_label: Открытый ключ (PEM)
         registered_help_html: 'Зарегистрируйте этот ключ в Wise: Settings → Connect and manage apps → Developer tools → Public keys → Add public key.'
         copy: Копировать
@@ -134,7 +134,7 @@ ru:
       status_with_summary: Последняя синхронизация %{timestamp} назад — %{summary}
       delete: Отключить
       setup_needed: Новые счета готовы к настройке
-      setup_description: 'Связано счетов: %{linked} из %{total}. Создайте счета Sure для валютных балансов Wise.'
+      setup_description: 'Связано %{linked} из %{total} счетов. Создайте счета Sure для валютных балансов Wise.'
       setup_action: Настроить счета
       no_accounts_title: Связанных счетов пока нет
       no_accounts_description: Запустите синхронизацию, чтобы найти балансы Wise, затем свяжите их со счетами Sure.

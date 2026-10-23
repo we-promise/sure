@@ -19,6 +19,7 @@ ru:
       acknowledge: Понятно
       acknowledge_title: Скрыть, пока цифры не изменятся
       new: Новое
+      dig_in: 'Разобраться с ИИ'
     feed:
       view_all: Все инсайты
       header: Последние
@@ -27,7 +28,7 @@ ru:
     types:
       spending_anomaly: Расходы
       cash_flow_warning: Денежный поток
-      net_worth_milestone: Чистая стоимость
+      net_worth_milestone: 'Капитал'
       subscription_audit: Подписки
       savings_rate_change: Норма сбережений
       idle_cash: Неработающие деньги
@@ -65,7 +66,7 @@ ru:
     actions:
       spending_anomaly: Операции в категории «%{category}»
       cash_flow_warning: Проверить регулярные операции
-      net_worth_milestone: Открыть отчёт о чистой стоимости
+      net_worth_milestone: 'Открыть отчёт о капитале'
       subscription_audit: Проверить регулярные операции
       savings_rate_change: Операции за тот месяц
       idle_cash: Перейти к счёту
@@ -78,7 +79,7 @@ ru:
       cash_flow_warning:
         low: Денежных средств может стать мало
         negative: Остаток денежных средств может уйти в минус
-      net_worth_milestone: Чистая стоимость достигла отметки %{milestone}
+      net_worth_milestone: 'Капитал достиг отметки %{milestone}'
       maintained_goal_depleted: Резерв «%{goal}» опустился ниже целевого уровня
       subscription_audit: Подписка %{name} всё ещё активна?
       savings_rate_change:
@@ -98,9 +99,9 @@ ru:
       cash_flow_warning:
         low: С учётом предстоящих регулярных операций и обычных расходов ваши денежные средства могут сократиться до %{projected_low} около %{projected_low_date}.
         negative: С учётом предстоящих регулярных операций и обычных расходов ваши денежные средства могут опуститься до %{projected_low} около %{projected_low_date}.
-      net_worth_milestone: Ваша чистая стоимость превысила %{milestone} и сейчас составляет %{net_worth}.
-      maintained_goal_depleted: В резерве «%{goal}» %{saved} из %{target}, которые он должен поддерживать. Не хватает %{missing}.
-      subscription_audit: Платёж %{name} (%{amount}) не поступал с ожидаемой даты %{expected_on}. Возможно, подписка отменена или дата списания изменилась.
+      net_worth_milestone: 'Ваш капитал превысил %{milestone} и сейчас составляет %{net_worth}.'
+      maintained_goal_depleted: 'Резерв «%{goal}» содержит %{saved} из необходимых %{target}. Не хватает %{missing}.'
+      subscription_audit: 'Платёж %{name} (%{amount}) не появлялся с ожидаемой даты %{expected_on}. Возможно, подписка отменена или дата списания изменилась.'
       savings_rate_change:
         up: Вы сберегли %{current_rate}% дохода (%{month}) — на %{change_pp} п. п. больше, чем %{previous_rate}% месяцем ранее.
         down: Вы сберегли %{current_rate}% дохода (%{month}) — на %{change_pp} п. п. меньше, чем %{previous_rate}% месяцем ранее.
@@ -110,3 +111,14 @@ ru:
         over: 'Превышен бюджет в этом месяце: %{categories}. Вы уже использовали %{budget_spent_pct}% общего бюджета.'
         near: 'Близки к лимиту в этом месяце: %{categories}. Вы уже использовали %{budget_spent_pct}% общего бюджета.'
       budget_on_track: Вы потратили %{spent} из бюджета %{budgeted} (%{budget_spent_pct}%), и все категории в пределах лимита.
+    dig_in:
+      prompt: |-
+        Помоги разобраться с этим инсайтом.
+
+        Инсайт: %{title}
+        Что обнаружил Sure: %{body}
+        Период: %{period}
+        Показатели:
+        %{facts}
+
+        Что стоит за этими данными и нужно ли мне что-то сделать?

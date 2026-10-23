@@ -3,16 +3,16 @@ ru:
   properties:
     address:
       address_line1_label: Адрес, строка 1
-      address_line1_placeholder: ул. Ленина, 123
+      address_line1_placeholder: '123 Main Street'
       city_label: Город
-      city_placeholder: Москва
+      city_placeholder: 'San Francisco'
       country_label: Страна
-      country_placeholder: Россия
+      country_placeholder: 'USA'
       postal_code_label: Почтовый индекс
-      postal_code_placeholder: '101000'
+      postal_code_placeholder: '12345'
       save: Сохранить
       state_region_label: Область/Регион
-      state_region_placeholder: МО
+      state_region_placeholder: 'CA'
       title: Ввести данные вручную
     balances:
       market_value_label: Оценочная рыночная стоимость
@@ -27,19 +27,19 @@ ru:
       title: Ввести данные вручную
     form:
       address_line1: Улица
-      address_line1_placeholder: ул. Ленина, 123
+      address_line1_placeholder: '123 Main St'
       area: Жилая площадь
       area_placeholder: '2000'
       area_unit: Единица измерения
       country: Страна
-      country_placeholder: РФ
+      country_placeholder: 'US'
       locality: Город
-      locality_placeholder: Москва
+      locality_placeholder: 'San Francisco'
       none: Нет
       postal_code: Почтовый индекс
-      postal_code_placeholder: '101000'
+      postal_code_placeholder: '94105'
       region: Область/Регион
-      region_placeholder: МО
+      region_placeholder: 'CA'
       subtype_prompt: Выберите тип недвижимости
       year_built: Год постройки
       year_built_placeholder: '2000'
@@ -56,6 +56,20 @@ ru:
       avm_preview_no_record: '%{provider} не нашёл записи об объекте по этому адресу, поэтому показанная стоимость — оценка по окружающему району. Перепроверьте адрес, прежде чем продолжить.'
       avm_preview_back: Назад
       avm_preview_confirm: Добавить недвижимость
+      avm_uk_only: '%{provider} поддерживает только жилую недвижимость в Великобритании.'
+      avm_uprn_label: 'UPRN'
+      avm_uprn_placeholder: '100023336956'
+      avm_uprn_help: 'Уникальный справочный номер объекта (UPRN, до 12 цифр) идентифицирует каждый адрес в Великобритании. Его можно найти на GeoPlace — findmyaddress.co.uk — или уточнить в местном органе власти. %{provider} бесплатно использует его для оценки объекта.'
+      avm_county_label: 'Графство (необязательно)'
+      avm_town_label: 'Город или населённый пункт'
+      avm_postcode_label: 'Почтовый индекс'
+      avm_preview_uprn: 'UPRN'
+      avm_preview_range: 'Диапазон оценки'
+      avm_preview_confidence: 'Достоверность'
+      avm_confidence:
+        high: 'Высокая'
+        medium: 'Средняя'
+        low: 'Низкая'
     overview:
       living_area: Жилая площадь
       market_value: Рыночная стоимость
@@ -100,10 +114,23 @@ ru:
         trend: Тренд
         unknown: Неизвестно
         year_built: Год постройки
+        refresh_valuation: 'Обновить оценку'
+        valuation_source: 'Оценка от %{provider}; последнее обновление — %{date}'
+        link_valuation: 'Автоматически обновлять стоимость через %{provider}'
+        link_valuation_description: 'Стоимость этого объекта обновляется только вручную.'
     avm_providers:
       rentcast: RentCast
       realie: Realie
+      chimnie: 'Chimnie'
     form_tabs:
       address: Адрес
       overview: Обзор
       value: Стоимость
+    refresh_valuation:
+      queued: 'Обновление оценки запущено. Новая стоимость появится в ближайшее время.'
+      not_linked: 'Этот объект не связан с провайдером оценки.'
+      not_configured: '%{provider} не настроен. Добавьте его API-ключ в настройках самостоятельного размещения, чтобы обновить оценку.'
+    link_valuation:
+      linked: 'Подключено к %{provider}; стоимость объекта обновлена.'
+      link_failed: '%{provider} не смог оценить этот объект, поэтому подключение не создано. Проверьте адрес и попробуйте снова.'
+      not_linkable: 'Этот объект нельзя подключить к выбранному провайдеру. Проверьте, что адрес заполнен полностью и находится в поддерживаемой стране, а валюта счёта совпадает с валютой провайдера.'
