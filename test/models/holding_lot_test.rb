@@ -212,6 +212,23 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # As SnaptradeAccount::SplitSecurityRepair and the security rake tasks do.
+  test "a trade moved to another security without its lot takes the lot along at the next materialization" do
+    travel_to TODAY do
+      setup_account
+      from = priced_security("LOTJ", 30)
+      to = priced_security("LOTK", 30)
+      entry = trade(from, 10, 12, 2)
+      materialize(:forward)
+      lot = HoldingLot.sole
+
+      Trade.where(id: entry.entryable_id).update_all(security_id: to.id)
+      materialize(:forward)
+
+      assert_equal [ lot.id, to.id ], HoldingLot.sole.then { |moved| [ moved.id, moved.security_id ] }
+    end
+  end
+
   # --- Remap and reset --------------------------------------------------------
 
   test "remap moves lots with their trades" do
