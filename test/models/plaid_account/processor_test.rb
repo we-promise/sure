@@ -199,6 +199,21 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     PlaidAccount::Processor.new(@plaid_account, as_of: date).process
   end
 
+  test "the sync date reaches the student loan processor" do
+    expect_investment_product_processor_calls
+    expect_no_investment_balance_calculator_calls
+    expect_depository_product_processor_calls
+
+    @plaid_account.update!(plaid_type: "loan", plaid_subtype: "student")
+    date = Date.new(2026, 1, 15)
+    student_loan = mock("student_loan_processor")
+    student_loan.expects(:process).once
+
+    PlaidAccount::Liabilities::StudentLoanProcessor.expects(:new).with(@plaid_account, as_of: date).returns(student_loan)
+
+    PlaidAccount::Processor.new(@plaid_account, as_of: date).process
+  end
+
   test "processes student loan liability data" do
     expect_investment_product_processor_calls
     expect_no_investment_balance_calculator_calls
