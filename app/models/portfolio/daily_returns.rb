@@ -642,16 +642,32 @@ class Portfolio::DailyReturns
         --
         -- Capped at what the first priced row still holds: units that arrived
         -- and left again before any price never reached the balance at a
-        -- value, so they cannot arrive on the first priced day.
+        -- value, so they cannot arrive on the first priced day. The cap is
+        -- shared by every journal waiting for the same row, so it applies to
+        -- their sum (carried_journals_by_date), not to each one.
+        --
+        -- A journal's quantity is scaled through the splits between it and
+        -- that row first. The calculators apply a split at the open of its
+        -- ex-date, so the row counts post-split shares at a post-split price;
+        -- a split on the journal's own date applied before the journal, which
+        -- is already in post-split shares. Numerators and denominators are
+        -- multiplied separately (both integers, so the products are exact) and
+        -- applied as Security::Split.scale does, then rounded to the stored
+        -- quantity scale.
         --
         -- Valued from the same holdings row the calculator read that day, in
         -- its currency, at the previous day's rate like every start-of-day
         -- flow.
-        carried_journals_by_date AS (
+        carried_journals AS (
           SELECT
-            first_priced.date AS date,
-            COALESCE(SUM(LEAST(trades.qty, first_priced.qty) * first_priced.price * carry_fx.rate), 0) AS carried_flow,
-            BOOL_OR(carry_fx.rate IS NULL) AS carry_rate_missing
+            entries.account_id,
+            trades.security_id,
+            first_priced.date,
+            first_priced.currency,
+            first_priced.qty AS held_qty,
+            first_priced.price,
+            carry_fx.rate,
+            ROUND(trades.qty * carry_splits.numerator / carry_splits.denominator, #{Security::Split::QTY_SCALE}) AS qty
           FROM entries
           JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id
           JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
@@ -679,6 +695,14 @@ class Portfolio::DailyReturns
           LEFT JOIN LATERAL (
             SELECT #{rate_lookup('first_priced.currency', 'first_priced.date - 1')} AS rate
           ) carry_fx ON TRUE
+          LEFT JOIN LATERAL (
+            SELECT COALESCE(ROUND(EXP(SUM(LN(s.numerator::numeric)))), 1) AS numerator,
+                   COALESCE(ROUND(EXP(SUM(LN(s.denominator::numeric)))), 1) AS denominator
+            FROM security_splits s
+            WHERE s.security_id = trades.security_id
+              AND s.ex_date > entries.date
+              AND s.ex_date <= first_priced.date
+          ) carry_splits ON TRUE
           -- Selected by the day the carry lands on, not by the journal's own
           -- date: a journal dated before the period whose first priced day
           -- falls inside it moved that day's balance as much as one dated in
@@ -691,7 +715,23 @@ class Portfolio::DailyReturns
             AND trades.qty > 0
             AND (journal_day.price IS NULL OR journal_day.price <= 0)
             AND (carry_windows.active_until_date IS NULL OR first_priced.date <= carry_windows.active_until_date)
-          GROUP BY first_priced.date
+        ),
+        -- One value per first priced row: the journals waiting for it, capped
+        -- together at what it holds.
+        carried_journals_by_date AS (
+          SELECT
+            per_row.date,
+            COALESCE(SUM(per_row.carried_value), 0) AS carried_flow,
+            BOOL_OR(per_row.rate IS NULL) AS carry_rate_missing
+          FROM (
+            SELECT
+              cj.date,
+              cj.rate,
+              LEAST(SUM(cj.qty), cj.held_qty) * cj.price * cj.rate AS carried_value
+            FROM carried_journals cj
+            GROUP BY cj.account_id, cj.security_id, cj.date, cj.currency, cj.held_qty, cj.price, cj.rate
+          ) per_row
+          GROUP BY per_row.date
         )
         SELECT
           b.date,
