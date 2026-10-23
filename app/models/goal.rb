@@ -1379,7 +1379,7 @@ class Goal < ApplicationRecord
     # goals stay on the balance basis. Only auto-set when the basis is still the
     # default.
     def default_progress_basis_for_market_accounts
-      return unless goal_accounts.any? { |ga| ga.account&.investment? || ga.account&.crypto? }
+      return unless goal_accounts.any? { |ga| ga.account&.balance_type == :investment }
       return unless progress_basis.blank? || progress_basis == "balance"
 
       self.progress_basis = "contributions"
