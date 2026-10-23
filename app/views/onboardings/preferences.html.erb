@@ -31,7 +31,7 @@
           <p class="text-sm">
             <span class="text-green-500 font-medium">+<%= format_money(Money.new(78.90, selected_currency)) %></span>
             <span class="text-green-500 font-medium">(+<%= format_money(Money.new(6.39, selected_currency)) %>)</span>
-            <span class="text-secondary">as of <%= format_date(Date.parse("2024-10-23"), :default, format_code: params[:date_format] || @user.family.date_format) %></span>
+            <span class="text-secondary"><%= t(".as_of", date: format_date(Date.parse("2024-10-23"), :default, format_code: params[:date_format] || @user.family.date_format)) %></span>
           </p>
         </div>
 

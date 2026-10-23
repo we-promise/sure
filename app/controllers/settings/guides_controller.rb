@@ -13,7 +13,9 @@ class Settings::GuidesController < ApplicationController
       strikethrough: true,
       superscript: true
     )
-    guide_source = File.read(Rails.root.join("docs/onboarding/guide.md"))
+    default_guide_path = Rails.root.join("docs/onboarding/guide.md")
+    localized_guide_path = Rails.root.join("docs/onboarding/guide.#{I18n.locale}.md")
+    guide_source = File.read(localized_guide_path.exist? ? localized_guide_path : default_guide_path)
     guide_source.gsub!(/src="assets\/([^"]+)"/) do
       %(src="#{helpers.asset_path(Regexp.last_match(1))}")
     end

@@ -3,16 +3,19 @@ ru:
   settings:
     securities:
       show:
-        disable_mfa: Отключить 2FA
-        disable_mfa_confirm: Вы уверены, что хотите отключить двухфакторную аутентификацию? Это сделает ваш аккаунт менее защищённым.
-        enable_mfa: Включить 2FA
-        mfa_description: Добавьте дополнительный уровень безопасности вашему аккаунту, требуя код из приложения-аутентификатора при входе
-        mfa_disabled_description: Включите 2FA, чтобы добавить дополнительный уровень безопасности вашему аккаунту.
+        disable_mfa: Отключить двухфакторную аутентификацию
+        disable_mfa_confirm: Отключить двухфакторную аутентификацию? Это снизит защищённость аккаунта.
+        disable_mfa_password_label: Подтвердите паролем
+        disable_mfa_password_placeholder: Введите пароль
+        enable_mfa: Включить двухфакторную аутентификацию
+        mfa_description: При входе потребуется код из приложения-аутентификатора.
+        mfa_disabled_description: Включите двухфакторную аутентификацию, чтобы дополнительно защитить аккаунт.
         mfa_disabled_status_html: Двухфакторная аутентификация <span class="font-medium
           text-destructive">отключена</span>
         mfa_enabled_description: Ваш аккаунт защищён дополнительным уровнем безопасности.
         mfa_enabled_status_html: Двухфакторная аутентификация <span class="font-medium
           text-success">включена</span>
+        mfa_sso_only: Двухфакторная аутентификация управляется вашим провайдером единого входа.
         mfa_title: Двухфакторная аутентификация
         webauthn_add: Добавить ключ доступа или ключ безопасности
         webauthn_added: Добавлено %{date}
