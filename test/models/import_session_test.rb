@@ -576,6 +576,8 @@ class ImportSessionTest < ActiveSupport::TestCase
 
   test "session mode imports rule records exported by Sure packages" do
     source_family = Family.create!(name: "Rule Export Source", currency: "USD", locale: "en")
+    # Without the matcher and Bayes rules a new family starts with.
+    source_family.rules.destroy_all
     category = source_family.categories.create!(
       name: "Exported Category",
       color: "#00AA00",
