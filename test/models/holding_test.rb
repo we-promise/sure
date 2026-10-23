@@ -184,6 +184,54 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }
   end
 
+  # A page asks a holding for its average cost several times (the cell, the
+  # trend, the statement's totals); each answer would replay the history.
+  test "the fallback replays the trades once per holding instance" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
+    @amzn.account
+
+    queries = ActiveRecord::Base.uncached do
+      capture_sql_queries { 4.times { @amzn.avg_cost } }
+    end
+
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }
+  end
+
+  test "the fallback remembers an unknown cost too" do
+    transfer_in = create_trade(@amzn.security, account: @account, qty: 15, price: 212.00, date: 1.day.ago.to_date)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    @amzn.account
+
+    queries = ActiveRecord::Base.uncached do
+      capture_sql_queries { 3.times { assert_nil @amzn.avg_cost } }
+    end
+
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
+  end
+
+  test "reload forgets the remembered fallback, so a later trade counts" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100, date: 3.days.ago.to_date)
+    assert_equal Money.new(BigDecimal("100")), @amzn.avg_cost
+
+    create_trade(@amzn.security, account: @account, qty: 5, price: 250, date: 2.days.ago.to_date)
+
+    # 10 at 100 plus 5 at 250: 2,250 for 15 units
+    assert_equal Money.new(BigDecimal("150")), @amzn.reload.avg_cost
+  end
+
+  test "the remembered fallback never answers for a sale's earlier cut-off" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100, date: 3.days.ago.to_date)
+    second_buy = create_trade(@amzn.security, account: @account, qty: 5, price: 250, date: 2.days.ago.to_date)
+
+    assert_equal Money.new(BigDecimal("150")), @amzn.avg_cost
+    assert_equal Money.new(BigDecimal("100")), @amzn.avg_cost_before(second_buy)
+
+    fresh = Holding.find(@amzn.id)
+    assert_equal Money.new(BigDecimal("100")), fresh.avg_cost_before(second_buy)
+    assert_equal Money.new(BigDecimal("150")), fresh.avg_cost
+  end
+
   # The fallback answers for a holding with no stored basis, so it has to give
   # the figure the holding calculators would store (#3566): the same tracker,
   # relieving sells, splitting, and releasing a transfer once the position closes.

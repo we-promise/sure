@@ -34,6 +34,11 @@ class Holding < ApplicationRecord
     security.name || ticker
   end
 
+  def reload(*)
+    remove_instance_variable(:@replayed_avg_cost) if defined?(@replayed_avg_cost)
+    super
+  end
+
   def weight
     return nil unless amount
     return 0 if amount.zero?
@@ -55,7 +60,7 @@ class Holding < ApplicationRecord
   # basis cannot be determined (no trades and no provider cost_basis).
   def avg_cost
     # Fallback to calculation for holdings without pre-computed cost_basis
-    stored_avg_cost || calculate_avg_cost
+    stored_avg_cost || replayed_avg_cost
   end
 
   # known_cost_basis as average cost per share, or nil when there is none to
@@ -292,6 +297,16 @@ class Holding < ApplicationRecord
       Trend.new \
         current: amount_money,
         previous: start_amount
+    end
+
+    # calculate_avg_cost through this holding's date, once per instance, nil
+    # included: a page asks a holding for its average cost several times, and
+    # each answer would replay the whole history. Only this default cut-off is
+    # kept; avg_cost_before replays to its own.
+    def replayed_avg_cost
+      return @replayed_avg_cost if defined?(@replayed_avg_cost)
+
+      @replayed_avg_cost = calculate_avg_cost
     end
 
     # The weighted-average cost of the position on this holding's date, worked
