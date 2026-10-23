@@ -84,6 +84,11 @@ pl:
           holdings: Aktywa
           total_value: Wartość całkowita
         vs_available_history: względem dostępnej historii
+        net_contributions:
+          difference: Różnica
+          incomplete: "Wpłaty netto mogą być niepełne: nie udało się wycenić wpłaty lub wypłaty."
+          label: Wpłaty netto
+          legend: Serie wykresu
     period_picker:
       aria_label: 'Okres: %{period}'
   ds:

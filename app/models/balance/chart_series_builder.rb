@@ -63,8 +63,142 @@ class Balance::ChartSeriesBuilder
     raise
   end
 
+  # Net contributions series: for each date of the balance series, what
+  # the owner has put into these accounts so far, net of what they took out.
+  #
+  # Inception-anchored, not period-anchored: it starts from the opening value
+  # of the accounts' first balance row and adds every external flow up to the
+  # date, however early the period starts. What counts as external is decided
+  # by Portfolio::FlowClassifier with these accounts as the scope, read
+  # through Portfolio::DailyReturns so a flow is valued exactly as the returns
+  # engine values it: a deposit at its cash amount, a security journalled in
+  # at the position's value, a foreign-currency flow as the balance took it
+  # (into the account's currency on its own date, then at the previous day's
+  # rate), an excluded entry like any other. Dividends, interest, fees, buys and sells are not external, so
+  # they never move this line.
+  #
+  # `anchor_date` is for a series whose value line starts later than its
+  # first balance row (a linked investment account trimmed to supported
+  # history). The line then starts from the balance held before that day's
+  # activity (DailyReturns' `value_open`) and counts that day's flows as well
+  # as later ones (#382), so the anchor day's market gain stays out of what
+  # was put in. History before the anchor is not read.
+  #
+  # `anchor_before_activity` says the value line's own point on the anchor
+  # date is the balance before that day's activity, not its close (a coarse
+  # interval's prepended opening, or upstream #4009's reset). The line's
+  # point there is then measured at the same moment, the day's opening
+  # value, and the day's flows arrive on the next point. It does nothing
+  # without an `anchor_date`.
+  #
+  # `dates` defaults to the balance series' own dates; a caller whose value
+  # line was reshaped after the query (Account::Chartable) passes that line's
+  # dates so the two are drawn on the same points.
+  #
+  # Dates before the accounts' first balance read zero, as the value line does.
+  #
+  # Accounts that hold trades are assets, so no sign is applied here; the
+  # only caller draws this line for them alone (UI::Account::Chart).
+  def net_contributions_series(anchor_date: nil, dates: nil, anchor_before_activity: false)
+    dates = (dates || query_data.map(&:date)).sort
+    cumulative = net_contributions_by_date(
+      anchor_date: anchor_date, through: dates.max, anchor_before_activity: anchor_before_activity
+    ).to_h
+
+    previous = nil
+    values = dates.map do |date|
+      amount = cumulative.fetch(date, 0)
+      money = Money.new(amount, currency)
+      value = Series::Value.new(
+        date: date,
+        date_formatted: I18n.l(date, format: :long),
+        value: money,
+        trend: Trend.new(current: money, previous: previous || money, favorable_direction: favorable_direction)
+      )
+      previous = money
+      value
+    end
+
+    Series.new(
+      start_date: period.start_date,
+      end_date: period.end_date,
+      interval: interval,
+      values: values,
+      favorable_direction: favorable_direction
+    )
+  rescue => e
+    Rails.logger.error "Net contributions series error: #{e.message} for accounts #{@account_ids}"
+    raise
+  end
+
+  # True when a flow the line counts could not be valued, so the line leaves
+  # it out from that day on: too low for a deposit, too high for a
+  # withdrawal. No direction is computed, since several unvalued flows of
+  # either sign have no known net. The returns engine reads the same
+  # two conditions: a flow in a currency with no rate (`rate_missing`)
+  # and a journal with no price for its date. The second is read off
+  # `suppressed`, which DailyReturns also sets for a non-positive
+  # denominator, so a suppressed day with a positive denominator is the
+  # unpriced journal.
+  def net_contributions_incomplete?(anchor_date: nil, dates: nil)
+    dates = (dates || query_data.map(&:date))
+    # Every row the line adds is read, the anchor day's included (#382).
+    net_contribution_rows(anchor_date: anchor_date, through: dates.max).any? do |row|
+      row.rate_missing || (row.suppressed && row.denominator.positive?)
+    end
+  end
+
   private
     attr_reader :account_ids, :currency, :period, :favorable_direction, :account_active_until_dates
+
+    # [[date, cumulative amount], ...] for EVERY day from the anchor to
+    # `through` (DailyReturns is always daily), so any sampled date in that
+    # range has its own row. Each day reads the first row's opening value
+    # plus every flow through that day; with `anchor_before_activity`, the
+    # anchor day reads its opening value alone. Empty when the accounts have
+    # no balances on or before `through`.
+    def net_contributions_by_date(anchor_date:, through:, anchor_before_activity:)
+      rows = net_contribution_rows(anchor_date: anchor_date, through: through)
+      return [] if rows.empty?
+
+      running = rows.first.value_open
+      rows.map do |row|
+        opening = running
+        running += row.external_flow + row.composition_flow
+        [ row.date, anchor_before_activity && anchor_date.present? && row.date == anchor_date ? opening : running ]
+      end
+    end
+
+    # The DailyReturns rows whose flows the line adds: from the anchor (or
+    # the first balance row, when the anchor is not later than it) to
+    # `through`. Memoized, so the series and the incomplete check share one
+    # query and read the same days.
+    def net_contribution_rows(anchor_date:, through:)
+      @net_contribution_rows ||= {}
+      @net_contribution_rows[[ anchor_date, through ]] ||= begin
+        first_date = first_balance_date
+        explicit_anchor = first_date.present? && anchor_date.present? && anchor_date > first_date
+        start_date = explicit_anchor ? anchor_date : first_date
+
+        if start_date.nil? || through.nil? || start_date > through
+          []
+        else
+          Portfolio::DailyReturns.new(
+            account_ids: account_ids,
+            currency: currency,
+            period: Period.custom(start_date: start_date, end_date: through),
+            active_until_dates: account_active_until_dates
+          ).rows
+        end
+      end
+    end
+
+    def first_balance_date
+      Balance.joins(:account)
+        .where(account_id: account_ids)
+        .where("balances.currency = accounts.currency")
+        .minimum(:date)
+    end
 
     def interval
       @interval || period.interval
