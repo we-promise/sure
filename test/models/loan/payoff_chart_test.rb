@@ -230,9 +230,7 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
   test "the accessible description says each scheduled payment's tooltip splits principal and interest" do
     payload = Loan::PayoffChart.new(on_contract_loan, as_of: @today).payload
 
-    composition = I18n.t("UI.account.chart.loan.aria_composition",
-                         principal: I18n.t("loans.tabs.schedule.principal"),
-                         interest: I18n.t("loans.tabs.schedule.interest"))
+    composition = composition_sentence
     assert_match(/Principal.*Interest/, composition)
     assert_includes payload[:aria_description], composition
   end
@@ -431,14 +429,16 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
   end
 
   private
-    # Each bounded window the loan chart offers, with the start date the
-    # shared Period gives it on @today. All is handled by @all_time.
+    # The description's sentence saying each payment's tooltip splits it into
+    # principal and interest.
     def composition_sentence
       I18n.t("UI.account.chart.loan.aria_composition",
              principal: I18n.t("loans.tabs.schedule.principal"),
              interest: I18n.t("loans.tabs.schedule.interest"))
     end
 
+    # Each bounded window the loan chart offers, with the start date the
+    # shared Period gives it on @today. All is handled by @all_time.
     def window_starts
       {
         "current_month" => @today.beginning_of_month,
