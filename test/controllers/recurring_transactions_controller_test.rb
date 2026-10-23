@@ -64,6 +64,42 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=hidden][name=?]", "recurring_transaction[category_id]"
   end
 
+  # The bill form's category picker groups a category under its parent and
+  # finds one by name, the way the transaction form's picker does. A flat list
+  # of every category puts a subcategory among unrelated neighbours, and a
+  # family with many categories has to scroll to find one.
+  test "the bill edit form groups categories under their parent and searches them" do
+    get edit_recurring_transaction_url(@recurring_transaction), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+
+    # The picker searches, so a category is found by name, not by scrolling.
+    assert_select "input[type=search][data-category-select-target=?]", "search"
+
+    names = css_select("[data-category-select-target=option]").map { |option| option["data-category-name"] }
+    parent = categories(:food_and_drink).name
+    child = categories(:subcategory).name
+
+    assert_includes names, parent
+    assert_includes names, child
+    assert_operator names.index(parent), :<, names.index(child), "a subcategory follows its parent"
+
+    # The child row says so, so the order reads as a hierarchy and not as an
+    # alphabetical accident.
+    assert_select "[data-category-name=?] [data-testid=?]", child, "category-select-subcategory-indicator"
+  end
+
+  # A family that locked its categories cannot create one, whichever form it
+  # starts from. The bill form used to offer the create row anyway.
+  test "the bill edit form does not offer to create categories when the family locked them" do
+    @family.update!(categories_locked: true)
+
+    get edit_recurring_transaction_url(@recurring_transaction), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "[data-category-select-locked-value=?]", "true"
+  end
+
   # Assigning the amount would already round it to the column's four places,
   # so the edit form refuses a finer one instead of saving a different figure.
   test "update refuses an amount finer than the column keeps" do

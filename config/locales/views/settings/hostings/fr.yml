@@ -106,6 +106,8 @@ fr:
         provider_label: Fournisseur de LLM actif
         provider_openai: OpenAI
         title: Fournisseur d'IA
+        max_items_per_call_help: "Limite supérieure pour les lots d'auto-catégorisation / détection de marchand. Par défaut : 25. Avec les fournisseurs compatibles OpenAI, les lots plus grands sont automatiquement découpés pour tenir dans la fenêtre de contexte."
+        max_items_per_call_label: Nombre maximum d'éléments par lot (Optionnel)
       not_authorized: Vous n'êtes pas autorisé(e) à effectuer cette action
       openai_settings:
         access_token_label: Jeton d'accès
@@ -124,8 +126,6 @@ fr:
         json_mode_label: Mode JSON
         json_mode_none: Aucun (meilleur pour les modèles standard)
         json_mode_strict: Strict (meilleur pour les modèles de raisonnement)
-        max_items_per_call_help: 'Limite supérieure pour les lots d''auto-catégorisation / détection de marchand. Par défaut : 25. Les lots plus grands sont automatiquement découpés pour tenir dans la fenêtre de contexte.'
-        max_items_per_call_label: Nombre maximum d'éléments par lot (Optionnel)
         max_response_tokens_help: 'Tokens réservés à la réponse du modèle. Par défaut : 512. Abaisser pour libérer de l''espace pour un historique plus long.'
         max_response_tokens_label: Tokens de réponse max (Optionnel)
         model_function_calling_help: 'L''assistant IA lit vos données via des appels de fonctions : choisissez donc un modèle dont le fournisseur documente la prise en charge des outils. Les modèles qui en sont dépourvus font échouer le chat avec une erreur opaque du fournisseur.'

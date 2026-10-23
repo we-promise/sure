@@ -1,6 +1,7 @@
 ---
 en:
   passwords:
+    disabled: "Changing your password in Sure is disabled. Please manage your password through your identity provider."
     edit:
       password: New Password
       password_challenge: Current Password
