@@ -44,7 +44,8 @@
 # - Pass active_until_dates when the scope's membership changes over time. An
 #   account is inside the scope only up to its cut-off date, so a transfer to
 #   it dated after that is external, as a transfer to any account outside the
-#   scope is.
+#   scope is. For a linked transfer "dated" means the counterpart leg's own
+#   date, which can differ from this leg's.
 class Portfolio::FlowClassifier
   CLASSES = %i[external_inflow external_outflow income fee internal].freeze
 
@@ -254,30 +255,36 @@ class Portfolio::FlowClassifier
       entry.amount.negative? ? :external_inflow : :external_outflow
     end
 
+    # Scope is checked on the COUNTERPART leg's date. A linked transfer's legs
+    # can be days apart, and a series windowed by cut-off keeps or drops each
+    # leg by its own date: a counterpart landing after its account's cut-off
+    # is dropped, so this leg must be the external flow, and one sent before
+    # it is kept, so this leg is internal even if dated after the cut-off.
     def transfer_resolution(entry, transaction)
-      counterpart_account_id = transfer_counterpart_account_id(transaction)
-      if counterpart_account_id && in_scope_on?(counterpart_account_id, entry.date)
+      counterpart_account_id, counterpart_date = transfer_counterpart(transaction)
+      if counterpart_account_id && in_scope_on?(counterpart_account_id, counterpart_date)
         :internal
       else
         transaction_direction(entry)
       end
     end
 
-    # The account on the other leg of a linked Transfer, by id only; the
-    # counterpart account itself is never loaded, so a scope check cannot
-    # leak an account the user is not allowed to see.
+    # The account (by id only) and date of the other leg of a linked
+    # Transfer; the counterpart account itself is never loaded, so a scope
+    # check cannot leak an account the user is not allowed to see.
     #
     # The transfer is chosen as #sql_joins chooses it: one the transaction is
     # the inflow of first, then the earliest by created_at and id. Not through
     # transfer_as_inflow / transfer_as_outflow: has_one is unordered, so of two
     # transfers on one leg it can return either.
-    def transfer_counterpart_account_id(transaction)
+    def transfer_counterpart(transaction)
       transfer = earliest_transfer(inflow_transaction_id: transaction.id) ||
         earliest_transfer(outflow_transaction_id: transaction.id)
       return nil unless transfer
 
       counterpart_id = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction_id : transfer.inflow_transaction_id
-      Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id)&.to_s
+      account_id, date = Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id, :date)
+      [ account_id&.to_s, date ]
     end
 
     def earliest_transfer(leg)
@@ -329,7 +336,7 @@ class Portfolio::FlowClassifier
     end
 
     def transfer_resolution_sql
-      "CASE WHEN #{in_scope_sql('flow_counterpart_entries.account_id')} THEN 'internal' ELSE #{direction_sql} END"
+      "CASE WHEN #{in_scope_sql('flow_counterpart_entries.account_id', 'flow_counterpart_entries.date')} THEN 'internal' ELSE #{direction_sql} END"
     end
 
     def security_transfer_counterpart_in_scope_sql
@@ -355,11 +362,12 @@ class Portfolio::FlowClassifier
       self.class.pending_sql
     end
 
-    # #in_scope_on? as SQL, for the entry the CASE is classifying. With no
-    # cut-offs it is the plain membership test. The cut-offs are written in
+    # #in_scope_on? as SQL: the account on the date given, the classified
+    # entry's own unless a counterpart leg's is passed (see
+    # #transfer_resolution). With no cut-offs it is the plain membership test. The cut-offs are written in
     # as quoted literals, like the scope ids: a uuid and an ISO date, neither
     # of which can spell a bind.
-    def in_scope_sql(account_expression)
+    def in_scope_sql(account_expression, date_expression = "entries.date")
       membership = "#{account_expression} = ANY(#{scope_ids_sql})"
       return membership if active_until_dates.empty?
 
@@ -371,7 +379,7 @@ class Portfolio::FlowClassifier
         (#{membership} AND NOT EXISTS (
           SELECT 1 FROM (VALUES #{cut_offs}) AS flow_cut_offs(account_id, active_until_date)
           WHERE flow_cut_offs.account_id = #{account_expression}
-            AND entries.date > flow_cut_offs.active_until_date
+            AND #{date_expression} > flow_cut_offs.active_until_date
         ))
       SQL
     end
