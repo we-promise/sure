@@ -328,6 +328,14 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", JSON.parse(response.body)["error"]
   end
 
+  test "malformed start_date or end_date is a 422, not a 500" do
+    %i[start_date end_date].each do |key|
+      get api_v1_transactions_url, params: { key => "not-a-date" }, headers: api_headers(@api_key)
+      assert_response :unprocessable_entity
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    end
+  end
+
   test "budget_id still requires authentication" do
     get api_v1_transactions_url, params: { budget_id: create_past_budget.id }
     assert_response :unauthorized
