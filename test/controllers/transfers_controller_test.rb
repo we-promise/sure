@@ -796,6 +796,50 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "show offers the investment contribution switch only for transfers into an investment account" do
+    contribution = create_confirmed_transfer(to: accounts(:investment))
+    payment = create_confirmed_transfer(to: accounts(:credit_card))
+
+    get transfer_url(contribution)
+    assert_select "input[type=checkbox][name='transfer[investment_contribution]'][checked]"
+
+    get transfer_url(payment)
+    assert_select "input[name='transfer[investment_contribution]']", count: 0
+  end
+
+  test "turning off the investment contribution makes a plain transfer and reloads the page" do
+    transfer = create_confirmed_transfer(to: accounts(:investment))
+
+    patch transfer_url(transfer),
+          params: { transfer: { investment_contribution: "0" } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html", "Referer" => transactions_url }
+
+    assert_response :success
+    assert_includes response.body, %(action="redirect")
+    assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
+  end
+
+  test "turning the investment contribution back on restores it" do
+    transfer = create_confirmed_transfer(to: accounts(:investment))
+    transfer.update_investment_contribution!(false)
+
+    patch transfer_url(transfer), params: { transfer: { investment_contribution: "1" } }
+
+    assert_redirected_to transactions_url
+    assert_equal "investment_contribution", transfer.outflow_transaction.reload.kind
+  end
+
+  test "switching the investment contribution requires write permission on both transfer sides" do
+    sign_in users(:family_member)
+    accounts(:investment).account_shares.create!(user: users(:family_member), permission: "read_only")
+    transfer = create_confirmed_transfer(to: accounts(:investment))
+
+    patch transfer_url(transfer), params: { transfer: { investment_contribution: "0" } }
+
+    assert_redirected_to transactions_url
+    assert_equal "investment_contribution", transfer.outflow_transaction.reload.kind
+  end
+
   test "mark_as_recurring creates a recurring transfer" do
     transfer = transfers(:one)
     family = users(:family_admin).family
@@ -841,6 +885,13 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def create_confirmed_transfer(to:)
+      outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+      inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)
+
+      Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction).tap(&:confirm!)
+    end
+
     # A loan owned by family_member and not shared with family_admin
     def member_loan
       accounts(:loan).tap { |loan| loan.update!(owner: users(:family_member)) }

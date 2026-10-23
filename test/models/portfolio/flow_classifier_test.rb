@@ -187,6 +187,45 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
                  "the transfer the leg is the inflow of, from the IRA, is the one read")
   end
 
+  # Of two transfers a leg is the inflow of, both forms read the earliest. The
+  # stray one here is inserted second but dated first, so a lookup that takes
+  # whichever row the index returns reads the IRA transfer instead.
+  test "classify reads the earliest of two transfers a leg is the inflow of, as sql_joins does" do
+    transfer = create_linked_transfer(family: @family, from: @ira, to: @brokerage, amount: 400)
+    inflow = transfer.inflow_transaction.entry
+    stray_outflow = create_labelled_transaction(account: @checking, label: nil, amount: 400)
+    Transfer.insert_all([ {
+      inflow_transaction_id: transfer.inflow_transaction_id,
+      outflow_transaction_id: stray_outflow.entryable_id,
+      amount: 400, status: "confirmed",
+      created_at: transfer.created_at - 1.minute, updated_at: transfer.created_at - 1.minute
+    } ])
+
+    assert_equal 2, Transfer.where(inflow_transaction_id: transfer.inflow_transaction_id).count,
+                 "precondition: the inflow leg is the inflow of two transfers"
+    assert_equal({ inflow.id => :external_inflow }, @family_scope.classify_ids([ inflow.id ]),
+                 "the earlier transfer, from Checking outside the scope, is the one read")
+    assert_equal :external_inflow, @family_scope.classify(inflow.reload)
+  end
+
+  test "classify reads the earliest of two transfers a leg is the outflow of, as sql_joins does" do
+    transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400)
+    outflow = transfer.outflow_transaction.entry
+    stray_inflow = create_labelled_transaction(account: @checking, label: nil, amount: -400)
+    Transfer.insert_all([ {
+      inflow_transaction_id: stray_inflow.entryable_id,
+      outflow_transaction_id: transfer.outflow_transaction_id,
+      amount: 400, status: "confirmed",
+      created_at: transfer.created_at - 1.minute, updated_at: transfer.created_at - 1.minute
+    } ])
+
+    assert_equal 2, Transfer.where(outflow_transaction_id: transfer.outflow_transaction_id).count,
+                 "precondition: the outflow leg is the outflow of two transfers"
+    assert_equal({ outflow.id => :external_outflow }, @family_scope.classify_ids([ outflow.id ]),
+                 "the earlier transfer, to Checking outside the scope, is the one read")
+    assert_equal :external_outflow, @family_scope.classify(outflow.reload)
+  end
+
   test "a Contribution or Withdrawal label does not outrank a linked transfer in scope" do
     transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 100)
     transfer.outflow_transaction.update!(investment_activity_label: "Withdrawal")
@@ -362,6 +401,56 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal Trade::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
     assert_includes Portfolio::FlowClassifier.labels_for(:income), "Dividend"
     assert_equal %w[Fee], Portfolio::FlowClassifier.labels_for(:fee)
+  end
+
+  # An account past its cut-off has left the scope, so a transfer to it after
+  # that date is external, in both forms; on the cut-off date it is still in.
+  test "a transfer to an account past its cut off is external in both forms" do
+    cut_off = Date.new(2026, 3, 2)
+    windowed = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], active_until_dates: { @ira.id => cut_off })
+    after = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400, date: cut_off + 1.day)
+    on = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 300, date: cut_off)
+    security = create_portfolio_security
+    security_out, = create_security_transfer(security: security, from: @brokerage, to: @ira, qty: 2, price: 50, date: cut_off + 1.day)
+
+    after_out = after.outflow_transaction.entry
+    on_out = on.outflow_transaction.entry
+
+    assert_equal :external_outflow, windowed.classify(after_out)
+    assert_equal :internal, windowed.classify(on_out)
+    assert_equal :external_outflow, windowed.classify(security_out)
+    assert_equal :internal, @family_scope.classify(after_out), "without a cut-off the same transfer is internal"
+
+    sql = windowed.classify_ids([ after_out.id, on_out.id, security_out.id ])
+    assert_equal :external_outflow, sql.fetch(after_out.id)
+    assert_equal :internal, sql.fetch(on_out.id)
+    assert_equal :external_outflow, sql.fetch(security_out.id)
+  end
+
+  # A linked transfer's legs can be days apart, and DailyReturns keeps or
+  # drops each leg by its OWN date against its account's cut-off. So whether
+  # the counterpart is still in scope is decided on the counterpart's date,
+  # not this leg's: a leg landing after its account left the scope is dropped,
+  # and the leg that sent it is an external flow; a leg sent while its account
+  # was in scope stays, and the leg receiving it is internal.
+  test "a transfer is resolved against the cut off on the counterpart leg's own date" do
+    cut_off = Date.new(2026, 3, 2)
+    windowed = Portfolio::FlowClassifier.new(scope_account_ids: [ @brokerage.id, @ira.id ], active_until_dates: { @ira.id => cut_off })
+
+    lands_late = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400, date: cut_off - 3.days)
+    lands_late.inflow_transaction.entry.update!(date: cut_off + 2.days)
+    sent_in_time = create_linked_transfer(family: @family, from: @ira, to: @brokerage, amount: 300, date: cut_off)
+    sent_in_time.inflow_transaction.entry.update!(date: cut_off + 3.days)
+
+    sender = lands_late.outflow_transaction.entry.reload
+    receiver = sent_in_time.inflow_transaction.entry.reload
+
+    assert_equal :external_outflow, windowed.classify(sender), "its counterpart lands after the IRA's cut-off"
+    assert_equal :internal, windowed.classify(receiver), "its counterpart left the IRA on the cut-off date"
+
+    sql = windowed.classify_ids([ sender.id, receiver.id ])
+    assert_equal :external_outflow, sql.fetch(sender.id)
+    assert_equal :internal, sql.fetch(receiver.id)
   end
 
   test "scope_account_ids is required" do

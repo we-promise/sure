@@ -230,12 +230,8 @@ tr:
       no_matches_title: Sonuç yok
       no_matches_description: Bir filtreyi veya aramayı temizlemeyi deneyin.
       col_name: Ad
-      col_type: Tür
-      col_frequency: Sıklık
       col_amount: Tutar
       col_next: Sonraki son ödeme
-      next_short: sonraki %{date}
-      col_status: Durum
       col_actions: Eylemler
       monthly_equivalent: '%{amount}/ay'
       types:

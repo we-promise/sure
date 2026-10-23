@@ -496,6 +496,52 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # A gateway endpoint can carry its key in the userinfo or the query string,
+  # and `show` has no admin gate: any member who turns on preview features sees
+  # this panel once the family's provider is Jev. Signed in as that member
+  # rather than the admin, because that is who the endpoint must not reach.
+  test "the jev panel shows a member the endpoint without its credentials" do
+    with_self_hosting do
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      member = users(:family_member)
+      member.family.update!(categorization_provider: "jev")
+      member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+      sign_in member
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[jev_endpoint]']", 1
+      assert_select "input[name='setting[jev_endpoint]'][value='https://gw.example.com/v1/jev']"
+      assert_no_match(/gw-secret|qk-secret|gw-user/, response.body)
+    end
+  end
+
+  # The field auto-submits on blur, so the redacted value it now shows comes
+  # straight back. Saving it would silently strip the operator's credentials.
+  test "submitting the redacted jev endpoint back keeps the stored one" do
+    with_self_hosting do
+      stored = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      Setting.jev_endpoint = stored
+
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://gw.example.com/v1/jev" } }
+
+      assert_equal stored, Setting.jev_endpoint
+    end
+  end
+
+  # Only the echoed redacted value is held back: a different endpoint still
+  # replaces a stored one that carries credentials.
+  test "submitting a different jev endpoint replaces a stored one with credentials" do
+    with_self_hosting do
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://other.example.com/v1/jev" } }
+
+      assert_equal "https://other.example.com/v1/jev", Setting.jev_endpoint
+    end
+  end
+
   test "rejects non-URL jev endpoint" do
     with_self_hosting do
       Setting.jev_endpoint = nil
@@ -538,6 +584,15 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { llm_provider: "anthropic" } }
 
       assert_equal "anthropic", Setting.llm_provider
+    end
+  end
+
+  test "max items per batch field is shown for every LLM provider" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_select "input[name=?]", "setting[llm_max_items_per_call]", count: 1
+      assert_select "[data-provider=openai] input[name=?]", "setting[llm_max_items_per_call]", count: 0
     end
   end
 
@@ -1016,19 +1071,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { llm_context_window: "0" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Context Window (Optional) must be a whole number ≥ 256.", flash[:alert]
       assert_nil Setting.llm_context_window
 
       patch settings_hosting_url, params: { setting: { llm_max_response_tokens: "-5" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Max Response Tokens (Optional) must be a whole number ≥ 64.", flash[:alert]
       assert_nil Setting.llm_max_response_tokens
 
       patch settings_hosting_url, params: { setting: { llm_max_items_per_call: "not-a-number" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Max Items Per Batch (Optional) must be a whole number ≥ 1.", flash[:alert]
       assert_nil Setting.llm_max_items_per_call
 
       patch settings_hosting_url, params: { setting: { openai_request_timeout: "0" } }
