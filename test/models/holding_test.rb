@@ -467,10 +467,10 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal 1, @account.holdings.where(external_id: "simplefin-holding-amzn").count
   end
 
-  # A holding can be deleted by another request between the remap loading it
-  # and writing it. The merge target is locked so that delete waits; the
-  # moved and reset rows are checked on write, since update_columns returns
-  # false rather than raising when the row is gone.
+  # Another request can delete or move a holding while a remap or reset runs.
+  # The rows being moved are locked as they load and the merge target is
+  # locked before the merge, so that request waits; the writes are still
+  # checked, since update_columns returns false rather than raising.
   test "remap_security! locks both rows of a merge" do
     new_security = create_security("GOOGLOCK", prices: [ { date: Date.current, price: 100.0 } ])
     @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: @amzn.currency)
@@ -479,6 +479,33 @@ class HoldingTest < ActiveSupport::TestCase
     assert_queries_match(/FROM "holdings".*FOR UPDATE/, count: 2) do
       @amzn.remap_security!(new_security)
     end
+  end
+
+  # The rows to move are locked as they are loaded, under the old security's
+  # predicate, so a row another remap or reset moved first is not returned
+  # (Postgres re-checks the WHERE after waiting for the lock) and a row this
+  # remap loaded cannot be moved under it. Locking by id after loading would
+  # merge or overwrite a row that already belongs to another security.
+  LOCKED_LOAD = /FROM "holdings" WHERE .*"holdings"\."security_id" = .*ORDER BY "holdings"\."id" ASC LIMIT .*FOR UPDATE/
+
+  test "remap_security! locks the rows it moves under the old security's predicate" do
+    new_security = create_security("GOOGPRED", prices: [ { date: Date.current, price: 100.0 } ])
+
+    assert_queries_match(LOCKED_LOAD, count: 1) do
+      @amzn.remap_security!(new_security)
+    end
+    assert_equal new_security, @amzn.reload.security
+  end
+
+  test "reset_security_to_provider! locks the rows it moves back under the remapped predicate" do
+    old_security = @amzn.security
+    new_security = create_security("GOOGRPRED", prices: [ { date: Date.current, price: 100.0 } ])
+    @amzn.remap_security!(new_security)
+
+    assert_queries_match(LOCKED_LOAD, count: 1) do
+      @amzn.reset_security_to_provider!
+    end
+    assert_equal old_security, @amzn.reload.security
   end
 
   test "remap_security! raises and rolls back when a moved holding is gone at write time" do
