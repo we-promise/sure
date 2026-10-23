@@ -127,7 +127,8 @@ class Assistant::Function::GetBalanceSheet < Assistant::Function
           currency: family.currency,
           period: period,
           favorable_direction: "up",
-          interval: interval
+          interval: interval,
+          user: user
         )
 
         to_ai_time_series(builder.balance_series)
