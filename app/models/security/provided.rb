@@ -102,11 +102,11 @@ module Security::Provided
       rank_search_results(all_results, symbol, country_code).first(MAX_SEARCH_RESULTS)
     end
 
-    private
-      def provider_key_for(provider_instance)
-        provider_instance.class.name.demodulize.underscore
-      end
+    def provider_key_for(provider_instance)
+      provider_instance.class.name.demodulize.underscore
+    end
 
+    private
       # Fetches (or reads from cache) search results for a single provider.
       # Designed to run inside a Concurrent::Promises.future.
       def fetch_provider_results(prov, symbol, params)
@@ -185,6 +185,32 @@ module Security::Provided
     return :no_provider if resolved.nil?
     return :stale if failed_fetch_count.to_i > 0
     :ok
+  end
+
+  PriceSource = Data.define(:provider, :status)
+
+  # Where this security's prices come from, for display. `provider` is the
+  # provider key (nil when none); `status` says how it applies:
+  # :assigned, :default (fallback to the first enabled provider),
+  # :unavailable (assigned provider disabled or not configured),
+  # :offline (fetching paused for this security) or :none (prices only from syncs or trades).
+  def price_source
+    resolved = price_data_provider
+    resolved_key = resolved && self.class.provider_key_for(resolved)
+
+    if resolved.nil? && price_provider.present?
+      PriceSource.new(provider: price_provider, status: :unavailable)
+    elsif offline?
+      # Without an assigned provider an offline security may never have had
+      # provider prices (e.g. synced-only tickers), so name no fallback.
+      PriceSource.new(provider: price_provider.presence, status: price_provider.present? ? :offline : :none)
+    elsif resolved.nil?
+      PriceSource.new(provider: nil, status: :none)
+    elsif price_provider.present?
+      PriceSource.new(provider: price_provider, status: :assigned)
+    else
+      PriceSource.new(provider: resolved_key, status: :default)
+    end
   end
 
   def find_or_fetch_price(date: Date.current, cache: true)
