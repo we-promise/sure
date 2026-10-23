@@ -148,7 +148,11 @@ class SureImport < Import
       update!(summary: result[:summary]) if has_attribute?(:summary)
     end
 
-    record_readback_verification!(before_counts:, reused_counts: reused_counts_from(result[:summary]))
+    record_readback_verification!(
+      before_counts:,
+      reused_counts: reused_counts_from(result[:summary]),
+      created_counts: created_counts_from(result[:summary])
+    )
     result
   rescue => error
     record_failed_readback_verification!(before_counts:, error:)
@@ -276,9 +280,17 @@ class SureImport < Import
       %w[categories tags merchants].index_with { |key| (summary || {}).dig(key, "updated").to_i }
     end
 
-    def record_readback_verification!(before_counts:, reused_counts: {})
+    # A ProviderMerchant row with no shared match yet becomes a FamilyMerchant
+    # (see Family::DataImporter#import_provider_merchants), which isn't counted
+    # under the "Merchant" NDJSON line type, so its creation must be added to
+    # the expected merchant delta explicitly.
+    def created_counts_from(summary)
+      { "merchants" => (summary || {}).dig("provider_merchants", "created").to_i }
+    end
+
+    def record_readback_verification!(before_counts:, reused_counts: {}, created_counts: {})
       update_columns(
-        readback_verification: build_readback_verification(before_counts:, status_for_mismatch: "mismatch", reused_counts:),
+        readback_verification: build_readback_verification(before_counts:, status_for_mismatch: "mismatch", reused_counts:, created_counts:),
         updated_at: Time.current
       )
     end
@@ -297,11 +309,12 @@ class SureImport < Import
       Rails.logger.warn("Failed to record Sure import readback verification for import #{id}: #{verification_error.message}")
     end
 
-    def build_readback_verification(before_counts:, status_for_mismatch:, reused_counts: {})
+    def build_readback_verification(before_counts:, status_for_mismatch:, reused_counts: {}, created_counts: {})
       after_counts = readback_count_snapshot
       actual_delta_counts = delta_counts(before_counts, after_counts)
       expected_counts = normalized_expected_record_counts
-      expected_creations = expected_counts.merge(reused_counts) { |_key, expected, reused| [ expected - reused, 0 ].max }
+      expected_creations = expected_counts.merge(created_counts) { |_key, expected, created| expected + created }
+      expected_creations = expected_creations.merge(reused_counts) { |_key, expected, reused| [ expected - reused, 0 ].max }
       checked_counts = (actual_delta_counts.keys | expected_counts.keys).index_with do |key|
         expected_creations.fetch(key, 0).to_i
       end

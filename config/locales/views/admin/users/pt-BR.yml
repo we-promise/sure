@@ -21,8 +21,6 @@ pt-BR:
           trial_expiring_soon: "Expira em 7 dias"
           trial_trialing: "Em teste"
           submit: "Filtro"
-        summary:
-          trials_expiring_7_days: "Testes expiram nos próximos 7 dias"
         table:
           user: "Usuário"
           trial_ends_at: "Fim do teste"

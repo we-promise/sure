@@ -10,9 +10,6 @@
 
 @import "./simonweb_pickr.css";
 
-@import "./driverjs.css";
-@import "./release-highlights.css";
-
 @import "./date-picker-dark-mode.css";
 @import "./print-report.css";
 @import "./privacy-mode.css";
@@ -65,6 +62,19 @@
     @apply bg-container hover:bg-container-hover;
   }
 
+  /* Below `mobile_at` the gem opens a full-screen dialog with fixed light colors */
+  .hw-combobox__dialog {
+    @apply bg-container text-primary;
+  }
+
+  .hw-combobox__dialog__label {
+    @apply text-primary;
+  }
+
+  .hw-combobox__dialog__input {
+    @apply bg-container text-primary border-primary;
+  }
+
   .hw_combobox__pagination__wrapper {
     @apply h-px;
 
@@ -73,6 +83,8 @@
     }
   }
 
+  --hw-active-bg-color: var(--color-container-inset-hover);
+  --hw-option-bg-color: var(--color-container);
   --hw-border-color: rgba(0, 0, 0, 0.2);
   --hw-handle-width: 20px;
   --hw-handle-height: 20px;

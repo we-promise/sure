@@ -51,6 +51,15 @@ class RuleImport < Import
         '[{"condition_type":"transaction_name","operator":"like","value":"amazon"}]',
         '[{"action_type":"auto_categorize"}]'
       ]
+
+      csv << [
+        "Split shared rent",
+        "transaction",
+        "true",
+        "",
+        '[{"condition_type":"transaction_name","operator":"like","value":"rent"}]',
+        '[{"action_type":"split_transaction","value":{"splits":[{"type":"percentage","name":"My share","share":"50","category":"Rent"},{"type":"percentage","name":"Partner share","share":"50","category":"Rent","tags":["Shared"]}]}}]'
+      ]
     end
 
     CSV.parse(csv_string, headers: true)
@@ -64,8 +73,8 @@ class RuleImport < Import
 
       rows.create!(
         source_row_number: index,
-        name: normalized_row[:name].to_s.strip,
-        resource_type: normalized_row[:resource_type].to_s.strip,
+        name: normalized_rule_text(normalized_row[:name], attribute: :name),
+        resource_type: normalized_rule_text(normalized_row[:resource_type], attribute: :resource_type),
         active: parse_boolean(normalized_row[:active]),
         effective_date: normalized_row[:effective_date].to_s.strip,
         conditions: normalized_row[:conditions].to_s.strip,
@@ -96,6 +105,20 @@ class RuleImport < Import
       }
     end
 
+    def normalized_rule_text(value, attribute:)
+      text = value.to_s
+      reject_invalid_text!(text, label: Rule.human_attribute_name(attribute))
+
+      text.strip
+    end
+
+    def reject_invalid_text!(value, label:, acceptable: DatabaseTextValidator.acceptable?(value))
+      return if acceptable
+
+      errors.add(:base, :invalid, message: "#{label} #{I18n.t("errors.messages.invalid")}")
+      raise ActiveRecord::RecordInvalid.new(self)
+    end
+
     def extract_conditions_and_actions(fragments)
       pieces = Array(fragments).compact
       return [ "", "" ] if pieces.empty?
@@ -117,8 +140,8 @@ class RuleImport < Import
     end
 
     def create_or_update_rule_from_row(row)
-      rule_name = row.name.to_s.strip.presence
-      resource_type = row.resource_type.to_s.strip
+      rule_name = normalized_rule_text(row.name, attribute: :name).presence
+      resource_type = normalized_rule_text(row.resource_type, attribute: :resource_type)
 
       # Validate resource type
       unless resource_type == "transaction"
@@ -151,8 +174,10 @@ class RuleImport < Import
       rule.active = row.active || false
       rule.effective_date = parse_date(row.effective_date)
 
-      # Clear existing conditions and actions
-      rule.conditions.destroy_all
+      # Clear existing conditions and actions. The conditions are marked rather
+      # than destroyed now, so the rule's save removes them and sees its
+      # conditions change (Rule re-seeds an email rule's baseline then).
+      rule.conditions.each(&:mark_for_destruction)
       rule.actions.destroy_all
 
       # Create conditions
@@ -210,6 +235,7 @@ class RuleImport < Import
     def resolve_import_condition_value(condition_data)
       condition_type = condition_data["condition_type"]
       value = condition_data["value"]
+      reject_invalid_text!(value, label: Rule::Condition.human_attribute_name(:value))
 
       return value unless value.present?
 
@@ -234,8 +260,11 @@ class RuleImport < Import
     def resolve_import_action_value(action_data)
       action_type = action_data["action_type"]
       value = action_data["value"]
+      reject_invalid_text!(value, label: Rule::Action.human_attribute_name(:value))
 
       return value unless value.present?
+
+      return resolve_import_split_value(value) if action_type == "split_transaction"
 
       # Map category names to UUIDs
       if action_type == "set_transaction_category"
@@ -263,6 +292,27 @@ class RuleImport < Import
       return value if names.empty?
 
       names.map { |name| find_or_create_tag(name).id }.join(",")
+    end
+
+    # Names resolve like the other actions; a raw id is kept only if it belongs to the family.
+    def resolve_import_split_value(value)
+      reject_invalid_text!(value, label: Rule::Action.human_attribute_name(:value),
+                                  acceptable: Rule::ActionExecutor::SplitTransaction.acceptable_text?(value))
+
+      Rule::ActionExecutor::SplitTransaction.localize_value(value) do |kind, name: nil, id: nil|
+        next (id if family_record_ids(kind.to_s.pluralize.to_sym).include?(id)) unless name
+
+        case kind
+        when :category then find_or_create_category(name).id
+        when :merchant then find_or_create_merchant(name).id
+        when :tag then find_or_create_tag(name).id
+        end
+      end
+    end
+
+    def family_record_ids(relation)
+      @family_record_ids ||= {}
+      @family_record_ids[relation] ||= family.public_send(relation).pluck(:id).to_set
     end
 
     # Preloaded once per import and extended in place on cache-miss, so a

@@ -207,4 +207,24 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to settings_providers_path
   end
+
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    families(:dylan_family).wise_items.update_all(scheduled_for_deletion: true)
+
+    get select_accounts_wise_items_url, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("wise_items.select_accounts.no_connection"), flash[:alert]
+  end
+
+  test "select accounts redirects to Settings outside a turbo frame" do
+    families(:dylan_family).wise_items.update_all(scheduled_for_deletion: true)
+
+    get select_accounts_wise_items_url
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("wise_items.select_accounts.no_connection"), flash[:alert]
+  end
 end
