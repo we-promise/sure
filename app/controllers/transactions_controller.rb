@@ -457,7 +457,7 @@ class TransactionsController < ApplicationController
     # Check if a recurring transaction already exists for this pattern.
     # The UI disables the button ahead of time using the same lookup, but this
     # guard remains as the authoritative check (e.g. stale page, direct POST).
-    existing = Current.family.recurring_transactions.covering(transaction.entry)
+    existing = covering_series_for(transaction.entry)
 
     if existing
       flash[:alert] = t("recurring_transactions.already_covered")
@@ -556,10 +556,17 @@ class TransactionsController < ApplicationController
     # conditions (see transactions/show.html.erb), so skip the extra query
     # entirely when it won't be used — this runs on every show/failed-update
     # render, including read-only viewers and split-child transactions.
+    # Scoped to what this user can open, as RecurringTransactionsController's
+    # own check is: sharing is per account, so a bill on an account the user
+    # was never given is not theirs to learn about.
+    def covering_series_for(entry)
+      Current.family.recurring_transactions.accessible_by(Current.user).covering(entry)
+    end
+
     def assign_mark_recurring_state
       return unless can_edit_entry? && !@entry.split_child?
 
-      existing = Current.family.recurring_transactions.covering(@entry)
+      existing = covering_series_for(@entry)
 
       @mark_recurring_href = mark_as_recurring_transaction_path(@entry.transaction)
       @mark_recurring_subtitle_class = existing ? "text-subdued" : "text-secondary"

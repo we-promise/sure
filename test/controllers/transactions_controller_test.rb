@@ -1022,6 +1022,32 @@ end
     assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
   end
 
+  # Sharing is per account. A bill on an account this member was never given
+  # is not theirs to learn about, as in the add-bill dialog's own check, so
+  # it neither disables the button nor refuses the request.
+  test "mark_as_recurring ignores a covering bill on an account the user cannot see" do
+    member = users(:family_member)
+    entry = create_transaction(account: accounts(:depository), amount: 100, name: "PRIVATE PLAN")
+    hidden = families(:dylan_family).recurring_transactions.create!(
+      account: accounts(:investment), name: "Private Plan", amount: 100, currency: "USD",
+      expected_day_of_month: Date.current.day, last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current, status: "active", manual: true, occurrence_count: 1
+    )
+    hidden.recurring_occurrences.order(:due_on).first.allocations.create!(
+      entry: entry, allocated_amount: 100, currency: "USD", source: "user_created"
+    )
+    assert_equal hidden, families(:dylan_family).recurring_transactions.covering(entry), "precondition: the hidden bill covers the entry"
+
+    sign_in member
+    get transaction_url(entry)
+    assert_select "button[disabled]", text: /Mark as Recurring/, count: 0
+
+    assert_difference "RecurringTransaction.count", 1 do
+      post mark_as_recurring_transaction_path(entry.entryable)
+    end
+    assert_equal I18n.t("recurring_transactions.marked_as_recurring"), flash[:notice]
+  end
+
   test "mark_as_recurring shows already-exists alert when a concurrent request wins the race" do
     family = families(:empty)
     sign_in users(:empty)
