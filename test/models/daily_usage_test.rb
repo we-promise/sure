@@ -33,13 +33,14 @@ class DailyUsageTest < ActiveSupport::TestCase
     3.times do
       DailyUsage.capture("ai_assistant_served_daily")
       DailyUsage.capture("job_served_daily")
+      DailyUsage.capture("mcp_call_served_daily")
     end
-    assert_equal %w[ai_assistant_served_daily job_served_daily], @events.pluck(:event)
+    assert_equal %w[ai_assistant_served_daily job_served_daily mcp_call_served_daily], @events.pluck(:event)
     assert_equal 1, @events.pluck(:distinct_id).uniq.size
     assert_match(/\A[0-9a-f]{64}\z/, @events.first[:distinct_id])
     assert_equal({ sure_version: Sure.version.to_s, "$process_person_profile" => false,
                    "$geoip_disable" => true }, @events.first[:properties])
-    assert_equal 2, @claims.size
+    assert_equal 3, @claims.size
   end
 
   test "web and installation events preserve independent claims identities and properties" do
@@ -52,25 +53,27 @@ class DailyUsageTest < ActiveSupport::TestCase
       DailyUsage.capture("web_ui_served_daily", user: user, date: date, ip: "203.0.113.42")
       DailyUsage.capture("ai_assistant_served_daily")
       DailyUsage.capture("job_served_daily")
+      DailyUsage.capture("mcp_call_served_daily")
     end
 
-    assert_equal %w[web_ui_served_daily ai_assistant_served_daily job_served_daily], @events.pluck(:event)
-    web, assistant, job = @events
+    assert_equal %w[web_ui_served_daily ai_assistant_served_daily job_served_daily mcp_call_served_daily], @events.pluck(:event)
+    web, assistant, job, mcp = @events
     web_key = Rails.application.key_generator.generate_key("daily-web-usage")
     installation_key = Rails.application.key_generator.generate_key("daily-installation-usage")
     assert_equal OpenSSL::HMAC.hexdigest("SHA256", web_key, "#{user.id}:#{date.iso8601}"), web[:distinct_id]
     assert_equal OpenSSL::HMAC.hexdigest("SHA256", installation_key, date.iso8601), assistant[:distinct_id]
     assert_equal assistant[:distinct_id], job[:distinct_id]
+    assert_equal assistant[:distinct_id], mcp[:distinct_id]
     assert_not_equal web[:distinct_id], assistant[:distinct_id]
     assert_equal({ sure_version: Sure.version.to_s, preview_features_enabled: user.preview_features_enabled?,
                    "$process_person_profile" => false, "$geoip_disable" => false,
                    "$ip" => "203.0.113.42" }, web[:properties])
-    [ assistant, job ].each do |event|
+    [ assistant, job, mcp ].each do |event|
       assert_equal({ sure_version: Sure.version.to_s, "$process_person_profile" => false,
                      "$geoip_disable" => true }, event[:properties])
     end
     assert_equal true, cache.read([ "daily-web-usage", web[:distinct_id] ])
-    assert_equal 2, @claims.size
+    assert_equal 3, @claims.size
   end
 
   test "web events require a user and family-local date" do
@@ -88,15 +91,17 @@ class DailyUsageTest < ActiveSupport::TestCase
     assert_not DailyUsage.enabled?("web_ui_served_daily")
     assert DailyUsage.enabled?("ai_assistant_served_daily")
     assert DailyUsage.enabled?("job_served_daily")
+    assert DailyUsage.enabled?("mcp_call_served_daily")
   end
 
   test "UTC rollover is independent of thread or family timezone" do
-    Time.use_zone("Pacific/Auckland") { DailyUsage.capture("job_served_daily") }
-    Time.use_zone("America/Los_Angeles") { DailyUsage.capture("job_served_daily") }
-    assert_equal 1, @events.size
+    events = %w[ai_assistant_served_daily job_served_daily mcp_call_served_daily]
+    Time.use_zone("Pacific/Auckland") { events.each { |event| DailyUsage.capture(event) } }
+    Time.use_zone("America/Los_Angeles") { events.each { |event| DailyUsage.capture(event) } }
+    assert_equal 3, @events.size
     travel_to Time.utc(2026, 10, 19)
-    DailyUsage.capture("job_served_daily")
-    assert_equal 2, @events.size
+    events.each { |event| DailyUsage.capture(event) }
+    assert_equal 6, @events.size
     assert_not_equal @events.first[:distinct_id], @events.last[:distinct_id]
   end
 

@@ -212,10 +212,10 @@ preserve the same routing, privacy, and opt-out behavior for both features.
 
 ## Daily installation activity
 
-`DailyUsage` captures all three daily events through the same shared feedback
+`DailyUsage` captures all daily events through the same shared feedback
 client, environment/opt-out gates, pseudonym generation and error handling. The
 web controller concern only selects qualifying responses and supplies user,
-family-local date and resolved IP; assistant hooks and Sidekiq middleware supply
+family-local date and resolved IP; assistant/MCP hooks and Sidekiq middleware supply
 their event names. User-scoped web claims remain in Rails cache; installation
 claims use Sidekiq Redis.
 
@@ -232,6 +232,14 @@ Active Job wrappers, scheduled jobs and retries. It does not count enqueueing or
 web requests; failing jobs still count. Capture uses the feedback SDK directly,
 not another Sidekiq job, so it cannot create a telemetry-job loop.
 
+`mcp_call_served_daily` records an authenticated `tools/call` execution attempt
+through Sure's MCP endpoint, using either OAuth or the environment token. The
+tool must exist and be available to the authenticated user; a tool failure still
+counts. Initialization, tool listing, notifications, malformed JSON/JSON-RPC,
+rejected authentication, invalid sessions/protocol versions and unknown or unavailable
+tools do not count. Tool names, arguments and results are not sent. The built-in
+assistant's internal tool calls do not trigger this event.
+
 Each event has an independent atomic Redis claim per installation per UTC
 calendar day. Unlike the existing per-user, family-local web event, these events
 have no user or family context. The daily pseudonymous installation ID is an HMAC
@@ -247,7 +255,8 @@ opt-in rules and `POSTHOG_FEEDBACK_ENABLED` opt-out above. Tests are disabled
 unless a test explicitly replaces the collector and environment gates. Browser
 opt-outs cannot control server capture. The only event properties are Sure's
 version, disabled person-profile processing and disabled GeoIP: no prompt,
-response, user/account ID, IP, job class, queue or job arguments are sent.
+response, user/account ID, IP, tool name, tool arguments/results, job class, queue
+or job arguments are sent.
 
 The guarantee is best-effort at-most-one capture attempt while a Redis claim is
 retained, not distributed exactly-once delivery. A Redis failure skips capture
