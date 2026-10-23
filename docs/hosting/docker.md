@@ -185,7 +185,7 @@ SMTP_PASSWORD="replacemewithyoursmtppassword"
 # SMTP_TLS_ENABLED="false"
 ```
 
-Set every key you list in the anchor in the plain `${VAR}` form. Docker Compose passes such a key that has no value in `.env` as an empty value, not as unset. An empty `EMAIL_SENDER` replaces the `sender@sure.local` fallback with an empty address, and an empty `SMTP_USERNAME` still makes the app try to log in. If your server needs no login, leave the `SMTP_USERNAME` and `SMTP_PASSWORD` lines out of the anchor. Keys written as `${VAR:-default}`, such as `SMTP_PORT` and `SMTP_TLS_ENABLED` above, are different: Compose uses the default when the `.env` value is unset or empty.
++Set each key you list in the anchor that has no default in the plain `${VAR}` form. Docker Compose passes such a key that has no value in `.env` as an empty value, not as unset. An empty `EMAIL_SENDER` replaces the `sender@sure.local` fallback with an empty address, and an empty `SMTP_USERNAME` still makes the app try to log in. If your server needs no login, leave the `SMTP_USERNAME` and `SMTP_PASSWORD` lines out of the anchor. Keys written as `${VAR:-default}`, such as `SMTP_PORT` and `SMTP_TLS_ENABLED` above, are different: Compose uses the default when the `.env` value is unset or empty.
 
 **Using a custom CA certificate**
 
