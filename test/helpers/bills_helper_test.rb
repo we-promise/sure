@@ -466,6 +466,24 @@ class BillsHelperTest < ActionView::TestCase
     assert_equal 7.5, hints[:learned_pct]
   end
 
+  test "matcher hints expose the detected name when one was stored" do
+    series = OpenStruct.new(matcher_hints: { "detected_name" => "NETFLIX.COM" })
+
+    assert_equal "NETFLIX.COM", bills_matcher_hints(series)[:detected_name]
+  end
+
+  test "matcher hints leave the detected name nil when none was stored" do
+    series = OpenStruct.new(matcher_hints: {})
+
+    assert_nil bills_matcher_hints(series)[:detected_name]
+  end
+
+  test "matcher hints hide the detected name for merchant-backed bills" do
+    series = OpenStruct.new(merchant_id: 1, matcher_hints: { "detected_name" => "NETFLIX.COM" })
+
+    assert_nil bills_matcher_hints(series)[:detected_name]
+  end
+
   test "plan sections split the bridge from the timeline and pick the warning state" do
     short_bridge = build_period(income: 0, due: 400, reserved: 0, leading: true, cash_on_hand: BigDecimal("100"))
     period = build_period(income: 1200, due: 300, reserved: 100)

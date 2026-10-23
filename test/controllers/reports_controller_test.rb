@@ -833,6 +833,159 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/#{Regexp.escape(I18n.t("reports.investment_performance.sells_count", count: 2))}/, response.body)
   end
 
+  # The card was gated on `investment_accounts`, which is visible accounts
+  # only (draft and active), while its realised-gains half is measured over
+  # every account included in reports, disabled ones too. A family whose only
+  # brokerage account is closed was shown no card at all, although the period
+  # held a disposal the card would have listed.
+  test "the investment card shows a disposal from a closed account when it is the only investment account" do
+    exclude_fixture_investment_accounts
+    account, security = closed_account_with_disposal(date: Date.current.beginning_of_month)
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "[data-section-key='investment_performance']", { count: 1 },
+                  "the card must render for a family whose only investment account is closed"
+    line = css_select("[data-testid='realized-gain-line']").map(&:text).find { |text| text.include?(security.ticker) }
+    assert line, "the disposal from #{account.name} must be listed on the card"
+    assert_match "$100.00", line
+  end
+
+  # The gate widens rather than moves: an open investment account still shows
+  # the card in a period with no disposal at all.
+  test "the investment card still shows for an open investment account in a period with no disposals" do
+    period_start = 10.years.ago.to_date.beginning_of_month
+    assert_not @family.trades.joins(:entry).where(entries: { date: period_start..period_start.end_of_month }).exists?,
+               "the period must hold no trade, or this proves nothing"
+
+    get reports_path(period_type: :custom, start_date: period_start, end_date: period_start.end_of_month)
+    assert_response :ok
+
+    assert_select "[data-section-key='investment_performance']", count: 1
+  end
+
+  test "the investment card stays hidden with no investment accounts and no disposals" do
+    exclude_fixture_investment_accounts
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "[data-section-key='investment_performance']", count: 0
+  end
+
+  # The gate is period-dependent: a disposal outside the chosen period is
+  # nothing this card would show.
+  test "the investment card stays hidden when the closed account's disposal is outside the period" do
+    exclude_fixture_investment_accounts
+    closed_account_with_disposal(date: Date.current.beginning_of_month.prev_month)
+
+    get reports_path(period_type: :custom, start_date: Date.current.beginning_of_month, end_date: Date.current)
+    assert_response :ok
+
+    assert_select "[data-section-key='investment_performance']", count: 0
+  end
+
+  # A transfer out has a sale's negative quantity but is not a disposal; the
+  # card leaves it out, so it must not open the card either.
+  test "a transfer out of a closed account does not show the investment card" do
+    exclude_fixture_investment_accounts
+    closed_account_with_disposal(date: Date.current.beginning_of_month, label: "Transfer")
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "[data-section-key='investment_performance']", count: 0
+  end
+
+  # Another member's closed account that this user does not include in their
+  # finances is not the user's to see; it must not open the card for them.
+  test "another member's closed account with a disposal does not show the investment card" do
+    exclude_fixture_investment_accounts
+    closed_account_with_disposal(date: Date.current.beginning_of_month, owner: users(:family_member))
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "[data-section-key='investment_performance']", count: 0
+  end
+
+  # The card lists only what this user counts in their finances. When the
+  # user's own closed account opens the card, another member's account that
+  # is not shared with them must not be listed beside it.
+  test "the investment card does not list another member's unshared disposal" do
+    exclude_fixture_investment_accounts
+    date = Date.current.beginning_of_month
+    _, own = closed_account_with_disposal(date: date)
+    _, theirs = closed_account_with_disposal(date: date, owner: users(:family_member))
+
+    get reports_path
+    assert_response :ok
+
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text)
+    assert lines.any? { |text| text.include?(own.ticker) }, "the user's own disposal must be listed"
+    assert lines.none? { |text| text.include?(theirs.ticker) },
+           "another member's unshared disposal must not be listed"
+  end
+
+  # The same holds when an open investment account of the user's is what
+  # shows the card, and when the other member's account is open too.
+  test "the investment card does not list another member's unshared disposal beside an open account" do
+    exclude_fixture_investment_accounts
+    date = Date.current.beginning_of_month
+    _, own = closed_account_with_disposal(date: date, close: false)
+    _, theirs = closed_account_with_disposal(date: date, owner: users(:family_member), close: false)
+
+    get reports_path
+    assert_response :ok
+
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text)
+    assert lines.any? { |text| text.include?(own.ticker) }, "the user's own disposal must be listed"
+    assert lines.none? { |text| text.include?(theirs.ticker) },
+           "another member's unshared disposal must not be listed"
+  end
+
+  # A member's account shared with the user and included in their finances
+  # is the user's to see, so its disposal is listed and opens the card.
+  test "the investment card lists a disposal from a member's account shared into the user's finances" do
+    exclude_fixture_investment_accounts
+    account, theirs = closed_account_with_disposal(date: Date.current.beginning_of_month, owner: users(:family_member))
+    account.account_shares.create!(user: @user, permission: "read_only", include_in_finances: true)
+
+    get reports_path
+    assert_response :ok
+
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text)
+    assert lines.any? { |text| text.include?(theirs.ticker) },
+           "a disposal from an account shared into the user's finances must be listed"
+  end
+
+  # An excluded trade is left out of reports, as investment totals leave it
+  # out; it is not a disposal for the card's gate or its list.
+  test "an excluded disposal from a closed account does not show the investment card" do
+    exclude_fixture_investment_accounts
+    closed_account_with_disposal(date: Date.current.beginning_of_month, excluded: true)
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "[data-section-key='investment_performance']", count: 0
+  end
+
+  test "the investment card does not list an excluded disposal" do
+    exclude_fixture_investment_accounts
+    date = Date.current.beginning_of_month
+    _, kept = closed_account_with_disposal(date: date, close: false)
+    _, excluded = closed_account_with_disposal(date: date, close: false, excluded: true)
+
+    get reports_path
+    assert_response :ok
+
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text)
+    assert lines.any? { |text| text.include?(kept.ticker) }, "the kept disposal must be listed"
+    assert lines.none? { |text| text.include?(excluded.ticker) }, "the excluded disposal must not be listed"
+  end
+
   # POSTing to settings_api_keys_path is create, which needs api_key params.
   test "google sheets instructions link to the API keys page" do
     get google_sheets_instructions_reports_url
@@ -843,6 +996,31 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    # Takes every fixture investment account out of the card's scope, so an
+    # account the test creates is the family's only one; otherwise the
+    # fixtures satisfy the visible-accounts gate on their own.
+    def exclude_fixture_investment_accounts
+      @family.accounts.where(accountable_type: %w[Investment Crypto]).update_all(exclude_from_reports: true)
+    end
+
+    # An investment account holding 5 shares at a basis of 100, with 2 sold at
+    # 150 on +date+ (a gain of $100.00), then closed.
+    # +close: false+ leaves it open; +excluded: true+ marks the sale excluded.
+    def closed_account_with_disposal(date:, label: "Sell", owner: @user, close: true, excluded: false)
+      account = @family.accounts.create!(name: "Closed brokerage", balance: 0, currency: "USD",
+                                         accountable: Investment.new, owner: owner)
+      security = Security.create!(ticker: "CLS#{SecureRandom.hex(3)}", name: "Closed Position")
+      account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                               amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+      account.entries.create!(
+        date: date, name: "out #{label}", amount: -300, currency: "USD", excluded: excluded,
+        entryable: Trade.new(security: security, qty: -2, price: 150, currency: "USD",
+                             investment_activity_label: label)
+      )
+      account.disable! if close
+      [ account, security ]
+    end
+
     # n EUR-priced disposals in a USD account, each on its own date with its
     # own rate row, so every one needs a distinct lookup.
     def seed_foreign_disposals(account, count)
