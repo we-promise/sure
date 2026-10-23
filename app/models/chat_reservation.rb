@@ -34,7 +34,11 @@ module ChatReservation
   # Marks a chat job as running, interim replies included. Expires with the
   # chat's response timeout in case the worker dies mid-job.
   def self.while_chat_runs
-    Sidekiq.redis { |conn| conn.call("SET", CHAT_KEY, "1", "EX", Chat.response_timeout.to_i) }
+    begin
+      Sidekiq.redis { |conn| conn.call("SET", CHAT_KEY, "1", "EX", Chat.response_timeout.to_i) }
+    rescue => e
+      Rails.logger.warn("ChatReservation chat flag not set: #{e.class}: #{e.message}")
+    end
     yield
   ensure
     begin

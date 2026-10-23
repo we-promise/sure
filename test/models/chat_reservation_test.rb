@@ -37,9 +37,10 @@ class ChatReservationTest < ActiveSupport::TestCase
   end
 
   test "with several AI threads, hold! reserves nothing" do
+    BackgroundJobHealth.stubs(:one_ai_thread?).returns(false)
     Sidekiq.expects(:redis).never
 
-    with_env_overrides("RAILS_AI_MAX_THREADS" => "2") { assert_nil ChatReservation.hold! }
+    assert_nil ChatReservation.hold!
   end
 
   test "the bubble says busy while a background AI job runs, ready while some wait, else nothing" do
@@ -70,6 +71,15 @@ class ChatReservationTest < ActiveSupport::TestCase
     Sidekiq.stubs(:redis).yields(conn)
 
     assert_raises(RuntimeError) { ChatReservation.while_chat_runs { raise "boom" } }
+  end
+
+  test "a Redis error while setting the chat flag doesn't skip the reply" do
+    conn = mock
+    conn.stubs(:call).with("SET", ChatReservation::CHAT_KEY, "1", "EX", Chat.response_timeout.to_i).raises(RedisClient::ConnectionError)
+    conn.stubs(:call).with("DEL", ChatReservation::CHAT_KEY)
+    Sidekiq.stubs(:redis).yields(conn)
+
+    assert_equal :reply, ChatReservation.while_chat_runs { :reply }
   end
 
   test "a reply isn't failed by a Redis error while clearing the chat flag" do
@@ -148,9 +158,8 @@ class ChatReservationTest < ActiveSupport::TestCase
 
     def with_hold_redis
       redis = FakeRedis.new
-      Sidekiq.stub(:redis, ->(&block) { block.call(redis) }) do
-        with_env_overrides("RAILS_AI_MAX_THREADS" => nil) { yield redis }
-      end
+      BackgroundJobHealth.stubs(:one_ai_thread?).returns(true)
+      Sidekiq.stub(:redis, ->(&block) { block.call(redis) }) { yield redis }
     end
 
     def fetch_for(queues, concurrency: 1)

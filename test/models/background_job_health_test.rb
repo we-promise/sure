@@ -38,31 +38,50 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
   test "with one AI thread, a running ai_low_priority job is busy" do
     stub_running("ai_low_priority")
 
-    with_env_overrides("RAILS_AI_MAX_THREADS" => nil) { assert BackgroundJobHealth.ai_busy? }
+    assert BackgroundJobHealth.ai_busy?
   end
 
   test "with one AI thread, a running chat is busy for the next one" do
     stub_running("ai_high_priority")
 
-    with_env_overrides("RAILS_AI_MAX_THREADS" => nil) { assert BackgroundJobHealth.ai_busy? }
+    assert BackgroundJobHealth.ai_busy?
   end
 
   test "other running jobs aren't busy" do
     stub_running("default")
 
-    with_env_overrides("RAILS_AI_MAX_THREADS" => nil) { assert_not BackgroundJobHealth.ai_busy? }
+    assert_not BackgroundJobHealth.ai_busy?
   end
 
   test "busy can be limited to some AI queues" do
     stub_running("ai_high_priority")
 
-    with_env_overrides("RAILS_AI_MAX_THREADS" => nil) { assert_not BackgroundJobHealth.ai_busy?(queues: [ "ai_low_priority" ]) }
+    assert_not BackgroundJobHealth.ai_busy?(queues: [ "ai_low_priority" ])
   end
 
   test "with several AI threads, a running ai_low_priority job isn't busy" do
-    stub_running("ai_low_priority")
+    stub_running("ai_low_priority", one_ai_thread: false)
 
-    with_env_overrides("RAILS_AI_MAX_THREADS" => "2") { assert_not BackgroundJobHealth.ai_busy? }
+    assert_not BackgroundJobHealth.ai_busy?
+  end
+
+  test "one AI thread when a worker process carries the label" do
+    Sidekiq::ProcessSet.stubs(:new).with(false).returns([ stub(labels: [ BackgroundJobHealth::ONE_AI_THREAD_LABEL ]) ])
+    assert BackgroundJobHealth.one_ai_thread?
+
+    Sidekiq::ProcessSet.stubs(:new).with(false).returns([ stub(labels: []) ])
+    assert_not BackgroundJobHealth.one_ai_thread?
+  end
+
+  test "a worker gets the label only when a capsule polls ai_low_priority with one thread" do
+    config = Sidekiq::Config.new
+    ai = config.capsule("ai") { |capsule| capsule.queues = %w[ai_high_priority ai_low_priority] }
+
+    ai.concurrency = 1
+    assert BackgroundJobHealth.one_ai_thread_worker?(config)
+
+    ai.concurrency = 2
+    assert_not BackgroundJobHealth.one_ai_thread_worker?(config)
   end
 
   test "fails open when Sidekiq/Redis is unreachable" do
@@ -82,7 +101,8 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
       Sidekiq::Queue.stubs(:new).with("high_priority").returns(stub(latency: latency))
     end
 
-    def stub_running(queue)
+    def stub_running(queue, one_ai_thread: true)
+      BackgroundJobHealth.stubs(:one_ai_thread?).returns(one_ai_thread)
       Sidekiq::WorkSet.stubs(:new).returns([ [ "worker:1", "tid", stub(queue: queue) ] ])
     end
 end
