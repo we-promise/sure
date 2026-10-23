@@ -69,7 +69,7 @@
                 disabled: @entry.linked? || split_locked || edit_locked,
                 "data-auto-submit-form-target": "auto" %>
           <% unless @entry.transaction.transfer? %>
-            <%= f.hidden_field :nature, value: "inflow" if @entry.transaction.refund? %>
+            <%= f.hidden_field :nature, value: "inflow", id: nil if @entry.transaction.refund? %>
             <div class="flex items-center gap-2">
               <%= f.select :nature,
                     [[t("shared.transaction_tabs.expense"), "outflow"], [t(@entry.transaction.refund? ? "transactions.transaction.refund" : "shared.transaction_tabs.income"), "inflow"]],

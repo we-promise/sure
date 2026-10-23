@@ -10,7 +10,7 @@
       <%= details[:net_cost] ? format_money(details[:net_cost]) : t("refunds.missing_rate") %>
     </p>
     <% details[:refunds].each do |refund| %>
-      <%= render DS::Link.new(text: entry_name_detailed(refund.entry), href: transaction_path(refund.entry), frame: :drawer, icon: "undo-2") %>
+      <%= render DS::Link.new(text: entry_name_detailed(refund.entry), href: transaction_path(refund.entry), frame: :drawer, icon: "undo-2", class: "privacy-sensitive") %>
     <% end %>
   <% else %>
     <p class="text-secondary"><%= t("refunds.explanation") %></p>

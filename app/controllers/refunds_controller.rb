@@ -4,13 +4,14 @@ class RefundsController < ApplicationController
   before_action :require_refund_write_permission!
 
   def new
+    @search = params[:search] if params[:search].is_a?(String)
     @purchases = Current.accessible_entries
       .where(entryable_type: "Transaction", excluded: false)
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
       .where(transactions: { kind: "standard" })
       .where("entries.amount > 0")
       .excluding_split_parents.excluding_pending
-    @purchases = @purchases.where("entries.name ILIKE ?", "%#{Entry.sanitize_sql_like(params[:search])}%") if params[:search].present?
+    @purchases = @purchases.where("entries.name ILIKE ?", "%#{Entry.sanitize_sql_like(@search)}%") if @search.present?
     @purchases = @purchases.reorder(date: :desc, created_at: :desc, id: :desc).preload(:account, :entryable).limit(100).to_a
     linked_purchase = @entry.transaction.refund_of&.entry
     if linked_purchase && Current.accessible_entries.exists?(id: linked_purchase.id)

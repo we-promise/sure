@@ -67,7 +67,9 @@ class RefundsControllerTest < ActionDispatch::IntegrationTest
   test "refund overview submits inflow direction when editing the displayed amount" do
     @refund.transaction.mark_as_refund!
     get transaction_path(@refund)
-    assert_select "input[type='hidden'][name='entry[nature]'][value='inflow']"
+    assert_select "input[type='hidden'][name='entry[nature]'][value='inflow']:not([id])"
+    assert_select "#entry_nature", count: 1
+    assert_select "select#entry_nature[disabled]"
     patch transaction_path(@refund), params: { entry: { name: "Return credit", amount: "800", nature: "inflow" } }
     assert_equal "Return credit", @refund.reload.name
     assert_equal(-800, @refund.amount)
@@ -85,10 +87,35 @@ class RefundsControllerTest < ActionDispatch::IntegrationTest
   test "renders purchase selection and net cost details" do
     get new_transaction_refund_path(@refund)
     assert_response :success
-    assert_select "select[name='refund[purchase_entry_id]']"
+    assert_select "select.form-field__input.privacy-sensitive[name='refund[purchase_entry_id]']"
     @refund.transaction.mark_as_refund!(purchase: @purchase.transaction)
     get transaction_path(@purchase)
     assert_response :success
     assert_select "[data-testid='purchase-net-cost']", text: /200/
+    assert_select "a.privacy-sensitive[href=?]", transaction_path(@refund)
+  end
+
+  test "purchase search filters by name and preserves the search text" do
+    @purchase.update!(name: "Matching purchase")
+    other_purchase = create_transaction(name: "Other purchase")
+
+    get new_transaction_refund_path(@refund), params: { search: "Matching" }
+
+    assert_response :success
+    assert_select "input[name='search'][value='Matching']"
+    assert_select "option[value=?]", @purchase.id
+    assert_select "option[value=?]", other_purchase.id, count: 0
+  end
+
+  test "non-string purchase searches are ignored" do
+    [ [ "Transaction" ], { name: "Transaction" } ].each do |search|
+      get new_transaction_refund_path(@refund), params: { search: search }
+
+      assert_response :success
+      assert_select "input[name='search']" do |inputs|
+        assert_empty inputs.first["value"].to_s
+      end
+      assert_select "option[value=?]", @purchase.id
+    end
   end
 end
