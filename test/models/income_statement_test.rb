@@ -486,6 +486,8 @@ class IncomeStatementTest < ActiveSupport::TestCase
   end
 
   test "a kind left out of the median expense is not counted, and the default still counts it" do
+    # The default counts contributions as expense only while the family does.
+    @family.update!(investment_contributions_as_spending: true)
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
     create_transaction(account: @checking_account, amount: 1000, category: @groceries_category)
     create_transaction(account: @checking_account, amount: 2000, kind: "investment_contribution")
@@ -502,6 +504,8 @@ class IncomeStatementTest < ActiveSupport::TestCase
   # cache key is never exercised: two fresh instances would pass even if the
   # excluded and default figures shared a key.
   test "the excluded and default medians are cached under different keys" do
+    # The default counts contributions as expense only while the family does.
+    @family.update!(investment_contributions_as_spending: true)
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
     create_transaction(account: @checking_account, amount: 1000, category: @groceries_category)
@@ -511,6 +515,22 @@ class IncomeStatementTest < ActiveSupport::TestCase
     default = IncomeStatement.new(@family).median_expense(interval: "month")
 
     assert_equal [ 1000.0, 3000.0 ], [ excluded, default ]
+  end
+
+  # The kind-excluding segment sits beside upstream's freshness segments, not
+  # in place of them: toggling the family setting still reaches the median.
+  test "a cached median follows the family's investing-as-spending setting" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    create_transaction(account: @checking_account, amount: 1000, category: @groceries_category)
+    create_transaction(account: @checking_account, amount: 2000, kind: "investment_contribution")
+    @family.update!(investment_contributions_as_spending: true)
+
+    counted = IncomeStatement.new(@family).median_expense(interval: "month")
+    @family.update!(investment_contributions_as_spending: false)
+    not_counted = IncomeStatement.new(@family.reload).median_expense(interval: "month")
+
+    assert_equal [ 3000.0, 1000.0 ], [ counted, not_counted ]
   end
 
   # The category median comes from category_stats, which has no kind filter,

@@ -208,10 +208,27 @@ class RetirementPlanTest < ActiveSupport::TestCase
     assert_equal BigDecimal("36000"), projection.annual_income
   end
 
-  # IncomeStatement counts a transfer into an investment account as an expense.
-  # For a FIRE plan that money is saving: counting it as spending would raise
-  # the FI number and lower the derived savings rate at the same time.
+  # A family that counts investing as spending has IncomeStatement count a
+  # transfer into an investment account as an expense. For a FIRE plan that
+  # money is saving: counting it as spending would raise the FI number and
+  # lower the derived savings rate at the same time.
   test "money moved into investments is saving, not spending" do
+    @family.update!(investment_contributions_as_spending: true)
+    mine = own_account(owner: @member, amount: 1_000)
+    create_transaction(account: mine, date: AS_OF, amount: 1_000)
+    create_transaction(account: mine, date: AS_OF, amount: 2_000, kind: "investment_contribution")
+    create_transaction(account: mine, date: AS_OF, amount: -6_000)
+
+    projection = RetirementPlan.for(@member).projection(as_of: AS_OF)
+
+    assert_equal BigDecimal("12000"), projection.annual_expenses
+    assert_equal BigDecimal("300000"), projection.fi_number
+  end
+
+  # With the family setting off the contribution is classified as invested,
+  # not spent; the plan reads the same either way.
+  test "money moved into investments is saving whatever the family counts as spending" do
+    @family.update!(investment_contributions_as_spending: false)
     mine = own_account(owner: @member, amount: 1_000)
     create_transaction(account: mine, date: AS_OF, amount: 1_000)
     create_transaction(account: mine, date: AS_OF, amount: 2_000, kind: "investment_contribution")
