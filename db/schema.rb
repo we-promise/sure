@@ -2300,6 +2300,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "asset_class"
     t.string "asset_sub_class"
+    t.datetime "classification_fetched_at"
     t.boolean "classification_locked", default: false, null: false
     t.string "classification_source"
     t.string "country_code"
