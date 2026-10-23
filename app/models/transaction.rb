@@ -230,6 +230,33 @@ class Transaction < ApplicationRecord
     "AND #{not_pending_sql(table_alias, providers: providers)}"
   end
 
+  # Transactions whose category is still the one an automatic source (e.g.
+  # "ai", "bayes") set.
+  scope :category_from, ->(*sources, since: nil, metadata: nil) { where(category_from_sql(*sources, since:, metadata:)) }
+
+  def self.category_from_sql(*sources, **options)
+    enriched_from_sql("category_id", *sources, **options)
+  end
+
+  # Transactions whose attribute (category_id, merchant_id; internal callers
+  # only) is still the value an automatic source set: that source's
+  # enrichment holds the current value. since: only enrichments written
+  # after it; metadata: only those whose metadata contains it.
+  def self.enriched_from_sql(attribute, *sources, since: nil, metadata: nil)
+    sql = +<<~SQL.squish
+      EXISTS (
+        SELECT 1 FROM data_enrichments de
+        WHERE de.enrichable_type = 'Transaction'
+          AND de.enrichable_id = transactions.id
+          AND de.attribute_name = :attribute
+          AND de.source IN (:sources)
+          AND de.value = to_jsonb(transactions.#{attribute}::text)
+    SQL
+    sql << " AND de.updated_at > :since" if since
+    sql << " AND de.metadata @> CAST(:metadata AS jsonb)" if metadata
+    sanitize_sql_array([ "#{sql})", { attribute: attribute, sources: sources.flatten.map(&:to_s), since: since, metadata: metadata&.to_json } ])
+  end
+
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
     joins(entry: :account).where(accounts: { family_id: family.id })
@@ -376,20 +403,6 @@ class Transaction < ApplicationRecord
 
   def has_potential_duplicate?
     potential_posted_match_data.present? && !potential_duplicate_dismissed?
-  end
-
-  # Manual recurring transactions are unique per (family, account, merchant/name, amount, currency)
-  # — see the partial unique indexes on recurring_transactions. Used to guard "mark as recurring"
-  # so the UI can disable the action ahead of time instead of failing after a POST.
-  def existing_manual_recurring_transaction
-    entry.account.family.recurring_transactions.find_by(
-      account_id: entry.account_id,
-      merchant_id: merchant_id,
-      name: merchant_id.present? ? nil : entry.name,
-      amount: entry.amount,
-      currency: entry.currency,
-      manual: true
-    )
   end
 
   def potential_duplicate_entry

@@ -488,6 +488,44 @@ class Entry < ApplicationRecord
     child_entries.exists?
   end
 
+  # Splits this entry unless it stopped being splittable. Two callers (the split dialog, two
+  # split rules, a rule and an API request) can both pass a splittable? check before either
+  # inserts children, and split! only validates its own amounts, so without the lock both sets
+  # of children would land and the amount would count twice. A provider sync can also mark the
+  # transaction pending or a transfer in between, so those are re-checked too. Returns true
+  # when it split.
+  def split_once!(splits, lock_attributes: false)
+    with_split_lock do |txn|
+      next false if split_parent? || excluded? || txn&.transfer? || txn&.pending?
+
+      split!(splits, lock_attributes: lock_attributes)
+      true
+    end
+  end
+
+  # Replaces the children of a split under the same lock, so a concurrent unsplit can't be undone
+  # and two edits can't both insert children. Returns false when the entry is no longer a split
+  # parent. Editing an existing split doesn't re-check pending/transfer: it creates no new split.
+  def resplit!(splits)
+    with_split_lock do
+      next false unless split_parent?
+
+      unsplit!
+      split!(splits)
+      true
+    end
+  end
+
+  # Unsplits under the same lock. Returns false when another caller already did.
+  def unsplit_once!
+    with_split_lock do
+      next false unless split_parent?
+
+      unsplit!
+      true
+    end
+  end
+
   def split_child?
     parent_entry_id.present?
   end
@@ -512,9 +550,12 @@ class Entry < ApplicationRecord
 
   # Splits this entry into child entries. Marks parent as excluded.
   #
-  # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
+  # @param splits [Array<Hash>] array of { name:, amount:, category_id:, merchant_id:, tag_ids:, excluded: } hashes.
+  #   merchant_id and tag_ids are optional per split and fall back to the parent's merchant / no tags.
+  # @param lock_attributes [Boolean] locks the category and merchant each split sets on its child, so
+  #   rules further down (or a later run) don't overwrite them. Tags are only ever added by rules.
   # @return [Array<Entry>] the created child entries
-  def split!(splits)
+  def split!(splits, lock_attributes: false)
     total = splits.sum { |s| s[:amount].to_d }
     unless total == amount
       raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
@@ -524,9 +565,14 @@ class Entry < ApplicationRecord
       children = splits.map do |split_attrs|
         child_transaction = Transaction.new(
           category_id: split_attrs[:category_id],
-          merchant_id: entryable.try(:merchant_id),
+          merchant_id: split_attrs[:merchant_id].presence || entryable.try(:merchant_id),
+          tag_ids: split_attrs[:tag_ids] || [],
           kind: entryable.try(:kind)
         )
+        if lock_attributes
+          locked_at = Time.current
+          child_transaction.locked_attributes = split_attrs.slice(:category_id, :merchant_id).compact_blank.keys.index_with { locked_at }
+        end
 
         child_entries.create!(
           account: account,
@@ -643,6 +689,20 @@ class Entry < ApplicationRecord
   end
 
   private
+    # Takes FOR UPDATE on the transaction row, then on this entry (lock! also reloads both), always
+    # in that order so the split methods can't deadlock each other. Yields the transaction, or nil
+    # for other entryables.
+    #
+    # Explicit transaction + lock!, not with_lock: Entry#transaction is the delegated_type
+    # accessor for the Transaction entryable, so with_lock silently never yields.
+    def with_split_lock
+      self.class.transaction do
+        txn = entryable if entryable.is_a?(Transaction)
+        txn&.lock!
+        lock!
+        yield txn
+      end
+    end
 
     # Remembers the earliest date this entry had before any save that changed
     # it, for sync_account_later to use as the sync window start.

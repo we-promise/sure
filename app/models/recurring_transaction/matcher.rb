@@ -387,8 +387,7 @@ class RecurringTransaction
 
       def known_names(series)
         @known_names ||= {}
-        @known_names[series.id] ||= ([ series.name ] + Array(series.matcher_hints["name_aliases"]))
-                                      .compact.map { |name| self.class.normalize_name(name) }.to_set
+        @known_names[series.id] ||= series.known_names
       end
 
       def normalize_name(name)
