@@ -23,7 +23,7 @@ class Insight::Generators::MaintainedGoalDepletedGeneratorTest < ActiveSupport::
     reserve(name: "Notgroschen", balance: 4_000, target: 6_000)
 
     generated = I18n.with_locale(:de) { generate.first }
-    body = I18n.with_locale(:de) { Insight::BodyWriter.new(@family).write(generated) }
+    body = I18n.with_locale(:de) { Insight::BodyWriter.new.write(generated) }
 
     assert_equal "Notgroschen liegt unter dem Zielstand", generated.title
     assert_equal "Für Notgroschen sind #{generated.facts[:saved]} von #{generated.facts[:target]} zurückgelegt. " \

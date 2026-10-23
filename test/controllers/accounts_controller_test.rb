@@ -1262,6 +1262,40 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
   end
 
+  test "reorder saves the manual order of one account group" do
+    # Same shape as the sidebar's sortable-list: group in the URL, ids in the body.
+    patch reorder_accounts_url(group: "depository"), params: { account_ids: [ accounts(:connected).id, @account.id ] }, as: :json
+
+    assert_response :success
+    assert_equal [ accounts(:connected).id, @account.id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "reorder drops accounts from another family" do
+    foreign = families(:empty).accounts.create!(name: "Foreign", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:empty))
+
+    patch reorder_accounts_url, params: { group: "depository", account_ids: [ foreign.id, @account.id ] }, as: :json
+
+    assert_response :success
+    assert_equal [ @account.id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "reorder rejects an unknown group" do
+    patch reorder_accounts_url, params: { group: "not_a_type", account_ids: [ @account.id ] }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_nil @user.reload.manual_account_order["not_a_type"]
+  end
+
+  test "sidebar shows drag handles only with the manual account order" do
+    get account_url(@account)
+    assert_select "[data-controller~='sortable-list']", count: 0
+
+    @user.update!(default_account_order: "manual")
+    get account_url(@account)
+    assert_select "[data-controller~='sortable-list'][data-sortable-list-url-value=?]", reorder_accounts_path(group: "depository")
+    assert_select "[data-sortable-list-target='item'][data-sortable-list-id=?]", @account.id
+  end
+
   private
     # #3630. Links a shared and an unshared account to +item+ through two fresh
     # provider rows built by the block, and returns them in that order. Shares
