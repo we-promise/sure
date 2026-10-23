@@ -36,7 +36,7 @@
   <% env_configured = configuration.fields.any? { |f| f.env_key && ENV[f.env_key].present? } %>
   <% if env_configured %>
     <p class="text-sm text-secondary">
-      Configuration can be set via environment variables or overridden below.
+      <%= t("settings.providers.provider_form.environment_configuration_hint") %>
     </p>
   <% end %>
 
@@ -57,16 +57,19 @@
           end
 
           input_type = field.secret ? "password" : "text"
+          field_key = "settings.providers.provider_form.fields.#{provider_key}.#{field.name}"
+          field_label = t("#{field_key}.label", default: field.label)
+          field_description = field.description.present? ? t("#{field_key}.description", default: field.description) : nil
         %>
 
         <div class="space-y-1">
           <%= form.text_field field.setting_key,
-                              label: field.label,
+                              label: field_label,
                               type: input_type,
-                              placeholder: field.default || (field.required ? "" : "Optional"),
+                              placeholder: field.default || (field.required ? "" : t("settings.providers.provider_form.optional")),
                               value: display_value %>
-          <% if field.description.present? %>
-            <p class="text-xs text-secondary px-1"><%= field.description %></p>
+          <% if field_description.present? %>
+            <p class="text-xs text-secondary px-1"><%= field_description %></p>
           <% end %>
         </div>
       <% end %>

@@ -29,6 +29,7 @@ ru:
         needs_setup: 'Счетов, требующих настройки: %{count}...'
       success: Синхронизация начата
     panel:
+      default_connection_name: Подключение Questrade
       eyebrow: Настройка · только на компьютере
       help_text: Документация API Questrade
       disconnect: Отключить

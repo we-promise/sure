@@ -61,7 +61,7 @@
     </div>
   <% else %>
     <%
-      questrade_item = Current.family.questrade_items.first_or_initialize(name: "Questrade Connection")
+      questrade_item = Current.family.questrade_items.first_or_initialize(name: t("questrade_items.panel.default_connection_name"))
     %>
     <%= styled_form_with model: questrade_item,
                          url: questrade_items_path,

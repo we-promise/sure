@@ -74,7 +74,7 @@ class Settings::ProvidersController < ApplicationController
     end
   rescue => error
     Rails.logger.error("Failed to update provider settings: #{error.class} - #{error.message}")
-    flash.now[:alert] = "Failed to update provider settings. Please try again."
+    flash.now[:alert] = t("settings.providers.update.failed")
     prepare_show_context
     render :show, status: :unprocessable_entity
   end
@@ -118,7 +118,7 @@ class Settings::ProvidersController < ApplicationController
     if panel
       @panel_key     = panel[:key]
       @panel_partial = panel[:partial]
-      @panel_title   = panel[:title]
+      @panel_title   = panel_title(panel)
       load_provider_items(provider_key)
       return render :connect_form
     end
@@ -219,7 +219,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
       { key: "kraken",         title: "Kraken",          turbo_id: "kraken",         partial: "kraken_panel" },
       { key: "coinspot",       title: "CoinSpot",        turbo_id: "coinspot",       partial: "coinspot_panel" },
-      { key: "onchain_wallet", title: "On-chain wallets", turbo_id: "onchain_wallet", partial: "onchain_wallet_panel" },
+      { key: "onchain_wallet", title: "On-chain wallets", title_key: "settings.providers.names.onchain_wallet", turbo_id: "onchain_wallet", partial: "onchain_wallet_panel" },
       { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
       { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
       { key: "trading212",     title: "Trading 212",     turbo_id: "trading212", partial: "trading212_panel" },
@@ -434,6 +434,10 @@ class Settings::ProvidersController < ApplicationController
       { error: has_error, last_synced_at: last_synced, stale: stale }
     end
 
+    def panel_title(panel)
+      panel[:title_key] ? t(panel[:title_key]) : panel[:title]
+    end
+
     # Builds a unified list of provider entries (registry-driven configurations
     # and hardcoded family panels) with pre-computed status, sorted
     # alphabetically by display title. Each entry carries enough data for the
@@ -453,7 +457,7 @@ class Settings::ProvidersController < ApplicationController
       family_entries = FAMILY_PANELS.map do |panel|
         {
           provider_key: panel[:key],
-          title: panel[:title],
+          title: panel_title(panel),
           turbo_id: panel[:turbo_id],
           partial: panel[:partial],
           auto_open_param: panel[:auto_open],

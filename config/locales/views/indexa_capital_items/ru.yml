@@ -16,6 +16,10 @@ ru:
       success: Подключение к IndexaCapital удалено
     errors:
       provider_not_configured: Провайдер IndexaCapital не настроен
+    account_types:
+      mutual: Инвестиционный портфель
+      pension: Пенсионный план
+      epsv: EPSV
     index:
       title: Подключения IndexaCapital
     indexa_capital_item:
@@ -87,6 +91,7 @@ ru:
       loading_message: Загрузка счетов IndexaCapital...
       loading_title: Загрузка
     panel:
+      default_connection_name: Подключение Indexa Capital
       alternative_auth: Или используйте аутентификацию по имени пользователя/паролю...
       field_descriptions: 'Описание полей:'
       fields:

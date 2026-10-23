@@ -27,7 +27,23 @@ class Settings::ProviderCard < ApplicationComponent
   end
 
   def meta_line
-    [ @region, @kinds.join(" / "), @tier ].compact_blank.join(" · ")
+    [ localized_region, localized_kinds, localized_tier ].compact_blank.join(" · ")
+  end
+
+  def localized_region
+    @region.to_s.split(" / ").map { |region| localized_metadata("regions", region) }.join(" / ") if @region.present?
+  end
+
+  def localized_kinds
+    @kinds.map { |kind| localized_metadata("kinds", kind) }.join(" / ") if @kinds.any?
+  end
+
+  def localized_tier
+    localized_metadata("tiers", @tier) if @tier.present?
+  end
+
+  def localized_metadata(group, value)
+    I18n.t("settings.providers.#{group}.#{value.to_s.downcase}", default: value)
   end
 
   def connect_path
