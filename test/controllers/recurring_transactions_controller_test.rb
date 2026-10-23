@@ -1371,6 +1371,36 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to bills_path
   end
 
+  # The dialog only ever posts "1". Anything else, such as the "0" or "false"
+  # a direct POST might send, is not the separate-bill choice.
+  test "create refuses a covered transaction when allow_duplicate is anything but 1" do
+    entry, = covered_entry_and_detected_bill
+
+    [ "0", "false" ].each do |value|
+      assert_no_difference "RecurringTransaction.count", "allow_duplicate=#{value} skipped the check" do
+        post recurring_transactions_url, params: covered_create_params(entry).merge(allow_duplicate: value)
+      end
+
+      assert_response :unprocessable_entity
+      assert_match I18n.t("recurring_transactions.new.covered_title"), response.body
+    end
+  end
+
+  test "a failed create does not turn another allow_duplicate value into the choice" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+    params = covered_create_params(entry).merge(allow_duplicate: "0")
+    params[:recurring_transaction][:first_due_on] = ""
+
+    post recurring_transactions_url, params: params
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=hidden][name=entry_id][value=?]", entry.id
+    assert_select "input[name=allow_duplicate]", count: 0
+  end
+
   test "create from a transaction no bill covers still saves" do
     entry = accounts(:depository).entries.create!(
       date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",

@@ -19,7 +19,7 @@ class RecurringTransactionsController < ApplicationController
   before_action :set_recurring_transaction, only: %i[edit update toggle_status destroy confirm dismiss]
   before_action :ensure_series_writable, only: %i[update toggle_status destroy confirm dismiss]
 
-  helper_method :series_writable?
+  helper_method :series_writable?, :separate_bill_chosen?
 
   def index
     scope = Current.family.recurring_transactions
@@ -165,7 +165,7 @@ class RecurringTransactionsController < ApplicationController
     # delegated-type reader, so Entry#with_lock never opens one: lock inside
     # the class-level transaction instead.
     @source_entry = Current.accessible_entries.find_by(id: params[:entry_id])
-    saved = if @source_entry && params[:allow_duplicate].blank?
+    saved = if @source_entry && !separate_bill_chosen?
       Entry.transaction do
         @source_entry.lock!
         @covering_series = covering_series_for(@source_entry)
@@ -292,6 +292,12 @@ class RecurringTransactionsController < ApplicationController
     end
 
   private
+
+    # "Create a separate bill anyway" posts allow_duplicate=1, and only that
+    # counts as the choice: a "0" or "false" from a direct POST does not.
+    def separate_bill_chosen?
+      params[:allow_duplicate] == "1"
+    end
 
     # Only a bill this user can open is worth naming in the dialog.
     def covering_series_for(entry)
