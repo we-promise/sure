@@ -126,22 +126,27 @@ class McpController < ApplicationController
       auth_header = request.authorization.to_s
       token = auth_header[/\ABearer\s+(.+)\z/i, 1]&.strip&.presence # pipelock:ignore
 
-      return if token.present? && authenticate_via_doorkeeper(token)
+      oauth_result = authenticate_via_doorkeeper(token) if token.present?
+      return if oauth_result == :authorized
       return if token.present? && authenticate_via_env_token(token)
 
-      render_mcp_unauthorized
+      if oauth_result == :insufficient_scope
+        render_mcp_insufficient_scope
+      else
+        render_mcp_unauthorized
+      end
     end
 
     def authenticate_via_doorkeeper(token)
       access_token = Doorkeeper::AccessToken.by_token(token)
-      return false unless access_token&.accessible?
-      return false unless access_token.scopes.include?("mcp") || access_token.scopes.include?("read_write")
+      return :unauthorized unless access_token&.accessible?
 
       user = User.find_by(id: access_token.resource_owner_id)
-      return false unless user&.active?
+      return :unauthorized unless user&.active?
+      return :insufficient_scope unless access_token.scopes.include?("mcp") || access_token.scopes.include?("read_write")
 
       setup_mcp_session(user)
-      true
+      :authorized
     end
 
     def authenticate_via_env_token(token)
@@ -226,6 +231,18 @@ class McpController < ApplicationController
         "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource/mcp\", scope=\"#{REQUIRED_SCOPE}\""
       )
       render json: { error: "unauthorized" }, status: :unauthorized
+    end
+
+    def render_mcp_insufficient_scope
+      response.set_header(
+        "WWW-Authenticate",
+        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource\", error=\"insufficient_scope\", scope=\"mcp\""
+      )
+      render json: {
+        error: "insufficient_scope",
+        error_description: t("mcp.errors.insufficient_scope"),
+        scope: "mcp"
+      }, status: :forbidden
     end
 
     def render_jsonrpc_error(id, code, message, status: :ok, data: nil)

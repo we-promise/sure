@@ -135,7 +135,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name=scope][value=mcp]"
   end
 
-  test "rejects token with read-only scope" do
+  test "returns 403 with the required scope for a valid read-only token" do
     app = Doorkeeper::Application.create!(
       name: "Test MCP Client #{SecureRandom.hex(4)}",
       redirect_uri: "https://claude.ai/callback",
@@ -151,26 +151,58 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     post "/mcp", params: jsonrpc_request("initialize").to_json,
          headers: mcp_headers(token.token)
 
-    assert_response :unauthorized
+    assert_response :forbidden
+    body = JSON.parse(response.body)
+    assert_equal "insufficient_scope", body["error"]
+    assert_equal "mcp", body["scope"]
+    assert_equal "This token lacks MCP access. Reauthorize with the mcp scope, or re-add this connector.", body["error_description"]
+    challenge = response.headers["WWW-Authenticate"]
+    assert_includes challenge, 'error="insufficient_scope"'
+    assert_includes challenge, 'scope="mcp"'
+    assert_includes challenge, "oauth-protected-resource"
   end
 
-  test "rejects expired Doorkeeper token" do
+  test "returns 401 for expired Doorkeeper tokens regardless of scope" do
     app = Doorkeeper::Application.create!(
       name: "Test MCP Client #{SecureRandom.hex(4)}",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    %w[read read_write].each do |scope|
+      token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+        application: app,
+        resource_owner_id: @user.id,
+        scopes: scope,
+        expires_in: -1.second # already expired at creation time
+      )
+
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(token.token)
+
+      assert_response :unauthorized
+      assert_equal "unauthorized", JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "returns 401 for a revoked token even when it lacks the MCP scope" do
+    app = Doorkeeper::Application.create!(
+      name: "Revoked MCP Client",
       redirect_uri: "https://claude.ai/callback",
       confidential: false
     )
     token = Doorkeeper::AccessToken.create!( # pipelock:ignore
       application: app,
       resource_owner_id: @user.id,
-      scopes: "read_write",
-      expires_in: -1.second # already expired at creation time
+      scopes: "read",
+      expires_in: 1.year,
+      revoked_at: Time.current
     )
 
     post "/mcp", params: jsonrpc_request("initialize").to_json,
          headers: mcp_headers(token.token)
 
     assert_response :unauthorized
+    assert_equal "unauthorized", JSON.parse(response.body)["error"]
   end
 
   test "rejects token for deactivated user" do
@@ -184,7 +216,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     token = Doorkeeper::AccessToken.create!( # pipelock:ignore
       application: app,
       resource_owner_id: inactive_user.id,
-      scopes: "read_write",
+      scopes: "read",
       expires_in: 1.year
     )
 
@@ -202,6 +234,29 @@ class McpControllerTest < ActionDispatch::IntegrationTest
            headers: mcp_headers(@token)
 
       assert_response :ok
+    end
+  end
+
+  test "env-var token still works when it also matches an OAuth token without MCP scope" do
+    app = Doorkeeper::Application.create!(
+      name: "Static MCP Client",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: @user.id,
+      scopes: "read",
+      expires_in: 1.year
+    )
+    @token = token.plaintext_token
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      assert_mcp_initialize_response(JSON.parse(response.body)["result"])
     end
   end
 

@@ -1,5 +1,8 @@
 ---
 pt-BR:
+  mcp:
+    errors:
+      insufficient_scope: "Este token não permite acesso ao MCP. Autorize novamente com o escopo mcp ou adicione este conector de novo."
   activerecord:
     errors:
       messages:
