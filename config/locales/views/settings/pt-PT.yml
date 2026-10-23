@@ -429,7 +429,7 @@ pt-PT:
         coinbase: Importe as suas posições cripto Coinbase e acompanhe o desempenho.
         binance: Sincronize os seus saldos à vista Binance utilizando uma chave de API apenas de leitura.
         kraken: Sincronize os saldos Kraken e as execuções de negociação à vista utilizando uma chave de API apenas de leitura.
-        onchain_wallet: Acompanhe carteiras Bitcoin, EVM, Solana, Cosmos e Polkadot de autocustódia a partir dos seus endereços públicos.
+        onchain_wallet: Acompanhe carteiras Bitcoin, Litecoin, Dogecoin, Zcash, EVM, Solana, Cosmos e Polkadot de autocustódia a partir dos seus endereços públicos.
         snaptrade: Ligue contas de corretagem através da rede de agregação SnapTrade.
         trading212: Sincronize a sua carteira de investimento Trading 212 utilizando uma chave de API apenas de leitura.
         ibkr: Sincronize contas de investimento Interactive Brokers através de importações de Flex Query.
@@ -520,10 +520,14 @@ pt-PT:
         etherscan_api_key_placeholder: Cole uma chave de API Etherscan
         etherscan_hint: As leituras do Ethereum funcionam sem chave. Adicionar uma chave Etherscan apenas aumenta o limite de frequência para o Ethereum.
         keep_etherscan_api_key: Deixe em branco para manter a chave existente
+        keep_sochain_api_key: Deixe em branco para manter a chave existente
         manage_wallets: Gerir carteiras
         keyless_body: O Sure apenas lê dados públicos da cadeia. Não estão envolvidas chaves, frases-semente ou assinaturas, e nada pode ser gasto.
         keyless_title: Apenas leitura, sem necessidade de chaves
         save: Guardar
+        sochain_api_key_label: Chave de API SoChain (opcional)
+        sochain_api_key_placeholder: Cole uma chave de API SoChain
+        sochain_hint: As leituras de Litecoin, Dogecoin e Zcash funcionam sem chave. Uma chave SoChain de sochain.com/dashboard aumenta o limite de pedidos.
         sync_start_date_hint: As transferências anteriores a esta data são ignoradas. Deixe em branco para importar tudo o que o explorador reportar.
         sync_start_date_label: Ignorar transferências anteriores a
       enable_banking_panel:

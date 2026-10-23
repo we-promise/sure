@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1888,6 +1888,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.string "institution_url"
     t.string "name"
     t.boolean "scheduled_for_deletion", default: false, null: false
+    t.text "sochain_api_key"
     t.string "status", default: "good", null: false
     t.datetime "sync_start_date"
     t.datetime "updated_at", null: false

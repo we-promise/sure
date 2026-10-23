@@ -96,6 +96,27 @@ module Onchain
 
     POLKADOT = "polkadot"
 
+    BASE58_CHAR = "[1-9A-HJ-NP-Za-km-z]"
+    BECH32_CHAR = "[ac-hj-np-z02-9]"
+
+    # Read through SoChain (Onchain::UtxoAdapter). Base58 shapes mirror the
+    # Bitcoin adapter's; Zcash is transparent addresses only.
+    UTXO = [
+      {
+        key: "litecoin", symbol: "LTC", name: "Litecoin", sochain_network: "LTC",
+        address_patterns: [ /\A[LM3]#{BASE58_CHAR}{25,39}\z/ ],
+        case_insensitive_patterns: [ /\Altc1#{BECH32_CHAR}{11,87}\z/i ]
+      },
+      {
+        key: "dogecoin", symbol: "DOGE", name: "Dogecoin", sochain_network: "DOGE",
+        address_patterns: [ /\A[DA9]#{BASE58_CHAR}{25,39}\z/ ]
+      },
+      {
+        key: "zcash", symbol: "ZEC", name: "Zcash", sochain_network: "ZEC",
+        address_patterns: [ /\At[13]#{BASE58_CHAR}{33}\z/ ]
+      }
+    ].freeze
+
     BUILTIN = [
       Definition.new(
         key: BITCOIN,
@@ -137,7 +158,21 @@ module Onchain
         token_kind: nil,
         adapter_class_name: "Onchain::PolkadotAdapter",
         adapter_options: {}
-      )
+      ),
+      *UTXO.map do |utxo|
+        Definition.new(
+          key: utxo[:key],
+          native: NativeAsset.new(symbol: utxo[:symbol], name: utxo[:name], decimals: 8),
+          token_kind: nil,
+          adapter_class_name: "Onchain::UtxoAdapter",
+          adapter_options: {
+            chain: utxo[:key],
+            sochain_network: utxo[:sochain_network],
+            address_patterns: utxo[:address_patterns],
+            case_insensitive_patterns: utxo.fetch(:case_insensitive_patterns, [])
+          }
+        )
+      end
     ].freeze
 
     class << self

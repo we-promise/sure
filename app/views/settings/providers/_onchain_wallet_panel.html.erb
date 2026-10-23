@@ -53,6 +53,14 @@
                               type: :password,
                               value: nil %>
 
+          <p class="text-sm text-secondary"><%= t("settings.providers.onchain_wallet_panel.sochain_hint") %></p>
+
+          <%= form.text_field :sochain_api_key,
+                              label: t("settings.providers.onchain_wallet_panel.sochain_api_key_label"),
+                              placeholder: connection.sochain_api_key.present? ? t("settings.providers.onchain_wallet_panel.keep_sochain_api_key") : t("settings.providers.onchain_wallet_panel.sochain_api_key_placeholder"),
+                              type: :password,
+                              value: nil %>
+
           <%= form.date_field :sync_start_date,
                               label: t("settings.providers.onchain_wallet_panel.sync_start_date_label"),
                               value: connection.sync_start_date&.to_date %>

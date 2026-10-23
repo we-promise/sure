@@ -43,6 +43,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match OnchainTestHelper::FAKE_ADDRESS.first(6), response.body
     assert_match I18n.t("settings.providers.onchain_wallet_panel.etherscan_api_key_label"), response.body
+    assert_match I18n.t("settings.providers.onchain_wallet_panel.sochain_api_key_label"), response.body
     assert_match I18n.t("settings.providers.onchain_wallet_panel.sync_start_date_label"), response.body
     assert_select "form[action=?]", sync_onchain_wallet_item_path(item)
     assert_select "a[href=?]", manage_onchain_wallet_item_path(item)
@@ -408,6 +409,17 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "abc123", item.reload.etherscan_api_key
 
     patch onchain_wallet_item_url(item), params: { onchain_wallet_item: { etherscan_api_key: "" } }
+    assert_equal "abc123", item.reload.etherscan_api_key
+  end
+
+  test "update stores a SoChain key and keeps it when the field is left blank" do
+    item = create_onchain_wallet_item(family: @family)
+
+    patch onchain_wallet_item_url(item), params: { onchain_wallet_item: { sochain_api_key: "def456" } }
+    assert_equal "def456", item.reload.sochain_api_key
+
+    patch onchain_wallet_item_url(item), params: { onchain_wallet_item: { sochain_api_key: "", etherscan_api_key: "abc123" } }
+    assert_equal "def456", item.reload.sochain_api_key
     assert_equal "abc123", item.reload.etherscan_api_key
   end
 
