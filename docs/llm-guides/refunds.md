@@ -46,8 +46,15 @@ unlinked in permissive imports; strict session imports reject missing references
 to avoid silently losing archive relationships.
 
 The nullable indexed self-reference is introduced by
-`20260906120000_add_refund_of_to_transactions.rb`. No historical transactions are
-automatically reclassified. Migration and runtime verification follow the
+`20260906120000_add_refund_of_to_transactions.rb`. Its index builds concurrently
+outside a DDL transaction, and its foreign key is added without validating
+existing rows. `20260906120001_validate_refund_of_foreign_key.rb` validates it
+separately, avoiding a write-blocking table scan. The first migration can resume
+after interruption, including rebuilding an invalid concurrent index. Previews
+that already applied the original migration keep their existing reference and
+validated foreign key. Rollback removes refund links, so export them first if
+they must be retained. No historical transactions are automatically reclassified.
+Migration and runtime verification follow the
 [development guide](development.md).
 
 ## API and assistant
