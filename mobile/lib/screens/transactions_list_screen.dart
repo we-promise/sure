@@ -149,10 +149,22 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   /// Split parents and children can't be deleted like plain transactions: the
   /// server refuses a child, and deleting a parent cascades to its children,
   /// which this list would keep showing. Point the user at "Unsplit" instead.
-  bool _blockSplitDelete(String? transactionId) {
+  ///
+  /// The list never loads split state itself, so a split made on the web or
+  /// another device is unknown here: look it up first.
+  Future<bool> _blockSplitDelete(String? transactionId) async {
     if (transactionId == null) return false;
     final splits =
         Provider.of<TransactionSplitsProvider>(context, listen: false);
+    if (!splits.isSplitStatusKnown(transactionId) && splits.isOnline) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final token = await auth.getValidAccessToken();
+      if (!mounted) return false;
+      if (token != null) {
+        await splits.loadSplit(accessToken: token, transactionId: transactionId);
+        if (!mounted) return false;
+      }
+    }
     if (!splits.isSplitParent(transactionId) &&
         !splits.isSplitChild(transactionId)) {
       return false;
@@ -165,11 +177,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     return true;
   }
 
-  void _toggleTransactionSelection(String transactionId) {
+  Future<void> _toggleTransactionSelection(String transactionId) async {
     if (!_selectedTransactions.contains(transactionId) &&
-        _blockSplitDelete(transactionId)) {
+        await _blockSplitDelete(transactionId)) {
       return;
     }
+    if (!mounted) return;
     setState(() {
       if (_selectedTransactions.contains(transactionId)) {
         _selectedTransactions.remove(transactionId);
@@ -311,7 +324,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
   Future<bool> _confirmAndDeleteTransaction(Transaction transaction) async {
     if (transaction.id == null) return false;
-    if (_blockSplitDelete(transaction.id)) return false;
+    if (await _blockSplitDelete(transaction.id)) return false;
+    if (!mounted) return false;
 
     // Show confirmation dialog
     // Capture providers and localizations before async gap
