@@ -151,6 +151,39 @@ class RemovePlaidHoldingsAheadOfTheirSnapshotMigrationTest < ActiveSupport::Test
     end
   end
 
+  # Balances and the account's history were computed with the removed rows, so
+  # an item that lost rows is synced again to rebuild them.
+  test "a sync is scheduled for an item whose rows were removed" do
+    plaid_row(@msft, Date.current, 9)
+
+    assert_difference -> { @plaid_account.plaid_item.syncs.count }, 1 do
+      run_migration
+    end
+  end
+
+  test "no sync is scheduled when nothing is removed" do
+    plaid_row(@aapl, @snapshot_date, 10)
+
+    assert_no_difference -> { Sync.count } do
+      run_migration
+    end
+  end
+
+  test "a sync that cannot be scheduled does not undo the removal" do
+    stale = plaid_row(@msft, Date.current, 9)
+    PlaidItem.any_instance.stubs(:sync_later).raises(StandardError, "queue unavailable")
+
+    run_migration
+
+    assert_not Holding.exists?(stale.id)
+  end
+
+  # Each account's DELETE commits on its own, so its row locks are released
+  # as it goes rather than held until the whole scan ends.
+  test "it runs outside a single migration transaction" do
+    assert RemovePlaidHoldingsAheadOfTheirSnapshot.disable_ddl_transaction
+  end
+
   private
     def plaid_row(security, date, qty)
       @account.holdings.create!(security: security, date: date, qty: qty, price: 50, amount: qty * 50,

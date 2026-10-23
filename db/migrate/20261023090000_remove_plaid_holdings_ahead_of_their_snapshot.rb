@@ -18,7 +18,15 @@
 # processor can no longer write and the readers would otherwise pick. Rows of
 # other providers, and rows with no provider (calculated or manual), are left
 # alone. Running it again removes nothing more.
+#
+# Balances and holdings history were computed with the removed rows, so each
+# Plaid item that lost rows is synced again to rebuild them.
 class RemovePlaidHoldingsAheadOfTheirSnapshot < ActiveRecord::Migration[8.1]
+  # Each account's DELETE commits on its own, so row locks are not held for
+  # the whole scan, and the syncs scheduled at the end read committed rows.
+  # Safe to interrupt: a rerun picks up where it stopped.
+  disable_ddl_transaction!
+
   # The processor's rule, copied rather than called, so the migration keeps
   # meaning what it meant when it was written.
   def self.snapshot_date(payload, today: Date.current)
@@ -51,23 +59,30 @@ class RemovePlaidHoldingsAheadOfTheirSnapshot < ActiveRecord::Migration[8.1]
   end
 
   def up
-    remove_stale_rows(batch_size: BATCH_SIZE)
+    schedule_syncs(remove_stale_rows(batch_size: BATCH_SIZE))
   end
 
   # In batches, so neither every Plaid payload nor every provider id is held at
-  # once; one DELETE per account provider.
+  # once; one DELETE per account provider. Returns the ids of the Plaid items
+  # that lost rows.
   def remove_stale_rows(batch_size:)
+    item_ids = []
+
     self.class.plaid_account_payloads
       .joins("JOIN account_providers ON account_providers.provider_id = plaid_accounts.id")
       .where(account_providers: { provider_type: "PlaidAccount" })
-      .select("plaid_accounts.id", "plaid_accounts.raw_holdings_payload", "account_providers.id AS account_provider_id")
+      .select("plaid_accounts.id", "plaid_accounts.plaid_item_id", "plaid_accounts.raw_holdings_payload",
+              "account_providers.id AS account_provider_id")
       .find_each(batch_size: batch_size) do |plaid_account|
         cutoff = self.class.snapshot_date(plaid_account.raw_holdings_payload)
 
-        execute ActiveRecord::Base.sanitize_sql_array([
+        removed = connection.delete(ActiveRecord::Base.sanitize_sql_array([
           "DELETE FROM holdings WHERE account_provider_id = ? AND date > ?", plaid_account.account_provider_id, cutoff
-        ])
+        ]))
+        item_ids << plaid_account.plaid_item_id if removed.positive?
       end
+
+    item_ids.uniq
   end
 
   # The removed rows were stale copies of positions the next Plaid sync writes
@@ -76,4 +91,13 @@ class RemovePlaidHoldingsAheadOfTheirSnapshot < ActiveRecord::Migration[8.1]
   def down
     raise ActiveRecord::IrreversibleMigration
   end
+
+  private
+    def schedule_syncs(item_ids)
+      PlaidItem.syncable.where(id: item_ids).find_each do |item|
+        item.sync_later
+      rescue => e
+        say "Could not schedule a sync for Plaid item #{item.id} (#{e.message}); it refreshes on its next sync"
+      end
+    end
 end
