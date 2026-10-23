@@ -147,6 +147,54 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal 2, queries.count { |sql| sql.include?('FROM "trades"') }
   end
 
+  # The fallback divides the cost of the purchases by their share count. After
+  # a split the holding's qty is in the new shares, so the purchases have to be
+  # counted in them too, or the cost per share is the pre-split figure.
+  test "the fallback cost per share halves from a 2-for-1 ex-date and keeps total cost" do
+    security, ex_date = split_security(2, 1)
+    create_trade(security, account: @account, qty: 10, price: 100, date: ex_date - 2)
+    before = split_holding(security, ex_date - 1, 10)
+    on = split_holding(security, ex_date, 20)
+
+    assert_equal Money.new(100), before.avg_cost
+    assert_equal Money.new(50), on.avg_cost
+    assert_equal before.avg_cost * before.qty, on.avg_cost * on.qty
+  end
+
+  test "a buy on the ex-date is not scaled again" do
+    security, ex_date = split_security(2, 1)
+    create_trade(security, account: @account, qty: 10, price: 100, date: ex_date - 2)
+    create_trade(security, account: @account, qty: 10, price: 50, date: ex_date)
+
+    # 1,000 + 500 over 20 post-split shares from the first buy and 10 from the second.
+    assert_equal Money.new(50), split_holding(security, ex_date, 30).avg_cost
+  end
+
+  test "a 1-for-10 reverse split scales the fallback the other way" do
+    security, ex_date = split_security(1, 10)
+    create_trade(security, account: @account, qty: 100, price: 10, date: ex_date - 2)
+
+    assert_equal Money.new(10), split_holding(security, ex_date - 1, 100).avg_cost
+    assert_equal Money.new(100), split_holding(security, ex_date, 10).avg_cost
+  end
+
+  test "without split rows the fallback is unchanged" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
+    before = @amzn.avg_cost
+
+    unrelated, = split_security(2, 1)
+
+    assert_equal before, Holding.find(@amzn.id).avg_cost
+    assert_not_empty unrelated.splits
+  end
+
+  test "the trend of a post-split fallback holding measures against the split-adjusted cost" do
+    security, ex_date = split_security(2, 1)
+    create_trade(security, account: @account, qty: 10, price: 100, date: ex_date - 2)
+
+    assert_equal Money.new(1000), split_holding(security, ex_date, 20).trend.previous
+  end
+
   test "calculates total return trend" do
     @amzn.stubs(:avg_cost).returns(Money.new(214.00))
     @nvda.stubs(:avg_cost).returns(Money.new(126.00))
@@ -490,6 +538,19 @@ class HoldingTest < ActiveSupport::TestCase
   end
 
   private
+
+    # A security with a split of numerator:denominator three days ago, and a
+    # price on each day around it.
+    def split_security(numerator, denominator)
+      ex_date = 3.days.ago.to_date
+      security = create_security("SP#{SecureRandom.hex(2).upcase}", prices: (ex_date - 2..Date.current).map { |date| { date: date, price: 50 } })
+      security.splits.create!(ex_date: ex_date, numerator: numerator, denominator: denominator, source: "manual")
+      [ security, ex_date ]
+    end
+
+    def split_holding(security, date, qty)
+      @account.holdings.create!(date: date, security: security, qty: qty, price: 50, amount: qty * 50, currency: "USD")
+    end
 
     def load_holdings
       security1 = create_security("AMZN", prices: [

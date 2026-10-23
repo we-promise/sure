@@ -6,9 +6,15 @@
 # The holding calculators apply it at the open of the ex-date, before that
 # day's trades (#249).
 class Security::Split < ApplicationRecord
+  # Who said the split happened. A user's own entry outranks a provider's, so a
+  # sync never overwrites what someone recorded by hand (#3781). Each provider
+  # that writes splits adds itself here.
+  SOURCES = %w[manual snaptrade].freeze
+
   belongs_to :security
 
   validates :ex_date, :source, presence: true
+  validates :source, inclusion: { in: SOURCES }, allow_blank: true
   validates :numerator, :denominator, numericality: { only_integer: true, greater_than: 0 }
   validates :ex_date, uniqueness: { scope: :security_id }
   validate :changes_the_share_count
@@ -16,6 +22,151 @@ class Security::Split < ApplicationRecord
   # New shares per old, exact.
   def ratio
     Rational(numerator, denominator)
+  end
+
+  def manual?
+    source == "manual"
+  end
+
+  class << self
+    # The one way a split row is written. Keyed on the security and ex-date,
+    # under the security's row lock so two writers cannot race to the unique
+    # index. A manual write replaces whatever is there; a provider's replaces
+    # another provider's, but never a manual row: that row is kept, and a
+    # provider that disagrees with it is recorded for support. Returns the row
+    # that stands.
+    def record!(security:, ex_date:, numerator:, denominator:, source:)
+      security.with_lock do
+        split = security.splits.find_or_initialize_by(ex_date: ex_date)
+
+        # Only a known provider is turned away here. Anything else falls
+        # through to save!, whose validations refuse it.
+        if split.persisted? && split.manual? && source.to_s != "manual" && SOURCES.include?(source.to_s)
+          report_overruled(split, Rational(numerator, denominator), source)
+          next split
+        end
+
+        split.assign_attributes(numerator: numerator, denominator: denominator, source: source)
+        next split unless split.changed?
+
+        split.save!
+        split.send(:rematerialize_holders)
+        split
+      end
+    end
+
+    # Re-points a merged duplicate's splits at the security that replaces it.
+    # On an ex-date both have, the manual row stays over a provider's, and
+    # between equals the canonical security's stays. The other is deleted, and
+    # recorded for support when its terms differ from the one kept.
+    #
+    # The callers re-point holdings and trades first, and those holdings were
+    # built against the duplicate's splits. So whenever either side has a
+    # split, every holder of `to` is rebuilt (after the merge commits).
+    # Returns how many were moved and how many dropped.
+    def move!(from:, to:)
+      counts = { moved: 0, dropped: 0 }
+
+      where(security_id: Array(from).map(&:id)).find_each do |split|
+        existing = to.splits.find_by(ex_date: split.ex_date)
+
+        if existing.nil?
+          split.update!(security: to)
+          counts[:moved] += 1
+        elsif split.manual? && !existing.manual?
+          report_dropped(kept: split, dropped: existing, into: to)
+          existing.destroy!
+          split.update!(security: to)
+          counts[:moved] += 1
+        else
+          report_dropped(kept: existing, dropped: split, into: to)
+          split.destroy!
+          counts[:dropped] += 1
+        end
+      end
+
+      rematerialize_holders_of(to) if counts.values.sum.positive? || to.splits.exists?
+      counts
+    end
+
+    # The product of the splits after `from` and on or before `to`: a split on
+    # its ex-date is already in that day's shares. Every reader of a split
+    # range goes through here, whether its splits are preloaded or not.
+    def factor_between(splits, from, to)
+      return Rational(1) if from.nil? || to.nil? || from >= to
+
+      splits.reduce(Rational(1)) do |factor, split|
+        split.ex_date > from && split.ex_date <= to ? factor * split.ratio : factor
+      end
+    end
+
+    # Every account with a holding or a trade in the security, in any family:
+    # a split changes all of their share counts. One job each, enqueued after
+    # the write commits (ApplicationJob.enqueue_after_transaction_commit).
+    def rematerialize_holders_of(security)
+      trade_account_ids = Entry.where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security.id).select(:id)).select(:account_id)
+      holding_account_ids = Holding.where(security_id: security.id).select(:account_id)
+
+      Account.where(id: trade_account_ids).or(Account.where(id: holding_account_ids)).find_each do |account|
+        SecuritySplitRematerializeJob.perform_later(account, security)
+      end
+    end
+
+    private
+      def report_dropped(kept:, dropped:, into:)
+        return if kept.ratio == dropped.ratio
+
+        DebugLogEntry.capture(
+          category: "security_split",
+          level: "warn",
+          message: "Merging duplicate securities dropped a split whose terms differ from the one kept",
+          source: name,
+          provider_key: dropped.source.to_s,
+          metadata: {
+            security_id: into.id,
+            duplicate_security_id: dropped.security_id == into.id ? kept.security_id : dropped.security_id,
+            ticker: into.ticker,
+            ex_date: kept.ex_date.iso8601,
+            kept_ratio: "#{kept.ratio.numerator}:#{kept.ratio.denominator}",
+            kept_source: kept.source,
+            dropped_ratio: "#{dropped.ratio.numerator}:#{dropped.ratio.denominator}",
+            dropped_source: dropped.source
+          }
+        )
+      end
+
+      def report_overruled(split, provider_ratio, provider)
+        return if provider_ratio == split.ratio
+
+        DebugLogEntry.capture(
+          category: "security_split",
+          level: "warn",
+          message: "Provider split differs from a manually recorded split; the manual one is kept",
+          source: name,
+          provider_key: provider.to_s,
+          metadata: {
+            security_id: split.security_id,
+            ticker: split.security.ticker,
+            ex_date: split.ex_date.iso8601,
+            provider_ratio: "#{provider_ratio.numerator}:#{provider_ratio.denominator}",
+            manual_ratio: "#{split.ratio.numerator}:#{split.ratio.denominator}"
+          }
+        )
+      end
+  end
+
+  # Changes an existing row in place, a moved ex-date included. Unlike
+  # .record!, this edits a row the caller already holds, so precedence is
+  # the caller's decision.
+  def revise!(ex_date:, numerator:, denominator:, source:)
+    update!(ex_date: ex_date, numerator: numerator, denominator: denominator, source: source)
+    rematerialize_holders if saved_changes?
+    self
+  end
+
+  def remove!
+    destroy!
+    rematerialize_holders
   end
 
   # The scale of the `qty` columns on `holdings` and `trades`. A quantity this
@@ -47,6 +198,10 @@ class Security::Split < ApplicationRecord
   end
 
   private
+    def rematerialize_holders
+      self.class.rematerialize_holders_of(security)
+    end
+
     # A 1:1 "split" changes nothing, and the DB refuses it too. Reuses Rails'
     # own `other_than` message, so no new string is needed.
     def changes_the_share_count
