@@ -343,6 +343,70 @@ class SnaptradeAccount::SplitSecurityRepairTest < ActiveSupport::TestCase
     assert_nil holding.reload.avg_cost
   end
 
+  # A sync resolves a position's security before it writes, so one running
+  # alongside the repair can write to a source row after the check above.
+  # Each SnapTrade writer is visible before it starts: an incomplete Sync on
+  # the connection or the account, or the activities fetch flag.
+  {
+    "the SnapTrade connection has a sync running" => ->(test) { test.snaptrade_item.syncs.create!(status: "syncing") },
+    "the SnapTrade connection has a sync pending" => ->(test) { test.snaptrade_item.syncs.create!(status: "pending") },
+    "the account has a sync pending" => ->(test) { test.account.syncs.create!(status: "pending") },
+    "an activities fetch is pending" => ->(test) { test.snaptrade_account.update!(activities_fetch_pending: true) }
+  }.each do |situation, arrange|
+    test "a live repair is refused, writing nothing, when #{situation}" do
+      holding = seed_observed_split
+      arrange.call(self)
+      before = account_state
+
+      error = assert_no_difference -> { DebugLogEntry.count } do
+        assert_raises(SnaptradeAccount::SplitSecurityRepair::SyncInProgress) { repair!(allow_price_gaps: true) }
+      end
+
+      assert_match(/sync/i, error.message)
+      assert_equal before, account_state
+      assert_nil holding.reload.avg_cost
+    end
+  end
+
+  test "finished syncs do not hold the repair off" do
+    holding = seed_observed_split
+    %w[completed failed stale].each do |status|
+      snaptrade_item.syncs.create!(status: status)
+      @account.syncs.create!(status: status)
+    end
+
+    repair!(allow_price_gaps: true)
+
+    assert_equal Money.new(150, "USD"), holding.reload.avg_cost
+  end
+
+  test "a sync pending on another account does not hold the repair off" do
+    holding = seed_observed_split
+    accounts(:depository).syncs.create!(status: "pending")
+
+    repair!(allow_price_gaps: true)
+
+    assert_equal Money.new(150, "USD"), holding.reload.avg_cost
+  end
+
+  # Syncable#sync_later creates a sync under a row lock on its syncable, so
+  # holding the connection's and the account's rows until the repair commits
+  # keeps a new sync from starting in the meantime.
+  test "a live repair locks the SnapTrade connection and account rows while it applies" do
+    seed_observed_split
+    locks = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+      locks << payload[:sql] if payload[:sql].include?("FOR UPDATE")
+    end
+
+    repair!(allow_price_gaps: true)
+
+    assert locks.any? { |sql| sql.include?(%("snaptrade_items")) }, "locks the SnapTrade connection row"
+    assert locks.any? { |sql| sql.include?(%("accounts")) }, "locks the account row"
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
+  end
+
   test "the rake task is a dry run unless DRY_RUN is false" do
     holding = seed_observed_split
 
@@ -574,6 +638,12 @@ class SnaptradeAccount::SplitSecurityRepairTest < ActiveSupport::TestCase
     assert_match(/target #{@row_b.id} \(XNYS, Split Co\)/, output)
     assert_match(/#{@row_a.id} \(XNYS, Split Co\)/, output)
     assert_match(/SHOP: skipped, rows on different exchanges/, output)
+  end
+
+  attr_reader :account, :snaptrade_account
+
+  def snaptrade_item
+    @snaptrade_account.snaptrade_item
   end
 
   private
