@@ -202,6 +202,9 @@ class CashFlowReport {
       final node = nodes[index];
       final children = (childrenOf[index] ?? const <int>[])
           .map((c) => build(c, side))
+          // A category whose refunds exceed its activity nets out negative;
+          // like the chart, leave it out rather than show a negative row.
+          .where((c) => c.amount > 0)
           .toList()
         ..sort((a, b) => b.amount.compareTo(a.amount));
       return CashFlowCategory(
@@ -217,7 +220,7 @@ class CashFlowReport {
     }
 
     List<CashFlowCategory> side(List<int> roots, CashFlowSide s) =>
-        roots.map((i) => build(i, s)).toList()
+        roots.map((i) => build(i, s)).where((c) => c.amount > 0).toList()
           ..sort((a, b) => b.amount.compareTo(a.amount));
 
     return CashFlowReport(

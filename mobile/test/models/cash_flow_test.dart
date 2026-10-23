@@ -93,6 +93,20 @@ void main() {
       expect(uncategorized.canDrillDown, isFalse);
     });
 
+    test('categories netted negative by refunds are left out', () {
+      final json = jsonDecode(cashFlowSankeyFixture) as Map<String, dynamic>;
+      final nodes = (json['sankey'] as Map)['nodes'] as List;
+      for (final n in nodes) {
+        if (n['name'] == 'Groceries') n['value'] = '-15.0';
+        if (n['name'] == 'Interest') n['value'] = '-5.0';
+      }
+      final r = CashFlowReport.fromJson(json);
+      expect(r.incomeCategories.map((c) => c.name), ['Salary']);
+      final food =
+          r.expenseCategories.firstWhere((c) => c.name == 'Food & Drink');
+      expect(food.children, isEmpty);
+    });
+
     test('structural nodes are not categories', () {
       final names = [
         ...report.incomeCategories.map((c) => c.name),
