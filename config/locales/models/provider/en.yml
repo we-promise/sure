@@ -1,6 +1,8 @@
 ---
 en:
   providers:
+    truelayer:
+      description: Connect to your UK bank via TrueLayer
     property_valuation:
       not_configured: This property data provider is not configured.
       missing_fields: Please provide a name and a complete US address (street, city, state, and ZIP code).
