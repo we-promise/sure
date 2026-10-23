@@ -130,10 +130,44 @@ class RedbarkAccount::Transactions::Processor
         date: date,
         name: name[0..254], # Limit to 255 chars
         source: "redbark",
+        category_id: matched_category_id(data),
         merchant: merchant_for(data),
         notes: data[:description].presence,
         extra: extra
       )
+    end
+
+    # A single category matcher reused across this account's transactions, built from the
+    # family's existing categories.
+    def category_matcher
+      @category_matcher ||= RedbarkAccount::Transactions::CategoryMatcher.new(
+        family_categories,
+        locale: family&.locale
+      )
+    end
+
+    # The family's existing categories. Importing transactions is intentionally
+    # non-destructive with respect to the family's category structure: we do NOT bootstrap
+    # Sure's defaults here. A family that has no categories simply gets uncategorised
+    # transactions, and matching resumes once the user sets up categories through the
+    # normal UI flow.
+    def family_categories
+      @family_categories ||= family&.categories&.to_a || []
+    end
+
+    def family
+      @family ||= redbark_account.redbark_item.family
+    end
+
+    # The id of the Sure category the transaction's Redbark category code (or, failing
+    # that, its merchant_category_code) maps to, or nil when the account has category
+    # matching switched off, or neither signal has a confident equivalent among the
+    # family's categories. The import adapter applies this via enrich_attribute, so it
+    # never overwrites a category the user has set or locked.
+    def matched_category_id(data)
+      return nil unless account&.enable_category_matcher?
+
+      category_matcher.match(data[:category], data[:merchantCategoryCode])&.id
     end
 
     def parse_transaction_amount(data)

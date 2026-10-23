@@ -78,7 +78,7 @@ module Account::Linkable
   # transactions, and therefore honors `enable_category_matcher`. Add a provider
   # here only once its entry processor checks the toggle; listing one that
   # ignores it shows the user a switch that does nothing.
-  CATEGORY_MATCHER_PROVIDER_TYPES = %w[PlaidAccount UpAccount MonobankAccount].freeze
+  CATEGORY_MATCHER_PROVIDER_TYPES = %w[PlaidAccount UpAccount MonobankAccount RedbarkAccount].freeze
 
   def supports_category_matcher?
     return true if plaid_account.present?
