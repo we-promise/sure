@@ -212,6 +212,20 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  test "an opening lot goes once the trades explain the whole position" do
+    travel_to TODAY do
+      build_reverse_fixture
+      materialize(:reverse)
+      assert HoldingLot.opening.exists?(security: @opening)
+
+      @account.holdings.find_by!(security: @opening, date: d(10)).update!(qty: 8, amount: 240)
+      materialize(:reverse)
+
+      assert_not HoldingLot.opening.exists?(security: @opening), "8 reported against 8 traded"
+      assert_equal 8, HoldingLot.where(security: @opening).sum(:qty)
+    end
+  end
+
   # Unlinking an account turns its syncs forward, and the forward calculator
   # knows nothing of units held before the trades.
   test "a forward sync after unlinking leaves the opening lots alone" do
