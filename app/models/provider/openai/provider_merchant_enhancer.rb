@@ -135,7 +135,8 @@ class Provider::Openai::ProviderMerchantEnhancer
       end
     rescue Faraday::BadRequestError => e
       # Auto mode handles rejection of its strict attempt inside its own helper.
-      # A 400 can reject the response format or reasoning effort; drop both.
+      # Only the strict attempt is retried; the retry drops both the response
+      # format and the reasoning effort, since either can cause the 400.
       if json_mode == JSON_MODE_STRICT
         Rails.logger.warn("Strict JSON mode failed for merchant enhancement, falling back to none mode: #{e.message}")
         enhance_merchants_with_mode(JSON_MODE_NONE, with_reasoning_effort: false)

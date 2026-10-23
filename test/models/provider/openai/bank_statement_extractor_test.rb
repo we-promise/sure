@@ -235,6 +235,42 @@ class Provider::Openai::BankStatementExtractorTest < ActiveSupport::TestCase
     end
   end
 
+  test "sends the configured reasoning effort with each chunk request" do
+    requests = []
+    @client.expects(:chat).twice
+      .with { |request| requests << request[:parameters]; true }
+      .returns(chat_response)
+
+    Setting.stubs(:openai_reasoning_effort).returns("low")
+    extractor = build_extractor
+    extractor.stubs(:extract_pages_from_pdf).returns([
+      "x" * (Provider::Openai::BankStatementExtractor::MAX_CHARS_PER_CHUNK + 1),
+      "y" * (Provider::Openai::BankStatementExtractor::MAX_CHARS_PER_CHUNK + 1)
+    ])
+
+    with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do
+      extractor.extract
+    end
+
+    assert_equal 2, requests.size
+    assert requests.all? { |params| params[:reasoning_effort] == "low" }
+  end
+
+  test "omits reasoning_effort when no effort is configured" do
+    requests = []
+    @client.expects(:chat)
+      .with { |request| requests << request[:parameters]; true }
+      .returns(chat_response)
+
+    Setting.stubs(:openai_reasoning_effort).returns(nil)
+
+    with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do
+      build_extractor.extract
+    end
+
+    assert requests.all? { |params| !params.key?(:reasoning_effort) }
+  end
+
   test "strips a markdown fenced reply so none mode still parses" do
     fenced = "```json\n" + { "transactions" => [ { "date" => "2024-01-15", "description" => "Coffee", "amount" => -5.50 } ] }.to_json + "\n```"
     @client.expects(:chat).returns(chat_response(content: fenced))

@@ -157,7 +157,8 @@ class Provider::Openai::AutoMerchantDetector
       # This handles providers that don't support json_schema response format.
       # Auto mode performs its own strict-attempt fallback; a BadRequestError
       # reaching this rescue while in auto mode came from a none-mode retry.
-      # A 400 can reject the response format or reasoning effort; drop both.
+      # Only the strict attempt is retried; the retry drops both the response
+      # format and the reasoning effort, since either can cause the 400.
       if json_mode == JSON_MODE_STRICT
         Rails.logger.warn("Strict JSON mode failed, falling back to none mode: #{e.message}")
         auto_detect_merchants_with_mode(JSON_MODE_NONE, with_reasoning_effort: false)
