@@ -26,6 +26,17 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
     scope = family.auto_categorizable_transactions_for(current_resource_owner)
     scope = scope.where(id: requested_ids) if requested_ids
 
+    # Without a list the request would cover every eligible transaction (all
+    # of them, right after a bulk import), plucking every id and enqueueing a
+    # job per batch inside this request. Cap it like the explicit list and
+    # say so; the rest can be queued once these jobs have run.
+    truncated = false
+    unless requested_ids
+      ids = scope.order(:id).limit(MAX_TRANSACTION_IDS + 1).pluck(:id)
+      truncated = ids.size > MAX_TRANSACTION_IDS
+      scope = scope.where(id: ids.first(MAX_TRANSACTION_IDS))
+    end
+
     queued_ids, unqueued_ids = family.queue_auto_categorization(scope)
 
     if unqueued_ids.any?
@@ -35,7 +46,9 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
                  "#{queued_ids.size} were queued. Retry to queue the rest.",
         queued_count: queued_ids.size,
         transaction_ids: queued_ids,
-        unqueued_transaction_ids: unqueued_ids
+        unqueued_transaction_ids: unqueued_ids,
+        skipped_transaction_ids: skipped_ids(requested_ids, queued_ids + unqueued_ids),
+        truncated: truncated
       }, status: :service_unavailable
     end
 
@@ -46,11 +59,18 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
       # transfer or split parent, or not a transaction this key can annotate.
       # One list for every reason, so it says nothing about another
       # family's ids.
-      skipped_transaction_ids: requested_ids ? requested_ids - queued_ids : []
+      skipped_transaction_ids: skipped_ids(requested_ids, queued_ids),
+      # True when more than MAX_TRANSACTION_IDS transactions were eligible and
+      # no list was sent: only the first MAX_TRANSACTION_IDS were queued.
+      truncated: truncated
     }, status: :accepted
   end
 
   private
+
+    def skipped_ids(requested_ids, handled_ids)
+      requested_ids ? requested_ids - handled_ids : []
+    end
 
     def ensure_write_scope
       authorize_scope!(:write)

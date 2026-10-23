@@ -92,6 +92,7 @@ components:
       - queued_count
       - transaction_ids
       - skipped_transaction_ids
+      - truncated
       properties:
         queued_count:
           type: integer
@@ -108,6 +109,10 @@ components:
             format: uuid
           description: 'Requested transactions that were not queued: already categorized,
             category locked, a transfer or split parent, or not one this key may annotate'
+        truncated:
+          type: boolean
+          description: True when transaction_ids was omitted and more than 1000 transactions
+            were eligible, so only the first 1000 were queued
     TransactionAutoCategorizationPartial:
       type: object
       required:
@@ -136,6 +141,18 @@ components:
             type: string
             format: uuid
           description: Transactions the queue refused; retry to queue them
+        skipped_transaction_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: 'Requested transactions that were never eligible (already categorized,
+            category locked, a transfer or split parent, or not one this key may annotate).
+            Do not retry these'
+        truncated:
+          type: boolean
+          description: True when transaction_ids was omitted and more than 1000 transactions
+            were eligible, so only the first 1000 were considered
     Split:
       type: object
       required:

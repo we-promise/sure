@@ -89,6 +89,38 @@ class Api::V1::TransactionAutoCategorizationsControllerTest < ActionDispatch::In
     assert_empty body["transaction_ids"] & body["unqueued_transaction_ids"]
   end
 
+  test "503 also reports requested ids that were never eligible" do
+    Provider::LlmConcept.stubs(:max_items_per_call).returns(1)
+    categorized = create_transaction(account: @account, category: categories(:food_and_drink)).transaction
+    other = create_transaction(account: @account, name: "Hardware store 3").transaction
+    AutoCategorizeJob.stubs(:perform_later).returns(true).then.returns(false)
+
+    post auto_categorize_api_v1_transactions_url,
+         params: { transaction_ids: [ categorized.id, @uncategorized.id, other.id ] },
+         headers: api_headers(@api_key), as: :json
+
+    assert_response :service_unavailable
+    body = JSON.parse(response.body)
+    assert_equal [ categorized.id ], body["skipped_transaction_ids"]
+  end
+
+  test "without transaction_ids only the first MAX_TRANSACTION_IDS are queued and the response says so" do
+    stub_const = Api::V1::TransactionAutoCategorizationsController
+    stub_const.send(:remove_const, :MAX_TRANSACTION_IDS)
+    stub_const.const_set(:MAX_TRANSACTION_IDS, 1)
+    create_transaction(account: @account, name: "Hardware store 4")
+
+    post auto_categorize_api_v1_transactions_url, headers: api_headers(@api_key), as: :json
+
+    assert_response :accepted
+    body = JSON.parse(response.body)
+    assert_equal 1, body["queued_count"]
+    assert_equal true, body["truncated"]
+  ensure
+    stub_const.send(:remove_const, :MAX_TRANSACTION_IDS)
+    stub_const.const_set(:MAX_TRANSACTION_IDS, 1_000)
+  end
+
   test "returns 503 when the queue adapter raises" do
     Provider::LlmConcept.stubs(:max_items_per_call).returns(1)
     other = create_transaction(account: @account, name: "Hardware store 2").transaction
