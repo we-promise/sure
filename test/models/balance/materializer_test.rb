@@ -357,6 +357,25 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_equal 10_000, account.balance
   end
 
+  # A position closed after the provider's anchor leaves a zero latest row,
+  # which current_holdings does not count, while cash was still written from
+  # the anchor day's open position. Removing the trades must still give the
+  # provider's whole balance back as cash.
+  test "removing the trades of a closed position resets cash to the provider's balance" do
+    account, security = linked_account_with_trade
+    create_trade(security, account: account, qty: -2, date: Date.current, price: 210)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    assert_nil account.reload.current_holdings.find_by(security: security), "the position is closed"
+    assert_not_equal 10_000, account.cash_balance, "the fallback wrote a trade-adjusted cash figure"
+
+    account.trades.each { |trade| trade.entry.destroy! }
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    account.reload
+    assert_empty account.holdings.where(account_provider_id: nil)
+    assert_equal 10_000, account.cash_balance
+  end
+
   # A provider's trade history can start after a position was opened (Plaid
   # sends at most two years), so a sell can arrive without its buy. Built from
   # zero that is a negative position, and cash above the provider's total. The

@@ -16,6 +16,7 @@ class Balance::Materializer
   def materialize_balances
     Balance.transaction do
       @had_derived_position = derived_position?
+      @had_calculated_position = calculated_position?
       clear_derived_holdings if @had_derived_position && !holdings_from_trades?
       materialize_holdings
       calculate_balances
@@ -76,6 +77,16 @@ class Balance::Materializer
       strategy == :reverse && account.latest_provider_holdings_snapshot_date.nil? && account.current_holdings.exists?
     end
 
+    # Any non-provider row with a quantity, on any day. Wider than
+    # derived_position?: a position the fallback built and then closed ends on
+    # a zero row that current_holdings leaves out, yet the cash it wrote came
+    # from a day the position was open. Read only once no trade is left, where
+    # the purge clears these rows and nothing is left for cash to exclude.
+    def calculated_position?
+      strategy == :reverse && account.latest_provider_holdings_snapshot_date.nil? &&
+        account.holdings.where(account_provider_id: nil).where.not(qty: 0).exists?
+    end
+
     # When the fallback stands aside for an account it had built, the reverse
     # path would read that position back as the provider's snapshot and keep
     # it. Clearing the rows first leaves the account as it reads without the
@@ -93,7 +104,7 @@ class Balance::Materializer
     # calculated holding keeps the provider's cash untouched.
     def update_cash_balance
       unless account.trades.exists?
-        account.update!(cash_balance: account.balance) if @had_derived_position
+        account.update!(cash_balance: account.balance) if @had_derived_position || @had_calculated_position
         return
       end
 
