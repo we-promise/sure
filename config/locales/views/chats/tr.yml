@@ -38,10 +38,7 @@ tr:
       delete_chat: Sohbeti sil
       edit_chat_title: Sohbet başlığını düzenle
       start_new_chat: Yeni sohbet başlat
-    demo_banner_message: "Vercel AI Gateway tarafından sağlanan krediler aracılığıyla
-      LLM'ler kullanıyorsunuz. Kod tabanı `gpt-4.1` ile test edildiğinden sonuçlar
-      farklılık gösterebilir, ancak token'larınız eğitim için başka hiçbir yere gitmez!
-      🤖"
+    demo_banner_message: "Vercel AI Gateway sayesinde ücretsiz LLM tokenları. Test amacıyla model ağırlıklarını sık sık değiştirdiğimiz için sonuçlar farklılık gösterebilir. Konuşmalarınızın nereye gittiğini öğrenmek için Vercel'in belgelerine bakın! 🤖"
     demo_banner_title: Demo Modu Aktif
     destroy:
       notice: Sohbet başarıyla silindi

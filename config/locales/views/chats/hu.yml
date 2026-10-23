@@ -2,7 +2,7 @@
 hu:
   chats:
     demo_banner_title: "Demo mód aktív"
-    demo_banner_message: "LLM-eket használsz a Vercel AI Gateway által biztosított krediteken keresztül. Az eredmények változhatnak, mivel a kódot `gpt-4.1`-en tesztelték, de a tokenjeid nem kerülnek sehova tanítás céljából! 🤖"
+    demo_banner_message: "Ingyenes LLM-tokenek a Vercel AI Gateway jóvoltából. Az eredmények eltérhetnek, mivel tesztelés céljából gyakran változtatjuk a modellek súlyait. A Vercel dokumentációjából megtudhatod, hová kerülnek a beszélgetéseid! 🤖"
     thinking: "Gondolkodás..."
     ai_greeting:
       greeting: "Szia, %{name}! Egy AI/nagy nyelvi modell vagyok, aki segíthet pénzügyeid kezelésében. Hozzáférhetek az internethez és a fiókadataidhoz."

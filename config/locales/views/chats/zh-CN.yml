@@ -2,7 +2,7 @@
 zh-CN:
   chats:
     demo_banner_title: 演示模式已启用
-    demo_banner_message: 您正在通过 Vercel AI Gateway 提供的额度使用 LLM。结果可能会有所不同，因为代码库是在 `gpt-4.1` 上测试的，而您的 token 不会被用于其他训练！🤖
+    demo_banner_message: "Vercel AI Gateway 免费提供 LLM token。由于我们经常更换模型权重进行测试，结果可能会有所不同。请查阅 Vercel 的文档，了解您的对话会被发送到哪里！🤖"
     thinking: 思考中……
     ai_greeting:
       greeting: "%{name}，你好！我是一个 AI/大语言模型，可以帮您处理财务问题。我可以访问网络和您的账户数据。"
