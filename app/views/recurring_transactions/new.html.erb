@@ -80,14 +80,17 @@
       <%# A suggestion is that bill, found by detection and not yet confirmed.
           Confirming it links this payment; a separate bill would become the
           duplicate the moment the suggestion was confirmed. %>
+      <%# Income is stored negative, so an inflow's covering series is income
+          and the warning names it as such. %>
       <% suggested = @covering_series.suggested? %>
+      <% covered = @covering_series.amount.negative? ? ".covered_income" : ".covered" %>
       <div class="mb-5">
-        <%= render DS::Alert.new(title: t(suggested ? ".covered_suggested_title" : ".covered_title"), variant: :warning, live: :polite) do %>
-          <p><%= t(suggested ? ".covered_suggested_body" : ".covered_body", name: @covering_series.display_name) %></p>
+        <%= render DS::Alert.new(title: t(suggested ? "#{covered}_suggested_title" : "#{covered}_title"), variant: :warning, live: :polite) do %>
+          <p><%= t(suggested ? "#{covered}_suggested_body" : "#{covered}_body", name: @covering_series.display_name) %></p>
           <div class="flex flex-wrap items-center gap-3">
             <% if suggested && series_writable?(@covering_series) %>
               <%= render DS::Link.new(
-                    text: t(".covered_confirm"),
+                    text: t("#{covered}_confirm"),
                     variant: "primary",
                     href: confirm_recurring_transaction_path(@covering_series),
                     method: :post,
@@ -95,7 +98,7 @@
                   ) %>
             <% end %>
             <%= render DS::Link.new(
-                  text: t(".covered_open"),
+                  text: t("#{covered}_open"),
                   variant: :default,
                   href: bill_path(@covering_series),
                   frame: "_top"
@@ -104,7 +107,7 @@
         <% end %>
       </div>
 
-      <%= render DS::Disclosure.new(title: t(".covered_create_anyway"), align: "left") do %>
+      <%= render DS::Disclosure.new(title: t("#{covered}_create_anyway"), align: "left") do %>
         <div class="pt-2">
           <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0,
                              source_entry_id: @source_entry&.id, allow_duplicate: true %>

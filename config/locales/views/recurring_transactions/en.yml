@@ -70,6 +70,13 @@ en:
       covered_suggested_body: "%{name} is waiting in your suggestions. Confirm it to start tracking it, so a new bill does not count this payment twice. Matching payments are linked automatically, and you can link this one from the bill."
       covered_confirm: Confirm bill
       covered_create_anyway: Create a separate bill anyway
+      covered_income_title: This deposit already belongs to an income
+      covered_income_body: "%{name} already tracks this deposit, so adding it again would count it twice."
+      covered_income_open: Open income
+      covered_income_suggested_title: Sure already suggested this income
+      covered_income_suggested_body: "%{name} is waiting in your suggestions. Add it to start tracking it, so this deposit is not counted twice. Matching deposits are linked automatically, and you can link this one from the income."
+      covered_income_confirm: Add income
+      covered_income_create_anyway: Add a separate income anyway
     smart_fills:
       create:
         failed: Could not analyze the charge history right now. The form kept the transaction's own values.

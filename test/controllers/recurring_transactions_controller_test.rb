@@ -1294,6 +1294,34 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", confirm_recurring_transaction_path(detected), count: 0
   end
 
+  # An inflow is covered by a recurring income, not a bill, and the dialog
+  # around it is already the income one, so the warning speaks of income too.
+  test "new from a deposit a recurring income covers speaks of income" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: -1840, currency: "USD", name: "ACME PAYROLL",
+      entryable: Transaction.new(merchant: covering_merchant)
+    )
+    income = @family.recurring_transactions.create!(
+      account: accounts(:depository), merchant: covering_merchant, name: nil, bill_type: "income",
+      amount: -1840, currency: "USD", expected_day_of_month: Date.current.day,
+      last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current,
+      status: "active", manual: false, occurrence_count: 2
+    )
+
+    { "active" => %w[covered_income_title covered_title], "suggested" => %w[covered_income_suggested_title covered_suggested_title] }.each do |status, (income_title, bill_title)|
+      income.update!(status: status)
+
+      get new_recurring_transaction_url(entry_id: entry.id), headers: { "Turbo-Frame" => "modal" }
+
+      assert_response :success
+      assert_match I18n.t("recurring_transactions.new.#{income_title}"), response.body
+      assert_no_match I18n.t("recurring_transactions.new.#{bill_title}"), response.body
+      assert_select "a[href=?]", bill_path(income), text: I18n.t("recurring_transactions.new.covered_income_open")
+      assert_match I18n.t("recurring_transactions.new.covered_income_create_anyway"), response.body
+    end
+    assert_select "a[href=?]", confirm_recurring_transaction_path(income), text: I18n.t("recurring_transactions.new.covered_income_confirm")
+  end
+
   # A suggestion is a bill Sure found and is waiting on. Saving a separate one
   # now would only become a duplicate when the suggestion is confirmed, so the
   # dialog offers the confirm instead, with the separate bill still behind it.
