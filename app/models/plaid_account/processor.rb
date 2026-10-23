@@ -174,28 +174,12 @@ class PlaidAccount::Processor
     # alongside is as of that same date. Anchoring that total on today would
     # set it against holdings later repriced for today, and the difference
     # would read as cash on every day in between -- the shift #3815 removed
-    # from IBKR. The anchor goes on the newest date the holdings carry; a
-    # snapshot with no dated holdings is today's.
+    # from IBKR. The anchor goes on the holdings snapshot's date, the date the
+    # holdings processor writes every holding of this sync on.
     def balance_date
       return Date.current unless plaid_account.plaid_type == "investment"
 
-      # A holding dated ahead of today is discounted on its own, so one bad
-      # feed does not pull the anchor off the date the rest agree on.
-      dated = holdings.filter_map { |holding| parse_date(holding["institution_price_as_of"]) }
-      dated.reject { |date| date > Date.current }.max || Date.current
-    end
-
-    def holdings
-      plaid_account.raw_holdings_payload&.dig("holdings") || []
-    end
-
-    def parse_date(value)
-      return nil if value.blank?
-      return value.to_date if value.respond_to?(:to_date) && !value.is_a?(String)
-
-      Date.parse(value.to_s)
-    rescue ArgumentError, TypeError
-      nil
+      plaid_account.holdings_snapshot_date
     end
 
     def balance_calculator
