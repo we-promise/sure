@@ -128,42 +128,13 @@ class Provider::Openai::ProviderMerchantEnhancer
     end
 
     def enhance_merchants_generic
-      if json_mode == JSON_MODE_AUTO
-        enhance_merchants_with_auto_mode
-      else
-        enhance_merchants_with_mode(json_mode)
-      end
-    rescue Faraday::BadRequestError => e
-      # Auto mode handles rejection of its strict attempt inside its own helper.
-      # Only the strict attempt is retried; the retry drops both the response
-      # format and the reasoning effort, since either can cause the 400.
-      if json_mode == JSON_MODE_STRICT
-        Rails.logger.warn("Strict JSON mode failed for merchant enhancement, falling back to none mode: #{e.message}")
-        enhance_merchants_with_mode(JSON_MODE_NONE, with_reasoning_effort: false)
-      else
-        raise
-      end
-    end
-
-    def enhance_merchants_with_auto_mode
-      result = begin
-        enhance_merchants_with_mode(JSON_MODE_STRICT)
-      rescue Faraday::BadRequestError => e
-        # Rescue only the strict attempt so a failed fallback propagates.
-        Rails.logger.warn("Auto mode: strict JSON mode rejected for merchant enhancement (#{e.message}), retrying with none mode")
-        return enhance_merchants_with_mode(JSON_MODE_NONE, with_reasoning_effort: false)
-      end
-
-      null_count = result.count { |r| r.business_url.nil? }
-      missing_count = merchants.size - result.size
-      failed_count = null_count + missing_count
-      failed_ratio = merchants.size > 0 ? failed_count.to_f / merchants.size : 0.0
-
-      if failed_ratio > Provider::Openai::AutoMerchantDetector::AUTO_MODE_NULL_THRESHOLD
-        Rails.logger.info("Auto mode: #{(failed_ratio * 100).round}% failed in strict mode for merchant enhancement, retrying with none mode")
-        enhance_merchants_with_mode(JSON_MODE_NONE)
-      else
-        result
+      request_with_json_mode_fallback(
+        json_mode,
+        operation: "merchant enhancement",
+        expected_count: merchants.size,
+        failed: ->(r) { r.business_url.nil? }
+      ) do |mode, with_reasoning_effort|
+        enhance_merchants_with_mode(mode, with_reasoning_effort: with_reasoning_effort)
       end
     end
 
