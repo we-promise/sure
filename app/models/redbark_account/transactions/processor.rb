@@ -118,7 +118,7 @@ class RedbarkAccount::Transactions::Processor
       # Transactions carry no per-item currency; they are in the account's currency
       currency = account.currency
 
-      extra = build_extra_metadata(data)
+      extra = build_extra_metadata(data, external_id)
 
       Rails.logger.debug "RedbarkAccount::Transactions::Processor - Importing transaction: id=#{external_id} date=#{date}"
 
@@ -132,7 +132,8 @@ class RedbarkAccount::Transactions::Processor
         source: "redbark",
         merchant: merchant_for(data),
         notes: data[:description].presence,
-        extra: extra
+        extra: extra,
+        replace_extra_namespaces: [ "redbark" ]
       )
     end
 
@@ -162,7 +163,11 @@ class RedbarkAccount::Transactions::Processor
       nil
     end
 
-    def build_extra_metadata(data)
+    # The "redbark" namespace is replaced on every import, so a field Redbark
+    # stops sending is cleared rather than kept by a deep merge. alias_ids is
+    # Sure's own record (RedbarkItem::Importer#record_alias), so it is carried
+    # over from the stored entry.
+    def build_extra_metadata(data, external_id)
       {
         "redbark" => {
           "id" => data[:id],
@@ -170,8 +175,20 @@ class RedbarkAccount::Transactions::Processor
           "merchant" => data[:merchantName],
           "category" => data[:category],
           "merchant_category_code" => data[:merchantCategoryCode],
-          "direction" => data[:direction]
+          "direction" => data[:direction],
+          "reference" => data[:reference].presence,
+          "extended_description" => data[:extendedDescription].presence,
+          "alias_ids" => alias_ids_by_external_id[external_id]
         }.compact
       }
+    end
+
+    def alias_ids_by_external_id
+      @alias_ids_by_external_id ||= account.entries
+        .where(source: "redbark", entryable_type: "Transaction")
+        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+        .where("transactions.extra -> 'redbark' -> 'alias_ids' IS NOT NULL")
+        .pluck(:external_id, Arel.sql("transactions.extra -> 'redbark' -> 'alias_ids'"))
+        .to_h
     end
 end
