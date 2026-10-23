@@ -39,6 +39,7 @@ class Commodity::Item < ApplicationRecord
   attribute :premium_basis, :string, default: "total"
 
   validates :name, :purchase_date, :purchase_currency, presence: true
+  validates :purchase_currency, inclusion: { in: ->(_) { Money::Currency.all_instances.map(&:iso_code) } }, allow_blank: true
   validates :code, inclusion: { in: ->(_) { Commodity::CATALOG.map(&:code) } }
   validates :form, inclusion: { in: FORMS }
   validates :weight_unit, inclusion: { in: Commodity::Weight::UNITS }
@@ -88,7 +89,8 @@ class Commodity::Item < ApplicationRecord
 
     # Exchange-rate pairs (with the earliest date needed) to value the items in
     # this scope: price currency, purchase currency and sale currency, each
-    # into the account currency. Returns { [from, to] => date }.
+    # into the account currency, and the account currency into the family
+    # currency for net worth. Returns { [from, to] => date }.
     def exchange_rate_start_dates
       pairs = {}
       add = ->(from, to, date) do
@@ -103,6 +105,11 @@ class Commodity::Item < ApplicationRecord
 
       joins(:account).group(:purchase_currency, "accounts.currency").minimum(:purchase_date).each do |(from, to), date|
         add.call(from, to, date)
+      end
+
+      # Inventory is valued from the first purchase, before any entry exists.
+      joins(account: :family).group("accounts.currency", "families.currency").minimum(:purchase_date).each do |(from, family_currency), date|
+        add.call(from, Family.normalize_currency_code(family_currency) || "USD", date)
       end
 
       Commodity::Sale.where(item_id: select(:id)).joins(item: :account)

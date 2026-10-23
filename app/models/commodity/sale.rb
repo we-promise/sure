@@ -9,6 +9,7 @@ class Commodity::Sale < ApplicationRecord
   before_validation :apply_proceeds_basis
 
   validates :date, :currency, presence: true
+  validates :currency, inclusion: { in: ->(_) { Money::Currency.all_instances.map(&:iso_code) } }, allow_blank: true
   validates :quantity, numericality: { only_integer: true, greater_than_or_equal_to: 1 }
   validates :proceeds, :costs, numericality: { greater_than_or_equal_to: 0 }
   validate :quantity_available

@@ -32,6 +32,13 @@ class Commodity::SaleTest < ActiveSupport::TestCase
     assert_includes Commodity::Item.sold, @item
   end
 
+  test "rejects an unknown currency" do
+    sale = @item.sales.build(date: Date.current, quantity: 1, proceeds: 40, currency: "XXZ")
+
+    assert_not sale.valid?
+    assert sale.errors.added?(:currency, :inclusion, value: "XXZ")
+  end
+
   test "cannot sell more than held" do
     @item.sales.create!(date: Date.current, quantity: 8, proceeds: 1, currency: "EUR")
     sale = @item.sales.build(date: Date.current, quantity: 3, proceeds: 1, currency: "EUR")

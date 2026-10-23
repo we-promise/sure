@@ -91,6 +91,21 @@ class Commodity::ItemTest < ActiveSupport::TestCase
     assert_equal Money.new(4200, "EUR"), item.realisable_value
   end
 
+  test "rejects an unknown purchase currency" do
+    item = create_commodity_item(account: @account)
+    item.purchase_currency = "XXZ"
+
+    assert_not item.valid?
+    assert item.errors.added?(:purchase_currency, :inclusion, value: "XXZ")
+  end
+
+  test "needs the account-to-family rate from the first purchase" do
+    @account.family.update!(currency: "USD")
+    create_commodity_item(account: @account, purchase_date: 90.days.ago.to_date, purchase_currency: "EUR")
+
+    assert_equal 90.days.ago.to_date, @account.commodity_items.exchange_rate_start_dates[%w[EUR USD]]
+  end
+
   test "rejects items in non-commodity accounts" do
     item = Commodity::Item.new(account: accounts(:depository), code: "XAU", name: "x", weight_value: 1, weight_unit: "g",
                                fineness: 1, purchase_date: Date.current, purchase_currency: "USD")

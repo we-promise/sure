@@ -44,8 +44,15 @@ export default class extends Controller {
   }
 
   async lookupPrice() {
+    // A newer date or currency supersedes any lookup still in flight.
+    this.lookupController?.abort();
+    this.spot = null;
+    this.showHint();
+    this.refreshPrice();
     if (!this.dateTarget.value) return;
 
+    const lookup = new AbortController();
+    this.lookupController = lookup;
     const params = new URLSearchParams({
       code: this.codeValue,
       date: this.dateTarget.value,
@@ -55,10 +62,14 @@ export default class extends Controller {
     try {
       const response = await fetch(`${this.lookupUrlValue}?${params}`, {
         headers: { Accept: "application/json" },
+        signal: lookup.signal,
       });
       if (!response.ok) return;
 
-      this.spot = await response.json();
+      const spot = await response.json();
+      if (lookup.signal.aborted) return;
+
+      this.spot = spot;
       this.showHint();
       this.refreshPrice();
     } catch {
@@ -67,7 +78,11 @@ export default class extends Controller {
   }
 
   refreshPrice() {
-    if (!this.spot?.price_per_ozt || this.priceDirty) return;
+    if (this.priceDirty) return;
+    if (!this.spot?.price_per_ozt) {
+      this.priceTarget.value = "";
+      return;
+    }
 
     const perOzt = Number(this.spot.price_per_ozt);
     let value;
@@ -80,8 +95,7 @@ export default class extends Controller {
         break;
       default: {
         const fineOzt = this.fineTroyOunces();
-        if (!fineOzt) return;
-        value = (perOzt * fineOzt).toFixed(2);
+        value = fineOzt ? (perOzt * fineOzt).toFixed(2) : "";
       }
     }
     this.priceTarget.value = value;

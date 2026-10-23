@@ -90,8 +90,8 @@ class CommodityStatement
 
   def accounts
     @accounts ||= begin
-      scope = family.accounts.visible.where(accountable_type: "Commodity")
-      scope = scope.accessible_by(user) if user
+      scope = family.accounts.visible.included_in_reports.where(accountable_type: "Commodity")
+      scope = scope.included_in_finances_for(user) if user
       scope
     end
   end

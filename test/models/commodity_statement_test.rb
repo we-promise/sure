@@ -33,6 +33,19 @@ class CommodityStatementTest < ActiveSupport::TestCase
     assert_in_delta(-2.8942, @statement.total.unrealized_trend.value.amount, 0.0001)
   end
 
+  test "leaves out accounts excluded from reports or from the user's finances" do
+    user = @family.users.first
+    assert_equal [ @account ], CommodityStatement.new(@family, user: user).accounts.to_a
+
+    @account.update!(exclude_from_reports: true)
+    assert_empty CommodityStatement.new(@family, user: user).accounts
+
+    @account.update!(exclude_from_reports: false)
+    other = @family.users.create!(email: "other-commodity@example.com", password: "password123", role: :member)
+    @account.account_shares.create!(user: other, permission: "read_only", include_in_finances: false)
+    assert_empty CommodityStatement.new(@family, user: other).accounts
+  end
+
   test "totals per location" do
     rows = @statement.by_location.to_h
 

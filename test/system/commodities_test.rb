@@ -44,8 +44,20 @@ class CommoditiesTest < ApplicationSystemTestCase
     within("[data-testid=commodity-per-metal]") { assert_text "0.9999 oz t" }
   end
 
+  test "clears the prefilled price when the new currency has no price" do
+    open_add_form "Gold"
+    fill_in "commodity_item[weight_value]", with: 1
+    select "oz t", from: "commodity_item[weight_unit]"
+    fill_in "commodity_item[purchase_date]", with: 10.days.ago.to_date
+    select "Total for all pieces", from: "commodity_item[metal_price_basis]"
+    assert_field "commodity_item[metal_price_value]", with: "2499.75"
+
+    select "Japanese Yen (JPY)", from: "commodity_item[purchase_currency]"
+    assert_field "commodity_item[metal_price_value]", with: ""
+  end
+
   private
-    def add_item(metal, name:, form:, weight:, unit:, location:, price:, premium:, vat: nil)
+    def open_add_form(metal)
       visit root_url
       within "[data-controller='DS--tabs']" do
         click_button "All"
@@ -53,6 +65,10 @@ class CommoditiesTest < ApplicationSystemTestCase
       end
       click_link "Commodities"
       click_link metal
+    end
+
+    def add_item(metal, name:, form:, weight:, unit:, location:, price:, premium:, vat: nil)
+      open_add_form metal
 
       fill_in "commodity_item[name]", with: name
       select form, from: "commodity_item[form]"
