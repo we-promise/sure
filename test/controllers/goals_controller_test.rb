@@ -301,6 +301,33 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_equal "balance", @goal.reload.progress_basis
+    # The re-rendered form still shows the stored basis, not two blank radios.
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=balance][checked]", 1
+    assert_select "input[type=radio][name='goal[progress_basis]'][checked]", 1
+  end
+
+  test "an unknown basis re-renders the stored basis after a valid one was saved" do
+    @goal.update!(progress_basis: "contributions")
+
+    patch goal_url(@goal), params: { goal: { progress_basis: "speculative" } }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=contributions][checked]", 1
+    assert_select "input[type=radio][name='goal[progress_basis]'][checked]", 1
+  end
+
+  test "create with an unknown basis re-renders with the default basis selected" do
+    account = unclaimed_account("Unknown Basis Pot")
+
+    assert_no_difference "Goal.count" do
+      post goals_url, params: {
+        goal: { name: "Unknown basis", target_amount: "1000", progress_basis: "speculative", account_ids: [ account.id ] }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=radio][name='goal[progress_basis]'][value=balance][checked]", 1
+    assert_select "input[type=radio][name='goal[progress_basis]'][checked]", 1
   end
 
   test "update refuses a basis change on a completed goal" do

@@ -202,8 +202,10 @@
         A completed goal's basis is frozen with its snapshot, so there the
         choice is shown disabled; disabled radios are not submitted, so an
         ordinary edit still saves. Checked against the stored basis, so a
-        refused switch re-renders showing the basis that was kept. %>
+        refused switch re-renders showing the basis that was kept; an unknown
+        basis falls back to it too, rather than leaving both radios blank. %>
     <% basis_locked = goal.progress_basis_locked? %>
+    <% shown_basis = (basis_locked || Goal::PROGRESS_BASES.exclude?(goal.progress_basis)) ? goal.progress_basis_in_database : goal.progress_basis %>
     <fieldset>
       <legend class="block text-sm font-medium text-primary"><%= t("goals.form.fields.progress_basis") %></legend>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1.5">
@@ -211,7 +213,7 @@
           <%= render "goals/radio_card", form: f, attribute: :progress_basis, value: basis,
                      label: t("goals.form.progress_bases.#{basis}.label"),
                      hint: t("goals.form.progress_bases.#{basis}.hint"),
-                     radio_options: { checked: basis == (basis_locked ? goal.progress_basis_in_database : goal.progress_basis) },
+                     radio_options: { checked: basis == shown_basis },
                      disabled: basis_locked %>
         <% end %>
       </div>
