@@ -22,7 +22,8 @@
     <%# The declare dialog is part of the preview-gated bills surface, so the
         action only appears for someone who has opted into it. %>
     <% if preview_features_enabled? %>
-      <%= render DS::Button.new(
+      <%# A link, not DS::Button: button_to POSTs, and the dialog is GET only. %>
+      <%= render DS::Link.new(
         text: t("transactions.show.create_bill"),
         variant: "outline",
         icon: "receipt",

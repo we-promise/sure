@@ -14,6 +14,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(@provider)
     Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:realie).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:chimnie).returns(nil)
     @provider.stubs(:usage).returns(provider_success_response(
       OpenStruct.new(
         used: 10,
@@ -27,7 +28,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key demo_family_refresh_enabled demo_family_refresh_family_id].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -169,6 +170,14 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { realie_api_key: "realie-token" } }
 
       assert_equal "realie-token", Setting.realie_api_key
+    end
+  end
+
+  test "can update chimnie api key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { chimnie_api_key: "chimnie-token" } }
+
+      assert_equal "chimnie-token", Setting.chimnie_api_key
     end
   end
 
@@ -487,6 +496,52 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # A gateway endpoint can carry its key in the userinfo or the query string,
+  # and `show` has no admin gate: any member who turns on preview features sees
+  # this panel once the family's provider is Jev. Signed in as that member
+  # rather than the admin, because that is who the endpoint must not reach.
+  test "the jev panel shows a member the endpoint without its credentials" do
+    with_self_hosting do
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      member = users(:family_member)
+      member.family.update!(categorization_provider: "jev")
+      member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+      sign_in member
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[jev_endpoint]']", 1
+      assert_select "input[name='setting[jev_endpoint]'][value='https://gw.example.com/v1/jev']"
+      assert_no_match(/gw-secret|qk-secret|gw-user/, response.body)
+    end
+  end
+
+  # The field auto-submits on blur, so the redacted value it now shows comes
+  # straight back. Saving it would silently strip the operator's credentials.
+  test "submitting the redacted jev endpoint back keeps the stored one" do
+    with_self_hosting do
+      stored = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      Setting.jev_endpoint = stored
+
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://gw.example.com/v1/jev" } }
+
+      assert_equal stored, Setting.jev_endpoint
+    end
+  end
+
+  # Only the echoed redacted value is held back: a different endpoint still
+  # replaces a stored one that carries credentials.
+  test "submitting a different jev endpoint replaces a stored one with credentials" do
+    with_self_hosting do
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://other.example.com/v1/jev" } }
+
+      assert_equal "https://other.example.com/v1/jev", Setting.jev_endpoint
+    end
+  end
+
   test "rejects non-URL jev endpoint" do
     with_self_hosting do
       Setting.jev_endpoint = nil
@@ -529,6 +584,15 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { llm_provider: "anthropic" } }
 
       assert_equal "anthropic", Setting.llm_provider
+    end
+  end
+
+  test "max items per batch field is shown for every LLM provider" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_select "input[name=?]", "setting[llm_max_items_per_call]", count: 1
+      assert_select "[data-provider=openai] input[name=?]", "setting[llm_max_items_per_call]", count: 0
     end
   end
 
@@ -699,6 +763,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         # DB value should NOT change when env override is active
         assert_equal "builtin", users(:family_admin).family.reload.assistant_type
       end
+    end
+  end
+
+  test "can turn the in-app assistant off" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { family: { assistant_type: "mcp_only" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "mcp_only", users(:family_admin).family.reload.assistant_type
+
+      get settings_hosting_url
+      assert_response :success
+      assert_select "select[name='family[assistant_type]'] option[value='mcp_only'][selected]"
     end
   end
 
@@ -994,19 +1071,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { llm_context_window: "0" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Context Window (Optional) must be a whole number ≥ 256.", flash[:alert]
       assert_nil Setting.llm_context_window
 
       patch settings_hosting_url, params: { setting: { llm_max_response_tokens: "-5" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Max Response Tokens (Optional) must be a whole number ≥ 64.", flash[:alert]
       assert_nil Setting.llm_max_response_tokens
 
       patch settings_hosting_url, params: { setting: { llm_max_items_per_call: "not-a-number" } }
 
       assert_response :unprocessable_entity
-      assert_match(/must be a whole number/, flash[:alert])
+      assert_equal "Max Items Per Batch (Optional) must be a whole number ≥ 1.", flash[:alert]
       assert_nil Setting.llm_max_items_per_call
 
       patch settings_hosting_url, params: { setting: { openai_request_timeout: "0" } }

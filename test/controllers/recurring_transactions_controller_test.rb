@@ -64,6 +64,42 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=hidden][name=?]", "recurring_transaction[category_id]"
   end
 
+  # The bill form's category picker groups a category under its parent and
+  # finds one by name, the way the transaction form's picker does. A flat list
+  # of every category puts a subcategory among unrelated neighbours, and a
+  # family with many categories has to scroll to find one.
+  test "the bill edit form groups categories under their parent and searches them" do
+    get edit_recurring_transaction_url(@recurring_transaction), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+
+    # The picker searches, so a category is found by name, not by scrolling.
+    assert_select "input[type=search][data-category-select-target=?]", "search"
+
+    names = css_select("[data-category-select-target=option]").map { |option| option["data-category-name"] }
+    parent = categories(:food_and_drink).name
+    child = categories(:subcategory).name
+
+    assert_includes names, parent
+    assert_includes names, child
+    assert_operator names.index(parent), :<, names.index(child), "a subcategory follows its parent"
+
+    # The child row says so, so the order reads as a hierarchy and not as an
+    # alphabetical accident.
+    assert_select "[data-category-name=?] [data-testid=?]", child, "category-select-subcategory-indicator"
+  end
+
+  # A family that locked its categories cannot create one, whichever form it
+  # starts from. The bill form used to offer the create row anyway.
+  test "the bill edit form does not offer to create categories when the family locked them" do
+    @family.update!(categories_locked: true)
+
+    get edit_recurring_transaction_url(@recurring_transaction), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "[data-category-select-locked-value=?]", "true"
+  end
+
   # Assigning the amount would already round it to the column's four places,
   # so the edit form refuses a finer one instead of saving a different figure.
   test "update refuses an amount finer than the column keeps" do
@@ -600,6 +636,34 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil @recurring_transaction.anchor_date
   end
 
+  # The bill form moves a due day through the frequency picker, which rewrites
+  # the rule and regenerates on save. Two moves in a row (27, 24, 22) must
+  # leave the paid October cycle with its one occurrence.
+  test "moving a paid bill's due day twice keeps its cycle to one occurrence" do
+    travel_to Date.new(2026, 10, 28) do
+      sign_in @user
+      october = Date.new(2026, 10, 1)..Date.new(2026, 10, 31)
+
+      patch recurring_transaction_url(@recurring_transaction),
+            params: { recurring_transaction: { frequency_preset: "monthly", frequency_day_of_month: "27" } }
+      paid = @recurring_transaction.recurring_occurrences.find_by!(due_on: Date.new(2026, 10, 27))
+      paid.allocations.create!(allocated_amount: 5, currency: "USD", source: "user_created")
+
+      [ 24, 22 ].each do |day|
+        patch recurring_transaction_url(@recurring_transaction),
+              params: { recurring_transaction: { frequency_preset: "monthly", frequency_day_of_month: day.to_s } }
+
+        assert_redirected_to recurring_transactions_url
+        assert_equal [ paid.id ], @recurring_transaction.recurring_occurrences.where(due_on: october).pluck(:id),
+                     "moving the due day to the #{day.ordinalize} adds no second October occurrence"
+        assert_includes @recurring_transaction.recurring_occurrences.pluck(:due_on), Date.new(2026, 11, day)
+      end
+
+      assert_equal 22, @recurring_transaction.reload.expected_day_of_month
+      assert_not_includes @recurring_transaction.recurring_occurrences.pluck(:due_on), Date.new(2026, 11, 24)
+    end
+  end
+
   test "update with an unchanged frequency does not rewrite the rules" do
     patch recurring_transaction_url(@recurring_transaction),
           params: { recurring_transaction: { frequency_preset: "weekly", frequency_weekday: "3" } }
@@ -959,6 +1023,29 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert suggestion.reload.ended?
   end
 
+  test "settings reviews detected income in its own strip, not as a possible bill" do
+    create_series(name: "CITY WATER", amount: 80, status: "suggested")
+    create_series(name: "ACME PAYROLL", amount: -2500, bill_type: "income", status: "suggested")
+
+    get recurring_transactions_url
+
+    assert_response :success
+    assert_select "[data-persisted-disclosure-key-value='bills-suggested']", text: /CITY WATER/ do |strip|
+      assert_no_match "ACME PAYROLL", strip.text
+    end
+    assert_select "[data-persisted-disclosure-key-value='income-suggested']", text: /ACME PAYROLL/ do
+      assert_select "a", text: I18n.t("recurring_transactions.suggested_income.dismiss")
+    end
+  end
+
+  test "confirming an income suggestion says income was added" do
+    suggestion = create_series(name: "ACME PAYROLL", amount: -2500, bill_type: "income", status: "suggested")
+
+    post confirm_recurring_transaction_url(suggestion)
+
+    assert_equal I18n.t("recurring_transactions.confirmed_income"), flash[:notice]
+  end
+
   # --- "Search all your transactions" picker inside the add dialog ---
 
   test "the add dialog links to the picker whether or not detection found anything" do
@@ -1257,12 +1344,14 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-    def create_series(name:, account: accounts(:depository), merchant: nil, status: "active", payment_url: nil)
+    def create_series(name:, account: accounts(:depository), merchant: nil, status: "active", payment_url: nil,
+                      amount: 25, bill_type: "bill")
       @family.recurring_transactions.create!(
         account: account,
         merchant: merchant,
         name: name,
-        amount: 25,
+        amount: amount,
+        bill_type: bill_type,
         dedup_scope: name,
         currency: "USD",
         expected_day_of_month: 5,

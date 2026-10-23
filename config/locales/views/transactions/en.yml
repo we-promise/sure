@@ -51,6 +51,7 @@ en:
       create_merchant: Create
       create_merchant_error: Could not create merchant
       merchant_search_placeholder: Search or create merchant
+      no_matching_categories: No matching categories
       submit: Add transaction
       tag_search_placeholder: Search or create tag
       tags_label: Tags
@@ -167,7 +168,7 @@ en:
       split_label: "Split"
     transfer_match:
       auto_matched: Auto-matched
-      auto_matched_short: A/M
+      auto_matched_short: Auto
       confirm_match: Confirm match
       payment_confirmed: Payment is confirmed
       reject_match: Reject match
@@ -274,6 +275,7 @@ en:
         tag: Tag
         merchant: Merchant
         ai: AI
+        attachment: Attachment
     convert_to_trade:
       title: Convert to Security Trade
       description: Convert this transaction into a trade with security details
@@ -344,6 +346,11 @@ en:
           pending: Pending
           ai_current: AI
           ai_history: AI history
+          attachment_with: With attachment
+          attachment_without: Without attachment
+        attachment_filter:
+          with: With attachment
+          without: Without attachment
         ai_filter:
           current: AI
           current_description: Category is still the one assigned automatically (AI or Bayes).
