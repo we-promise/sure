@@ -15,7 +15,8 @@ namespace :snaptrade do
   # check only, and only with an account id:
   #   DRY_RUN=false ALLOW_PRICE_GAPS=true bin/rails "snaptrade:repair_split_securities[ACCOUNT_ID]"
   #
-  # The task exits non-zero when any account failed. A failure inside the
+  # The task exits non-zero when any account was refused or failed, or when
+  # it is run with ALLOW_PRICE_GAPS and no account id. A failure inside the
   # repair rolls that account back; one while reporting on it comes after the
   # repair has committed, and says so.
   desc "Repair SnapTrade holdings and trades split across duplicate security rows (dry run unless DRY_RUN=false)"
@@ -23,8 +24,7 @@ namespace :snaptrade do
     dry_run = ENV["DRY_RUN"].to_s.strip.downcase != "false"
     allow_price_gaps = ENV["ALLOW_PRICE_GAPS"].to_s.strip.downcase == "true"
     if allow_price_gaps && args[:account_id].blank?
-      puts "ALLOW_PRICE_GAPS needs an account id: run it for one reviewed account at a time. Nothing written."
-      next
+      abort "ALLOW_PRICE_GAPS needs an account id: run it for one reviewed account at a time. Nothing written."
     end
     accounts = if args[:account_id].present?
       Account.where(id: args[:account_id])
@@ -40,6 +40,7 @@ namespace :snaptrade do
       "#{id} (#{exchange || 'no exchange'}, #{security&.name})"
     end
 
+    refusals = []
     failures = []
     accounts.find_each do |account|
       repair = SnaptradeAccount::SplitSecurityRepair.new(account, dry_run: dry_run, allow_price_gaps: allow_price_gaps)
@@ -89,6 +90,7 @@ namespace :snaptrade do
       end
     rescue SnaptradeAccount::SplitSecurityRepair::Refused => e
       puts "Account #{account.id} (#{account.name}): refused, nothing written: #{e.message}"
+      refusals << account.id
     rescue StandardError => e
       outcome = if repair_returned
         dry_run ? "reporting failed, nothing written" : "repair applied, but reporting failed"
@@ -100,6 +102,9 @@ namespace :snaptrade do
       failures << account.id
     end
 
-    abort "Failed: #{failures.size} account(s): #{failures.join(', ')}" if failures.any?
+    problems = []
+    problems << "Refused: #{refusals.size} account(s): #{refusals.join(', ')}" if refusals.any?
+    problems << "Failed: #{failures.size} account(s): #{failures.join(', ')}" if failures.any?
+    abort problems.join("; ") if problems.any?
   end
 end

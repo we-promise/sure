@@ -30,6 +30,9 @@ class SnaptradeAccount::SplitSecurityRepair
   class PriceGapsRefused < Refused; end
   class SplitHistoryRefused < Refused; end
 
+  # Rows reached a source security while the repair ran; it rolled back.
+  class ConcurrentChange < StandardError; end
+
   Result = Data.define(
     :account, :ticker, :target_id, :target_source, :source_ids,
     :trades_moved, :holdings_moved, :holdings_dropped, :holdings_replaced, :dropped_snapshots,
@@ -75,6 +78,7 @@ class SnaptradeAccount::SplitSecurityRepair
     begin
       ActiveRecord::Base.transaction do
         plans.each { |plan| apply(plan) }
+        refuse_concurrent_change!(plans)
         Balance::Materializer.new(
           account, strategy: :reverse, security_ids: plans.map { |plan| plan[:result].target_id }
         ).materialize_balances
@@ -259,6 +263,22 @@ class SnaptradeAccount::SplitSecurityRepair
           backtrace: error.backtrace&.first(5)
         }
       )
+    end
+
+    # The plans are built before the transaction opens, and a sync can add a
+    # holding or trade to a source row in between (or after apply read the
+    # trades). Moving the rest and leaving that row behind would re-split the
+    # position, so roll back and let the task be run again. A holding another
+    # provider owns stays on its row by design and is not counted.
+    def refuse_concurrent_change!(plans)
+      changed = plans.map { |plan| plan[:result] }.select do |result|
+        repairable_holdings.where(security_id: result.source_ids).exists? ||
+          account.trades.where(security_id: result.source_ids).exists?
+      end
+      return if changed.empty?
+
+      raise ConcurrentChange,
+        "rows reached a source security during the repair (#{changed.map(&:ticker).join(', ')}); run it again"
     end
 
     def refuse_price_gaps!(plans)
