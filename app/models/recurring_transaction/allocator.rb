@@ -55,58 +55,75 @@ class RecurringTransaction
     # a cross-currency entry converts at its own date's rate, or requires an
     # explicit amount when no rate exists.
     def allocate!(amount: nil, entry: nil, paid_on: nil, source: nil, cap_at_remaining: false)
-      occurrence.with_lock do
-        with_entry_lock(entry) do
-          allocated, source_amount, source_currency = resolve_amounts(amount, entry)
-          guard_entry_capacity!(entry, source_amount) if entry
-          freeze_expected_amount!
+      # Plan, then occurrence, then entry: the same order release uses. A
+      # manual attach can learn and update the plan's matcher hints, so taking
+      # the plan lock afterwards would deadlock with a concurrent release.
+      series = occurrence.recurring_transaction
+      allocation = series.with_lock do
+        occurrence.with_lock do
+          with_entry_lock(entry) do
+            allocated, source_amount, source_currency = resolve_amounts(amount, entry)
+            guard_entry_capacity!(entry, source_amount) if entry
+            freeze_expected_amount!
 
-          # Opt-in, because exceeding the remainder is load-bearing elsewhere:
-          # a single settlement above the expected amount is exactly how a
-          # price rise gets recorded and learned from. A caller that promises
-          # capping (the AI payment tool) enforces it HERE, under the
-          # occurrence lock, because its own pre-lock check is advisory only:
-          # two concurrent payments can both read the same stale remainder.
-          if cap_at_remaining && allocated > occurrence.remaining_amount
-            raise OverAllocationError, I18n.t("recurring_transactions.allocator.exceeds_remaining",
-              amount: Money.new(allocated, occurrence.currency).format,
-              remaining: Money.new(occurrence.remaining_amount, occurrence.currency).format)
+            # Opt-in, because exceeding the remainder is load-bearing elsewhere:
+            # a single settlement above the expected amount is exactly how a
+            # price rise gets recorded and learned from. A caller that promises
+            # capping (the AI payment tool) enforces it HERE, under the
+            # occurrence lock, because its own pre-lock check is advisory only:
+            # two concurrent payments can both read the same stale remainder.
+            if cap_at_remaining && allocated > occurrence.remaining_amount
+              raise OverAllocationError, I18n.t("recurring_transactions.allocator.exceeds_remaining",
+                amount: Money.new(allocated, occurrence.currency).format,
+                remaining: Money.new(occurrence.remaining_amount, occurrence.currency).format)
+            end
+
+            allocation = occurrence.allocations.create!(
+              entry: entry,
+              allocated_amount: allocated,
+              currency: occurrence.currency,
+              source_amount: source_amount,
+              source_currency: source_currency,
+              state: "confirmed",
+              source: source || (entry ? "user_confirmed" : "user_created"),
+              paid_on: paid_on
+            )
+
+            learn_from_manual_attach!(allocation, series) if entry
+            refresh_close_state!
+            split_financed_charge(allocation)
+            allocation
           end
-
-          allocation = occurrence.allocations.create!(
-            entry: entry,
-            allocated_amount: allocated,
-            currency: occurrence.currency,
-            source_amount: source_amount,
-            source_currency: source_currency,
-            state: "confirmed",
-            source: source || (entry ? "user_confirmed" : "user_created"),
-            paid_on: paid_on
-          )
-
-          learn_from_manual_attach!(allocation) if entry
-          refresh_close_state!
-          allocation
         end
       end
+
+      allocation
     end
 
     def unallocate!(allocation)
+      entry = allocation.entry
+      was_confirmed = allocation.allocation_confirmed?
+
       occurrence.with_lock do
-        with_entry_lock(allocation.entry) do
+        with_entry_lock(entry) do
           allocation.destroy!
           refresh_close_state!
+          unsplit_financed_charge(entry) if was_confirmed
         end
       end
+
+      # An ended plan that just lost its last payment no longer has a charge to
+      # explain the hidden purchase.
+      release_financed_purchase_if_over
     end
 
     # The Matcher's write path: confirmed at the exact tier, suggested at the
     # high tier. Suggestions never move close state.
     def allocate_matched!(entry:, state:, confidence:, signals:)
-      occurrence.with_lock do
+      allocation = occurrence.with_lock do
         with_entry_lock(entry) do
           allocated, source_amount, source_currency = resolve_amounts(nil, entry)
-          return nil unless allocated.positive?
+          next nil unless allocated.positive?
 
           guard_entry_capacity!(entry, source_amount)
           freeze_expected_amount! if state == "confirmed"
@@ -125,36 +142,73 @@ class RecurringTransaction
           )
 
           refresh_close_state! if state == "confirmed"
+          split_financed_charge(allocation)
           allocation
         end
       end
+
+      allocation
     end
 
     # Accepting a suggestion makes it a real payment.
     def confirm_suggestion!(allocation)
-      occurrence.with_lock do
+      allocation = occurrence.with_lock do
         with_entry_lock(allocation.entry) do
           freeze_expected_amount!
           allocation.update!(state: "confirmed", source: "user_confirmed")
           refresh_close_state!
+          split_financed_charge(allocation)
+          allocation
         end
       end
+
+      allocation
+    end
+
+    # Re-points an orphaned allocation and lets the one split path repair the
+    # charge. The matcher uses this instead of copying the split rules. Another
+    # occurrence may have claimed the replacement after orphan selection, so
+    # capacity is rechecked under the entry lock.
+    def reattach_entry!(allocation, entry)
+      reattached = false
+      occurrence.with_lock do
+        with_entry_lock(entry) do
+          guard_entry_capacity!(entry, allocation.source_amount)
+          allocation.update!(entry: entry)
+          reattached = true
+          split_financed_charge(allocation)
+        end
+      end
+
+      reattached ? allocation : nil
+    rescue OverAllocationError, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+      Rails.logger.warn(
+        "[Allocator] could not reattach entry=#{entry&.id} " \
+        "occurrence=#{occurrence.id}: #{e.class}: #{e.message}"
+      )
+      nil
     end
 
     # Records the (series, entry) pair so the matcher never proposes it again.
     def reject_suggestion!(allocation)
+      entry = allocation.entry
+      was_confirmed = allocation.allocation_confirmed?
+
       occurrence.with_lock do
-        with_entry_lock(allocation.entry) do
-          if allocation.entry
+        with_entry_lock(entry) do
+          if entry
             RecurringMatchRejection.find_or_create_by!(
               recurring_transaction: occurrence.recurring_transaction,
-              entry: allocation.entry
+              entry: entry
             )
           end
 
           allocation.destroy!
+          unsplit_financed_charge(entry) if was_confirmed
         end
       end
+
+      release_financed_purchase_if_over unless was_confirmed
     end
 
     # Settles the remainder with no transaction, as a user decision, so it
@@ -194,6 +248,41 @@ class RecurringTransaction
     end
 
     private
+      # Runs inside the caller's allocation transaction, so a failed split rolls
+      # the payment back instead of leaving a confirmed charge whole. A no-op
+      # (suggested allocation, no entry, or not splittable) returns false.
+      def split_financed_charge(allocation)
+        return if allocation.blank? || !allocation.allocation_confirmed?
+        return if allocation.entry.blank?
+
+        FinancedChargeSplitter.new(
+          occurrence: occurrence,
+          entry: allocation.entry
+        ).split!
+      end
+
+      # Rejecting the last suggestion from an inactive or ended plan leaves no
+      # charge to explain the hidden purchase, so the purchase counts again.
+      def release_financed_purchase_if_over
+        plan = occurrence.recurring_transaction.reload
+        return unless plan.financed?
+        return if plan.active? || plan.paused?
+
+        plan.release_financed_purchase!
+      end
+
+      def unsplit_financed_charge(entry)
+        return if entry.blank?
+
+        FinancedChargeSplitter.new(occurrence: occurrence, entry: entry).unsplit!
+      rescue StandardError => e
+        Rails.logger.error(
+          "[Allocator] unsplit failed for entry=#{entry.id} " \
+          "occurrence=#{occurrence.id}: #{e.class}: #{e.message}"
+        )
+        raise
+      end
+
       # Serializes every write touching this entry, whichever occurrence it
       # targets. Always taken inside the occurrence row lock, so the ordering is
       # occurrence then entry and no pair can deadlock.
@@ -310,8 +399,7 @@ class RecurringTransaction
       #     $2,150 rent is not evidence that rent varies. Being the only
       #     allocation does not make a payment the bill, so the test is
       #     whether it actually SETTLES the occurrence.
-      def learn_from_manual_attach!(allocation)
-        series = occurrence.recurring_transaction
+      def learn_from_manual_attach!(allocation, series)
         entry = allocation.entry
         hints = series.matcher_hints.deep_dup
 

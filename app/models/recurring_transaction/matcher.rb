@@ -72,15 +72,20 @@ class RecurringTransaction
         # PENDING prefixes), which is why this repair exists at all.
         replacement = family.entries
           .where(entryable_type: "Transaction")
+          .where(excluded: false)
           .where(currency: allocation.source_currency || allocation.currency)
           .where(date: allocation.paid_on)
           .where(amount: amounts)
           .where.not(id: RecurringAllocation.where.not(entry_id: nil).select(:entry_id))
+          .excluding_split_parents
+          .excluding_split_children
           .then { |scope| series.account_id.present? ? scope.where(account_id: series.account_id) : scope }
           .includes(:entryable)
           .find { |entry| repair_identity?(series, entry) }
 
-        allocation.update!(entry: replacement) if replacement
+        next unless replacement
+
+        Allocator.new(allocation.recurring_occurrence).reattach_entry!(allocation, replacement)
       end
     end
 
@@ -179,6 +184,9 @@ class RecurringTransaction
       rescue Allocator::OverAllocationError
         # Another occurrence already claimed the entry's capacity. Skip the
         # candidate rather than aborting the run.
+      rescue ActiveRecord::RecordInvalid
+        # The financed charge could not split; the allocation rolled back with
+        # it. Skip the candidate rather than aborting the run.
       end
 
       # The hard filters depend on the series and the entry, not the individual
@@ -228,6 +236,8 @@ class RecurringTransaction
       def open_occurrences
         family.recurring_occurrences
               .open_status
+              .joins(:recurring_transaction)
+              .where.not(recurring_transactions: { status: "ended" })
               .includes(recurring_transaction: :recurrence_rules)
               .to_a
       end
@@ -264,6 +274,7 @@ class RecurringTransaction
         family.entries
               .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
               .where(entryable_type: "Transaction")
+              .excluding_split_children
               .where(excluded: false)
               .where(date: window_min..window_max)
               .where("transactions.kind NOT IN (?) OR transactions.id IN (?)", Transaction::TRANSFER_KINDS, transfer_destinations.keys)

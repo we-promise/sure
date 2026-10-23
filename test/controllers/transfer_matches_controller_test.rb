@@ -41,6 +41,31 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Transfer created", flash[:notice]
   end
 
+  test "existing matched entry owned by an installment plan is refused" do
+    inflow = create_transaction(amount: 100, account: accounts(:depository))
+    card = @user.family.accounts.create!(
+      name: "Plan Card", accountable: CreditCard.new, balance: 0,
+      currency: "USD", owner: @user, status: "active"
+    )
+    purchase = create_transaction(
+      account: card, name: "Laptop", amount: 1200,
+      category: @user.family.categories.first, kind: "standard"
+    )
+    RecurringTransaction::InstallmentPlan.new(
+      family: @user.family, user: @user, entry: purchase,
+      interest_rate: 0, term_months: 12
+    ).call
+
+    assert_no_difference "Transfer.count" do
+      post transaction_transfer_match_path(inflow), params: {
+        transfer_match: { method: "existing", matched_entry_id: purchase.id }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.show.installment_plan_locked"), flash[:alert]
+  end
+
   test "creates transfer for target account" do
     inflow_transaction = create_transaction(amount: 100, account: accounts(:depository))
 

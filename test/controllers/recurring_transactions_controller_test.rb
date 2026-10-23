@@ -519,6 +519,36 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "deleting a charged plan retires it and keeps the purchase hidden" do
+    card = @family.accounts.create!(
+      name: "Plan Card", accountable: CreditCard.new, balance: 0,
+      currency: "USD", owner: @user, status: "active"
+    )
+    purchase = card.entries.create!(
+      date: Date.current, name: "Laptop Store", amount: 1200,
+      currency: "USD", entryable: Transaction.new(kind: "standard", category: categories(:one))
+    )
+    plan = RecurringTransaction::InstallmentPlan.new(
+      family: @family, user: @user, entry: purchase,
+      interest_rate: 12, term_months: 12,
+      interest_category_id: categories(:food_and_drink).id
+    ).call
+    occurrence = plan.recurring_occurrences.order(:due_on).first
+    charge = card.entries.create!(
+      date: occurrence.due_on, name: "Laptop Store",
+      amount: occurrence.resolved_expected_amount, currency: "USD",
+      entryable: Transaction.new(kind: "standard", category: categories(:one))
+    )
+    RecurringTransaction::Allocator.new(occurrence).allocate!(entry: charge)
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      delete recurring_transaction_url(plan)
+    end
+
+    assert_equal "ended", plan.reload.status
+    assert purchase.reload.excluded?, "the charges replaced the purchase"
+  end
+
   test "creating income says income, not bill" do
     post recurring_transactions_url, params: {
       recurring_transaction: {

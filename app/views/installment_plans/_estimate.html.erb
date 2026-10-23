@@ -1,0 +1,17 @@
+<%# locals: (estimate:) %>
+
+<%# The loan engine computes this, not the dialog. It is the same schedule the
+    plan will use, so the estimate and the first plan charge agree. %>
+<div class="rounded-lg border border-primary bg-surface-inset p-3 space-y-1">
+  <% if estimate %>
+    <p class="text-sm font-medium text-primary privacy-sensitive">
+      <%= t(".monthly_payment", amount: format_money(estimate[:monthly_payment])) %>
+    </p>
+    <p class="text-xs text-secondary privacy-sensitive">
+      <%= t(".total_interest", amount: format_money(estimate[:total_interest])) %>
+      &middot; <%= t(".payment_count", count: estimate[:count]) %>
+    </p>
+  <% else %>
+    <p class="text-xs text-secondary"><%= t(".unavailable") %></p>
+  <% end %>
+</div>

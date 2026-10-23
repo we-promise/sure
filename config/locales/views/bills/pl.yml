@@ -352,6 +352,7 @@ pl:
     row_today: Dziś
     show:
       edit: Edytuj rachunek
+      edit_plan: Edytuj warunki planu
     smart_configurations:
       show:
         apply: Zastosuj zaznaczone

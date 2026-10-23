@@ -19,7 +19,7 @@ class Rule::ActionExecutor::SetTransactionMerchant < Rule::ActionExecutor
     merchant = family.merchants.find_by_id(value)
     return 0 unless merchant
 
-    scope = transaction_scope
+    scope = transaction_scope.excluding_installment_plan_purchases
     unless ignore_attribute_locks
       scope = scope.enrichable(:merchant_id)
     end

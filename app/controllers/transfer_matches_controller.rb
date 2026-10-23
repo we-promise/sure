@@ -9,13 +9,45 @@ class TransferMatchesController < ApplicationController
   def create
     return unless require_account_permission!(@entry.account, redirect_path: transactions_path)
 
+    if @entry.installment_plan_locked?
+      redirect_back_or_to transactions_path,
+        alert: t("transactions.show.installment_plan_locked")
+      return
+    end
+
     target_account = resolve_target_account
     return unless require_account_permission!(target_account, redirect_path: transactions_path)
 
-    @transfer = build_transfer
+    if @matched_entry&.installment_plan_locked?
+      redirect_back_or_to transactions_path,
+        alert: t("transactions.show.installment_plan_locked")
+      return
+    end
+
+    locked_by_plan = false
+    entries = [ @entry, @matched_entry ].compact.uniq(&:id)
+
     Transfer.transaction do
+      entries.sort_by { |entry| RecurringTransaction::Allocator.entry_lock_id(entry) }
+             .each { |entry| RecurringTransaction::Allocator.lock_entry!(entry) }
+      # Row locks in one canonical order, so two requests locking the same pair
+      # cannot deadlock, and the duplicate-merge path cannot disagree.
+      entries.sort_by(&:id).each(&:lock!)
+
+      if entries.any?(&:installment_plan_locked?)
+        locked_by_plan = true
+        raise ActiveRecord::Rollback
+      end
+
+      @transfer = build_transfer
       @transfer.save!
       @transfer.confirm!
+    end
+
+    if locked_by_plan
+      redirect_back_or_to transactions_path,
+        alert: t("transactions.show.installment_plan_locked")
+      return
     end
 
     @transfer.sync_account_later
@@ -50,7 +82,8 @@ class TransferMatchesController < ApplicationController
       if transfer_match_params[:method] == "new"
         accessible_accounts.find(transfer_match_params[:target_account_id])
       else
-        Current.accessible_entries.find(transfer_match_params[:matched_entry_id]).account
+        @matched_entry = Current.accessible_entries.find(transfer_match_params[:matched_entry_id])
+        @matched_entry.account
       end
     end
 
@@ -75,7 +108,7 @@ class TransferMatchesController < ApplicationController
         transfer.status = "confirmed"
         transfer
       else
-        target_transaction = Current.accessible_entries.find(transfer_match_params[:matched_entry_id])
+        target_transaction = @matched_entry || Current.accessible_entries.find(transfer_match_params[:matched_entry_id])
 
         transfer = Transfer.find_or_initialize_by(
           inflow_transaction: @entry.amount.negative? ? @entry.transaction : target_transaction.transaction,

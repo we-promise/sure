@@ -298,6 +298,25 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       "the rest of that charge can still pay another bill; over-allocation is refused when it is written"
   end
 
+  test "split children are not offered as payment candidates" do
+    parent = accounts(:depository).entries.create!(
+      date: @occurrence.due_on, amount: 30, currency: "USD",
+      name: "Split parent charge", entryable: Transaction.new
+    )
+    parent.split!([
+      { name: "Child A", amount: 10, category_id: categories(:one).id, excluded: false },
+      { name: "Child B", amount: 20, category_id: categories(:one).id, excluded: false }
+    ])
+    child_ids = parent.child_entries.pluck(:id)
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    offered_ids = @controller.view_assigns["ranked_candidates"].map { |entry, _| entry.id } +
+                  @controller.view_assigns["other_entries"].map(&:id)
+    assert_empty offered_ids & child_ids
+  end
+
   test "searching looks past the date window" do
     old = accounts(:depository).entries.create!(
       date: @occurrence.due_on - 300, amount: 15.99, currency: "USD",

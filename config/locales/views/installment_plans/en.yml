@@ -1,0 +1,36 @@
+---
+en:
+  installment_plans:
+    not_available: This purchase cannot become an installment plan
+    new:
+      title: Installment plan
+      description: Enter the issuer's terms. The purchase leaves the budget and card balance, and the monthly charges take its place.
+      purchase_label: Purchase
+      amount_label: Amount
+      account_label: Card
+      interest_rate: Interest rate (% per year)
+      term_months: Number of installments
+      interest_category: Interest category
+      no_interest_category: Keep the whole charge under the purchase category
+      interest_category_hint: Each monthly charge puts its interest here and its principal under the purchase category.
+      first_due_on: First installment due
+      hint: The plan shows each installment's principal and interest. You can end it before the first payment to restore the purchase.
+      errors_title: Check these terms
+      cancel: Cancel
+      submit: Create plan
+    edit_title: Edit plan terms
+    edit_description: Change the terms before the first payment. The plan's schedule rebuilds from these terms.
+    update_submit: Save terms
+    terms_locked: This plan's terms cannot change unless the plan is active, or after a payment is matched or suggested, or an installment is skipped or missed.
+    estimate:
+      monthly_payment: "Estimated payment %{amount} a month"
+      total_interest: "%{amount} total interest"
+      payment_count:
+        one: "1 payment"
+        other: "%{count} payments"
+      unavailable: Add a valid rate, term and first payment date to see the estimate.
+      unavailable_error: Estimate unavailable right now.
+    create:
+      success: Installment plan created
+    update:
+      success: Plan terms updated

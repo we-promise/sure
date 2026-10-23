@@ -1,6 +1,9 @@
 ---
 en:
   recurring_transactions:
+    financed_charge:
+      principal_name: "%{name} (principal)"
+      interest_name: "%{name} (interest)"
     allocator:
       missing_rate: "no exchange rate from %{from} to %{to}; enter an amount explicitly"
       unmeasurable: "this transaction carries an allocation that cannot be converted to %{currency}, so what is left of it cannot be measured. Add an exchange rate for %{date} or remove the existing payment first"
@@ -17,6 +20,19 @@ en:
       models:
         recurring_transaction:
           merchant_or_name_required: "Either merchant or name must be present"
+          financing_terms_not_installment: "Loan terms only mean something on an installment plan"
+          installment_plan_missing_purchase: "Choose a purchase to turn into a plan"
+          installment_plan_purchase_not_standard: "Only a plain expense can become an installment plan"
+          installment_plan_purchase_not_writable: "This account is read-only, so its purchases cannot become a plan"
+          installment_plan_purchase_not_manual: "A plan cannot replace a purchase on a synced account"
+          installment_plan_purchase_already_planned: "This purchase is already on an installment plan"
+          installment_plan_invalid_rate: "The interest rate must be between 0 and 100 percent"
+          installment_plan_invalid_term: "Choose between 1 and 600 installments"
+          installment_plan_invalid_first_due: "Choose a first payment date on or after the purchase and today"
+          installment_plan_invalid_amount: "The purchase is too small to split into installments"
+          installment_plan_invalid_interest_category: "Choose an interest category from this family"
+          installment_plan_terms_locked: "The plan's amount, account and term are fixed here. Edit the plan terms before the first payment"
+          installment_plan_has_payments: "A plan that has taken a payment cannot be deleted; end it instead"
           attributes:
             payment_url:
               invalid_scheme: "must be a valid http:// or https:// address"
@@ -33,3 +49,7 @@ en:
               same_as_source: "cannot be the same as the source account"
               family_mismatch: "must belong to the same family as the source account"
               wrong_family: "must belong to this family"
+            financed_source_entry_id:
+              invalid: "must be a purchase in this family"
+            financed_interest_category_id:
+              invalid: "must be a category in this family"

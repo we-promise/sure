@@ -18,7 +18,7 @@ class Rule::ActionExecutor::SetTransactionName < Rule::ActionExecutor
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     return 0 if value.blank?
 
-    scope = transaction_scope.with_entry
+    scope = transaction_scope.excluding_installment_plan_purchases.with_entry
     unless ignore_attribute_locks
       # Filter by entry's locked_attributes, not transaction's
       # Since name is on Entry, not Transaction, we need to check entries.locked_attributes

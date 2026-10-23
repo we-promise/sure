@@ -58,6 +58,17 @@
     <% if (autopay = bills_autopay_label(series)) %>&middot; <%= autopay %><% end %>
   </p>
 
+  <% if series.financed? %>
+    <p class="text-xs text-secondary privacy-sensitive">
+      <%= t("bills.summary.financed_total_interest", amount: format_money(series.financed_total_interest)) %>
+      <% if current_occurrence && (installment = series.financed_installment_for(current_occurrence)) %>
+        &middot; <%= t("bills.summary.installment_split",
+                       principal: format_money(installment[:principal]),
+                       interest: format_money(installment[:interest])) %>
+      <% end %>
+    </p>
+  <% end %>
+
   <%# Subscription state is state, not depth, so it stays here. %>
   <%= render "bills/state_chips", series: series %>
 
