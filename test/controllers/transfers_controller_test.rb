@@ -638,6 +638,20 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_inflow_tags, transfer.inflow_transaction.reload.tag_ids
   end
 
+  test "confirming a legacy transfer with refund links returns a useful error" do
+    transfer = transfers(:one)
+    credit = create_transaction(amount: -10, kind: "refund")
+    # Simulate a link created before transfer legs were excluded from purchase eligibility.
+    credit.transaction.update_columns(refund_of_id: transfer.outflow_transaction_id)
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("activerecord.errors.messages.refund_links_present"), flash[:alert]
+    assert transfer.reload.pending?
+    assert_equal transfer.outflow_transaction_id, credit.transaction.reload.refund_of_id
+  end
+
   test "confirming requires write permission on both transfer sides" do
     # family_member: full_control on depository (outflow), read_only on credit_card (inflow)
     sign_in users(:family_member)

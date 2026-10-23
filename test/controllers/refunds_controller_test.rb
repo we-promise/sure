@@ -95,6 +95,22 @@ class RefundsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a.privacy-sensitive[href=?]", transaction_path(@refund)
   end
 
+  test "purchase picker excludes pending transfer legs" do
+    inflow = create_transaction(account: accounts(:credit_card), amount: -1000)
+    Transfer.create!(inflow_transaction: inflow.transaction,
+      outflow_transaction: @purchase.transaction, status: "pending")
+
+    get new_transaction_refund_path(@refund)
+
+    assert_response :success
+    assert_select "option[value=?]", @purchase.id, count: 0
+
+    post transaction_refund_path(@refund), params: { refund: { purchase_entry_id: @purchase.id } }
+    assert_redirected_to transaction_path(@refund)
+    assert @refund.transaction.reload.standard?
+    assert_nil @refund.transaction.refund_of_id
+  end
+
   test "purchase search filters by name and preserves the search text" do
     @purchase.update!(name: "Matching purchase")
     other_purchase = create_transaction(name: "Other purchase")

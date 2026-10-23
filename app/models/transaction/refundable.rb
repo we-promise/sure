@@ -13,7 +13,7 @@ module Transaction::Refundable
   end
 
   def refundable_purchase?
-    standard? && entry&.amount&.positive? && !pending? && !entry.split_parent? && !entry.excluded?
+    standard? && !transfer && entry&.amount&.positive? && !pending? && !entry.split_parent? && !entry.excluded?
   end
 
   def refund_linked?

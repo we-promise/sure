@@ -101,6 +101,23 @@ class Transaction::RefundableTest < ActiveSupport::TestCase
     assert credit.transaction.reload.cc_payment?
   end
 
+  test "pending transfer legs cannot be used as refund purchases" do
+    inflow = create_transaction(account: accounts(:credit_card), amount: -1000)
+    transfer = Transfer.create!(inflow_transaction: inflow.transaction,
+      outflow_transaction: @purchase.transaction, status: "pending")
+
+    assert_not @purchase.transaction.reload.refundable_purchase?
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      @credit.transaction.mark_as_refund!(purchase: @purchase.transaction)
+    end
+    assert_includes error.record.errors.details[:refund_of], { error: :invalid }
+    assert_nil @credit.transaction.reload.refund_of_id
+    assert @credit.transaction.standard?
+
+    transfer.confirm!
+    assert transfer.reload.confirmed?
+  end
+
   test "deleting a purchase preserves the bank credit as an unlinked refund" do
     @credit.transaction.mark_as_refund!(purchase: @purchase.transaction)
     @purchase.destroy!

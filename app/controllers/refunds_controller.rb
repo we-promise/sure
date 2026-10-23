@@ -9,6 +9,13 @@ class RefundsController < ApplicationController
       .where(entryable_type: "Transaction", excluded: false)
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
       .where(transactions: { kind: "standard" })
+      .where(<<~SQL.squish)
+        NOT EXISTS (
+          SELECT 1 FROM transfers
+          WHERE transfers.inflow_transaction_id = transactions.id
+             OR transfers.outflow_transaction_id = transactions.id
+        )
+      SQL
       .where("entries.amount > 0")
       .excluding_split_parents.excluding_pending
     @purchases = @purchases.where("entries.name ILIKE ?", "%#{Entry.sanitize_sql_like(@search)}%") if @search.present?
