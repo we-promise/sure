@@ -732,7 +732,11 @@ class Portfolio::DailyReturns
             AND entries.date < DATE :end_date
             AND first_priced.date >= DATE :start_date
             AND #{fragment(:journal_predicate)}
-            AND trades.qty <> 0
+            -- A NULL quantity is carried too, contributing no units: it
+            -- suppressed its own day (flows_by_date), and whatever its
+            -- zero-priced row left at nothing is settled here, through
+            -- carry_incomplete, like any other unit not journalled in.
+            AND (trades.qty <> 0 OR trades.qty IS NULL)
             AND (journal_day.price IS NULL OR journal_day.price <= 0)
             AND (carry_windows.active_until_date IS NULL OR first_priced.date <= carry_windows.active_until_date)
         ),
@@ -771,8 +775,12 @@ class Portfolio::DailyReturns
           COALESCE(arr.arrived_value, 0) AS arrived_value,
           COALESCE(dep.departed_value, 0) AS departed_value,
           -- A first priced day that repriced units other than an external
-          -- journal's is suppressed for the same reason as the journal day.
-          (COALESCE(f.journal_unpriced, false) OR COALESCE(cj.carry_incomplete, false)) AS journal_unpriced,
+          -- journal's is suppressed for the same reason as the journal day,
+          -- and so is one whose carry had no rate: it converted to nothing,
+          -- which leaves the arrival in `market`, as a journal on its own day
+          -- with no rate would be.
+          (COALESCE(f.journal_unpriced, false) OR COALESCE(cj.carry_incomplete, false)
+           OR COALESCE(cj.carry_rate_missing, false)) AS journal_unpriced,
           COALESCE(f.external_flow, 0) + COALESCE(cj.carried_flow, 0) AS external_flow,
           COALESCE(f.income, 0) AS income,
           COALESCE(f.fees, 0) AS fees

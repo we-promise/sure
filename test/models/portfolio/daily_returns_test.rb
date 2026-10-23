@@ -1166,6 +1166,30 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
            "a journal with no quantity is a journal that could not be valued"
   end
 
+  # Carried, the same journal is still one that could not be valued. Its
+  # zero-priced row left the position at nothing, so the first priced day's
+  # jump is the zero price undoing itself; dropped from the carry, that jump
+  # read as a gain.
+  test "a journal with no quantity suppresses its first priced day" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    journal = security_journal(account: @account, date: @day_two, qty: 5, price: 0)
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    assert_not daily_returns(end_date: day_three).rows.last.suppressed,
+               "with its quantity, the arrival is carried and the day is complete"
+
+    journal.trade.update_columns(qty: nil)
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert third.suppressed, "with none, the repriced units are unaccounted for"
+    assert third.unvalued_journal
+    assert_equal BigDecimal("0"), third.external_flow, "a journal with no quantity carries no flow"
+  end
+
   # One journal that cannot be valued suppresses the whole day, even beside
   # others that can. The return is the scope's, not a security's: the unvalued
   # position's value is in the close and missing from the denominator, so no
@@ -1593,6 +1617,28 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
 
     assert returns.rate_missing?, "a journal that could not be converted must be flagged"
     assert returns.rows.last.suppressed
+  end
+
+  # The same rule on the day a carried journal lands. Its first priced row is
+  # quoted in a currency with no rate, so the carry converts to nothing and
+  # the arrival stays in `market` as a gain. On its own day such a journal
+  # suppresses the day; carried, it must too, not only flag the rate.
+  test "a carried journal priced in a currency with no rate suppresses its first priced day" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: 5, price: 0, currency: "EUR"
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: "EUR")
+
+    returns = daily_returns(end_date: day_three)
+    third = returns.rows.last
+
+    assert third.rate_missing, "the carry could not be converted"
+    assert third.suppressed, "an arrival valued at nothing is not a return"
+    assert third.unvalued_journal
+    assert_equal BigDecimal("0"), returns.returns.last.last
   end
 
   # The other direction. A journal is valued from its holding, so the rate it
