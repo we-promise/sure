@@ -65,7 +65,8 @@ class Holding::Materializer
       end
       rows += @calculator.clamped_security_ids.map { |security_id| lot_row(security_id, nil, qty: 0, clamped: true) }
 
-      HoldingLot.store!(account, rows, security_ids: security_ids)
+      # Only the reverse walk knows the units held before the trades.
+      HoldingLot.store!(account, rows, security_ids: security_ids, openings: strategy == :reverse)
     end
 
     def lot_row(security_id, source_entry_id, qty:, acquired_on: nil, unit_cost: nil, currency: account.currency, clamped: false)
