@@ -256,7 +256,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       redirect_uri: "https://claude.ai/callback",
       confidential: false
     )
-    %w[read read_write].each do |scope|
+    %w[mcp read read_write].each do |scope|
       token = Doorkeeper::AccessToken.create!( # pipelock:ignore
         application: app,
         resource_owner_id: @user.id,
