@@ -376,9 +376,15 @@ class TransactionsController < ApplicationController
     activity_label = params[:investment_activity_label].presence
     # Serialize replacements on the source, including requests already in flight.
     ActiveRecord::Base.transaction do
+      # Match the lock order used by refund linking and entry validation.
+      @transaction.lock!
       # Entry#transaction is its delegated transaction record, so use an
       # explicit DB transaction rather than ActiveRecord's instance with_lock.
       @entry.lock!
+      if @transaction.refund? || @transaction.refund_linked?
+        redirect_back_or_to transactions_path, alert: t("activerecord.errors.messages.refund_links_present")
+        next
+      end
       if @entry.excluded?
         flash[:alert] = t("transactions.convert_to_trade.errors.already_converted")
         redirect_back_or_to transactions_path

@@ -13,10 +13,17 @@ class Transaction::RefundConcurrencyTest < ActiveSupport::TestCase
   end
 
   teardown do
-    @worker&.join(5) || @worker&.kill
-    @account.entries.where(parent_entry_id: nil).each(&:destroy!)
-    @account.destroy!
-    @family.destroy!
+    begin
+      @worker&.join(5)
+    ensure
+      if @worker&.alive?
+        @worker.kill
+        @worker.join
+      end
+      @account.entries.where(parent_entry_id: nil).each(&:destroy!)
+      @account.destroy!
+      @family.destroy!
+    end
   end
 
   test "linking waits for an in-flight split and rejects the split parent" do
@@ -31,6 +38,7 @@ class Transaction::RefundConcurrencyTest < ActiveSupport::TestCase
     end
 
     assert_equal :rejected, worker_result
+    assert_equal :invalid, @rejection_errors.first[:error]
     assert_nil @refund.transaction.reload.refund_of_id
     assert_equal 2, @purchase.child_entries.count
   end
@@ -47,6 +55,7 @@ class Transaction::RefundConcurrencyTest < ActiveSupport::TestCase
     end
 
     assert_equal :rejected, worker_result
+    assert_equal :refund_links_present, @rejection_errors.first[:error]
     assert_equal @purchase.entryable_id, @refund.transaction.reload.refund_of_id
     assert_empty @purchase.child_entries
   end
@@ -64,9 +73,65 @@ class Transaction::RefundConcurrencyTest < ActiveSupport::TestCase
     end
 
     assert_equal :rejected, worker_result
+    assert_equal :refund_links_present, @rejection_errors.first[:error]
     assert_equal child.entryable_id, @refund.transaction.reload.refund_of_id
     assert_equal 2, @purchase.child_entries.count
     assert @purchase.reload.excluded?
+  end
+
+  [ { amount: -100 }, { excluded: true } ].each do |attributes|
+    test "purchase edits #{attributes.keys.first} wait for refund linking and revalidate" do
+      @purchase.transaction.with_lock do
+        start_worker do
+          purchase = Entry.find(@purchase.id)
+          purchase.transaction # Cache the state before the refund is linked.
+          -> { purchase.update!(attributes) }
+        end
+        assert_worker_waits_for_lock
+        @refund.transaction.mark_as_refund!(purchase: @purchase.transaction)
+      end
+
+      assert_equal :rejected, worker_result
+      assert_equal attributes.key?(:amount) ? :invalid_refund : :refund_links_present,
+        @rejection_errors.first[:error]
+      assert_equal 1000, @purchase.reload.amount
+      assert_not @purchase.excluded?
+      assert_equal @purchase.entryable_id, @refund.transaction.reload.refund_of_id
+    end
+
+    test "linking waits for a purchase edit of #{attributes.keys.first} and rejects the changed purchase" do
+      Entry.transaction do
+        @purchase.update!(attributes)
+        start_worker do
+          purchase = Transaction.find(@purchase.entryable_id)
+          purchase.entry
+          -> { Transaction.find(@refund.entryable_id).mark_as_refund!(purchase: purchase) }
+        end
+        assert_worker_waits_for_lock
+      end
+
+      assert_equal :rejected, worker_result
+      assert_equal :invalid, @rejection_errors.first[:error]
+      assert_nil @refund.transaction.reload.refund_of_id
+      assert @refund.transaction.standard?
+    end
+  end
+
+  test "refund amount edits recheck the kind after waiting for classification" do
+    @refund.transaction.with_lock do
+      start_worker do
+        refund = Entry.find(@refund.id)
+        refund.transaction
+        -> { refund.update!(amount: 800) }
+      end
+      assert_worker_waits_for_lock
+      @refund.transaction.mark_as_refund!
+    end
+
+    assert_equal :rejected, worker_result
+    assert_equal :invalid_refund, @rejection_errors.first[:error]
+    assert_equal(-800, @refund.reload.amount)
+    assert @refund.transaction.refund?
   end
 
   private
@@ -78,7 +143,8 @@ class Transaction::RefundConcurrencyTest < ActiveSupport::TestCase
           ready << connection.select_value("SELECT pg_backend_pid()")
           operation.call
           :completed
-        rescue ActiveRecord::RecordInvalid
+        rescue ActiveRecord::RecordInvalid => error
+          @rejection_errors = error.record.errors.details.values.flatten
           :rejected
         end
       end

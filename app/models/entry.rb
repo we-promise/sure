@@ -40,6 +40,7 @@ class Entry < ApplicationRecord
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
+  before_validation :lock_transaction_for_refund_validation
   validate :refund_direction_unchanged
   validate :cannot_exclude_refund_linked_purchase
 
@@ -693,10 +694,22 @@ class Entry < ApplicationRecord
       @earliest_saved_date = [ @earliest_saved_date, date_before_last_save ].compact.min
     end
 
+    def lock_transaction_for_refund_validation
+      @refund_validation_transaction = nil
+      return unless persisted? && transaction? && (amount_changed? || excluded_changed?)
+
+      # Save holds this lock through validation and the entry update. Refund
+      # linking, splitting and trade conversion take the transaction lock first
+      # too, so a purchase cannot become ineligible after a link is validated.
+      # Load separately to preserve unsaved nested transaction attributes.
+      @refund_validation_transaction = Transaction.lock.find(entryable_id)
+    end
+
     def refund_direction_unchanged
       return unless transaction? && amount.present?
 
-      if (transaction.refund? && !amount.negative?) || (amount <= 0 && transaction.purchase_refunds.exists?)
+      record = @refund_validation_transaction || transaction
+      if (record.refund? && !amount.negative?) || (amount <= 0 && record.purchase_refunds.exists?)
         errors.add(:amount, :invalid_refund)
       end
     end
@@ -710,7 +723,8 @@ class Entry < ApplicationRecord
     def cannot_exclude_refund_linked_purchase
       return unless transaction? && excluded_changed?(to: true)
 
-      errors.add(:base, :refund_links_present) if transaction.purchase_refunds.exists?
+      record = @refund_validation_transaction || transaction
+      errors.add(:base, :refund_links_present) if record.purchase_refunds.exists?
     end
 
     def split_child_date_matches_parent
