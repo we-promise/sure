@@ -2,6 +2,7 @@ require "test_helper"
 
 class FamilyTest < ActiveSupport::TestCase
   include SyncableInterfaceTest
+  include SqlQueryCapture
 
   def setup
     @syncable = families(:dylan_family)
@@ -238,6 +239,53 @@ class FamilyTest < ActiveSupport::TestCase
     older_entry.destroy!
 
     assert_not_equal before_destroy, family.reload.entries_cache_version
+  end
+
+  test "build_cache_key changes when family currency changes" do
+    family = families(:empty)
+    before = family.build_cache_key("test_key")
+    family.update!(currency: "EUR")
+    after = family.reload.build_cache_key("test_key")
+
+    assert_not_equal before, after
+  end
+
+  test "build_cache_key changes through the account deletion lifecycle and does not revert" do
+    family = families(:dylan_family)
+    newer_account = accounts(:credit_card)
+    older_account = accounts(:depository)
+
+    newer_account.touch
+    k0 = family.build_cache_key("test_key")
+
+    older_account.mark_for_deletion!
+    k1 = family.reload.build_cache_key("test_key")
+
+    older_account.destroy!
+    k2 = family.reload.build_cache_key("test_key")
+
+    assert_not_equal k0, k1
+    assert_not_equal k1, k2
+    # Regression assertion for #4200: ensure key does not revert to pre-deletion state (k0)
+    assert_not_equal k0, k2
+  end
+
+  test "build_cache_key remains unchanged when nothing relevant has changed" do
+    family = families(:dylan_family)
+    key1 = family.build_cache_key("test_key", invalidate_on_data_updates: true)
+    key2 = family.reload.build_cache_key("test_key", invalidate_on_data_updates: true)
+
+    assert_equal key1, key2
+  end
+
+  test "accounts_status_version fetches count and max updated_at in a single query" do
+    family = families(:dylan_family)
+    queries = capture_sql_queries do
+      family.accounts_status_version
+    end
+
+    account_queries = queries.grep(/FROM "accounts"/i)
+    assert_equal 1, account_queries.size, "accounts_status_version should execute only one query"
   end
 
   test "default currency comes from country ISO data" do
@@ -696,6 +744,37 @@ class FamilyTest < ActiveSupport::TestCase
     Provider::Registry.stubs(:get_provider).with(:jev).raises(ArgumentError, "boom")
 
     assert_raises(ArgumentError) { family.resolved_categorization_provider }
+  end
+
+  test "earliest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
+
+    account.entries.create!(date: Date.new(2000, 1, 15), name: "Old valuation",
+                            amount: 5000, currency: "USD", entryable: Valuation.new)
+    transaction_date = Date.new(2025, 3, 10)
+    account.entries.create!(date: transaction_date, name: "Groceries",
+                            amount: -50, currency: "USD", entryable: Transaction.new)
+
+    assert_equal transaction_date, family.earliest_activity_date
+
+    # A Trade earlier than the Transaction must win, so a regression that
+    # drops Trade from the filter is caught (#4007).
+    trade_date = Date.new(2020, 6, 15)
+    account.entries.create!(date: trade_date, name: "Investment purchase",
+                            amount: 100, currency: "USD",
+                            entryable: Trade.new(security: securities(:aapl), qty: 1, price: 100, currency: "USD"))
+
+    assert_equal trade_date, family.earliest_activity_date
+  end
+
+  test "earliest_activity_date returns nil when family has no Transaction/Trade entries" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "House", balance: 0, currency: "USD", accountable: Depository.new)
+    account.entries.create!(date: Date.new(2000, 1, 15), name: "Old valuation",
+                            amount: 5000, currency: "USD", entryable: Valuation.new)
+
+    assert_nil family.earliest_activity_date
   end
 
   private

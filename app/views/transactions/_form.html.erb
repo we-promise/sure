@@ -44,7 +44,8 @@
       form: ef,
       categories: categories,
       selected_id: ef.object.category_id,
-      blank_label: t(".category_prompt")
+      blank_label: t(".category_prompt"),
+      locked: Current.family.categories_locked?
     ) %>
     <% end %>
 
