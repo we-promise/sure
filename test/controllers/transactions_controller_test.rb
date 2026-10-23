@@ -1022,6 +1022,26 @@ end
     assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
   end
 
+  # An ended series no longer covers the payment, but the unique index still
+  # holds its key, so the create would fail. The button says so up front
+  # instead of failing after the POST.
+  test "mark_as_recurring is disabled when an ended series holds the same key" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Betashares"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+    RecurringTransaction.create_from_transaction(entry.entryable).update!(status: "ended")
+
+    get transaction_url(entry)
+    assert_select "button[disabled][title=?]", I18n.t("recurring_transactions.already_exists"), text: /Mark as Recurring/
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(entry.entryable)
+    end
+    assert_equal I18n.t("recurring_transactions.already_exists"), flash[:alert]
+  end
+
   # Sharing is per account. A bill on an account this member was never given
   # is not theirs to learn about, as in the add-bill dialog's own check, so
   # it neither disables the button nor refuses the request.

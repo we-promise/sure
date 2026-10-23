@@ -457,10 +457,10 @@ class TransactionsController < ApplicationController
     # Check if a recurring transaction already exists for this pattern.
     # The UI disables the button ahead of time using the same lookup, but this
     # guard remains as the authoritative check (e.g. stale page, direct POST).
-    existing = covering_series_for(transaction.entry)
+    blocked = mark_recurring_blocked_message(transaction)
 
-    if existing
-      flash[:alert] = t("recurring_transactions.already_covered")
+    if blocked
+      flash[:alert] = blocked
       redirect_back_or_to transactions_path
       return
     end
@@ -563,17 +563,28 @@ class TransactionsController < ApplicationController
       Current.family.recurring_transactions.accessible_by(Current.user).covering(entry)
     end
 
+    # Why "Mark as recurring" cannot go ahead, or nil when it can: a series
+    # already covers the payment, or one the user ended still holds the key
+    # the create would write.
+    def mark_recurring_blocked_message(transaction)
+      if covering_series_for(transaction.entry)
+        t("recurring_transactions.already_covered")
+      elsif RecurringTransaction.identity_taken_by(transaction)
+        t("recurring_transactions.already_exists")
+      end
+    end
+
     def assign_mark_recurring_state
       return unless can_edit_entry? && !@entry.split_child?
 
-      existing = covering_series_for(@entry)
+      blocked = mark_recurring_blocked_message(@entry.transaction)
 
       @mark_recurring_href = mark_as_recurring_transaction_path(@entry.transaction)
-      @mark_recurring_subtitle_class = existing ? "text-subdued" : "text-secondary"
-      @mark_recurring_subtitle = existing ? t("recurring_transactions.already_covered") : t("transactions.show.mark_recurring_subtitle")
-      @mark_recurring_disabled = existing.present?
-      @mark_recurring_title = existing ? t("recurring_transactions.already_covered") : nil
-      @mark_recurring_button_class = existing ? "disabled:opacity-50" : nil
+      @mark_recurring_subtitle_class = blocked ? "text-subdued" : "text-secondary"
+      @mark_recurring_subtitle = blocked || t("transactions.show.mark_recurring_subtitle")
+      @mark_recurring_disabled = blocked.present?
+      @mark_recurring_title = blocked
+      @mark_recurring_button_class = blocked ? "disabled:opacity-50" : nil
     end
 
     def accessible_transactions

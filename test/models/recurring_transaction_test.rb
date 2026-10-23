@@ -804,6 +804,39 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_nil RecurringTransaction.covering(entry)
   end
 
+  # The unique indexes ignore status, so a series create_from_transaction
+  # would collide with is found whatever state it is in, even when covering
+  # (which skips ended series) does not see it. Built from a real create, so
+  # the lookup and the index cannot disagree on the key.
+  test "identity_taken_by finds the row create_from_transaction would collide with" do
+    setup_covering_family
+    [
+      create_transaction(account: @account, amount: 100, merchant: @merchant),
+      create_transaction(account: @account, amount: 40, name: "CITY WATER 0042")
+    ].each do |entry|
+      transaction = entry.entryable
+      assert_nil RecurringTransaction.identity_taken_by(transaction), "nothing holds the key yet"
+
+      created = RecurringTransaction.create_from_transaction(transaction)
+      created.update!(status: "ended")
+
+      assert_nil @family.recurring_transactions.covering(entry), "precondition: covering skips the ended series"
+      assert_equal created, RecurringTransaction.identity_taken_by(transaction)
+      assert_raises(ActiveRecord::RecordNotUnique) do
+        RecurringTransaction.transaction(requires_new: true) { RecurringTransaction.create_from_transaction(transaction) }
+      end
+    end
+  end
+
+  # dedup_scope carries the amount, so another price tier is a new key.
+  test "identity_taken_by leaves another price tier free" do
+    setup_covering_family
+    RecurringTransaction.create_from_transaction(create_transaction(account: @account, amount: 100, merchant: @merchant).entryable)
+    other_tier = create_transaction(account: @account, amount: 120, merchant: @merchant).entryable
+
+    assert_nil RecurringTransaction.identity_taken_by(other_tier)
+  end
+
   # The matcher never pays an ordinary bill with a transfer leg, so neither
   # does this check by name or merchant. A leg already allocated to a series
   # is still covered by it.

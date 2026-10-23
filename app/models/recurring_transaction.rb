@@ -548,6 +548,30 @@ class RecurringTransaction < ApplicationRecord
          end
   end
 
+  # The row create_from_transaction would collide with, whatever its status.
+  # The partial unique indexes ignore status, so an ended series still holds
+  # its key after covering has stopped returning it. Mirrors the identity
+  # written below: merchant when the transaction has one (the merchant index
+  # ignores name), else the entry's name, with the amount as dedup_scope.
+  def self.identity_taken_by(transaction)
+    entry = transaction.entry
+    key = {
+      family_id: entry.account.family_id,
+      account_id: entry.account_id,
+      destination_account_id: nil,
+      amount: entry.amount,
+      currency: entry.currency,
+      dedup_scope: entry.amount.to_d.to_s("F")
+    }
+    key = if transaction.merchant_id.present?
+      key.merge(merchant_id: transaction.merchant_id)
+    else
+      key.merge(merchant_id: nil, name: entry.name)
+    end
+
+    find_by(key)
+  end
+
   # Create a manual recurring transaction from an existing transaction
   # Automatically calculates amount variance from past 6 months of matching transactions
   def self.create_from_transaction(transaction, date_variance: 2)
