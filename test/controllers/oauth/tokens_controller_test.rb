@@ -2,7 +2,7 @@ require "test_helper"
 
 class Oauth::TokensControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @app = Doorkeeper::Application.create!(
+    @oauth_application = Doorkeeper::Application.create!(
       name: "Migrated MCP Client",
       redirect_uri: "https://claude.ai/callback",
       confidential: false,
@@ -21,7 +21,7 @@ class Oauth::TokensControllerTest < ActionDispatch::IntegrationTest
     assert_equal "read_write", body["scope"]
     refreshed = Doorkeeper::AccessToken.by_token(body.fetch("access_token"))
     assert refreshed.accessible?
-    assert_equal @app.id, refreshed.application_id
+    assert_equal @oauth_application.id, refreshed.application_id
     assert_equal @token.resource_owner_id, refreshed.resource_owner_id
   end
 
@@ -92,7 +92,7 @@ class Oauth::TokensControllerTest < ActionDispatch::IntegrationTest
 
     def create_token(scopes:)
       Doorkeeper::AccessToken.create!( # pipelock:ignore
-        application: @app,
+        application: @oauth_application,
         resource_owner_id: users(:family_admin).id,
         scopes: scopes,
         expires_in: 1.year,
@@ -103,7 +103,7 @@ class Oauth::TokensControllerTest < ActionDispatch::IntegrationTest
     def refresh(overrides = {})
       post "/oauth/token", params: {
         grant_type: "refresh_token",
-        client_id: @app.uid,
+        client_id: @oauth_application.uid,
         refresh_token: @token.plaintext_refresh_token
       }.merge(overrides)
     end
