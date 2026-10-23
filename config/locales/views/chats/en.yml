@@ -4,7 +4,7 @@ en:
     demo_banner_title: "Demo Mode Active"
     demo_banner_message: "You are using LLMs via credits provided by Cloudflare Workers AI.  Results may vary since the codebase was tested on `gpt-4.1` but your tokens don't go anywhere else to be trained with! 🤖"
     thinking: "Thinking ..."
-    ai_busy: "System is busy. Your message will be processed after the current job."
+    ai_busy: "Just finishing off a background task, then I'll get straight onto your message."
     reservation:
       ready_html: "I've put off some background tasks so I can get straight onto your message. They'll sneak back in %{countdown}, so keep typing!"
       busy: "Just finishing off a background task, then I'm all yours. Keep typing!"
