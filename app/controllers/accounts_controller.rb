@@ -105,9 +105,19 @@ class AccountsController < ApplicationController
     # turn for nothing. Same reasoning as the statements-frame return above.
     #
     # The chart and the Schedule tab's forecast card read the same projection,
-    # so it is built once here and handed to both.
-    @loan_projection = @account.loan.payoff_projection(as_of: @as_of) if @account.accountable.is_a?(Loan)
-    @loan_chart = loan_payoff_chart(@account, as_of: @as_of, period: @period, projection: @loan_projection) if chart_card_requested?
+    # so it is built once here and handed to both. The Extra repayments tab's
+    # projection is built on the same date, and only when there is an extra
+    # to model; the chart draws it beside the others.
+    if @account.accountable.is_a?(Loan)
+      @loan_projection = @account.loan.payoff_projection(as_of: @as_of)
+      @extra_repayment = loan_extra_repayment
+      if @extra_repayment.applied?
+        @loan_extra_projection = @account.loan.payoff_projection(as_of: @as_of, extra: @extra_repayment.amount,
+                                                                 extra_frequency: @extra_repayment.frequency)
+      end
+    end
+    @loan_chart = loan_payoff_chart(@account, as_of: @as_of, period: @period, projection: @loan_projection,
+                                    extra_projection: @loan_extra_projection) if chart_card_requested?
 
     per_page = safe_per_page(stored_per_page_default)
     store_per_page!(per_page) if params[:per_page].present?
@@ -354,14 +364,25 @@ class AccountsController < ApplicationController
     # nil is what the component already takes as "no chart", and the account
     # page then renders exactly as it did before the chart existed. Reported,
     # because a loan silently losing its chart is a bug someone has to see.
-    def loan_payoff_chart(account, as_of:, period:, projection: nil)
+    def loan_payoff_chart(account, as_of:, period:, projection: nil, extra_projection: nil)
       return nil unless account.accountable.is_a?(Loan)
 
-      Loan::PayoffChart.new(account.loan, as_of: as_of, period: period, projection: projection).payload
+      Loan::PayoffChart.new(account.loan, as_of: as_of, period: period, projection: projection,
+                            extra_projection: extra_projection).payload
     rescue StandardError => e
       Rails.logger.error("Loan payoff chart failed for account #{account.id}: #{e.class} - #{e.message}")
       Sentry.capture_exception(e) { |scope| scope.set_tags(record_type: "Account", record_id: account.id) } if defined?(Sentry)
       nil
+    end
+
+    # The Extra repayments tab's form submits `extra_payment[amount]` and
+    # `extra_payment[frequency]` over GET. Params of any other shape -- a scalar
+    # for the hash, an array for either field -- are no extra rather than an
+    # error.
+    def loan_extra_repayment
+      extra_payment = params[:extra_payment]
+      permitted = extra_payment.permit(:amount, :frequency) if extra_payment.is_a?(ActionController::Parameters)
+      Loan::ExtraRepayment.new(amount: permitted&.[](:amount), frequency: permitted&.[](:frequency), currency: @account.currency)
     end
 
     # A plain visit, or a frame request for one of the two frames the chart

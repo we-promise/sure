@@ -1,0 +1,115 @@
+<%# locals: (account:, projection:, extra_projection:, extra_repayment:) %>
+
+<%# What paying an extra amount on top of every repayment does to the payoff
+    date and the interest. `projection` is the page's projection with no extra
+    and `extra_projection` the same loan on the same date with the extra, nil
+    when none applies. The chart above draws both, so the cards and the lines
+    quote one date. Each comparison is against paying no extra, not against
+    the contract: the Schedule tab and the chart already say how far ahead or
+    behind the loan is. %>
+<% extra_repayment.validate %>
+<% amount_invalid = extra_repayment.errors[:amount].any? %>
+<% frequency_invalid = extra_repayment.errors[:frequency].any? %>
+
+<%# @container: the cards go three across only when the tab itself has room,
+    not when the window does. With both side panels open the tab is narrow
+    on a wide screen, and three figures side by side ran past their cards. %>
+<div class="@container space-y-4">
+  <p class="text-sm text-secondary"><%= t(".intro") %></p>
+
+  <% if projection.applicable? %>
+    <%# Built as the Bills form is: the shared money field, with the loan's
+        currency shown and fixed, and a select for how often. GET, so the
+        figures below are a link that can be shared or reloaded. %>
+    <%= styled_form_with url: account_path(account), method: :get, scope: :extra_payment,
+                         data: { turbo_action: "advance" }, class: "space-y-2" do |f| %>
+      <%= hidden_field_tag :tab, "extra_repayments", id: nil %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <%= f.money_field :amount,
+              label: t(".amount_label"),
+              currency_value_override: account.currency,
+              disable_currency: true,
+              value: extra_repayment.field_value,
+              placeholder: t(".amount_placeholder"),
+              min: 0,
+              input_class: "privacy-sensitive privacy-sensitive-interactive",
+              aria: { invalid: (amount_invalid ? "true" : nil),
+                      describedby: (dom_id(account, :extra_amount_error) if amount_invalid) }.compact.presence %>
+        <%= f.select :frequency,
+              Loan::ExtraRepayment::FREQUENCIES.map { |frequency| [ t(".frequencies.#{frequency}"), frequency ] },
+              { label: t(".frequency_label"), selected: extra_repayment.frequency },
+              { "aria-invalid": (frequency_invalid ? "true" : nil),
+                "aria-describedby": (dom_id(account, :extra_frequency_error) if frequency_invalid) }.compact %>
+      </div>
+      <% if amount_invalid %>
+        <p id="<%= dom_id(account, :extra_amount_error) %>" class="text-xs text-destructive" data-testid="extra-amount-error"><%= extra_repayment.errors[:amount].first %></p>
+      <% end %>
+      <% if frequency_invalid %>
+        <p id="<%= dom_id(account, :extra_frequency_error) %>" class="text-xs text-destructive" data-testid="extra-frequency-error"><%= extra_repayment.errors[:frequency].first %></p>
+      <% end %>
+      <%# The design system's form actions: Apply alone is the form's
+          full-width submit; with Clear it is a right-aligned pair, Clear
+          first. %>
+      <% if extra_repayment.input.present? %>
+        <div class="flex justify-end gap-2">
+          <%= render DS::Link.new(text: t(".clear"), href: account_path(account, tab: "extra_repayments"), variant: "ghost") %>
+          <%= render DS::Button.new(text: t(".apply"), type: :submit) %>
+        </div>
+      <% else %>
+        <%= f.submit t(".apply") %>
+      <% end %>
+    <% end %>
+
+    <div class="grid grid-cols-1 @lg:grid-cols-3 gap-2" data-testid="extra-cards">
+      <% if extra_projection&.payoff_date %>
+        <%= summary_card title: t(".payoff_with_extra") do %>
+          <span data-testid="extra-payoff-date"><%= l extra_projection.payoff_date, format: :long %></span>
+          <% if (sooner = extra_projection.months_sooner_than(projection)) %>
+            <span class="block text-xs text-secondary mt-1" data-testid="extra-months-sooner"><%= t(".months_sooner", count: sooner) %></span>
+          <% end %>
+        <% end %>
+
+        <% if (saved = extra_projection.interest_saved_versus(projection)) %>
+          <%= summary_card title: t(".interest_saved") do %>
+            <span data-testid="extra-interest-saved"><%= format_money saved %></span>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <%# The total still to repay: with the extra when one applies, and the
+          saving against paying no extra beneath it. %>
+      <% costed = extra_projection || projection %>
+      <%= summary_card title: t(".total_cost") do %>
+        <% if (total = costed.total_cost) %>
+          <span class="privacy-sensitive" data-testid="total-cost"><%= format_money total %></span>
+          <% if extra_projection && (saved = extra_projection.total_cost_saved_versus(projection)) %>
+            <span class="block text-xs text-secondary mt-1 privacy-sensitive" data-testid="total-cost-saved"><%= t(".total_cost_saved", amount: format_money(saved)) %></span>
+          <% end %>
+        <% else %>
+          <%= t(".total_cost_not_cleared") %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if extra_projection %>
+      <% if !extra_projection.converged? %>
+        <p class="text-sm text-secondary" data-testid="extra-not-cleared"><%= t(".extra_not_cleared") %></p>
+      <% elsif !projection.converged? %>
+        <p class="text-sm text-secondary privacy-sensitive" data-testid="baseline-not-cleared"><%= t(".baseline_not_cleared", balloon: format_money(projection.balloon_amount)) %></p>
+      <% else %>
+        <p class="text-xs text-secondary"><%= t(".comparison_basis") %></p>
+        <% unless extra_repayment.frequency == "monthly" %>
+          <p class="text-xs text-secondary" data-testid="extra-dated-note"><%= t(".dated_note") %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% if account.loan.variable_rate_type? %>
+      <p class="text-xs text-secondary"><%= t(".variable_rate_notice") %></p>
+    <% end %>
+  <% else %>
+    <%# Repaid, or past the last scheduled repayment with a balance still
+        owing: the second is not repaid and must not read as if it were. %>
+    <p class="text-sm text-secondary" data-testid="extra-not-applicable"><%= t(projection.settled? ? ".not_applicable" : ".no_scheduled_repayments") %></p>
+  <% end %>
+</div>

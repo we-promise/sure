@@ -46,6 +46,35 @@ de:
       type: Typ
       unknown: Unbekannt
     tabs:
+      extra_repayments:
+        amount_label: Sondertilgung
+        amount_placeholder: "0,00"
+        apply: Anwenden
+        baseline_not_cleared: "Mit der aktuellen Rate ist dieser Kredit bis zum ursprünglichen Laufzeitende nicht getilgt, und %{balloon} blieben offen. Es gibt daher kein früheres Datum und keine Zinsersparnis zum Vergleich. Mit diesem Zusatzbetrag ist er zum oben genannten Datum getilgt."
+        clear: Zurücksetzen
+        comparison_basis: Verglichen mit der aktuellen Rate ohne Zusatzbetrag, ab dem heutigen Saldo.
+        dated_note: Wöchentliche und zweiwöchentliche Zusatzbeträge werden jeweils bei der nächsten Rate nach ihrer Zahlung angerechnet; die Zinsersparnis ist daher eher zu niedrig angegeben.
+        extra_not_cleared: Auch mit diesem Zusatzbetrag ist der Kredit bis zum ursprünglichen Laufzeitende nicht getilgt. Versuch es mit einem höheren Betrag.
+        frequencies:
+          fortnightly: Alle zwei Wochen
+          monthly: Monatlich
+          weekly: Wöchentlich
+        frequency_label: Wie oft
+        interest_saved: Gesparte Zinsen
+        intro: Sieh dir an, wie viel früher der Kredit getilgt ist und wie viel Zinsen du sparst, wenn du zusätzlich zu deinen Raten wöchentlich, alle zwei Wochen oder monatlich einen Zusatzbetrag zahlst.
+        invalid_amount: Gib einen Betrag von null oder mehr in Ziffern ein.
+        invalid_frequency: Wähle wöchentlich, alle zwei Wochen oder monatlich.
+        months_sooner:
+          zero: Im selben Monat getilgt
+          one: "%{count} Monat früher"
+          other: "%{count} Monate früher"
+        no_scheduled_repayments: Für diesen Kredit sind keine planmäßigen Raten mehr vorgesehen, aber es ist noch ein Saldo offen. Daher gibt es keine Rate, zu der du einen Zusatzbetrag zahlen kannst.
+        not_applicable: Auf diesen Kredit ist nichts mehr zu tilgen, daher gibt es keine Sondertilgung zu berechnen.
+        payoff_with_extra: Tilgung mit Zusatzbetrag
+        total_cost: Gesamtkosten ab heute
+        total_cost_not_cleared: Bis zum ursprünglichen Laufzeitende nicht getilgt
+        total_cost_saved: "%{amount} weniger als ohne Zusatzbetrag"
+        variable_rate_notice: Der Zinssatz dieses Kredits ändert sich. Diese Zahlen berücksichtigen die bereits erfassten Zinsänderungen; eine noch nicht erfasste Änderung verschiebt sie.
       schedule:
         date: Datum
         description: Hochgerechnet aus ursprünglicher Kreditsumme, Zinssatz und Laufzeit, beginnend am %{start_date}. Sondertilgungen sind nicht berücksichtigt.
