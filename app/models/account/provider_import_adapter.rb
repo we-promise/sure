@@ -272,7 +272,11 @@ class Account::ProviderImportAdapter
           entry.transaction.assign_attributes(kind: transfer ? transfer.kind_for_leg(entry.transaction) : auto_kind)
         end
 
-        if auto_category.present? && entry.transaction.category_id.blank?
+        # A kind lock or matched transfer can keep a detected contribution from
+        # becoming an investment contribution. Categorize the final kind only,
+        # while preserving an independently locked Uncategorized choice.
+        if auto_category.present? && entry.transaction.investment_contribution? &&
+            entry.transaction.category_id.blank? && !entry.transaction.locked?(:category_id)
           entry.transaction.assign_attributes(category: auto_category)
         end
       end
