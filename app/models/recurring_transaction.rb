@@ -75,6 +75,7 @@ class RecurringTransaction < ApplicationRecord
 
   after_commit :generate_occurrences, on: :create
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
+  before_save :preserve_detected_name, if: -> { name_changed? && name_was.present? && matcher_hints.to_h["detected_name"].blank? }
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
 
   # Form state for the frequency picker and the create-bill dialog;
@@ -137,6 +138,17 @@ class RecurringTransaction < ApplicationRecord
   # keeps reading the merchant directly.
   def display_name
     name.presence || merchant&.name
+  end
+
+  # The name the detector matched on, kept apart from the user-facing name
+  # so renaming a bill does not orphan it from its bank transactions.
+  def matcher_name
+    matcher_hints.to_h["detected_name"].presence || name
+  end
+
+  # A bill first renamed without a stored detected name keeps its original name, so the detector can still claim it.
+  def preserve_detected_name
+    self.matcher_hints = matcher_hints.to_h.merge("detected_name" => name_was)
   end
 
   def merchant_or_name_present
@@ -540,7 +552,8 @@ class RecurringTransaction < ApplicationRecord
       manual: true,
       expected_amount_min: expected_min,
       expected_amount_max: expected_max,
-      expected_amount_avg: expected_avg
+      expected_amount_avg: expected_avg,
+      matcher_hints: transaction.merchant_id.present? ? {} : { "detected_name" => entry.name }
     }
 
     create!(attributes)
@@ -626,7 +639,7 @@ class RecurringTransaction < ApplicationRecord
       end
     else
       # Match by entry name
-      entries.where(name: name)
+      entries.where(name: matcher_name)
     end
 
     schedule_matched(candidates)

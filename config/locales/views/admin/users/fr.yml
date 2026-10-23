@@ -115,6 +115,7 @@ fr:
         family_required: Sélectionnez une famille / un groupe existant ou saisissez un nom pour en créer un.
         last_super_admin_error: Impossible de rétrograder le dernier super administrateur du système.
         password_and_family_conflict: Le mot de passe et l'appartenance à une famille / un groupe ne peuvent pas être modifiés en même temps.
+        password_disabled: La définition d'un mot de passe est désactivée, car les utilisateurs ne peuvent se connecter que via SSO.
         password_missing_case: Le mot de passe doit contenir des majuscules et des minuscules.
         password_missing_number: Le mot de passe doit contenir au moins un chiffre.
         password_missing_special: Le mot de passe doit contenir au moins un caractère spécial.
