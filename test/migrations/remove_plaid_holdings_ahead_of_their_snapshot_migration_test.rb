@@ -151,6 +151,24 @@ class RemovePlaidHoldingsAheadOfTheirSnapshotMigrationTest < ActiveSupport::Test
     end
   end
 
+  # A correction on a removed row goes to the row the next sync carries
+  # corrections from: the latest one on or before the snapshot date.
+  test "a correction on a removed row survives into the next sync" do
+    plaid_row(@aapl, @snapshot_date, 10)
+    earlier = plaid_row(@msft, @snapshot_date - 3, 5)
+    stale = plaid_row(@msft, Date.current, 9)
+    stale.set_manual_cost_basis!(42)
+    assert_not earlier.reload.cost_basis_locked
+
+    run_migration
+
+    assert_not Holding.exists?(stale.id)
+    assert_equal [ 42, true ], [ earlier.reload.cost_basis.to_i, earlier.cost_basis_locked ]
+    sync_holdings
+    msft = @account.current_holdings.find_by!(security: @msft)
+    assert_equal [ @snapshot_date, 42, true ], [ msft.date, msft.cost_basis.to_i, msft.cost_basis_locked ]
+  end
+
   # Balances and the account's history were computed with the removed rows, so
   # an item that lost rows is synced again to rebuild them.
   test "a sync is scheduled for an item whose rows were removed" do

@@ -50,12 +50,18 @@ class PlaidAccount::Investments::HoldingsProcessor
     # A snapshot can be dated before the last one (that sync had no usable
     # price date and landed on today). Plaid's own rows after it would stay the
     # newest provider date and hide this snapshot, so they go once it is
-    # written. Other providers' rows, and rows with no provider, are kept.
+    # written. A correction the user made on one moves to the snapshot row
+    # first, oldest row first so the latest wins. Other providers' rows, and
+    # rows with no provider, are kept.
     def retire_rows_after(snapshot_date)
       account_provider_id = plaid_account.account_provider&.id
       return if account.nil? || account_provider_id.nil?
 
-      account.holdings.where(account_provider_id: account_provider_id).where("date > ?", snapshot_date).delete_all
+      later = account.holdings.where(account_provider_id: account_provider_id).where("date > ?", snapshot_date)
+      later.where("security_locked OR cost_basis_locked").order(:date, :id).each do |holding|
+        import_adapter.carry_corrections_back(from: holding, date: snapshot_date)
+      end
+      later.delete_all
     end
 
     # A price date that cannot be read is left out of the snapshot date, and

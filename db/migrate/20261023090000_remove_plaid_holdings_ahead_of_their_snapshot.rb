@@ -75,6 +75,7 @@ class RemovePlaidHoldingsAheadOfTheirSnapshot < ActiveRecord::Migration[8.1]
               "account_providers.id AS account_provider_id")
       .find_each(batch_size: batch_size) do |plaid_account|
         cutoff = self.class.snapshot_date(plaid_account.raw_holdings_payload)
+        carry_corrections_back(plaid_account.account_provider_id, cutoff)
 
         removed = connection.delete(ActiveRecord::Base.sanitize_sql_array([
           "DELETE FROM holdings WHERE account_provider_id = ? AND date > ?", plaid_account.account_provider_id, cutoff
@@ -93,6 +94,16 @@ class RemovePlaidHoldingsAheadOfTheirSnapshot < ActiveRecord::Migration[8.1]
   end
 
   private
+    # A correction the user made on a row about to go moves to the row the
+    # next sync carries corrections from, through the same adapter method the
+    # processor uses, so it is not lost with the row.
+    def carry_corrections_back(account_provider_id, cutoff)
+      Holding.where(account_provider_id: account_provider_id).where("date > ?", cutoff)
+        .where("security_locked OR cost_basis_locked").order(:date, :id).each do |holding|
+          Account::ProviderImportAdapter.new(holding.account).carry_corrections_back(from: holding, date: cutoff)
+        end
+    end
+
     def schedule_syncs(item_ids)
       PlaidItem.syncable.where(id: item_ids).find_each do |item|
         item.sync_later

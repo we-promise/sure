@@ -513,6 +513,66 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal({ a.id => 12, b.id => 7 }, account.current_holdings.to_h { |holding| [ holding.security_id, holding.qty.to_i ] })
   end
 
+  # The retired rows were the current ones, so a correction the user made
+  # there is moved onto the snapshot row rather than lost with them.
+  test "a cost basis locked on a retired row moves to the snapshot row" do
+    snapshot_date = Date.current - 1
+    a = securities(:aapl)
+    link_account_provider!
+    process_holdings("a" => [ a, { "quantity" => 10 } ])
+    account.holdings.find_by!(security: a, date: Date.current).set_manual_cost_basis!(42)
+
+    process_holdings("a" => [ a, { "quantity" => 12, "institution_price_as_of" => snapshot_date.to_s } ])
+
+    holding = account.current_holdings.sole
+    assert_equal snapshot_date, holding.date
+    assert_equal [ 42, "manual", true ], [ holding.cost_basis.to_i, holding.cost_basis_source, holding.cost_basis_locked ]
+  end
+
+  test "a security remapped on a retired row stays remapped on the snapshot row" do
+    snapshot_date = Date.current - 1
+    msft = securities(:msft)
+    chosen = Security.create!(ticker: "MSFT2", name: "Chosen", exchange_operating_mic: "XNAS", country_code: "US")
+    link_account_provider!
+    process_holdings("b" => [ msft, { "quantity" => 5 } ])
+    account.holdings.find_by!(security: msft, date: Date.current).remap_security!(chosen)
+
+    process_holdings("b" => [ msft, { "quantity" => 7, "institution_price_as_of" => snapshot_date.to_s } ])
+
+    holding = account.current_holdings.sole
+    assert_equal [ snapshot_date, chosen.id, msft.id, true, 7 ],
+                 [ holding.date, holding.security_id, holding.provider_security_id, holding.security_locked, holding.qty.to_i ]
+  end
+
+  test "of several retired rows, the latest correction wins" do
+    snapshot_date = Date.current - 2
+    a = securities(:aapl)
+    provider = link_account_provider!
+    [ [ Date.current - 1, 30 ], [ Date.current, 42 ] ].each do |date, basis|
+      account.holdings.create!(security: a, date: date, qty: 10, price: 50, amount: 500, currency: "USD",
+                               account_provider_id: provider.id, provider_security_id: a.id,
+                               cost_basis: basis, cost_basis_source: "manual", cost_basis_locked: true)
+    end
+
+    process_holdings("a" => [ a, { "quantity" => 12, "institution_price_as_of" => snapshot_date.to_s } ])
+
+    assert_equal 42, account.current_holdings.sole.cost_basis.to_i
+  end
+
+  test "an uncorrected retired row leaves the snapshot row as the sync wrote it" do
+    snapshot_date = Date.current - 1
+    a = securities(:aapl)
+    provider = link_account_provider!
+    account.holdings.create!(security: a, date: Date.current, qty: 10, price: 50, amount: 500, currency: "USD",
+                             account_provider_id: provider.id, provider_security_id: a.id,
+                             cost_basis: 30, cost_basis_source: "provider")
+
+    process_holdings("a" => [ a, { "quantity" => 12, "institution_price_as_of" => snapshot_date.to_s } ])
+
+    holding = account.current_holdings.sole
+    assert_equal [ nil, false, false ], [ holding.cost_basis, holding.cost_basis_locked, holding.security_locked ]
+  end
+
   test "later rows of another provider or with no provider are kept" do
     snapshot_date = Date.current - 1
     link_account_provider!
