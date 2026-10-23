@@ -10,8 +10,9 @@ namespace :snaptrade do
   #
   # A ticker whose rows name different exchanges is two listings, so it is
   # skipped and listed for review. A live run refuses an account whose target
-  # row lacks a split its source rows have, and one whose target row lacks
-  # prices its source rows have. ALLOW_PRICE_GAPS=true overrides the price
+  # row lacks a split its source rows have, one whose target row lacks
+  # prices its source rows have, and one with a SnapTrade sync or activities
+  # fetch pending or running. ALLOW_PRICE_GAPS=true overrides the price
   # check only, and only with an account id:
   #   DRY_RUN=false ALLOW_PRICE_GAPS=true bin/rails "snaptrade:repair_split_securities[ACCOUNT_ID]"
   #

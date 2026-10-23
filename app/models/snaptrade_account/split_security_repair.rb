@@ -21,14 +21,16 @@
 # A dry run (the default) reports what it would do and writes nothing. A live
 # run refuses, writing nothing, when a source row has a split the target lacks,
 # or when the moved history would have dates priced on a source row but not on
-# the target, unless allow_price_gaps is set. A live run that fails is rolled
-# back and recorded in the debug log.
+# the target, unless allow_price_gaps is set, and while a SnapTrade sync or
+# activities fetch for the account is pending or running. A live run that
+# fails is rolled back and recorded in the debug log.
 class SnaptradeAccount::SplitSecurityRepair
   include SnaptradeAccount::DataHelpers
 
   class Refused < StandardError; end
   class PriceGapsRefused < Refused; end
   class SplitHistoryRefused < Refused; end
+  class SyncInProgress < Refused; end
 
   # Rows reached a source security while the repair ran; it rolled back.
   class ConcurrentChange < StandardError; end
@@ -77,12 +79,15 @@ class SnaptradeAccount::SplitSecurityRepair
 
     begin
       ActiveRecord::Base.transaction do
+        hold_off_syncs!
         plans.each { |plan| apply(plan) }
         refuse_concurrent_change!(plans)
         Balance::Materializer.new(
           account, strategy: :reverse, security_ids: plans.map { |plan| plan[:result].target_id }
         ).materialize_balances
       end
+    rescue Refused
+      raise
     rescue StandardError => e
       capture_failure(e, plans)
       raise
@@ -96,6 +101,31 @@ class SnaptradeAccount::SplitSecurityRepair
 
     def snaptrade_provider_id
       @snaptrade_provider_id ||= account.account_providers.find_by(provider_type: "SnaptradeAccount")&.id
+    end
+
+    def snaptrade_account
+      @snaptrade_account ||= AccountProvider.find(snaptrade_provider_id).provider
+    end
+
+    # A SnapTrade sync resolves each position's security before it writes,
+    # so one running alongside the repair can write to a source row after
+    # refuse_concurrent_change! has looked, and the position stays split.
+    # Syncable#sync_later creates a sync under a row lock on its syncable, so
+    # holding the connection's and the account's rows until the repair
+    # commits keeps a new sync from starting in the meantime. A writer that
+    # is already under way -- an incomplete sync on either, or the activities
+    # fetch a sync leaves behind -- refuses the repair instead.
+    def hold_off_syncs!
+      item = SnaptradeItem.lock.find(snaptrade_account.snaptrade_item_id)
+      locked_account = Account.lock.find(account.id)
+
+      busy = []
+      busy << "the SnapTrade connection has a sync pending or running" if item.syncs.incomplete.exists?
+      busy << "the account has a sync pending or running" if locked_account.syncs.incomplete.exists?
+      busy << "an activities fetch is pending" if SnaptradeAccount.where(id: snaptrade_account.id).pick(:activities_fetch_pending)
+      return if busy.empty?
+
+      raise SyncInProgress, "#{busy.join('; ')}; run it again once the sync has finished"
     end
 
     # SnapTrade's own holdings and those with no provider (materialized from
@@ -266,10 +296,11 @@ class SnaptradeAccount::SplitSecurityRepair
     end
 
     # The plans are built before the transaction opens, and a sync can add a
-    # holding or trade to a source row in between (or after apply read the
-    # trades). Moving the rest and leaving that row behind would re-split the
-    # position, so roll back and let the task be run again. A holding another
-    # provider owns stays on its row by design and is not counted.
+    # holding or trade to a source row in between (or a user can, after apply
+    # read the trades). Moving the rest and leaving that row behind would
+    # re-split the position, so roll back and let the task be run again. A
+    # holding another provider owns stays on its row by design and is not
+    # counted.
     def refuse_concurrent_change!(plans)
       changed = plans.map { |plan| plan[:result] }.select do |result|
         repairable_holdings.where(security_id: result.source_ids).exists? ||
