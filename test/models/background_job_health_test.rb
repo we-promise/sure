@@ -94,6 +94,14 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
     assert_not BackgroundJobHealth.one_ai_thread_worker?(low_only)
   end
 
+  test "no label when another capsule in the worker also polls an AI queue" do
+    config = Sidekiq::Config.new
+    config.capsule("ai") { |capsule| capsule.queues = %w[ai_high_priority ai_low_priority]; capsule.concurrency = 1 }
+    config.default_capsule { |capsule| capsule.queues = %w[default ai_low_priority]; capsule.concurrency = 2 }
+
+    assert_not BackgroundJobHealth.one_ai_thread_worker?(config)
+  end
+
   test "fails open when Sidekiq/Redis is unreachable" do
     Sidekiq::ProcessSet.stubs(:new).raises(StandardError.new("no redis"))
 

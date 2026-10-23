@@ -45,7 +45,8 @@ class BackgroundJobHealth
     end
 
     def one_ai_thread_worker?(config)
-      config.capsules.values.any? { |capsule| capsule.concurrency == 1 && (AI_QUEUES - capsule.queues).empty? }
+      ai_capsules = config.capsules.values.select { |capsule| capsule.queues.intersect?(AI_QUEUES) }
+      ai_capsules.one? && ai_capsules.first.concurrency == 1 && (AI_QUEUES - ai_capsules.first.queues).empty?
     end
 
     # With one AI thread, a chat sent now waits for any running AI job.
