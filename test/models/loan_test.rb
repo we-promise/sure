@@ -299,6 +299,20 @@ class LoanTest < ActiveSupport::TestCase
     end
   end
 
+  # A provider's rate is external input. One that is not a number is ignored
+  # like one out of bounds, rather than raising and costing the sync the
+  # other terms it reported.
+  test "variable_rate_update_for records nothing for a rate that is not a number" do
+    as_of = Date.new(2026, 1, 15)
+    moved = Loan.new(rate_type: "variable", interest_rate: 4.5)
+    first = Loan.new(rate_type: "variable", interest_rate: nil)
+
+    [ "n/a", "", "5.2%", true ].each do |rate|
+      assert_nil moved.variable_rate_update_for(rate, as_of: as_of), "#{rate.inspect} was dated as a change"
+      assert_nil first.variable_rate_update_for(rate, as_of: as_of), "#{rate.inspect} was set as the base rate"
+    end
+  end
+
   test "variable_rate_update_for accepts both ends of the form's bounds" do
     as_of = Date.new(2026, 1, 15)
     loan = Loan.new(rate_type: "variable", interest_rate: 4.5)

@@ -282,6 +282,20 @@ class PlaidAccount::Liabilities::MortgageProcessorTest < ActiveSupport::TestCase
     assert_equal 4.5, loan.interest_rate.to_f
   end
 
+  # The rate is ignored, as one out of bounds is, and the rate type from the
+  # same payload still lands instead of the whole write being lost.
+  test "a variable rate that is not a number is ignored and the rate type still lands" do
+    loan = loan_with(interest_rate: 4.5, rate_type: "fixed", start_date: ORIGINATED)
+    payload(type: "variable", percentage: "n/a")
+
+    process_as_of(Date.new(2026, 1, 15))
+
+    loan.reload
+    assert_equal "variable", loan.rate_type
+    assert_equal 4.5, loan.interest_rate.to_f
+    assert_equal({}, rates(loan))
+  end
+
   test "a rate change under Plaid's own rate type is dated too" do
     loan = loan_with(interest_rate: 4.5, rate_type: "arm", start_date: ORIGINATED)
     payload(type: "arm", percentage: 5.2)
