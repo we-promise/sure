@@ -60,7 +60,63 @@ module Family::AutoTransferMatchable
     ])
   end
 
+  # Concurrent calls are expected: Account::Syncer runs this once per account in
+  # perform_post_sync, and a multi-account provider sync (Redbark, Plaid, ...)
+  # enqueues one job per account, which Sidekiq can run in parallel. Two of those
+  # jobs scanning/inserting into the same family's transfers can deadlock in
+  # Postgres (lock-order conflict on the unique index, not a plain duplicate --
+  # find_or_create_transfer! already tolerates that one via RecordNotUnique).
+  # ActiveRecord::Deadlocked aborts the whole surrounding transaction, so it must
+  # be retried from scratch here: the caller (Sync#perform_post_sync) only logs
+  # and swallows errors, it never retries, and letting the error escape further
+  # up would roll back the Sync status transition that is committing in the same
+  # transaction, leaving the sync stuck in "syncing" forever (only pending ->
+  # syncing is a valid `start!` transition, so a job-level retry would just no-op
+  # on it).
+  MAX_DEADLOCK_RETRIES = 3
+
   def auto_match_transfers!(account: nil, exchange_rate_tolerance: Family::AutoTransferMatchable.exchange_rate_tolerance)
+    attempt = 0
+
+    begin
+      attempt += 1
+      perform_auto_match_transfers!(account: account, exchange_rate_tolerance: exchange_rate_tolerance)
+    rescue ActiveRecord::Deadlocked => e
+      if attempt > MAX_DEADLOCK_RETRIES
+        Rails.logger.error("Family#auto_match_transfers! gave up after #{MAX_DEADLOCK_RETRIES} deadlock retries: #{e.message}")
+        DebugLogEntry.capture(
+          category: "provider_sync",
+          level: "error",
+          message: "Family#auto_match_transfers! gave up after #{MAX_DEADLOCK_RETRIES} deadlock retries",
+          source: "Family::AutoTransferMatchable",
+          family: self,
+          account: account,
+          metadata: { attempt: attempt, error: e.message }
+        )
+        raise
+      end
+
+      Rails.logger.warn("Family#auto_match_transfers! deadlocked (attempt #{attempt}/#{MAX_DEADLOCK_RETRIES}), retrying: #{e.message}")
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Family#auto_match_transfers! deadlocked, retrying",
+        source: "Family::AutoTransferMatchable",
+        family: self,
+        account: account,
+        metadata: { attempt: attempt, max_retries: MAX_DEADLOCK_RETRIES, error: e.message }
+      )
+      sleep(deadlock_retry_delay(attempt))
+      retry
+    end
+  end
+
+  private
+
+    def deadlock_retry_delay(attempt)
+      0.1 * (2 ** (attempt - 1)) + rand * 0.1
+    end
+
     # Exclude already matched transfers. Cross-currency FX-tolerance matching is
     # restricted to provider-linked accounts ONLY on this automatic path -- a
     # coincidental amount/FX-rate match applied here has no human reviewing it
@@ -68,37 +124,48 @@ module Family::AutoTransferMatchable
     # Transaction#transfer_match_candidates, which calls transfer_match_candidates
     # directly without this restriction, so a user can still find and confirm a
     # real cross-currency transfer that happens to involve a manual account.
-    candidates_scope = transfer_match_candidates(
-      account_id: account&.id,
-      include_rejected: false,
-      exchange_rate_tolerance:,
-      restrict_cross_currency_to_linked_accounts: true,
-      # Only pair accounts that at least one member can write to on both sides, so
-      # someone can always confirm or reject the match.
-      require_common_writer: true
-    )
+    def perform_auto_match_transfers!(account:, exchange_rate_tolerance:)
+      candidates_scope = transfer_match_candidates(
+        account_id: account&.id,
+        include_rejected: false,
+        exchange_rate_tolerance:,
+        restrict_cross_currency_to_linked_accounts: true,
+        # Only pair accounts that at least one member can write to on both sides, so
+        # someone can always confirm or reject the match.
+        require_common_writer: true
+      )
 
-    # Track which transactions we've already matched to avoid duplicates
-    used_transaction_ids = Set.new
+      # Track which transactions we've already matched to avoid duplicates
+      used_transaction_ids = Set.new
 
-    Transfer.transaction do
-      candidates_scope.each do |match|
-        next if used_transaction_ids.include?(match.inflow_transaction_id) ||
-               used_transaction_ids.include?(match.outflow_transaction_id)
+      # requires_new: true matters here, not just style: every real caller
+      # (Sync#perform_post_sync) runs this nested inside an already-open
+      # Sync.transaction. Without requires_new, this block would just join
+      # that outer transaction instead of opening a savepoint -- so a
+      # deadlock here would abort the WHOLE outer transaction, and the
+      # retry in auto_match_transfers! would immediately hit
+      # PG::InFailedSqlTransaction on its very first query (a different,
+      # unrescued error) instead of succeeding. With requires_new, Rails
+      # issues ROLLBACK TO SAVEPOINT on any error raised inside the block,
+      # leaving the connection and the outer transaction usable again, so
+      # the retry actually gets a clean savepoint to work with.
+      Transfer.transaction(requires_new: true) do
+        candidates_scope.each do |match|
+          next if used_transaction_ids.include?(match.inflow_transaction_id) ||
+                 used_transaction_ids.include?(match.outflow_transaction_id)
 
-        # Skip this candidate when the transfer for this exact pair was not created
-        # (a concurrent sync claimed one of the transactions for a different pairing).
-        # A created transfer stays pending and leaves the transaction kinds untouched
-        # until the user confirms it (Transfer#confirm!).
-        next unless find_or_create_transfer!(match)
+          # Skip this candidate when the transfer for this exact pair was not created
+          # (a concurrent sync claimed one of the transactions for a different pairing).
+          # A created transfer stays pending and leaves the transaction kinds untouched
+          # until the user confirms it (Transfer#confirm!).
+          next unless find_or_create_transfer!(match)
 
-        used_transaction_ids << match.inflow_transaction_id
-        used_transaction_ids << match.outflow_transaction_id
+          used_transaction_ids << match.inflow_transaction_id
+          used_transaction_ids << match.outflow_transaction_id
+        end
       end
     end
-  end
 
-  private
     # Create the transfer for a matched candidate, tolerating a concurrent sync
     # that already inserted the same pair.
     #
