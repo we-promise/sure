@@ -244,6 +244,7 @@ ru:
       funding_accounts_heading: Счета
       funding_last_30d: за 30 дней
       funding_last_90d: за 90 дней
+      milestone: "%{percent}% · %{date}"
       header:
         target: Цель %{amount}
         target_by: Цель %{amount} к %{date}

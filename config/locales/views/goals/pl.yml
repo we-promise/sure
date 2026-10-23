@@ -288,6 +288,7 @@ pl:
       funding_accounts_heading: Konta finansujące
       funding_last_30d: ostatnie 30 dni
       funding_last_90d: ostatnie 90 dni
+      milestone: "%{percent}% · %{date}"
       header:
         target: Cel %{amount}
         target_by: Cel %{amount} do %{date}
