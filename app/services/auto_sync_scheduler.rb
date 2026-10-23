@@ -22,13 +22,10 @@ class AutoSyncScheduler < CronScheduler
         }
       end
 
-      # Converts the configured local time to a fixed UTC offset for the cron
-      # string (unlike MarketDataScheduler, which embeds the IANA timezone
-      # directly — see that class for why).
+      # Embeds the IANA timezone in the cron string, like MarketDataScheduler,
+      # so the job keeps the configured local time across daylight saving.
       def build_cron(hour:, minute:, timezone:)
-        local_time = timezone.now.change(hour: hour, min: minute, sec: 0)
-        utc_time = local_time.utc
-        "#{utc_time.min} #{utc_time.hour} * * *"
+        "#{minute} #{hour} * * * #{timezone.tzinfo.name}"
       end
   end
 end
