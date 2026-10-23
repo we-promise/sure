@@ -55,7 +55,7 @@ How every workflow in Sure that calls an LLM, an embedding or classification ser
 **Part D: Reference**
 - [D1. Environment variables and settings (master table)](#d1-environment-variables-and-settings)
 - [D2. Fan-out catalogue](#d2-fan-out-catalogue)
-- [D3. Sync vs async catalogue](#d3-sync-vs-async-catalogue)
+- [D3. Process placement: web vs worker](#d3-process-placement-web-vs-worker)
 - [D4. Observations, quirks and possible bugs](#d4-observations-quirks-and-possible-bugs)
 
 ---
@@ -122,6 +122,8 @@ flowchart TD
 |---|---|---|
 | default | `RAILS_MAX_THREADS - RAILS_AI_MAX_THREADS` (default 3-1 = **2**) | `scheduled`(10), `high_priority`(4), `medium_priority`(2), `low_priority`(1), `default`(1), all weighted |
 | `ai` | `RAILS_AI_MAX_THREADS` (default **1**) | `ai_high_priority` then `ai_low_priority`, **strict order** |
+
+**Every background LLM call shares that one ai thread by default**: chat (W13, W14, and the nested W16 calls), AI categorization (W8), merchant detection (W9), merchant enhancement (W10) and PDF import (W11). Chat goes first *between* jobs, but waits for whichever job is running. Ruby ML (W5–W7), insights (W17) and recurring detection (W19) run on the default capsule, so they never compete with chat. [D3](#d3-process-placement-web-vs-worker) shows every workflow's process and lane.
 
 Jobs relevant to this document:
 
@@ -247,7 +249,7 @@ Building the providers (`Registry` private methods):
 
 `Setting.llm_provider` is resolved as `ENV["LLM_PROVIDER"]` first, then the DB field (`setting.rb:236`).
 
-`Chat.default_model` (`chat.rb:59`) picks the model stamped on a new chat message: Anthropic's effective model if `llm_provider == anthropic` and Anthropic is configured, else OpenAI's, else Anthropic's.
+`Chat.default_model` (`chat.rb:59`) picks the model stamped on a new chat message: Anthropic's effective model if `llm_provider == anthropic` and Anthropic is configured; else OpenAI's if OpenAI is configured; else Anthropic's if Anthropic is configured; and, when neither is configured, OpenAI's effective model.
 
 ## B2. How OpenAI / OpenAI-compatible is called
 
@@ -1000,7 +1002,7 @@ flowchart LR
 - **Entry:** an external MCP client. With `ASSISTANT_TYPE=mcp_only`, the in-app chat is disabled and MCP is the only AI surface.
 - **Exit:** a JSON-RPC response (synchronous).
 - **Env:** `MCP_API_TOKEN`, `MCP_USER_EMAIL`.
-- **Sync and async:** synchronous HTTP. Side effects can be async (RuleJob).
+- **Sync and async:** synchronous HTTP. Side effects can be async (RuleJob). `import_bank_statement` makes its LLM call inside this web request (W16), unlike the same tool called from chat, which runs in the worker.
 
 ---
 
@@ -1014,7 +1016,7 @@ Tools in `app/models/assistant/function/` that start other AI/ML workflows:
 |---|---|---|
 | `apply_rule` | `rule.apply_later(ignore_attribute_locks:)` → `RuleJob` → W4 → possibly W5, W6, W8, W9 | async (enqueue) |
 | `create_rule` / `update_rule` / `preview_rule` | rules incl. AI actions; preview evaluates conditions only | sync |
-| `import_bank_statement` | `preferred_llm_provider.extract_bank_statement` (**a nested LLM call inside the chat job**) → creates an import | sync, nested in W13 |
+| `import_bank_statement` | `preferred_llm_provider.extract_bank_statement` (**a nested LLM call**: inside the chat job from W13, inside the web request from W15) → creates an import | sync, nested in W13 / W15 |
 | `upload_account_statement` (preview) | statement vault → `PdfImport` → W11 | async |
 | `search_family_files` | vector search (W12) | sync |
 | `get_insights` (preview) | reads W17 output | sync |
@@ -1138,7 +1140,7 @@ flowchart LR
 - **Entry:** dialog buttons. **Exit:** a rendered dialog. Errors become a friendly message.
 - **Settings:** the user's AI consent, `LLM_PROVIDER`, the model envs, `OPENAI_REQUEST_TIMEOUT` / `ANTHROPIC_REQUEST_TIMEOUT` (a slow local model blocks the request; Puma timeout applies). The prompt is not overridable.
 - **Fan-outs:** none (one call; the OpenAI suggester can retry with a different `response_format`).
-- **Sync and async:** **synchronous HTTP**. It is the only LLM call besides the health probes that runs on a web thread.
+- **Sync and async:** **synchronous HTTP**. It is one of four places where an LLM or embedding call runs on a web thread (see [D3](#d3-process-placement-web-vs-worker)).
 
 ---
 
@@ -1197,7 +1199,7 @@ Precedence is **ENV > `Setting` (Settings → Self-hosting) > default** unless n
 | `LLM_PROVIDER` | `llm_provider` | `openai` | B1, W8-W11, W13, W20, vector default |
 | `OPENAI_ACCESS_TOKEN` | `openai_access_token` | none | OpenAI, vector, embeddings fallback |
 | `OPENAI_URI_BASE` | `openai_uri_base` | api.openai.com | custom endpoint ⇒ generic mode |
-| `OPENAI_MODEL` | `openai_model` | `gpt-4.1` | changing it ⇒ ClearAiCacheJob for all families |
+| `OPENAI_MODEL` | `openai_model` | `gpt-4.1` | changing the stored `Setting.openai_model` (Settings UI) ⇒ ClearAiCacheJob for all families; changing the ENV does not (D4 #10) |
 | `OPENAI_REQUEST_TIMEOUT` | `openai_request_timeout` | 60 | OpenAI HTTP |
 | `OPENAI_EXTRA_HEADERS` | n/a | none | static or `{session_id}` headers |
 | `OPENAI_SUPPORTS_RESPONSES_ENDPOINT` | n/a | auto (native only) | force native or generic chat |
@@ -1274,16 +1276,68 @@ Precedence is **ENV > `Setting` (Settings → Self-hosting) > default** unless n
 | Model change | Setting → ClearAiCacheJob | per family | all families |
 | BayesEvaluation find_best | combinations / greedy | in-process loop | ~tens to hundreds of model fits |
 
-## D3. Sync vs async catalogue
+## D3. Process placement: web vs worker
 
-| Synchronous in a web request | Asynchronous (default capsule) | Asynchronous (ai capsule) |
+A deployment runs the same image as two processes: **web** (Puma, `bin/rails server`) and **worker** (`bundle exec sidekiq`). The worker has two capsules (A2): **default** (weighted queues) and **ai** (one thread by default, `ai_high_priority` strictly before `ai_low_priority`). *enqueue* means the web request only schedules the job.
+
+| # | Workflow | Web (Puma request) | Worker: default capsule | Worker: ai capsule | Calls an LLM or embeddings? |
+|---|---|---|---|---|---|
+| W1 | Family sync | enqueue | `SyncJob` (high) | — | no (only through AI rule actions) |
+| W2 | Transfer matching | — | inside `SyncJob` | — | no |
+| W3 | Logo backfill | — | inside `SyncJob` | — | no |
+| W4 | Rules sequencing | enqueue; rule preview | `RuleJob` / `ApplyRulesJob` / `ApplyAllRulesJob` (medium) | AI actions fan out to W8 / W9 | indirect |
+| W5 | Merchant matcher | — | inline in the rule job or `BayesCategorizeJob` (medium) | — | no |
+| W6 | Bayes classifier | "Run" enqueues | inline in the rule job or `BayesCategorizeJob` (medium) | — | no |
+| W7 | Classifier page and evaluation | page render | `BayesEvaluationJob`, `ClearBayesLocksJob` (low) | — | no |
+| W8 | AI categorization | — | — | `AutoCategorizeJob` (ai_low) | **yes** (LLM or Jev) |
+| W9 | AI merchant detection | — | — | `AutoDetectMerchantsJob` (ai_low) | **yes** |
+| W10 | Merchant enhancement | enqueue (sets the cache lock) | — | `EnhanceProviderMerchantsJob` (ai_low) | **yes** |
+| W11 | PDF ingestion | enqueue | publish → sync (W1) | `ProcessPdfJob` (ai_low) | **yes** (+ embeddings) |
+| W12 | Document upload and search | **non-PDF upload: embed in the request** | — | search inside the chat job | **yes** (embeddings) |
+| W13 | Built-in assistant | message post; picks `Chat.default_model` | — | `AssistantResponseJob` (ai_high) | **yes** |
+| W14 | External assistant | message post | — | `AssistantResponseJob` (ai_high), streaming | yes (external agent) |
+| W15 | MCP | **`tools/call` runs in the request** | side effects (`RuleJob`) | — | via W16 |
+| W16 | Tools that call AI | **from MCP: `import_bank_statement` in the request** | — | from chat: nested in the chat job | **yes** |
+| W17 | Insights | refresh enqueues | `GenerateInsightsJob` (scheduled), deterministic | — | no |
+| W18 | Dig in with AI | prefill render | — | → W13 | via W13 |
+| W19 | Recurring / bills detection | **"Identify" buttons run in the request** | `IdentifyRecurringTransactionsJob` (default), `GenerateRecurringOccurrencesJob` (scheduled) | — | no |
+| W20 | Bill smart-fill / configure | **LLM call in the request** | — | — | **yes** |
+| W21 | AI cache reset | model change enqueues | `ClearAiCacheJob` (low), one per family | — | no |
+| W22 | AI health probes | **settings and admin probes in the request** (cached) | `WorkerAiHealthCheckJob` (high) | — | **yes** (probe) |
+| W23 | Evals | — | — | — | CLI (rake), in whichever container it is run |
+
+### LLM calls on web threads
+
+Four paths call a model from a Puma thread, outside the ai capsule's queueing:
+
+| Path | Call | Bounded by |
 |---|---|---|
-| W20 bill smart-fill / configure (LLM) | W1 SyncJob | W13 / W14 AssistantResponseJob (high) |
-| W22 AI health page probes | W4 rule jobs (W5, W6 inline) | W8 AutoCategorizeJob (low) |
-| W12 non-PDF document upload (embeddings) | W7 BayesCategorizeJob, BayesEvaluationJob, ClearBayesLocksJob | W9 AutoDetectMerchantsJob (low) |
-| W15 MCP tools/call | W17 GenerateInsightsJob | W10 EnhanceProviderMerchantsJob (low) |
-| W19 Identify buttons (Ruby) | W19 IdentifyRecurringTransactionsJob | W11 ProcessPdfJob (low) |
-| Rule preview, classifier page render | W21 ClearAiCacheJob, W22 worker probe | |
+| W20 bill smart-fill / configure | `suggest_bill_setup` (LLM) | `OPENAI_REQUEST_TIMEOUT` / `ANTHROPIC_REQUEST_TIMEOUT`, then Puma |
+| W12 non-PDF document upload | `embed_batch` per chunk (pgvector / Qdrant), or an OpenAI vector-store upload | the embedding or upload HTTP timeout |
+| W15 → W16 MCP `import_bank_statement` | `extract_bank_statement` (LLM, whole PDF) | provider request timeout |
+| W22 settings and admin probes | up to six probes: LLM, function calling, PDF text, PDF vision, vector store, embedding | `AI_HEALTH_PROBE_TIMEOUT` each, cached |
+
+Each one holds a Puma thread for as long as the model takes. With a slow local model and the default Puma thread count, a few concurrent calls can make the whole web UI unresponsive. None of them is visible in Sidekiq's busy or queue metrics.
+
+### Which process reads which setting
+
+Most AI settings resolve as ENV > `Setting` > default, **in the process that reads them**. Docker Compose gives both processes one env file, but Helm, Podman quadlets and bare-metal installs set env per process, where the two can drift.
+
+| Setting | Web | Worker | If only one process has it |
+|---|---|---|---|
+| Provider keys, URIs, models, `LLM_PROVIDER`, `LLM_JSON_MODE`, request timeouts | W13 `Chat.default_model`, W15/W16, W20, W22, settings page | W8–W11, W13, W14 | Chat messages are stamped with the web's model name, which the worker then requests from its own endpoint; bill AI works but categorization doesn't, or the reverse |
+| `VECTOR_STORE_PROVIDER`, `EMBEDDING_*`, `QDRANT_*` | W12 upload | W11, chat search | Uploads land in one store and search reads another, or one side has no store |
+| `AI_RESPONSE_TIMEOUT` | **only here**: browser watchdog (`Chat.response_timeout_ms`) and `MessagesController#report_timeout` | not read | Setting it only on the worker has no effect |
+| `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` | not read | **only here**: `Assistant::Responder` in the chat job | Setting it only on the web has no effect |
+| `LLM_MAX_ITEMS_PER_CALL`, `LLM_CONTEXT_WINDOW`, `LLM_MAX_RESPONSE_TOKENS` | settings page display (and field lock), plus the web-thread calls above | rule batches, `BatchSlicer`, chat history budget | The page shows one value and the jobs use another |
+| `RAILS_AI_MAX_THREADS` | `Chat#ask_assistant_later` → `BackgroundJobHealth.ai_busy?` (counts `ai_low` latency as "busy" only when this is 1) | capsule size | The chat "busy" bubble misreports lane occupancy |
+| `CATEGORIZATION_PROVIDER`, `JEV_*` | selector lock on the settings page | W8 | The page offers a choice the worker overrides |
+| `EXTERNAL_ASSISTANT_*` | settings page | W14 | As above |
+| `MCP_API_TOKEN`, `MCP_USER_EMAIL` | **only here** (W15) | not read | — |
+| `LANGFUSE_*` | W15/W16, W20 traces | every job's traces | Traces from one process are missing |
+| `AUTO_SYNC_*` | settings save reschedules | `AutoSyncScheduler.sync!` at Sidekiq boot | The schedule changes on the next boot or save |
+
+The settings page disables a field when the ENV var is set **in the web process**. If the ENV var is set only on the worker, the field stays editable, and the stored value is silently ignored by the jobs.
 
 ## D4. Observations, quirks and possible bugs
 

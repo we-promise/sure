@@ -13,10 +13,10 @@ This is not a code review. File references appear only where they show what a us
 | Question | Short answer |
 |---|---|
 | Do defaults work out of the box? | **Mostly, for persona 1 (no LLM). Fragile for persona 2.** With no LLM, nothing AI-related breaks, and the classifier rules sit quietly until there is enough history. With a "simple" LLM (the documented Ollama compose), the defaults (2,048-token context, an 8B model, non-streaming chat, one AI worker thread) produce slow or truncated results that look like bugs. |
-| Do workflows match what users want? | **The building blocks are right; the framing is engineering-first.** Users want "categorize my spending", "warn me about bills", "am I on track?". Sure gives them *Rules*, *Merchant matcher*, *Category classifier*, *Auto-categorize with AI*, *Enhance merchants*, *Statement vault*, *AI prompts*, *LLM usage* and *MCP*: ten nouns for roughly three jobs. |
+| Do workflows match what users want? | **The building blocks are right; the framing is engineering-first.** Users want "categorize my spending", "warn me about bills", "am I on track?". Sure gives them *Rules*, *Merchant matcher*, *Category classifier*, *Auto-categorize with AI*, *Enhance merchants*, *Statement vault*, *AI prompts*, *LLM usage* and *MCP*: nine nouns for roughly three jobs. |
 | Simple to understand? | **No for categorization, yes for insights and bills.** Categorization happens in four places (provider data, rules, Bayes, AI) with three lock behaviours, and the Classifier page speaks ROC-AUC, complement NB and Lidstone smoothing. Insights, bills and the paycheck plan are plain-language and concrete. |
 | Exposed enough for bug reports, without overwhelming? | **Inverted.** Tuning internals are exposed to every family admin (classifier knobs, prompts, JSON mode), while the things a user needs to *report* a problem (why this category, did AI run last night, what failed) are hidden: provenance is not shown per transaction, and the Debug log is super-admin only. |
-| Are user vs family settings scoped right? | **Several mis-scopes.** Instance-wide API keys and model settings live on a page any *family admin* can edit. Language, timezone and date format are *family* settings, not personal ones. AI consent is per *user*, but AI rules run for the whole *family* regardless. |
+| Are user vs family settings scoped right? | **Several mis-scopes.** Instance-wide API keys and model settings live on a page any *family admin* can edit. Language is already personal (a per-user locale overrides the family's), but timezone and date format are *family* settings that any member can change for everyone. AI consent is per *user*, but AI rules run for the whole *family* regardless. |
 | Easy for **Maybe v0.6.0 upgraders**? | **Data: seamless (same database). Behaviour: silently different.** Rules now run in order and only when active, two system rules appear, the assistant can now write data under a consent given for a read-only assistant, and market data stops updating (Synth is gone, and the default provider needs a key). There is no upgrade guide and no in-app "what changed" screen. See §7.0. |
 | Easy for migrants from YNAB / Actual / Firefly III / Securo / ChatGPT? | **Accounts and rules: yes. Budgeting philosophy: partly. AI trust model: no.** Importers exist for YNAB, Actual, Mint, QIF and CSV, but there is **no Firefly III importer** and no OFX or CAMT support (formats Securo and Firefly users have). Actual users will recognise ordered rules. YNAB users will look for "Ready to Assign". ChatGPT Finances users expect zero setup, read-only AI and viewable memories, while Sure's assistant can change data without asking. |
 | Does it echo popular personal-finance books? | **More than most apps:** net worth (assets vs liabilities), savings-rate change, months-of-expenses reserve goals, idle cash, subscription audit, paycheck planning. **Missing the frameworks people actually quote:** bucket or percentage plans (Barefoot, IWT, 50/30/20), "pay yourself first", debt snowball, passive vs earned income, decumulation ("die with zero"). |
@@ -26,7 +26,7 @@ This is not a code review. File references appear only where they show what a us
 1. **A setup tier switch** (*Off / Simple / Custom*) that hides everything above the user's tier and picks defaults that work for that tier.
 2. **One user-facing concept, "Auto-categorize"**, with a stage list ("matched similar → learned from your history → asked AI → your rules"), instead of four mechanisms.
 3. **"Why this category?" on every transaction, plus a "Report a problem" button** that bundles redacted diagnostics. Make transparency per transaction, not per subsystem.
-4. **Fix the scopes:** instance settings to super-admin only, personal settings (language, timezone, date format, AI consent) per user, household settings per family.
+4. **Fix the scopes:** instance settings to super-admin only, personal settings (timezone, date format, AI consent; language already is) per user, household settings per family.
 5. **Plan templates** (Barefoot buckets, IWT Conscious Spending Plan, 50/30/20, YNAB-style zero-based) that map onto existing categories, budgets, goals and the paycheck plan.
 
 ---
@@ -119,6 +119,8 @@ Users think in **jobs**. Here is how each job maps to Sure's workflows (W-number
 - **No effective-configuration view** ("what is actually in force, and where did it come from: ENV, Setting or default?") outside the super-admin System Health page.
 - **There is no declarative config file** an agent can write and a human can read and diff (`sure-ai.yml`), only env vars plus DB settings.
 - **Shadow comparison, the confidence threshold and Jev** are powerful, but their results show only on the Self-hosting page.
+- **Two containers, two configurations.** An agent configuring Helm, Podman or bare metal sets env per process, and must know which process reads what. For example, `AI_RESPONSE_TIMEOUT` is read only by the web container and `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` only by the worker ([01 D3](01-ai-ml-workflow-map.md#which-process-reads-which-setting)). Setting a value on the wrong side does nothing, and nothing reports it.
+- **More models do not mean more lanes.** Chat, categorization, merchant detection, enhancement and PDF import all share one AI worker thread by default, whichever provider each uses. Routing chat to a fast cloud model doesn't stop it queuing behind a slow local categorization batch. Only `RAILS_AI_MAX_THREADS` changes that, and it is not mentioned on any settings page.
 
 ---
 
@@ -139,8 +141,9 @@ Users think in **jobs**. Here is how each job maps to Sure's workflows (W-number
 | Classifier tuning (~30 knobs) and classifier rules | Family | Advanced → Classifier, Rules | family admin | the family |
 | AI rules | Family | Rules | admin / member | the family's transactions, **all members' accounts in scope** |
 | AI consent (`ai_enabled`) | **User** | chat consent prompt | the user | chat and bill AI **only** |
-| Language, timezone, date format, country | **Family** (`families.locale/timezone/date_format/country`) | Preferences | admin | every member |
-| Month start day, currencies, budgets | Family | Preferences | admin | every member |
+| Language | **User** (`users.locale`), falling back to the browser language, then `families.locale` | Preferences | the user | the user |
+| Timezone, date format, country, month start day | **Family** (`families.timezone/date_format/country/month_start_day`) | Preferences | **any member** (not admin-gated) | every member |
+| Currencies, budgets | Family | Preferences | admin | every member |
 | Preview features, UI layout, AI sidebar | User | Preferences / appearance | the user | the user |
 | Auto-sync time | Instance | Self-hosting | family admin | all families |
 | Debug log, background jobs, system health | n/a | Advanced | **super-admin** | n/a |
@@ -149,10 +152,10 @@ Users think in **jobs**. Here is how each job maps to Sure's workflows (W-number
 
 1. **Instance settings are editable by family admins.** On a single-family self-host this doesn't matter. On any multi-family instance (shared with relatives, or a small hosted community), one family admin can change the model, the provider, or the API key (and so the cost and data destination) for everyone. Instance-wide AI settings should require super-admin, as Debug and System Health already do.
 2. **Family settings live on the instance page.** Assistant type and categorization provider are per family but appear on the "Self-hosting" page, so users of a hosted Sure never see them. Move them to a family **AI** page.
-3. **Personal preferences are family-wide.** Language, timezone and date format are household columns. A bilingual household, or members in different time zones, can't each have their own. These are classic **user** settings. Budget period, currency and sharing defaults are correctly **family** settings.
+3. **Personal preferences are family-wide.** Language already has a per-user override, but timezone and date format are household columns, and any member can change them for everyone from their own Preferences page. Members in different time zones can't each have their own. These are classic **user** settings. Budget period, currency and sharing defaults are correctly **family** settings.
 4. **Consent is personal, but data flow is household-wide.** A member who declined AI still has their transactions sent to the provider by a family AI rule. Either make AI rules skip accounts owned by non-consenting members, or make AI a household decision taken by an admin with a clear notice to every member. Pick one and say so in the UI.
 5. **Tuning sits at the same level as basics.** The Classifier page exposes 30+ statistical knobs to every family admin. These belong in an "Expert" disclosure. "Find best settings" plus "Apply" is the right user-level control; the knobs are not.
-6. **ENV silently wins.** When ENV overrides a setting, the UI shows the stored value or disables the field without explaining. Users editing a field that has no effect is a support ticket waiting to happen.
+6. **ENV silently wins.** When ENV overrides a setting, the UI shows the stored value or disables the field without explaining. Users editing a field that has no effect is a support ticket waiting to happen. It gets worse when the web and worker containers have different env: the page reflects the **web** container's ENV, while categorization, PDF import and chat replies run in the **worker** ([01 D3](01-ai-ml-workflow-map.md#which-process-reads-which-setting)).
 
 ### 4.3 Proposed scoping
 

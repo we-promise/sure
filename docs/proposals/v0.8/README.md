@@ -36,7 +36,7 @@ Every PR or issue referenced in the three documents, grouped by milestone. "Refe
 | [#4401](https://github.com/we-promise/sure/issues/4401) | Redact the Jev endpoint in the self-hosting settings panel | merged | 01: B4, W8 |
 | [#4349](https://github.com/we-promise/sure/issues/4349) | Batch load recent paid occurrences during price change detection to prevent N+1 | open | 01: W19 |
 | [#4328](https://github.com/we-promise/sure/issues/4328) | Fix Twelve Data per-minute throttle never engaging on Redis | merged | 03: §10, §7.0 |
-| [#4310](https://github.com/we-promise/sure/issues/4310) | Add a tunable, self-testing Bayes classifier | merged | 01: D4, W4, W5, W6, W7, W8, header; 02: A4, B4, B5, §0; 03: §5, §7.0 |
+| [#4310](https://github.com/we-promise/sure/issues/4310) | Add a tunable, self-testing Bayes classifier | merged | 01: D4, W4, W5, W6, W7, W8, header; 02: A4, A8, B4, B5, §0; 03: §5, §7.0 |
 | [#4305](https://github.com/we-promise/sure/issues/4305) | Fall back to initials for failed logos and show Brandfetch usage | open | 01: W3; 03: §5 |
 | [#4303](https://github.com/we-promise/sure/issues/4303) | Move transfer matching controls beside transaction amounts | merged | 01: W2; 03: §5 |
 | [#4299](https://github.com/we-promise/sure/issues/4299) | Keep rejected statements in the vault inbox | merged | 01: W11 |
@@ -51,7 +51,7 @@ Every PR or issue referenced in the three documents, grouped by milestone. "Refe
 | [#4246](https://github.com/we-promise/sure/issues/4246) | Support "not equal to" and "is not empty" for tag rule conditions | merged | 01: W4 |
 | [#4244](https://github.com/we-promise/sure/issues/4244) | fix(ai): route chat to the provider selected by LLM_PROVIDER first | merged | 01: B1, W13; 02: A1 |
 | [#4243](https://github.com/we-promise/sure/issues/4243) | docs(ai): document the native Anthropic provider | merged | 01: B3 |
-| [#4239](https://github.com/we-promise/sure/issues/4239) | feat(insights): deterministic insight text, plus "Dig in with AI" | merged | 01: W17, W18; 02: B4 |
+| [#4239](https://github.com/we-promise/sure/issues/4239) | feat(insights): deterministic insight text, plus "Dig in with AI" | merged | 01: W17, W18; 02: A8, B4 |
 | [#4237](https://github.com/we-promise/sure/issues/4237) | fix(jobs): run AI jobs in their own Sidekiq capsule so they can't starve syncs | merged | 01: A2; 02: A8, B4; 03: §3, §7.0 |
 | [#4222](https://github.com/we-promise/sure/issues/4222) | Fix duplicate bill suggestions after renaming a bill | merged | 01: W19 |
 | [#4211](https://github.com/we-promise/sure/issues/4211) | Skip email notifications for inactive rules | merged | 01: W4; 03: §7.0 |

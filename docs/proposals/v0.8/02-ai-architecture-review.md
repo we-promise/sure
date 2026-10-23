@@ -38,7 +38,7 @@ The five changes with the most leverage:
 | `strip_thinking_tags` definitions | **4** | Same. |
 | `extract_http_status_code` definitions | **4** | Same. |
 | Comment "Honors Setting.llm_provider (issue [#2113](https://github.com/we-promise/sure/issues/2113))" | **6** copies | Agent fingerprint: a fix pattern repeated per call site instead of centralized. |
-| Agent instruction surfaces | `AGENTS.md`, `CLAUDE.md`, 7 × `.cursor/rules`, `.junie`, `.gemini`, `copilot-instructions`, 18 `docs/llm-guides/*` | Good investment. There is already a drift problem (hence `instruction-preservation-map.md`). |
+| Agent instruction surfaces | `AGENTS.md`, `CLAUDE.md`, 7 × `.cursor/rules`, `.junie`, `.gemini`, `copilot-instructions`, 16 `docs/llm-guides/*` guides (plus their `README.md`) | Good investment. There is already a drift problem (hence `instruction-preservation-map.md`). |
 
 The map itself is evidence. Producing it took dozens of file reads across about 60 files. **Every agent working on an AI feature pays that cost again, partially and inconsistently.**
 
@@ -98,15 +98,16 @@ Every writer (provider sync, rules, matcher, Bayes, AI, user) goes through `enri
 
 **A8. Sidekiq topology has become product behaviour.**
 
-> **Related PRs:** [#4237](https://github.com/we-promise/sure/issues/4237) AI capsule · [#4262](https://github.com/we-promise/sure/issues/4262) dev Sidekiq
+> **Related PRs:** [#4237](https://github.com/we-promise/sure/issues/4237) AI capsule · [#4262](https://github.com/we-promise/sure/issues/4262) dev Sidekiq · [#4310](https://github.com/we-promise/sure/issues/4310) Bayes off the AI lane · [#4239](https://github.com/we-promise/sure/issues/4239) insights off the AI lane
 
-- The `ai` capsule defaults to **one thread**, strict-ordered with chat first. That protects syncs, but one long PDF or a 40-job categorization run still blocks chat *while running*. Strict ordering only helps between jobs.
+- The `ai` capsule defaults to **one thread**, strict-ordered with chat first, and **every background LLM call shares it**: chat, categorization, merchant detection, merchant enhancement and PDF import ([01 D3](01-ai-ml-workflow-map.md#d3-process-placement-web-vs-worker)). That protects syncs, but one long PDF or a 40-job categorization run still blocks chat *while running*. Strict ordering only helps between jobs.
+- Keeping non-LLM work off that thread already pays off, and recent PRs show the pattern. [#4310](https://github.com/we-promise/sure/issues/4310) took Bayes out of `AutoCategorizeJob` (where it ran on the ai lane before the LLM) and made it a rule on the default capsule. [#4239](https://github.com/we-promise/sure/issues/4239) replaced LLM-written insight text with deterministic text and moved `GenerateInsightsJob` from `ai_low_priority` to `scheduled`. Both freed the AI lane for work that needs a model. The lane test in O-B1 would keep it that way.
 - Rule jobs on `medium_priority` run Bayes and the matcher **inline**, which is CPU-bound in-memory work of up to 5k transactions per family per sync.
 - `find_best` evaluation can run for minutes on `low_priority`.
 - There are no per-job timeouts. Per-family serialization uses three different mechanisms: advisory locks (rules, insights, recurring), cache flags (enhance, evaluation) and `sidekiq_options lock:` (cron jobs).
 
 **A9. LLM calls inside web requests.**
-Bill smart-fill and smart-configure run an LLM call synchronously in a web request, and so do the AI health probes. With local models this ties up Puma threads. This is the one place the "AI happens in the ai lane" principle is broken.
+Four paths call a model from a Puma thread ([01 D3](01-ai-ml-workflow-map.md#llm-calls-on-web-threads)): bill smart-fill and smart-configure, the non-PDF document upload (embeddings), MCP `tools/call` running `import_bank_statement` (a whole-PDF extraction), and the AI health probes. With local models each one holds a Puma thread for minutes, outside the ai lane's queueing and invisible to Sidekiq metrics. These are the places where the "AI happens in the ai lane" principle is broken, and nothing stops a new feature from adding a fifth.
 
 **A10. Observability is spread across four channels with no correlation.**
 Langfuse traces, `llm_usages`, `DebugLogEntry` and AI-health snapshots each tell part of the story. No ID flows sync → rule run → AI job → provider call, so "why does this transaction have this category?" has no single answer.
@@ -116,6 +117,9 @@ Langfuse traces, `llm_usages`, `DebugLogEntry` and AI-health snapshots each tell
 > **Related PRs:** [#4192](https://github.com/we-promise/sure/issues/4192) share permissions in bulk categorize · [#4004](https://github.com/we-promise/sure/issues/4004) guests can't mutate family config · [#3709](https://github.com/we-promise/sure/issues/3709) *(open, v0.7.7)* per-person ownership
 
 Chat and bill AI respect `User#ai_enabled?`. Rule-driven AI only needs a configured provider, so one admin's rule sends every member's transaction text to a third party. Whether or not that is intended, it should be a stated policy, not an accident of which entry point checks what.
+
+**A12. Two processes, one configuration story.**
+Web and worker each resolve ENV > Setting > default for themselves, and some settings are read by only one of them: `AI_RESPONSE_TIMEOUT` only by the web (the chat watchdog), `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` only by the worker, `RAILS_AI_MAX_THREADS` by both for different purposes ([01 D3](01-ai-ml-workflow-map.md#which-process-reads-which-setting)). Compose hides this by sharing one env file. Helm, quadlet and bare-metal installs set env per process, and a drift shows up as "the settings page says X but the jobs do Y". The on-demand worker AI health check (W22) exists because the processes can differ. It shows the worker's provider, model, endpoints, request timeout and embedding settings beside the web's, but not batch size, context window, JSON mode, tool rounds or the chat watchdog.
 
 ### 2.2 Opportunities
 
@@ -136,7 +140,7 @@ Chat and bill AI respect `User#ai_enabled?`. Rule-driven AI only needs a configu
 | **S5** | `AiJob` base class: queue lane, failure policy (an explicit `retry`/`discard`/`record` declaration), RuleRun callbacks, per-family concurrency key, trace context. | 5 AI jobs with copied rescue/callback code | S | Low |
 | **S6** | A config registry: `AiConfig.key :llm_max_items_per_call, env:, setting:, default: 25, clamp:, scope: :instance, on_change: …`. Generates the settings form permit list, the docs table and the AI-health display. | about 40 hand-rolled precedence methods, the one-line permit list, inconsistent cache-clear side effects | M | Low |
 | **S7** | A `Enrichment::Policy` per source (`locks?`, `overrides?`, `trainable?`), referenced by every writer. | lock logic in 5 classes, `locked_by_*` flags | S | Low |
-| **S8** | Move bill smart-fill to a job and a Turbo stream, like chat. | the only synchronous LLM call in a user flow | S | Low |
+| **S8** | Move bill smart-fill, the non-PDF document upload and MCP `import_bank_statement` to jobs on the ai lane, with a Turbo stream (UI) or a pending import (MCP) as the response. Keep the health probes as the one allow-listed exception. | the synchronous LLM and embedding calls in user flows (A9) | S–M | Low |
 | **S9** | Delete the Classifier "Run" special path: make it "Apply" on the two classifier rules (`RuleJob`). | `BayesCategorizeJob` semantics that differ from the nightly run | S | Low |
 | **S10** | Split `Family` AI/ML concerns out of `family.rb` (classifier rules, categorization provider, AI prompts already split) into `Family::Classification`. | a merge hotspot that every AI PR touches | S | Low |
 
@@ -177,7 +181,7 @@ A prompt edit can shift categorization accuracy for every self-hoster, but CI ch
 
 > **Related PRs:** [#1559](https://github.com/we-promise/sure/issues/1559) *(open, v0.7.7)* in-repo OpenClaw bootstrap skill · [#3677](https://github.com/we-promise/sure/issues/3677) *(open, v0.7.7)* mise dev services
 
-`.cursor` (7), `.junie`, `.gemini`, `copilot`, `CLAUDE.md` → `AGENTS.md`, and 18 guides. The existence of `instruction-preservation-map.md` shows the maintainers already feel the drift. Adding AI-pipeline guidance in N places would make it worse.
+`.cursor` (7), `.junie`, `.gemini`, `copilot`, `CLAUDE.md` → `AGENTS.md`, and 16 guides. The existence of `instruction-preservation-map.md` shows the maintainers already feel the drift. Adding AI-pipeline guidance in N places would make it worse.
 
 **B9. Hot files cause conflicts.**
 `family.rb`, `setting.rb`, `hostings_controller.rb` (the one-line permit), `config/sidekiq.yml`, `config/locales/*` and `Rule::Registry::TransactionResource` are touched by many parallel agent PRs. Long-lived agent branches rebase repeatedly, and auto-resolved conflicts are where subtle regressions enter.
@@ -187,6 +191,8 @@ A prompt edit can shift categorization accuracy for every self-hoster, but CI ch
 - **O-B1. Executable architecture (highest leverage).** Encode invariants as tests and cops that fail with a *prescriptive message* (agents act on these reliably):
   - Every class including `LlmConcept` implements every operation or declares `unsupported :op` (a parity matrix test, which fixes B3).
   - Every job that calls `Provider::Registry`/`Ai::Router` is on an `ai_*` queue, and nothing else is (a lane test, for A8).
+  - No controller action reaches an LLM or embedding call, except an explicit allow-list (the health probes). A test that stubs the provider to raise when called outside a job would catch it (for A9).
+  - Every AI setting declares which process reads it (web, worker or both), so the generated env table (O-B4) and the effective-configuration view can flag a value that only one process has (for A12).
   - Every call to an `enrich_attribute` writer passes a `source` that has a registered `Enrichment::Policy` (for A7).
   - No `Provider::Registry.get_provider(:openai|:anthropic)` outside the router (a cop, for A1).
   - Every provider operation receives `family:` (usage attribution).
@@ -235,7 +241,7 @@ Ordered so that each step makes the next one safer for agents to carry out.
 |---|---|---|
 | **Now (guardrails)** | O-B1 (parity, lane, router-cop, `family:` tests), O-B5 (one guide + recipes), O-B6 (first 4 ADRs), P1, P2, O-B8 | Cheap. Stops new divergence before consolidating old divergence. |
 | **Next (foundations)** | S1 router, S6 config registry, S5 `AiJob` base, S7 enrichment policy, O-B2 contract tests, O-B4 generated docs | S1 and S6 remove the most drift. O-B2 is the prerequisite for S2. |
-| **Then (consolidation)** | S2 structured-call primitive, S3 batching, S8 async bill smart-fill, S9 classifier Run as rules, S10 / P4 file splits | Large, but mechanical once contracts and tests exist. Good `good-agent-task` material (O-B9). |
+| **Then (consolidation)** | S2 structured-call primitive, S3 batching, S8 web-thread LLM calls to jobs, S9 classifier Run as rules, S10 / P4 file splits | Large, but mechanical once contracts and tests exist. Good `good-agent-task` material (O-B9). |
 | **Product (decided by maintainers)** | S4 rule-pipeline phases, O-A1 cascade as product, O-A2 per-task models, O-A3 provenance UI, A11 consent policy, O-B3 eval gate | Changes visible behaviour or policy. Needs an ADR and a maintainer decision, not an agent PR. |
 
 ### Non-goals
