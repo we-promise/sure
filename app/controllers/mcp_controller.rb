@@ -5,6 +5,7 @@ class McpController < ApplicationController
   SUPPORTED_PROTOCOL_VERSIONS = [ "2025-03-26", PROTOCOL_VERSION ].freeze
   MCP_SESSION_TTL = 1.day
   REQUIRED_SCOPE = "mcp"
+  LEGACY_READ_WRITE_SCOPE_DEADLINE = Time.utc(2027, 1, 20).freeze
 
   # Skip session-based auth and CSRF — this is a token-authenticated API
   skip_authentication
@@ -143,10 +144,16 @@ class McpController < ApplicationController
 
       user = User.find_by(id: access_token.resource_owner_id)
       return :unauthorized unless user&.active?
-      return :insufficient_scope unless access_token.scopes.include?("mcp") || access_token.scopes.include?("read_write")
+      return :insufficient_scope unless mcp_scope_allowed?(access_token)
 
       setup_mcp_session(user)
       :authorized
+    end
+
+    def mcp_scope_allowed?(access_token)
+      return true if access_token.scopes.include?("mcp")
+
+      access_token.scopes.include?("read_write") && Time.current < LEGACY_READ_WRITE_SCOPE_DEADLINE
     end
 
     def authenticate_via_env_token(token)
