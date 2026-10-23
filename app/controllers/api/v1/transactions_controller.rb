@@ -237,9 +237,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # (notes, external ids, account) for accounts nobody shared with them.
     def budget_transactions
       @budget.current_user = current_resource_owner
-      @budget.transactions
+      @budget.reportable_transactions
         .where(entries: { account_id: accessible_account_ids })
-        .where.not(transactions: { kind: current_resource_owner.family.analytics_excluded_kinds })
     end
 
     def set_report_filters
@@ -254,6 +253,18 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
       @exclude_split_parents = boolean_filter_param(:exclude_split_parents)
       @excluded = boolean_filter_param(:excluded)
+      @start_date = date_filter_param(:start_date)
+      @end_date = date_filter_param(:end_date)
+    end
+
+    # Parsed here, outside index's catch-all rescue, so a malformed date is a
+    # 422 rather than a 500. Date.parse keeps the formats the filter accepted.
+    def date_filter_param(key)
+      return nil if params[key].blank?
+
+      Date.parse(params[key].to_s)
+    rescue Date::Error
+      raise InvalidFilterError, "#{key} must be a valid date"
     end
 
     def apply_report_filters(query)
@@ -268,7 +279,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     def boolean_filter_param(key)
       return nil unless params.key?(key)
 
-      case params[key].to_s.downcase
+      case params[key].to_s.strip.downcase
       when "true", "1" then true
       when "false", "0" then false
       else raise InvalidFilterError, "#{key} must be true or false"
@@ -311,12 +322,12 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       end
 
       # Date range filtering
-      if params[:start_date].present?
-        query = query.where("entries.date >= ?", Date.parse(params[:start_date]))
+      if @start_date
+        query = query.where("entries.date >= ?", @start_date)
       end
 
-      if params[:end_date].present?
-        query = query.where("entries.date <= ?", Date.parse(params[:end_date]))
+      if @end_date
+        query = query.where("entries.date <= ?", @end_date)
       end
 
       # Amount filtering
