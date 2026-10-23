@@ -90,34 +90,38 @@ module AccountableResource
     # account's cached balance; before this, a validation failing on the
     # attributes (a half-filled loan rate change, say) returned 422 with the
     # balance half of the rejected form already committed.
-    saved = Account.transaction do
-      # Handle balance update if the value actually changed
-      if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
-        result = @account.set_current_balance(account_params[:balance].to_d)
-        unless result.success?
-          @account.assign_attributes(update_params)
-          @error_message = result.error
+    saved = with_account_update_lock do
+      # Loan updates already hold a row-lock transaction. Use a savepoint so
+      # Rollback undoes these writes without being swallowed by that outer scope.
+      Account.transaction(requires_new: true) do
+        # Handle balance update if the value actually changed
+        if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
+          result = @account.set_current_balance(account_params[:balance].to_d)
+          unless result.success?
+            @account.assign_attributes(update_params)
+            @error_message = result.error
+            raise ActiveRecord::Rollback
+          end
+        end
+
+        # Update remaining account attributes. Note: currency is intentionally allowed
+        # here so all account types (depositories, credit cards, loans, etc.) can
+        # have their currency changed via this shared update path.
+        unless @account.update(update_params)
+          @error_message = @account.errors.full_messages.join(", ")
           raise ActiveRecord::Rollback
         end
-      end
 
-      # Update remaining account attributes. Note: currency is intentionally allowed
-      # here so all account types (depositories, credit cards, loans, etc.) can
-      # have their currency changed via this shared update path.
-      unless @account.update(update_params)
-        @error_message = @account.errors.full_messages.join(", ")
+        # Inside the transaction, as `create` does: the locks are saved with
+        # `update!`, and a raise there after the commit left the balance and the
+        # attributes above in place behind a failed request.
+        @account.lock_saved_attributes!
+
+        true
+      rescue ActiveRecord::RecordInvalid => e
+        @error_message = e.record.errors.full_messages.join(", ").presence || e.message
         raise ActiveRecord::Rollback
       end
-
-      # Inside the transaction, as `create` does: the locks are saved with
-      # `update!`, and a raise there after the commit left the balance and the
-      # attributes above in place behind a failed request.
-      @account.lock_saved_attributes!
-
-      true
-    rescue ActiveRecord::RecordInvalid => e
-      @error_message = e.record.errors.full_messages.join(", ").presence || e.message
-      raise ActiveRecord::Rollback
     end
 
     unless saved
@@ -129,6 +133,12 @@ module AccountableResource
   end
 
   private
+    # Hook for subclasses to serialize persistence. The default takes no lock;
+    # loans override it, leaving rendering and redirects outside the lock.
+    def with_account_update_lock
+      yield
+    end
+
     # The account the 422 form renders when the exception carried none.
     #
     # `accountable_attributes` is defaulted the way `create_and_sync` defaults
