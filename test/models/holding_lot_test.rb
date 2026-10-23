@@ -23,6 +23,16 @@ class HoldingLotTest < ActiveSupport::TestCase
     assert_equal [ [ "transfer", 0 ], [ "buy", 10 ] ], book.ledger.map { |lot| [ lot.source_id, lot.qty ] }
   end
 
+  test "a split restates the shortfall with the position" do
+    book = Holding::LotBook.new
+    book.apply(nil, -6)
+    book.split(Rational(2, 1))
+
+    book.add_unknown(12, source_id: "transfer")
+
+    assert_equal 0, book.open_qty, "12 post-split units were already sold"
+  end
+
   test "a pro-rata rounding residual lands on the last open lot of the book" do
     book = Holding::LotBook.new
     %w[a b c].each { |id| book.apply(BigDecimal("10"), 1, source_id: id) }
