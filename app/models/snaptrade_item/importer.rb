@@ -211,10 +211,23 @@ class SnaptradeItem::Importer
           # clears the flag when done; SyncCleanerJob clears one left stuck.
           snaptrade_account.update!(activities_fetch_pending: true)
 
-          SnaptradeActivitiesFetchJob.set(wait: 10.seconds).perform_later(
-            snaptrade_account,
-            start_date: start_date
-          )
+          # A fetch that never queued has nothing to clear the flag, so it is
+          # cleared here. Active Job raises some enqueue failures and reports
+          # an adapter's EnqueueError by returning false.
+          begin
+            queued = SnaptradeActivitiesFetchJob.set(wait: 10.seconds).perform_later(
+              snaptrade_account,
+              start_date: start_date
+            )
+          rescue StandardError
+            snaptrade_account.update!(activities_fetch_pending: false)
+            raise
+          end
+
+          unless queued
+            snaptrade_account.update!(activities_fetch_pending: false)
+            Rails.logger.error "SnaptradeItem::Importer - Could not queue the background activities fetch for account #{snaptrade_account.id}"
+          end
         end
       end
 
