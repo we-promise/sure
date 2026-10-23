@@ -9,6 +9,14 @@ class Holding::ReverseCalculator
     @security_ids = security_ids
   end
 
+  # Every lot of each security, the opening lot included, once #calculate has run.
+  def lots_by_security
+    lots_from(@lot_books)
+  end
+
+  # Securities whose provider quantity is below what their trades add up to.
+  attr_reader :clamped_security_ids
+
   def calculate
     Rails.logger.tagged("Holding::ReverseCalculator") do
       precompute_cost_basis
@@ -156,6 +164,7 @@ class Holding::ReverseCalculator
           positions[event.entryable.security_id] -= event.entryable.qty
         end
       end
+      open_lots(snapshot.merge(positions), traded: positions.keys)
 
       events.each do |event|
         if event.is_a?(Security::Split)
@@ -208,6 +217,22 @@ class Holding::ReverseCalculator
 
       # Spans still open at the last trade stay unknown through to the present.
       open_unknown_start.each { |security_id, start| @unknown_spans[security_id] << [ start, nil ] }
+    end
+
+    # Units held before the first imported trade (or, with no trades, all the
+    # provider reports) are the opening lot. Its cost is unknown to the trades,
+    # so it stays out of the average, and sales relieve it like any other lot.
+    # A traded position whose provider quantity is below its trades' total has
+    # nothing to open and is recorded as clamped.
+    def open_lots(baselines, traded:)
+      @clamped_security_ids = Set.new
+      baselines.each do |security_id, qty|
+        if qty.negative? && traded.include?(security_id)
+          @clamped_security_ids << security_id
+        else
+          @lot_books[security_id].add_unknown(qty)
+        end
+      end
     end
 
     # Trades and splits in the order they took effect. A split goes first on its
