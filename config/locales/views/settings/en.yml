@@ -143,6 +143,10 @@ en:
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
+        insight_dig_in:
+          title: Insight Dig In
+          subtitle: First chat message when you dig into an insight with AI
+          label: Dig in message
       update:
         success: AI prompts updated
         multiple_errors: "Multiple prompts are too long (maximum is %{count} characters)"
@@ -193,6 +197,7 @@ en:
         general_title: General
         default_period: Default Period
         default_account_order: Default Account Order
+        default_account_order_hint: With Manual, drag accounts in the sidebar to set their order.
         language: Language
         language_auto: Browser language
         page_title: Preferences
@@ -354,6 +359,7 @@ en:
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
+      classifier_label: Classifier
       background_jobs_label: Background jobs
       api_key_label: API Keys
       payment_label: Payment
