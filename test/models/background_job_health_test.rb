@@ -65,15 +65,21 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
     assert_not BackgroundJobHealth.ai_busy?
   end
 
-  test "one AI thread when a worker process carries the label" do
-    Sidekiq::ProcessSet.stubs(:new).with(false).returns([ stub(labels: [ BackgroundJobHealth::ONE_AI_THREAD_LABEL ]) ])
+  test "one AI thread when the only worker process polling AI queues carries the label" do
+    stub_processes(ai_process(labelled: true), stub(queues: %w[default], labels: []))
     assert BackgroundJobHealth.one_ai_thread?
 
-    Sidekiq::ProcessSet.stubs(:new).with(false).returns([ stub(labels: []) ])
+    stub_processes(ai_process(labelled: false))
     assert_not BackgroundJobHealth.one_ai_thread?
   end
 
-  test "a worker gets the label only when a capsule polls ai_low_priority with one thread" do
+  test "several worker processes polling AI queues aren't one AI thread" do
+    stub_processes(ai_process(labelled: true), ai_process(labelled: true))
+
+    assert_not BackgroundJobHealth.one_ai_thread?
+  end
+
+  test "a worker gets the label only for a one-thread capsule polling both AI queues" do
     config = Sidekiq::Config.new
     ai = config.capsule("ai") { |capsule| capsule.queues = %w[ai_high_priority ai_low_priority] }
 
@@ -82,6 +88,10 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
 
     ai.concurrency = 2
     assert_not BackgroundJobHealth.one_ai_thread_worker?(config)
+
+    low_only = Sidekiq::Config.new
+    low_only.capsule("ai") { |capsule| capsule.queues = %w[ai_low_priority]; capsule.concurrency = 1 }
+    assert_not BackgroundJobHealth.one_ai_thread_worker?(low_only)
   end
 
   test "fails open when Sidekiq/Redis is unreachable" do
@@ -99,6 +109,14 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
       Sidekiq::ProcessSet.stubs(:new).returns(process_set)
 
       Sidekiq::Queue.stubs(:new).with("high_priority").returns(stub(latency: latency))
+    end
+
+    def stub_processes(*processes)
+      Sidekiq::ProcessSet.stubs(:new).with(false).returns(processes)
+    end
+
+    def ai_process(labelled:)
+      stub(queues: %w[default ai_high_priority ai_low_priority], labels: labelled ? [ BackgroundJobHealth::ONE_AI_THREAD_LABEL ] : [])
     end
 
     def stub_running(queue, one_ai_thread: true)

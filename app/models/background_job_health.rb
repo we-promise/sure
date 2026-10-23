@@ -12,9 +12,9 @@ class BackgroundJobHealth
   CRITICAL_QUEUE = "high_priority".freeze
   CHAT_QUEUE = "ai_high_priority".freeze
   AI_QUEUES = [ CHAT_QUEUE, "ai_low_priority" ].freeze
-  # A worker whose AI lane has one thread adds this label to its Sidekiq
-  # process at startup (config/initializers/sidekiq.rb), so web processes read
-  # the worker's lane instead of their own RAILS_AI_MAX_THREADS.
+  # A worker whose AI lane has one thread for both AI queues adds this label to
+  # its Sidekiq process at startup (config/initializers/sidekiq.rb), so web
+  # processes read the worker's lane instead of their own RAILS_AI_MAX_THREADS.
   ONE_AI_THREAD_LABEL = "one-ai-thread".freeze
   LATENCY_WARN_SECONDS = 60
 
@@ -37,12 +37,15 @@ class BackgroundJobHealth
       current
     end
 
+    # Only when a single worker process polls the AI queues: with several, a
+    # chat can run on one while another runs background AI jobs.
     def one_ai_thread?
-      Sidekiq::ProcessSet.new(false).any? { |process| process.labels.include?(ONE_AI_THREAD_LABEL) }
+      ai_processes = Sidekiq::ProcessSet.new(false).select { |process| process.queues.intersect?(AI_QUEUES) }
+      ai_processes.one? && ai_processes.first.labels.include?(ONE_AI_THREAD_LABEL)
     end
 
     def one_ai_thread_worker?(config)
-      config.capsules.values.any? { |capsule| capsule.queues.include?("ai_low_priority") && capsule.concurrency == 1 }
+      config.capsules.values.any? { |capsule| capsule.concurrency == 1 && (AI_QUEUES - capsule.queues).empty? }
     end
 
     # With one AI thread, a chat sent now waits for any running AI job.
