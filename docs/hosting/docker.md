@@ -164,7 +164,7 @@ x-rails-env: &rails_env
   SMTP_USERNAME: ${SMTP_USERNAME}
   SMTP_PASSWORD: ${SMTP_PASSWORD}
   SMTP_TLS_ENABLED: ${SMTP_TLS_ENABLED:-true}
-  # Only for a server whose certificate cannot be verified:
++  # Only when an otherwise valid certificate uses an untrusted CA:
   # SMTP_TLS_SKIP_VERIFY: ${SMTP_TLS_SKIP_VERIFY:-false}
 ```
 
