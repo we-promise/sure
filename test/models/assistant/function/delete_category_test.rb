@@ -59,6 +59,7 @@ class Assistant::Function::DeleteCategoryTest < ActiveSupport::TestCase
     result = @fn.call("id" => @category.id, "replacement_id" => nil)
 
     assert result[:success]
+    assert_not Category.exists?(@category.id)
     assert_nil transactions(:one).reload.category_id
   end
 
