@@ -48,7 +48,8 @@ class AccountableSparklinesController < ApplicationController
         currency: family.currency,
         period: Period.last_30_days,
         favorable_direction: @accountable.favorable_direction,
-        interval: "1 day"
+        interval: "1 day",
+        user: Current.user
       ).balance_series
     end
 
@@ -70,15 +71,17 @@ class AccountableSparklinesController < ApplicationController
         currency: family.currency,
         period: Period.last_30_days,
         favorable_direction: @accountable.favorable_direction,
-        interval: "1 day"
+        interval: "1 day",
+        user: Current.user
       )
     end
 
-    # The series is built from exactly these account rows, so the key carries a
-    # digest of them. A share count/timestamp version can stay the same while
-    # the counted set changes (ownership moved by update_all, shares replaced
-    # with older timestamps, report exclusion toggled); the row digest changes
-    # whenever the set does and never repeats for a different set.
+    # The series is built from exactly these account rows, scaled to the viewer's
+    # ownership share of each, so the key carries a digest of both. A share
+    # count/timestamp version can stay the same while the counted set changes
+    # (ownership moved by update_all, shares replaced with older timestamps,
+    # report exclusion toggled); the row digest changes whenever the set does
+    # and never repeats for a different set.
     def cache_key
       family.build_cache_key(
         "#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}_#{account_rows_digest}",
@@ -86,7 +89,18 @@ class AccountableSparklinesController < ApplicationController
       )
     end
 
+    # Rows are shared by everyone with the same accessible set, but the series
+    # is not: it is scaled per viewer. The percentages go into the digest so a
+    # co-owner at 40% never reads the owner's 60% series (or a stale one after
+    # a percentage edit).
     def account_rows_digest
-      Digest::SHA256.hexdigest(account_identity_rows.map { |row| row.join(":") }.sort.join(","))
+      rows = account_identity_rows.map { |row| [ *row, viewer_percentages[row.first] ].join(":") }
+      Digest::SHA256.hexdigest(rows.sort.join(","))
+    end
+
+    def viewer_percentages
+      @viewer_percentages ||= account_scope.includes(:account_shares).to_h do |account|
+        [ account.id, account.ownership_percentage_for(Current.user) ]
+      end
     end
 end

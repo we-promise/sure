@@ -34,6 +34,10 @@ class Assistant::Function::RecordValuation < Assistant::Function
         this function — ask the user for the source. A value with no provenance
         is worse than a missing value, because it looks authoritative.
 
+        The amount is the FULL value of the account, even when the user owns only
+        part of it. Never enter the user's share: ownership percentages are applied
+        when balances are read, so a share would be scaled down a second time.
+
         Recording a valuation on a date that already has one replaces it. The
         citation is stored in the entry's notes; any note a person wrote there is
         preserved and the new citation appended below it.

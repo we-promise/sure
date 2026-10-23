@@ -73,6 +73,14 @@
               <% if account.shared? %>
                 <%= icon("users", class: "w-3 h-3 text-secondary shrink-0") %>
               <% end %>
+              <% if (ownership_label = ownership_badge_label(account)) %>
+                <%= render DS::Pill.new(
+                  label: ownership_label,
+                  tone: :neutral,
+                  marker: false,
+                  title: t("accounts.sidebar.ownership_share", percentage: ownership_label)
+                ) %>
+              <% end %>
             </div>
             <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
           </div>

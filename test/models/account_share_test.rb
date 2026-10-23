@@ -58,4 +58,14 @@ class AccountShareTest < ActiveSupport::TestCase
     assert_not share.valid?
     assert_includes share.errors[:user], "must be in the same family"
   end
+
+  test "ownership percentage must be between 0 and 100" do
+    account = accounts(:investment)
+    account.account_shares.where(user: @member).destroy_all
+
+    assert AccountShare.new(account: account, user: @member, ownership_percentage: 0).valid?
+    assert AccountShare.new(account: account, user: @member, ownership_percentage: 100).valid?
+    assert_not AccountShare.new(account: account, user: @member, ownership_percentage: 100.01).valid?
+    assert_not AccountShare.new(account: account, user: @member, ownership_percentage: -1).valid?
+  end
 end
