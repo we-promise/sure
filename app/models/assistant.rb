@@ -32,7 +32,10 @@ module Assistant
     Function::GetBillAudit,
     Function::CreateBill,
     Function::UpdateBill,
-    Function::RecordBillPayment
+    Function::RecordBillPayment,
+    # Prepares a broker trade CSV with the manual import's own steps and
+    # leaves it pending; nothing is imported until the user publishes it.
+    Function::PrepareTradeImport
   ].freeze
 
   # Guests may view family configuration but not change it, so these tools are
