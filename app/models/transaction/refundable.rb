@@ -58,7 +58,12 @@ module Transaction::Refundable
   # Missing dated rates deliberately raise Money::ConversionError.
   def purchase_net_cost_money(refunds: purchase_refunds.includes(:entry))
     refunds.reduce(entry.amount_money) do |net, refund|
-      net + refund.entry.amount_money.exchange_to(entry.currency, date: refund.entry.date)
+      converted = if block_given?
+        yield refund.entry.amount_money, entry.currency, refund.entry.date
+      else
+        refund.entry.amount_money.exchange_to(entry.currency, date: refund.entry.date)
+      end
+      net + converted
     end
   end
 

@@ -3,6 +3,7 @@
 class Transaction::RefundDetails
   def initialize(transactions:, user:)
     @transactions = transactions.to_a
+    @exchange_rates = {}
     visible = user.family.transactions.joins(:entry)
       .where(entries: { account_id: user.accessible_accounts.select(:id) })
     @visible_purchase_ids = visible.where(id: @transactions.filter_map(&:refund_of_id)).pluck(:id).to_set
@@ -17,7 +18,9 @@ class Transaction::RefundDetails
     status = "not_applicable"
     if transaction.standard? && entry.amount.positive? && !entry.excluded?
       begin
-        money = transaction.purchase_net_cost_money(refunds: refunds)
+        money = transaction.purchase_net_cost_money(refunds: refunds) do |refund_money, currency, date|
+          exchange_refund(refund_money, currency, date)
+        end
         cost = {
           amount: money.amount.to_s("F"), currency: money.currency.iso_code,
           amount_cents: (money.amount * money.currency.minor_unit_conversion).round.to_i
@@ -39,4 +42,18 @@ class Transaction::RefundDetails
       net_purchase_cost_status: status
     }
   end
+
+  private
+    def exchange_refund(money, currency, date)
+      from = money.currency.iso_code
+      return money if from == currency
+
+      key = [ from, currency, date ]
+      rate = @exchange_rates.fetch(key) do
+        @exchange_rates[key] = ExchangeRate.find_or_fetch_rate(from: from, to: currency, date: date)&.rate
+      end
+      raise Money::ConversionError.new(from_currency: from, to_currency: currency, date: date) unless rate
+
+      money.exchange_to(currency, date: date, custom_rate: rate)
+    end
 end
