@@ -66,6 +66,15 @@ class RecurringTransaction
         return recurring
       end
 
+      # The same goes for a chosen category. A malformed id casts to nil on
+      # the uuid column, which category_belongs_to_family then skips, so it
+      # would save as an uncategorised bill. A paycheck takes no category, so
+      # whatever was posted for one is ignored.
+      if !is_income && attrs[:category_id].present? && recurring.category_id.nil?
+        recurring.errors.add(:base, I18n.t("recurring_transactions.create.category_invalid"))
+        return recurring
+      end
+
       if amount.nil?
         recurring.errors.add(:base, I18n.t("recurring_transactions.create.amount_invalid"))
         return recurring

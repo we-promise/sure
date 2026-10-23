@@ -605,6 +605,39 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  # The uuid column casts a malformed id to nil, which the ownership validation
+  # then skips, so without its own check the bill saved uncategorised.
+  test "create rejects a category id that is not an id" do
+    assert_no_difference "@family.recurring_transactions.count" do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Pet Cover", amount: "54.73", account_id: accounts(:depository).id,
+          first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+          category_id: "not-a-category"
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("recurring_transactions.create.category_invalid"), response.body
+  end
+
+  # A paycheck never takes a category, so whatever was posted for one is
+  # ignored rather than refused.
+  test "create ignores a malformed category id on a declared paycheck" do
+    assert_difference "@family.recurring_transactions.count", 1 do
+      post recurring_transactions_url, params: {
+        recurring_transaction: {
+          name: "Acme Payroll", amount: "1840", account_id: accounts(:depository).id, is_income: "1",
+          first_due_on: (Date.current + 5).iso8601, frequency_preset: "monthly",
+          category_id: "not-a-category"
+        }
+      }
+    end
+
+    assert_nil @family.recurring_transactions.order(:created_at).last.category_id
+  end
+
   test "create with a non-monthly preset writes explicit rules" do
     due = Date.current + 4
 
