@@ -398,7 +398,12 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("goals.show.ring.basis_at_completion.balance")
     assert_not_includes response.body, I18n.t("goals.show.ring.basis.balance")
 
-    @goal.update_columns(progress_basis: "contributions")
+    # The basis can't change on a completed goal, so reach a contributions
+    # snapshot the way a user would: reopen, switch, complete again.
+    @goal.reopen!
+    @goal.update!(progress_basis: "contributions")
+    @goal.complete!
+    assert @goal.reload.completed_amount.present?
     get goal_url(@goal)
     assert_includes response.body, I18n.t("goals.show.ring.basis_at_completion.contributions")
     assert_not_includes response.body, I18n.t("goals.show.ring.basis.contributions")
