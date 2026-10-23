@@ -400,8 +400,13 @@ class RecurringTransaction
       # in the UPDATE itself, against the row as it stands, and the write
       # touches nothing else. It runs after the bookkeeping update! so that
       # save never carries a category of its own.
+      #
+      # update_all also skips category_belongs_to_family, and a transaction's
+      # category_id carries no ownership check of its own, so the id is
+      # checked against the family here.
       def fill_blank_category(recurring, category_id)
         return if category_id.blank? || !fillable_category?(recurring)
+        return unless family.categories.exists?(id: category_id)
 
         filled = RecurringTransaction
           .where(id: recurring.id, category_id: nil)

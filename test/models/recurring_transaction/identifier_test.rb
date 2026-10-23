@@ -1061,6 +1061,26 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_equal categories(:one), manual.category
   end
 
+  # A transaction's category_id carries no ownership check (the API passes it
+  # through), and the fill writes with update_all, which skips the series'
+  # category_belongs_to_family validation. Another family's category must not
+  # reach a series through either pass.
+  test "another family's category on the entries is not written to a blank series" do
+    account = @family.accounts.first
+    foreign = families(:empty).categories.create!(name: "Not Ours")
+    detected = create_detected_series(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    manual = create_detected_series(account: account, name: "Declared Cover", amount: 54.73, day: 5, manual: true)
+    create_name_pattern_entries(account: account, name: "Pet Cover", amount: 54.73, day: 5, entry_categories: [ foreign ] * 3)
+    create_name_pattern_entries(account: account, name: "Declared Cover", amount: 54.73, day: 5, entry_categories: [ foreign ] * 3)
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal 3, detected.reload.occurrence_count, "detection must have claimed the series"
+    assert_equal 3, manual.reload.occurrence_count, "the manual pass must have matched the entries"
+    assert_nil detected.category_id
+    assert_nil manual.category_id
+  end
+
   test "a manual income series is never given a category" do
     account = @family.accounts.first
     paycheck = create_detected_series(account: account, name: "Acme Payroll", amount: -1840, day: 5, manual: true, bill_type: "income")
