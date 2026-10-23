@@ -117,11 +117,12 @@ class RedbarkAccount::LoanDetailsProcessor
       # is stored is what is compared. A bank reporting 0.064994 one sync and
       # 0.064996 the next would otherwise record a new row each time for a
       # movement of a hundredth of a basis point.
-      rate = (decimal * 100).round(3)
+      rate = decimal * 100
       # The loan form caps a rate at Loan::MAX_INTEREST_RATE, and the model does
       # not check a schedule written any other way. A bank reporting 150% has
-      # sent something other than a rate.
-      return rate if rate.between?(0, Loan::MAX_INTEREST_RATE)
+      # sent something other than a rate. Checked before rounding, which would
+      # otherwise carry -0.0004% or 100.0004% onto the bound.
+      return rate.round(3) if rate.between?(0, Loan::MAX_INTEREST_RATE)
 
       capture("Redbark reported a rate outside 0..#{Loan::MAX_INTEREST_RATE}%; ignoring it", value: value.to_s)
       nil
