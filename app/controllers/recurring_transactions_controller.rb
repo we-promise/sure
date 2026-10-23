@@ -160,14 +160,15 @@ class RecurringTransactionsController < ApplicationController
     # merchant with no name, so whether this duplicates a bill is asked of the
     # transaction the dialog was opened from. The dialog already said so; this
     # catches a stale dialog or a direct POST. The check and the save hold the
-    # source entry's row lock, so two submissions from one transaction cannot
-    # both see no covering bill and both save. Entry#transaction is the
-    # delegated-type reader, so Entry#with_lock never opens one: lock inside
-    # the class-level transaction instead.
+    # entry lock the Allocator takes, so neither a second submission, an
+    # allocation of this transaction nor a "Mark as recurring" on it can slip
+    # in between them. The lock is transaction-scoped, so it is taken inside
+    # the class-level transaction (Entry#transaction is the delegated-type
+    # reader, not ActiveRecord's).
     @source_entry = Current.accessible_entries.find_by(id: params[:entry_id])
     saved = if @source_entry && !separate_bill_chosen?
       Entry.transaction do
-        @source_entry.lock!
+        RecurringTransaction::Allocator.lock_entry!(@source_entry)
         @covering_series = covering_series_for(@source_entry)
         @covering_series.nil? && @recurring_transaction.errors.none? && save_declared_bill
       end

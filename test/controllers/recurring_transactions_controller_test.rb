@@ -1448,28 +1448,31 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Two submissions from the same transaction could both see no covering bill
-  # and both save. The check and the save run while the source entry is
-  # locked, so the second waits and then sees the first one's bill.
-  test "create checks for a covering bill and saves while holding the source entry" do
+  # and both save, and so could a submission racing an allocation of that
+  # transaction or a "Mark as recurring" on it. The check and the save hold
+  # the entry lock the Allocator takes, so each waits for the other.
+  test "create checks for a covering bill and saves while holding the entry lock" do
     entry = accounts(:depository).entries.create!(
       date: Date.current, amount: 100, currency: "USD", name: "FRESH CHARGE",
       entryable: Transaction.new(merchant: covering_merchant)
     )
     connection = ActiveRecord::Base.connection
     outside = connection.open_transactions
-    depths = {}
+    seen = {}
 
     RecurringTransactionsController.any_instance.stubs(:covering_series_for)
-      .with { depths[:check] = connection.open_transactions; true }.returns(nil)
+      .with { seen[:check] = [ connection.open_transactions, entry_lock_held?(entry) ]; true }.returns(nil)
     RecurringTransaction::DeclaredBill.stubs(:save)
-      .with { depths[:save] = connection.open_transactions; true }.returns(true)
-    Entry.any_instance.expects(:lock!).once.returns(true)
+      .with { seen[:save] = [ connection.open_transactions, entry_lock_held?(entry) ]; true }.returns(true)
+    assert_not entry_lock_held?(entry), "precondition: nothing holds the entry lock before the request"
 
     post recurring_transactions_url, params: covered_create_params(entry)
 
     assert_redirected_to bills_path
-    assert_operator depths[:check], :>, outside, "the covering check ran outside the lock"
-    assert_operator depths[:save], :>, outside, "the save ran outside the lock"
+    assert_operator seen[:check].first, :>, outside, "the covering check ran outside a transaction"
+    assert_operator seen[:save].first, :>, outside, "the save ran outside a transaction"
+    assert seen[:check].last, "the covering check ran without the entry lock"
+    assert seen[:save].last, "the save ran without the entry lock"
   end
 
   # The save now runs inside the lock's transaction, so a unique-index
@@ -1497,6 +1500,17 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    # The Allocator's two-key advisory lock on this entry, held by this session.
+    def entry_lock_held?(entry)
+      ActiveRecord::Base.connection.select_value(ActiveRecord::Base.sanitize_sql_array([ <<~SQL, RecurringTransaction::Allocator::ENTRY_LOCK_NAMESPACE, RecurringTransaction::Allocator.entry_lock_id(entry) ]))
+        SELECT EXISTS (
+          SELECT 1 FROM pg_locks
+          WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted
+            AND classid = ? AND objid = ? AND objsubid = 2
+        )
+      SQL
+    end
 
     def covering_merchant
       @covering_merchant ||= @family.merchants.create!(name: "Betashares")

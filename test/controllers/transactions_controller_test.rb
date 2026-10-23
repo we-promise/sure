@@ -1068,6 +1068,33 @@ end
     assert_equal I18n.t("recurring_transactions.marked_as_recurring"), flash[:notice]
   end
 
+  # The add-bill form checks and saves under the entry lock the Allocator
+  # takes. This path makes a series for the same transaction, so it holds the
+  # same lock, or the two could both see nothing and both create.
+  test "mark_as_recurring checks and creates while holding the entry lock" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    entry = create_transaction(account: account, amount: 100, name: "FRESH CHARGE")
+    connection = ActiveRecord::Base.connection
+    outside = connection.open_transactions
+    seen = {}
+
+    TransactionsController.any_instance.stubs(:mark_recurring_blocked_message)
+      .with { seen[:check] = [ connection.open_transactions, entry_lock_held?(entry) ]; true }.returns(nil)
+    RecurringTransaction.stubs(:create_from_transaction)
+      .with { seen[:create] = [ connection.open_transactions, entry_lock_held?(entry) ]; true }.returns(true)
+    assert_not entry_lock_held?(entry), "precondition: nothing holds the entry lock before the request"
+
+    post mark_as_recurring_transaction_path(entry.entryable)
+
+    assert_equal I18n.t("recurring_transactions.marked_as_recurring"), flash[:notice]
+    assert_operator seen[:check].first, :>, outside, "the check ran outside a transaction"
+    assert_operator seen[:create].first, :>, outside, "the create ran outside a transaction"
+    assert seen[:check].last, "the check ran without the entry lock"
+    assert seen[:create].last, "the create ran without the entry lock"
+  end
+
   test "mark_as_recurring shows already-exists alert when a concurrent request wins the race" do
     family = families(:empty)
     sign_in users(:empty)
@@ -2056,6 +2083,17 @@ end
   end
 
   private
+    # The Allocator's two-key advisory lock on this entry, held by this session.
+    def entry_lock_held?(entry)
+      ActiveRecord::Base.connection.select_value(ActiveRecord::Base.sanitize_sql_array([ <<~SQL, RecurringTransaction::Allocator::ENTRY_LOCK_NAMESPACE, RecurringTransaction::Allocator.entry_lock_id(entry) ]))
+        SELECT EXISTS (
+          SELECT 1 FROM pg_locks
+          WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted
+            AND classid = ? AND objid = ? AND objsubid = 2
+        )
+      SQL
+    end
+
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
     end

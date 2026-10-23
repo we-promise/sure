@@ -454,19 +454,24 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(transaction.entry.account)
 
-    # Check if a recurring transaction already exists for this pattern.
-    # The UI disables the button ahead of time using the same lookup, but this
-    # guard remains as the authoritative check (e.g. stale page, direct POST).
-    blocked = mark_recurring_blocked_message(transaction)
-
-    if blocked
-      flash[:alert] = blocked
-      redirect_back_or_to transactions_path
-      return
-    end
-
     begin
-      recurring_transaction = RecurringTransaction.create_from_transaction(transaction)
+      # Check if a recurring transaction already exists for this pattern.
+      # The UI disables the button ahead of time using the same lookup, but
+      # this guard remains as the authoritative check (e.g. stale page, direct
+      # POST). The check and the create hold the entry lock the Allocator and
+      # the add-bill form take, so neither can slip in between them.
+      blocked = nil
+      Entry.transaction do
+        RecurringTransaction::Allocator.lock_entry!(transaction.entry)
+        blocked = mark_recurring_blocked_message(transaction)
+        RecurringTransaction.create_from_transaction(transaction) unless blocked
+      end
+
+      if blocked
+        flash[:alert] = blocked
+        redirect_back_or_to transactions_path
+        return
+      end
 
       respond_to do |format|
         format.html do
