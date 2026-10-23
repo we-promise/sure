@@ -135,6 +135,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
       key = [
         "balance_sheet_net_worth_breakdown_series",
         CACHE_VERSION,
+        ExchangeRate::CONVERSION_CACHE_VERSION,
         user&.id,
         shares_version,
         period.start_date,

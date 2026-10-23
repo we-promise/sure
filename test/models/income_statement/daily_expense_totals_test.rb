@@ -59,12 +59,23 @@ class IncomeStatement::DailyExpenseTotalsTest < ActiveSupport::TestCase
     assert_equal 200, daily_series.first.total
   end
 
-  test "falls back to no conversion when the day's rate is missing" do
+  test "uses the latest earlier rate when the day's rate is missing" do
     eur_account = @family.accounts.create! name: "EUR Checking", currency: "EUR", balance: 1000, accountable: Depository.new
+    ExchangeRate.create! from_currency: "EUR", to_currency: @family.currency, date: 30.days.ago.to_date, rate: 2
 
     create_transaction(account: eur_account, amount: 100, currency: "EUR", date: Date.current)
 
-    assert_equal 100, daily_series.first.total
+    assert_equal 200, daily_series.first.total
+  end
+
+  # Counted at 1 it read as 100 (#3640).
+  test "leaves out an expense in a currency with no rate at all" do
+    eur_account = @family.accounts.create! name: "EUR Checking", currency: "EUR", balance: 1000, accountable: Depository.new
+
+    create_transaction(account: eur_account, amount: 100, currency: "EUR", date: Date.current)
+    create_transaction(account: @checking, amount: 10, date: Date.current)
+
+    assert_equal 10, daily_series.first.total
   end
 
   test "returns days in chronological order" do

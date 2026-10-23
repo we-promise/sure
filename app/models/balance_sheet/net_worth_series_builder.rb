@@ -46,6 +46,7 @@ class BalanceSheet::NetWorthSeriesBuilder
       shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
       key = [
         "balance_sheet_net_worth_series_historical",
+        ExchangeRate::CONVERSION_CACHE_VERSION,
         user&.id,
         shares_version,
         period.start_date,
