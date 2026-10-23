@@ -1267,6 +1267,67 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), fourth.market
   end
 
+  # Two journals waiting for the same first priced row share what it holds.
+  # Capped one at a time, each could claim the whole row: 5 + 5 arrived, 7
+  # left before any price, and the 3 still held were carried as 6.
+  test "inbound journals carried to the same first priced day share its cap" do
+    day_three = @day_two + 1.day
+    day_four = day_three + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_four, opening: 1_000, closing: 1_300, market_flow: 300
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    security_journal account: @account, date: day_three, qty: 5
+    security_journal account: @account, date: day_three, qty: -7, price: 0, holding_qty: 3
+    @account.holdings.create!(security: security_under_test, date: day_four, qty: 3, price: 100,
+                              amount: 300, currency: @account.currency)
+
+    fourth = daily_returns(end_date: day_four).rows.last
+
+    assert_equal BigDecimal("300"), fourth.external_flow
+    assert_equal BigDecimal("0"), fourth.market
+  end
+
+  # A split between the journal and its first priced day changes the count
+  # the journal's units became. The holding calculators apply a split at the
+  # open of its ex-date, so the first priced row already counts post-split
+  # shares at a post-split price, and the journal's quantity is scaled to
+  # match before it is capped and valued. Unscaled, 5 units that became 10
+  # were carried as 5 at the halved price.
+  test "an inbound journal carried across a split is scaled to the first priced row's shares" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_100, market_flow: 100
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    Security::Split.create!(security: security_under_test, ex_date: day_three, numerator: 2, denominator: 1, source: "manual")
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 10, price: 10,
+                              amount: 100, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert_equal BigDecimal("100"), third.external_flow
+    assert_equal BigDecimal("0"), third.market
+  end
+
+  # A split going ex on the journal's own date applied before the journal, so
+  # its quantity is already in post-split shares and is not scaled again.
+  test "a split on the journal's own date does not scale the carried journal" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_100, market_flow: 100
+    security_journal account: @account, date: @day_two, qty: 5, price: 0, holding_qty: 10
+    Security::Split.create!(security: security_under_test, ex_date: @day_two, numerator: 2, denominator: 1, source: "manual")
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 10, price: 10,
+                              amount: 100, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert_equal BigDecimal("50"), third.external_flow, "only the 5 journalled units are the flow"
+  end
+
   test "an unpriced journal dated before the period is carried to its first priced day in the period" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
     lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_050, market_flow: 50
