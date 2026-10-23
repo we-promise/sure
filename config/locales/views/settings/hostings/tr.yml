@@ -145,6 +145,8 @@ tr:
           her zaman OpenAI kullanır.
         env_configured_message: LLM_PROVIDER ortam değişkeni aracılığıyla başarıyla
           yapılandırıldı.
+        max_items_per_call_help: "Otomatik kategorilendirme / satıcı tespiti toplu işlemleri için üst sınır. Varsayılan: 25. OpenAI uyumlu sağlayıcılarda daha büyük toplu işlemler bağlam penceresine sığacak şekilde otomatik olarak bölünür."
+        max_items_per_call_label: Toplu İşlem Başına Maksimum Öğe (İsteğe Bağlı)
         not_configured_hint: Etkinleştirmek için aşağıya bir %{provider} API anahtarı
           ekleyin.
         provider_anthropic: Anthropic (Claude)
@@ -176,10 +178,6 @@ tr:
         json_mode_label: JSON Modu
         json_mode_none: Yok (standart modeller için en iyisi)
         json_mode_strict: Sıkı (düşünen modeller için en iyisi)
-        max_items_per_call_help: 'Otomatik kategorilendirme / satıcı tespiti toplu
-          işlemleri için üst sınır. Varsayılan: 25. Daha büyük toplu işlemler bağlam
-          penceresine sığacak şekilde otomatik olarak bölünür.'
-        max_items_per_call_label: Toplu İşlem Başına Maksimum Öğe (İsteğe Bağlı)
         max_response_tokens_help: 'Modelin yanıtı için ayrılan token sayısı. Varsayılan:
           512. Daha uzun geçmiş için yer açmak amacıyla düşürün.'
         max_response_tokens_label: Maksimum Yanıt Token'ı (İsteğe Bağlı)

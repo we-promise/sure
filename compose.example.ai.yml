@@ -304,7 +304,7 @@ services:
       - sure_net
 
   web:
-    image: ghcr.io/we-promise/sure:stable
+    image: ghcr.io/we-promise/sure:${SURE_IMAGE_TAG:-stable}
     volumes:
       - app-storage:/rails/storage
     ports:
@@ -336,7 +336,7 @@ services:
       - sure_net
 
   worker:
-    image: ghcr.io/we-promise/sure:stable
+    image: ghcr.io/we-promise/sure:${SURE_IMAGE_TAG:-stable}
     command: bundle exec sidekiq
     volumes:
       - app-storage:/rails/storage
@@ -372,36 +372,68 @@ services:
       - sure_net
 
   backup:
+    # Full-instance backups (database, uploaded files, .env and compose.yml),
+    # organized as <BACKUP_DIR>/<version>/<timestamp>-<trigger>/. Runs the same
+    # image as web/worker, so there is nothing to download.
+    #   Every day:  docker compose --profile backup up -d backup
+    #   Right now:  docker compose run --rm backup create
+    # See docs/hosting/docker.md "Backups, upgrades and rollbacks".
     profiles:
       - backup
-    image: alpine:3.20
+    image: ghcr.io/we-promise/sure:${SURE_IMAGE_TAG:-stable}
+    # Root so it can write the host's backup folder; uploaded files keep their owner.
+    user: "0"
+    entrypoint: ["bin/sure-backup"]
     restart: unless-stopped
     volumes:
-      - ./bin/db-backup.sh:/usr/local/bin/db-backup.sh:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+      - app-storage:/rails/storage
+      # The compose directory, so backups include .env and compose.yml
+      - .:/config:ro
     environment:
-      - POSTGRES_HOST=db
-      - POSTGRES_DB
-      - POSTGRES_USER
-      - POSTGRES_PASSWORD # pipelock:ignore
-      - BACKUP_SCHEDULE
-      - BACKUP_OVERWRITE
-      - BACKUP_KEEP_DAYS
-      - BACKUP_DESTINATION
-      - INSTANCE_ID
-      # Rclone Provider Config
-      # By default we map the S3 variables. If you use a different provider (e.g., gdrive), 
-      # replace these with the equivalent variables you added to your .env file.
-      - RCLONE_CONFIG_S3_TYPE
-      - RCLONE_CONFIG_S3_PROVIDER
-      - RCLONE_CONFIG_S3_ACCESS_KEY_ID
-      - RCLONE_CONFIG_S3_SECRET_ACCESS_KEY
-      - RCLONE_CONFIG_S3_ENDPOINT
-    command: >
-      sh -c "apk add --no-cache postgresql16-client~=16 rclone~=1.66 gzip~=1 &&
-             echo \"$${BACKUP_SCHEDULE:-0 2 * * *} /usr/local/bin/db-backup.sh\" > /etc/crontabs/root &&
-             crond -f -d 8"
+      <<: *db_env
+      POSTGRES_HOST: db
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+      INSTANCE_ID: ${INSTANCE_ID:-default}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    networks:
+      - sure_net
+
+  backup-offsite:
+    # Optional: copies the backup folder to any rclone remote (S3, R2, B2, SFTP,
+    # Google Drive, ...) every hour, and prunes old scheduled backups there.
+    #   docker compose --profile backup-offsite up -d backup-offsite
+    profiles:
+      - backup-offsite
+    image: rclone/rclone:1.71
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        : "$${BACKUP_DESTINATION:?set BACKUP_DESTINATION in .env}"
+        while true; do
+          rclone copy /backups "$${BACKUP_DESTINATION%/}/$${INSTANCE_ID}" --exclude ".tmp-*/**" \
+            && rclone delete "$${BACKUP_DESTINATION%/}/$${INSTANCE_ID}" --min-age "$${BACKUP_KEEP_DAYS}d" --include "/*/*-scheduled/**" \
+            && rclone rmdirs "$${BACKUP_DESTINATION%/}/$${INSTANCE_ID}" --leave-root \
+            || echo "backup-offsite: copy failed; retrying in an hour"
+          sleep 3600
+        done
+    volumes:
+      - ${BACKUP_DIR:-./backups}:/backups:ro
+    environment:
+      BACKUP_DESTINATION: ${BACKUP_DESTINATION:-}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+      INSTANCE_ID: ${INSTANCE_ID:-default}
+      # By default we map the S3 variables. If you use a different provider (e.g., gdrive),
+      # replace these with the equivalent variables you added to your .env file.
+      RCLONE_CONFIG_S3_TYPE: ${RCLONE_CONFIG_S3_TYPE:-}
+      RCLONE_CONFIG_S3_PROVIDER: ${RCLONE_CONFIG_S3_PROVIDER:-}
+      RCLONE_CONFIG_S3_ACCESS_KEY_ID: ${RCLONE_CONFIG_S3_ACCESS_KEY_ID:-}
+      RCLONE_CONFIG_S3_SECRET_ACCESS_KEY: ${RCLONE_CONFIG_S3_SECRET_ACCESS_KEY:-} # pipelock:ignore
+      RCLONE_CONFIG_S3_ENDPOINT: ${RCLONE_CONFIG_S3_ENDPOINT:-}
     networks:
       - sure_net
 

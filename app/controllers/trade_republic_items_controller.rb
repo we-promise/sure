@@ -276,6 +276,8 @@ class TradeRepublicItemsController < ApplicationController
 
   def update
     attrs = trade_republic_item_params.to_h
+    # The form leaves the phone number blank to keep the current one.
+    attrs.delete("phone_number") if attrs["phone_number"].blank?
     login_pin = attrs["pin"]
     reauthentication_required = reauthentication_needed?(attrs)
 
@@ -319,10 +321,13 @@ class TradeRepublicItemsController < ApplicationController
   end
 
   def sync
-    @trade_republic_item.sync_later unless @trade_republic_item.syncing?
+    # A connection that needs a new login can only fail to sync.
+    syncing = @trade_republic_item.syncing?
+    queued = @trade_republic_item.ready_for_sync? && !syncing
+    @trade_republic_item.sync_later if queued
     if provider_panel_form? && turbo_panel_request?
       # Only this card, as the login steps do, so the other cards keep their state.
-      return render_login_panel(notice: t("settings.providers.sync_provider_in_progress"))
+      return render_login_panel(notice: (t("settings.providers.sync_provider_in_progress") if queued || syncing))
     end
 
     respond_to do |format|
@@ -339,7 +344,7 @@ class TradeRepublicItemsController < ApplicationController
   def select_accounts
     item = current_trade_republic_item
     unless item
-      redirect_to settings_providers_path, alert: t(".not_configured")
+      frame_redirect_to settings_providers_path, alert: t(".not_configured")
       return
     end
 
@@ -407,7 +412,8 @@ class TradeRepublicItemsController < ApplicationController
       )
     end
 
-    tr_account.trade_republic_item.sync_later unless tr_account.trade_republic_item.syncing?
+    linked_item = tr_account.trade_republic_item
+    linked_item.sync_later if linked_item.ready_for_sync? && !linked_item.syncing?
     if processing_failed
       redirect_to account_path(account), notice: t(".success"), alert: t(".processing_failed"), status: :see_other
     else
@@ -434,7 +440,7 @@ class TradeRepublicItemsController < ApplicationController
     latest_sync = @trade_republic_item.syncs.ordered.first
     should_sync = latest_sync.nil? || !latest_sync.completed?
 
-    if no_accounts && !@trade_republic_item.syncing? && should_sync && @trade_republic_item.session_configured?
+    if no_accounts && !@trade_republic_item.syncing? && should_sync && @trade_republic_item.ready_for_sync?
       @trade_republic_item.sync_later
     end
 
@@ -504,7 +510,8 @@ class TradeRepublicItemsController < ApplicationController
     end
 
     @trade_republic_item.update!(pending_account_setup: @trade_republic_item.unlinked_accounts_count.positive?)
-    @trade_republic_item.sync_later if created_accounts.any?
+    # The accounts are set up from stored data; syncing them needs a login.
+    @trade_republic_item.sync_later if created_accounts.any? && @trade_republic_item.ready_for_sync?
 
     if created_accounts.any?
       options = { notice: t(".success", count: created_accounts.count), status: :see_other }
