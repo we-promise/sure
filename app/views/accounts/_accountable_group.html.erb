@@ -1,4 +1,4 @@
-<%# locals: (account_group:, mobile: false, all_tab: false, open: nil, **args) %>
+<%# locals: (account_group:, mobile: false, all_tab: false, open: nil, sortable: false, **args) %>
 
 <div id="<%= account_group.dom_id(tab: all_tab ? :all : nil, mobile: mobile) %>" data-group-key="<%= account_group.key %>">
   <% is_open = open.nil? ? (account_group.accounts.any? { |account| page_active?(account_path(account)) } || Current.user.always_expanded_account_group?(account_group.key)) : open %>
@@ -13,7 +13,10 @@
 
       <div class="ml-auto text-right grow">
         <%= tag.p format_money(account_group.total_money), class: "text-sm font-medium text-primary privacy-sensitive" %>
-        <%= turbo_frame_tag "#{account_group.key}_sparkline", src: accountable_sparkline_path(account_group.key), loading: "lazy", data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
+        <%= turbo_frame_tag "#{account_group.key}_sparkline",
+                            src: accountable_sparkline_path(account_group.key),
+                            loading: "lazy",
+                            data: sparkline_frame_data do %>
           <div class="flex items-center w-8 h-4 ml-auto">
             <div class="w-6 h-px bg-loader"></div>
           </div>
@@ -21,11 +24,43 @@
       </div>
     <% end %>
 
-    <div class="space-y-1">
+    <%= tag.div class: "space-y-1",
+          data: sortable ? {
+            controller: "sortable-list",
+            sortable_list_url_value: reorder_accounts_path(group: account_group.key),
+            sortable_list_param_value: "account_ids",
+            sortable_list_hold_delay_value: 400,
+            sortable_list_save_timeout_value: 10_000,
+            sortable_list_mirror_lists_value: true,
+            action: "dragover->sortable-list#dragOver drop->sortable-list#drop account-sort-mode:stop@window->sortable-list#releaseKeyboardGrab turbo:before-visit@window->sortable-list#saveBeforeVisit"
+          } : {} do %>
       <% account_group.accounts.each do |account| %>
+        <%# Rows become draggable only in sort mode (account-sort-mode). %>
+        <%= tag.div class: "flex items-center gap-1 rounded-lg",
+              data: sortable ? {
+                sortable_list_target: "item",
+                sortable_list_id: account.id,
+                action: "dragstart->sortable-list#dragStart dragend->sortable-list#dragEnd"
+              } : {} do %>
+        <% if sortable %>
+          <%# Hidden until the sidebar is in sort mode (account-sort-mode). %>
+          <%= render DS::Button.new(
+            variant: :icon,
+            icon: "grip-vertical",
+            size: :sm,
+            style: "display:none",
+            class: "shrink-0 cursor-grab active:cursor-grabbing touch-none [-webkit-touch-callout:none]",
+            aria_label: t("accounts.sidebar.reorder_account", account: account.name),
+            title: t("accounts.sidebar.reorder_hint"),
+            data: {
+              account_sort_mode_target: "handle",
+              action: "touchstart->sortable-list#touchStart touchmove->sortable-list#touchMove touchend->sortable-list#touchEnd touchcancel->sortable-list#touchCancel contextmenu->sortable-list#suppressContextMenu keydown->sortable-list#handleKeyDown"
+            }
+          ) %>
+        <% end %>
         <%= link_to account_path(account),
                   class: class_names(
-                    "block flex items-center gap-2 px-3 py-2 rounded-lg",
+                    "block flex items-center gap-2 px-3 py-2 rounded-lg min-w-0 grow",
                     page_active?(account_path(account)) ? "bg-container" : "hover:bg-surface-hover"
                   ),
                   data: page_active?(account_path(account)) ? { active_account: true } : {},
@@ -44,15 +79,19 @@
 
           <div class="ml-auto text-right grow h-10">
             <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
-            <%= turbo_frame_tag dom_id(account, :sparkline), src: sparkline_account_path(account), loading: "lazy", data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
+            <%= turbo_frame_tag dom_id(account, :sparkline),
+                                src: sparkline_account_path(account),
+                                loading: "lazy",
+                                data: sparkline_frame_data do %>
               <div class="flex items-center w-8 h-4 ml-auto">
                 <div class="w-6 h-px bg-loader"></div>
               </div>
             <% end %>
           </div>
         <% end %>
+        <% end %>
       <% end %>
-    </div>
+    <% end %>
 
     <div class="my-2">
       <%= render DS::Link.new(

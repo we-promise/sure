@@ -7,7 +7,7 @@
          data-pending-response-created-at="<%= assistant_message.created_at&.iso8601 %>"
          data-pending-response-timeout-url="<%= report_timeout_chat_message_path(assistant_message.chat, assistant_message) %>">
       <%= render "chats/ai_avatar" %>
-      <p class="text-sm text-secondary animate-pulse"><%= t("chats.thinking") %></p>
+      <p id="<%= dom_id(assistant_message, :status) %>" class="text-sm text-secondary animate-pulse"><%= t("chats.thinking") %></p>
     </div>
   <% elsif assistant_message.reasoning? %>
     <details class="group mb-1">

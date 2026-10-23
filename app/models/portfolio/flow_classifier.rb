@@ -41,6 +41,11 @@
 # - Scope to one family itself. Neither form filters by family: #classify_ids
 #   reads whichever entry ids it is given, and scope_account_ids is taken as
 #   given. Pass only ids and accounts the caller has already scoped.
+# - Pass active_until_dates when the scope's membership changes over time. An
+#   account is inside the scope only up to its cut-off date, so a transfer to
+#   it dated after that is external, as a transfer to any account outside the
+#   scope is. For a linked transfer "dated" means the counterpart leg's own
+#   date, which can differ from this leg's.
 class Portfolio::FlowClassifier
   CLASSES = %i[external_inflow external_outflow income fee internal].freeze
 
@@ -98,7 +103,7 @@ class Portfolio::FlowClassifier
   EXTERNAL_LABELS = labels_for(:external)
   TRANSFER_LABEL = "Transfer".freeze
 
-  attr_reader :scope_account_ids, :include_excluded
+  attr_reader :scope_account_ids, :include_excluded, :active_until_dates
 
   # include_excluded: classify an excluded entry as if it were not excluded.
   # Excluding hides an entry from budgets and reports, but the balance
@@ -106,9 +111,16 @@ class Portfolio::FlowClassifier
   # against balances -- Portfolio::DailyReturns -- has to see it as the flow it
   # was. Split parents are excluded too and are NOT applied; that reader skips
   # them itself.
-  def initialize(scope_account_ids:, include_excluded: false)
+  #
+  # active_until_dates: { account_id => last date in scope }. An account with
+  # no entry is in scope on every date.
+  def initialize(scope_account_ids:, include_excluded: false, active_until_dates: {})
     @scope_account_ids = Array(scope_account_ids).map(&:to_s).uniq.freeze
     @include_excluded = include_excluded
+    @active_until_dates = (active_until_dates || {}).compact
+      .to_h { |account_id, date| [ account_id.to_s, date.to_date ] }
+      .slice(*@scope_account_ids)
+      .freeze
   end
 
   # One of CLASSES, or nil when the entry carries no flow: excluded entries
@@ -153,9 +165,7 @@ class Portfolio::FlowClassifier
   # the entry two rows and a SUM over it would count the entry twice. The
   # lateral reads one transfer per transaction, preferring one the
   # transaction is the inflow of, as #transfer_counterpart_account_id does,
-  # then the earliest by created_at and id. #classify reads whichever row
-  # `has_one` returns, so only a transaction that is the inflow (or, with no
-  # inflow, the outflow) of two transfers may still read differently.
+  # then the earliest by created_at and id, which #classify reads too.
   def sql_joins
     <<~SQL.squish
       LEFT JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id
@@ -245,24 +255,40 @@ class Portfolio::FlowClassifier
       entry.amount.negative? ? :external_inflow : :external_outflow
     end
 
+    # Scope is checked on the COUNTERPART leg's date. A linked transfer's legs
+    # can be days apart, and a series windowed by cut-off keeps or drops each
+    # leg by its own date: a counterpart landing after its account's cut-off
+    # is dropped, so this leg must be the external flow, and one sent before
+    # it is kept, so this leg is internal even if dated after the cut-off.
     def transfer_resolution(entry, transaction)
-      counterpart_account_id = transfer_counterpart_account_id(transaction)
-      if counterpart_account_id && scope_account_ids.include?(counterpart_account_id)
+      counterpart_account_id, counterpart_date = transfer_counterpart(transaction)
+      if counterpart_account_id && in_scope_on?(counterpart_account_id, counterpart_date)
         :internal
       else
         transaction_direction(entry)
       end
     end
 
-    # The account on the other leg of a linked Transfer, by id only; the
-    # counterpart account itself is never loaded, so a scope check cannot
-    # leak an account the user is not allowed to see.
-    def transfer_counterpart_account_id(transaction)
-      transfer = transaction.transfer_as_inflow || transaction.transfer_as_outflow
+    # The account (by id only) and date of the other leg of a linked
+    # Transfer; the counterpart account itself is never loaded, so a scope
+    # check cannot leak an account the user is not allowed to see.
+    #
+    # The transfer is chosen as #sql_joins chooses it: one the transaction is
+    # the inflow of first, then the earliest by created_at and id. Not through
+    # transfer_as_inflow / transfer_as_outflow: has_one is unordered, so of two
+    # transfers on one leg it can return either.
+    def transfer_counterpart(transaction)
+      transfer = earliest_transfer(inflow_transaction_id: transaction.id) ||
+        earliest_transfer(outflow_transaction_id: transaction.id)
       return nil unless transfer
 
       counterpart_id = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction_id : transfer.inflow_transaction_id
-      Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id)&.to_s
+      account_id, date = Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id, :date)
+      [ account_id&.to_s, date ]
+    end
+
+    def earliest_transfer(leg)
+      Transfer.where(leg).order(:created_at, :id).first
     end
 
     # A security moved between accounts has no Transfer row; its other leg is
@@ -273,7 +299,7 @@ class Portfolio::FlowClassifier
     def security_transfer_counterpart_in_scope?(entry, trade)
       counterparts = Entry
         .joins("JOIN trades counterpart_trades ON counterpart_trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'")
-        .where(account_id: scope_account_ids)
+        .where(account_id: scope_account_ids.select { |account_id| in_scope_on?(account_id, entry.date) })
         .where.not(account_id: entry.account_id)
         .where(date: entry.date)
         .where(counterpart_trades: { security_id: trade.security_id, qty: -trade.qty, investment_activity_label: TRANSFER_LABEL })
@@ -281,10 +307,24 @@ class Portfolio::FlowClassifier
       counterparts.exists?
     end
 
+    # Inside the scope on `date`: one of its accounts, and not past its cut-off.
+    def in_scope_on?(account_id, date)
+      return false unless scope_account_ids.include?(account_id)
+
+      active_until = active_until_dates[account_id]
+      active_until.nil? || date <= active_until
+    end
+
     def label_sql
       "COALESCE(trades.investment_activity_label, transactions.investment_activity_label)"
     end
 
+    # A Trade's direction is its quantity's sign, and a summing caller takes
+    # the magnitude from -entries.amount. Those agree for every writer today:
+    # a Contribution or Withdrawal is written as a Transaction, and a
+    # Transfer-labelled Trade as a journal or a cash amount signed like its
+    # quantity. A Contribution Trade written as amount = qty x price would be
+    # classed an inflow and summed as an outflow; nothing writes that shape.
     def direction_sql
       <<~SQL.squish
         CASE
@@ -296,7 +336,7 @@ class Portfolio::FlowClassifier
     end
 
     def transfer_resolution_sql
-      "CASE WHEN flow_counterpart_entries.account_id = ANY(#{scope_ids_sql}) THEN 'internal' ELSE #{direction_sql} END"
+      "CASE WHEN #{in_scope_sql('flow_counterpart_entries.account_id', 'flow_counterpart_entries.date')} THEN 'internal' ELSE #{direction_sql} END"
     end
 
     def security_transfer_counterpart_in_scope_sql
@@ -307,7 +347,7 @@ class Portfolio::FlowClassifier
           JOIN trades counterpart_trades
             ON counterpart_trades.id = counterpart_entries.entryable_id
             AND counterpart_entries.entryable_type = 'Trade'
-          WHERE counterpart_entries.account_id = ANY(#{scope_ids_sql})
+          WHERE #{in_scope_sql('counterpart_entries.account_id')}
             AND counterpart_entries.account_id <> entries.account_id
             AND counterpart_entries.date = entries.date
             #{"AND counterpart_entries.excluded IS NOT TRUE" unless include_excluded}
@@ -320,6 +360,32 @@ class Portfolio::FlowClassifier
 
     def pending_sql
       self.class.pending_sql
+    end
+
+    # #in_scope_on? as SQL: the account on the date given, the classified
+    # entry's own unless a counterpart leg's is passed (see
+    # #transfer_resolution). With no cut-offs it is the plain membership test. The cut-offs are written in
+    # as quoted literals, like the scope ids: a uuid and an ISO date, neither
+    # of which can spell a bind.
+    def in_scope_sql(account_expression, date_expression = "entries.date")
+      membership = "#{account_expression} = ANY(#{scope_ids_sql})"
+      return membership if active_until_dates.empty?
+
+      cut_offs = active_until_dates.map do |account_id, date|
+        "(#{quote(account_id)}::uuid, #{quote(date.iso8601)}::date)"
+      end.join(", ")
+
+      <<~SQL.squish
+        (#{membership} AND NOT EXISTS (
+          SELECT 1 FROM (VALUES #{cut_offs}) AS flow_cut_offs(account_id, active_until_date)
+          WHERE flow_cut_offs.account_id = #{account_expression}
+            AND #{date_expression} > flow_cut_offs.active_until_date
+        ))
+      SQL
+    end
+
+    def quote(value)
+      ActiveRecord::Base.connection.quote(value)
     end
 
     # The one bound value in the whole expression, sanitized on its own and
@@ -337,6 +403,6 @@ class Portfolio::FlowClassifier
     end
 
     def quote_list(values)
-      values.map { |value| ActiveRecord::Base.connection.quote(value) }.join(", ")
+      values.map { |value| quote(value) }.join(", ")
     end
 end

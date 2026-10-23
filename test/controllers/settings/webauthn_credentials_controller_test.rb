@@ -33,7 +33,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
 
     assert_difference -> { @user.webauthn_credentials.count }, 1 do
       post settings_webauthn_credentials_path, params: {
-        webauthn_credential: { nickname: "MacBook Touch ID" },
+        webauthn_credential: { nickname: "MacBook Touch ID", code: @code },
         credential: credential
       }, as: :json
     end
@@ -48,6 +48,164 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     assert @user.reload.webauthn_id.present?
   end
 
+  test "registering a credential requires an MFA code" do
+    [ nil, "", "000000" ].each do |code|
+      options = registration_options
+      credential = @client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com")
+
+      assert_no_difference -> { @user.webauthn_credentials.count } do
+        register(credential, code: code)
+      end
+
+      assert_response :unprocessable_entity
+      assert_equal I18n.t("webauthn_credentials.invalid_code"), JSON.parse(response.body).fetch("error")
+    end
+  end
+
+  test "registering a credential accepts a current authenticator code" do
+    travel_to Time.zone.parse("2026-10-07 12:00:10") do
+      options = registration_options
+      credential = @client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com")
+
+      assert_difference -> { @user.webauthn_credentials.count }, 1 do
+        register(credential, code: totp_code)
+      end
+
+      assert_response :success
+    end
+  end
+
+  test "an authenticator code that was already used is reported as such" do
+    travel_to Time.zone.parse("2026-10-07 12:00:10") do
+      code = totp_code
+      assert @user.verify_otp?(code)
+
+      options = registration_options
+      credential = @client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com")
+
+      assert_no_difference -> { @user.webauthn_credentials.count } do
+        register(credential, code: code)
+      end
+
+      assert_response :unprocessable_entity
+      assert_equal I18n.t("webauthn_credentials.code_already_used"), JSON.parse(response.body).fetch("error")
+    end
+  end
+
+  test "a backup code confirms only one registration" do
+    code = backup_code
+
+    options = registration_options(code: code)
+    register(@client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com"), code: code)
+    assert_response :success
+
+    post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: code } }, as: :json
+    assert_response :unprocessable_entity
+    assert_equal I18n.t("webauthn_credentials.invalid_code"), JSON.parse(response.body).fetch("error")
+  end
+
+  test "options refuse a missing or wrong code before the browser creates a passkey" do
+    [ nil, "", "000000" ].each do |code|
+      post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: code } }, as: :json
+
+      assert_response :unprocessable_entity
+      assert_equal I18n.t("webauthn_credentials.invalid_code"), JSON.parse(response.body).fetch("error")
+      assert_nil session[:webauthn_registration_challenge]
+    end
+  end
+
+  test "options report an authenticator code that was already used" do
+    travel_to Time.zone.parse("2026-10-07 12:00:10") do
+      code = totp_code
+      assert @user.verify_otp?(code)
+
+      post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: code } }, as: :json
+
+      assert_response :unprocessable_entity
+      assert_equal I18n.t("webauthn_credentials.code_already_used"), JSON.parse(response.body).fetch("error")
+    end
+  end
+
+  test "options check the code without spending it" do
+    code = backup_code
+
+    registration_options(code: code)
+
+    assert @user.reload.verify_otp?(code), "backup code should still be unused after options"
+  end
+
+  test "a registration that fails does not spend the backup code" do
+    code = backup_code
+
+    stale_options = registration_options(code: code)
+    registration_options(code: code)
+    stale_credential = @client.create(challenge: stale_options.fetch("challenge"), rp_id: "www.example.com")
+    register(stale_credential, code: code)
+    assert_response :unprocessable_entity
+    assert_equal I18n.t("webauthn_credentials.failure"), JSON.parse(response.body).fetch("error")
+
+    options = registration_options(code: code)
+    assert_difference -> { @user.webauthn_credentials.count }, 1 do
+      register(@client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com"), code: code)
+    end
+    assert_response :success
+  end
+
+  test "a duplicate credential does not spend the backup code" do
+    code = backup_code
+    registration_options(code: code)
+    @user.webauthn_credentials.create!(nickname: "Existing", credential_id: "duplicate-credential-id", public_key: "public-key")
+
+    verified_credential = Struct.new(:id, :public_key, :sign_count).new("duplicate-credential-id", "new-public-key", 0)
+    relying_party = mock("webauthn_relying_party")
+    relying_party.expects(:verify_registration).returns(verified_credential)
+    Settings::WebauthnCredentialsController.any_instance.stubs(:webauthn_relying_party).returns(relying_party)
+
+    register({ id: "duplicate-credential-id", response: {} }, code: code)
+    assert_response :unprocessable_entity
+
+    assert @user.reload.verify_otp?(code), "backup code should still be unused"
+  end
+
+  test "code attempts are rate limited per user" do
+    registration_options
+    Settings::WebauthnCredentialsController.cache_store.stubs(:increment).returns(11)
+
+    register({ id: "x", response: {} }, code: "000000")
+
+    assert_response :too_many_requests
+    assert_equal I18n.t("webauthn_credentials.rate_limited"), JSON.parse(response.body).fetch("error")
+  end
+
+  test "guessing codes through options alone is limited to 10 a minute" do
+    # The test cache is a null store, so hand out the counts a real store
+    # would return for the options counter, which create does not share.
+    Settings::WebauthnCredentialsController.cache_store.stubs(:increment)
+      .with { |key, *| key.include?("code-check") && key.exclude?("code-spend") }
+      .returns(*1..11)
+
+    10.times do
+      post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: "000000" } }, as: :json
+      assert_response :unprocessable_entity
+    end
+
+    post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: "000000" } }, as: :json
+
+    assert_response :too_many_requests
+    assert_equal I18n.t("webauthn_credentials.rate_limited"), JSON.parse(response.body).fetch("error")
+  end
+
+  test "every locale that translates the passkey form also translates the code confirmation" do
+    I18n.available_locales.each do |locale|
+      next unless I18n.exists?("webauthn_credentials.failure", locale, fallback: false)
+
+      %w[webauthn_credentials.code_already_used webauthn_credentials.invalid_code webauthn_credentials.rate_limited
+         settings.securities.show.webauthn_code_label settings.securities.show.webauthn_code_placeholder].each do |key|
+        assert I18n.exists?(key, locale, fallback: false), "#{locale} is missing #{key}"
+      end
+    end
+  end
+
   test "uses configured relying party id and allowed origin" do
     with_webauthn_config(rp_id: "example.test", allowed_origins: [ "https://app.example.test" ]) do
       client = WebAuthn::FakeClient.new("https://app.example.test")
@@ -59,7 +217,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
 
       assert_difference -> { @user.webauthn_credentials.count }, 1 do
         post settings_webauthn_credentials_path, params: {
-          webauthn_credential: { nickname: "Configured origin key" },
+          webauthn_credential: { nickname: "Configured origin key", code: @code },
           credential: credential
         }, as: :json
       end
@@ -73,14 +231,14 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     credential = @client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com")
 
     post settings_webauthn_credentials_path, params: {
-      webauthn_credential: { nickname: "MacBook Touch ID" },
+      webauthn_credential: { nickname: "MacBook Touch ID", code: @code },
       credential: credential
     }, as: :json
     assert_response :success
 
     assert_no_difference -> { @user.webauthn_credentials.count } do
       post settings_webauthn_credentials_path, params: {
-        webauthn_credential: { nickname: "Replay" },
+        webauthn_credential: { nickname: "Replay", code: backup_code },
         credential: credential
       }, as: :json
     end
@@ -93,7 +251,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
 
     assert_no_difference -> { @user.webauthn_credentials.count } do
       post settings_webauthn_credentials_path, params: {
-        webauthn_credential: { nickname: "Malformed" },
+        webauthn_credential: { nickname: "Malformed", code: @code },
         credential: []
       }, as: :json
     end
@@ -117,7 +275,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
 
     assert_no_difference -> { @user.webauthn_credentials.count } do
       post settings_webauthn_credentials_path, params: {
-        webauthn_credential: { nickname: "Duplicate security key" },
+        webauthn_credential: { nickname: "Duplicate security key", code: @code },
         credential: { id: "duplicate-credential-id", response: {} }
       }, as: :json
     end
@@ -131,7 +289,7 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     credential = @client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com")
 
     post settings_webauthn_credentials_path, params: {
-      webauthn_credential: { nickname: "" },
+      webauthn_credential: { nickname: "", code: @code },
       credential: credential
     }, as: :json
 
@@ -154,10 +312,28 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
   end
 
   private
-    def registration_options
-      post options_settings_webauthn_credentials_path, as: :json
+    # Options now check the code too; keep one valid code per test so the
+    # create call that follows can spend the same one.
+    def registration_options(code: nil)
+      @code = code || @code || backup_code
+      post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: @code } }, as: :json
       assert_response :success
       JSON.parse(response.body)
+    end
+
+    def backup_code
+      @user.enable_mfa!.first
+    end
+
+    def totp_code
+      ROTP::TOTP.new(@user.reload.otp_secret, issuer: "Sure Finances").now
+    end
+
+    def register(credential, code:)
+      post settings_webauthn_credentials_path, params: {
+        webauthn_credential: { nickname: "Attempt", code: code },
+        credential: credential
+      }, as: :json
     end
 
     def with_webauthn_config(rp_id:, allowed_origins:)
