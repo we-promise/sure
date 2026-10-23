@@ -488,8 +488,84 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     key2 = search2.cache_key_base
 
     assert_equal key1, key2
-    assert_not_nil cache.read("transaction_search_totals/v3/#{key2}")
+    assert_not_nil cache.read("transaction_search_totals/v4/#{key2}")
     assert_equal result1, search2.totals
+  end
+
+  test "totals does not serve a value cached under the v3 key" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+    create_transaction(account: @checking_account, amount: 100, kind: "standard")
+
+    search = Transaction::Search.new(@family)
+    stale = Transaction::Search::Totals.new(
+      count: 9, transfer_count: 0, income_money: Money.new(999, "USD"), expense_money: Money.new(999, "USD"),
+      transfer_inflow_money: Money.new(0, "USD"), transfer_outflow_money: Money.new(0, "USD")
+    )
+    cache.write("transaction_search_totals/v3/#{search.cache_key_base}", stale)
+
+    assert_equal Money.new(100, "USD"), search.totals.expense_money
+  end
+
+  test "totals excludes excluded entries from income and expense" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    excluded_income = create_transaction(account: @checking_account, amount: -200, kind: "standard", excluded: true)
+
+    search = Transaction::Search.new(@family)
+    totals = search.totals
+
+    assert_equal Money.new(0, "USD"), totals.income_money
+    assert_equal Money.new(100, "USD"), totals.expense_money
+    # The list still shows the excluded entry, and the count still matches the list.
+    assert_includes search.transactions_scope.map(&:id), excluded_income.entryable_id
+    assert_equal search.transactions_scope.count, totals.count
+    assert_equal 2, totals.count
+  end
+
+  test "totals excludes excluded transfers" do
+    create_transaction(account: @checking_account, amount: -50, kind: "funds_movement")
+    create_transaction(account: @checking_account, amount: -300, kind: "funds_movement", excluded: true)
+    create_transaction(account: @checking_account, amount: 70, kind: "funds_movement")
+    create_transaction(account: @checking_account, amount: 400, kind: "funds_movement", excluded: true)
+
+    totals = Transaction::Search.new(@family).totals
+
+    assert_equal Money.new(50, "USD"), totals.transfer_inflow_money
+    assert_equal Money.new(70, "USD"), totals.transfer_outflow_money
+  end
+
+  test "totals counts transfers whether or not they are excluded" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    create_transaction(account: @checking_account, amount: -50, kind: "funds_movement")
+    create_transaction(account: @checking_account, amount: -300, kind: "funds_movement", excluded: true)
+
+    totals = Transaction::Search.new(@family).totals
+    transfer_totals = Transaction::Search.new(@family, filters: { "types" => [ "transfer" ] }).totals
+
+    assert_equal 2, totals.transfer_count
+    assert_equal 3, totals.count
+    assert_equal 2, transfer_totals.transfer_count
+    assert_equal transfer_totals.count, transfer_totals.transfer_count
+  end
+
+  test "totals treats a null excluded as live" do
+    entry = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    entry.update_columns(excluded: nil)
+
+    assert_equal Money.new(100, "USD"), Transaction::Search.new(@family).totals.expense_money
+  end
+
+  test "totals excludes an excluded split child" do
+    parent = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    kept, excluded = parent.split!([
+      { name: "Kept", amount: 60 },
+      { name: "Excluded", amount: 40, excluded: true }
+    ])
+
+    search = Transaction::Search.new(@family)
+
+    assert_equal Money.new(60, "USD"), search.totals.expense_money
+    assert_equal [ excluded.entryable_id, kept.entryable_id ].sort, search.transactions_scope.map(&:id).sort
   end
 
   test "category filter includes subcategories" do
