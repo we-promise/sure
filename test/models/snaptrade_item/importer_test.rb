@@ -31,4 +31,28 @@ class SnaptradeItem::ImporterTest < ActiveSupport::TestCase
       assert_raises(ActiveRecord::ActiveRecordError) { @importer.send(:import_activities, @snaptrade_account) }
     end
   end
+
+  # Set before the enqueue, the flag would otherwise outlive a fetch that was
+  # never queued, holding the item in "syncing" until SyncCleanerJob clears it.
+  test "the pending flag is cleared again when queueing the fetch raises" do
+    queue = mock("configured_job")
+    queue.stubs(:perform_later).raises(RuntimeError, "queue down")
+    SnaptradeActivitiesFetchJob.stubs(:set).returns(queue)
+
+    assert_raises(RuntimeError) { @importer.send(:import_activities, @snaptrade_account) }
+
+    assert_not @snaptrade_account.reload.activities_fetch_pending?
+  end
+
+  # Active Job reports an adapter's EnqueueError by returning false, not by
+  # raising.
+  test "the pending flag is cleared again when the queue refuses the fetch" do
+    queue = mock("configured_job")
+    queue.stubs(:perform_later).returns(false)
+    SnaptradeActivitiesFetchJob.stubs(:set).returns(queue)
+
+    @importer.send(:import_activities, @snaptrade_account)
+
+    assert_not @snaptrade_account.reload.activities_fetch_pending?
+  end
 end
