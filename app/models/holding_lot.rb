@@ -19,7 +19,8 @@ class HoldingLot < ApplicationRecord
     # Replaces an account's lots with `rows`, within `security_ids` when given,
     # keeping each lot's row (and id) by its key: the source entry for a derived
     # lot, the position for the opening lot. An opening lot keeps its origin.
-    def store!(account, rows, security_ids: nil)
+    # A caller that cannot see opening lots (`openings: false`) leaves them be.
+    def store!(account, rows, security_ids: nil, openings: true)
       rows = rows.select { |row| security_ids.include?(row[:security_id]) } if security_ids
       derived_rows, opening_rows = rows.partition { |row| row[:source_entry_id] }
       scope = account.holding_lots
@@ -27,7 +28,7 @@ class HoldingLot < ApplicationRecord
 
       transaction do
         scope.derived.where.not(source_entry_id: derived_rows.pluck(:source_entry_id)).delete_all
-        scope.opening.where.not(security_id: opening_rows.pluck(:security_id)).delete_all
+        scope.opening.where.not(security_id: opening_rows.pluck(:security_id)).delete_all if openings
         if derived_rows.any?
           upsert_all(derived_rows, unique_by: %i[account_id source_entry_id],
             update_only: %i[security_id acquired_on qty unit_cost currency])
