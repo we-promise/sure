@@ -146,10 +146,10 @@ zh-TW:
         aria_label: 目標已完成 %{percent}%。目標 %{target} 中已存 %{amount}。
         basis:
           balance: 計入帳戶目前的價值
-          contributions: 僅計入你投入的資金
+          contributions: 僅計入您投入的資金
         basis_at_completion:
           balance: 依目標完成時帳戶的價值計入
-          contributions: 僅計入目標完成時你已投入的資金
+          contributions: 僅計入目標完成時您已投入的資金
       projection:
         heading: 預測
         legend_saved: 已存
