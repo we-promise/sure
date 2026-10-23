@@ -163,8 +163,12 @@ class Holding < ApplicationRecord
       # Process each holding for the old security
       account.holdings.where(security: old_security).find_each do |holding|
         if collision_keys.include?([ holding.date, holding.currency ])
-          # Collision: merge into existing holding for new_security (same date AND currency)
-          existing = account.holdings.find_by!(security: new_security, date: holding.date, currency: holding.currency)
+          # Collision: merge into existing holding for new_security (same date AND currency).
+          # Lock both rows so a concurrent delete waits for this merge, or
+          # wins first and makes lock! / find_by! raise, rather than the
+          # merge adding a deleted row's units or writing onto a gone row.
+          holding.lock!
+          existing = account.holdings.lock.find_by!(security: new_security, date: holding.date, currency: holding.currency)
           merged_qty = existing.qty + holding.qty
           merged_amount = existing.amount + holding.amount
 
@@ -218,12 +222,15 @@ class Holding < ApplicationRecord
           # No collision: update to new security. Write only the columns this
           # remap owns, for the same reason as the merge above: a negative
           # derived row must still move.
-          holding.update_columns(
+          # update_columns returns false, without raising, when the row was
+          # deleted after find_each loaded it; fail so the remap rolls back.
+          moved = holding.update_columns(
             security_id: new_security.id,
             security_locked: true,
             provider_security_id: holding.provider_security_id || old_security.id,
             updated_at: Time.current
           )
+          raise ActiveRecord::RecordNotSaved.new("Holding #{holding.id} was deleted during remap", holding) unless moved
         end
       end
 
@@ -262,12 +269,15 @@ class Holding < ApplicationRecord
       # Write only the columns the reset owns, so a negative derived row
       # still moves back (see remap_security!).
       account.holdings.where(security: current_security, provider_security: original_security).find_each do |holding|
-        holding.update_columns(
+        reset = holding.update_columns(
           security_id: original_security.id,
           security_locked: false,
           provider_security_id: nil,
           updated_at: Time.current
         )
+        # As in remap_security!: a row deleted since find_each loaded it
+        # writes nothing, so fail and roll back the trade move.
+        raise ActiveRecord::RecordNotSaved.new("Holding #{holding.id} was deleted during reset", holding) unless reset
       end
     end
 

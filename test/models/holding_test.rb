@@ -467,6 +467,45 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal 1, @account.holdings.where(external_id: "simplefin-holding-amzn").count
   end
 
+  # A holding can be deleted by another request between the remap loading it
+  # and writing it. The merge target is locked so that delete waits; the
+  # moved and reset rows are checked on write, since update_columns returns
+  # false rather than raising when the row is gone.
+  test "remap_security! locks both rows of a merge" do
+    new_security = create_security("GOOGLOCK", prices: [ { date: Date.current, price: 100.0 } ])
+    @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: @amzn.currency)
+
+    # One collision date (today's AMZN row), so one lock on each side.
+    assert_queries_match(/FROM "holdings".*FOR UPDATE/, count: 2) do
+      @amzn.remap_security!(new_security)
+    end
+  end
+
+  test "remap_security! raises and rolls back when a moved holding is gone at write time" do
+    old_security = @amzn.security
+    new_security = create_security("GOOGGONE", prices: [ { date: Date.current, price: 100.0 } ])
+    create_trade(old_security, account: @account, qty: 5, price: 100.00, date: Date.current)
+    Holding.any_instance.stubs(:update_columns).returns(false)
+
+    assert_raises(ActiveRecord::RecordNotSaved) { @amzn.remap_security!(new_security) }
+
+    assert_equal 1, @account.trades.where(security: old_security).count
+    assert_equal 0, @account.trades.where(security: new_security).count
+  end
+
+  test "reset_security_to_provider! raises and rolls back when a holding is gone at write time" do
+    old_security = @amzn.security
+    new_security = create_security("GOOGRST", prices: [ { date: Date.current, price: 100.0 } ])
+    create_trade(old_security, account: @account, qty: 5, price: 100.00, date: Date.current)
+    @amzn.remap_security!(new_security)
+    Holding.any_instance.stubs(:update_columns).returns(false)
+
+    assert_raises(ActiveRecord::RecordNotSaved) { @amzn.reset_security_to_provider! }
+
+    assert_equal 1, @account.trades.where(security: new_security).count
+    assert_equal 0, @account.trades.where(security: old_security).count
+  end
+
   test "reset_security_to_provider! restores original security" do
     old_security = @amzn.security
     new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
