@@ -40,6 +40,9 @@ class Entry < ApplicationRecord
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
+  before_validation :lock_transaction_for_refund_validation
+  validate :refund_direction_unchanged
+  validate :cannot_exclude_refund_linked_purchase
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
@@ -514,12 +517,21 @@ class Entry < ApplicationRecord
   #   rules further down (or a later run) don't overwrite them. Tags are only ever added by rules.
   # @return [Array<Entry>] the created child entries
   def split!(splits, lock_attributes: false)
-    total = splits.sum { |s| s[:amount].to_d }
-    unless total == amount
-      raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
-    end
-
     self.class.transaction do
+      # Refund linking and splitting must serialize on the same row. Reload
+      # the entry after waiting so its amount and associations are current.
+      transaction.lock! if transaction?
+      reload
+      if transaction? && transaction.refund_linked?
+        errors.add(:base, :refund_links_present)
+        raise ActiveRecord::RecordInvalid, self
+      end
+
+      total = splits.sum { |s| s[:amount].to_d }
+      unless total == amount
+        raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
+      end
+
       children = splits.map do |split_attrs|
         child_transaction = Transaction.new(
           category_id: split_attrs[:category_id],
@@ -556,7 +568,19 @@ class Entry < ApplicationRecord
   # Removes split children and restores parent entry.
   def unsplit!
     self.class.transaction do
-      child_entries.each do |child|
+      transaction.lock! if transaction?
+      reload
+      children = child_entries.includes(:entryable).to_a
+      transactions = children.select(&:transaction?).map(&:transaction).sort_by { |record| record.id.to_s }
+      # Refund linking takes these same locks. Recheck after waiting so a
+      # concurrently linked child cannot be deleted and lose its refund link.
+      transactions.each(&:lock!)
+      if transactions.any? { |record| record.refund? || record.refund_linked? }
+        errors.add(:base, :refund_links_present)
+        raise ActiveRecord::RecordInvalid, self
+      end
+
+      children.each do |child|
         child.unsplitting = true
         child.destroy!
       end
@@ -670,10 +694,37 @@ class Entry < ApplicationRecord
       @earliest_saved_date = [ @earliest_saved_date, date_before_last_save ].compact.min
     end
 
+    def lock_transaction_for_refund_validation
+      @refund_validation_transaction = nil
+      return unless persisted? && transaction? && (amount_changed? || excluded_changed?)
+
+      # Save holds this lock through validation and the entry update. Refund
+      # linking, splitting and trade conversion take the transaction lock first
+      # too, so a purchase cannot become ineligible after a link is validated.
+      # Load separately to preserve unsaved nested transaction attributes.
+      @refund_validation_transaction = Transaction.lock.find(entryable_id)
+    end
+
+    def refund_direction_unchanged
+      return unless transaction? && amount.present?
+
+      record = @refund_validation_transaction || transaction
+      if (record.refund? && !amount.negative?) || (amount <= 0 && record.purchase_refunds.exists?)
+        errors.add(:amount, :invalid_refund)
+      end
+    end
+
     def cannot_unexclude_split_parent
       return unless excluded_changed?(from: true, to: false) && split_parent?
 
       errors.add(:excluded, "cannot be toggled off for a split transaction")
+    end
+
+    def cannot_exclude_refund_linked_purchase
+      return unless transaction? && excluded_changed?(to: true)
+
+      record = @refund_validation_transaction || transaction
+      errors.add(:base, :refund_links_present) if record.purchase_refunds.exists?
     end
 
     def split_child_date_matches_parent

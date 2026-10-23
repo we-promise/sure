@@ -7,6 +7,19 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
     @function = Assistant::Function::GetTransactions.new(@user)
   end
 
+  test "refunds are identified separately from income with purchase metadata" do
+    entry = Entry.create!(account: accounts(:depository), name: "Assistant refund",
+      amount: -300, currency: "USD", date: Date.current, entryable: Transaction.new(kind: "refund"))
+    result = @function.call("search" => "Assistant refund", "types" => [ "refund" ])
+    row = result[:transactions].sole
+    assert_equal entry.entryable_id, row[:id]
+    assert_equal "refund", row[:classification]
+    assert_equal "inflow", row[:cash_flow_direction]
+    assert_equal true, row[:refund]
+    assert_equal Money.new(300, "USD").format, result[:total_refunds]
+    assert_equal Money.new(0, "USD").format, result[:total_income]
+  end
+
   test "returns transaction ids and notes" do
     @transaction.entry.update!(notes: "Visible note")
 

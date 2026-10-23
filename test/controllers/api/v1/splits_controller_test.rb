@@ -116,6 +116,24 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "split children expose their linked refunds and net purchase cost" do
+    children = @entry.split!([
+      { name: "First half", amount: 50 },
+      { name: "Second half", amount: 50 }
+    ])
+    purchase = children.first.transaction
+    refund = create_transaction(account: @account, amount: -10, name: "Partial return").transaction
+    refund.mark_as_refund!(purchase: purchase)
+
+    get api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key)
+
+    assert_response :success
+    child = JSON.parse(response.body).fetch("children").find { |row| row.fetch("id") == purchase.id }
+    assert_equal [ refund.id ], child.fetch("refund_transaction_ids")
+    assert_equal "available", child.fetch("net_purchase_cost_status")
+    assert_equal 40, BigDecimal(child.fetch("net_purchase_cost").fetch("amount"))
+  end
+
   test "resolves a child id to its parent" do
     post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
     child = @entry.reload.child_entries.first

@@ -266,13 +266,17 @@ class Account::ProviderImportAdapter
         # both legs. Deriving it from the transfer also repairs legs an earlier
         # sync already overwrote. An unconfirmed auto-match gets its kinds only
         # in Transfer#confirm!, so until then the leg keeps its own kind.
-        if auto_kind.present?
+        if auto_kind.present? && !entry.transaction.locked?(:kind)
           transfer = matched_transfer_for(entry)
           transfer = nil if transfer&.pending?
           entry.transaction.assign_attributes(kind: transfer ? transfer.kind_for_leg(entry.transaction) : auto_kind)
         end
 
-        if auto_category.present? && entry.transaction.category_id.blank?
+        # A kind lock or matched transfer can keep a detected contribution from
+        # becoming an investment contribution. Categorize the final kind only,
+        # while preserving an independently locked Uncategorized choice.
+        if auto_category.present? && entry.transaction.investment_contribution? &&
+            entry.transaction.category_id.blank? && !entry.transaction.locked?(:category_id)
           entry.transaction.assign_attributes(category: auto_category)
         end
       end

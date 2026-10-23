@@ -126,6 +126,39 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
     end
   end
 
+  %w[refund linked_purchase].each do |state|
+    test "trade conversion rechecks #{state} after security lookup" do
+      entry = create_transaction(account: accounts(:investment), amount: state == "refund" ? -100 : 100)
+      credit = create_transaction(amount: -50)
+      security = securities(:aapl)
+      Security.expects(:find_by).with do |attributes|
+        if attributes == { id: security.id }
+          if state == "refund"
+            entry.transaction.mark_as_refund!
+          else
+            credit.transaction.mark_as_refund!(purchase: entry.transaction)
+          end
+          true
+        end
+      end.returns(security)
+
+      assert_no_difference "Trade.count" do
+        post create_trade_from_transaction_transaction_url(entry.transaction), params: {
+          security_id: security.id, qty: 2, price: 50
+        }
+      end
+
+      assert_redirected_to transactions_path
+      assert_equal I18n.t("activerecord.errors.messages.refund_links_present"), flash[:alert]
+      assert_not entry.reload.excluded?
+      if state == "refund"
+        assert entry.transaction.refund?
+      else
+        assert_equal entry.entryable_id, credit.transaction.reload.refund_of_id
+      end
+    end
+  end
+
   test "inferred conversion values use an amount edited before the source lock" do
     [ @account, accounts(:investment) ].each do |account|
       [ { qty: 2 }, { price: 50 } ].each do |trade_params|

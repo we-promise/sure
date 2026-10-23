@@ -17,7 +17,12 @@ module IncomeStatement::ScopedTransactionsQuery
     # of income and expense totals while still letting callers sum them.
     def classification_sql(t)
       contribution = @family.investment_contributions_as_spending? ? "expense" : "investment"
-      "CASE WHEN #{t}.kind = 'investment_contribution' THEN '#{contribution}' WHEN #{t}.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
+      "CASE WHEN #{t}.kind = 'investment_contribution' THEN '#{contribution}' WHEN #{t}.kind IN ('loan_payment', 'refund') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
+    end
+
+    # Income is positive; expenses retain their sign so refunds reduce spending.
+    def reported_amount_sql(t)
+      "CASE WHEN #{classification_sql(t)} = 'income' THEN -1 ELSE 1 END * (#{converted_amount_sql(t)})"
     end
 
     # Entry amount converted to the family currency at the day's exchange

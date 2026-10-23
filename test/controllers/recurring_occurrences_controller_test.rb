@@ -16,6 +16,20 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Resolving a payment is the ACT surface, so it owns the drawer slot -- the
+  test "income occurrence picker excludes refunds" do
+    @series.update!(amount: -300, bill_type: "income")
+    entry = @series.account.entries.create!(name: "Returned shirts", date: Date.current,
+      amount: -300, currency: "USD", entryable: Transaction.new(kind: "refund"))
+
+    get recurring_occurrence_url(@occurrence), params: { q: "Returned shirts" }
+    assert_response :success
+    assert_select "form[action=?]", recurring_occurrence_allocations_path(@occurrence, entry_id: entry.id), count: 0
+    # The search input and empty-state copy legitimately repeat the query.
+    # Candidate names render as standalone paragraphs or spans in either list.
+    assert_select "p, span", text: entry.name, count: 0
+  end
+
+  # Resolving a payment owns the drawer slot, the
   # same one transactions, trades and transfers use. The bill opens in that
   # same slot, so View bill swaps one for the other instead of stacking two.
   test "show renders the occurrence dialog in a single drawer frame" do

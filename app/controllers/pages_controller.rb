@@ -282,6 +282,7 @@ class PagesController < ApplicationController
         dashboard_income_statement.income_totals(period: @period),
         dashboard_income_statement.expense_totals(period: @period),
         Current.family.currency,
+        refund_totals: dashboard_income_statement.refund_totals(period: @period),
         invested_total: dashboard_income_statement.invested_total(period: @period)
       )
     end
@@ -351,7 +352,7 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, invested_total: nil)
+    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, refund_totals:, invested_total: nil)
       nodes = []
       links = []
       node_indices = {}
@@ -369,11 +370,16 @@ class PagesController < ApplicationController
 
       # Central Cash Flow node, sized to whichever side is larger so a deficit
       # (outflows above income) still balances, as IncomeStatement::Sankey does
-      capacity = [ total_income, (total_expense + total_invested).round(2) ].max
+      refund_credit = net_totals.net_expense_categories.sum { |ct| ct.total.negative? ? -ct.total : 0 }.to_f
+      capacity = [ total_income + refund_credit, (total_expense + refund_credit + total_invested).round(2) ].max
       cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", capacity, 100.0, "var(--color-success)")
 
-      # Build netted subcategory data from raw totals
-      net_subcategories_by_parent = build_net_subcategories(expense_totals, income_totals)
+      # Gross child flows can exceed a net parent or imply fictitious income
+      # when a child has a refund. Flatten only the affected parent categories.
+      refund_parent_ids = refund_totals.category_totals.filter_map do |ct|
+        ct.category.parent_id || ct.category.id if ct.total.positive?
+      end
+      net_subcategories_by_parent = build_net_subcategories(expense_totals, income_totals).except(*refund_parent_ids)
 
       # Process net income categories (flow: subcategory -> parent -> cash_flow)
       process_net_category_nodes(
@@ -390,7 +396,7 @@ class PagesController < ApplicationController
       # Process net expense categories (flow: cash_flow -> parent -> subcategory)
       process_net_category_nodes(
         categories: net_totals.net_expense_categories,
-        total: total_expense,
+        total: net_totals.net_expense_categories.sum { |ct| [ ct.total, 0 ].max }.to_f.round(2),
         prefix: "expense",
         net_subcategories_by_parent: net_subcategories_by_parent,
         add_node: add_node,
@@ -468,6 +474,13 @@ class PagesController < ApplicationController
       categories.each do |ct|
         val = ct.total.to_f.round(2)
         next if val.zero?
+
+        if val.negative?
+          color = ct.category.color.presence || Category::UNCATEGORIZED_COLOR
+          idx = add_node.call("refund_#{ct.category.id || ct.category.name}", t("refunds.category_credit", category: ct.category.name), -val, 0, color)
+          links << { source: idx, target: cash_flow_idx, value: -val, color: color, percentage: 0 }
+          next
+        end
 
         percentage = total.zero? ? 0 : (val / total * 100).round(1)
         color = ct.category.color.presence || Category::UNCATEGORIZED_COLOR

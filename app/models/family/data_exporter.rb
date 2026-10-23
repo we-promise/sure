@@ -411,6 +411,7 @@ class Family::DataExporter
           merchant_id: transaction.merchant_id,
           tag_ids: transaction.tag_ids,
           kind: transaction.kind,
+          refund_of_id: transaction.refund_of_id,
           created_at: transaction.created_at,
           updated_at: transaction.updated_at
         }
@@ -578,6 +579,7 @@ class Family::DataExporter
           merchant_id: transaction.merchant_id,
           tag_ids: transaction.tag_ids,
           kind: transaction.kind,
+          refund_of_id: transaction.refund_of_id,
           created_at: transaction.created_at,
           updated_at: transaction.updated_at
         }

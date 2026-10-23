@@ -25,6 +25,26 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     @allocator = Allocator.new(@occurrence)
   end
 
+  test "refunds cannot settle recurring income through direct allocation" do
+    @rent.update!(amount: -2000, bill_type: "income")
+    entry = entry_for(-2000)
+    entry.transaction.reload.mark_as_refund!
+
+    assert_no_difference "RecurringAllocation.count" do
+      assert_raises(ActiveRecord::RecordInvalid) { @allocator.allocate!(entry: entry) }
+    end
+  end
+
+  test "a suggested payment reclassified as a refund cannot be confirmed" do
+    @rent.update!(amount: -2000, bill_type: "income")
+    entry = entry_for(-2000)
+    allocation = @allocator.allocate_matched!(entry: entry, state: "suggested", confidence: 0.7, signals: {})
+    entry.transaction.reload.mark_as_refund!
+
+    assert_raises(ActiveRecord::RecordInvalid) { @allocator.confirm_suggestion!(allocation) }
+    assert_equal "suggested", allocation.reload.state
+  end
+
   test "a currency mismatch reads as a sentence, not a missing translation" do
     allocation = RecurringAllocation.new(
       recurring_occurrence: @occurrence, state: :confirmed, source: :user_confirmed,

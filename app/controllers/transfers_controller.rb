@@ -112,6 +112,8 @@ class TransfersController < ApplicationController
         end
       end
     end
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_back_or_to transactions_url, alert: error.record.errors.full_messages.to_sentence, status: :see_other
   end
 
   def update_tags

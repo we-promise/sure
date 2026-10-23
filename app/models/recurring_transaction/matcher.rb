@@ -78,7 +78,7 @@ class RecurringTransaction
           .where.not(id: RecurringAllocation.where.not(entry_id: nil).select(:entry_id))
           .then { |scope| series.account_id.present? ? scope.where(account_id: series.account_id) : scope }
           .includes(:entryable)
-          .find { |entry| repair_identity?(series, entry) }
+          .find { |entry| !entry.transaction.refund? && repair_identity?(series, entry) }
 
         allocation.update!(entry: replacement) if replacement
       end
@@ -266,6 +266,7 @@ class RecurringTransaction
               .where(entryable_type: "Transaction")
               .where(excluded: false)
               .where(date: window_min..window_max)
+              .where.not(transactions: { kind: "refund" })
               .where("transactions.kind NOT IN (?) OR transactions.id IN (?)", Transaction::TRANSFER_KINDS, transfer_destinations.keys)
               .where.not(id: RecurringAllocation.where.not(entry_id: nil).where(state: "confirmed").select(:entry_id))
               .includes(:entryable)

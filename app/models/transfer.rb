@@ -15,6 +15,7 @@ class Transfer < ApplicationRecord
   validate :transfer_has_opposite_amounts
   validate :transfer_within_date_range
   validate :transfer_has_same_family
+  validate :transfer_has_no_refunds
 
   # Runs on every destroy, including the cascade when one leg's transaction
   # (or its entry) is deleted, so the surviving leg never keeps a transfer kind
@@ -224,6 +225,14 @@ class Transfer < ApplicationRecord
   end
 
   private
+    def transfer_has_no_refunds
+      transactions = [ inflow_transaction, outflow_transaction ].compact
+      if transactions.any? { |transaction| transaction.refund? || transaction.refund_of_id.present? } ||
+          Transaction.where(refund_of_id: transactions.filter_map(&:id)).exists?
+        errors.add(:base, :refund_links_present)
+      end
+    end
+
     def contribution_by_default?
       to_account.present? && Transfer.kind_for_account(to_account, from_account: from_account) == "investment_contribution"
     end

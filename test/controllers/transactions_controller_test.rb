@@ -788,6 +788,7 @@ end
       count: 1,
       expense_money: Money.new(10000, "USD"),
       income_money: Money.new(0, "USD"),
+      refund_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(0, "USD"),
       transfer_outflow_money: Money.new(0, "USD")
     )
@@ -812,6 +813,7 @@ end
       count: 1,
       expense_money: Money.new(10000, "USD"),
       income_money: Money.new(0, "USD"),
+      refund_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(0, "USD"),
       transfer_outflow_money: Money.new(0, "USD")
     )
@@ -835,6 +837,7 @@ end
       count: 2,
       expense_money: Money.new(0, "USD"),
       income_money: Money.new(0, "USD"),
+      refund_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(5000, "USD"),
       transfer_outflow_money: Money.new(3000, "USD")
     )

@@ -4,6 +4,8 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
+  before_action :reject_refund_conversion, only: %i[convert_to_trade create_trade_from_transaction mark_as_recurring]
+  before_action :reject_generic_refund_transition, only: %i[create update]
 
   helper_method :new_transaction_idempotency_key
 
@@ -375,9 +377,15 @@ class TransactionsController < ApplicationController
     activity_label = params[:investment_activity_label].presence
     # Serialize replacements on the source, including requests already in flight.
     ActiveRecord::Base.transaction do
+      # Match the lock order used by refund linking and entry validation.
+      @transaction.lock!
       # Entry#transaction is its delegated transaction record, so use an
       # explicit DB transaction rather than ActiveRecord's instance with_lock.
       @entry.lock!
+      if @transaction.refund? || @transaction.refund_linked?
+        redirect_back_or_to transactions_path, alert: t("activerecord.errors.messages.refund_links_present")
+        next
+      end
       if @entry.excluded?
         flash[:alert] = t("transactions.convert_to_trade.errors.already_converted")
         redirect_back_or_to transactions_path
@@ -526,6 +534,32 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def reject_generic_refund_transition
+      attributes = params[:entry]
+      return unless attributes.is_a?(ActionController::Parameters)
+
+      attributes = attributes[:entryable_attributes]
+      return unless attributes.is_a?(ActionController::Parameters)
+      return unless attributes.key?(:kind)
+
+      kind = attributes[:kind]
+      current = @entry.transaction if @entry&.transaction?
+      return if kind == current&.kind
+      return unless kind == "refund" || current&.refund?
+
+      # Refund transitions must use the dedicated commands, which enforce
+      # eligibility, preserve the previous kind and maintain enrichment locks.
+      destination = @entry ? transaction_path(@entry) : transactions_path
+      redirect_back_or_to destination, alert: t("activerecord.errors.messages.invalid_refund"), status: :see_other
+    end
+
+    def reject_refund_conversion
+      transaction = accessible_transactions.find(params[:id])
+      return unless transaction.refund? || (action_name != "mark_as_recurring" && transaction.refund_linked?)
+
+      redirect_back_or_to transactions_path, alert: t("activerecord.errors.messages.refund_links_present")
+    end
+
     # Scoped by user (not just family) because Current.accessible_entries is
     # user-scoped for family sharing (see Current#accessible_entries).
     #

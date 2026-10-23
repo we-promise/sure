@@ -188,7 +188,7 @@ class Financekit::Processor
       account = mapping.account
       account.with_lock do
         entry = identity.entry
-        entry&.lock!
+        lock_entry_for_update!(entry) if entry
         if entry && protected_entry?(entry)
           settle_edited_pending_entry!(entry, record)
           identity.update!(review_required: true)
@@ -225,7 +225,7 @@ class Financekit::Processor
         counts["settled"] += 1
       elsif entry
         Entry.transaction do
-          entry.lock!
+          lock_entry_for_update!(entry)
           if protected_entry?(entry) || entry.source != "financekit" || entry.account_id != mapping.account.id
             identity.review_required = true
             create_conflict!(mapping, identity, "protected_tombstone")
@@ -278,7 +278,7 @@ class Financekit::Processor
       return unless entry
 
       Entry.transaction do
-        entry.lock!
+        lock_entry_for_update!(entry)
         if protected_entry?(entry) || entry.source != "financekit" || entry.account_id != mapping.account.id
           identity.review_required = true
           create_conflict!(mapping, identity, "protected_source_update")
@@ -305,7 +305,7 @@ class Financekit::Processor
       return unless entry && record["status"] == "booked"
 
       Entry.transaction do
-        entry.lock!
+        lock_entry_for_update!(entry)
         return unless entry.user_modified? && !entry.excluded? && !entry.import_locked?
 
         transaction = entry.transaction
@@ -313,6 +313,13 @@ class Financekit::Processor
           transaction.update!(extra: transaction.extra.deep_merge("financekit" => { "pending" => false }))
         end
       end
+    end
+
+    # Match refund linking, entry edits and splitting: transaction first, entry
+    # second. Reload both before checking protection or changing provider state.
+    def lock_entry_for_update!(entry)
+      entry.transaction.lock! if entry.transaction?
+      entry.lock!
     end
 
     # Balance observations have no source transaction, so the conflict hangs off

@@ -86,6 +86,67 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
                  "a repayment on a Loan account must stay loan_payment, not the provider's funds_movement"
   end
 
+  %w[refund funds_movement].each do |locked_kind|
+    test "a detected contribution does not categorize a locked #{locked_kind}" do
+      investment_account = accounts(:investment)
+      entry = investment_account.entries.create!(
+        external_id: "plaid_locked_#{locked_kind}", source: "plaid",
+        name: "Employer contribution", date: Date.current, amount: -100, currency: "USD",
+        entryable: Transaction.new(kind: locked_kind)
+      )
+      entry.transaction.lock_attr!(:kind)
+
+      Account::ProviderImportAdapter.new(investment_account).import_transaction(
+        external_id: entry.external_id, source: "plaid",
+        name: "Employer contribution", date: Date.current, amount: -100, currency: "USD"
+      )
+
+      transaction = entry.reload.transaction
+      assert_equal locked_kind, transaction.kind
+      assert_nil transaction.category_id,
+        "the detected label must not assign an investment category to a different final kind"
+    end
+  end
+
+  test "a detected contribution categorizes a locked investment contribution" do
+    investment_account = accounts(:investment)
+    contribution_category = investment_account.family.investment_contributions_category
+    entry = investment_account.entries.create!(
+      external_id: "plaid_locked_investment_contribution", source: "plaid",
+      name: "Employer contribution", date: Date.current, amount: -100, currency: "USD",
+      entryable: Transaction.new(kind: "investment_contribution")
+    )
+    entry.transaction.lock_attr!(:kind)
+
+    Account::ProviderImportAdapter.new(investment_account).import_transaction(
+      external_id: entry.external_id, source: "plaid",
+      name: "Employer contribution", date: Date.current, amount: -100, currency: "USD"
+    )
+
+    transaction = entry.reload.transaction
+    assert_equal "investment_contribution", transaction.kind
+    assert_equal contribution_category.id, transaction.category_id
+  end
+
+  test "a detected contribution respects a locked empty category" do
+    investment_account = accounts(:investment)
+    entry = investment_account.entries.create!(
+      external_id: "plaid_locked_empty_contribution_category", source: "plaid",
+      name: "Employer contribution", date: Date.current, amount: -100, currency: "USD",
+      entryable: Transaction.new
+    )
+    entry.transaction.lock_attr!(:category_id)
+
+    Account::ProviderImportAdapter.new(investment_account).import_transaction(
+      external_id: entry.external_id, source: "plaid",
+      name: "Employer contribution", date: Date.current, amount: -100, currency: "USD"
+    )
+
+    transaction = entry.reload.transaction
+    assert_equal "investment_contribution", transaction.kind
+    assert_nil transaction.category_id, "a deliberate Uncategorized choice must survive sync"
+  end
+
   test "re-importing a matched loan payment leg keeps the kinds its transfer set" do
     loan_adapter = Account::ProviderImportAdapter.new(accounts(:loan))
 
