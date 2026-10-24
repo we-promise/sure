@@ -3,6 +3,7 @@ pt-PT:
   enable_banking_items:
     errors:
       api_error: "Ocorreu um erro de comunicação com o banco."
+      history_truncated: "Só foi possível importar parte do histórico de transações, porque o banco devolveu mais páginas do que uma sincronização consegue carregar. Faltam as transações mais antigas."
       network_unreachable: "O serviço bancário está temporariamente indisponível. Tente novamente mais tarde."
       session_invalid: "Sessão expirada. Volte a associar o seu banco."
       unexpected: "Ocorreu um erro inesperado durante a sincronização."
