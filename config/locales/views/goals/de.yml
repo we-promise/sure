@@ -54,6 +54,10 @@ de:
         checking: Girokonto
         hsa: HSA
         money_market: Geldmarkt
+        wallet: Portemonnaie
+        safe: "Tresor (Safe)"
+        piggy_bank: Sparschwein
+        envelope: Umschlag
         other: Sonstiges
         savings: Sparkonto
       suggested_no_date: Setz eine Frist, um ein Zieldatum hochzurechnen.
