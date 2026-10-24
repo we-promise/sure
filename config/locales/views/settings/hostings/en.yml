@@ -188,10 +188,12 @@ en:
         access_token_placeholder: Enter your access token here
         uri_base_label: API Base URL (Optional)
         uri_base_placeholder: "https://api.openai.com/v1 (default)"
+        uri_base_local_help: "For a model on your own machine, enter its OpenAI-compatible endpoint, for example Ollama at http://localhost:11434/v1, or http://ollama:11434/v1 when Sure and Ollama run as Docker Compose services."
         model_label: Model (Optional)
         model_placeholder: "gpt-4.1 (default)"
         model_function_calling_help: "The AI assistant reads your data through function calls, so pick a model your provider documents as supporting tools/function calling. Models without it fail chat with an opaque provider error."
         model_function_calling_link: Check the configured model
+        model_required_help: "Required when you set an API base URL: enter the model name your server uses, such as llama3.1 for Ollama."
         json_mode_label: JSON Mode
         json_mode_auto: Auto (recommended)
         json_mode_strict: Strict (best for thinking models)
