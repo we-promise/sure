@@ -60,8 +60,15 @@ fr:
       no_category: Aucune catégorie
       note_label: Note
       note_placeholder: Ajoutez tout commentaire supplémentaire ici...
-      provider_disabled_warning: Mises à jour des prix en pause — le fournisseur %{provider} est désactivé. Réactivez-le dans les paramètres ou réassociez l'holding à un autre fournisseur.
+      provider_disabled_warning: >-
+        Mises à jour des prix en pause — le fournisseur %{provider} est désactivé. Réactivez-le dans les
+        paramètres ou réassociez l'holding à un autre fournisseur.
       quantity_label: Quantité
       sell: Vendre
       settings: Paramètres
       type_label: Type
+    api_errors:
+      activity_label_must_match_type: investment_activity_label doit être %{label} lorsque type vaut %{type}
+      invalid_activity_label: Libellé d’activité d’investissement invalide
+      invalid_type: Type invalide
+      supported_types: 'type doit être l’une des valeurs suivantes : %{types}'

@@ -73,6 +73,7 @@ tr:
       title: Raporlar
       today: Bugün
       toggle_section: Bölüm görünürlüğünü değiştir
+      shortcut_hint: "%{action} (%{key})"
     invalid_date_range: Bitiş tarihi başlangıç tarihinden önce olamaz. Tarihler yer
       değiştirildi.
     investment_flows:

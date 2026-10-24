@@ -25,6 +25,15 @@ tr:
       rate_change_remove: Kaldır
       start_date: Kullandırım tarihi
       start_date_hint: Kredinin kullandırıldığı tarih. Hesabın açılış tarihini kullanmak için boş bırakın.
+      down_payment: Peşinat
+      insurance_rate: Sigorta oranı
+      insurance_rate_hint: Geri ödemeye ek olarak her ay tahsil edilen yıllık orandır. Sabit
+        teminatlı sigortada ilk bakiye, azalan teminatlı sigortada ise kalan borç üzerinden
+        hesaplanır.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Sigorta türü
+      insurance_rate_type_decreasing_life: Azalan teminatlı
+      insurance_rate_type_level_term: Sabit teminatlı
     new:
       title: Kredi detaylarını girin
     overview:
@@ -49,6 +58,15 @@ tr:
         type: Tür
         unknown: Bilinmiyor
         original_payoff_date: Orijinal Vade Sonu Tarihi
+        insurance_rate_only: Yıllık %{rate}
+        leverage: Kaldıraç
+        leverage_band_conservative: Temkinli
+        leverage_band_high: Yüksek
+        leverage_band_moderate: Orta
+        leverage_multiple: "%{ratio}x"
+        total_cost: Toplam Maliyet
+        total_cost_with_insurance: Sigorta Dahil Toplam Maliyet
+        total_insurance: Sigorta
       schedule:
         date: Tarih
         description: Orijinal bakiye, faiz oranı ve vadeye göre %{start_date} tarihinden itibaren öngörülmüştür. Ek ödemeler yansıtılmaz.
@@ -62,3 +80,14 @@ tr:
         remaining_balance: Kalan Bakiye
         total_cost: Toplam Maliyet
         total_interest: Toplam Faiz
+        forecasted_payoff_date: Öngörülen Borç Kapanış Tarihi
+        forecasted_payoff_not_converged: Mevcut taksit tutarıyla borç kapanmıyor
+        not_applicable: Uygulanamaz
+      repayment_progress:
+        instalment: "%{number}. taksit · %{date}"
+        insurance: Sigorta
+        interest: Faiz
+        of_original: "/ %{amount}"
+        principal: Anapara
+        repaid: Geri ödenen
+        total: Toplam

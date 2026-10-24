@@ -72,6 +72,7 @@ ru:
       title: Отчёты
       today: Сегодня
       toggle_section: Переключить видимость раздела
+      shortcut_hint: "%{action} (%{key})"
     invalid_date_range: Дата окончания не может быть раньше даты начала. Даты были
       поменяны местами.
     investment_flows:

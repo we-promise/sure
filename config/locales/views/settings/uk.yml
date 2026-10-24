@@ -1,115 +1,116 @@
+---
 uk:
   views:
     settings:
       payments:
-        renewal: "Ваш внесок продовжується %{date}."
-        cancellation: "Ваш внесок закінчується %{date}."
+        renewal: Ваш внесок продовжується %{date}.
+        cancellation: Ваш внесок закінчується %{date}.
   settings:
     background_jobs:
       show:
-        page_title: "Фонові завдання"
-        title: "Статус воркера"
-        subtitle: "Стан виконання Sidekiq у реальному часі: процеси воркерів, глибина черги та набори повторних/мертвих завдань."
-        redis_unreachable: "Стан Sidekiq недоступний (Redis недосяжний). Активність невідома, тому дії вимкнено."
-        operations_title: "Операції в процесі"
-        operations_subtitle: "Синхронізації, імпорти та експорти для всіх сімей, які не досягли кінцевого статусу. Операції, що простоюють понад 30 хвилин без видимого завдання, вважаються втраченими та можуть бути позначені як такі."
-        empty: "Немає операцій у процесі."
+        page_title: Фонові завдання
+        title: Статус воркера
+        subtitle: 'Стан виконання Sidekiq у реальному часі: процеси воркерів, глибина черги та набори повторних/мертвих завдань.'
+        redis_unreachable: Стан Sidekiq недоступний (Redis недосяжний). Активність невідома, тому дії вимкнено.
+        operations_title: Операції в процесі
+        operations_subtitle: Синхронізації, імпорти та експорти для всіх сімей, які не досягли кінцевого статусу. Операції, що простоюють понад 30 хвилин без видимого завдання, вважаються втраченими та можуть бути позначені як такі.
+        empty: Немає операцій у процесі.
         missing_value: "-"
         stats:
-          workers: "Воркери"
-          busy: "Зайнято"
-          enqueued: "У черзі"
-          retries: "Повтори"
-          scheduled: "Заплановано"
-          dead: "Остаточно невдалі"
+          workers: Воркери
+          busy: Зайнято
+          enqueued: У черзі
+          retries: Повтори
+          scheduled: Заплановано
+          dead: Остаточно невдалі
           queue_label: "%{name}: %{size} · %{latency}с затримка"
         table:
-          type: "Операція"
-          family: "Сім'я"
-          status: "Статус"
-          last_activity: "Остання активність"
-          liveness: "Активність"
-          action: "Дія"
+          type: Операція
+          family: Сім'я
+          status: Статус
+          last_activity: Остання активність
+          liveness: Активність
+          action: Дія
       operation:
         ago: "%{time} тому"
-        sync_label: "Синхронізація · %{type}"
-        running: "Виконується"
-        queued: "У черзі"
-        recent: "Нещодавно"
-        unknown: "Невідомо"
-        stuck: "Застрягло — ймовірно, втрачено"
-        confirm: "Позначити цю операцію як втрачену? Запис переміщується до кінцевого статусу, щоб його можна було повторити. Базові дані не змінюються."
+        sync_label: Синхронізація · %{type}
+        running: Виконується
+        queued: У черзі
+        recent: Нещодавно
+        unknown: Невідомо
+        stuck: Застрягло — ймовірно, втрачено
+        confirm: Позначити цю операцію як втрачену? Запис переміщується до кінцевого статусу, щоб його можна було повторити. Базові дані не змінюються.
         missing_value: "-"
         actions:
-          mark_stale: "Позначити як застаріле"
-          mark_failed: "Позначити як невдале"
-          release_claim: "Звільнити заявку"
+          mark_stale: Позначити як застаріле
+          mark_failed: Позначити як невдале
+          release_claim: Звільнити заявку
       cancel:
         cancelled: "%{type} позначено як втрачене."
-        not_cancellable: "Цю операцію зараз неможливо змінити — її завдання може все ще бути в черзі або виконуватися. Спробуйте ще раз, коли вона простоюватиме 30 хвилин."
-        cancelled_error: "Позначено як невдале адміністратором — фонове завдання, ймовірно, було втрачено."
+        not_cancellable: Цю операцію зараз неможливо змінити — її завдання може все ще бути в черзі або виконуватися. Спробуйте ще раз, коли вона простоюватиме 30 хвилин.
+        cancelled_error: Позначено як невдале адміністратором — фонове завдання, ймовірно, було втрачено.
     debugs:
       show:
-        page_title: "Відладка"
-        title: "Журнал подій відладки"
-        subtitle: "Значущі операційні події для супер-адміністраторів. Найновіші спочатку."
-        empty: "Подій відладки не знайдено."
+        page_title: Відладка
+        title: Журнал подій відладки
+        subtitle: Значущі операційні події для супер-адміністраторів. Найновіші спочатку.
+        empty: Подій відладки не знайдено.
         missing_value: "-"
         filters:
-          all: "Усі"
-          category: "Категорія"
-          level: "Рівень"
-          source: "Джерело"
-          provider: "Постачальник"
-          start_date: "З"
-          end_date: "До"
-          family_id: "ID сім'ї"
-          account_id: "ID рахунку"
-          user_id: "ID користувача"
-          account_provider_id: "ID постачальника рахунку"
-          submit: "Фільтрувати"
-          reset: "Скинути"
+          all: Усі
+          category: Категорія
+          level: Рівень
+          source: Джерело
+          provider: Постачальник
+          start_date: З
+          end_date: До
+          family_id: ID сім'ї
+          account_id: ID рахунку
+          user_id: ID користувача
+          account_provider_id: ID постачальника рахунку
+          submit: Фільтрувати
+          reset: Скинути
         table:
-          time: "Час"
-          level: "Рівень"
-          category: "Категорія"
-          source: "Джерело"
-          message: "Повідомлення"
-          context: "Контекст"
-          metadata: "Метадані"
-          view_metadata: "Переглянути"
+          time: Час
+          level: Рівень
+          category: Категорія
+          source: Джерело
+          message: Повідомлення
+          context: Контекст
+          metadata: Метадані
+          view_metadata: Переглянути
         context:
-          provider: "постачальник=%{value}"
-          family: "сім'я=%{value}"
-          account: "рахунок=%{value}"
-          user: "користувач=%{value}"
-          account_provider: "постачальник_рахунку=%{value}"
+          provider: постачальник=%{value}
+          family: сім'я=%{value}
+          account: рахунок=%{value}
+          user: користувач=%{value}
+          account_provider: постачальник_рахунку=%{value}
     llm_usages:
       show:
-        page_title: "Використання та вартість LLM"
-        subtitle: "Відстежуйте використання ШІ та орієнтовну вартість"
-        start_date: "Дата початку"
-        end_date: "Дата закінчення"
-        filter: "Фільтрувати"
-        total_requests: "Усього запитів"
-        total_tokens: "Усього токенів"
-        prompt: "промпт"
-        completion: "завершення"
-        total_cost: "Загальна вартість"
-        avg_cost_per_request: "Середня вартість/запит"
-        based_on_requests: "На основі %{with_cost} з %{total} запитів з даними про вартість"
-        cost_by_operation: "Вартість за операцією"
-        cost_by_model: "Вартість за моделлю"
-        recent_usage: "Нещодавнє використання"
-        col_date: "Дата"
-        col_operation: "Операція"
-        col_model: "Модель"
-        col_tokens: "Токени"
-        col_cost: "Вартість"
-        failed: "Не вдалося"
-        no_usage_data: "Даних про використання за вибраний період не знайдено"
-        cost_estimates_title: "Про оцінку вартості"
-        cost_estimates_description: "Витрати оцінюються на основі опублікованих цін постачальників, востаннє перевірених %{date}. Фактичні витрати можуть відрізнятися. Ціни вказані за 1 мільйон токенів і залежать від моделі. Користувацькі або самостійно розміщені моделі показуватимуть \"Н/Д\" і не включатимуться до загальної вартості."
+        page_title: Використання та вартість LLM
+        subtitle: Відстежуйте використання ШІ та орієнтовну вартість
+        start_date: Дата початку
+        end_date: Дата закінчення
+        filter: Фільтрувати
+        total_requests: Усього запитів
+        total_tokens: Усього токенів
+        prompt: промпт
+        completion: завершення
+        total_cost: Загальна вартість
+        avg_cost_per_request: Середня вартість/запит
+        based_on_requests: На основі %{with_cost} з %{total} запитів з даними про вартість
+        cost_by_operation: Вартість за операцією
+        cost_by_model: Вартість за моделлю
+        recent_usage: Нещодавнє використання
+        col_date: Дата
+        col_operation: Операція
+        col_model: Модель
+        col_tokens: Токени
+        col_cost: Вартість
+        failed: Не вдалося
+        no_usage_data: Даних про використання за вибраний період не знайдено
+        cost_estimates_title: Про оцінку вартості
+        cost_estimates_description: Витрати оцінюються на основі опублікованих цін постачальників, востаннє перевірених %{date}. Фактичні витрати можуть відрізнятися. Ціни вказані за 1 мільйон токенів і залежать від моделі. Користувацькі або самостійно розміщені моделі показуватимуть "Н/Д" і не включатимуться до загальної вартості.
     ai_prompts:
       show:
         page_title: Промпти ШІ
@@ -152,19 +153,19 @@ uk:
         page_title: Платежі
         subscription_subtitle: Оновіть дані своєї кредитної картки
         subscription_title: Керування внесками
-        currently_on_plan: "Наразі на плані"
-        trialing: "Наразі використовується відкрита демо-версія %{product_name}"
+        currently_on_plan: Наразі на плані
+        trialing: Наразі використовується відкрита демо-версія %{product_name}
         trial_days_left:
-          one: "Дані будуть видалені через %{count} день"
-          other: "Дані будуть видалені через %{count} днів"
+          one: Дані будуть видалені через %{count} день
+          other: Дані будуть видалені через %{count} днів
           few: Дані будуть видалені через %{count} дні
           many: Дані будуть видалені через %{count} днів
-        not_contributing_prefix: "Ви наразі"
-        not_contributing_emphasis: "не робите внесок"
-        contributions_note: "Внески до %{product_name} будуть відображатися тут."
-        manage: "Керувати"
-        choose_level: "Вибрати рівень"
-        payment_via_stripe: "Оплата через Stripe"
+        not_contributing_prefix: Ви наразі
+        not_contributing_emphasis: не робите внесок
+        contributions_note: Внески до %{product_name} будуть відображатися тут.
+        manage: Керувати
+        choose_level: Вибрати рівень
+        payment_via_stripe: Оплата через Stripe
     appearances:
       show:
         page_title: Зовнішній вигляд
@@ -204,7 +205,7 @@ uk:
         month_start_day_hint: Встановіть, коли починається ваш бюджетний місяць (наприклад, день зарплати)
         month_start_day_warning: Ваші бюджети та розрахунки MTD використовуватимуть цей користувацький день початку замість 1-го числа кожного місяця.
         translations_notice: Зверніть увагу, ми все ще працюємо над перекладами для різних мов.
-        currencies_title: "Валюти %{moniker}"
+        currencies_title: Валюти %{moniker}
         currencies_subtitle: Виберіть, які валюти відображатимуться в полях грошей для вашого %{moniker}
         base_currency_label: Базова валюта
         base_currency_badge: Базова валюта
@@ -220,11 +221,11 @@ uk:
         selected_currencies_count:
           one: "%{count} вибрано"
           other: "%{count} вибрано"
-          few: '%{count} вибрано'
-          many: '%{count} вибрано'
+          few: "%{count} вибрано"
+          many: "%{count} вибрано"
         save_currencies: Зберегти валюти
-        sharing_title: "Спільний доступ до %{moniker}"
-        sharing_subtitle: "Керуйте тим, як рахунки надаються у вашому %{moniker}"
+        sharing_title: Спільний доступ до %{moniker}
+        sharing_subtitle: Керуйте тим, як рахунки надаються у вашому %{moniker}
         sharing_default_label: Спільний доступ за замовчуванням для нових рахунків
         sharing_shared: Поділитися з усіма учасниками
         sharing_private: Зберігати приватним за замовчуванням
@@ -254,8 +255,7 @@ uk:
         not_authorized: Ви не маєте права видаляти учасників.
       show:
         confirm_delete:
-          body: Ви впевнені, що хочете назавжди видалити свій обліковий запис? Ця дія
-            незворотна.
+          body: Ви впевнені, що хочете назавжди видалити свій обліковий запис? Ця дія незворотна.
           title: Видалити обліковий запис?
         confirm_reset:
           body: Ви впевнені, що хочете скинути свій обліковий запис? Це видалить усі ваші рахунки, категорії, продавців, теги та інші дані. Цю дію неможливо скасувати.
@@ -271,8 +271,7 @@ uk:
           title: Видалити учасника
         danger_zone_title: Небезпечна зона
         delete_account: Видалити обліковий запис
-        delete_account_warning: Видалення вашого облікового запису назавжди видалить усі
-          ваші дані та не може бути скасовано.
+        delete_account_warning: Видалення вашого облікового запису назавжди видалить усі ваші дані та не може бути скасовано.
         reset_account: Скинути обліковий запис
         reset_account_warning: Скидання вашого облікового запису видалить усі ваші рахунки, категорії, продавців, теги та інші дані, але збереже ваш обліковий запис користувача.
         reset_account_with_sample_data: Скинути та попередньо завантажити
@@ -303,12 +302,12 @@ uk:
         page_title: Безпека
         encryption_warning:
           title: Відсутні ключі шифрування
-          intro: "Конфіденційні дані (ключі API, токени постачальників, секрети MFA та PII) зберігаються в незашифрованому вигляді. Щоб увімкнути шифрування, встановіть наступні ключі у своїх змінних середовища або облікових даних Rails:"
+          intro: 'Конфіденційні дані (ключі API, токени постачальників, секрети MFA та PII) зберігаються в незашифрованому вигляді. Щоб увімкнути шифрування, встановіть наступні ключі у своїх змінних середовища або облікових даних Rails:'
           keys:
-            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
-            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
-            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
-          generate: "Згенеруйте набір за допомогою: bin/rails db:encryption:init"
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: 'Згенеруйте набір за допомогою: bin/rails db:encryption:init'
         mfa_title: Двофакторна автентифікація
         mfa_description: Додайте додатковий рівень безпеки до свого облікового запису, вимагаючи код з вашого додатка-автентифікатора під час входу
         enable_mfa: Увімкнути 2FA
@@ -334,14 +333,14 @@ uk:
         copy_url: Копіювати
         copied: Скопійовано!
         how_to_connect_title: Як підключити Claude
-        step_1: "Відкрийте Claude.ai та перейдіть до Налаштування → Інтеграції."
+        step_1: Відкрийте Claude.ai та перейдіть до Налаштування → Інтеграції.
         step_2: Натисніть "Додати інтеграцію" та вставте URL-адресу сервера MCP вище.
         step_3: Натисніть Підключити — вас буде перенаправлено до Sure для входу та авторизації доступу.
         step_4: Після авторизації Claude зможе читати ваші рахунки, транзакції та дані про баланс.
         connected_title: Підключені клієнти
         connected_subtitle: Ці програми наразі мають доступ до ваших даних Sure. Скасуйте доступ для тих, якими ви більше не користуєтеся.
         unknown_client: Невідомий клієнт
-        connected_ago: "Підключено %{time} тому"
+        connected_ago: Підключено %{time} тому
         revoke: Відкликати
         revoke_confirm: Відкликати доступ для цього клієнта?
       revoke:
@@ -388,7 +387,7 @@ uk:
     user_avatar_field:
       accepted_formats: JPG або PNG. Макс. 5 МБ.
       choose: Завантажити фото
-      choose_label: (необов'язково)
+      choose_label: "(необов'язково)"
       change: Змінити фото
     providers:
       update:
@@ -402,14 +401,14 @@ uk:
         ok: Підключено
         warn: Потрібна дія
         err: Помилка
-        "off": Не налаштовано
+        'off': Не налаштовано
       maturity:
         beta: Бета
         alpha: Альфа
-      drawer_trust_statement: "Доступ лише для читання. Sure ніколи не може переміщувати гроші, а ваші облікові дані зберігаються в зашифрованому вигляді."
+      drawer_trust_statement: Доступ лише для читання. Sure ніколи не може переміщувати гроші, а ваші облікові дані зберігаються в зашифрованому вигляді.
       setup_steps:
         eyebrow: Налаштування
-        need_help: "Потрібна допомога?"
+        need_help: Потрібна допомога?
       connect: Підключити
       groups:
         your_connections: Ваші з'єднання
@@ -463,6 +462,8 @@ uk:
         onchain_wallet: Відстежуйте некастодіальні гаманці Bitcoin, EVM і Solana за їхніми публічними адресами.
         trading212: Синхронізуйте свій інвестиційний портфель Trading 212 за допомогою ключа API лише для читання.
         trade_republic: Синхронізуйте свій інвестиційний рахунок Trade Republic через захищений вхід у вебверсію лише для читання.
+        financekit: Синхронізуйте деякі рахунки FinanceKit через застосунок Sure для iOS.
+        up: Синхронізуйте рахунки австралійського банку Up за допомогою особистого токена доступу.
       search_filters:
         aria_label: Пошук постачальників
         placeholder: Пошук постачальників
@@ -475,11 +476,11 @@ uk:
       clear_filter: Очистити фільтри
       encryption_error:
         title: Відсутні ключі шифрування
-        message: "Синхронізація з банком потребує налаштування шифрування Active Record. Встановіть primary_key, deterministic_key та key_derivation_salt у своїх облікових даних Rails або змінних середовища."
+        message: Синхронізація з банком потребує налаштування шифрування Active Record. Встановіть primary_key, deterministic_key та key_derivation_salt у своїх облікових даних Rails або змінних середовища.
       provider_form:
-        save_and_connect: "Зберегти та підключити"
+        save_and_connect: Зберегти та підключити
       coinbase_panel:
-        setup_instructions: "Щоб підключити Coinbase:"
+        setup_instructions: 'Щоб підключити Coinbase:'
         step1_html: Перейдіть до <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Налаштування API Coinbase</a>
         step2: Створіть новий ключ API з правами лише для читання (перегляд рахунків, перегляд транзакцій)
         step3: Скопіюйте свій ключ API та секрет API та вставте їх нижче
@@ -493,15 +494,15 @@ uk:
         disconnect: Відключити
         disconnect_confirm: Ви впевнені, що хочете відключити це з'єднання Coinbase? Ваші синхронізовані рахунки стануть ручними.
       binance_panel:
-        setup_instructions: "Щоб підключити Binance, створіть ключ API лише для читання:"
-        step1_html: 'Перейдіть до <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Керування API Binance</a>'
-        step2: "Створіть новий ключ API лише з дозволом на читання"
-        step3: "Вставте свій ключ API та секрет нижче"
-        no_withdraw_title: "Лише ключ для читання"
-        no_withdraw_body: "Не вмикайте дозволи на зняття коштів під час створення ключа API Binance. Sure потрібен лише доступ для читання."
-        ip_hint_title: "Потрібен білий список IP"
-        ip_hint_body: "Додайте вихідний IP-адресу сервера програми до білого списку ключів API Binance:"
-        ip_hint_contact_admin: "Зверніться до свого адміністратора, щоб отримати вихідну IP-адресу сервера програми."
+        setup_instructions: 'Щоб підключити Binance, створіть ключ API лише для читання:'
+        step1_html: Перейдіть до <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Керування API Binance</a>
+        step2: Створіть новий ключ API лише з дозволом на читання
+        step3: Вставте свій ключ API та секрет нижче
+        no_withdraw_title: Лише ключ для читання
+        no_withdraw_body: Не вмикайте дозволи на зняття коштів під час створення ключа API Binance. Sure потрібен лише доступ для читання.
+        ip_hint_title: Потрібен білий список IP
+        ip_hint_body: 'Додайте вихідний IP-адресу сервера програми до білого списку ключів API Binance:'
+        ip_hint_contact_admin: Зверніться до свого адміністратора, щоб отримати вихідну IP-адресу сервера програми.
         api_key_label: Ключ API
         api_key_placeholder: Вставте свій ключ API Binance
         api_secret_label: Секрет API
@@ -509,17 +510,17 @@ uk:
         connect_button: Підключити Binance
         syncing: Синхронізація...
         sync: Синхронізувати
-        historical_import: "Налаштування історичного імпорту"
-        sync_start_date_label: "Імпортувати дані з"
-        sync_start_date_help: "Виберіть, наскільки далеко назад отримувати історичні угоди."
+        historical_import: Налаштування історичного імпорту
+        sync_start_date_label: Імпортувати дані з
+        sync_start_date_help: Виберіть, наскільки далеко назад отримувати історичні угоди.
         disconnect: Відключити
-        disconnect_confirm: "Ви впевнені, що хочете відключити Binance?"
+        disconnect_confirm: Ви впевнені, що хочете відключити Binance?
       kraken_panel:
-        step1_html: 'Перейдіть до <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Налаштування API Kraken</a>'
-        step2: "Створіть ключ API лише з Query Funds та Query Closed Orders & Trades."
-        step3: "Вставте ключ API та приватний ключ нижче."
-        read_only_title: "Лише синхронізація біржі для читання"
-        read_only_body: "Не надавайте дозволи на торгівлю, скасування, зняття коштів, експорт, книгу, Earn, стейкінг або перекази. Sure імпортує лише баланси, активи та виконання спотових угод."
+        step1_html: Перейдіть до <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Налаштування API Kraken</a>
+        step2: Створіть ключ API лише з Query Funds та Query Closed Orders & Trades.
+        step3: Вставте ключ API та приватний ключ нижче.
+        read_only_title: Лише синхронізація біржі для читання
+        read_only_body: Не надавайте дозволи на торгівлю, скасування, зняття коштів, експорт, книгу, Earn, стейкінг або перекази. Sure імпортує лише баланси, активи та виконання спотових угод.
         default_connection_name: Kraken
         add_connection: Додати з'єднання Kraken
         update_connection: Оновити з'єднання
@@ -535,82 +536,82 @@ uk:
         syncing: Синхронізація...
         sync: Синхронізувати
         disconnect: Відключити
-        disconnect_confirm: "Ви впевнені, що хочете відключити %{name}?"
+        disconnect_confirm: Ви впевнені, що хочете відключити %{name}?
       enable_banking_panel:
-        callback_url_instruction: "Для URL-адреси зворотного виклику використовуйте %{callback_url}."
+        callback_url_instruction: Для URL-адреси зворотного виклику використовуйте %{callback_url}.
         connection_error: Помилка з'єднання
-        step_1_html: "Перейдіть до %{link} і отримайте свої облікові дані розробника."
-        step_2: "Виберіть свою країну та вставте ідентифікатор програми + сертифікат клієнта нижче."
-        step_3: "Збережіть, а потім використовуйте Додати з'єднання, щоб пов'язати свій банк."
-        config_locked_title: "Конфігурацію заблоковано"
-        config_locked_message: "Відключіть усі пов'язані банки перед зміною цих облікових даних."
-        application_id_label: "Ідентифікатор програми"
-        application_id_placeholder_new: "Введіть ідентифікатор програми"
-        application_id_placeholder_update: "Введіть новий ID для оновлення"
-        client_certificate_label: "Сертифікат клієнта (з приватним ключем)"
-        save_and_connect: "Зберегти та підключити"
-        update_connection: "Оновити з'єднання"
-        connected_bank: "Підключений банк"
-        session_expires: "Сеанс закінчується: %{date}"
-        unknown: "Невідомо"
-        connection: "З'єднання"
-        session_expired_reconnect: "Сеанс закінчився - перепідключіться"
-        configured: "Налаштовано"
-        ready_to_link: "Готово до пов'язування рахунків"
-        sync: "Синхронізувати"
-        reconnect: "Перепідключити"
-        connect_bank: "Підключити банк"
-        remove: "Видалити"
-        remove_confirm: "Ви впевнені, що хочете видалити це з'єднання?"
-        add_connection: "Додати з'єднання"
-        syncing: "Синхронізація"
-        select_country: "Вибрати країну..."
-        country_label: "Країна"
+        step_1_html: Перейдіть до %{link} і отримайте свої облікові дані розробника.
+        step_2: Виберіть свою країну та вставте ідентифікатор програми + сертифікат клієнта нижче.
+        step_3: Збережіть, а потім використовуйте Додати з'єднання, щоб пов'язати свій банк.
+        config_locked_title: Конфігурацію заблоковано
+        config_locked_message: Відключіть усі пов'язані банки перед зміною цих облікових даних.
+        application_id_label: Ідентифікатор програми
+        application_id_placeholder_new: Введіть ідентифікатор програми
+        application_id_placeholder_update: Введіть новий ID для оновлення
+        client_certificate_label: Сертифікат клієнта (з приватним ключем)
+        save_and_connect: Зберегти та підключити
+        update_connection: Оновити з'єднання
+        connected_bank: Підключений банк
+        session_expires: 'Сеанс закінчується: %{date}'
+        unknown: Невідомо
+        connection: З'єднання
+        session_expired_reconnect: Сеанс закінчився - перепідключіться
+        configured: Налаштовано
+        ready_to_link: Готово до пов'язування рахунків
+        sync: Синхронізувати
+        reconnect: Перепідключити
+        connect_bank: Підключити банк
+        remove: Видалити
+        remove_confirm: Ви впевнені, що хочете видалити це з'єднання?
+        add_connection: Додати з'єднання
+        syncing: Синхронізація
+        select_country: Вибрати країну...
+        country_label: Країна
       lunchflow_panel:
-        step_1_html: "Перейдіть до %{link} і створіть ключ API."
-        step_2: "Вставте свій ключ нижче та підключіться."
-        step_3: "Потім перейдіть до розділу «Рахунки», щоб пов'язати свої синхронізовані рахунки."
-        api_key_label: "Ключ API"
-        api_key_placeholder_new: "Вставте ключ API тут"
-        api_key_placeholder_update: "Введіть новий ключ API для оновлення"
-        base_url_label: "Базова URL-адреса (необов'язково)"
-        base_url_placeholder: "https://lunchflow.app/api/v1 (за замовчуванням)"
-        save_and_connect: "Зберегти та підключити"
-        update_connection: "Оновити з'єднання"
+        step_1_html: Перейдіть до %{link} і створіть ключ API.
+        step_2: Вставте свій ключ нижче та підключіться.
+        step_3: Потім перейдіть до розділу «Рахунки», щоб пов'язати свої синхронізовані рахунки.
+        api_key_label: Ключ API
+        api_key_placeholder_new: Вставте ключ API тут
+        api_key_placeholder_update: Введіть новий ключ API для оновлення
+        base_url_label: Базова URL-адреса (необов'язково)
+        base_url_placeholder: https://lunchflow.app/api/v1 (за замовчуванням)
+        save_and_connect: Зберегти та підключити
+        update_connection: Оновити з'єднання
       akahu_panel:
-        step_1_html: "Перейдіть до %{link} і створіть особисту програму."
-        step_2: "Скопіюйте токен своєї програми та токен користувача."
-        step_3: "Вставте токени нижче, збережіть, а потім пов'яжіть свої синхронізовані рахунки."
+        step_1_html: Перейдіть до %{link} і створіть особисту програму.
+        step_2: Скопіюйте токен своєї програми та токен користувача.
+        step_3: Вставте токени нижче, збережіть, а потім пов'яжіть свої синхронізовані рахунки.
       up_panel:
-        step_1_html: "Перейдіть до %{link} і згенеруйте особистий токен доступу."
-        step_2: "Скопіюйте свій особистий токен доступу."
-        step_3: "Вставте токен нижче, збережіть, а потім пов'яжіть свої синхронізовані рахунки."
+        step_1_html: Перейдіть до %{link} і згенеруйте особистий токен доступу.
+        step_2: Скопіюйте свій особистий токен доступу.
+        step_3: Вставте токен нижче, збережіть, а потім пов'яжіть свої синхронізовані рахунки.
       monobank_panel:
-        step_1_html: "Перейдіть до %{link}, увійдіть через застосунок Monobank і згенеруйте персональний токен."
-        step_2: "Скопіюйте токен — він показується лише один раз."
-        step_3: "Вставте токен нижче, збережіть, а потім підключіть картки та банки, які потрібно відслідковувати."
+        step_1_html: Перейдіть до %{link}, увійдіть через застосунок Monobank і згенеруйте персональний токен.
+        step_2: Скопіюйте токен — він показується лише один раз.
+        step_3: Вставте токен нижче, збережіть, а потім підключіть картки та банки, які потрібно відслідковувати.
       simplefin_panel:
-        step_1_html: "Перейдіть до %{link} для отримання одноразового токена налаштування."
-        step_2: "Вставте токен нижче та підключіться."
-        step_3: "Потім перейдіть до розділу «Рахунки», щоб пов'язати свої синхронізовані рахунки."
-        setup_token_label: "Токен налаштування"
-        setup_token_placeholder: "Вставте токен налаштування SimpleFIN"
-        save_and_connect: "Зберегти та підключити"
+        step_1_html: Перейдіть до %{link} для отримання одноразового токена налаштування.
+        step_2: Вставте токен нижче та підключіться.
+        step_3: Потім перейдіть до розділу «Рахунки», щоб пов'язати свої синхронізовані рахунки.
+        setup_token_label: Токен налаштування
+        setup_token_placeholder: Вставте токен налаштування SimpleFIN
+        save_and_connect: Зберегти та підключити
       plaid_panel:
-        step_1_html: "Відкрийте %{link} і скопіюйте свій ідентифікатор клієнта та секретний ключ."
-        step_2: "Виберіть середовище. Використовуйте пісочницю для тестування та виробництво для реальних рахунків."
-        step_3: "Вставте свої облікові дані нижче та підключіться."
+        step_1_html: Відкрийте %{link} і скопіюйте свій ідентифікатор клієнта та секретний ключ.
+        step_2: Виберіть середовище. Використовуйте пісочницю для тестування та виробництво для реальних рахунків.
+        step_3: Вставте свої облікові дані нижче та підключіться.
       plaid_eu_panel:
-        step_1_html: "Відкрийте %{link} і скопіюйте свій ідентифікатор клієнта ЄС та секретний ключ."
+        step_1_html: Відкрийте %{link} і скопіюйте свій ідентифікатор клієнта ЄС та секретний ключ.
       not_found: Постачальника не знайдено.
       sync_provider_no_items: Немає доступних з'єднань для синхронізації.
       ibkr_panel:
         steps:
-          step_1: 'У вашому клієнтському порталі IBKR перейдіть до "Продуктивність та звіти" > "Flex Queries".'
-          step_2: 'Натисніть значок "+" у розділі "Activity Flex Query", щоб створити новий запит.'
-          step_3: 'Назвіть свій запит (наприклад, "Sure Sync"), потім перегляньте деталі Flex Query нижче та ввімкніть перелічені розділи, поля та параметри конфігурації.'
-          step_4: 'Збережіть запит, запишіть свій "ID запиту", потім використовуйте значок шестірні в розділі "Конфігурація веб-служби Flex", щоб згенерувати токен доступу.'
-          step_5: "Вставте свій ID запиту та токен нижче, збережіть конфігурацію, а потім перейдіть до розділу «Рахунки», щоб пов'язати виявлені рахунки IBKR."
+          step_1: У вашому клієнтському порталі IBKR перейдіть до "Продуктивність та звіти" > "Flex Queries".
+          step_2: Натисніть значок "+" у розділі "Activity Flex Query", щоб створити новий запит.
+          step_3: Назвіть свій запит (наприклад, "Sure Sync"), потім перегляньте деталі Flex Query нижче та ввімкніть перелічені розділи, поля та параметри конфігурації.
+          step_4: Збережіть запит, запишіть свій "ID запиту", потім використовуйте значок шестірні в розділі "Конфігурація веб-служби Flex", щоб згенерувати токен доступу.
+          step_5: Вставте свій ID запиту та токен нижче, збережіть конфігурацію, а потім перейдіть до розділу «Рахунки», щоб пов'язати виявлені рахунки IBKR.
         flex_query_details:
           eyebrow: Flex Query
           title: Розділи, поля та конфігурація
@@ -618,33 +619,33 @@ uk:
           sections_heading: Увімкніть ці розділи та поля
           configuration_heading: Встановіть ці параметри запиту
         sections:
-          account_information: "Інформація про рахунок: ID рахунку, валюта"
-          cash_report: "Звіт про готівку:"
-          cash_report_options: "Опції: Немає"
-          cash_report_fields: "Поля: Валюта, Кінцева готівка"
-          cash_transactions: "Готівкові транзакції:"
-          cash_transactions_options: "Опції: Дивіденди, Депозити та зняття, Детально"
-          cash_transactions_fields: "Поля: Сума, Conid, Валюта, Курс FX до базової, Дата звіту, ID транзакції, Тип"
-          change_in_position_value_summary: "Зведення про зміну вартості позиції: Валюта, Вартість на кінець періоду"
-          net_asset_value: "Чиста вартість активів (NAV) у базовій валюті:"
-          net_asset_value_options: "Опції: Немає"
-          net_asset_value_fields: "Поля: Валюта, Дата звіту, Усього"
-          open_positions: "Відкриті позиції:"
-          open_positions_options: "Опції: Зведення"
-          open_positions_fields: "Поля: Клас активу, Conid, Ціна бази витрат, Валюта, Курс FX до базової, Ринкова ціна, Кількість, Дата звіту, ID цінного паперу, Тип ID цінного паперу, Сторона, Символ"
-          trades: "Угоди:"
-          trades_options: "Опції: Виконання"
-          trades_fields: "Поля: Клас активу, Купівля/Продаж, Conid, Валюта, Курс FX до базової, Комісія IB, Валюта комісії IB, Кількість, Символ, Дата угоди, ID угоди, Ціна угоди, ID транзакції"
+          account_information: 'Інформація про рахунок: ID рахунку, валюта'
+          cash_report: 'Звіт про готівку:'
+          cash_report_options: 'Опції: Немає'
+          cash_report_fields: 'Поля: Валюта, Кінцева готівка'
+          cash_transactions: 'Готівкові транзакції:'
+          cash_transactions_options: 'Опції: Дивіденди, Депозити та зняття, Детально'
+          cash_transactions_fields: 'Поля: Сума, Conid, Валюта, Курс FX до базової, Дата звіту, ID транзакції, Тип'
+          change_in_position_value_summary: 'Зведення про зміну вартості позиції: Валюта, Вартість на кінець періоду'
+          net_asset_value: 'Чиста вартість активів (NAV) у базовій валюті:'
+          net_asset_value_options: 'Опції: Немає'
+          net_asset_value_fields: 'Поля: Валюта, Дата звіту, Усього'
+          open_positions: 'Відкриті позиції:'
+          open_positions_options: 'Опції: Зведення'
+          open_positions_fields: 'Поля: Клас активу, Conid, Ціна бази витрат, Валюта, Курс FX до базової, Ринкова ціна, Кількість, Дата звіту, ID цінного паперу, Тип ID цінного паперу, Сторона, Символ'
+          trades: 'Угоди:'
+          trades_options: 'Опції: Виконання'
+          trades_fields: 'Поля: Клас активу, Купівля/Продаж, Conid, Валюта, Курс FX до базової, Комісія IB, Валюта комісії IB, Кількість, Символ, Дата угоди, ID угоди, Ціна угоди, ID транзакції'
         configuration:
-          models: "Моделі: Необов'язково"
-          format: "Формат: XML"
-          period: "Період: Останні 365 календарних днів"
-          date_format: "Формат дати: yyyy-MM-dd"
-          time_format: "Формат часу: HH:mm:ss"
-          date_time_separator: "Роздільник дати/часу: ; (крапка з комою)"
-          profit_and_loss: "Прибуток і збиток: За замовчуванням"
+          models: 'Моделі: Необов''язково'
+          format: 'Формат: XML'
+          period: 'Період: Останні 365 календарних днів'
+          date_format: 'Формат дати: yyyy-MM-dd'
+          time_format: 'Формат часу: HH:mm:ss'
+          date_time_separator: 'Роздільник дати/часу: ; (крапка з комою)'
+          profit_and_loss: 'Прибуток і збиток: За замовчуванням'
           all_other_options: 'Усі інші параметри конфігурації: "Ні"'
-        report_window_note: "Звіти IBKR Flex обмежені вікном запиту, яке ви налаштували в IBKR. Sure імпортує повні поточні активи плюс до останніх 365 днів активності з цього звіту."
+        report_window_note: Звіти IBKR Flex обмежені вікном запиту, яке ви налаштували в IBKR. Sure імпортує повні поточні активи плюс до останніх 365 днів активності з цього звіту.
         sync: Синхронізувати
         disconnect_confirm: Відключити Interactive Brokers?
         query_id_label: ID запиту
@@ -713,7 +714,7 @@ uk:
           step_2: Коли з'явиться запит, введіть код із застосунку-автентифікатора.
           step_3: Коли з'явиться запит, підтвердьте вхід у застосунку Trade Republic.
         phone_number_label: Номер телефону
-        phone_number_placeholder_new: +49 170 1234567
+        phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Залиште порожнім, щоб зберегти поточний номер телефону
         pin_label: PIN-код або пароль
         pin_placeholder_new: PIN-код або пароль вашого застосунку Trade Republic
@@ -744,14 +745,14 @@ uk:
         qr_instruction: Відскануйте QR-код у застосунку Trade Republic і підтвердьте вхід.
         qr_success: Вхід підтверджено. Sure оновлює сторінку постачальника.
         qr_error: Не вдалося розпочати вхід за QR-кодом. Спробуйте ще раз.
-        add_account: "Додати ще одне підключення"
+        add_account: Додати ще одне підключення
         save_configuration: Зберегти й увійти
         update_configuration: Оновити конфігурацію
         sync: Синхронізувати
-        syncing: "Синхронізація..."
+        syncing: Синхронізація...
         disconnect: Відключити Trade Republic
         disconnect_confirm: Відключити Trade Republic? Ваші синхронізовані рахунки стануть ручними.
-        disconnect_confirm_with_identifier: "Відключити підключення Trade Republic, що закінчується на %{last4}? Ваші синхронізовані рахунки стануть ручними."
+        disconnect_confirm_with_identifier: Відключити підключення Trade Republic, що закінчується на %{last4}? Ваші синхронізовані рахунки стануть ручними.
         identifier_phone: Телефон
         identifier_account: Рахунок
         status_configured_prefix: Підключено. Перейдіть на вкладку
@@ -762,7 +763,7 @@ uk:
           few: Знайдено %{count} рахунки Trade Republic.
           many: Знайдено %{count} рахунків Trade Republic.
           other: Знайдено %{count} рахунку Trade Republic.
-        status_configured_suffix: — тут можна керувати знайденими рахунками.
+        status_configured_suffix: "— тут можна керувати знайденими рахунками."
         not_configured: Не налаштовано.
       trading212_panel:
         steps:
@@ -789,8 +790,25 @@ uk:
         add_account: Додати ще один рахунок
         status_configured_prefix: Налаштовано. Перейдіть на вкладку
         accounts_tab: Рахунки
-        status_configured_suffix: — тут можна керувати знайденими рахунками.
+        status_configured_suffix: "— тут можна керувати знайденими рахунками."
         not_configured: Не налаштовано.
+      financekit:
+        accounts: Пов’язані рахунки
+        app_store: App Store
+        coming_soon: Незабаром!
+        description: Керуйте підключеннями Apple Wallet у застосунку Sure для iOS. Дані Wallet синхронізуються, поки застосунок відкритий; автоматична фонова синхронізація поки недоступна.
+        last_accepted_at: Востаннє прийнято Sure
+        last_imported_at: Востаннє імпортовано до вашої сім’ї
+        linked_accounts:
+          one: "%{count} пов’язаний рахунок"
+          other: "%{count} пов’язаного рахунку"
+          few: "%{count} пов’язані рахунки"
+          many: "%{count} пов’язаних рахунків"
+        not_yet: Ще ні
+        status:
+          active: Синхронізація активна
+          repair_required: Потрібне відновлення — відкрийте застосунок Sure для iOS
+        summary: Синхронізація Wallet
     budget_shares:
       update:
         success: Налаштування спільного доступу до бюджету оновлено

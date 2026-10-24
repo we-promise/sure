@@ -182,10 +182,13 @@ fr:
       workplace_pension_uk:
         long: Pension d'entreprise
         short: Pension
+      cash_management:
+        long: Compte de gestion de trésorerie
+        short: CMA
     value_tooltip:
       cash: Liquidités
       holdings: Titres
       total: Valeur totale du portefeuille
-      total_value_tooltip: Le solde total du portefeuille correspond à la somme des
-        liquidités (disponibles pour la négociation) et de la valeur marchande actuelle
-        de vos titres.
+      total_value_tooltip: >-
+        Le solde total du portefeuille correspond à la somme des liquidités (disponibles pour la négociation)
+        et de la valeur marchande actuelle de vos titres.

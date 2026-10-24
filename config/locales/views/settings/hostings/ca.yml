@@ -56,6 +56,24 @@ ca:
           d'agent te'l donarà.
         url_label: URL de l'endpoint
         url_placeholder: https://your-agent-host/v1/chat
+        agent_discovery_configure_first: Desa un URL d'endpoint vàlid i un token d'API
+          per carregar els agents disponibles.
+        agent_discovery_error: 'No s''han pogut carregar els agents: %{error}'
+        external_agent_invalid: Selecciona un agent retornat per l'endpoint configurat.
+        external_agent_required: Selecciona un agent extern abans de desar.
+        external_agent_reselect: L'endpoint ha canviat i l'agent seleccionat anteriorment
+          no hi està disponible. Selecciona un agent del nou endpoint.
+        external_info:
+          items:
+          - Introdueix l'URL complet de l'endpoint compatible amb OpenAI, acabat en
+            /v1/chat/completions.
+          - Sure descobreix els agents disponibles a /v1/models després de desar l'endpoint
+            i el token.
+          - El servei extern tria el model de cada agent; Sure només selecciona la
+            ruta de l'agent.
+          - El servei extern retorna els errors d'autenticació, d'endpoint o d'agent.
+            Consulta'n els registres quan falli una sol·licitud.
+          title: Configuració d'IA externa
       brand_fetch_settings:
         description: Introdueix el Client ID proporcionat per Brandfetch
         env_configured_message: Has configurat correctament el teu Client ID de Brandfetch
@@ -64,7 +82,7 @@ ca:
           120×120 en lloc de 40×40. Això proporciona imatges més nítides en pantalles
           d'alta densitat.
         high_res_label: Activa logotips d'alta resolució
-        label: Client ID
+        label: ID del client
         placeholder: Introdueix aquí el teu Client ID
         setup_step_1_html: Visita <a href="https://brandfetch.com/developers" target="_blank"
           rel="noopener noreferrer" class="underline">brandfetch.com</a> i crea un
@@ -151,17 +169,29 @@ ca:
         title: OpenAI
         uri_base_label: URL base de l'API (opcional)
         uri_base_placeholder: https://api.openai.com/v1 (per defecte)
-        model_function_calling_help: L'assistent d'IA llegeix les teves dades mitjançant crides a funcions, així que tria un model que el teu proveïdor documenti com a compatible amb eines/crides a funcions. Els models que no ho admeten fan fallar el xat amb un error poc clar del proveïdor.
+        model_function_calling_help: L'assistent d'IA llegeix les teves dades mitjançant
+          crides a funcions, així que tria un model que el teu proveïdor documenti
+          com a compatible amb eines/crides a funcions. Els models que no ho admeten
+          fan fallar el xat amb un error poc clar del proveïdor.
         model_function_calling_link: Comprova el model configurat
         timeout_heading: Temps d'espera
-        timeout_description: Controla quant de temps poden durar les crides a models compatibles amb OpenAI abans que Sure les abandoni. Augmenta aquests valors si executes un model local en maquinari lent.
+        timeout_description: Controla quant de temps poden durar les crides a models
+          compatibles amb OpenAI abans que Sure les abandoni. Augmenta aquests valors
+          si executes un model local en maquinari lent.
         openai_request_timeout_label: Temps d'espera de la sol·licitud en segons (opcional)
-        openai_request_timeout_help: 'Per defecte: 60. S''aplica a cada sol·licitud HTTP compatible amb OpenAI, incloent-hi l''autocategorització, la detecció de comerços, el xat, el processament de PDF i les crides al magatzem de vectors. OPENAI_REQUEST_TIMEOUT té prioritat sobre aquest camp.'
+        openai_request_timeout_help: 'Per defecte: 60. S''aplica a cada sol·licitud
+          HTTP compatible amb OpenAI, incloent-hi l''autocategorització, la detecció
+          de comerços, el xat, el processament de PDF i les crides al magatzem de
+          vectors. OPENAI_REQUEST_TIMEOUT té prioritat sobre aquest camp.'
         ai_response_timeout_label: Temps d'espera de la resposta en segons (opcional)
-        ai_response_timeout_help: 'Per defecte: 90. Només s''aplica al vigilant de tot el torn del xat, així que calcula''l com una suma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × temps d''espera de la sol·licitud, més el temps d''execució de les eines i de cua. AI_RESPONSE_TIMEOUT té prioritat sobre aquest camp.'
+        ai_response_timeout_help: 'Per defecte: 90. Només s''aplica al vigilant de
+          tot el torn del xat, així que calcula''l com una suma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS)
+          × temps d''espera de la sol·licitud, més el temps d''execució de les eines
+          i de cua. AI_RESPONSE_TIMEOUT té prioritat sobre aquest camp.'
       provider_selection:
         binance_public_hint: gratuït, sense clau API — només cripto (BTC, ETH, etc.)
-        moex_public_hint: gratuït, sense clau API — accions, fons i bons russos (MOEX), inclou canvi RUB
+        moex_public_hint: gratuït, sense clau API — accions, fons i bons russos (MOEX),
+          inclou canvi RUB
         description: Tria un únic proveïdor per obtenir tipus de canvi de divisa.
         env_configured_message: La selecció de proveïdor està desactivada perquè hi
           ha variables d'entorn configurades. Per activar la selecció aquí, elimina
@@ -192,8 +222,10 @@ ca:
         securities_title: Proveïdors de valors
         twelve_data_hint: requereix clau API, 800 crèdits/dia
         yahoo_finance_hint: gratuït, no cal clau API
-        tinkoff_invest_hint: requereix un token de només lectura -- preus d'accions, fons i bons russos + logotips de marques
-        requires_api_key_mansa: requereix clau API, nivell gratuït de 100 crides/dia -- només NGX (Nigerian Exchange)
+        tinkoff_invest_hint: requereix un token de només lectura -- preus d'accions,
+          fons i bons russos + logotips de marques
+        requires_api_key_mansa: requereix clau API, nivell gratuït de 100 crides/dia
+          -- només NGX (Nigerian Exchange)
       show:
         ai_assistant: Assistent d'IA
         clear_cache: Neteja la memòria cau de dades
@@ -212,6 +244,7 @@ ca:
         sync_settings: Configuració de sincronització
         title: Self hosting
         property_valuation_providers: Proveïdors de valoració d'immobles
+        demo_refresh: Renovació de dades de demostració
       sync_auto_sync_scheduler!:
         scheduler_sync_failed: La configuració s'ha desat, però no s'ha pogut actualitzar
           la planificació de sincronització. Torna-ho a provar o revisa els registres
@@ -276,7 +309,15 @@ ca:
           del servidor.
         success: Configuració actualitzada
         invalid_anthropic_base_url: L'URL base d'Anthropic ha de ser un URL http(s).
-        anthropic_model_required_for_base_url: Cal indicar el model d'Anthropic quan s'estableix un URL base personalitzat.
+        anthropic_model_required_for_base_url: Cal indicar el model d'Anthropic quan
+          s'estableix un URL base personalitzat.
+        invalid_categorization_rate: "%{field} ha de ser un nombre entre 0 i 1."
+        invalid_demo_family: La família seleccionada ha de tenir el correu de demostració
+          configurat.
+        invalid_jev_endpoint: L'endpoint de Jev ha de ser un URL https. Només s'accepta
+          http sense xifrar per a localhost.
+        select_demo_family: Selecciona primer una família de demostració d'un sol
+          ús.
       yahoo_finance_settings:
         connection_failed: No s'ha pogut connectar amb Yahoo Finance
         description: Yahoo Finance ofereix accés gratuït a preus d'accions, tipus
@@ -289,25 +330,38 @@ ca:
         status_healthy: Yahoo Finance està actiu i funciona.
         status_rate_limited: Yahoo Finance està limitant temporalment les sol·licituds.
         rate_limited_title: S'ha arribat al límit de sol·licituds de Yahoo Finance.
-        rate_limited_message: No cal fer res. Sure evitarà comprovacions d'estat addicionals durant 30 minuts. Les operacions de preus i tipus de canvi continuen de manera independent.
+        rate_limited_message: No cal fer res. Sure evitarà comprovacions d'estat addicionals
+          durant 30 minuts. Les operacions de preus i tipus de canvi continuen de
+          manera independent.
         status_unavailable: Yahoo Finance no està disponible en aquest moment.
         unavailable_title: No s'ha pogut verificar Yahoo Finance.
-        unavailable_message: No s'ha pogut accedir a Yahoo Finance o ha retornat una resposta inesperada. Comprova la connexió a Internet i torna-ho a provar més tard.
+        unavailable_message: No s'ha pogut accedir a Yahoo Finance o ha retornat una
+          resposta inesperada. Comprova la connexió a Internet i torna-ho a provar
+          més tard.
         status_unknown: S'està comprovant l'estat de Yahoo Finance.
       llm_provider_selector:
         title: Proveïdor d'IA
-        description: Tria quin LLM fa servir el xat d'IA. Les operacions per lots (categorització de transaccions, detecció de comerços i processament de PDF) ara com ara sempre utilitzen OpenAI.
-        env_configured_message: Configurat correctament mitjançant la variable d'entorn LLM_PROVIDER.
+        description: Tria quin LLM fa servir el xat d'IA. Les operacions per lots
+          (categorització de transaccions, detecció de comerços i processament de
+          PDF) ara com ara sempre utilitzen OpenAI.
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn
+          LLM_PROVIDER.
         provider_label: Proveïdor d'LLM actiu
         provider_openai: OpenAI
         provider_anthropic: Anthropic (Claude)
-        provider_help: El canvi de proveïdor s'aplica al xat següent. Configura a continuació les credencials del proveïdor actiu.
-        not_configured_hint: Afegeix una clau API de %{provider} a continuació per activar-lo.
+        provider_help: El canvi de proveïdor s'aplica al xat següent. Configura a
+          continuació les credencials del proveïdor actiu.
+        not_configured_hint: Afegeix una clau API de %{provider} a continuació per
+          activar-lo.
         data_retention_heading: Tractament de les dades
-        data_retention: Per defecte, les dades enviades a l'API no s'utilitzen per entrenar models; les API allotjades pels proveïdors conserven les dades uns 30 dies per a la supervisió d'abusos i seguretat. Els endpoints personalitzats o autoallotjats segueixen la teva pròpia política.
+        data_retention: Per defecte, les dades enviades a l'API no s'utilitzen per
+          entrenar models; les API allotjades pels proveïdors conserven les dades
+          uns 30 dies per a la supervisió d'abusos i seguretat. Els endpoints personalitzats
+          o autoallotjats segueixen la teva pròpia política.
       anthropic_settings:
         title: Anthropic (Claude)
-        description: Introdueix la teva clau API d'Anthropic. Opcionalment, apunta l'URL base a AWS Bedrock o GCP Vertex.
+        description: Introdueix la teva clau API d'Anthropic. Opcionalment, apunta
+          l'URL base a AWS Bedrock o GCP Vertex.
         env_configured_message: Configurat correctament mitjançant variables d'entorn.
         access_token_label: Clau API
         access_token_placeholder: Introdueix la teva clau API d'Anthropic
@@ -315,39 +369,141 @@ ca:
         base_url_placeholder: https://api.anthropic.com (per defecte)
         model_label: Model per defecte (opcional)
         model_placeholder: claude-sonnet-4-6 (per defecte)
-        model_help: S'utilitza per al xat i el processament de PDF. Les operacions per lots (categorització, detecció de comerços) utilitzen Haiku per defecte per reduir costos.
+        model_help: S'utilitza per al xat i el processament de PDF. Les operacions
+          per lots (categorització, detecció de comerços) utilitzen Haiku per defecte
+          per reduir costos.
       rentcast_settings:
         title: RentCast
-        description: Introdueix la teva clau API de RentCast per consultar dades i estimacions de valor d'immobles dels EUA en afegir un immoble. El nivell gratuït està limitat a 50 sol·licituds d'API al mes, compartides entre les consultes d'immobles i les actualitzacions diàries de la valoració. Amb un pla de pagament, augmenta el límit amb la variable d'entorn RENTCAST_MAX_REQUESTS_PER_MONTH.
-        env_configured_message: Configurat correctament mitjançant la variable d'entorn RENTCAST_API_KEY.
+        description: Introdueix la teva clau API de RentCast per consultar dades i
+          estimacions de valor d'immobles dels EUA en afegir un immoble. El nivell
+          gratuït està limitat a 50 sol·licituds d'API al mes, compartides entre les
+          consultes d'immobles i les actualitzacions diàries de la valoració. Amb
+          un pla de pagament, augmenta el límit amb la variable d'entorn RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn
+          RENTCAST_API_KEY.
         label: Clau API
         placeholder: Introdueix aquí la teva clau API de RentCast
-        usage: '%{used} de %{limit} sol·licituds mensuals utilitzades'
+        usage: "%{used} de %{limit} sol·licituds mensuals utilitzades"
       realie_settings:
         title: Realie
-        description: Introdueix la teva clau API de Realie per consultar dades i estimacions de valor d'immobles dels EUA en afegir un immoble. El nivell gratuït està limitat a 25 sol·licituds d'API al mes, compartides entre les consultes d'immobles i les actualitzacions diàries de la valoració. Amb un pla de pagament, augmenta el límit amb la variable d'entorn REALIE_MAX_REQUESTS_PER_MONTH.
-        env_configured_message: Configurat correctament mitjançant la variable d'entorn REALIE_API_KEY.
+        description: Introdueix la teva clau API de Realie per consultar dades i estimacions
+          de valor d'immobles dels EUA en afegir un immoble. El nivell gratuït està
+          limitat a 25 sol·licituds d'API al mes, compartides entre les consultes
+          d'immobles i les actualitzacions diàries de la valoració. Amb un pla de
+          pagament, augmenta el límit amb la variable d'entorn REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn
+          REALIE_API_KEY.
         label: Clau API
         placeholder: Introdueix aquí la teva clau API de Realie
-        usage: '%{used} de %{limit} sol·licituds mensuals utilitzades'
+        usage: "%{used} de %{limit} sol·licituds mensuals utilitzades"
       tinkoff_invest_settings:
         title: T-Invest (T-Bank)
-        description: Introdueix un token d'API de T-Invest de només lectura. S'utilitza per obtenir logotips de marques per als valors (inclosos fons i bons, fins i tot quan MOEX en proporciona els preus) i, si està activat a dalt, preus d'instruments russos.
-        moex_only_notice: 'No està activat per a preus a dalt: T-Invest s''utilitza per obtenir logotips de marques per a tots els teus valors sempre que hi hagi un token configurat, independentment de la casella de dalt.'
-        env_configured_message: Configurat correctament mitjançant la variable d'entorn TINKOFF_INVEST_API_KEY.
+        description: Introdueix un token d'API de T-Invest de només lectura. S'utilitza
+          per obtenir logotips de marques per als valors (inclosos fons i bons, fins
+          i tot quan MOEX en proporciona els preus) i, si està activat a dalt, preus
+          d'instruments russos.
+        moex_only_notice: 'No està activat per a preus a dalt: T-Invest s''utilitza
+          per obtenir logotips de marques per a tots els teus valors sempre que hi
+          hagi un token configurat, independentment de la casella de dalt.'
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn
+          TINKOFF_INVEST_API_KEY.
         label: Token d'API
         placeholder: Introdueix aquí el teu token d'API de T-Invest
-        show_details: (mostra detalls)
-        step_1: Obre les inversions de T-Bank i ves a Configuració i després a Tokens d'API (cal tenir un compte de valors obert a T-Bank).
+        show_details: "(mostra detalls)"
+        step_1: Obre les inversions de T-Bank i ves a Configuració i després a Tokens
+          d'API (cal tenir un compte de valors obert a T-Bank).
         step_2: Crea un token amb accés de només lectura.
         step_3: Copia el token i enganxa'l a sota.
       mansa_settings:
         title: Mansa
-        description: Introdueix la clau API de Mansa API. Admet NGX (Nigerian Exchange), que no cobreix cap altre proveïdor d'aquí. Mansa també cobreix altres borses africanes, però només NGX s'ha verificat amb aquesta integració.
-        env_configured_message: Configurat correctament mitjançant la variable d'entorn MANSA_API_KEY.
+        description: Introdueix la clau API de Mansa API. Admet NGX (Nigerian Exchange),
+          que no cobreix cap altre proveïdor d'aquí. Mansa també cobreix altres borses
+          africanes, però només NGX s'ha verificat amb aquesta integració.
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn
+          MANSA_API_KEY.
         label: Clau API
         placeholder: Introdueix aquí la teva clau API de Mansa
-        show_details: (mostra detalls)
-        step_1_html: Visita <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> i obtén la teva clau API gratuïta -- no cal targeta.
+        show_details: "(mostra detalls)"
+        step_1_html: Visita <a href="https://mansaapi.com" target="_blank" rel="noopener
+          noreferrer" class="underline">mansaapi.com</a> i obtén la teva clau API
+          gratuïta -- no cal targeta.
         step_2: Copia la clau API i enganxa-la a sota.
-        rate_limit_warning: El nivell gratuït de Mansa està limitat a 100 crides d'API al dia i només ofereix cotitzacions actuals -- els preus històrics requereixen un pla de pagament. Només NGX (Nigerian Exchange) s'ha verificat amb aquesta integració; les altres borses africanes que cobreix Mansa encara no s'admeten aquí.
+        rate_limit_warning: El nivell gratuït de Mansa està limitat a 100 crides d'API
+          al dia i només ofereix cotitzacions actuals -- els preus històrics requereixen
+          un pla de pagament. Només NGX (Nigerian Exchange) s'ha verificat amb aquesta
+          integració; les altres borses africanes que cobreix Mansa encara no s'admeten
+          aquí.
+      categorization_provider_selector:
+        confidence_threshold_env_notice: Bloquejat per la variable d'entorn CATEGORIZATION_CONFIDENCE_THRESHOLD.
+        confidence_threshold_help: Per sota d'aquest nivell de confiança, no s'aplica
+          la categoria i la transacció queda sense categoritzar perquè es pugui tornar
+          a provar més endavant. No es descarta res. Estableix-lo a 0 per aplicar
+          totes les respostes.
+        confidence_threshold_label: Confiança mínima (0–1)
+        data_retention_direct: Les descripcions de les transaccions, els imports i
+          els noms de les teves categories s'envien a TypeSafe per categoritzar-les.
+          Revisa'n la política de conservació de dades abans d'activar-ho amb dades
+          reals.
+        data_retention_heading: Compartició de dades
+        data_retention_proxied: Les descripcions de les transaccions, els imports
+          i els noms de les teves categories s'envien a %{host}, que els reenvia a
+          TypeSafe. Revisa les polítiques de conservació de dades de tots dos proveïdors
+          abans d'activar-ho amb dades reals.
+        description: Tria quin proveïdor categoritza les transaccions. És independent
+          del proveïdor d'IA de més amunt, que gestiona el xat i el processament de
+          PDF.
+        env_notice: Establert a %{type} mitjançant variables d'entorn.
+        jev_configured: Clau API de Jev configurada.
+        jev_not_configured: Jev està seleccionat, però no té cap clau API configurada.
+          La categorització continuarà utilitzant el proveïdor d'IA fins que n'afegeixis
+          una a sota.
+        preview_pill: Vista prèvia
+        provider_help: El proveïdor d'IA llegeix un lot de transaccions i en retorna
+          els noms de les categories. Jev tria entre la teva llista de categories
+          i retorna un nivell de confiança calibrat per a cada transacció.
+        provider_jev: Jev (TypeSafe)
+        provider_label: Proveïdor de categorització
+        provider_llm: Proveïdor d'IA (OpenAI o Anthropic)
+        shadow_rate_env_notice: Bloquejat per la variable d'entorn CATEGORIZATION_SHADOW_RATE.
+        shadow_rate_help: Executa el proveïdor que NO has seleccionat en paral·lel
+          al que has triat i registra les discrepàncies sense canviar cap categoria.
+          Això duplica la despesa d'API en cada execució de categorització que s'inclou
+          a la mostra. Estableix-la a 0 per desactivar-ho.
+        shadow_rate_label: Taxa de comparació en paral·lel (0–1)
+        title: Categorització de transaccions
+      categorization_shadow_results:
+        shadow_disagreement_confidence: "(confiança %{confidence})"
+        shadow_disagreement_row: "%{applied_provider} ha triat %{applied_category};
+          %{shadow_provider} ha triat %{shadow_category}."
+        shadow_disagreements_heading: Discrepàncies més recents
+        shadow_no_category: sense categoria
+        shadow_no_disagreements: Els dos proveïdors han coincidit en totes les transaccions
+          de la mostra.
+        shadow_results_empty: Encara no s'ha registrat cap comparació. Estableix una
+          taxa de comparació en paral·lel superior a 0 i executa la categorització
+          per recollir-ne.
+        shadow_results_heading: Comparació en paral·lel
+        shadow_results_summary: "%{agreement}%% de coincidència en una mostra de %{count}
+          transaccions."
+      demo_refresh_settings:
+        description: Renova automàticament només la família de demostració seleccionada.
+          Se n'eliminaran totes les dades i els inicis de sessió. Les altres famílies
+          no es modificaran. Requereix un worker en execució amb almenys 2 GiB de
+          RAM. Primer crea una família de demostració d'un sol ús amb el generador
+          de demostracions i després selecciona-la aquí. No triïs la família d'un
+          usuari real.
+        enabled_label: Activa la renovació diària de la família de demostració
+        family_label: Família de demostració d'un sol ús
+        none: No s'ha seleccionat cap família de demostració
+        save_family: Desa la família de demostració
+      jev_settings:
+        api_key_label: Clau API
+        api_key_placeholder: Introdueix la teva clau API de TypeSafe
+        endpoint_label: Endpoint (opcional)
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone (predeterminat)
+        env_configured_message: Configurat correctament mitjançant variables d'entorn.
+        model_help: Per defecte, es connecta directament a TypeSafe. Per accedir a
+          Jev mitjançant OpenRouter, estableix l'endpoint a https://openrouter.ai/api/alpha/decisions
+          i el model a ~typesafe/jev-latest.
+        model_label: Model (opcional)
+        model_placeholder: jev-latest (predeterminat)

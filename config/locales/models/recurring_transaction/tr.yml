@@ -24,6 +24,7 @@ tr:
     attributes:
       recurring_transaction:
         payment_url: Ödeme bağlantısı
+        frequency_interval: Yineleme aralığı
   recurring_transactions:
     allocator:
       missing_rate: '%{from} para biriminden %{to} para birimine döviz kuru yok; tutarı elle girin'

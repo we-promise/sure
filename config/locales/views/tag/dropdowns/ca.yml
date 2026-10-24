@@ -1,0 +1,9 @@
+---
+ca:
+  tag:
+    dropdowns:
+      show:
+        empty: Encara no hi ha etiquetes
+        manage: Gestiona les etiquetes
+        no_tags: No s'han trobat etiquetes
+        search_placeholder: Cerca

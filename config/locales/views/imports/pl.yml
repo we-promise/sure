@@ -37,13 +37,15 @@ pl:
         leave_empty: Zostaw puste
         name_label: Odbiorca (opcjonalnie)
         notes_label: Notatki (opcjonalnie)
-        preconfigured_notice: Import z Actual Budget został skonfigurowany za Ciebie.
-          Przejdź do następnego kroku.
+        preconfigured_notice: >-
+          Import z Actual Budget został skonfigurowany za Ciebie. Przejdź do następnego
+          kroku.
         signage_convention_label: Konwencja znaku kwoty
       category_import:
         button_label: Dalej
-        description: Prześlij prosty plik CSV, taki jak ten generowany podczas eksportu
-          danych. Kolumny zostaną automatycznie zmapowane.
+        description: >-
+          Prześlij prosty plik CSV, taki jak ten generowany podczas eksportu danych.
+          Kolumny zostaną automatycznie zmapowane.
         instructions: Wybierz Dalej, aby przeanalizować plik CSV i przejść do etapu
           czyszczenia.
       merchant_import:
@@ -69,8 +71,9 @@ pl:
         select_format: Wybierz format
         tags_optional: Tagi (opcjonalnie)
       rule_import:
-        description: Skonfiguruj import reguł. Reguły zostaną utworzone lub zaktualizowane
-          na podstawie danych z CSV.
+        description: >-
+          Skonfiguruj import reguł. Reguły zostaną utworzone lub zaktualizowane na
+          podstawie danych z CSV.
         process_button: Przetwórz reguły
         process_help: Kliknij poniższy przycisk, aby przetworzyć CSV i wygenerować
           wiersze reguł.
@@ -79,8 +82,9 @@ pl:
         description: Wybierz kolumny odpowiadające poszczególnym polom w pliku CSV.
         manually_configure: Skonfiguruj ręcznie
         sample_caption: Przykładowe dane z przesłanego pliku CSV
-        template_description: Znaleźliśmy konfigurację z poprzedniego importu dla
-          tego konta. Czy chcesz zastosować ją do tego importu?
+        template_description: >-
+          Znaleźliśmy konfigurację z poprzedniego importu dla tego konta. Czy chcesz
+          zastosować ją do tego importu?
         template_found: Znaleziono konfigurację szablonu
         title: Skonfiguruj import
       trade_import:
@@ -95,9 +99,9 @@ pl:
         format_label: Format
         leave_empty: Zostaw puste
         name_label: Nazwa
-        no_security_provider_warning: Dostawca cen papierów wartościowych nie jest
-          skonfigurowany. Import transakcji zadziała, ale Sure nie uzupełni historii
-          cen. Skonfiguruj to w ustawieniach.
+        no_security_provider_warning: >-
+          Dostawca cen papierów wartościowych nie jest skonfigurowany. Import transakcji
+          zadziała, ale Sure nie uzupełni historii cen. Skonfiguruj to w ustawieniach.
         note_label: Notatka
         price_label: Cena
         quantity_label: Ilość
@@ -155,36 +159,39 @@ pl:
         create_account: Utwórz konto
         csv_mapping_label: "%{mapping} w CSV"
         next: Dalej
-        no_accounts: Nie masz jeszcze żadnych kont. Utwórz konto, którego można użyć
-          dla nieprzypisanych wierszy w CSV, albo wróć do etapu czyszczenia i podaj
-          nazwę konta, której można użyć.
+        no_accounts: >-
+          Nie masz jeszcze żadnych kont. Utwórz konto, którego można użyć dla nieprzypisanych
+          wierszy w CSV, albo wróć do etapu czyszczenia i podaj nazwę konta, której
+          można użyć.
         rows_label: Wiersze
         sure_mapping_label: "%{mapping} w %{product_name}"
         unassigned_account: Chcesz utworzyć nowe konto dla nieprzypisanych wierszy?
       show:
-        account_mapping_description: Przypisz wszystkie konta z importowanego pliku
-          do istniejących kont %{product_name}. Możesz też dodać nowe konta lub zostawić
-          je bez przypisania.
+        account_mapping_description: >-
+          Przypisz wszystkie konta z importowanego pliku do istniejących kont %{product_name}.
+          Możesz też dodać nowe konta lub zostawić je bez przypisania.
         account_mapping_title: Przypisz konta
-        account_type_mapping_description: Przypisz wszystkie typy kont z importowanego
-          pliku do typów używanych w %{product_name}.
+        account_type_mapping_description: >-
+          Przypisz wszystkie typy kont z importowanego pliku do typów używanych w
+          %{product_name}.
         account_type_mapping_title: Przypisz typy kont
-        category_mapping_description: Przypisz wszystkie kategorie z importowanego
-          pliku do istniejących kategorii %{product_name}. Możesz też dodać nowe kategorie
-          lub zostawić je bez przypisania.
+        category_mapping_description: >-
+          Przypisz wszystkie kategorie z importowanego pliku do istniejących kategorii
+          %{product_name}. Możesz też dodać nowe kategorie lub zostawić je bez przypisania.
         category_mapping_title: Przypisz kategorie
         invalid_data: Masz nieprawidłowe dane, popraw je, aż wszystkie błędy znikną
-        tag_mapping_description: Przypisz wszystkie tagi z importowanego pliku do
-          istniejących tagów %{product_name}. Możesz też dodać nowe tagi lub zostawić
-          je bez przypisania.
+        tag_mapping_description: >-
+          Przypisz wszystkie tagi z importowanego pliku do istniejących tagów %{product_name}.
+          Możesz też dodać nowe tagi lub zostawić je bez przypisania.
         tag_mapping_title: Przypisz tagi
       sure_import:
         cancel: Anuluj
         description: Przejrzyj dane, które zostaną zaimportowane z pliku eksportu.
-        empty_summary: Nie udało się znaleźć w tym pliku żadnych rekordów nadających
-          się do importu. Plik może być pusty albo jego wiersze nie pasują do oczekiwanego
-          formatu eksportu. Każdy wiersz powinien być obiektem JSON z kluczami "type"
-          i "data" oraz typami obsługiwanymi przez ten import.
+        empty_summary: >-
+          Nie udało się znaleźć w tym pliku żadnych rekordów nadających się do importu.
+          Plik może być pusty albo jego wiersze nie pasują do oczekiwanego formatu
+          eksportu. Każdy wiersz powinien być obiektem JSON z kluczami "type" i "data"
+          oraz typami obsługiwanymi przez ten import.
         publish_button: Rozpocznij import
         summary: Podsumowanie importu
         title: Potwierdź import
@@ -197,16 +204,17 @@ pl:
           other: Znaleziono %{count} kategorii
         categories_heading: Kategorie
         category_name_col: Nazwa kategorii
-        description: Sprawdź wykryty format daty, a następnie wybierz, które kategorie
-          i tagi z pliku QIF chcesz przenieść do %{product_name}.
+        description: >-
+          Sprawdź wykryty format daty, a następnie wybierz, które kategorie i tagi
+          z pliku QIF chcesz przenieść do %{product_name}.
         empty_state_primary: W tym pliku QIF nie znaleziono kategorii ani tagów.
         empty_state_secondary: Wszystkie transakcje zostaną zaimportowane bez kategorii
           i tagów.
         split_badge: podział
-        split_warning_description: Ten plik QIF zawiera transakcje dzielone. Podziały
-          nie są jeszcze obsługiwane, więc każda taka transakcja zostanie zaimportowana
-          jako pojedyncza transakcja z pełną kwotą i bez kategorii. Szczegółowy podział
-          nie zostanie zachowany.
+        split_warning_description: >-
+          Ten plik QIF zawiera transakcje dzielone. Podziały nie są jeszcze obsługiwane,
+          więc każda taka transakcja zostanie zaimportowana jako pojedyncza transakcja
+          z pełną kwotą i bez kategorii. Szczegółowy podział nie zostanie zachowany.
         split_warning_title: Wykryto transakcje dzielone
         submit: Przejdź do podsumowania
         tag_name_col: Nazwa tagu
@@ -236,8 +244,9 @@ pl:
         csv_file_prompt: aby dodać tutaj plik CSV
         csv_invalid: Musi być prawidłowym CSV z nagłówkami i co najmniej jednym wierszem
           danych
-        description: Wklej lub prześlij poniżej swój plik CSV. Przed rozpoczęciem
-          zapoznaj się z instrukcjami w tabeli poniżej.
+        description: >-
+          Wklej lub prześlij poniżej swój plik CSV. Przed rozpoczęciem zapoznaj się
+          z instrukcjami w tabeli poniżej.
         download_sample_csv: Pobierz przykładowy CSV
         drop_csv_subtitle: Twój plik zostanie przesłany automatycznie
         drop_csv_title: Upuść CSV, aby przesłać
@@ -252,8 +261,9 @@ pl:
         paste_csv_placeholder: Wklej tutaj zawartość pliku CSV
         qif_account_label: Konto
         qif_account_placeholder: Wybierz konto…
-        qif_description: Wybierz konto, do którego należy ten plik QIF, a następnie
-          prześlij eksport .qif z Quicken.
+        qif_description: >-
+          Wybierz konto, do którego należy ten plik QIF, a następnie prześlij eksport
+          .qif z Quicken.
         qif_file_hint: tylko pliki .qif
         qif_file_prompt: aby dodać tutaj plik QIF
         qif_submit: Prześlij QIF
@@ -265,8 +275,9 @@ pl:
       sure_import:
         browse: Przeglądaj
         browse_hint: aby dodać tutaj plik all.ndjson
-        description: Prześlij plik all.ndjson z eksportu danych, aby przywrócić konta,
-          transakcje, kategorie i inne dane.
+        description: >-
+          Prześlij plik all.ndjson z eksportu danych, aby przywrócić konta, transakcje,
+          kategorie i inne dane.
         drop_subtitle: Plik zostanie przesłany automatycznie
         drop_title: Upuść plik NDJSON, aby go przesłać
         hint_html: Prześlij plik <strong>all.ndjson</strong> z archiwum ZIP eksportu
@@ -284,8 +295,9 @@ pl:
     cancel:
       cancelled: Import oznaczony jako nieudany. Możesz spróbować ponownie ze strony
         importu.
-      not_cancellable: Tego importu nie można teraz oznaczyć jako nieudany, jego zadanie
-        może wciąż działać. Spróbuj ponownie, gdy będzie nieaktywny przez godzinę.
+      not_cancellable: >-
+        Tego importu nie można teraz oznaczyć jako nieudany, jego zadanie może wciąż
+        działać. Spróbuj ponownie, gdy będzie nieaktywny przez godzinę.
     column_labels:
       account: Konto
       amount: Kwota
@@ -320,18 +332,22 @@ pl:
       invalid_document_file_type: Nieprawidłowy typ pliku dokumentu dla aktywnego
         magazynu wektorowego.
       invalid_file_type: Nieprawidłowy typ pliku. Prześlij plik CSV.
-      invalid_ndjson_file_type: Nieprawidłowy typ lub format pliku. Prześlij poprawny
-        plik eksportu .ndjson lub .json.
+      invalid_ndjson_file_type: >-
+        Nieprawidłowy typ lub format pliku. Prześlij poprawny plik eksportu .ndjson
+        lub .json.
       invalid_pdf: Przesłany plik nie jest prawidłowym plikiem PDF.
       ndjson_uploaded: Plik NDJSON został pomyślnie przesłany.
-      pdf_processing: Twój plik PDF jest przetwarzany. Po zakończeniu analizy otrzymasz
-        wiadomość e-mail.
+      pdf_processing: >-
+        Twój plik PDF jest przetwarzany. Po zakończeniu analizy otrzymasz wiadomość
+        e-mail.
       pdf_too_large: Plik PDF jest zbyt duży. Maksymalny rozmiar to %{max_size} MB.
     date_format:
-      description: Format daty wykryto automatycznie na podstawie pliku. Zmień go,
-        jeśli daty wyglądają nieprawidłowo.
-      error_description: Żaden z obsługiwanych formatów daty nie pasował do dat w
-        tym pliku. Sprawdź, czy plik zawiera poprawne daty.
+      description: >-
+        Format daty wykryto automatycznie na podstawie pliku. Zmień go, jeśli daty
+        wyglądają nieprawidłowo.
+      error_description: >-
+        Żaden z obsługiwanych formatów daty nie pasował do dat w tym pliku. Sprawdź,
+        czy plik zawiera poprawne daty.
       error_title: Nie udało się wykryć formatu daty
       heading: Format daty
       preview: Pierwsza odczytana data
@@ -366,21 +382,24 @@ pl:
     errors:
       custom_column_requires_inflow: Import niestandardowych kolumn wymaga wybrania
         kolumny wpływu
-      interrupted: Proces w tle został przerwany, zanim się zakończył. Zaimportowane
+      interrupted: >-
+        Proces w tle został przerwany, zanim się zakończył. Zaimportowane dane wycofano,
+        możesz bezpiecznie spróbować ponownie.
+      presumed_lost: >-
+        Oznaczono jako nieudany, ponieważ zadanie w tle uznano za utracone. Zaimportowane
         dane wycofano, możesz bezpiecznie spróbować ponownie.
-      presumed_lost: Oznaczono jako nieudany, ponieważ zadanie w tle uznano za utracone.
-        Zaimportowane dane wycofano, możesz bezpiecznie spróbować ponownie.
     failure:
-      description: Sprawdź format pliku, ewentualne błędy oraz czy wszystkie wymagane
-        pola są wypełnione, a potem spróbuj ponownie.
+      description: >-
+        Sprawdź format pliku, ewentualne błędy oraz czy wszystkie wymagane pola są
+        wypełnione, a potem spróbuj ponownie.
       title: Import nieudany
       try_again: Spróbuj ponownie
     importing:
       back_to_dashboard: Wróć do pulpitu
       check_status: Sprawdź status
-      description: Twój import jest w toku. Sprawdź status w menu importów albo kliknij
-        "Sprawdź status", aby odświeżyć stronę. Możesz spokojnie korzystać dalej z
-        aplikacji.
+      description: >-
+        Twój import jest w toku. Sprawdź status w menu importów albo kliknij "Sprawdź
+        status", aby odświeżyć stronę. Możesz spokojnie korzystać dalej z aplikacji.
       title: Import w toku
     index:
       new: Nowy import
@@ -427,17 +446,21 @@ pl:
       check_status: Sprawdź status
       complete_description: Przeanalizowaliśmy Twój plik PDF. Oto, co znaleźliśmy.
       complete_fully_reconciled:
-        few: Każda transakcja z tego wyciągu była już na Twoim koncie. Wszystkie %{count}
+        few: >-
+          Każda transakcja z tego wyciągu była już na Twoim koncie. Wszystkie %{count}
           transakcje zostały dopasowane i oznaczone jako uzgodnione, nic nie wymagało
           importu.
-        many: Każda transakcja z tego wyciągu była już na Twoim koncie. Wszystkie
-          %{count} transakcji zostało dopasowanych i oznaczonych jako uzgodnione,
-          nic nie wymagało importu.
-        one: Każda transakcja z tego wyciągu była już na Twoim koncie. %{count} transakcja
+        many: >-
+          Każda transakcja z tego wyciągu była już na Twoim koncie. Wszystkie %{count}
+          transakcji zostało dopasowanych i oznaczonych jako uzgodnione, nic nie wymagało
+          importu.
+        one: >-
+          Każda transakcja z tego wyciągu była już na Twoim koncie. %{count} transakcja
           została dopasowana i oznaczona jako uzgodniona, nic nie wymagało importu.
-        other: Każda transakcja z tego wyciągu była już na Twoim koncie. Wszystkie
-          %{count} transakcji zostało dopasowanych i oznaczonych jako uzgodnione,
-          nic nie wymagało importu.
+        other: >-
+          Każda transakcja z tego wyciągu była już na Twoim koncie. Wszystkie %{count}
+          transakcji zostało dopasowanych i oznaczonych jako uzgodnione, nic nie wymagało
+          importu.
       complete_title: Dokument przeanalizowany
       create_account: Utwórz konto
       delete_import: Usuń import
@@ -446,12 +469,14 @@ pl:
       errors:
         provider_no_pdf_support: Dostawca AI nie obsługuje przetwarzania PDF
         provider_not_configured: Dostawca AI nie jest skonfigurowany
-      failed_description: Nie udało się przetworzyć dokumentu PDF. Spróbuj ponownie
-        lub skontaktuj się ze wsparciem.
+      failed_description: >-
+        Nie udało się przetworzyć dokumentu PDF. Spróbuj ponownie lub skontaktuj się
+        ze wsparciem.
       failed_title: Przetwarzanie nie powiodło się
       no_accounts: Brak dostępnych kont. Najpierw utwórz konto.
-      processing_description: Analizujemy Twój dokument przy użyciu AI. Może to chwilę
-        potrwać. Po zakończeniu analizy otrzymasz wiadomość e-mail.
+      processing_description: >-
+        Analizujemy Twój dokument przy użyciu AI. Może to chwilę potrwać. Po zakończeniu
+        analizy otrzymasz wiadomość e-mail.
       processing_failed_generic: 'Przetwarzanie nie powiodło się: %{error}'
       processing_failed_with_message: "%{message}"
       processing_title: Przetwarzanie PDF
@@ -461,14 +486,18 @@ pl:
         one: Opublikuj %{count} transakcję
         other: Opublikuj %{count} transakcji
       ready_for_review_description:
-        few: "%{count} transakcje z Twojego wyciągu nie są jeszcze na tym koncie.
-          Sprawdź je i opublikuj, aby dodać."
-        many: "%{count} transakcji z Twojego wyciągu nie ma jeszcze na tym koncie.
-          Sprawdź je i opublikuj, aby dodać."
-        one: "%{count} transakcja z Twojego wyciągu nie jest jeszcze na tym koncie.
-          Sprawdź ją i opublikuj, aby dodać."
-        other: "%{count} transakcji z Twojego wyciągu nie ma jeszcze na tym koncie.
-          Sprawdź je i opublikuj, aby dodać."
+        few: >-
+          %{count} transakcje z Twojego wyciągu nie są jeszcze na tym koncie. Sprawdź
+          je i opublikuj, aby dodać.
+        many: >-
+          %{count} transakcji z Twojego wyciągu nie ma jeszcze na tym koncie. Sprawdź
+          je i opublikuj, aby dodać.
+        one: >-
+          %{count} transakcja z Twojego wyciągu nie jest jeszcze na tym koncie. Sprawdź
+          ją i opublikuj, aby dodać.
+        other: >-
+          %{count} transakcji z Twojego wyciągu nie ma jeszcze na tym koncie. Sprawdź
+          je i opublikuj, aby dodać.
       ready_for_review_title: Gotowe do sprawdzenia
       review_transactions: Sprawdź transakcje
       save_account: Zapisz
@@ -495,16 +524,106 @@ pl:
       started: Import rozpoczął się w tle.
     ready:
       back_to_imports: Wróć do importów
-      description: Oto podsumowanie nowych elementów, które zostaną dodane do konta
-        po opublikowaniu tego importu.
-      empty_summary: Nie udało się znaleźć w tym pliku żadnych rekordów nadających
-        się do importu. Plik może być pusty albo jego wiersze nie pasują do oczekiwanego
-        formatu eksportu. Każdy wiersz powinien być obiektem JSON z kluczami "type"
-        i "data" oraz typami obsługiwanymi przez ten import.
+      description: >-
+        Oto podsumowanie nowych elementów, które zostaną dodane do konta po opublikowaniu
+        tego importu.
+      empty_summary: >-
+        Nie udało się znaleźć w tym pliku żadnych rekordów nadających się do importu.
+        Plik może być pusty albo jego wiersze nie pasują do oczekiwanego formatu eksportu.
+        Każdy wiersz powinien być obiektem JSON z kluczami "type" i "data" oraz typami
+        obsługiwanymi przez ten import.
       publish_import: Opublikuj import
       summary_count_label: Liczba
       summary_item_label: Element
       title: Potwierdź dane importu
+      missing_merchant_warning_description:
+        one: >-
+          1 odwołanie do kontrahenta w tym pliku wskazuje na kontrahenta, którego
+          nie ma w eksporcie. Może tak być, jeśli eksport wykonano, zanim do eksportów
+          Sure dodano kontrahentów przypisanych przez dostawców. Nadal możesz opublikować
+          ten import. Ten rekord zostanie zaimportowany bez kontrahenta, którego można
+          przypisać później.
+        other: >-
+          Liczba odwołań do brakujących kontrahentów w tym pliku: %{count}. Może tak
+          być, jeśli eksport wykonano, zanim do eksportów Sure dodano kontrahentów
+          przypisanych przez dostawców. Nadal możesz opublikować ten import. Dotknięte
+          tym rekordy zostaną zaimportowane bez kontrahentów, których można przypisać
+          później.
+        few: >-
+          Liczba odwołań do brakujących kontrahentów w tym pliku: %{count}. Może tak
+          być, jeśli eksport wykonano, zanim do eksportów Sure dodano kontrahentów
+          przypisanych przez dostawców. Nadal możesz opublikować ten import. Dotknięte
+          tym rekordy zostaną zaimportowane bez kontrahentów, których można przypisać
+          później.
+        many: >-
+          Liczba odwołań do brakujących kontrahentów w tym pliku: %{count}. Może tak
+          być, jeśli eksport wykonano, zanim do eksportów Sure dodano kontrahentów
+          przypisanych przez dostawców. Nadal możesz opublikować ten import. Dotknięte
+          tym rekordy zostaną zaimportowane bez kontrahentów, których można przypisać
+          później.
+      missing_merchant_warning_title: W tym eksporcie brakuje części kontrahentów
+      provider_merchant_diff_description:
+        one: >-
+          1 kontrahent z tego pliku już istnieje, ale ma inne dane. Istniejący kontrahent
+          zostanie zachowany, a wartości z pliku nie zostaną zastosowane.
+        other: >-
+          Liczba kontrahentów z tego pliku, którzy już istnieją, ale mają inne dane:
+          %{count}. Istniejący kontrahenci zostaną zachowani, a wartości z pliku nie
+          zostaną zastosowane.
+        few: >-
+          %{count} kontrahenci z tego pliku już istnieją, ale mają inne dane. Istniejący
+          kontrahenci zostaną zachowani, a wartości z pliku nie zostaną zastosowane.
+        many: >-
+          %{count} kontrahentów z tego pliku już istnieje, ale ma inne dane. Istniejący
+          kontrahenci zostaną zachowani, a wartości z pliku nie zostaną zastosowane.
+      provider_merchant_diff_fields:
+        name: Nazwa
+        provider_merchant_id: Identyfikator dostawcy
+        website_url: Strona internetowa
+      provider_merchant_diff_none: brak
+      provider_merchant_diff_row: "%{field}: zachowano %{kept}, w pliku jest %{imported}"
+      provider_merchant_diff_summary: Zobacz różnice
+      provider_merchant_diff_title: Niektórzy kontrahenci już istnieją, ale mają inne
+        dane
+      reused_taxonomy_notice_description:
+        one: >-
+          1 kategoria, tag lub kontrahent z tego pliku już istnieje na Twoim koncie
+          (na przykład wśród domyślnych kategorii z konfiguracji początkowej). Istniejący
+          element zostanie ponownie użyty i zaktualizowany danymi z pliku, zamiast
+          tworzenia duplikatu.
+        other: >-
+          Liczba kategorii, tagów lub kontrahentów z tego pliku, którzy już istnieją
+          na Twoim koncie: %{count} (na przykład wśród domyślnych kategorii z konfiguracji
+          początkowej). Istniejące elementy zostaną ponownie użyte i zaktualizowane
+          danymi z pliku, zamiast tworzenia duplikatów.
+        few: >-
+          Liczba kategorii, tagów lub kontrahentów z tego pliku, którzy już istnieją
+          na Twoim koncie: %{count} (na przykład wśród domyślnych kategorii z konfiguracji
+          początkowej). Istniejące elementy zostaną ponownie użyte i zaktualizowane
+          danymi z pliku, zamiast tworzenia duplikatów.
+        many: >-
+          Liczba kategorii, tagów lub kontrahentów z tego pliku, którzy już istnieją
+          na Twoim koncie: %{count} (na przykład wśród domyślnych kategorii z konfiguracji
+          początkowej). Istniejące elementy zostaną ponownie użyte i zaktualizowane
+          danymi z pliku, zamiast tworzenia duplikatów.
+      reused_taxonomy_notice_title: Niektóre kategorie, tagi lub kontrahenci już istnieją
+      skipped_recurring_description:
+        one: >-
+          1 transakcja cykliczna nie ma nazwy, a jej kontrahenta brakuje, więc zostanie
+          pominięta. Automatycznie wykryte transakcje cykliczne zostaną odtworzone
+          po imporcie.
+        other: >-
+          Liczba transakcji cyklicznych bez nazwy i z brakującym kontrahentem: %{count}.
+          Zostaną one pominięte. Automatycznie wykryte transakcje cykliczne zostaną
+          odtworzone po imporcie.
+        few: >-
+          %{count} transakcje cykliczne nie mają nazwy, a ich kontrahentów brakuje,
+          więc zostaną pominięte. Automatycznie wykryte transakcje cykliczne zostaną
+          odtworzone po imporcie.
+        many: >-
+          %{count} transakcji cyklicznych nie ma nazwy, a ich kontrahentów brakuje,
+          więc zostaną pominięte. Automatycznie wykryte transakcje cykliczne zostaną
+          odtworzone po imporcie.
     revert:
       started: Cofanie importu trwa w tle.
     revert_failure:
@@ -564,11 +683,13 @@ pl:
         status: Status
       row:
         actions:
-          confirm_mark_failed: Ten import jest nieaktywny od jakiegoś czasu, a jego
-            zadanie w tle prawdopodobnie zostało przerwane. Oznaczyć go jako nieudany,
-            aby móc spróbować ponownie? Żadne zaimportowane dane nie zostaną zachowane.
-          confirm_revert: To usunie zaimportowane transakcje, ale nadal będzie można
-            w każdej chwili przejrzeć i ponownie zaimportować dane.
+          confirm_mark_failed: >-
+            Ten import jest nieaktywny od jakiegoś czasu, a jego zadanie w tle prawdopodobnie
+            zostało przerwane. Oznaczyć go jako nieudany, aby móc spróbować ponownie?
+            Żadne zaimportowane dane nie zostaną zachowane.
+          confirm_revert: >-
+            To usunie zaimportowane transakcje, ale nadal będzie można w każdej chwili
+            przejrzeć i ponownie zaimportować dane.
           delete: Usuń
           mark_failed: Oznacz jako nieudany
           revert: Cofnij
@@ -610,7 +731,8 @@ pl:
       transaction_import: Import transakcji
       ynab_import: Import z YNAB
     update:
-      account_locked: Ten import został już opublikowany, więc nie można zmienić jego
-        konta. Najpierw go cofnij, jeśli chcesz zaimportować dane gdzie indziej.
+      account_locked: >-
+        Ten import został już opublikowany, więc nie można zmienić jego konta. Najpierw
+        go cofnij, jeśli chcesz zaimportować dane gdzie indziej.
       account_saved: Konto zapisane.
       invalid_account: Nie znaleziono konta.

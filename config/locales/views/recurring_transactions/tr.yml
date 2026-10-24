@@ -74,6 +74,7 @@ tr:
       semiannual: Altı ayda bir
       annual: Yıllık
       custom: Özel zamanlama
+      interval: Özel aralık
     frequency:
       monthly: Aylık, %{day}
       weekly: Her hafta %{weekday}
@@ -84,6 +85,9 @@ tr:
       annual: Yıllık, %{month}, %{day}
       custom: Özel zamanlama
       last_day: ayın son günü
+      every_n_months: "%{interval} ayda bir, %{day}"
+      every_n_weeks: "%{interval} haftada bir, %{weekday}"
+      every_n_years: "%{interval} yılda bir, %{day} %{month}"
     actions:
       edit_payment_link: Ödeme bağlantısını düzenle
       pause: Duraklat
@@ -182,6 +186,8 @@ tr:
       frequency_second_day_label: İkinci gün
       frequency_weekday_label: Gün
       frequency_month_label: Ay
+      frequency_interval_label: Yineleme aralığı
+      frequency_interval_unit_label: Birim
     update:
       success: Fatura güncellendi
       success_with_siblings:
@@ -204,3 +210,7 @@ tr:
       dismiss: Fatura değil
     confirmed: Fatura yinelenen işlemlerinize eklendi
     dismissed: Yok sayıldı. Bu desen bir daha önerilmeyecek.
+    frequency_interval_units:
+      monthly: ay
+      weekly: hafta
+      yearly: yıl

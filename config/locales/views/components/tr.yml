@@ -75,12 +75,37 @@ tr:
           remaining_principal_balance: Kalan anapara bakiyesi
           total_account_value: Toplam hesap değeri
           total_gains: Toplam kazanç
+          loan_remaining_balance: Kalan bakiye
         views:
           cash: Nakit
           holdings: Varlıklar
           total_value: Toplam değer
           gains: Kazanç / ROI
         vs_available_history: mevcut geçmişe göre
+        loan:
+          actual: Kayıtlı bakiye
+          aria_actual_history_starts: Kayıtlı bakiye geçmişi %{date} tarihinde başlıyor.
+          aria_description: Kredi bakiyesi grafiği. Kayıtlı bakiye %{current_balance}. İlk
+            plana göre borç kapanış tarihi %{scheduled_payoff_date}. Bugünkü bakiyeye göre
+            öngörülen borç kapanış tarihi %{projected_payoff_date}.
+          interactive_chart: etkileşimli grafik
+          interest_saved: Faiz tasarrufu
+          legend: Grafik serileri
+          months_saved:
+            one: Plandan %{count} ay önce
+            other: Plandan %{count} ay önce
+          no_payoff: mevcut taksit tutarıyla kapanmıyor
+          not_converged: Mevcut taksit tutarıyla bu borç ilk vade sonunda kapanmıyor; %{balloon}
+            tutarında borç kalıyor.
+          on_schedule: Plana uygun
+          projected: Bugünden itibaren öngörülen
+          projected_payoff: Öngörülen borç kapanışı
+          projection_basis: Bugünkü kayıtlı bakiyeyi, ödeme planının aynı gün için öngördüğü
+            bakiyeyle karşılaştırır. Planlanan tarihten önce kaydedilen ödeme, o tarihe kadar
+            planın ilerisinde; sonra kaydedilen ödeme ise gerisinde görünür.
+          scheduled: İlk ödeme planı
+          since_start: kredi başlangıcından bu yana
+          today: Bugün
     period_picker:
       aria_label: 'Zaman aralığı: %{period}'
   ds:

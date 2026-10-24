@@ -3,16 +3,18 @@ pl:
   settings:
     ai_prompts:
       prompt_field:
-        format_risk: 'Twoje polecenie dla %{provider} usunęło przykład {"%{key}":
-          ...}. Każde żądanie nadal oczekuje tego kształtu, więc parsowanie zwykle
-          działa, ale nadpisanie proszące o inny format wyjścia je zepsuje.'
+        format_risk: >-
+          Twoje polecenie dla %{provider} usunęło przykład {"%{key}": ...}. Każde
+          żądanie nadal oczekuje tego kształtu, więc parsowanie zwykle działa, ale
+          nadpisanie proszące o inny format wyjścia je zepsuje.
         prompt_label: Polecenie
         provider_anthropic: Anthropic
         provider_label: Dostawca
         provider_openai: OpenAI
         reset: Przywróć domyślne
-        reset_confirm_body: Spowoduje to odrzucenie Twojego niestandardowego polecenia
-          i przywrócenie wbudowanych domyślnych instrukcji.
+        reset_confirm_body: >-
+          Spowoduje to odrzucenie Twojego niestandardowego polecenia i przywrócenie
+          wbudowanych domyślnych instrukcji.
         reset_confirm_title: Przywrócić domyślne polecenie?
         status_custom: Używane jest Twoje niestandardowe polecenie
         status_default: Używane są domyślne ustawienia wbudowane
@@ -20,8 +22,9 @@ pl:
         disable_ai: Wyłącz asystenta AI
         main_system_prompt:
           label: Systemowe polecenie czatu
-          subtitle: Podstawowe instrukcje definiujące, jak asystent AI zachowuje się
-            we wszystkich rozmowach
+          subtitle: >-
+            Podstawowe instrukcje definiujące, jak asystent AI zachowuje się we wszystkich
+            rozmowach
           title: Główny prompt systemowy
         merchant_detector:
           subtitle: AI identyfikuje i wzbogaca dane transakcji o informacje o sprzedawcy
@@ -31,7 +34,8 @@ pl:
         prompt_instructions: Instrukcje promptów
         save: Zapisz polecenia
         save_confirm:
-          body: Niestandardowe nadpisania poleceń zastępują wbudowane instrukcje systemowe
+          body: >-
+            Niestandardowe nadpisania poleceń zastępują wbudowane instrukcje systemowe
             i zabezpieczenia (takie jak ograniczenia dotyczące porad finansowych)
             dla Twojej rodziny.
           cancel: Anuluj
@@ -39,7 +43,8 @@ pl:
           dont_show_again: Nie pokazuj więcej tego ostrzeżenia
           title: Zapisać niestandardowe polecenia AI?
         transaction_categorizer:
-          subtitle: AI automatycznie kategoryzuje Twoje transakcje na podstawie zdefiniowanych
+          subtitle: >-
+            AI automatycznie kategoryzuje Twoje transakcje na podstawie zdefiniowanych
             kategorii
           title: Kategoryzator transakcji
       update:
@@ -49,21 +54,22 @@ pl:
       show:
         dashboard_subtitle: Dostosuj sposób wyświetlania pulpitu
         dashboard_title: Pulpit
-        dashboard_two_column_description: Wyświetlaj widżety pulpitu w dwóch kolumnach
-          na dużych ekranach. Gdy opcja jest wyłączona, widżety układają się w jednej
-          kolumnie.
+        dashboard_two_column_description: >-
+          Wyświetlaj widżety pulpitu w dwóch kolumnach na dużych ekranach. Gdy opcja
+          jest wyłączona, widżety układają się w jednej kolumnie.
         dashboard_two_column_title: Układ dwukolumnowy
-        disable_modal_click_outside_description: Zapobiega zamykaniu okien modalnych
-          po kliknięciu poza nimi. Przydatne, aby uniknąć przypadkowej utraty niezapisanych
-          zmian.
+        disable_modal_click_outside_description: >-
+          Zapobiega zamykaniu okien modalnych po kliknięciu poza nimi. Przydatne,
+          aby uniknąć przypadkowej utraty niezapisanych zmian.
         disable_modal_click_outside_title: Utrzymuj okna modalne otwarte po kliknięciu
           poza nimi
         modals_subtitle: Dostosuj zachowanie okien modalnych
         modals_title: Okna modalne
         page_title: Wygląd
-        split_grouped_description: Pokazuj podzielone transakcje zgrupowane pod transakcją
-          nadrzędną na liście transakcji. Gdy opcja jest wyłączona, pozycje podrzędne
-          pojawiają się jako osobne wiersze.
+        split_grouped_description: >-
+          Pokazuj podzielone transakcje zgrupowane pod transakcją nadrzędną na liście
+          transakcji. Gdy opcja jest wyłączona, pozycje podrzędne pojawiają się jako
+          osobne wiersze.
         split_grouped_title: Grupuj podzielone transakcje
         theme_dark: Ciemny
         theme_light: Jasny
@@ -72,23 +78,28 @@ pl:
         theme_title: Motyw
         transactions_subtitle: Dostosuj sposób wyświetlania transakcji
         transactions_title: Transakcje
+        dashboard_account_groups_description: >-
+          Te sekcje kont będą początkowo rozwinięte na pulpicie i na pasku bocznym
+          kont. Możesz je w każdej chwili ręcznie zwinąć.
+        dashboard_account_groups_title: Domyślnie rozwinięte
     background_jobs:
       cancel:
         cancelled: "%{type} oznaczono jako utracone."
         cancelled_error: Oznaczono jako nieudane przez administratora - zadanie w
           tle uznano za utracone.
-        not_cancellable: Tej operacji nie można teraz zmodyfikować - jej zadanie może
-          być wciąż w kolejce albo w trakcie wykonywania. Spróbuj ponownie, gdy będzie
-          bezczynna przez 30 minut.
+        not_cancellable: >-
+          Tej operacji nie można teraz zmodyfikować - jej zadanie może być wciąż w
+          kolejce albo w trakcie wykonywania. Spróbuj ponownie, gdy będzie bezczynna
+          przez 30 minut.
       operation:
         actions:
           mark_failed: Oznacz jako nieudane
           mark_stale: Oznacz jako nieaktualne
           release_claim: Zwolnij przypisanie
         ago: "%{time} temu"
-        confirm: Oznaczyć tę operację jako utraconą? Rekord zostanie przeniesiony
-          do statusu końcowego, aby można było spróbować ponownie. Dane źródłowe pozostają
-          nietknięte.
+        confirm: >-
+          Oznaczyć tę operację jako utraconą? Rekord zostanie przeniesiony do statusu
+          końcowego, aby można było spróbować ponownie. Dane źródłowe pozostają nietknięte.
         missing_value: "-"
         queued: W kolejce
         recent: Ostatnie
@@ -99,13 +110,15 @@ pl:
       show:
         empty: Brak operacji w toku.
         missing_value: "-"
-        operations_subtitle: Synchronizacje, importy i eksporty wszystkich gospodarstw
-          domowych, które nie osiągnęły statusu końcowego. Operacje bezczynne od ponad
-          30 minut bez widocznego zadania są uznawane za utracone i można je tak oznaczyć.
+        operations_subtitle: >-
+          Synchronizacje, importy i eksporty wszystkich gospodarstw domowych, które
+          nie osiągnęły statusu końcowego. Operacje bezczynne od ponad 30 minut bez
+          widocznego zadania są uznawane za utracone i można je tak oznaczyć.
         operations_title: Operacje w toku
         page_title: Zadania w tle
-        redis_unreachable: Stan Sidekiq jest niedostępny (brak połączenia z Redis).
-          Status aktywności jest nieznany, więc akcje są wyłączone.
+        redis_unreachable: >-
+          Stan Sidekiq jest niedostępny (brak połączenia z Redis). Status aktywności
+          jest nieznany, więc akcje są wyłączone.
         stats:
           busy: Zajęte
           dead: Martwe
@@ -114,8 +127,9 @@ pl:
           retries: Ponowienia
           scheduled: Zaplanowane
           workers: Procesy robocze
-        subtitle: 'Stan Sidekiq na żywo: procesy robocze, głębokość kolejek oraz zbiory
-          ponowień i martwych zadań.'
+        subtitle: >-
+          Stan Sidekiq na żywo: procesy robocze, głębokość kolejek oraz zbiory ponowień
+          i martwych zadań.
         table:
           action: Akcja
           family: Gospodarstwo domowe
@@ -176,10 +190,11 @@ pl:
         completion: odpowiedź
         cost_by_model: Koszt wg modelu
         cost_by_operation: Koszt wg operacji
-        cost_estimates_description: Koszty są szacowane na podstawie opublikowanych cenników dostawców, ostatnio zweryfikowanych %{date}. Rzeczywiste koszty
-          mogą się różnić. Ceny podane są za 1 milion tokenów i zależą od modelu.
-          Modele niestandardowe lub hostowane samodzielnie pokazują "N/D" i nie są
-          wliczane do sum kosztów.
+        cost_estimates_description: >-
+          Koszty są szacowane na podstawie opublikowanych cenników dostawców, ostatnio
+          zweryfikowanych %{date}. Rzeczywiste koszty mogą się różnić. Ceny podane
+          są za 1 milion tokenów i zależą od modelu. Modele niestandardowe lub hostowane
+          samodzielnie pokazują "N/D" i nie są wliczane do sum kosztów.
         cost_estimates_title: O szacowaniu kosztów
         end_date: Data końcowa
         failed: Nieudane
@@ -197,12 +212,14 @@ pl:
       revoke:
         revoked: Połączenie cofnięte.
       show:
-        connect_subtitle: Wklej ten URL do Claude.ai (albo dowolnego klienta kompatybilnego
-          z MCP), aby połączyć go z Twoim kontem Sure.
+        connect_subtitle: >-
+          Wklej ten URL do Claude.ai (albo dowolnego klienta kompatybilnego z MCP),
+          aby połączyć go z Twoim kontem Sure.
         connect_title: Połącz asystenta AI
         connected_ago: Połączono %{time} temu
-        connected_subtitle: Te aplikacje mają obecnie dostęp do Twoich danych Sure.
-          Cofnij dostęp tym, których już nie używasz.
+        connected_subtitle: >-
+          Te aplikacje mają obecnie dostęp do Twoich danych Sure. Cofnij dostęp tym,
+          których już nie używasz.
         connected_title: Połączeni klienci
         copied: Skopiowano!
         copy_url: Kopiuj
@@ -212,10 +229,12 @@ pl:
         revoke_confirm: Cofnąć dostęp temu klientowi?
         step_1: Otwórz Claude.ai i przejdź do Ustawienia → Dostosuj → Konektory.
         step_2: Kliknij "Dodaj konektor" i wklej powyższy URL serwera MCP.
-        step_3: Kliknij Połącz. Zostaniesz przekierowany do Sure, aby się zalogować
-          i autoryzować dostęp.
-        step_4: Po autoryzacji Claude będzie mógł odczytywać Twoje konta, transakcje
-          i dane o saldach.
+        step_3: >-
+          Kliknij Połącz. Zostaniesz przekierowany do Sure, aby się zalogować i autoryzować
+          dostęp.
+        step_4: >-
+          Po autoryzacji Claude będzie mógł odczytywać Twoje konta, transakcje i dane
+          o saldach.
         unknown_client: Nieznany klient
     payments:
       show:
@@ -265,8 +284,9 @@ pl:
         general_subtitle: Skonfiguruj swoje preferencje
         general_title: Ogólne
         household_budget_enabled: Budżet domowy
-        household_budget_enabled_hint: Prowadź wspólny budżet domowy obok budżetów
-          osobistych. Wyłącz, aby używać wyłącznie budżetów osobistych.
+        household_budget_enabled_hint: >-
+          Prowadź wspólny budżet domowy obok budżetów osobistych. Wyłącz, aby używać
+          wyłącznie budżetów osobistych.
         language: Język
         language_auto: Język przeglądarki
         manage_currencies: Zarządzaj walutami
@@ -275,8 +295,9 @@ pl:
         month_start_day: Miesiąc budżetowy zaczyna się
         month_start_day_hint: Ustaw, kiedy zaczyna się Twój miesiąc budżetowy (np.
           dzień wypłaty)
-        month_start_day_warning: Twoje budżety i obliczenia MTD będą używać tego niestandardowego
-          dnia startowego zamiast 1. dnia każdego miesiąca.
+        month_start_day_warning: >-
+          Twoje budżety i obliczenia MTD będą używać tego niestandardowego dnia startowego
+          zamiast 1. dnia każdego miesiąca.
         no_additional_currencies: Nic nie wybrano
         no_matching_currencies: Nie znaleziono walut
         page_title: Preferencje
@@ -303,8 +324,9 @@ pl:
     profiles:
       destroy:
         cannot_remove_self: Nie możesz usunąć siebie z konta.
-        member_owns_other_family_data: Ten członek nadal posiada konta w innym gospodarstwie
-          domowym i nie można go usunąć. Najpierw przenieś albo usuń te konta.
+        member_owns_other_family_data: >-
+          Ten członek nadal posiada konta w innym gospodarstwie domowym i nie można
+          go usunąć. Najpierw przenieś albo usuń te konta.
         member_removal_failed: Wystąpił problem podczas usuwania członka.
         member_removed: Członek został pomyślnie usunięty.
         not_authorized: Nie masz uprawnień do usuwania członków.
@@ -320,14 +342,16 @@ pl:
           body: Czy na pewno chcesz usunąć %{name} ze swojego konta?
           title: Usuń członka
         confirm_reset:
-          body: Czy na pewno chcesz zresetować swoje konto? Spowoduje to usunięcie
-            wszystkich kont, kategorii, sprzedawców, tagów i innych danych. Tej akcji
-            nie można cofnąć.
+          body: >-
+            Czy na pewno chcesz zresetować swoje konto? Spowoduje to usunięcie wszystkich
+            kont, kategorii, sprzedawców, tagów i innych danych. Tej akcji nie można
+            cofnąć.
           title: Zresetować konto?
         confirm_reset_with_sample_data:
-          body: Czy na pewno chcesz zresetować swoje konto i załadować przykładowe
-            dane? Spowoduje to usunięcie istniejących danych i zastąpienie ich danymi
-            demonstracyjnymi, aby bezpiecznie poznawać Sure.
+          body: >-
+            Czy na pewno chcesz zresetować swoje konto i załadować przykładowe dane?
+            Spowoduje to usunięcie istniejących danych i zastąpienie ich danymi demonstracyjnymi,
+            aby bezpiecznie poznawać Sure.
           title: Zresetować konto i załadować przykładowe dane?
         danger_zone_title: Strefa ryzyka
         delete_account: Usuń konto
@@ -340,8 +364,9 @@ pl:
         group_title: Członkowie grupy
         household_form_input_placeholder: Wprowadź nazwę gospodarstwa domowego
         household_form_label: Nazwa gospodarstwa domowego
-        household_subtitle: Zaproszone osoby mogą zalogować się do Twojego konta %{moniker}
-          i uzyskać dostęp do współdzielonych zasobów.
+        household_subtitle: >-
+          Zaproszone osoby mogą zalogować się do Twojego konta %{moniker} i uzyskać
+          dostęp do współdzielonych zasobów.
         household_title: Gospodarstwo domowe
         invitation_link: Odnośnik do zaproszenia
         invite_member: Dodaj członka
@@ -354,15 +379,18 @@ pl:
         remove_member: Usuń członka
         resend_confirmation_link: poproś o nowy e-mail potwierdzający
         reset_account: Zresetuj konto
-        reset_account_warning: Reset konta usunie wszystkie konta, kategorie, sprzedawców,
-          tagi i inne dane, ale pozostawi Twoje konto użytkownika.
+        reset_account_warning: >-
+          Reset konta usunie wszystkie konta, kategorie, sprzedawców, tagi i inne
+          dane, ale pozostawi Twoje konto użytkownika.
         reset_account_with_sample_data: Zresetuj i załaduj dane
-        reset_account_with_sample_data_warning: Usuń wszystkie istniejące dane i załaduj
-          nowe dane przykładowe, aby poznawać aplikację na gotowym środowisku.
+        reset_account_with_sample_data_warning: >-
+          Usuń wszystkie istniejące dane i załaduj nowe dane przykładowe, aby poznawać
+          aplikację na gotowym środowisku.
         save: Zapisz
-        unconfirmed_email_notice_html: Poprosiłeś o zmianę adresu e-mail na %{email}.
-          Sprawdź pocztę i potwierdź zmianę, aby zaczęła obowiązywać. Jeśli nie otrzymałeś
-          wiadomości, sprawdź folder ze spamem albo %{resend_link}.
+        unconfirmed_email_notice_html: >-
+          Poprosiłeś o zmianę adresu e-mail na %{email}. Sprawdź pocztę i potwierdź
+          zmianę, aby zaczęła obowiązywać. Jeśli nie otrzymałeś wiadomości, sprawdź
+          folder ze spamem albo %{resend_link}.
     providers:
       akahu_panel:
         step_1_html: Przejdź do %{link} i utwórz aplikację osobistą.
@@ -370,7 +398,8 @@ pl:
         step_3: Wklej tokeny poniżej, zapisz, a następnie połącz zsynchronizowane
           konta.
       bank_sync:
-        lede: Połącz konta zewnętrzne, aby transakcje, salda i posiadane aktywa trafiały
+        lede: >-
+          Połącz konta zewnętrzne, aby transakcje, salda i posiadane aktywa trafiały
           do Sure automatycznie.
         page_title: Synchronizacja banku
       binance_panel:
@@ -384,18 +413,22 @@ pl:
         historical_import: Ustawienia importu historycznego
         ip_hint_body: 'Dodaj adres IP wyjściowy serwera aplikacji do białej listy
           klucza API Binance:'
-        ip_hint_contact_admin: Skontaktuj się z administratorem, aby uzyskać adres
-          IP wyjściowy serwera aplikacji.
+        ip_hint_contact_admin: >-
+          Skontaktuj się z administratorem, aby uzyskać adres IP wyjściowy serwera
+          aplikacji.
         ip_hint_title: Wymagane dodanie do białej listy IP
-        no_withdraw_body: Nie włączaj uprawnień do wypłat podczas tworzenia klucza
-          API Binance. Sure potrzebuje tylko dostępu do odczytu.
+        no_withdraw_body: >-
+          Nie włączaj uprawnień do wypłat podczas tworzenia klucza API Binance. Sure
+          potrzebuje tylko dostępu do odczytu.
         no_withdraw_title: Tylko klucz do odczytu
         setup_instructions: 'Aby połączyć Binance, utwórz klucz API tylko do odczytu:'
-        step1_html: Przejdź do <a href="https://www.binance.com/en/my/settings/api-management"
+        step1_html: >-
+          Przejdź do <a href="https://www.binance.com/en/my/settings/api-management"
           target="_blank" rel="noopener noreferrer" class="underline">Binance API
           Management</a>
-        step2: Utwórz nowy klucz API z zaznaczonym wyłącznie uprawnieniem odczytu
-          (Enable Reading)
+        step2: >-
+          Utwórz nowy klucz API z zaznaczonym wyłącznie uprawnieniem odczytu (Enable
+          Reading)
         step3: Wklej poniżej swój klucz API i sekret
         sync: Synchronizuj
         sync_start_date_help: Wybierz, jak daleko wstecz pobrać historyczne transakcje.
@@ -409,24 +442,27 @@ pl:
         api_secret_placeholder: Wprowadź sekret API Coinbase
         connect_button: Połącz Coinbase
         disconnect: Rozłącz
-        disconnect_confirm: Czy na pewno chcesz odłączyć to połączenie Coinbase? Twoje
-          zsynchronizowane konta staną się kontami ręcznymi.
+        disconnect_confirm: >-
+          Czy na pewno chcesz odłączyć to połączenie Coinbase? Twoje zsynchronizowane
+          konta staną się kontami ręcznymi.
         setup_instructions: 'Aby połączyć Coinbase:'
-        step1_html: Przejdź do <a href="https://portal.cdp.coinbase.com/projects/api-keys"
-          target="_blank" rel="noopener noreferrer" class="text-primary underline">Ustawień
-          API Coinbase</a>
-        step2: Utwórz nowy klucz API z uprawnieniami tylko do odczytu (podgląd kont,
-          podgląd transakcji)
+        step1_html: >-
+          Przejdź do <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank"
+          rel="noopener noreferrer" class="text-primary underline">Ustawień API Coinbase</a>
+        step2: >-
+          Utwórz nowy klucz API z uprawnieniami tylko do odczytu (podgląd kont, podgląd
+          transakcji)
         step3: Skopiuj klucz API i sekret API, a następnie wklej je poniżej
         sync: Synchronizuj
         syncing: Synchronizacja...
       connect: Połącz
-      drawer_trust_statement: Dostęp tylko do odczytu. Sure nigdy nie może przenosić
-        pieniędzy, a Twoje dane uwierzytelniające są przechowywane w postaci zaszyfrowanej.
-      drawer_trust_statement_encryption_unconfigured: Dostęp tylko do odczytu. Sure
-        nigdy nie może przenosić pieniędzy. Skonfiguruj jawne klucze szyfrowania,
-        zanim zaczniesz przechowywać dane uwierzytelniające dostawców w środowisku
-        produkcyjnym.
+      drawer_trust_statement: >-
+        Dostęp tylko do odczytu. Sure nigdy nie może przenosić pieniędzy, a Twoje
+        dane uwierzytelniające są przechowywane w postaci zaszyfrowanej.
+      drawer_trust_statement_encryption_unconfigured: >-
+        Dostęp tylko do odczytu. Sure nigdy nie może przenosić pieniędzy. Skonfiguruj
+        jawne klucze szyfrowania, zanim zaczniesz przechowywać dane uwierzytelniające
+        dostawców w środowisku produkcyjnym.
       empty_filter: Żaden dostawca nie pasuje do Twojego filtra.
       enable_banking_panel:
         add_connection: Dodaj połączenie
@@ -460,8 +496,9 @@ pl:
         unknown: Nieznane
         update_connection: Zaktualizuj połączenie
       encryption_error:
-        message: Klucze szyfrowania Active Record nie są skonfigurowane. Upewnij się,
-          że dane uwierzytelniające szyfrowania (active_record_encryption.primary_key,
+        message: >-
+          Klucze szyfrowania Active Record nie są skonfigurowane. Upewnij się, że
+          dane uwierzytelniające szyfrowania (active_record_encryption.primary_key,
           active_record_encryption.deterministic_key oraz active_record_encryption.key_derivation_salt)
           są poprawnie ustawione w poświadczeniach Rails lub zmiennych środowiskowych
           przed użyciem dostawców synchronizacji.
@@ -491,15 +528,17 @@ pl:
           configuration_heading: Ustaw te opcje zapytania
           eyebrow: Flex Query
           sections_heading: Włącz te sekcje i pola
-          summary: Rozwiń, aby zobaczyć dokładne sekcje, pola i ustawienia, które
-            musi zawierać Twoje IBKR Activity Flex Query.
+          summary: >-
+            Rozwiń, aby zobaczyć dokładne sekcje, pola i ustawienia, które musi zawierać
+            Twoje IBKR Activity Flex Query.
           title: Sekcje, pola i konfiguracja
         not_configured: Nie skonfigurowano.
         query_id_label: ID zapytania
         query_id_placeholder_existing: Zostaw puste, aby zachować bieżący Query ID
         query_id_placeholder_new: Wpisz swój Query ID z IBKR Flex
-        report_window_note: Raporty IBKR Flex są ograniczone do okresu zapytania skonfigurowanego
-          w IBKR. Sure zaimportuje pełny bieżący stan posiadania oraz do 365 ostatnich
+        report_window_note: >-
+          Raporty IBKR Flex są ograniczone do okresu zapytania skonfigurowanego w
+          IBKR. Sure zaimportuje pełny bieżący stan posiadania oraz do 365 ostatnich
           dni aktywności z tego raportu.
         save_configuration: Zapisz konfigurację
         sections:
@@ -508,8 +547,9 @@ pl:
           cash_report_fields: 'Fields: Currency, Ending Cash'
           cash_report_options: 'Options: None'
           cash_transactions: 'Cash Transactions:'
-          cash_transactions_fields: 'Fields: Amount, Conid, Currency, FX Rate To Base,
-            Report Date, Transaction ID, Type'
+          cash_transactions_fields: >-
+            Fields: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction
+            ID, Type
           cash_transactions_options: 'Options: Dividends, Deposits & Withdrawals,
             Detail'
           change_in_position_value_summary: 'Change In Position Value Summary: Currency,
@@ -518,14 +558,16 @@ pl:
           net_asset_value_fields: 'Fields: Currency, Report Date, Total'
           net_asset_value_options: 'Options: None'
           open_positions: 'Open Positions:'
-          open_positions_fields: 'Fields: Asset Class, Conid, Cost Basis Price, Currency,
-            FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security
-            ID Type, Side, Symbol'
+          open_positions_fields: >-
+            Fields: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base,
+            Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side,
+            Symbol
           open_positions_options: 'Options: Summary'
           trades: 'Trades:'
-          trades_fields: 'Fields: Asset Class, Buy/Sell, Conid, Currency, FX Rate
-            To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
-            Date, Trade ID, TradePrice, Transaction ID'
+          trades_fields: >-
+            Fields: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission,
+            IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice,
+            Transaction ID
           trades_options: 'Options: Execution'
         status_configured_prefix: "%{summary}. Przejdź do zakładki"
         status_configured_suffix: aby zarządzać wykrytymi kontami.
@@ -534,12 +576,15 @@ pl:
             Queries".
           step_2: Kliknij ikonę "+" w sekcji "Activity Flex Query", aby utworzyć nowe
             zapytanie.
-          step_3: Nadaj zapytaniu nazwę (np. "Sure Sync"), a następnie sprawdź poniższe
+          step_3: >-
+            Nadaj zapytaniu nazwę (np. "Sure Sync"), a następnie sprawdź poniższe
             szczegóły Flex Query i włącz wymienione sekcje, pola oraz opcje konfiguracji.
-          step_4: Zapisz zapytanie, zanotuj swój "Query ID", a następnie użyj ikony
-            koła zębatego w sekcji "Flex Web Service Configuration", aby wygenerować
-            Token dostępu.
-          step_5: Wklej swój Query ID i Token poniżej, zapisz konfigurację, a następnie
+          step_4: >-
+            Zapisz zapytanie, zanotuj swój "Query ID", a następnie użyj ikony koła
+            zębatego w sekcji "Flex Web Service Configuration", aby wygenerować Token
+            dostępu.
+          step_5: >-
+            Wklej swój Query ID i Token poniżej, zapisz konfigurację, a następnie
             przejdź do Kont, aby połączyć wykryte konta IBKR.
         sync: Synchronizuj
         token_label: Token
@@ -559,15 +604,18 @@ pl:
         disconnect_confirm: Czy na pewno chcesz rozłączyć %{name}?
         keep_api_key_placeholder: Zostaw puste, aby zachować obecny API Key
         keep_api_secret_placeholder: Zostaw puste, aby zachować obecny Private Key
-        read_only_body: Nie nadawaj uprawnień do handlu, anulowania, wypłat, eksportu,
-          rejestru, Earn, stakingu ani przelewów. Sure importuje wyłącznie salda,
-          posiadane aktywa i zrealizowane transakcje spot.
+        read_only_body: >-
+          Nie nadawaj uprawnień do handlu, anulowania, wypłat, eksportu, rejestru,
+          Earn, stakingu ani przelewów. Sure importuje wyłącznie salda, posiadane
+          aktywa i zrealizowane transakcje spot.
         read_only_title: Tylko synchronizacja giełdy w trybie odczytu
         setup_accounts: Skonfiguruj konto
-        step1_html: Przejdź do <a href="https://pro.kraken.com/app/settings/api" target="_blank"
+        step1_html: >-
+          Przejdź do <a href="https://pro.kraken.com/app/settings/api" target="_blank"
           rel="noopener noreferrer" class="underline">ustawień API Kraken</a>
-        step2: Utwórz klucz API z uprawnieniami wyłącznie "Query Funds" oraz "Query
-          Closed Orders & Trades".
+        step2: >-
+          Utwórz klucz API z uprawnieniami wyłącznie "Query Funds" oraz "Query Closed
+          Orders & Trades".
         step3: Wklej poniżej API Key i Private Key.
         sync: Synchronizuj
         syncing: Synchronizowanie...
@@ -600,8 +648,9 @@ pl:
         step_1_html: Przejdź do %{link}, zaloguj się aplikacją Monobank i wygeneruj
           token osobisty.
         step_2: Skopiuj token — jest pokazywany tylko raz.
-        step_3: Wklej token poniżej, zapisz, a następnie połącz karty i skarbonki,
-          które chcesz śledzić.
+        step_3: >-
+          Wklej token poniżej, zapisz, a następnie połącz karty i skarbonki, które
+          chcesz śledzić.
       not_authorized: Brak autoryzacji
       not_found: Nie znaleziono dostawcy.
       onchain_wallet_panel:
@@ -611,16 +660,19 @@ pl:
         disconnect_all_confirm: To usunie wszystkie śledzone adresy i ich konta. Kontynuować?
         etherscan_api_key_label: Klucz API Etherscan (opcjonalnie)
         etherscan_api_key_placeholder: Wklej klucz API Etherscan
-        etherscan_hint: Odczyt danych Ethereum działa bez klucza. Dodanie klucza Etherscan
-          tylko podnosi limit zapytań dla Ethereum.
+        etherscan_hint: >-
+          Odczyt danych Ethereum działa bez klucza. Dodanie klucza Etherscan tylko
+          podnosi limit zapytań dla Ethereum.
         keep_etherscan_api_key: Zostaw puste, aby zachować obecny klucz
-        keyless_body: Sure wyłącznie odczytuje publiczne dane blockchaina. Nie są
-          potrzebne żadne klucze, frazy seed ani podpisy, i nic nie może zostać wydane.
+        keyless_body: >-
+          Sure wyłącznie odczytuje publiczne dane blockchaina. Nie są potrzebne żadne
+          klucze, frazy seed ani podpisy, i nic nie może zostać wydane.
         keyless_title: Tylko odczyt, bez wymaganych kluczy
         manage_wallets: Zarządzaj portfelami
         save: Zapisz
-        sync_start_date_hint: Przelewy sprzed tej daty są ignorowane. Zostaw puste,
-          aby zaimportować wszystko, co zgłasza eksplorator.
+        sync_start_date_hint: >-
+          Przelewy sprzed tej daty są ignorowane. Zostaw puste, aby zaimportować wszystko,
+          co zgłasza eksplorator.
         sync_start_date_label: Ignoruj przelewy sprzed
       plaid_eu_panel:
         step_1_html: Otwórz %{link} i skopiuj swój europejski Client ID oraz Secret
@@ -633,10 +685,10 @@ pl:
       provider_form:
         save_and_connect: Zapisz i połącz
       provider_setup_encryption_warning:
-        message: Ta instalacja self-hosted nie ma skonfigurowanych jawnych kluczy
-          szyfrowania Active Record. Skonfiguruj primary_key, deterministic_key i
-          key_derivation_salt przed zapisaniem danych uwierzytelniających dostawcy
-          na produkcji.
+        message: >-
+          Ta instalacja self-hosted nie ma skonfigurowanych jawnych kluczy szyfrowania
+          Active Record. Skonfiguruj primary_key, deterministic_key i key_derivation_salt
+          przed zapisaniem danych uwierzytelniających dostawcy na produkcji.
         title: Brak kluczy szyfrowania
       recently_synced: Zsynchronizowano niedawno. Spróbuj ponownie za chwilę.
       search_filters:
@@ -683,31 +735,46 @@ pl:
         ibkr: Synchronizuj konta inwestycyjne Interactive Brokers przez import Flex
           Query.
         indexa_capital: Śledź swój zautomatyzowany portfel inwestycyjny Indexa Capital.
-        kraken: Synchronizuj salda i zrealizowane transakcje spot z Kraken za pomocą
-          klucza API tylko do odczytu.
-        lunchflow: Połącz ponad 20 tys. banków z ponad 40 krajów (Wielka Brytania,
-          UE, USA i więcej!)
+        kraken: >-
+          Synchronizuj salda i zrealizowane transakcje spot z Kraken za pomocą klucza
+          API tylko do odczytu.
+        lunchflow: >-
+          Połącz ponad 20 tys. banków z ponad 40 krajów (Wielka Brytania, UE, USA
+          i więcej!)
         mercury: Synchronizuj automatycznie swoje firmowe konta bankowe Mercury.
-        monobank: Synchronizuj ukraińskie karty i skarbonki Monobank za pomocą osobistego
+        monobank: >-
+          Synchronizuj ukraińskie karty i skarbonki Monobank za pomocą osobistego
           tokenu API.
-        onchain_wallet: Śledź portfele Bitcoin, EVM i Solana z samodzielną kontrolą
-          kluczy na podstawie ich publicznych adresów.
+        onchain_wallet: >-
+          Śledź portfele Bitcoin, EVM i Solana z samodzielną kontrolą kluczy na podstawie
+          ich publicznych adresów.
         plaid: Połącz tysiące amerykańskich instytucji finansowych przez Plaid.
         plaid_eu: Połącz europejskie instytucje finansowe przez Plaid (PSD2 / otwarta
           bankowość).
-        questrade: Synchronizuj swoje konta inwestycyjne Questrade bezpośrednio przez
-          API Questrade.
+        questrade: >-
+          Synchronizuj swoje konta inwestycyjne Questrade bezpośrednio przez API Questrade.
         redbark: Synchronizuj australijskie konta bankowe przez otwartą bankowość
           Redbark.
         simplefin: Połącz amerykańskie konta bankowe przez otwarty protokół SimpleFIN.
         snaptrade: Połącz konta maklerskie przez sieć agregacji SnapTrade.
         sophtron: Połącz amerykańskie i kanadyjskie banki oraz dostawców usług.
-        trade_republic: Synchronizuj swoje konto inwestycyjne Trade Republic przez
-          bezpieczne logowanie internetowe tylko do odczytu.
-        trading212: Synchronizuj swój portfel inwestycyjny Trading 212 za pomocą klucza
-          API tylko do odczytu.
-        wise: Synchronizuj automatycznie swoje wielowalutowe salda i przelewy międzynarodowe
+        trade_republic: >-
+          Synchronizuj swoje konto inwestycyjne Trade Republic przez bezpieczne logowanie
+          internetowe tylko do odczytu.
+        trading212: >-
+          Synchronizuj swój portfel inwestycyjny Trading 212 za pomocą klucza API
+          tylko do odczytu.
+        wise: >-
+          Synchronizuj automatycznie swoje wielowalutowe salda i przelewy międzynarodowe
           Wise.
+        coinspot: >-
+          Synchronizuj salda CoinSpot, wartości w AUD, przelewy, wpłaty, wypłaty i
+          historię zleceń za pomocą klucza API tylko do odczytu.
+        financekit: Synchronizuj (niektóre) konta FinanceKit przez aplikację Sure
+          na iOS.
+        fio: Synchronizuj konto Fio banka za pomocą tokena API tylko do odczytu.
+        up: Synchronizuj konta w australijskim banku Up za pomocą osobistego tokena
+          dostępu.
       trade_republic_panel:
         accounts_discovered:
           few: Wykryto %{count} konta Trade Republic.
@@ -715,8 +782,9 @@ pl:
           one: Wykryto 1 konto Trade Republic.
           other: Wykryto %{count} kont Trade Republic.
         accounts_tab: Konta
-        approval_pending: Logowanie rozpoczęte. Zatwierdź je w aplikacji Trade Republic
-          — Sure sprawdza to automatycznie.
+        approval_pending: >-
+          Logowanie rozpoczęte. Zatwierdź je w aplikacji Trade Republic — Sure sprawdza
+          to automatycznie.
         authenticator_code_label: Kod z aplikacji uwierzytelniającej (jeśli wymagany)
         authenticator_code_notice: Wpisz kod z aplikacji uwierzytelniającej.
         authenticator_code_placeholder: Kod 6-cyfrowy
@@ -733,13 +801,17 @@ pl:
           title: Trade Republic połączono pomyślnie
         currency_label: Waluta konta
         disconnect: Odłącz Trade Republic
-        disconnect_confirm: Odłączyć Trade Republic? Twoje zsynchronizowane konta
-          staną się kontami ręcznymi.
-        disconnect_confirm_with_identifier: "Odłączyć połączenie Trade Republic kończące się na %{last4}? Twoje zsynchronizowane konta staną się kontami ręcznymi."
+        disconnect_confirm: >-
+          Odłączyć Trade Republic? Twoje zsynchronizowane konta staną się kontami
+          ręcznymi.
+        disconnect_confirm_with_identifier: >-
+          Odłączyć połączenie Trade Republic kończące się na %{last4}? Twoje zsynchronizowane
+          konta staną się kontami ręcznymi.
         identifier_phone: Telefon
         identifier_account: Konto
         encryption_warning:
-          message: Danych logowania i sesji Trade Republic nie można bezpiecznie przechowywać,
+          message: >-
+            Danych logowania i sesji Trade Republic nie można bezpiecznie przechowywać,
             dopóki nie skonfigurowano Active Record Encryption.
           title: Szyfrowanie nie jest skonfigurowane
         login_expired: Żądanie zatwierdzenia wygasło.
@@ -751,8 +823,9 @@ pl:
         pin_label: PIN lub hasło
         pin_placeholder_existing: Zostaw puste, aby zachować bieżący PIN lub hasło
         pin_placeholder_new: Twój PIN lub hasło z aplikacji Trade Republic
-        push_login_notice: Zatwierdź teraz logowanie w aplikacji Trade Republic. Sure
-          sprawdza to automatycznie w tle. Możesz też sprawdzić status samodzielnie.
+        push_login_notice: >-
+          Zatwierdź teraz logowanie w aplikacji Trade Republic. Sure sprawdza to automatycznie
+          w tle. Możesz też sprawdzić status samodzielnie.
         qr_back_to_credentials: Wróć do numeru telefonu i PIN-u lub hasła
         qr_cancel: Anuluj logowanie kodem QR
         qr_error: Nie udało się rozpocząć logowania kodem QR. Spróbuj ponownie.
@@ -761,19 +834,20 @@ pl:
         qr_login: Zaloguj się kodem QR
         qr_success: Logowanie zatwierdzone. Sure odświeża stronę dostawcy.
         restart_login: Rozpocznij logowanie ponownie
-        add_account: "Dodaj kolejne połączenie"
+        add_account: Dodaj kolejne połączenie
         save_configuration: Zapisz i rozpocznij logowanie
         setup_accounts: Skonfiguruj konta
         status_configured_prefix: Połączono. Przejdź do zakładki
         status_configured_suffix: ", aby zarządzać wykrytymi kontami."
         steps:
-          step_1: Wpisz numer telefonu i PIN lub hasło używane w aplikacji Trade Republic, a
-            następnie zapisz.
+          step_1: >-
+            Wpisz numer telefonu i PIN lub hasło używane w aplikacji Trade Republic,
+            a następnie zapisz.
           step_2: Gdy zostaniesz o to poproszony, wpisz kod z aplikacji uwierzytelniającej.
           step_3: Gdy zostaniesz o to poproszony, zatwierdź logowanie w aplikacji
             Trade Republic.
         sync: Synchronizuj
-        syncing: "Synchronizowanie..."
+        syncing: Synchronizowanie...
         update_configuration: Zaktualizuj konfigurację
       trading212_panel:
         accounts_tab: Konta
@@ -813,21 +887,79 @@ pl:
       update:
         no_changes: Nie wprowadzono żadnych zmian
         updated_successfully: Ustawienia dostawcy zostały zaktualizowane
+      coinspot_panel:
+        add_connection: Dodaj połączenie z CoinSpot
+        api_key_label: Klucz API
+        api_key_placeholder: Wklej klucz API CoinSpot
+        api_secret_label: Sekret API
+        api_secret_placeholder: Wklej sekret API CoinSpot
+        connection_name_label: Nazwa połączenia
+        connection_name_placeholder: Główne konto CoinSpot
+        default_connection_name: CoinSpot
+        disconnect: Rozłącz
+        disconnect_confirm: Czy na pewno chcesz rozłączyć %{name}?
+        keep_api_key_placeholder: Pozostaw puste, aby zachować obecny klucz API
+        keep_api_secret_placeholder: Pozostaw puste, aby zachować obecny sekret API
+        read_only_body: >-
+          Nie przyznawaj uprawnień do wysyłania, wypłat, handlu ani przelewów. Sure
+          importuje tylko salda, wartości w AUD, przelewy, wpłaty, wypłaty i historię
+          zrealizowanych zleceń.
+        read_only_title: Synchronizacja giełdy wyłącznie w trybie odczytu
+        setup_accounts: Skonfiguruj konto
+        step1_html: >-
+          Otwórz <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener
+          noreferrer" class="underline">ustawienia API CoinSpot</a>
+        step2: Utwórz klucz API z dostępem tylko do odczytu sald i historii.
+        step3: Wklej poniżej klucz API i sekret.
+        sync: Synchronizuj
+        syncing: Synchronizacja...
+        update_connection: Zaktualizuj połączenie
+      financekit:
+        accounts: Połączone konta
+        app_store: App Store
+        coming_soon: Już wkrótce!
+        description: >-
+          Zarządzaj połączeniami Apple Wallet w aplikacji Sure na iOS. Dane z Wallet
+          synchronizują się, gdy aplikacja jest otwarta. Automatyczna synchronizacja
+          w tle nie jest jeszcze dostępna.
+        last_accepted_at: Ostatnio przyjęte przez Sure
+        last_imported_at: Ostatni import do Twojej rodziny
+        linked_accounts:
+          one: 1 połączone konto
+          other: "%{count} połączonego konta"
+          few: "%{count} połączone konta"
+          many: "%{count} połączonych kont"
+        not_yet: Jeszcze nie
+        status:
+          active: Synchronizacja aktywna
+          repair_required: Wymagana naprawa — otwórz aplikację Sure na iOS
+        summary: Synchronizacja Wallet
+      fio_panel:
+        step_1_html: Zaloguj się do bankowości internetowej %{link} i otwórz Ustawienia
+          → API.
+        step_2: >-
+          Utwórz token z dostępem tylko do odczytu ("Sledování účtu"). Wymaga on silnej
+          autoryzacji i jest ważny do 180 dni.
+        step_3: >-
+          Wklej token poniżej i zapisz. Jeden token zapewnia dostęp do jednego konta,
+          więc dodaj osobne połączenie dla każdego konta Fio.
     securities:
       show:
         encryption_warning:
           generate: 'Wygeneruj zestaw poleceniem: bin/rails db:encryption:init'
-          intro: 'Dane wrażliwe (klucze API, tokeny dostawców, sekrety MFA i dane
-            osobowe) są przechowywane bez szyfrowania. Aby włączyć szyfrowanie, ustaw
-            poniższe klucze w zmiennych środowiskowych albo w Rails credentials:'
+          intro: >-
+            Dane wrażliwe (klucze API, tokeny dostawców, sekrety MFA i dane osobowe)
+            są przechowywane bez szyfrowania. Aby włączyć szyfrowanie, ustaw poniższe
+            klucze w zmiennych środowiskowych albo w Rails credentials:
           keys:
           - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
           - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
           - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
           title: Brak kluczy szyfrowania
         page_title: Bezpieczeństwo
-        sso_confirm_body: Czy na pewno chcesz odłączyć konto %{provider}? Możesz je
-          połączyć ponownie później, logując się ponownie przez tego dostawcę.
+        sso_confirm_body: >-
+          Czy na pewno chcesz odłączyć konto %{provider}? Możesz je połączyć ponownie
+          później, logując się ponownie przez tego dostawcę.
         sso_confirm_button: Odłącz
         sso_confirm_title: Odłączyć konto?
         sso_connect_hint: Wyloguj się i zaloguj przez dostawcę SSO, aby połączyć konto.
@@ -838,9 +970,9 @@ pl:
         sso_no_identities: Brak połączonych kont SSO
         sso_subtitle: Zarządzaj połączeniami kont jednokrotnego logowania
         sso_title: Połączone konta
-        sso_warning_message: To jest Twoja jedyna metoda logowania. Przed odłączeniem
-          ustaw hasło w ustawieniach bezpieczeństwa, w przeciwnym razie możesz utracić
-          dostęp do konta.
+        sso_warning_message: >-
+          To jest Twoja jedyna metoda logowania. Przed odłączeniem ustaw hasło w ustawieniach
+          bezpieczeństwa, w przeciwnym razie możesz utracić dostęp do konta.
     settings_nav:
       accounts_label: Konta
       advanced_section_title: Zaawansowane

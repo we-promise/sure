@@ -24,3 +24,6 @@ pl:
       savings:
         long: Oszczędnościowe
         short: Oszczędności
+      cash:
+        long: Gotówka
+        short: Gotówka

@@ -92,6 +92,7 @@ ru:
         account_type_cash: Денежный счёт
         account_summary: '%{account_type} • Баланс: %{balance}'
         account_id: 'ID счёта: %{account_id}'
+        account_type_crypto: Криптосчёт
       link_existing:
         description: Или свяжите найденный счёт Trade Republic с существующим ручным инвестиционным счётом.
         manual_account_option: '%{name} (%{balance})'

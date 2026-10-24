@@ -34,9 +34,9 @@ tr:
         model_placeholder: claude-sonnet-4-6 (varsayılan)
         title: Anthropic (Claude)
       assistant_settings:
-        agent_id_help: Sağlayıcı birden fazla ajan barındırdığında belirli bir ajana
-          yönlendirir. Varsayılan için boş bırakın.
-        agent_id_label: Ajan Kimliği (İsteğe Bağlı)
+        agent_id_help: Sure bu listeyi uç noktanın /v1/models yanıtından yükler. Seçilen ajan
+          yönlendirmeyi belirler; kullandığı model harici hizmet tarafından yönetilir.
+        agent_id_label: Ajan (Zorunlu)
         agent_id_placeholder: main (varsayılan)
         confirm_disconnect:
           body: Bu, kaydedilmiş URL'yi, token'ı ve ajan kimliğini kaldıracak ve yerleşik
@@ -70,6 +70,23 @@ tr:
           size verecektir.
         url_label: Uç Nokta URL'si
         url_placeholder: https://your-agent-host/v1/chat
+        agent_discovery_configure_first: Kullanılabilir ajanları yüklemek için geçerli bir
+          uç nokta URL'si ve API token'ı kaydedin.
+        agent_discovery_error: 'Ajanlar yüklenemedi: %{error}'
+        external_agent_invalid: Yapılandırılmış uç noktanın döndürdüğü ajanlardan birini seçin.
+        external_agent_required: Kaydetmeden önce bir harici ajan seçin.
+        external_agent_reselect: Uç nokta değişti ve önceden seçilen ajan yeni uç noktada
+          bulunmuyor. Yeni uç noktadan bir ajan seçin.
+        external_info:
+          items:
+          - "/v1/chat/completions ile biten tam OpenAI uyumlu uç nokta URL'sini girin."
+          - Uç nokta ve token kaydedildikten sonra Sure, kullanılabilir ajanları /v1/models
+            üzerinden keşfeder.
+          - Her ajanın arkasındaki modeli harici hizmet seçer; Sure yalnızca ajana yönlendirmeyi
+            seçer.
+          - Kimlik doğrulama, uç nokta veya ajan hataları harici hizmet tarafından döndürülür.
+            Bir istek başarısız olduğunda hizmetin günlüklerini kontrol edin.
+          title: Harici yapay zeka yapılandırması
       brand_fetch_settings:
         description: Brandfetch tarafından sağlanan İstemci Kimliğini girin
         env_configured_message: Brandfetch İstemci Kimliğinizi BRAND_FETCH_CLIENT_ID
@@ -140,9 +157,8 @@ tr:
           ~30 gün boyunca saklar. Özel veya kendi barındırdığınız uç noktalar kendi
           politikanızı izler.
         data_retention_heading: Veri işleme
-        description: Yapay zeka sohbetini hangi LLM'nin güçlendireceğini seçin. Toplu
-          işlemler (işlem kategorilendirme, satıcı tespiti ve PDF işleme) şu anda
-          her zaman OpenAI kullanır.
+        description: Yapay zeka sohbeti, satıcı tespiti ve PDF işleme için hangi LLM'nin kullanılacağını
+          seçin. İşlem kategorilendirme aşağıda ayrıca yapılandırılır.
         env_configured_message: LLM_PROVIDER ortam değişkeni aracılığıyla başarıyla
           yapılandırıldı.
         not_configured_hint: Etkinleştirmek için aşağıya bir %{provider} API anahtarı
@@ -250,6 +266,7 @@ tr:
         sync_settings: Eşitleme Ayarları
         title: Kendi Sunucunda Barındırma
         property_valuation_providers: Gayrimenkul Değerleme Sağlayıcıları
+        demo_refresh: Demo verilerini yenileme
       sync_auto_sync_scheduler!:
         scheduler_sync_failed: Ayarlar kaydedildi, ancak eşitleme zamanlaması güncellenemedi.
           Lütfen tekrar deneyin veya sunucu günlüklerini kontrol edin.
@@ -339,6 +356,11 @@ tr:
         scheduler_sync_failed: Ayarlar kaydedildi, ancak eşitleme zamanlaması güncellenemedi.
           Lütfen tekrar deneyin veya sunucu günlüklerini kontrol edin.
         success: Ayarlar güncellendi
+        invalid_categorization_rate: "%{field}, 0 ile 1 arasında bir sayı olmalıdır."
+        invalid_demo_family: Yapılandırılan demo e-posta adresi, seçilen aileye ait olmalıdır.
+        invalid_jev_endpoint: Jev uç noktası bir https URL'si olmalıdır. Şifrelenmemiş http
+          yalnızca localhost için kabul edilir.
+        select_demo_family: Önce silinebilir bir demo ailesi seçin.
       yahoo_finance_settings:
         connection_failed: Yahoo Finance'e bağlanılamıyor
         description: Yahoo Finance, API anahtarı gerektirmeden hisse senedi fiyatları,
@@ -380,3 +402,71 @@ tr:
         step_1_html: <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> adresine gidin ve ücretsiz API anahtarınızı alın -- kart gerekmez.
         step_2: API anahtarınızı kopyalayıp aşağıya yapıştırın.
         rate_limit_warning: Mansa'nın ücretsiz katmanı günde 100 API çağrısıyla sınırlıdır ve yalnızca güncel fiyatları sunar -- geçmiş fiyatlar ücretli plan gerektirir. Bu entegrasyonla yalnızca NGX (Nijerya Borsası) doğrulanmıştır; Mansa'nın kapsadığı diğer Afrika borsaları burada henüz desteklenmemektedir.
+      categorization_provider_selector:
+        confidence_threshold_env_notice: CATEGORIZATION_CONFIDENCE_THRESHOLD ortam değişkeni
+          tarafından kilitlenmiştir.
+        confidence_threshold_help: Güven düzeyi bu eşiğin altındaysa kategori uygulanmaz
+          ve işlem kategorilendirilmemiş olarak bırakılır; böylece sonraki çalıştırmada
+          yeniden denenebilir. Hiçbir veri atılmaz. Her yanıtı uygulamak için 0 olarak ayarlayın.
+        confidence_threshold_label: Asgari güven düzeyi (0–1)
+        data_retention_direct: İşlem açıklamaları, tutarlar ve kategori adlarınız kategorilendirme
+          için TypeSafe'e gönderilir. Gerçek verilerle etkinleştirmeden önce sağlayıcının
+          veri saklama politikasını inceleyin.
+        data_retention_heading: Veri paylaşımı
+        data_retention_proxied: İşlem açıklamaları, tutarlar ve kategori adlarınız %{host}
+          adresine gönderilir ve oradan TypeSafe'e iletilir. Gerçek verilerle etkinleştirmeden
+          önce her iki sağlayıcının veri saklama politikasını inceleyin.
+        description: İşlemleri hangi sağlayıcının kategorilendireceğini seçin. Bu seçim,
+          yukarıdaki sohbet ve PDF işlemeden sorumlu yapay zeka sağlayıcısından bağımsızdır.
+        env_notice: Ortam değişkenleri aracılığıyla %{type} olarak ayarlanmıştır.
+        jev_configured: Jev API anahtarı yapılandırılmış.
+        jev_not_configured: Jev seçili, ancak API anahtarı yapılandırılmamış. Aşağıya bir
+          anahtar ekleyene kadar kategorilendirme için yapay zeka sağlayıcısı kullanılmaya
+          devam eder.
+        preview_pill: Önizleme
+        provider_help: Yapay zeka sağlayıcısı bir işlem grubunu okur ve kategori adlarını
+          döndürür. Jev ise kategori listenizden seçim yapar ve her işlem için kalibre edilmiş
+          bir güven düzeyi döndürür.
+        provider_jev: Jev (TypeSafe)
+        provider_label: Kategorilendirme sağlayıcısı
+        provider_llm: Yapay zeka sağlayıcısı (OpenAI veya Anthropic)
+        shadow_rate_env_notice: CATEGORIZATION_SHADOW_RATE ortam değişkeni tarafından kilitlenmiştir.
+        shadow_rate_help: Seçtiğiniz sağlayıcıyla birlikte SEÇMEDİĞİNİZ sağlayıcıyı da çalıştırır;
+          hiçbir kategoriyi değiştirmeden aralarındaki farklılıkları kaydeder. Örnekleme
+          alınan her kategorilendirme çalıştırmasında API maliyetini iki katına çıkarır.
+          Kapatmak için 0 olarak ayarlayın.
+        shadow_rate_label: Gölge karşılaştırma oranı (0–1)
+        title: İşlem Kategorilendirme
+      categorization_shadow_results:
+        shadow_disagreement_confidence: "(güven düzeyi %{confidence})"
+        shadow_disagreement_row: "%{applied_provider}, %{applied_category} kategorisini;
+          %{shadow_provider} ise %{shadow_category} kategorisini seçti."
+        shadow_disagreements_heading: En son farklı sonuçlar
+        shadow_no_category: kategori yok
+        shadow_no_disagreements: İki sağlayıcı da örneklenen tüm işlemlerde aynı sonuca
+          ulaştı.
+        shadow_results_empty: Henüz karşılaştırma kaydedilmedi. Sonuç toplamak için gölge
+          karşılaştırma oranını 0'dan büyük bir değere ayarlayıp kategorilendirmeyi çalıştırın.
+        shadow_results_heading: Gölge karşılaştırma
+        shadow_results_summary: Örneklenen %{count} işlemde %{agreement}%% uyum.
+      demo_refresh_settings:
+        description: Yalnızca seçilen demo ailesini otomatik olarak yeniler. Bu ailenin
+          tüm verileri ve giriş kayıtları silinir. Diğer aileler etkilenmez. En az 2 GiB
+          RAM'e sahip, çalışan bir arka plan işçisi gerekir. Önce demo oluşturucuyla silinebilir
+          bir demo ailesi oluşturun, ardından burada seçin. Gerçek bir kullanıcının ailesini
+          seçmeyin.
+        enabled_label: Demo ailesinin günlük yenilenmesini etkinleştir
+        family_label: Silinebilir demo ailesi
+        none: Demo ailesi seçilmedi
+        save_family: Demo ailesini kaydet
+      jev_settings:
+        api_key_label: API Anahtarı
+        api_key_placeholder: TypeSafe API anahtarınızı girin
+        endpoint_label: Uç Nokta (İsteğe Bağlı)
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone (varsayılan)
+        env_configured_message: Ortam değişkenleri aracılığıyla başarıyla yapılandırıldı.
+        model_help: Varsayılan olarak doğrudan TypeSafe kullanılır. Jev'e OpenRouter üzerinden
+          erişmek için uç noktayı https://openrouter.ai/api/alpha/decisions ve modeli ~typesafe/jev-latest
+          olarak ayarlayın.
+        model_label: Model (İsteğe Bağlı)
+        model_placeholder: jev-latest (varsayılan)

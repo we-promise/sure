@@ -182,9 +182,13 @@ pl:
       workplace_pension_uk:
         long: Emerytura pracownicza
         short: Emerytalne
+      cash_management:
+        long: Konto do zarządzania gotówką
+        short: CMA
     value_tooltip:
       cash: Gotówka
       holdings: Pozycje
       total: Saldo portfela
-      total_value_tooltip: Łączne saldo portfela to suma gotówki maklerskiej (dostępnej
-        do handlu) oraz aktualnej wartości rynkowej Twoich pozycji.
+      total_value_tooltip: >-
+        Łączne saldo portfela to suma gotówki maklerskiej (dostępnej do handlu) oraz
+        aktualnej wartości rynkowej Twoich pozycji.

@@ -607,6 +607,9 @@ ru:
         trading212: Синхронизируйте инвестиционный портфель Trading 212 с помощью API-ключа только для чтения.
         trade_republic: Синхронизируйте инвестиционный счёт Trade Republic через защищённый веб-вход только для чтения.
         questrade: Синхронизируйте инвестиционные счета Questrade напрямую через Questrade API.
+        financekit: Синхронизация поддерживаемых счетов FinanceKit через приложение Sure для
+          iOS.
+        up: Синхронизация счетов австралийского банка Up с помощью персонального токена доступа.
       up_panel:
         step_1_html: Перейдите по ссылке %{link} и создайте персональный токен доступа.
         step_2: Скопируйте персональный токен доступа.
@@ -750,6 +753,25 @@ ru:
         accounts_tab: Счета
         status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
         not_configured: Не настроено.
+      financekit:
+        accounts: Подключённые счета
+        app_store: App Store
+        coming_soon: Скоро!
+        description: Управляйте подключениями Apple Wallet в приложении Sure для iOS. Данные
+          Wallet синхронизируются, пока приложение открыто; автоматическая фоновая синхронизация
+          пока недоступна.
+        last_accepted_at: Последнее принятие данных в Sure
+        last_imported_at: Последний импорт в вашу семью
+        linked_accounts:
+          one: "%{count} подключённый счёт"
+          other: "%{count} подключённого счёта"
+          few: "%{count} подключённых счёта"
+          many: "%{count} подключённых счетов"
+        not_yet: Пока нет
+        status:
+          active: Синхронизация активна
+          repair_required: Требуется восстановление — откройте приложение Sure для iOS
+        summary: Синхронизация Wallet
     securities:
       show:
         encryption_warning:

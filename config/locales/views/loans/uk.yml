@@ -1,3 +1,4 @@
+---
 uk:
   loans:
     edit:
@@ -24,6 +25,13 @@ uk:
       rate_change_remove: Видалити
       start_date: Дата видачі кредиту
       start_date_hint: Коли кошти кредиту було видано. Залиште порожнім, щоб використати дату відкриття рахунку.
+      down_payment: Перший внесок
+      insurance_rate: Страховий тариф
+      insurance_rate_hint: Річна ставка, що нараховується щомісяця разом із платежем за позикою. Для фіксованої страхової суми вона застосовується до початкового боргу, а для спадної — до залишку боргу.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Тип страхування
+      insurance_rate_type_decreasing_life: Зі спадною страховою сумою
+      insurance_rate_type_level_term: З фіксованою страховою сумою
     new:
       title: Введіть деталі позики
     overview:
@@ -46,8 +54,17 @@ uk:
         term: Термін
         type: Тип
         unknown: Невідомо
-        edit_loan_details: "Редагувати деталі позики"
+        edit_loan_details: Редагувати деталі позики
         original_payoff_date: Початкова дата погашення
+        insurance_rate_only: "%{rate} на рік"
+        leverage: Фінансовий важіль
+        leverage_band_conservative: Консервативний
+        leverage_band_high: Високий
+        leverage_band_moderate: Помірний
+        leverage_multiple: "%{ratio}x"
+        total_cost: Загальна вартість
+        total_cost_with_insurance: Загальна вартість зі страхуванням
+        total_insurance: Страхування
       schedule:
         date: Дата
         description: Розраховано на основі початкової суми, ставки й терміну, починаючи з %{start_date}. Дострокові платежі не враховано.
@@ -55,9 +72,20 @@ uk:
         opening_payment: Перший платіж
         interest: Відсотки
         monthly_payment: Щомісячний платіж
-        number: №
+        number: "№"
         payment: Платіж
         principal: Тіло кредиту
         remaining_balance: Залишок боргу
         total_cost: Загальна вартість
         total_interest: Загальна сума відсотків
+        forecasted_payoff_date: Прогнозована дата погашення
+        forecasted_payoff_not_converged: Не погашається за поточного розміру платежу
+        not_applicable: Не застосовується
+      repayment_progress:
+        instalment: Платіж %{number} · %{date}
+        insurance: Страхування
+        interest: Відсотки
+        of_original: із %{amount}
+        principal: Основна сума боргу
+        repaid: Погашено
+        total: Разом

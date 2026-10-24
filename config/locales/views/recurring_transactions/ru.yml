@@ -75,6 +75,7 @@ ru:
       semiannual: Раз в 6 месяцев
       annual: Ежегодно
       custom: Особое расписание
+      interval: Произвольный интервал
     frequency:
       monthly: 'Ежемесячно, день: %{day}'
       weekly: 'Еженедельно, день недели: %{weekday}'
@@ -85,6 +86,9 @@ ru:
       annual: 'Ежегодно, %{month}, день: %{day}'
       custom: Особое расписание
       last_day: последний день
+      every_n_months: 'Интервал: %{interval} мес.; день месяца: %{day}'
+      every_n_weeks: 'Интервал: %{interval} нед.; день недели: %{weekday}'
+      every_n_years: 'Интервал в годах: %{interval}; месяц: %{month}, день: %{day}'
     actions:
       edit_payment_link: Изменить ссылку на оплату
       pause: Приостановить
@@ -185,6 +189,8 @@ ru:
       frequency_second_day_label: И день
       frequency_weekday_label: День недели
       frequency_month_label: Месяц
+      frequency_interval_label: Интервал повторения
+      frequency_interval_unit_label: Единица измерения
     update:
       success: Платёж обновлён
       success_with_siblings:
@@ -211,3 +217,7 @@ ru:
       dismiss: Это не платёж
     confirmed: Платёж добавлен в регулярные операции
     dismissed: Отклонено. Этот шаблон больше не будет предлагаться.
+    frequency_interval_units:
+      monthly: месяцы
+      weekly: недели
+      yearly: годы

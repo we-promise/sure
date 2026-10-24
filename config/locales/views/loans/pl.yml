@@ -16,6 +16,31 @@ pl:
       subtype_prompt: Wybierz typ pożyczki
       term_months: Okres (miesiące)
       term_months_placeholder: '360'
+      down_payment: Wkład własny
+      insurance_rate: Stawka ubezpieczenia
+      insurance_rate_hint: >-
+        Stawka roczna naliczana co miesiąc razem z ratą. Wariant ze stałą sumą ubezpieczenia
+        jest naliczany od początkowego salda, a wariant z malejącą sumą — od pozostałego
+        zadłużenia.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Rodzaj ubezpieczenia
+      insurance_rate_type_decreasing_life: Z malejącą sumą ubezpieczenia
+      insurance_rate_type_level_term: Ze stałą sumą ubezpieczenia
+      rate_change_add: Dodaj zmianę oprocentowania
+      rate_change_effective_date: Data wejścia w życie
+      rate_change_rate: Oprocentowanie
+      rate_change_remove: Usuń
+      rate_changes: Zmiany oprocentowania
+      rate_changes_empty: >-
+        Nie zapisano zmian oprocentowania. Pożyczka jest oprocentowana według podanej
+        powyżej stopy.
+      rate_changes_hint: >-
+        Każdy wiersz określa oprocentowanie obowiązujące od wskazanej daty do następnej
+        zmiany. Ponowne wpisanie tej samej daty zastępuje istniejący wiersz, zamiast
+        dodawać kolejny.
+      start_date: Data uruchomienia pożyczki
+      start_date_hint: Data wypłaty środków z pożyczki. Pozostaw puste, aby użyć daty
+        otwarcia konta.
     new:
       title: Wprowadź dane pożyczki
     overview:
@@ -27,6 +52,7 @@ pl:
       term: Okres
       type: Typ
       unknown: Nieznane
+      original_payoff_date: Pierwotny termin spłaty
     tabs:
       overview:
         edit_loan_details: Edytuj szczegóły pożyczki
@@ -38,11 +64,21 @@ pl:
         term: Okres
         type: Typ
         unknown: Nieznany
+        insurance_rate_only: "%{rate} rocznie"
+        leverage: Dźwignia finansowa
+        leverage_band_conservative: Zachowawcza
+        leverage_band_high: Wysoka
+        leverage_band_moderate: Umiarkowana
+        leverage_multiple: "%{ratio}x"
+        original_payoff_date: Pierwotny termin spłaty
+        total_cost: Całkowity koszt
+        total_cost_with_insurance: Całkowity koszt z ubezpieczeniem
+        total_insurance: Ubezpieczenie
       schedule:
         date: Data
-        description: Prognoza na podstawie początkowego salda, oprocentowania i okresu,
-          licząc od %{start_date}. Dodatkowe wpłaty i zmiany oprocentowania nie są
-          uwzględnione.
+        description: >-
+          Prognoza na podstawie początkowego salda, oprocentowania i okresu, licząc
+          od %{start_date}. Dodatkowe wpłaty i zmiany oprocentowania nie są uwzględnione.
         interest: Odsetki
         monthly_payment: Rata miesięczna
         number: "#"
@@ -52,3 +88,20 @@ pl:
         remaining_balance: Pozostałe saldo
         total_cost: Całkowity koszt
         total_interest: Suma odsetek
+        forecasted_payoff_date: Prognozowany termin spłaty
+        forecasted_payoff_not_converged: Brak pełnej spłaty przy obecnej racie
+        not_applicable: Nie dotyczy
+        opening_payment: Płatność początkowa
+        variable_rate_notice: >-
+          Oprocentowanie tej pożyczki zmienia się w czasie. Harmonogram przelicza
+          raty przy każdej zapisanej zmianie, zachowując pierwotny termin spłaty i
+          dostosowując wysokość raty. Zmiana, której jeszcze nie zapisano, wpłynie
+          na te wartości.
+      repayment_progress:
+        instalment: Rata %{number} · %{date}
+        insurance: Ubezpieczenie
+        interest: Odsetki
+        of_original: z %{amount}
+        principal: Kapitał
+        repaid: Spłacono
+        total: Łącznie

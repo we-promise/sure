@@ -1,0 +1,113 @@
+---
+pl:
+  coinspot_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} konto wymaga konfiguracji"
+        other: "%{count} konta wymaga konfiguracji"
+        few: "%{count} konta wymagają konfiguracji"
+        many: "%{count} kont wymaga konfiguracji"
+      calculating_balances: Obliczanie sald...
+      checking_configuration: Sprawdzanie konfiguracji konta...
+      checking_credentials: Sprawdzanie danych uwierzytelniających...
+      credentials_invalid: Nieprawidłowe dane uwierzytelniające API CoinSpot. Sprawdź
+        klucz API i sekret.
+      importing_accounts: Importowanie kont z CoinSpot...
+      processing_accounts: Przetwarzanie danych konta...
+      processing_failed:
+        one: Nie udało się przetworzyć %{count} konta CoinSpot
+        other: Nie udało się przetworzyć %{count} konta CoinSpot
+        few: Nie udało się przetworzyć %{count} kont CoinSpot
+        many: Nie udało się przetworzyć %{count} kont CoinSpot
+  coinspot_items:
+    coinspot_item:
+      delete: Usuń
+      deletion_in_progress: Usuwanie...
+      import_accounts_menu: Importuj konto
+      no_accounts_message: Twoje konto na giełdzie CoinSpot pojawi się tutaj po synchronizacji.
+      no_accounts_title: Nie znaleziono kont
+      provider_name: CoinSpot
+      reconnect: Dane uwierzytelniające wymagają aktualizacji
+      setup_action: Importuj konto
+      setup_description: Zaimportuj to połączenie z CoinSpot jako konto giełdy kryptowalut.
+      setup_needed: Konto gotowe do importu
+      stale_rate_warning: >-
+        Saldo jest przybliżone, ponieważ dokładny kurs wymiany na %{date} był niedostępny.
+        Zostanie zaktualizowane przy następnej synchronizacji.
+      status: Ostatnia synchronizacja %{timestamp} temu
+      status_never: Nigdy nie synchronizowano
+      status_with_summary: Ostatnia synchronizacja %{timestamp} temu - %{summary}
+      sync_status:
+        all_synced:
+          one: Zsynchronizowano %{count} konto
+          other: Zsynchronizowano %{count} konta
+          few: Zsynchronizowano %{count} konta
+          many: Zsynchronizowano %{count} kont
+        no_accounts: Nie znaleziono kont
+        partial_sync: 'Zsynchronizowano: %{linked_count}; do skonfigurowania: %{unlinked_count}'
+      syncing: Synchronizacja...
+    complete_account_setup:
+      no_accounts: Brak kont do zaimportowania
+      none_selected: Nie wybrano kont
+      setup_failed:
+        one: Nie udało się zaimportować %{count} konta
+        other: Nie udało się zaimportować %{count} konta
+        few: Nie udało się zaimportować %{count} kont
+        many: Nie udało się zaimportować %{count} kont
+      success:
+        one: Zaimportowano %{count} konto
+        other: Zaimportowano %{count} konta
+        few: Zaimportowano %{count} konta
+        many: Zaimportowano %{count} kont
+    create:
+      default_name: CoinSpot
+      success: Połączono z CoinSpot. Trwa synchronizacja Twojego konta giełdowego.
+    destroy:
+      success: Zaplanowano usunięcie połączenia z CoinSpot.
+      unlink_failed: Nie udało się rozłączyć połączenia z CoinSpot
+    link_accounts:
+      select_connection: Wybierz połączenie z CoinSpot przed połączeniem kont.
+    link_existing_account:
+      errors:
+        coinspot_account_already_linked: To konto CoinSpot jest już połączone
+        invalid_coinspot_account: Nieprawidłowe konto CoinSpot
+        only_manual: >-
+          Z CoinSpot można połączyć tylko ręcznie utworzone konta giełd kryptowalut,
+          które nie są już powiązane z dostawcą
+      select_connection: Wybierz połączenie z CoinSpot przed połączeniem kont.
+      success: Połączono z kontem CoinSpot
+    provider_connection:
+      default_description: Połącz z kontem na giełdzie CoinSpot
+      default_name: CoinSpot
+      description: Połącz z %{name}
+      name: CoinSpot - %{name}
+    select_accounts:
+      no_credentials_configured: Dodaj dane uwierzytelniające API CoinSpot przed konfiguracją
+        kont.
+      select_connection: Wybierz połączenie z CoinSpot w ustawieniach dostawców.
+    select_existing_account:
+      cancel: Anuluj
+      check_provider_health: Sprawdź, czy dane uwierzytelniające API CoinSpot są prawidłowe.
+      link: Połącz
+      no_accounts_found: Nie znaleziono kont CoinSpot.
+      title: Połącz konto CoinSpot
+      wait_for_sync: Poczekaj na zakończenie synchronizacji CoinSpot.
+    setup_accounts:
+      accounts_count:
+        one: Dostępne jest %{count} konto
+        other: Dostępne jest %{count} konta
+        few: Dostępne są %{count} konta
+        many: Dostępnych jest %{count} kont
+      cancel: Anuluj
+      creating: Importowanie...
+      import_selected: Importuj wybrane
+      instructions: >-
+        CoinSpot importuje jedno zbiorcze konto giełdy kryptowalut dla tego połączenia,
+        wraz z saldami, wartościami w AUD, przelewami, wpłatami, wypłatami i historią
+        zleceń.
+      no_accounts: Wszystkie konta CoinSpot zostały zaimportowane.
+      select_all: Zaznacz wszystkie
+      subtitle: Wybierz konto giełdowe do śledzenia
+      title: Importuj konto CoinSpot
+    update:
+      success: Zaktualizowano połączenie z CoinSpot.

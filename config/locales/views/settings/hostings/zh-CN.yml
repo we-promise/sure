@@ -9,8 +9,8 @@ zh-CN:
         title: Brandfetch 设置
         env_configured_message: 已通过环境变量配置 Brandfetch。
         show_details: "（显示详情）"
-        setup_step_1_html: 前往 Brandfetch 并创建 API Key。
-        setup_step_2_html: 复制 API Key。
+        setup_step_1_html: "访问 <a href=\"https://brandfetch.com/developers\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">brandfetch.com</a>，创建免费的 Brandfetch 开发者账户。"
+        setup_step_2_html: "打开 <a href=\"https://developers.brandfetch.com/dashboard/logo-api\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">Logo API</a> 页面。"
         setup_step_3: 将 API Key 粘贴到下方。
         high_res_label: 高清 Logo
         high_res_description: 启用后优先获取更高分辨率的品牌资源。
@@ -122,7 +122,7 @@ zh-CN:
         plan: "%{plan} 套餐"
         title: Twelve Data 设置
         show_details: "（显示详情）"
-        step_1_html: 注册或登录 Twelve Data。
+        step_1_html: "访问 <a href=\"https://twelvedata.com/register\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">twelvedata.com</a>，创建免费的 Twelve Data 开发者账户。"
         step_2_html: 前往 <a href="https://twelvedata.com/account/api-keys" target="_blank"
           rel="noopener noreferrer" class="underline">API Keys</a> 页面。
         step_3: 显示 API 密钥并粘贴到下方。
@@ -225,7 +225,7 @@ zh-CN:
         label: API 令牌
         placeholder: 粘贴 Tiingo API Token
         show_details: "（显示详情）"
-        step_1_html: 注册或登录 Tiingo。
+        step_1_html: "访问 <a href=\"https://www.tiingo.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">tiingo.com</a>，创建免费账户。"
         step_2_html: 前往 <a href="https://www.tiingo.com/account/api/token" target="_blank"
           rel="noopener noreferrer" class="underline">API Token</a> 页面。
         step_3: 复制 API Token 并粘贴到下方。
@@ -236,8 +236,8 @@ zh-CN:
         label: API 令牌
         placeholder: 粘贴 EODHD API Token
         show_details: "（显示详情）"
-        step_1_html: 注册或登录 EODHD。
-        step_2_html: 打开 API Token 页面。
+        step_1_html: "访问 <a href=\"https://eodhd.com/register\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">eodhd.com</a>，创建免费账户。"
+        step_2_html: "打开<a href=\"https://eodhd.com/cp/dashboard\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">控制面板</a>，找到你的 API 令牌。"
         step_3: 复制 API Token 并粘贴到下方。
         rate_limit_warning: 免费或低阶计划可能有调用频率限制。
       alpha_vantage_settings:
@@ -247,7 +247,7 @@ zh-CN:
         label: API 密钥
         placeholder: 粘贴 Alpha Vantage API Key
         show_details: "（显示详情）"
-        step_1_html: 注册或登录 Alpha Vantage。
+        step_1_html: "访问 <a href=\"https://www.alphavantage.co/support/#api-key\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">alphavantage.co</a>，领取免费的 API 密钥。"
         step_2: 前往 API Key 页面并复制密钥。
         rate_limit_warning: 免费计划可能有调用频率限制。
         no_health_check_note: 此提供商暂无健康检查。

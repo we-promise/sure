@@ -1,0 +1,9 @@
+---
+uk:
+  tag:
+    dropdowns:
+      show:
+        empty: Тегів ще немає
+        manage: Керувати тегами
+        no_tags: Тегів не знайдено
+        search_placeholder: Пошук

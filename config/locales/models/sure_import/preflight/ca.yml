@@ -2,5 +2,17 @@
 ca:
   sure_import:
     preflight:
-      missing_reference: 'Línia %{line}: %{type} fa referència a %{field} %{value}, que no existeix.'
-      skipped_missing_reference: 'Línia %{line}: %{type} fa referència a %{field} %{value}, que no existeix. S''ometrà durant la importació.'
+      missing_reference: 'Línia %{line}: %{type} fa referència a %{field} %{value},
+        que no existeix.'
+      skipped_missing_reference: 'Línia %{line}: %{type} fa referència a %{field}
+        %{value}, que no existeix. S''ometrà durant la importació.'
+      provider_merchant_diff: 'Línia %{line}: el comerç del proveïdor (ProviderMerchant)
+        %{name} ja existeix amb dades diferents a %{fields}. Es conservarà el comerç
+        existent.'
+      skipped_missing_merchant_reference: 'Línia %{line}: %{type} fa referència a
+        un comerç (%{value}) que no està inclòs en aquesta exportació. Això pot passar
+        amb exportacions fetes abans que els comerços assignats pels proveïdors s''incloguessin
+        a les exportacions de Sure. S''importarà sense aquest comerç.'
+      skipped_unnamed_recurring: 'Línia %{line}: %{type} no té nom i fa referència
+        a un comerç (%{value}) que no està inclòs en aquesta exportació. S''ometrà
+        durant la importació.'

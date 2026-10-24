@@ -6,9 +6,28 @@ pl:
     dashboard:
       cashflow_preview:
         node_labels:
-          cash_flow: "Przepływ gotówki"
-          surplus: "Nadwyżka"
-          deficit: "Deficyt"
+          cash_flow: Przepływ gotówki
+          surplus: Nadwyżka
+          deficit: Deficyt
+        feedback_loading: Ładowanie formularza opinii…
+        feedback_privacy: >-
+          Twoja odpowiedź jest wysyłana do PostHog. Opisz problem bez numerów kont,
+          sald ani innych prywatnych informacji finansowych.
+        feedback_prompt: >-
+          Porównaj ten wykres z dotychczasowym wykresem powyżej i daj nam znać, czy
+          poza kolejnością coś wygląda inaczej.
+        feedback_submit: Wyślij opinię
+        feedback_thanks: Dziękujemy za pomoc w ulepszaniu wykresu!
+        feedback_title: Opinia o wykresie przepływów pieniężnych
+        feedback_unavailable: Przesyłanie opinii jest teraz niedostępne. Spróbuj ponownie
+          później.
+        negative: Coś wygląda nieprawidłowo
+        positive: Wygląda prawidłowo
+        preview: Podgląd
+        preview_tooltip: >-
+          Ten wykres zastąpi wizualizację powyżej, ponieważ korzysta z nowego API
+          wspólnego z aplikacją mobilną w Swift.
+        title: Nowy wykres Sankeya
       balance_sheet:
         add_accounts: Dodaj konta %{name}, aby zobaczyć pełny podział
         add_asset_accounts: Dodaj konta aktywów, aby zobaczyć pełny podział
@@ -23,6 +42,8 @@ pl:
         title: Bilans
         value: Wartość
         weight: Udział
+        collapse_all: Zwiń wszystkie
+        expand_all: Rozwiń wszystkie
       bond_rate_review_notice:
         few: "%{count} partie obligacji wymagają aktualizacji stopy emisji (%{accounts})."
         many: "%{count} partii obligacji wymaga aktualizacji stopy emisji (%{accounts})."
@@ -46,11 +67,15 @@ pl:
         total_return: Łączny zwrot
       cashflow_sankey:
         add_transaction: Dodaj transakcję
-        no_data_description: Dodaj transakcje, aby wyświetlić dane o przepływach pieniężnych,
-          albo poszerz zakres czasu
+        no_data_description: >-
+          Dodaj transakcje, aby wyświetlić dane o przepływach pieniężnych, albo poszerz
+          zakres czasu
         no_data_title: Brak danych o przepływach pieniężnych dla tego okresu
         title: Przepływy pieniężne
         zoom_out: Wróć do pełnego przepływu środków
+        load_error: Nie udało się wczytać przepływów pieniężnych. Spróbuj ponownie.
+        loading: Ładowanie przepływów pieniężnych…
+        retry: Spróbuj ponownie
       drag_to_reorder: Przeciągnij, aby zmienić kolejność sekcji
       insights_feed:
         title: Analizy
@@ -87,8 +112,9 @@ pl:
       new: Nowe
       no_account_empty_state:
         new_account: Nowe konto
-        no_account_subtitle: Ponieważ nie dodano jeszcze żadnych kont, nie ma danych
-          do wyświetlenia. Dodaj pierwsze konto, aby zacząć przeglądać dane pulpitu.
+        no_account_subtitle: >-
+          Ponieważ nie dodano jeszcze żadnych kont, nie ma danych do wyświetlenia.
+          Dodaj pierwsze konto, aby zacząć przeglądać dane pulpitu.
         no_account_title: Brak kont
       no_accounts:
         add_account: Dodaj konto
@@ -107,8 +133,9 @@ pl:
         date_range_short_single: "%{date}, %{year}"
         month_picker_aria_label: Wybierz miesiąc
         no_data: Brak danych o wydatkach w tym miesiącu
-        period_scope_hint: Pokazuje miesiąc wybrany tutaj — niezależnie od okresu
-          pulpitu ustawionego na górze.
+        period_scope_hint: >-
+          Pokazuje miesiąc wybrany tutaj — niezależnie od okresu pulpitu ustawionego
+          na górze.
         previous_comparison_days: "(1-%{end_day})"
         title: Wydatki
       subtitle: Zobacz, co dzieje się z Twoimi finansami
@@ -125,17 +152,19 @@ pl:
         width_label: Szerokość
     feedback:
       bug_report: Zgłoś błąd
-      description: Daj nam znać, jeśli masz konkretne uwagi. Możesz dołączyć linki
-        do filmów lub zrzutów ekranu.
+      description: >-
+        Daj nam znać, jeśli masz konkretne uwagi. Możesz dołączyć linki do filmów
+        lub zrzutów ekranu.
       discuss: Porozmawiaj o %{product} z innymi
       feature_request: Zgłoś propozycję funkcji
       heading: Zostaw opinię
       title: Opinia
     intro:
       coming_soon: Wprowadzenie już wkrótce
-      description: Pracujemy nad bogatszym wprowadzeniem, które pozna Twoje cele,
-        kamienie milowe i codzienne potrzeby. Na razie przejdź do czatu w panelu bocznym,
-        aby porozmawiać z Sure i powiedzieć, na jakim etapie finansowej podróży jesteś.
+      description: >-
+        Pracujemy nad bogatszym wprowadzeniem, które pozna Twoje cele, kamienie milowe
+        i codzienne potrzeby. Na razie przejdź do czatu w panelu bocznym, aby porozmawiać
+        z Sure i powiedzieć, na jakim etapie finansowej podróży jesteś.
       not_authorized: Wprowadzenie jest dostępne tylko dla użytkowników gościnnych.
       start_chatting: Rozpocznij rozmowę
       welcome: Witaj!
@@ -149,17 +178,20 @@ pl:
       refresh_hint: Po skonfigurowaniu Redis odśwież tę stronę, aby kontynuować.
       refresh_page: Odśwież stronę
       setup_guide_hint: Skonfiguruj Redis według naszego pełnego przewodnika Docker
-      subheading: Twoja samodzielnie hostowana instalacja Sure wymaga poprawnie skonfigurowanego
+      subheading: >-
+        Twoja samodzielnie hostowana instalacja Sure wymaga poprawnie skonfigurowanego
         Redis.
       view_setup_guide: Zobacz przewodnik konfiguracji
-      why_required_body: Sure używa Redis do obsługi zadań Sidekiq w tle, takich jak
-        synchronizacja danych kont, przetwarzanie importów i inne operacje utrzymujące
-        aktualność Twoich danych finansowych.
+      why_required_body: >-
+        Sure używa Redis do obsługi zadań Sidekiq w tle, takich jak synchronizacja
+        danych kont, przetwarzanie importów i inne operacje utrzymujące aktualność
+        Twoich danych finansowych.
       why_required_title: Dlaczego Redis jest wymagany?
     release_notes_unavailable:
-      body_html: "<p>Nie udało się teraz pobrać najnowszych informacji o wydaniu.
-        Spróbuj ponownie później albo odwiedź bezpośrednio naszą <a href='https://github.com/we-promise/sure/releases'
-        target='_blank' rel='noopener noreferrer'>stronę wydań na GitHubie</a>.</p>"
+      body_html: >-
+        <p>Nie udało się teraz pobrać najnowszych informacji o wydaniu. Spróbuj ponownie
+        później albo odwiedź bezpośrednio naszą <a href='https://github.com/we-promise/sure/releases'
+        target='_blank' rel='noopener noreferrer'>stronę wydań na GitHubie</a>.</p>
       name: Informacje o wydaniu niedostępne
     terms:
       heading: Warunki korzystania z usługi

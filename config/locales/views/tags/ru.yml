@@ -24,3 +24,9 @@ ru:
       edit: Редактировать
     update:
       updated: Тег обновлён
+    menu:
+      label: Изменить теги
+      loading: Загрузка тегов...
+    summary:
+      add: Добавить теги
+      title: 'Теги: %{names}'

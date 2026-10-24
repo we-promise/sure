@@ -4,7 +4,7 @@ uk:
     errors:
       models:
         recurring_transaction:
-          merchant_or_name_required: "Повинен бути присутнім або продавець, або назва"
+          merchant_or_name_required: Повинен бути присутнім або продавець, або назва
           attributes:
             payment_url:
               invalid_scheme: має бути дійсною адресою http:// або https://
@@ -24,9 +24,10 @@ uk:
     attributes:
       recurring_transaction:
         payment_url: Посилання для оплати
+        frequency_interval: Інтервал повторення
   recurring_transactions:
     allocator:
       missing_rate: немає обмінного курсу з %{from} на %{to}; вкажіть суму вручну
       unmeasurable: ця транзакція містить розподіл, який не можна конвертувати в %{currency}, тому неможливо визначити її залишок. Додайте обмінний курс на %{date} або спершу видаліть наявну оплату
       over_allocated: розподіл %{amount} перевищує залишок транзакції %{capacity} %{currency}
-      exceeds_remaining: '%{amount} перевищує залишок %{remaining} за цей період'
+      exceeds_remaining: "%{amount} перевищує залишок %{remaining} за цей період"

@@ -2,8 +2,9 @@
 fr:
   concerns:
     self_hostable:
-      redis_configured: Redis est maintenant correctement configuré ! Vous pouvez
-        maintenant configurer votre application Sure.
+      redis_configured: >-
+        Redis est maintenant correctement configuré ! Vous pouvez maintenant configurer votre application
+        Sure.
   shared:
     dot_separator: "·"
     cancel: Annuler
@@ -17,8 +18,7 @@ fr:
       default_btn_text: Confirmer
       default_title: Êtes-vous sûr ?
       resource_deletion_title: Supprimer %{resource} ?
-      resource_deletion_body: Êtes-vous sûr de vouloir supprimer %{resource} ? Ceci
-        n’est pas réversible.
+      resource_deletion_body: Êtes-vous sûr de vouloir supprimer %{resource} ? Ceci n’est pas réversible.
       resource_deletion_btn_text: Supprimer %{resource}
     exchange_rate_tabs:
       calculate_rate_tab: Calculer le taux FX
@@ -36,18 +36,20 @@ fr:
     preview: Aperçu
     require_admin: Seuls les administrateurs peuvent effectuer cette action
     sidekiq_health_banner:
-      body: 'Les tâches en arrière-plan ne sont pas traitées : les soldes, le patrimoine
-        net et les synchronisations de comptes peuvent donc être obsolètes ou absents.'
+      body: >-
+        Les tâches en arrière-plan ne sont pas traitées : les soldes, le patrimoine net et les synchronisations
+        de comptes peuvent donc être obsolètes ou absents.
       cta: Voir la santé du système
       reasons:
-        no_worker_processes: Aucun processus worker Sidekiq n'est connecté. Démarrez
-          le conteneur worker ou l'unité systemd.
-        queue_backed_up: La plus ancienne tâche en file d'attente attend au-delà du
-          budget de latence. Le worker est actif mais prend du retard.
-        redis_unreachable: L'application ne parvient pas à joindre Redis. Vérifiez
-          votre REDIS_URL et que Redis fonctionne.
-        stale_heartbeat: Le worker Sidekiq n'a pas envoyé de signal de vie récemment.
-          Il est peut-être bloqué ou a planté.
+        no_worker_processes: Aucun processus worker Sidekiq n'est connecté. Démarrez le conteneur worker
+          ou l'unité systemd.
+        queue_backed_up: >-
+          La plus ancienne tâche en file d'attente attend au-delà du budget de latence. Le worker est
+          actif mais prend du retard.
+        redis_unreachable: L'application ne parvient pas à joindre Redis. Vérifiez votre REDIS_URL et
+          que Redis fonctionne.
+        stale_heartbeat: Le worker Sidekiq n'a pas envoyé de signal de vie récemment. Il est peut-être
+          bloqué ou a planté.
       title: Certaines données sont peut-être obsolètes
     sync_toast:
       message: Nouvelles données disponibles
@@ -61,3 +63,4 @@ fr:
     trend_change:
       no_change: pas de changement
     submitting: Envoi en cours…
+    require_connector_owner: Vous ne pouvez gérer que les connexions que vous avez ajoutées

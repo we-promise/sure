@@ -4,3 +4,11 @@ tr:
     preflight:
       missing_reference: 'Satır %{line}: %{type}, mevcut olmayan %{field} %{value} değerine başvuruyor.'
       skipped_missing_reference: 'Satır %{line}: %{type}, mevcut olmayan %{field} %{value} değerine başvuruyor. İçe aktarma sırasında atlanacak.'
+      provider_merchant_diff: 'Satır %{line}: ProviderMerchant %{name}, farklı %{fields}
+        bilgileriyle zaten mevcut. Mevcut satıcı korunacak.'
+      skipped_missing_merchant_reference: 'Satır %{line}: %{type}, bu dışa aktarmada yer
+        almayan bir satıcıya (%{value}) başvuruyor. Bu durum, sağlayıcının atadığı satıcılar
+        Sure dışa aktarmalarına eklenmeden önce alınmış bir dışa aktarmada görülebilir.
+        Kayıt, bu satıcı olmadan içe aktarılacak.'
+      skipped_unnamed_recurring: 'Satır %{line}: %{type} kaydının adı yok ve bu dışa aktarmada
+        yer almayan bir satıcıya (%{value}) başvuruyor. İçe aktarma sırasında atlanacak.'

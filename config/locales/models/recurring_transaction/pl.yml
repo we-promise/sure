@@ -4,6 +4,7 @@ pl:
     attributes:
       recurring_transaction:
         payment_url: Link płatności
+        frequency_interval: Odstęp powtarzania
     errors:
       models:
         recurring_transaction:
@@ -30,8 +31,9 @@ pl:
     allocator:
       exceeds_remaining: "%{amount} przekracza pozostałe %{remaining} w tym cyklu"
       missing_rate: brak kursu wymiany z %{from} na %{to}; wpisz kwotę ręcznie
-      over_allocated: przypisanie %{amount} przekracza pozostałe %{capacity} %{currency}
-        tej transakcji
-      unmeasurable: ta transakcja ma przypisaną kwotę, której nie można przeliczyć
-        na %{currency}, więc nie da się określić, ile z niej zostało. Dodaj kurs wymiany
-        dla %{date} albo najpierw usuń istniejącą płatność
+      over_allocated: >-
+        przypisanie %{amount} przekracza pozostałe %{capacity} %{currency} tej transakcji
+      unmeasurable: >-
+        ta transakcja ma przypisaną kwotę, której nie można przeliczyć na %{currency},
+        więc nie da się określić, ile z niej zostało. Dodaj kurs wymiany dla %{date}
+        albo najpierw usuń istniejącą płatność

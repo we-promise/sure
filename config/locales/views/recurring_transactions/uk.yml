@@ -1,13 +1,14 @@
+---
 uk:
   recurring_transactions:
     title: Повторювані транзакції
     upcoming: Майбутні повторювані транзакції
     projected: Прогнозовані
     recurring: Повторювані
-    expected_today: "Очікується сьогодні"
+    expected_today: Очікується сьогодні
     expected_in:
-      one: "Очікується через %{count} день"
-      other: "Очікується через %{count} днів"
+      one: Очікується через %{count} день
+      other: Очікується через %{count} днів
       few: Очікується через %{count} дні
       many: Очікується через %{count} днів
     day_of_month: День %{day} місяця
@@ -20,10 +21,10 @@ uk:
     info:
       title: Автоматичне виявлення шаблонів
       manual_description: Ви можете вручну визначити шаблони або очистити застарілі повторювані транзакції за допомогою кнопок вище.
-      automatic_description: "Автоматичне визначення також запускається після:"
+      automatic_description: 'Автоматичне визначення також запускається після:'
       triggers:
-        - Завершення імпорту CSV (транзакції, угоди, рахунки тощо)
-        - Завершення будь-якої синхронізації з постачальником (Plaid, SimpleFIN тощо)
+      - Завершення імпорту CSV (транзакції, угоди, рахунки тощо)
+      - Завершення будь-якої синхронізації з постачальником (Plaid, SimpleFIN тощо)
     identified: Визначено %{count} шаблонів повторюваних транзакцій
     cleaned_up: Очищено %{count} застарілих повторюваних транзакцій
     marked_inactive: Призупинено. Ця транзакція не з'являтиметься, доки ви її не відновите.
@@ -34,7 +35,7 @@ uk:
     already_exists: Для цього шаблону вже існує ручна повторювана транзакція
     creation_failed: Не вдалося створити повторювану транзакцію. Перевірте деталі транзакції та спробуйте ще раз.
     unexpected_error: Під час створення повторюваної транзакції сталася несподівана помилка
-    amount_range: "Діапазон: від %{min} до %{max}"
+    amount_range: 'Діапазон: від %{min} до %{max}'
     empty:
       title: Повторюваних транзакцій не знайдено
       description: Натисніть "Визначити шаблони", щоб автоматично виявити повторювані транзакції з вашої історії транзакцій.
@@ -68,6 +69,7 @@ uk:
       semiannual: Кожні 6 місяців
       annual: Щороку
       custom: Власний розклад
+      interval: Власний інтервал
     frequency:
       monthly: Щомісяця (%{day})
       weekly: Щотижня (%{weekday})
@@ -78,6 +80,9 @@ uk:
       annual: Щороку (%{month}, %{day})
       custom: Власний розклад
       last_day: останній день
+      every_n_months: З інтервалом %{interval} міс., %{day}
+      every_n_weeks: З інтервалом %{interval} тиж., %{weekday}
+      every_n_years: З інтервалом %{interval} р., %{month} %{day}
     actions:
       edit_payment_link: Змінити посилання для оплати
       pause: Призупинити
@@ -89,7 +94,7 @@ uk:
       add_link: Додати посилання
       add_link_aria: Додати посилання для оплати %{name}
       autopay: Автоплатіж
-      autopay_aria: '%{name} оплачується автоматично; відкрити його портал у новій вкладці'
+      autopay_aria: "%{name} оплачується автоматично; відкрити його портал у новій вкладці"
       open_site: Відкрити сайт для оплати
     new:
       title: Додати платіж
@@ -97,7 +102,7 @@ uk:
       start_from_title: Почніть із виявленого нами регулярного списання
       start_from_income_title: Почніть із виявленого нами регулярного надходження
       start_from_hint: Необов'язково. Вибір лише заповнить форму; ви все одно зможете будь-що змінити.
-      candidate_meta: '%{count}× · востаннє %{date}'
+      candidate_meta: "%{count}× · востаннє %{date}"
       search_all_prompt: Не бачите потрібного?
       search_all_cta: Шукати серед усіх транзакцій
       pick_different: Почати з іншої транзакції
@@ -178,6 +183,8 @@ uk:
       frequency_second_day_label: Другий день
       frequency_weekday_label: День тижня
       frequency_month_label: Місяць
+      frequency_interval_label: Повторювати кожні
+      frequency_interval_unit_label: Одиниця
     update:
       success: Платіж оновлено
       success_with_siblings:
@@ -204,3 +211,7 @@ uk:
       dismiss: Це не платіж
     confirmed: Платіж додано до ваших повторюваних транзакцій
     dismissed: Відхилено. Цей шаблон більше не пропонуватиметься.
+    frequency_interval_units:
+      monthly: місяці
+      weekly: тижні
+      yearly: роки

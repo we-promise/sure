@@ -16,7 +16,7 @@ ca:
     subtypes:
       exchange:
         long: Exchange de cripto
-        short: Exchange
+        short: Plataforma d'intercanvi
       wallet:
         long: Cartera de cripto
         short: Cartera

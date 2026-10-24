@@ -78,7 +78,7 @@ zh-CN:
       disconnect: 断开连接
       disconnect_confirm: "断开 %{name}？"
       instructions:
-        copy_token_html: "复制完整 token（包括 <code>secret-token:</code> 前缀），并将其作为命名连接添加到下方"
+        copy_token_html: "复制<strong>完整令牌</strong>（包括 <code>secret-token:</code> 前缀），并在下方将其添加为一个已命名的连接"
         create_token: 创建一个具有“只读”访问权限的新 API token
         open_tokens: 前往 设置 > 开发者 > API Tokens
         sign_in_html: "访问 %{link} 并登录您想连接的账户"

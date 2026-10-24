@@ -1,0 +1,7 @@
+---
+ca:
+  assistant:
+    external:
+      model_catalog:
+        default_agent_label: Agent predeterminat (%{id})
+        named_agent_label: "%{name} (%{id})"

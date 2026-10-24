@@ -24,3 +24,6 @@ tr:
       savings:
         long: Tasarruf Hesabı
         short: Tasarruf Hesabı
+      cash:
+        long: Nakit
+        short: Nakit

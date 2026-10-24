@@ -6,7 +6,9 @@ fr:
     destroy:
       success: Les comptes prévus pour la suppression ont été marqués.
     errors:
-      link_token_generic: Nous n'avons pas pu ouvrir Plaid pour le moment. Veuillez réessayer, et si le problème persiste, vérifiez les journaux du serveur pour plus de détails.
+      link_token_generic: >-
+        Nous n'avons pas pu ouvrir Plaid pour le moment. Veuillez réessayer, et si le problème persiste,
+        vérifiez les journaux du serveur pour plus de détails.
       link_token_with_message: 'Plaid n''a pas pu ouvrir la connexion : %{message}'
     link_existing_account:
       already_linked: Ce compte Plaid est déjà lié
@@ -16,10 +18,14 @@ fr:
       add_accounts: Ajouter des comptes
       add_new: Ajouter une nouvelle connexion
       confirm_accept: Supprimer l'institution
-      confirm_body: Cela supprimera de manière permanente tous les comptes de ce groupe ainsi que toutes les données associées.
+      confirm_body: >-
+        Cela supprimera de manière permanente tous les comptes de ce groupe ainsi que toutes les données
+        associées.
       confirm_title: Voulez-vous vraiment supprimer cette institution ?
       connection_lost: Connexion perdue
-      connection_lost_description: Cette connexion n'est plus valide. Vous devrez la supprimer et en ajouter une nouvelle pour pouvoir continuer la synchronisation des données.
+      connection_lost_description: >-
+        Cette connexion n'est plus valide. Vous devrez la supprimer et en ajouter une nouvelle pour pouvoir
+        continuer la synchronisation des données.
       delete: Supprimer
       deletion_in_progress: "(suppression en cours...)"
       error: Une erreur s'est produite lors de la synchronisation des données
@@ -30,9 +36,11 @@ fr:
       status_never: Synchronisation de données requise
       syncing: Synchronisation...
       update: Mettre à jour la connexion
+      provider_name: Plaid
     select_existing_account:
       cancel: Annuler
       description: Sélectionnez un compte Plaid à lier à votre compte existant
       link_account: Lier le compte
-      no_available_accounts: Aucun compte Plaid disponible à lier. Veuillez d'abord connecter un nouveau compte Plaid.
+      no_available_accounts: Aucun compte Plaid disponible à lier. Veuillez d'abord connecter un nouveau
+        compte Plaid.
       title: Lier %{account_name} à Plaid

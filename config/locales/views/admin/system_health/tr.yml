@@ -18,8 +18,8 @@ tr:
           status: Sonuç
           checked_at: Son güncelleme
         environments:
-          sandbox: Sandbox
-          production: Production
+          sandbox: Test ortamı
+          production: Canlı ortam
         messages:
           enqueue_failed: Test kuyruğa alınamadı. Sidekiq'i kontrol edin ve aşağıdaki sonuçları yenileyin.
           ready: Hesabınıza kayıtlı, bildirimleri etkin iOS cihazlarına bir test bildirimi gönderin.
@@ -51,6 +51,7 @@ tr:
         tabs:
           background_jobs: Arka plan işleri
           ai: AI durumu
+          hosted_usage: Barındırılan hizmetin kullanımı
         alert:
           title: Arka plan işleri çalışmıyor
         status_section_title: Sidekiq durumu
@@ -256,3 +257,80 @@ tr:
           local_setup:
             title: Önerilen yerel kurulum
             description: LLM'i yerel OpenAI uyumlu uç noktanız üzerinden çalıştırın, belge vektörlerini pgvector'da saklayın ve embedding ayarlarını OpenAI uyumlu bir embedding uç noktasına yönlendirin. PostgreSQL imajı vector uzantısını içermeli ve embedding boyutları seçilen modelle eşleşmelidir.
+      hosted_usage:
+        cleanup:
+          description: 'Mevcut temizleme kapsamına uyanlar: duraklatılmış veya deneme aşamasındaki
+            aboneliği 14 günden uzun süre önce sona eren haneler ya da aboneliği olmayan
+            ve 45 + 14 günden eski haneler. En fazla %{limit} hane gösterilir.'
+          disabled: Zamanlanmış deneme temizliği, yönetilen mod dışında devre dışıdır. Bunlar
+            yalnızca kapsama uyan kayıtlardır.
+          eligibility_help: Yakın zamanda giriş yapılmış olması kapsama girmeyi engellemez.
+            Uygunluk, silinmiş olduğunu göstermez; 90 gün, arşiv saklama süresidir ve deneme
+            temizliği eşiği değildir.
+          empty: Temizleme kapsamına uyan hane yok
+          reasons:
+            expired_trial_grace_elapsed: Deneme sona erdi; 14 günlük ek süre doldu
+            no_subscription_grace_elapsed: Abonelik yok; 45 + 14 gün geçti
+          title: Temizlemeye uygunluk
+        columns:
+          cleanup_eligible: Temizlemeye uygun
+          cleanup_reason: Neden
+          household: Hane kimliği
+          latest_session: Saklanan en son giriş kaydı
+          members: Üye hesapları
+          recent_sessions: Son 30 günde oluşturulan ve saklanan oturumlar
+          recorded_at: Abonelik kayıt tarihi
+          retained_sessions: Saklanan giriş oturumları
+          status: Mevcut durum
+          subscription_rows: Abonelik kayıtları
+          trial_ends_at: Deneme bitişi
+        eligible: Uygun
+        limitations: Mevcut tablolar deneme, ödeme veya oturum etkinliklerinin tüm geçmişini
+          saklamaz. Abonelik oluşturma tarihi, içe aktarma tarihini yansıtabilir. Üye hesaplarının
+          her birinin farklı bir kişiye ait olduğu doğrulanmamıştır. Bu görünüm hiçbir hane
+          veya abonelik verisini değiştirmez. Paylaşılan demo sıfırlandığında eski haneler
+          ve oturumlar silindiği için ziyaretçi geçmişi yeniden oluşturulamaz.
+        limitations_title: Bu sayılar bize ne anlatır?
+        loading: Barındırılan hizmetin kullanım verileri yükleniyor…
+        not_eligible: Uygun değil
+        not_recorded: Kaydedilmemiş
+        snapshot: "%{time} itibarıyla salt okunur veritabanı anlık görüntüsü"
+        statuses:
+          active: Aktif
+          canceled: İptal edildi
+          incomplete: Tamamlanmamış
+          incomplete_expired: Tamamlanmamış, süresi dolmuş
+          no_subscription: Abonelik yok
+          past_due: Ödemesi gecikmiş
+          paused: Duraklatıldı
+          trialing: Deneme aşamasında
+          unknown: Bilinmiyor
+          unpaid: Ödenmemiş
+        summary:
+          active_supporter_households_count: Aktif destekçi haneler (yerel)
+          cleanup_eligible_count: Temizlemeye uygun haneler
+          supporter_subscription_count: Stripe bağlantılı abonelik kayıtları
+          trial_households_count: Deneme haneleri (son 30 gün)
+          trial_members_count: Mevcut deneme üye hesapları
+          trials_expiring_soon_count: Önümüzdeki 7 günde sona erecek denemeler
+        summary_help: Deneme toplamları, son 30 günde kaydedilen abonelikleri kapsar. Yakında
+          sona erecek denemelerin, temizlemeye uygun hanelerin ve destekçilerin toplamları
+          ise tablo sınırları uygulanmadan eşleşen tüm mevcut kayıtları kapsar.
+        supporters:
+          description: Müşteri ve abonelik kimlikleri Stripe biçiminde olan mevcut yerel
+            abonelik kayıtlarıdır; sentetik demo aboneliği hariç tutulur. Durumlar, ödemelerin
+            alındığını veya ilk ödeme tarihlerini doğrulamaz. Stripe'a herhangi bir istek
+            gönderilmez.
+          empty: Stripe bağlantılı abonelik kaydı yok
+          title: Yerel destekçi durumu
+        synthetic_demo: Sentetik demo
+        title: Barındırılan hizmetin kullanımı
+        trials:
+          description: "%{date} tarihinden beri kaydedilen ve deneme bitiş tarihi hâlâ bulunan
+            abonelikler; ücretli aboneliğe dönüşen denemeler de dahildir. En fazla %{limit}
+            hane gösterilir."
+          empty: Bu dönemde kaydedilmiş deneme hanesi yok
+          sessions_help: Oturumlar, etkin kullanıcılar için saklanan giriş kayıtlarıdır;
+            şu anda çevrimiçi olan kullanıcıları veya ziyaretleri göstermez. Çıkış yapıldığında
+            ilgili kayıt silinir. En son oluşturulma zamanı, son görülme zamanı değildir.
+          title: Yakın zamanda kaydedilen deneme haneleri

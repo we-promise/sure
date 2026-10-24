@@ -7,7 +7,9 @@ ca:
       manual: Manual
     cleaned_up: S'han netejat %{count} transaccions recurrents obsoletes
     cleanup_stale: Neteja obsoletes
-    confirm_delete: Vols eliminar %{name} de les teves factures? Les teves transaccions es queden exactament com estan. Això només elimina la factura i la seva periodicitat de pagament.
+    confirm_delete: Vols eliminar %{name} de les teves factures? Les teves transaccions
+      es queden exactament com estan. Això només elimina la factura i la seva periodicitat
+      de pagament.
     creation_failed: No s'ha pogut crear la transacció recurrent. Comprova els detalls
       de la transacció i torna-ho a provar.
     day_of_month: Dia %{day} del mes
@@ -75,6 +77,7 @@ ca:
       semiannual: Semestral
       annual: Anual
       custom: Periodicitat personalitzada
+      interval: Interval personalitzat
     frequency:
       monthly: Cada mes, el %{day}
       weekly: Cada setmana, el %{weekday}
@@ -85,6 +88,9 @@ ca:
       annual: Cada any (%{month}), el %{day}
       custom: Periodicitat personalitzada
       last_day: darrer dia
+      every_n_months: Cada %{interval} mesos, el dia %{day}
+      every_n_weeks: Cada %{interval} setmanes, el %{weekday}
+      every_n_years: Cada %{interval} anys, el %{day} de %{month}
     actions:
       edit_payment_link: Edita l'enllaç de pagament
       pause: Posa en pausa
@@ -96,23 +102,27 @@ ca:
       add_link: Afegeix un enllaç
       add_link_aria: Afegeix un enllaç de pagament per a %{name}
       autopay: Domiciliat
-      autopay_aria: '%{name} es paga automàticament; obre el seu portal en una pestanya nova'
+      autopay_aria: "%{name} es paga automàticament; obre el seu portal en una pestanya
+        nova"
       open_site: Obre el web de la factura
     new:
       title: Afegeix una factura
       income_title: Afegeix un ingrés
       start_from_title: Parteix d'un càrrec recurrent que hem detectat
       start_from_income_title: Parteix d'un ingrés recurrent que hem detectat
-      start_from_hint: Opcional. Si en tries un, només s'omple el formulari; encara pots canviar-ho tot.
-      candidate_meta: '%{count}× · últim %{date}'
+      start_from_hint: Opcional. Si en tries un, només s'omple el formulari; encara
+        pots canviar-ho tot.
+      candidate_meta: "%{count}× · últim %{date}"
       search_all_prompt: No trobes el que busques?
       search_all_cta: Cerca a totes les transaccions
       pick_different: Parteix d'una altra transacció
       smart_fill: Emplena amb IA
-      smart_fill_applied: La IA ha suggerit aquests valors a partir de l'historial de càrrecs. Revisa'ls abans de desar.
+      smart_fill_applied: La IA ha suggerit aquests valors a partir de l'historial
+        de càrrecs. Revisa'ls abans de desar.
     smart_fills:
       create:
-        failed: Ara mateix no s'ha pogut analitzar l'historial de càrrecs. El formulari manté els valors de la transacció.
+        failed: Ara mateix no s'ha pogut analitzar l'historial de càrrecs. El formulari
+          manté els valors de la transacció.
     pick_entry:
       title: Cerca una transacció per començar
       income_title: Cerca un ingrés per començar
@@ -120,7 +130,8 @@ ca:
       search_placeholder: Cerca per nom, notes o comerç
       back: Torna al formulari
       showing_recent: Es mostren les teves %{count} més recents. Cerca per filtrar-les.
-      no_results: No hi ha res que coincideixi amb «%{query}». Prova amb menys paraules, o torna enrere i omple el formulari tu mateix.
+      no_results: No hi ha res que coincideixi amb «%{query}». Prova amb menys paraules,
+        o torna enrere i omple el formulari tu mateix.
     picker_row:
       claimed: Forma part de %{name}
     create:
@@ -128,7 +139,8 @@ ca:
       success_income: Ingrés afegit
       due_date_required: Introdueix la propera data de venciment de la factura
       amount_invalid: Introdueix l'import com a número sense format
-      account_invalid: Tria un compte al qual puguis afegir factures, o deixa-ho en blanc
+      account_invalid: Tria un compte al qual puguis afegir factures, o deixa-ho en
+        blanc
       already_exists: Aquesta factura ja existeix
     edit:
       trigger_label: Edita la factura
@@ -137,16 +149,19 @@ ca:
     form:
       payment_url_label: Enllaç de pagament
       payment_url_placeholder: bank.example.com/pay
-      payment_url_hint: On pagues aquesta factura. S'obre en una pestanya nova des de les llistes de factures recurrents i properes.
+      payment_url_hint: On pagues aquesta factura. S'obre en una pestanya nova des
+        de les llistes de factures recurrents i properes.
       autopay_label: Es paga automàticament
-      autopay_hint: Es manté a la llista de factures, però deixa de tractar-se com a tasca pendent.
+      autopay_hint: Es manté a la llista de factures, però deixa de tractar-se com
+        a tasca pendent.
       more_options: Més opcions
       notes_label: Notes
       notes_placeholder: Compte 4821, carregat a l'Amex
       notes_hint: Tot el que vulguis tenir a mà quan paguis. Es mostra a la factura.
       apply_to_siblings:
         one: Utilitza també aquest enllaç per a l'altra factura de %{name}
-        other: Utilitza també aquest enllaç per a les altres %{count} factures de %{name}
+        other: Utilitza també aquest enllaç per a les altres %{count} factures de
+          %{name}
       submit: Desa la factura
       submit_income: Desa l'ingrés
       income_name_label: Origen
@@ -154,9 +169,11 @@ ca:
       income_amount_label: Import per cobrament
       income_due_on_label: Propera data de cobrament
       income_account_label: S'ingressa a
-      income_frequency_hint: Cada quant cobres. Tria els detalls del dia perquè coincideixin amb el dia de cobrament.
+      income_frequency_hint: Cada quant cobres. Tria els detalls del dia perquè coincideixin
+        amb el dia de cobrament.
       income_frequency_label: Cada quant cobres
-      income_frequency_new_hint: Els detalls del dia de cobrament surten de la data de dalt. Pots ajustar la periodicitat després de desar.
+      income_frequency_new_hint: Els detalls del dia de cobrament surten de la data
+        de dalt. Pots ajustar la periodicitat després de desar.
       income_notes_placeholder: Transferència de nòmina, repartida entre dos comptes
       income_notes_hint: Qualsevol cosa que valgui la pena recordar sobre aquest ingrés.
       name_label: Nom
@@ -167,34 +184,47 @@ ca:
       account_blank: Qualsevol compte
       bill_type_label: Tipus
       installment_count_label: Nombre de pagaments
-      installment_count_hint: El pla acaba després d'aquest nombre de pagaments i en mostra el progrés fins llavors.
+      installment_count_hint: El pla acaba després d'aquest nombre de pagaments i
+        en mostra el progrés fins llavors.
       renews_on_label: Renovació
       trial_ends_on_label: Fi del període de prova
-      amount_edit_hint: S'aplica a les factures que vencin a partir d'ara. Les que ja han vençut mantenen l'import que tenien.
-      income_amount_edit_hint: S'aplica als cobraments a partir d'ara. Els que ja han vençut mantenen l'import que tenien.
+      amount_edit_hint: S'aplica a les factures que vencin a partir d'ara. Les que
+        ja han vençut mantenen l'import que tenien.
+      income_amount_edit_hint: S'aplica als cobraments a partir d'ara. Els que ja
+        han vençut mantenen l'import que tenien.
       cancelled_on_label: Data de cancel·lació
-      cancelled_on_hint: Registrar la data és només per a la teva referència. Posa la factura en pausa perquè deixin d'aparèixer els propers venciments.
+      cancelled_on_hint: Registrar la data és només per a la teva referència. Posa
+        la factura en pausa perquè deixin d'aparèixer els propers venciments.
       category_label: Categoria
       category_blank: Sense categoria
-      frequency_new_hint: Els detalls del dia surten de la data de venciment de dalt. Pots ajustar la periodicitat després de desar.
+      frequency_new_hint: Els detalls del dia surten de la data de venciment de dalt.
+        Pots ajustar la periodicitat després de desar.
       frequency_label: Periodicitat
-      frequency_hint: Cada quant venç aquesta factura. Tria els detalls del dia perquè coincideixin amb el teu extracte.
+      frequency_hint: Cada quant venç aquesta factura. Tria els detalls del dia perquè
+        coincideixin amb el teu extracte.
       frequency_day_label: El dia
       frequency_second_day_label: I el dia
       frequency_weekday_label: Dia
       frequency_month_label: Mes
+      frequency_interval_label: Es repeteix cada
+      frequency_interval_unit_label: Unitat
     update:
       success: Factura actualitzada
       success_with_siblings:
-        one: Factura actualitzada, i l'enllaç de pagament s'ha copiat a %{count} factura més
-        other: Factura actualitzada, i l'enllaç de pagament s'ha copiat a %{count} factures més
+        one: Factura actualitzada, i l'enllaç de pagament s'ha copiat a %{count} factura
+          més
+        other: Factura actualitzada, i l'enllaç de pagament s'ha copiat a %{count}
+          factures més
     manage:
       title: Les teves factures són a la pàgina Factures
-      description: Declara, edita, posa en pausa i paga-ho tot des d'allà. Aquesta pàgina controla la detecció.
+      description: Declara, edita, posa en pausa i paga-ho tot des d'allà. Aquesta
+        pàgina controla la detecció.
       cta: Obre totes les factures
-    identify_already_running: La detecció ja s'està executant. Torna-ho a comprovar d'aquí a un moment.
+    identify_already_running: La detecció ja s'està executant. Torna-ho a comprovar
+      d'aquí a un moment.
     deleted_income: Ingrés eliminat. Les teves transaccions no s'han modificat.
-    confirm_delete_income: Vols eliminar %{name} com a ingrés? Les teves transaccions es queden exactament com estan. Això només elimina l'ingrés i la seva periodicitat.
+    confirm_delete_income: Vols eliminar %{name} com a ingrés? Les teves transaccions
+      es queden exactament com estan. Això només elimina l'ingrés i la seva periodicitat.
     suggested:
       title: Possibles factures noves
       seen_count:
@@ -205,3 +235,7 @@ ca:
       dismiss: No és una factura
     confirmed: Factura afegida a les teves transaccions recurrents
     dismissed: Descartat. Aquest patró no es tornarà a suggerir.
+    frequency_interval_units:
+      monthly: mesos
+      weekly: setmanes
+      yearly: anys

@@ -1,0 +1,9 @@
+---
+tr:
+  tag:
+    dropdowns:
+      show:
+        empty: Henüz etiket yok
+        manage: Etiketleri yönet
+        no_tags: Etiket bulunamadı
+        search_placeholder: Ara

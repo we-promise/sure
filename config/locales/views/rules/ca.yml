@@ -142,3 +142,12 @@ ca:
       then: ALESHORES
     update:
       success: Regla actualitzada
+    category_rule_cta:
+      close: Tanca
+      create_rule: Crea una regla
+      description: Pots crear una regla per categoritzar automàticament les transaccions
+        com aquesta
+      dont_show_again: No tornis a mostrar-ho
+      hide_for_today: Amaga-ho avui
+      hide_for_today_hint: "«Amaga-ho avui» pausa aquests suggeriments durant 24 hores."
+      message: Categoria canviada a %{category_name}

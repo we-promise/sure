@@ -240,6 +240,7 @@ ru:
         status: Статус
         tag: Тег
         type: Тип
+        ai: ИИ
     searches:
       filters:
         account_filter:
@@ -257,6 +258,8 @@ ru:
           on_or_before: не позднее %{date}
           pending: В ожидании
           transfer: Перевод
+          ai_current: ИИ
+          ai_history: История ИИ
         category_filter:
           filter_category: Фильтр по категориям
         date_filter:
@@ -273,6 +276,12 @@ ru:
           expense: Расход
           income: Доход
           transfer: Перевод
+        ai_filter:
+          current: ИИ
+          current_description: Категория по-прежнему соответствует назначенной автоматически
+            (ИИ или байесовской моделью).
+          history: История ИИ
+          history_description: Категория была назначена автоматически, но затем изменена.
       form:
         filter: Фильтр
         search_placeholder: Поиск операций ...
@@ -360,6 +369,25 @@ ru:
       applied_to_title: Платежи, оплаченные этой операцией
       applied_to_detail: '%{amount} в счёт платежа со сроком %{date}'
       applied_to_unreviewed: Требует проверки
+      original_description: Исходное описание
+      payment_channel: Канал платежа
+      plaid_counterparty_label: Контрагент %{index}
+      plaid_payment_meta_label: Данные платежа · %{name}
+      provider_extra_fields:
+        by_order_of: По поручению
+        confidence_level: Уровень уверенности
+        entity_id: Идентификатор сущности
+        logo_url: URL логотипа
+        name: Название
+        payee: Получатель
+        payer: Плательщик
+        phone_number: Номер телефона
+        ppd_id: Идентификатор PPD
+        reason: Основание
+        reference_number: Номер ссылки
+        type: Тип
+        website: Веб-сайт
+      transaction_code: Код операции
     split_parent_row:
       split_label: Разделена
     summary:

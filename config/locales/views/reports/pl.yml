@@ -17,8 +17,9 @@ pl:
     empty_state:
       add_account: Dodaj konto
       add_transaction: Dodaj transakcję
-      description: Zacznij śledzić swoje finanse, dodając transakcje lub łącząc konta,
-        aby zobaczyć pełne raporty
+      description: >-
+        Zacznij śledzić swoje finanse, dodając transakcje lub łącząc konta, aby zobaczyć
+        pełne raporty
       title: Brak danych
     google_sheets_instructions:
       close: Rozumiem
@@ -72,8 +73,9 @@ pl:
       title: Raporty
       today: Dziś
       toggle_section: Przełącz widoczność sekcji
-    invalid_date_range: Data końcowa nie może być wcześniejsza niż data początkowa.
-      Daty zostały zamienione.
+      shortcut_hint: "%{action} (%{key})"
+    invalid_date_range: >-
+      Data końcowa nie może być wcześniejsza niż data początkowa. Daty zostały zamienione.
     investment_flows:
       contributions: Wpłaty
       contributions_description: Środki dodane do inwestycji

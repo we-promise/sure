@@ -24,5 +24,8 @@ ca:
       savings:
         long: Estalvis
         short: Estalvis
+      cash:
+        long: Efectiu
+        short: Efectiu
     types_plural:
       depository: Comptes corrents i estalvis

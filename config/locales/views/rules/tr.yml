@@ -144,3 +144,12 @@ tr:
       then: SONRA
     update:
       success: Kural güncellendi
+    category_rule_cta:
+      close: Kapat
+      create_rule: Kural oluştur
+      description: Bunun gibi işlemleri otomatik olarak kategorilendirmek için bir kural
+        oluşturabilirsiniz
+      dont_show_again: Bunu bir daha gösterme
+      hide_for_today: Bugün için gizle
+      hide_for_today_hint: Bugün için gizle seçeneği bu önerileri 24 saat boyunca duraklatır.
+      message: "%{category_name} olarak güncellendi"

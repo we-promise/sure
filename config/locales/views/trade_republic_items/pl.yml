@@ -2,8 +2,8 @@
 pl:
   providers:
     trade_republic:
-      connection_description: Połącz rachunek inwestycyjny Trade Republic przez bezpieczne
-        logowanie internetowe
+      connection_description: >-
+        Połącz rachunek inwestycyjny Trade Republic przez bezpieczne logowanie internetowe
       institution_name: Trade Republic
       name: Trade Republic
   trade_republic_items:
@@ -23,13 +23,17 @@ pl:
       none_created: Nie utworzono żadnych kont.
       none_selected: Nie wybrano żadnych kont.
       partial_failure:
-        few: Nie udało się w pełni skonfigurować %{count} wybranych kont Trade Republic.
+        few: >-
+          Nie udało się w pełni skonfigurować %{count} wybranych kont Trade Republic.
           Sprawdź dziennik debugowania i spróbuj ponownie.
-        many: Nie udało się w pełni skonfigurować %{count} wybranych kont Trade Republic.
+        many: >-
+          Nie udało się w pełni skonfigurować %{count} wybranych kont Trade Republic.
           Sprawdź dziennik debugowania i spróbuj ponownie.
-        one: Nie udało się w pełni skonfigurować jednego wybranego konta Trade Republic.
+        one: >-
+          Nie udało się w pełni skonfigurować jednego wybranego konta Trade Republic.
           Sprawdź dziennik debugowania i spróbuj ponownie.
-        other: Nie udało się w pełni skonfigurować %{count} wybranych kont Trade Republic.
+        other: >-
+          Nie udało się w pełni skonfigurować %{count} wybranych kont Trade Republic.
           Sprawdź dziennik debugowania i spróbuj ponownie.
       success:
         few: Pomyślnie utworzono %{count} konta Trade Republic.
@@ -37,29 +41,35 @@ pl:
         one: Pomyślnie utworzono %{count} konto Trade Republic.
         other: Pomyślnie utworzono %{count} kont Trade Republic.
     complete_login:
-      approval_pending: Jeszcze nie potwierdzono. Zatwierdź logowanie w aplikacji
-        Trade Republic i spróbuj ponownie.
+      approval_pending: >-
+        Jeszcze nie potwierdzono. Zatwierdź logowanie w aplikacji Trade Republic i
+        spróbuj ponownie.
       login_expired: Żądanie logowania wygasło. Rozpocznij ponownie.
       no_pending_login: Żadne logowanie nie jest obecnie oczekujące. Najpierw rozpocznij
         nowe logowanie.
-      still_pending: Jeszcze nie potwierdzono. Zatwierdź logowanie w aplikacji Trade
-        Republic i spróbuj ponownie.
+      still_pending: >-
+        Jeszcze nie potwierdzono. Zatwierdź logowanie w aplikacji Trade Republic i
+        spróbuj ponownie.
       success: Trade Republic połączono pomyślnie.
     create:
-      success: Trade Republic zapisano. Potwierdź logowanie w aplikacji Trade Republic,
-        aby zakończyć łączenie.
-    duplicate_connection: "To konto Trade Republic jest już połączone. Nowe połączenie zostało usunięte."
+      success: >-
+        Trade Republic zapisano. Potwierdź logowanie w aplikacji Trade Republic, aby
+        zakończyć łączenie.
+    duplicate_connection: To konto Trade Republic jest już połączone. Nowe połączenie
+      zostało usunięte.
     defaults:
       name: Trade Republic
     destroy:
       success: Zaplanowano usunięcie połączenia Trade Republic.
-      unlink_failed: Nie udało się w pełni rozłączyć Trade Republic. Połączenie zostało
-        zachowane, aby można je było bezpiecznie ponowić.
+      unlink_failed: >-
+        Nie udało się w pełni rozłączyć Trade Republic. Połączenie zostało zachowane,
+        aby można je było bezpiecznie ponowić.
     initiate_login:
       not_configured: Trade Republic nie jest skonfigurowane.
       pin_required: Podaj swój PIN lub hasło Trade Republic, aby rozpocząć nowe logowanie.
-      verification_required: Logowanie rozpoczęte. Potwierdź je przez %{method}, a
-        następnie kliknij Potwierdź logowanie.
+      verification_required: >-
+        Logowanie rozpoczęte. Potwierdź je przez %{method}, a następnie kliknij Potwierdź
+        logowanie.
     initiate_qr_login:
       not_configured: Trade Republic nie jest skonfigurowane.
     link_existing_account:
@@ -68,9 +78,10 @@ pl:
       not_found: Nie znaleziono rachunku ani konfiguracji Trade Republic.
       only_manual_investment: Do Trade Republic można połączyć wyłącznie ręcznie utworzone
         konta inwestycyjne.
-      processing_failed: Konto zostało połączone, ale jego wstępne przetwarzanie danych
-        nie powiodło się. Zaplanowano synchronizację; jeśli dane nadal będą niekompletne,
-        sprawdź dziennik debugowania.
+      processing_failed: >-
+        Konto zostało połączone, ale jego wstępne przetwarzanie danych nie powiodło
+        się. Zaplanowano synchronizację; jeśli dane nadal będą niekompletne, sprawdź
+        dziennik debugowania.
       success: Pomyślnie połączono rachunek z Trade Republic.
     poll_login:
       login_expired: Żądanie logowania wygasło. Rozpocznij ponownie.
@@ -103,6 +114,7 @@ pl:
         account_type_cash: Konto gotówkowe
         account_type_investment: Portfel inwestycyjny
         title: Dostępne konto
+        account_type_crypto: Konto kryptowalutowe
       buttons:
         back_to_settings: Wróć do ustawień
         cancel: Anuluj
@@ -118,8 +130,9 @@ pl:
           item_3: Wpłaty, wypłaty i wypłaty odsetek
         title: Import z Trade Republic
       link_existing:
-        description: Możesz też połączyć wykryte konto Trade Republic z istniejącym
-          ręcznym kontem inwestycyjnym.
+        description: >-
+          Możesz też połączyć wykryte konto Trade Republic z istniejącym ręcznym kontem
+          inwestycyjnym.
         manual_account_option: "%{name} (%{balance})"
         select_prompt: Wybierz konto...
       linked_accounts:
@@ -128,15 +141,17 @@ pl:
       page_title: Skonfiguruj rachunek Trade Republic
       status:
         fetching_accounts: Pobieranie konta z Trade Republic...
-        no_accounts_found_description: Sure nie mogło znaleźć konta Trade Republic.
-          Sprawdź, czy Twoja sesja jest nadal ważna.
+        no_accounts_found_description: >-
+          Sure nie mogło znaleźć konta Trade Republic. Sprawdź, czy Twoja sesja jest
+          nadal ważna.
         no_accounts_found_title: Nie znaleziono konta.
       subtitle: Połącz swój rachunek inwestycyjny Trade Republic.
     sync:
       errors:
         phone_number_missing: Brakuje numeru telefonu Trade Republic.
-        reauthentication_required: Sesja Trade Republic nie istnieje lub wygasła.
-          Połącz ponownie w Ustawienia > Dostawcy.
+        reauthentication_required: >-
+          Sesja Trade Republic nie istnieje lub wygasła. Połącz ponownie w Ustawienia
+          > Dostawcy.
       status:
         accounts_need_setup:
           few: "%{count} konta Trade Republic wymagają konfiguracji..."

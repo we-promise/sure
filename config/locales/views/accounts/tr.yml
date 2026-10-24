@@ -36,6 +36,9 @@ tr:
       warning_no_sync: Hesap artık sağlayıcınızla otomatik olarak senkronize edilmeyecek
       warning_title: Bunun anlamı
       warning_transactions_kept: Mevcut tüm işlemler ve bakiyeler korunacaktır
+      warning_wallet_connection: Bu Apple Wallet bağlantısındaki tüm hesapların bağlantısı
+        kesilecek. İşlemleri ve bakiyeleri korunacak. Sure iOS uygulamasında yeni bir Wallet
+        kurulumu yaparak yeniden bağlanabilirsiniz.
     create:
       success: "%{type} hesabı oluşturuldu"
     destroy:
@@ -71,6 +74,10 @@ tr:
         other_accounts: Diğer hesaplar
       new_account: Yeni hesap
       sync: Tümünü senkronize et
+      financekit_accounts:
+        description: Apple Wallet bağlantılarını ve senkronizasyonu Sure iOS uygulamasından
+          yönetin.
+        title: Apple Wallet
     new:
       container:
         close: Kapat
@@ -118,6 +125,8 @@ tr:
         search_placeholder: Kayıtları isme göre ara
         status: Durum
         title: Aktivite
+        category: Kategori
+        uncategorized_only: Yalnızca kategorilendirilmemiş
       chart:
         balance: Bakiye
         owed: Borç miktarı

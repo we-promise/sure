@@ -1,3 +1,4 @@
+---
 uk:
   transactions:
     bulk_updates:
@@ -37,7 +38,7 @@ uk:
       expense: Витрата
       income: Дохід
       merchant_label: Продавець
-      none: (немає)
+      none: "(немає)"
       note_label: Нотатки
       note_placeholder: Введіть нотатку
       create_tag: Створити
@@ -101,18 +102,37 @@ uk:
       tab_transactions: Транзакції
       tab_upcoming: Майбутні
       uncategorized: "(без категорії)"
-      additional_details: "Додаткові відомості"
-      payee: "Одержувач"
-      description: "Опис"
-      memo: "Примітка"
-      provider_extras: "Додаткові відомості від постачальника"
-      transfer_or_debt_payment: "Переказ або сплата боргу?"
-      open_matcher: "Відкрити зіставлення"
-      convert: "Перетворити"
+      additional_details: Додаткові відомості
+      payee: Одержувач
+      description: Опис
+      memo: Примітка
+      provider_extras: Додаткові відомості від постачальника
+      transfer_or_debt_payment: Переказ або сплата боргу?
+      open_matcher: Відкрити зіставлення
+      convert: Перетворити
       create_bill: Створити платіж
       applied_to_title: Платежі, оплачені цією транзакцією
-      applied_to_detail: '%{amount} в оплату платежу з терміном %{date}'
+      applied_to_detail: "%{amount} в оплату платежу з терміном %{date}"
       applied_to_unreviewed: Потребує перевірки
+      original_description: Початковий опис
+      payment_channel: Канал платежу
+      plaid_counterparty_label: Контрагент %{index}
+      plaid_payment_meta_label: Метадані платежу · %{name}
+      provider_extra_fields:
+        by_order_of: За дорученням
+        confidence_level: Рівень впевненості
+        entity_id: ID суб’єкта
+        logo_url: URL логотипа
+        name: Назва
+        payee: Одержувач
+        payer: Платник
+        phone_number: Номер телефону
+        ppd_id: PPD ID
+        reason: Причина
+        reference_number: Номер посилання
+        type: Тип
+        website: Вебсайт
+      transaction_code: Код транзакції
     activity_labels:
       buy: Купівля
       sell: Продаж
@@ -134,7 +154,7 @@ uk:
     potential_duplicate_description: Ця очікувана транзакція може бути такою ж, як і проведена транзакція нижче. Якщо так, об'єднайте їх, щоб уникнути подвійного підрахунку.
     keep_both: Ні, залишити обидві
     split_parent_row:
-      split_label: "Розділено"
+      split_label: Розділено
     transfer_match:
       auto_matched: Автоматично зіставлено
       auto_matched_short: А/З
@@ -165,7 +185,7 @@ uk:
       possible_duplicate_short: Дубл.?
       review_recommended: Перевірка
       review_recommended_short: Перев.
-      confirm_title: "Об'єднати з проведеною транзакцією (%{posted_amount})"
+      confirm_title: Об'єднати з проведеною транзакцією (%{posted_amount})
       reject_title: Зберегти як окремі транзакції
     summary:
       total_transactions: Усього транзакцій
@@ -180,61 +200,61 @@ uk:
       edit_tags: Редагувати теги
       import: Імпорт
     index:
-      title: "Транзакції"
+      title: Транзакції
       transaction: транзакція
       transactions: транзакції
       import: Імпорт
-      new_rule: "Нове правило"
-      edit_rules: "Редагувати правила"
-      edit_categories: "Редагувати категорії"
-      edit_tags: "Редагувати теги"
-      edit_merchants: "Редагувати продавців"
-      edit_imports: "Редагувати імпорт"
-      new_transaction: "Нова транзакція"
+      new_rule: Нове правило
+      edit_rules: Редагувати правила
+      edit_categories: Редагувати категорії
+      edit_tags: Редагувати теги
+      edit_merchants: Редагувати продавців
+      edit_imports: Редагувати імпорт
+      new_transaction: Нова транзакція
       categorize_button:
-        one: "Категоризувати (%{count})"
-        other: "Категоризувати (%{count})"
+        one: Категоризувати (%{count})
+        other: Категоризувати (%{count})
         few: Категоризувати (%{count})
         many: Категоризувати (%{count})
     categorizes:
       show:
-        exit: "Вихід"
-        skip: "Пропустити"
+        exit: Вихід
+        skip: Пропустити
         remaining:
-          one: "Залишилася %{count} некатегоризована транзакція"
-          other: "Залишилося %{count} некатегоризованих транзакцій"
+          one: Залишилася %{count} некатегоризована транзакція
+          other: Залишилося %{count} некатегоризованих транзакцій
           few: Залишилися %{count} некатегоризовані транзакції
           many: Залишилося %{count} некатегоризованих транзакцій
         transaction_count:
           one: "%{count} транзакція"
           other: "%{count} транзакцій"
-          few: '%{count} транзакції'
-          many: '%{count} транзакцій'
-        transactions_hint: "Зніміть прапорець, щоб виключити транзакцію, або призначте їй іншу категорію безпосередньо в її рядку."
-        assign_category: "Призначити категорію"
+          few: "%{count} транзакції"
+          many: "%{count} транзакцій"
+        transactions_hint: Зніміть прапорець, щоб виключити транзакцію, або призначте їй іншу категорію безпосередньо в її рядку.
+        assign_category: Призначити категорію
         assign_category_prompt: "→ призначити"
-        filter_placeholder: "Шукати категорії..."
-        col_transaction: "Транзакція"
-        col_date: "Дата"
-        col_amount: "Сума"
-        col_category: "Категорія"
-        type_income: "Дохід"
-        type_expense: "Витрата"
-        create_rule_label: "Створити правило категоризації"
-        rule_description_prefix: "Майбутні транзакції %{type} з назвою, що містить"
-        rule_description_suffix: "також повинні отримати цю категорію."
-        no_categories: "Немає відповідних категорій"
-        all_done: "Усі транзакції категоризовано"
+        filter_placeholder: Шукати категорії...
+        col_transaction: Транзакція
+        col_date: Дата
+        col_amount: Сума
+        col_category: Категорія
+        type_income: Дохід
+        type_expense: Витрата
+        create_rule_label: Створити правило категоризації
+        rule_description_prefix: Майбутні транзакції %{type} з назвою, що містить
+        rule_description_suffix: також повинні отримати цю категорію.
+        no_categories: Немає відповідних категорій
+        all_done: Усі транзакції категоризовано
       create:
         categorized:
           one: "%{count} транзакцію категоризовано"
           other: "%{count} транзакцій категоризовано"
-          few: '%{count} транзакції категоризовано'
-          many: '%{count} транзакцій категоризовано'
-        rule_creation_failed: "Транзакції категоризовано, але правило не вдалося створити (можливо, воно вже існує)."
+          few: "%{count} транзакції категоризовано"
+          many: "%{count} транзакцій категоризовано"
+        rule_creation_failed: Транзакції категоризовано, але правило не вдалося створити (можливо, воно вже існує).
       entry_row:
-        include_checkbox: "Включити %{name}"
-        assign_category_select: "Призначити категорію для %{name}"
+        include_checkbox: Включити %{name}
+        assign_category_select: Призначити категорію для %{name}
     list:
       drag_drop_title: Перетягніть CSV для імпорту
       drag_drop_subtitle: Завантажуйте транзакції безпосередньо
@@ -251,12 +271,13 @@ uk:
         category: Категорія
         tag: Тег
         merchant: Продавець
+        ai: ШІ
     convert_to_trade:
       title: Перетворити на угоду з цінними паперами
       description: Перетворіть цю транзакцію на угоду з даними цінного папера
-      date_label: "Дата:"
-      account_label: "Рахунок:"
-      amount_label: "Сума:"
+      date_label: 'Дата:'
+      account_label: 'Рахунок:'
+      amount_label: 'Сума:'
       security_label: Цінний папір
       security_prompt: Вибрати цінний папір...
       security_custom: "+ Ввести власний тикер"
@@ -266,7 +287,7 @@ uk:
       ticker_search_placeholder: Шукати тикер...
       ticker_search_hint: Шукайте за тикером або назвою компанії, або введіть власний тикер
       price_mismatch_title: Ціна може не збігатися
-      price_mismatch_message: "Ваша ціна (%{entered_price}/акція) значно відрізняється від поточної ринкової ціни %{ticker} (%{market_price}). Якщо це здається неправильним, можливо, ви вибрали неправильний цінний папір — спробуйте використати \"Ввести власний тикер\", щоб вказати правильний."
+      price_mismatch_message: Ваша ціна (%{entered_price}/акція) значно відрізняється від поточної ринкової ціни %{ticker} (%{market_price}). Якщо це здається неправильним, можливо, ви вибрали неправильний цінний папір — спробуйте використати "Ввести власний тикер", щоб вказати правильний.
       quantity_label: Кількість (акцій)
       quantity_placeholder: напр. 20
       quantity_hint: Кількість акцій в угоді
@@ -282,7 +303,7 @@ uk:
       cancel: Скасувати
       submit: Перетворити на угоду
       success: Транзакцію перетворено на угоду
-      conversion_note: "Перетворено з транзакції: %{original_name} (%{original_date})"
+      conversion_note: 'Перетворено з транзакції: %{original_name} (%{original_date})'
       errors:
         not_investment_account: Тільки транзакції на інвестиційних рахунках можна перетворити на угоди
         already_converted: Цю транзакцію вже перетворено або виключено
@@ -291,8 +312,8 @@ uk:
         select_security: Будь ласка, виберіть або введіть цінний папір
         enter_qty_or_price: Будь ласка, введіть кількість або ціну за акцію. Інше буде розраховано з суми транзакції.
         invalid_qty_or_price: Недійсна кількість або ціна. Будь ласка, введіть дійсні додатні значення.
-        conversion_failed: "Не вдалося перетворити транзакцію: %{error}"
-        unexpected_error: "Несподівана помилка під час перетворення: %{error}"
+        conversion_failed: 'Не вдалося перетворити транзакцію: %{error}'
+        unexpected_error: 'Несподівана помилка під час перетворення: %{error}'
     searches:
       filters:
         account_filter:
@@ -300,8 +321,8 @@ uk:
         category_filter:
           filter_category: Фільтрувати категорію
         date_filter:
-          start_date: "Дата початку"
-          end_date: "Дата закінчення"
+          start_date: Дата початку
+          end_date: Дата закінчення
         merchant_filter:
           filter_merchants: Фільтрувати продавців
         tag_filter:
@@ -319,6 +340,8 @@ uk:
           transfer: Переказ
           confirmed: Підтверджено
           pending: Очікується
+          ai_current: ШІ
+          ai_history: Історія ШІ
         type_filter:
           expense: Витрата
           income: Дохід
@@ -326,6 +349,11 @@ uk:
         status_filter:
           confirmed: Підтверджено
           pending: Очікується
+        ai_filter:
+          current: ШІ
+          current_description: Категорія залишається тією, яку призначено автоматично (ШІ або баєсівським класифікатором).
+          history: Історія ШІ
+          history_description: Транзакцію було класифіковано автоматично, але згодом категорію змінено.
       menu:
         account_filter: Рахунок
         amount_filter: Сума
@@ -344,25 +372,25 @@ uk:
         less_than: менше ніж
       form:
         toggle_selection_checkboxes: Переключити всі прапорці
-        search_placeholder: "Шукати транзакції ..."
-        filter: "Фільтр"
+        search_placeholder: Шукати транзакції ...
+        filter: Фільтр
     attachments:
-      cannot_exceed: "Не можна перевищувати %{count} вкладень на транзакцію"
-      uploaded_one: "Вкладення успішно завантажено"
+      cannot_exceed: Не можна перевищувати %{count} вкладень на транзакцію
+      uploaded_one: Вкладення успішно завантажено
       uploaded_many: "%{count} вкладень успішно завантажено"
-      failed_upload: "Не вдалося завантажити вкладення: %{error}"
-      no_files_selected: "Не вибрано файлів для завантаження"
-      attachment_deleted: "Вкладення успішно видалено"
-      failed_delete: "Не вдалося видалити вкладення: %{error}"
-      upload_failed: "Не вдалося завантажити вкладення. Спробуйте ще раз або зверніться до служби підтримки."
-      delete_failed: "Не вдалося видалити вкладення. Спробуйте ще раз або зверніться до служби підтримки."
-      upload: "Завантажити"
-      no_attachments: "Ще немає вкладень"
-      select_up_to: "Виберіть до %{count} файлів (зображення або PDF, макс. %{size} МБ кожен) • %{used} з %{count} використано"
+      failed_upload: 'Не вдалося завантажити вкладення: %{error}'
+      no_files_selected: Не вибрано файлів для завантаження
+      attachment_deleted: Вкладення успішно видалено
+      failed_delete: 'Не вдалося видалити вкладення: %{error}'
+      upload_failed: Не вдалося завантажити вкладення. Спробуйте ще раз або зверніться до служби підтримки.
+      delete_failed: Не вдалося видалити вкладення. Спробуйте ще раз або зверніться до служби підтримки.
+      upload: Завантажити
+      no_attachments: Ще немає вкладень
+      select_up_to: Виберіть до %{count} файлів (зображення або PDF, макс. %{size} МБ кожен) • %{used} з %{count} використано
       files:
-        one: "Файл (%{count})"
-        other: "Файли (%{count})"
+        one: Файл (%{count})
+        other: Файли (%{count})
         few: Файли (%{count})
         many: Файли (%{count})
-      browse_to_add: "Виберіть файли, щоб додати їх"
-      max_reached: "Досягнуто максимального ліміту файлів (%{count}/%{max}). Видаліть існуючий файл, щоб завантажити інший."
+      browse_to_add: Виберіть файли, щоб додати їх
+      max_reached: Досягнуто максимального ліміту файлів (%{count}/%{max}). Видаліть існуючий файл, щоб завантажити інший.

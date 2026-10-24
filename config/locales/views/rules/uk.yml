@@ -1,3 +1,4 @@
+---
 uk:
   rules:
     no_action: Немає дії
@@ -35,7 +36,7 @@ uk:
       new_rule: Нове правило
       ai_cost_warning: Дії правил з підтримкою ШІ коштуватимуть грошей. Обов'язково фільтруйте якомога вужче, щоб уникнути непотрібних витрат.
       rules_heading: Правила
-      sort_by: "Сортувати за:"
+      sort_by: 'Сортувати за:'
       sort_name: Назва
       sort_updated_at: Оновлено
       toggle_sort_direction: Переключити напрямок сортування
@@ -43,12 +44,12 @@ uk:
       no_rules_description: Налаштуйте правила для виконання дій з вашими транзакціями та іншими даними під час кожної синхронізації рахунку.
     confirm:
       title: Підтвердити зміни
-      title_with_name: "Підтвердити зміни до \"%{name}\""
-      apply_notice_html: "Ви збираєтеся застосувати це правило до <span class=\"text-primary font-medium\">%{count} %{resource}</span>, які відповідають зазначеним критеріям правила. Будь ласка, підтвердьте, якщо ви хочете продовжити цю зміну."
+      title_with_name: Підтвердити зміни до "%{name}"
+      apply_notice_html: Ви збираєтеся застосувати це правило до <span class="text-primary font-medium">%{count} %{resource}</span>, які відповідають зазначеним критеріям правила. Будь ласка, підтвердьте, якщо ви хочете продовжити цю зміну.
       ai_cost_title: Оцінка вартості ШІ
-      ai_cost_with_estimate_html: "Це використовуватиме ШІ для категоризації %{count} транзакції(й). Орієнтовна вартість: <span class=\"font-semibold\">~$%{cost}</span>"
-      ai_cost_no_estimate_html: "Це використовуватиме ШІ для категоризації %{count} транзакції(й)."
-      cost_unavailable_model: "Оцінка вартості недоступна для моделі \"%{model}\"."
+      ai_cost_with_estimate_html: 'Це використовуватиме ШІ для категоризації %{count} транзакції(й). Орієнтовна вартість: <span class="font-semibold">~$%{cost}</span>'
+      ai_cost_no_estimate_html: Це використовуватиме ШІ для категоризації %{count} транзакції(й).
+      cost_unavailable_model: Оцінка вартості недоступна для моделі "%{model}".
       cost_unavailable_no_provider: Оцінка вартості недоступна (не налаштовано постачальника LLM).
       cost_warning: Ви можете понести витрати, будь ласка, перевірте у постачальника моделі найактуальніші ціни.
       view_usage_history: Переглянути історію використання
@@ -70,7 +71,7 @@ uk:
       success: Усі правила поставлено в чергу на виконання
       ai_cost_title: Оцінка вартості ШІ
       ai_cost_message: Це використовуватиме ШІ для категоризації до %{transactions} транзакцій.
-      estimated_cost: "Орієнтовна вартість: ~$%{cost}"
+      estimated_cost: 'Орієнтовна вартість: ~$%{cost}'
       cost_unavailable_model: Оцінка вартості недоступна для моделі "%{model}".
       cost_unavailable_no_provider: Оцінка вартості недоступна (не налаштовано постачальника LLM).
       cost_warning: Ви можете понести витрати, будь ласка, перевірте у постачальника моделі найактуальніші ціни.
@@ -120,6 +121,14 @@ uk:
         greater_or_equal_to: Більше або дорівнює
         less_than: Менше ніж
         less_than_or_equal_to: Менше або дорівнює
+    category_rule_cta:
+      close: Закрити
+      create_rule: Створити правило
+      description: Ви можете створити правило для автоматичної класифікації подібних транзакцій
+      dont_show_again: Більше не показувати
+      hide_for_today: Приховати на сьогодні
+      hide_for_today_hint: Ця дія приховує такі пропозиції на 24 години.
+      message: Змінено на %{category_name}
   rule:
     conditions:
       condition_group:

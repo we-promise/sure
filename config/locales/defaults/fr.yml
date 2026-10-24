@@ -5,10 +5,8 @@ fr:
       messages:
         record_invalid: 'La validation a échoué : %{errors}'
         restrict_dependent_destroy:
-          has_many: Vous ne pouvez pas supprimer l'enregistrement parce que les %{record}
-            dépendants existent
-          has_one: Vous ne pouvez pas supprimer l'enregistrement car un(e) %{record}
-            dépendant(e) existe
+          has_many: Vous ne pouvez pas supprimer l'enregistrement parce que les %{record} dépendants existent
+          has_one: Vous ne pouvez pas supprimer l'enregistrement car un(e) %{record} dépendant(e) existe
   date:
     abbr_day_names:
     - dim
@@ -234,3 +232,8 @@ fr:
       long: "%A %d %B %Y %Hh%M"
       short: "%d %b %Hh%M"
     pm: pm
+  oauth:
+    registration:
+      invalid_redirect_uris: >-
+        redirect_uris doit utiliser HTTPS, HTTP sur une adresse de bouclage ou un schéma d’URI d’application
+        native

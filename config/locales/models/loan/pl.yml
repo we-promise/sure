@@ -1,0 +1,10 @@
+---
+pl:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: >-
+            Wiersz zmiany oprocentowania musi zawierać datę wejścia w życie i oprocentowanie.
+          rate_change_before_origination: Zmiana oprocentowania nie może wejść w życie
+            przed uruchomieniem pożyczki.

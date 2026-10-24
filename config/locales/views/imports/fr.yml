@@ -8,7 +8,9 @@ fr:
         description: Modifiez vos données dans le tableau ci-dessous. Les cellules rouges sont invalides.
         error_rows: Lignes d'erreur
         errors_notice: Vous avez des erreurs dans vos données. Survolez l'erreur pour voir les détails.
-        errors_notice_mobile: Vous avez des erreurs dans vos données. Cliquez sur l'icône d'aide de l'erreur pour voir les détails.
+        errors_notice_mobile: >-
+          Vous avez des erreurs dans vos données. Cliquez sur l'icône d'aide de l'erreur pour voir les
+          détails.
         next_step: Étape suivante
         not_configured: Veuillez configurer votre importation avant de continuer.
         title: Nettoyez vos données
@@ -36,15 +38,21 @@ fr:
         leave_empty: Laisser vide
         name_label: Bénéficiaire (facultatif)
         notes_label: Remarques (facultatif)
-        preconfigured_notice: Nous avons préconfiguré votre importation de budget réel pour vous. Veuillez passer à l'étape suivante.
+        preconfigured_notice: >-
+          Nous avons préconfiguré votre importation de budget réel pour vous. Veuillez passer à l'étape
+          suivante.
         signage_convention_label: Convention de signalétique
       category_import:
         button_label: Continuer
-        description: Téléversez un fichier CSV simple (comme celui que nous générons lorsque vous exportez vos données). Nous mapperons automatiquement les colonnes pour vous.
+        description: >-
+          Téléversez un fichier CSV simple (comme celui que nous générons lorsque vous exportez vos données).
+          Nous mapperons automatiquement les colonnes pour vous.
         instructions: Sélectionnez continuer pour analyser votre CSV et passer à l'étape de nettoyage.
       merchant_import:
         button_label: Continuer
-        description: Téléversez un fichier CSV avec vos commerçants. Nous mapperons automatiquement les colonnes pour vous.
+        description: >-
+          Téléversez un fichier CSV avec vos commerçants. Nous mapperons automatiquement les colonnes
+          pour vous.
         instructions: Sélectionnez continuer pour analyser votre CSV et passer à l'étape de nettoyage.
       mint_import:
         account_optional: Compte (facultatif)
@@ -63,12 +71,22 @@ fr:
         select_format: Sélectionnez un format
         tags_optional: Balises (facultatif)
       rule_import:
-        description: Configurez votre importation de règles. Les règles seront créées ou mises à jour en fonction des données CSV.
+        description: >-
+          Configurez votre importation de règles. Les règles seront créées ou mises à jour en fonction
+          des données CSV.
         process_button: Traiter les règles
-        process_help: Cliquez sur le bouton ci-dessous pour traiter votre CSV et générer les lignes de règles.
+        process_help: Cliquez sur le bouton ci-dessous pour traiter votre CSV et générer les lignes de
+          règles.
       show:
         description: Sélectionnez les colonnes qui correspondent à chaque champ dans votre CSV.
         title: Configurez votre importation
+        apply_template: Appliquer le modèle
+        manually_configure: Configurer manuellement
+        sample_caption: Aperçu des données du fichier CSV téléversé
+        template_description: >-
+          Une configuration issue d’une précédente importation a été trouvée pour ce compte. Voulez-vous
+          l’appliquer à cette importation ?
+        template_found: Modèle de configuration trouvé
       trade_import:
         account_label: Compte
         apply_configuration: Appliquer la configuration
@@ -81,7 +99,10 @@ fr:
         format_label: Formater
         leave_empty: Laisser vide
         name_label: Nom
-        no_security_provider_warning: Le fournisseur de prix des titres n'est pas configuré. Vos importations de transactions boursières fonctionneront, mais Sure ne remplira pas l'historique des prix. Veuillez accéder à vos paramètres pour configurer cela.
+        no_security_provider_warning: >-
+          Le fournisseur de prix des titres n'est pas configuré. Vos importations de transactions boursières
+          fonctionneront, mais Sure ne remplira pas l'historique des prix. Veuillez accéder à vos paramètres
+          pour configurer cela.
         note_label: Remarque
         price_label: Prix
         quantity_label: Quantité
@@ -124,7 +145,8 @@ fr:
         success: Importation configurée avec succès.
       ynab_import:
         account_label: Compte (facultatif)
-        amount_notice: Les montants sont détectés automatiquement à partir des colonnes Débit (Outflow) et Crédit (Inflow).
+        amount_notice: Les montants sont détectés automatiquement à partir des colonnes Débit (Outflow)
+          et Crédit (Inflow).
         apply_configuration: Appliquer la configuration
         category_label: Catégorie (facultatif)
         date_format_label: Format de date
@@ -132,30 +154,47 @@ fr:
         leave_empty: Laisser vide
         name_label: Bénéficiaire (facultatif)
         notes_label: Mémo (facultatif)
-        preconfigured_notice: Nous avons préconfiguré votre importation YNAB pour vous. Veuillez passer à l'étape suivante.
+        preconfigured_notice: Nous avons préconfiguré votre importation YNAB pour vous. Veuillez passer
+          à l'étape suivante.
     confirms:
       mappings:
         create_account: Créer un compte
         csv_mapping_label: "%{mapping} dans le CSV"
         next: Suivant
-        no_accounts: Vous n'avez pas encore de comptes. Veuillez créer un compte que nous pouvons utiliser pour les lignes non affectées de votre CSV ou retournez à l'étape Nettoyer et fournissez un nom de compte que nous pouvons utiliser.
+        no_accounts: >-
+          Vous n'avez pas encore de comptes. Veuillez créer un compte que nous pouvons utiliser pour les
+          lignes non affectées de votre CSV ou retournez à l'étape Nettoyer et fournissez un nom de compte
+          que nous pouvons utiliser.
         rows_label: Lignes
         sure_mapping_label: "%{mapping} dans %{product_name}"
-        unassigned_account: Avez-vous besoin de créer un nouveau compte pour les lignes non affectées ?
+        unassigned_account: Avez-vous besoin de créer un nouveau compte pour les lignes non affectées
+          ?
       show:
-        account_mapping_description: Affectez tous les comptes de votre fichier importé aux comptes existants. Vous pouvez également ajouter de nouveaux comptes ou les laisser sans catégorie.
+        account_mapping_description: >-
+          Associez tous les comptes de votre fichier importé aux comptes existants de %{product_name}.
+          Vous pouvez aussi ajouter de nouveaux comptes ou les laisser sans catégorie.
         account_mapping_title: Attribuez vos comptes
-        account_type_mapping_description: Affectez tous les types de comptes importés dans votre fichier
+        account_type_mapping_description: Associez tous les types de comptes de votre fichier importé
+          à ceux de %{product_name}.
         account_type_mapping_title: Attribuez vos types de comptes
-        category_mapping_description: Affectez toutes les catégories importées dans votre fichier aux catégories existantes. Vous pouvez également ajouter de nouvelles catégories ou les laisser non catégorisées.
+        category_mapping_description: >-
+          Associez toutes les catégories de votre fichier importé aux catégories existantes de %{product_name}.
+          Vous pouvez aussi ajouter de nouvelles catégories ou les laisser sans catégorie.
         category_mapping_title: Attribuez vos catégories
-        invalid_data: Vous avez des données invalides, veuillez les modifier jusqu'à ce que toutes les erreurs soient résolues
-        tag_mapping_description: Affectez toutes les étiquettes importées dans votre fichier aux étiquettes existantes. Vous pouvez également ajouter de nouvelles étiquettes ou les laisser non catégorisées.
+        invalid_data: >-
+          Vous avez des données invalides, veuillez les modifier jusqu'à ce que toutes les erreurs soient
+          résolues
+        tag_mapping_description: >-
+          Associez toutes les étiquettes de votre fichier importé aux étiquettes existantes de %{product_name}.
+          Vous pouvez aussi ajouter de nouvelles étiquettes ou les laisser sans catégorie.
         tag_mapping_title: Attribuez vos étiquettes
       sure_import:
         cancel: Annuler
         description: Vérifiez les données qui seront importées depuis votre fichier d'export.
-        empty_summary: Aucun enregistrement importable n'a été trouvé dans ce fichier. Il est peut-être vide, ou les lignes ne correspondent pas au format d'export attendu (chaque ligne doit être un objet JSON avec les clés « type » et « data », pour des types pris en charge par cet import).
+        empty_summary: >-
+          Aucun enregistrement importable n'a été trouvé dans ce fichier. Il est peut-être vide, ou les
+          lignes ne correspondent pas au format d'export attendu (chaque ligne doit être un objet JSON
+          avec les clés « type » et « data », pour des types pris en charge par cet import).
         publish_button: Démarrer l'importation
         summary: Résumé de l'importation
         title: Confirmer votre importation
@@ -166,11 +205,16 @@ fr:
           other: "%{count} catégories trouvées"
         categories_heading: Catégories
         category_name_col: Nom de la catégorie
-        description: Vérifiez le format de date détecté, puis choisissez les catégories et étiquettes de votre fichier QIF à importer dans %{product_name}.
+        description: >-
+          Vérifiez le format de date détecté, puis choisissez les catégories et étiquettes de votre fichier
+          QIF à importer dans %{product_name}.
         empty_state_primary: Aucune catégorie ou étiquette trouvée dans ce fichier QIF.
         empty_state_secondary: Toutes les transactions seront importées sans catégories ni étiquettes.
         split_badge: scindée
-        split_warning_description: 'Ce fichier QIF contient des transactions scindées. Les transactions scindées ne sont pas encore prises en charge : chaque transaction scindée sera importée comme une transaction unique avec son montant total et sans catégorie. Les ventilations individuelles ne seront pas conservées.'
+        split_warning_description: >-
+          Ce fichier QIF contient des transactions scindées. Les transactions scindées ne sont pas encore
+          prises en charge : chaque transaction scindée sera importée comme une transaction unique avec
+          son montant total et sans catégorie. Les ventilations individuelles ne seront pas conservées.
         split_warning_title: Transactions scindées détectées
         submit: Continuer vers la revue
         tag_name_col: Nom de l'étiquette
@@ -195,20 +239,25 @@ fr:
         copy_paste_tab: Copier et coller
         csv_file_prompt: pour ajouter votre fichier CSV ici
         csv_invalid: Doit être un CSV valide avec des en-têtes et au moins une ligne de données
-        description: Collez ou téléversez votre fichier CSV ci-dessous. Veuillez examiner les instructions dans le tableau ci-dessous avant de commencer.
+        description: >-
+          Collez ou téléversez votre fichier CSV ci-dessous. Veuillez examiner les instructions dans le
+          tableau ci-dessous avant de commencer.
         download_sample_csv: Téléchargez un exemple de fichier CSV
         drop_csv_subtitle: Votre fichier sera téléchargé automatiquement
         drop_csv_title: Déposez le CSV pour télécharger
         instructions_1: Voici un exemple de CSV avec des colonnes disponibles pour l'importation.
         instructions_2: Votre CSV doit avoir une ligne d'en-tête
-        instructions_3: Vous pouvez nommer vos colonnes comme vous le souhaitez. Vous les associerez à un stade ultérieur.
+        instructions_3: Vous pouvez nommer vos colonnes comme vous le souhaitez. Vous les associerez à
+          un stade ultérieur.
         instructions_4: Les colonnes marquées avec une étoile (*) sont des données requises.
         instructions_5: Pas de virgules, pas de symboles monétaires et pas de parenthèses dans les nombres.
         multi_account_import: Importation multi-comptes
         paste_csv_placeholder: Collez le contenu de votre fichier CSV ici
         qif_account_label: Compte
         qif_account_placeholder: Sélectionner un compte…
-        qif_description: Sélectionnez le compte auquel appartient ce fichier QIF, puis téléversez votre export .qif depuis Quicken.
+        qif_description: >-
+          Sélectionnez le compte auquel appartient ce fichier QIF, puis téléversez votre export .qif depuis
+          Quicken.
         qif_file_hint: Fichiers .qif uniquement
         qif_file_prompt: pour ajouter votre fichier QIF ici
         qif_submit: Téléverser le QIF
@@ -220,10 +269,13 @@ fr:
       sure_import:
         browse: Parcourir
         browse_hint: pour ajouter votre fichier all.ndjson ici
-        description: Téléversez le fichier all.ndjson de votre export de données pour restaurer vos comptes, transactions, catégories et plus encore.
+        description: >-
+          Téléversez le fichier all.ndjson de votre export de données pour restaurer vos comptes, transactions,
+          catégories et plus encore.
         drop_subtitle: Votre fichier sera téléversé automatiquement
         drop_title: Déposez le NDJSON pour téléverser
-        hint_html: Téléversez le fichier <strong>all.ndjson</strong> de l'archive ZIP d'export de vos données
+        hint_html: Téléversez le fichier <strong>all.ndjson</strong> de l'archive ZIP d'export de vos
+          données
         ndjson_invalid: Le fichier doit être un NDJSON valide avec au moins un enregistrement
         title: Importer depuis l'export
         upload_button: Téléverser le NDJSON
@@ -235,7 +287,9 @@ fr:
       template_applied: Modèle appliqué.
     cancel:
       cancelled: Import marqué en échec. Vous pouvez réessayer depuis la page d'import.
-      not_cancellable: Cet import ne peut pas être marqué en échec pour l'instant, sa tâche est peut-être encore en cours. Réessayez après une heure d'inactivité.
+      not_cancellable: >-
+        Cet import ne peut pas être marqué en échec pour l'instant, sa tâche est peut-être encore en cours.
+        Réessayez après une heure d'inactivité.
     column_labels:
       account: Compte
       amount: Montant
@@ -257,22 +311,31 @@ fr:
       ticker: Ticker
     create:
       csv_uploaded: CSV téléversé avec succès.
-      document_provider_not_configured: Aucun magasin de vecteurs n'est configuré pour les téléversements de documents.
+      document_provider_not_configured: Aucun magasin de vecteurs n'est configuré pour les téléversements
+        de documents.
       document_too_large: Le document est trop volumineux. La taille maximale est de %{max_size} Mo.
-      document_upload_failed: Nous n'avons pas pu téléverser le document dans le magasin de vecteurs. Veuillez réessayer.
+      document_upload_failed: Nous n'avons pas pu téléverser le document dans le magasin de vecteurs.
+        Veuillez réessayer.
       document_uploaded: Document téléversé avec succès.
-      duplicate_pdf_unavailable: Ce PDF est déjà enregistré comme un relevé auquel vous ne pouvez pas accéder.
+      duplicate_pdf_unavailable: Ce PDF est déjà enregistré comme un relevé auquel vous ne pouvez pas
+        accéder.
       file_too_large: Le fichier est trop volumineux. La taille maximale est de %{max_size} Mo.
       invalid_document_file_type: Type de fichier de document invalide pour le magasin de vecteurs actif.
       invalid_file_type: Type de fichier invalide. Veuillez téléverser un fichier CSV.
-      invalid_ndjson_file_type: Type ou format de fichier invalide. Veuillez téléverser un fichier d'export .ndjson ou .json valide.
+      invalid_ndjson_file_type: Type ou format de fichier invalide. Veuillez téléverser un fichier d'export
+        .ndjson ou .json valide.
       invalid_pdf: Le fichier téléversé n'est pas un PDF valide.
       ndjson_uploaded: Fichier NDJSON téléversé avec succès.
-      pdf_processing: Votre PDF est en cours de traitement. Vous recevrez un e-mail lorsque l'analyse sera terminée.
+      pdf_processing: Votre PDF est en cours de traitement. Vous recevrez un e-mail lorsque l'analyse
+        sera terminée.
       pdf_too_large: Le fichier PDF est trop volumineux. La taille maximale est de %{max_size} Mo.
     date_format:
-      description: Le format de date a été détecté automatiquement depuis votre fichier. Modifiez-le si les dates semblent incorrectes.
-      error_description: Aucun des formats de date pris en charge n'a pu analyser les dates dans ce fichier. Veuillez vérifier que le fichier contient des entrées de date valides.
+      description: >-
+        Le format de date a été détecté automatiquement depuis votre fichier. Modifiez-le si les dates
+        semblent incorrectes.
+      error_description: >-
+        Aucun des formats de date pris en charge n'a pu analyser les dates dans ce fichier. Veuillez vérifier
+        que le fichier contient des entrées de date valides.
       error_title: Impossible de détecter le format de date
       heading: Format de date
       preview: Première date analysée
@@ -305,17 +368,27 @@ fr:
     empty:
       message: Aucune importation trouvée.
     errors:
-      custom_column_requires_inflow: Les importations de colonnes personnalisées nécessitent la sélection d'une colonne d'entrée
-      interrupted: 'Le worker en arrière-plan a été interrompu avant la fin de l''opération. Les données importées ont été annulées : vous pouvez réessayer sans risque.'
-      presumed_lost: 'Marqué en échec après que la tâche en arrière-plan a été présumée perdue. Les données importées ont été annulées : vous pouvez réessayer sans risque.'
+      custom_column_requires_inflow: Les importations de colonnes personnalisées nécessitent la sélection
+        d'une colonne d'entrée
+      interrupted: >-
+        Le worker en arrière-plan a été interrompu avant la fin de l'opération. Les données importées
+        ont été annulées : vous pouvez réessayer sans risque.
+      presumed_lost: >-
+        Marqué en échec après que la tâche en arrière-plan a été présumée perdue. Les données importées
+        ont été annulées : vous pouvez réessayer sans risque.
     failure:
-      description: Veuillez vérifier le format de votre fichier, détecter d'éventuelles erreurs et que tous les champs obligatoires sont remplis, puis revenez et réessayez.
+      description: >-
+        Veuillez vérifier le format de votre fichier, détecter d'éventuelles erreurs et que tous les champs
+        obligatoires sont remplis, puis revenez et réessayez.
       title: Échec de l'importation
       try_again: Réessayez
     importing:
       back_to_dashboard: Retour au tableau de bord
       check_status: Vérifier l'état
-      description: Votre importation est en cours. Consultez le menu des importations pour les mises à jour de statut ou cliquez sur « Vérifier le statut » pour actualiser la page pour les mises à jour. N'hésitez pas à continuer à utiliser l'application.
+      description: >-
+        Votre importation est en cours. Consultez le menu des importations pour les mises à jour de statut
+        ou cliquez sur « Vérifier le statut » pour actualiser la page pour les mises à jour. N'hésitez
+        pas à continuer à utiliser l'application.
       title: Importation en cours
     index:
       new: Nouvelle importation
@@ -356,8 +429,12 @@ fr:
       check_status: Vérifier le statut
       complete_description: Nous avons analysé votre PDF et voici ce que nous avons trouvé.
       complete_fully_reconciled:
-        one: 'Toutes les transactions de ce relevé figuraient déjà dans votre compte. %{count} a été rapprochée et marquée comme telle : rien n''était à importer.'
-        other: 'Toutes les transactions de ce relevé figuraient déjà dans votre compte. Les %{count} ont été rapprochées et marquées comme telles : rien n''était à importer.'
+        one: >-
+          Toutes les transactions de ce relevé figuraient déjà dans votre compte. %{count} a été rapprochée
+          et marquée comme telle : rien n'était à importer.
+        other: >-
+          Toutes les transactions de ce relevé figuraient déjà dans votre compte. Les %{count} ont été
+          rapprochées et marquées comme telles : rien n'était à importer.
       complete_title: Document analysé
       create_account: Créer un compte
       delete_import: Supprimer l'importation
@@ -366,10 +443,13 @@ fr:
       errors:
         provider_no_pdf_support: Le fournisseur d'IA ne prend pas en charge le traitement des PDF
         provider_not_configured: Fournisseur d'IA non configuré
-      failed_description: Nous n'avons pas pu traiter votre document PDF. Veuillez réessayer ou contacter le support.
+      failed_description: Nous n'avons pas pu traiter votre document PDF. Veuillez réessayer ou contacter
+        le support.
       failed_title: Traitement échoué
       no_accounts: Aucun compte disponible. Veuillez d'abord créer un compte.
-      processing_description: Nous analysons votre document à l'aide de l'IA. Cela peut prendre un moment. Vous recevrez un e-mail lorsque l'analyse sera terminée.
+      processing_description: >-
+        Nous analysons votre document à l'aide de l'IA. Cela peut prendre un moment. Vous recevrez un
+        e-mail lorsque l'analyse sera terminée.
       processing_failed_generic: 'Traitement échoué : %{error}'
       processing_failed_with_message: "%{message}"
       processing_title: Traitement de votre PDF
@@ -377,8 +457,10 @@ fr:
         one: Publier %{count} transaction
         other: Publier %{count} transactions
       ready_for_review_description:
-        one: "Nous avons extrait %{count} transaction de votre relevé. Examinez-la et publiez-la pour l'ajouter."
-        other: "Nous avons extrait %{count} transactions de votre relevé. Examinez-les et publiez-les pour les ajouter."
+        one: Nous avons extrait %{count} transaction de votre relevé. Examinez-la et publiez-la pour l'ajouter.
+        other: >-
+          Nous avons extrait %{count} transactions de votre relevé. Examinez-les et publiez-les pour les
+          ajouter.
       ready_for_review_title: Prêt pour l'examen
       review_transactions: Examiner les transactions
       save_account: Enregistrer
@@ -394,7 +476,8 @@ fr:
         other: "%{count} transactions"
       try_again: Réessayer
       unknown_document_type: Inconnu
-      unknown_state_description: Cette importation est dans un état inattendu. Veuillez retourner aux importations.
+      unknown_state_description: Cette importation est dans un état inattendu. Veuillez retourner aux
+        importations.
       unknown_state_title: État inconnu
       view_summary: Voir le récapitulatif de l'import
     publish:
@@ -402,12 +485,63 @@ fr:
       started: Votre importation a démarré en arrière-plan.
     ready:
       back_to_imports: Retour aux importations
-      description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez publié cette importation.
-      empty_summary: Aucun enregistrement importable n'a été trouvé dans ce fichier. Il est peut-être vide, ou les lignes ne correspondent pas au format d'export attendu (chaque ligne doit être un objet JSON avec les clés « type » et « data », pour des types pris en charge par cet import).
+      description: >-
+        Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez
+        publié cette importation.
+      empty_summary: >-
+        Aucun enregistrement importable n'a été trouvé dans ce fichier. Il est peut-être vide, ou les
+        lignes ne correspondent pas au format d'export attendu (chaque ligne doit être un objet JSON avec
+        les clés « type » et « data », pour des types pris en charge par cet import).
       publish_import: Publier l'importation
       summary_count_label: Nombre
       summary_item_label: Élément
       title: Confirmez vos données d'importation
+      missing_merchant_warning_description:
+        one: >-
+          %{count} référence de commerçant dans ce fichier renvoie à un commerçant absent de l’export.
+          Cela peut arriver si l’export a été créé avant l’inclusion dans les exports Sure des commerçants
+          attribués par les fournisseurs. Vous pouvez poursuivre l’importation : l’enregistrement concerné
+          sera importé sans commerçant, que vous pourrez lui attribuer ensuite.
+        other: >-
+          %{count} références de commerçants dans ce fichier renvoient à des commerçants absents de l’export.
+          Cela peut arriver si l’export a été créé avant l’inclusion dans les exports Sure des commerçants
+          attribués par les fournisseurs. Vous pouvez poursuivre l’importation : les enregistrements concernés
+          seront importés sans commerçant, que vous pourrez leur attribuer ensuite.
+      missing_merchant_warning_title: Certains commerçants sont absents de cet export
+      provider_merchant_diff_description:
+        one: >-
+          %{count} commerçant de ce fichier existe déjà avec des informations différentes. Le commerçant
+          existant sera conservé et les valeurs de ce fichier ne seront pas appliquées.
+        other: >-
+          %{count} commerçants de ce fichier existent déjà avec des informations différentes. Les commerçants
+          existants seront conservés et les valeurs de ce fichier ne seront pas appliquées.
+      provider_merchant_diff_fields:
+        name: Nom
+        provider_merchant_id: Identifiant du fournisseur
+        website_url: Site web
+      provider_merchant_diff_none: aucun
+      provider_merchant_diff_row: "%{field} : %{kept} conservé, valeur du fichier : %{imported}"
+      provider_merchant_diff_summary: Voir les différences
+      provider_merchant_diff_title: Certains commerçants existent déjà avec des informations différentes
+      reused_taxonomy_notice_description:
+        one: >-
+          %{count} catégorie, étiquette ou commerçant de ce fichier existe déjà dans votre compte, par
+          exemple parmi les catégories par défaut de la configuration initiale. Cet élément sera réutilisé
+          et mis à jour avec les données du fichier au lieu de créer un doublon.
+        other: >-
+          %{count} catégories, étiquettes ou commerçants de ce fichier existent déjà dans votre compte,
+          par exemple parmi les catégories par défaut de la configuration initiale. Ces éléments seront
+          réutilisés et mis à jour avec les données du fichier au lieu de créer des doublons.
+      reused_taxonomy_notice_title: Certaines catégories, étiquettes ou certains commerçants existent
+        déjà
+      skipped_recurring_description:
+        one: >-
+          %{count} transaction récurrente n’a pas de nom et son commerçant est absent ; elle sera donc
+          ignorée. Les transactions récurrentes détectées automatiquement seront reconstituées après l’importation.
+        other: >-
+          %{count} transactions récurrentes n’ont pas de nom et leurs commerçants sont absents ; elles
+          seront donc ignorées. Les transactions récurrentes détectées automatiquement seront reconstituées
+          après l’importation.
     revert:
       started: L'importation est rétablie en arrière-plan.
     revert_failure:
@@ -428,7 +562,9 @@ fr:
       upload: Téléverser
     success:
       back_to_dashboard: Retour au tableau de bord
-      description: Vos données importées ont été ajoutées avec succès à l'application et sont maintenant prêtes à être utilisées.
+      description: >-
+        Vos données importées ont été ajoutées avec succès à l'application et sont maintenant prêtes à
+        être utilisées.
       title: Importation réussie
       verification:
         checked: Vérifié
@@ -442,7 +578,8 @@ fr:
         title: Vérification de la relecture
     summary:
       already_recorded: Déjà enregistrée
-      already_recorded_hint: Rapprochée d'une transaction que ce compte contenait déjà, et marquée comme rapprochée.
+      already_recorded_hint: Rapprochée d'une transaction que ce compte contenait déjà, et marquée comme
+        rapprochée.
       awaiting_review: En attente d'examen
       close: Fermer
       extracted: Trouvée sur le relevé
@@ -463,8 +600,13 @@ fr:
         status: Statut
       row:
         actions:
-          confirm_mark_failed: Cet import est inactif depuis un moment et sa tâche en arrière-plan a probablement été interrompue. Des données peuvent avoir été partiellement enregistrées. Le marquer en échec pour pouvoir réessayer peut entraîner des doublons.
-          confirm_revert: Cette opération supprimera les transactions importées, mais vous pourrez toujours consulter et réimporter vos données à tout moment.
+          confirm_mark_failed: >-
+            Cet import est inactif depuis un moment et sa tâche en arrière-plan a probablement été interrompue.
+            Des données peuvent avoir été partiellement enregistrées. Le marquer en échec pour pouvoir
+            réessayer peut entraîner des doublons.
+          confirm_revert: >-
+            Cette opération supprimera les transactions importées, mais vous pourrez toujours consulter
+            et réimporter vos données à tout moment.
           delete: Supprimer
           mark_failed: Marquer en échec
           revert: Revenir
@@ -506,6 +648,8 @@ fr:
       transaction_import: Import de transactions
       ynab_import: Importation YNAB
     update:
-      account_locked: Cet import a déjà été publié, son compte ne peut donc plus être modifié. Rétablissez-le d'abord si vous devez l'importer ailleurs.
+      account_locked: >-
+        Cet import a déjà été publié, son compte ne peut donc plus être modifié. Rétablissez-le d'abord
+        si vous devez l'importer ailleurs.
       account_saved: Compte enregistré.
       invalid_account: Compte introuvable.

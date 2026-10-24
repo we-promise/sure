@@ -3,4 +3,15 @@ fr:
   sure_import:
     preflight:
       missing_reference: 'Ligne %{line} : %{type} référence un %{field} manquant (%{value}).'
-      skipped_missing_reference: 'Ligne %{line} : %{type} référence un %{field} manquant (%{value}). Elle sera ignorée pendant l''import.'
+      skipped_missing_reference: >-
+        Ligne %{line} : %{type} référence un %{field} manquant (%{value}). Elle sera ignorée pendant l'import.
+      provider_merchant_diff: >-
+        Ligne %{line} : le ProviderMerchant %{name} existe déjà avec une valeur différente pour %{fields}.
+        Le commerçant existant sera conservé.
+      skipped_missing_merchant_reference: >-
+        Ligne %{line} : %{type} fait référence à un commerçant (%{value}) absent de cet export. Cela peut
+        arriver si l’export a été créé avant l’inclusion dans les exports Sure des commerçants attribués
+        par les fournisseurs. L’enregistrement sera importé sans ce commerçant.
+      skipped_unnamed_recurring: >-
+        Ligne %{line} : %{type} n’a pas de nom et fait référence à un commerçant (%{value}) absent de
+        cet export. Cet enregistrement sera ignoré lors de l’importation.

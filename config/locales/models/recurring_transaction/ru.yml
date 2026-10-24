@@ -24,6 +24,7 @@ ru:
     attributes:
       recurring_transaction:
         payment_url: Ссылка для оплаты
+        frequency_interval: Интервал повторения
   recurring_transactions:
     allocator:
       missing_rate: нет обменного курса %{from} к %{to}; укажите сумму вручную

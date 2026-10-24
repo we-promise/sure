@@ -75,12 +75,39 @@ ru:
           remaining_principal_balance: Остаток основного долга
           total_account_value: Общая стоимость счёта
           total_gains: Общая доходность
+          loan_remaining_balance: Остаток задолженности
         views:
           cash: Денежные средства
           holdings: Активы
           total_value: Общая стоимость
           gains: Доходность / ROI
         vs_available_history: по сравнению с доступной историей
+        loan:
+          actual: Учтённый остаток
+          aria_actual_history_starts: История учтённого остатка начинается %{date}.
+          aria_description: 'График остатка по кредиту. Учтённый остаток: %{current_balance}.
+            Первоначальная дата погашения по графику: %{scheduled_payoff_date}. Прогноз погашения
+            исходя из сегодняшнего остатка: %{projected_payoff_date}.'
+          interactive_chart: интерактивный график
+          interest_saved: Экономия на процентах
+          legend: Ряды данных графика
+          months_saved:
+            one: На %{count} месяц раньше графика
+            other: На %{count} месяца раньше графика
+            few: На %{count} месяца раньше графика
+            many: На %{count} месяцев раньше графика
+          no_payoff: не погашается при текущем размере платежа
+          not_converged: При текущем размере платежа этот долг не будет погашен к первоначальной
+            дате окончания срока; останется задолженность %{balloon}.
+          on_schedule: По графику
+          projected: Прогноз на основе текущего остатка
+          projected_payoff: Прогноз погашения
+          projection_basis: Сравнивает учтённый остаток на сегодня с остатком по графику на
+            тот же день. Платёж, учтённый до назначенной даты, показывает опережение до наступления
+            этой даты; платёж, учтённый позже, показывает отставание.
+          scheduled: Первоначальный график
+          since_start: с начала кредита
+          today: Сегодня
     period_picker:
       aria_label: "Период: %{period}"
   ds:

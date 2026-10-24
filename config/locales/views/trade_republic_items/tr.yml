@@ -62,6 +62,7 @@ tr:
         title: Kullanılabilir hesap
         account_summary: '%{account_type} • Bakiye: %{balance}'
         account_id: 'Hesap ID: %{account_id}'
+        account_type_crypto: Kripto hesabı
       buttons:
         refresh: "Yenile"
         cancel: "İptal"
@@ -147,7 +148,7 @@ tr:
         card_fee: Kart ücreti
         card_refund: Kart iadesi
         tax_refund: Vergi iadesi
-        round_up: Round up
+        round_up: Yukarı yuvarlama
     duplicate_connection: "Bu Trade Republic hesabı zaten bağlı. Yeni bağlantı kaldırıldı."
     defaults:
       name: Trade Republic

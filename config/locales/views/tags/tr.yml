@@ -24,3 +24,9 @@ tr:
       edit: Düzenle
     update:
       updated: Etiket güncellendi
+    menu:
+      label: Etiketleri düzenle
+      loading: Etiketler yükleniyor…
+    summary:
+      add: Etiket ekle
+      title: 'Etiketler: %{names}'

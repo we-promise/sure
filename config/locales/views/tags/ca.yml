@@ -24,3 +24,9 @@ ca:
       edit: Edita
     update:
       updated: Etiqueta actualitzada
+    menu:
+      label: Edita les etiquetes
+      loading: S'estan carregant les etiquetes…
+    summary:
+      add: Afegeix etiquetes
+      title: 'Etiquetes: %{names}'

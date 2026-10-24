@@ -76,12 +76,38 @@ ca:
           remaining_principal_balance: Capital pendent
           total_account_value: Valor total del compte
           total_gains: Guanys totals
+          loan_remaining_balance: Saldo pendent
         views:
           cash: Efectiu
           holdings: Posicions
           total_value: Valor total
           gains: Guanys / ROI
         vs_available_history: vs. historial disponible
+        loan:
+          actual: Saldo registrat
+          aria_actual_history_starts: L'historial del saldo registrat comença el %{date}.
+          aria_description: 'Gràfic del saldo del préstec. Saldo registrat: %{current_balance}.
+            Liquidació segons el pla original: %{scheduled_payoff_date}. Liquidació
+            prevista a partir del saldo d''avui: %{projected_payoff_date}.'
+          interactive_chart: Gràfic interactiu
+          interest_saved: Interessos estalviats
+          legend: Sèries del gràfic
+          months_saved:
+            one: "%{count} mes abans del previst"
+            other: "%{count} mesos abans del previst"
+          no_payoff: no es liquida amb la quota actual
+          not_converged: Amb la quota actual, aquest saldo no es liquida abans del
+            venciment original; encara es deurien %{balloon}.
+          on_schedule: Segons el previst
+          projected: Projecció a partir d'avui
+          projected_payoff: Liquidació prevista
+          projection_basis: Compara el saldo registrat d'avui amb el saldo del pla
+            per al mateix dia. Un pagament comptabilitzat abans de la data prevista
+            es mostra com un avançament fins que arriba aquella data; si es comptabilitza
+            després, es mostra com un endarreriment.
+          scheduled: Pla original
+          since_start: des de l'inici del préstec
+          today: Avui
     period_picker:
       aria_label: 'Període: %{period}'
   ds:
@@ -102,7 +128,7 @@ ca:
     tooltip:
       trigger_label: Més informació
     link:
-      opens_in_new_tab: (s'obre en una pestanya nova)
+      opens_in_new_tab: "(s'obre en una pestanya nova)"
     icon_picker:
       no_matching_icons: No hi ha icones que coincideixin
       search_placeholder: Cerca icones...

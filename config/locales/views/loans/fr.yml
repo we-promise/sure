@@ -14,7 +14,9 @@ fr:
       rate_type_variable: Variable
       down_payment: Apport personnel
       insurance_rate: Taux d'assurance
-      insurance_rate_hint: Un taux annuel, prélevé chaque mois en complément de la mensualité. L'assurance constante porte sur le capital initial, l'assurance dégressive sur le capital restant dû.
+      insurance_rate_hint: >-
+        Un taux annuel, prélevé chaque mois en complément de la mensualité. L'assurance constante porte
+        sur le capital initial, l'assurance dégressive sur le capital restant dû.
       insurance_rate_placeholder: '0,36'
       insurance_rate_type: Type d'assurance
       insurance_rate_type_decreasing_life: Dégressive
@@ -23,6 +25,20 @@ fr:
       subtype_prompt: Sélectionner le type de prêt
       term_months: Durée (mois)
       term_months_placeholder: '360'
+      rate_change_add: Ajouter un changement de taux
+      rate_change_effective_date: Date d’effet
+      rate_change_rate: Taux
+      rate_change_remove: Retirer
+      rate_changes: Changements de taux
+      rate_changes_empty: Aucun changement de taux enregistré. Le taux d’intérêt ci-dessus s’applique
+        au prêt.
+      rate_changes_hint: >-
+        Chaque ligne définit le taux applicable à partir de sa date d’effet jusqu’à la suivante. Saisir
+        à nouveau une date remplace la ligne correspondante au lieu d’en ajouter une autre.
+      start_date: Date de déblocage du prêt
+      start_date_hint: >-
+        Date à laquelle les fonds du prêt ont été débloqués. Laissez vide pour utiliser la date d’ouverture
+        du compte.
     new:
       title: Saisir les détails du prêt
     overview:
@@ -34,6 +50,7 @@ fr:
       term: Durée
       type: Type
       unknown: Inconnu
+      original_payoff_date: Date de remboursement initialement prévue
     tabs:
       overview:
         edit_loan_details: Modifier les détails du prêt
@@ -54,6 +71,7 @@ fr:
         total_insurance: Assurance
         type: Type
         unknown: Inconnu
+        original_payoff_date: Date de remboursement initialement prévue
       repayment_progress:
         instalment: Échéance %{number} · %{date}
         insurance: Assurance
@@ -62,3 +80,24 @@ fr:
         principal: Capital
         repaid: Remboursé
         total: Total
+      schedule:
+        date: Date
+        description: >-
+          Projection à partir du solde initial, du taux et de la durée, à compter du %{start_date}. Les
+          remboursements supplémentaires ne sont pas pris en compte.
+        forecasted_payoff_date: Date de remboursement prévue
+        forecasted_payoff_not_converged: Remboursement impossible avec la mensualité actuelle
+        interest: Intérêts
+        monthly_payment: Mensualité
+        not_applicable: S. o.
+        number: N°
+        opening_payment: Échéance initiale
+        payment: Remboursement
+        principal: Capital
+        remaining_balance: Capital restant dû
+        total_cost: Coût total
+        total_interest: Total des intérêts
+        variable_rate_notice: >-
+          Le taux de ce prêt évolue dans le temps. L’échéancier recalcule l’amortissement à chaque changement
+          enregistré, en conservant la date de remboursement initiale et en ajustant la mensualité. Un
+          changement non encore enregistré modifiera ces chiffres.

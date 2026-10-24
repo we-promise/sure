@@ -33,9 +33,14 @@ ca:
       warning_can_delete: Després de desenllaçar-lo, podràs eliminar el compte si
         és necessari
       warning_manual_updates: Hauràs d'afegir transaccions i actualitzar saldos manualment
-      warning_no_sync: El compte ja no es sincronitzarà automàticament amb el teu proveïdor
+      warning_no_sync: El compte ja no es sincronitzarà automàticament amb el teu
+        proveïdor
       warning_title: Això significa
       warning_transactions_kept: Totes les transaccions i saldos existents es conservaran
+      warning_wallet_connection: Es desenllaçaran tots els comptes d'aquesta connexió
+        d'Apple Wallet. Se'n conservaran les transaccions i els saldos. Pots tornar
+        a connectar-los des de l'app de Sure per a iOS amb una nova configuració de
+        Wallet.
     create:
       success: Compte %{type} creat
     destroy:
@@ -62,7 +67,9 @@ ca:
       opening_balance_date_label: Data del saldo inicial
       exclude_from_reports: Exclou de tots els informes
       enable_category_matcher_label: Activa l'assignació de categories
-      enable_category_matcher_hint: Si està activat, la categoria suggerida pel proveïdor s'aplica a les transaccions importades. Desactiva-ho per deixar les transaccions noves sense categoria.
+      enable_category_matcher_hint: Si està activat, la categoria suggerida pel proveïdor
+        s'aplica a les transaccions importades. Desactiva-ho per deixar les transaccions
+        noves sense categoria.
     index:
       accounts: Comptes
       cancel_sync: Cancel·la la sincronització
@@ -70,6 +77,10 @@ ca:
         other_accounts: Altres comptes
       new_account: Nou compte
       sync: Sincronitza-ho tot
+      financekit_accounts:
+        description: Gestiona les connexions d'Apple Wallet i la sincronització a
+          l'app de Sure per a iOS.
+        title: Apple Wallet
     new:
       container:
         close: Tanca
@@ -117,6 +128,8 @@ ca:
         search_placeholder: Cerca entrades per nom
         status: Estat
         title: Activitat
+        category: Categoria
+        uncategorized_only: Només sense categoritzar
       chart:
         balance: Saldo
         owed: Import degut

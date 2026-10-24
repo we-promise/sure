@@ -2,8 +2,9 @@
 pl:
   concerns:
     self_hostable:
-      redis_configured: Redis jest teraz poprawnie skonfigurowany! Możesz teraz skonfigurować
-        aplikację Sure.
+      redis_configured: >-
+        Redis jest teraz poprawnie skonfigurowany! Możesz teraz skonfigurować aplikację
+        Sure.
   shared:
     cancel: Anuluj
     confirm_modal:
@@ -36,18 +37,22 @@ pl:
     preview: Podgląd
     require_admin: Tę akcję mogą wykonać tylko administratorzy
     sidekiq_health_banner:
-      body: Zadania w tle nie są przetwarzane, więc salda, wartość netto i synchronizacje
+      body: >-
+        Zadania w tle nie są przetwarzane, więc salda, wartość netto i synchronizacje
         kont mogą być nieaktualne lub ich brakować.
       cta: Zobacz stan systemu
       reasons:
-        no_worker_processes: Żaden proces workera Sidekiq nie jest podłączony. Uruchom
-          kontener workera albo jednostkę systemd.
-        queue_backed_up: Najstarsze zadanie w kolejce czeka dłużej niż zakładany budżet
-          czasu. Worker działa, ale nie nadąża.
+        no_worker_processes: >-
+          Żaden proces workera Sidekiq nie jest podłączony. Uruchom kontener workera
+          albo jednostkę systemd.
+        queue_backed_up: >-
+          Najstarsze zadanie w kolejce czeka dłużej niż zakładany budżet czasu. Worker
+          działa, ale nie nadąża.
         redis_unreachable: Aplikacja nie może połączyć się z Redis. Sprawdź REDIS_URL
           i czy Redis działa.
-        stale_heartbeat: Worker Sidekiq nie zgłosił ostatnio sygnału życia. Mógł się
-          zawiesić albo ulec awarii.
+        stale_heartbeat: >-
+          Worker Sidekiq nie zgłosił ostatnio sygnału życia. Mógł się zawiesić albo
+          ulec awarii.
       title: Część danych może być nieaktualna
     sync_toast:
       message: Dostępne nowe dane
@@ -61,3 +66,4 @@ pl:
     trend_change:
       no_change: bez zmian
     submitting: Wysyłanie…
+    require_connector_owner: Możesz zarządzać tylko połączeniami dodanymi przez siebie

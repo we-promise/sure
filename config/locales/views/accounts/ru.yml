@@ -37,6 +37,9 @@ ru:
         провайдером
       warning_title: Что это значит
       warning_transactions_kept: Все существующие операции и балансы будут сохранены
+      warning_wallet_connection: Все счета в этом подключении Apple Wallet будут отключены.
+        Их операции и остатки сохранятся. Вы сможете подключиться снова через приложение
+        Sure для iOS, заново настроив Wallet.
     create:
       success: Счёт %{type} создан
     destroy:
@@ -71,6 +74,10 @@ ru:
       new_account: Новый счёт
       sync: Синхронизировать все
       cancel_sync: Отменить синхронизацию
+      financekit_accounts:
+        description: Управляйте подключениями Apple Wallet и синхронизацией в приложении
+          Sure для iOS.
+        title: Apple Wallet
     new:
       container:
         close: Закрыть
@@ -118,6 +125,8 @@ ru:
         search_placeholder: Поиск записей по названию
         status: Статус
         title: Активность
+        category: Категория
+        uncategorized_only: Только без категории
       chart:
         balance: Баланс
         owed: Сумма задолженности

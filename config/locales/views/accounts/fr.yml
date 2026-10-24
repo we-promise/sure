@@ -27,13 +27,19 @@ fr:
       data_not_available: Données non disponibles pour la période sélectionnée
     confirm_unlink:
       confirm_button: Confirmer et délier
-      description_html: Vous êtes sur le point de délier <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Cela le convertira en compte manuel.
+      description_html: >-
+        Vous êtes sur le point de délier <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>.
+        Cela le convertira en compte manuel.
       title: Délier le compte du fournisseur ?
       warning_can_delete: Après la déliaison, vous pourrez supprimer le compte si nécessaire
       warning_manual_updates: Vous devrez ajouter des transactions et mettre à jour les soldes manuellement
       warning_no_sync: Le compte ne se synchronisera plus automatiquement avec votre fournisseur
       warning_title: Ce que cela signifie
       warning_transactions_kept: Toutes les transactions et soldes existants seront conservés
+      warning_wallet_connection: >-
+        Tous les comptes de cette connexion Apple Wallet seront déliés. Leurs transactions et soldes seront
+        conservés. Vous pourrez les reconnecter depuis l’application Sure pour iOS en configurant à nouveau
+        Wallet.
     create:
       success: Compte %{type} créé
     destroy:
@@ -47,7 +53,9 @@ fr:
     form:
       additional_details: Détails supplémentaires
       balance: 'Solde à la date :'
-      enable_category_matcher_hint: Lorsque cette option est activée, la catégorie suggérée par le fournisseur est appliquée aux transactions importées. Désactivez-la pour laisser les nouvelles transactions sans catégorie.
+      enable_category_matcher_hint: >-
+        Lorsque cette option est activée, la catégorie suggérée par le fournisseur est appliquée aux transactions
+        importées. Désactivez-la pour laisser les nouvelles transactions sans catégorie.
       enable_category_matcher_label: Activer l'attribution automatique de catégorie
       exclude_from_reports: Exclure de tous les rapports
       institution_domain_label: Domaine de l'institution
@@ -57,7 +65,9 @@ fr:
       name_label: Nom du compte
       name_placeholder: Nom de compte d'exemple
       notes_label: Notes
-      notes_placeholder: Stockez des informations supplémentaires comme les numéros de compte, codes de tri, IBAN, numéros de routage, etc.
+      notes_placeholder: >-
+        Stockez des informations supplémentaires comme les numéros de compte, codes de tri, IBAN, numéros
+        de routage, etc.
       opening_balance_date_label: Date du solde d'ouverture
     index:
       accounts: Comptes
@@ -66,11 +76,17 @@ fr:
         other_accounts: Autres comptes
       new_account: Nouveau compte
       sync: Tout synchroniser
+      financekit_accounts:
+        description: Gérez les connexions Apple Wallet et leur synchronisation dans l’application Sure
+          pour iOS.
+        title: Apple Wallet
     new:
       container:
         close: Fermer
         navigate: Naviguer
         select: Sélectionnez
+        next: Suivant
+        previous: Précédent
       import_accounts: Importer des comptes
       method_selector:
         connected_entry: Lier un compte
@@ -87,7 +103,8 @@ fr:
       no_providers: Aucun fournisseur n'est actuellement configuré
       title: Sélectionner un fournisseur à lier
     set_default:
-      depository_only: Seuls les comptes de liquidités et de carte de crédit peuvent être définis par défaut.
+      depository_only: Seuls les comptes de liquidités et de carte de crédit peuvent être définis par
+        défaut.
     show:
       activity:
         amount: Montant
@@ -110,15 +127,24 @@ fr:
         search_placeholder: Rechercher des entrées par nom
         status: Statut
         title: Activité
+        category: Catégorie
+        uncategorized_only: Sans catégorie uniquement
       chart:
         balance: Solde
         owed: Montant dû
       header:
         complete_setup: Configuration complète
-      limited_fx_history_warning: L'historique des taux de change n'est disponible qu'à partir du %{date}. Les transactions antérieures à cette date utilisent des conversions de devises approximatives — cela peut se produire lorsque le fournisseur FX n'offre qu'une fenêtre historique limitée.
+      limited_fx_history_warning: >-
+        L'historique des taux de change n'est disponible qu'à partir du %{date}. Les transactions antérieures
+        à cette date utilisent des conversions de devises approximatives — cela peut se produire lorsque
+        le fournisseur FX n'offre qu'une fenêtre historique limitée.
       menu:
         confirm_accept: Supprimer "%{name}"
-        confirm_body_html: "<p>En supprimant ce compte, vous effacerez son historique de valeur, affectant divers aspects de votre solde global. Cette action aura un impact direct sur vos calculs de valeur nette et les graphiques des comptes.</p><br /> <p>Après la suppression, il n'y a aucun moyen de restaurer l'information du compte car vous aurez besoin d'en ajouter un nouveau.</p>"
+        confirm_body_html: >-
+          <p>En supprimant ce compte, vous effacerez son historique de valeur, affectant divers aspects
+          de votre solde global. Cette action aura un impact direct sur vos calculs de valeur nette et
+          les graphiques des comptes.</p><br /> <p>Après la suppression, il n'y a aucun moyen de restaurer
+          l'information du compte car vous aurez besoin d'en ajouter un nouveau.</p>
         confirm_title: Supprimer le compte ?
         delete_account: Supprimer le compte
         edit: Modifier
@@ -135,10 +161,14 @@ fr:
         holdings: Holdings
         overview: Aperçu
         statements: Déclarations
+        schedule: Échéancier
     sidebar:
       configure_providers: Configurez vos fournisseurs ici.
       missing_data: Données historiques manquantes
-      missing_data_description: "%{product} utilise des fournisseurs tiers pour récupérer l'historique des taux de change, des cours des titres, etc. Ces données sont nécessaires au calcul précis des soldes historiques des comptes."
+      missing_data_description: >-
+        %{product} utilise des fournisseurs tiers pour récupérer l'historique des taux de change, des
+        cours des titres, etc. Ces données sont nécessaires au calcul précis des soldes historiques des
+        comptes.
       new_account: Nouveau compte
       new_account_group: Nouveau %{account_group}
       new_asset: Nouvel actif
@@ -147,6 +177,8 @@ fr:
         all: Tout
         assets: Actifs
         debts: Dettes
+      collapse_all: Tout replier
+      expand_all: Tout déplier
     subtype_regions:
       au: Australie
       ca: Canada
@@ -197,4 +229,5 @@ fr:
   email_confirmations:
     new:
       invalid_token: Lien de confirmation invalide ou expiré.
-      success_login: Votre email a été confirmé. Veuillez vous identifier avec votre nouvelle adresse email.
+      success_login: Votre email a été confirmé. Veuillez vous identifier avec votre nouvelle adresse
+        email.

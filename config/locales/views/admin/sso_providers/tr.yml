@@ -145,7 +145,7 @@ tr:
           actions: İşlemler
           disabled: Devre dışı
           enabled: Etkin
-          issuer: Issuer
+          issuer: Kimlik sağlayıcı (Issuer)
           name: Ad
           status: Durum
           strategy: Strateji

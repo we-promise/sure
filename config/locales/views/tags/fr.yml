@@ -24,3 +24,9 @@ fr:
       edit: Éditer
     update:
       updated: Étiquette mise à jour
+    menu:
+      label: Modifier les étiquettes
+      loading: Chargement des étiquettes…
+    summary:
+      add: Ajouter des étiquettes
+      title: 'Étiquettes : %{names}'

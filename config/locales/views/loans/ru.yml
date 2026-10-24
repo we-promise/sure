@@ -25,6 +25,15 @@ ru:
       rate_change_remove: Удалить
       start_date: Дата выдачи
       start_date_hint: Когда кредит был выдан. Оставьте пустым, чтобы использовать дату открытия счёта.
+      down_payment: Первоначальный взнос
+      insurance_rate: Страховая ставка
+      insurance_rate_hint: Годовая ставка, по которой страховой платёж начисляется ежемесячно
+        вместе с платежом по кредиту. При постоянной страховой сумме расчёт идёт от первоначального
+        долга, при уменьшающейся — от остатка долга.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Тип страхования
+      insurance_rate_type_decreasing_life: С уменьшающейся страховой суммой
+      insurance_rate_type_level_term: С постоянной страховой суммой
     new:
       title: Введите детали кредита
     overview:
@@ -49,6 +58,15 @@ ru:
         type: Тип
         unknown: Неизвестно
         original_payoff_date: Первоначальная дата погашения
+        insurance_rate_only: "%{rate} в год"
+        leverage: Кредитное плечо
+        leverage_band_conservative: Консервативное
+        leverage_band_high: Высокое
+        leverage_band_moderate: Умеренное
+        leverage_multiple: "%{ratio}x"
+        total_cost: Общая стоимость
+        total_cost_with_insurance: Общая стоимость со страхованием
+        total_insurance: Страхование
       schedule:
         date: Дата
         description: Рассчитано по первоначальной сумме, ставке и сроку, начиная с %{start_date}. Досрочные платежи не учитываются.
@@ -62,3 +80,14 @@ ru:
         remaining_balance: Остаток долга
         total_cost: Общая сумма выплат
         total_interest: Всего процентов
+        forecasted_payoff_date: Прогнозируемая дата погашения
+        forecasted_payoff_not_converged: Не погашается при текущем размере платежа
+        not_applicable: Не применимо
+      repayment_progress:
+        instalment: Платёж %{number} · %{date}
+        insurance: Страхование
+        interest: Проценты
+        of_original: из %{amount}
+        principal: Основной долг
+        repaid: Погашено
+        total: Всего

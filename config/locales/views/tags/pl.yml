@@ -24,3 +24,9 @@ pl:
       edit: Edytuj
     update:
       updated: Tag został zaktualizowany
+    menu:
+      label: Edytuj tagi
+      loading: Ładowanie tagów...
+    summary:
+      add: Dodaj tagi
+      title: 'Tagi: %{names}'

@@ -1,3 +1,4 @@
+---
 uk:
   tags:
     create:
@@ -23,3 +24,9 @@ uk:
       edit: Редагувати
     update:
       updated: Тег оновлено
+    menu:
+      label: Редагувати теги
+      loading: Завантаження тегів…
+    summary:
+      add: Додати теги
+      title: 'Теги: %{names}'

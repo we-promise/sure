@@ -618,6 +618,8 @@ tr:
         onchain_wallet: Gözetimsiz Bitcoin, EVM ve Solana cüzdanlarını herkese açık adresleri üzerinden takip edin.
         trading212: Trading 212 yatırım portföyünüzü salt okunur bir API anahtarıyla senkronize edin.
         trade_republic: Trade Republic yatırım hesabınızı güvenli, salt okunur web girişiyle senkronize edin.
+        financekit: Bazı FinanceKit hesaplarını Sure iOS uygulaması üzerinden senkronize edin.
+        up: Avustralya'daki Up banka hesaplarını kişisel erişim token'ıyla senkronize edin.
       up_panel:
         step_1_html: "%{link} adresine gidin ve kişisel bir erişim token'ı oluşturun."
         step_2: Kişisel erişim token'ınızı kopyalayın.
@@ -760,6 +762,23 @@ tr:
         accounts_tab: Hesaplar
         status_configured_suffix: sekmesine gidin.
         not_configured: Yapılandırılmadı.
+      financekit:
+        accounts: Bağlı hesaplar
+        app_store: App Store
+        coming_soon: Yakında!
+        description: Apple Wallet bağlantılarını Sure iOS uygulamasından yönetin. Cüzdan
+          verileri uygulama açıkken senkronize edilir; gözetimsiz arka plan senkronizasyonu
+          henüz kullanılamıyor.
+        last_accepted_at: Sure tarafından son kabul tarihi
+        last_imported_at: Ailenize son içe aktarma tarihi
+        linked_accounts:
+          one: 1 bağlı hesap
+          other: "%{count} bağlı hesap"
+        not_yet: Henüz yok
+        status:
+          active: Senkronizasyon aktif
+          repair_required: Onarım gerekiyor — Sure iOS uygulamasını açın
+        summary: Cüzdan senkronizasyonu
     securities:
       show:
         disable_mfa: 2FA'yı devre dışı bırak

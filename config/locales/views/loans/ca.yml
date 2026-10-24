@@ -17,14 +17,27 @@ ca:
       rate_type_fixed: Fix
       rate_type_variable: Variable
       rate_changes: Canvis de tipus
-      rate_changes_hint: Cada fila fixa el tipus que s'aplica des de la seva data d'efecte fins a la següent. Si tornes a introduir una data, se substitueix aquella fila en lloc d'afegir-ne una segona.
-      rate_changes_empty: No hi ha cap canvi de tipus registrat. El préstec aplica el tipus d'interès indicat a dalt.
+      rate_changes_hint: Cada fila fixa el tipus que s'aplica des de la seva data
+        d'efecte fins a la següent. Si tornes a introduir una data, se substitueix
+        aquella fila en lloc d'afegir-ne una segona.
+      rate_changes_empty: No hi ha cap canvi de tipus registrat. El préstec aplica
+        el tipus d'interès indicat a dalt.
       rate_change_effective_date: Data d'efecte
       rate_change_rate: Tipus
       rate_change_add: Afegeix un canvi de tipus
       rate_change_remove: Elimina
       start_date: Data de formalització
-      start_date_hint: Quan es va desemborsar el préstec. Deixa-ho en blanc per utilitzar la data d'obertura del compte.
+      start_date_hint: Quan es va desemborsar el préstec. Deixa-ho en blanc per utilitzar
+        la data d'obertura del compte.
+      down_payment: Entrada
+      insurance_rate: Tipus de l'assegurança
+      insurance_rate_hint: Tipus anual que es cobra mensualment juntament amb la quota.
+        L'assegurança de capital constant es calcula sobre el saldo original; la de
+        capital decreixent, sobre el deute pendent.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Tipus d'assegurança
+      insurance_rate_type_decreasing_life: Capital decreixent
+      insurance_rate_type_level_term: Capital constant
     new:
       title: Introdueix les dades del préstec
     overview:
@@ -49,10 +62,23 @@ ca:
         type: Tipus
         unknown: Desconegut
         original_payoff_date: Data de venciment original
+        insurance_rate_only: "%{rate} anual"
+        leverage: Palanquejament
+        leverage_band_conservative: Conservador
+        leverage_band_high: Alt
+        leverage_band_moderate: Moderat
+        leverage_multiple: "%{ratio}x"
+        total_cost: Cost total
+        total_cost_with_insurance: Cost total amb assegurança
+        total_insurance: Assegurança
       schedule:
         date: Data
-        description: Projecció a partir del saldo, el tipus i el termini originals, des del %{start_date}. No reflecteix les amortitzacions anticipades.
-        variable_rate_notice: El tipus d'aquest préstec varia amb el temps. El quadre d'amortització es recalcula a cada canvi registrat, mantenint la data de venciment original i ajustant la quota; un canvi que encara no s'hagi registrat modificarà aquestes xifres.
+        description: Projecció a partir del saldo, el tipus i el termini originals,
+          des del %{start_date}. No reflecteix les amortitzacions anticipades.
+        variable_rate_notice: El tipus d'aquest préstec varia amb el temps. El quadre
+          d'amortització es recalcula a cada canvi registrat, mantenint la data de
+          venciment original i ajustant la quota; un canvi que encara no s'hagi registrat
+          modificarà aquestes xifres.
         opening_payment: Quota inicial
         interest: Interessos
         monthly_payment: Quota mensual
@@ -62,3 +88,14 @@ ca:
         remaining_balance: Capital pendent
         total_cost: Cost total
         total_interest: Interessos totals
+        forecasted_payoff_date: Data prevista de liquidació
+        forecasted_payoff_not_converged: No es liquida amb la quota actual
+        not_applicable: No aplicable
+      repayment_progress:
+        instalment: Quota %{number} · %{date}
+        insurance: Assegurança
+        interest: Interessos
+        of_original: de %{amount}
+        principal: Capital
+        repaid: Amortitzat
+        total: Total

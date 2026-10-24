@@ -4,5 +4,17 @@ pl:
     preflight:
       missing_reference: Wiersz %{line} %{type} odwołuje się do brakującego pola %{field}
         %{value}.
-      skipped_missing_reference: Wiersz %{line} %{type} odwołuje się do brakującego
-        pola %{field} %{value}. Zostanie pominięty podczas importu.
+      skipped_missing_reference: >-
+        Wiersz %{line} %{type} odwołuje się do brakującego pola %{field} %{value}.
+        Zostanie pominięty podczas importu.
+      provider_merchant_diff: >-
+        Wiersz %{line}: ProviderMerchant %{name} już istnieje, ale ma inne wartości
+        pól %{fields}. Istniejący kontrahent zostanie zachowany.
+      skipped_missing_merchant_reference: >-
+        Wiersz %{line}: %{type} odwołuje się do kontrahenta (%{value}), którego nie
+        ma w tym eksporcie. Może tak być, jeśli eksport wykonano, zanim do eksportów
+        Sure dodano kontrahentów przypisanych przez dostawców. Rekord zostanie zaimportowany
+        bez tego kontrahenta.
+      skipped_unnamed_recurring: >-
+        Wiersz %{line}: %{type} nie ma nazwy i odwołuje się do kontrahenta (%{value}),
+        którego nie ma w tym eksporcie. Rekord zostanie pominięty podczas importu.

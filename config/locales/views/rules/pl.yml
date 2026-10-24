@@ -21,8 +21,9 @@ pl:
       ai_cost_title: Szacowanie kosztu AI
       button: Zastosuj wszystkie
       confirm_button: Potwierdź i zastosuj wszystkie
-      confirm_message: 'Liczba reguł do zastosowania: %{count}. Liczba unikalnych
-        transakcji, na które wpłyną: %{transactions}. Potwierdź, jeśli chcesz kontynuować.'
+      confirm_message: >-
+        Liczba reguł do zastosowania: %{count}. Liczba unikalnych transakcji, na które
+        wpłyną: %{transactions}. Potwierdź, jeśli chcesz kontynuować.
       confirm_title: Zastosować wszystkie reguły
       cost_unavailable_model: Szacowanie kosztu niedostępne dla modelu "%{model}".
       cost_unavailable_no_provider: Szacowanie kosztu niedostępne (brak skonfigurowanego
@@ -34,9 +35,9 @@ pl:
       view_usage: Zobacz historię użycia
     clear_ai_cache:
       button: Zresetuj cache AI
-      confirm_body: Czy na pewno chcesz zresetować cache AI? Umożliwi to regułom AI
-        ponowne przetworzenie wszystkich transakcji. Może to wygenerować dodatkowe
-        koszty API.
+      confirm_body: >-
+        Czy na pewno chcesz zresetować cache AI? Umożliwi to regułom AI ponowne przetworzenie
+        wszystkich transakcji. Może to wygenerować dodatkowe koszty API.
       confirm_button: Zresetuj cache
       confirm_title: Zresetować cache AI?
       success: Trwa czyszczenie cache AI. To może potrwać chwilę.
@@ -61,11 +62,13 @@ pl:
     confirm:
       ai_cost_no_estimate_html: 'Liczba transakcji do skategoryzowania przez AI: %{count}.'
       ai_cost_title: Szacowany koszt AI
-      ai_cost_with_estimate_html: 'Liczba transakcji do skategoryzowania przez AI:
-        %{count}. Szacowany koszt: <span class="font-semibold">~$%{cost}</span>'
-      apply_notice_html: Zaraz zastosujesz tę regułę do <span class="text-primary
-        font-medium">%{count} %{resource}</span> spełniających podane kryteria reguły.
-        Potwierdź, jeśli chcesz kontynuować tę zmianę.
+      ai_cost_with_estimate_html: >-
+        Liczba transakcji do skategoryzowania przez AI: %{count}. Szacowany koszt:
+        <span class="font-semibold">~$%{cost}</span>
+      apply_notice_html: >-
+        Zaraz zastosujesz tę regułę do <span class="text-primary font-medium">%{count}
+        %{resource}</span> spełniających podane kryteria reguły. Potwierdź, jeśli
+        chcesz kontynuować tę zmianę.
       confirm_changes: Potwierdź zmiany
       cost_unavailable_model: Szacowanie kosztu niedostępne dla modelu "%{model}".
       cost_unavailable_no_provider: Szacowanie kosztu niedostępne (nie skonfigurowano
@@ -88,12 +91,14 @@ pl:
       starting_from: Od
       then: WTEDY
     index:
-      ai_cost_warning: Akcje reguł z AI generują koszty. Filtruj jak najwęziej, żeby
-        uniknąć zbędnych wydatków.
+      ai_cost_warning: >-
+        Akcje reguł z AI generują koszty. Filtruj jak najwęziej, żeby uniknąć zbędnych
+        wydatków.
       delete_all_rules: Usuń wszystkie reguły
       new_rule: Nowa reguła
-      no_rules_description: Skonfiguruj reguły, żeby automatycznie wykonywać akcje
-        na transakcjach i innych danych przy każdej synchronizacji konta.
+      no_rules_description: >-
+        Skonfiguruj reguły, żeby automatycznie wykonywać akcje na transakcjach i innych
+        danych przy każdej synchronizacji konta.
       no_rules_title: Brak reguł
       page_title: Reguły
       rules_heading: Reguły
@@ -114,8 +119,9 @@ pl:
           modified: Zmodyfikowane
           processed: Przetworzone
           queued: W kolejce
-      description: Zobacz historię wykonania reguł, w tym status powodzenia/niepowodzenia
-        oraz liczbę transakcji.
+      description: >-
+        Zobacz historię wykonania reguł, w tym status powodzenia/niepowodzenia oraz
+        liczbę transakcji.
       execution_types:
         manual: Ręczne
         scheduled: Zaplanowane
@@ -145,3 +151,12 @@ pl:
       then: WTEDY
     update:
       success: Reguła zaktualizowana
+    category_rule_cta:
+      close: Zamknij
+      create_rule: Utwórz regułę
+      description: Możesz utworzyć regułę, aby automatycznie kategoryzować podobne
+        transakcje
+      dont_show_again: Nie pokazuj ponownie
+      hide_for_today: Ukryj na dziś
+      hide_for_today_hint: Opcja „Ukryj na dziś” wstrzymuje te sugestie na 24 godziny.
+      message: Zmieniono na %{category_name}

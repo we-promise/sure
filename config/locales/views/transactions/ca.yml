@@ -118,8 +118,8 @@ ca:
       price_label: Preu per acció
       price_mismatch_message: El teu preu (%{entered_price}/acció) difereix significativament
         del preu de mercat actual de %{ticker} (%{market_price}). Si sembla incorrecte,
-        potser has seleccionat el valor equivocat — prova "Introdueix un ticker
-        personalitzat" per especificar el correcte.
+        potser has seleccionat el valor equivocat — prova "Introdueix un ticker personalitzat"
+        per especificar el correcte.
       price_mismatch_title: El preu pot no coincidir
       price_placeholder: p. ex. 52,15
       qty_or_price_hint: Introdueix com a mínim la quantitat O el preu. L'altre es
@@ -195,7 +195,7 @@ ca:
       title: Transaccions
       transaction: transacció
       transactions: transaccions
-    keep_both: 'No, mantén-les totes dues'
+    keep_both: No, mantén-les totes dues
     list:
       drag_drop_subtitle: Puja transaccions directament
       drag_drop_title: Deixa anar el CSV per importar
@@ -218,8 +218,8 @@ ca:
       review_recommended: Revisa
       review_recommended_short: Rev
     potential_duplicate_description: Aquesta transacció pendent pot ser la mateixa
-      que la transacció comptabilitzada a sota. Si és així, fusiona-les per evitar comptabilitzar
-      dues vegades.
+      que la transacció comptabilitzada a sota. Si és així, fusiona-les per evitar
+      comptabilitzar dues vegades.
     potential_duplicate_title: S'ha detectat un duplicat possible
     search:
       filters:
@@ -231,6 +231,7 @@ ca:
         status: Estat
         tag: Etiqueta
         type: Tipus
+        ai: IA
     searches:
       filters:
         amount_filter:
@@ -246,6 +247,8 @@ ca:
           on_or_before: el %{date} o abans
           pending: Pendent
           transfer: Transferència
+          ai_current: IA
+          ai_history: Historial d'IA
         date_filter:
           end_date: Data de fi
           start_date: Data d'inici
@@ -264,6 +267,13 @@ ca:
           filter_merchants: Filtra comerços
         tag_filter:
           filter_tags: Filtra etiquetes
+        ai_filter:
+          current: IA
+          current_description: La categoria encara és la que es va assignar automàticament
+            (IA o Bayes).
+          history: Historial d'IA
+          history_description: Es va categoritzar automàticament, però des de llavors
+            s'ha canviat la categoria.
       form:
         filter: Filtra
         search_placeholder: Cerca transaccions...
@@ -312,14 +322,14 @@ ca:
       exclude: Exclou
       exclude_description: Les transaccions excloses es retiraran dels càlculs i informes
         de pressupost.
-      keep_both: 'No, mantén-les totes dues'
+      keep_both: No, mantén-les totes dues
       loan_payment: Pagament de préstec
       mark_recurring: Marca com a recurrent
       mark_recurring_subtitle: Segueix-ho com a transacció recurrent. La variància
         d'import es calcula automàticament a partir dels últims 6 mesos de transaccions
         similars.
       mark_recurring_title: Transacció recurrent
-      memo: Memo
+      memo: Anotació
       merchant_label: Comerç
       merge_duplicate: Sí, fusiona-les
       name_label: Nom
@@ -338,8 +348,8 @@ ca:
         pendent amb la seva versió comptabilitzada.
       pending_duplicate_merger_title: Duplicat d'una transacció comptabilitzada?
       potential_duplicate_description: Aquesta transacció pendent pot ser la mateixa
-        que la transacció comptabilitzada a sota. Si és així, fusiona-les per evitar comptabilitzar
-        dues vegades.
+        que la transacció comptabilitzada a sota. Si és així, fusiona-les per evitar
+        comptabilitzar dues vegades.
       potential_duplicate_title: S'ha detectat un duplicat possible
       provider_extras: Extres del proveïdor
       settings: Configuració
@@ -353,8 +363,27 @@ ca:
       uncategorized: "(sense categoritzar)"
       create_bill: Crea una factura
       applied_to_title: Factures pagades amb aquesta transacció
-      applied_to_detail: '%{amount} aplicats a la factura amb venciment el %{date}'
+      applied_to_detail: "%{amount} aplicats a la factura amb venciment el %{date}"
       applied_to_unreviewed: Cal revisar-ho
+      original_description: Descripció original
+      payment_channel: Canal de pagament
+      plaid_counterparty_label: Contrapart %{index}
+      plaid_payment_meta_label: Metadades del pagament · %{name}
+      provider_extra_fields:
+        by_order_of: Per ordre de
+        confidence_level: Nivell de confiança
+        entity_id: ID de l'entitat
+        logo_url: URL del logotip
+        name: Nom
+        payee: Beneficiari
+        payer: Ordenant
+        phone_number: Número de telèfon
+        ppd_id: ID PPD
+        reason: Motiu
+        reference_number: Número de referència
+        type: Tipus
+        website: Lloc web
+      transaction_code: Codi de la transacció
     split_parent_row:
       split_label: Divisió
     transfer_match:

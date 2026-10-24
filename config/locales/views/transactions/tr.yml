@@ -231,6 +231,7 @@ tr:
         status: Durum
         tag: Etiket
         type: Tür
+        ai: Yapay zeka
     searches:
       filters:
         account_filter:
@@ -248,6 +249,8 @@ tr:
           on_or_before: "%{date} veya öncesinde"
           pending: Beklemede
           transfer: Transfer
+          ai_current: Yapay zeka
+          ai_history: Yapay zeka geçmişi
         category_filter:
           filter_category: Kategoriyi filtrele
         date_filter:
@@ -264,6 +267,13 @@ tr:
           expense: Gider
           income: Gelir
           transfer: Transfer
+        ai_filter:
+          current: Yapay zeka
+          current_description: Kategori hâlâ otomatik olarak atanan kategoridir (yapay zeka
+            veya Bayes).
+          history: Yapay zeka geçmişi
+          history_description: Otomatik olarak kategorilendirildi, ancak kategorisi daha sonra
+            değiştirildi.
       form:
         filter: Filtrele
         search_placeholder: İşlemleri ara...
@@ -352,6 +362,25 @@ tr:
       applied_to_title: Bu ödemeyle kapatılan faturalar
       applied_to_detail: Son ödeme tarihi %{date} olan faturaya %{amount}
       applied_to_unreviewed: İnceleme gerekiyor
+      original_description: Orijinal açıklama
+      payment_channel: Ödeme kanalı
+      plaid_counterparty_label: Karşı taraf %{index}
+      plaid_payment_meta_label: Ödeme meta verisi · %{name}
+      provider_extra_fields:
+        by_order_of: Talimat veren
+        confidence_level: Güven düzeyi
+        entity_id: Varlık kimliği
+        logo_url: Logo URL'si
+        name: Ad
+        payee: Alıcı
+        payer: Ödeyen
+        phone_number: Telefon numarası
+        ppd_id: PPD kimliği
+        reason: Neden
+        reference_number: Referans numarası
+        type: Tür
+        website: Web sitesi
+      transaction_code: İşlem kodu
     split_parent_row:
       split_label: Bölünmüş
     summary:

@@ -1,0 +1,7 @@
+---
+uk:
+  assistant:
+    external:
+      model_catalog:
+        default_agent_label: Агент за замовчуванням (%{id})
+        named_agent_label: "%{name} (%{id})"

@@ -1,3 +1,4 @@
+---
 uk:
   reports:
     index:
@@ -5,8 +6,8 @@ uk:
       subtitle: Комплексне уявлення про ваше фінансове здоров'я
       export: Експорт CSV
       print_report: Друк звіту
-      drag_to_reorder: "Перетягніть, щоб змінити порядок розділу"
-      toggle_section: "Переключити видимість розділу"
+      drag_to_reorder: Перетягніть, щоб змінити порядок розділу
+      toggle_section: Переключити видимість розділу
       periods:
         monthly: Щомісяця
         quarterly: Щокварталу
@@ -16,23 +17,24 @@ uk:
       date_range:
         from: З
         to: По
-      showing_period: "Показано дані з %{start} по %{end}"
-      previous_period: "Попередній період"
-      next_period: "Наступний період"
-      today: "Сьогодні"
+      showing_period: Показано дані з %{start} по %{end}
+      previous_period: Попередній період
+      next_period: Наступний період
+      today: Сьогодні
       period_label:
-        quarterly: "Q%{quarter} %{year}"
-        ytd: "З початку року %{year}"
+        quarterly: Q%{quarter} %{year}
+        ytd: З початку року %{year}
         past_year: "%{year}"
         last_6_months: "%{start} – %{end}"
       period_picker:
-        quarter: "Q%{quarter} %{year}"
-        ytd: "З початку року %{year}"
-      previous_year: "Попередній рік"
-      next_year: "Наступний рік"
-      previous_decade: "Попереднє десятиліття"
-      next_decade: "Наступне десятиліття"
-    invalid_date_range: "Дата закінчення не може бути раніше дати початку. Дати було поміняно місцями."
+        quarter: Q%{quarter} %{year}
+        ytd: З початку року %{year}
+      previous_year: Попередній рік
+      next_year: Наступний рік
+      previous_decade: Попереднє десятиліття
+      next_decade: Наступне десятиліття
+      shortcut_hint: "%{action} (%{key})"
+    invalid_date_range: Дата закінчення не може бути раніше дати початку. Дати було поміняно місцями.
     summary:
       total_income: Загальний дохід
       total_expenses: Загальні витрати
@@ -75,9 +77,9 @@ uk:
       avg_per_transaction: Сер. за транзакцію
       transactions: Транзакції
       insight_title: Аналітика
-      insight_higher_weekend: "Ви витрачаєте на %{percent}% більше за транзакцію у вихідні, ніж у будні"
-      insight_higher_weekday: "Ви витрачаєте на %{percent}% більше за транзакцію в будні, ніж у вихідні"
-      insight_similar: "Ваші витрати за транзакцію схожі в будні та у вихідні"
+      insight_higher_weekend: Ви витрачаєте на %{percent}% більше за транзакцію у вихідні, ніж у будні
+      insight_higher_weekday: Ви витрачаєте на %{percent}% більше за транзакцію в будні, ніж у вихідні
+      insight_similar: Ваші витрати за транзакцію схожі в будні та у вихідні
       no_spending_data: Немає даних про витрати за цей період
     empty_state:
       title: Немає доступних даних
@@ -121,8 +123,8 @@ uk:
         entries:
           one: "%{count} запис"
           other: "%{count} записів"
-          few: '%{count} записи'
-          many: '%{count} записів'
+          few: "%{count} записи"
+          many: "%{count} записів"
         percentage: "% від загальної суми"
       pagination:
         showing:
@@ -164,13 +166,13 @@ uk:
       holdings_count:
         one: "%{count} актив"
         other: "%{count} активів"
-        few: '%{count} активи'
-        many: '%{count} активів'
+        few: "%{count} активи"
+        many: "%{count} активів"
       sells_count:
         one: "%{count} продаж"
         other: "%{count} продажів"
-        few: '%{count} продажі'
-        many: '%{count} продажів'
+        few: "%{count} продажі"
+        many: "%{count} продажів"
       holdings: Активи
       sell_trades: Продажі
       and_more: "+%{count} ще"
@@ -187,13 +189,17 @@ uk:
       title_with_key: "✅ Скопіюйте URL-адресу для Google Sheets"
       title_no_key: "⚠️ Потрібен ключ API"
       ready: Ваша URL-адреса CSV (з ключем API) готова.
-      steps: "Щоб імпортувати в Google Sheets:\n1. Створіть нову таблицю Google\n2. У клітинці A1 введіть формулу, показану нижче\n3. Натисніть Enter"
-      security_warning: "Ця URL-адреса містить ваш ключ API. Зберігайте її в безпеці!"
+      steps: |-
+        Щоб імпортувати в Google Sheets:
+        1. Створіть нову таблицю Google
+        2. У клітинці A1 введіть формулу, показану нижче
+        3. Натисніть Enter
+      security_warning: Ця URL-адреса містить ваш ключ API. Зберігайте її в безпеці!
       need_key: Щоб імпортувати дані в Google Sheets, вам потрібен ключ API.
-      step1: "Перейдіть до Налаштування → Ключі API"
-      step2: "Створіть новий ключ API з дозволом на читання"
+      step1: Перейдіть до Налаштування → Ключі API
+      step2: Створіть новий ключ API з дозволом на читання
       step3: Скопіюйте ключ API
-      step4: "Додайте його до цієї URL-адреси як: ?api_key=ВАШ_КЛЮЧ"
+      step4: 'Додайте його до цієї URL-адреси як: ?api_key=ВАШ_КЛЮЧ'
       example: Приклад
       then_use: Потім використовуйте повну URL-адресу з =IMPORTDATA() в Google Sheets.
       open_sheets: Відкрити Google Sheets
@@ -202,8 +208,7 @@ uk:
     print:
       document_title: Фінансовий звіт
       title: Фінансовий звіт
-      generated_on: "Згенеровано %{date}"
-      # Summary section
+      generated_on: Згенеровано %{date}
       summary:
         title: Зведення
         income: Дохід
@@ -213,7 +218,6 @@ uk:
         vs_prior: "%{percent}% порівняно з попереднім"
         of_income: "%{percent}% від доходу"
         used: використано
-      # Net Worth section
       net_worth:
         title: Чистий капітал
         current_balance: Поточний баланс
@@ -221,7 +225,6 @@ uk:
         assets: Активи
         liabilities: Зобов'язання
         no_liabilities: Немає зобов'язань
-      # Monthly Trends section
       trends:
         title: Щомісячні тенденції
         month: Місяць
@@ -231,7 +234,6 @@ uk:
         savings_rate: Рівень заощаджень
         average: Середній
         current_month_note: "* Поточний місяць (часткові дані)"
-      # Investments section
       investments:
         title: Інвестиції
         portfolio_value: Вартість портфеля
@@ -245,7 +247,6 @@ uk:
         weight: Вага
         value: Вартість
         return: Дохідність
-      # Spending by Category section
       spending:
         title: Витрати за категоріями
         income: Дохід

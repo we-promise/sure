@@ -24,3 +24,6 @@ fr:
       savings:
         long: Compte d'épargne
         short: Compte d'épargne
+      cash:
+        long: Liquidités
+        short: Liquidités

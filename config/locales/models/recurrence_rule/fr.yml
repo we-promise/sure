@@ -9,6 +9,14 @@ fr:
         month_of_year: Mois
         weekday: Jour de la semaine
         weekday_ordinal: Rang dans le mois
+      recurring_transaction/recurrence_rules:
+        base: 'Règle de récurrence :'
+        day_of_month: Jour du mois
+        frequency: Fréquence
+        interval: Intervalle
+        month_of_year: Mois
+        weekday: Jour de la semaine
+        weekday_ordinal: Semaine du mois
     errors:
       models:
         recurrence_rule:
@@ -24,4 +32,5 @@ fr:
               not_allowed_for_weekly: ne s'applique pas à une règle hebdomadaire
               not_allowed_without_weekday: ne s'applique que si un jour de la semaine est défini
               required_with_weekday: est obligatoire lorsqu'un jour de la semaine est défini
-          day_spec_required: Choisissez soit un jour du mois, soit un jour de la semaine, mais pas les deux
+          day_spec_required: Choisissez soit un jour du mois, soit un jour de la semaine, mais pas les
+            deux

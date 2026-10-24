@@ -17,15 +17,15 @@ fr:
     empty_state:
       add_account: Ajouter un compte
       add_transaction: Ajouter une transaction
-      description: Commencez à suivre vos finances en ajoutant des transactions ou
-        en connectant vos comptes pour voir des rapports complets
+      description: >-
+        Commencez à suivre vos finances en ajoutant des transactions ou en connectant vos comptes pour
+        voir des rapports complets
       title: Aucune donnée disponible
     google_sheets_instructions:
       close: Compris
       example: Exemple
       go_to_api_keys: Aller aux clés API
-      need_key: Pour importer des données dans Google Sheets, vous avez besoin d'une
-        clé API.
+      need_key: Pour importer des données dans Google Sheets, vous avez besoin d'une clé API.
       open_sheets: Ouvrir Google Sheets
       ready: Votre URL CSV (avec clé API) est prête.
       security_warning: Cette URL inclut votre clé API. Gardez-la en sécurité !
@@ -73,8 +73,9 @@ fr:
       title: Rapports
       today: Aujourd'hui
       toggle_section: Basculer la visibilité de la section
-    invalid_date_range: La date de fin ne peut pas être antérieure à la date de début.
-      Les dates ont été inversées.
+      shortcut_hint: "%{action} (%{key})"
+    invalid_date_range: La date de fin ne peut pas être antérieure à la date de début. Les dates ont été
+      inversées.
     investment_flows:
       contributions: Contributions
       contributions_description: Argent ajouté aux investissements
@@ -233,12 +234,9 @@ fr:
       current: actuel
       expenses: Dépenses
       income: Revenus
-      insight_higher_weekday: Vous dépensez %{percent}% de plus par transaction en
-        semaine que le week-end
-      insight_higher_weekend: Vous dépensez %{percent}% de plus par transaction le
-        week-end qu'en semaine
-      insight_similar: Vos dépenses par transaction sont similaires en semaine et
-        le week-end
+      insight_higher_weekday: Vous dépensez %{percent}% de plus par transaction en semaine que le week-end
+      insight_higher_weekend: Vous dépensez %{percent}% de plus par transaction le week-end qu'en semaine
+      insight_similar: Vos dépenses par transaction sont similaires en semaine et le week-end
       insight_title: Aperçu
       month: Mois
       monthly_breakdown: Répartition mensuelle

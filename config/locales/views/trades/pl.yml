@@ -62,10 +62,17 @@ pl:
       no_category: Brak kategorii
       note_label: Notatka
       note_placeholder: Dodaj tutaj dodatkowe notatki...
-      provider_disabled_warning: Aktualizacje cen wstrzymane. Dostawca %{provider}
-        jest wyłączony. Włącz go ponownie w Ustawieniach albo przypisz aktywo do innego
-        dostawcy.
+      provider_disabled_warning: >-
+        Aktualizacje cen wstrzymane. Dostawca %{provider} jest wyłączony. Włącz go
+        ponownie w Ustawieniach albo przypisz aktywo do innego dostawcy.
       quantity_label: Ilość
       sell: Sprzedaż
       settings: Ustawienia
       type_label: Typ
+    api_errors:
+      activity_label_must_match_type: >-
+        investment_activity_label musi mieć wartość %{label}, gdy type ma wartość
+        %{type}
+      invalid_activity_label: Nieprawidłowa etykieta aktywności inwestycyjnej
+      invalid_type: Nieprawidłowy typ
+      supported_types: 'type musi mieć jedną z wartości: %{types}'

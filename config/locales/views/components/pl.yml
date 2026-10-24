@@ -78,12 +78,42 @@ pl:
           remaining_principal_balance: Pozostały kapitał
           total_account_value: Łączna wartość konta
           total_gains: Łączny zysk
+          loan_remaining_balance: Pozostałe saldo
         views:
           cash: Gotówka
           gains: Zyski / ROI
           holdings: Aktywa
           total_value: Wartość całkowita
         vs_available_history: względem dostępnej historii
+        loan:
+          actual: Zapisane saldo
+          aria_actual_history_starts: Historia zapisanego salda zaczyna się %{date}.
+          aria_description: >-
+            Wykres salda pożyczki. Zapisane saldo: %{current_balance}. Pierwotny planowany
+            termin spłaty: %{scheduled_payoff_date}. Prognozowany termin spłaty na
+            podstawie dzisiejszego salda: %{projected_payoff_date}.
+          interactive_chart: wykres interaktywny
+          interest_saved: Zaoszczędzone odsetki
+          legend: Serie danych na wykresie
+          months_saved:
+            one: "%{count} miesiąc wcześniej niż planowano"
+            other: "%{count} miesiąca wcześniej niż planowano"
+            few: "%{count} miesiące wcześniej niż planowano"
+            many: "%{count} miesięcy wcześniej niż planowano"
+          no_payoff: brak przy obecnej racie
+          not_converged: >-
+            Przy obecnej racie saldo nie zostanie spłacone w pierwotnym terminie.
+            Pozostanie do spłaty %{balloon}.
+          on_schedule: Zgodnie z harmonogramem
+          projected: Prognoza od dziś
+          projected_payoff: Prognozowana spłata
+          projection_basis: >-
+            Porównuje dzisiejsze zapisane saldo z saldem w harmonogramie na ten sam
+            dzień. Płatność zaksięgowana przed planowaną datą wskazuje wyprzedzenie
+            harmonogramu do tej daty, a zaksięgowana po terminie — opóźnienie.
+          scheduled: Pierwotny harmonogram
+          since_start: od uruchomienia pożyczki
+          today: Dzisiaj
     period_picker:
       aria_label: 'Okres: %{period}'
   ds:

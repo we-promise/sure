@@ -13,10 +13,19 @@ pl:
       expiration_date: Data ważności
       minimum_payment: Minimalna spłata
       minimum_payment_placeholder: '100'
-      treat_balance_as_available_credit_description: Włącz, jeśli bank podaje saldo
-        tej karty jako pozostały dostępny limit kredytowy zamiast kwoty zadłużenia.
-        Zadłużenie jest wtedy wyliczane z limitu kredytowego podanego przez bank albo
-        z pola Dostępny limit kredytowy, jeśli bank go nie podaje.
+      treat_balance_as_available_credit_description: >-
+        Włącz, jeśli bank podaje saldo tej karty jako pozostały dostępny limit kredytowy
+        zamiast kwoty zadłużenia. Zadłużenie jest wtedy wyliczane z limitu kredytowego
+        podanego przez bank albo z pola Dostępny limit kredytowy, jeśli bank go nie
+        podaje.
       treat_balance_as_available_credit_label: Saldo to dostępny limit kredytowy
+      simplefin_balance_sign_auto: Automatycznie
+      simplefin_balance_sign_credit: Nadpłata (bank jest Ci winien pieniądze)
+      simplefin_balance_sign_debt: Zadłużenie (jesteś winien pieniądze bankowi)
+      simplefin_balance_sign_description: >-
+        Zmień to ustawienie tylko wtedy, gdy SimpleFIN podaje saldo z niejednoznacznym
+        znakiem. Tryb automatyczny nadal korzysta z historii transakcji i salda od
+        dostawcy.
+      simplefin_balance_sign_label: Znaczenie salda SimpleFIN
     new:
       title: Wprowadź dane karty kredytowej

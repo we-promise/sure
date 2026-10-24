@@ -468,6 +468,43 @@ tr:
       summary_count_label: Adet
       summary_item_label: Öğe
       title: İçe aktarma verilerinizi onaylayın
+      missing_merchant_warning_description:
+        one: Bu dosyadaki 1 satıcı referansı, dosyada yer almayan bir satıcıya işaret ediyor.
+          Bu durum, sağlayıcının atadığı satıcılar Sure dışa aktarmalarına eklenmeden önce
+          alınmış bir dışa aktarmada görülebilir. İçe aktarmayı yine de tamamlayabilirsiniz;
+          ilgili kayıt satıcı olmadan içe aktarılır ve daha sonra etiketlenebilir.
+        other: Bu dosyadaki %{count} satıcı referansı, dosyada yer almayan satıcılara işaret
+          ediyor. Bu durum, sağlayıcının atadığı satıcılar Sure dışa aktarmalarına eklenmeden
+          önce alınmış bir dışa aktarmada görülebilir. İçe aktarmayı yine de tamamlayabilirsiniz;
+          ilgili kayıtlar satıcı olmadan içe aktarılır ve daha sonra etiketlenebilir.
+      missing_merchant_warning_title: Bu dışa aktarmada bazı satıcılar eksik
+      provider_merchant_diff_description:
+        one: Bu dosyadaki 1 satıcı, farklı bilgilerle zaten mevcut. Mevcut satıcı korunacak
+          ve bu dosyadaki değerler uygulanmayacak.
+        other: Bu dosyadaki %{count} satıcı, farklı bilgilerle zaten mevcut. Mevcut satıcılar
+          korunacak ve bu dosyadaki değerler uygulanmayacak.
+      provider_merchant_diff_fields:
+        name: Ad
+        provider_merchant_id: Sağlayıcı kimliği
+        website_url: Web sitesi
+      provider_merchant_diff_none: yok
+      provider_merchant_diff_row: "%{field}: %{kept} korunuyor, dosyadaki değer %{imported}"
+      provider_merchant_diff_summary: Farkları görüntüle
+      provider_merchant_diff_title: Bazı satıcılar farklı bilgilerle zaten mevcut
+      reused_taxonomy_notice_description:
+        one: Bu dosyadaki 1 kategori, etiket veya satıcı hesabınızda zaten mevcut (örneğin
+          ilk kurulumda eklenen varsayılan kategorilerden biri). Kopya oluşturmak yerine
+          mevcut kayıt yeniden kullanılacak ve bu dosyanın verileriyle güncellenecek.
+        other: Bu dosyadaki %{count} kategori, etiket veya satıcı hesabınızda zaten mevcut
+          (örneğin ilk kurulumda eklenen varsayılan kategoriler). Kopya oluşturmak yerine
+          mevcut kayıtlar yeniden kullanılacak ve bu dosyanın verileriyle güncellenecek.
+      reused_taxonomy_notice_title: Bazı kategoriler, etiketler veya satıcılar zaten mevcut
+      skipped_recurring_description:
+        one: 1 yinelenen işlemin adı yok ve satıcısı eksik olduğu için işlem atlanacak.
+          Otomatik algılanan yinelenen işlemler, içe aktarma sonrasında yeniden oluşturulur.
+        other: "%{count} yinelenen işlemin adı yok ve satıcıları eksik olduğu için bu işlemler
+          atlanacak. Otomatik algılanan yinelenen işlemler, içe aktarma sonrasında yeniden
+          oluşturulur."
     revert:
       started: İçe aktarma arka planda geri alınıyor.
     revert_failure:
