@@ -390,6 +390,10 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
              .returns("chart" => { "error" => { "code" => "Not Found" } })
     # Live on that date: GEL per 100 RUB, with no currency.
     @provider.stubs(:fetch_authenticated_chart).with("RUBGEL=X", anything).returns(fx_chart(date, nil, 3.1481))
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:category] == "exchange_rates" &&
+        attributes[:metadata] == { symbol: "RUBGEL=X", expected_currency: "GEL", quote_currency: nil }
+    end
 
     response = @provider.fetch_exchange_rates(from: "GEL", to: "RUB", start_date: date, end_date: date)
 
