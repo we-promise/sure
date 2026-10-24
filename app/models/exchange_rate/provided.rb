@@ -100,27 +100,31 @@ module ExchangeRate::Provided
     end
 
     # @return [Integer] The number of exchange rates synced
-    def import_provider_rates(from:, to:, start_date:, end_date:, clear_cache: false)
+    def import_provider_rates(from:, to:, start_date:, end_date:, clear_cache: false, account: nil)
       unless provider.present?
         Rails.logger.warn("No provider configured for ExchangeRate.import_provider_rates")
         return 0
       end
 
-      importer = ExchangeRate::Importer.new(
-        exchange_rate_provider: provider,
-        from: from,
-        to: to,
-        start_date: start_date,
-        end_date: end_date,
-        clear_cache: clear_cache
-      )
+      build_importer = -> {
+        ExchangeRate::Importer.new(
+          exchange_rate_provider: provider,
+          from: from,
+          to: to,
+          start_date: start_date,
+          end_date: end_date,
+          clear_cache: clear_cache
+        )
+      }
+      importer = build_importer.call
       return importer.import_provider_rates if importer.rates_up_to_date?
 
       # Concurrent syncs that need the same currency pair queue up behind one
       # another instead of skipping: a sync that returned without rates would
       # materialize its balances without them. Once the first import is done the
       # next one finds the rates in place and returns without calling the provider.
-      with_import_lock(from, to, start_date) { importer.import_provider_rates }
+      # A fresh importer re-reads what the import it waited for stored.
+      with_import_lock(from, to, start_date, account) { build_importer.call.import_provider_rates }
     end
 
     def import_lock_key(from, to)
@@ -138,7 +142,7 @@ module ExchangeRate::Provided
       # the connection closes, so a crashed worker cannot leave the pair locked.
       # After the wait the import runs anyway: its rows are upserts, so an
       # overlapping import costs a provider call but never duplicates data.
-      def with_import_lock(from, to, start_date)
+      def with_import_lock(from, to, start_date, account)
         # The unlock must run on the session that took the lock.
         connection = lease_connection
         key = import_lock_key(from, to)
@@ -157,6 +161,7 @@ module ExchangeRate::Provided
             level: "warn",
             message: "Exchange rate import still locked after #{IMPORT_LOCK_WAIT_SECONDS}s, importing anyway",
             source: name,
+            account: account,
             provider_key: ExchangeRatePair.resolve_provider_name,
             metadata: { from: from, to: to, start_date: start_date }
           )

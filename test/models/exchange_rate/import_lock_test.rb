@@ -59,6 +59,10 @@ class ExchangeRate::ImportLockTest < ActiveSupport::TestCase
       Account::MarketDataImporter.new(@account).import_exchange_rates
     end
 
+    entry = DebugLogEntry.where(category: "exchange_rate_import").last
+    assert_equal @account, entry.account
+    assert_equal @family, entry.family
+
     assert ExchangeRate.exists?(from_currency: "EUR", to_currency: "USD", date: @entry_date)
   end
 
@@ -102,6 +106,19 @@ class ExchangeRate::ImportLockTest < ActiveSupport::TestCase
     end
 
     assert other_worker_can_lock?, "the lock should be released after a failed statement"
+  end
+
+  test "a queued import re-reads the provider coverage the import it waited for recorded" do
+    listed_on = @entry_date - 5.days
+    hold_lock_in_other_worker
+    ExchangeRate.expects(:sleep).with { |seconds|
+      listed_on.upto(Date.current) { |d| ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: d, rate: 1.1) }
+      ExchangeRatePair.record_first_provider_rate_on(from: "EUR", to: "USD", date: listed_on)
+      seconds == 1 && release_lock_in_other_worker
+    }.once
+    @provider.expects(:fetch_exchange_rates).never
+
+    ExchangeRate.import_provider_rates(from: "EUR", to: "USD", start_date: @entry_date - 30.days, end_date: Date.current)
   end
 
   private
