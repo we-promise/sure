@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -14,6 +16,7 @@ import 'package:sure_mobile/services/cash_flow_service.dart';
 import 'package:sure_mobile/services/preferences_service.dart';
 import 'package:sure_mobile/services/transactions_service.dart';
 import 'package:sure_mobile/theme/sure_theme.dart';
+import 'package:sure_mobile/widgets/cash_flow_donut_chart.dart';
 import 'package:sure_mobile/widgets/sure_segmented_control.dart';
 
 import '../support/cash_flow_fixture.dart';
@@ -25,9 +28,26 @@ void main() {
   });
 
   final requests = <Uri>[];
+  final settingsRequests = <Uri>[];
 
-  CashFlowService service({int status = 200}) => CashFlowService(
+  // Answers `GET /api/v1/family_settings` (not recorded in [requests]).
+  http.Response? familySettings(http.Request request,
+      {int monthStartDay = 1, int status = 200}) {
+    if (request.url.path != '/api/v1/family_settings') return null;
+    settingsRequests.add(request.url);
+    return http.Response('{"month_start_day":$monthStartDay}', status);
+  }
+
+  CashFlowService service({
+    int status = 200,
+    int monthStartDay = 1,
+    int settingsStatus = 200,
+  }) =>
+      CashFlowService(
         client: MockClient((request) async {
+          final settings = familySettings(request,
+              monthStartDay: monthStartDay, status: settingsStatus);
+          if (settings != null) return settings;
           requests.add(request.url);
           return http.Response(
             status == 200 ? cashFlowSankeyFixture : '{}',
@@ -49,6 +69,7 @@ void main() {
     bool hidden = false,
     DateTime Function()? clock,
     AccessTokenLoader? accessTokenLoader,
+    Future<void> Function(BuildContext context)? onUnauthorized,
   }) {
     return ChangeNotifierProvider<PrivacyProvider>.value(
       value: PrivacyProvider(initialHidden: hidden),
@@ -75,12 +96,16 @@ void main() {
           ),
           accessTokenLoader: accessTokenLoader ?? (_) async => 'token',
           clock: clock ?? () => DateTime(2026, 10, 19),
+          onUnauthorized: onUnauthorized,
         ),
       ),
     );
   }
 
-  setUp(requests.clear);
+  setUp(() {
+    requests.clear();
+    settingsRequests.clear();
+  });
 
   testWidgets('shows income, expenses, net savings and ranked expenses',
       (tester) async {
@@ -197,12 +222,41 @@ void main() {
     expect(find.text('Try Again'), findsOneWidget);
   });
 
+  testWidgets('Try Again reloads the report', (tester) async {
+    usePhoneSurface(tester);
+    var calls = 0;
+    final recovering = CashFlowService(
+      client: MockClient((request) async {
+        final settings = familySettings(request);
+        if (settings != null) return settings;
+        calls++;
+        return calls == 1
+            ? http.Response('{}', 500)
+            : http.Response(cashFlowSankeyFixture, 200);
+      }),
+    );
+    await tester.pumpWidget(harness(cashFlowService: recovering));
+    await tester.pumpAndSettle();
+    expect(calls, 1);
+    expect(find.text("Couldn't load cash flow"), findsOneWidget);
+
+    await tester.tap(find.text('Try Again'));
+    await tester.pumpAndSettle();
+
+    expect(calls, 2);
+    expect(find.text("Couldn't load cash flow"), findsNothing);
+    expect(find.text('Try Again'), findsNothing);
+    expect(find.text(r'$3,500.00'), findsOneWidget);
+  });
+
   testWidgets('keeps the last report, marked outdated, when a refresh fails',
       (tester) async {
     usePhoneSurface(tester);
     var calls = 0;
     final flaky = CashFlowService(
       client: MockClient((request) async {
+        final settings = familySettings(request);
+        if (settings != null) return settings;
         calls++;
         return calls == 1
             ? http.Response(cashFlowSankeyFixture, 200)
@@ -260,14 +314,178 @@ void main() {
 
   testWidgets('More screen links to Cash Flow', (tester) async {
     usePhoneSurface(tester);
-    await tester.pumpWidget(MaterialApp(
-      theme: SureTheme.light,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: const MoreScreen(),
+    await tester.pumpWidget(ChangeNotifierProvider<PrivacyProvider>.value(
+      value: PrivacyProvider(initialHidden: false),
+      child: MaterialApp(
+        theme: SureTheme.light,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const MoreScreen(),
+      ),
     ));
     expect(find.text('Cash Flow'), findsOneWidget);
     expect(
         find.text('Income, spending and savings by category'), findsOneWidget);
+
+    await tester.tap(find.text('Cash Flow'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CashFlowScreen), findsOneWidget);
+    expect(find.byType(MoreScreen), findsNothing);
+  });
+
+  testWidgets('This month and Last month follow the family month start day',
+      (tester) async {
+    usePhoneSurface(tester);
+    await tester
+        .pumpWidget(harness(cashFlowService: service(monthStartDay: 15)));
+    await tester.pumpAndSettle();
+
+    expect(settingsRequests, hasLength(1));
+    expect(requests.single.queryParameters['start_date'], '2026-10-15');
+    expect(requests.single.queryParameters['end_date'], '2026-11-14');
+
+    await tester.tap(find.byKey(const ValueKey('cashFlowPeriod_lastMonth')));
+    await tester.pumpAndSettle();
+
+    expect(requests.last.queryParameters['start_date'], '2026-09-15');
+    expect(requests.last.queryParameters['end_date'], '2026-10-14');
+    // The setting is looked up once per screen.
+    expect(settingsRequests, hasLength(1));
+  });
+
+  testWidgets('falls back to calendar months when family settings fail',
+      (tester) async {
+    usePhoneSurface(tester);
+    await tester
+        .pumpWidget(harness(cashFlowService: service(settingsStatus: 500)));
+    await tester.pumpAndSettle();
+
+    expect(requests.single.queryParameters['start_date'], '2026-10-01');
+    expect(requests.single.queryParameters['end_date'], '2026-10-19');
+    expect(find.text(r'$3,500.00'), findsOneWidget);
+  });
+
+  testWidgets('a 401 from the report logs the session out', (tester) async {
+    usePhoneSurface(tester);
+    var logouts = 0;
+    await tester.pumpWidget(harness(
+      cashFlowService: service(status: 401),
+      onUnauthorized: (_) async => logouts++,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(logouts, 1);
+  });
+
+  testWidgets('a 401 from family settings logs out without loading the report',
+      (tester) async {
+    usePhoneSurface(tester);
+    var logouts = 0;
+    await tester.pumpWidget(harness(
+      cashFlowService: service(settingsStatus: 401),
+      onUnauthorized: (_) async => logouts++,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(logouts, 1);
+    expect(requests, isEmpty);
+  });
+
+  testWidgets('returning to a period reuses its in-flight request',
+      (tester) async {
+    usePhoneSurface(tester);
+    final pending = <String, Completer<http.Response>>{};
+    final slow = CashFlowService(
+      client: MockClient((request) {
+        final settings = familySettings(request);
+        if (settings != null) return Future.value(settings);
+        requests.add(request.url);
+        final completer = Completer<http.Response>();
+        pending[request.url.queryParameters['start_date']!] = completer;
+        return completer.future;
+      }),
+    );
+    await tester.pumpWidget(harness(cashFlowService: slow));
+    await tester.pump();
+    await tester.pump();
+    expect(requests, hasLength(1)); // This month, 2026-10-01
+
+    await tester.tap(find.byKey(const ValueKey('cashFlowPeriod_lastMonth')));
+    await tester.pump();
+    await tester.pump();
+    expect(requests, hasLength(2));
+
+    // Back to This month while its first request is still running.
+    await tester.tap(find.byKey(const ValueKey('cashFlowPeriod_currentMonth')));
+    await tester.pump();
+    await tester.pump();
+    expect(requests, hasLength(2));
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    pending['2026-10-01']!.complete(http.Response(cashFlowSankeyFixture, 200));
+    await tester.pumpAndSettle();
+    expect(find.text(r'$3,500.00'), findsOneWidget);
+
+    pending['2026-09-01']!.complete(http.Response('{}', 500));
+    await tester.pumpAndSettle();
+    expect(find.text(r'$3,500.00'), findsOneWidget);
+  });
+
+  testWidgets('hides a cached report for an old range while it reloads',
+      (tester) async {
+    usePhoneSurface(tester);
+    var today = DateTime(2026, 10, 31);
+    final next = <Completer<http.Response>>[];
+    final service = CashFlowService(
+      client: MockClient((request) {
+        final settings = familySettings(request);
+        if (settings != null) return Future.value(settings);
+        requests.add(request.url);
+        if (next.isNotEmpty) return next.last.future;
+        return Future.value(http.Response(cashFlowSankeyFixture, 200));
+      }),
+    );
+    await tester
+        .pumpWidget(harness(cashFlowService: service, clock: () => today));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('cashFlowPeriod_lastMonth')));
+    await tester.pumpAndSettle();
+
+    today = DateTime(2026, 11, 1);
+    next.add(Completer<http.Response>());
+    await tester.tap(find.byKey(const ValueKey('cashFlowPeriod_currentMonth')));
+    await tester.pump();
+    await tester.pump();
+
+    // October's report is not shown (or tappable) while November loads.
+    expect(find.text('Rent'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    next.last.complete(http.Response(cashFlowSankeyFixture, 200));
+    await tester.pumpAndSettle();
+    expect(find.text('Rent'), findsOneWidget);
+  });
+
+  testWidgets('privacy mode hides the donut slices', (tester) async {
+    usePhoneSurface(tester);
+    await tester.pumpWidget(harness(cashFlowService: service(), hidden: true));
+    await tester.pumpAndSettle();
+
+    final donut = tester.widget<CashFlowDonutChart>(
+        find.byKey(const ValueKey('cashFlowDonut')));
+    expect(donut.hidden, isTrue);
+  });
+
+  testWidgets('the donut shows its slices outside privacy mode',
+      (tester) async {
+    usePhoneSurface(tester);
+    await tester.pumpWidget(harness(cashFlowService: service()));
+    await tester.pumpAndSettle();
+
+    final donut = tester.widget<CashFlowDonutChart>(
+        find.byKey(const ValueKey('cashFlowDonut')));
+    expect(donut.hidden, isFalse);
+    expect(donut.segments, isNotEmpty);
   });
 }

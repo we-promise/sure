@@ -17,6 +17,9 @@ class DonutSegment {
 /// the cash flow screen, mirroring the web dashboard's outflows donut: one
 /// slice per category with a small gap between slices and an arbitrary
 /// [center] widget (typically the side total).
+///
+/// With [hidden] (privacy mode) only the empty track is drawn: the slice
+/// proportions would give the masked amounts away.
 class CashFlowDonutChart extends StatelessWidget {
   const CashFlowDonutChart({
     super.key,
@@ -25,6 +28,7 @@ class CashFlowDonutChart extends StatelessWidget {
     this.size = 200,
     this.strokeWidth = 18,
     this.semanticLabel,
+    this.hidden = false,
   });
 
   final List<DonutSegment> segments;
@@ -32,6 +36,7 @@ class CashFlowDonutChart extends StatelessWidget {
   final double size;
   final double strokeWidth;
   final String? semanticLabel;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +48,7 @@ class CashFlowDonutChart extends StatelessWidget {
         dimension: size,
         child: CustomPaint(
           painter: _DonutPainter(
-            segments: segments,
+            segments: hidden ? const [] : segments,
             strokeWidth: strokeWidth,
             trackColor: palette.surfaceInset,
           ),

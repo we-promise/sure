@@ -17,12 +17,33 @@ enum CashFlowPeriod {
   last365Days;
 
   /// Inclusive date range for this period relative to [today] (date part only).
-  CashFlowDateRange rangeFor(DateTime today) {
+  ///
+  /// [monthStartDay] is the family's month start (`Family#month_start_day`,
+  /// 1..28). Like the web's `Period.current_month_for` / `last_month_for`, it
+  /// moves "This month" and "Last month" to the custom boundaries; the other
+  /// presets are rolling or calendar-year ranges and ignore it.
+  CashFlowDateRange rangeFor(DateTime today, {int monthStartDay = 1}) {
     final day = DateTime(today.year, today.month, today.day);
     switch (this) {
       case CashFlowPeriod.currentMonth:
+        if (monthStartDay > 1) {
+          // Family#current_custom_month_period: start to its end, which can
+          // run past today (the web shows the whole custom month).
+          final start = _customMonthStart(day, monthStartDay);
+          return CashFlowDateRange(start, _customMonthEnd(start));
+        }
         return CashFlowDateRange(DateTime(day.year, day.month, 1), day);
       case CashFlowPeriod.lastMonth:
+        if (monthStartDay > 1) {
+          final currentStart = _customMonthStart(day, monthStartDay);
+          final previousDay = DateTime(
+            currentStart.year,
+            currentStart.month,
+            currentStart.day - 1,
+          );
+          final start = _customMonthStart(previousDay, monthStartDay);
+          return CashFlowDateRange(start, _customMonthEnd(start));
+        }
         // Day 0 of the current month is the last day of the previous month.
         return CashFlowDateRange(
           DateTime(day.year, day.month - 1, 1),
@@ -38,6 +59,16 @@ enum CashFlowPeriod {
         return CashFlowDateRange(_daysBefore(day, 365), day);
     }
   }
+
+  /// `Family#custom_month_start_for`.
+  static DateTime _customMonthStart(DateTime day, int monthStartDay) =>
+      day.day >= monthStartDay
+          ? DateTime(day.year, day.month, monthStartDay)
+          : DateTime(day.year, day.month - 1, monthStartDay);
+
+  /// `Family#custom_month_end_for`: the day before the next month's start.
+  static DateTime _customMonthEnd(DateTime start) =>
+      DateTime(start.year, start.month + 1, start.day - 1);
 
   // Calendar arithmetic (not Duration) so DST transitions never shift the day.
   static DateTime _daysBefore(DateTime day, int days) =>

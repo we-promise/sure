@@ -30,9 +30,13 @@ class CashFlowCategoryTransactionsScreen extends StatefulWidget {
     required this.range,
     this.service,
     this.accessTokenLoader,
+    this.onUnauthorized,
   });
 
   final CashFlowCategory category;
+
+  /// Called on a 401; defaults to [AuthProvider.logout].
+  final Future<void> Function(BuildContext context)? onUnauthorized;
   final CashFlowDateRange range;
   final TransactionsService? service;
   final AccessTokenLoader? accessTokenLoader;
@@ -124,6 +128,7 @@ class _CashFlowCategoryTransactionsScreenState
       result = null;
     }
     if (!mounted || generation != _generation) return;
+    final unauthorized = result?['error'] == 'unauthorized';
 
     setState(() {
       _loading = false;
@@ -140,6 +145,17 @@ class _CashFlowCategoryTransactionsScreenState
         _failed = true;
       }
     });
+    if (unauthorized) await _handleUnauthorized();
+  }
+
+  Future<void> _handleUnauthorized() async {
+    final handler = widget.onUnauthorized;
+    if (handler != null) return handler(context);
+    try {
+      await context.read<AuthProvider>().logout();
+    } on ProviderNotFoundException {
+      // No auth provider above this screen (e.g. in isolation).
+    }
   }
 
   @override

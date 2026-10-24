@@ -43,6 +43,55 @@ void main() {
       );
     });
 
+    test('This month / Last month follow a custom month start day', () {
+      // Family#custom_month_start_for: on or after the start day the custom
+      // month began this calendar month, before it the previous one.
+      expect(
+        CashFlowPeriod.currentMonth.rangeFor(today, monthStartDay: 10),
+        CashFlowDateRange(DateTime(2026, 3, 10), DateTime(2026, 4, 9)),
+      );
+      expect(
+        CashFlowPeriod.lastMonth.rangeFor(today, monthStartDay: 10),
+        CashFlowDateRange(DateTime(2026, 2, 10), DateTime(2026, 3, 9)),
+      );
+      expect(
+        CashFlowPeriod.currentMonth.rangeFor(today, monthStartDay: 20),
+        CashFlowDateRange(DateTime(2026, 2, 20), DateTime(2026, 3, 19)),
+      );
+      expect(
+        CashFlowPeriod.lastMonth.rangeFor(today, monthStartDay: 20),
+        CashFlowDateRange(DateTime(2026, 1, 20), DateTime(2026, 2, 19)),
+      );
+    });
+
+    test('custom month start wraps across the year boundary', () {
+      final jan = DateTime(2026, 1, 5);
+      expect(
+        CashFlowPeriod.currentMonth.rangeFor(jan, monthStartDay: 25),
+        CashFlowDateRange(DateTime(2025, 12, 25), DateTime(2026, 1, 24)),
+      );
+      expect(
+        CashFlowPeriod.lastMonth.rangeFor(jan, monthStartDay: 25),
+        CashFlowDateRange(DateTime(2025, 11, 25), DateTime(2025, 12, 24)),
+      );
+    });
+
+    test('rolling and yearly presets ignore the month start day', () {
+      for (final period in [
+        CashFlowPeriod.last30Days,
+        CashFlowPeriod.last90Days,
+        CashFlowPeriod.currentYear,
+        CashFlowPeriod.last365Days,
+      ]) {
+        expect(
+            period.rangeFor(today, monthStartDay: 10), period.rangeFor(today));
+      }
+      expect(
+        CashFlowPeriod.currentMonth.rangeFor(today, monthStartDay: 1),
+        CashFlowPeriod.currentMonth.rangeFor(today),
+      );
+    });
+
     test('formats ISO dates for the API', () {
       final range =
           CashFlowDateRange(DateTime(2026, 2, 3), DateTime(2026, 12, 31));

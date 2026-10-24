@@ -11,6 +11,7 @@ const String cashFlowSankeyFixture = '''
     "basis": "net_by_category",
     "income": "5000.0",
     "spending": "1500.0",
+    "invested": "0.0",
     "net_savings": "3500.0",
     "nodes": [
       { "id": "cash_flow_node", "name": "Cash Flow", "kind": "cash_flow", "value": "5000.0", "percentage": "100.0", "category_id": null, "filter_value": null, "color": null },

@@ -44,9 +44,15 @@ class CashFlowScreen extends StatefulWidget {
     this.accessTokenLoader,
     this.clock,
     this.initialPeriod = CashFlowPeriod.currentMonth,
+    this.onUnauthorized,
   });
 
   final CashFlowService? service;
+
+  /// Called when the server rejects the session (401). Defaults to
+  /// [AuthProvider.logout], like the dashboard and account screens, so the
+  /// app returns to login instead of retrying a revoked credential forever.
+  final Future<void> Function(BuildContext context)? onUnauthorized;
 
   /// Passed to the category drill-down screen.
   final TransactionsService? transactionsService;
@@ -62,6 +68,9 @@ class CashFlowScreen extends StatefulWidget {
 
 class _CashFlowScreenState extends State<CashFlowScreen> {
   late final CashFlowService _service = widget.service ?? CashFlowService();
+
+  /// Family month start day once known (null until family settings load).
+  int? _monthStartDay;
   late CashFlowPeriod _period = widget.initialPeriod;
   CashFlowSide _side = CashFlowSide.expense;
 
@@ -78,7 +87,9 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
   // Per period, so a response for one period is never dropped because the
   // user switched to another while it was in flight.
   final Map<CashFlowPeriod, int> _requestIds = {};
-  final Set<CashFlowPeriod> _inFlight = {};
+
+  /// Requests in flight, with the date range each one asked for.
+  final Map<CashFlowPeriod, CashFlowDateRange> _inFlight = {};
 
   @override
   void initState() {
@@ -86,8 +97,40 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  CashFlowDateRange _rangeFor(CashFlowPeriod period) =>
-      period.rangeFor((widget.clock ?? DateTime.now)());
+  @override
+  void dispose() {
+    // Only closes a client the service created itself.
+    if (widget.service == null) _service.close();
+    super.dispose();
+  }
+
+  CashFlowDateRange _rangeFor(CashFlowPeriod period) => period.rangeFor(
+        (widget.clock ?? DateTime.now)(),
+        monthStartDay: _monthStartDay ?? 1,
+      );
+
+  /// The cached report for [period] when it is still for the current range,
+  /// or (flagged Outdated) when a refresh for the new range failed. While a
+  /// replacement is loading, an out-of-range report is not shown, so a
+  /// category tap can't open the old range.
+  CashFlowReport? _visibleReport(CashFlowPeriod period) {
+    final report = _reports[period];
+    if (report == null) return null;
+    if (_reportRanges[period] == _rangeFor(period) || _stale.contains(period)) {
+      return report;
+    }
+    return null;
+  }
+
+  Future<void> _handleUnauthorized() async {
+    final handler = widget.onUnauthorized;
+    if (handler != null) return handler(context);
+    try {
+      await context.read<AuthProvider>().logout();
+    } on ProviderNotFoundException {
+      // No auth provider above this screen (e.g. in isolation).
+    }
+  }
 
   Future<String?> _accessToken() {
     final loader = widget.accessTokenLoader;
@@ -105,16 +148,26 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
 
   Future<void> _load({bool force = false}) async {
     final period = _period;
-    final range = _rangeFor(period);
+    var range = _rangeFor(period);
     if (!force &&
         _reports.containsKey(period) &&
         !_stale.contains(period) &&
         _reportRanges[period] == range) {
       return;
     }
+    // Back on a period whose request is still running for the same range:
+    // wait for that one instead of starting (and discarding) another.
+    if (!force && _inFlight[period] == range) {
+      setState(() {
+        _loading = true;
+        _failed = false;
+        _offline = false;
+      });
+      return;
+    }
     final requestId = (_requestIds[period] ?? 0) + 1;
     _requestIds[period] = requestId;
-    _inFlight.add(period);
+    _inFlight[period] = range;
     setState(() {
       _loading = true;
       _failed = false;
@@ -123,10 +176,27 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
 
     final offline = _connectivity()?.isOffline ?? false;
     Map<String, dynamic>? result;
+    var unauthorized = false;
     try {
       final token = offline ? null : await _accessToken();
       if (token != null) {
-        result = await _service.getCashFlow(accessToken: token, range: range);
+        if (_monthStartDay == null) {
+          // "This month" / "Last month" follow the family's month start, as
+          // on the web. If settings can't load, calendar months are used
+          // and the lookup is retried on the next load.
+          final settings = await _service.getMonthStartDay(accessToken: token);
+          if (settings['success'] == true) {
+            _monthStartDay = settings['month_start_day'] as int;
+            range = _rangeFor(period);
+            if (_requestIds[period] == requestId) _inFlight[period] = range;
+          } else if (settings['error'] == 'unauthorized') {
+            unauthorized = true;
+          }
+        }
+        if (!unauthorized) {
+          result = await _service.getCashFlow(accessToken: token, range: range);
+          unauthorized = result['error'] == 'unauthorized';
+        }
       }
     } catch (_) {
       // A failed token refresh (or storage error) is a failed load.
@@ -152,13 +222,14 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
         if (_reports.containsKey(period)) _stale.add(period);
       }
     });
+    if (unauthorized) await _handleUnauthorized();
   }
 
   void _selectPeriod(CashFlowPeriod period) {
     if (period == _period) return;
     setState(() {
       _period = period;
-      _loading = _inFlight.contains(period);
+      _loading = _inFlight.containsKey(period);
       _failed = false;
       _offline = false;
     });
@@ -168,7 +239,7 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final report = _reports[_period];
+    final report = _visibleReport(_period);
 
     return Scaffold(
       appBar: AppBar(title: Text(l.cashFlowTitle)),
@@ -262,6 +333,7 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
           range: CashFlowDateRange(report.startDate, report.endDate),
           service: widget.transactionsService,
           accessTokenLoader: widget.accessTokenLoader,
+          onUnauthorized: widget.onUnauthorized,
         ),
       ),
     );
@@ -539,6 +611,7 @@ class _CategoryBreakdown extends StatelessWidget {
               CashFlowDonutChart(
                 key: const ValueKey('cashFlowDonut'),
                 semanticLabel: title,
+                hidden: hidden,
                 segments: [
                   for (var i = 0; i < categories.length; i++)
                     DonutSegment(
