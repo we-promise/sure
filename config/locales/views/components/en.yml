@@ -187,3 +187,4 @@ en:
       data_warnings: "Data warnings: %{count}"
       notices: "Notices: %{count}"
       view_data_quality: View data quality details
+      affected_accounts: Affected accounts
