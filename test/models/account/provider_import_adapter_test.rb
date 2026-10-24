@@ -2161,6 +2161,68 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   # entry is found by find_or_initialize_by (persisted), bypassing auto-claim.
   # =========================================================================
 
+  test "combines provider namespace replacement with targeted metadata removal" do
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_metadata_composition",
+      amount: 10.0,
+      currency: "USD",
+      date: Date.today,
+      name: "DIRECT DEBIT",
+      source: "simplefin",
+      extra: {
+        "simplefin" => { "pending" => false, "amount_normalization" => "direct_debit" },
+        "provider_snapshot" => { "obsolete" => true },
+        "exchange_rate" => "1.1"
+      }
+    )
+
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_metadata_composition",
+      amount: -10.0,
+      currency: "USD",
+      date: Date.today,
+      name: "DIRECT DEBIT",
+      source: "simplefin",
+      extra: { "provider_snapshot" => { "current" => true } },
+      replace_extra_namespaces: [ "provider_snapshot" ],
+      extra_keys_to_remove: [ %w[simplefin amount_normalization] ]
+    )
+
+    entry.reload
+    assert_equal({ "current" => true }, entry.transaction.extra.fetch("provider_snapshot"))
+    assert_equal false, entry.transaction.extra.fetch("simplefin").fetch("pending")
+    assert_not entry.transaction.extra.fetch("simplefin").key?("amount_normalization")
+    assert_equal "1.1", entry.transaction.extra.fetch("exchange_rate")
+    assert_equal(-10, entry.amount)
+  end
+
+  test "removes only explicitly requested extra metadata keys" do
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_metadata_cleanup",
+      amount: 10.0,
+      currency: "USD",
+      date: Date.today,
+      name: "DIRECT DEBIT",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => false, "amount_normalization" => "direct_debit" } }
+    )
+
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_metadata_cleanup",
+      amount: -10.0,
+      currency: "USD",
+      date: Date.today,
+      name: "DIRECT DEBIT",
+      source: "simplefin",
+      extra: nil,
+      extra_keys_to_remove: [ %w[simplefin amount_normalization] ]
+    )
+
+    sf = entry.transaction.extra.fetch("simplefin")
+    assert_equal false, sf.fetch("pending")
+    assert_not sf.key?("amount_normalization")
+  end
+
   test "clears pending flag when same external_id is reused for booked version (not user-modified)" do
     pending_entry = @adapter.import_transaction(
       external_id: "eb_same_id_123",
