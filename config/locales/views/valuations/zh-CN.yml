@@ -28,6 +28,7 @@ zh-CN:
       entry_updated: 条目已更新
     errors:
       amount_required: 需要金额
+      duplicate_date: 该日期已有余额更新。请刷新页面后重试。
     form:
       amount: 金额
       submit: 添加余额更新
