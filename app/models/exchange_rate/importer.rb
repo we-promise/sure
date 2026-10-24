@@ -219,6 +219,7 @@ class ExchangeRate::Importer
         )
 
         if provider_response.success? && provider_response.data.present?
+          ExchangeRatePair.record_direct_quote(from: from, to: to, provider_name: current_provider_name)
           Rails.logger.debug("Fetched #{provider_response.data.size} rates from #{exchange_rate_provider.class.name} for #{from}/#{to} between #{provider_fetch_start_date} and #{end_date}")
           provider_response.data.index_by(&:date)
         elsif (crossed = usd_cross_rates(provider_response.error)).any?
