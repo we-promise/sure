@@ -25,48 +25,48 @@
     <% end %>
 
     <% if sortable %>
-    <%= tag.div class: "space-y-1",
-          data: sortable ? {
-            controller: "sortable-list",
-            sortable_list_url_value: reorder_accounts_path(group: account_group.key),
-            sortable_list_param_value: "account_ids",
-            sortable_list_hold_delay_value: 400,
-            sortable_list_save_timeout_value: 10_000,
-            sortable_list_mirror_lists_value: true,
-            action: "dragover->sortable-list#dragOver drop->sortable-list#drop account-sort-mode:stop@window->sortable-list#releaseKeyboardGrab turbo:before-visit@window->sortable-list#saveBeforeVisit"
-          } : {} do %>
-      <%= render partial: "accounts/sidebar_account", collection: account_group.accounts, as: :account, locals: { color: account_group.color, sortable: true } %>
-    <% end %>
-    <% else %>
-    <div class="space-y-2">
-      <% account_group.institution_groups.each do |institution_group| %>
-        <% if institution_group.name.present? %>
-          <% institution_open = institution_group.accounts.any? { |account| page_active?(account_path(account)) } || Current.user.always_expanded_account_group?(account_group.key) || open == true %>
-          <%= render DS::Disclosure.new(
-            open: institution_open,
-            class: "rounded-xl border border-primary",
-            summary_class: "flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer focus-ring min-h-11 hover:bg-surface-hover",
-            body_class: "ml-3 pl-2 pb-2 border-l border-primary",
-            data: { institution_group: institution_group.name }
-          ) do |institution_disclosure| %>
-            <% institution_disclosure.with_summary_content do %>
-              <%= icon "chevron-right", class: "shrink-0 [details[open]>summary_&]:rotate-90 motion-safe:transition-transform" %>
-              <div class="min-w-0 flex-1">
-                <%= tag.p institution_group.name, class: "text-sm font-medium text-primary truncate" %>
-                <%= tag.p t("accounts.sidebar.account_count", count: institution_group.accounts.size), class: "text-xs text-secondary" %>
-              </div>
-              <%= tag.p format_money(institution_group.total_money), class: "shrink-0 text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
-            <% end %>
-
-            <div class="space-y-1">
-              <%= render partial: "accounts/sidebar_account", collection: institution_group.accounts, as: :account, locals: { color: account_group.color } %>
-            </div>
-          <% end %>
-        <% else %>
-          <%= render partial: "accounts/sidebar_account", collection: institution_group.accounts, as: :account, locals: { color: account_group.color } %>
-        <% end %>
+      <%= tag.div class: "space-y-1",
+            data: sortable ? {
+              controller: "sortable-list",
+              sortable_list_url_value: reorder_accounts_path(group: account_group.key),
+              sortable_list_param_value: "account_ids",
+              sortable_list_hold_delay_value: 400,
+              sortable_list_save_timeout_value: 10_000,
+              sortable_list_mirror_lists_value: true,
+              action: "dragover->sortable-list#dragOver drop->sortable-list#drop account-sort-mode:stop@window->sortable-list#releaseKeyboardGrab turbo:before-visit@window->sortable-list#saveBeforeVisit"
+            } : {} do %>
+        <%= render partial: "accounts/sidebar_account", collection: account_group.accounts, as: :account, locals: { color: account_group.color, sortable: true } %>
       <% end %>
-    </div>
+    <% else %>
+      <div class="space-y-2">
+        <% account_group.institution_groups.each do |institution_group| %>
+          <% if institution_group.name.present? %>
+            <% institution_open = institution_group.accounts.any? { |account| page_active?(account_path(account)) } || Current.user.always_expanded_account_group?(account_group.key) || open == true %>
+            <%= render DS::Disclosure.new(
+              open: institution_open,
+              class: "rounded-xl border border-primary",
+              summary_class: "flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer focus-ring min-h-11 hover:bg-surface-hover",
+              body_class: "ml-3 pl-2 pb-2 border-l border-primary",
+              data: { institution_group: institution_group.name }
+            ) do |institution_disclosure| %>
+              <% institution_disclosure.with_summary_content do %>
+                <%= icon "chevron-right", class: "shrink-0 [details[open]>summary_&]:rotate-90 motion-safe:transition-transform" %>
+                <div class="min-w-0 flex-1">
+                  <%= tag.p institution_group.name, class: "text-sm font-medium text-primary truncate" %>
+                  <%= tag.p t("accounts.sidebar.account_count", count: institution_group.accounts.size), class: "text-xs text-secondary" %>
+                </div>
+                <%= tag.p format_money(institution_group.total_money), class: "shrink-0 text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
+              <% end %>
+
+              <div class="space-y-1">
+                <%= render partial: "accounts/sidebar_account", collection: institution_group.accounts, as: :account, locals: { color: account_group.color } %>
+              </div>
+            <% end %>
+          <% else %>
+            <%= render partial: "accounts/sidebar_account", collection: institution_group.accounts, as: :account, locals: { color: account_group.color } %>
+          <% end %>
+        <% end %>
+      </div>
     <% end %>
 
     <div class="my-2">

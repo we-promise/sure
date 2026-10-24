@@ -138,7 +138,7 @@ class EnableBankingItem::SyncSchedulingTest < ActiveSupport::TestCase
     @item.update!(aspsp_name: "Test Bank", aspsp_required_psu_headers: [ "PSU-IP-Address", "PSU-User-Agent" ])
     user = users(:family_admin)
     session = user.sessions.create!
-    context = @item.interactive_psu_context(ip_address: "192.0.2.10", user_agent: "Sure test", user: user, session: session)
+    context = @item.interactive_psu_context(ip_address: "81.2.3.4", user_agent: "Sure test", user: user, session: session)
     sync = @item.sync_later(psu_context: context)
     assert sync
     provider_account = @item.enable_banking_accounts.create!(
@@ -174,7 +174,7 @@ class EnableBankingItem::SyncSchedulingTest < ActiveSupport::TestCase
     @item.update!(aspsp_name: "Test Bank", aspsp_required_psu_headers: [ "PSU-IP-Address", "PSU-ID" ])
     user = users(:family_admin)
     session = user.sessions.create!
-    context = @item.interactive_psu_context(ip_address: "192.0.2.10", user_agent: "Sure test", user: user, session: session)
+    context = @item.interactive_psu_context(ip_address: "81.2.3.4", user_agent: "Sure test", user: user, session: session)
     @item.enable_banking_sync_budget.update!(next_background_sync_at: 3.hours.from_now)
 
     assert_empty @item.build_psu_headers(psu_context: context)
@@ -193,7 +193,7 @@ class EnableBankingItem::SyncSchedulingTest < ActiveSupport::TestCase
 
     assert_nil @item.sync_later
     travel 16.minutes do
-      context = @item.interactive_psu_context(ip_address: "192.0.2.10", user_agent: "Sure test", user: user, session: session)
+      context = @item.interactive_psu_context(ip_address: "81.2.3.4", user_agent: "Sure test", user: user, session: session)
       assert_enqueued_with(job: SyncJob) { assert @item.sync_later(psu_context: context) }
     end
   end
@@ -203,16 +203,16 @@ class EnableBankingItem::SyncSchedulingTest < ActiveSupport::TestCase
     @item.update!(aspsp_name: "Test Bank", aspsp_required_psu_headers: [ "PSU-IP-Address", "PSU-User-Agent" ])
     user = users(:family_admin)
     session = user.sessions.create!
-    context = @item.interactive_psu_context(ip_address: "192.0.2.10", user_agent: "Sure private agent", user: user, session: session)
+    context = @item.interactive_psu_context(ip_address: "81.2.3.4", user_agent: "Sure private agent", user: user, session: session)
     sync = @item.sync_later(psu_context: context)
 
     assert sync
     stored_data = ActiveRecord::Base.connection.select_value(
       "SELECT data::text FROM syncs WHERE id = #{ActiveRecord::Base.connection.quote(sync.id)}"
     )
-    refute_includes stored_data, "192.0.2.10"
+    refute_includes stored_data, "81.2.3.4"
     refute_includes stored_data, "Sure private agent"
-    assert_equal "192.0.2.10", @item.consume_psu_context!(sync).fetch("ip_address")
+    assert_equal "81.2.3.4", @item.consume_psu_context!(sync).fetch("ip_address")
     assert_nil @item.consume_psu_context!(sync)
   end
 end

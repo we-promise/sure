@@ -119,20 +119,20 @@
                   <span class="text-xs text-secondary">(<%= @holding.cost_basis_source_label %>)</span>
                 <% end %>
                 <% unless @holding.scalable_snapshot_backed? %>
-                <button type="button" class="ml-1" data-action="click->drawer-cost-basis#toggle" data-drawer-cost-basis-target="opener">
-                  <%= icon "pencil", size: "xs", class: "text-secondary hover:text-primary" %>
-                </button>
+                  <button type="button" class="ml-1" data-action="click->drawer-cost-basis#toggle" data-drawer-cost-basis-target="opener">
+                    <%= icon "pencil", size: "xs", class: "text-secondary hover:text-primary" %>
+                  </button>
                 <% end %>
               </dd>
             </div>
             <%# Inline cost basis editor (hidden by default) %>
             <% unless @holding.scalable_snapshot_backed? %>
-            <div class="hidden mt-3 space-y-3" data-drawer-cost-basis-target="form">
-              <p class="text-xs text-secondary">
-                <%= t("holdings.cost_basis_cell.set_cost_basis_header", ticker: @holding.ticker) %>
-              </p>
-              <%= render "holdings/cost_basis_form", holding: @holding, context: :drawer, cancel_action: "drawer-cost-basis#toggle" %>
-            </div>
+              <div class="hidden mt-3 space-y-3" data-drawer-cost-basis-target="form">
+                <p class="text-xs text-secondary">
+                  <%= t("holdings.cost_basis_cell.set_cost_basis_header", ticker: @holding.ticker) %>
+                </p>
+                <%= render "holdings/cost_basis_form", holding: @holding, context: :drawer, cancel_action: "drawer-cost-basis#toggle" %>
+              </div>
             <% end %>
           </div>
           <div class="flex items-center justify-between text-sm">

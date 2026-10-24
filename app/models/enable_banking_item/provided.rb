@@ -26,5 +26,4 @@ module EnableBankingItem::Provided
 
     available.transform_keys { |header| header.split("-").map(&:capitalize).join("-") }
   end
-
 end

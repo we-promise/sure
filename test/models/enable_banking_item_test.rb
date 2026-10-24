@@ -240,7 +240,7 @@ class EnableBankingItemTest < ActiveSupport::TestCase
 
     %w[81.2.3.4 2a00:1450:4001::1 64:ff9b::5102:304].each do |ip|
       @item.last_psu_ip = ip
-      assert_equal({ "Psu-Ip-Address" => ip }, @item.build_psu_headers, ip)
+      assert_equal({ "Psu-Ip-Address" => ip }, @item.build_psu_headers(psu_context: { "ip_address" => ip }), ip)
     end
   end
 
@@ -282,14 +282,21 @@ class EnableBankingItemTest < ActiveSupport::TestCase
       "not-an-ip" => "an unparseable value"
     }.each do |ip, kind|
       @item.last_psu_ip = ip
-      assert_equal({}, @item.build_psu_headers, kind)
+      assert_equal({}, @item.build_psu_headers(psu_context: { "ip_address" => ip }), kind)
     end
   end
 
   test "build_psu_headers sends nothing when the bank also requires a header it can't supply" do
-    @item.aspsp_required_psu_headers = [ "Psu-Ip-Address", "Psu-User-Agent" ]
+    @item.aspsp_required_psu_headers = [ "Psu-Ip-Address", "Psu-Http-Method" ]
     @item.last_psu_ip = "81.2.3.4"
 
-    assert_equal({}, @item.build_psu_headers)
+    assert_equal({}, @item.build_psu_headers(psu_context: { "ip_address" => "81.2.3.4", "user_agent" => "Sure test" }))
+  end
+
+  test "build_psu_headers never reuses the saved browser address without live context" do
+    @item.aspsp_required_psu_headers = [ "Psu-Ip-Address" ]
+    @item.last_psu_ip = "81.2.3.4"
+
+    assert_empty @item.build_psu_headers
   end
 end

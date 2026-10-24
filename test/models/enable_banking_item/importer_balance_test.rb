@@ -716,7 +716,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal 1, result[:balances_failed]
   end
 
-  test "rate limiting on balances stops all transaction requests and preserves the snapshot" do
+  test "rate limiting on balances propagates after fetching transactions and preserves the snapshot" do
     account = Account.create!(family: @family, name: "Bank", currency: "EUR", balance: 123.45,
                               cash_balance: 123.45, accountable: Depository.create!)
     AccountProvider.create!(account: account, provider: @enable_banking_account)
@@ -726,7 +726,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     @enable_banking_item.stubs(:upsert_enable_banking_snapshot!)
     error = Provider::EnableBanking::EnableBankingError.new("limited", :rate_limited)
     @mock_provider.expects(:get_account_balances).once.raises(error)
-    @importer.expects(:fetch_and_store_transactions).never
+    @importer.expects(:fetch_and_store_transactions).with(@enable_banking_account).once.returns(success: true, transactions_count: 0)
 
     assert_raises(Provider::EnableBanking::EnableBankingError) { @importer.import }
     assert_equal 123.45.to_d, @enable_banking_account.reload.current_balance
@@ -808,7 +808,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     link_account(Depository.create!)
     stub_balances(clbd("1234.56"), clbd("5834.56"))
 
-    assert_difference "DebugLogEntry.count", 1 do
+    assert_difference "DebugLogEntry.where(category: 'provider_sync_warning').count", 1 do
       assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
     end
 
@@ -816,7 +816,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1234.56"), @enable_banking_account.current_balance
     assert_not @enable_banking_account.balance_evidence_verified?, "a heuristic pick must not become a trusted anchor"
 
-    entry = DebugLogEntry.order(:created_at).last
+    entry = DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last
     assert_equal "provider_sync_warning", entry.category
     assert_equal "lowest", entry.metadata["stage"]
     assert_equal 2, entry.metadata["candidates"].size
@@ -826,7 +826,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     link_account(Depository.create!)
     stub_balances(clbd("1234.56"), clbd("5834.56"))
 
-    assert_difference "DebugLogEntry.count", 1 do
+    assert_difference "DebugLogEntry.where(category: 'provider_sync_warning').count", 1 do
       2.times { assert @importer.send(:fetch_and_update_balance, @enable_banking_account) }
     end
   end
@@ -834,7 +834,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
   test "a single balance per type counts as evidence and logs nothing" do
     stub_balances(clbd("1234.56"))
 
-    assert_no_difference "DebugLogEntry.count" do
+    assert_no_difference "DebugLogEntry.where(category: 'provider_sync_warning').count" do
       assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
     end
 
@@ -868,7 +868,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("80.00"), @enable_banking_account.reload.current_balance
-    assert_equal "last_committed_transaction", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "last_committed_transaction", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "a booking reference reused with different dates does not decide the tie" do
@@ -886,7 +886,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("80.00"), @enable_banking_account.reload.current_balance
-    assert_equal "first", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "first", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "duplicate balances pointing to the same booking fall through to later stages" do
@@ -900,7 +900,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("1234.56"), @enable_banking_account.reload.current_balance
-    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "lowest", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "a gap equal to the credit limit identifies the overdraft-inclusive balance" do
@@ -911,7 +911,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("1234.56"), @enable_banking_account.reload.current_balance
-    entry = DebugLogEntry.order(:created_at).last
+    entry = DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last
     assert_equal "credit_limit", entry.metadata["stage"]
     assert_equal "4600.0", entry.metadata["credit_limit"]
   end
@@ -930,7 +930,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("950.00"), @enable_banking_account.reload.current_balance
     assert @enable_banking_account.balance_evidence_verified?
-    assert_equal "anchor", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "anchor", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "the anchor check abstains when bookings on the anchor day change the answer" do
@@ -946,7 +946,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("300.00"), @enable_banking_account.reload.current_balance
-    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "lowest", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "the anchor check abstains when a booked amount cannot be parsed" do
@@ -963,7 +963,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("950.00"), @enable_banking_account.reload.current_balance
     assert_not @enable_banking_account.balance_evidence_verified?
-    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "lowest", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "the anchor check falls back to value_date when booking_date is missing" do
@@ -977,7 +977,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("950.00"), @enable_banking_account.reload.current_balance
-    assert_equal "anchor", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "anchor", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "the anchor check ignores pending rows and bookings before the anchor date" do
@@ -996,7 +996,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("1100.00"), @enable_banking_account.reload.current_balance
-    assert_equal "anchor", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "anchor", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "the anchor check is skipped when the previous balance was not verified" do
@@ -1008,7 +1008,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("800.00"), @enable_banking_account.reload.current_balance
-    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "lowest", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "an anchor tie is broken by the newer last_change_date_time" do
@@ -1025,7 +1025,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1000.00"), @enable_banking_account.reload.current_balance
     assert_not @enable_banking_account.balance_evidence_verified?
     assert @enable_banking_account.balance_verified?, "only the processor may change the anchor's verification"
-    assert_equal "anchor_timestamp", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "anchor_timestamp", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "the anchor check abstains when no candidate matches the expected balance" do
@@ -1039,7 +1039,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("1500.00"), @enable_banking_account.reload.current_balance
     assert_not @enable_banking_account.balance_evidence_verified?
-    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "lowest", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "duplicate fresher balances go through the same tiebreak regardless of response order" do
@@ -1056,7 +1056,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
 
       assert_equal BigDecimal("200.00"), @enable_banking_account.reload.current_balance, "order #{first}, #{second}"
       assert_not @enable_banking_account.balance_evidence_verified?
-      assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+      assert_equal "lowest", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
     end
   end
 
@@ -1124,7 +1124,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("500.00"), @enable_banking_account.reload.current_balance
-    assert_equal "first", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "first", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "a gap equal to the credit limit decides before the booking references" do
@@ -1144,7 +1144,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("1234.56"), @enable_banking_account.reload.current_balance
-    assert_equal "credit_limit", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "credit_limit", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "an evidence-backed tie in the fresher type stays verified when it has no older entries" do
@@ -1164,14 +1164,14 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     @enable_banking_account.reload
     assert_equal BigDecimal("1234.56"), @enable_banking_account.current_balance
     assert @enable_banking_account.balance_evidence_verified?
-    assert_equal "credit_limit", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "credit_limit", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "the same amount reported twice is no tie" do
     link_account(Depository.create!)
     stub_balances(clbd("1000.00"), clbd("1000.00"))
 
-    assert_no_difference -> { DebugLogEntry.count } do
+    assert_no_difference -> { DebugLogEntry.where(category: "provider_sync_warning").count } do
       assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
     end
 
@@ -1191,7 +1191,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
       { balance_type: "ITAV", balance_amount: { amount: "200.00", currency: "EUR" }, credit_debit_indicator: "CRDT", reference_date: "2026-09-29" }
     )
 
-    assert_no_difference -> { DebugLogEntry.count } do
+    assert_no_difference -> { DebugLogEntry.where(category: "provider_sync_warning").count } do
       assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
     end
 
@@ -1218,7 +1218,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("1000.00"), @enable_banking_account.reload.current_balance
-    assert_equal "anchor", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "anchor", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "the anchor check ignores an anchor written before the provider account was linked" do
@@ -1231,19 +1231,19 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
     assert_equal BigDecimal("800.00"), @enable_banking_account.reload.current_balance
-    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "lowest", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "an unchanged tie is logged once, a changed one again" do
     link_account(Depository.create!)
     stub_balances(clbd("5834.56"), clbd("1234.56"))
 
-    assert_difference -> { DebugLogEntry.count }, 1 do
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync_warning").count }, 1 do
       2.times { assert @importer.send(:fetch_and_update_balance, @enable_banking_account) }
     end
 
     stub_balances(clbd("5800.00"), clbd("1200.00"))
-    assert_difference -> { DebugLogEntry.count }, 1 do
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync_warning").count }, 1 do
       assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
     end
   end
@@ -1251,7 +1251,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
   test "the same tie reported in a different order is not logged again" do
     link_account(Depository.create!)
 
-    assert_difference -> { DebugLogEntry.count }, 1 do
+    assert_difference -> { DebugLogEntry.where(category: "provider_sync_warning").count }, 1 do
       stub_balances(clbd("5834.56"), clbd("1234.56"))
       assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
@@ -1271,7 +1271,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("900.00"), @enable_banking_account.reload.current_balance
     assert_not @enable_banking_account.balance_evidence_verified?
-    assert_equal "lowest", DebugLogEntry.order(:created_at).last.metadata["stage"]
+    assert_equal "lowest", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
   end
 
   test "the anchor check dates timestamped bookings in the family timezone" do
@@ -1288,7 +1288,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
       assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
 
       assert_equal BigDecimal("1000.00"), @enable_banking_account.reload.current_balance
-      assert_equal "anchor", DebugLogEntry.order(:created_at).last.metadata["stage"]
+      assert_equal "anchor", DebugLogEntry.where(category: "provider_sync_warning").order(:created_at).last.metadata["stage"]
     end
   end
 

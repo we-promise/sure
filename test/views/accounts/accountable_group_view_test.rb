@@ -37,6 +37,17 @@ class AccountableGroupViewTest < ActionView::TestCase
     assert_select "a[href='#{account_path(@manual)}']", count: 1
   end
 
+  test "manual ordering keeps one sortable list across banks with labeled handles" do
+    render partial: "accounts/accountable_group", locals: { account_group: @group, sortable: true }
+
+    assert_select "details[data-institution-group]", count: 0
+    assert_select "[data-controller='sortable-list']" do
+      assert_select "[data-sortable-list-target='item']", count: 3
+      assert_select "button[aria-label=?]", I18n.t("accounts.sidebar.reorder_account", account: @eur.name)
+      assert_select "a[href='#{account_path(@usd)}'][aria-current='page']", count: 1
+    end
+  end
+
   test "keeps inactive bank folders collapsed and supports mobile rendering" do
     controller.request.env["PATH_INFO"] = "/"
 
