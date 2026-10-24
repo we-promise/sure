@@ -7,6 +7,107 @@ class Loan::VariableRateScheduleTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
   end
 
+  test "repeated form reads do not duplicate snapshot validation errors" do
+    [ "{broken", "[]", "null", "5" ].each do |snapshot|
+      account = build_loan(rate_type: "variable").account
+      account.assign_attributes(accountable_attributes: { rate_schedule_snapshot: snapshot, rate_changes: [] })
+      loan = account.loan
+
+      2.times do
+        assert_not account.valid?
+        assert_equal 1, loan.errors[:base].size
+        assert_equal 1, account.errors[:"accountable.base"].size
+        errors_before_render = loan.errors.objects.dup
+
+        2.times { assert_empty loan.rate_change_rows }
+
+        assert_equal errors_before_render, loan.errors.objects
+        assert_equal 1, account.errors[:"accountable.base"].size
+      end
+    end
+  end
+
+  test "reading invalid snapshot rows before validation does not add errors or allow a later save" do
+    loan = build_loan(rate_type: "variable", start_date: Date.new(2024, 1, 1),
+                      variable_rate_schedule: { "2026-01-01" => "7" })
+    loan.assign_attributes(rate_schedule_snapshot: "[]", rate_changes: [])
+
+    2.times do
+      assert_equal [ { effective_date: "2026-01-01", rate: "7.0" } ], loan.rate_change_rows
+      assert_empty loan.errors
+    end
+    2.times do
+      assert_not loan.valid?
+      assert_equal 1, loan.errors[:base].size
+    end
+    assert_not loan.save
+    assert_equal({ "2026-01-01" => "7" }, loan.reload.variable_rate_schedule)
+    assert loan.valid?
+    assert_not loan.changed_for_autosave?
+  end
+
+  test "invalid rows and an invalid snapshot report their shared error once" do
+    loan = build_loan(rate_type: "variable")
+    loan.assign_attributes(rate_schedule_snapshot: "[]", rate_changes: [ { effective_date: "", rate: "9" } ])
+
+    2.times do
+      assert_not loan.valid?
+      2.times { loan.rate_change_rows }
+      assert_equal 1, loan.errors[:base].size
+    end
+  end
+
+  test "reconciliation is reused until the snapshot or submitted rows change" do
+    loan = build_loan(rate_type: "variable", start_date: Date.new(2024, 1, 1))
+    loan.assign_attributes(rate_schedule_snapshot: "{}", rate_changes: [ { effective_date: "2026-01-01", rate: "7" } ])
+    rows = loan.rate_change_rows
+    schedule = loan.variable_rate_schedule
+
+    assert loan.valid?
+    assert_equal rows, loan.rate_change_rows
+    assert_same schedule, loan.variable_rate_schedule
+
+    loan.rate_changes = [ { effective_date: "2026-02-01", rate: "8" } ]
+    assert_equal [ { effective_date: "2026-02-01", rate: "8.0" } ], loan.rate_change_rows
+    loan.rate_schedule_snapshot = "[]"
+    assert_empty loan.rate_change_rows
+    assert_not loan.valid?
+    loan.rate_schedule_snapshot = "{}"
+    assert loan.valid?
+    assert_equal [ { effective_date: "2026-02-01", rate: "8.0" } ], loan.rate_change_rows
+    assert loan.save
+    assert_not loan.changed_for_autosave?
+    assert_equal({ "2026-02-01" => "8.0" }, loan.reload.variable_rate_schedule)
+    assert loan.valid?
+  end
+
+  test "provider locking clears both valid and invalid form caches on the same loan instance" do
+    [ true, false ].each do |invalid_snapshot|
+      loan = build_loan(rate_type: "variable", start_date: Date.new(2024, 1, 1),
+                        variable_rate_schedule: { "2026-01-01" => "7" })
+      snapshot = invalid_snapshot ? "[]" : loan.rate_schedule_snapshot
+      loan.assign_attributes(rate_schedule_snapshot: snapshot,
+                             rate_changes: [ { effective_date: "2026-01-01", rate: "7" } ])
+      loan.rate_change_rows
+      assert_equal !invalid_snapshot, loan.valid?
+      assert_not loan.has_changes_to_save?
+      Loan.find(loan.id).enrich_attributes(
+        { variable_rate_schedule: { "2026-01-01" => "7", "2026-02-01" => "8" } }, source: "redbark"
+      )
+
+      assert loan.enrich_attributes(
+        { variable_rate_schedule: { "2026-01-01" => "7", "2026-03-01" => "9" } }, source: "plaid"
+      )
+
+      assert loan.valid?
+      assert_empty loan.errors
+      assert_equal [ "2026-01-01", "2026-02-01", "2026-03-01" ], loan.rate_change_rows.pluck(:effective_date)
+      assert_equal({ "2026-01-01" => "7", "2026-02-01" => "8", "2026-03-01" => "9" },
+                   Loan.find(loan.id).variable_rate_schedule)
+      assert_not loan.changed_for_autosave?
+    end
+  end
+
   test "a fixed loan is unaffected by this feature" do
     fixed = build_loan(rate_type: "fixed")
 
