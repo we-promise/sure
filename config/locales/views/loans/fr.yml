@@ -59,6 +59,8 @@ fr:
         insurance: Assurance
         interest: Intérêts
         of_original: sur %{amount}
+        paid_so_far: Payé à ce jour · %{date}
         principal: Capital
+        principal_and_interest: Capital + intérêts
         repaid: Remboursé
         total: Total

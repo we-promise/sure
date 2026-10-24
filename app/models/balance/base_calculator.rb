@@ -40,6 +40,24 @@ class Balance::BaseCalculator
       @sync_cache ||= Balance::SyncCache.new(account)
     end
 
+    def loan_principal_change(date)
+      loan_principal_payments&.change_for(date)
+    end
+
+    # The balance change a loan's payment actually makes when interest is
+    # taken out first. The preview toggle is checked here because a sync is a
+    # background job with no `Current.user`.
+    def loan_principal_payments
+      return @loan_principal_payments if defined?(@loan_principal_payments)
+
+      @loan_principal_payments = if account.loan? &&
+          account.loan.amortizable? &&
+          account.has_opening_anchor? &&
+          account.family.preview_features_enabled?
+        sync_cache.loan_principal_payments(account.loan)
+      end
+    end
+
     def holdings_value_for_date(date)
       sync_cache.get_holdings_value(date)
     end
@@ -110,8 +128,13 @@ class Balance::BaseCalculator
       income_outflow_sum = income_trades.select { |e| e.amount >= 0 }.sum(&:amount)
 
       if account.balance_type == :non_cash && account.accountable_type == "Loan"
-        non_cash_inflows = txn_inflow_sum.abs
-        non_cash_outflows = txn_outflow_sum
+        if (change = loan_principal_change(date))
+          non_cash_inflows = change.principal_paid
+          non_cash_outflows = change.principal_added
+        else
+          non_cash_inflows = txn_inflow_sum.abs
+          non_cash_outflows = txn_outflow_sum
+        end
       elsif account.balance_type != :non_cash
         cash_inflows = txn_inflow_sum.abs + trade_cash_inflow_sum.abs + income_inflow_sum.abs
         cash_outflows = txn_outflow_sum + trade_cash_outflow_sum + income_outflow_sum
