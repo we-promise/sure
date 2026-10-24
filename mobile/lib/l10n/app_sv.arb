@@ -315,7 +315,7 @@
   "cashFlowIncome": "Inkomster",
   "cashFlowExpenses": "Utgifter",
   "cashFlowNetSavings": "Nettosparande",
-  "cashFlowSavingsRate": "{rate} sparkvot",
+  "cashFlowSavingsRate": "Sparkvot: {rate}",
   "cashFlowExpensesByCategory": "Utgifter per kategori",
   "cashFlowIncomeByCategory": "Inkomster per kategori",
   "cashFlowShareOfExpenses": "{percent} av utgifterna",

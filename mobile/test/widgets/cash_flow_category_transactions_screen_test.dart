@@ -38,7 +38,11 @@ void main() {
   final range =
       CashFlowDateRange(DateTime(2026, 10, 1), DateTime(2026, 10, 19));
 
-  Widget harness(TransactionsService service, {AccessTokenLoader? loader}) {
+  Widget harness(
+    TransactionsService service, {
+    AccessTokenLoader? loader,
+    Future<void> Function(BuildContext context)? onUnauthorized,
+  }) {
     return ChangeNotifierProvider<PrivacyProvider>.value(
       value: PrivacyProvider(initialHidden: false),
       child: MaterialApp(
@@ -50,6 +54,7 @@ void main() {
           range: range,
           service: service,
           accessTokenLoader: loader ?? (_) async => 'token',
+          onUnauthorized: onUnauthorized,
         ),
       ),
     );
@@ -118,5 +123,19 @@ void main() {
     expect(find.text('Never'), findsNothing);
     expect(find.text('Try Again'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('a 401 logs the session out', (tester) async {
+    var logouts = 0;
+    final service = TransactionsService(
+      client: MockClient((_) async => http.Response('{}', 401)),
+    );
+    await tester.pumpWidget(harness(
+      service,
+      onUnauthorized: (_) async => logouts++,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(logouts, 1);
   });
 }

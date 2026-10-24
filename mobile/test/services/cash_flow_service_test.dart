@@ -64,6 +64,53 @@ void main() {
       final result =
           await service.getCashFlow(accessToken: 'token', range: range);
       expect(result['success'], isFalse);
+      expect(
+        result['error'],
+        'Unable to load cash flow. Please try again later.',
+      );
+    });
+
+    test('reads the family month start day', () async {
+      late Uri requested;
+      final service = CashFlowService(
+        client: MockClient((request) async {
+          requested = request.url;
+          return http.Response('{"month_start_day":15}', 200);
+        }),
+      );
+      final result = await service.getMonthStartDay(accessToken: 'token');
+      expect(requested.path, '/api/v1/family_settings');
+      expect(result, {'success': true, 'month_start_day': 15});
+    });
+
+    test('maps a family settings 401 to unauthorized', () async {
+      final service = CashFlowService(
+        client: MockClient((_) async => http.Response('{}', 401)),
+      );
+      final result = await service.getMonthStartDay(accessToken: 'token');
+      expect(result, {'success': false, 'error': 'unauthorized'});
+    });
+
+    test('rejects a missing or out-of-range month start day', () async {
+      for (final body in [
+        '{}',
+        '{"month_start_day":0}',
+        '{"month_start_day":29}',
+        '{"month_start_day":"15"}'
+      ]) {
+        final service = CashFlowService(
+          client: MockClient((_) async => http.Response(body, 200)),
+        );
+        final result = await service.getMonthStartDay(accessToken: 'token');
+        expect(result['success'], isFalse, reason: body);
+        expect(result['error'], 'Failed to load family settings');
+      }
+    });
+
+    test('close() leaves an injected client open', () async {
+      final client = _TrackingClient();
+      CashFlowService(client: client).close();
+      expect(client.closed, isFalse);
     });
   });
 
@@ -96,4 +143,15 @@ void main() {
     expect(requested.queryParametersAll['category_ids[]'],
         ['cat_food', 'cat_groceries']);
   });
+}
+
+class _TrackingClient extends http.BaseClient {
+  bool closed = false;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) =>
+      throw UnimplementedError();
+
+  @override
+  void close() => closed = true;
 }

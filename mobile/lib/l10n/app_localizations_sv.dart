@@ -1081,7 +1081,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String cashFlowSavingsRate(String rate) {
-    return '$rate sparkvot';
+    return 'Sparkvot: $rate';
   }
 
   @override
