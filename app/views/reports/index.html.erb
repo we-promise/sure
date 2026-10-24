@@ -142,6 +142,7 @@
          data-sortable-list-url-value="<%= update_preferences_reports_path %>"
          data-sortable-list-param-value="preferences.reports_section_order"
          data-sortable-list-hold-delay-value="800"
+         data-sortable-list-own-keys-only-value="true"
          data-action="dragover->sortable-list#dragOver drop->sortable-list#drop"
          role="list"
          aria-label="<%= t("reports.index.sections_aria") %>">
@@ -189,9 +190,13 @@
                 <%= t(section[:title]) %>
               </h2>
             </div>
+            <%# A mouse grab hint. Keys only grab the section itself, so the hint
+                stays out of the tab order instead of being an invisible stop. %>
             <button
               type="button"
               class="cursor-grab active:cursor-grabbing hidden lg:flex items-center justify-center w-6 h-6 text-secondary hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+              tabindex="-1"
+              aria-hidden="true"
               aria-label="<%= t("reports.index.drag_to_reorder") %>">
               <%= icon("grip-vertical", size: "sm") %>
             </button>

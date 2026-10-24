@@ -63,6 +63,14 @@ class ReportsTest < ApplicationSystemTestCase
     assert_operator saved_order.index(second), :<, saved_order.index(first)
   end
 
+  test "Enter on a link inside a section follows the link instead of grabbing the section" do
+    section = find("section[data-section-key='transactions_breakdown']")
+    section.find_link(I18n.t("reports.transactions_breakdown.export.google_sheets")).send_keys(:enter)
+
+    assert_selector "dialog[open]"
+    assert_equal "false", section["aria-grabbed"]
+  end
+
   private
     def clicked_hotkeys
       page.evaluate_script("window.clickedHotkeys")
