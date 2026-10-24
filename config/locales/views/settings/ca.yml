@@ -53,6 +53,8 @@ ca:
           la seva matriu a la llista de transaccions. Si està desactivat, els fills
           apareixen com a files individuals.
         split_grouped_title: Agrupa les transaccions dividides
+        auto_generate_transaction_names_title: "Genera automàticament els noms de les transaccions"
+        auto_generate_transaction_names_description: "Quan el nom d'una transacció introduïda manualment es deixa en blanc, s'omple a partir de la categoria i el comerç seleccionats (p. ex. «Entreteniment - Netflix»). Si no se'n selecciona cap, el nom continua sent obligatori. S'aplica a tota la llar i només a les transaccions noves."
         theme_dark: Fosc
         theme_light: Clar
         theme_subtitle: Tria el tema preferit per a l'aplicació
