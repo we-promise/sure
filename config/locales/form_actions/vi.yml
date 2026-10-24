@@ -1,0 +1,19 @@
+---
+vi:
+  helpers:
+    submit:
+      account:
+        create: Tạo tài khoản
+        update: Cập nhật tài khoản
+      tag:
+        create: Tạo thẻ
+        update: Cập nhật thẻ
+      family_merchant:
+        create: Tạo đơn vị giao dịch
+        update: Cập nhật đơn vị giao dịch
+      rule:
+        create: Tạo quy tắc
+        update: Cập nhật quy tắc
+  rules:
+    form:
+      if: NẾU

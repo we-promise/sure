@@ -1,0 +1,19 @@
+---
+ca:
+  helpers:
+    submit:
+      account:
+        create: Crea un compte
+        update: Actualitza el compte
+      tag:
+        create: Crea una etiqueta
+        update: Actualitza l’etiqueta
+      family_merchant:
+        create: Crea un comerç
+        update: Actualitza el comerç
+      rule:
+        create: Crea una regla
+        update: Actualitza la regla
+  rules:
+    form:
+      if: SI

@@ -1,0 +1,19 @@
+---
+tr:
+  helpers:
+    submit:
+      account:
+        create: Hesap oluştur
+        update: Hesabı güncelle
+      tag:
+        create: Etiket oluştur
+        update: Etiketi güncelle
+      family_merchant:
+        create: İşletme oluştur
+        update: İşletmeyi güncelle
+      rule:
+        create: Kural oluştur
+        update: Kuralı güncelle
+  rules:
+    form:
+      if: EĞER

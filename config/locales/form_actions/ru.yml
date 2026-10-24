@@ -1,0 +1,19 @@
+---
+ru:
+  helpers:
+    submit:
+      account:
+        create: Создать счёт
+        update: Обновить счёт
+      tag:
+        create: Создать метку
+        update: Обновить метку
+      family_merchant:
+        create: Создать продавца
+        update: Обновить продавца
+      rule:
+        create: Создать правило
+        update: Обновить правило
+  rules:
+    form:
+      if: ЕСЛИ

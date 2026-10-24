@@ -1,0 +1,19 @@
+---
+en:
+  helpers:
+    submit:
+      account:
+        create: Create account
+        update: Update account
+      tag:
+        create: Create tag
+        update: Update tag
+      family_merchant:
+        create: Create merchant
+        update: Update merchant
+      rule:
+        create: Create rule
+        update: Update rule
+  rules:
+    form:
+      if: IF

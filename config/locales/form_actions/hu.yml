@@ -1,0 +1,19 @@
+---
+hu:
+  helpers:
+    submit:
+      account:
+        create: Számla létrehozása
+        update: Számla frissítése
+      tag:
+        create: Címke létrehozása
+        update: Címke frissítése
+      family_merchant:
+        create: Kereskedő létrehozása
+        update: Kereskedő frissítése
+      rule:
+        create: Szabály létrehozása
+        update: Szabály frissítése
+  rules:
+    form:
+      if: HA

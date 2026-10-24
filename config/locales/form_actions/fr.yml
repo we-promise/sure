@@ -1,0 +1,19 @@
+---
+fr:
+  helpers:
+    submit:
+      account:
+        create: Créer un compte
+        update: Mettre à jour le compte
+      tag:
+        create: Créer une étiquette
+        update: Mettre à jour l’étiquette
+      family_merchant:
+        create: Créer un commerçant
+        update: Mettre à jour le commerçant
+      rule:
+        create: Créer une règle
+        update: Mettre à jour la règle
+  rules:
+    form:
+      if: SI

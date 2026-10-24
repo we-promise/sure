@@ -1,0 +1,19 @@
+---
+nb:
+  helpers:
+    submit:
+      account:
+        create: Opprett konto
+        update: Oppdater konto
+      tag:
+        create: Opprett etikett
+        update: Oppdater etikett
+      family_merchant:
+        create: Opprett brukersted
+        update: Oppdater brukersted
+      rule:
+        create: Opprett regel
+        update: Oppdater regel
+  rules:
+    form:
+      if: HVIS

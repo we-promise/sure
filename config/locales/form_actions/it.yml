@@ -1,0 +1,19 @@
+---
+it:
+  helpers:
+    submit:
+      account:
+        create: Crea conto
+        update: Aggiorna conto
+      tag:
+        create: Crea etichetta
+        update: Aggiorna etichetta
+      family_merchant:
+        create: Crea esercente
+        update: Aggiorna esercente
+      rule:
+        create: Crea regola
+        update: Aggiorna regola
+  rules:
+    form:
+      if: SE

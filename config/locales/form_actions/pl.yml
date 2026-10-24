@@ -1,0 +1,19 @@
+---
+pl:
+  helpers:
+    submit:
+      account:
+        create: Utwórz konto
+        update: Zaktualizuj konto
+      tag:
+        create: Utwórz tag
+        update: Zaktualizuj tag
+      family_merchant:
+        create: Utwórz sprzedawcę
+        update: Zaktualizuj sprzedawcę
+      rule:
+        create: Utwórz regułę
+        update: Zaktualizuj regułę
+  rules:
+    form:
+      if: JEŚLI

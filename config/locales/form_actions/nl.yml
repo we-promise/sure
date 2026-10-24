@@ -1,0 +1,19 @@
+---
+nl:
+  helpers:
+    submit:
+      account:
+        create: Rekening aanmaken
+        update: Rekening bijwerken
+      tag:
+        create: Label aanmaken
+        update: Label bijwerken
+      family_merchant:
+        create: Handelaar aanmaken
+        update: Handelaar bijwerken
+      rule:
+        create: Regel aanmaken
+        update: Regel bijwerken
+  rules:
+    form:
+      if: ALS

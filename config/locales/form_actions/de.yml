@@ -1,0 +1,19 @@
+---
+de:
+  helpers:
+    submit:
+      account:
+        create: Konto erstellen
+        update: Konto aktualisieren
+      tag:
+        create: Schlagwort erstellen
+        update: Schlagwort aktualisieren
+      family_merchant:
+        create: Händler erstellen
+        update: Händler aktualisieren
+      rule:
+        create: Regel erstellen
+        update: Regel aktualisieren
+  rules:
+    form:
+      if: WENN

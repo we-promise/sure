@@ -1,0 +1,19 @@
+---
+ro:
+  helpers:
+    submit:
+      account:
+        create: Creează un cont
+        update: Actualizează contul
+      tag:
+        create: Creează o etichetă
+        update: Actualizează eticheta
+      family_merchant:
+        create: Creează un comerciant
+        update: Actualizează comerciantul
+      rule:
+        create: Creează o regulă
+        update: Actualizează regula
+  rules:
+    form:
+      if: DACĂ

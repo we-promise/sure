@@ -1,0 +1,19 @@
+---
+zh-TW:
+  helpers:
+    submit:
+      account:
+        create: 新增帳戶
+        update: 更新帳戶
+      tag:
+        create: 新增標籤
+        update: 更新標籤
+      family_merchant:
+        create: 新增商家
+        update: 更新商家
+      rule:
+        create: 新增規則
+        update: 更新規則
+  rules:
+    form:
+      if: 如果

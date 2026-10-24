@@ -1,0 +1,19 @@
+---
+uk:
+  helpers:
+    submit:
+      account:
+        create: Створити рахунок
+        update: Оновити рахунок
+      tag:
+        create: Створити мітку
+        update: Оновити мітку
+      family_merchant:
+        create: Створити продавця
+        update: Оновити продавця
+      rule:
+        create: Створити правило
+        update: Оновити правило
+  rules:
+    form:
+      if: ЯКЩО
