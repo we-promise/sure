@@ -9,8 +9,8 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   module GeneratedControllers
   end
 
-  def append(content)
-    Provider::FamilyGenerator.append_source_enum_entry(content, "gocardless")
+  def append(content, name = "gocardless")
+    Provider::FamilyGenerator.append_source_enum_entry(content, name)
   end
 
   def assert_parses(source)
@@ -81,19 +81,57 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes job, "@gocardless_account.gocardless_item&.family&.broadcast_sync_complete"
   end
 
-  test "appends to a single-line enum" do
+  test "inserts into a single-line enum before the first source that sorts after it" do
     result = append(<<~RUBY)
       class ProviderMerchant < Merchant
-        enum :source, { plaid: "plaid", redbark: "redbark" }
+        enum :source, { akahu: "akahu", plaid: "plaid", redbark: "redbark" }
       end
     RUBY
 
     assert_parses result
-    assert_includes result, 'redbark: "redbark", gocardless: "gocardless" }'
+    assert_includes result, '{ akahu: "akahu", gocardless: "gocardless", plaid: "plaid", redbark: "redbark" }'
   end
 
-  test "appends to a multiline enum without putting the entry after the expression ends" do
+  test "inserts into a multiline enum on a line of its own, keeping the list sorted" do
     result = append(<<~RUBY)
+      class DataEnrichment < ApplicationRecord
+        enum :source, {
+          akahu: "akahu",
+          plaid: "plaid",
+          redbark: "redbark"
+        }
+      end
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(    akahu: "akahu",\n    gocardless: "gocardless",\n    plaid: "plaid",\n)
+  end
+
+  test "ignores commented-out keys and keeps a comment with the entry it describes" do
+    result = append(<<~RUBY)
+      class DataEnrichment < ApplicationRecord
+        enum :source, {
+          akahu: "akahu", # zopa: "zopa"
+          # plaid: imported from the Plaid API
+          plaid: "plaid",
+          redbark: "redbark"
+        }
+      end
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(    akahu: "akahu", # zopa: "zopa"\n    gocardless: "gocardless",\n    # plaid: imported from the Plaid API\n    plaid: "plaid",\n)
+  end
+
+  test "appends to a single-line enum a source that sorts last" do
+    result = append('enum :source, { plaid: "plaid", redbark: "redbark" }', "zopa")
+
+    assert_parses "x = #{result}"
+    assert_includes result, 'redbark: "redbark", zopa: "zopa" }'
+  end
+
+  test "appends to a multiline enum a source that sorts last without putting it after the expression ends" do
+    result = append(<<~RUBY, "zopa")
       class DataEnrichment < ApplicationRecord
         enum :source, {
           plaid: "plaid",
@@ -104,18 +142,33 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
 
     assert_parses result
     # The comma must attach to the previous entry, and the new entry take its indentation.
-    assert_includes result, %(    redbark: "redbark",\n    gocardless: "gocardless"\n)
+    assert_includes result, %(    redbark: "redbark",\n    zopa: "zopa"\n)
+  end
+
+  test "appends after a last entry with a trailing comment without putting the comma in the comment" do
+    result = append(<<~RUBY, "zopa")
+      class DataEnrichment < ApplicationRecord
+        enum :source, {
+          plaid: "plaid",
+          redbark: "redbark" # last one
+          # zebra: "zebra"
+        }
+      end
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(    redbark: "redbark", # last one\n    # zebra: "zebra"\n    zopa: "zopa"\n)
   end
 
   test "does not double the comma on a single-line enum with a trailing comma" do
-    result = append('enum :source, { plaid: "plaid", redbark: "redbark", }')
+    result = append('enum :source, { plaid: "plaid", redbark: "redbark", }', "zopa")
 
     assert_parses "x = #{result}"
     assert_not_includes result, ",,"
   end
 
   test "does not double the comma on a multiline enum with a trailing comma" do
-    result = append(<<~RUBY)
+    result = append(<<~RUBY, "zopa")
       class DataEnrichment < ApplicationRecord
         enum :source, {
           plaid: "plaid",
@@ -126,7 +179,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
 
     assert_parses result
     assert_not_includes result, ",,"
-    assert_includes result, 'gocardless: "gocardless"'
+    assert_includes result, 'zopa: "zopa"'
   end
 
   test "does not emit a leading comma into an empty single-line enum" do
