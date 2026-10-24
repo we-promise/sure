@@ -72,8 +72,9 @@ class RuleImport < Import
   def generate_rows_from_csv
     rows.destroy_all
 
+    header_size = header_row_size
     csv_rows.each.with_index(1) do |row, index|
-      normalized_row = normalize_rule_row(row)
+      normalized_row = normalize_rule_row(row, header_size: header_size)
 
       rows.create!(
         source_row_number: index,
@@ -98,14 +99,14 @@ class RuleImport < Import
     # The optional group column is read by its header and left out of the
     # positional fields, which re-assemble conditions and actions from
     # everything after the fourth column.
-    def normalize_rule_row(row)
+    def normalize_rule_row(row, header_size: row.headers.compact.size)
       fields = row.fields.dup
       headers = row.headers
       group_index = headers.index { |header| header.to_s.strip.delete_suffix("*") == "group" }
-      # Counted from the end of the named columns, so a row whose JSON was
-      # split into extra fields (CSV pads headers with nil for those) still
-      # gives up the right one.
-      group = fields.delete_at(group_index - headers.compact.size) if group_index
+      # Counted from the end of the header row, so a row whose JSON was split
+      # into extra fields (CSV pads headers with nil for those) still gives up
+      # the right one.
+      group = fields.delete_at(group_index - header_size) if group_index
       name, resource_type, active, effective_date = fields[0..3]
       conditions, actions = extract_conditions_and_actions(fields[4..])
 
@@ -118,6 +119,14 @@ class RuleImport < Import
         actions: actions,
         rule_group: group_index ? group.to_s : nil
       }
+    end
+
+    # The number of cells in the header row, blank ones included. A row's
+    # headers cannot tell a blank header cell from the nil CSV pads in for a
+    # row with more fields than the header.
+    def header_row_size
+      header = CSV.parse_line((raw_file_str || "").strip, col_sep: col_sep, liberal_parsing: true)
+      header ? header.size : 0
     end
 
     def normalized_rule_text(value, attribute:)

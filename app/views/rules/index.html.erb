@@ -50,7 +50,10 @@
 <% end %>
 <div class="bg-container rounded-xl shadow-border-xs p-4">
   <% if @layout.items.any? %>
-    <div data-controller="rules-filter">
+    <%# A refresh (e.g. after a rule's switch saves) morphs the page back to
+      the server's open groups and unfiltered rows; filter() applies the
+      search, filters and stored folds again. %>
+    <div data-controller="rules-filter" data-action="turbo:morph@window->rules-filter#filter">
       <%= render "rules/filters", list_filter: @list_filter, groups: @layout.groups %>
 
       <div class="bg-container-inset rounded-xl">

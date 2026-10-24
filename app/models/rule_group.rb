@@ -18,6 +18,11 @@ class RuleGroup < ApplicationRecord
   # the same moment by another request is found instead of failing.
   def self.find_or_create_named!(name)
     find_by(name: name) || create_or_find_by!(name: name)
+  rescue ActiveRecord::RecordInvalid => error
+    # Committed between the lookup and the uniqueness validation.
+    raise unless error.record.errors.of_kind?(:name, :taken)
+
+    where(name: name).take!
   end
 
   # Switches every rule of the group on or off, one by one, so each rule runs

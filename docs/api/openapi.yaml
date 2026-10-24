@@ -3627,6 +3627,7 @@ components:
           - balances
           - recurring_transactions
           - rules
+          - rule_groups
           - rule_actions
           - rule_conditions
           - rule_runs
@@ -3702,6 +3703,9 @@ components:
               type: integer
               minimum: 0
             rules:
+              type: integer
+              minimum: 0
+            rule_groups:
               type: integer
               minimum: 0
             rule_actions:

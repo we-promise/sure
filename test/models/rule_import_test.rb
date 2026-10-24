@@ -701,6 +701,19 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal "Split rule", normalized[:name]
   end
 
+  test "reads the group when the header row has a blank cell" do
+    conditions = [ { condition_type: "transaction_name", operator: "like", value: "rent" } ].to_json
+    actions = [ { action_type: "exclude_transaction" } ].to_json
+    csv = "name,resource_type,active,effective_date,conditions,actions,group,\n" +
+      CSV.generate_line([ "Rent rule", "transaction", "true", "", conditions, actions, "Housing" ])
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    assert_equal "Housing", @family.rules.find_by!(name: "Rent rule").rule_group&.name
+  end
+
   test "a file without the group column keeps the group of an updated rule" do
     group = @family.rule_groups.create!(name: "Food")
     @family.rules.create!(name: "Categorize groceries", resource_type: "transaction", rule_group: group,

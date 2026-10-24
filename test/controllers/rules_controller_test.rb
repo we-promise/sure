@@ -427,11 +427,12 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Subscriptions", Rule.order(:created_at).last.rule_group.name
   end
 
-  test "saves the rule when its new group is created by another request at the same moment" do
+  test "saves the rule again when its new group's insert hits the unique index" do
     family = @user.family
     conflicted = false
     # Inserts the same group right before the rule's own insert of it, as a
-    # parallel request would.
+    # parallel request would. The rollback also removes this row, so the
+    # retry creates the group; with a committed row it finds it instead.
     RuleGroup.any_instance.stubs(:assign_next_position).with do
       unless conflicted
         conflicted = true

@@ -74,6 +74,10 @@ class Rule < ApplicationRecord
   # Joining a group puts the rule at the end of that group; leaving one keeps
   # it right below the group. Either way the rules still run in the order the
   # list shows (see Rule::Layout).
+  # The family's position lock is taken before the rule's row is written, in
+  # the order every other position writer takes them, so a concurrent reorder
+  # cannot deadlock against this save.
+  before_save -> { Rule.lock_positions!(family) }, if: :will_save_change_to_rule_group_id?
   after_save :place_in_rule_group, if: :saved_change_to_rule_group_id?
 
   # Set when this save's after_update took the baseline, or tried to and timed

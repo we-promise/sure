@@ -279,6 +279,25 @@ class RulesTest < ApplicationSystemTestCase
     assert_no_selector "[data-sortable-list-id='#{rule.id}']"
   end
 
+  test "keeps a folded group folded when switching another rule refreshes the page" do
+    group = @user.family.rule_groups.create!(name: "Food")
+    folded = create_exclude_rule("Folded rule", group: group)
+    loose = create_exclude_rule("Loose rule")
+
+    visit rules_path
+    find("[data-sortable-list-id='group:#{group.id}'] [data-rules-group-header]").click
+    assert_no_selector "[data-sortable-list-id='#{folded.id}']"
+
+    # The switch saves the rule and refreshes the page with a morph.
+    find("##{ActionView::RecordIdentifier.dom_id(loose)} input[type='checkbox'][name='rule[active]']", visible: :all).execute_script("this.click()")
+    assert_text "Rule updated"
+
+    assert_selector "[data-sortable-list-id='group:#{group.id}'] details:not([open])"
+    assert_no_selector "[data-sortable-list-id='#{folded.id}']"
+    visit rules_path
+    assert_selector "[data-sortable-list-id='group:#{group.id}'] details:not([open])"
+  end
+
   test "folds a rule outside a group to its title and keeps it folded after a reload" do
     rule = create_exclude_rule("Loose rule")
 

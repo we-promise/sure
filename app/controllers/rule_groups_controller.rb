@@ -12,7 +12,7 @@ class RuleGroupsController < ApplicationController
     if @rule_group.save
       redirect_to rules_path, notice: t(".success")
     else
-      render :new, status: :unprocessable_entity
+      redirect_with_errors
     end
   end
 
@@ -23,7 +23,7 @@ class RuleGroupsController < ApplicationController
     if @rule_group.update(rule_group_params)
       redirect_to rules_path, notice: t(".success")
     else
-      render :edit, status: :unprocessable_entity
+      redirect_with_errors
     end
   end
 
@@ -54,6 +54,12 @@ class RuleGroupsController < ApplicationController
   end
 
   private
+    # The form targets the whole page (_top), so a re-rendered form would
+    # replace the rules page with a page holding only the dialog.
+    def redirect_with_errors
+      redirect_to rules_path, alert: @rule_group.errors.full_messages.to_sentence
+    end
+
     def set_rule_group
       @rule_group = Current.family.rule_groups.find(params[:id])
     end

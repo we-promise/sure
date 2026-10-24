@@ -37,8 +37,8 @@ class Rule::Layout
   end
 
   # Moves a rule to right after the group's last other rule: the end of the
-  # group it joined, or right below the group it left. Only the items after
-  # that spot shift, so an import that groups many rules stays linear.
+  # group it joined, or right below the group it left. The items after that
+  # spot shift down by one, with one statement per table.
   def place_after_group!(rule, group)
     with_lock do
       anchor = [

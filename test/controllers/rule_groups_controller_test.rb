@@ -28,7 +28,18 @@ class RuleGroupsControllerTest < ActionDispatch::IntegrationTest
       post rule_groups_url, params: { rule_group: { name: "Food" } }
     end
 
-    assert_response :unprocessable_entity
+    assert_redirected_to rules_url
+    assert_match "already been taken", flash[:alert]
+  end
+
+  test "keeps the name when renaming to a taken one" do
+    other = @family.rule_groups.create!(name: "Housing")
+
+    patch rule_group_url(other), params: { rule_group: { name: "Food" } }
+
+    assert_redirected_to rules_url
+    assert_match "already been taken", flash[:alert]
+    assert_equal "Housing", other.reload.name
   end
 
   test "renames a group" do

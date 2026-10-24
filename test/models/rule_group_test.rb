@@ -49,4 +49,15 @@ class RuleGroupTest < ActiveSupport::TestCase
       @family.rules.create!(resource_type: "transaction", active: active, rule_group: @group,
         actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
     end
+
+    test "find_or_create_named! finds a group another request created meanwhile" do
+      family = families(:empty)
+      existing = family.rule_groups.create!(name: "Bills")
+      # The lookup misses, as if the other request committed right after it.
+      RuleGroup.stubs(:find_by).returns(nil)
+
+      assert_no_difference "RuleGroup.count" do
+        assert_equal existing, family.rule_groups.find_or_create_named!("Bills")
+      end
+    end
 end
