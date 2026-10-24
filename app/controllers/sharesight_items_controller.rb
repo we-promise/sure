@@ -129,6 +129,7 @@ class SharesightItemsController < ApplicationController
     @linkable_accounts = linkable_accounts
       .visible
       .where(accountable_type: "Investment")
+      .where(plaid_account_id: nil, simplefin_account_id: nil)
       .left_joins(:account_providers)
       .where(account_providers: { id: nil })
       .order(:name)
@@ -146,15 +147,19 @@ class SharesightItemsController < ApplicationController
       sharesight_account = @sharesight_item.sharesight_accounts.find_by(id: sharesight_account_id)
       next unless sharesight_account
 
+      linked = false
       sharesight_account.with_lock do
         next if sharesight_account.current_account.present?
 
         account = Account.create_from_sharesight_account(sharesight_account)
-        sharesight_account.ensure_account_provider!(account)
+        # ensure_account_provider! returns nil if linking fails, so don't keep an account we couldn't link.
+        raise ActiveRecord::Rollback unless sharesight_account.ensure_account_provider!(account)
+
         created_accounts << account
+        linked = true
       end
 
-      process_after_linking(sharesight_account)
+      process_after_linking(sharesight_account) if linked
     end
 
     @sharesight_item.update!(pending_account_setup: @sharesight_item.unlinked_accounts_count.positive?)

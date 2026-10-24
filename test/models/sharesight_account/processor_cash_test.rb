@@ -42,6 +42,22 @@ class SharesightAccount::ProcessorCashTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal("930"), BigDecimal("5780") ], [ @account.cash_balance, @account.balance ]
   end
 
+  test "a foreign trade after the anchor is paid from the portfolio's cash" do
+    us_buy = { "id" => 3, "transaction_type" => "BUY", "transaction_date" => "2026-09-15", "symbol" => "AAPL", "market" => "NASDAQ",
+               "quantity" => 10, "price" => 100.0, "exchange_rate" => 0.5, "holding_id" => 3, "state" => "confirmed" }
+    us_holding = { "id" => 3, "quantity" => 10.0, "value" => 2000.0, "instrument_price" => 100.0,
+                   "instrument" => { "code" => "AAPL", "market_code" => "NASDAQ", "currency_code" => "USD" }, "instrument_currency" => { "code" => "USD" } }
+    @sharesight_account.update!(
+      raw_trades_payload: TRADES + [ us_buy ], raw_holdings_payload: HOLDINGS + [ us_holding ], current_balance: 6850,
+      cash_anchor_amount: 5000, cash_anchor_on: Date.new(2026, 9, 5)
+    )
+
+    process
+
+    # US$1,000 at 0.5 USD per AUD is A$2,000: 5000 - 1100 + 30 - 2000.
+    assert_equal BigDecimal("1930"), @account.reload.cash_balance
+  end
+
   test "a portfolio settled elsewhere is shares only" do
     @sharesight_account.update!(cash_mode: "untracked", cash_anchor_amount: 2000, cash_anchor_on: Date.new(2026, 9, 5))
 

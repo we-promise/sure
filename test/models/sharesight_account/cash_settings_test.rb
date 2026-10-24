@@ -42,6 +42,17 @@ class SharesightAccount::CashSettingsTest < ActiveSupport::TestCase
     assert_includes @sharesight_account.errors.full_messages, I18n.t("sharesight_accounts.errors.account_is_portfolio", name: "CMC Invest")
   end
 
+  test "a deleted settlement account doesn't stop syncs" do
+    @sharesight_account.update!(cash_mode: "settlement", settlement_account: @bank)
+
+    @bank.destroy!
+    @sharesight_account.reload
+
+    assert_nil @sharesight_account.settlement_account
+    assert @sharesight_account.update(raw_payload: { "id" => 42 }), "an import can still save the portfolio"
+    assert_equal SharesightAccount::OUTSIDE, @sharesight_account.trade_destination_on(Date.current)
+  end
+
   test "a cash anchor needs both its amount and date" do
     @sharesight_account.cash_anchor_amount = 2049.29
 

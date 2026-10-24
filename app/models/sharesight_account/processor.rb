@@ -43,17 +43,38 @@ class SharesightAccount::Processor
     end
 
     # Zero once the cash lives somewhere else. While the broker has it, either
-    # the balance you saw rolled forward through everything booked since (in
-    # the portfolio's currency), or Sharesight's own cash accounts.
+    # the balance you saw rolled forward through everything booked since, or
+    # Sharesight's own cash accounts.
     def current_cash
       return BigDecimal("0") unless sharesight_account.holds_cash_at_broker_on?(Date.current)
       return sharesight_account.cash_balance || BigDecimal("0") unless sharesight_account.cash_anchor?
 
       moved = account.entries
-        .where(entryable_type: %w[Transaction Trade], currency: sharesight_account.currency)
+        .where(entryable_type: %w[Transaction Trade])
         .where(date: (sharesight_account.cash_anchor_on + 1)..Date.current)
-        .sum(:amount)
+        .includes(:entryable)
+        .sum(BigDecimal("0")) { |entry| in_portfolio_currency(entry) }
       sharesight_account.cash_anchor_amount - moved
+    end
+
+    # A foreign trade is still paid from the portfolio's cash, so convert it with
+    # the trade's own rate, or Sure's rate for that day if it doesn't have one.
+    def in_portfolio_currency(entry)
+      return entry.amount if entry.currency == sharesight_account.currency
+
+      Money.new(entry.amount, entry.currency)
+        .exchange_to(sharesight_account.currency, date: entry.date, custom_rate: entry.entryable.try(:exchange_rate))
+        .amount
+    rescue Money::ConversionError
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "warn",
+        message: "Left #{entry.name} (#{entry.currency}) out of the cash at the broker: no exchange rate for #{entry.date}",
+        source: "sharesight",
+        family: sharesight_account.sharesight_item.family,
+        provider_key: "sharesight"
+      )
+      BigDecimal("0")
     end
 
     # Compares the units Sharesight holds with what the trades add up to. A gap

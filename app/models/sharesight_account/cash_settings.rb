@@ -38,8 +38,10 @@ module SharesightAccount::CashSettings
     validates :cash_mode, inclusion: { in: CASH_MODES }
     validates :dividend_mode, inclusion: { in: DIVIDEND_MODES }
     validates :settlement_window_days, numericality: { only_integer: true, in: 0..MAX_SETTLEMENT_WINDOW_DAYS }
-    validate :settlement_account_present
-    validate :dividend_account_present
+    # Only checked when these settings change. If the chosen account gets deleted later (the
+    # foreign key clears it), syncs keep going and treat that money as going outside Sure.
+    validate :settlement_account_present, if: -> { will_save_change_to_cash_mode? || will_save_change_to_settlement_account_id? }
+    validate :dividend_account_present, if: -> { will_save_change_to_dividend_mode? || will_save_change_to_dividend_account_id? }
     validate :cash_anchor_complete
     validate :other_accounts_belong_to_family
   end

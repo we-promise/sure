@@ -67,6 +67,41 @@ class SharesightItemsControllerTest < ActionDispatch::IntegrationTest
     assert_not item.reload.pending_account_setup?
   end
 
+  test "setup only offers manual accounts to link" do
+    item = sharesight_item
+    item.sharesight_accounts.create!(name: "Shares", currency: "AUD", sharesight_account_id: "42")
+    manual = investment_account(owner: @user)
+    plaid_linked = investment_account(owner: @user)
+    plaid_linked.update_columns(plaid_account_id: plaid_accounts(:one).id)
+
+    get setup_accounts_sharesight_item_url(item)
+
+    assert_select "option[value=?]", manual.id
+    assert_select "option[value=?]", plaid_linked.id, count: 0
+  end
+
+  test "completing setup doesn't keep an account it couldn't link" do
+    item = sharesight_item
+    portfolio = item.sharesight_accounts.create!(name: "Shares", currency: "AUD", sharesight_account_id: "42")
+    SharesightAccount.any_instance.stubs(:ensure_account_provider!).returns(nil)
+
+    assert_no_difference -> { @family.accounts.count } do
+      post complete_account_setup_sharesight_item_url(item), params: { account_ids: [ portfolio.id ] }
+    end
+
+    assert_redirected_to setup_accounts_sharesight_item_url(item)
+    assert_nil portfolio.reload.current_account
+  end
+
+  test "the link dialog renders one modal frame" do
+    sharesight_item
+
+    get select_existing_account_sharesight_items_url(account_id: investment_account(owner: @user).id)
+
+    assert_response :success
+    assert_select "turbo-frame#modal", count: 1
+  end
+
   test "links a portfolio to an existing manual investment account" do
     item = sharesight_item
     portfolio = item.sharesight_accounts.create!(name: "Shares", currency: "AUD", sharesight_account_id: "42", current_balance: 1500)
