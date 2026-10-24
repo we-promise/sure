@@ -43,6 +43,49 @@ class Provider::Openai::ReceiptExtractorTest < ActiveSupport::TestCase
     assert_nil client.last_params[:response_format]
   end
 
+  test "sends an image/jpg photo with the image/jpeg media type" do
+    client = capturing_client(RECEIPT_JSON)
+
+    build_extractor(client, content_type: "image/jpg", file_content: "jpg-bytes").extract
+
+    image = client.last_params[:messages].last[:content].find { |part| part[:type] == "image_url" }
+    assert_equal "data:image/jpeg;base64,#{Base64.strict_encode64("jpg-bytes")}", image.dig(:image_url, :url)
+  end
+
+  test "auto mode retries a text receipt without response_format when the provider rejects it" do
+    Pdf::TextExtractor.expects(:pages).returns([ "HAMMER 30.00" ])
+    calls = []
+    client = Object.new
+    client.define_singleton_method(:chat) do |parameters:|
+      calls << parameters
+      raise Faraday::BadRequestError.new("response_format unsupported") if parameters.key?(:response_format)
+
+      { "choices" => [ { "message" => { "content" => RECEIPT_JSON } } ], "usage" => { "total_tokens" => 10 } }
+    end
+
+    result = build_extractor(client, content_type: "application/pdf", json_mode: "auto").extract
+
+    assert_equal 2, calls.size
+    assert_equal({ type: "json_object" }, calls.first[:response_format])
+    assert_not calls.last.key?(:response_format)
+    assert_equal 2, result.line_items.size
+  end
+
+  test "a rejected response_format is not retried outside auto mode" do
+    Pdf::TextExtractor.expects(:pages).returns([ "HAMMER 30.00" ])
+    calls = 0
+    client = Object.new
+    client.define_singleton_method(:chat) do |parameters:|
+      calls += 1
+      raise Faraday::BadRequestError.new("response_format unsupported")
+    end
+
+    assert_raises(Faraday::BadRequestError) do
+      build_extractor(client, content_type: "application/pdf", json_mode: "json_object").extract
+    end
+    assert_equal 1, calls
+  end
+
   test "accepts JSON wrapped in a markdown fence" do
     client = capturing_client("```json\n#{RECEIPT_JSON}\n```")
 
@@ -173,13 +216,13 @@ class Provider::Openai::ReceiptExtractorTest < ActiveSupport::TestCase
       pdf.b
     end
 
-    def build_extractor(client, content_type:, file_content: "%PDF-1.4 fake".b, vision: true)
+    def build_extractor(client, content_type:, file_content: "%PDF-1.4 fake".b, vision: true, json_mode: "json_object")
       Provider::Openai::ReceiptExtractor.new(
         client,
         model: "gpt-4.1",
         file_content: file_content,
         content_type: content_type,
-        json_mode: "json_object",
+        json_mode: json_mode,
         vision: vision
       )
     end

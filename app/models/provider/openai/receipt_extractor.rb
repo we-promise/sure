@@ -8,6 +8,9 @@ class Provider::Openai::ReceiptExtractor
   include Provider::Openai::Concerns::PdfPageRenderer
 
   IMAGE_CONTENT_TYPES = %w[image/jpeg image/jpg image/png image/gif image/webp].freeze
+  # image/jpg is not a registered media type; vision endpoints that validate
+  # the data URL expect image/jpeg.
+  IMAGE_MEDIA_TYPE_ALIASES = { "image/jpg" => "image/jpeg" }.freeze
   MAX_TEXT_CHARS = 30_000
   MAX_PDF_PAGES = 5
 
@@ -105,11 +108,21 @@ class Provider::Openai::ReceiptExtractor
       apply_json_mode(params, mode: json_mode)
       apply_response_limit(params)
 
-      request(params, operation: "extract_receipt")
+      begin
+        request(params, operation: "extract_receipt")
+      rescue Faraday::BadRequestError => e
+        # Auto mode tolerates OpenAI-compatible endpoints that reject
+        # response_format: retry once without it. The prompt already asks for
+        # JSON only, and parse_json_flexibly handles fenced or wrapped output.
+        raise unless json_mode == JSON_MODE_AUTO && params.key?(:response_format)
+
+        Rails.logger.warn("Auto mode: JSON response format rejected by provider (#{e.class}), retrying receipt extraction without response_format")
+        request(params.except(:response_format), operation: "extract_receipt")
+      end
     end
 
     def extract_from_image
-      vision_request([ "data:#{content_type};base64,#{Base64.strict_encode64(file_content)}" ])
+      vision_request([ "data:#{IMAGE_MEDIA_TYPE_ALIASES.fetch(content_type, content_type)};base64,#{Base64.strict_encode64(file_content)}" ])
     end
 
     def extract_from_pdf_images
