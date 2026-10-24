@@ -52,6 +52,15 @@ en:
         other: "%{count} positions"
       return: Total return
       weight: Weight
+    lots:
+      title: Lots
+      opening: Held before the first trade
+      unknown: Unknown
+      total_cost_label: Total paid for this lot
+      total_cost_hint: What the whole parcel cost when you acquired it. Deleting
+        its trade removes the lot and the cost you set.
+      save: Save
+      unlock: Use the trade's price
     missing_price_tooltip:
       description: This investment has missing values and we could not calculate
         its returns or value.

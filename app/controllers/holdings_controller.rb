@@ -12,6 +12,7 @@ class HoldingsController < ApplicationController
 
   def show
     @last_price_updated = @holding.security.prices.maximum(:updated_at)
+    @lots = @holding.open_lots.to_a
   end
 
   def update
