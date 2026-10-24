@@ -50,6 +50,29 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(180), buy.unrealized_gain_loss.value.amount
   end
 
+  # A quote comes in the listing's currency, which need not be the trade's.
+  # `Money#-` takes the right operand's bare amount, so a 200 USD quote against
+  # a 180 EUR purchase price read as a 20 "EUR" gain per share. 10 bought at
+  # 180 EUR, quoted at 200 USD with USD->EUR 0.9: worth 1,800 EUR, no gain.
+  test "a purchase's unrealized gain converts a quote in another currency to the trade's" do
+    buy = cross_currency_purchase
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    gain = buy.unrealized_gain_loss
+
+    assert_equal BigDecimal(0), gain.value.amount
+    assert_equal "EUR", gain.value.currency.iso_code
+    assert_equal BigDecimal(1800), gain.current.amount
+  end
+
+  # No rate means the gain is unknown, not the figure a rate of 1.0 would give.
+  test "a purchase quoted in another currency with no rate has no unrealized gain" do
+    buy = cross_currency_purchase
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    assert_nil buy.unrealized_gain_loss
+  end
+
   # No rate for that date means the gain is unknown, not zero and not the
   # figure a rate of 1.0 would produce.
   test "a cross-currency disposal with no rate for its date has no figure" do
@@ -327,5 +350,15 @@ class TradeTest < ActiveSupport::TestCase
       security = Security.create!(ticker: "EUX#{SecureRandom.hex(3)}", name: "Euro Listed")
 
       [ account, security ]
+    end
+
+    def cross_currency_purchase
+      account = families(:empty).accounts.create!(
+        name: "Depot", balance: 10_000, currency: "EUR", accountable: Investment.new
+      )
+      security = Security.create!(ticker: "USX#{SecureRandom.hex(3)}", name: "Dollar Listed")
+      buy = create_trade(security, account: account, qty: 10, date: Date.current, price: 180, currency: "EUR").entryable
+      buy.security.stubs(:current_price).returns(Money.new(200, "USD"))
+      buy
     end
 end
