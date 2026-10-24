@@ -1,13 +1,16 @@
 <%# locals: (entry:, balance_trend: nil, view_ctx: "global", in_split_group: false) %>
 
 <% transaction = entry.entryable %>
+
+<%# Cached per row; see TransactionsHelper#transaction_row_cache_key for what
+    busts it and bump its version when editing this template or its partials. %>
+<% cache transaction_row_cache_key(entry, view_ctx: view_ctx, in_split_group: in_split_group), expires_in: 3.days, skip_digest: true do %>
 <% transaction_security_logo_url = transaction.activity_security&.display_logo_url %>
 <% open_path = if transaction.transfer?
      transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry)
    else
      in_split_group ? entry_path(entry, grouped: true) : entry_path(entry)
    end %>
-
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
     <div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= "pl-8 lg:pl-12" if in_split_group %>"
@@ -226,4 +229,5 @@
       </div>
     </div>
   <% end %>
+<% end %>
 <% end %>
