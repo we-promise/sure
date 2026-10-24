@@ -1,14 +1,14 @@
 ---
 es:
   snaptrade_items:
-    default_name: "Conexión de SnapTrade"
+    default_name: Conexión de SnapTrade
     destroy:
       success: Conexión de SnapTrade programada para su eliminación.
     connect:
       decryption_failed: No se han podido leer las credenciales de SnapTrade. Por favor, elimina y vuelve a crear esta conexión.
       connection_failed: 'Error al conectar con SnapTrade: %{message}'
     callback:
-      success: ¡Bróker conectado! Por favor, selecciona qué cuentas quieres vincular.
+      success: "¡Bróker conectado! Por favor, selecciona qué cuentas quieres vincular."
       no_item: No se ha encontrado la configuración de SnapTrade.
     complete_account_setup:
       success:
@@ -95,8 +95,8 @@ es:
       linked_to: 'Vinculada a:'
     snaptrade_item:
       accounts_need_setup:
-        one: '%{count} cuenta necesita configuración'
-        other: '%{count} cuentas necesitan configuración'
+        one: "%{count} cuenta necesita configuración"
+        other: "%{count} cuentas necesitan configuración"
       deletion_in_progress: Eliminación en curso...
       syncing: Sincronizando...
       requires_update: La conexión necesita una actualización
@@ -117,6 +117,25 @@ es:
         other: Hay %{count} cuentas más disponibles para configurar
       no_accounts_title: No se han detectado cuentas
       no_accounts_description: Conecta un bróker para importar tus cuentas de inversión.
+    complete_oauth_device_flow:
+      success: Autorización de SnapTrade completada.
+      access_denied: Se ha rechazado la autorización de SnapTrade.
+      authorization_pending: SnapTrade aún no ha recibido tu confirmación. Aprueba el código en SnapTrade e inténtalo de nuevo.
+      device_code_required: No hay ninguna autorización de dispositivo de SnapTrade en curso para esta conexión. Vuelve a iniciarla para obtener un código nuevo.
+      expired: Este código de dispositivo ha caducado. Inicia de nuevo la autorización.
+      failed: No se pudo completar la autorización de dispositivo de SnapTrade. Inténtalo de nuevo.
+    oauth_device_flow:
+      cancel_button: Cancelar
+      code_label: Código de dispositivo
+      complete_button: Ya he autorizado SnapTrade
+      instructions: Abre SnapTrade, confirma este código de dispositivo y vuelve aquí para terminar.
+      missing_client_id: OAuth de SnapTrade no está configurado. Añade SNAPTRADE_OAUTH_CLIENT_ID a .env.local, reinicia la aplicación e inténtalo de nuevo.
+      open_snaptrade: Abrir SnapTrade
+      start_button: Iniciar autorización
+      subtitle: Autoriza a Sure para SnapTrade mediante un código de dispositivo.
+      title: Conectar SnapTrade
+    start_oauth_device_flow:
+      failed: No se pudo iniciar la autorización de dispositivo de SnapTrade. Inténtalo de nuevo.
   providers:
     snaptrade:
       name: SnapTrade
@@ -132,11 +151,11 @@ es:
       oauth_connect_button: Conectar con SnapTrade
       oauth_reauthorize_button: Volver a autorizar
       status_connected:
-        one: '%{count} cuenta de SnapTrade'
-        other: '%{count} cuentas de SnapTrade'
+        one: "%{count} cuenta de SnapTrade"
+        other: "%{count} cuentas de SnapTrade"
       needs_setup:
-        one: '%{count} necesita configuración'
-        other: '%{count} necesitan configuración'
+        one: "%{count} necesita configuración"
+        other: "%{count} necesitan configuración"
       status_ready: Listo para conectar brókers
       setup_accounts_button: Configurar cuentas
       connect_button: Conectar bróker
@@ -145,38 +164,40 @@ es:
       loading_connections: Cargando conexiones...
       connections_error: 'Error al cargar las conexiones: %{message}'
       accounts_count:
-        one: '%{count} cuenta'
-        other: '%{count} cuentas'
+        one: "%{count} cuenta"
+        other: "%{count} cuentas"
       orphaned_connection: Conexión huérfana (no sincronizada localmente)
       needs_linking: necesita vincularse
       no_connections: No se han encontrado conexiones de bróker.
       delete_connection: Eliminar
-      delete_connection_title: ¿Eliminar conexión del bróker?
+      delete_connection_title: "¿Eliminar conexión del bróker?"
       delete_connection_body: Esto eliminará permanentemente la conexión de %{brokerage} de SnapTrade. Todas las cuentas de este bróker se desvincularán. Deberás volver a conectar para sincronizar estas cuentas de nuevo.
       delete_connection_confirm: Eliminar conexión
       manage_at_snaptrade: Gestionar conexiones en SnapTrade
+      oauth_device_button: Usar un código de dispositivo
+      oauth_status_ready_device: Autoriza a Sure mediante un código de dispositivo para leer los datos de tu cuenta de SnapTrade.
   snaptrade_item:
     sync_status:
       no_accounts: No se han encontrado cuentas
       synced:
-        one: '%{count} cuenta sincronizada'
-        other: '%{count} cuentas sincronizadas'
+        one: "%{count} cuenta sincronizada"
+        other: "%{count} cuentas sincronizadas"
       synced_with_setup: 'Sincronizadas: %{linked}; necesitan configuración: %{unlinked}'
     institution_summary:
       none: No hay instituciones conectadas
       count:
-        one: '%{count} institución'
-        other: '%{count} instituciones'
+        one: "%{count} institución"
+        other: "%{count} instituciones"
     brokerage_summary:
       none: No hay brókers conectados
       count:
-        one: '%{count} bróker'
-        other: '%{count} brókers'
+        one: "%{count} bróker"
+        other: "%{count} brókers"
     syncer:
       discovering: Detectando cuentas...
       importing: Importando cuentas de SnapTrade...
       processing: Procesando posiciones y actividades...
       calculating: Calculando saldos...
       checking_config: Comprobando la configuración de la cuenta...
-      needs_setup: '%{count} cuentas necesitan configuración...'
+      needs_setup: "%{count} cuentas necesitan configuración..."
       activities_fetching_async: Las actividades se están obteniendo en segundo plano. Esto puede tardar hasta un minuto para conexiones de bróker recientes.

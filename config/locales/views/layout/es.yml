@@ -13,9 +13,15 @@ es:
         reports: Informes
         goals: Objetivos
         transactions: Transacciones
+        plan: Plan
+        bills: Facturas
+      insights: Insights
+      release_highlight:
+        done: Entendido
+        title: Novedades
     auth:
-      existing_account: ¿Ya tienes una cuenta?
-      no_account: ¿Nuevo en %{product_name}?
+      existing_account: "¿Ya tienes una cuenta?"
+      no_account: "¿Nuevo en %{product_name}?"
       sign_in: Iniciar sesión
       sign_up: Crear cuenta
     shared:
@@ -23,9 +29,13 @@ es:
         privacy_policy: Política de privacidad
         terms_of_service: Términos de servicio
       confirm_dialog:
-        are_you_sure: ¿Estás seguro?
+        are_you_sure: "¿Estás seguro?"
         cannot_be_undone: Esta acción no se puede deshacer.
         confirm: Confirmar
+      notification_tray:
+        download_complete: Descarga completada
+        download_failed: Error al descargar. Inténtalo de nuevo.
+        download_location: El archivo está en tu carpeta Descargas.
     trial:
       open_demo: Demo pública
       data_deleted_in_days: Los datos se eliminarán en %{days} días

@@ -142,12 +142,12 @@ de:
       submit_income: Einkommen speichern
       trial_ends_on_label: Testzeitraum endet
     frequency:
-      annual: Jährlich am %{day}. %{month}
+      annual: Jährlich am %{day} %{month}
       biweekly: Alle 2 Wochen am %{weekday}
       custom: Eigener Zeitplan
       every_n_months: Alle %{interval} Monate am %{day}
       every_n_weeks: Alle %{interval} Wochen am %{weekday}
-      every_n_years: Alle %{interval} Jahre am %{day}. %{month}
+      every_n_years: Alle %{interval} Jahre am %{day} %{month}
       last_day: letzter Tag
       monthly: Monatlich am %{day}
       quarterly: Vierteljährlich am %{day}

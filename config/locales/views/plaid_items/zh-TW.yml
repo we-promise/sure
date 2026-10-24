@@ -16,7 +16,7 @@ zh-TW:
       connection_lost: 連線中斷
       connection_lost_description: 此連線已失效。您需要刪除此連線並重新新增，才能繼續同步資料。
       delete: 刪除
-      deletion_in_progress: （正在刪除...）
+      deletion_in_progress: "（正在刪除...）"
       error: 同步資料時發生錯誤
       no_accounts_description: 我們無法從此金融機構載入任何帳戶。
       no_accounts_title: 找不到帳戶
@@ -25,6 +25,8 @@ zh-TW:
       status_never: 需要同步資料
       syncing: 同步中...
       update: 更新
+      add_accounts: 新增帳戶
+      provider_name: Plaid
     select_existing_account:
       no_available_accounts: 沒有可連結的 Plaid 帳戶，請先連結一個新的 Plaid 帳戶。
       title: 將 %{account_name} 連結至 Plaid

@@ -1,0 +1,134 @@
+---
+es:
+  monobank_item:
+    institution_summary:
+      count:
+        one: 1 entidad
+        other: "%{count} entidades"
+      none: No hay entidades conectadas
+      one: 1 entidad
+    sync:
+      status:
+        calculating: Calculando saldos...
+        checking_setup: Comprobando configuración de la cuenta...
+        needs_setup:
+          other: "%{count} cuentas necesitan configuración..."
+          one: 1 cuenta necesita configuración...
+        processing: Procesando transacciones...
+        importing: Importando cuentas de Monobank...
+    sync_status:
+      all_synced:
+        one: 1 cuenta sincronizada
+        other: "%{count} cuentas sincronizadas"
+      no_accounts: No se encontraron cuentas
+      partial: "%{linked} sincronizadas, %{unlinked} pendientes de configurar"
+    errors:
+      account_processing_failed: No se pudo sincronizar la cuenta de Monobank
+      account_sync_schedule_failed: No se pudo programar la sincronización de la cuenta de Monobank
+      sync_failed: No se pudo sincronizar la conexión de Monobank
+      transactions_failed: No se pudo obtener el extracto de Monobank
+  monobank_items:
+    link_accounts:
+      link_failed: No se vinculó ninguna cuenta.
+      no_accounts_selected: Selecciona al menos una cuenta.
+      no_credentials_configured: Configura Monobank primero en los ajustes de proveedores.
+      success:
+        one: Se ha vinculado 1 cuenta de Monobank.
+        other: Se han vinculado %{count} cuentas de Monobank.
+      unsupported_account_type: Monobank no admite ese tipo de cuenta.
+    link_existing_account:
+      account_already_linked: Esta cuenta ya está vinculada a un proveedor.
+      monobank_account_already_linked: Esta cuenta de Monobank ya está vinculada.
+      no_account_selected: Selecciona una cuenta de Monobank para vincularla.
+      success: Cuenta de Monobank vinculada a %{account_name}.
+    monobank_item:
+      delete: Eliminar
+      deletion_in_progress: Eliminación en curso
+      error: Error
+      no_accounts_title: Aún no se han importado cuentas
+      setup_action: Configurar cuentas
+      setup_description: "%{linked} de %{total} cuentas vinculadas."
+      setup_needed: Configuración de cuentas necesaria
+      status_never: Nunca sincronizado
+      status_with_summary: Sincronizado hace %{timestamp} · %{summary}
+      syncing: Sincronizando
+      no_accounts_description: Obtén las cuentas de Monobank y elige cuáles vincular.
+    provider_panel:
+      connection_name_label: Nombre de la conexión
+      disconnect: Desconectar
+      disconnect_confirm: "¿Seguro que quieres desconectar %{name}?"
+      keep_access_token_placeholder: Déjalo en blanco para conservar el token existente
+      setup_accounts: Configurar cuentas
+      sync: Sincronizar
+      syncing: Sincronizando...
+      update_connection: Actualizar conexión
+      access_token_label: Token de API personal
+      access_token_placeholder: Pega tu token personal de Monobank
+      add_connection: Añadir conexión de Monobank
+      connection_name_placeholder: Mi Monobank
+      rate_limit_notice: Monobank permite una solicitud por minuto, por lo que cada sincronización obtiene unas pocas cuentas y el historial más antiguo llega a lo largo de varias sincronizaciones.
+      default_connection_name: Conexión de Monobank
+    select_accounts:
+      cancel: Cancelar
+      link_accounts: Vincular cuentas
+      description: Elige las tarjetas o botes de Monobank que quieras añadir.
+      no_accounts_found: No se encontraron cuentas de Monobank sin vincular.
+      title: Vincular cuentas de Monobank
+      no_credentials_configured: Configura Monobank primero en los ajustes de proveedores.
+    select_existing_account:
+      account_already_linked: Esta cuenta ya está vinculada a un proveedor.
+      cancel: Cancelar
+      link_account: Vincular cuenta
+      description: Elige una cuenta de Monobank sin vincular para conectarla a esta cuenta.
+      title: Vincular la cuenta de Monobank a %{account_name}
+      no_accounts_found: No se encontraron cuentas de Monobank sin vincular.
+      no_credentials_configured: Configura Monobank primero en los ajustes de proveedores.
+    setup_accounts:
+      account_type_label: Tipo de cuenta
+      account_types:
+        depository: Efectivo
+        skip: Omitir
+      cancel: Cancelar
+      choose_account_type: Elige un tipo de cuenta
+      choose_account_type_description: Omite las cuentas que no quieras seguir.
+      create_accounts: Crear cuentas
+      no_accounts_to_setup: No hay cuentas que configurar
+      all_accounts_linked: Todas las cuentas de Monobank ya están vinculadas.
+      api_error: No se pudieron actualizar las cuentas desde Monobank, por lo que se muestran las cuentas guardadas en la última sincronización.
+      no_credentials: Configura primero las credenciales de Monobank.
+      subtitle: Elige cómo debe aparecer en Sure cada tarjeta o bote de Monobank.
+      title: Vincular cuentas de Monobank
+    destroy:
+      success: Se ha programado la eliminación de la conexión de Monobank.
+      unlink_failed: No se pudo desconectar la conexión de Monobank
+    complete_account_setup:
+      all_skipped: No se ha creado ninguna cuenta de Monobank.
+      creation_failed: No se pudieron crear las cuentas de Monobank.
+      no_accounts: No se ha seleccionado ninguna cuenta de Monobank.
+      success:
+        one: Se ha creado 1 cuenta de Monobank.
+        other: Se han creado %{count} cuentas de Monobank.
+    create:
+      success: Conexión de Monobank guardada.
+    update:
+      success: Conexión de Monobank actualizada.
+  providers:
+    monobank:
+      name: Monobank
+      description: Conecta tarjetas y botes del banco ucraniano Monobank con un token de API personal
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Conexión de Monobank
+  monobank_account:
+    card_types:
+      black: Tarjeta Black
+      eaid: Tarjeta eAid
+      fop: Cuenta de empresa
+      iron: Tarjeta Iron
+      jar: Bote
+      platinum: Tarjeta Platinum
+      unknown: Tarjeta Monobank
+      white: Tarjeta White
+      yellow: Tarjeta Yellow
+    jar_fallback: Bote de Monobank

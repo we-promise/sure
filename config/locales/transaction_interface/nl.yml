@@ -1,0 +1,6 @@
+---
+nl:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Eenmalige inkomsten (uitgesloten van gemiddelden)"
+      one_time_expense_tooltip: "Eenmalige uitgave (uitgesloten van gemiddelden)"

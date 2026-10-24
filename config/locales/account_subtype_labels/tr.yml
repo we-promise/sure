@@ -1,0 +1,40 @@
+---
+tr:
+  investments:
+    subtypes:
+      non-registered:
+        long: Kayıtlı olmayan yatırım hesabı
+      fhsa:
+        long: İlk konut için tasarruf hesabı (FHSA)
+      rdsp:
+        long: Engelliler için kayıtlı tasarruf planı (RDSP)
+      dpsp:
+        long: Ertelenmiş kâr paylaşım planı (DPSP)
+      prpp:
+        long: Ortak kayıtlı emeklilik planı (PRPP)
+      lif:
+        long: Ömür boyu gelir fonu (LIF)
+      lrif:
+        long: Bloke emeklilik gelir fonu (LRIF)
+      prif:
+        long: Özel düzenlemeye tabi kayıtlı emeklilik gelir fonu (PRIF)
+      rlif:
+        long: Kısıtlı ömür boyu gelir fonu (RLIF)
+      assurance_vie:
+        long: Fransız hayat sigortası (Assurance Vie)
+  loans:
+    subtypes:
+      home_equity:
+        long: Konut öz sermayesine dayalı kredi
+      line_of_credit:
+        long: Kredi limiti
+      business:
+        long: İşletme kredisi
+      mortgage:
+        long: İpotek
+      student:
+        long: Öğrenci Kredisi
+      auto:
+        long: Taşıt Kredisi
+      other:
+        long: Diğer Kredi

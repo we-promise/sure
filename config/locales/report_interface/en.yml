@@ -1,0 +1,6 @@
+---
+en:
+  reports:
+    index:
+      sections_aria_label: "Report sections"
+      section_reorder_aria: "%{title} section. Press Enter or Space to pick up for reordering, then use the arrow keys to move."

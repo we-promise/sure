@@ -1,5 +1,6 @@
 <div class="relative"
      data-controller="tag-select"
+     data-tag-select-create-error-value="<%= helpers.t("tags.create.failed") %>"
      data-tag-select-create-url-value="<%= helpers.tags_path(format: :json) %>"
      data-tag-select-field-name-value="<%= field_name %>"
      data-tag-select-default-color-value="<%= Tag::COLORS.first %>"

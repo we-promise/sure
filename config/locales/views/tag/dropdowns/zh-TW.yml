@@ -1,0 +1,9 @@
+---
+zh-TW:
+  tag:
+    dropdowns:
+      show:
+        empty: 尚無標籤
+        manage: 管理標籤
+        no_tags: 找不到標籤
+        search_placeholder: 搜尋

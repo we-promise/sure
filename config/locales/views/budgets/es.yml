@@ -20,10 +20,10 @@ es:
     budgeted_summary:
       expected_income: Ingresos previstos
       budgeted: Presupuestado
-      earned: '%{amount} ganado'
-      over: '%{amount} de más'
-      left: '%{amount} restante'
-      spent: '%{amount} gastado'
+      earned: "%{amount} ganado"
+      over: "%{amount} de más"
+      left: "%{amount} restante"
+      spent: "%{amount} gastado"
     edit:
       setup_title: Configura tu presupuesto
       setup_description: Introduce a continuación tus ingresos mensuales y el gasto previsto para configurar tu presupuesto.
@@ -33,8 +33,8 @@ es:
       autosuggest_description: Se basará en el historial de transacciones. La IA puede cometer errores, verifica antes de continuar.
       continue: Continuar
     name:
-      custom_range: '%{start} - %{end_date}'
-      month_year: '%{month}'
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
     show:
       categories:
         amount: Importe
@@ -63,20 +63,32 @@ es:
       success: Presupuesto copiado de %{source_name}
       no_source: No se ha encontrado ningún presupuesto anterior del que copiar
       already_initialized: Este presupuesto ya se ha configurado
+    switcher:
+      household: Grupo Familiar
+      aria_label: Cambiar de presupuesto
+    available_cash:
+      available: Disponible en efectivo
+      earmarked: Ya reservado para objetivos
+      free: Realmente libre
+      goals_link: Ver objetivos
+      heading: Efectivo disponible
+      subtitle: Se muestra junto al plan anterior, pero no forma parte de él.
   budget_categories:
     allocation_progress:
       budget_exceeded_html: Presupuesto superado en <span class="text-red-500 privacy-sensitive">%{amount}</span>
       left_to_allocate: por asignar
-      over_set: '> 100 % asignado'
-      percent_set: '%{percent} asignado'
+      over_set: "> 100 % asignado"
+      percent_set: "%{percent} asignado"
     budget_category_form:
-      monthly_average: '%{amount}/mes de media'
+      monthly_average: "%{amount}/mes de media"
       shared_placeholder: Compartido
       shared_title: Deja vacío para compartir el presupuesto de la categoría padre
+      rollover_label: Acumular saldo
+      rollover_title: Conservar el dinero no gastado de esta categoría de un mes al siguiente
     confirm_button:
       confirm: Confirmar
     no_categories:
-      oops: ¡Vaya!
+      oops: "¡Vaya!"
       no_categories_message: Todavía no has creado ni asignado ninguna categoría de gasto a tus transacciones.
       use_defaults: Usar las predeterminadas (recomendado)
       new_category: Nueva categoría
@@ -96,3 +108,28 @@ es:
       recent_transactions: Transacciones recientes
       view_all_transactions: Ver todas las transacciones de la categoría
       no_transactions: No se han encontrado transacciones en este periodo presupuestario.
+      rolled_over: Trasladado del mes anterior
+    move:
+      amount_label: Importe
+      cancel: Cancelar
+      from_label: Origen
+      to_label: Destino
+      available: "%{amount} disponibles"
+      button_title: Mover dinero de esta categoría
+      dialog_title: Mover dinero
+      errors:
+        different_budgets: Ambas categorías deben pertenecer al mismo presupuesto.
+        insufficient_funds: Ese importe supera lo asignado a esta categoría.
+        non_positive_amount: Introduce un importe mayor que cero.
+        parent_child: No se puede mover dinero entre una categoría y su propia subcategoría; ajusta la subcategoría directamente.
+        same_category: Elige otra categoría a la que mover el dinero.
+        uncategorized: Sin categoría no es un sobre real, por lo que no se puede mover dinero hacia o desde él.
+      no_destination: Actualmente este es el único sobre entre el que se puede mover dinero; una categoría no puede enviar dinero a su categoría superior ni a sus subcategorías.
+      submit: Mover
+      success: Dinero movido.
+    bills_reserved: "%{amount} reservados para facturas"
+    bills_reserved_unconvertible:
+      one: 1 factura no tiene reserva porque no hay un tipo de cambio disponible
+      other: "%{count} facturas no tienen reserva porque no hay un tipo de cambio disponible"
+    budget_category:
+      rolled_over: "+%{amount} trasladados del mes anterior"

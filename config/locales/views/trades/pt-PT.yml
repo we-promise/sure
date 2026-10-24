@@ -20,7 +20,8 @@ pt-PT:
       type_dividend: Dividendo
       type_interest: Juros
       dividend_requires_security: O título é obrigatório para dividendos
-      trade_requires_security: É necessário um título (ticker) para negociações de compra e venda
+      trade_requires_security: É necessário um título (ticker) para negociações de
+        compra e venda
     header:
       buy: Compra
       sell: Venda
@@ -55,7 +56,9 @@ pt-PT:
       delete_subtitle: Esta ação é irreversível
       delete_title: Eliminar Negociação
       details: Detalhes
-      provider_disabled_warning: "Atualizações de preço suspensas — o serviço %{provider} está desativado. Reative-o nas Definições ou remapeie a posição para outro serviço."
+      provider_disabled_warning: >-
+        Atualizações de preço suspensas — o serviço %{provider} está desativado. Reative-o
+        nas Definições ou remapeie a posição para outro serviço.
       exclude_subtitle: Esta negociação não será incluída nos relatórios e cálculos
       exclude_title: Excluir das análises
       no_category: Sem categoria
@@ -65,3 +68,9 @@ pt-PT:
       sell: Venda
       settings: Definições
       type_label: Tipo
+    api_errors:
+      activity_label_must_match_type: investment_activity_label deve ser %{label}
+        quando type for %{type}
+      invalid_activity_label: Rótulo de atividade de investimento inválido
+      invalid_type: Tipo inválido
+      supported_types: 'type deve ser um de: %{types}'

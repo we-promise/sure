@@ -1,0 +1,134 @@
+---
+zh-TW:
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Monobank 連線
+  monobank_account:
+    card_types:
+      black: Black 卡
+      eaid: eAid 卡
+      fop: 企業帳戶
+      iron: Iron 卡
+      jar: 存錢筒
+      platinum: Platinum 卡
+      unknown: Monobank 卡
+      white: White 卡
+      yellow: Yellow 卡
+    jar_fallback: Monobank 存錢筒
+  monobank_item:
+    errors:
+      account_processing_failed: 無法同步 Monobank 帳戶
+      account_sync_schedule_failed: 無法排定 Monobank 帳戶同步
+      sync_failed: 無法同步 Monobank 連線
+      transactions_failed: 無法取得 Monobank 對帳單
+    institution_summary:
+      count:
+        one: 1 個機構
+        other: "%{count} 個機構"
+      none: 沒有已連線的機構
+      one: 1 個機構
+    sync:
+      status:
+        calculating: 正在計算餘額...
+        checking_setup: 正在檢查帳戶設定...
+        importing: 正在從 Monobank 匯入帳戶…
+        needs_setup:
+          one: 1 個帳戶需要設定…
+          other: "%{count} 個帳戶需要設定..."
+        processing: 正在處理交易...
+    sync_status:
+      all_synced:
+        one: 已同步 1 個帳戶
+        other: 已同步 %{count} 個帳戶
+      no_accounts: 找不到帳戶
+      partial: 已同步 %{linked} 個，%{unlinked} 個需要設定
+  monobank_items:
+    complete_account_setup:
+      all_skipped: 未建立任何 Monobank 帳戶。
+      creation_failed: 無法建立 Monobank 帳戶。
+      no_accounts: 未選擇任何 Monobank 帳戶。
+      success:
+        one: 已建立 1 個 Monobank 帳戶。
+        other: 已建立 %{count} 個 Monobank 帳戶。
+    create:
+      success: Monobank 連線已儲存。
+    destroy:
+      success: 已排定刪除 Monobank 連線。
+      unlink_failed: 無法中斷 Monobank 連線
+    link_accounts:
+      link_failed: 沒有連結任何帳戶。
+      no_accounts_selected: 請選擇至少一個帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Monobank。
+      success:
+        one: 已連結 1 個 Monobank 帳戶。
+        other: 已連結 %{count} 個 Monobank 帳戶。
+      unsupported_account_type: Monobank 不支援此帳戶類型。
+    link_existing_account:
+      account_already_linked: 此帳戶已連結到供應商。
+      monobank_account_already_linked: 此 Monobank 帳戶已連結。
+      no_account_selected: 請選擇要連結的 Monobank 帳戶。
+      success: 已將 Monobank 帳戶連結至 %{account_name}。
+    monobank_item:
+      delete: 刪除
+      deletion_in_progress: 正在刪除
+      error: 錯誤
+      no_accounts_description: 取得 Monobank 帳戶，並選擇要連結的項目。
+      no_accounts_title: 尚未匯入帳戶
+      setup_action: 設定帳戶
+      setup_description: 已連結 %{linked}/%{total} 個帳戶。
+      setup_needed: 需要設定帳戶
+      status_never: 從未同步
+      status_with_summary: "%{timestamp}前已同步 · %{summary}"
+      syncing: 正在同步
+    provider_panel:
+      access_token_label: 個人 API 權杖
+      access_token_placeholder: 貼上您的 Monobank 個人權杖
+      add_connection: 新增 Monobank 連線
+      connection_name_label: 連線名稱
+      connection_name_placeholder: 我的 Monobank
+      default_connection_name: Monobank 連線
+      disconnect: 中斷連線
+      disconnect_confirm: 確定要中斷 %{name} 嗎？
+      keep_access_token_placeholder: 留白則沿用現有的 Token
+      rate_limit_notice: Monobank 每分鐘允許一次請求，因此每次同步只會取得幾個帳戶，較早的歷史紀錄會分多次同步取得。
+      setup_accounts: 設定帳戶
+      sync: 同步
+      syncing: 同步中...
+      update_connection: 更新連線
+    select_accounts:
+      cancel: 取消
+      description: 選擇要新增的 Monobank 卡片或存錢筒。
+      link_accounts: 連結帳戶
+      no_accounts_found: 找不到尚未連結的 Monobank 帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Monobank。
+      title: 連結 Monobank 帳戶
+    select_existing_account:
+      account_already_linked: 此帳戶已連結到供應商。
+      cancel: 取消
+      description: 選擇尚未連結的 Monobank 帳戶，與此帳戶建立連結。
+      link_account: 連結帳戶
+      no_accounts_found: 找不到尚未連結的 Monobank 帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Monobank。
+      title: 將 Monobank 帳戶連結至 %{account_name}
+    setup_accounts:
+      account_type_label: 帳戶類型
+      account_types:
+        depository: 現金
+        skip: 跳過
+      all_accounts_linked: 所有 Monobank 帳戶均已連結。
+      api_error: 無法從 Monobank 更新帳戶，因此顯示上次同步儲存的帳戶。
+      cancel: 取消
+      choose_account_type: 選擇帳戶類型
+      choose_account_type_description: 跳過不想追蹤的帳戶。
+      create_accounts: 建立帳戶
+      no_accounts_to_setup: 沒有需要設定的帳戶
+      no_credentials: 請先設定 Monobank 憑證。
+      subtitle: 選擇各張 Monobank 卡片或存錢筒在 Sure 中的呈現方式。
+      title: 連結 Monobank 帳戶
+    update:
+      success: Monobank 連線已更新。
+  providers:
+    monobank:
+      description: 使用個人 API 權杖連結烏克蘭 Monobank 卡片與存錢筒
+      name: Monobank

@@ -1,0 +1,32 @@
+---
+nb:
+  properties:
+    update:
+      success: Eiendomsopplysningene er oppdatert.
+      error: Kunne ikke oppdatere eiendomsopplysningene.
+    update_balances:
+      success: Saldoen er oppdatert.
+    update_address:
+      success: Adressen er oppdatert.
+      error: Kunne ikke oppdatere adressen. Kontroller de obligatoriske feltene.
+  enable_banking_items:
+    account_types:
+      card: Kortkonto
+      overdraft: Konto med overtrekksmulighet
+      transacting: Transaksjonskonto
+      salary: Lønnskonto
+      non_resident_external: Ekstern konto for personer bosatt i utlandet
+      tax: Skattekonto
+      cash_trading: Konto for kontanthandel
+      overnight_deposit: Døgninnskudd
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Automatisk kategorisering
+        auto_detect_merchants: Automatisk gjenkjenning av brukersteder
+        enhance_provider_merchants: Beriking av leverandørens brukerstedsdata
+        suggest_bill_setup: Forslag til fakturaoppsett
+        process_pdf: PDF-behandling
+        process_pdf_vision: Visuell PDF-behandling
+        extract_bank_statement: Uttrekk fra kontoutskrifter
+        chat: Samtale

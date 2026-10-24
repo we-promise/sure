@@ -1,0 +1,40 @@
+---
+vi:
+  investments:
+    subtypes:
+      non-registered:
+        long: Tài khoản đầu tư không đăng ký
+      fhsa:
+        long: Tài khoản tiết kiệm mua căn nhà đầu tiên (FHSA)
+      rdsp:
+        long: Chương trình tiết kiệm đăng ký dành cho người khuyết tật (RDSP)
+      dpsp:
+        long: Chương trình chia sẻ lợi nhuận hoãn lại (DPSP)
+      prpp:
+        long: Chương trình hưu trí đăng ký tập thể (PRPP)
+      lif:
+        long: Quỹ thu nhập trọn đời (LIF)
+      lrif:
+        long: Quỹ thu nhập hưu trí bị khóa (LRIF)
+      prif:
+        long: Quỹ thu nhập hưu trí đăng ký theo quy định riêng (PRIF)
+      rlif:
+        long: Quỹ thu nhập trọn đời có hạn chế (RLIF)
+      assurance_vie:
+        long: Bảo hiểm nhân thọ Pháp (Assurance Vie)
+  loans:
+    subtypes:
+      home_equity:
+        long: Khoản vay dựa trên vốn chủ sở hữu trong nhà
+      line_of_credit:
+        long: Hạn mức tín dụng
+      business:
+        long: Khoản vay kinh doanh
+      mortgage:
+        long: Thế chấp
+      student:
+        long: Vay sinh viên
+      auto:
+        long: Vay mua xe
+      other:
+        long: Vay khác

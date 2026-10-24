@@ -42,24 +42,25 @@ class EnableBankingAccount < ApplicationRecord
     return nil unless account_type.present?
 
     type_mappings = {
-      "CACC" => "Current/Checking Account",
-      "SVGS" => "Savings Account",
-      "CARD" => "Card Account",
-      "CRCD" => "Credit Card",
-      "LOAN" => "Loan Account",
-      "MORT" => "Mortgage Account",
-      "ODFT" => "Overdraft Account",
-      "CASH" => "Cash Account",
-      "TRAN" => "Transacting Account",
-      "SALA" => "Salary Account",
-      "MOMA" => "Money Market Account",
-      "NREX" => "Non-Resident External Account",
-      "TAXE" => "Tax Account",
-      "TRAS" => "Cash Trading Account",
-      "ONDP" => "Overnight Deposit"
+      "CACC" => "depositories.subtypes.checking.long",
+      "SVGS" => "depositories.subtypes.savings.long",
+      "CARD" => "enable_banking_items.account_types.card",
+      "CRCD" => "accounts.types.credit_card",
+      "LOAN" => "accounts.types.loan",
+      "MORT" => "loans.subtypes.mortgage.long",
+      "ODFT" => "enable_banking_items.account_types.overdraft",
+      "CASH" => "depositories.subtypes.cash.long",
+      "TRAN" => "enable_banking_items.account_types.transacting",
+      "SALA" => "enable_banking_items.account_types.salary",
+      "MOMA" => "depositories.subtypes.money_market.long",
+      "NREX" => "enable_banking_items.account_types.non_resident_external",
+      "TAXE" => "enable_banking_items.account_types.tax",
+      "TRAS" => "enable_banking_items.account_types.cash_trading",
+      "ONDP" => "enable_banking_items.account_types.overnight_deposit"
     }
 
-    type_mappings[account_type.upcase] || account_type.titleize
+    translation_key = type_mappings[account_type.upcase]
+    translation_key ? I18n.t(translation_key) : account_type
   end
 
   CASH_ACCOUNT_TYPE_MAP = {

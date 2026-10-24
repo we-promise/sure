@@ -13,11 +13,19 @@ pt-PT:
       expiration_date: Data de validade
       minimum_payment: Pagamento mínimo
       minimum_payment_placeholder: '100'
-      treat_balance_as_available_credit_description: Ative se o seu banco comunicar
-        o saldo deste cartão como crédito disponível restante, em vez do montante em
-        dívida. A dívida é então calculada a partir do limite de crédito comunicado
-        pelo seu banco, ou do campo Crédito disponível se o seu banco não fornecer
-        um.
+      treat_balance_as_available_credit_description: >-
+        Ative se o seu banco comunicar o saldo deste cartão como crédito disponível
+        restante, em vez do montante em dívida. A dívida é então calculada a partir
+        do limite de crédito comunicado pelo seu banco, ou do campo Crédito disponível
+        se o seu banco não fornecer um.
       treat_balance_as_available_credit_label: O saldo é crédito disponível
+      simplefin_balance_sign_auto: Automático
+      simplefin_balance_sign_credit: Crédito (o banco deve-lhe dinheiro)
+      simplefin_balance_sign_debt: Dívida (deve dinheiro ao banco)
+      simplefin_balance_sign_description: >-
+        Utilize uma definição manual apenas quando o SimpleFIN indicar um sinal ambíguo.
+        O modo automático continua a utilizar o histórico de transações e o saldo
+        do fornecedor.
+      simplefin_balance_sign_label: Significado do saldo do SimpleFIN
     new:
       title: Introduza os detalhes do cartão de crédito

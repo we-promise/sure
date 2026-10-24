@@ -1,0 +1,13 @@
+---
+hu:
+  upload_interface:
+    too_many_files: Túl sok fájl (legfeljebb %{max})
+    file_too_large: A fájl túl nagy (legfeljebb %{max} MB)
+    uploading: "%{filename} feltöltése…"
+    qif_invalid: Érvényes QIF-fájlnak kell lennie
+    amount_type_strategies:
+      signed_amount: Előjeles összeg
+      custom_column: Egyéni oszlop
+    upload_files:
+      one: "%{count} fájl feltöltése"
+      other: "%{count} fájl feltöltése"

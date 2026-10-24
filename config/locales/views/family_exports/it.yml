@@ -4,8 +4,10 @@ it:
     access_denied: Accesso negato
     create:
       success: Esportazione avviata. Potrai scaricarla a breve.
-    delete_confirmation: Sei sicuro di voler eliminare questa esportazione? Questa azione non può essere annullata.
-    delete_failed_confirmation: Sei sicuro di voler eliminare questa esportazione fallita?
+    delete_confirmation: Sei sicuro di voler eliminare questa esportazione? Questa
+      azione non può essere annullata.
+    delete_failed_confirmation: Sei sicuro di voler eliminare questa esportazione
+      fallita?
     destroy:
       success: Esportazione eliminata con successo
     export_not_ready: Esportazione non pronta per il download
@@ -13,13 +15,16 @@ it:
     new:
       dialog_title: Esporta i tuoi dati
       dialog_subtitle: Scarica tutti i tuoi dati finanziari
-      whats_included: "Cosa è incluso:"
+      whats_included: 'Cosa è incluso:'
       accounts_and_balances: Tutti i conti e i saldi
       transaction_history: Cronologia transazioni
       investment_trades: Movimenti di investimento
       categories_tags_rules: Categorie, etichette e regole
       note_label: Nota
-      note_description: Questa esportazione include tutti i tuoi dati, ma solo alcuni possono essere reimportati tramite la funzione di importazione CSV. Supportiamo l'importazione di conti, transazioni (con categoria ed etichette) e movimenti. Altri dati del conto non possono essere importati e sono solo per i tuoi archivi.
+      note_description: Questa esportazione include tutti i tuoi dati, ma solo alcuni
+        possono essere reimportati tramite la funzione di importazione CSV. Supportiamo
+        l'importazione di conti, transazioni (con categoria ed etichette) e movimenti.
+        Altri dati del conto non possono essere importati e sono solo per i tuoi archivi.
       cancel: Annulla
       export_data: Esporta dati
     index:
@@ -40,4 +45,14 @@ it:
         actions:
           delete: Elimina
           download: Scarica
+          mark_failed: Segna come fallita
+          confirm_mark_failed: Questa esportazione è inattiva da un po' e l'attività
+            in background è stata probabilmente interrotta. Contrassegnarla come fallita?
+            Puoi crearne subito una nuova.
       empty: Nessuna esportazione ancora.
+    cancel:
+      cancelled: Esportazione contrassegnata come fallita. Puoi crearne subito una
+        nuova.
+      not_cancellable: 'Questa esportazione non può essere contrassegnata come fallita
+        ora: l''attività potrebbe essere ancora in esecuzione. Riprova dopo un''ora
+        di inattività.'

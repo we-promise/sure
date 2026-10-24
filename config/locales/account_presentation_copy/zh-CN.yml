@@ -1,0 +1,32 @@
+---
+zh-CN:
+  properties:
+    update:
+      success: 房产详情已更新。
+      error: 无法更新房产详情。
+    update_balances:
+      success: 余额已更新。
+    update_address:
+      success: 地址已更新。
+      error: 无法更新地址，请检查必填字段。
+  enable_banking_items:
+    account_types:
+      card: 银行卡账户
+      overdraft: 透支账户
+      transacting: 交易账户
+      salary: 工资账户
+      non_resident_external: 非居民外部账户
+      tax: 税务账户
+      cash_trading: 现金交易账户
+      overnight_deposit: 隔夜存款
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: 自动分类
+        auto_detect_merchants: 自动识别商户
+        enhance_provider_merchants: 完善服务商商户信息
+        suggest_bill_setup: 账单设置建议
+        process_pdf: 处理 PDF
+        process_pdf_vision: 通过图像处理 PDF
+        extract_bank_statement: 提取银行对账单
+        chat: 对话

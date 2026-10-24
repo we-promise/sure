@@ -20,7 +20,7 @@ zh-TW:
         tag_name_col: 標籤名稱
         txn_count:
           one: 1 筆交易
-          other: '%{count} 筆交易'
+          other: "%{count} 筆交易"
         split_warning_title: 偵測到拆分交易
         split_warning_description: 這個 QIF 檔案含有拆分交易。目前尚未支援拆分，因此每筆拆分交易都會以完整金額、不帶分類的方式匯入成單一交易，個別的拆分明細不會保留。
         split_badge: 拆分
@@ -113,6 +113,20 @@ zh-TW:
         instructions: 按「繼續」就會讀取您的 CSV，接著進入校正步驟。
       mint_import:
         date_format_label: 日期格式
+        account_optional: 帳戶（選填）
+        amount: 金額
+        apply_configuration: 套用設定
+        category_optional: 分類（選填）
+        currency: 幣別
+        date: 日期
+        format: 格式
+        incomes_negative: 收入為負數
+        incomes_positive: 收入為正數
+        intro: 已為您預先設定 Mint 匯入，請繼續下一步。
+        leave_empty: 留白
+        name_optional: 名稱（選填）
+        select_format: 選擇格式
+        tags_optional: 標籤（選填）
       actual_import:
         preconfigured_notice: 我們已經幫您預先設定好 Actual Budget 匯入，請直接前往下一步。
         leave_empty: 留白
@@ -145,6 +159,11 @@ zh-TW:
       show:
         description: 選擇 CSV 中對應各個欄位的項目。
         title: 設定您的匯入項目
+        apply_template: 套用範本
+        manually_configure: 手動設定
+        sample_caption: 您上傳 CSV 的範例資料
+        template_description: 我們找到此帳戶先前匯入的設定。要套用至這次匯入嗎？
+        template_found: 找到範本設定
     confirms:
       sure_import:
         title: 確認您的匯入
@@ -156,7 +175,7 @@ zh-TW:
       mappings:
         create_account: 建立帳戶
         csv_mapping_label: CSV 中的%{mapping}
-        sure_mapping_label: '%{product_name} 中的%{mapping}'
+        sure_mapping_label: "%{product_name} 中的%{mapping}"
         no_accounts: 您尚未建立任何帳戶。請建立一個帳戶以便分配 CSV 中（未指定）的資料列，或返回「校正」步驟並提供可使用的帳戶名稱。
         rows_label: 資料列
         unassigned_account: 需要為未分配的資料列建立新帳戶嗎？
@@ -174,6 +193,7 @@ zh-TW:
     uploads:
       handle_qif_upload:
         qif_uploaded: QIF 檔案上傳成功。
+        qif_account_required: 請為 QIF 匯入選擇帳戶
       update:
         qif_uploaded: QIF 檔案上傳成功。
       show:
@@ -258,6 +278,7 @@ zh-TW:
     update:
       account_saved: 帳戶已儲存。
       invalid_account: 找不到帳戶。
+      account_locked: 此匯入已確認完成，無法變更帳戶。若要匯入至其他帳戶，請先還原匯入。
     publish:
       started: 您的匯入已在背景開始執行。
       max_rows_exceeded: 您的匯入超過了 %{max} 列的上限。
@@ -326,6 +347,7 @@ zh-TW:
       confirm: 確認
       select: 選擇
       progress: 第 %{step} 步，共 %{total} 步
+      label: 步驟 %{step}
     empty:
       message: 找不到匯入紀錄。
     index:
@@ -416,6 +438,28 @@ zh-TW:
       empty_summary: 在此檔案中找不到可匯入的紀錄。檔案可能是空的，或各行不符合預期的匯出格式（每行應為包含「type」與「data」鍵的 JSON 物件，且類型須為此匯入支援的類型）。
       publish_import: 發布匯入
       back_to_imports: 返回匯入清單
+      missing_merchant_warning_description:
+        one: 此檔案有 1 個商家參照指向未包含的商家。這可能是因為匯出檔建立時，Sure 尚未將供應商指定的商家納入匯出。您仍可確認匯入，受影響的紀錄只是不會附帶商家，之後可自行標記。
+        other: 此檔案有 %{count} 個商家參照指向未包含的商家。這可能是因為匯出檔建立時，Sure 尚未將供應商指定的商家納入匯出。您仍可確認匯入，受影響的紀錄只是不會附帶商家，之後可自行標記。
+      missing_merchant_warning_title: 此匯出檔缺少部分商家
+      provider_merchant_diff_description:
+        one: 此檔案有 1 個商家已存在，但詳細資料不同。將保留現有商家，不套用檔案中的值。
+        other: 此檔案有 %{count} 個商家已存在，但詳細資料不同。將保留現有商家，不套用檔案中的值。
+      provider_merchant_diff_fields:
+        name: 名稱
+        provider_merchant_id: 供應商 ID
+        website_url: 網站
+      provider_merchant_diff_none: 無
+      provider_merchant_diff_row: "%{field}：保留 %{kept}，檔案中為 %{imported}"
+      provider_merchant_diff_summary: 查看差異
+      provider_merchant_diff_title: 部分商家已存在，但詳細資料不同
+      reused_taxonomy_notice_description:
+        one: 此檔案有 1 個分類、標籤或商家已存在於您的帳戶中，例如初始設定的預設分類。我們會沿用並以此檔案的資料更新，不會建立重複項目。
+        other: 此檔案有 %{count} 個分類、標籤或商家已存在於您的帳戶中，例如初始設定的預設分類。我們會沿用並以此檔案的資料更新，不會建立重複項目。
+      reused_taxonomy_notice_title: 部分分類、標籤或商家已存在
+      skipped_recurring_description:
+        one: 1 筆定期交易沒有名稱且缺少商家，因此會略過。自動偵測的定期交易會在匯入後重新建立。
+        other: "%{count} 筆定期交易沒有名稱且缺少商家，因此會略過。自動偵測的定期交易會在匯入後重新建立。"
     errors:
       custom_column_requires_inflow: 自訂欄位匯入必須選擇一個流入欄位
       interrupted: 背景工作在完成前被中斷。已匯入的資料已復原，您可以安心重試。
@@ -446,14 +490,14 @@ zh-TW:
       back_to_imports: 返回匯入清單
       unknown_state_title: 未知狀態
       unknown_state_description: 這筆匯入處於非預期的狀態，請返回匯入頁面。
-      processing_failed_with_message: '%{message}'
+      processing_failed_with_message: "%{message}"
       processing_failed_generic: 處理失敗：%{error}
       ready_for_review_title: 可以開始檢視了
-      ready_for_review_description: 我們從您的對帳單中擷取了 %{count} 筆交易。請審核後發布，即可加入您的帳戶。
+      ready_for_review_description: 對帳單中有 %{count} 筆交易尚未存在於此帳戶。請審閱後確認匯入，將它們加入帳戶。
       transactions_extracted: 擷取到的交易
       transactions_extracted_count:
-        one: '%{count} 筆交易'
-        other: '%{count} 筆交易'
+        one: "%{count} 筆交易"
+        other: "%{count} 筆交易"
       select_account: 匯入到帳戶
       select_account_placeholder: 選擇一個帳戶...
       select_account_hint: 選擇要把這些交易匯入到哪一個帳戶。
@@ -466,3 +510,27 @@ zh-TW:
       review_transactions: 檢視交易
       select_account_to_continue: 請先在上方選擇一個帳戶才能繼續。
       unknown_document_type: 未知
+      already_recorded_note:
+        one: 其中 %{count} 筆已存在於此帳戶，並已與對帳單配對。
+        other: 其中 %{count} 筆已存在於此帳戶，並已與對帳單配對。
+      complete_fully_reconciled:
+        one: 此對帳單的每筆交易都已存在於帳戶中。已配對並標記核對完成 %{count} 筆，無需匯入任何交易。
+        other: 此對帳單的每筆交易都已存在於帳戶中。已將全部 %{count} 筆配對並標記核對完成，無需匯入任何交易。
+      errors:
+        provider_no_pdf_support: AI 供應商不支援 PDF 處理
+        provider_not_configured: 尚未設定 AI 供應商
+      view_summary: 查看匯入摘要
+    summary:
+      already_recorded: 已記錄
+      already_recorded_hint: 已與此帳戶既有交易配對，並標記核對完成。
+      awaiting_review: 等待匯入
+      close: 關閉
+      extracted: 對帳單中找到的交易
+      fully_reconciled:
+        one: 無需匯入，對帳單中唯一的一筆交易已存在。
+        other: 無需匯入，全部 %{count} 筆交易都已存在。
+      imported: 已匯入為新交易
+      statement_evidence_html: 已與 %{statement} 核對。
+      subtitle: 此對帳單的各筆交易在 %{account} 中的處理結果。
+      subtitle_no_account: 此對帳單各筆交易的處理結果。
+      title: 匯入摘要

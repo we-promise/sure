@@ -68,7 +68,7 @@ class Import::UploadsController < ApplicationController
 
     def handle_qif_upload
       unless QifParser.valid?(csv_str)
-        flash.now[:alert] = "Must be a valid QIF file"
+        flash.now[:alert] = t("upload_interface.qif_invalid")
         render :show, status: :unprocessable_entity and return
       end
 

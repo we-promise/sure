@@ -1,0 +1,32 @@
+---
+fr:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: Nom de la transaction
+        transaction_amount: Montant de la transaction
+        transaction_type: Type de transaction
+        transaction_merchant: Commerçant de la transaction
+        transaction_category: Catégorie de la transaction
+        transaction_tag: Étiquette de la transaction
+        transaction_details: Détails de la transaction
+        transaction_notes: Notes de la transaction
+        transaction_account: Compte de la transaction
+    action_executors:
+      labels:
+        set_transaction_category: Définir la catégorie de la transaction
+        set_transaction_tags: Définir les étiquettes de la transaction
+        set_transaction_merchant: Définir le commerçant de la transaction
+        set_transaction_name: Définir le nom de la transaction
+        set_investment_activity_label: Définir le type d’activité d’investissement
+        exclude_transaction: Exclure du budget et des rapports
+        set_as_transfer_or_payment: Définir comme virement ou paiement
+        send_email_notification: Envoyer une notification par e-mail
+        auto_categorize: Catégoriser automatiquement les transactions avec l’IA
+        auto_detect_merchants: Détecter automatiquement les commerçants
+        auto_detect_merchants_with_ai: Détecter automatiquement les commerçants avec
+          l’IA ($$)
+      auto_categorize:
+        cost_unavailable: "%{label} (coût indisponible)"
+        cost_estimate: "%{label} (environ %{cost} USD pour 20 transactions)"
+        provider_missing: "%{label} (aucun fournisseur de catégorisation configuré)"

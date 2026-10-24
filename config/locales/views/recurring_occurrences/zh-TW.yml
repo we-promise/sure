@@ -1,0 +1,53 @@
+---
+zh-TW:
+  recurring_occurrences:
+    history_status:
+      missed: 未繳
+      paid: 已付款
+      scheduled: 未結清
+      skipped: 已略過
+    mark_paid:
+      success: 帳單已標記為已付款
+    override_amount:
+      success: 預計金額已更新
+    reopen:
+      success: 帳單已重新開啟
+    show:
+      add_heading: 新增另一筆付款
+      cant_find: 找不到交易？
+      due_on: "%{date} 到期"
+      find_heading: 尋找一筆付款
+      link_payment: 連結付款
+      manual_amount_label: 金額
+      manual_date_label: 日期
+      manual_explainer: 若您確定付款已發生，但此處沒有相符交易，可以手動記錄付款。
+      manual_payment: 手動付款
+      mark_paid: 標記為已付款
+      mark_paid_hint: 不建立交易，直接結清剩餘金額。
+      missed: 已標記為未繳
+      no_candidates: 沒有日期相近的交易可供連結。
+      no_ranked_candidates: 目前沒有看起來屬於此帳單的付款。
+      no_search_results: 沒有符合 %{query} 的項目。
+      not_this_one: 不是這筆
+      other_matches: 其他可能的配對
+      overpaid: 超過預計金額
+      paid_headline: 已付 %{amount}
+      paid_of: 已付 %{paid}，預計 %{expected}
+      payments: 付款
+      record_payment: 記錄付款
+      remaining: 剩餘 %{amount}
+      reopen: 重新開啟
+      review_heading: 審閱付款
+      search_all: 搜尋所有交易
+      search_placeholder: 搜尋交易
+      settled: 已全額付清
+      skip: 跳過
+      skipped: 已略過
+      snooze_week: 延後一週
+      unlink: 取消連結
+      view_bill: 查看完整帳單
+    skip:
+      success: 帳單已略過
+    snooze:
+      invalid_date: 無法辨識該日期
+      success: 延後至 %{date}

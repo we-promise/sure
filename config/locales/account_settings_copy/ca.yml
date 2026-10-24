@@ -1,0 +1,17 @@
+---
+ca:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: La configuració es pot establir mitjançant variables d’entorn o sobreescriure a continuació.
+        optional: Opcional
+      update:
+        failed: No s’ha pogut actualitzar la configuració dels proveïdors. Torna-ho a provar.
+    llm_usages:
+      show:
+        http_status: 'Estat HTTP: %{status}'
+  shared:
+    async_loading:
+      timeout: Temps d’espera esgotat
+      failed_with_status: Error en carregar (%{status})
+      network_error: Error de xarxa

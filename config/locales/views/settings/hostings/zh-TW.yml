@@ -30,6 +30,7 @@ zh-TW:
         confirm_clear_cache:
           title: 清除資料快取？
           body: 您確定要清除資料快取嗎？這將移除所有匯率、證券價格、帳戶餘額及其他暫存資料。此操作無法復原。
+        demo_refresh: 示範資料重設
       provider_selection:
         exchange_rate_title: 匯率資料供應商
         exchange_rate_description: 選擇單一供應商來取得貨幣匯率。
@@ -57,9 +58,11 @@ zh-TW:
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
+          mansa: Mansa
         title: 供應商選擇
         description: 選擇用於取得匯率和證券價格的服務。Yahoo Finance 是免費的且不需要 API 金鑰。Twelve Data 需要免費的 API 金鑰，但可能提供更廣的資料涵蓋範圍。
         securities_provider_label: 證券（股價）資料供應商
+        requires_api_key_mansa: 需要 API 金鑰，免費方案每天 100 次呼叫，僅支援 NGX（奈及利亞證券交易所）
       assistant_settings:
         title: AI 助手
         description: 選擇聊天助手的回應方式。內建模式會直接使用您設定的 LLM 供應商；外部模式則交給遠端 AI 代理處理，該代理可以透過 MCP 回頭呼叫 Sure 的財務工具。
@@ -68,7 +71,8 @@ zh-TW:
         type_external: 外部（遠端代理）
         external_status: 外部助手端點
         external_configured: 已設定
-        external_not_configured: 尚未設定。請在下方輸入網址與 Token，或設定 EXTERNAL_ASSISTANT_URL 與 EXTERNAL_ASSISTANT_TOKEN 環境變數。
+        external_not_configured: 尚未設定。請在下方輸入網址與 Token，或設定 EXTERNAL_ASSISTANT_URL 與 EXTERNAL_ASSISTANT_TOKEN
+          環境變數。
         env_notice: 助手類型已透過 ASSISTANT_TYPE 環境變數鎖定為「%{type}」。
         env_configured_external: 已透過環境變數成功設定。
         url_label: 端點網址
@@ -86,12 +90,28 @@ zh-TW:
         confirm_disconnect:
           title: 要中斷外部助手嗎？
           body: 這會移除已儲存的網址、Token 與 Agent ID，並切換回內建助手。日後輸入新的憑證就能重新連線。
+        agent_discovery_configure_first: 請儲存有效的端點網址與 API 權杖，以載入可用代理。
+        agent_discovery_error: 無法載入代理：%{error}
+        external_agent_invalid: 請選擇設定端點回傳的代理。
+        external_agent_required: 儲存前請選擇外部代理。
+        external_agent_reselect: 端點已變更，先前選擇的代理在新端點不可用。請從新端點選擇代理。
+        external_info:
+          items:
+          - 輸入完整的 OpenAI 相容端點網址，結尾須為 /v1/chat/completions。
+          - 儲存端點與權杖後，Sure 會透過 /v1/models 尋找可用代理。
+          - 各代理背後的模型由外部服務選擇；Sure 只選擇代理路由。
+          - 驗證、端點或代理錯誤由外部服務回傳。請求失敗時，請查看該服務的日誌。
+          title: 外部 AI 設定
       brand_fetch_settings:
         description: 輸入 Brandfetch 提供的 Client ID
         env_configured_message: 您已透過 BRAND_FETCH_CLIENT_ID 環境變數成功設定 Brandfetch Client ID。
-        show_details: （顯示詳細資訊）
-        setup_step_1_html: 前往 <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> 註冊一個免費的 Brandfetch 開發者帳號。
-        setup_step_2_html: 前往 <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> 頁面。
+        show_details: "（顯示詳細資訊）"
+        setup_step_1_html: >-
+          前往 <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a>
+          註冊一個免費的 Brandfetch 開發者帳號。
+        setup_step_2_html: >-
+          前往 <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener
+          noreferrer" class="underline">Logo API</a> 頁面。
         setup_step_3: 點選「Your Client ID」區塊下方的眼睛圖示以顯示您的 Client ID，然後貼到下方。
         label: Client ID
         placeholder: 在此輸入您的 Client ID
@@ -134,7 +154,8 @@ zh-TW:
         json_mode_strict: 嚴格 (Strict) - 最適合思考模型
         json_mode_none: 無 (None) - 最適合標準模型
         json_mode_json_object: JSON 物件 (JSON Object)
-        json_mode_help: 「嚴格模式」最適合思考模型（如 qwen-thinking, deepseek-reasoner）。「無模式」最適合標準模型（如 llama, mistral, gpt-oss）。
+        json_mode_help: "「嚴格模式」最適合思考模型（如 qwen-thinking, deepseek-reasoner）。「無模式」最適合標準模型（如 llama, mistral,
+          gpt-oss）。"
         budget_heading: Token 預算
         budget_description: 適用於相容 OpenAI 的呼叫（聊天、自動分類、商家辨識與 PDF 處理）。預設值是為了小上下文的本機模型而保守設定的。若使用上下文視窗較大的雲端模型，請把數值調高。
         context_window_label: 上下文視窗（選填）
@@ -144,6 +165,17 @@ zh-TW:
         max_items_per_call_label: 每批項目數上限（選填）
         max_items_per_call_help: 自動分類／商家辨識每批次的上限。預設值：25。過大的批次會自動切分以符合上下文視窗。
         title: OpenAI
+        ai_response_timeout_help: >-
+          預設為 90。此值只用於整輪聊天的逾時監控，建議以加總方式估算：（1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS）× 請求逾時，再加上工具執行與佇列等待時間。AI_RESPONSE_TIMEOUT
+          會覆寫此欄位。
+        ai_response_timeout_label: 回覆逾時秒數（選填）
+        model_function_calling_help: AI 助理透過函式呼叫讀取您的資料，請選擇供應商文件明確支援工具／函式呼叫的模型。不支援的模型會使聊天失敗，且通常只回傳不明確的供應商錯誤。
+        model_function_calling_link: 檢查已設定的模型
+        openai_request_timeout_help: 預設為 60。適用於每個 OpenAI 相容 HTTP 請求，包括自動分類、商家辨識、聊天、PDF 處理與向量儲存呼叫。OPENAI_REQUEST_TIMEOUT
+          會覆寫此欄位。
+        openai_request_timeout_label: 請求逾時秒數（選填）
+        timeout_description: 控制 OpenAI 相容模型呼叫在 Sure 放棄前可執行多久。若在較慢的硬體上執行本機模型，可提高這些值。
+        timeout_heading: 逾時設定
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance 提供免費的股票價格、匯率和金融資料存取，且不需要 API 金鑰。
@@ -161,14 +193,18 @@ zh-TW:
         troubleshooting: 請檢查您的網路連線與防火牆設定。Yahoo Finance 可能暫時無法使用。
       rentcast_settings:
         title: RentCast
-        description: 輸入您的 RentCast API 金鑰，即可在新增房產時查詢美國房產的細節與估價。免費方案每月限 50 次 API 請求，由房產查詢與每日估價更新共用。付費方案可用 RENTCAST_MAX_REQUESTS_PER_MONTH 環境變數提高上限。
+        description: >-
+          輸入您的 RentCast API 金鑰，即可在新增房產時查詢美國房產的細節與估價。免費方案每月限 50 次 API 請求，由房產查詢與每日估價更新共用。付費方案可用 RENTCAST_MAX_REQUESTS_PER_MONTH
+          環境變數提高上限。
         env_configured_message: 已透過 RENTCAST_API_KEY 環境變數成功設定。
         label: API 金鑰
         placeholder: 在此輸入您的 RentCast API 金鑰
         usage: 本月已使用 %{used} / %{limit} 次請求
       realie_settings:
         title: Realie
-        description: 輸入您的 Realie API 金鑰，即可在新增房產時查詢美國房產的細節與估價。免費方案每月限 25 次 API 請求，由房產查詢與每日估價更新共用。付費方案可用 REALIE_MAX_REQUESTS_PER_MONTH 環境變數提高上限。
+        description: >-
+          輸入您的 Realie API 金鑰，即可在新增房產時查詢美國房產的細節與估價。免費方案每月限 25 次 API 請求，由房產查詢與每日估價更新共用。付費方案可用 REALIE_MAX_REQUESTS_PER_MONTH
+          環境變數提高上限。
         env_configured_message: 已透過 REALIE_API_KEY 環境變數成功設定。
         label: API 金鑰
         placeholder: 在此輸入您的 Realie API 金鑰
@@ -179,9 +215,13 @@ zh-TW:
         env_configured_message: 已透過 TIINGO_API_KEY 環境變數成功設定。
         label: API 權杖 (API Token)
         placeholder: 在此輸入您的 Tiingo API Token
-        show_details: （顯示詳細資訊）
-        step_1_html: 前往 <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> 註冊一個免費帳號。
-        step_2_html: 前往 <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a> 頁面。
+        show_details: "（顯示詳細資訊）"
+        step_1_html: >-
+          前往 <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a>
+          註冊一個免費帳號。
+        step_2_html: >-
+          前往 <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer"
+          class="underline">API Token</a> 頁面。
         step_3: 複製您的 API Token 並貼到下方。
       tinkoff_invest_settings:
         title: T-Invest (T-Bank)
@@ -189,19 +229,24 @@ zh-TW:
         env_configured_message: 已透過 TINKOFF_INVEST_API_KEY 環境變數成功設定。
         label: API 權杖 (API Token)
         placeholder: 在此輸入您的 T-Invest API Token
-        show_details: （顯示詳細資訊）
+        show_details: "（顯示詳細資訊）"
         step_1: 開啟 T-Bank 投資，接著進入 Settings，然後是 API tokens（需要已開立的 T-Bank 券商帳戶）。
         step_2: 建立一個唯讀存取的 Token。
         step_3: 複製 Token 並貼到下方。
+        moex_only_notice: 未啟用上方的報價功能。只要設定權杖，T-Invest 就會用來取得所有證券的品牌標誌，與上方核取方塊無關。
       eodhd_settings:
         title: EODHD
         description: 輸入 EODHD 提供的 API Token。支援 LSE、XETRA 與其他國際交易所的歐洲 ETF。
         env_configured_message: 已透過 EODHD_API_KEY 環境變數成功設定。
         label: API 權杖 (API Token)
         placeholder: 在此輸入您的 EODHD API Token
-        show_details: （顯示詳細資訊）
-        step_1_html: 前往 <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> 註冊一個免費帳號。
-        step_2_html: 前往您的 <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> 找到您的 API Token。
+        show_details: "（顯示詳細資訊）"
+        step_1_html: >-
+          前往 <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a>
+          註冊一個免費帳號。
+        step_2_html: >-
+          前往您的 <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a>
+          找到您的 API Token。
         step_3: 複製您的 API Token 並貼到下方。
         rate_limit_warning: EODHD 免費方案每天限用 20 次 API 呼叫，最適合當作補充用的供應商，處理其他供應商查不到的歐洲 ETF。
       alpha_vantage_settings:
@@ -210,8 +255,10 @@ zh-TW:
         env_configured_message: 已透過 ALPHA_VANTAGE_API_KEY 環境變數成功設定。
         label: API 金鑰
         placeholder: 在此輸入您的 Alpha Vantage API 金鑰
-        show_details: （顯示詳細資訊）
-        step_1_html: 前往 <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> 索取您的免費 API 金鑰。
+        show_details: "（顯示詳細資訊）"
+        step_1_html: >-
+          前往 <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer"
+          class="underline">alphavantage.co</a> 索取您的免費 API 金鑰。
         step_2: 複製 API 金鑰並貼到下方。
         rate_limit_warning: Alpha Vantage 免費方案每天限用 25 次 API 呼叫，最適合當作補充用的供應商，處理其他供應商查不到的歐洲 ETF。
         no_health_check_note: 由於這個供應商的用量限制很嚴格，因此不做連線健康檢查。
@@ -221,11 +268,15 @@ zh-TW:
         env_configured_message: 已透過 TWELVE_DATA_API_KEY 環境變數成功設定。
         label: API 金鑰
         placeholder: 在此輸入您的 API 金鑰
-        show_details: （顯示詳細資訊）
-        step_1_html: 前往 <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> 註冊一個免費的 Twelve Data 開發者帳號。
-        step_2_html: 前往 <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a> 頁面。
+        show_details: "（顯示詳細資訊）"
+        step_1_html: >-
+          前往 <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a>
+          註冊一個免費的 Twelve Data 開發者帳號。
+        step_2_html: >-
+          前往 <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer"
+          class="underline">API Keys</a> 頁面。
         step_3: 顯示您的 Secret Key 並貼到下方。
-        plan: '%{plan} 方案'
+        plan: "%{plan} 方案"
         plan_upgrade_warning_title: 部分代碼需要付費方案
         plan_upgrade_warning_description: 您投資組合中的下列代碼，無法用目前的 Twelve Data 方案同步價格。
         requires_plan: 需要 %{plan} 方案
@@ -236,10 +287,14 @@ zh-TW:
         success: 設定已更新
         invalid_onboarding_state: 註冊狀態無效
         invalid_sync_time: 同步時間格式無效，請使用 HH:MM 格式（例如 02:30）。
-        invalid_llm_budget: '%{field} 必須是大於或等於 %{minimum} 的整數。'
+        invalid_llm_budget: "%{field} 必須是大於或等於 %{minimum} 的整數。"
         invalid_anthropic_base_url: Anthropic Base URL 必須是 http(s) 網址。
         anthropic_model_required_for_base_url: 設定自訂 Base URL 時，必須一併指定 Anthropic 模型。
         scheduler_sync_failed: 設定已儲存，但同步排程更新失敗。請再試一次，或查看伺服器紀錄檔。
+        invalid_categorization_rate: "%{field} 必須是 0 到 1 之間的數字。"
+        invalid_demo_family: 所選家庭必須擁有設定的示範電子郵件地址。
+        invalid_jev_endpoint: Jev 端點必須是 HTTPS 網址；僅 localhost 可使用純 HTTP。
+        select_demo_family: 請先選擇可捨棄的示範家庭。
       disconnect_external_assistant:
         external_assistant_disconnected: 外部助手已中斷連線
       clear_cache:
@@ -259,3 +314,62 @@ zh-TW:
         include_pending_label: 納入待處理交易
         include_pending_description: 啟用後，待處理（尚未清算）的交易會被匯入，並在入帳時自動核對。如果您的銀行提供的待處理資料不可靠，請關閉這個選項。
         env_configured_message: 這項設定已停用，因為系統設定了供應商的環境變數（SIMPLEFIN_INCLUDE_PENDING 或 PLAID_INCLUDE_PENDING）。移除它才能啟用這項設定。
+      categorization_provider_selector:
+        confidence_threshold_env_notice: 已由 CATEGORIZATION_CONFIDENCE_THRESHOLD 環境變數鎖定。
+        confidence_threshold_help: 低於此信心程度時不會套用分類，交易維持未分類，方便之後再次嘗試。任何資料都不會被捨棄。設為 0 即套用所有回答。
+        confidence_threshold_label: 最低信心程度（0–1）
+        data_retention_direct: 交易描述、金額與您的分類名稱會傳送至 TypeSafe 進行分類。在真實資料上啟用前，請先查閱其資料保留政策。
+        data_retention_heading: 資料分享
+        data_retention_proxied: 交易描述、金額與您的分類名稱會傳送至 %{host}，再轉送至 TypeSafe。在真實資料上啟用前，請先查閱兩家供應商的資料保留政策。
+        description: 選擇負責交易分類的供應商。此設定獨立於上方處理聊天與 PDF 的 AI 供應商。
+        env_notice: 已透過環境變數設定為 %{type}。
+        jev_configured: Jev API 金鑰已設定。
+        jev_not_configured: 已選擇 Jev，但尚未設定 API 金鑰。在下方新增金鑰前，分類仍會使用 AI 供應商。
+        preview_pill: 預覽
+        provider_help: AI 供應商會讀取一批交易並回傳分類名稱。Jev 會從您的分類清單選擇，並為每筆交易回傳經校準的信心程度。
+        provider_jev: Jev（TypeSafe）
+        provider_label: 分類供應商
+        provider_llm: AI 供應商（OpenAI 或 Anthropic）
+        shadow_rate_env_notice: 已由 CATEGORIZATION_SHADOW_RATE 環境變數鎖定。
+        shadow_rate_help: 同時執行您未選擇的供應商，記錄兩者意見不同之處，但不變更任何分類。每次被抽樣的分類作業都會產生兩倍 API 費用。設為 0 即關閉。
+        shadow_rate_label: 影子比對抽樣比例（0–1）
+        title: 交易分類
+      categorization_shadow_results:
+        shadow_disagreement_confidence: "（信心程度 %{confidence}）"
+        shadow_disagreement_row: "%{applied_provider} 選擇 %{applied_category}；%{shadow_provider} 選擇 %{shadow_category}。"
+        shadow_disagreements_heading: 最近的差異
+        shadow_no_category: 無分類
+        shadow_no_disagreements: 兩家供應商對所有抽樣交易的判斷一致。
+        shadow_results_empty: 尚無比對紀錄。將影子比對抽樣比例設為大於 0，並執行分類以蒐集結果。
+        shadow_results_heading: 影子比對
+        shadow_results_summary: "%{count} 筆抽樣交易的一致率為 %{agreement}%%。"
+      demo_refresh_settings:
+        description: 只會自動重設所選示範家庭，其全部資料與登入紀錄都將移除，其他家庭不受影響。需要運作中的背景程序與至少 2 GiB 記憶體。請先用示範產生器建立可捨棄的示範家庭，再於此選取。切勿選擇真實使用者的家庭。
+        enabled_label: 啟用每日示範家庭重設
+        family_label: 可捨棄的示範家庭
+        none: 未選擇示範家庭
+        save_family: 儲存示範家庭
+      jev_settings:
+        api_key_label: API 金鑰
+        api_key_placeholder: 輸入您的 TypeSafe API 金鑰
+        endpoint_label: 端點（選填）
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone（預設）
+        env_configured_message: 已透過環境變數成功設定。
+        model_help: >-
+          預設直接連線至 TypeSafe。若改由 OpenRouter 存取 Jev，請將端點設為 https://openrouter.ai/api/alpha/decisions，模型設為
+          ~typesafe/jev-latest。
+        model_label: 模型名稱（選填）
+        model_placeholder: jev-latest（預設）
+      mansa_settings:
+        description: 輸入 Mansa API 的金鑰。支援此處其他供應商未涵蓋的 NGX（奈及利亞證券交易所）。Mansa 也涵蓋其他非洲交易所，但此整合目前僅驗證 NGX。
+        env_configured_message: 已透過 MANSA_API_KEY 環境變數成功設定。
+        label: API 金鑰
+        placeholder: 在此輸入您的 Mansa API 金鑰
+        rate_limit_warning: Mansa 免費方案每天限 100 次 API 呼叫，只提供即時報價；歷史價格需要付費方案。此整合目前僅驗證 NGX（奈及利亞證券交易所），尚不支援
+          Mansa 涵蓋的其他非洲交易所。
+        show_details: "（顯示詳細資訊）"
+        step_1_html: >-
+          前往 <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a>
+          申請免費 API 金鑰，無需信用卡。
+        step_2: 複製 API 金鑰並貼至下方。
+        title: Mansa

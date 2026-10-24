@@ -2,7 +2,7 @@
 it:
   UI:
     period_picker:
-      aria_label: "Periodo: %{period}"
+      aria_label: 'Periodo: %{period}'
     account:
       activity_feed:
         toggle_selection_checkboxes: Attiva/disattiva selezione
@@ -33,9 +33,12 @@ it:
           adjustments: Riconciliazioni manuali o altre rettifiche
           adjustments_asset: Rettifiche manuali del valore o perizie
           buys: Acquisti di crypto durante il giorno
-          change_in_brokerage_cash: Variazione netta della liquidità da depositi, prelievi e operazioni
-          change_in_holdings_market: Variazione del valore delle posizioni dai movimenti del prezzo di mercato
-          change_in_holdings_trades: Impatto sulle posizioni dall'acquisto e dalla vendita di titoli
+          change_in_brokerage_cash: Variazione netta della liquidità da depositi,
+            prelievi e operazioni
+          change_in_holdings_market: Variazione del valore delle posizioni dai movimenti
+            del prezzo di mercato
+          change_in_holdings_trades: Impatto sulle posizioni dall'acquisto e dalla
+            vendita di titoli
           charges: Nuovi addebiti effettuati durante il giorno
           end_balance: Il saldo calcolato dopo tutte le transazioni
           end_balance_investment: Il saldo calcolato dopo tutte le attività
@@ -48,19 +51,24 @@ it:
           final_principal: Il saldo del capitale finale per il giorno
           final_value: Il valore dell'asset finale per il giorno
           market_changes: Variazioni di valore dai movimenti del prezzo di mercato
-          net_cash_flow: Variazione netta del saldo da tutte le transazioni durante il giorno
-          net_principal_change: Pagamenti del capitale e nuovi prestiti durante il giorno
-          net_value_change: Tutte le variazioni di valore inclusi miglioramenti e deprezzamento
+          net_cash_flow: Variazione netta del saldo da tutte le transazioni durante
+            il giorno
+          net_principal_change: Pagamenti del capitale e nuovi prestiti durante il
+            giorno
+          net_value_change: Tutte le variazioni di valore inclusi miglioramenti e
+            deprezzamento
           payments: Pagamenti effettuati alla carta durante il giorno
           sells: Vendite di crypto durante il giorno
           start_balance: Il saldo del conto all'inizio di questo giorno
           start_balance_credit: Il saldo dovuto all'inizio di questo giorno
-          start_balance_crypto: Il valore delle posizioni crypto all'inizio di questo giorno
-          start_balance_investment: Il valore totale del portafoglio all'inizio di questo giorno
+          start_balance_crypto: Il valore delle posizioni crypto all'inizio di questo
+            giorno
+          start_balance_investment: Il valore totale del portafoglio all'inizio di
+            questo giorno
           start_principal: Il saldo del capitale all'inizio di questo giorno
           start_value: Il valore dell'asset all'inizio di questo giorno
       chart:
-        no_data_available: "Nessun dato disponibile"
+        no_data_available: Nessun dato disponibile
         title:
           balance: Saldo
           cash_value: Valore in liquidità
@@ -70,14 +78,43 @@ it:
           holdings_value: Valore posizioni
           remaining_principal_balance: Saldo capitale residuo
           total_account_value: Valore totale del conto
+          loan_remaining_balance: Saldo residuo
+          total_gains: Guadagni totali
         views:
           cash: Liquidità
           holdings: Posizioni
           total_value: Valore totale
+          gains: Guadagni / ROI
         vs_available_history: vs. cronologia disponibile
+        loan:
+          today: Oggi
+          actual: Saldo registrato
+          aria_actual_history_starts: La cronologia del saldo registrato inizia il
+            %{date}.
+          aria_description: Grafico del saldo del prestito. Saldo registrato %{current_balance}.
+            Estinzione originariamente prevista %{scheduled_payoff_date}. Estinzione
+            stimata dal saldo attuale %{projected_payoff_date}.
+          interactive_chart: grafico interattivo
+          interest_saved: Interessi risparmiati
+          legend: Serie del grafico
+          months_saved:
+            one: "%{count} mese prima del previsto"
+            other: "%{count} mesi prima del previsto"
+          no_payoff: non con la rata attuale
+          not_converged: 'Con la rata attuale, il saldo non viene estinto entro la
+            scadenza originale: resterebbero da pagare %{balloon}.'
+          on_schedule: In linea con il piano
+          projected: Stima da oggi
+          projected_payoff: Estinzione stimata
+          projection_basis: Confronta il saldo registrato oggi con quello previsto
+            dal piano per lo stesso giorno. Un pagamento contabilizzato prima della
+            data prevista risulta in anticipo fino a quella data; uno contabilizzato
+            dopo risulta in ritardo.
+          scheduled: Piano originale
+          since_start: dall'inizio del prestito
       activity_date:
-        balance_tooltip: "Il saldo a fine giornata, dopo tutte le transazioni e rettifiche"
-        no_balance_data: "Nessun dato di saldo disponibile per questa data"
+        balance_tooltip: Il saldo a fine giornata, dopo tutte le transazioni e rettifiche
+        no_balance_data: Nessun dato di saldo disponibile per questa data
   ds:
     alert:
       variants:
@@ -96,23 +133,26 @@ it:
     tooltip:
       trigger_label: Ulteriori informazioni
     link:
-      opens_in_new_tab: (si apre in una nuova scheda)
+      opens_in_new_tab: "(si apre in una nuova scheda)"
+    icon_picker:
+      no_matching_icons: Nessuna icona corrispondente
+      search_placeholder: Cerca icone...
   provider_sync_summary:
     title: Riepilogo sincronizzazione
-    last_sync: "Ultima sincronizzazione: %{time_ago} fa"
+    last_sync: 'Ultima sincronizzazione: %{time_ago} fa'
     accounts:
       title: Conti
-      total: "Totale: %{count}"
-      linked: "Collegati: %{count}"
-      unlinked: "Scollegati: %{count}"
-      institutions: "Istituti: %{count}"
+      total: 'Totale: %{count}'
+      linked: 'Collegati: %{count}'
+      unlinked: 'Scollegati: %{count}'
+      institutions: 'Istituti: %{count}'
     transactions:
       title: Transazioni
-      seen: "Viste: %{count}"
-      imported: "Importate: %{count}"
-      updated: "Aggiornate: %{count}"
-      skipped: "Saltate: %{count}"
-      fetching: "Recupero dal broker..."
+      seen: 'Viste: %{count}'
+      imported: 'Importate: %{count}'
+      updated: 'Aggiornate: %{count}'
+      skipped: 'Saltate: %{count}'
+      fetching: Recupero dal broker...
       protected:
         one: "%{count} voce protetta (non sovrascritta)"
         other: "%{count} voci protette (non sovrascritte)"
@@ -124,19 +164,19 @@ it:
       protected: Protetta
     holdings:
       title: Posizioni
-      found: "Trovate: %{count}"
-      processed: "Elaborate: %{count}"
+      found: 'Trovate: %{count}'
+      processed: 'Elaborate: %{count}'
     trades:
       title: Operazioni
-      imported: "Importate: %{count}"
-      skipped: "Saltate: %{count}"
-      fetching: "Recupero attività dal broker..."
+      imported: 'Importate: %{count}'
+      skipped: 'Saltate: %{count}'
+      fetching: Recupero attività dal broker...
     health:
       title: Salute
       view_error_details: Vedi dettagli errori
-      rate_limited: "Limite di frequenza raggiunto %{time_ago} fa"
+      rate_limited: Limite di frequenza raggiunto %{time_ago} fa
       recently: di recente
-      errors: "Errori: %{count}"
+      errors: 'Errori: %{count}'
       pending_reconciled:
         one: "%{count} transazione in attesa duplicata riconciliata"
         other: "%{count} transazioni in attesa duplicate riconciliate"
@@ -159,6 +199,6 @@ it:
       stale_unmatched_count:
         one: "%{count} transazione"
         other: "%{count} transazioni"
-      data_warnings: "Avvisi dati: %{count}"
-      notices: "Avvisi: %{count}"
+      data_warnings: 'Avvisi dati: %{count}'
+      notices: 'Avvisi: %{count}'
       view_data_quality: Vedi dettagli qualità dati

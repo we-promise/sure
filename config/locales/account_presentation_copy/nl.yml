@@ -1,0 +1,32 @@
+---
+nl:
+  properties:
+    update:
+      success: De vastgoedgegevens zijn bijgewerkt.
+      error: De vastgoedgegevens konden niet worden bijgewerkt.
+    update_balances:
+      success: Het saldo is bijgewerkt.
+    update_address:
+      success: Het adres is bijgewerkt.
+      error: Het adres kon niet worden bijgewerkt. Controleer de verplichte velden.
+  enable_banking_items:
+    account_types:
+      card: Kaartrekening
+      overdraft: Rekening met roodstand
+      transacting: Transactierekening
+      salary: Salarisrekening
+      non_resident_external: Externe rekening voor niet-ingezetenen
+      tax: Belastingrekening
+      cash_trading: Rekening voor contante handel
+      overnight_deposit: Overnightdeposito
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Automatische categorisering
+        auto_detect_merchants: Automatische herkenning van handelaren
+        enhance_provider_merchants: Verrijking van handelaarsgegevens van de provider
+        suggest_bill_setup: Suggesties voor het instellen van rekeningen
+        process_pdf: PDF-verwerking
+        process_pdf_vision: Visuele PDF-verwerking
+        extract_bank_statement: Extractie van bankafschriften
+        chat: Gesprek

@@ -1,0 +1,13 @@
+---
+vi:
+  upload_interface:
+    too_many_files: Quá nhiều tệp (tối đa %{max})
+    file_too_large: Tệp quá lớn (tối đa %{max} MB)
+    uploading: Đang tải lên %{filename}…
+    qif_invalid: Phải là tệp QIF hợp lệ
+    amount_type_strategies:
+      signed_amount: Số tiền có dấu
+      custom_column: Cột tùy chỉnh
+    upload_files:
+      one: Tải lên %{count} tệp
+      other: Tải lên %{count} tệp

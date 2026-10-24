@@ -1,0 +1,15 @@
+---
+uk:
+  upload_interface:
+    too_many_files: Забагато файлів (максимум %{max})
+    file_too_large: Файл завеликий (максимум %{max} МБ)
+    uploading: Завантаження %{filename}…
+    qif_invalid: Потрібен коректний файл QIF
+    amount_type_strategies:
+      signed_amount: Сума зі знаком
+      custom_column: Користувацький стовпець
+    upload_files:
+      one: Завантажити %{count} файл
+      few: Завантажити %{count} файли
+      many: Завантажити %{count} файлів
+      other: Завантажити файли (%{count})

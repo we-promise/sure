@@ -1,0 +1,40 @@
+---
+de:
+  investments:
+    subtypes:
+      non-registered:
+        long: Nicht registriertes Anlagekonto
+      fhsa:
+        long: Sparkonto für den ersten Eigenheimkauf (FHSA)
+      rdsp:
+        long: Registrierter Sparplan für Menschen mit Behinderung (RDSP)
+      dpsp:
+        long: Plan zur aufgeschobenen Gewinnbeteiligung (DPSP)
+      prpp:
+        long: Gemeinschaftlicher registrierter Altersvorsorgeplan (PRPP)
+      lif:
+        long: Fonds für lebenslanges Alterseinkommen (LIF)
+      lrif:
+        long: Gebundener Renteneinkommensfonds (LRIF)
+      prif:
+        long: Gesetzlich geregelter registrierter Renteneinkommensfonds (PRIF)
+      rlif:
+        long: Beschränkter Fonds für lebenslanges Alterseinkommen (RLIF)
+      assurance_vie:
+        long: Französische Lebensversicherung (Assurance Vie)
+  loans:
+    subtypes:
+      home_equity:
+        long: Darlehen auf das Eigenkapital einer Immobilie
+      line_of_credit:
+        long: Kreditlinie
+      business:
+        long: Unternehmenskredit
+      mortgage:
+        long: Hypothek
+      student:
+        long: Studienkredit
+      auto:
+        long: Autokredit
+      other:
+        long: Sonstiges Darlehen

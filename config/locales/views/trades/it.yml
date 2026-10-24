@@ -20,7 +20,8 @@ it:
       type_dividend: Dividendo
       type_interest: Interessi
       dividend_requires_security: Il titolo è obbligatorio per i dividendi
-      trade_requires_security: Un titolo (ticker) è obbligatorio per le operazioni di acquisto e vendita
+      trade_requires_security: Un titolo (ticker) è obbligatorio per le operazioni
+        di acquisto e vendita
     header:
       buy: Acquisto
       sell: Vendita
@@ -32,6 +33,15 @@ it:
       purchase_qty_label: Quantità Acquistata
       symbol_label: Simbolo
       total_return_label: Utile/perdita non realizzato
+      fee: Commissione
+      other: Altro
+      reinvestment: Reinvestimento
+      transfer: Bonifico
+      withdrawal: Prelievo
+      contribution: Contributo
+      exchange: Scambio
+      sweep_in: Trasferimento automatico di liquidità in entrata
+      sweep_out: Trasferimento automatico di liquidità in uscita
     new:
       title: Nuova transazione
     show:
@@ -46,7 +56,9 @@ it:
       delete_subtitle: Questa azione non può essere annullata
       delete_title: Elimina Movimento
       details: Dettagli
-      provider_disabled_warning: "Aggiornamenti prezzi in pausa — il provider %{provider} è disabilitato. Riabilitalo nelle Impostazioni o rimappa la posizione su un altro provider."
+      provider_disabled_warning: Aggiornamenti prezzi in pausa — il provider %{provider}
+        è disabilitato. Riabilitalo nelle Impostazioni o rimappa la posizione su un
+        altro provider.
       exclude_subtitle: Questo movimento non verrà incluso nei rapporti e nei calcoli
       exclude_title: Escludi dall'analisi
       no_category: Nessuna categoria
@@ -56,3 +68,9 @@ it:
       sell: Vendita
       settings: Impostazioni
       type_label: Tipo
+    api_errors:
+      activity_label_must_match_type: investment_activity_label deve essere %{label}
+        quando type è %{type}
+      invalid_activity_label: Etichetta dell'attività di investimento non valida
+      invalid_type: Tipo non valido
+      supported_types: 'type deve essere uno tra: %{types}'

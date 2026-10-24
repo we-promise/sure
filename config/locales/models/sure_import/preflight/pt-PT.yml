@@ -2,5 +2,19 @@
 pt-PT:
   sure_import:
     preflight:
-      missing_reference: "A linha %{line} %{type} referencia %{field} %{value} em falta."
-      skipped_missing_reference: "A linha %{line} %{type} referencia %{field} %{value} em falta. Será ignorada durante a importação."
+      missing_reference: A linha %{line} %{type} referencia %{field} %{value} em falta.
+      skipped_missing_reference: >-
+        A linha %{line} %{type} referencia %{field} %{value} em falta. Será ignorada
+        durante a importação.
+      provider_merchant_diff: >-
+        Na linha %{line}, ProviderMerchant %{name} já existe com %{fields} diferente.
+        O comerciante existente será mantido.
+      skipped_missing_merchant_reference: >-
+        Na linha %{line}, %{type} faz referência a um comerciante (%{value}) que não
+        está incluído nesta exportação. Isso pode ocorrer com exportações anteriores
+        à inclusão de comerciantes atribuídos por fornecedores nas exportações do
+        Sure. A importação será feita sem esse comerciante.
+      skipped_unnamed_recurring: >-
+        Na linha %{line}, %{type} não tem nome e faz referência a um comerciante (%{value})
+        que não está incluído nesta exportação. O registo será ignorado durante a
+        importação.

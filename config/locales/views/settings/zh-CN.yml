@@ -335,7 +335,6 @@ zh-CN:
         ok: 已连接
         warn: 需要处理
         err: 错误
-        false: 未配置
         'off': 未配置
       maturity:
         beta: "测试版（Beta）"

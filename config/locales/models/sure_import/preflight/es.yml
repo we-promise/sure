@@ -1,0 +1,9 @@
+---
+es:
+  sure_import:
+    preflight:
+      missing_reference: 'Línea %{line}: %{type} hace referencia a %{field} %{value}, que no existe.'
+      provider_merchant_diff: 'Línea %{line}: ProviderMerchant %{name} ya existe con un valor diferente de %{fields}. Se conservará el comercio existente.'
+      skipped_missing_merchant_reference: 'Línea %{line}: %{type} hace referencia a un comercio (%{value}) que no está incluido en esta exportación. Esto puede ocurrir si se exportó antes de que Sure incluyera los comercios asignados por proveedores. Se importará sin ese comercio.'
+      skipped_missing_reference: 'Línea %{line}: %{type} hace referencia a %{field} %{value}, que no existe. Se omitirá durante la importación.'
+      skipped_unnamed_recurring: 'Línea %{line}: %{type} no tiene nombre y hace referencia a un comercio (%{value}) que no está incluido en esta exportación. Se omitirá durante la importación.'

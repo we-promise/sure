@@ -1,0 +1,31 @@
+---
+nb:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: Transaksjonsnavn
+        transaction_amount: Transaksjonsbeløp
+        transaction_type: Transaksjonstype
+        transaction_merchant: Brukersted for transaksjonen
+        transaction_category: Transaksjonskategori
+        transaction_tag: Transaksjonstagg
+        transaction_details: Transaksjonsdetaljer
+        transaction_notes: Transaksjonsnotater
+        transaction_account: Transaksjonskonto
+    action_executors:
+      labels:
+        set_transaction_category: Angi transaksjonskategori
+        set_transaction_tags: Angi transaksjonstagger
+        set_transaction_merchant: Angi brukersted for transaksjonen
+        set_transaction_name: Angi transaksjonsnavn
+        set_investment_activity_label: Angi type investeringsaktivitet
+        exclude_transaction: Utelat fra budsjett og rapporter
+        set_as_transfer_or_payment: Angi som overføring eller betaling
+        send_email_notification: Send e-postvarsel
+        auto_categorize: Kategoriser transaksjoner automatisk med KI
+        auto_detect_merchants: Finn brukersteder automatisk
+        auto_detect_merchants_with_ai: Finn brukersteder automatisk med KI ($$)
+      auto_categorize:
+        cost_unavailable: "%{label} (kostnad ukjent)"
+        cost_estimate: "%{label} (ca. %{cost} USD per 20 transaksjoner)"
+        provider_missing: "%{label} (ingen kategoriseringsleverandør konfigurert)"

@@ -1,0 +1,40 @@
+---
+fr:
+  investments:
+    subtypes:
+      non-registered:
+        long: Compte de placement non enregistré
+      fhsa:
+        long: Compte d’épargne libre d’impôt pour l’achat d’une première propriété (CELIAPP)
+      rdsp:
+        long: Régime enregistré d’épargne-invalidité (REEI)
+      dpsp:
+        long: Régime de participation différée aux bénéfices (RPDB)
+      prpp:
+        long: Régime de pension agréé collectif (RPAC)
+      lif:
+        long: Fonds de revenu viager (FRV)
+      lrif:
+        long: Fonds de revenu de retraite immobilisé (FRRI)
+      prif:
+        long: Fonds enregistré de revenu de retraite prescrit (FERR prescrit)
+      rlif:
+        long: Fonds de revenu viager restreint (FRVR)
+      assurance_vie:
+        long: Assurance vie
+  loans:
+    subtypes:
+      home_equity:
+        long: Prêt sur valeur domiciliaire
+      line_of_credit:
+        long: Marge de crédit
+      business:
+        long: Prêt professionnel
+      mortgage:
+        long: Hypothèque
+      student:
+        long: Prêt étudiant
+      auto:
+        long: Prêt auto
+      other:
+        long: Autre prêt

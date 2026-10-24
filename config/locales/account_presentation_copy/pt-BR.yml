@@ -1,0 +1,32 @@
+---
+pt-BR:
+  properties:
+    update:
+      success: Os dados do imóvel foram atualizados.
+      error: Não foi possível atualizar os dados do imóvel.
+    update_balances:
+      success: O saldo foi atualizado.
+    update_address:
+      success: O endereço foi atualizado.
+      error: Não foi possível atualizar o endereço. Confira os campos obrigatórios.
+  enable_banking_items:
+    account_types:
+      card: Conta de cartão
+      overdraft: Conta com cheque especial
+      transacting: Conta transacional
+      salary: Conta-salário
+      non_resident_external: Conta externa para não residentes
+      tax: Conta fiscal
+      cash_trading: Conta de negociação à vista
+      overnight_deposit: Depósito de um dia
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Categorização automática
+        auto_detect_merchants: Identificação automática de estabelecimentos
+        enhance_provider_merchants: Enriquecimento dos dados dos estabelecimentos do provedor
+        suggest_bill_setup: Sugestões de configuração de contas a pagar
+        process_pdf: Processamento de PDF
+        process_pdf_vision: Processamento visual de PDF
+        extract_bank_statement: Extração de extratos bancários
+        chat: Conversa

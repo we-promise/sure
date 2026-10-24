@@ -1,0 +1,98 @@
+---
+it:
+  coinspot_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} conto da configurare"
+        other: "%{count} conti da configurare"
+      checking_credentials: Verifica credenziali...
+      processing_accounts: Elaborazione dati conto...
+      calculating_balances: Calcolo dei saldi...
+      checking_configuration: Verifica della configurazione dei conti...
+      credentials_invalid: Credenziali API CoinSpot non valide. Controlla la chiave
+        API e il segreto.
+      importing_accounts: Importazione dei conti da CoinSpot...
+      processing_failed:
+        one: Elaborazione non riuscita per %{count} conto CoinSpot
+        other: Elaborazione non riuscita per %{count} conti CoinSpot
+  coinspot_items:
+    coinspot_item:
+      delete: Elimina
+      deletion_in_progress: Eliminazione in corso...
+      import_accounts_menu: Importa conto
+      no_accounts_title: Nessun conto trovato
+      reconnect: Le credenziali devono essere aggiornate
+      setup_action: Importa conto
+      setup_needed: Conto pronto per l'importazione
+      stale_rate_warning: Il saldo è approssimativo perché il tasso di cambio esatto
+        per %{date} non era disponibile. Verrà aggiornato alla prossima sincronizzazione.
+      status: Ultima sincronizzazione %{timestamp} fa
+      status_never: Mai sincronizzato
+      status_with_summary: Ultima sincronizzazione %{timestamp} fa - %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} conto sincronizzato"
+          other: "%{count} conti sincronizzati"
+        no_accounts: Nessun conto trovato
+        partial_sync: "%{linked_count} sincronizzati, %{unlinked_count} da configurare"
+      provider_name: CoinSpot
+      syncing: Sincronizzazione in corso...
+      no_accounts_message: Il conto exchange CoinSpot apparirà qui dopo la sincronizzazione.
+      setup_description: Importa questa connessione CoinSpot come conto exchange crypto.
+    complete_account_setup:
+      no_accounts: Nessun conto da importare
+      none_selected: Nessun conto selezionato
+      success:
+        one: Importato %{count} conto
+        other: Importati %{count} conti
+      setup_failed:
+        one: Importazione di %{count} conto non riuscita
+        other: Importazione di %{count} conti non riuscita
+    provider_connection:
+      description: Collega a %{name}
+      default_name: CoinSpot
+      default_description: Collega un conto exchange CoinSpot
+      name: CoinSpot - %{name}
+    select_existing_account:
+      cancel: Annulla
+      link: Collega
+      check_provider_health: Verifica che le credenziali API CoinSpot siano valide.
+      no_accounts_found: Nessun conto CoinSpot trovato.
+      title: Collega conto CoinSpot
+      wait_for_sync: Attendi il completamento della sincronizzazione CoinSpot.
+    setup_accounts:
+      accounts_count:
+        one: "%{count} conto disponibile"
+        other: "%{count} conti disponibili"
+      cancel: Annulla
+      creating: Importazione in corso...
+      import_selected: Importa selezionati
+      subtitle: Seleziona il conto exchange da tracciare
+      select_all: Seleziona tutto
+      instructions: CoinSpot importa un unico conto exchange crypto aggregato per
+        questa connessione, con saldi, valori in AUD, trasferimenti, depositi, prelievi
+        e cronologia degli ordini.
+      no_accounts: Tutti i conti CoinSpot sono stati importati.
+      title: Importa conto CoinSpot
+    create:
+      default_name: CoinSpot
+      success: Collegamento a CoinSpot riuscito. Il conto exchange è in fase di sincronizzazione.
+    destroy:
+      success: Connessione CoinSpot programmata per l'eliminazione.
+      unlink_failed: Impossibile disconnettere la connessione CoinSpot
+    link_accounts:
+      select_connection: Scegli una connessione CoinSpot prima di collegare i conti.
+    link_existing_account:
+      errors:
+        coinspot_account_already_linked: Questo conto CoinSpot è già collegato
+        invalid_coinspot_account: Conto CoinSpot non valido
+        only_manual: Solo i conti exchange crypto manuali senza un provider già collegato
+          possono essere associati a CoinSpot
+      select_connection: Scegli una connessione CoinSpot prima di collegare i conti.
+      success: Collegamento al conto CoinSpot riuscito
+    select_accounts:
+      no_credentials_configured: Aggiungi le credenziali API CoinSpot prima di configurare
+        i conti.
+      select_connection: Scegli una connessione CoinSpot nelle impostazioni dei provider.
+    update:
+      success: Connessione CoinSpot aggiornata correttamente.

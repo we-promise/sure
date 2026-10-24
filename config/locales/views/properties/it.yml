@@ -3,6 +3,7 @@ it:
   properties:
     edit:
       edit: Modifica %{account}
+      title: Inserisci la proprietà manualmente
     form:
       address_line1: Indirizzo
       address_line1_placeholder: Via Roma, 1
@@ -23,38 +24,54 @@ it:
       year_built_placeholder: '2000'
     new:
       title: Inserisci la proprietà manualmente
-      next: "Avanti"
+      next: Avanti
+      avm_preview_back: Indietro
+      avm_description: Inserisci un nome e l'indirizzo della proprietà. %{provider}
+        cercherà i dettagli e il valore di mercato stimato.
+      avm_option: Aggiungi tramite %{provider}
+      avm_preview_confirm: Aggiungi proprietà
+      avm_preview_description: 'Ecco cosa ha trovato %{provider}. Verifica i dettagli
+        prima di aggiungere la proprietà: non è stato ancora creato nulla.'
+      avm_preview_no_record: "%{provider} non ha trovato una proprietà registrata
+        a questo indirizzo, quindi il valore mostrato è una stima basata sulla zona
+        circostante. Ricontrolla l'indirizzo prima di continuare."
+      avm_preview_title: Conferma dettagli della proprietà
+      avm_submit: Cerca proprietà
+      avm_title: Aggiungi proprietà tramite %{provider}
+      avm_us_only: "%{provider} supporta solo proprietà situate negli Stati Uniti."
     address:
-      title: "Inserisci la proprietà manualmente"
-      address_line1_label: "Indirizzo"
-      address_line1_placeholder: "Via Roma, 1"
-      city_label: "Città"
-      city_placeholder: "Milano"
-      state_region_label: "Provincia/Regione"
-      state_region_placeholder: "MI"
-      postal_code_label: "CAP"
-      postal_code_placeholder: "20100"
-      country_label: "Paese"
-      country_placeholder: "Italia"
-      save: "Salva"
+      title: Inserisci la proprietà manualmente
+      address_line1_label: Indirizzo
+      address_line1_placeholder: Via Roma, 1
+      city_label: Città
+      city_placeholder: Milano
+      state_region_label: Provincia/Regione
+      state_region_placeholder: MI
+      postal_code_label: CAP
+      postal_code_placeholder: '20100'
+      country_label: Paese
+      country_placeholder: Italia
+      save: Salva
     balances:
-      title: "Inserisci la proprietà manualmente"
-      market_value_label: "Valore di mercato stimato"
-      market_value_tooltip: "Il valore di mercato stimato della tua proprietà. Questo numero può spesso essere trovato su siti come Immobiliare.it o Idealista, e non è mai un numero esatto."
-      save: "Salva"
-      next: "Avanti"
+      title: Inserisci la proprietà manualmente
+      market_value_label: Valore di mercato stimato
+      market_value_tooltip: Il valore di mercato stimato della tua proprietà. Questo
+        numero può spesso essere trovato su siti come Immobiliare.it o Idealista,
+        e non è mai un numero esatto.
+      save: Salva
+      next: Avanti
     overview_fields:
-      name_label: "Nome"
-      name_placeholder: "Casa vacanze"
-      subtype_prompt: "Seleziona tipo"
-      property_type_label: "Tipo di proprietà"
-      year_built_label: "Anno di costruzione (facoltativo)"
-      year_built_placeholder: "1990"
-      area_label: "Superficie (facoltativo)"
-      area_placeholder: "80"
-      square_feet: "Piedi quadrati"
-      square_meters: "Metri quadrati"
-      area_unit_label: "Unità superficie"
+      name_label: Nome
+      name_placeholder: Casa vacanze
+      subtype_prompt: Seleziona tipo
+      property_type_label: Tipo di proprietà
+      year_built_label: Anno di costruzione (facoltativo)
+      year_built_placeholder: '1990'
+      area_label: Superficie (facoltativo)
+      area_placeholder: '80'
+      square_feet: Piedi quadrati
+      square_meters: Metri quadrati
+      area_unit_label: Unità superficie
     overview:
       living_area: Superficie
       market_value: Valore di Mercato
@@ -70,7 +87,7 @@ it:
         trend: Tendenza
         unknown: Sconosciuto
         year_built: Anno di Costruzione
-        edit_account_details: "Modifica dettagli conto"
+        edit_account_details: Modifica dettagli conto
     subtypes:
       apartment:
         short: Appartamento
@@ -87,3 +104,10 @@ it:
       agri_land:
         short: Terreno Agric.
         long: Terreno Agricolo
+    form_tabs:
+      address: Indirizzo
+      overview: Panoramica
+      value: Valore
+    avm_providers:
+      realie: Realie
+      rentcast: RentCast

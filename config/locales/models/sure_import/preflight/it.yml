@@ -1,0 +1,16 @@
+---
+it:
+  sure_import:
+    preflight:
+      missing_reference: 'Riga %{line}, %{type}: riferimento a %{field} %{value} mancante.'
+      provider_merchant_diff: 'Riga %{line}: ProviderMerchant %{name} esiste già con
+        valori diversi per %{fields}. Verrà mantenuto l''esercente esistente.'
+      skipped_missing_merchant_reference: 'Riga %{line}, %{type}: riferimento a un
+        esercente (%{value}) non incluso nell''esportazione. Può accadere con esportazioni
+        precedenti all''inclusione degli esercenti assegnati dai provider nelle esportazioni
+        Sure. Verrà importato senza quell''esercente.'
+      skipped_missing_reference: 'Riga %{line}, %{type}: riferimento a %{field} %{value}
+        mancante. Il record verrà saltato durante l''importazione.'
+      skipped_unnamed_recurring: 'Riga %{line}, %{type}: manca il nome e viene indicato
+        un esercente (%{value}) non incluso nell''esportazione. Il record verrà saltato
+        durante l''importazione.'

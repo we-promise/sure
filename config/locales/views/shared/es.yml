@@ -2,8 +2,7 @@
 es:
   concerns:
     self_hostable:
-      redis_configured: "¡Redis ya está configurado correctamente! Ahora puedes configurar
-        tu aplicación Sure."
+      redis_configured: "¡Redis ya está configurado correctamente! Ahora puedes configurar tu aplicación Sure."
   shared:
     preview: Vista previa
     dot_separator: "·"
@@ -31,8 +30,7 @@ es:
       default_body: Esto no es reversible.
       default_btn_text: Confirmar
       resource_deletion_title: "¿Eliminar %{resource}?"
-      resource_deletion_body: "¿Estás seguro de que deseas eliminar %{resource}? Esto
-        no es reversible."
+      resource_deletion_body: "¿Estás seguro de que deseas eliminar %{resource}? Esto no es reversible."
       resource_deletion_btn_text: Eliminar %{resource}
     family_moniker:
       group_plural: Grupos
@@ -47,3 +45,13 @@ es:
       income: Ingreso
       transfer: Transferencia
     submitting: Enviando…
+    require_connector_owner: Solo puedes gestionar las conexiones que has añadido
+    sidekiq_health_banner:
+      body: Las tareas en segundo plano no se están procesando, por lo que los saldos, el patrimonio neto y las sincronizaciones de cuentas pueden estar desactualizados o faltar.
+      cta: Ver estado del sistema
+      reasons:
+        no_worker_processes: No hay ningún proceso de trabajo de Sidekiq conectado. Inicia el contenedor del trabajador o la unidad de systemd.
+        queue_backed_up: La tarea más antigua de la cola ha superado el tiempo de espera previsto. El trabajador está activo, pero se está quedando atrás.
+        redis_unreachable: La aplicación no puede conectar con Redis. Comprueba REDIS_URL y que Redis esté en ejecución.
+        stale_heartbeat: El trabajador de Sidekiq no ha enviado una señal de actividad recientemente. Puede estar bloqueado o haberse detenido inesperadamente.
+      title: Algunos datos pueden estar desactualizados

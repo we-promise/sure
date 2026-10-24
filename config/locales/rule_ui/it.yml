@@ -1,0 +1,18 @@
+---
+it:
+  rules:
+    new:
+      back: Torna alle regole
+      title: Nuova regola per %{resource}
+    form:
+      for: PER
+    edit:
+      title: Modifica regola per %{resource}
+      title_with_name: Modifica regola per %{resource} «%{name}»
+  transfers:
+    account_links:
+      missing_account: 'Errore nei dati: conto mancante'
+      transfer_id: 'ID del trasferimento: %{id}'
+  tags:
+    create:
+      failed: Impossibile creare l’etichetta

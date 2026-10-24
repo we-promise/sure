@@ -1,0 +1,31 @@
+---
+vi:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: Tên giao dịch
+        transaction_amount: Số tiền giao dịch
+        transaction_type: Loại giao dịch
+        transaction_merchant: Đơn vị bán hàng của giao dịch
+        transaction_category: Danh mục giao dịch
+        transaction_tag: Nhãn giao dịch
+        transaction_details: Chi tiết giao dịch
+        transaction_notes: Ghi chú giao dịch
+        transaction_account: Tài khoản giao dịch
+    action_executors:
+      labels:
+        set_transaction_category: Đặt danh mục giao dịch
+        set_transaction_tags: Đặt nhãn giao dịch
+        set_transaction_merchant: Đặt đơn vị bán hàng của giao dịch
+        set_transaction_name: Đặt tên giao dịch
+        set_investment_activity_label: Đặt loại hoạt động đầu tư
+        exclude_transaction: Loại khỏi ngân sách và báo cáo
+        set_as_transfer_or_payment: Đánh dấu là chuyển khoản hoặc thanh toán
+        send_email_notification: Gửi thông báo qua email
+        auto_categorize: Tự động phân loại giao dịch bằng AI
+        auto_detect_merchants: Tự động nhận diện đơn vị bán hàng
+        auto_detect_merchants_with_ai: Tự động nhận diện đơn vị bán hàng bằng AI ($$)
+      auto_categorize:
+        cost_unavailable: "%{label} (chưa rõ chi phí)"
+        cost_estimate: "%{label} (khoảng %{cost} USD cho mỗi 20 giao dịch)"
+        provider_missing: "%{label} (chưa cấu hình nhà cung cấp phân loại)"

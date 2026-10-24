@@ -4,6 +4,7 @@ es:
     create:
       invalid_credentials: Correo electrónico o contraseña no válidos.
       local_login_disabled: El inicio de sesión con contraseña local está desactivado. Por favor, utiliza el inicio de sesión único (SSO).
+      account_deactivated: Esta cuenta ha sido desactivada. Contacta con un administrador.
     destroy:
       logout_successful: Has cerrado sesión correctamente.
     post_logout:
@@ -21,7 +22,7 @@ es:
     new:
       email: Dirección de correo electrónico
       email_placeholder: tu@ejemplo.com
-      forgot_password: ¿Has olvidado tu contraseña?
+      forgot_password: "¿Has olvidado tu contraseña?"
       password: Contraseña
       submit: Iniciar sesión
       title: Sure
@@ -33,3 +34,5 @@ es:
       no_auth_methods_enabled: No hay métodos de autenticación habilitados actualmente. Por favor, contacta con un administrador.
       demo_banner_title: Modo de demostración activo
       demo_banner_message: Este es un entorno de demostración. Las credenciales de acceso se han rellenado automáticamente para tu comodidad. Por favor, no introduzcas información real o sensible.
+      passkey_button: Iniciar sesión con una clave de acceso
+      passkey_unsupported: Este navegador no admite claves de acceso.

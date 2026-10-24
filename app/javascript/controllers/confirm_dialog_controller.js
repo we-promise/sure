@@ -4,6 +4,7 @@ import { Controller } from "@hotwired/stimulus";
 // See javascript/controllers/application.js for how this is wired up
 export default class extends Controller {
   static targets = ["title", "subtitle", "confirmButton"];
+  static values = { labels: Object };
 
   handleConfirm(rawData) {
     const data = this.#normalizeRawData(rawData);
@@ -35,15 +36,15 @@ export default class extends Controller {
         button.setAttribute("hidden", true);
       }
 
-      button.textContent = data.confirmText || "Confirm";
+      button.textContent = data.confirmText || this.labelsValue.confirm;
     });
 
-    this.titleTarget.textContent = data.title || "Are you sure?";
+    this.titleTarget.textContent = data.title || this.labelsValue.are_you_sure;
     // Text, never HTML: bodies interpolate record names (merchants, accounts,
     // brokerages, tickers) that come from bank feeds, providers and other
     // family members, however the caller built the confirmation.
     this.subtitleTarget.textContent =
-      data.body || "This action cannot be undone.";
+      data.body || this.labelsValue.cannot_be_undone;
   }
 
   // If data is a string, it's the title.  Otherwise, return the parsed object.
@@ -51,11 +52,13 @@ export default class extends Controller {
     try {
       const parsed = JSON.parse(rawData);
 
-      if (typeof parsed === "boolean") {
-        return { title: "Are you sure?" };
+      if (typeof parsed === "string") return { title: parsed };
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed;
       }
 
-      return parsed;
+      // Boolean and empty confirmations use the server-rendered locale defaults.
+      return {};
     } catch (e) {
       return { title: rawData };
     }

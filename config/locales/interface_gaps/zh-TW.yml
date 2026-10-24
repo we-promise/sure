@@ -1,0 +1,14 @@
+---
+zh-TW:
+  binance_items:
+    setup_accounts:
+      historical_import: 匯入歷史資料
+  enable_banking_items:
+    setup_accounts:
+      psd2_savings_notice: 提醒：部分法國受監管的儲蓄帳戶（Livret A、PEL、LEP、LDDS）透過開放銀行（PSD2）可能僅能有限存取，或無法存取。如果缺少儲蓄帳戶，你可以手動新增。
+  reports:
+    index:
+      period_aria: 報表期間
+  shared:
+    transaction_tabs:
+      aria: 交易類型

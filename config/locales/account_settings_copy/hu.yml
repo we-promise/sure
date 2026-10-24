@@ -1,0 +1,17 @@
+---
+hu:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: A beállítások környezeti változókkal adhatók meg, vagy az alábbi mezőkben felülírhatók.
+        optional: Nem kötelező
+      update:
+        failed: Nem sikerült frissíteni a szolgáltatók beállításait. Próbálja újra.
+    llm_usages:
+      show:
+        http_status: 'HTTP-állapot: %{status}'
+  shared:
+    async_loading:
+      timeout: Időtúllépés
+      failed_with_status: Sikertelen betöltés (%{status})
+      network_error: Hálózati hiba

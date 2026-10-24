@@ -1,0 +1,32 @@
+---
+pl:
+  properties:
+    update:
+      success: Zaktualizowano dane nieruchomości.
+      error: Nie udało się zaktualizować danych nieruchomości.
+    update_balances:
+      success: Zaktualizowano saldo.
+    update_address:
+      success: Zaktualizowano adres.
+      error: Nie udało się zaktualizować adresu. Sprawdź wymagane pola.
+  enable_banking_items:
+    account_types:
+      card: Rachunek karty
+      overdraft: Rachunek z debetem
+      transacting: Rachunek transakcyjny
+      salary: Rachunek do wypłaty wynagrodzenia
+      non_resident_external: Zewnętrzny rachunek nierezydenta
+      tax: Rachunek podatkowy
+      cash_trading: Rachunek do obrotu gotówkowego
+      overnight_deposit: Depozyt jednodniowy
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Automatyczna kategoryzacja
+        auto_detect_merchants: Automatyczne wykrywanie sprzedawców
+        enhance_provider_merchants: Uzupełnianie danych sprzedawców od dostawcy
+        suggest_bill_setup: Sugestie konfiguracji rachunków do zapłaty
+        process_pdf: Przetwarzanie PDF
+        process_pdf_vision: Wizualne przetwarzanie PDF
+        extract_bank_statement: Wyodrębnianie wyciągów bankowych
+        chat: Czat

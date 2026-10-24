@@ -1,0 +1,9 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: 此帳戶已全額預留給「%{goal_name}」，請輸入具體金額以分配給不同目標。

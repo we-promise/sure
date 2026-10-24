@@ -88,7 +88,7 @@ ca:
       annual: Cada any (%{month}), el %{day}
       custom: Periodicitat personalitzada
       last_day: darrer dia
-      every_n_months: Cada %{interval} mesos, el dia %{day}
+      every_n_months: "Cada %{interval} mesos, el %{day}"
       every_n_weeks: Cada %{interval} setmanes, el %{weekday}
       every_n_years: Cada %{interval} anys, el %{day} de %{month}
     actions:

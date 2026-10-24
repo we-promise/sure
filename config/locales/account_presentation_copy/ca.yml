@@ -1,0 +1,32 @@
+---
+ca:
+  properties:
+    update:
+      success: S’han actualitzat les dades de l’immoble.
+      error: No s’han pogut actualitzar les dades de l’immoble.
+    update_balances:
+      success: S’ha actualitzat el saldo.
+    update_address:
+      success: S’ha actualitzat l’adreça.
+      error: No s’ha pogut actualitzar l’adreça. Revisa els camps obligatoris.
+  enable_banking_items:
+    account_types:
+      card: Compte de targeta
+      overdraft: Compte amb descobert
+      transacting: Compte transaccional
+      salary: Compte nòmina
+      non_resident_external: Compte extern per a no residents
+      tax: Compte fiscal
+      cash_trading: Compte d’operacions al comptat
+      overnight_deposit: Dipòsit a un dia
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Categorització automàtica
+        auto_detect_merchants: Detecció automàtica de comerços
+        enhance_provider_merchants: Enriquiment de comerços del proveïdor
+        suggest_bill_setup: Suggeriments de configuració de factures
+        process_pdf: Processament de PDF
+        process_pdf_vision: Processament visual de PDF
+        extract_bank_statement: Extracció d’extractes bancaris
+        chat: Conversa

@@ -1,0 +1,35 @@
+---
+zh-TW:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        day_of_month: 每月幾日
+        frequency: 頻率
+        interval: 間隔
+        month_of_year: 月份
+        weekday: 星期幾
+        weekday_ordinal: 每月第幾週
+      recurring_transaction/recurrence_rules:
+        base: 重複規則：
+        day_of_month: 每月幾日
+        frequency: 頻率
+        interval: 間隔
+        month_of_year: 月份
+        weekday: 星期幾
+        weekday_ordinal: 每月第幾週
+    errors:
+      models:
+        recurrence_rule:
+          attributes:
+            day_of_month:
+              not_allowed_for_weekly: 不適用於每週規則
+            month_of_year:
+              not_allowed: 僅適用於每年規則
+              required_for_yearly: 每年規則必須填寫
+            weekday:
+              required_for_weekly: 每週規則必須填寫
+            weekday_ordinal:
+              not_allowed_for_weekly: 不適用於每週規則
+              not_allowed_without_weekday: 僅在指定星期幾時適用
+              required_with_weekday: 指定星期幾時必須填寫
+          day_spec_required: 請在每月幾日與星期幾之間擇一指定

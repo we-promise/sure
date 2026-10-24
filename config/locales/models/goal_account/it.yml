@@ -1,0 +1,10 @@
+---
+it:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Questo conto è già interamente riservato
+                a «%{goal_name}». Inserisci un importo per suddividerlo.

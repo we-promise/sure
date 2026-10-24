@@ -1,0 +1,20 @@
+---
+it:
+  authentication_ui:
+    password:
+      missing_case: "deve contenere lettere maiuscole e minuscole"
+      missing_number: "deve contenere almeno un numero"
+      missing_special: "deve contenere almeno un carattere speciale"
+    sso:
+      copy_failed: "Impossibile copiare negli appunti"
+      issuer_valid: "Emittente OIDC valido"
+      issuer_mismatch_trailing: "L’emittente non corrisponde: il rilevamento ha restituito %{issuer}. In genere ciò dipende da una differenza nella barra finale. Copia l’emittente esattamente come restituito."
+      issuer_mismatch: "L’emittente non corrisponde: il rilevamento ha restituito %{issuer}. Copia l’emittente esattamente come restituito dal provider."
+      browser_validation_unavailable: "Impossibile convalidare dal browser (CORS). È comunque possibile salvare il provider."
+      testing: "Test in corso…"
+      request_failed: "Richiesta non riuscita: %{message}"
+    authorization:
+      authorizing: "Autorizzazione in corso…"
+      denying: "Rifiuto in corso…"
+      explanation: "Autorizzando, consenti a questa applicazione di accedere ai tuoi dati di %{product_name} in base ai permessi indicati sopra."
+      title: "Autorizzazione di %{product_name}"

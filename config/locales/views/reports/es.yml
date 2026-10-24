@@ -24,8 +24,8 @@ es:
       period_label:
         quarterly: T%{quarter} %{year}
         ytd: Año en curso %{year}
-        past_year: '%{year}'
-        last_6_months: '%{start} – %{end}'
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
       period_picker:
         quarter: T%{quarter} %{year}
         ytd: Año en curso %{year}
@@ -33,6 +33,7 @@ es:
       next_year: Año siguiente
       previous_decade: Década anterior
       next_decade: Década siguiente
+      shortcut_hint: "%{action} (%{key})"
     invalid_date_range: La fecha de fin no puede ser anterior a la de inicio. Las fechas se han intercambiado.
     summary:
       total_income: Ingresos totales
@@ -50,7 +51,7 @@ es:
       remaining: Restante
       over_by: Exceso de
       shared: compartido
-      suggested_daily: '%{amount} sugerido por día durante los %{days} días restantes'
+      suggested_daily: "%{amount} sugerido por día durante los %{days} días restantes"
       no_budgets: No hay categorías de presupuesto configuradas para este mes
       status:
         good: Correcto
@@ -120,9 +121,9 @@ es:
         income: Ingreso
         uncategorized: Sin categorizar
         entries:
-          one: '%{count} movimiento'
-          other: '%{count} movimientos'
-        percentage: '% del total'
+          one: "%{count} movimiento"
+          other: "%{count} movimientos"
+        percentage: "% del total"
       pagination:
         showing:
           one: Mostrando %{count} movimiento
@@ -156,17 +157,17 @@ es:
       realized_gains: Ganancias realizadas
       total_gains: Ganancias totales
       taxable_realized_note: Estas ganancias pueden estar sujetas a impuestos
-      no_data: '-'
+      no_data: "-"
       view_details: Ver detalles
       holdings_count:
-        one: '%{count} activo'
-        other: '%{count} activos'
+        one: "%{count} activo"
+        other: "%{count} activos"
       sells_count:
-        one: '%{count} venta'
-        other: '%{count} ventas'
+        one: "%{count} venta"
+        other: "%{count} ventas"
       holdings: Activos
       sell_trades: Operaciones de venta
-      and_more: +%{count} más
+      and_more: "+%{count} más"
     investment_flows:
       title: Flujos de inversión
       description: Controla el dinero que entra y sale de tus cuentas de inversión
@@ -177,16 +178,14 @@ es:
       net_flow: Flujo neto
       net_flow_description: Variación neta total
     google_sheets_instructions:
-      title_with_key: ✅ Copiar URL para Google Sheets
-      title_no_key: ⚠️ Se requiere clave API
+      title_with_key: "✅ Copiar URL para Google Sheets"
+      title_no_key: "⚠️ Se requiere clave API"
       ready: Tu URL de CSV (con clave API) está lista.
-      steps: 'Para importar en Google Sheets:
-
+      steps: |-
+        Para importar en Google Sheets:
         1. Crea una nueva hoja de cálculo
-
         2. En la celda A1, introduce la fórmula que se muestra abajo
-
-        3. Pulsa Enter'
+        3. Pulsa Enter
       security_warning: Esta URL incluye tu clave API. ¡Mantenla segura!
       need_key: Para importar los datos en Google Sheets necesitas una clave API.
       step1: Ve a Ajustes → Claves API
@@ -208,8 +207,8 @@ es:
         expenses: Gastos
         net_savings: Ahorro neto
         budget: Presupuesto
-        vs_prior: '%{percent}% respecto al anterior'
-        of_income: '%{percent}% de ingresos'
+        vs_prior: "%{percent}% respecto al anterior"
+        of_income: "%{percent}% de ingresos"
         used: utilizado
       net_worth:
         title: Patrimonio neto
@@ -226,7 +225,7 @@ es:
         net: Neto
         savings_rate: Tasa de ahorro
         average: Media
-        current_month_note: '* Mes actual (datos parciales)'
+        current_month_note: "* Mes actual (datos parciales)"
       investments:
         title: Inversiones
         portfolio_value: Valor de la Cartera
@@ -246,5 +245,5 @@ es:
         expenses: Gastos
         category: Categoría
         amount: Importe
-        percent: '%'
-        more_categories: + %{count} más categorías
+        percent: "%"
+        more_categories: "+ %{count} más categorías"

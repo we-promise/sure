@@ -2,7 +2,7 @@
 it:
   family_merchants:
     create:
-      error: "Errore nella creazione del commerciante: %{error}"
+      error: 'Errore nella creazione del commerciante: %{error}'
       success: Nuovo commerciante creato con successo
     destroy:
       success: Commerciante eliminato con successo
@@ -12,46 +12,69 @@ it:
     form:
       name_placeholder: Nome commerciante
       website_placeholder: Sito web (es. starbucks.com)
-      website_hint: Inserisci il sito web del commerciante per visualizzarne automaticamente il logo
+      website_hint: Inserisci il sito web del commerciante per visualizzarne automaticamente
+        il logo
     index:
       empty: Nessun commerciante ancora
       new: Nuovo commerciante
       import: Importa commercianti
       merge: Unisci commercianti
       title: Commercianti
-      family_title: "Commercianti %{moniker}"
-      family_empty: "Nessun commerciante %{moniker} ancora"
+      family_title: Commercianti %{moniker}
+      family_empty: Nessun commerciante %{moniker} ancora
       provider_title: Commercianti del provider
-      provider_empty: "Nessun commerciante del provider collegato a questo %{moniker} ancora"
-      provider_read_only: I commercianti del provider vengono sincronizzati dalle istituzioni collegate. Non possono essere modificati qui.
-      provider_info: Questi commercianti sono stati rilevati automaticamente dai tuoi conti bancari collegati o dall'IA. Puoi modificarli per crearne una copia personalizzata, o rimuoverli per scollegarli dalle transazioni.
+      provider_empty: Nessun commerciante del provider collegato a questo %{moniker}
+        ancora
+      provider_read_only: I commercianti del provider vengono sincronizzati dalle
+        istituzioni collegate. Non possono essere modificati qui.
+      provider_info: Questi commercianti sono stati rilevati automaticamente dai tuoi
+        conti bancari collegati o dall'IA. Puoi modificarli per crearne una copia
+        personalizzata, o rimuoverli per scollegarli dalle transazioni.
       enhance_info:
-        one: "%{count} commerciante del provider non ha informazioni sul sito web. Migliora con l'IA per rilevare siti, mostrare loghi e unire commercianti duplicati."
-        other: "%{count} commercianti del provider non hanno informazioni sul sito web. Migliora con l'IA per rilevare siti, mostrare loghi e unire commercianti duplicati."
+        one: "%{count} commerciante del provider non ha informazioni sul sito web.
+          Migliora con l'IA per rilevare siti, mostrare loghi e unire commercianti
+          duplicati."
+        other: "%{count} commercianti del provider non hanno informazioni sul sito
+          web. Migliora con l'IA per rilevare siti, mostrare loghi e unire commercianti
+          duplicati."
       enhance_button: Migliora con l'IA
       unlinked_title: Scollegati di recente
-      unlinked_info: Questi commercianti sono stati recentemente rimossi dalle tue transazioni. Scompariranno da questa lista dopo 30 giorni a meno che non vengano riassegnati a una transazione.
+      unlinked_info: Questi commercianti sono stati recentemente rimossi dalle tue
+        transazioni. Scompariranno da questa lista dopo 30 giorni a meno che non vengano
+        riassegnati a una transazione.
       table:
         merchant: Commerciante
         actions: Azioni
         source: Fonte
+      no_family_merchants_found: Nessun esercente della famiglia corrispondente
+      no_provider_merchants_found: Nessun esercente dei provider corrispondente
+      per_page: per pagina
+      search_family_merchants: Cerca esercenti della famiglia...
+      search_provider_merchants: Cerca esercenti dei provider...
     family_merchant:
       edit: Modifica
       delete: Elimina
     merchant:
       confirm_accept: Elimina commerciante
-      confirm_body: Sei sicuro di voler eliminare questo commerciante? La rimozione di questo commerciante scollegherà tutte le transazioni associate e potrebbe influire sui rapporti.
+      confirm_body: Sei sicuro di voler eliminare questo commerciante? La rimozione
+        di questo commerciante scollegherà tutte le transazioni associate e potrebbe
+        influire sui rapporti.
       confirm_title: Eliminare il commerciante?
       delete: Elimina commerciante
       edit: Modifica commerciante
     merge:
       title: Unisci commercianti
-      description: Seleziona un commerciante di destinazione e i commercianti da unire. Tutte le transazioni dei commercianti uniti verranno riassegnate alla destinazione.
+      description: Seleziona un commerciante di destinazione e i commercianti da unire.
+        Tutte le transazioni dei commercianti uniti verranno riassegnate alla destinazione.
       target_label: Unisci in (destinazione)
       select_target: Seleziona commerciante di destinazione...
       sources_label: Commercianti da unire
-      sources_hint: I commercianti selezionati verranno uniti nella destinazione. I commercianti della famiglia verranno eliminati, quelli del provider verranno scollegati.
+      sources_hint: I commercianti selezionati verranno uniti nella destinazione.
+        I commercianti della famiglia verranno eliminati, quelli del provider verranno
+        scollegati.
       submit: Unisci selezionati
+      no_merchants_found: Nessun esercente corrispondente
+      sources_search_placeholder: Cerca esercenti...
     new:
       title: Nuovo commerciante
     perform_merge:
@@ -65,9 +88,11 @@ it:
       edit: Modifica
       remove: Rimuovi
       remove_confirm_title: Rimuovere il commerciante?
-      remove_confirm_body: Sei sicuro di voler rimuovere %{name}? Questo scollegherà tutte le transazioni associate da questo commerciante ma non lo eliminerà.
+      remove_confirm_body: Sei sicuro di voler rimuovere %{name}? Questo scollegherà
+        tutte le transazioni associate da questo commerciante ma non lo eliminerà.
     enhance:
-      success: Miglioramento commercianti del provider avviato. I commercianti verranno migliorati e i duplicati uniti a breve.
+      success: Miglioramento commercianti del provider avviato. I commercianti verranno
+        migliorati e i duplicati uniti a breve.
       already_running: Il miglioramento è già in corso. Attendi che finisca.
     update:
       success: Commerciante aggiornato con successo

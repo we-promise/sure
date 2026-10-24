@@ -6,7 +6,7 @@ import { Controller } from "@hotwired/stimulus";
 // Optional: data-lazy-load-auto-open-param-value="paramName" to auto-open when ?paramName=1 is in URL
 export default class extends Controller {
   static targets = ["content", "loading", "frame"];
-  static values = { url: String, loaded: Boolean, autoOpenParam: String };
+  static values = { url: String, loaded: Boolean, autoOpenParam: String, failureMessage: String, networkErrorMessage: String };
 
   connect() {
     // Check if we should auto-open based on URL param
@@ -61,11 +61,11 @@ export default class extends Controller {
         this.loadedValue = true;
       } else {
         console.error("Lazy load failed:", response.status, response.statusText);
-        this.showError(`Failed to load (${response.status})`);
+        this.showError(this.failureMessageValue.replace("%{status}", String(response.status)));
       }
     } catch (error) {
       console.error("Lazy load error:", error);
-      this.showError("Network error");
+      this.showError(this.networkErrorMessageValue);
     } finally {
       this.loading = false;
     }
@@ -73,7 +73,10 @@ export default class extends Controller {
 
   showError(message) {
     if (this.hasLoadingTarget) {
-      this.loadingTarget.innerHTML = `<p class="text-destructive text-sm">${message}</p>`;
+      const error = document.createElement("p");
+      error.className = "text-destructive text-sm";
+      error.textContent = message;
+      this.loadingTarget.replaceChildren(error);
     }
   }
 }

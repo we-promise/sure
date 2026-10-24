@@ -1,0 +1,32 @@
+---
+it:
+  properties:
+    update:
+      success: I dettagli dell’immobile sono stati aggiornati.
+      error: Impossibile aggiornare i dettagli dell’immobile.
+    update_balances:
+      success: Il saldo è stato aggiornato.
+    update_address:
+      success: L’indirizzo è stato aggiornato.
+      error: Impossibile aggiornare l’indirizzo. Controlla i campi obbligatori.
+  enable_banking_items:
+    account_types:
+      card: Conto carta
+      overdraft: Conto con scoperto
+      transacting: Conto transazionale
+      salary: Conto stipendio
+      non_resident_external: Conto estero per non residenti
+      tax: Conto fiscale
+      cash_trading: Conto per operazioni a pronti
+      overnight_deposit: Deposito overnight
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Categorizzazione automatica
+        auto_detect_merchants: Rilevamento automatico degli esercenti
+        enhance_provider_merchants: Arricchimento degli esercenti del fornitore
+        suggest_bill_setup: Suggerimenti per la configurazione delle fatture
+        process_pdf: Elaborazione di PDF
+        process_pdf_vision: Elaborazione visiva di PDF
+        extract_bank_statement: Estrazione di estratti conto bancari
+        chat: Conversazione

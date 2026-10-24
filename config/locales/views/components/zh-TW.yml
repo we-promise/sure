@@ -71,12 +71,33 @@ zh-TW:
           remaining_principal_balance: 剩餘本金餘額
           total_account_value: 帳戶總價值
           total_gains: 總獲利
+          loan_remaining_balance: 剩餘餘額
         views:
           cash: 現金
           gains: 獲利 / 報酬率
           holdings: 持股
           total_value: 總價值
-        vs_available_history: （對比可用歷史資料）
+        vs_available_history: "（對比可用歷史資料）"
+        loan:
+          actual: 已記錄餘額
+          aria_actual_history_starts: 餘額紀錄始於 %{date}。
+          aria_description: 貸款餘額圖表。已記錄餘額 %{current_balance}，原定清償日 %{scheduled_payoff_date}，依今日餘額預估清償日
+            %{projected_payoff_date}。
+          interactive_chart: 互動圖表
+          interest_saved: 節省利息
+          legend: 圖表數列
+          months_saved:
+            one: 比原定時間提早 %{count} 個月
+            other: 比原定時間提早 %{count} 個月
+          no_payoff: 依目前還款額無法清償
+          not_converged: 依目前還款額，無法在原定到期日前清償，仍將欠款 %{balloon}。
+          on_schedule: 符合進度
+          projected: 從今日起推估
+          projected_payoff: 預估清償
+          projection_basis: 比較今日已記錄餘額與還款表同日的餘額。若付款在預定日前入帳，會在該日期前顯示超前；預定日後才入帳則顯示落後。
+          scheduled: 原始還款表
+          since_start: 自貸款開始以來
+          today: 今天
       activity_date:
         balance_tooltip: 計入所有交易與調整之後的當日結束餘額
         no_balance_data: 這一天沒有可用的餘額資料
@@ -89,7 +110,7 @@ zh-TW:
         error: 錯誤
         destructive: 錯誤
     pill:
-      aria_label: '%{label}'
+      aria_label: "%{label}"
       default_label: 預覽
     dialog:
       close: 關閉
@@ -98,7 +119,10 @@ zh-TW:
     tooltip:
       trigger_label: 更多資訊
     link:
-      opens_in_new_tab: （在新分頁開啟）
+      opens_in_new_tab: "（在新分頁開啟）"
+    icon_picker:
+      no_matching_icons: 沒有相符圖示
+      search_placeholder: 搜尋圖示…
   provider_sync_summary:
     title: 同步摘要
     last_sync: 上次同步：%{time_ago}前
@@ -116,8 +140,8 @@ zh-TW:
       skipped: 已跳過：%{count}
       fetching: 正在從券商取得資料...
       protected:
-        one: '%{count} 筆項目受保護（未被覆蓋）'
-        other: '%{count} 筆項目受保護（未被覆蓋）'
+        one: "%{count} 筆項目受保護（未被覆蓋）"
+        other: "%{count} 筆項目受保護（未被覆蓋）"
       view_protected: 查看受保護的項目
     skip_reasons:
       excluded: 已排除
@@ -136,7 +160,7 @@ zh-TW:
     health:
       title: 健康狀態
       view_error_details: 查看錯誤詳情
-      rate_limited: '%{time_ago}前遭到用量限制'
+      rate_limited: "%{time_ago}前遭到用量限制"
       recently: 不久
       errors: 錯誤：%{count}
       pending_reconciled:
@@ -144,23 +168,23 @@ zh-TW:
         other: 已對帳 %{count} 筆重複的待處理交易
       view_reconciled: 查看已對帳的交易
       duplicate_suggestions:
-        one: '%{count} 筆可能重複的交易需要檢視'
-        other: '%{count} 筆可能重複的交易需要檢視'
+        one: "%{count} 筆可能重複的交易需要檢視"
+        other: "%{count} 筆可能重複的交易需要檢視"
       view_duplicate_suggestions: 查看疑似重複的交易
       stale_pending:
-        one: '%{count} 筆過期的待處理交易（已排除於預算之外）'
-        other: '%{count} 筆過期的待處理交易（已排除於預算之外）'
+        one: "%{count} 筆過期的待處理交易（已排除於預算之外）"
+        other: "%{count} 筆過期的待處理交易（已排除於預算之外）"
       view_stale_pending: 查看受影響的帳戶
       stale_pending_count:
-        one: '%{count} 筆交易'
-        other: '%{count} 筆交易'
+        one: "%{count} 筆交易"
+        other: "%{count} 筆交易"
       stale_unmatched:
-        one: '%{count} 筆待處理交易需要手動檢視'
-        other: '%{count} 筆待處理交易需要手動檢視'
+        one: "%{count} 筆待處理交易需要手動檢視"
+        other: "%{count} 筆待處理交易需要手動檢視"
       view_stale_unmatched: 查看需要檢視的交易
       stale_unmatched_count:
-        one: '%{count} 筆交易'
-        other: '%{count} 筆交易'
+        one: "%{count} 筆交易"
+        other: "%{count} 筆交易"
       data_warnings: 資料警告：%{count}
       notices: 通知：%{count}
       view_data_quality: 查看資料品質詳情

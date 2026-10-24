@@ -1,0 +1,17 @@
+---
+ro:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: Configurația poate fi stabilită prin variabile de mediu sau suprascrisă mai jos.
+        optional: Opțional
+      update:
+        failed: Setările furnizorilor nu au putut fi actualizate. Încearcă din nou.
+    llm_usages:
+      show:
+        http_status: 'Stare HTTP: %{status}'
+  shared:
+    async_loading:
+      timeout: Timp de așteptare depășit
+      failed_with_status: Încărcarea a eșuat (%{status})
+      network_error: Eroare de rețea

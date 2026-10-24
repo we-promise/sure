@@ -24,3 +24,6 @@ es:
       savings:
         long: Cuenta de ahorro
         short: Ahorro
+      cash:
+        long: Efectivo
+        short: Efectivo

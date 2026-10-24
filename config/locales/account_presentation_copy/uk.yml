@@ -1,0 +1,32 @@
+---
+uk:
+  properties:
+    update:
+      success: Відомості про нерухомість оновлено.
+      error: Не вдалося оновити відомості про нерухомість.
+    update_balances:
+      success: Баланс оновлено.
+    update_address:
+      success: Адресу оновлено.
+      error: Не вдалося оновити адресу. Перевірте обов’язкові поля.
+  enable_banking_items:
+    account_types:
+      card: Картковий рахунок
+      overdraft: Рахунок з овердрафтом
+      transacting: Розрахунковий рахунок
+      salary: Зарплатний рахунок
+      non_resident_external: Зовнішній рахунок нерезидента
+      tax: Податковий рахунок
+      cash_trading: Рахунок для торгівлі без позикових коштів
+      overnight_deposit: Депозит овернайт
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Автоматична категоризація
+        auto_detect_merchants: Автоматичне визначення продавців
+        enhance_provider_merchants: Доповнення даних продавців від провайдера
+        suggest_bill_setup: Пропозиції щодо налаштування рахунків до сплати
+        process_pdf: Обробка PDF
+        process_pdf_vision: Візуальна обробка PDF
+        extract_bank_statement: Видобування банківських виписок
+        chat: Чат

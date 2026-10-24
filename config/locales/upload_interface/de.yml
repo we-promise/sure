@@ -1,0 +1,13 @@
+---
+de:
+  upload_interface:
+    too_many_files: Zu viele Dateien (max. %{max})
+    file_too_large: Datei zu groß (max. %{max} MB)
+    uploading: "%{filename} wird hochgeladen…"
+    qif_invalid: Die Datei muss eine gültige QIF-Datei sein
+    amount_type_strategies:
+      signed_amount: Betrag mit Vorzeichen
+      custom_column: Benutzerdefinierte Spalte
+    upload_files:
+      one: "%{count} Datei hochladen"
+      other: "%{count} Dateien hochladen"

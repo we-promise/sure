@@ -1,0 +1,11 @@
+---
+hu:
+  binance_items:
+    setup_accounts:
+      historical_import: Korábbi adatok importálása
+  reports:
+    index:
+      period_aria: Jelentés időszaka
+  shared:
+    transaction_tabs:
+      aria: Tranzakció típusa

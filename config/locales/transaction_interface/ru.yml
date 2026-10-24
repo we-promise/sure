@@ -1,0 +1,6 @@
+---
+ru:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Разовый доход (не учитывается в средних значениях)"
+      one_time_expense_tooltip: "Разовый расход (не учитывается в средних значениях)"

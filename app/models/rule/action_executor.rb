@@ -10,7 +10,7 @@ class Rule::ActionExecutor
   end
 
   def label
-    key.humanize
+    I18n.t("rules.action_executors.labels.#{key}")
   end
 
   def type

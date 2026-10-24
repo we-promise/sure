@@ -1,0 +1,31 @@
+---
+nl:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: Transactienaam
+        transaction_amount: Transactiebedrag
+        transaction_type: Transactietype
+        transaction_merchant: Handelaar van de transactie
+        transaction_category: Transactiecategorie
+        transaction_tag: Transactietag
+        transaction_details: Transactiedetails
+        transaction_notes: Transactienotities
+        transaction_account: Transactierekening
+    action_executors:
+      labels:
+        set_transaction_category: Transactiecategorie instellen
+        set_transaction_tags: Transactietags instellen
+        set_transaction_merchant: Handelaar van de transactie instellen
+        set_transaction_name: Transactienaam instellen
+        set_investment_activity_label: Type beleggingsactiviteit instellen
+        exclude_transaction: Uitsluiten van budgetten en rapporten
+        set_as_transfer_or_payment: Instellen als overboeking of betaling
+        send_email_notification: E-mailmelding verzenden
+        auto_categorize: Transacties automatisch categoriseren met AI
+        auto_detect_merchants: Handelaren automatisch herkennen
+        auto_detect_merchants_with_ai: Handelaren automatisch herkennen met AI ($$)
+      auto_categorize:
+        cost_unavailable: "%{label} (kosten onbekend)"
+        cost_estimate: "%{label} (circa %{cost} USD per 20 transacties)"
+        provider_missing: "%{label} (geen categoriseringsprovider ingesteld)"

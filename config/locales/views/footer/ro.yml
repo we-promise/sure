@@ -1,0 +1,6 @@
+---
+ro:
+  layouts:
+    shared:
+      footer:
+        community_fork: "(versiune derivată din %{original_product}, întreținută de comunitate)"

@@ -28,8 +28,9 @@ es:
         clear_cache: Limpiar caché de datos
         clear_cache_warning: Limpiar la caché de datos eliminará todos los tipos de cambio, precios de valores, saldos de cuentas y otros datos temporales. Esto no eliminará cuentas, transacciones, categorías ni otros datos del usuario.
         confirm_clear_cache:
-          title: ¿Limpiar caché de datos?
-          body: ¿Estás seguro de que deseas limpiar la caché de datos? Se eliminarán tipos de cambio, precios y saldos históricos. Esta acción no se puede deshacer.
+          title: "¿Limpiar caché de datos?"
+          body: "¿Estás seguro de que deseas limpiar la caché de datos? Se eliminarán tipos de cambio, precios y saldos históricos. Esta acción no se puede deshacer."
+        demo_refresh: Renovación de datos de demostración
       provider_selection:
         exchange_rate_title: Proveedor de tipos de cambio
         exchange_rate_description: Selecciona un único proveedor para obtener los tipos de cambio de divisas.
@@ -57,9 +58,11 @@ es:
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
+          mansa: Mansa
         title: Selección de Proveedores
         description: Elige qué servicio usar para obtener tipos de cambio y precios de acciones. Yahoo Finance es gratuito y no requiere clave API. Twelve Data requiere una clave API (gratuita disponible) pero ofrece mayor cobertura de datos.
         securities_provider_label: Proveedor de valores (Precios de acciones)
+        requires_api_key_mansa: requiere clave API; plan gratuito de 100 llamadas/día; solo NGX (Nigerian Exchange)
       assistant_settings:
         title: Asistente de IA
         description: Elige cómo responde el asistente del chat. "Integrado" utiliza directamente tu proveedor de LLM configurado. "Externo" delega en un agente remoto que puede interactuar con las herramientas financieras de Sure mediante MCP.
@@ -84,12 +87,24 @@ es:
         disconnect_description: Elimina la conexión del asistente externo y vuelve al asistente integrado.
         disconnect_button: Desconectar
         confirm_disconnect:
-          title: ¿Desconectar asistente externo?
+          title: "¿Desconectar asistente externo?"
           body: Esto eliminará la URL guardada, el token y el ID del agente, y cambiará al asistente integrado. Podrás volver a conectarlo más tarde introduciendo nuevas credenciales.
+        agent_discovery_configure_first: Guarda una URL de endpoint y un token de API válidos para cargar los agentes disponibles.
+        agent_discovery_error: 'No se pudieron cargar los agentes: %{error}'
+        external_agent_invalid: Selecciona un agente devuelto por el endpoint configurado.
+        external_agent_required: Selecciona un agente externo antes de guardar.
+        external_agent_reselect: El endpoint ha cambiado y el agente seleccionado anteriormente no está disponible allí. Selecciona un agente del nuevo endpoint.
+        external_info:
+          items:
+          - Introduce la URL completa del endpoint compatible con OpenAI, terminada en /v1/chat/completions.
+          - Sure detecta los agentes disponibles desde /v1/models después de guardar el endpoint y el token.
+          - El servicio externo elige el modelo que utiliza cada agente; Sure solo selecciona la ruta del agente.
+          - El servicio externo devuelve los errores de autenticación, endpoint o agente. Consulta sus registros cuando falle una solicitud.
+          title: Configuración de IA externa
       brand_fetch_settings:
         description: Introduce el ID de Cliente proporcionado por Brandfetch
         env_configured_message: Has configurado correctamente tu Client ID de Brandfetch mediante la variable de entorno BRAND_FETCH_CLIENT_ID.
-        show_details: (ver detalles)
+        show_details: "(ver detalles)"
         setup_step_1_html: Visita <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> y crea una cuenta gratuita de desarrollador de Brandfetch.
         setup_step_2_html: Ve a la página <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
         setup_step_3: Pulsa el icono del ojo en la sección "Your Client ID" para revelar tu Client ID y pégalo abajo.
@@ -146,10 +161,12 @@ es:
         timeout_heading: Tiempos de espera
         timeout_description: Controla cuánto tiempo pueden ejecutarse las llamadas a modelos compatibles con OpenAI antes de que Sure las cancele. Auméntalos si ejecutas un modelo local en hardware lento.
         openai_request_timeout_label: Tiempo de espera de solicitud en segundos (opcional)
-        openai_request_timeout_help: "Predeterminado: 60. Se aplica a cada solicitud HTTP compatible con OpenAI, incluida la categorización automática, la detección de comercios, el chat, el procesamiento de PDF y las llamadas al almacén vectorial. OPENAI_REQUEST_TIMEOUT sobrescribe este campo."
+        openai_request_timeout_help: 'Predeterminado: 60. Se aplica a cada solicitud HTTP compatible con OpenAI, incluida la categorización automática, la detección de comercios, el chat, el procesamiento de PDF y las llamadas al almacén vectorial. OPENAI_REQUEST_TIMEOUT sobrescribe este campo.'
         ai_response_timeout_label: Tiempo de espera de respuesta en segundos (opcional)
-        ai_response_timeout_help: "Predeterminado: 90. Solo se aplica al monitor de turno completo del chat, así que dimensiona este valor como una suma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × tiempo de espera de solicitud, más el tiempo de ejecución de herramientas y cola. AI_RESPONSE_TIMEOUT sobrescribe este campo."
+        ai_response_timeout_help: 'Predeterminado: 90. Solo se aplica al monitor de turno completo del chat, así que dimensiona este valor como una suma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × tiempo de espera de solicitud, más el tiempo de ejecución de herramientas y cola. AI_RESPONSE_TIMEOUT sobrescribe este campo.'
         title: OpenAI
+        model_function_calling_help: El asistente de IA lee tus datos mediante llamadas a funciones, así que elige un modelo que, según la documentación del proveedor, admita herramientas o llamadas a funciones. Los modelos que no las admiten hacen fallar el chat con un error poco claro del proveedor.
+        model_function_calling_link: Comprobar el modelo configurado
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance proporciona acceso gratuito a precios de acciones, tipos de cambio y datos financieros sin necesidad de una clave API.
@@ -181,7 +198,7 @@ es:
         env_configured_message: Configurado correctamente mediante la variable de entorno TIINGO_API_KEY.
         label: Token de API
         placeholder: Introduce aquí tu token de API de Tiingo
-        show_details: (ver detalles)
+        show_details: "(ver detalles)"
         step_1_html: Visita <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> y crea una cuenta gratuita.
         step_2_html: Ve a la página <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a>.
         step_3: Copia tu token de API y pégalo abajo.
@@ -191,17 +208,18 @@ es:
         env_configured_message: Configurado correctamente mediante la variable de entorno TINKOFF_INVEST_API_KEY.
         label: Token de API
         placeholder: Introduce aquí tu token de API de T-Invest
-        show_details: (ver detalles)
+        show_details: "(ver detalles)"
         step_1: Abre las inversiones de T-Bank, luego Ajustes y después Tokens de API (requiere una cuenta de bróker abierta en T-Bank).
         step_2: Crea un token con acceso de solo lectura.
         step_3: Copia el token y pégalo abajo.
+        moex_only_notice: 'No está activado para los precios anteriores: cuando hay un token configurado, T-Invest obtiene logotipos de marca para todos tus valores, independientemente de la casilla anterior.'
       eodhd_settings:
         title: EODHD
         description: Introduce el token de API proporcionado por EODHD. Admite ETF de la UE en LSE, XETRA y otras bolsas internacionales.
         env_configured_message: Configurado correctamente mediante la variable de entorno EODHD_API_KEY.
         label: Token de API
         placeholder: Introduce aquí tu token de API de EODHD
-        show_details: (ver detalles)
+        show_details: "(ver detalles)"
         step_1_html: Visita <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> y crea una cuenta gratuita.
         step_2_html: Ve a tu <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">panel</a> para encontrar tu token de API.
         step_3: Copia tu token de API y pégalo abajo.
@@ -212,18 +230,18 @@ es:
         env_configured_message: Configurado correctamente mediante la variable de entorno ALPHA_VANTAGE_API_KEY.
         label: Clave API
         placeholder: Introduce aquí tu clave API de Alpha Vantage
-        show_details: (ver detalles)
+        show_details: "(ver detalles)"
         step_1_html: Visita <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> y solicita tu clave API gratuita.
         step_2: Copia la clave API y pégala abajo.
         rate_limit_warning: El plan gratuito de Alpha Vantage está limitado a 25 llamadas a la API al día. Es mejor usarlo como proveedor complementario para ETF de la UE no disponibles en otros proveedores.
         no_health_check_note: La comprobación del estado de la conexión no está disponible para este proveedor debido a su estricto límite de llamadas.
       twelve_data_settings:
-        api_calls_used: '%{used} / %{limit} llamadas diarias a la API utilizadas (%{percentage})'
+        api_calls_used: "%{used} / %{limit} llamadas diarias a la API utilizadas (%{percentage})"
         description: Introduce la clave API proporcionada por Twelve Data
         env_configured_message: Configurado con éxito a través de la variable de entorno TWELVE_DATA_API_KEY.
         label: Clave API
         placeholder: Introduce tu clave API aquí
-        show_details: (ver detalles)
+        show_details: "(ver detalles)"
         step_1_html: Visita <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> y crea una cuenta gratuita de desarrollador de Twelve Data.
         step_2_html: Ve a la página <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.
         step_3: Revela tu Secret Key y pégala abajo.
@@ -238,10 +256,14 @@ es:
         success: Configuración actualizada
         invalid_onboarding_state: Estado de incorporación no válido
         invalid_sync_time: Formato de hora de sincronización no válido. Por favor, usa el formato HH:MM (ej. 02:30).
-        invalid_llm_budget: '%{field} debe ser un número entero ≥ %{minimum}.'
+        invalid_llm_budget: "%{field} debe ser un número entero ≥ %{minimum}."
         invalid_anthropic_base_url: La URL base de Anthropic debe ser una URL http(s).
         anthropic_model_required_for_base_url: El modelo de Anthropic es obligatorio cuando se define una URL base personalizada.
         scheduler_sync_failed: Ajustes guardados, pero no se pudo actualizar la programación de sincronización. Inténtalo de nuevo o revisa los registros del servidor.
+        invalid_categorization_rate: "%{field} debe ser un número entre 0 y 1."
+        invalid_demo_family: La familia seleccionada debe ser propietaria del correo de demostración configurado.
+        invalid_jev_endpoint: El endpoint de Jev debe ser una URL https. Solo se acepta http sin cifrar para localhost.
+        select_demo_family: Selecciona primero una familia de demostración desechable.
       disconnect_external_assistant:
         external_assistant_disconnected: Asistente externo desconectado
       clear_cache:
@@ -261,3 +283,57 @@ es:
         include_pending_label: Incluir transacciones pendientes
         include_pending_description: Cuando está habilitado, las transacciones pendientes (no liquidadas) se importarán y se conciliarán automáticamente cuando se confirmen. Desactívalo si tu banco proporciona datos pendientes poco fiables.
         env_configured_message: Este ajuste está desactivado porque hay una variable de entorno del proveedor (SIMPLEFIN_INCLUDE_PENDING o PLAID_INCLUDE_PENDING) definida. Elimínala para habilitar este ajuste aquí.
+      categorization_provider_selector:
+        preview_pill: Vista previa
+        confidence_threshold_env_notice: Bloqueado por la variable de entorno CATEGORIZATION_CONFIDENCE_THRESHOLD.
+        confidence_threshold_help: Por debajo de este nivel de confianza no se aplica la categoría y la transacción queda sin categoría para que se pueda reintentar más adelante. No se descarta nada. Establécelo en 0 para aplicar todas las respuestas.
+        confidence_threshold_label: Confianza mínima (0–1)
+        data_retention_direct: Las descripciones e importes de las transacciones y los nombres de tus categorías se envían a TypeSafe para clasificarlas. Revisa su política de conservación antes de activar esta función con datos reales.
+        data_retention_heading: Datos compartidos
+        data_retention_proxied: Las descripciones e importes de las transacciones y los nombres de tus categorías se envían a %{host}, que los reenvía a TypeSafe. Revisa las políticas de conservación de ambos proveedores antes de activar esta función con datos reales.
+        description: Elige qué proveedor clasifica las transacciones. Es independiente del proveedor de IA de arriba, que gestiona el chat y el procesamiento de PDF.
+        env_notice: Establecido en %{type} mediante variables de entorno.
+        jev_configured: Clave API de Jev configurada.
+        jev_not_configured: Jev está seleccionado, pero no tiene una clave API configurada. La clasificación seguirá usando el proveedor de IA hasta que añadas una a continuación.
+        provider_help: El proveedor de IA lee un lote de transacciones y devuelve nombres de categorías. Jev elige de tu lista de categorías y devuelve un nivel de confianza calibrado para cada transacción.
+        provider_jev: Jev (TypeSafe)
+        provider_label: Proveedor de clasificación
+        provider_llm: Proveedor de IA (OpenAI o Anthropic)
+        shadow_rate_env_notice: Bloqueado por la variable de entorno CATEGORIZATION_SHADOW_RATE.
+        shadow_rate_help: Ejecuta el proveedor que NO has seleccionado junto al elegido y registra sus discrepancias sin cambiar ninguna categoría. Esto duplica el gasto de API de cada ejecución de clasificación incluida en la muestra. Establécelo en 0 para desactivarlo.
+        shadow_rate_label: Proporción de comparación en paralelo (0–1)
+        title: Clasificación de transacciones
+      jev_settings:
+        api_key_label: Clave API
+        env_configured_message: Configurado con éxito a través de variables de entorno.
+        model_label: Modelo (Opcional)
+        api_key_placeholder: Introduce tu clave API de TypeSafe
+        endpoint_label: Endpoint (opcional)
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone (predeterminado)
+        model_help: De forma predeterminada se conecta directamente a TypeSafe. Para acceder a Jev mediante OpenRouter, establece el endpoint en https://openrouter.ai/api/alpha/decisions y el modelo en ~typesafe/jev-latest.
+        model_placeholder: jev-latest (predeterminado)
+      mansa_settings:
+        label: Clave API
+        show_details: "(ver detalles)"
+        title: Mansa
+        description: Introduce la clave de Mansa API. Admite NGX (Nigerian Exchange), que no cubre ningún otro proveedor de aquí. Mansa también cubre otras bolsas africanas, pero solo NGX está verificada con esta integración.
+        env_configured_message: Configurado correctamente mediante la variable de entorno MANSA_API_KEY.
+        placeholder: Introduce aquí tu clave API de Mansa
+        rate_limit_warning: El plan gratuito de Mansa está limitado a 100 llamadas de API al día y solo ofrece cotizaciones actuales; los precios históricos requieren un plan de pago. Solo NGX (Nigerian Exchange) está verificada con esta integración; las demás bolsas africanas que cubre Mansa aún no se admiten aquí.
+        step_1_html: Visita <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> y obtén tu clave API gratuita, sin necesidad de tarjeta.
+        step_2: Copia tu clave API y pégala a continuación.
+      categorization_shadow_results:
+        shadow_disagreement_confidence: "(confianza %{confidence})"
+        shadow_disagreement_row: "%{applied_provider} eligió %{applied_category}; %{shadow_provider} eligió %{shadow_category}."
+        shadow_disagreements_heading: Discrepancias más recientes
+        shadow_no_category: sin categoría
+        shadow_no_disagreements: Los dos proveedores coincidieron en todas las transacciones de la muestra.
+        shadow_results_empty: Todavía no hay comparaciones registradas. Establece una proporción de comparación en paralelo mayor que 0 y ejecuta la clasificación para obtenerlas.
+        shadow_results_heading: Comparación en paralelo
+        shadow_results_summary: "%{agreement}%% de coincidencia en %{count} transacciones de la muestra."
+      demo_refresh_settings:
+        description: Renueva automáticamente solo la familia de demostración seleccionada. Se eliminarán todos sus datos y accesos. Las demás familias no se modificarán. Requiere un trabajador en ejecución con al menos 2 GiB de RAM. Primero crea una familia de demostración desechable con el generador de demos y selecciónala aquí. No elijas la familia de un usuario real.
+        enabled_label: Activar la renovación diaria de la familia de demostración
+        family_label: Familia de demostración desechable
+        none: No se ha seleccionado ninguna familia de demostración
+        save_family: Guardar familia de demostración

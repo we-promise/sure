@@ -70,11 +70,33 @@ es:
           holdings_value: Valor de las posiciones
           remaining_principal_balance: Capital pendiente
           total_account_value: Valor total de la cuenta
+          loan_remaining_balance: Saldo pendiente
+          total_gains: Ganancias totales
         views:
           cash: Efectivo
           holdings: Posiciones
           total_value: Valor total
+          gains: Ganancias / ROI
         vs_available_history: vs. historial disponible
+        loan:
+          today: Hoy
+          actual: Saldo registrado
+          aria_actual_history_starts: El historial de saldos registrados comienza el %{date}.
+          aria_description: 'Gráfico del saldo del préstamo. Saldo registrado: %{current_balance}. Amortización total prevista originalmente: %{scheduled_payoff_date}. Amortización total proyectada a partir del saldo actual: %{projected_payoff_date}.'
+          interactive_chart: gráfico interactivo
+          interest_saved: Intereses ahorrados
+          legend: Series del gráfico
+          months_saved:
+            one: "%{count} mes antes de lo previsto"
+            other: "%{count} meses antes de lo previsto"
+          no_payoff: no con la cuota actual
+          not_converged: Con la cuota actual, este saldo no se amortiza antes del vencimiento original; aún se deberían %{balloon}.
+          on_schedule: Según lo previsto
+          projected: Proyección desde hoy
+          projected_payoff: Amortización total proyectada
+          projection_basis: Compara el saldo registrado hoy con el saldo del calendario para el mismo día. Un pago registrado antes de su fecha prevista aparece como adelantado hasta esa fecha; uno registrado después aparece como retrasado.
+          scheduled: Calendario original
+          since_start: desde el inicio del préstamo
       activity_date:
         balance_tooltip: El saldo al final del día, tras todas las transacciones y ajustes
         no_balance_data: No hay datos de saldo disponibles para esta fecha
@@ -87,7 +109,7 @@ es:
         error: Error
         destructive: Error
     pill:
-      aria_label: '%{label}'
+      aria_label: "%{label}"
       default_label: Experimental
     dialog:
       close: Cerrar
@@ -96,7 +118,10 @@ es:
     tooltip:
       trigger_label: Más información
     link:
-      opens_in_new_tab: (se abre en una pestaña nueva)
+      opens_in_new_tab: "(se abre en una pestaña nueva)"
+    icon_picker:
+      no_matching_icons: No hay iconos que coincidan
+      search_placeholder: Buscar iconos...
   provider_sync_summary:
     title: Resumen de sincronización
     last_sync: 'Última sincronización: hace %{time_ago}'
@@ -114,8 +139,8 @@ es:
       skipped: 'Omitidas: %{count}'
       fetching: Obteniendo del bróker...
       protected:
-        one: '%{count} entrada protegida (no sobrescrita)'
-        other: '%{count} entradas protegidas (no sobrescritas)'
+        one: "%{count} entrada protegida (no sobrescrita)"
+        other: "%{count} entradas protegidas (no sobrescritas)"
       view_protected: Ver entradas protegidas
     skip_reasons:
       excluded: Excluida
@@ -138,27 +163,27 @@ es:
       recently: recientemente
       errors: 'Errores: %{count}'
       pending_reconciled:
-        one: '%{count} transacción pendiente duplicada conciliada'
-        other: '%{count} transacciones pendientes duplicadas conciliadas'
+        one: "%{count} transacción pendiente duplicada conciliada"
+        other: "%{count} transacciones pendientes duplicadas conciliadas"
       view_reconciled: Ver transacciones conciliadas
       duplicate_suggestions:
-        one: '%{count} posible duplicado necesita revisión'
-        other: '%{count} posibles duplicados necesitan revisión'
+        one: "%{count} posible duplicado necesita revisión"
+        other: "%{count} posibles duplicados necesitan revisión"
       view_duplicate_suggestions: Ver duplicados sugeridos
       stale_pending:
-        one: '%{count} transacción pendiente antigua (excluida de presupuestos)'
-        other: '%{count} transacciones pendientes antiguas (excluidas de presupuestos)'
+        one: "%{count} transacción pendiente antigua (excluida de presupuestos)"
+        other: "%{count} transacciones pendientes antiguas (excluidas de presupuestos)"
       view_stale_pending: Ver cuentas afectadas
       stale_pending_count:
-        one: '%{count} transacción'
-        other: '%{count} transacciones'
+        one: "%{count} transacción"
+        other: "%{count} transacciones"
       stale_unmatched:
-        one: '%{count} transacción pendiente necesita revisión manual'
-        other: '%{count} transacciones pendientes necesitan revisión manual'
+        one: "%{count} transacción pendiente necesita revisión manual"
+        other: "%{count} transacciones pendientes necesitan revisión manual"
       view_stale_unmatched: Ver transacciones que necesitan revisión
       stale_unmatched_count:
-        one: '%{count} transacción'
-        other: '%{count} transacciones'
+        one: "%{count} transacción"
+        other: "%{count} transacciones"
       data_warnings: 'Avisos de datos: %{count}'
       notices: 'Avisos: %{count}'
       view_data_quality: Ver detalles de calidad de datos

@@ -1,0 +1,6 @@
+---
+nl:
+  reports:
+    index:
+      sections_aria_label: "Rapportsecties"
+      section_reorder_aria: "Sectie %{title}. Druk op Enter of de spatiebalk om de sectie te selecteren voor het wijzigen van de volgorde en verplaats deze vervolgens met de pijltoetsen."

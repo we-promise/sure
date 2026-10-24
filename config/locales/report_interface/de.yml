@@ -1,0 +1,6 @@
+---
+de:
+  reports:
+    index:
+      sections_aria_label: "Berichtsabschnitte"
+      section_reorder_aria: "Abschnitt %{title}. Drücke die Eingabe- oder Leertaste, um den Abschnitt zum Umsortieren auszuwählen, und verschiebe ihn dann mit den Pfeiltasten."

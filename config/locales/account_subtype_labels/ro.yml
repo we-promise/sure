@@ -1,0 +1,40 @@
+---
+ro:
+  investments:
+    subtypes:
+      non-registered:
+        long: Cont de investiții neînregistrat
+      fhsa:
+        long: Cont de economii pentru prima locuință (FHSA)
+      rdsp:
+        long: Plan de economii înregistrat pentru persoane cu dizabilități (RDSP)
+      dpsp:
+        long: Plan de participare amânată la profit (DPSP)
+      prpp:
+        long: Plan colectiv de pensii înregistrat (PRPP)
+      lif:
+        long: Fond de venit viager (LIF)
+      lrif:
+        long: Fond blocat de venit pentru pensie (LRIF)
+      prif:
+        long: Fond înregistrat de venit pentru pensie cu reglementare specială (PRIF)
+      rlif:
+        long: Fond restricționat de venit viager (RLIF)
+      assurance_vie:
+        long: Asigurare de viață franceză (Assurance Vie)
+  loans:
+    subtypes:
+      home_equity:
+        long: Împrumut garantat cu valoarea netă a locuinței
+      line_of_credit:
+        long: Linie de credit
+      business:
+        long: Credit pentru afaceri
+      mortgage:
+        long: Credit ipotecar
+      student:
+        long: Credit pentru studii
+      auto:
+        long: Credit auto
+      other:
+        long: Alt împrumut

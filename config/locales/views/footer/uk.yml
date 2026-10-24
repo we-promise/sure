@@ -1,0 +1,6 @@
+---
+uk:
+  layouts:
+    shared:
+      footer:
+        community_fork: "(відгалуження %{original_product}, яке підтримує спільнота)"

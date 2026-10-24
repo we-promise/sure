@@ -1,0 +1,342 @@
+---
+zh-TW:
+  admin:
+    system_health:
+      hosted_usage:
+        cleanup:
+          description: 符合既有清理範圍：已暫停或試用中的訂閱結束超過 14 天，或沒有訂閱且家庭建立已超過 45 + 14 天。最多顯示 %{limit} 個家庭。
+          disabled: 非代管模式不會執行排定的試用清理，此處僅顯示符合範圍的項目。
+          eligibility_help: 最近登入不會使項目排除於範圍外。符合資格不代表已刪除；90 天是封存保留期，不是試用清理門檻。
+          empty: 沒有家庭符合清理範圍
+          reasons:
+            expired_trial_grace_elapsed: 試用已結束，14 天寬限期已過
+            no_subscription_grace_elapsed: 沒有訂閱，已超過 45 + 14 天
+          title: 清理資格
+        columns:
+          cleanup_eligible: 符合清理資格
+          cleanup_reason: 原因
+          household: 家庭 ID
+          latest_session: 保留紀錄中的最近登入
+          members: 成員帳號
+          recent_sessions: 過去 30 天建立且仍保留的工作階段
+          recorded_at: 訂閱記錄時間
+          retained_sessions: 保留的登入工作階段
+          status: 目前狀態
+          subscription_rows: 訂閱資料列
+          trial_ends_at: 試用結束
+        eligible: 符合資格
+        limitations: 目前資料表未保留完整的試用、付款或工作階段活動紀錄。訂閱建立時間可能反映匯入時間。成員帳號並未驗證為不同的真人。此檢視不會變更家庭或訂閱資料。共用示範重設會移除舊家庭與工作階段，因此無法重建訪客歷史。
+        limitations_title: 這些數字能說明什麼
+        loading: 正在載入代管使用情況…
+        not_eligible: 不符合資格
+        not_recorded: 未記錄
+        snapshot: 截至 %{time} 的唯讀資料庫快照
+        statuses:
+          active: 啟用中
+          canceled: 已取消
+          incomplete: 未完成
+          incomplete_expired: 未完成且已過期
+          no_subscription: 沒有訂閱
+          past_due: 已逾期
+          paused: 已暫停
+          trialing: 試用中
+          unknown: 未知
+          unpaid: 未付款
+        summary:
+          active_supporter_households_count: 有效贊助者家庭（本機）
+          cleanup_eligible_count: 符合清理資格的家庭
+          supporter_subscription_count: 連結 Stripe 的訂閱資料列
+          trial_households_count: 試用家庭（過去 30 天）
+          trial_members_count: 目前試用成員帳號
+          trials_expiring_soon_count: 未來 7 天到期的試用
+        summary_help: 試用總數涵蓋過去 30 天記錄的訂閱。即將到期的試用、清理與贊助者總數涵蓋目前所有符合條件的資料列，不受表格顯示筆數限制。
+        supporters:
+          description: 目前本機訂閱資料列中，客戶與訂閱 ID 符合 Stripe 格式的項目；不包含合成示範訂閱。這些狀態不代表已確認收到付款或首次付款日期，也不會向 Stripe
+            發出請求。
+          empty: 沒有連結 Stripe 的訂閱資料列
+          title: 本機贊助者狀態
+        synthetic_demo: 合成示範
+        title: 代管使用情況
+        trials:
+          description: 自 %{date} 起記錄且保留試用結束日期的訂閱，包括已轉為付費的試用。最多顯示 %{limit} 個家庭。
+          empty: 此期間沒有記錄試用家庭
+          sessions_help: 工作階段是啟用中使用者保留的登入紀錄，不代表目前在線人數或造訪次數。登出會刪除紀錄。最近建立時間不等於最後活動時間。
+          title: 近期試用家庭
+      push_notification:
+        body: 這是您 Sure 帳號的測試推播通知。
+        title: Sure 測試通知
+      push_notifications:
+        columns:
+          checked_at: 上次更新
+          device: 裝置
+          environment: APNs 環境
+          status: 結果
+        device: 裝置 %{number}
+        environments:
+          production: 正式環境
+          sandbox: 沙盒環境
+        messages:
+          cooldown: 請等候 30 秒後再傳送下一則測試。
+          disabled: 管理員已停用推播傳送。
+          enqueue_failed: 測試無法加入佇列，請檢查 Sidekiq 並重新整理下方結果。
+          hosted_only: 推播通知僅在代管模式可用。
+          ineligible: 只有啟用中的超級管理員可以傳送測試通知。
+          no_devices: 請在 Sure iOS 應用程式中為此帳號啟用推播通知，再傳送測試。
+          not_configured: 尚未設定 APNs 憑證。
+          queued: 測試通知已加入佇列，請重新整理下方結果查看狀態。
+          ready: 傳送測試通知至您帳號已註冊並啟用的 iOS 裝置。
+          storage_unavailable: 無法儲存測試請求，請檢查共用快取設定。
+        pending: 待處理
+        queueing: 正在加入佇列…
+        refresh: 重新整理結果
+        requested_at: 最近一次測試請求時間：%{time}
+        result_help: APNs 接受請求不代表裝置已收到通知。重新整理可查看背景工作結果；結果保留 24 小時。
+        results_label: 測試結果
+        send_test: 傳送測試推播通知
+        statuses:
+          accepted: APNs 已接受
+          enqueue_failed: 無法加入佇列，請檢查 Sidekiq
+          expired: 已過期，沒有最終結果
+          failed: 失敗，請查看推播偵錯日誌
+          queued: 佇列中
+          rejected: APNs 已拒絕，請查看推播偵錯日誌
+          retrying: 正在重試暫時性失敗
+          skipped: 已略過：不再符合資格
+          unregistered: 裝置註冊已失效
+        title: 推播通知
+      show:
+        ai:
+          adapters:
+            openai: OpenAI 代管向量儲存
+            pgvector: pgvector
+            qdrant: Qdrant
+          alerts:
+            custom_openai:
+              message: >-
+                設定的端點未通過 /v1/vector_stores 存活檢查。多數本機與 OpenAI 相容端點並未實作此 API。聊天和 PDF 處理可能仍可使用；一般本機設定請使用
+                pgvector 搭配獨立的嵌入端點。失敗已記錄於「設定 → 偵錯日誌」與 Rails.logger。
+              title: 此自訂端點的代管向量儲存檢查失敗
+            embedding_dimensions_mismatch:
+              message: >-
+                嵌入端點回傳的向量長度與 EMBEDDING_DIMENSIONS 不符。請依模型文件中的向量大小設定 EMBEDDING_MODEL 與 EMBEDDING_DIMENSIONS，重新啟動
+                Sure 以套用環境設定。若既有資料使用不同大小，還需修改或重建 pgvector 嵌入欄位／資料表，並重新產生文件嵌入。
+              title: 嵌入維度不符
+            embedding_probe_failed:
+              message: >-
+                Sure 無法透過設定的端點與模型建立簡短測試嵌入。請檢查 EMBEDDING_URI_BASE、EMBEDDING_MODEL、EMBEDDING_ACCESS_TOKEN
+                及嵌入服務供應商日誌。失敗已記錄於「設定 → 偵錯日誌」與 Rails.logger。
+              title: 嵌入服務即時檢查失敗
+            embedding_probe_timeout:
+              message: >-
+                嵌入端點未在 AI_HEALTH_PROBE_TIMEOUT 時限內回應。若供應商回應較慢，請提高此健康檢查逾時值，再重新啟動 Sure，讓每個程序套用環境設定。若一般 AI
+                聊天呼叫也逾時，請另外提高 OPENAI_REQUEST_TIMEOUT。
+              title: 嵌入服務即時檢查逾時
+            function_calling_not_used:
+              message: 端點接受 tools 參數，但模型回覆文字而未呼叫健康檢查工具。AI 助理必須透過工具呼叫才能讀取財務資料，因此聊天可能沒有答案，或提供虛構數字。建議選用供應商文件明確支援函式呼叫的模型。
+              title: 模型直接回答，未依要求呼叫工具
+            function_calling_unsupported:
+              message: >-
+                端點可處理一般聊天請求，卻拒絕相同但帶有 tools 參數的請求。AI 助理透過函式呼叫讀取帳戶、交易與持有部位，因此在改用支援工具的模型前，聊天會持續失敗，且常只顯示無助於診斷的
+                404。請選用供應商文件明確支援函式呼叫的模型。失敗已記錄於「設定 → 偵錯日誌」與 Rails.logger。
+              title: 模型不支援函式呼叫
+            llm_model_not_available:
+              message: 端點已有回應，但未列出或提供設定的模型。請為所選供應商選擇可用模型，再重新檢查。若 Gemini 經由 OpenAI 相容轉接層使用，請選擇目前支援的模型，例如
+                gemini-2.5-flash。
+              title: 設定的 AI 模型不可用
+            llm_probe_failed:
+              message: Sure 無法同時驗證設定的端點與模型。失敗已記錄於「設定 → 偵錯日誌」與 Rails.logger。
+              title: LLM 即時檢查失敗
+            missing_vector_store:
+              message: 必須先設定向量儲存介接器及其必要條件，才能為上傳的文件建立索引與搜尋。
+              title: 尚未設定向量儲存
+            pdf_text_extraction_failed:
+              message: Sure 無法完成文字優先流程，也就是在本機擷取 PDF 內嵌文字後傳送給設定的模型。未傳送任何客戶資料。失敗已記錄於「設定 → 偵錯日誌」與 Rails.logger。
+              title: 合成 PDF 文字擷取檢查失敗
+            pdf_vision_processing_failed:
+              message: Sure 無法透過設定的模型完成影像或原生文件 PDF 處理流程。未傳送任何客戶資料。失敗已記錄於「設定 → 偵錯日誌」與 Rails.logger。
+              title: 合成 PDF 視覺／原生處理檢查失敗
+            pgvector_extension_not_enabled:
+              message: >-
+                已選擇 pgvector 介接器，但 PostgreSQL 尚未為此資料庫啟用 vector 擴充套件。請使用包含 pgvector 的 PostgreSQL 映像檔，以資料庫擁有者或超級使用者身分啟用擴充套件，再以
+                VECTOR_STORE_PROVIDER=pgvector 重新執行資料庫遷移。
+              title: PostgreSQL vector 擴充套件尚未啟用
+            pgvector_probe_failed:
+              message: >-
+                Sure 無法查詢 pgvector 區塊資料表。請檢查 PostgreSQL 權限、vector 擴充套件及 vector_store_chunks 遷移。失敗已記錄於「設定
+                → 偵錯日誌」與 Rails.logger。
+              title: pgvector 儲存檢查失敗
+            pgvector_table_not_found:
+              message: >-
+                pgvector 擴充套件已啟用，但找不到區塊資料表。請檢查遷移狀態，再以 VECTOR_STORE_PROVIDER=pgvector 重新執行向量儲存遷移，讓 Sure
+                建立 vector_store_chunks。
+              title: 缺少 vector_store_chunks 資料表
+            qdrant:
+              message: Qdrant 介接器目前只有基本架構，文件上傳與搜尋操作仍會失敗。請選擇 OpenAI 或 pgvector 進行文件搜尋。
+              title: 尚未實作 Qdrant 支援
+            unavailable_vector_store:
+              message: 請檢查下方介接器需求。使用 pgvector 時，資料庫必須提供 vector 擴充套件，或已有 vector_store_chunks 資料表。
+              title: 所選向量儲存不可用
+            vector_probe_failed:
+              message: Sure 無法驗證所選向量儲存及所有必要的嵌入服務。失敗已記錄於「設定 → 偵錯日誌」與 Rails.logger。
+              title: 文件搜尋即時檢查失敗
+          failure_codes:
+            dimensions_mismatch: 嵌入向量維度與設定的維度不符
+            extension_not_enabled: PostgreSQL vector 擴充套件尚未啟用
+            invalid_response: 服務回傳非預期的回應
+            model_not_available: 供應商未回傳設定的模型
+            no_tool_call: 模型回答時未呼叫健康檢查工具
+            render_missing_binary: 此容器中沒有可用的 pdftoppm 轉譯器（poppler-utils）
+            request_failed: 服務請求失敗
+            table_not_found: 找不到 vector_store_chunks 資料表
+            timeout: 服務未在探測時限內回應
+            tools_refused: 服務接受未附工具的相同請求，卻拒絕附帶工具的請求
+            unsupported_provider: 供應商不支援此檢查
+          function_calling_statuses:
+            failing: 即時檢查失敗
+            not_checked: 未檢查
+            not_used: 工具參數已接受，但模型未呼叫任何工具
+            supported: 即時工具呼叫成功
+            unavailable: 設定 LLM 供應商後才可使用
+            unsupported: 實際使用的供應商／模型不支援
+          labels:
+            adapter: 介接器
+            adapter_available: 介接器可用
+            anthropic_credentials: Anthropic 憑證
+            effective_provider: 實際使用的供應商
+            embedding_dimensions: 嵌入維度
+            embedding_endpoint: 嵌入端點
+            embedding_model: 嵌入模型
+            embedding_probe: 嵌入端點檢查
+            endpoint: 端點
+            failure_reason: 失敗原因
+            function_calling: 函式呼叫（工具）
+            function_calling_failure_reason: 函式呼叫失敗原因
+            llm_request_timeout: LLM 請求逾時
+            model: 模型
+            openai_compatible_credentials: OpenAI 相容 API 憑證
+            openai_credentials: OpenAI 憑證
+            pdf_text_extraction: PDF 文字擷取流程
+            pdf_text_extraction_failure_reason: 文字擷取失敗原因
+            pdf_vision_processing: PDF 視覺／原生處理流程
+            pdf_vision_processing_failure_reason: 視覺／原生處理失敗原因
+            pgvector_extension: PostgreSQL vector 擴充套件
+            pgvector_table: 向量區塊資料表
+            probe_request_timeout: 健康檢查探測逾時
+            selected_provider: 所選供應商
+            storage_probe: pgvector 儲存檢查
+          last_checked: 即時檢查於 %{time_ago}前完成，結果會短暫快取。
+          llm:
+            description: 即時檢查會驗證設定的模型，要求它像助理一樣執行一次簡單函式呼叫，再以不含客戶資料的單頁合成 PDF 分別測試文字擷取與視覺／原生處理。憑證值絕不會顯示。
+            title: LLM 與 PDF 處理
+          loading: 正在執行即時檢查…
+          local_setup:
+            description: >-
+              透過本機 OpenAI 相容端點執行 LLM，將文件向量存入 pgvector，並將嵌入設定指向 OpenAI 相容的嵌入端點。PostgreSQL 映像檔必須包含 vector
+              擴充套件，嵌入維度也必須符合所選模型。
+            title: 建議的本機設定
+          not_checked_help: 直接開啟 AI 狀態網址或執行檢查，以驗證服務是否正常運作。
+          pdf_statuses:
+            failing: 合成 PDF 檢查失敗
+            not_checked: 未檢查
+            supported: 合成 PDF 檢查通過
+            unavailable: 設定 LLM 供應商後才可使用
+            unsupported: 實際使用的供應商／模型已停用或不支援
+          probe_statuses:
+            failing: 即時檢查失敗
+            not_checked: 未檢查
+            not_configured: 未設定
+            passing: 即時檢查通過
+          providers:
+            anthropic: Anthropic
+            cloudflare: Cloudflare
+            custom_openai_compatible: 自訂端點
+            kilo: Kilo
+            ollama: Ollama
+            openai: OpenAI
+            openai_compatible: OpenAI 相容
+            openrouter: OpenRouter
+            together: Together
+          run_checks: 重新執行檢查
+          values:
+            available: 可用
+            available_not_enabled: 可用但未啟用
+            configured: 已設定
+            enabled: 已啟用
+            fallback: "（備援）"
+            'no': 否
+            not_available: 不可用
+            not_configured: 未設定
+            not_found: 找不到
+            not_set: 未設定
+            'yes': 是
+          vector_statuses:
+            failing: 即時檢查失敗
+            missing: 未設定
+            not_checked: 未檢查
+            not_configured: 未設定
+            passing: 即時檢查均通過
+            scaffolded: 僅有基本架構
+          vector_store:
+            description: 即時檢查會查詢代管向量儲存 API，或測試 pgvector 資料表並產生一個不予儲存的簡短嵌入。
+            title: 向量儲存與文件搜尋
+          worker:
+            configuration_statuses:
+              match: 與網頁服務一致
+              mismatch: 與網頁服務不同
+            coverage_notice: 每次檢查只驗證一個實際取出工作的背景程序。若有多個背景工作副本，一次通過不代表所有程序均正常；請再次加入檢查，以抽查其他程序。
+            description: >-
+              上方檢查由此網頁程序執行。大多數 AI 工作（助理回覆、PDF 處理、嵌入、自動分類與商家辨識）實際在 Sidekiq 背景程序中執行，其網路存取、DNS、代理規則，甚至載入的憑證都可能不同。請將檢查加入佇列，驗證背景程序本身的設定與連線。
+            empty:
+              description: 按下「驗證背景程序設定」將非同步檢查加入佇列。背景程序取出工作後，結果會顯示於此。
+              title: 尚無背景程序回報
+            labels:
+              checked_at: 已檢查
+              configuration: 設定
+              process: 背景工作程序
+            settings_origin:
+              database_backed: >-
+                在「設定 → 自行架設」中變更的供應商、模型與 API 金鑰會儲存在資料庫。rails-settings-cached 會在寫入時使共用快取失效，因此網頁與背景程序在下一個請求或佇列工作就會讀取新值，無需重新啟動。
+              env_backed: >-
+                嵌入設定及僅透過環境變數設定的值，會在每個容器啟動時固定。Rails 無法變更其他容器的環境，因此修改後必須重新啟動或重建網頁與背景服務。只重新啟動其中一項的部署工具（部分部署、更新
+                Secret 卻未重新啟動 Pod）無法完整套用變更。
+              title: 哪些設定需要重新啟動？
+            statuses:
+              failing: 未通過
+              passing: 通過
+              stale: 已過期
+            title: 背景程序驗證
+            verify_button: 驗證背景程序設定
+        alert:
+          title: 背景工作未執行
+        counters_section_description: 彙整所有佇列的 Sidekiq 計數。
+        counters_section_title: 工作計數
+        labels:
+          enqueued: 佇列中
+          failed: 失敗
+          last_heartbeat: 上次心跳
+          latency: 延遲
+          max_queue_latency: 最舊工作的等待時間
+          processed_total: 已處理總數
+          processes: 背景工作程序
+          queue: 佇列
+          retries: 重試
+          size: 數量
+          status: 狀態
+        queues_section_description: 各佇列的待辦數量與最舊工作等待時間。延遲以最舊工作已等候的秒數表示。
+        queues_section_title: 佇列
+        status_section_description: 負責同步、餘額與淨資產計算的背景程序目前狀態。
+        status_section_title: Sidekiq 狀態
+        tabs:
+          ai: AI 狀態
+          background_jobs: 背景工作
+          hosted_usage: 代管使用情況
+        title: 系統健康狀態
+        values:
+          healthy: 正常
+          never: 從未
+          no_queues: 沒有已註冊的佇列，背景程序可能未執行。
+          seconds: "%{seconds} 秒"
+          time_ago: "%{time_ago}前"
+          unhealthy: 功能受損
+      verify_worker_ai:
+        queued: 背景程序檢查已加入佇列。程序取出工作後就會顯示於下方，通常只需幾秒。

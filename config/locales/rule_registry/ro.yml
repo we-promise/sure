@@ -1,0 +1,31 @@
+---
+ro:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: Numele tranzacției
+        transaction_amount: Suma tranzacției
+        transaction_type: Tipul tranzacției
+        transaction_merchant: Comerciantul tranzacției
+        transaction_category: Categoria tranzacției
+        transaction_tag: Eticheta tranzacției
+        transaction_details: Detaliile tranzacției
+        transaction_notes: Notele tranzacției
+        transaction_account: Contul tranzacției
+    action_executors:
+      labels:
+        set_transaction_category: Stabilește categoria tranzacției
+        set_transaction_tags: Stabilește etichetele tranzacției
+        set_transaction_merchant: Stabilește comerciantul tranzacției
+        set_transaction_name: Stabilește numele tranzacției
+        set_investment_activity_label: Stabilește tipul activității de investiții
+        exclude_transaction: Exclude din buget și rapoarte
+        set_as_transfer_or_payment: Marchează ca transfer sau plată
+        send_email_notification: Trimite o notificare prin e-mail
+        auto_categorize: Clasifică automat tranzacțiile cu IA
+        auto_detect_merchants: Identifică automat comercianții
+        auto_detect_merchants_with_ai: Identifică automat comercianții cu IA ($$)
+      auto_categorize:
+        cost_unavailable: "%{label} (cost indisponibil)"
+        cost_estimate: "%{label} (aprox. %{cost} USD pentru 20 de tranzacții)"
+        provider_missing: "%{label} (niciun furnizor de clasificare configurat)"

@@ -1,0 +1,4 @@
+---
+fr:
+  date:
+    day_of_month: "%{day}"

@@ -1,0 +1,18 @@
+---
+de:
+  rules:
+    new:
+      back: Zurück zu den Regeln
+      title: 'Neue Regel: %{resource}'
+    form:
+      for: GILT FÜR
+    edit:
+      title: Regel für %{resource} bearbeiten
+      title_with_name: Regel für %{resource} „%{name}“ bearbeiten
+  transfers:
+    account_links:
+      missing_account: 'Datenfehler: Konto fehlt'
+      transfer_id: 'Transfer-ID: %{id}'
+  tags:
+    create:
+      failed: Tag konnte nicht erstellt werden

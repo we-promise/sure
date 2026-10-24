@@ -1,0 +1,18 @@
+---
+zh-CN:
+  rules:
+    new:
+      back: 返回规则
+      title: 新建%{resource}规则
+    form:
+      for: 适用范围
+    edit:
+      title: 编辑%{resource}规则
+      title_with_name: 编辑%{resource}规则“%{name}”
+  transfers:
+    account_links:
+      missing_account: 数据错误：缺少账户
+      transfer_id: 转账 ID：%{id}
+  tags:
+    create:
+      failed: 无法创建标签

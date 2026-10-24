@@ -22,7 +22,8 @@ zh-TW:
         configuration_mode: 設定模式
         db_backed_providers: 以資料庫儲存的供應商
         db_backed_providers_description: 從資料庫載入供應商，而不是從 YAML 設定檔
-        db_backed_providers_help_html: 設定 <code class="bg-surface px-1 py-0.5 rounded text-xs">AUTH_PROVIDERS_SOURCE=db</code> 即可啟用以資料庫儲存的供應商，這樣變更就不需要重新啟動伺服器。
+        db_backed_providers_help_html: >-
+          設定 <code class="bg-surface px-1 py-0.5 rounded text-xs">AUTH_PROVIDERS_SOURCE=db</code> 即可啟用以資料庫儲存的供應商，這樣變更就不需要重新啟動伺服器。
         table:
           name: 名稱
           strategy: 驗證策略
@@ -32,14 +33,17 @@ zh-TW:
           enabled: 已啟用
           disabled: 已停用
         legacy_providers_title: 以環境變數設定的供應商
-        legacy_providers_notice: 這些供應商是透過環境變數或 YAML 設定的，無法在這個介面管理。若要在這裡管理，請啟用 AUTH_PROVIDERS_SOURCE=db 改成以資料庫儲存的供應商，再從介面重新建立一次。
+        legacy_providers_notice: 這些供應商是透過環境變數或 YAML 設定的，無法在這個介面管理。若要在這裡管理，請啟用 AUTH_PROVIDERS_SOURCE=db
+          改成以資料庫儲存的供應商，再從介面重新建立一次。
         env_configured: 環境變數／YAML
       new:
         title: 新增 SSO 供應商
         description: 設定一個新的單一登入驗證供應商
+        provider_configuration: 供應商設定
       edit:
         title: 編輯 SSO 供應商
         description: 更新 %{label} 的設定
+        provider_configuration: 供應商設定
       create:
         success: SSO 供應商建立成功。
       update:
@@ -80,7 +84,7 @@ zh-TW:
         client_id_help: 從您的識別供應商取得的 OAuth Client ID
         client_secret_label: Client Secret
         client_secret_placeholder_new: your-client-secret
-        client_secret_placeholder_existing: ••••••••
+        client_secret_placeholder_existing: "••••••••"
         client_secret_help: OAuth Client Secret（在資料庫中加密儲存）
         client_secret_help_existing: 留白即維持現有的 Secret
         redirect_uri_label: 回呼 URL (Callback URL)

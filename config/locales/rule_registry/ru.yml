@@ -1,0 +1,33 @@
+---
+ru:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: Название транзакции
+        transaction_amount: Сумма транзакции
+        transaction_type: Тип транзакции
+        transaction_merchant: Продавец транзакции
+        transaction_category: Категория транзакции
+        transaction_tag: Тег транзакции
+        transaction_details: Детали транзакции
+        transaction_notes: Заметки к транзакции
+        transaction_account: Счёт транзакции
+    action_executors:
+      labels:
+        set_transaction_category: Установить категорию транзакции
+        set_transaction_tags: Установить теги транзакции
+        set_transaction_merchant: Установить продавца транзакции
+        set_transaction_name: Установить название транзакции
+        set_investment_activity_label: Установить тип инвестиционной операции
+        exclude_transaction: Исключить из бюджета и отчётов
+        set_as_transfer_or_payment: Отметить как перевод или платёж
+        send_email_notification: Отправить уведомление по электронной почте
+        auto_categorize: Автоматически распределять транзакции по категориям с помощью
+          ИИ
+        auto_detect_merchants: Автоматически определять продавцов
+        auto_detect_merchants_with_ai: Автоматически определять продавцов с помощью
+          ИИ ($$)
+      auto_categorize:
+        cost_unavailable: "%{label} (стоимость неизвестна)"
+        cost_estimate: "%{label} (около %{cost} USD за 20 транзакций)"
+        provider_missing: "%{label} (сервис категоризации не настроен)"

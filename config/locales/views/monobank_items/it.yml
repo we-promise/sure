@@ -1,0 +1,138 @@
+---
+it:
+  monobank_item:
+    institution_summary:
+      count:
+        one: 1 istituzione
+        other: "%{count} istituti"
+      one: 1 istituzione
+      none: Nessun istituto collegato
+    sync:
+      status:
+        needs_setup:
+          other: "%{count} conti da configurare..."
+          one: 1 conto da configurare...
+        processing: Elaborazione transazioni...
+        calculating: Calcolo dei saldi...
+        checking_setup: Verifica della configurazione dei conti...
+        importing: Importazione dei conti da Monobank...
+    sync_status:
+      all_synced:
+        one: 1 conto sincronizzato
+        other: "%{count} conti sincronizzati"
+      no_accounts: Nessun conto trovato
+      partial: "%{linked} sincronizzati, %{unlinked} da configurare"
+    errors:
+      account_processing_failed: Impossibile sincronizzare il conto Monobank
+      account_sync_schedule_failed: Impossibile pianificare la sincronizzazione del
+        conto Monobank
+      sync_failed: Impossibile sincronizzare la connessione Monobank
+      transactions_failed: Impossibile recuperare l'estratto conto Monobank
+  monobank_items:
+    link_accounts:
+      link_failed: Nessun conto è stato collegato.
+      no_accounts_selected: Seleziona almeno un conto.
+      no_credentials_configured: Configura prima Monobank nelle impostazioni dei provider.
+      success:
+        one: Collegato 1 conto Monobank.
+        other: Collegati %{count} conti Monobank.
+      unsupported_account_type: Monobank non supporta questo tipo di conto.
+    link_existing_account:
+      account_already_linked: Questo conto è già collegato a un provider.
+      monobank_account_already_linked: Questo conto Monobank è già collegato.
+      no_account_selected: Seleziona un conto Monobank da collegare.
+      success: Conto Monobank collegato a %{account_name}.
+    monobank_item:
+      delete: Elimina
+      deletion_in_progress: Eliminazione in corso
+      error: Errore
+      setup_action: Configura conti
+      setup_description: "%{linked} di %{total} conti collegati."
+      setup_needed: Configurazione conto necessaria
+      status_never: Mai sincronizzato
+      status_with_summary: Sincronizzato %{timestamp} fa · %{summary}
+      no_accounts_description: Recupera i conti Monobank e scegli quali collegare.
+      no_accounts_title: Nessun conto ancora importato
+      syncing: Sincronizzazione
+    provider_panel:
+      connection_name_label: Nome connessione
+      disconnect: Disconnetti
+      disconnect_confirm: Sei sicuro di voler disconnettere %{name}?
+      keep_access_token_placeholder: Lascia vuoto per mantenere il token esistente
+      setup_accounts: Configura conti
+      sync: Sincronizza
+      update_connection: Aggiorna connessione
+      syncing: Sincronizzazione in corso...
+      access_token_label: Token API personale
+      access_token_placeholder: Incolla il tuo token personale Monobank
+      add_connection: Aggiungi connessione Monobank
+      connection_name_placeholder: Il mio Monobank
+      default_connection_name: Connessione Monobank
+      rate_limit_notice: Monobank consente una richiesta al minuto, quindi ogni sincronizzazione
+        recupera pochi conti alla volta e la cronologia meno recente arriva in più
+        sincronizzazioni.
+    select_accounts:
+      cancel: Annulla
+      link_accounts: Collega conti
+      description: Scegli le carte o i salvadanai Monobank da aggiungere.
+      no_accounts_found: Nessun conto Monobank non collegato trovato.
+      no_credentials_configured: Configura prima Monobank nelle impostazioni dei provider.
+      title: Collega conti Monobank
+    select_existing_account:
+      account_already_linked: Questo conto è già collegato a un provider.
+      cancel: Annulla
+      link_account: Collega conto
+      description: Scegli un conto Monobank non collegato da associare a questo conto.
+      no_accounts_found: Nessun conto Monobank non collegato trovato.
+      no_credentials_configured: Configura prima Monobank nelle impostazioni dei provider.
+      title: Collega conto Monobank a %{account_name}
+    setup_accounts:
+      account_type_label: Tipo di conto
+      account_types:
+        skip: Salta
+        depository: Liquidità
+      cancel: Annulla
+      choose_account_type: Scegli un tipo di conto
+      create_accounts: Crea conti
+      no_accounts_to_setup: Nessun conto da configurare
+      all_accounts_linked: Tutti i conti Monobank sono già collegati.
+      api_error: 'Impossibile aggiornare i conti da Monobank: vengono mostrati quelli
+        salvati nell''ultima sincronizzazione.'
+      choose_account_type_description: Salta i conti che non vuoi monitorare.
+      no_credentials: Configura prima le credenziali Monobank.
+      subtitle: Scegli come devono apparire in Sure le carte e i salvadanai Monobank.
+      title: Collega conti Monobank
+    complete_account_setup:
+      all_skipped: Non è stato creato alcun conto Monobank.
+      creation_failed: Impossibile creare i conti Monobank.
+      no_accounts: Non è stato selezionato alcun conto Monobank.
+      success:
+        one: Creato 1 conto Monobank.
+        other: Creati %{count} conti Monobank.
+    create:
+      success: Connessione Monobank salvata.
+    destroy:
+      success: Connessione Monobank programmata per l'eliminazione.
+      unlink_failed: Impossibile disconnettere la connessione Monobank
+    update:
+      success: Connessione Monobank aggiornata.
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Connessione Monobank
+  monobank_account:
+    card_types:
+      black: Carta Black
+      eaid: Carta eAid
+      fop: Conto aziendale
+      iron: Carta Iron
+      jar: Salvadanaio
+      platinum: Carta Platinum
+      unknown: Carta Monobank
+      white: Carta White
+      yellow: Carta Yellow
+    jar_fallback: Salvadanaio Monobank
+  providers:
+    monobank:
+      description: Collega carte e salvadanai Monobank ucraini con un token API personale
+      name: Monobank

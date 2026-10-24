@@ -73,7 +73,7 @@ class Settings::ProvidersController < ApplicationController
     end
   rescue => error
     Rails.logger.error("Failed to update provider settings: #{error.class} - #{error.message}")
-    flash.now[:alert] = "Failed to update provider settings. Please try again."
+    flash.now[:alert] = t(".failed")
     prepare_show_context
     render :show, status: :unprocessable_entity
   end

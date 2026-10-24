@@ -152,17 +152,17 @@ hu:
       submit_income: Bevétel mentése
       trial_ends_on_label: Próbaidő vége
     frequency:
-      annual: Évente, %{month} %{day}. napján
+      annual: "Évente, hónap: %{month}, nap: %{day}"
       biweekly: Kéthetente, %{weekday}
       custom: Egyéni ütemezés
-      every_n_months: "%{interval} havonta, a hónap %{day}. napján"
+      every_n_months: "%{interval} havonta, nap: %{day}"
       every_n_weeks: "%{interval} hetente, %{weekday}"
-      every_n_years: "%{interval} évente, %{month} %{day}. napján"
+      every_n_years: "%{interval} évente, hónap: %{month}, nap: %{day}"
       last_day: utolsó nap
-      monthly: Havonta, a hónap %{day}. napján
-      quarterly: Negyedévente, a hónap %{day}. napján
-      semiannual: Félévente, a hónap %{day}. napján
-      semimonthly: Havonta kétszer, %{first}. és %{second}. napján
+      monthly: "Havonta, nap: %{day}"
+      quarterly: "Negyedévente, nap: %{day}"
+      semiannual: "Félévente, nap: %{day}"
+      semimonthly: "Havonta kétszer, napok: %{first} és %{second}"
       weekly: Hetente, %{weekday}
     frequency_interval_units:
       monthly: hónap

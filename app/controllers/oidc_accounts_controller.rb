@@ -78,7 +78,7 @@ class OidcAccountsController < ApplicationController
     else
       @email = params[:email]
       @user_exists = User.exists?(email: @email) if @email.present?
-      flash.now[:alert] = "Invalid email or password"
+      flash.now[:alert] = t("sessions.create.invalid_credentials")
       render :link, status: :unprocessable_entity
     end
   end

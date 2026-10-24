@@ -55,7 +55,7 @@ module AccountableResource
     # consumed with delete so a stale value can't leak into a later flow.
     return_path = safe_return_to(account_params[:return_to]) || session.delete(:return_to).presence || @account
     redirect_to return_path,
-                notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
+                notice: t("accounts.create.success", type: accountable_type_for_notice)
   rescue ActiveRecord::RecordInvalid => e
     # `create_and_sync` saves with `save!`. A validation the user can trip from
     # the form (a half-filled loan rate change, say) must come back as the form
@@ -124,10 +124,15 @@ module AccountableResource
       return
     end
 
-    redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: accountable_type.name.underscore.humanize)
+    redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: accountable_type_for_notice)
   end
 
   private
+    def accountable_type_for_notice
+      label = accountable_type.singular_display_name
+      I18n.locale == :en ? label.capitalize : label
+    end
+
     def set_link_options
       account_type_name = accountable_type.name
 

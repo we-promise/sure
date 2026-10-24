@@ -1,0 +1,33 @@
+---
+uk:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: Назва транзакції
+        transaction_amount: Сума транзакції
+        transaction_type: Тип транзакції
+        transaction_merchant: Продавець транзакції
+        transaction_category: Категорія транзакції
+        transaction_tag: Тег транзакції
+        transaction_details: Деталі транзакції
+        transaction_notes: Нотатки до транзакції
+        transaction_account: Рахунок транзакції
+    action_executors:
+      labels:
+        set_transaction_category: Установити категорію транзакції
+        set_transaction_tags: Установити теги транзакції
+        set_transaction_merchant: Установити продавця транзакції
+        set_transaction_name: Установити назву транзакції
+        set_investment_activity_label: Установити тип інвестиційної операції
+        exclude_transaction: Виключити з бюджету та звітів
+        set_as_transfer_or_payment: Позначити як переказ або платіж
+        send_email_notification: Надіслати сповіщення електронною поштою
+        auto_categorize: Автоматично розподіляти транзакції за категоріями за допомогою
+          ШІ
+        auto_detect_merchants: Автоматично визначати продавців
+        auto_detect_merchants_with_ai: Автоматично визначати продавців за допомогою
+          ШІ ($$)
+      auto_categorize:
+        cost_unavailable: "%{label} (вартість невідома)"
+        cost_estimate: "%{label} (близько %{cost} USD за 20 транзакцій)"
+        provider_missing: "%{label} (сервіс категоризації не налаштовано)"

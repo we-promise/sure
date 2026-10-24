@@ -1,0 +1,18 @@
+---
+ru:
+  rules:
+    new:
+      back: Назад к правилам
+      title: 'Новое правило: %{resource}'
+    form:
+      for: ОБЛАСТЬ ПРИМЕНЕНИЯ
+    edit:
+      title: 'Изменить правило: %{resource}'
+      title_with_name: 'Изменить правило «%{name}»: %{resource}'
+  transfers:
+    account_links:
+      missing_account: 'Ошибка данных: отсутствует счёт'
+      transfer_id: 'ID перевода: %{id}'
+  tags:
+    create:
+      failed: Не удалось создать тег

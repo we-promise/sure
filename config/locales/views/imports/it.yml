@@ -3,36 +3,45 @@ it:
   import:
     qif_category_selections:
       update:
-        success: "Categorie ed etichette salvate."
+        success: Categorie ed etichette salvate.
       show:
-        title: "Configura e seleziona"
-        description: "Esamina il formato data rilevato, poi scegli quali categorie ed etichette dal tuo file QIF importare in %{product_name}."
+        title: Configura e seleziona
+        description: Esamina il formato data rilevato, poi scegli quali categorie
+          ed etichette dal tuo file QIF importare in %{product_name}.
         categories_heading: Categorie
         categories_found:
-          one: "1 categoria trovata"
+          one: 1 categoria trovata
           other: "%{count} categorie trovate"
         category_name_col: Nome categoria
         transactions_col: Transazioni
         tags_heading: Etichette
         tags_found:
-          one: "1 etichetta trovata"
+          one: 1 etichetta trovata
           other: "%{count} etichette trovate"
         tag_name_col: Nome etichetta
         txn_count:
-          one: "1 trans."
+          one: 1 trans.
           other: "%{count} trans."
         split_warning_title: Transazioni suddivise rilevate
-        split_warning_description: "Questo file QIF contiene transazioni suddivise. Le suddivisioni non sono ancora supportate, quindi ogni transazione suddivisa verrà importata come singola transazione con il suo importo totale e senza categoria. I dettagli delle singole suddivisioni non verranno preservati."
+        split_warning_description: Questo file QIF contiene transazioni suddivise.
+          Le suddivisioni non sono ancora supportate, quindi ogni transazione suddivisa
+          verrà importata come singola transazione con il suo importo totale e senza
+          categoria. I dettagli delle singole suddivisioni non verranno preservati.
         split_badge: suddivisa
-        empty_state_primary: Nessuna categoria o etichetta trovata in questo file QIF.
-        empty_state_secondary: Tutte le transazioni verranno importate senza categorie o etichette.
+        empty_state_primary: Nessuna categoria o etichetta trovata in questo file
+          QIF.
+        empty_state_secondary: Tutte le transazioni verranno importate senza categorie
+          o etichette.
         submit: Continua alla revisione
     cleans:
       show:
-        not_configured: "Configura la tua importazione prima di procedere."
-        description: Modifica i tuoi dati nella tabella qui sotto. Le celle rosse non sono valide.
-        errors_notice: Hai degli errori nei tuoi dati. Passa sopra l'errore per vedere i dettagli.
-        errors_notice_mobile: Hai degli errori nei tuoi dati. Tocca il tooltip di errore per vedere i dettagli.
+        not_configured: Configura la tua importazione prima di procedere.
+        description: Modifica i tuoi dati nella tabella qui sotto. Le celle rosse
+          non sono valide.
+        errors_notice: Hai degli errori nei tuoi dati. Passa sopra l'errore per vedere
+          i dettagli.
+        errors_notice_mobile: Hai degli errori nei tuoi dati. Tocca il tooltip di
+          errore per vedere i dettagli.
         title: Pulisci i tuoi dati
         data_cleaned: I tuoi dati sono stati puliti
         next_step: Passo successivo
@@ -66,7 +75,7 @@ it:
         as_amount_type_column: come colonna tipo importo
         select_value: Seleziona valore
         as_identifier_value: come valore identificatore
-        treat_as_html: "Tratta \"<span class=\"font-medium\">%{value}</span>\" come"
+        treat_as_html: Tratta "<span class="font-medium">%{value}</span>" come
         income_inflow: Entrata (flusso in entrata)
         expense_outflow: Spesa (flusso in uscita)
         select_type: Seleziona tipo
@@ -100,21 +109,43 @@ it:
         account_label: Conto
         name_label: Nome
         note_label: Nota
-        no_security_provider_warning: Il provider di prezzi dei titoli non è configurato. Le importazioni di operazioni funzioneranno, ma Sure non recupererà la cronologia dei prezzi. Vai nelle impostazioni per configurarlo.
+        no_security_provider_warning: Il provider di prezzi dei titoli non è configurato.
+          Le importazioni di operazioni funzioneranno, ma Sure non recupererà la cronologia
+          dei prezzi. Vai nelle impostazioni per configurarlo.
         date_format_label: Formato data
         apply_configuration: Applica configurazione
       category_import:
         button_label: Continua
-        description: Carica un semplice file CSV (come quello che generiamo quando esporti i tuoi dati). Mapperemo automaticamente le colonne per te.
-        instructions: Seleziona continua per analizzare il tuo CSV e passare alla fase di pulizia.
+        description: Carica un semplice file CSV (come quello che generiamo quando
+          esporti i tuoi dati). Mapperemo automaticamente le colonne per te.
+        instructions: Seleziona continua per analizzare il tuo CSV e passare alla
+          fase di pulizia.
       merchant_import:
         button_label: Continua
-        description: Carica un file CSV con i tuoi esercenti. Mapperemo automaticamente le colonne per te.
-        instructions: Seleziona continua per analizzare il tuo CSV e passare alla fase di pulizia.
+        description: Carica un file CSV con i tuoi esercenti. Mapperemo automaticamente
+          le colonne per te.
+        instructions: Seleziona continua per analizzare il tuo CSV e passare alla
+          fase di pulizia.
       mint_import:
         date_format_label: Formato data
+        account_optional: Conto (opzionale)
+        amount: Importo
+        apply_configuration: Applica configurazione
+        category_optional: Categoria (opzionale)
+        currency: Valuta
+        date: Data
+        format: Formato
+        incomes_negative: Le entrate sono negative
+        incomes_positive: Le entrate sono positive
+        leave_empty: Lascia vuoto
+        select_format: Seleziona formato
+        intro: Abbiamo preconfigurato l'importazione Mint per te. Procedi al passaggio
+          successivo.
+        name_optional: Nome (facoltativo)
+        tags_optional: Etichette (facoltative)
       actual_import:
-        preconfigured_notice: Abbiamo preconfigurato la tua importazione da Actual Budget. Procedi al passo successivo.
+        preconfigured_notice: Abbiamo preconfigurato la tua importazione da Actual
+          Budget. Procedi al passo successivo.
         leave_empty: Lascia vuoto
         date_label: Data
         date_format_label: Formato data
@@ -128,8 +159,10 @@ it:
         notes_label: Note (opzionale)
         apply_configuration: Applica configurazione
       ynab_import:
-        preconfigured_notice: Abbiamo preconfigurato la tua importazione da YNAB. Procedi al passo successivo.
-        amount_notice: Gli importi vengono rilevati automaticamente dalle colonne Uscita ed Entrata.
+        preconfigured_notice: Abbiamo preconfigurato la tua importazione da YNAB.
+          Procedi al passo successivo.
+        amount_notice: Gli importi vengono rilevati automaticamente dalle colonne
+          Uscita ed Entrata.
         leave_empty: Lascia vuoto
         date_label: Data
         date_format_label: Formato data
@@ -139,45 +172,69 @@ it:
         notes_label: Memo (opzionale)
         apply_configuration: Applica configurazione
       rule_import:
-        description: Configura la tua importazione di regole. Le regole verranno create o aggiornate in base ai dati CSV.
+        description: Configura la tua importazione di regole. Le regole verranno create
+          o aggiornate in base ai dati CSV.
         process_button: Elabora regole
-        process_help: Clicca il pulsante qui sotto per elaborare il tuo CSV e generare le righe delle regole.
+        process_help: Clicca il pulsante qui sotto per elaborare il tuo CSV e generare
+          le righe delle regole.
       show:
         description: Seleziona le colonne che corrispondono a ogni campo nel tuo CSV.
         title: Configura la tua importazione
+        apply_template: Applica modello
+        manually_configure: Configura manualmente
+        sample_caption: Dati di esempio dal CSV caricato
+        template_description: Abbiamo trovato una configurazione di un'importazione
+          precedente per questo conto. Vuoi applicarla a questa importazione?
+        template_found: Configurazione modello trovata
     confirms:
       sure_import:
         title: Conferma la tua importazione
         description: Esamina i dati che verranno importati dal tuo file di esportazione.
         summary: Riepilogo importazione
-        empty_summary: Non abbiamo trovato record importabili in questo file. Potrebbe essere vuoto, o le righe potrebbero non corrispondere al formato di esportazione previsto (ogni riga dovrebbe essere un oggetto JSON con chiavi "type" e "data", usando i tipi supportati da questa importazione).
+        empty_summary: Non abbiamo trovato record importabili in questo file. Potrebbe
+          essere vuoto, o le righe potrebbero non corrispondere al formato di esportazione
+          previsto (ogni riga dovrebbe essere un oggetto JSON con chiavi "type" e
+          "data", usando i tipi supportati da questa importazione).
         publish_button: Avvia importazione
         cancel: Annulla
       mappings:
         create_account: Crea conto
         csv_mapping_label: "%{mapping} nel CSV"
         sure_mapping_label: "%{mapping} in %{product_name}"
-        no_accounts: Non hai ancora nessun conto. Crea un conto da usare per le righe (non assegnate) nel tuo CSV o torna alla fase di pulizia e fornisci un nome conto da usare.
+        no_accounts: Non hai ancora nessun conto. Crea un conto da usare per le righe
+          (non assegnate) nel tuo CSV o torna alla fase di pulizia e fornisci un nome
+          conto da usare.
         rows_label: Righe
-        unassigned_account: Hai bisogno di creare un nuovo conto per le righe non assegnate?
+        unassigned_account: Hai bisogno di creare un nuovo conto per le righe non
+          assegnate?
         next: Avanti
       show:
-        invalid_data: "Hai dati non validi, modifica finché tutti gli errori non sono risolti"
-        account_mapping_description: Assegna tutti i conti del tuo file importato ai conti esistenti di %{product_name}. Puoi anche aggiungere nuovi conti o lasciarli non categorizzati.
+        invalid_data: Hai dati non validi, modifica finché tutti gli errori non sono
+          risolti
+        account_mapping_description: Assegna tutti i conti del tuo file importato
+          ai conti esistenti di %{product_name}. Puoi anche aggiungere nuovi conti
+          o lasciarli non categorizzati.
         account_mapping_title: Assegna i tuoi conti
-        account_type_mapping_description: Assegna tutti i tipi di conto del tuo file importato a quelli di %{product_name}
+        account_type_mapping_description: Assegna tutti i tipi di conto del tuo file
+          importato a quelli di %{product_name}
         account_type_mapping_title: Assegna i tipi di conto
-        category_mapping_description: Assegna tutte le categorie del tuo file importato alle categorie esistenti di %{product_name}. Puoi anche aggiungere nuove categorie o lasciarle non categorizzate.
+        category_mapping_description: Assegna tutte le categorie del tuo file importato
+          alle categorie esistenti di %{product_name}. Puoi anche aggiungere nuove
+          categorie o lasciarle non categorizzate.
         category_mapping_title: Assegna le tue categorie
-        tag_mapping_description: Assegna tutte le etichette del tuo file importato alle etichette esistenti di %{product_name}. Puoi anche aggiungere nuove etichette o lasciarle non categorizzate.
+        tag_mapping_description: Assegna tutte le etichette del tuo file importato
+          alle etichette esistenti di %{product_name}. Puoi anche aggiungere nuove
+          etichette o lasciarle non categorizzate.
         tag_mapping_title: Assegna le tue etichette
     uploads:
       handle_qif_upload:
-        qif_uploaded: "File QIF caricato con successo."
+        qif_uploaded: File QIF caricato con successo.
+        qif_account_required: Seleziona un conto per l'importazione QIF
       update:
-        qif_uploaded: "File QIF caricato con successo."
+        qif_uploaded: File QIF caricato con successo.
       show:
-        csv_invalid: "Deve essere un CSV valido con intestazioni e almeno una riga di dati"
+        csv_invalid: Deve essere un CSV valido con intestazioni e almeno una riga
+          di dati
         drop_csv_title: Trascina CSV per caricare
         drop_csv_subtitle: Il tuo file verrà caricato automaticamente
         upload_csv_tab: Carica CSV
@@ -189,7 +246,8 @@ it:
         download_sample_csv: Scarica un CSV di esempio
         to_see_format: per vedere il formato CSV richiesto
         qif_title: Carica file QIF
-        qif_description: Seleziona il conto a cui appartiene questo file QIF, poi carica la tua esportazione .qif da Quicken.
+        qif_description: Seleziona il conto a cui appartiene questo file QIF, poi
+          carica la tua esportazione .qif da Quicken.
         qif_account_label: Conto
         qif_account_placeholder: Seleziona un conto…
         qif_file_prompt: per aggiungere qui il tuo file QIF
@@ -197,84 +255,94 @@ it:
         qif_submit: Carica QIF
         browse: Sfoglia
         csv_file_prompt: per aggiungere qui il tuo file CSV
-        description: Incolla o carica il tuo file CSV qui sotto. Esamina le istruzioni nella tabella qui sotto prima di iniziare.
-        instructions_1: Di seguito un esempio di CSV con le colonne disponibili per l'importazione.
+        description: Incolla o carica il tuo file CSV qui sotto. Esamina le istruzioni
+          nella tabella qui sotto prima di iniziare.
+        instructions_1: Di seguito un esempio di CSV con le colonne disponibili per
+          l'importazione.
         instructions_2: Il tuo CSV deve avere una riga di intestazione
-        instructions_3: Puoi nominare le tue colonne come preferisci. Le mapperai in un passaggio successivo.
+        instructions_3: Puoi nominare le tue colonne come preferisci. Le mapperai
+          in un passaggio successivo.
         instructions_4: Le colonne contrassegnate con asterisco (*) sono dati obbligatori.
         instructions_5: Nessuna virgola, simbolo valuta o parentesi nei numeri.
         title: Importa i tuoi dati
       sure_import:
         title: Importa da esportazione
-        description: Carica il file all.ndjson dalla tua esportazione dati per ripristinare conti, transazioni, categorie e altro.
+        description: Carica il file all.ndjson dalla tua esportazione dati per ripristinare
+          conti, transazioni, categorie e altro.
         drop_title: Trascina NDJSON per caricare
         drop_subtitle: Il tuo file verrà caricato automaticamente
         browse: Sfoglia
         browse_hint: per aggiungere qui il tuo file all.ndjson
         upload_button: Carica NDJSON
-        hint_html: Carica il file <strong>all.ndjson</strong> dal tuo ZIP di esportazione dati
+        hint_html: Carica il file <strong>all.ndjson</strong> dal tuo ZIP di esportazione
+          dati
         ndjson_invalid: Deve essere un NDJSON valido con almeno un record
   imports:
     mapping_labels:
-      account_type: "Tipo conto"
-      account: "Conto"
-      category: "Categoria"
-      tag: "Etichetta"
+      account_type: Tipo conto
+      account: Conto
+      category: Categoria
+      tag: Etichetta
     dry_run_resources:
-      transactions: "Transazioni"
-      balances: "Saldi"
-      accounts: "Conti"
-      categories: "Categorie"
-      tags: "Etichette"
-      rules: "Regole"
-      merchants: "Esercenti"
-      recurring_transactions: "Transazioni ricorrenti"
-      transfers: "Bonifici"
-      rejected_transfers: "Bonifici rifiutati"
-      trades: "Operazioni"
-      holdings: "Posizioni"
-      valuations: "Valutazioni"
-      budgets: "Budget"
-      budget_categories: "Categorie budget"
+      transactions: Transazioni
+      balances: Saldi
+      accounts: Conti
+      categories: Categorie
+      tags: Etichette
+      rules: Regole
+      merchants: Esercenti
+      recurring_transactions: Transazioni ricorrenti
+      transfers: Bonifici
+      rejected_transfers: Bonifici rifiutati
+      trades: Operazioni
+      holdings: Posizioni
+      valuations: Valutazioni
+      budgets: Budget
+      budget_categories: Categorie budget
     column_labels:
-      date: "Data"
-      amount: "Importo"
-      name: "Nome"
-      currency: "Valuta"
-      category: "Categoria"
-      tags: "Etichette"
-      account: "Conto"
-      notes: "Note"
-      qty: "Quantità"
-      ticker: "Ticker"
-      exchange: "Borsa"
-      price: "Prezzo"
-      entity_type: "Tipo"
-      category_parent: "Categoria genitore"
-      category_color: "Colore"
-      category_icon: "Icona Lucide"
-      merchant_color: "Colore"
-      merchant_website: "URL sito web"
+      date: Data
+      amount: Importo
+      name: Nome
+      currency: Valuta
+      category: Categoria
+      tags: Etichette
+      account: Conto
+      notes: Note
+      qty: Quantità
+      ticker: Ticker
+      exchange: Borsa
+      price: Prezzo
+      entity_type: Tipo
+      category_parent: Categoria genitore
+      category_color: Colore
+      category_icon: Icona Lucide
+      merchant_color: Colore
+      merchant_website: URL sito web
     update:
-      account_saved: "Conto salvato."
-      invalid_account: "Conto non trovato."
+      account_saved: Conto salvato.
+      invalid_account: Conto non trovato.
+      account_locked: Questa importazione è già stata pubblicata, quindi il conto
+        non può essere cambiato. Annullala prima se vuoi importarla altrove.
     publish:
-      started: "La tua importazione è iniziata in background."
-      max_rows_exceeded: "La tua importazione supera il numero massimo di righe di %{max}."
+      started: La tua importazione è iniziata in background.
+      max_rows_exceeded: La tua importazione supera il numero massimo di righe di
+        %{max}.
     revert:
-      started: "Ripristino importazione in background."
+      started: Ripristino importazione in background.
     apply_template:
-      template_applied: "Template applicato."
-      no_template_found: "Nessun template trovato, configura manualmente la tua importazione."
+      template_applied: Template applicato.
+      no_template_found: Nessun template trovato, configura manualmente la tua importazione.
     destroy:
-      deleted: "La tua importazione è stata eliminata."
+      deleted: La tua importazione è stata eliminata.
     failure:
       title: Importazione fallita
-      description: Verifica il formato del tuo file, eventuali errori e che tutti i campi obbligatori siano compilati, poi torna e riprova.
+      description: Verifica il formato del tuo file, eventuali errori e che tutti
+        i campi obbligatori siano compilati, poi torna e riprova.
       try_again: Riprova
     success:
       title: Importazione riuscita
-      description: I dati importati sono stati aggiunti con successo all'app e sono ora pronti per l'uso.
+      description: I dati importati sono stati aggiunti con successo all'app e sono
+        ora pronti per l'uso.
       back_to_dashboard: Torna al dashboard
       verification:
         title: Verifica di rilettura
@@ -288,7 +356,9 @@ it:
           reverted: Ripristinato
     importing:
       title: Importazione in corso
-      description: "La tua importazione è in corso. Controlla il menu importazioni per aggiornamenti sullo stato o clicca 'Controlla stato' per aggiornare la pagina. Puoi continuare a usare l'app."
+      description: La tua importazione è in corso. Controlla il menu importazioni
+        per aggiornamenti sullo stato o clicca 'Controlla stato' per aggiornare la
+        pagina. Puoi continuare a usare l'app.
       check_status: Controlla stato
       back_to_dashboard: Torna al dashboard
     revert_failure:
@@ -297,24 +367,26 @@ it:
       try_again: Riprova
     date_format:
       heading: Formato data
-      description: "Il formato data è stato rilevato automaticamente dal tuo file. Modificalo se le date sembrano errate."
-      preview: "Prima data analizzata"
-      error_title: "Impossibile rilevare il formato data"
-      error_description: "Nessuno dei formati data supportati ha potuto analizzare le date in questo file. Verifica che il file contenga voci di data valide."
+      description: Il formato data è stato rilevato automaticamente dal tuo file.
+        Modificalo se le date sembrano errate.
+      preview: Prima data analizzata
+      error_title: Impossibile rilevare il formato data
+      error_description: Nessuno dei formati data supportati ha potuto analizzare
+        le date in questo file. Verifica che il file contenga voci di data valide.
     type_labels:
-      transaction_import: "Importazione transazioni"
-      trade_import: "Importazione operazioni"
-      account_import: "Importazione conti"
-      mint_import: "Importazione Mint"
-      actual_import: "Importazione Actual"
-      ynab_import: "Importazione YNAB"
-      qif_import: "Importazione QIF"
-      category_import: "Importazione categorie"
-      rule_import: "Importazione regole"
-      merchant_import: "Importazione esercenti"
-      pdf_import: "Importazione PDF"
-      document_import: "Importazione documento"
-      sure_import: "Importazione Sure"
+      transaction_import: Importazione transazioni
+      trade_import: Importazione operazioni
+      account_import: Importazione conti
+      mint_import: Importazione Mint
+      actual_import: Importazione Actual
+      ynab_import: Importazione YNAB
+      qif_import: Importazione QIF
+      category_import: Importazione categorie
+      rule_import: Importazione regole
+      merchant_import: Importazione esercenti
+      pdf_import: Importazione PDF
+      document_import: Importazione documento
+      sure_import: Importazione Sure
     steps:
       upload: Carica
       configure: Configura
@@ -322,7 +394,8 @@ it:
       map: Mappa
       confirm: Conferma
       select: Seleziona
-      progress: "Passo %{step} di %{total}"
+      progress: Passo %{step} di %{total}
+      label: Passaggio %{step}
     empty:
       message: Nessuna importazione trovata.
     index:
@@ -337,19 +410,19 @@ it:
         actions: Azioni
       row:
         type_labels:
-          transaction_import: "Transazione"
-          trade_import: "Operazione"
-          account_import: "Conto"
-          mint_import: "Mint"
-          actual_import: "Actual"
-          ynab_import: "YNAB"
-          qif_import: "QIF"
-          category_import: "Categoria"
-          rule_import: "Regola"
-          merchant_import: "Esercente"
-          pdf_import: "PDF"
-          document_import: "Documento"
-          sure_import: "Sure"
+          transaction_import: Transazione
+          trade_import: Operazione
+          account_import: Conto
+          mint_import: Mint
+          actual_import: Actual
+          ynab_import: YNAB
+          qif_import: QIF
+          category_import: Categoria
+          rule_import: Regola
+          merchant_import: Esercente
+          pdf_import: PDF
+          document_import: Documento
+          sure_import: Sure
         status:
           in_progress: In corso
           uploading: Elaborazione righe
@@ -359,9 +432,14 @@ it:
           failed: Fallita
         actions:
           revert: Ripristina
-          confirm_revert: Verranno eliminate le transazioni importate, ma potrai comunque rivedere e reimportare i tuoi dati in qualsiasi momento.
+          confirm_revert: Verranno eliminate le transazioni importate, ma potrai comunque
+            rivedere e reimportare i tuoi dati in qualsiasi momento.
           delete: Elimina
           view: Vedi
+          confirm_mark_failed: Questa importazione è inattiva da un po' e l'attività
+            in background è stata probabilmente interrotta. Contrassegnarla come fallita
+            per poter riprovare? Nessun dato importato verrà conservato.
+          mark_failed: Segna come fallita
       empty: Nessuna importazione ancora.
     new:
       description: Importa da uno strumento finanziario o carica file di dati grezzi.
@@ -391,28 +469,89 @@ it:
       csv_uploaded: CSV caricato con successo.
       ndjson_uploaded: File NDJSON caricato con successo.
       pdf_too_large: Il file PDF è troppo grande. La dimensione massima è %{max_size}MB.
-      pdf_processing: Il tuo PDF è in fase di elaborazione. Riceverai un'email quando l'analisi sarà completata.
+      pdf_processing: Il tuo PDF è in fase di elaborazione. Riceverai un'email quando
+        l'analisi sarà completata.
       invalid_pdf: Il file caricato non è un PDF valido.
-      duplicate_pdf_unavailable: Questo PDF è già archiviato come estratto conto a cui non puoi accedere.
-      document_too_large: Il file documento è troppo grande. La dimensione massima è %{max_size}MB.
-      invalid_document_file_type: Tipo di file documento non valido per il vector store attivo.
+      duplicate_pdf_unavailable: Questo PDF è già archiviato come estratto conto a
+        cui non puoi accedere.
+      document_too_large: Il file documento è troppo grande. La dimensione massima
+        è %{max_size}MB.
+      invalid_document_file_type: Tipo di file documento non valido per il vector
+        store attivo.
       document_uploaded: Documento caricato con successo.
-      document_upload_failed: Non siamo riusciti a caricare il documento nel vector store. Riprova.
-      invalid_ndjson_file_type: Tipo o formato file non valido. Carica un file di esportazione .ndjson o .json valido.
-      document_provider_not_configured: Nessun vector store configurato per i caricamenti di documenti.
+      document_upload_failed: Non siamo riusciti a caricare il documento nel vector
+        store. Riprova.
+      invalid_ndjson_file_type: Tipo o formato file non valido. Carica un file di
+        esportazione .ndjson o .json valido.
+      document_provider_not_configured: Nessun vector store configurato per i caricamenti
+        di documenti.
     show:
       finalize_upload: Finalizza il caricamento del file.
       finalize_mappings: Finalizza le mappature prima di procedere.
     ready:
-      description: Ecco un riepilogo dei nuovi elementi che verranno aggiunti al tuo conto una volta pubblicata questa importazione.
+      description: Ecco un riepilogo dei nuovi elementi che verranno aggiunti al tuo
+        conto una volta pubblicata questa importazione.
       title: Conferma i tuoi dati di importazione
       summary_item_label: Elemento
       summary_count_label: Conteggio
-      empty_summary: Non abbiamo trovato record importabili in questo file. Potrebbe essere vuoto, o le righe potrebbero non corrispondere al formato di esportazione previsto (ogni riga dovrebbe essere un oggetto JSON con chiavi "type" e "data", usando i tipi supportati da questa importazione).
+      empty_summary: Non abbiamo trovato record importabili in questo file. Potrebbe
+        essere vuoto, o le righe potrebbero non corrispondere al formato di esportazione
+        previsto (ogni riga dovrebbe essere un oggetto JSON con chiavi "type" e "data",
+        usando i tipi supportati da questa importazione).
       publish_import: Pubblica importazione
       back_to_imports: Torna alle importazioni
+      provider_merchant_diff_fields:
+        name: Nome
+        provider_merchant_id: ID provider
+        website_url: Sito web
+      missing_merchant_warning_description:
+        one: '1 riferimento a un esercente in questo file punta a un esercente non
+          incluso. Può accadere con esportazioni create prima che gli esercenti assegnati
+          dai provider fossero inclusi nelle esportazioni Sure. Puoi comunque pubblicare
+          l''importazione: il record interessato sarà importato senza esercente e
+          potrai assegnarlo in seguito.'
+        other: "%{count} riferimenti a esercenti in questo file puntano a esercenti
+          non inclusi. Può accadere con esportazioni create prima che gli esercenti
+          assegnati dai provider fossero inclusi nelle esportazioni Sure. Puoi comunque
+          pubblicare l'importazione: i record interessati saranno importati senza
+          esercente e potrai assegnarlo in seguito."
+      missing_merchant_warning_title: Alcuni esercenti non sono presenti in questa
+        esportazione
+      provider_merchant_diff_description:
+        one: 1 esercente in questo file esiste già con dettagli diversi. Verrà mantenuto
+          l'esercente esistente e i valori del file non saranno applicati.
+        other: "%{count} esercenti in questo file esistono già con dettagli diversi.
+          Verranno mantenuti quelli esistenti e i valori del file non saranno applicati."
+      provider_merchant_diff_none: nessuno
+      provider_merchant_diff_row: "%{field}: viene mantenuto %{kept}, nel file è presente
+        %{imported}"
+      provider_merchant_diff_summary: Visualizza differenze
+      provider_merchant_diff_title: Alcuni esercenti esistono già con dettagli diversi
+      reused_taxonomy_notice_description:
+        one: 1 categoria, etichetta o esercente in questo file esiste già nel tuo
+          account, ad esempio tra le categorie predefinite della configurazione iniziale.
+          Verrà riutilizzato e aggiornato con i dati del file, senza creare duplicati.
+        other: "%{count} categorie, etichette o esercenti in questo file esistono
+          già nel tuo account, ad esempio tra le categorie predefinite della configurazione
+          iniziale. Verranno riutilizzati e aggiornati con i dati del file, senza
+          creare duplicati."
+      reused_taxonomy_notice_title: Alcune categorie, etichette o esercenti esistono
+        già
+      skipped_recurring_description:
+        one: 1 transazione ricorrente non ha nome e il relativo esercente è assente,
+          quindi verrà saltata. Le transazioni ricorrenti rilevate automaticamente
+          vengono ricostruite dopo l'importazione.
+        other: "%{count} transazioni ricorrenti non hanno nome e i relativi esercenti
+          sono assenti, quindi verranno saltate. Le transazioni ricorrenti rilevate
+          automaticamente vengono ricostruite dopo l'importazione."
     errors:
-      custom_column_requires_inflow: "Le importazioni con colonne personalizzate richiedono la selezione di una colonna di flusso in entrata"
+      custom_column_requires_inflow: Le importazioni con colonne personalizzate richiedono
+        la selezione di una colonna di flusso in entrata
+      interrupted: 'Il processo in background è stato interrotto prima del completamento.
+        I dati importati sono stati annullati: puoi riprovare in sicurezza.'
+      presumed_lost: 'Contrassegnata come fallita dopo che l''attività in background
+        è stata considerata persa. I dati importati sono stati annullati: puoi riprovare
+        in sicurezza.'
     document_types:
       bank_statement: Estratto conto bancario
       credit_card_statement: Estratto carta di credito
@@ -423,11 +562,13 @@ it:
       unknown: Documento sconosciuto
     pdf_import:
       processing_title: Elaborazione del tuo PDF
-      processing_description: Stiamo analizzando il tuo documento con l'AI. Potrebbe richiedere un momento. Riceverai un'email quando l'analisi sarà completata.
+      processing_description: Stiamo analizzando il tuo documento con l'AI. Potrebbe
+        richiedere un momento. Riceverai un'email quando l'analisi sarà completata.
       check_status: Controlla stato
       back_to_dashboard: Torna al dashboard
       failed_title: Elaborazione fallita
-      failed_description: Non siamo riusciti a elaborare il tuo documento PDF. Riprova o contatta il supporto.
+      failed_description: Non siamo riusciti a elaborare il tuo documento PDF. Riprova
+        o contatta il supporto.
       try_again: Riprova
       delete_import: Elimina importazione
       complete_title: Documento analizzato
@@ -438,11 +579,16 @@ it:
       email_sent_notice: Ti è stata inviata un'email con i prossimi passi.
       back_to_imports: Torna alle importazioni
       unknown_state_title: Stato sconosciuto
-      unknown_state_description: Questa importazione è in uno stato imprevisto. Torna alle importazioni.
+      unknown_state_description: Questa importazione è in uno stato imprevisto. Torna
+        alle importazioni.
       processing_failed_with_message: "%{message}"
-      processing_failed_generic: "Elaborazione fallita: %{error}"
+      processing_failed_generic: 'Elaborazione fallita: %{error}'
       ready_for_review_title: Pronto per la revisione
-      ready_for_review_description: "Abbiamo estratto %{count} transazioni dal tuo estratto conto. Revisiona e pubblica per aggiungerle al tuo conto."
+      ready_for_review_description:
+        one: "%{count} transazione dell'estratto conto non è ancora presente in questo
+          conto. Verificala e pubblicala per aggiungerla."
+        other: "%{count} transazioni dell'estratto conto non sono ancora presenti
+          in questo conto. Verificale e pubblicale per aggiungerle."
       transactions_extracted: Transazioni estratte
       transactions_extracted_count:
         one: "%{count} transazione"
@@ -454,8 +600,49 @@ it:
       create_account: Crea conto
       save_account: Salva
       publish_transactions:
-        one: "Pubblica %{count} transazione"
-        other: "Pubblica %{count} transazioni"
+        one: Pubblica %{count} transazione
+        other: Pubblica %{count} transazioni
       review_transactions: Rivedi transazioni
       select_account_to_continue: Seleziona un conto sopra per continuare.
       unknown_document_type: Sconosciuto
+      already_recorded_note:
+        one: "%{count} era già presente in questo conto ed è stata associata all'estratto
+          conto."
+        other: "%{count} erano già presenti in questo conto e sono state associate
+          all'estratto conto."
+      complete_fully_reconciled:
+        one: 'Tutte le transazioni dell''estratto conto erano già presenti nel conto.
+          %{count} è stata associata e contrassegnata come riconciliata: non era necessario
+          importare nulla.'
+        other: 'Tutte le transazioni dell''estratto conto erano già presenti nel conto.
+          Tutte e %{count} sono state associate e contrassegnate come riconciliate:
+          non era necessario importare nulla.'
+      errors:
+        provider_no_pdf_support: Il provider AI non supporta l'elaborazione PDF
+        provider_not_configured: Provider AI non configurato
+      view_summary: Visualizza riepilogo importazione
+    summary:
+      close: Chiudi
+      title: Riepilogo importazione
+      already_recorded: Già registrata
+      already_recorded_hint: Associata a una transazione già presente nel conto e
+        contrassegnata come riconciliata.
+      awaiting_review: In attesa di importazione
+      extracted: Trovate nell'estratto conto
+      fully_reconciled:
+        one: 'Non era necessario importare nulla: l''unica transazione dell''estratto
+          conto era già registrata.'
+        other: 'Non era necessario importare nulla: tutte e %{count} le transazioni
+          erano già registrate.'
+      imported: Importate come nuove
+      statement_evidence_html: Riconciliata con %{statement}.
+      subtitle: Come sono state gestite le transazioni di questo estratto conto in
+        %{account}.
+      subtitle_no_account: Come sono state gestite le transazioni di questo estratto
+        conto.
+    cancel:
+      cancelled: Importazione contrassegnata come fallita. Puoi riprovare dalla pagina
+        dell'importazione.
+      not_cancellable: 'Questa importazione non può essere contrassegnata come fallita
+        ora: l''attività potrebbe essere ancora in esecuzione. Riprova dopo un''ora
+        di inattività.'

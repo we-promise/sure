@@ -1,0 +1,6 @@
+---
+tr:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Tek seferlik gelir (ortalamalara dahil edilmez)"
+      one_time_expense_tooltip: "Tek seferlik gider (ortalamalara dahil edilmez)"

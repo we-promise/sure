@@ -125,12 +125,12 @@ pl:
       biweekly: Co 2 tygodnie, w %{weekday}
       custom: Niestandardowy harmonogram
       last_day: ostatni dzień
-      monthly: Miesięcznie, %{day} dnia
-      quarterly: Kwartalnie, %{day} dnia
-      semiannual: Co 6 miesięcy, %{day} dnia
-      semimonthly: Dwa razy w miesiącu, %{first} i %{second} dnia
+      monthly: "Co miesiąc, dzień: %{day}"
+      quarterly: "Co kwartał, dzień: %{day}"
+      semiannual: "Co 6 miesięcy, dzień: %{day}"
+      semimonthly: "Dwa razy w miesiącu, dni: %{first} i %{second}"
       weekly: Co tydzień, w %{weekday}
-      every_n_months: Co %{interval} mies., %{day} dnia
+      every_n_months: "Co %{interval} mies., dzień: %{day}"
       every_n_weeks: Co %{interval} tyg., w %{weekday}
       every_n_years: 'Odstęp w latach: %{interval}; miesiąc: %{month}; dzień: %{day}'
     frequency_presets:

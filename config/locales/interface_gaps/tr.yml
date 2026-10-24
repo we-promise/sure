@@ -1,0 +1,8 @@
+---
+tr:
+  reports:
+    index:
+      period_aria: Rapor dönemi
+  shared:
+    transaction_tabs:
+      aria: İşlem türü

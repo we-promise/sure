@@ -1,0 +1,18 @@
+---
+hu:
+  rules:
+    new:
+      back: Vissza a szabályokhoz
+      title: 'Új szabály: %{resource}'
+    form:
+      for: HATÓKÖR
+    edit:
+      title: Szabály szerkesztése (%{resource})
+      title_with_name: "„%{name}” szabály szerkesztése (%{resource})"
+  transfers:
+    account_links:
+      missing_account: 'Adathiba: hiányzó számla'
+      transfer_id: 'Átutalás azonosítója: %{id}'
+  tags:
+    create:
+      failed: Nem sikerült létrehozni a címkét

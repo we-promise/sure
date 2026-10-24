@@ -74,7 +74,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     end
 
     assert_response :unprocessable_entity
-    assert_equal "Invalid email or password", flash[:alert]
+    assert_equal I18n.t("sessions.create.invalid_credentials"), flash[:alert]
   end
 
   test "should reject linking for a deactivated user even with correct password" do
@@ -91,7 +91,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     end
 
     assert_response :unprocessable_entity
-    assert_equal "Invalid email or password", flash[:alert]
+    assert_equal I18n.t("sessions.create.invalid_credentials"), flash[:alert]
   end
 
   test "should reject linking for a user deactivated between the initial check and session creation" do

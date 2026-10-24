@@ -1,0 +1,18 @@
+---
+tr:
+  rules:
+    new:
+      back: Kurallara dön
+      title: "%{resource} için yeni kural"
+    form:
+      for: KAPSAM
+    edit:
+      title: "%{resource} kuralını düzenle"
+      title_with_name: "“%{name}” %{resource} kuralını düzenle"
+  transfers:
+    account_links:
+      missing_account: 'Veri hatası: hesap eksik'
+      transfer_id: 'Transfer kimliği: %{id}'
+  tags:
+    create:
+      failed: Etiket oluşturulamadı

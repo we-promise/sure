@@ -47,7 +47,7 @@
         <%= icon "dollar-sign", class: "w-5 h-5 text-secondary" %>
         <p class="text-xs font-medium text-secondary uppercase"><%= t(".total_cost") %></p>
       </div>
-      <p class="text-2xl font-semibold text-primary">$<%= sprintf("%.2f", @statistics[:total_cost]) %></p>
+      <p class="text-2xl font-semibold text-primary"><%= llm_usage_cost(@statistics[:total_cost], precision: 2) %></p>
     </div>
 
     <div class="bg-container-inset rounded-lg p-4">
@@ -56,7 +56,7 @@
         <p class="text-xs font-medium text-secondary uppercase"><%= t(".avg_cost_per_request") %></p>
       </div>
       <p class="text-2xl font-semibold text-primary">
-        $<%= sprintf("%.4f", @statistics[:avg_cost]) %>
+        <%= llm_usage_cost(@statistics[:avg_cost], precision: 4) %>
       </p>
       <% if @statistics[:requests_with_cost] < @statistics[:total_requests] %>
         <p class="text-xs text-secondary mt-1">
@@ -74,8 +74,8 @@
         <div class="space-y-2">
           <% @statistics[:by_operation].each do |operation, cost| %>
             <div class="flex justify-between items-center">
-              <span class="text-sm text-primary"><%= operation.humanize %></span>
-              <span class="text-sm font-medium text-primary">$<%= sprintf("%.4f", cost) %></span>
+              <span class="text-sm text-primary"><%= llm_usage_operation_label(operation) %></span>
+              <span class="text-sm font-medium text-primary"><%= llm_usage_cost(cost, precision: 4) %></span>
             </div>
           <% end %>
         </div>
@@ -92,7 +92,7 @@
           <% @statistics[:by_model].each do |model, cost| %>
             <div class="flex justify-between items-center">
               <span class="text-sm text-primary font-mono"><%= model %></span>
-              <span class="text-sm font-medium text-primary">$<%= sprintf("%.4f", cost) %></span>
+              <span class="text-sm font-medium text-primary"><%= llm_usage_cost(cost, precision: 4) %></span>
             </div>
           <% end %>
         </div>
@@ -119,10 +119,10 @@
             <% @llm_usages.each do |usage| %>
               <tr class="<%= "bg-red-tint-5 theme-dark:bg-red-tint-10" if usage.failed? %>">
                 <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
-                  <%= usage.created_at.strftime("%b %d, %Y %I:%M %p") %>
+                  <%= tag.time l(usage.created_at, format: :long), datetime: usage.created_at.iso8601 %>
                 </td>
                 <td class="px-4 py-3 text-sm text-primary">
-                  <%= usage.operation.humanize %>
+                  <%= llm_usage_operation_label(usage.operation) %>
                 </td>
                 <td class="px-4 py-3 text-sm text-primary font-mono">
                   <%= usage.model %>
@@ -137,7 +137,7 @@
                       <div role="tooltip" data-tooltip-target="tooltip" class="tooltip bg-inverse text-sm p-2 rounded-md w-64 text-left break-words whitespace-normal hidden">
                         <div class="text-inverse">
                           <% if usage.http_status_code.present? %>
-                            <p class="text-xs mt-1 text-inverse opacity-70">HTTP Status: <%= usage.http_status_code %></p>
+                            <p class="text-xs mt-1 text-inverse opacity-70"><%= t(".http_status", status: usage.http_status_code) %></p>
                           <% end %>
                           <p class="text-xs"><%= usage.error_message %></p>
                         </div>
@@ -151,7 +151,7 @@
                   <% end %>
                 </td>
                 <td class="px-4 py-3 text-sm font-medium text-primary text-right whitespace-nowrap">
-                  <%= usage.formatted_cost %>
+                  <%= llm_usage_cost(usage.estimated_cost) %>
                 </td>
               </tr>
             <% end %>

@@ -1,0 +1,17 @@
+---
+en:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: Configuration can be set via environment variables or overridden below.
+        optional: Optional
+      update:
+        failed: Failed to update provider settings. Please try again.
+    llm_usages:
+      show:
+        http_status: 'HTTP Status: %{status}'
+  shared:
+    async_loading:
+      timeout: Timeout
+      failed_with_status: Failed to load (%{status})
+      network_error: Network error

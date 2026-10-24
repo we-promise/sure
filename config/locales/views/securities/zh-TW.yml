@@ -2,8 +2,8 @@
 zh-TW:
   securities:
     combobox:
-      display: '%{symbol} - %{name}（%{exchange}）'
-      exchange_label: '%{symbol}（%{exchange}）'
+      display: "%{symbol} - %{name}（%{exchange}）"
+      exchange_label: "%{symbol}（%{exchange}）"
     providers:
       twelve_data: Twelve Data
       yahoo_finance: Yahoo Finance
@@ -13,3 +13,4 @@ zh-TW:
       mfapi: MFAPI.in
       binance_public: Binance
       moex_public: MOEX
+      mansa: Mansa

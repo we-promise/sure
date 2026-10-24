@@ -1,0 +1,353 @@
+---
+pt-PT:
+  bills:
+    add_bill: Adicionar despesa a pagar
+    add_payment: Adicionar pagamento
+    ai_prompts:
+      due_before_paycheck: O que vence antes do meu próximo salário?
+      monthly_subscriptions: Quanto pago por mês em subscrições?
+      safe_to_spend: Quanto posso gastar com segurança neste período?
+      subscriptions_up: Que subscrições aumentaram de preço este ano?
+    all:
+      any_status: Qualquer estado
+      any_type: Qualquer tipo
+      col_actions: Ações
+      col_amount: Montante
+      col_frequency: Frequência
+      col_name: Nome
+      col_next: Próximo vencimento
+      col_status: Estado
+      col_type: Tipo
+      monthly_equivalent: "%{amount}/mês"
+      next_short: 'próximo: %{date}'
+      no_matches_description: Experimente limpar um filtro ou a pesquisa.
+      no_matches_title: Nenhum resultado
+      search_placeholder: Pesquisar despesas a pagar
+      sort_amount: Por montante
+      sort_due: Por próximo vencimento
+      sort_name: Por nome
+      status_filters:
+        due: A vencer
+        ended: Dispensadas
+        overdue: Atrasadas
+        paid: Pagas
+        partial: Parcialmente pagas
+        paused: Pausadas
+      subscription_active: Ativa
+      subscription_annual: Por ano
+      subscription_monthly: Por mês
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
+      subscription_price_changes: Alterações de preço neste ano
+      types:
+        bill: Despesa a pagar
+        income: Rendimento
+        installment: Plano de prestações
+        other: Outro
+        subscription: Subscrição
+        transfer: Transferência
+    amount_range: varia de %{min} a %{max}
+    attention:
+      amount_changed: Montante alterado
+      needs_review: Associação a rever
+      overdue:
+        one: 1 dia de atraso
+        other: "%{count} dias em atraso"
+      partial: Parcial · faltam %{amount}
+    calendar:
+      empty_month: Não há despesas a pagar este mês.
+      month_totals: "%{expected} previstos · %{paid} pagos"
+      next_month: Próximo mês
+      previous_month: Mês anterior
+      reset_feed: Redefinir ligação
+      subscribe_ical: Subscrever (iCal)
+      today: Hoje
+    cancelled_still_scheduled: >-
+      Marcou esta despesa como cancelada em %{date}, mas continua agendada, pelo que
+      continuarão a aparecer vencimentos futuros.
+    debt_payment: "· pagamento de dívida"
+    detail:
+      annualized: Por ano
+      around: por volta de %{date}
+      average: Média paga
+      avg_payment: Pagamento médio
+      cancelled_chip: Cancelada em %{date}
+      current: Atual
+      history: Histórico
+      history_aria: Pagamentos nos últimos doze meses
+      history_title: Últimos 12 meses
+      key_metrics: Por ano
+      last_account: Última conta utilizada
+      manual_payment: Pagamento manual
+      next_payment: Próximo pagamento
+      notes: Notas
+      payment_count:
+        one: 1 pagamento
+        other: "%{count} pagamentos"
+      price_change_line: "%{from} → %{to}"
+      price_changes: Alterações de preço
+      range: "%{min} a %{max}"
+      recent_payments: Pagamentos recentes
+      renews_chip: Renova em %{date}
+      rule_aliases: Também corresponde a %{names}
+      rule_amount_range: de %{min} a %{max}
+      rule_learned_tolerance: >-
+        Montantes que não se afastem mais de %{percent} do montante habitual são associados
+        a esta despesa
+      rule_named: "%{name}"
+      rules: Como são identificados os pagamentos desta despesa
+      spent_per_year: Gasto
+      trial_chip: Período experimental termina em %{date}
+      upcoming: Em breve
+      year: Ano
+      ytd: Pago neste ano
+    detect:
+      already_running: A deteção já está em curso. Volte a verificar dentro de instantes.
+      found:
+        one: Foi encontrada 1 possível despesa recorrente. Reveja-a abaixo.
+        other: Foram encontradas %{count} possíveis despesas recorrentes. Reveja-as
+          abaixo.
+      none_found: >-
+        Não foram encontrados novos padrões recorrentes. Pode adicionar despesas manualmente.
+    due_label:
+      due_since: 'Vencimento: %{date}'
+      overdue:
+        one: 1 dia de atraso; venceu em %{date}
+        other: "%{count} dias de atraso; venceu em %{date}"
+      settled: Venceu em %{date}
+      snoozed: Adiada até %{date}
+      today: Vence hoje
+      upcoming:
+        one: Vence amanhã, %{date}
+        other: Vence em %{count} dias, %{date}
+    feed:
+      calendar_name: Despesas a pagar do Sure
+    find_payment: Encontrar pagamento
+    index:
+      accept: Aplicar
+      add_bill: Adicionar despesa a pagar
+      add_income: Adicionar rendimento
+      all_automatic: todas em pagamento automático
+      attention_overdue_total: "%{amount} em atraso"
+      confidence: "%{percent}% de correspondência"
+      detected_review:
+        one: >-
+          Foi encontrado 1 pagamento recorrente nas suas transações. Reveja-o para
+          que os totais correspondam ao que realmente paga.
+        other: >-
+          Foram encontrados %{count} pagamentos recorrentes nas suas transações. Reveja-os
+          para que os totais correspondam ao que realmente paga.
+      detected_review_action: Rever
+      dormant: Inativa
+      empty:
+        action: Encontrar transações recorrentes
+        description: >-
+          As despesas a pagar são os seus encargos recorrentes. O Sure identifica-as
+          automaticamente no histórico de transações. Pode adicionar uma ligação de
+          pagamento a cada uma para pagar diretamente a partir daqui.
+        no_history_description: >-
+          Ainda não há transações. Ligue uma conta ou importe o histórico para o Sure
+          encontrar automaticamente as suas despesas a pagar, ou adicione uma manualmente.
+        title: Ainda não há despesas a pagar
+      hero_next_seven: "%{amount} vencem nos próximos 7 dias"
+      hero_past_due: "%{amount} em atraso"
+      kpi_next_seven: Vencem nos próximos 7 dias
+      kpi_paid: Pago neste mês
+      kpi_past_due: Em atraso
+      kpi_remaining: Restante neste mês
+      later: Após este mês
+      left_to_pay: falta pagar
+      needs_action_count:
+        one: 1 requer a sua atenção
+        other: "%{count} requerem a sua atenção"
+      needs_attention: Precisa de atenção
+      needs_review: Precisa de revisão
+      notice_price: 'O preço de %{name} mudou: %{from} → %{to} (%{percent})'
+      notice_renewal: "%{name} renova em %{date}"
+      notice_trial: O período experimental de %{name} termina em %{date}
+      notices_routine:
+        one: 1 alteração menor
+        other: "%{count} alterações menores"
+      overdue: Em atraso
+      paid_count:
+        one: 1 despesa liquidada
+        other: "%{count} despesas liquidadas"
+      paid_so_far: Pago até agora
+      paid_this_month: Pago neste mês
+      recurring_annual: "%{amount} por ano"
+      recurring_label: Compromisso recorrente
+      recurring_monthly: "%{amount} por mês"
+      reject: Não é esta despesa
+      review_with_ai: Rever com IA
+      suggestion_line: "%{entry} parece ser um pagamento de %{bill}"
+      suggestion_unknown_entry: Uma transação
+      summary_count:
+        one: 1 despesa a vencer
+        other: "%{count} despesas a vencer"
+      summary_label: Vencem neste mês
+      summary_needs_action:
+        one: 1 requer a sua atenção
+        other: "%{count} requerem a sua atenção"
+      this_month: Este mês
+      title: Despesas a pagar
+      unconvertible:
+        one: 1 despesa não está incluída por não haver taxa de câmbio disponível
+        other: "%{count} despesas não estão incluídas por não haver taxa de câmbio
+          disponível"
+    installment_progress: Prestação %{done_plus_one} de %{total}
+    manage: Gerir
+    manage_payments: Gerir pagamentos
+    match:
+      amount_off: "%{amount} de diferença"
+      days_after:
+        one: 1 dia após o vencimento
+        other: "%{count} dias após o vencimento"
+      days_before:
+        one: 1 dia antes do vencimento
+        other: "%{count} dias antes do vencimento"
+      due_date: Mesma data de vencimento
+      exact_amount: Montante exato
+      name_matches: Nome corresponde
+      same_merchant: Mesmo comerciante
+    month_pulse:
+      bill_count:
+        one: 1 despesa
+        other: "%{count} despesas"
+      date_today: Hoje
+      date_tomorrow: Amanhã
+      left_to_pay: falta pagar
+      next_up: A seguir
+      pulse_bar_aria: "%{percent}% das despesas deste mês foram pagas"
+      pulse_next_seven: próximos 7 dias
+      pulse_overdue: em atraso
+      pulse_paid: pago
+      unconvertible:
+        one: 1 despesa não está incluída por não haver taxa de câmbio disponível
+        other: "%{count} despesas não estão incluídas por não haver taxa de câmbio
+          disponível"
+      view_calendar: Ver calendário
+    paid_from: pela conta %{account}
+    paid_label: Pago
+    paid_over: Pago %{paid}, acima do previsto
+    paid_over_short: Pago acima do previsto
+    pane:
+      close: Recolher detalhes
+    partial_progress: "%{paid} de %{expected} pagos"
+    pay_period:
+      before_next_paycheck: Antes do próximo salário
+      due_before_date: "%{amount} vencem antes de %{date}"
+      paycheck_on: Salário em %{date}
+    paycheck:
+      add_income: Adicionar rendimento
+      all_clear:
+        description: >-
+          Não há despesas a vencer entre hoje e %{date}, pelo que não há montantes
+          comprometidos nesse intervalo.
+        title: Nada a pagar
+      allocation_aria: >-
+        Do rendimento de %{income}, %{due} vencem agora, %{reserved} estão reservados
+        para mais tarde e %{safe} podem ser gastos com segurança.
+      allocation_aria_short: >-
+        O rendimento de %{income} destina-se aos compromissos deste período e ainda
+        faltam %{short}.
+      before_next_paycheck: Antes de %{date}
+      bills_before_payday:
+        one: Despesas antes do próximo salário · 1
+        other: Despesas antes do próximo salário · %{count}
+      bills_this_period:
+        one: Despesas neste período · 1
+        other: Despesas neste período · %{count}
+      bridge_amount: "· %{amount} a pagar"
+      bridge_label: Antes do próximo salário
+      bridge_split: >-
+        Vencem antes de %{date} e são cobertas pelos %{cash} disponíveis nas suas
+        contas.
+      due_this_period: Vencem neste período
+      empty:
+        action: Adicionar rendimento
+        description: >-
+          Adicione os seus rendimentos para saber o que cada dia de pagamento tem
+          de cobrir. As entradas detetadas nunca definem as datas de recebimento por
+          si só — é o utilizador quem as define.
+        title: Indique o seu calendário de rendimentos
+      income_amount: "%{amount} de rendimento"
+      income_detected: Detetado automaticamente; não define datas de recebimento
+      income_next_payday: 'próximo: %{date}'
+      income_paused: Em pausa, não planeado
+      income_section_title: Calendário de rendimentos
+      income_source_count:
+        one: "%{count} fonte de rendimento"
+        other: "%{count} fontes de rendimento"
+      manage: Gerir
+      next_on: 'Próximo: %{date}'
+      no_income_arriving: Não há rendimentos a receber
+      no_upcoming_income: Não há rendimentos agendados a partir de agora.
+      of_total: de %{amount}
+      period_source: " · %{source}"
+      period_source_multiple: " · %{count} fontes de rendimento"
+      reserved_ahead: Reservado para depois
+      reserved_footer:
+        one: Reservado para 1 despesa futura
+        other: Reservado para %{count} despesas futuras
+      review_plan: Rever plano
+      safe_after_bills: Disponível após as despesas
+      safe_short: Disponível
+      short_after_bills: Em falta após as despesas
+      short_short: Falta
+      shortfall_amount: "· %{amount}"
+      shortfall_label: Falta antes do próximo recebimento
+      shortfall_largest: 'Maior compromisso próximo:'
+      shortfall_split: "%{obligations} vencem antes de %{date} e as suas contas têm
+        %{cash}."
+      unconvertible:
+        one: 1 compromisso não foi incluído porque não há taxa de câmbio disponível
+        other: >-
+          %{count} compromissos não foram incluídos porque não há taxa de câmbio disponível
+    possible_duplicate: Possível duplicado
+    remaining_label: restante
+    reset_feed_token:
+      confirm: >-
+        Redefinir a ligação do calendário? Todas as ligações partilhadas anteriormente
+        deixarão de funcionar.
+      done: >-
+        Ligação do calendário redefinida. As aplicações que usam a ligação antiga
+        deixarão de receber atualizações. Subscreva novamente com a nova ligação.
+    resolve: Resolver
+    review_match: Rever associação
+    row_overdue: Em atraso
+    row_today: Hoje
+    show:
+      edit: Editar despesa a pagar
+    smart_configurations:
+      show:
+        apply: Aplicar selecionados
+        autopay_off: Desativado
+        autopay_on: Ativado
+        failed: >-
+          Não foi possível analisar esta despesa neste momento. A configuração não
+          foi alterada.
+        field_amount: Montante
+        field_autopay: Pagamento automático
+        field_category: Categoria
+        field_kind: Tipo
+        field_name: Nome
+        field_schedule: Agendamento
+        intro: >-
+          Selecione as alterações que deseja aplicar. Os campos desmarcados permanecerão
+          como estão.
+        no_changes: >-
+          Esta despesa já corresponde ao seu histórico de pagamentos. Não há nada
+          a alterar.
+        title: Sugestões de IA para %{name}
+        trigger: Configurar com IA
+        uncategorized: Sem categoria
+    summary:
+      cost_line: Média de %{average} por pagamento, cerca de %{annualized} por ano
+      paid_headline: "%{amount} pagos"
+      remaining: "%{amount} restantes"
+    view_full_bill: Ver despesa completa
+    views:
+      all: Todas as despesas a pagar
+      aria_label: Visualizações de despesas a pagar
+      calendar: Calendário
+      overview: Visão geral
+      paycheck: Plano de rendimentos

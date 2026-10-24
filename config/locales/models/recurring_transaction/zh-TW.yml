@@ -5,3 +5,29 @@ zh-TW:
       models:
         recurring_transaction:
           merchant_or_name_required: 商家與名稱至少須提供一項
+          attributes:
+            account:
+              required_for_transfer: 定期轉帳必須指定
+              wrong_family: 必須屬於此家庭
+            anchor_date:
+              required_for_intervals: 規則每隔 2 個以上週期重複時必須指定
+            bill_type:
+              transfer_shape_mismatch: 只有設定收款帳戶時才能選擇轉帳
+            destination_account:
+              family_mismatch: 必須與付款帳戶屬於同一家庭
+              same_as_source: 不能與付款帳戶相同
+              wrong_family: 必須屬於此家庭
+            expected_amount_min:
+              greater_than_max: 不能大於預計最高金額
+            payment_url:
+              invalid_scheme: 必須是有效的 http:// 或 https:// 網址
+    attributes:
+      recurring_transaction:
+        frequency_interval: 重複間隔
+        payment_url: 付款連結
+  recurring_transactions:
+    allocator:
+      exceeds_remaining: "%{amount} 超過此週期剩餘的 %{remaining}"
+      missing_rate: 沒有從 %{from} 換算至 %{to} 的匯率，請直接輸入金額
+      over_allocated: 分配 %{amount} 將超過此交易剩餘的 %{capacity} %{currency}
+      unmeasurable: 此交易已有一筆無法換算為 %{currency} 的分配，無法計算剩餘額度。請先新增 %{date} 的匯率，或移除既有付款

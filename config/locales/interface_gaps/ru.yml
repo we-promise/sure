@@ -1,0 +1,8 @@
+---
+ru:
+  reports:
+    index:
+      period_aria: Период отчёта
+  shared:
+    transaction_tabs:
+      aria: Тип транзакции

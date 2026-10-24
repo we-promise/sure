@@ -1,0 +1,20 @@
+---
+fr:
+  authentication_ui:
+    password:
+      missing_case: "doit contenir des lettres majuscules et minuscules"
+      missing_number: "doit contenir au moins un chiffre"
+      missing_special: "doit contenir au moins un caractère spécial"
+    sso:
+      copy_failed: "Impossible de copier dans le presse-papiers"
+      issuer_valid: "Émetteur OIDC valide"
+      issuer_mismatch_trailing: "L’émetteur ne correspond pas : la découverte a renvoyé %{issuer}. Cela vient généralement d’une différence de barre oblique finale. Copiez l’émetteur exactement tel qu’il est renvoyé."
+      issuer_mismatch: "L’émetteur ne correspond pas : la découverte a renvoyé %{issuer}. Copiez l’émetteur exactement tel qu’il est renvoyé par le fournisseur."
+      browser_validation_unavailable: "Impossible de valider depuis le navigateur (CORS). Le fournisseur peut tout de même être enregistré."
+      testing: "Test en cours…"
+      request_failed: "La requête a échoué : %{message}"
+    authorization:
+      authorizing: "Autorisation en cours…"
+      denying: "Refus en cours…"
+      explanation: "En autorisant, vous permettez à cette application d’accéder à vos données %{product_name} selon les permissions ci-dessus."
+      title: "Autorisation %{product_name}"

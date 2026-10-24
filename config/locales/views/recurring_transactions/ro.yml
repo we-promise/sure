@@ -183,13 +183,13 @@ ro:
       annual: Anual la %{day} %{month}
       biweekly: La fiecare 2 săptămâni, %{weekday}
       custom: Program personalizat
-      every_n_months: La fiecare %{interval} luni, în ziua %{day}
+      every_n_months: "La fiecare %{interval} luni, zi: %{day}"
       every_n_weeks: La fiecare %{interval} săptămâni, %{weekday}
       every_n_years: La fiecare %{interval} ani, la %{day} %{month}
       last_day: ultima zi
-      monthly: Lunar, în ziua %{day}
-      quarterly: Trimestrial, în ziua %{day}
-      semiannual: La fiecare 6 luni, în ziua %{day}
+      monthly: "Lunar, zi: %{day}"
+      quarterly: "Trimestrial, zi: %{day}"
+      semiannual: "La fiecare 6 luni, zi: %{day}"
       semimonthly: De două ori pe lună, în zilele %{first} și %{second}
       weekly: Săptămânal, %{weekday}
     frequency_interval_units:

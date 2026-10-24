@@ -1,0 +1,18 @@
+---
+ro:
+  rules:
+    new:
+      back: Înapoi la reguli
+      title: Regulă nouă pentru %{resource}
+    form:
+      for: PENTRU
+    edit:
+      title: Editează regula pentru %{resource}
+      title_with_name: Editează regula „%{name}” pentru %{resource}
+  transfers:
+    account_links:
+      missing_account: 'Eroare de date: lipsește un cont'
+      transfer_id: 'ID transfer: %{id}'
+  tags:
+    create:
+      failed: Eticheta nu a putut fi creată

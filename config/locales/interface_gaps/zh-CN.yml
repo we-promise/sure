@@ -1,0 +1,8 @@
+---
+zh-CN:
+  reports:
+    index:
+      period_aria: 报表期间
+  shared:
+    transaction_tabs:
+      aria: 交易类型

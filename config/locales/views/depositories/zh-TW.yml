@@ -24,3 +24,6 @@ zh-TW:
       savings:
         long: 儲蓄帳戶 (Savings)
         short: 儲蓄
+      cash:
+        long: 現金
+        short: 現金

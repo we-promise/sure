@@ -1,0 +1,32 @@
+---
+ca:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: Nom de la transacció
+        transaction_amount: Import de la transacció
+        transaction_type: Tipus de transacció
+        transaction_merchant: Comerç de la transacció
+        transaction_category: Categoria de la transacció
+        transaction_tag: Etiqueta de la transacció
+        transaction_details: Detalls de la transacció
+        transaction_notes: Notes de la transacció
+        transaction_account: Compte de la transacció
+    action_executors:
+      labels:
+        set_transaction_category: Estableix la categoria de la transacció
+        set_transaction_tags: Estableix les etiquetes de la transacció
+        set_transaction_merchant: Estableix el comerç de la transacció
+        set_transaction_name: Estableix el nom de la transacció
+        set_investment_activity_label: Estableix el tipus d’activitat d’inversió
+        exclude_transaction: Exclou del pressupost i dels informes
+        set_as_transfer_or_payment: Marca com a transferència o pagament
+        send_email_notification: Envia una notificació per correu electrònic
+        auto_categorize: Categoritza automàticament les transaccions amb IA
+        auto_detect_merchants: Detecta automàticament els comerços
+        auto_detect_merchants_with_ai: Detecta automàticament els comerços amb IA
+          ($$)
+      auto_categorize:
+        cost_unavailable: "%{label} (cost no disponible)"
+        cost_estimate: "%{label} (aprox. %{cost} USD per cada 20 transaccions)"
+        provider_missing: "%{label} (cap proveïdor de categorització configurat)"

@@ -115,7 +115,7 @@ tr:
       creating_accounts: Hesaplar Oluşturuluyor...
       header_subtitle: İçe aktarılan hesaplarınız için doğru hesap türlerini seçin
       historical_data_range: 'Geçmiş Veri Aralığı:'
-      psd2_savings_notice: ''
+      psd2_savings_notice: "Not: Fransa’daki bazı düzenlemeye tabi tasarruf hesaplarına (Livret A, PEL, LEP, LDDS) Açık Bankacılık (PSD2) üzerinden erişim sınırlı olabilir veya hiç mümkün olmayabilir. Bir tasarruf hesabı eksikse bu hesabı elle ekleyebilirsiniz."
       sync_start_date_help: İşlem geçmişini ne kadar geriye kadar eşitlemek istediğinizi
         seçin. En fazla 2 yıllık geçmiş kullanılabilir.
       sync_start_date_label: 'İşlemleri şu tarihten itibaren eşitlemeye başla:'

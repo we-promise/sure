@@ -1,0 +1,11 @@
+---
+fr:
+  binance_items:
+    setup_accounts:
+      historical_import: Importation de l’historique
+  reports:
+    index:
+      period_aria: Période du rapport
+  shared:
+    transaction_tabs:
+      aria: Type de transaction

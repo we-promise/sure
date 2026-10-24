@@ -1,0 +1,31 @@
+---
+zh-CN:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: 交易名称
+        transaction_amount: 交易金额
+        transaction_type: 交易类型
+        transaction_merchant: 交易商户
+        transaction_category: 交易分类
+        transaction_tag: 交易标签
+        transaction_details: 交易明细
+        transaction_notes: 交易备注
+        transaction_account: 交易账户
+    action_executors:
+      labels:
+        set_transaction_category: 设置交易分类
+        set_transaction_tags: 设置交易标签
+        set_transaction_merchant: 设置交易商户
+        set_transaction_name: 设置交易名称
+        set_investment_activity_label: 设置投资活动类型
+        exclude_transaction: 从预算和报表中排除
+        set_as_transfer_or_payment: 设为转账或还款
+        send_email_notification: 发送邮件通知
+        auto_categorize: 使用 AI 自动分类交易
+        auto_detect_merchants: 自动识别商户
+        auto_detect_merchants_with_ai: 使用 AI 自动识别商户（$$）
+      auto_categorize:
+        cost_unavailable: "%{label}（费用未知）"
+        cost_estimate: "%{label}（每 20 笔交易约 %{cost} 美元）"
+        provider_missing: "%{label}（未配置分类服务）"

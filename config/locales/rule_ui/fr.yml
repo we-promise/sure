@@ -1,0 +1,18 @@
+---
+fr:
+  rules:
+    new:
+      back: Retour aux règles
+      title: 'Nouvelle règle : %{resource}'
+    form:
+      for: POUR
+    edit:
+      title: Modifier la règle de %{resource}
+      title_with_name: Modifier la règle de %{resource} « %{name} »
+  transfers:
+    account_links:
+      missing_account: 'Erreur de données : compte manquant'
+      transfer_id: 'ID du virement : %{id}'
+  tags:
+    create:
+      failed: Impossible de créer l’étiquette

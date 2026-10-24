@@ -1,0 +1,20 @@
+---
+pl:
+  authentication_ui:
+    password:
+      missing_case: "musi zawierać wielkie i małe litery"
+      missing_number: "musi zawierać co najmniej jedną cyfrę"
+      missing_special: "musi zawierać co najmniej jeden znak specjalny"
+    sso:
+      copy_failed: "Nie udało się skopiować do schowka"
+      issuer_valid: "Prawidłowy wystawca OIDC"
+      issuer_mismatch_trailing: "Wystawca nie jest zgodny: wykrywanie zwróciło %{issuer}. Zwykle wynika to z różnicy w ukośniku na końcu. Skopiuj adres wystawcy dokładnie tak, jak został zwrócony."
+      issuer_mismatch: "Wystawca nie jest zgodny: wykrywanie zwróciło %{issuer}. Skopiuj adres wystawcy dokładnie tak, jak został zwrócony przez dostawcę."
+      browser_validation_unavailable: "Nie można zweryfikować w przeglądarce (CORS). Nadal można zapisać dostawcę."
+      testing: "Testowanie…"
+      request_failed: "Żądanie nie powiodło się: %{message}"
+    authorization:
+      authorizing: "Autoryzowanie…"
+      denying: "Odrzucanie…"
+      explanation: "Autoryzując, zezwalasz tej aplikacji na dostęp do Twoich danych w %{product_name} zgodnie z powyższymi uprawnieniami."
+      title: "Autoryzacja %{product_name}"

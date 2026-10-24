@@ -1,0 +1,6 @@
+---
+uk:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Разовий дохід (не враховується в середніх значеннях)"
+      one_time_expense_tooltip: "Разова витрата (не враховується в середніх значеннях)"

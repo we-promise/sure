@@ -1,0 +1,6 @@
+---
+pl:
+  layouts:
+    shared:
+      footer:
+        community_fork: "(społecznościowe rozwidlenie projektu %{original_product})"

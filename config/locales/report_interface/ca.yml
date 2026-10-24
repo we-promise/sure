@@ -1,0 +1,6 @@
+---
+ca:
+  reports:
+    index:
+      sections_aria_label: "Seccions de l’informe"
+      section_reorder_aria: "Secció %{title}. Prem Retorn o Espai per seleccionar-la i canviar-ne l’ordre; després, fes servir les tecles de fletxa per moure-la."

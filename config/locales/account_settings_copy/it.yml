@@ -1,0 +1,17 @@
+---
+it:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: La configurazione può essere impostata tramite variabili d’ambiente o sovrascritta qui sotto.
+        optional: Facoltativo
+      update:
+        failed: Impossibile aggiornare le impostazioni dei fornitori. Riprova.
+    llm_usages:
+      show:
+        http_status: 'Stato HTTP: %{status}'
+  shared:
+    async_loading:
+      timeout: Tempo di attesa scaduto
+      failed_with_status: Caricamento non riuscito (%{status})
+      network_error: Errore di rete

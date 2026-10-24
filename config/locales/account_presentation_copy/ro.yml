@@ -1,0 +1,32 @@
+---
+ro:
+  properties:
+    update:
+      success: Detaliile proprietății au fost actualizate.
+      error: Detaliile proprietății nu au putut fi actualizate.
+    update_balances:
+      success: Soldul a fost actualizat.
+    update_address:
+      success: Adresa a fost actualizată.
+      error: Adresa nu a putut fi actualizată. Verifică câmpurile obligatorii.
+  enable_banking_items:
+    account_types:
+      card: Cont de card
+      overdraft: Cont cu descoperit
+      transacting: Cont tranzacțional
+      salary: Cont de salariu
+      non_resident_external: Cont extern pentru nerezidenți
+      tax: Cont fiscal
+      cash_trading: Cont de tranzacționare la vedere
+      overnight_deposit: Depozit overnight
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Categorizare automată
+        auto_detect_merchants: Detectarea automată a comercianților
+        enhance_provider_merchants: Îmbogățirea datelor comercianților de la furnizor
+        suggest_bill_setup: Sugestii pentru configurarea facturilor
+        process_pdf: Procesare PDF
+        process_pdf_vision: Procesare vizuală PDF
+        extract_bank_statement: Extragerea extraselor bancare
+        chat: Conversație

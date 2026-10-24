@@ -11,8 +11,8 @@ zh-TW:
     institution_summary:
       none: 沒有已連線的機構
       count:
-        one: '%{count} 個機構'
-        other: '%{count} 個機構'
+        one: "%{count} 個機構"
+        other: "%{count} 個機構"
     errors:
       provider_not_configured: 尚未設定 Questrade 供應商
     sync:
@@ -22,7 +22,7 @@ zh-TW:
         calculating: 正在計算餘額...
         importing_data: 正在匯入帳戶資料...
         checking_setup: 正在檢查帳戶設定...
-        needs_setup: '%{count} 個帳戶需要設定...'
+        needs_setup: "%{count} 個帳戶需要設定..."
       success: 同步已開始
     panel:
       setup_instructions: 設定說明：
@@ -30,9 +30,9 @@ zh-TW:
       step_2: 在下方輸入您的憑證並按下儲存
       step_3: 連線成功後，前往「帳戶管理」分頁設定新帳戶
       field_descriptions: 欄位說明：
-      optional: （選填）
-      required: （必填）
-      optional_with_default: （選填，預設為 %{default_value}）
+      optional: "（選填）"
+      required: "（必填）"
+      optional_with_default: "（選填，預設為 %{default_value}）"
       save_button: 儲存設定
       update_button: 更新設定
       token_refresh_hint: Questrade Token 會在每次帳戶同步時自動更新。若連線超過 7 天未使用而失效，在這裡貼上新的 Token 即可重新啟用，不需中斷連線。
@@ -49,6 +49,19 @@ zh-TW:
           description: 您的 Questrade api server
           placeholder_new: 在此貼上 api server
           placeholder_update: 輸入新的 api server 以更新
+      disconnect: 中斷連線
+      disconnect_confirm: 要中斷 Questrade 連線嗎？這會移除連線，並解除已同步帳戶的連結。
+      eyebrow: 設定 · 僅限桌面版
+      help_text: Questrade API 文件
+      steps:
+        s1_html: >-
+          使用桌面瀏覽器登入 <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary
+          font-medium underline">Questrade 入口網站</a>。行動應用程式無法設定 API。
+        s2: 開啟 Settings，在 General settings 下編輯 IQ API 設定。
+        s3_html: 在 API access 對話框中，按下 <strong>My applications</strong> 下的 <strong>Manage</strong>。
+        s4: 註冊個人應用程式，填寫名稱與描述後儲存。
+        s5: 新增裝置並產生權杖。
+        s6: 將產生的權杖貼至下方並儲存。
     create:
       success: Questrade 連線建立成功
     update:
@@ -92,7 +105,7 @@ zh-TW:
       setup_action: 設定新帳戶
       setup_description: 已連結 %{total} 個帳戶中的 %{linked} 個。請為新匯入的 Questrade 帳戶選擇帳戶類型。
       setup_needed: 有新帳戶可以設定
-      status: '%{timestamp}前已同步'
+      status: "%{timestamp}前已同步"
       status_never: 從未同步
       status_with_summary: 上次同步於 %{timestamp}前 - %{summary}
       syncing: 同步中...
@@ -109,7 +122,7 @@ zh-TW:
       no_accounts_found: 找不到帳戶。請檢查您的 API 金鑰設定。
       no_api_key: 尚未設定 Questrade API 金鑰，請前往「設定」完成設定。
       no_credentials_configured: 請先在供應商設定中設定您的 Questrade 憑證。
-      no_name_placeholder: （無名稱）
+      no_name_placeholder: "（無名稱）"
       title: 選擇 Questrade 帳戶
     select_existing_account:
       account_already_linked: 此帳戶已與供應商連結
@@ -130,10 +143,17 @@ zh-TW:
       no_accounts_found: 找不到任何 Questrade 帳戶。請檢查您的 API 金鑰設定。
       no_api_key: 尚未設定 Questrade API 金鑰，請前往「設定」完成設定。
       no_credentials_configured: 請先在供應商設定中設定您的 Questrade 憑證。
-      no_name_placeholder: （無名稱）
+      no_name_placeholder: "（無名稱）"
       settings_link: 前往供應商設定
       subtitle: 選擇一個 Questrade 帳戶
       title: 將 %{account_name} 與 Questrade 連結
+      buttons:
+        cancel: 取消
+        link: 連結
+      dialog_title: 連結至 Questrade 帳戶
+      linking_label: 正在連結
+      none_available: 沒有尚未連結的 Questrade 帳戶。
+      page_title: 連結 Questrade 帳戶
     link_existing_account:
       account_already_linked: 此帳戶已與供應商連結
       api_error: API 錯誤：%{message}
@@ -213,6 +233,18 @@ zh-TW:
       sync_start_date_help: 選擇您希望回溯同步交易歷史的時間範圍。
       sync_start_date_label: 開始同步交易的日期：
       title: 設定您的 Questrade 帳戶
+      all_linked: 所有 Questrade 帳戶均已連結。
+      buttons:
+        cancel: 取消
+        create: 建立帳戶
+        done: 完成
+      dialog_title: 設定您的 Questrade 帳戶
+      import_as: 匯入為
+      page_title: 設定 Questrade 帳戶
+      types:
+        depository: 現金／存款
+        investment: 投資
+        skip: 跳過此帳戶
     setup_required:
       title: 請先連接 Questrade
       not_configured_title: 尚未連接 Questrade

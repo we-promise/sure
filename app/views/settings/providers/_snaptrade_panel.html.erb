@@ -81,7 +81,9 @@
             controller: "lazy-load",
             action: "toggle->lazy-load#toggled",
             lazy_load_url_value: connections_snaptrade_item_path(snaptrade_item),
-            lazy_load_auto_open_param_value: "manage"
+            lazy_load_auto_open_param_value: "manage",
+            lazy_load_failure_message_value: t("shared.async_loading.failed_with_status"),
+            lazy_load_network_error_message_value: t("shared.async_loading.network_error")
           }
         ) do |disclosure| %>
           <% disclosure.with_summary_content do %>

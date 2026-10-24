@@ -152,14 +152,14 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 6, (expected_end.year * 12 + expected_end.month) - (expected_start.year * 12 + expected_start.month) + 1
 
     # Page should include both boundary months
-    assert_includes @response.body, expected_start.strftime("%b %Y")
-    assert_includes @response.body, expected_end.strftime("%b %Y")
+    assert_includes @response.body, I18n.l(expected_start, format: :month_year)
+    assert_includes @response.body, I18n.l(expected_end, format: :month_year)
 
     # Page should NOT include the months immediately outside the window
     prev_month = expected_start - 1.month
     next_month = expected_end + 1.month
-    assert_not_includes @response.body, prev_month.strftime("%b %Y")
-    assert_not_includes @response.body, next_month.strftime("%b %Y")
+    assert_not_includes @response.body, I18n.l(prev_month, format: :month_year)
+    assert_not_includes @response.body, I18n.l(next_month, format: :month_year)
   end
 
   test "last 6 months default start date is consistent with navigation" do
@@ -247,8 +247,8 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     assert_equal I18n.t("reports.invalid_date_range"), flash[:alert]
-    assert_includes @response.body, end_date.strftime("%b %Y")
-    assert_includes @response.body, start_date.strftime("%b %Y")
+    assert_includes @response.body, I18n.l(end_date, format: :month_year)
+    assert_includes @response.body, I18n.l(start_date, format: :month_year)
   end
 
   test "spending patterns returns data when expense transactions exist" do

@@ -1,0 +1,453 @@
+---
+it:
+  admin:
+    system_health:
+      hosted_usage:
+        cleanup:
+          description: 'Rispetta l''ambito di pulizia esistente: un abbonamento in
+            pausa o in prova terminato da oltre 14 giorni, oppure nessun abbonamento
+            e un nucleo familiare creato da più di 45 + 14 giorni. Vengono mostrati
+            fino a %{limit} nuclei familiari.'
+          disabled: La pulizia programmata delle prove è disabilitata al di fuori
+            della modalità gestita. Questi risultati indicano solo la corrispondenza
+            ai criteri.
+          eligibility_help: Gli accessi recenti non escludono un risultato. L'idoneità
+            non conferma l'eliminazione; 90 giorni è il periodo di conservazione dell'archivio,
+            non la soglia di pulizia delle prove.
+          empty: Nessun nucleo familiare corrisponde ai criteri di pulizia
+          reasons:
+            expired_trial_grace_elapsed: Prova terminata; trascorso il periodo di
+              tolleranza di 14 giorni
+            no_subscription_grace_elapsed: Nessun abbonamento; trascorsi 45 + 14 giorni
+          title: Idoneità alla pulizia
+        columns:
+          cleanup_eligible: Idoneo alla pulizia
+          cleanup_reason: Motivo
+          household: ID nucleo familiare
+          latest_session: Ultimo accesso conservato
+          members: Account dei membri
+          recent_sessions: Sessioni conservate create negli ultimi 30 giorni
+          recorded_at: Abbonamento registrato
+          retained_sessions: Sessioni di accesso conservate
+          status: Stato attuale
+          subscription_rows: Righe degli abbonamenti
+          trial_ends_at: Prova scade
+        eligible: Idoneo
+        limitations: Le tabelle attuali non conservano la cronologia completa di prove,
+          pagamenti o attività delle sessioni. La creazione di un abbonamento può
+          derivare da un'importazione. Gli account dei membri non rappresentano persone
+          uniche verificate. Questa vista non modifica i dati di nuclei familiari
+          o abbonamenti. I ripristini della demo condivisa eliminano i vecchi nuclei
+          familiari e le sessioni, quindi la cronologia dei visitatori non può essere
+          ricostruita.
+        limitations_title: Cosa indicano questi numeri
+        loading: Caricamento dell'utilizzo del servizio ospitato…
+        not_eligible: Non idoneo
+        not_recorded: Non registrato
+        snapshot: Istantanea del database in sola lettura al %{time}
+        statuses:
+          active: Attivo
+          canceled: Annullato
+          incomplete: Incompleto
+          incomplete_expired: Incompleto, scaduto
+          no_subscription: Nessun abbonamento
+          past_due: Scaduto
+          paused: In pausa
+          trialing: In prova
+          unknown: Sconosciuto
+          unpaid: Non pagato
+        summary:
+          active_supporter_households_count: Nuclei familiari sostenitori attivi (locali)
+          cleanup_eligible_count: Nuclei familiari idonei alla pulizia
+          supporter_subscription_count: Righe di abbonamento collegate a Stripe
+          trial_households_count: Nuclei familiari in prova (ultimi 30 giorni)
+          trial_members_count: Account dei membri attualmente in prova
+          trials_expiring_soon_count: Prove in scadenza nei prossimi 7 giorni
+        summary_help: I totali delle prove comprendono gli abbonamenti registrati
+          negli ultimi 30 giorni. I totali di prove in scadenza, pulizia e sostenitori
+          includono tutte le righe attuali corrispondenti, senza i limiti delle tabelle.
+        supporters:
+          description: Righe locali attuali degli abbonamenti con ID cliente e abbonamento
+            nel formato Stripe; l'abbonamento sintetico della demo è escluso. Gli
+            stati non verificano i pagamenti ricevuti né le date del primo pagamento.
+            Non viene effettuata alcuna richiesta a Stripe.
+          empty: Nessuna riga di abbonamento collegata a Stripe
+          title: Stato locale dei sostenitori
+        synthetic_demo: Demo sintetica
+        title: Utilizzo del servizio ospitato
+        trials:
+          description: Abbonamenti registrati dal %{date} che conservano una data
+            di fine prova, incluse le prove convertite. Vengono mostrati fino a %{limit}
+            nuclei familiari.
+          empty: Nessun nucleo familiare in prova registrato in questo intervallo
+          sessions_help: Le sessioni sono registrazioni di accesso conservate per
+            gli utenti abilitati, non utenti attualmente online né visite. Uscire
+            elimina una registrazione. L'ora di creazione più recente non indica l'ultima
+            attività.
+          title: Nuclei familiari in prova recenti
+      push_notification:
+        body: Questa è una notifica push di prova per il tuo account Sure.
+        title: Notifica di prova Sure
+      push_notifications:
+        columns:
+          checked_at: Ultimo aggiornamento
+          device: Dispositivo
+          environment: Ambiente APNs
+          status: Risultato
+        device: Dispositivo %{number}
+        environments:
+          production: Produzione
+          sandbox: Ambiente di prova
+        messages:
+          cooldown: Attendi 30 secondi prima di inviare un'altra prova.
+          disabled: L'invio delle notifiche push è stato disabilitato dall'operatore.
+          enqueue_failed: Impossibile mettere in coda la prova. Controlla Sidekiq
+            e aggiorna i risultati qui sotto.
+          hosted_only: Le notifiche push sono disponibili solo nella modalità ospitata.
+          ineligible: Solo un super amministratore attivo può inviare una notifica
+            di prova.
+          no_devices: Abilita le notifiche push nell'app Sure per iOS per questo account
+            per inviare una prova.
+          not_configured: Le credenziali APNs non sono configurate.
+          queued: Notifica di prova in coda. Aggiorna i risultati qui sotto per verificarne
+            lo stato.
+          ready: Invia una notifica di prova ai dispositivi iOS abilitati e registrati
+            sul tuo account.
+          storage_unavailable: Impossibile salvare la richiesta di prova. Controlla
+            la configurazione della cache condivisa.
+        pending: In attesa
+        queueing: Accodamento…
+        refresh: Aggiorna risultati
+        requested_at: Ultima prova richiesta alle %{time}
+        result_help: L'accettazione da parte di APNs non conferma la consegna al dispositivo.
+          Aggiorna per vedere i risultati del processo di lavoro. I risultati vengono
+          conservati per 24 ore.
+        results_label: Risultati della prova
+        send_test: Invia notifica push di prova
+        statuses:
+          accepted: Accettata da APNs
+          enqueue_failed: Impossibile accodare; controlla Sidekiq
+          expired: Scaduta senza un risultato finale
+          failed: Non riuscita; controlla i log di debug delle notifiche push
+          queued: In coda
+          rejected: Rifiutata da APNs; controlla i log di debug delle notifiche push
+          retrying: Nuovo tentativo dopo un errore temporaneo
+          skipped: 'Saltata: non più idonea'
+          unregistered: La registrazione del dispositivo non è più valida
+        title: Notifiche push
+      show:
+        ai:
+          function_calling_statuses:
+            not_checked: Non verificato
+            failing: Controllo in tempo reale fallito
+            not_used: Strumenti accettati, ma il modello non ne ha chiamato nessuno
+            supported: Chiamata allo strumento in tempo reale riuscita
+            unavailable: Non disponibile finché non viene configurato un provider
+              LLM
+            unsupported: Non supportato dal provider/modello effettivo
+          labels:
+            model: Modello
+            adapter: Adattatore
+            adapter_available: Adattatore disponibile
+            anthropic_credentials: Credenziali Anthropic
+            effective_provider: Provider effettivo
+            embedding_dimensions: Dimensioni degli embedding
+            embedding_endpoint: Endpoint degli embedding
+            embedding_model: Modello degli embedding
+            embedding_probe: Controllo dell'endpoint degli embedding
+            endpoint: Endpoint
+            failure_reason: Motivo dell'errore
+            function_calling: Chiamate di funzione (strumenti)
+            function_calling_failure_reason: Motivo dell'errore nelle chiamate di
+              funzione
+            llm_request_timeout: Timeout delle richieste LLM
+            openai_compatible_credentials: Credenziali API compatibili con OpenAI
+            openai_credentials: Credenziali OpenAI
+            pdf_text_extraction: Percorso di estrazione del testo PDF
+            pdf_text_extraction_failure_reason: Motivo dell'errore di estrazione del
+              testo
+            pdf_vision_processing: Percorso PDF visivo/nativo
+            pdf_vision_processing_failure_reason: Motivo dell'errore visivo/nativo
+            pgvector_extension: Estensione vector di PostgreSQL
+            pgvector_table: Tabella dei frammenti vettoriali
+            probe_request_timeout: Timeout del controllo di integrità
+            selected_provider: Provider selezionato
+            storage_probe: Controllo dell'archivio pgvector
+          pdf_statuses:
+            not_checked: Non verificato
+            failing: Controllo del PDF sintetico fallito
+            supported: Controllo del PDF sintetico superato
+            unavailable: Non disponibile finché non viene configurato un provider
+              LLM
+            unsupported: Disabilitato o non supportato dal provider/modello effettivo
+          probe_statuses:
+            not_checked: Non verificato
+            not_configured: Non configurato
+            failing: Controllo in tempo reale fallito
+            passing: Controllo in tempo reale superato
+          providers:
+            openai: OpenAI
+            anthropic: Anthropic
+            cloudflare: Cloudflare
+            custom_openai_compatible: Endpoint personalizzato
+            kilo: Kilo
+            ollama: Ollama
+            openai_compatible: Compatibile con OpenAI
+            openrouter: OpenRouter
+            together: Together
+          values:
+            available: Disponibile
+            configured: Configurato
+            enabled: Abilitato
+            'no': 'No'
+            not_configured: Non configurato
+            'yes': Sì
+            available_not_enabled: Disponibile, non abilitato
+            fallback: "(alternativa di riserva)"
+            not_available: Non disponibile
+            not_found: Non trovato
+            not_set: Non impostato
+          vector_statuses:
+            missing: Non configurato
+            not_checked: Non verificato
+            not_configured: Non configurato
+            failing: Controllo in tempo reale fallito
+            passing: Controlli in tempo reale superati
+            scaffolded: Struttura preliminare
+          worker:
+            labels:
+              checked_at: Verificato
+              configuration: Configurazione
+              process: Processo di lavoro
+            configuration_statuses:
+              match: Corrisponde al processo web
+              mismatch: Differisce dal processo web
+            coverage_notice: Ogni controllo verifica un solo processo di lavoro, quello
+              che lo preleva dalla coda. Con più repliche, un risultato positivo non
+              conferma lo stato di tutti i processi; accoda di nuovo il controllo
+              per verificarne un altro.
+            description: I controlli qui sopra sono stati eseguiti da questo processo
+              web. Gran parte del lavoro AI — risposte dell'assistente, elaborazione
+              PDF, embedding, classificazione automatica e rilevamento degli esercenti
+              — viene eseguita da un processo Sidekiq, che può avere accesso alla
+              rete, DNS, regole proxy o persino credenziali caricate differenti. Accoda
+              un controllo per verificare configurazione e connettività del processo
+              di lavoro.
+            empty:
+              description: Fai clic su «Verifica configurazione del processo di lavoro»
+                per accodare un controllo asincrono. Il risultato appare qui quando
+                un processo lo prende in carico.
+              title: Nessun processo di lavoro ha ancora risposto
+            settings_origin:
+              database_backed: Le impostazioni di provider, modello e chiave API modificate
+                in Impostazioni → Hosting autonomo vengono salvate nel database. rails-settings-cached
+                invalida la cache condivisa alla scrittura, quindi sia il processo
+                web sia quello di lavoro useranno il nuovo valore alla richiesta o
+                attività successiva, senza riavvio.
+              env_backed: La configurazione degli embedding e qualsiasi valore impostato
+                solo tramite variabile d'ambiente sono fissati all'avvio di ciascun
+                container. Rails non può cambiare l'ambiente di un altro container,
+                quindi queste modifiche richiedono il riavvio o la ricreazione sia
+                del servizio web sia di quello di lavoro. Gli strumenti di distribuzione
+                che ne riavviano solo uno, come un rilascio parziale o un Secret aggiornato
+                senza riavvio del pod, non applicheranno la modifica.
+              title: Quali impostazioni richiedono un riavvio?
+            statuses:
+              failing: Non funzionante
+              passing: Funzionante
+              stale: Non aggiornato
+            title: Verifica del processo di lavoro
+            verify_button: Verifica configurazione del processo di lavoro
+          adapters:
+            openai: Archivio vettoriale ospitato da OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          alerts:
+            custom_openai:
+              message: L'endpoint configurato non ha superato il controllo di disponibilità
+                di /v1/vector_stores. La maggior parte degli endpoint locali e compatibili
+                con OpenAI non implementa questa API. La chat e l'elaborazione PDF
+                potrebbero comunque funzionare; per la normale configurazione locale,
+                usa pgvector con un endpoint separato per gli embedding. L'errore
+                è stato registrato in Impostazioni → Log di debug e in Rails.logger.
+              title: Il controllo dell'archivio vettoriale ospitato è fallito su questo
+                endpoint personalizzato
+            embedding_dimensions_mismatch:
+              message: L'endpoint degli embedding ha restituito un vettore la cui
+                lunghezza non corrisponde a EMBEDDING_DIMENSIONS. Imposta EMBEDDING_MODEL
+                e EMBEDDING_DIMENSIONS secondo la dimensione vettoriale documentata
+                del modello, riavvia Sure per applicare l'ambiente, quindi modifica
+                o ricrea la colonna/tabella degli embedding pgvector e rigenera gli
+                embedding dei documenti se i dati esistenti usavano una dimensione
+                diversa.
+              title: Le dimensioni degli embedding non corrispondono
+            embedding_probe_failed:
+              message: Sure non ha potuto creare un breve embedding di prova tramite
+                l'endpoint e il modello configurati. Controlla EMBEDDING_URI_BASE,
+                EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN e i log del provider degli
+                embedding. L'errore è stato registrato in Impostazioni → Log di debug
+                e in Rails.logger.
+              title: Il controllo in tempo reale degli embedding è fallito
+            embedding_probe_timeout:
+              message: L'endpoint degli embedding non ha risposto entro AI_HEALTH_PROBE_TIMEOUT.
+                Aumenta questo timeout se il provider è lento, poi riavvia Sure per
+                applicare l'ambiente a ogni processo. Se anche le normali richieste
+                alla chat AI scadono, aumenta separatamente OPENAI_REQUEST_TIMEOUT.
+              title: Il controllo in tempo reale degli embedding è scaduto
+            function_calling_not_used:
+              message: L'endpoint ha accettato il parametro tools, ma il modello ha
+                risposto con testo anziché chiamare lo strumento di controllo. L'assistente
+                AI non può leggere i dati finanziari senza chiamate agli strumenti,
+                quindi la chat potrebbe non rispondere o fornire cifre inventate.
+                Preferisci un modello il cui provider documenti il supporto alle chiamate
+                di funzione.
+              title: Il modello ha risposto senza chiamare lo strumento richiesto
+            function_calling_unsupported:
+              message: L'endpoint ha servito una richiesta di chat semplice ma ha
+                rifiutato la stessa richiesta con il parametro tools. L'assistente
+                AI legge conti, transazioni e posizioni tramite chiamate di funzione,
+                quindi la chat continuerà a fallire, spesso con un errore 404 poco
+                informativo, finché non viene scelto un modello che supporta gli strumenti.
+                Scegli un modello il cui provider documenti tale supporto. L'errore
+                è stato registrato in Impostazioni → Log di debug e in Rails.logger.
+              title: Il modello non supporta le chiamate di funzione
+            llm_model_not_available:
+              message: L'endpoint ha risposto, ma non ha elencato né servito il modello
+                configurato. Scegli un modello attivo per il provider selezionato
+                e ripeti i controlli. Per Gemini tramite un livello di compatibilità
+                OpenAI, usa un modello attualmente supportato, ad esempio gemini-2.5-flash.
+              title: Il modello AI configurato non è disponibile
+            llm_probe_failed:
+              message: Sure non ha potuto verificare sia l'endpoint sia il modello
+                configurati. L'errore è stato registrato in Impostazioni → Log di
+                debug e in Rails.logger.
+              title: Il controllo in tempo reale del modello LLM è fallito
+            missing_vector_store:
+              message: I documenti caricati non possono essere indicizzati né cercati
+                finché non vengono configurati un adattatore per l'archivio vettoriale
+                e i relativi requisiti.
+              title: Nessun archivio vettoriale configurato
+            pdf_text_extraction_failed:
+              message: Sure non ha potuto completare il percorso che estrae localmente
+                il testo incorporato nel PDF e lo invia al modello configurato. Non
+                sono stati inviati dati dei clienti. L'errore è stato registrato in
+                Impostazioni → Log di debug e in Rails.logger.
+              title: Il controllo di estrazione del testo dal PDF sintetico è fallito
+            pdf_vision_processing_failed:
+              message: Sure non ha potuto completare l'elaborazione del PDF come immagini
+                o documento nativo tramite il modello configurato. Non sono stati
+                inviati dati dei clienti. L'errore è stato registrato in Impostazioni
+                → Log di debug e in Rails.logger.
+              title: Il controllo visivo/nativo del PDF sintetico è fallito
+            pgvector_extension_not_enabled:
+              message: È selezionato l'adattatore pgvector, ma PostgreSQL non ha abilitato
+                l'estensione vector per questo database. Usa un'immagine PostgreSQL
+                che includa pgvector, abilita l'estensione come proprietario del database
+                o superutente e riesegui le migrazioni con VECTOR_STORE_PROVIDER=pgvector.
+              title: L'estensione vector di PostgreSQL non è abilitata
+            pgvector_probe_failed:
+              message: Sure non ha potuto interrogare la tabella dei frammenti pgvector.
+                Controlla i permessi PostgreSQL, l'estensione vector e la migrazione
+                vector_store_chunks. L'errore è stato registrato in Impostazioni →
+                Log di debug e in Rails.logger.
+              title: Il controllo dell'archivio pgvector è fallito
+            pgvector_table_not_found:
+              message: L'estensione pgvector è abilitata, ma la tabella dei frammenti
+                non è stata trovata. Controlla lo stato delle migrazioni, poi riesegui
+                la migrazione dell'archivio vettoriale con VECTOR_STORE_PROVIDER=pgvector
+                affinché Sure possa creare vector_store_chunks.
+              title: La tabella vector_store_chunks è assente
+            qdrant:
+              message: 'L''adattatore Qdrant ha solo una struttura preliminare: caricamento
+                e ricerca dei documenti al momento non funzionano. Seleziona OpenAI
+                o pgvector per la ricerca dei documenti.'
+              title: Il supporto Qdrant non è ancora implementato
+            unavailable_vector_store:
+              message: Controlla i requisiti dell'adattatore qui sotto. Per pgvector,
+                il database deve fornire l'estensione vector o una tabella vector_store_chunks
+                già esistente.
+              title: L'archivio vettoriale selezionato non è disponibile
+            vector_probe_failed:
+              message: Sure non ha potuto verificare l'archivio vettoriale selezionato
+                e tutti i servizi di embedding necessari. L'errore è stato registrato
+                in Impostazioni → Log di debug e in Rails.logger.
+              title: Il controllo in tempo reale della ricerca documenti è fallito
+          failure_codes:
+            dimensions_mismatch: Le dimensioni del vettore di embedding non corrispondono
+              a quelle configurate
+            extension_not_enabled: L'estensione vector di PostgreSQL non è abilitata
+            invalid_response: Il servizio ha restituito una risposta inattesa
+            model_not_available: Il provider non ha restituito il modello configurato
+            no_tool_call: Il modello ha risposto senza chiamare lo strumento di controllo
+            render_missing_binary: Il renderer pdftoppm (poppler-utils) non è disponibile
+              in questo container
+            request_failed: La richiesta al servizio è fallita
+            table_not_found: La tabella vector_store_chunks non è stata trovata
+            timeout: Il servizio non ha risposto prima del timeout del controllo
+            tools_refused: Il servizio ha accettato la richiesta senza strumenti e
+              l'ha rifiutata con gli strumenti
+            unsupported_provider: Il provider non supporta questo controllo
+          last_checked: Controlli in tempo reale completati %{time_ago} fa. I risultati
+            vengono memorizzati brevemente nella cache.
+          llm:
+            description: I controlli in tempo reale verificano il modello configurato,
+              gli chiedono una semplice chiamata di funzione come fa l'assistente
+              e verificano separatamente l'estrazione del testo e l'elaborazione visiva/nativa
+              con un PDF sintetico di una pagina privo di dati dei clienti. I valori
+              delle credenziali non vengono mai mostrati.
+            title: Elaborazione LLM e PDF
+          loading: Esecuzione dei controlli in tempo reale…
+          local_setup:
+            description: Esegui il modello LLM tramite il tuo endpoint locale compatibile
+              con OpenAI, conserva i vettori dei documenti in pgvector e configura
+              gli embedding con un endpoint compatibile con OpenAI. L'immagine PostgreSQL
+              deve includere l'estensione vector e le dimensioni degli embedding devono
+              corrispondere al modello selezionato.
+            title: Configurazione locale consigliata
+          not_checked_help: Apri direttamente l'URL dello stato AI o esegui i controlli
+            per verificare la disponibilità del servizio.
+          run_checks: Ripeti i controlli
+          vector_store:
+            description: Il controllo in tempo reale interroga l'API dell'archivio
+              vettoriale ospitato oppure verifica la tabella pgvector e crea un breve
+              embedding senza salvarlo.
+            title: Archivio vettoriale e ricerca documenti
+        labels:
+          status: Stato
+          enqueued: Accodate
+          failed: Fallite
+          last_heartbeat: Ultimo segnale di attività
+          latency: Latenza
+          max_queue_latency: Tempo di attesa dell'attività più vecchia
+          processed_total: Totale elaborate
+          processes: Processi di lavoro
+          queue: Coda
+          retries: Nuovi tentativi
+          size: Dimensione
+        tabs:
+          hosted_usage: Utilizzo del servizio ospitato
+          ai: Stato AI
+          background_jobs: Attività in background
+        values:
+          never: Mai
+          healthy: Regolare
+          no_queues: Non sono registrate code. Il processo di lavoro potrebbe non
+            essere in esecuzione.
+          seconds: "%{seconds}s"
+          time_ago: "%{time_ago} fa"
+          unhealthy: Degradato
+        alert:
+          title: Le attività in background non sono in esecuzione
+        counters_section_description: Contatori Sidekiq aggregati per tutte le code.
+        counters_section_title: Contatori delle attività
+        queues_section_description: Numero di attività e tempo di attesa dell'attività
+          più vecchia per ogni coda. La latenza indica i secondi di attesa dell'attività
+          più vecchia.
+        queues_section_title: Code
+        status_section_description: Stato attuale del processo in background che gestisce
+          sincronizzazioni, saldi e calcolo del patrimonio netto.
+        status_section_title: Stato di Sidekiq
+        title: Stato del sistema
+      verify_worker_ai:
+        queued: Controllo del processo di lavoro accodato. Comparirà qui sotto quando
+          un processo lo prenderà in carico, di solito entro pochi secondi.

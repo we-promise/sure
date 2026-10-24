@@ -163,13 +163,13 @@ class SimplefinItemsController < ApplicationController
       .left_joins(:account, :account_provider)
       .where(accounts: { id: nil }, account_providers: { id: nil })
     @account_type_options = [
-      [ "Skip this account", "skip" ],
-      [ "Checking or Savings Account", "Depository" ],
-      [ "Credit Card", "CreditCard" ],
-      [ "Investment Account", "Investment" ],
-      [ "Crypto Account", "Crypto" ],
-      [ "Loan or Mortgage", "Loan" ],
-      [ "Other Asset", "OtherAsset" ]
+      [ t("lunchflow_items.setup_accounts.account_types.skip"), "skip" ],
+      [ t("lunchflow_items.setup_accounts.account_types.depository"), "Depository" ],
+      [ t("lunchflow_items.setup_accounts.account_types.credit_card"), "CreditCard" ],
+      [ t("lunchflow_items.setup_accounts.account_types.investment"), "Investment" ],
+      [ t("snaptrade_items.setup_accounts.account_types.crypto"), "Crypto" ],
+      [ t("lunchflow_items.setup_accounts.account_types.loan"), "Loan" ],
+      [ t("lunchflow_items.setup_accounts.account_types.other_asset"), "OtherAsset" ]
     ]
 
     # Compute UI-only suggestions (preselect only when high confidence)
@@ -197,31 +197,31 @@ class SimplefinItemsController < ApplicationController
     # Subtype options for each account type
     @subtype_options = {
       "Depository" => {
-        label: "Account Subtype:",
-        options: Depository::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t("sophtron_items.setup_accounts.subtype_labels.depository"),
+        options: Depository.subtype_options_for_select
       },
       "CreditCard" => {
         label: "",
         options: [],
-        message: "Credit cards will be automatically set up as credit card accounts."
+        message: t("sophtron_items.setup_accounts.subtype_messages.credit_card")
       },
       "Investment" => {
-        label: "Investment Type:",
-        options: Investment::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t("sophtron_items.setup_accounts.subtype_labels.investment"),
+        options: Investment.subtype_options_for_select
       },
       "Loan" => {
-        label: "Loan Type:",
-        options: Loan::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t("sophtron_items.setup_accounts.subtype_labels.loan"),
+        options: Loan.subtype_options_for_select
       },
       "Crypto" => {
         label: nil,
         options: [],
-        message: "Crypto accounts track cryptocurrency holdings."
+        message: t("provider_account_setup.crypto_holdings_message")
       },
       "OtherAsset" => {
         label: nil,
         options: [],
-        message: "No additional options needed for Other Assets."
+        message: t("sophtron_items.setup_accounts.subtype_messages.other_asset")
       }
     }
 

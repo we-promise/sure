@@ -6,13 +6,13 @@ zh-TW:
         title: 使用者管理
         description: 管理這個執行個體的使用者角色。超級管理員可以存取 SSO 供應商設定與使用者管理。
         section_title: 家庭／群組
-        you: （您）
+        you: "（您）"
         trial_ends_at: 試用結束
         not_available: 不適用
         no_users: 找不到使用者。
         unnamed_family: 未命名的家庭／群組
         no_subscription: 沒有訂閱
-        family_summary: '%{members} 位成員 · %{accounts} 個帳戶 · %{transactions} 筆交易'
+        family_summary: "%{members} 位成員 · %{accounts} 個帳戶 · %{transactions} 筆交易"
         filters:
           role: 角色
           role_all: 所有角色
@@ -30,6 +30,15 @@ zh-TW:
           session_count: 工作階段數
           never: 從未
           role: 角色
+          actions: 操作
+          create_new_family_option: "+ 建立新家庭／群組"
+          family: 家庭／群組
+          keep_current_family: 保留目前家庭／群組
+          new_family_moniker: 新家庭／群組類型
+          new_family_name: 新家庭／群組名稱
+          new_family_name_placeholder: 輸入名稱以建立新家庭／群組
+          password_placeholder: 留白即保留目前設定
+          set_password: 設定新密碼
         role_descriptions_title: 角色說明
         roles:
           guest: 訪客
@@ -43,9 +52,67 @@ zh-TW:
           super_admin: 執行個體管理員。可以管理 SSO 供應商、使用者角色，並為了支援而模擬登入使用者。
         invitations:
           pending_label: 已邀請（待接受）
-          expires: '%{date} 到期'
+          expires: "%{date} 到期"
           delete: 刪除
           delete_all: 全部刪除
+        actions:
+          delete_user: 刪除使用者
+          last_super_admin_role_locked: 您是系統最後一位超級管理員，因此無法變更角色。
+          manage_user: 管理使用者
+          self_edit_warning: 變更自己的角色會修改您的管理權限。
+          self_update_confirm: 確定要更新自己帳號的角色或家庭嗎？
+          update: 更新使用者
+        auth_types:
+          local: 本機
+          local_and_sso: 本機 + SSO
+          sso: SSO
+          sso_provider_tooltip: SSO 供應商：%{providers}
+        delete_confirm: 確定要刪除此使用者嗎？此操作無法復原。
+        delete_confirm_last_user: 確定要刪除此使用者嗎？這是其家庭／群組中的最後一位使用者，因此整個家庭／群組及所有相關資料也會刪除。此操作無法復原。
+        family_monikers:
+          family: 家庭
+          group: 群組
+        remove: 刪除使用者
+        removed_sso_identities:
+          allow_again: 重新允許
+          confirm: 要重新允許 %{email} 透過 SSO 登入或建立帳號嗎？
+          description: 這些身分無法建立或重新連結帳號。只有在誤刪的情況下，才應重新允許該身分。
+          title: 已移除的 SSO 身分
+        unused_families:
+          delete: 刪除未使用的家庭
+          delete_confirm: 確定要刪除此未使用的家庭／群組嗎？此操作無法復原。
+          empty: 找不到未使用的家庭／群組。
+          family_id: 家庭 ID：%{id}
+          title: 未使用的家庭／群組
       update:
         success: 使用者角色更新成功。
         failure: 使用者角色更新失敗。
+        family_required: 選擇現有家庭／群組，或輸入名稱建立新項目。
+        last_super_admin_error: 無法降低系統最後一位超級管理員的角色權限。
+        password_and_family_conflict: 密碼與家庭／群組成員關係不能同時更新。
+        password_missing_case: 密碼必須同時包含大寫與小寫字母。
+        password_missing_number: 密碼必須包含至少一個數字。
+        password_missing_special: 密碼必須包含至少一個特殊字元。
+        password_too_short: 密碼長度至少須為 8 個字元。
+        success_family: 使用者家庭／群組成員關係已更新。
+        success_password: 使用者密碼已更新。
+        success_role: 使用者角色已更新。
+        success_role_and_password: 使用者角色與密碼已更新。
+      deletion:
+        cancel: 取消
+        email_label: 使用者電子郵件
+        instruction: 輸入 %{email} 以確認。
+        submit: 永久移除使用者
+        title: 永久移除使用者
+        warning: 這會立即撤銷存取權限，並排定永久刪除使用者及其資料。此操作無法復原。
+      destroy:
+        cannot_remove_last_super_admin: 無法移除最後一位啟用中的超級管理員。
+        cannot_remove_self: 您無法從此處移除自己的帳號。
+        confirmation_mismatch: 電子郵件地址不符，未移除使用者。
+        failure: 無法移除使用者。
+        success: 使用者存取權限已撤銷，並已排定永久刪除。
+    families:
+      destroy:
+        family_has_active_subscription: 此家庭／群組仍有有效訂閱，必須先取消訂閱才能刪除。
+        family_has_users: 此家庭／群組仍有使用者，無法刪除。
+        success: 家庭／群組已成功刪除。

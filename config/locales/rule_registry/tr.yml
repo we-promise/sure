@@ -1,0 +1,31 @@
+---
+tr:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: İşlem adı
+        transaction_amount: İşlem tutarı
+        transaction_type: İşlem türü
+        transaction_merchant: İşlemin satıcısı
+        transaction_category: İşlem kategorisi
+        transaction_tag: İşlem etiketi
+        transaction_details: İşlem ayrıntıları
+        transaction_notes: İşlem notları
+        transaction_account: İşlem hesabı
+    action_executors:
+      labels:
+        set_transaction_category: İşlem kategorisini ayarla
+        set_transaction_tags: İşlem etiketlerini ayarla
+        set_transaction_merchant: İşlemin satıcısını ayarla
+        set_transaction_name: İşlem adını ayarla
+        set_investment_activity_label: Yatırım faaliyeti türünü ayarla
+        exclude_transaction: Bütçe ve raporlardan hariç tut
+        set_as_transfer_or_payment: Transfer veya ödeme olarak işaretle
+        send_email_notification: E-posta bildirimi gönder
+        auto_categorize: İşlemleri yapay zekâyla otomatik kategorize et
+        auto_detect_merchants: Satıcıları otomatik algıla
+        auto_detect_merchants_with_ai: Satıcıları yapay zekâyla otomatik algıla ($$)
+      auto_categorize:
+        cost_unavailable: "%{label} (maliyet bilinmiyor)"
+        cost_estimate: "%{label} (20 işlem için yaklaşık %{cost} USD)"
+        provider_missing: "%{label} (kategorizasyon sağlayıcısı yapılandırılmamış)"

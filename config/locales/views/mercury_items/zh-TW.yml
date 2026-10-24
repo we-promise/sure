@@ -62,7 +62,7 @@ zh-TW:
       setup_action: 設定新帳戶
       setup_description: 已連結 %{total} 個帳戶中的 %{linked} 個。請為新匯入的 Mercury 帳戶選擇帳戶類型。
       setup_needed: 有新帳戶可以設定
-      status: '%{timestamp}前已同步'
+      status: "%{timestamp}前已同步"
       status_never: 從未同步
       status_with_summary: 上次同步於 %{timestamp}前 - %{summary}
       syncing: 同步中...
@@ -81,15 +81,18 @@ zh-TW:
         create_token: 建立一組具備「Read Only」存取權的新 API Token
         open_tokens: 前往 Settings > Developer > API Tokens
         sign_in_html: 前往 %{link} 並登入您想連結的帳號
-        whitelist_ip_html: <strong>重要：</strong>請將您伺服器的 IP 位址加入該 Token 的白名單
+        whitelist_ip_html: "<strong>重要：</strong>請將您伺服器的 IP 位址加入該 Token 的白名單"
       keep_token_placeholder: 留白以保留目前的 Token
-      sandbox_note_html: 每一組您想同步的 Mercury 登入帳號／API Token，都請使用各自獨立的具名連線。若要進行 sandbox 測試，請把 Base URL 設為 <code>https://api-sandbox.mercury.com/api/v1</code>。Mercury 要求 IP 白名單，記得在 Mercury 儀表板加入您的 IP。
+      sandbox_note_html: >-
+        每一組您想同步的 Mercury 登入帳號／API Token，都請使用各自獨立的具名連線。若要進行 sandbox 測試，請把 Base URL 設為 <code>https://api-sandbox.mercury.com/api/v1</code>。Mercury
+        要求 IP 白名單，記得在 Mercury 儀表板加入您的 IP。
       setup_accounts: 設定帳戶
       setup_title: 設定說明：
       sync: 同步
       token_label: 權杖 (Token)
       token_placeholder: 在此貼上 Token
       update_connection: 更新連線
+      disconnect: 中斷連線
     provider_connection:
       default_description: 透過 Mercury 連結您的銀行
       default_name: Mercury
@@ -105,7 +108,7 @@ zh-TW:
       no_accounts_found: 找不到任何帳戶，請檢查您的 API Token 設定。
       no_api_token: 尚未設定 Mercury API Token，請前往「設定」完成設定。
       no_credentials_configured: 請先在供應商設定中設定您的 Mercury API Token。
-      no_name_placeholder: （無名稱）
+      no_name_placeholder: "（無名稱）"
       select_connection: 請在供應商設定中選擇一個 Mercury 連線。
       title: 選擇 Mercury 帳戶
     select_existing_account:
@@ -120,7 +123,7 @@ zh-TW:
       no_accounts_found: 找不到任何 Mercury 帳戶，請檢查您的 API Token 設定。
       no_api_token: 尚未設定 Mercury API Token，請前往「設定」完成設定。
       no_credentials_configured: 請先在供應商設定中設定您的 Mercury API Token。
-      no_name_placeholder: （無名稱）
+      no_name_placeholder: "（無名稱）"
       select_connection: 請在供應商設定中選擇一個 Mercury 連線。
       title: 將 %{account_name} 與 Mercury 連結
     link_existing_account:

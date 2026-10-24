@@ -1,0 +1,16 @@
+---
+nb:
+  binance_items:
+    setup_accounts:
+      historical_import: Historisk import
+  enable_banking_items:
+    setup_accounts:
+      psd2_savings_notice: 'Merk: Enkelte regulerte franske sparekontoer (Livret A,
+        PEL, LEP, LDDS) kan ha begrenset eller ingen tilgang via Open Banking (PSD2).
+        Hvis en sparekonto mangler, kan du legge den til manuelt.'
+  reports:
+    index:
+      period_aria: Rapportperiode
+  shared:
+    transaction_tabs:
+      aria: Transaksjonstype

@@ -1,0 +1,38 @@
+---
+it:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        frequency: Frequenza
+        month_of_year: Mese
+        day_of_month: Giorno del mese
+        interval: Intervallo
+        weekday: Giorno della settimana
+        weekday_ordinal: Settimana del mese
+      recurring_transaction/recurrence_rules:
+        frequency: Frequenza
+        month_of_year: Mese
+        base: 'Regola di ricorrenza:'
+        day_of_month: Giorno del mese
+        interval: Intervallo
+        weekday: Giorno della settimana
+        weekday_ordinal: Settimana del mese
+    errors:
+      models:
+        recurrence_rule:
+          attributes:
+            day_of_month:
+              not_allowed_for_weekly: non si applica a una regola settimanale
+            month_of_year:
+              not_allowed: si applica solo a una regola annuale
+              required_for_yearly: è obbligatorio per una regola annuale
+            weekday:
+              required_for_weekly: è obbligatorio per una regola settimanale
+            weekday_ordinal:
+              not_allowed_for_weekly: non si applica a una regola settimanale
+              not_allowed_without_weekday: si applica solo quando è impostato un giorno
+                della settimana
+              required_with_weekday: è obbligatoria quando è impostato un giorno della
+                settimana
+          day_spec_required: 'Scegli esattamente una delle due opzioni: giorno del
+            mese o giorno della settimana'

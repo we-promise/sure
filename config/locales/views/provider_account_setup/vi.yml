@@ -1,0 +1,4 @@
+---
+vi:
+  provider_account_setup:
+    crypto_holdings_message: "Tài khoản tiền mã hóa theo dõi lượng tiền mã hóa đang nắm giữ."

@@ -1,0 +1,13 @@
+---
+nb:
+  upload_interface:
+    too_many_files: For mange filer (maks. %{max})
+    file_too_large: Filen er for stor (maks. %{max} MB)
+    uploading: Laster opp %{filename}…
+    qif_invalid: Filen må være en gyldig QIF-fil
+    amount_type_strategies:
+      signed_amount: Beløp med fortegn
+      custom_column: Egendefinert kolonne
+    upload_files:
+      one: Last opp %{count} fil
+      other: Last opp %{count} filer

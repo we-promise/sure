@@ -1,0 +1,6 @@
+---
+fr:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Revenu ponctuel (exclu des moyennes)"
+      one_time_expense_tooltip: "Dépense ponctuelle (exclue des moyennes)"

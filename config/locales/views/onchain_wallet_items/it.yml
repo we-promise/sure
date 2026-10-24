@@ -1,0 +1,145 @@
+---
+it:
+  onchain_wallet_items:
+    new_wallet:
+      continue: Continua
+      address_label: Indirizzo del portafoglio
+      address_placeholder: bc1..., 0x... o un indirizzo Solana
+      bitcoin_single_address_note: 'Bitcoin viene monitorato un indirizzo alla volta.
+        Le chiavi estese (xpub/ypub/zpub) non sono supportate: un portafoglio con
+        fondi distribuiti su indirizzi derivati mostrerà solo il saldo dell''indirizzo
+        inserito.'
+      chain_auto_detect: Rileva automaticamente
+      chain_label: Rete
+      read_only_note: Vengono letti solo dati pubblici della blockchain. Non inserire
+        mai frasi seed o chiavi private.
+      subtitle: Monitora un portafoglio di cui possiedi le chiavi tramite il suo indirizzo
+        pubblico.
+      title: Aggiungi un portafoglio in autocustodia
+    onchain_wallet_item:
+      sync: Sincronizza ora
+      syncing: Sincronizzazione in corso...
+      assets_tracked:
+        one: 1 attività monitorata
+        other: "%{count} attività monitorate"
+    token_review_form:
+      cancel: Annulla
+      assets_truncated: Questo indirizzo contiene più token di quanti ne emergano
+        da una lettura, quindi sono elencati solo i %{count} più attendibili.
+      explanation: 'Le attività con un prezzo noto sono selezionate. Le altre non
+        lo sono: i portafogli raccolgono airdrop indesiderati e monitorarne uno non
+        gli attribuisce un valore.'
+      native: Nativo
+      no_price: Prezzo non disponibile; monitoraggio solo per quantità
+      nothing_found: Non risultano attività visibili a questo indirizzo su questa
+        rete.
+    wallet_card:
+      needs_attention: Richiede attenzione
+      status: Sincronizzato %{timestamp} fa
+      sync: Sincronizza ora
+      syncing: Sincronizzazione in corso...
+      addresses_tracked:
+        one: 1 indirizzo monitorato
+        other: "%{count} indirizzi monitorati"
+      delete: Rimuovi connessione
+      deletion_in_progress: Rimozione...
+      no_wallets_message: Collega un indirizzo dalle impostazioni dei provider per
+        visualizzarlo qui.
+      no_wallets_title: Nessun portafoglio ancora collegato
+      status_never: Non ancora sincronizzato
+    choose_chain:
+      activity_found: Attività trovata
+      explanation: Questo formato di indirizzo viene usato da più reti, con saldi
+        diversi su ciascuna. Scegli quella da monitorare.
+      no_activity_found: Nessun risultato
+      subtitle: "%{address}"
+      title: Quale rete?
+    destroy:
+      success: Connessione in autocustodia programmata per l'eliminazione.
+    disconnect_asset:
+      success: Monitoraggio di %{symbol} interrotto. Conto e cronologia sono stati
+        conservati.
+    disconnect_wallet:
+      success:
+        one: Monitoraggio interrotto per 1 attività a questo indirizzo.
+        other: Monitoraggio interrotto per %{count} attività a questo indirizzo.
+    enable_crypto_prices:
+      not_self_hosted: In questa installazione i provider di dati di mercato sono
+        configurati dall'operatore dell'istanza.
+      success: I prezzi delle criptovalute sono abilitati. I valori dei portafogli
+        appariranno dopo la prossima sincronizzazione.
+    errors:
+      address_required: Inserisci un indirizzo di portafoglio.
+      already_linked: Questo indirizzo è già monitorato su questa rete. Usa Verifica
+        token per modificare le attività monitorate.
+      chain_unreachable: Impossibile raggiungere l'esploratore pubblico di questa
+        rete. Riprova tra poco.
+      rate_limited: L'esploratore pubblico sta limitando le richieste. Riprova tra
+        qualche minuto.
+      unexpected: Si è verificato un problema durante la lettura del portafoglio.
+        I dettagli sono stati registrati per l'assistenza.
+      unrecognized_address: Non sembra un indirizzo valido su una delle reti supportate.
+      wallet_not_found: Questo portafoglio non è monitorato da questa connessione.
+    link_wallet:
+      errors:
+        none_tracked: 'Nessun monitoraggio avviato: impossibile aggiungere %{assets}.
+          Riprova tra poco.'
+        nothing_selected: Scegli almeno un'attività da monitorare.
+        some_failed: 'Impossibile monitorare %{assets}: sono stati esclusi.'
+      success:
+        one: Monitoraggio di 1 attività di questo portafoglio.
+        other: Monitoraggio di %{count} attività di questo portafoglio.
+    manage:
+      assets_truncated: Questo indirizzo contiene più token di quanti ne emergano
+        da una lettura, quindi sono elencati solo i %{count} più attendibili. Le attività
+        già monitorate continuano a sincronizzarsi.
+      disconnect_asset: Interrompi monitoraggio
+      disconnect_asset_confirm: Interrompere il monitoraggio di %{symbol}? Conto e
+        cronologia vengono conservati e non si aggiorneranno più.
+      disconnect_wallet: Disconnetti portafoglio
+      disconnect_wallet_confirm: Interrompere il monitoraggio di tutte le attività
+        a questo indirizzo?
+      history_note: La disconnessione conserva i conti e la cronologia; semplicemente
+        non verranno più aggiornati.
+      history_truncated: 'Non è stato possibile leggere tutti i trasferimenti di questo
+        indirizzo: la cronologia supera ciò che copre una sincronizzazione, oppure
+        l''esploratore l''ha rifiutata. I saldi sono completi, ma mancano alcuni trasferimenti.'
+      native: Nativo
+      no_wallets: Nessun portafoglio ancora monitorato.
+      review_tokens: Verifica token
+      subtitle: Tutti gli indirizzi letti da questa connessione e le attività monitorate
+        per ciascuno.
+      title: Gestisci portafogli in autocustodia
+    price_provider_warning:
+      body: 'Nessun provider di mercato abilitato può fornire prezzi delle criptovalute:
+        questi portafogli monitorano quindi le quantità ma mostrano un valore pari
+        a zero.'
+      enable: Abilita prezzi delle criptovalute
+      exchange_rate_body: 'Le criptovalute hanno prezzi in USD e non è configurato
+        un provider di cambi per convertirli in %{currency}: questi portafogli monitorano
+        quindi le quantità ma mostrano un valore pari a zero. Imposta EXCHANGE_RATE_PROVIDER
+        — Frankfurter non richiede una chiave API.'
+      exchange_rate_title: Nessun provider di tassi di cambio configurato
+      link: Apri impostazioni dei dati di mercato
+      title: I prezzi delle criptovalute non sono configurati
+    provider_connection:
+      description: Monitora un portafoglio di cui possiedi le chiavi tramite il suo
+        indirizzo pubblico.
+      name: Portafoglio in autocustodia
+    review_tokens:
+      save: Salva attività monitorate
+      subtitle: "%{chain} · %{address}"
+      title: Verifica attività monitorate
+    token_review:
+      import_selected: Monitora attività selezionate
+      subtitle: "%{chain} · %{address}"
+      title: Scegli cosa monitorare
+    update:
+      success: Connessione in autocustodia aggiornata.
+    update_tokens:
+      errors:
+        no_changes: 'Nessuna modifica: sono ancora selezionate le stesse attività.'
+        none_tracked: 'Nessuna modifica: impossibile aggiungere %{assets}. Riprova
+          tra poco.'
+        some_failed: 'Impossibile monitorare %{assets}: sono stati esclusi.'
+      success: Attività monitorate aggiornate (%{created} aggiunte, %{removed} rimosse).

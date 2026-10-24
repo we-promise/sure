@@ -1,0 +1,6 @@
+---
+pl:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Jednorazowy przychód (wyłączony ze średnich)"
+      one_time_expense_tooltip: "Jednorazowy wydatek (wyłączony ze średnich)"

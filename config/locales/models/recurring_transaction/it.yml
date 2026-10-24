@@ -4,4 +4,37 @@ it:
     errors:
       models:
         recurring_transaction:
-          merchant_or_name_required: "È necessario indicare l'esercente o il nome"
+          merchant_or_name_required: È necessario indicare l'esercente o il nome
+          attributes:
+            account:
+              required_for_transfer: deve essere presente per un trasferimento ricorrente
+              wrong_family: deve appartenere a questa famiglia
+            anchor_date:
+              required_for_intervals: è obbligatoria quando una regola si ripete ogni
+                2 o più periodi
+            bill_type:
+              transfer_shape_mismatch: può essere un trasferimento solo quando è impostato
+                un conto di destinazione
+            destination_account:
+              family_mismatch: deve appartenere alla stessa famiglia del conto di
+                origine
+              same_as_source: non può coincidere con il conto di origine
+              wrong_family: deve appartenere a questa famiglia
+            expected_amount_min:
+              greater_than_max: non può superare l'importo massimo previsto
+            payment_url:
+              invalid_scheme: deve essere un indirizzo http:// o https:// valido
+    attributes:
+      recurring_transaction:
+        payment_url: Collegamento di pagamento
+        frequency_interval: Intervallo di ripetizione
+  recurring_transactions:
+    allocator:
+      exceeds_remaining: "%{amount} supera i %{remaining} rimanenti in questo ciclo"
+      missing_rate: nessun tasso di cambio da %{from} a %{to}; inserisci esplicitamente
+        un importo
+      over_allocated: l'assegnazione di %{amount} supera la disponibilità residua
+        della transazione di %{capacity} %{currency}
+      unmeasurable: questa transazione contiene un'assegnazione non convertibile in
+        %{currency}, quindi il residuo non può essere calcolato. Aggiungi un tasso
+        di cambio per il %{date} o rimuovi prima il pagamento esistente

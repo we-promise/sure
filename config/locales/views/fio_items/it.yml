@@ -1,0 +1,167 @@
+---
+it:
+  fio_item:
+    sync:
+      status:
+        needs_setup:
+          other: "%{count} conti da configurare..."
+          one: 1 conto da configurare...
+        processing: Elaborazione transazioni...
+        calculating: Calcolo dei saldi...
+        checking_setup: Verifica della configurazione dei conti...
+        importing: Importazione dell'estratto conto da Fio...
+    sync_status:
+      all_synced:
+        one: 1 conto sincronizzato
+        other: "%{count} conti sincronizzati"
+      partial: "%{linked} sincronizzati, %{unlinked} da configurare"
+      no_accounts: Nessun conto ancora trovato
+    errors:
+      account_mismatch: Questo token appartiene a un conto Fio diverso da quello già
+        sincronizzato da questa connessione. Aggiungilo come connessione separata.
+      account_processing_failed: Impossibile sincronizzare il conto Fio
+      account_sync_schedule_failed: Impossibile pianificare la sincronizzazione del
+        conto Fio
+      history_locked: Fio ha rifiutato questo periodo dell'estratto conto. Sblocca
+        la cronologia completa nell'internet banking in Impostazioni → API, poi sincronizza
+        di nuovo entro 10 minuti.
+      statement_fetch_failed: Impossibile recuperare l'estratto conto da Fio
+      statement_too_large: L'estratto conto contiene più transazioni di quante Fio
+        fornisca in una richiesta. Sposta in avanti la data di inizio della sincronizzazione
+        e riprova.
+      sync_failed: Impossibile sincronizzare la connessione Fio
+  fio_items:
+    fio_item:
+      delete: Elimina
+      deletion_in_progress: Eliminazione in corso
+      error: Errore
+      setup_action: Configura conto
+      setup_needed: Configurazione conto necessaria
+      status_never: Mai sincronizzato
+      status_with_summary: Sincronizzato %{timestamp} fa · %{summary}
+      sync_now: Sincronizza ora
+      no_accounts_description: Fio riporta il conto solo nell'estratto conto, quindi
+        apparirà dopo la prima sincronizzazione riuscita.
+      no_accounts_title: Nessun conto ancora importato
+      requires_update: È necessario un nuovo token
+      requires_update_description: Fio ha rifiutato il token di questa connessione.
+        Crea un nuovo token in sola lettura in Impostazioni → API nell'internet banking.
+      requires_update_title: È necessario un nuovo token
+      setup_description: Il conto accessibile con questo token non è ancora collegato
+        a un conto Sure.
+      syncing: Sincronizzazione
+      update_token: Aggiorna token
+    link_existing_account:
+      account_already_linked: Questo conto è già collegato a un provider.
+      fio_account_already_linked: Questo conto Fio è già collegato.
+      no_account_selected: Nessun conto Fio disponibile per il collegamento.
+      success: Il conto Fio è stato collegato a %{account_name}.
+      unsupported_account_type: Fio può sincronizzare solo conti di liquidità e prestiti.
+    provider_panel:
+      connection_name_label: Nome connessione
+      disconnect: Disconnetti
+      disconnect_confirm: Sei sicuro di voler disconnettere %{name}?
+      keep_token_placeholder: Lascia vuoto per mantenere il token esistente
+      last_synced: Sincronizzato %{timestamp} fa
+      never_synced: Mai sincronizzato
+      setup_accounts: Configura conto
+      sync: Sincronizza
+      update_connection: Aggiorna connessione
+      default_connection_name: Connessione Fio banka
+      sync_start_date_label: Importa transazioni dal
+      syncing: Sincronizzazione in corso...
+      account_needs_setup: Non ancora collegato a un conto Sure.
+      add_connection: Aggiungi connessione Fio banka
+      connected_account: Conto collegato
+      connection_name_placeholder: Il mio conto Fio
+      no_account_yet: 'Nessun conto ancora: la prima sincronizzazione individuerà
+        il conto accessibile con questo token.'
+      one_account_notice: 'Ogni token accede a un solo conto Fio: aggiungi una connessione
+        per ciascun conto da monitorare. Un token può essere usato una volta ogni
+        30 secondi; una sincronizzazione richiesta prima verrà gestita da quella successiva.'
+      requires_update: È necessario un nuovo token
+      requires_update_notice: Fio ha rifiutato questo token. I token sono validi fino
+        a 180 giorni, salvo rinnovo automatico a ogni accesso bancario. Crea un nuovo
+        token in sola lettura in Impostazioni → API e incollalo qui sotto.
+      sync_start_date_hint: 'Fio fornisce gli ultimi 90 giorni senza ulteriori autorizzazioni.
+        Per dati precedenti, sblocca la cronologia completa nell''internet banking
+        in Impostazioni → API (icona del lucchetto): si aprirà una finestra di 10
+        minuti durante la quale eseguire la sincronizzazione.'
+      token_label: Token API (sola lettura)
+      token_placeholder: Incolla il token di 64 caratteri
+    select_accounts:
+      account_type_label: Tipo di conto
+      cancel: Annulla
+      link_account: Collega conto
+      sync_now: Sincronizza ora
+      already_linked: Il conto di questa connessione è già collegato a un conto Sure.
+      awaiting_first_sync: Fio non ha ancora riportato il conto di questo token. Esegui
+        una sincronizzazione e torna qui.
+      description: Questo token accede a un solo conto. Scegli come monitorarlo in
+        Sure.
+      no_credentials_configured: Configura prima Fio banka nelle impostazioni dei
+        provider.
+      title: Collega il tuo conto Fio
+    select_existing_account:
+      account_already_linked: Questo conto è già collegato a un provider.
+      cancel: Annulla
+      link_account: Collega conto
+      sync_now: Sincronizza ora
+      already_linked: Il conto di questa connessione è già collegato a un conto Sure.
+      awaiting_first_sync: Fio non ha ancora riportato il conto di questo token. Esegui
+        una sincronizzazione e torna qui.
+      description: Collega il conto accessibile con questo token al conto selezionato.
+      no_credentials_configured: Configura prima Fio banka nelle impostazioni dei
+        provider.
+      title: Collega conto Fio a %{account_name}
+    setup_accounts:
+      account_type_label: Tipo di conto
+      account_types:
+        skip: Salta
+      cancel: Annulla
+      choose_account_type: Scegli un tipo di conto
+      close: Chiudi
+      sync_now: Sincronizza ora
+      account_already_handled: Il conto di questa connessione è già collegato o è
+        stato saltato.
+      awaiting_first_sync: Nessun conto ancora trovato
+      awaiting_first_sync_description: Fio riporta il conto solo nell'estratto conto,
+        quindi apparirà dopo la prima sincronizzazione riuscita.
+      choose_account_type_description: Saltalo se non vuoi monitorare questo conto.
+      create_account: Crea conto
+      nothing_to_setup: Nulla da configurare
+      subtitle: Scegli come deve apparire in Sure il conto accessibile con questo
+        token.
+      title: Collega il tuo conto Fio
+    account_types:
+      depository: Conto corrente o di risparmio
+      loan: Prestito, mutuo o scoperto
+    complete_account_setup:
+      creation_failed: Impossibile creare il conto Sure.
+      no_account: Nessun conto Fio richiedeva la configurazione.
+      skipped: Il conto Fio è stato saltato.
+      success: Creato %{account_name}.
+      unsupported_account_type: Fio non supporta questo tipo di conto.
+    create:
+      success: Connessione Fio banka salvata.
+      token_required: Incolla il token API dell'internet banking Fio.
+    destroy:
+      success: Connessione Fio banka programmata per l'eliminazione.
+      unlink_failed: Impossibile disconnettere la connessione Fio banka
+    link_accounts:
+      link_failed: Impossibile collegare il conto.
+      no_account_found: Nessun conto Fio non collegato trovato per questa connessione.
+      no_credentials_configured: Configura prima Fio banka nelle impostazioni dei
+        provider.
+      success: Il conto Fio è stato collegato a %{account_name}.
+      unsupported_account_type: Fio non supporta questo tipo di conto.
+    update:
+      success: Connessione Fio banka aggiornata.
+  family:
+    fio:
+      create_fio_item:
+        default_name: Connessione Fio banka
+  providers:
+    fio:
+      description: Sincronizza un conto Fio banka con un token API in sola lettura
+      name: Fio banka

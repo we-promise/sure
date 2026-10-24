@@ -66,8 +66,7 @@ class LunchflowItemsController < ApplicationController
         else
           # Redirect for regular requests
           redirect_to settings_providers_path,
-                     alert: t(".no_credentials_configured",
-                            default: "Please configure your Lunch Flow API key first in Provider Settings.")
+                     alert: t("lunchflow_items.setup_accounts.no_api_key")
         end
         return
       end
@@ -82,8 +81,7 @@ class LunchflowItemsController < ApplicationController
         lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
 
         unless lunchflow_provider.present?
-          redirect_to settings_providers_path, alert: t(".no_api_key",
-                                                        default: "Lunch Flow API key not found. Please configure it in Provider Settings.")
+          redirect_to settings_providers_path, alert: t("lunchflow_items.setup_accounts.no_api_key")
           return
         end
 
@@ -147,7 +145,7 @@ class LunchflowItemsController < ApplicationController
     # Fetch account details from API
     lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
     unless lunchflow_provider.present?
-      redirect_to new_account_path, alert: t(".no_api_key")
+      redirect_to new_account_path, alert: t("lunchflow_items.setup_accounts.no_api_key")
       return
     end
 
@@ -266,8 +264,7 @@ class LunchflowItemsController < ApplicationController
       else
         # Redirect for regular requests
         redirect_to settings_providers_path,
-                   alert: t(".no_credentials_configured",
-                          default: "Please configure your Lunch Flow API key first in Provider Settings.")
+                   alert: t("lunchflow_items.setup_accounts.no_api_key")
       end
       return
     end
@@ -283,8 +280,7 @@ class LunchflowItemsController < ApplicationController
         lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
 
         unless lunchflow_provider.present?
-          redirect_to settings_providers_path, alert: t(".no_api_key",
-                                                        default: "Lunch Flow API key not found. Please configure it in Provider Settings.")
+          redirect_to settings_providers_path, alert: t("lunchflow_items.setup_accounts.no_api_key")
           return
         end
 
@@ -358,7 +354,7 @@ class LunchflowItemsController < ApplicationController
     # Fetch account details from API
     lunchflow_provider = Provider::LunchflowAdapter.build_provider(family: Current.family)
     unless lunchflow_provider.present?
-      redirect_to accounts_path, alert: t(".no_api_key")
+      redirect_to accounts_path, alert: t("lunchflow_items.setup_accounts.no_api_key")
       return
     end
 

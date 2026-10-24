@@ -51,12 +51,18 @@ es:
       notes_label: Notas
       notes_placeholder: Guarda información adicional como números de cuenta, códigos de sucursal, IBAN, números de ruta, etc.
       exclude_from_reports: Excluir de todos los informes
+      enable_category_matcher_hint: Cuando está activado, se aplica la categoría sugerida por el proveedor a las transacciones importadas. Desactívalo para dejar las nuevas transacciones sin categoría.
+      enable_category_matcher_label: Activar asignación de categorías
     index:
       accounts: Cuentas
       manual_accounts:
         other_accounts: Otras cuentas
       new_account: Nueva cuenta
       sync: Sincronizar todo
+      cancel_sync: Cancelar sincronización
+      financekit_accounts:
+        description: Gestiona las conexiones de Apple Wallet y la sincronización desde la aplicación de Sure para iOS.
+        title: Apple Wallet
     sync_all:
       syncing: Sincronizando cuentas...
     new:
@@ -65,14 +71,16 @@ es:
         select: Seleccionar
         navigate: Navegar
         close: Cerrar
+        next: Siguiente
+        previous: Anterior
       method_selector:
         connected_entry: Vincular cuenta
         connected_entry_eu: Vincular cuenta de la UE
         link_with_provider: Vincular con %{provider}
         lunchflow_entry: Vincular cuenta de Lunch Flow
         manual_entry: Introducir saldo de la cuenta
-        title: ¿Cómo te gustaría añadirla?
-      title: ¿Qué te gustaría añadir?
+        title: "¿Cómo te gustaría añadirla?"
+      title: "¿Qué te gustaría añadir?"
     show:
       limited_fx_history_warning: El historial de tipos de cambio solo está disponible desde %{date}. Las transacciones anteriores a esa fecha usan conversiones de divisa aproximadas; esto puede ocurrir cuando el proveedor de tipos de cambio solo ofrece una ventana histórica limitada.
       tabs:
@@ -80,6 +88,7 @@ es:
         holdings: Posiciones
         overview: Resumen
         statements: Extractos
+        schedule: Calendario
       activity:
         amount: Cantidad
         balance: Saldo
@@ -101,6 +110,8 @@ es:
         search_placeholder: Buscar registros por nombre
         status: Estado
         title: Actividad
+        category: Categoría
+        uncategorized_only: Solo sin categoría
       chart:
         balance: Saldo
         owed: Cantidad adeudada
@@ -108,8 +119,8 @@ es:
         complete_setup: Completar configuración
       menu:
         confirm_accept: Eliminar "%{name}"
-        confirm_body_html: <p>Al eliminar esta cuenta, borrarás su historial de valores, afectando varios aspectos de tu cuenta general. Esta acción tendrá un impacto directo en los cálculos de tu patrimonio neto y en los gráficos de la cuenta.</p><br /> <p>Después de la eliminación, no podrás restaurar la información de la cuenta, ya que tendrás que añadirla como una nueva cuenta.</p>
-        confirm_title: ¿Eliminar cuenta?
+        confirm_body_html: "<p>Al eliminar esta cuenta, borrarás su historial de valores, afectando varios aspectos de tu cuenta general. Esta acción tendrá un impacto directo en los cálculos de tu patrimonio neto y en los gráficos de la cuenta.</p><br /> <p>Después de la eliminación, no podrás restaurar la información de la cuenta, ya que tendrás que añadirla como una nueva cuenta.</p>"
+        confirm_title: "¿Eliminar cuenta?"
         delete_account: Eliminar cuenta
         edit: Editar
         import: Importar transacciones
@@ -124,7 +135,7 @@ es:
       success: Cuenta %{type} actualizada
     sidebar:
       missing_data: Faltan datos históricos
-      missing_data_description: '%{product} utiliza proveedores externos para obtener tipos de cambio históricos, precios de valores y más. Estos datos son necesarios para calcular saldos históricos precisos de las cuentas.'
+      missing_data_description: "%{product} utiliza proveedores externos para obtener tipos de cambio históricos, precios de valores y más. Estos datos son necesarios para calcular saldos históricos precisos de las cuentas."
       configure_providers: Configura tus proveedores aquí.
       tabs:
         all: Todo
@@ -134,6 +145,8 @@ es:
       new_debt: Nueva deuda
       new_account: Nueva cuenta
       new_account_group: Nuevo %{account_group}
+      collapse_all: Contraer todo
+      expand_all: Expandir todo
     types:
       depository: Efectivo
       investment: Inversión
@@ -173,7 +186,7 @@ es:
       in: India
       generic: General
     confirm_unlink:
-      title: ¿Desvincular cuenta del proveedor?
+      title: "¿Desvincular cuenta del proveedor?"
       description_html: Estás a punto de desvincular <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Esto la convertirá en una cuenta manual.
       warning_title: Qué significa esto
       warning_no_sync: La cuenta dejará de sincronizarse automáticamente con tu proveedor
@@ -181,6 +194,7 @@ es:
       warning_transactions_kept: Se conservarán todas las transacciones y saldos existentes
       warning_can_delete: Tras desvincularla, podrás eliminar la cuenta si es necesario
       confirm_button: Confirmar y desvincular
+      warning_wallet_connection: Se desvincularán todas las cuentas de esta conexión de Apple Wallet. Sus transacciones y saldos se conservarán. Puedes volver a conectar desde la aplicación de Sure para iOS con una nueva configuración de Wallet.
     unlink:
       success: Cuenta desvinculada correctamente. Ahora es una cuenta manual.
       not_linked: La cuenta no está vinculada a un proveedor

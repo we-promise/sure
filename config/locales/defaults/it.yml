@@ -4,9 +4,9 @@ it:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
     common:
-      close: "Chiudi"
+      close: Chiudi
   global:
-    expand: "Espandi"
+    expand: Espandi
   activerecord:
     errors:
       messages:
@@ -159,8 +159,8 @@ it:
   helpers:
     select:
       prompt: Seleziona...
-      search_placeholder: "Cerca"
-      default_label: "Seleziona..."
+      search_placeholder: Cerca
+      default_label: Seleziona...
     submit:
       create: Crea %{model}
       submit: Salva %{model}
@@ -232,3 +232,11 @@ it:
       long: "%d %B %Y %H:%M"
       short: "%d %b %H:%M"
     pm: pm
+  mcp:
+    errors:
+      invalid_session_id: ID di sessione MCP non valido
+      unsupported_protocol_version: 'Versione del protocollo MCP non supportata: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris deve usare https, http su loopback o uno
+        schema URI di app nativa

@@ -5,38 +5,48 @@ pt-PT:
     upcoming: Próximas Transações Recorrentes
     projected: Projetado
     recurring: Recorrente
-    expected_today: "Prevista hoje"
+    expected_today: Prevista hoje
     expected_in:
-      one: "Prevista em %{count} dia"
-      other: "Prevista em %{count} dias"
+      one: Prevista em %{count} dia
+      other: Prevista em %{count} dias
     day_of_month: Dia %{day} do mês
     identify_patterns: Identificar Padrões
     cleanup_stale: Limpar transações obsoletas
     settings:
       enable_label: Ativar Transações Recorrentes
-      enable_description: Deteta automaticamente padrões de transações recorrentes e apresenta as próximas transações previstas.
+      enable_description: >-
+        Deteta automaticamente padrões de transações recorrentes e apresenta as próximas
+        transações previstas.
     settings_updated: Definições de transações recorrentes atualizadas
     info:
       title: Deteção Automática de Padrões
-      manual_description: Pode identificar padrões manualmente ou limpar transações recorrentes obsoletas usando os botões acima.
-      automatic_description: "A identificação automática também é executada após:"
+      manual_description: >-
+        Pode identificar padrões manualmente ou limpar transações recorrentes obsoletas
+        usando os botões acima.
+      automatic_description: 'A identificação automática também é executada após:'
       triggers:
-        - Importações de CSV concluídas (transações, negociações, contas, etc.)
-        - Qualquer sincronização de serviço concluída (Plaid, SimpleFIN, etc.)
+      - Importações de CSV concluídas (transações, negociações, contas, etc.)
+      - Qualquer sincronização de serviço concluída (Plaid, SimpleFIN, etc.)
     identified: Identificados %{count} padrões de transações recorrentes
     cleaned_up: Limpadas %{count} transações recorrentes obsoletas
     marked_inactive: Transação recorrente marcada como inativa
     marked_active: Transação recorrente marcada como ativa
     deleted: Transação recorrente eliminada
-    confirm_delete: Tem a certeza de que pretende eliminar esta transação recorrente?
+    confirm_delete: >-
+      Remover %{name} das suas despesas a pagar? As suas transações permanecerão exatamente
+      como estão. Esta ação remove apenas a despesa e o seu plano de pagamentos.
     marked_as_recurring: Transação marcada como recorrente
     already_exists: Já existe uma transação recorrente manual para este padrão
-    creation_failed: Falha ao criar a transação recorrente. Verifique os detalhes da transação e tente novamente.
+    creation_failed: >-
+      Falha ao criar a transação recorrente. Verifique os detalhes da transação e
+      tente novamente.
     unexpected_error: Ocorreu um erro ao criar a transação recorrente
-    amount_range: "Intervalo: %{min} a %{max}"
+    amount_range: 'Intervalo: %{min} a %{max}'
     empty:
       title: Nenhuma transação recorrente encontrada
-      description: Clique em "Identificar Padrões" para detectar automaticamente transações recorrentes do seu histórico.
+      description: >-
+        Clique em "Identificar Padrões" para detectar automaticamente transações recorrentes
+        do seu histórico.
     table:
       merchant: Designação
       amount: Montante
@@ -45,12 +55,205 @@ pt-PT:
       last_occurrence: Última Ocorrência
       status: Estado
       actions: Ações
+      frequency: Frequência
     status:
       active: Ativa
       inactive: Inativa
+      ended: Dispensada
+      paused: Pausada
+      suggested: Possível despesa a pagar
     badges:
       manual: Manual
     transfer_marked_as_recurring: Transferência marcada como recorrente
-    transfer_already_exists: Já existe uma transferência recorrente para este par de contas
-    transfer_creation_failed: Falha ao criar a transferência recorrente. Verifique os detalhes da transferência e tente novamente.
-    transfer_feature_disabled: As transações recorrentes estão desativadas para esta família
+    transfer_already_exists: Já existe uma transferência recorrente para este par
+      de contas
+    transfer_creation_failed: >-
+      Falha ao criar a transferência recorrente. Verifique os detalhes da transferência
+      e tente novamente.
+    transfer_feature_disabled: As transações recorrentes estão desativadas para esta
+      família
+    actions:
+      delete: Remover
+      edit_payment_link: Editar ligação de pagamento
+      pause: Pausar
+      resume: Retomar
+    confirm_delete_income: >-
+      Remover %{name} como rendimento? As suas transações permanecerão exatamente
+      como estão. Esta ação remove apenas o rendimento e o seu agendamento.
+    confirmed: Despesa a pagar adicionada às suas transações recorrentes
+    create:
+      account_invalid: Escolha uma conta à qual possa adicionar despesas a pagar,
+        ou deixe em branco
+      already_exists: Esta despesa a pagar já existe
+      amount_invalid: Introduza o valor apenas como número
+      due_date_required: Indique a próxima data de vencimento da despesa
+      success: Despesa a pagar adicionada
+      success_income: Rendimento adicionado
+    deleted_income: Rendimento removido. As suas transações não foram alteradas.
+    dismissed: Sugestão dispensada. Este padrão não será sugerido novamente.
+    edit:
+      income_title: Editar rendimento · %{name}
+      title: Editar %{name}
+      trigger_label: Editar despesa a pagar
+    form:
+      account_blank: Qualquer conta
+      account_label: Pago pela conta
+      amount_edit_hint: >-
+        Aplica-se aos vencimentos futuros. As despesas já vencidas mantêm o montante
+        anterior.
+      amount_label: Montante
+      apply_to_siblings:
+        one: Usar esta ligação também na outra despesa de %{name}
+        other: Usar esta ligação também nas outras %{count} despesas de %{name}
+      autopay_hint: Mantém a despesa na lista, mas deixa de a tratar como uma tarefa
+        pendente.
+      autopay_label: Pagamento automático
+      bill_type_label: Tipo
+      cancelled_on_hint: >-
+        A data fica registada para sua referência. Coloque a despesa em pausa para
+        impedir que apareçam novos vencimentos.
+      cancelled_on_label: Cancelada em
+      category_blank: Sem categoria
+      category_label: Categoria
+      first_due_on_label: Próximo vencimento
+      frequency_day_label: No dia
+      frequency_hint: >-
+        Com que frequência vence esta despesa. Ajuste os dias de acordo com o seu
+        extrato.
+      frequency_interval_label: Repetir a cada
+      frequency_interval_unit_label: Unidade
+      frequency_label: Frequência
+      frequency_month_label: Em
+      frequency_new_hint: >-
+        Os dias são definidos a partir da data de vencimento acima. Poderá ajustar
+        o agendamento depois de guardar.
+      frequency_second_day_label: E no dia
+      frequency_weekday_label: Em
+      income_account_label: Depositado na conta
+      income_amount_edit_hint: >-
+        Aplica-se às datas de recebimento futuras. Os recebimentos já previstos até
+        agora mantêm o valor anterior.
+      income_amount_label: Montante por recebimento
+      income_due_on_label: Próximo recebimento
+      income_frequency_hint: Com que frequência recebe. Ajuste os dias de acordo com
+        a data do seu pagamento.
+      income_frequency_label: Frequência de recebimento
+      income_frequency_new_hint: >-
+        Os detalhes do recebimento vêm da data acima. Poderá ajustar o agendamento
+        depois de guardar.
+      income_name_label: Origem
+      income_name_placeholder: Empregador, cliente, trabalho extra
+      income_notes_hint: Informações a reter sobre este rendimento.
+      income_notes_placeholder: Depósito direto, dividido entre duas contas
+      installment_count_hint: O plano termina após este número de pagamentos e mostra
+        o progresso até lá.
+      installment_count_label: Número de pagamentos
+      more_options: Mais opções
+      name_label: Nome
+      name_placeholder: Renda, PG&E, Netflix
+      notes_hint: Informações que deseja ter à mão ao pagar. São apresentadas na despesa.
+      notes_label: Notas
+      notes_placeholder: Conta 4821, cobrada no Amex
+      payment_url_hint: >-
+        Onde paga esta despesa. Abre num novo separador a partir das listas de recorrências
+        e próximos vencimentos.
+      payment_url_label: Ligação de pagamento
+      payment_url_placeholder: bank.example.com/pay
+      renews_on_label: Renovação em
+      submit: Guardar despesa a pagar
+      submit_income: Guardar rendimento
+      trial_ends_on_label: Fim do período experimental
+    frequency:
+      annual: Anualmente, em %{day} de %{month}
+      biweekly: 'A cada 2 semanas: %{weekday}'
+      custom: Programação personalizada
+      every_n_months: "A cada %{interval} meses, dia: %{day}"
+      every_n_weeks: 'A cada %{interval} semanas: %{weekday}'
+      every_n_years: A cada %{interval} anos, em %{day} de %{month}
+      last_day: último dia
+      monthly: "Mensalmente, dia: %{day}"
+      quarterly: "Trimestralmente, dia: %{day}"
+      semiannual: "A cada 6 meses, dia: %{day}"
+      semimonthly: Duas vezes por mês, nos dias %{first} e %{second}
+      weekly: 'Semanalmente: %{weekday}'
+    frequency_interval_units:
+      monthly: meses
+      weekly: semanas
+      yearly: anos
+    frequency_presets:
+      annual: Anual
+      biweekly: A cada 2 semanas
+      custom: Programação personalizada
+      interval: Intervalo personalizado
+      monthly: Mensal
+      quarterly: Trimestral
+      semiannual: A cada 6 meses
+      semimonthly: Duas vezes por mês
+      weekly: Semanal
+    identify_already_running: A deteção já está em curso. Volte a verificar dentro
+      de instantes.
+    manage:
+      cta: Abrir todas as despesas a pagar
+      description: >-
+        Adicione, edite, coloque em pausa e pague tudo a partir dessa página. Esta
+        página controla a deteção.
+      title: As suas despesas a pagar estão na página Despesas a pagar
+    new:
+      candidate_meta: "%{count}× · última em %{date}"
+      income_title: Adicionar rendimento
+      pick_different: Começar a partir de outra transação
+      search_all_cta: Pesquisar em todas as suas transações
+      search_all_prompt: Não encontrou o que procurava?
+      smart_fill: Preencher com IA
+      smart_fill_applied: >-
+        A IA sugeriu estes valores com base no histórico de cobranças. Reveja antes
+        de guardar.
+      start_from_hint: >-
+        Opcional. Escolher uma transação apenas preenche o formulário; pode continuar
+        a alterar qualquer campo.
+      start_from_income_title: Começar a partir de um depósito recorrente que identificamos
+      start_from_title: Começar a partir de uma cobrança recorrente que identificamos
+      title: Adicionar despesa a pagar
+    pay_action:
+      add_link: Adicionar ligação
+      add_link_aria: Adicionar ligação de pagamento para %{name}
+      autopay: Pagamento automático
+      autopay_aria: "%{name} é paga automaticamente; abrir o portal num novo separador"
+      open_site: Abrir site da despesa a pagar
+      pay: Pagar
+      pay_aria: Pagar %{name} (abre num novo separador)
+    pick_entry:
+      back: Voltar ao formulário
+      hint: >-
+        Escolher uma transação apenas preenche o formulário; pode continuar a alterar
+        qualquer campo.
+      income_title: Encontrar um depósito para começar
+      no_results: >-
+        Nenhum resultado para “%{query}”. Tente menos palavras ou volte e preencha
+        o formulário manualmente.
+      search_placeholder: Pesquisar por nome, notas ou comerciante
+      showing_recent: >-
+        A mostrar as suas %{count} transações mais recentes. Pesquise para limitar
+        os resultados.
+      title: Encontrar uma transação para começar
+    picker_row:
+      claimed: Parte de %{name}
+    smart_fills:
+      create:
+        failed: >-
+          Não foi possível analisar o histórico de cobranças agora. O formulário manteve
+          os valores da própria transação.
+    suggested:
+      collapsed_hint: Toque para rever
+      confirm: Adicionar despesa a pagar
+      dismiss: Não é uma despesa a pagar
+      seen_count:
+        one: identificada uma vez
+        other: identificada %{count} vezes
+      title: Possíveis novas despesas a pagar
+    update:
+      success: Despesa a pagar atualizada
+      success_with_siblings:
+        one: Despesa atualizada e ligação de pagamento copiada para outra despesa
+        other: Despesa atualizada e ligação de pagamento copiada para outras %{count}
+          despesas

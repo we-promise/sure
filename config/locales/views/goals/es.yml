@@ -15,30 +15,30 @@ es:
       pending_pledges_callout: Tienes aportaciones pendientes. Sure las confirmará en la próxima sincronización.
       kpi:
         contributed_label: Aportado · últimos 30 días
-        velocity_delta_up: ↑ %{percent}%% vs. 30 días anteriores
-        velocity_delta_down: ↓ %{percent}%% vs. 30 días anteriores
+        velocity_delta_up: "↑ %{percent}%% vs. 30 días anteriores"
+        velocity_delta_down: "↓ %{percent}%% vs. 30 días anteriores"
         velocity_delta_flat: vs. 30 días anteriores
         velocity_delta_zero_base: Primeros 30 días de actividad
         needs_this_month_label: Necesita este mes
         needs_this_month_sub:
           one: 1 objetivo por debajo del ritmo
-          other: '%{count} objetivos por debajo del ritmo'
+          other: "%{count} objetivos por debajo del ritmo"
         needs_this_month_zero_sub: Ningún objetivo por debajo del ritmo
         on_track_label: Objetivos en camino
-        on_track_value: '%{on_track} de %{total}'
+        on_track_value: "%{on_track} de %{total}"
         on_track_sub_parts:
           reached:
             one: 1 alcanzado
-            other: '%{count} alcanzados'
+            other: "%{count} alcanzados"
           behind:
             one: 1 rezagado
-            other: '%{count} rezagados'
+            other: "%{count} rezagados"
           no_date:
             one: 1 sin fecha límite
-            other: '%{count} sin fecha límite'
+            other: "%{count} sin fecha límite"
           paused:
             one: 1 en pausa
-            other: '%{count} en pausa'
+            other: "%{count} en pausa"
         on_track_sub_all_good: Todos los objetivos activos al ritmo previsto
         on_track_all_caught_up: Todo al día
       goals_section:
@@ -64,6 +64,7 @@ es:
         no_target_date: Abiertos
         paused: En pausa
         completed: Completados
+      chips_aria: Filtrar objetivos por estado
     new:
       heading: Nuevo objetivo
       subtitle: Ahorra para algo concreto.
@@ -104,7 +105,7 @@ es:
       unarchive: Restaurar
       reopen: Reabrir objetivo
       delete: Eliminar definitivamente
-      confirm_delete_title: ¿Eliminar este objetivo?
+      confirm_delete_title: "¿Eliminar este objetivo?"
       confirm_delete_body: "%{name} y su historial de aportaciones se eliminarán definitivamente. Tus cuentas vinculadas, saldos y transacciones no se verán afectados. Para conservarlo como registro, archívalo."
       confirm_delete_cta: Eliminar objetivo
       record_pledge_cta: Registrar aportación
@@ -112,7 +113,7 @@ es:
       pledge_just_saved: Registra dinero que has apartado
       funding_accounts_heading: Cuentas de financiación
       funding_accounts:
-        earmarked_of: '%{earmarked} reservados de %{balance}'
+        earmarked_of: "%{earmarked} reservados de %{balance}"
         empty:
           heading: Aún no hay cuentas de financiación vinculadas
           body: Edita el objetivo para vincular las cuentas de depósito en las que ahorras.
@@ -124,6 +125,7 @@ es:
         behind_covered: las aportaciones pendientes cubren la diferencia
         on_track: alcanza el objetivo hacia el %{date}
         no_target_date: establece una fecha objetivo para proyectar la línea de meta
+        depleted: "%{amount} por debajo de su saldo objetivo; repón ese importe para recuperar la reserva"
       pending_pledge:
         title:
           zero: 'Pendiente: %{amount} en %{account} · caduca hoy'
@@ -134,7 +136,7 @@ es:
         pledged_at: Registrada hace %{time_ago}
         extend: Ampliar 7 días
         cancel: Cancelar
-        confirm_cancel_title: ¿Cancelar esta aportación?
+        confirm_cancel_title: "¿Cancelar esta aportación?"
         confirm_cancel_body: Se eliminará la aportación de %{amount}. Puedes registrar una nueva cuando quieras.
         confirm_cancel_cta: Cancelar aportación
       header:
@@ -148,6 +150,8 @@ es:
         of_target: de la meta
         market_value: Valor de mercado %{amount}
         aria_label: Objetivo completado al %{percent}%. %{amount} de %{target} ahorrados.
+        aria_label_with_used: Objetivo completado al %{percent}%. %{amount} de %{target}, incluidos %{used} ya utilizados.
+        including_used: Incluye %{amount} ya utilizados
       projection:
         heading: Proyección
         legend_saved: Ahorrado
@@ -162,16 +166,17 @@ es:
         today_marker: Hoy
         tooltip_projected: 'Proyectado: %{amount}'
         tooltip_saved: 'Ahorrado: %{amount}'
-        tooltip_target_relation: '%{percent}% de la meta de %{target}'
+        tooltip_target_relation: "%{percent}% de la meta de %{target}"
+        reserve: Una reserva mantiene un saldo objetivo, por lo que no hay una fecha de finalización que proyectar.
       catch_up:
         title: Ahorra %{amount}/mes más para ponerte al día
         body: Ritmo actual %{avg}/mes · necesario %{required}/mes para alcanzar tu meta.
         adjust_target_cta: Mejor ajustar la meta
-      confirm_complete_title: ¿Marcar este objetivo como completado?
+      confirm_complete_title: "¿Marcar este objetivo como completado?"
       confirm_complete_body: Saldrá de la lista de objetivos en curso. Podrás archivarlo o restaurarlo más adelante.
       confirm_complete_body_short: Estás al %{progress}%, %{saved} de %{target}. Al marcarlo como completado se registrará este logro en lugar de la meta original. ¿Continúas, o cierras esto y ajustas la meta?
       confirm_complete_cta: Marcar como completado
-      confirm_archive_title: ¿Archivar este objetivo?
+      confirm_archive_title: "¿Archivar este objetivo?"
       confirm_archive_body: Los objetivos archivados desaparecen de la lista principal. Puedes restaurarlos más adelante.
       confirm_archive_cta: Archivar
       paused_banner:
@@ -186,10 +191,16 @@ es:
         heading: Objetivo alcanzado. Buen trabajo.
         body: Objetivo cerrado con %{saved} de %{target}. Consérvalo como registro o archívalo ahora.
         archive_cta: Archivar objetivo
+        body_reached: Has alcanzado tu meta con %{saved} de %{target}. Aún no está cerrada; el dinero sigue reservado para ella.
+        body_reserve: 'Tu reserva ha alcanzado su saldo objetivo: %{saved} de %{target}. No tienes que hacer nada; sigue reservada.'
+        close_cta: Cerrar este objetivo
+        close_hint: Al cerrarlo se libera el dinero reservado para tus otros objetivos de la misma cuenta. Hazlo cuando lo hayas gastado realmente.
+        frozen: Alcanzado el %{date} · %{amount}
+        heading_reserve: Reserva intacta
       inactive:
         heading_paused: Este objetivo está en pausa
         heading_archived: Este objetivo está archivado
-        body: '%{saved} de %{target} ahorrados hasta ahora.'
+        body: "%{saved} de %{target} ahorrados hasta ahora."
       no_target_date:
         heading: Añade una fecha objetivo
         body: Establece una fecha límite para proyectar la línea de meta y seguir el ritmo necesario.
@@ -197,6 +208,10 @@ es:
       empty:
         heading: Aún no hay ingresos
         body: Haz una transferencia a tu cuenta vinculada. Sure la detectará en la próxima sincronización. O actualiza el saldo de tu cuenta manual.
+      consume: He utilizado parte de este dinero
+      reserve_shortfall:
+        body: Tienes %{saved} de %{target}. Añade %{missing} para recuperar el saldo objetivo.
+        heading: Reserva por debajo de su saldo objetivo
     errors:
       not_found: No se ha encontrado este objetivo. Puede que se haya eliminado.
     states:
@@ -212,6 +227,8 @@ es:
       no_target_date: Abierto
       paused: En pausa
       archived: Archivado
+      depleted: Necesita reposición
+      funded: Reserva intacta
     empty_state:
       heading: Aún no hay objetivos
       body: Establece una meta, vincula las cuentas en las que ahorras y observa cómo crece tu progreso.
@@ -221,20 +238,20 @@ es:
       add_account: Añadir una cuenta
     goal_card:
       no_accounts: Sin cuentas vinculadas
-      n_accounts: '%{first} +%{count}'
+      n_accounts: "%{first} +%{count}"
       left: restante
-      aria_progress: '%{percent}% de %{target}'
+      aria_progress: "%{percent}% de %{target}"
       accounts:
         one: 1 cuenta
-        other: '%{count} cuentas'
+        other: "%{count} cuentas"
       no_target_date: Abierto
       completed: Completado
       past_due: Vencido
       days_left:
         one: Queda 1 día
         other: Quedan %{count} días
-      pace_with_target: '%{avg}/mes · meta %{target}/mes'
-      pace_no_target: '%{avg}/mes de media'
+      pace_with_target: "%{avg}/mes · meta %{target}/mes"
+      pace_no_target: "%{avg}/mes de media"
       footer_paused: En pausa
       footer_archived: Archivado
       footer_reached: Objetivo alcanzado
@@ -243,12 +260,15 @@ es:
       pending_pledge: Aportación pendiente
       pending_count:
         one: 1 pendiente
-        other: '%{count} pendientes'
+        other: "%{count} pendientes"
       footer_no_pledges: Aún no hay aportaciones confirmadas
       footer_last_today: Última aportación confirmada hoy
       footer_last_days:
         one: Última aportación confirmada hace 1 día
         other: Última aportación confirmada hace %{count} días
+      footer_reserve_intact: Reserva intacta
+      footer_reserve_short: Faltan %{amount} para reponer
+      including_used: Incluye %{amount} ya utilizados
     form:
       create: Crear objetivo
       save: Guardar cambios
@@ -268,9 +288,15 @@ es:
         notes_placeholder: Un recordatorio para tu yo del futuro…
         funding_accounts: Cuentas de financiación
         funding_accounts_hint: El saldo de este objetivo es el saldo (o la parte reservada) de estas cuentas.
-        whole_balance: "Vacío: todo el saldo"
+        whole_balance: 'Vacío: todo el saldo'
         earmark_for: Importe reservado para %{account}
         earmark_hint: Deja un importe en blanco para dedicar todo el saldo de esa cuenta.
+        target_balance: Saldo objetivo
+        target_balance_hint: Basado en la mediana de tus gastos mensuales de los meses anteriores. Se actualiza cada mes.
+        target_balance_pending: Se calculará al guardar
+        target_mode: Cómo se establece el saldo objetivo
+        target_months: Meses de gastos
+        target_months_hint: Se recalcula el día 1 de cada mes a partir de la mediana de tus gastos mensuales.
       subtypes:
         checking: Corriente
         savings: Ahorro
@@ -278,3 +304,43 @@ es:
         cd: Depósito a plazo
         money_market: Mercado monetario
         other: Otra
+      earmark:
+        headroom: Quedan {left} para reservar en esta cuenta.
+        prorata: Tus objetivos de esta cuenta suman {total} para un saldo de {balance}; avanzarán de forma proporcional.
+        whole_balance: Esta cuenta financiará lo que quede después de las demás reservas.
+        whole_balance_alone: Este objetivo utilizará todo el saldo de esta cuenta.
+      kinds:
+        maintained:
+          hint: Un saldo que quieres mantener, como un fondo de emergencia. Nunca se cierra.
+          label: Reserva que mantener
+        one_off:
+          hint: Ahorra para algo y cierra el objetivo cuando gastes el dinero.
+          label: Objetivo puntual
+      target_modes:
+        fixed: Un importe fijo
+        months_of_expenses: Un número de meses de gastos
+    consume:
+      cancel: Cancelar
+      errors:
+        non_positive: Introduce un importe mayor que cero.
+        account_not_linked: Esa cuenta no financia este objetivo.
+        account_required: Este objetivo se financia desde varias cuentas; indica de cuál salió el dinero.
+        exceeds_earmark: Eso supera lo que este objetivo tiene reservado en esta cuenta.
+        exceeds_target: Eso supera la cantidad que este objetivo se propuso ahorrar.
+        maintained: Una reserva se utiliza y se repone, no se registra como gastada; el importe que falta ya aparece en el objetivo.
+        no_linked_account: Este objetivo ya no tiene ninguna cuenta de financiación.
+        not_active: Este objetivo ya no está activo, por lo que no se puede registrar nada en él.
+        transaction_already_claimed: Esa salida de dinero ya está atribuida.
+        transaction_not_found: Esa salida de dinero ya no está disponible para atribuirla.
+      account_label: "¿De qué cuenta?"
+      amount_hint: Actualmente hay %{saved} destinados a este objetivo.
+      amount_label: "¿Cuánto has utilizado?"
+      earmark_note: El importe que registres dejará de estar reservado para este objetivo, de modo que tus otros objetivos de esa cuenta recuperarán su parte.
+      submit: Registrar
+      subtitle: "%{goal}"
+      success: "%{amount} registrados como utilizados."
+      title: Registrar un gasto
+    unattributed_outflows:
+      attribute: Fue este gasto
+      body: Si parte de este dinero se gastó en %{goal}, indícalo para que deje de computar para la meta.
+      heading: Ha salido dinero de estas cuentas

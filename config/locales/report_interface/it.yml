@@ -1,0 +1,6 @@
+---
+it:
+  reports:
+    index:
+      sections_aria_label: "Sezioni del report"
+      section_reorder_aria: "Sezione %{title}. Premi Invio o Spazio per selezionarla e riordinarla, poi usa i tasti freccia per spostarla."

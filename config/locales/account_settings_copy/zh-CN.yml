@@ -1,0 +1,17 @@
+---
+zh-CN:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: 可通过环境变量配置，也可在下方覆盖。
+        optional: 可选
+      update:
+        failed: 更新服务商设置失败，请重试。
+    llm_usages:
+      show:
+        http_status: HTTP 状态：%{status}
+  shared:
+    async_loading:
+      timeout: 超时
+      failed_with_status: 加载失败（%{status}）
+      network_error: 网络错误

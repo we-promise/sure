@@ -1,0 +1,6 @@
+---
+nb:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Engangsinntekt (utelatt fra gjennomsnitt)"
+      one_time_expense_tooltip: "Engangsutgift (utelatt fra gjennomsnitt)"

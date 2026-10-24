@@ -1,0 +1,20 @@
+---
+es:
+  authentication_ui:
+    password:
+      missing_case: "debe incluir letras mayúsculas y minúsculas"
+      missing_number: "debe incluir al menos un número"
+      missing_special: "debe incluir al menos un carácter especial"
+    sso:
+      copy_failed: "No se pudo copiar al portapapeles"
+      issuer_valid: "Emisor OIDC válido"
+      issuer_mismatch_trailing: "El emisor no coincide: el descubrimiento devolvió %{issuer}. Suele deberse a una diferencia en la barra final. Copia el emisor exactamente como se ha devuelto."
+      issuer_mismatch: "El emisor no coincide: el descubrimiento devolvió %{issuer}. Copia el emisor exactamente como lo devuelve el proveedor."
+      browser_validation_unavailable: "No se pudo validar desde el navegador (CORS). Aun así, se puede guardar el proveedor."
+      testing: "Probando…"
+      request_failed: "La solicitud falló: %{message}"
+    authorization:
+      authorizing: "Autorizando…"
+      denying: "Denegando…"
+      explanation: "Al autorizar, permites que esta aplicación acceda a tus datos de %{product_name} según los permisos anteriores."
+      title: "Autorización de %{product_name}"

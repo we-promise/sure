@@ -1,0 +1,6 @@
+---
+hu:
+  layouts:
+    shared:
+      footer:
+        community_fork: "(a %{original_product} közösségi változata)"

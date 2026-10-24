@@ -1,0 +1,17 @@
+---
+pt-PT:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: A configuração pode ser definida através de variáveis de ambiente ou substituída abaixo.
+        optional: Opcional
+      update:
+        failed: Não foi possível atualizar as definições dos fornecedores. Tente novamente.
+    llm_usages:
+      show:
+        http_status: 'Estado HTTP: %{status}'
+  shared:
+    async_loading:
+      timeout: Tempo de espera excedido
+      failed_with_status: Falha ao carregar (%{status})
+      network_error: Erro de rede

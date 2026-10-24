@@ -1,0 +1,6 @@
+---
+zh-TW:
+  layouts:
+    shared:
+      footer:
+        community_fork: "（%{original_product} 的社群分支）"

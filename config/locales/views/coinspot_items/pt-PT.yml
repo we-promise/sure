@@ -1,0 +1,108 @@
+---
+pt-PT:
+  coinspot_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} conta precisa de configuração"
+        other: "%{count} contas precisam de configuração"
+      calculating_balances: A calcular saldos...
+      checking_configuration: A verificar a configuração da conta...
+      checking_credentials: A verificar credenciais...
+      credentials_invalid: >-
+        Credenciais de API da CoinSpot inválidas. Verifique a sua chave de API e o
+        seu segredo.
+      importing_accounts: A importar contas da CoinSpot...
+      processing_accounts: A processar os dados da conta...
+      processing_failed:
+        one: Não foi possível processar %{count} conta da CoinSpot
+        other: Não foi possível processar %{count} contas da CoinSpot
+  coinspot_items:
+    coinspot_item:
+      delete: Eliminar
+      deletion_in_progress: A eliminar...
+      import_accounts_menu: Importar conta
+      no_accounts_message: A sua conta na corretora CoinSpot aparecerá aqui após a
+        sincronização.
+      no_accounts_title: Nenhuma conta encontrada
+      provider_name: CoinSpot
+      reconnect: As credenciais precisam de ser atualizadas
+      setup_action: Importar conta
+      setup_description: Importe esta ligação com a CoinSpot como uma conta em corretora
+        de criptomoedas.
+      setup_needed: Conta pronta para importar
+      stale_rate_warning: >-
+        O saldo é aproximado porque a taxa de câmbio exata para %{date} não estava
+        disponível. Será atualizado na próxima sincronização.
+      status: Última sincronização há %{timestamp}
+      status_never: Nunca sincronizado
+      status_with_summary: Sincronizado há %{timestamp} - %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} conta sincronizada"
+          other: "%{count} contas sincronizadas"
+        no_accounts: Nenhuma conta encontrada
+        partial_sync: "%{linked_count} sincronizadas, %{unlinked_count} precisam de
+          configuração"
+      syncing: A sincronizar...
+    complete_account_setup:
+      no_accounts: Nenhuma conta para importar
+      none_selected: Nenhuma conta selecionada
+      setup_failed:
+        one: Não foi possível importar %{count} conta
+        other: Não foi possível importar %{count} contas
+      success:
+        one: Importada %{count} conta
+        other: Importadas %{count} contas
+    create:
+      default_name: CoinSpot
+      success: >-
+        Ligação com a CoinSpot realizada com sucesso. A sua conta na corretora está
+        a ser sincronizada.
+    destroy:
+      success: Eliminação da ligação com a CoinSpot agendada.
+      unlink_failed: Não foi possível desligar a ligação com a CoinSpot
+    link_accounts:
+      select_connection: Escolha uma ligação com a CoinSpot antes de associar contas.
+    link_existing_account:
+      errors:
+        coinspot_account_already_linked: Esta conta da CoinSpot já está associada
+        invalid_coinspot_account: Conta da CoinSpot inválida
+        only_manual: >-
+          Somente contas manuais em corretoras de criptomoedas, sem associação existente
+          com um fornecedor, podem ser associadas à CoinSpot
+      select_connection: Escolha uma ligação com a CoinSpot antes de associar contas.
+      success: Conta da CoinSpot associada com sucesso
+    provider_connection:
+      default_description: Associar a uma conta na corretora CoinSpot
+      default_name: CoinSpot
+      description: Ligar a %{name}
+      name: CoinSpot - %{name}
+    select_accounts:
+      no_credentials_configured: Adicione as credenciais de API da CoinSpot antes
+        de configurar as contas.
+      select_connection: Escolha uma ligação com a CoinSpot nas definições do fornecedor.
+    select_existing_account:
+      cancel: Cancelar
+      check_provider_health: Verifique se as suas credenciais de API da CoinSpot são
+        válidas.
+      link: Associar
+      no_accounts_found: Nenhuma conta da CoinSpot encontrada.
+      title: Associar conta da CoinSpot
+      wait_for_sync: Aguarde a conclusão da sincronização da CoinSpot.
+    setup_accounts:
+      accounts_count:
+        one: "%{count} conta disponível"
+        other: "%{count} contas disponíveis"
+      cancel: Cancelar
+      creating: A importar...
+      import_selected: Importar selecionadas
+      instructions: >-
+        A CoinSpot importa uma única conta consolidada de corretora de criptomoedas
+        para esta ligação, com saldos, valores em AUD, transferências, depósitos,
+        levantamentos e histórico de ordens.
+      no_accounts: Todas as contas da CoinSpot foram importadas.
+      select_all: Selecionar todas
+      subtitle: Selecione a conta na plataforma de negociação que pretende acompanhar
+      title: Importar conta da CoinSpot
+    update:
+      success: Ligação com a CoinSpot atualizada com sucesso.

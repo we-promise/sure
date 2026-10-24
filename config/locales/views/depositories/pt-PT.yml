@@ -24,3 +24,6 @@ pt-PT:
       savings:
         long: Poupança
         short: Poupança
+      cash:
+        long: Dinheiro
+        short: Dinheiro

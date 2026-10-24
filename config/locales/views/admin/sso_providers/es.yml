@@ -37,21 +37,23 @@ es:
       new:
         title: Añadir proveedor de SSO
         description: Configura un nuevo proveedor de autenticación de inicio de sesión único
+        provider_configuration: Configuración del proveedor
       edit:
         title: Editar proveedor de SSO
         description: Actualizar configuración para %{label}
+        provider_configuration: Configuración del proveedor
       create:
         success: El proveedor de SSO se ha creado correctamente.
       update:
         success: El proveedor de SSO se ha actualizado correctamente.
       destroy:
         success: El proveedor de SSO se ha eliminado correctamente.
-        confirm: ¿Estás seguro de que quieres eliminar este proveedor? Esta acción no se puede deshacer.
+        confirm: "¿Estás seguro de que quieres eliminar este proveedor? Esta acción no se puede deshacer."
       toggle:
         success_enabled: El proveedor de SSO se ha activado correctamente.
         success_disabled: El proveedor de SSO se ha desactivado correctamente.
-        confirm_enable: ¿Estás seguro de que quieres activar este proveedor?
-        confirm_disable: ¿Estás seguro de que quieres desactivar este proveedor?
+        confirm_enable: "¿Estás seguro de que quieres activar este proveedor?"
+        confirm_disable: "¿Estás seguro de que quieres desactivar este proveedor?"
       form:
         basic_information: Información básica
         oauth_configuration: Configuración OAuth/OIDC
@@ -80,9 +82,9 @@ es:
         client_id_help: ID de cliente OAuth de tu proveedor de identidad
         client_secret_label: Secreto de cliente (Client Secret)
         client_secret_placeholder_new: tu-secreto-de-cliente
-        client_secret_placeholder_existing: ••••••••••••••••
+        client_secret_placeholder_existing: "••••••••••••••••"
         client_secret_help: Secreto de cliente OAuth (encriptado en la base de datos)
-        client_secret_help_existing: ' - dejar en blanco para mantener el actual'
+        client_secret_help_existing: " - dejar en blanco para mantener el actual"
         redirect_uri_label: URI de redirección
         redirect_uri_placeholder: https://tudominio.com/auth/openid_connect/callback
         redirect_uri_help: URL de retorno para configurar en tu proveedor de identidad
@@ -95,7 +97,7 @@ es:
         update_provider: Actualizar proveedor
         errors_title:
           one: 'Un error impidió guardar este proveedor:'
-          other: '%{count} errores impidieron guardar este proveedor:'
+          other: "%{count} errores impidieron guardar este proveedor:"
         provisioning_title: Aprovisionamiento de usuarios
         default_role_label: Rol predeterminado para nuevos usuarios
         default_role_help: Rol asignado a los usuarios creados mediante el aprovisionamiento de cuentas SSO Just-In-Time (JIT). Por defecto es Miembro.

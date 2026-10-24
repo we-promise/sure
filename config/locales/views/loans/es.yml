@@ -13,6 +13,25 @@ es:
       none: Ninguno
       subtype_prompt: Selecciona el tipo de préstamo
       subtype_none: Ninguno
+      rate_change_remove: Eliminar
+      down_payment: Entrada inicial
+      insurance_rate: Tipo de la prima del seguro
+      insurance_rate_hint: Un porcentaje anual que se cobra mensualmente junto con la cuota. El seguro de capital constante se calcula sobre el saldo original; el decreciente, sobre el importe pendiente.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Tipo de seguro
+      insurance_rate_type_decreasing_life: Decreciente
+      insurance_rate_type_level_term: Capital constante
+      rate_change_add: Añadir cambio de interés
+      rate_change_effective_date: Fecha de entrada en vigor
+      rate_change_rate: Tipo de interés
+      rate_changes: Cambios de interés
+      rate_changes_empty: No hay cambios de interés registrados. El préstamo utiliza el tipo de interés indicado arriba.
+      rate_changes_hint: Cada fila establece el tipo aplicable desde su fecha de entrada en vigor hasta la siguiente. Si vuelves a introducir una fecha, se sustituye esa fila en lugar de añadir otra.
+      rate_type_adjustable: Revisable
+      rate_type_fixed: Fijo
+      rate_type_variable: Variable
+      start_date: Fecha de formalización
+      start_date_hint: Fecha en la que se desembolsó el préstamo. Déjala en blanco para usar la fecha de apertura de la cuenta.
     new:
       title: Introduce los detalles del préstamo
     overview:
@@ -24,6 +43,7 @@ es:
       term: Plazo
       type: Tipo
       unknown: Desconocido
+      original_payoff_date: Fecha original de amortización total
     tabs:
       overview:
         interest_rate: Tipo de interés
@@ -35,3 +55,37 @@ es:
         type: Tipo
         unknown: Desconocido
         edit_loan_details: Editar detalles del préstamo
+        total_cost: Coste total
+        total_insurance: Seguros
+        insurance_rate_only: "%{rate} al año"
+        leverage: Apalancamiento
+        leverage_band_conservative: Conservador
+        leverage_band_high: Alto
+        leverage_band_moderate: Moderado
+        leverage_multiple: "%{ratio}x"
+        total_cost_with_insurance: Coste total, incluido el seguro
+        original_payoff_date: Fecha original de amortización total
+      repayment_progress:
+        insurance: Seguros
+        interest: Interés
+        of_original: de %{amount}
+        total: Total
+        instalment: Pago %{number} · %{date}
+        principal: Capital
+        repaid: Amortizado
+      schedule:
+        date: Fecha
+        interest: Interés
+        monthly_payment: Cuota mensual
+        not_applicable: N/D
+        payment: Pago
+        total_cost: Coste total
+        description: Proyección a partir del saldo, el tipo y el plazo originales, desde el %{start_date}. No incluye pagos adicionales.
+        forecasted_payoff_date: Fecha prevista de amortización total
+        forecasted_payoff_not_converged: No se amortiza con la cuota actual
+        number: "#"
+        opening_payment: Pago inicial
+        remaining_balance: Saldo pendiente
+        total_interest: Intereses totales
+        variable_rate_notice: El tipo de interés de este préstamo cambia con el tiempo. El calendario se recalcula con cada cambio registrado, manteniendo la fecha original de amortización total y ajustando la cuota; un cambio aún no registrado modificará estas cifras.
+        principal: Capital

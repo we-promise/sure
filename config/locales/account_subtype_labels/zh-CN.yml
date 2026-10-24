@@ -1,0 +1,40 @@
+---
+zh-CN:
+  investments:
+    subtypes:
+      non-registered:
+        long: 非注册投资账户
+      fhsa:
+        long: 首次购房储蓄账户（FHSA）
+      rdsp:
+        long: 注册残障储蓄计划（RDSP）
+      dpsp:
+        long: 递延利润分享计划（DPSP）
+      prpp:
+        long: 集合注册养老金计划（PRPP）
+      lif:
+        long: 终身收入基金（LIF）
+      lrif:
+        long: 锁定退休收入基金（LRIF）
+      prif:
+        long: 特定规则注册退休收入基金（PRIF）
+      rlif:
+        long: 受限终身收入基金（RLIF）
+      assurance_vie:
+        long: 法国人寿保险储蓄（Assurance Vie）
+  loans:
+    subtypes:
+      home_equity:
+        long: 房屋净值贷款
+      line_of_credit:
+        long: 信用额度
+      business:
+        long: 企业贷款
+      mortgage:
+        long: 房贷
+      student:
+        long: 学生贷款
+      auto:
+        long: 车贷
+      other:
+        long: 其他贷款

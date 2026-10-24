@@ -13,6 +13,25 @@ zh-TW:
       none: 無
       subtype_prompt: 選擇貸款類型
       subtype_none: 無
+      down_payment: 頭期款
+      insurance_rate: 保險費率
+      insurance_rate_hint: 年費率，按月隨還款收取。定額型以原始本金計費，遞減型以尚欠本金計費。
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: 保險類型
+      insurance_rate_type_decreasing_life: 遞減型
+      insurance_rate_type_level_term: 定額定期型
+      rate_change_add: 新增利率變動
+      rate_change_effective_date: 生效日
+      rate_change_rate: 利率
+      rate_change_remove: 移除
+      rate_changes: 利率變動
+      rate_changes_empty: 尚未記錄利率變動，貸款以以上利率計算。
+      rate_changes_hint: 每列設定自生效日起至下次變動前適用的利率。再次輸入相同日期會取代該列，不會新增第二列。
+      rate_type_adjustable: 定期調整
+      rate_type_fixed: 固定
+      rate_type_variable: 浮動
+      start_date: 撥款日
+      start_date_hint: 貸款撥付日期。留白即使用帳戶開立日期。
     new:
       title: 輸入貸款詳情
     overview:
@@ -24,6 +43,7 @@ zh-TW:
       term: 貸款期限
       type: 類型
       unknown: 未知
+      original_payoff_date: 原定清償日
     tabs:
       overview:
         interest_rate: 利率
@@ -35,3 +55,37 @@ zh-TW:
         type: 類型
         unknown: 未知
         edit_loan_details: 編輯貸款詳細資料
+        insurance_rate_only: 每年 %{rate}
+        leverage: 槓桿
+        leverage_band_conservative: 保守
+        leverage_band_high: 高
+        leverage_band_moderate: 適中
+        leverage_multiple: "%{ratio} 倍"
+        original_payoff_date: 原定清償日
+        total_cost: 總費用
+        total_cost_with_insurance: 含保險總費用
+        total_insurance: 保險
+      repayment_progress:
+        instalment: 第 %{number} 期還款 · %{date}
+        insurance: 保險
+        interest: 利息
+        of_original: "／%{amount}"
+        principal: 本金
+        repaid: 已償還
+        total: 總計
+      schedule:
+        date: 日期
+        description: 依原始本金、利率與期數推估，自 %{start_date} 起算，不含額外還款。
+        forecasted_payoff_date: 預估清償日
+        forecasted_payoff_not_converged: 目前還款額不足以清償
+        interest: 利息
+        monthly_payment: 每月還款額
+        not_applicable: 不適用
+        number: "#"
+        opening_payment: 期初付款
+        payment: 還款
+        principal: 本金
+        remaining_balance: 剩餘餘額
+        total_cost: 總費用
+        total_interest: 總利息
+        variable_rate_notice: 此貸款利率隨時間變動。每次記錄利率變動後，還款表會重新攤還計算，維持原定清償日並調整每期還款額；尚未記錄的變動會影響這些數字。

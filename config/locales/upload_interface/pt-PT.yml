@@ -1,0 +1,14 @@
+---
+pt-PT:
+  upload_interface:
+    too_many_files: 'Demasiados ficheiros (máximo: %{max})'
+    file_too_large: 'Ficheiro demasiado grande (máximo: %{max} MB)'
+    uploading: A carregar %{filename}…
+    qif_invalid: Tem de ser um ficheiro QIF válido
+    amount_type_strategies:
+      signed_amount: Montante com sinal
+      custom_column: Coluna personalizada
+    upload_files:
+      one: Carregar %{count} ficheiro
+      many: Carregar %{count} ficheiros
+      other: Carregar %{count} ficheiros

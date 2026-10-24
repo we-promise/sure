@@ -1,0 +1,32 @@
+---
+ru:
+  properties:
+    update:
+      success: Сведения о недвижимости обновлены.
+      error: Не удалось обновить сведения о недвижимости.
+    update_balances:
+      success: Баланс обновлён.
+    update_address:
+      success: Адрес обновлён.
+      error: Не удалось обновить адрес. Проверьте обязательные поля.
+  enable_banking_items:
+    account_types:
+      card: Карточный счёт
+      overdraft: Счёт с овердрафтом
+      transacting: Расчётный счёт
+      salary: Зарплатный счёт
+      non_resident_external: Внешний счёт нерезидента
+      tax: Налоговый счёт
+      cash_trading: Счёт для торговли без заёмных средств
+      overnight_deposit: Депозит овернайт
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Автоматическая категоризация
+        auto_detect_merchants: Автоматическое определение продавцов
+        enhance_provider_merchants: Дополнение данных продавцов от провайдера
+        suggest_bill_setup: Предложения по настройке счетов к оплате
+        process_pdf: Обработка PDF
+        process_pdf_vision: Визуальная обработка PDF
+        extract_bank_statement: Извлечение банковских выписок
+        chat: Чат

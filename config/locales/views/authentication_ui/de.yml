@@ -1,0 +1,20 @@
+---
+de:
+  authentication_ui:
+    password:
+      missing_case: "muss Groß- und Kleinbuchstaben enthalten"
+      missing_number: "muss mindestens eine Ziffer enthalten"
+      missing_special: "muss mindestens ein Sonderzeichen enthalten"
+    sso:
+      copy_failed: "Kopieren in die Zwischenablage fehlgeschlagen"
+      issuer_valid: "Gültiger OIDC-Aussteller"
+      issuer_mismatch_trailing: "Der Aussteller stimmt nicht überein: Die Erkennung hat %{issuer} zurückgegeben. Dies liegt meist an einem abweichenden abschließenden Schrägstrich. Kopiere den Aussteller exakt wie zurückgegeben."
+      issuer_mismatch: "Der Aussteller stimmt nicht überein: Die Erkennung hat %{issuer} zurückgegeben. Kopiere den Aussteller exakt so, wie der Anbieter ihn zurückgibt."
+      browser_validation_unavailable: "Validierung im Browser nicht möglich (CORS). Der Anbieter kann trotzdem gespeichert werden."
+      testing: "Wird getestet…"
+      request_failed: "Anfrage fehlgeschlagen: %{message}"
+    authorization:
+      authorizing: "Wird autorisiert…"
+      denying: "Wird abgelehnt…"
+      explanation: "Mit der Autorisierung erlaubst du dieser App, gemäß den oben aufgeführten Berechtigungen auf deine %{product_name}-Daten zuzugreifen."
+      title: "%{product_name}-Autorisierung"

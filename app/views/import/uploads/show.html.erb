@@ -5,7 +5,7 @@
 <%= content_for :previous_path, imports_path %>
 
 <% if @import.is_a?(SureImport) %>
-  <div class="space-y-4" data-controller="drag-and-drop-import">
+  <div class="space-y-4" data-controller="drag-and-drop-import" data-drag-and-drop-import-invalid-file-type-value="<%= t("imports.create.invalid_file_type") %>">
     <!-- Overlay -->
     <%= render "imports/drag_drop_overlay", title: t("import.uploads.sure_import.drop_title"), subtitle: t("import.uploads.sure_import.drop_subtitle") %>
 
@@ -16,7 +16,7 @@
       </div>
 
       <%= styled_form_with model: @import, scope: :import, url: import_upload_path(@import), multipart: true, class: "space-y-2", data: { drag_and_drop_import_target: "form" } do |form| %>
-        <div class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-action="click->file-upload#triggerFileInput" data-file-upload-target="uploadArea">
+        <div class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-file-upload-uploading-value="<%= t("upload_interface.uploading", filename: "%{filename}") %>" data-action="click->file-upload#triggerFileInput" data-file-upload-target="uploadArea">
           <div class="flex flex-col items-center justify-center pt-5 pb-6">
             <div data-file-upload-target="uploadText" class="flex flex-col items-center">
               <%= icon("database", size: "lg", class: "mb-4 mx-auto") %>
@@ -60,7 +60,7 @@
             { label: t(".qif_account_label"), include_blank: t(".qif_account_placeholder"), selected: @import.account_id },
             required: false %>
 
-      <label for="import_import_file" class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-file-upload-target="uploadArea">
+      <label for="import_import_file" class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-file-upload-uploading-value="<%= t("upload_interface.uploading", filename: "%{filename}") %>" data-file-upload-target="uploadArea">
         <div class="flex flex-col items-center justify-center pt-5 pb-6">
           <div data-file-upload-target="uploadText" class="flex flex-col items-center">
             <%= icon("plus", size: "lg", class: "mb-4 mx-auto") %>
@@ -91,7 +91,7 @@
 
 <% else %>
   <%# ── Standard CSV upload ── %>
-  <div class="space-y-4" data-controller="drag-and-drop-import">
+  <div class="space-y-4" data-controller="drag-and-drop-import" data-drag-and-drop-import-invalid-file-type-value="<%= t("imports.create.invalid_file_type") %>">
     <!-- Overlay -->
     <%= render "imports/drag_drop_overlay", title: t(".drop_csv_title"), subtitle: t(".drop_csv_subtitle") %>
 
@@ -115,7 +115,7 @@
               <%= form.select :account_id, Current.user.accessible_accounts.visible.alphabetically.pluck(:name, :id), { label: t(".account_optional_label"), include_blank: t(".multi_account_import"), selected: @import.account_id } %>
             <% end %>
 
-            <label for="import_import_file_csv" class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-file-upload-target="uploadArea">
+            <label for="import_import_file_csv" class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-file-upload-uploading-value="<%= t("upload_interface.uploading", filename: "%{filename}") %>" data-file-upload-target="uploadArea">
               <div class="flex flex-col items-center justify-center pt-5 pb-6">
                 <div data-file-upload-target="uploadText" class="flex flex-col items-center">
                   <%= icon("plus", size: "lg", class: "mb-4 mx-auto") %>

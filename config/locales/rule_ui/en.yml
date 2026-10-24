@@ -1,0 +1,18 @@
+---
+en:
+  rules:
+    new:
+      back: Back to rules
+      title: New %{resource} rule
+    form:
+      for: FOR
+    edit:
+      title: Edit %{resource} rule
+      title_with_name: Edit %{resource} rule "%{name}"
+  transfers:
+    account_links:
+      missing_account: 'Data error: Missing account'
+      transfer_id: 'Transfer ID: %{id}'
+  tags:
+    create:
+      failed: Could not create tag

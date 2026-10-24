@@ -3,6 +3,11 @@ it:
   transfers:
     create:
       success: Bonifico creato
+      date_invalid: non è valido
+      exchange_rate_unavailable: Tasso di cambio non disponibile per le valute e la
+        data selezionate
+      stale_form: Questo modulo è già stato inviato con dettagli diversi. Aggiorna
+        la pagina e riprova.
     destroy:
       success: Bonifico rimosso
     form:
@@ -12,8 +17,8 @@ it:
       incoming_fee: Commissione bonifico in entrata
       date: Data
       destination_amount: Importo di destinazione
-      destination_amount_display: "Importo di destinazione: %{amount}"
-      exchange_rate_display: "Tasso di cambio: %{rate}"
+      destination_amount_display: 'Importo di destinazione: %{amount}'
+      exchange_rate_display: 'Tasso di cambio: %{rate}'
       expense: Spesa
       from: Da
       income: Entrata
@@ -30,7 +35,8 @@ it:
       delete_title: Rimuovere il bonifico?
       details: Dettagli
       mark_recurring: Segna come ricorrente
-      mark_recurring_subtitle: Traccia questo bonifico come schema ricorrente nel feed delle prossime uscite e nella pagina dei ricorrenti.
+      mark_recurring_subtitle: Traccia questo bonifico come schema ricorrente nel
+        feed delle prossime uscite e nella pagina dei ricorrenti.
       mark_recurring_title: Segna il bonifico come ricorrente
       note_label: Note
       note_placeholder: Aggiungi una nota a questo bonifico

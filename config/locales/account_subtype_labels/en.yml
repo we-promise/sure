@@ -1,0 +1,40 @@
+---
+en:
+  investments:
+    subtypes:
+      non-registered:
+        long: Non-Registered Investment Account
+      fhsa:
+        long: First Home Savings Account
+      rdsp:
+        long: Registered Disability Savings Plan
+      dpsp:
+        long: Deferred Profit Sharing Plan
+      prpp:
+        long: Pooled Registered Pension Plan
+      lif:
+        long: Life Income Fund
+      lrif:
+        long: Locked-In Retirement Income Fund
+      prif:
+        long: Prescribed Registered Retirement Income Fund
+      rlif:
+        long: Restricted Life Income Fund
+      assurance_vie:
+        long: Assurance Vie
+  loans:
+    subtypes:
+      home_equity:
+        long: Home Equity Loan
+      line_of_credit:
+        long: Line of Credit
+      business:
+        long: Business Loan
+      mortgage:
+        long: Mortgage
+      student:
+        long: Student Loan
+      auto:
+        long: Auto Loan
+      other:
+        long: Other Loan

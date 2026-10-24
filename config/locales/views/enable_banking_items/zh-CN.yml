@@ -74,7 +74,7 @@ zh-CN:
       create_accounts: 创建账户
       creating_accounts: 正在创建账户...
       cancel: 取消
-      psd2_savings_notice: 根据 PSD2 规则，部分储蓄账户可能需要额外授权。
+      psd2_savings_notice: "提示：部分法国受监管储蓄账户（Livret A、PEL、LEP、LDDS）可能无法通过开放银行（PSD2）访问，或仅提供有限访问。如果缺少储蓄账户，你可以手动添加。"
     new:
       link_enable_banking_title: 连接 Enable Banking
       session_expired: 会话已过期 - 需要重新授权

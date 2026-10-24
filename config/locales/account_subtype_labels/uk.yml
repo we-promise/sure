@@ -1,0 +1,40 @@
+---
+uk:
+  investments:
+    subtypes:
+      non-registered:
+        long: Незареєстрований інвестиційний рахунок
+      fhsa:
+        long: Ощадний рахунок для придбання першого житла (FHSA)
+      rdsp:
+        long: Зареєстрований накопичувальний план для людей з інвалідністю (RDSP)
+      dpsp:
+        long: План відстроченої участі у прибутку (DPSP)
+      prpp:
+        long: Колективний зареєстрований пенсійний план (PRPP)
+      lif:
+        long: Фонд довічного доходу (LIF)
+      lrif:
+        long: Заблокований фонд пенсійного доходу (LRIF)
+      prif:
+        long: Зареєстрований фонд пенсійного доходу зі спеціальним регулюванням (PRIF)
+      rlif:
+        long: Фонд довічного доходу з обмеженнями (RLIF)
+      assurance_vie:
+        long: Французьке страхування життя (Assurance Vie)
+  loans:
+    subtypes:
+      home_equity:
+        long: Кредит під заставу власного капіталу в житлі
+      line_of_credit:
+        long: Кредитна лінія
+      business:
+        long: Кредит для бізнесу
+      mortgage:
+        long: Іпотека
+      student:
+        long: Студентська позика
+      auto:
+        long: Автокредит
+      other:
+        long: Інша позика

@@ -1,0 +1,17 @@
+---
+pt-PT:
+  recurring_allocations:
+    already_allocated: Essa transação já foi aplicada a esta despesa a pagar
+    confirm:
+      success: Pagamento aplicado à despesa a pagar
+    create:
+      success: Pagamento aplicado
+    destroy:
+      success: Pagamento desassociado
+    invalid: Não foi possível registar o pagamento
+    missing_rate: Não há taxa de câmbio disponível; introduza explicitamente o montante
+    over_allocation: Esta ação afetaria um montante superior ao da transação
+    reject:
+      success: >-
+        Sugestão dispensada. Essa transação não será sugerida novamente para esta
+        despesa a pagar.

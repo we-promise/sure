@@ -3,7 +3,7 @@ it:
   tags:
     create:
       created: Etichetta creata
-      error: "Errore nella creazione dell'etichetta: %{error}"
+      error: 'Errore nella creazione dell''etichetta: %{error}'
     destroy:
       deleted: Etichetta eliminata
     destroy_all:
@@ -24,3 +24,9 @@ it:
       edit: Modifica
     update:
       updated: Etichetta aggiornata
+    menu:
+      label: Modifica etichette
+      loading: Caricamento etichette...
+    summary:
+      add: Aggiungi etichette
+      title: 'Etichette: %{names}'

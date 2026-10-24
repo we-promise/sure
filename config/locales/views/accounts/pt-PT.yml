@@ -3,9 +3,9 @@ pt-PT:
   account:
     entries:
       destroy:
-        success: "Registo eliminado com sucesso."
+        success: Registo eliminado com sucesso.
   accounts:
-    not_authorized: "Não tem permissão para gerir esta conta"
+    not_authorized: Não tem permissão para gerir esta conta
     account:
       complete_setup: Concluir configuração
       edit: Editar
@@ -27,19 +27,22 @@ pt-PT:
     chart:
       data_not_available: Dados não disponíveis para o período selecionado
     create:
-      success: "Conta %{type} criada"
+      success: Conta %{type} criada
     set_default:
-      depository_only: "Apenas as contas de dinheiro e cartões de crédito podem ser definidas como predefinidas."
+      depository_only: >-
+        Apenas as contas de dinheiro e cartões de crédito podem ser definidas como
+        predefinidas.
     destroy:
-      success: "Conta %{type} agendada para eliminação"
-      cannot_delete_linked: "Não é possível eliminar uma conta ligada. Desligue-a primeiro."
-      failed: "A eliminação do recurso falhou. Tente novamente mais tarde."
+      success: Conta %{type} agendada para eliminação
+      cannot_delete_linked: Não é possível eliminar uma conta ligada. Desligue-a primeiro.
+      failed: A eliminação do recurso falhou. Tente novamente mais tarde.
     empty:
-      empty_message: Adicione uma conta através de ligação, importação ou introdução manual.
+      empty_message: Adicione uma conta através de ligação, importação ou introdução
+        manual.
       new_account: Nova conta
       no_accounts: Ainda sem contas
     form:
-      balance: "Saldo à data:"
+      balance: 'Saldo à data:'
       opening_balance_date_label: Data do saldo inicial
       name_label: Nome da conta
       name_placeholder: Exemplo de nome de conta
@@ -49,10 +52,14 @@ pt-PT:
       institution_domain_label: Domínio da instituição
       institution_domain_placeholder: ex., montepio.pt
       notes_label: Notas
-      notes_placeholder: Guarde informações adicionais, como números de conta, códigos de classificação, IBAN, números de encaminhamento, etc.
+      notes_placeholder: >-
+        Guarde informações adicionais, como números de conta, códigos de classificação,
+        IBAN, números de encaminhamento, etc.
       exclude_from_reports: Excluir de todos os relatórios
       enable_category_matcher_label: Ativar correspondência de categorias
-      enable_category_matcher_hint: Quando ativado, a categoria sugerida pelo serviço externo é aplicada às transações importadas. Desative para deixar as novas transações sem categoria.
+      enable_category_matcher_hint: >-
+        Quando ativado, a categoria sugerida pelo serviço externo é aplicada às transações
+        importadas. Desative para deixar as novas transações sem categoria.
     index:
       accounts: Contas
       cancel_sync: Cancelar sincronização
@@ -60,29 +67,40 @@ pt-PT:
         other_accounts: Outras contas
       new_account: Nova conta
       sync: Sincronizar tudo
+      financekit_accounts:
+        description: Gira as ligações com a Apple Wallet e sincronize pela aplicação
+          Sure para iOS.
+        title: Apple Wallet
     sync_all:
-      syncing: "A sincronizar contas..."
+      syncing: A sincronizar contas...
     new:
       import_accounts: Importar contas
       container:
         select: Selecionar
         navigate: Navegar
         close: Fechar
+        next: Seguinte
+        previous: Anterior
       method_selector:
         connected_entry: Ligar conta
         connected_entry_eu: Ligar conta da UE
-        link_with_provider: "Ligar com %{provider}"
+        link_with_provider: Ligar com %{provider}
         lunchflow_entry: Ligar conta do Lunch Flow
         manual_entry: Introduzir saldo da conta
         title: Como gostaria de adicionar?
       title: O que gostaria de adicionar?
     show:
-      limited_fx_history_warning: "O histórico de taxas de câmbio só está disponível a partir de %{date}. As transações anteriores a esta data utilizam conversões de moeda aproximadas — tal acontece quando o serviço externo de câmbio apenas oferece uma janela histórica limitada."
+      limited_fx_history_warning: >-
+        O histórico de taxas de câmbio só está disponível a partir de %{date}. As
+        transações anteriores a esta data utilizam conversões de moeda aproximadas
+        — tal acontece quando o serviço externo de câmbio apenas oferece uma janela
+        histórica limitada.
       tabs:
         activity: Atividade
         holdings: Posições
         overview: Visão geral
         statements: Extratos
+        schedule: Plano de pagamentos
       activity:
         amount: Montante
         balance: Saldo
@@ -104,6 +122,8 @@ pt-PT:
         search_placeholder: Pesquisar registos por nome
         status: Estado
         title: Atividade
+        category: Categoria
+        uncategorized_only: Apenas sem categoria
       chart:
         balance: Saldo
         owed: Montante em dívida
@@ -111,11 +131,12 @@ pt-PT:
         complete_setup: Concluir configuração
       menu:
         confirm_accept: Eliminar "%{name}"
-        confirm_body_html: "<p>Ao eliminar esta conta, irá apagar o seu histórico de valores,
-          afetando vários aspetos da sua conta geral. Esta ação
-          terá um impacto direto nos cálculos do património líquido e nos
-          gráficos da conta.</p><br /> <p>Após a eliminação, não há forma de restaurar
-          as informações da conta, pois terá de a adicionar como uma nova conta.</p>"
+        confirm_body_html: >-
+          <p>Ao eliminar esta conta, irá apagar o seu histórico de valores, afetando
+          vários aspetos da sua conta geral. Esta ação terá um impacto direto nos
+          cálculos do património líquido e nos gráficos da conta.</p><br /> <p>Após
+          a eliminação, não há forma de restaurar as informações da conta, pois terá
+          de a adicionar como uma nova conta.</p>
         confirm_title: Eliminar conta?
         delete_account: Eliminar conta
         edit: Editar
@@ -128,10 +149,13 @@ pt-PT:
         exclude_from_reports: Excluir de todos os relatórios
         include_in_reports: Incluir nos relatórios
     update:
-      success: "Conta %{type} atualizada"
+      success: Conta %{type} atualizada
     sidebar:
       missing_data: Dados históricos em falta
-      missing_data_description: "%{product} utiliza fontes externas para obter dados históricos, como taxas de câmbio, preços de títulos, entre outros, para calcular com precisão os saldos históricos das contas."
+      missing_data_description: >-
+        %{product} utiliza fontes externas para obter dados históricos, como taxas
+        de câmbio, preços de títulos, entre outros, para calcular com precisão os
+        saldos históricos das contas.
       configure_providers: Configure aqui as fontes externas.
       tabs:
         all: Tudo
@@ -140,7 +164,9 @@ pt-PT:
       new_asset: Novo ativo
       new_debt: Nova dívida
       new_account: Nova conta
-      new_account_group: "Novo(a) %{account_group}"
+      new_account_group: Novo(a) %{account_group}
+      collapse_all: Recolher tudo
+      expand_all: Expandir tudo
     types:
       depository: Dinheiro
       investment: Investimento
@@ -181,24 +207,30 @@ pt-PT:
       generic: Geral
     confirm_unlink:
       title: Desligar conta do serviço externo?
-      description_html: "Está prestes a desligar <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Isto irá convertê-la numa conta manual."
+      description_html: >-
+        Está prestes a desligar <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>.
+        Isto irá convertê-la numa conta manual.
       warning_title: O que isto significa
-      warning_no_sync: A conta deixará de sincronizar automaticamente com o seu serviço externo
+      warning_no_sync: A conta deixará de sincronizar automaticamente com o seu serviço
+        externo
       warning_manual_updates: Terá de adicionar transações e atualizar saldos manualmente
       warning_transactions_kept: Todas as transações e saldos existentes serão preservados
       warning_can_delete: Após desligar, poderá eliminar a conta, se necessário
       confirm_button: Confirmar e desligar
+      warning_wallet_connection: >-
+        Todas as contas desta ligação à Apple Wallet serão desassociadas. As transações
+        e os saldos serão preservados. Poderá voltar a ligar através da aplicação
+        Sure para iOS com uma nova configuração da Wallet.
     unlink:
-      success: "Conta desligada com sucesso. Agora é uma conta manual."
-      not_linked: "A conta não está ligada a um serviço externo"
-      error: "Falha ao desligar a conta: %{error}"
-      generic_error: "Ocorreu um erro inesperado. Tente novamente."
+      success: Conta desligada com sucesso. Agora é uma conta manual.
+      not_linked: A conta não está ligada a um serviço externo
+      error: 'Falha ao desligar a conta: %{error}'
+      generic_error: Ocorreu um erro inesperado. Tente novamente.
     select_provider:
       title: Selecionar um serviço externo para ligar
-      description: "Escolha o serviço externo que pretende utilizar para ligar %{account_name}"
-      already_linked: "A conta já está ligada a um serviço externo"
-      no_providers: "Nenhum serviço externo configurado atualmente"
-
+      description: Escolha o serviço externo que pretende utilizar para ligar %{account_name}
+      already_linked: A conta já está ligada a um serviço externo
+      no_providers: Nenhum serviço externo configurado atualmente
   email_confirmations:
     new:
       invalid_token: Link de confirmação inválido ou expirado.

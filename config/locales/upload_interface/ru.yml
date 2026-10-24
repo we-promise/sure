@@ -1,0 +1,15 @@
+---
+ru:
+  upload_interface:
+    too_many_files: Слишком много файлов (максимум %{max})
+    file_too_large: Слишком большой файл (максимум %{max} МБ)
+    uploading: Загрузка %{filename}…
+    qif_invalid: Требуется корректный файл QIF
+    amount_type_strategies:
+      signed_amount: Сумма со знаком
+      custom_column: Пользовательский столбец
+    upload_files:
+      one: Загрузить %{count} файл
+      few: Загрузить %{count} файла
+      many: Загрузить %{count} файлов
+      other: Загрузить файлы (%{count})

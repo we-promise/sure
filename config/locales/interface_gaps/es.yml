@@ -1,0 +1,17 @@
+---
+es:
+  binance_items:
+    setup_accounts:
+      historical_import: Importación del historial
+  enable_banking_items:
+    setup_accounts:
+      psd2_savings_notice: 'Nota: Algunas cuentas de ahorro reguladas francesas (Livret
+        A, PEL, LEP, LDDS) pueden tener un acceso limitado o no estar disponibles
+        a través de la banca abierta (PSD2). Si falta una cuenta de ahorro, puedes
+        añadirla manualmente.'
+  reports:
+    index:
+      period_aria: Período del informe
+  shared:
+    transaction_tabs:
+      aria: Tipo de transacción

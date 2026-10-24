@@ -1,0 +1,17 @@
+---
+vi:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: Có thể cấu hình bằng biến môi trường hoặc ghi đè bên dưới.
+        optional: Không bắt buộc
+      update:
+        failed: Không thể cập nhật cài đặt nhà cung cấp. Vui lòng thử lại.
+    llm_usages:
+      show:
+        http_status: 'Trạng thái HTTP: %{status}'
+  shared:
+    async_loading:
+      timeout: Hết thời gian chờ
+      failed_with_status: Không thể tải (%{status})
+      network_error: Lỗi mạng

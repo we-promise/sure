@@ -1,0 +1,6 @@
+---
+de:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Einmalige Einnahme (von Durchschnittswerten ausgeschlossen)"
+      one_time_expense_tooltip: "Einmalige Ausgabe (von Durchschnittswerten ausgeschlossen)"

@@ -1,0 +1,32 @@
+---
+de:
+  properties:
+    update:
+      success: Die Immobiliendetails wurden aktualisiert.
+      error: Die Immobiliendetails konnten nicht aktualisiert werden.
+    update_balances:
+      success: Der Kontostand wurde aktualisiert.
+    update_address:
+      success: Die Adresse wurde aktualisiert.
+      error: Die Adresse konnte nicht aktualisiert werden. Bitte prüfen Sie die Pflichtfelder.
+  enable_banking_items:
+    account_types:
+      card: Kartenkonto
+      overdraft: Überziehungskonto
+      transacting: Transaktionskonto
+      salary: Gehaltskonto
+      non_resident_external: Externes Konto für Nichtansässige
+      tax: Steuerkonto
+      cash_trading: Konto für Kassageschäfte
+      overnight_deposit: Tagesgeldanlage
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Automatische Kategorisierung
+        auto_detect_merchants: Automatische Händlererkennung
+        enhance_provider_merchants: Anreicherung der Händlerdaten des Anbieters
+        suggest_bill_setup: Vorschläge zur Rechnungseinrichtung
+        process_pdf: PDF-Verarbeitung
+        process_pdf_vision: Visuelle PDF-Verarbeitung
+        extract_bank_statement: Extraktion von Kontoauszügen
+        chat: Chat

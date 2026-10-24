@@ -152,13 +152,13 @@ pt-BR:
       annual: Anualmente, em %{day} de %{month}
       biweekly: 'A cada 2 semanas: %{weekday}'
       custom: Programação personalizada
-      every_n_months: A cada %{interval} meses, no dia %{day}
+      every_n_months: "A cada %{interval} meses, dia: %{day}"
       every_n_weeks: 'A cada %{interval} semanas: %{weekday}'
       every_n_years: A cada %{interval} anos, em %{day} de %{month}
       last_day: último dia
-      monthly: Mensalmente, no dia %{day}
-      quarterly: Trimestralmente, no dia %{day}
-      semiannual: A cada 6 meses, no dia %{day}
+      monthly: "Mensalmente, dia: %{day}"
+      quarterly: "Trimestralmente, dia: %{day}"
+      semiannual: "A cada 6 meses, dia: %{day}"
       semimonthly: Duas vezes por mês, nos dias %{first} e %{second}
       weekly: 'Semanalmente: %{weekday}'
     frequency_interval_units:

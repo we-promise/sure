@@ -1,0 +1,6 @@
+---
+zh-TW:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "一次性收入（不計入平均值）"
+      one_time_expense_tooltip: "一次性支出（不計入平均值）"

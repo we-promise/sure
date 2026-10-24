@@ -31,8 +31,8 @@ it:
     family_merchants: Esercenti
     guides: Guide
     holdings: Portafoglio
-    home: Home
-    hostings: Self-Hosting
+    home: Pagina iniziale
+    hostings: Hosting autonomo
     ibkr_items: Interactive Brokers
     impersonation_sessions: Impersonazioni
     imports: Importazioni
@@ -70,7 +70,7 @@ it:
     rules: Regole
     securities: Titoli
     security: Sicurezza
-    self_hosting: Self-Hosting
+    self_hosting: Hosting autonomo
     sessions: Accedi
     simplefin_items: SimpleFIN
     snaptrade_items: SnapTrade
@@ -87,3 +87,8 @@ it:
     users: Utenti
     valuations: Valutazioni
     vehicles: Veicoli
+    changelog: Novità
+    feedback: Feedback
+    redbark_items: Redbark
+    monobank_items: Monobank
+    system_health: Stato del sistema

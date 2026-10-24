@@ -1,0 +1,20 @@
+---
+tr:
+  authentication_ui:
+    password:
+      missing_case: "hem büyük hem de küçük harf içermelidir"
+      missing_number: "en az bir rakam içermelidir"
+      missing_special: "en az bir özel karakter içermelidir"
+    sso:
+      copy_failed: "Panoya kopyalanamadı"
+      issuer_valid: "Geçerli OIDC sağlayıcısı"
+      issuer_mismatch_trailing: "Sağlayıcı adresi eşleşmiyor: keşif %{issuer} değerini döndürdü. Bu genellikle sondaki eğik çizgi farkından kaynaklanır. Sağlayıcı adresini döndürüldüğü biçimiyle aynen kopyalayın."
+      issuer_mismatch: "Sağlayıcı adresi eşleşmiyor: keşif %{issuer} değerini döndürdü. Sağlayıcı adresini sağlayıcının döndürdüğü biçimiyle aynen kopyalayın."
+      browser_validation_unavailable: "Tarayıcıdan doğrulanamadı (CORS). Sağlayıcı yine de kaydedilebilir."
+      testing: "Test ediliyor…"
+      request_failed: "İstek başarısız oldu: %{message}"
+    authorization:
+      authorizing: "Yetkilendiriliyor…"
+      denying: "Reddediliyor…"
+      explanation: "Yetkilendirerek bu uygulamanın %{product_name} verilerinize yukarıdaki izinler doğrultusunda erişmesine izin verirsiniz."
+      title: "%{product_name} Yetkilendirmesi"

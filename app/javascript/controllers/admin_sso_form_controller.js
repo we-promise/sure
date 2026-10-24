@@ -3,6 +3,13 @@ import { Controller } from "@hotwired/stimulus"
 // Connects to data-controller="admin-sso-form"
 export default class extends Controller {
   static targets = ["callbackUrl", "testResult", "samlCallbackUrl"]
+  static values = { messages: Object }
+
+  message(key, parameters = {}) {
+    return this.messagesValue[key].replace(/%\{(\w+)\}/g, (placeholder, name) =>
+      Object.prototype.hasOwnProperty.call(parameters, name) ? String(parameters[name]) : placeholder
+    )
+  }
 
   connect() {
     // Initialize field visibility on page load
@@ -67,15 +74,15 @@ export default class extends Controller {
 
   copySamlCallback(event) {
     event.preventDefault()
+    const button = event.currentTarget
 
     if (!this.hasSamlCallbackUrlTarget) return
 
     const callbackUrl = this.samlCallbackUrlTarget.textContent
 
     navigator.clipboard.writeText(callbackUrl).then(() => {
-      const button = event.currentTarget
       const originalText = button.innerHTML
-      button.innerHTML = '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!'
+      button.textContent = this.messagesValue.copied
       button.classList.add('text-green-600')
 
       setTimeout(() => {
@@ -84,7 +91,7 @@ export default class extends Controller {
       }, 2000)
     }).catch(err => {
       console.error('Failed to copy:', err)
-      alert('Failed to copy to clipboard')
+      alert(this.messagesValue.copy_failed)
     })
   }
 
@@ -114,15 +121,15 @@ export default class extends Controller {
           if (data.issuer === issuer) {
             issuerInput.classList.remove('border-yellow-300', 'border-red-300', 'border-amber-300')
             issuerInput.classList.add('border-green-300')
-            this.showValidationMessage(issuerInput, 'Valid OIDC issuer', 'success')
+            this.showValidationMessage(issuerInput, this.messagesValue.issuer_valid, 'success')
           } else {
             issuerInput.classList.remove('border-yellow-300', 'border-green-300')
             issuerInput.classList.add('border-amber-300')
 
             const trailingSlashOnly = data.issuer.replace(/\/$/, '') === issuer.replace(/\/$/, '')
             const message = trailingSlashOnly
-              ? `Issuer mismatch: discovery returned ${data.issuer}. This is usually a trailing slash mismatch, so copy the issuer exactly as returned.`
-              : `Issuer mismatch: discovery returned ${data.issuer}. Copy the issuer exactly as returned by the provider.`
+              ? this.message("issuer_mismatch_trailing", { issuer: data.issuer })
+              : this.message("issuer_mismatch", { issuer: data.issuer })
 
             this.showValidationMessage(issuerInput, message, 'warning')
           }
@@ -136,12 +143,13 @@ export default class extends Controller {
       // CORS errors are expected when validating from browser - show as warning not error
       issuerInput.classList.remove('border-yellow-300', 'border-green-300')
       issuerInput.classList.add('border-amber-300')
-      this.showValidationMessage(issuerInput, "Could not validate from browser (CORS). Provider can still be saved.", 'warning')
+      this.showValidationMessage(issuerInput, this.messagesValue.browser_validation_unavailable, 'warning')
     }
   }
 
   copyCallback(event) {
     event.preventDefault()
+    const button = event.currentTarget
 
     const callbackDisplay = this.callbackUrlTarget
     if (!callbackDisplay) return
@@ -151,9 +159,8 @@ export default class extends Controller {
     // Copy to clipboard
     navigator.clipboard.writeText(callbackUrl).then(() => {
       // Show success feedback
-      const button = event.currentTarget
       const originalText = button.innerHTML
-      button.innerHTML = '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!'
+      button.textContent = this.messagesValue.copied
       button.classList.add('text-green-600')
       
       setTimeout(() => {
@@ -162,7 +169,7 @@ export default class extends Controller {
       }, 2000)
     }).catch(err => {
       console.error('Failed to copy:', err)
-      alert('Failed to copy to clipboard')
+      alert(this.messagesValue.copy_failed)
     })
   }
 
@@ -199,7 +206,7 @@ export default class extends Controller {
 
     // Show loading state
     button.disabled = true
-    button.textContent = 'Testing...'
+    button.textContent = this.messagesValue.testing
     resultEl.textContent = ''
     resultEl.className = 'ml-2 text-sm'
 
@@ -227,11 +234,11 @@ export default class extends Controller {
         console.log('SSO Test Connection Details:', data.details)
       }
     } catch (error) {
-      resultEl.textContent = `✗ Request failed: ${error.message}`
+      resultEl.textContent = `✗ ${this.message("request_failed", { message: error.message })}`
       resultEl.classList.add('text-red-600')
     } finally {
       button.disabled = false
-      button.textContent = 'Test Connection'
+      button.textContent = this.messagesValue.test_connection
     }
   }
 }

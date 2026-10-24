@@ -35,7 +35,7 @@ es:
         title: Gestión de Claves API
         newly_created:
           page_title: Clave API creada correctamente
-          heading: ¡Clave API creada correctamente!
+          heading: "¡Clave API creada correctamente!"
           key_ready: Tu nueva clave API "%{name}" se ha creado y está lista para usarse.
           your_api_key: Tu clave API
           copy_store_securely: Copia y guarda esta clave en un lugar seguro. La necesitarás para autenticar tus peticiones a la API.
@@ -51,7 +51,7 @@ es:
           usage_instructions: 'Incluye tu clave API en el encabezado X-Api-Key al realizar solicitudes a la API de %{product_name}:'
           back_to_keys: Volver a claves API
           revoke_key: Revocar Clave
-          revoke_confirmation: ¿Estás seguro de que deseas revocar esta clave API? Esta acción no se puede deshacer y deshabilitará inmediatamente todas las aplicaciones que usen esta clave.
+          revoke_confirmation: "¿Estás seguro de que deseas revocar esta clave API? Esta acción no se puede deshacer y deshabilitará inmediatamente todas las aplicaciones que usen esta clave."
           description: Tu clave API activa está lista para usar. Mantenla segura y nunca la compartas públicamente.
           active: Activa
           key_name: Nombre
@@ -115,3 +115,5 @@ es:
         usage_instructions: 'Usa tu clave API incluyéndola en el encabezado X-Api-Key:'
         copy_key: Copiar Clave API
         continue: Continuar a Configuración de Claves API
+      key_reveal:
+        copied: "¡Copiado!"

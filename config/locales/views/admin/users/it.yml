@@ -3,49 +3,137 @@ it:
   admin:
     users:
       index:
-        title: "Gestione utenti"
-        description: "Gestisci i ruoli utente per la tua istanza. I super amministratori possono accedere alle impostazioni del provider SSO e alla gestione utenti."
-        section_title: "Famiglie / Gruppi"
+        title: Gestione utenti
+        description: Gestisci i ruoli utente per la tua istanza. I super amministratori
+          possono accedere alle impostazioni del provider SSO e alla gestione utenti.
+        section_title: Famiglie / Gruppi
         you: "(Tu)"
-        trial_ends_at: "Prova scade"
-        not_available: "n/d"
-        no_users: "Nessun utente trovato."
-        unnamed_family: "Famiglia/Gruppo senza nome"
-        no_subscription: "Nessun abbonamento"
+        trial_ends_at: Prova scade
+        not_available: n/d
+        no_users: Nessun utente trovato.
+        unnamed_family: Famiglia/Gruppo senza nome
+        no_subscription: Nessun abbonamento
         family_summary: "%{members} membri · %{accounts} conti · %{transactions} transazioni"
         filters:
-          role: "Ruolo"
-          role_all: "Tutti i ruoli"
-          trial_status: "Stato prova"
-          trial_all: "Tutti"
-          trial_expiring_soon: "In scadenza in 7 giorni"
-          trial_trialing: "In prova"
-          submit: "Filtra"
+          role: Ruolo
+          role_all: Tutti i ruoli
+          trial_status: Stato prova
+          trial_all: Tutti
+          trial_expiring_soon: In scadenza in 7 giorni
+          trial_trialing: In prova
+          submit: Filtra
         table:
-          user: "Utente"
-          trial_ends_at: "Prova scade"
-          family_accounts: "Conti famiglia"
-          family_transactions: "Transazioni famiglia"
-          last_login: "Ultimo accesso"
-          session_count: "Numero sessioni"
-          never: "Mai"
-          role: "Ruolo"
-        role_descriptions_title: "Descrizioni ruoli"
+          user: Utente
+          trial_ends_at: Prova scade
+          family_accounts: Conti famiglia
+          family_transactions: Transazioni famiglia
+          last_login: Ultimo accesso
+          session_count: Numero sessioni
+          never: Mai
+          role: Ruolo
+          actions: Azioni
+          create_new_family_option: "+ Crea nuova famiglia/gruppo"
+          family: Famiglia / Gruppo
+          keep_current_family: Mantieni famiglia/gruppo attuale
+          new_family_moniker: Tipo della nuova famiglia/gruppo
+          new_family_name: Nome della nuova famiglia/gruppo
+          new_family_name_placeholder: Inserisci un nome per creare una nuova famiglia/gruppo
+          password_placeholder: Lascia vuoto per mantenere il valore attuale
+          set_password: Imposta nuova password
+        role_descriptions_title: Descrizioni ruoli
         roles:
-          guest: "Ospite"
-          member: "Membro"
-          admin: "Amministratore"
-          super_admin: "Super amministratore"
+          guest: Ospite
+          member: Membro
+          admin: Amministratore
+          super_admin: Super amministratore
         role_descriptions:
-          guest: "Esperienza assistente-first con permessi volutamente limitati per i flussi di introduzione."
-          member: "Accesso utente base. Può gestire i propri conti, transazioni e impostazioni."
-          admin: "Amministratore famiglia. Può accedere alle impostazioni avanzate come chiavi API, importazioni e prompt AI."
-          super_admin: "Amministratore istanza. Può gestire provider SSO, ruoli utente e impersonare utenti per supporto."
+          guest: Esperienza assistente-first con permessi volutamente limitati per
+            i flussi di introduzione.
+          member: Accesso utente base. Può gestire i propri conti, transazioni e impostazioni.
+          admin: Amministratore famiglia. Può accedere alle impostazioni avanzate
+            come chiavi API, importazioni e prompt AI.
+          super_admin: Amministratore istanza. Può gestire provider SSO, ruoli utente
+            e impersonare utenti per supporto.
         invitations:
-          pending_label: "Invitato (in attesa)"
-          expires: "Scade %{date}"
-          delete: "Elimina"
-          delete_all: "Elimina tutto"
+          pending_label: Invitato (in attesa)
+          expires: Scade %{date}
+          delete: Elimina
+          delete_all: Elimina tutto
+        family_monikers:
+          family: Famiglia
+          group: Gruppo
+        actions:
+          delete_user: Elimina utente
+          last_super_admin_role_locked: Il cambio di ruolo è bloccato perché sei l'ultimo
+            super amministratore del sistema.
+          manage_user: Gestisci utente
+          self_edit_warning: Modificare il tuo ruolo cambierà i tuoi privilegi amministrativi.
+          self_update_confirm: Sei sicuro di voler aggiornare il ruolo o la famiglia
+            del tuo account?
+          update: Aggiorna utente
+        auth_types:
+          local: Locale
+          local_and_sso: Locale + SSO
+          sso: SSO
+          sso_provider_tooltip: 'Provider SSO: %{providers}'
+        delete_confirm: Sei sicuro di voler eliminare questo utente? L'azione non
+          può essere annullata.
+        delete_confirm_last_user: 'Sei sicuro di voler eliminare questo utente? È
+          l''ultimo utente della sua famiglia/gruppo: eliminandolo verranno eliminati
+          anche l''intera famiglia/gruppo e tutti i dati associati. L''azione non
+          può essere annullata.'
+        remove: Elimina utente
+        removed_sso_identities:
+          allow_again: Consenti di nuovo
+          confirm: Consentire a %{email} di accedere o creare di nuovo un account
+            tramite SSO?
+          description: Queste identità non possono creare o ricollegare un account.
+            Consenti di nuovo un'identità solo se la rimozione è stata accidentale.
+          title: Identità SSO rimosse
+        unused_families:
+          delete: Elimina famiglia inutilizzata
+          delete_confirm: Sei sicuro di voler eliminare questa famiglia/gruppo inutilizzato?
+            L'azione non può essere annullata.
+          empty: Nessuna famiglia/gruppo inutilizzato trovato.
+          family_id: 'ID famiglia: %{id}'
+          title: Famiglie / gruppi inutilizzati
       update:
-        success: "Ruolo utente aggiornato con successo."
-        failure: "Aggiornamento ruolo utente fallito."
+        success: Ruolo utente aggiornato con successo.
+        failure: Aggiornamento ruolo utente fallito.
+        family_required: Seleziona una famiglia/gruppo esistente oppure inserisci
+          il nome di uno nuovo.
+        last_super_admin_error: Impossibile declassare l'ultimo super amministratore
+          del sistema.
+        password_and_family_conflict: La password e l'appartenenza a una famiglia/gruppo
+          non possono essere aggiornate contemporaneamente.
+        password_missing_case: La password deve contenere lettere maiuscole e minuscole.
+        password_missing_number: La password deve contenere almeno un numero.
+        password_missing_special: La password deve contenere almeno un carattere speciale.
+        password_too_short: La password deve contenere almeno 8 caratteri.
+        success_family: Appartenenza dell'utente alla famiglia/gruppo aggiornata correttamente.
+        success_password: Password dell'utente aggiornata correttamente.
+        success_role: Ruolo dell'utente aggiornato correttamente.
+        success_role_and_password: Ruolo e password dell'utente aggiornati correttamente.
+      deletion:
+        cancel: Annulla
+        email_label: E-mail dell'utente
+        instruction: Digita %{email} per confermare.
+        submit: Rimuovi definitivamente l'utente
+        title: Rimuovi definitivamente l'utente
+        warning: L'accesso viene revocato immediatamente e viene programmata l'eliminazione
+          definitiva dell'utente e dei suoi dati. L'azione non può essere annullata.
+      destroy:
+        cannot_remove_last_super_admin: Non puoi rimuovere l'ultimo super amministratore
+          attivo.
+        cannot_remove_self: Non puoi rimuovere il tuo account da qui.
+        confirmation_mismatch: L'indirizzo e-mail non corrisponde. L'utente non è
+          stato rimosso.
+        failure: Impossibile rimuovere l'utente.
+        success: Accesso utente revocato ed eliminazione definitiva programmata.
+    families:
+      destroy:
+        family_has_active_subscription: La famiglia/il gruppo ha un abbonamento attivo
+          e non può essere eliminato finché l'abbonamento non viene annullato.
+        family_has_users: La famiglia/il gruppo contiene ancora utenti e non può essere
+          eliminato.
+        success: Famiglia/gruppo eliminato correttamente.

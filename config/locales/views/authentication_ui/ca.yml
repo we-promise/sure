@@ -1,0 +1,20 @@
+---
+ca:
+  authentication_ui:
+    password:
+      missing_case: "ha d’incloure lletres majúscules i minúscules"
+      missing_number: "ha d’incloure almenys un número"
+      missing_special: "ha d’incloure almenys un caràcter especial"
+    sso:
+      copy_failed: "No s’ha pogut copiar al porta-retalls"
+      issuer_valid: "Emissor OIDC vàlid"
+      issuer_mismatch_trailing: "L’emissor no coincideix: el descobriment ha retornat %{issuer}. Normalment es deu a una diferència en la barra final. Copia l’emissor exactament com s’ha retornat."
+      issuer_mismatch: "L’emissor no coincideix: el descobriment ha retornat %{issuer}. Copia l’emissor exactament com el retorna el proveïdor."
+      browser_validation_unavailable: "No s’ha pogut validar des del navegador (CORS). Tot i així, es pot desar el proveïdor."
+      testing: "S’està provant…"
+      request_failed: "La sol·licitud ha fallat: %{message}"
+    authorization:
+      authorizing: "S’està autoritzant…"
+      denying: "S’està denegant…"
+      explanation: "En autoritzar, permets que aquesta aplicació accedeixi a les teves dades de %{product_name} segons els permisos anteriors."
+      title: "Autorització de %{product_name}"

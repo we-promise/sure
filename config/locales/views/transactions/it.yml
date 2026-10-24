@@ -38,7 +38,7 @@ it:
       expense: Spesa
       income: Entrata
       merchant_label: Esercente
-      none: (nessuno)
+      none: "(nessuno)"
       note_label: Note
       note_placeholder: Inserisci una nota
       create_tag: Crea
@@ -46,6 +46,12 @@ it:
       tag_search_placeholder: Cerca o crea etichetta
       tags_label: Etichette
       transfer: Bonifico
+      create_merchant: Crea
+      category_search_placeholder: Cerca categorie
+      create_category: Crea «%{name}»
+      create_category_error: Impossibile creare la categoria
+      create_merchant_error: Impossibile creare l'esercente
+      merchant_search_placeholder: Cerca o crea esercente
     create:
       created: Transazione creata
     update:
@@ -56,10 +62,14 @@ it:
       keep_both: No, tienile entrambe
       loan_payment: Pagamento prestito
       mark_recurring: Segna come ricorrente
-      mark_recurring_subtitle: Monitora questa come transazione ricorrente. La varianza dell'importo viene calcolata automaticamente dagli ultimi 6 mesi di transazioni simili.
+      mark_recurring_subtitle: Monitora questa come transazione ricorrente. La varianza
+        dell'importo viene calcolata automaticamente dagli ultimi 6 mesi di transazioni
+        simili.
       mark_recurring_title: Transazione ricorrente
       merge_duplicate: Sì, uniscile
-      potential_duplicate_description: Questa transazione in attesa potrebbe essere la stessa di quella registrata qui sotto. In caso affermativo, uniscile per evitare il doppio conteggio.
+      potential_duplicate_description: Questa transazione in attesa potrebbe essere
+        la stessa di quella registrata qui sotto. In caso affermativo, uniscile per
+        evitare il doppio conteggio.
       potential_duplicate_title: Possibile duplicato rilevato
       transfer: Bonifico
       account_label: Conto
@@ -67,22 +77,29 @@ it:
       category_label: Categoria
       date_label: Data
       delete: Elimina
-      delete_subtitle: Questa operazione elimina permanentemente la transazione, influisce sui saldi storici e non può essere annullata.
+      delete_subtitle: Questa operazione elimina permanentemente la transazione, influisce
+        sui saldi storici e non può essere annullata.
       delete_title: Elimina transazione
       details: Dettagli
       attachments: Allegati
       exclude: Escludi
-      exclude_description: Le transazioni escluse verranno rimosse dai calcoli del budget e dai rapporti.
+      exclude_description: Le transazioni escluse verranno rimosse dai calcoli del
+        budget e dai rapporti.
       activity_type: Tipo di attività
-      activity_type_description: Tipo di attività di investimento (Acquisto, Vendita, Dividendo, ecc.). Rilevato automaticamente o impostato manualmente.
+      activity_type_description: Tipo di attività di investimento (Acquisto, Vendita,
+        Dividendo, ecc.). Rilevato automaticamente o impostato manualmente.
       one_time_title: "%{type} una tantum"
-      one_time_description: Le transazioni una tantum verranno escluse da alcuni calcoli del budget e rapporti per aiutarti a vedere ciò che conta davvero.
+      one_time_description: Le transazioni una tantum verranno escluse da alcuni calcoli
+        del budget e rapporti per aiutarti a vedere ciò che conta davvero.
       convert_to_trade_title: Converti in operazione su titolo
-      convert_to_trade_description: Converti questa transazione in un'operazione di Acquisto o Vendita con dettagli del titolo per il monitoraggio del portafoglio.
+      convert_to_trade_description: Converti questa transazione in un'operazione di
+        Acquisto o Vendita con dettagli del titolo per il monitoraggio del portafoglio.
       convert_to_trade_button: Converti in operazione
-      transfer_matcher_description: Collega questa transazione alla sua controparte in un altro conto.
+      transfer_matcher_description: Collega questa transazione alla sua controparte
+        in un altro conto.
       pending_duplicate_merger_title: Duplicato della transazione registrata?
-      pending_duplicate_merger_description: Unisci manualmente questa transazione in attesa con la sua versione registrata.
+      pending_duplicate_merger_description: Unisci manualmente questa transazione
+        in attesa con la sua versione registrata.
       pending_duplicate_merger_button: Apri fusione
       merchant_label: Esercente
       name_label: Nome
@@ -96,14 +113,37 @@ it:
       tab_transactions: Transazioni
       tab_upcoming: In arrivo
       uncategorized: "(non categorizzata)"
-      additional_details: "Dettagli aggiuntivi"
-      payee: "Beneficiario"
-      description: "Descrizione"
-      memo: "Memo"
-      provider_extras: "Dati provider"
-      transfer_or_debt_payment: "Bonifico o pagamento debito?"
-      open_matcher: "Apri corrispondenza"
-      convert: "Converti"
+      additional_details: Dettagli aggiuntivi
+      payee: Beneficiario
+      description: Descrizione
+      memo: Memo
+      provider_extras: Dati provider
+      transfer_or_debt_payment: Bonifico o pagamento debito?
+      open_matcher: Apri corrispondenza
+      convert: Converti
+      applied_to_unreviewed: Da esaminare
+      provider_extra_fields:
+        name: Nome
+        payee: Beneficiario
+        reason: Motivo
+        type: Tipo
+        phone_number: Numero di telefono
+        website: Sito web
+        by_order_of: Per ordine di
+        confidence_level: Livello di affidabilità
+        entity_id: ID entità
+        logo_url: URL del logo
+        payer: Pagatore
+        ppd_id: ID PPD
+        reference_number: Numero di riferimento
+      applied_to_detail: "%{amount} per la scadenza del %{date}"
+      applied_to_title: Scadenze pagate con questa transazione
+      create_bill: Crea una scadenza
+      original_description: Descrizione originale
+      payment_channel: Canale di pagamento
+      plaid_counterparty_label: Controparte %{index}
+      plaid_payment_meta_label: Metadati di pagamento · %{name}
+      transaction_code: Codice transazione
     activity_labels:
       buy: Acquisto
       sell: Vendita
@@ -119,13 +159,17 @@ it:
       exchange: Cambio
       other: Altro
     mark_recurring: Segna come ricorrente
-    mark_recurring_subtitle: Monitora questa come transazione ricorrente. La varianza dell'importo viene calcolata automaticamente dagli ultimi 6 mesi di transazioni simili.
+    mark_recurring_subtitle: Monitora questa come transazione ricorrente. La varianza
+      dell'importo viene calcolata automaticamente dagli ultimi 6 mesi di transazioni
+      simili.
     mark_recurring_title: Transazione ricorrente
     potential_duplicate_title: Possibile duplicato rilevato
-    potential_duplicate_description: Questa transazione in attesa potrebbe essere la stessa di quella registrata qui sotto. In caso affermativo, uniscile per evitare il doppio conteggio.
+    potential_duplicate_description: Questa transazione in attesa potrebbe essere
+      la stessa di quella registrata qui sotto. In caso affermativo, uniscile per
+      evitare il doppio conteggio.
     keep_both: No, tienile entrambe
     split_parent_row:
-      split_label: "Suddivisa"
+      split_label: Suddivisa
     transfer_match:
       auto_matched: Abbinato automaticamente
       auto_matched_short: A/A
@@ -139,9 +183,11 @@ it:
       linked_with_provider: Collegata con %{provider}
       activity_type_tooltip: Tipo di attività di investimento
       possible_duplicate: Duplicato?
-      potential_duplicate_tooltip: Questa potrebbe essere un duplicato di un'altra transazione
+      potential_duplicate_tooltip: Questa potrebbe essere un duplicato di un'altra
+        transazione
       review_recommended: Da rivedere
-      review_recommended_tooltip: Grande differenza di importo — si consiglia revisione per verificare se è un duplicato
+      review_recommended_tooltip: Grande differenza di importo — si consiglia revisione
+        per verificare se è un duplicato
       split: Suddivisa
       split_tooltip: Questa transazione è stata suddivisa in più voci
       split_child_tooltip: Parte di una transazione suddivisa
@@ -156,7 +202,7 @@ it:
       possible_duplicate_short: Dup?
       review_recommended: Da rivedere
       review_recommended_short: Rev
-      confirm_title: "Unisci con la transazione registrata (%{posted_amount})"
+      confirm_title: Unisci con la transazione registrata (%{posted_amount})
       reject_title: Mantieni come transazioni separate
     summary:
       total_transactions: Totale transazioni
@@ -171,53 +217,55 @@ it:
       edit_tags: Modifica etichette
       import: Importa
     index:
-      title: "Transazioni"
+      title: Transazioni
       transaction: transazione
       transactions: transazioni
       import: Importa
-      new_rule: "Nuova regola"
-      edit_rules: "Modifica regole"
-      edit_categories: "Modifica categorie"
-      edit_tags: "Modifica etichette"
-      edit_merchants: "Modifica esercenti"
-      edit_imports: "Modifica importazioni"
-      new_transaction: "Nuova transazione"
+      new_rule: Nuova regola
+      edit_rules: Modifica regole
+      edit_categories: Modifica categorie
+      edit_tags: Modifica etichette
+      edit_merchants: Modifica esercenti
+      edit_imports: Modifica importazioni
+      new_transaction: Nuova transazione
       categorize_button:
-        one: "Categorizza (1)"
-        other: "Categorizza (%{count})"
+        one: Categorizza (1)
+        other: Categorizza (%{count})
     categorizes:
       show:
-        exit: "Esci"
-        skip: "Salta"
+        exit: Esci
+        skip: Salta
         remaining:
-          one: "1 transazione non categorizzata rimanente"
+          one: 1 transazione non categorizzata rimanente
           other: "%{count} transazioni non categorizzate rimanenti"
         transaction_count:
-          one: "1 transazione"
+          one: 1 transazione
           other: "%{count} transazioni"
-        transactions_hint: "Deseleziona per escludere una transazione, o assegnale direttamente una categoria diversa nella sua riga."
-        assign_category: "Assegna una categoria"
+        transactions_hint: Deseleziona per escludere una transazione, o assegnale
+          direttamente una categoria diversa nella sua riga.
+        assign_category: Assegna una categoria
         assign_category_prompt: "→ assegna"
-        filter_placeholder: "Cerca categorie..."
-        col_transaction: "Transazione"
-        col_date: "Data"
-        col_amount: "Importo"
-        col_category: "Categoria"
-        type_income: "Entrata"
-        type_expense: "Spesa"
-        create_rule_label: "Crea regola di categorizzazione"
-        rule_description_prefix: "Le future transazioni di tipo %{type} con nome contenente"
-        rule_description_suffix: "dovrebbero ricevere questa categoria."
-        no_categories: "Nessuna categoria corrispondente"
-        all_done: "Tutte le transazioni sono categorizzate"
+        filter_placeholder: Cerca categorie...
+        col_transaction: Transazione
+        col_date: Data
+        col_amount: Importo
+        col_category: Categoria
+        type_income: Entrata
+        type_expense: Spesa
+        create_rule_label: Crea regola di categorizzazione
+        rule_description_prefix: Le future transazioni di tipo %{type} con nome contenente
+        rule_description_suffix: dovrebbero ricevere questa categoria.
+        no_categories: Nessuna categoria corrispondente
+        all_done: Tutte le transazioni sono categorizzate
       create:
         categorized:
-          one: "1 transazione categorizzata"
+          one: 1 transazione categorizzata
           other: "%{count} transazioni categorizzate"
-        rule_creation_failed: "Transazioni categorizzate, ma la regola non è stata creata (potrebbe già esistere)."
+        rule_creation_failed: Transazioni categorizzate, ma la regola non è stata
+          creata (potrebbe già esistere).
       entry_row:
-        include_checkbox: "Includi %{name}"
-        assign_category_select: "Assegna categoria per %{name}"
+        include_checkbox: Includi %{name}
+        assign_category_select: Assegna categoria per %{name}
     list:
       drag_drop_title: Trascina CSV per importare
       drag_drop_subtitle: Carica transazioni direttamente
@@ -234,29 +282,36 @@ it:
         category: Categoria
         tag: Etichetta
         merchant: Esercente
+        ai: AI
     convert_to_trade:
       title: Converti in operazione su titolo
       description: Converti questa transazione in un'operazione con dettagli del titolo
-      date_label: "Data:"
-      account_label: "Conto:"
-      amount_label: "Importo:"
+      date_label: 'Data:'
+      account_label: 'Conto:'
+      amount_label: 'Importo:'
       security_label: Titolo
       security_prompt: Seleziona un titolo...
       security_custom: "+ Inserisci ticker personalizzato"
-      security_not_listed_hint: Non trovi il tuo titolo? Seleziona "Inserisci ticker personalizzato" in fondo alla lista.
+      security_not_listed_hint: Non trovi il tuo titolo? Seleziona "Inserisci ticker
+        personalizzato" in fondo alla lista.
       ticker_placeholder: ENEL
       ticker_hint: Inserisci il simbolo del titolo/ETF (es. ENEL, ISP)
       ticker_search_placeholder: Cerca un ticker...
-      ticker_search_hint: Cerca per simbolo ticker o nome azienda, o digita un ticker personalizzato
+      ticker_search_hint: Cerca per simbolo ticker o nome azienda, o digita un ticker
+        personalizzato
       price_mismatch_title: Il prezzo potrebbe non corrispondere
-      price_mismatch_message: "Il tuo prezzo (%{entered_price}/azione) differisce significativamente dal prezzo di mercato attuale di %{ticker} (%{market_price}). Se sembra errato, potresti aver selezionato il titolo sbagliato — prova a usare \"Inserisci ticker personalizzato\" per specificare quello corretto."
+      price_mismatch_message: Il tuo prezzo (%{entered_price}/azione) differisce significativamente
+        dal prezzo di mercato attuale di %{ticker} (%{market_price}). Se sembra errato,
+        potresti aver selezionato il titolo sbagliato — prova a usare "Inserisci ticker
+        personalizzato" per specificare quello corretto.
       quantity_label: Quantità (Azioni)
       quantity_placeholder: es. 20
       quantity_hint: Numero di azioni scambiate
       price_label: Prezzo per azione
       price_placeholder: es. 52,15
       price_hint: Prezzo per azione (%{currency})
-      qty_or_price_hint: Inserisci almeno la quantità O il prezzo. L'altro verrà calcolato dall'importo della transazione (%{amount}).
+      qty_or_price_hint: Inserisci almeno la quantità O il prezzo. L'altro verrà calcolato
+        dall'importo della transazione (%{amount}).
       trade_type_label: Tipo di operazione
       trade_type_hint: Acquisto o vendita di azioni di un titolo
       exchange_label: Borsa (opzionale)
@@ -265,17 +320,20 @@ it:
       cancel: Annulla
       submit: Converti in operazione
       success: Transazione convertita in operazione
-      conversion_note: "Convertita dalla transazione: %{original_name} (%{original_date})"
+      conversion_note: 'Convertita dalla transazione: %{original_name} (%{original_date})'
       errors:
-        not_investment_account: Solo le transazioni nei conti di investimento possono essere convertite in operazioni
+        not_investment_account: Solo le transazioni nei conti di investimento possono
+          essere convertite in operazioni
         already_converted: Questa transazione è già stata convertita o esclusa
         enter_ticker: Inserisci un simbolo ticker
         security_not_found: Il titolo selezionato non esiste più. Selezionane un altro.
         select_security: Seleziona o inserisci un titolo
-        enter_qty_or_price: Inserisci la quantità o il prezzo per azione. L'altro verrà calcolato dall'importo della transazione.
-        invalid_qty_or_price: Quantità o prezzo non validi. Inserisci valori positivi validi.
-        conversion_failed: "Impossibile convertire la transazione: %{error}"
-        unexpected_error: "Errore imprevisto durante la conversione: %{error}"
+        enter_qty_or_price: Inserisci la quantità o il prezzo per azione. L'altro
+          verrà calcolato dall'importo della transazione.
+        invalid_qty_or_price: Quantità o prezzo non validi. Inserisci valori positivi
+          validi.
+        conversion_failed: 'Impossibile convertire la transazione: %{error}'
+        unexpected_error: 'Errore imprevisto durante la conversione: %{error}'
     searches:
       filters:
         account_filter:
@@ -283,8 +341,8 @@ it:
         category_filter:
           filter_category: Filtra categoria
         date_filter:
-          start_date: "Data inizio"
-          end_date: "Data fine"
+          start_date: Data inizio
+          end_date: Data fine
         merchant_filter:
           filter_merchants: Filtra esercenti
         tag_filter:
@@ -302,6 +360,8 @@ it:
           transfer: Bonifico
           confirmed: Confermata
           pending: In attesa
+          ai_current: AI
+          ai_history: Cronologia AI
         type_filter:
           expense: Spesa
           income: Entrata
@@ -309,6 +369,13 @@ it:
         status_filter:
           confirmed: Confermata
           pending: In attesa
+        ai_filter:
+          current: AI
+          current_description: La categoria è ancora quella assegnata automaticamente
+            (AI o Bayes).
+          history: Cronologia AI
+          history_description: È stata classificata automaticamente, ma la categoria
+            è stata poi modificata.
       menu:
         account_filter: Conto
         amount_filter: Importo
@@ -327,23 +394,25 @@ it:
         less_than: minore di
       form:
         toggle_selection_checkboxes: Seleziona/deseleziona tutto
-        search_placeholder: "Cerca transazioni ..."
-        filter: "Filtra"
+        search_placeholder: Cerca transazioni ...
+        filter: Filtra
     attachments:
-      cannot_exceed: "Non è possibile superare %{count} allegati per transazione"
-      uploaded_one: "Allegato caricato con successo"
+      cannot_exceed: Non è possibile superare %{count} allegati per transazione
+      uploaded_one: Allegato caricato con successo
       uploaded_many: "%{count} allegati caricati con successo"
-      failed_upload: "Impossibile caricare l'allegato: %{error}"
-      no_files_selected: "Nessun file selezionato per il caricamento"
-      attachment_deleted: "Allegato eliminato con successo"
-      failed_delete: "Impossibile eliminare l'allegato: %{error}"
-      upload_failed: "Impossibile caricare l'allegato. Riprova o contatta il supporto."
-      delete_failed: "Impossibile eliminare l'allegato. Riprova o contatta il supporto."
-      upload: "Carica"
-      no_attachments: "Nessun allegato ancora"
-      select_up_to: "Seleziona fino a %{count} file (immagini o PDF, max %{size}MB ciascuno) • %{used} di %{count} utilizzati"
+      failed_upload: 'Impossibile caricare l''allegato: %{error}'
+      no_files_selected: Nessun file selezionato per il caricamento
+      attachment_deleted: Allegato eliminato con successo
+      failed_delete: 'Impossibile eliminare l''allegato: %{error}'
+      upload_failed: Impossibile caricare l'allegato. Riprova o contatta il supporto.
+      delete_failed: Impossibile eliminare l'allegato. Riprova o contatta il supporto.
+      upload: Carica
+      no_attachments: Nessun allegato ancora
+      select_up_to: Seleziona fino a %{count} file (immagini o PDF, max %{size}MB
+        ciascuno) • %{used} di %{count} utilizzati
       files:
-        one: "File (1)"
-        other: "File (%{count})"
-      browse_to_add: "Sfoglia per aggiungere file"
-      max_reached: "Limite massimo di file raggiunto (%{count}/%{max}). Elimina un file esistente per caricarne un altro."
+        one: File (1)
+        other: File (%{count})
+      browse_to_add: Sfoglia per aggiungere file
+      max_reached: Limite massimo di file raggiunto (%{count}/%{max}). Elimina un
+        file esistente per caricarne un altro.

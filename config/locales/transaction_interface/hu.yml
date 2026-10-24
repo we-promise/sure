@@ -1,0 +1,6 @@
+---
+hu:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Egyszeri bevétel (az átlagokból kizárva)"
+      one_time_expense_tooltip: "Egyszeri kiadás (az átlagokból kizárva)"

@@ -29,6 +29,9 @@ zh-TW:
       default_title: 您確定嗎？
       default_body: 這個動作無法復原。
       default_btn_text: 確認
+      resource_deletion_body: 確定要刪除 %{resource} 嗎？此操作無法復原。
+      resource_deletion_btn_text: 刪除 %{resource}
+      resource_deletion_title: 刪除 %{resource}？
     family_moniker:
       group_plural: 群組
       group_singular: 群組
@@ -42,3 +45,13 @@ zh-TW:
       income: 收入
       transfer: 轉帳
     submitting: 正在提交…
+    require_connector_owner: 您只能管理自己新增的連線
+    sidekiq_health_banner:
+      body: 背景工作未處理，因此餘額、淨資產及帳戶同步資料可能過期或缺漏。
+      cta: 查看系統健康狀態
+      reasons:
+        no_worker_processes: 沒有連線中的 Sidekiq 背景程序。請啟動背景程序容器或 systemd 單元。
+        queue_backed_up: 最舊佇列工作的等待時間已超過延遲門檻。背景程序仍在運作，但進度落後。
+        redis_unreachable: 應用程式無法連上 Redis。請檢查 REDIS_URL，並確認 Redis 正在執行。
+        stale_heartbeat: Sidekiq 背景程序最近沒有回報心跳，可能已卡住或當機。
+      title: 部分資料可能已過期

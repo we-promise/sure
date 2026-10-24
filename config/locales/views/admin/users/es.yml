@@ -6,13 +6,13 @@ es:
         title: Gestión de usuarios
         description: Gestiona los roles de usuario para tu instancia. Los superadministradores pueden acceder a la configuración del proveedor de SSO y a la gestión de usuarios.
         section_title: Usuarios
-        you: (Tú)
+        you: "(Tú)"
         trial_ends_at: La prueba finaliza
         not_available: n/a
         no_users: No se han encontrado usuarios.
         unnamed_family: Familia/grupo sin nombre
         no_subscription: Sin suscripción
-        family_summary: '%{members} miembros · %{accounts} cuentas · %{transactions} transacciones'
+        family_summary: "%{members} miembros · %{accounts} cuentas · %{transactions} transacciones"
         filters:
           role: Rol
           role_all: Todos los roles
@@ -30,6 +30,15 @@ es:
           session_count: Número de sesiones
           never: Nunca
           role: Rol
+          actions: Acciones
+          create_new_family_option: "+ Crear nueva familia o grupo"
+          family: Familia / Grupo
+          keep_current_family: Mantener la familia o grupo actual
+          new_family_moniker: Tipo de la nueva familia o grupo
+          new_family_name: Nombre de la nueva familia o grupo
+          new_family_name_placeholder: Introduce un nombre para crear una nueva familia o grupo
+          password_placeholder: Déjalo en blanco para conservar la actual
+          set_password: Establecer nueva contraseña
         role_descriptions_title: Descripción de los roles
         roles:
           guest: Invitado
@@ -46,6 +55,64 @@ es:
           expires: Caduca el %{date}
           delete: Eliminar
           delete_all: Eliminar todas
+        family_monikers:
+          family: Familia
+          group: Grupo
+        actions:
+          delete_user: Eliminar usuario
+          last_super_admin_role_locked: El cambio de rol está bloqueado porque eres el último superadministrador del sistema.
+          manage_user: Gestionar usuario
+          self_edit_warning: Cambiar tu propio rol modificará tus privilegios de administración.
+          self_update_confirm: "¿Seguro que quieres actualizar el rol o la familia de tu propia cuenta?"
+          update: Actualizar usuario
+        auth_types:
+          local: Local
+          local_and_sso: Local + SSO
+          sso: SSO
+          sso_provider_tooltip: 'Proveedor de SSO: %{providers}'
+        delete_confirm: "¿Seguro que quieres eliminar a este usuario? Esta acción no se puede deshacer."
+        delete_confirm_last_user: "¿Seguro que quieres eliminar a este usuario? Es el último usuario de su familia o grupo, por lo que eliminarlo también eliminará toda la familia o grupo y todos los datos asociados. Esta acción no se puede deshacer."
+        remove: Eliminar usuario
+        removed_sso_identities:
+          allow_again: Volver a permitir
+          confirm: "¿Permitir que %{email} vuelva a iniciar sesión o a crear una cuenta mediante SSO?"
+          description: Estas identidades no pueden crear ni volver a conectar una cuenta. Vuelve a permitir una identidad solo si se eliminó por error.
+          title: Identidades SSO eliminadas
+        unused_families:
+          delete: Eliminar familia sin uso
+          delete_confirm: "¿Seguro que quieres eliminar esta familia o grupo sin uso? Esta acción no se puede deshacer."
+          empty: No se encontraron familias ni grupos sin uso.
+          family_id: 'ID de familia: %{id}'
+          title: Familias y grupos sin uso
       update:
         success: Rol de usuario actualizado correctamente.
         failure: Error al actualizar el rol de usuario.
+        family_required: Selecciona una familia o grupo existente o introduce un nombre para uno nuevo.
+        last_super_admin_error: No se puede quitar el rol al último superadministrador del sistema.
+        password_and_family_conflict: No se pueden actualizar al mismo tiempo la contraseña y la pertenencia a una familia o grupo.
+        password_missing_case: La contraseña debe incluir letras mayúsculas y minúsculas.
+        password_missing_number: La contraseña debe incluir al menos un número.
+        password_missing_special: La contraseña debe incluir al menos un carácter especial.
+        password_too_short: La contraseña debe tener al menos 8 caracteres.
+        success_family: Pertenencia del usuario a la familia o grupo actualizada correctamente.
+        success_password: Contraseña del usuario actualizada correctamente.
+        success_role: Rol del usuario actualizado correctamente.
+        success_role_and_password: Rol y contraseña del usuario actualizados correctamente.
+      deletion:
+        cancel: Cancelar
+        email_label: Correo del usuario
+        instruction: Escribe %{email} para confirmar.
+        submit: Eliminar usuario definitivamente
+        warning: Esto revoca el acceso de inmediato y programa la eliminación permanente del usuario y sus datos. No se puede deshacer.
+        title: Eliminar usuario definitivamente
+      destroy:
+        cannot_remove_last_super_admin: No puedes eliminar al último superadministrador activo.
+        cannot_remove_self: No puedes eliminar tu propia cuenta desde aquí.
+        confirmation_mismatch: La dirección de correo no coincide. El usuario no se ha eliminado.
+        failure: No se pudo eliminar al usuario.
+        success: Acceso del usuario revocado y eliminación permanente programada.
+    families:
+      destroy:
+        family_has_active_subscription: La familia o grupo tiene una suscripción activa y no puede eliminarse hasta que se cancele la suscripción.
+        family_has_users: La familia o grupo todavía tiene usuarios y no puede eliminarse.
+        success: Familia o grupo eliminado correctamente.

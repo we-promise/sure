@@ -1,0 +1,7 @@
+---
+it:
+  syncs:
+    cancel:
+      cancelled: Sincronizzazione annullata. Tutto ciò che è già stato sincronizzato
+        viene conservato; le attività in coda sono state fermate.
+      not_cancellable: Questa sincronizzazione è già terminata.

@@ -1,0 +1,55 @@
+---
+it:
+  recurring_occurrences:
+    history_status:
+      paid: Pagate
+      missed: Mancato
+      scheduled: Aperto
+      skipped: Saltato
+    show:
+      due_on: Scadenza %{date}
+      manual_amount_label: Importo
+      manual_date_label: Data
+      manual_payment: Pagamento manuale
+      paid_headline: "%{amount} pagati"
+      paid_of: Pagati %{paid} di %{expected}
+      payments: Pagamenti
+      remaining: "%{amount} rimanenti"
+      skip: Salta
+      unlink: Scollega
+      view_bill: Visualizza scadenza completa
+      add_heading: Aggiungi un altro pagamento
+      cant_find: Non trovi la transazione?
+      find_heading: Trova un pagamento
+      link_payment: Collega pagamento
+      manual_explainer: Registra un pagamento che sai essere avvenuto quando nessuna
+        transazione qui corrisponde.
+      mark_paid: Segna come pagata
+      mark_paid_hint: Salda il resto senza registrare una transazione.
+      missed: Contrassegnata come mancata
+      no_candidates: Nessuna transazione vicina per data da collegare.
+      no_ranked_candidates: Nessuna transazione qui sembra ancora un pagamento di
+        questa scadenza.
+      no_search_results: Nessun risultato per %{query}.
+      not_this_one: Non questa
+      other_matches: Altre corrispondenze probabili
+      overpaid: più del previsto
+      record_payment: Registra pagamento
+      reopen: Riapri
+      review_heading: Verifica pagamento
+      search_all: Cerca tutte le transazioni
+      search_placeholder: Cerca transazioni
+      settled: Pagata per intero
+      skipped: Saltato
+      snooze_week: Rimanda di una settimana
+    snooze:
+      success: Rimandato al %{date}
+      invalid_date: Impossibile interpretare questa data
+    mark_paid:
+      success: Scadenza contrassegnata come pagata
+    override_amount:
+      success: Importo previsto aggiornato
+    reopen:
+      success: Scadenza riaperta
+    skip:
+      success: Scadenza saltata

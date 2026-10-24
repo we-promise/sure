@@ -1,0 +1,20 @@
+---
+hu:
+  authentication_ui:
+    password:
+      missing_case: "kis- és nagybetűket is kell tartalmaznia"
+      missing_number: "legalább egy számjegyet kell tartalmaznia"
+      missing_special: "legalább egy speciális karaktert kell tartalmaznia"
+    sso:
+      copy_failed: "Nem sikerült a vágólapra másolni"
+      issuer_valid: "Érvényes OIDC-kibocsátó"
+      issuer_mismatch_trailing: "A kibocsátó nem egyezik: a felderítés ezt adta vissza: %{issuer}. Ezt általában a záró perjel eltérése okozza. Másold a kibocsátót pontosan a visszaadott formában."
+      issuer_mismatch: "A kibocsátó nem egyezik: a felderítés ezt adta vissza: %{issuer}. Másold a kibocsátót pontosan a szolgáltató által visszaadott formában."
+      browser_validation_unavailable: "A böngészőből nem sikerült ellenőrizni (CORS). A szolgáltató ennek ellenére menthető."
+      testing: "Tesztelés…"
+      request_failed: "A kérés sikertelen: %{message}"
+    authorization:
+      authorizing: "Engedélyezés…"
+      denying: "Elutasítás…"
+      explanation: "Az engedélyezéssel hozzáférést adsz ennek az alkalmazásnak a %{product_name} adataidhoz a fenti jogosultságok szerint."
+      title: "%{product_name} engedélyezés"

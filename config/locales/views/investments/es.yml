@@ -182,6 +182,9 @@ es:
       other:
         short: Otra
         long: Otra inversión
+      cash_management:
+        long: Cuenta de gestión de efectivo
+        short: CMA
     value_tooltip:
       cash: Efectivo
       holdings: Inversiones

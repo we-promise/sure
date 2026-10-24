@@ -1,0 +1,7 @@
+---
+zh-TW:
+  assistant:
+    external:
+      model_catalog:
+        default_agent_label: 預設代理（%{id}）
+        named_agent_label: "%{name}（%{id}）"

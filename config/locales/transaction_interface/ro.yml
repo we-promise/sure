@@ -1,0 +1,6 @@
+---
+ro:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Venit ocazional (exclus din medii)"
+      one_time_expense_tooltip: "Cheltuială ocazională (exclusă din medii)"

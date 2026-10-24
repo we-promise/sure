@@ -1,0 +1,40 @@
+---
+pl:
+  investments:
+    subtypes:
+      non-registered:
+        long: Niezarejestrowany rachunek inwestycyjny
+      fhsa:
+        long: Rachunek oszczędnościowy na pierwsze mieszkanie (FHSA)
+      rdsp:
+        long: Zarejestrowany plan oszczędnościowy dla osób z niepełnosprawnościami (RDSP)
+      dpsp:
+        long: Plan odroczonego udziału w zyskach (DPSP)
+      prpp:
+        long: Zbiorowy zarejestrowany plan emerytalny (PRPP)
+      lif:
+        long: Fundusz dożywotniego dochodu (LIF)
+      lrif:
+        long: Zablokowany fundusz dochodu emerytalnego (LRIF)
+      prif:
+        long: Zarejestrowany fundusz dochodu emerytalnego o szczególnych zasadach (PRIF)
+      rlif:
+        long: Fundusz dożywotniego dochodu z ograniczeniami (RLIF)
+      assurance_vie:
+        long: Francuskie ubezpieczenie na życie (Assurance Vie)
+  loans:
+    subtypes:
+      home_equity:
+        long: Pożyczka pod zastaw kapitału własnego w nieruchomości
+      line_of_credit:
+        long: Linia kredytowa
+      business:
+        long: Kredyt firmowy
+      mortgage:
+        long: Kredyt hipoteczny
+      student:
+        long: Pożyczka studencka
+      auto:
+        long: Pożyczka na samochód
+      other:
+        long: Inna pożyczka

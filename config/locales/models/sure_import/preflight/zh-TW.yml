@@ -1,0 +1,10 @@
+---
+zh-TW:
+  sure_import:
+    preflight:
+      missing_reference: 第 %{line} 行的 %{type} 參照缺少的 %{field} %{value}。
+      provider_merchant_diff: 第 %{line} 行的 ProviderMerchant %{name} 已存在，但 %{fields} 不同。將保留既有商家。
+      skipped_missing_merchant_reference: 第 %{line} 行的 %{type} 參照此匯出檔未包含的商家（%{value}）。這可能是因為匯出檔建立時，Sure
+        尚未將供應商指定的商家納入匯出。匯入時不會附帶此商家。
+      skipped_missing_reference: 第 %{line} 行的 %{type} 參照缺少的 %{field} %{value}，匯入時將略過。
+      skipped_unnamed_recurring: 第 %{line} 行的 %{type} 沒有名稱，且參照此匯出檔未包含的商家（%{value}），匯入時將略過。

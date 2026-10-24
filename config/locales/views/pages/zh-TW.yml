@@ -28,7 +28,9 @@ zh-TW:
       title: 更新日誌
     release_notes_unavailable:
       name: 無法取得版本資訊
-      body_html: <p>目前無法取得最新的版本資訊。請稍後再回來看看，或直接前往我們的 <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub releases 頁面</a>。</p>
+      body_html: >-
+        <p>目前無法取得最新的版本資訊。請稍後再回來看看，或直接前往我們的 <a href='https://github.com/we-promise/sure/releases' target='_blank'
+        rel='noopener noreferrer'>GitHub releases 頁面</a>。</p>
     privacy:
       title: 隱私權政策
       heading: 隱私權政策
@@ -40,9 +42,21 @@ zh-TW:
     dashboard:
       cashflow_preview:
         node_labels:
-          cash_flow: "現金流"
-          surplus: "盈餘"
-          deficit: "赤字"
+          cash_flow: 現金流
+          surplus: 盈餘
+          deficit: 赤字
+        feedback_loading: 正在載入意見表單…
+        feedback_privacy: 您的回覆會傳送至 PostHog。描述問題時，請勿包含帳號、餘額或其他私人財務資訊。
+        feedback_prompt: 請將此圖表與上方原圖比較，告訴我們除了排序之外是否有其他差異。
+        feedback_submit: 傳送意見
+        feedback_thanks: 感謝您協助改善圖表！
+        feedback_title: 現金流圖表意見
+        feedback_unavailable: 目前無法傳送意見，請稍後再試。
+        negative: 看起來有問題
+        positive: 看起來正確
+        preview: 預覽
+        preview_tooltip: 此圖將取代上方視覺化，因為它使用與 Swift 行動版共用的新 API。
+        title: 新版桑基圖
       welcome: 歡迎回來，%{name}
       subtitle: 這是您目前的財務概況
       new: 新增帳戶
@@ -79,6 +93,8 @@ zh-TW:
         classifications:
           asset: 資產
           liability: 負債
+        collapse_all: 全部收合
+        expand_all: 全部展開
       insights_feed:
         title: 洞察
       cashflow_sankey:
@@ -87,6 +103,9 @@ zh-TW:
         no_data_title: 此時段內無現金流資料
         no_data_description: 新增交易紀錄以顯示現金流資料，或擴大時間範圍
         add_transaction: 新增交易
+        load_error: 無法載入現金流，請再試一次。
+        loading: 正在載入現金流…
+        retry: 再試一次
       no_accounts:
         title: 尚無帳戶
         description: 新增帳戶以顯示淨資產資料
@@ -104,7 +123,7 @@ zh-TW:
         weight: 占比
         value: 金額
         return: 報酬
-        period_activity: '%{period}活動'
+        period_activity: "%{period}活動"
         contributions: 投入
         withdrawals: 提領
         trades: 證券交易
@@ -112,7 +131,7 @@ zh-TW:
         add_investment: 新增一個投資帳戶來追蹤您的投資組合
       money_flow:
         title: 資金流入 / 流出
-        date_range: '%{start_date} 至 %{end_date}'
+        date_range: "%{start_date} 至 %{end_date}"
         month_picker_aria_label: 選擇月份
         filter_accounts: 篩選帳戶 (%{count})
         filter_accounts_all: 所有帳戶
@@ -123,3 +142,12 @@ zh-TW:
         chart_span: 最近 %{count} 個月
         income: 收入
         expenses: 支出
+      spending_trend:
+        date_range: "%{start_date} 至 %{end_date}"
+        date_range_short: "%{year} 年 %{start_date} 至 %{end_day} 日"
+        date_range_short_single: "%{year} 年 %{date}"
+        month_picker_aria_label: 選擇月份
+        no_data: 本月沒有支出資料
+        period_scope_hint: 顯示此處選擇的月份，不受儀表板上方的時間範圍影響。
+        previous_comparison_days: "（1–%{end_day} 日）"
+        title: 支出

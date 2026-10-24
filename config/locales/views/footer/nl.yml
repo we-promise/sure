@@ -1,0 +1,6 @@
+---
+nl:
+  layouts:
+    shared:
+      footer:
+        community_fork: "(door de gemeenschap onderhouden afsplitsing van %{original_product})"

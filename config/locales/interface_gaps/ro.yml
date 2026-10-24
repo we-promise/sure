@@ -1,0 +1,17 @@
+---
+ro:
+  binance_items:
+    setup_accounts:
+      historical_import: Importul istoricului
+  enable_banking_items:
+    setup_accounts:
+      psd2_savings_notice: 'Notă: Unele conturi de economii reglementate din Franța
+        (Livret A, PEL, LEP, LDDS) pot avea acces limitat sau pot fi indisponibile
+        prin Open Banking (PSD2). Dacă lipsește un cont de economii, îl poți adăuga
+        manual.'
+  reports:
+    index:
+      period_aria: Perioada raportului
+  shared:
+    transaction_tabs:
+      aria: Tipul tranzacției

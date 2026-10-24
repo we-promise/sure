@@ -1,0 +1,32 @@
+---
+en:
+  properties:
+    update:
+      success: Property details updated successfully.
+      error: Unable to update property details.
+    update_balances:
+      success: Balance updated successfully.
+    update_address:
+      success: Address updated successfully.
+      error: Unable to update address. Please check the required fields.
+  enable_banking_items:
+    account_types:
+      card: Card Account
+      overdraft: Overdraft Account
+      transacting: Transacting Account
+      salary: Salary Account
+      non_resident_external: Non-Resident External Account
+      tax: Tax Account
+      cash_trading: Cash Trading Account
+      overnight_deposit: Overnight Deposit
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Auto categorize
+        auto_detect_merchants: Auto detect merchants
+        enhance_provider_merchants: Enhance provider merchants
+        suggest_bill_setup: Suggest bill setup
+        process_pdf: Process PDF
+        process_pdf_vision: Process PDF with vision
+        extract_bank_statement: Extract bank statement
+        chat: Chat

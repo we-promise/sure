@@ -14,9 +14,9 @@ zh-TW:
       and_more_actions:
         one: 另有 1 個動作
         other: 另有 %{count} 個動作
-      action_label_to: '%{label} 為 %{value}'
+      action_label_to: "%{label} 為 %{value}"
       all_past_and_future: 過去與未來所有的 %{resource}
-      on_or_after: '%{date} 當日或之後的 %{resource}'
+      on_or_after: "%{date} 當日或之後的 %{resource}"
     form:
       rule_name_label: 規則名稱（選填）
       rule_name_placeholder: 為這條規則輸入一個名稱
@@ -52,6 +52,7 @@ zh-TW:
       confirm_changes: 確認變更
     actions:
       value_placeholder: 輸入一個值
+      to_label: 為
     update:
       success: 規則已更新
     destroy:
@@ -104,12 +105,34 @@ zh-TW:
         expense: 支出
         transfer: 轉帳
         equal_to: 等於
+      operators:
+        contains: 包含
+        does_not_contain: 不包含
+        equal_to: 等於
+        greater_or_equal_to: 大於或等於
+        greater_than: 大於
+        is_empty: 為空白
+        is_equal_to: 等於
+        is_not_empty: 不為空白
+        less_than: 小於
+        less_than_or_equal_to: 小於或等於
+        not_equal_to: 不等於
+    category_rule_cta:
+      close: 關閉
+      create_rule: 建立規則
+      description: 您可以建立規則，自動分類類似這筆的交易
+      dont_show_again: 不再顯示
+      hide_for_today: 今天隱藏
+      hide_for_today_hint: "「今天隱藏」會暫停這些建議 24 小時。"
+      message: 已更新為 %{category_name}
   rule:
     conditions:
       condition_group:
-        and_prefix: ' 與 '
+        and_prefix: " 與 "
         match: 符合
         all: 以下所有
         any: 以下任一
         of_the_following_conditions: 條件
         add_condition: 新增條件
+      condition:
+        value_placeholder: 輸入一個值

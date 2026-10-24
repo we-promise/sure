@@ -1,0 +1,6 @@
+---
+vi:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Thu nhập một lần (không tính vào giá trị trung bình)"
+      one_time_expense_tooltip: "Chi tiêu một lần (không tính vào giá trị trung bình)"

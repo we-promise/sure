@@ -1,0 +1,6 @@
+---
+ru:
+  layouts:
+    shared:
+      footer:
+        community_fork: "(форк %{original_product}, поддерживаемый сообществом)"

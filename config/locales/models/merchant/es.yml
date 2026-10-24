@@ -1,0 +1,5 @@
+---
+es:
+  models:
+    merchant:
+      no_merchant: Sin comercio

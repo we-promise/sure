@@ -1,0 +1,20 @@
+---
+zh-TW:
+  authentication_ui:
+    password:
+      missing_case: "必須同時包含大寫和小寫字母"
+      missing_number: "必須包含至少一個數字"
+      missing_special: "必須包含至少一個特殊字元"
+    sso:
+      copy_failed: "無法複製到剪貼簿"
+      issuer_valid: "OIDC 簽發者有效"
+      issuer_mismatch_trailing: "簽發者不符：探索文件回傳 %{issuer}。這通常是結尾斜線不一致所致，請原樣複製回傳的簽發者網址。"
+      issuer_mismatch: "簽發者不符：探索文件回傳 %{issuer}。請原樣複製供應商回傳的簽發者網址。"
+      browser_validation_unavailable: "無法透過瀏覽器驗證（CORS）。仍可儲存供應商。"
+      testing: "正在測試…"
+      request_failed: "請求失敗：%{message}"
+    authorization:
+      authorizing: "正在授權…"
+      denying: "正在拒絕…"
+      explanation: "授權後，此應用程式將能依據上述權限存取你的 %{product_name} 資料。"
+      title: "%{product_name} 授權"

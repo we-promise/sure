@@ -1,0 +1,14 @@
+---
+ro:
+  upload_interface:
+    too_many_files: Prea multe fișiere (maximum %{max})
+    file_too_large: Fișier prea mare (maximum %{max} MB)
+    uploading: Se încarcă %{filename}…
+    qif_invalid: Trebuie să fie un fișier QIF valid
+    amount_type_strategies:
+      signed_amount: Sumă cu semn
+      custom_column: Coloană personalizată
+    upload_files:
+      one: Încarcă %{count} fișier
+      few: Încarcă %{count} fișiere
+      other: Încarcă %{count} de fișiere

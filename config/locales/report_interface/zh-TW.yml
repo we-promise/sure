@@ -1,0 +1,6 @@
+---
+zh-TW:
+  reports:
+    index:
+      sections_aria_label: "報表區塊"
+      section_reorder_aria: "%{title}區塊。按 Enter 鍵或空白鍵選取區塊以調整順序，再使用方向鍵移動。"

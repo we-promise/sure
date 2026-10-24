@@ -1,8 +1,4 @@
 class Rule::ActionExecutor::SendEmailNotification < Rule::ActionExecutor
-  def label
-    "Send email notification"
-  end
-
   # rule_run is accepted for interface compatibility but unused: the digest email
   # is fire-and-forget and is not tracked as part of RuleRun accounting.
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)

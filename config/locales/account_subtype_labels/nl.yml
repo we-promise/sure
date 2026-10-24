@@ -1,0 +1,40 @@
+---
+nl:
+  investments:
+    subtypes:
+      non-registered:
+        long: Niet-geregistreerde beleggingsrekening
+      fhsa:
+        long: Spaarrekening voor de eerste woning (FHSA)
+      rdsp:
+        long: Geregistreerd spaarplan voor mensen met een beperking (RDSP)
+      dpsp:
+        long: Plan voor uitgestelde winstdeling (DPSP)
+      prpp:
+        long: Collectief geregistreerd pensioenplan (PRPP)
+      lif:
+        long: Fonds voor levenslang pensioeninkomen (LIF)
+      lrif:
+        long: Geblokkeerd pensioeninkomensfonds (LRIF)
+      prif:
+        long: Geregistreerd pensioeninkomensfonds met bijzondere voorschriften (PRIF)
+      rlif:
+        long: Beperkt fonds voor levenslang pensioeninkomen (RLIF)
+      assurance_vie:
+        long: Franse levensverzekering (Assurance Vie)
+  loans:
+    subtypes:
+      home_equity:
+        long: Lening op basis van de overwaarde van de woning
+      line_of_credit:
+        long: Kredietlijn
+      business:
+        long: Zakelijke lening
+      mortgage:
+        long: Hypotheek
+      student:
+        long: Studielening
+      auto:
+        long: Autolening
+      other:
+        long: Andere lening

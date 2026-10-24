@@ -13,5 +13,12 @@ es:
       expiration_date: Fecha de vencimiento
       minimum_payment: Pago mínimo
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automático
+      simplefin_balance_sign_credit: Crédito (el banco te debe dinero)
+      simplefin_balance_sign_debt: Deuda (debes dinero al banco)
+      simplefin_balance_sign_description: Usa una opción manual solo cuando SimpleFIN indique un signo ambiguo. La opción automática sigue utilizando el historial de transacciones y el saldo del proveedor.
+      simplefin_balance_sign_label: Significado del saldo de SimpleFIN
+      treat_balance_as_available_credit_description: Actívalo si tu banco informa del saldo de esta tarjeta como crédito disponible restante en lugar del importe adeudado. La deuda se calcula a partir del límite de crédito indicado por el banco o del campo Crédito disponible si el banco no proporciona un límite.
+      treat_balance_as_available_credit_label: El saldo es crédito disponible
     new:
       title: Introducir detalles de la tarjeta de crédito

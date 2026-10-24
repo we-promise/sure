@@ -1,0 +1,13 @@
+---
+tr:
+  upload_interface:
+    too_many_files: Çok fazla dosya (en fazla %{max})
+    file_too_large: Dosya çok büyük (en fazla %{max} MB)
+    uploading: "%{filename} yükleniyor…"
+    qif_invalid: Geçerli bir QIF dosyası olmalıdır
+    amount_type_strategies:
+      signed_amount: İşaretli tutar
+      custom_column: Özel sütun
+    upload_files:
+      one: "%{count} dosya yükle"
+      other: "%{count} dosya yükle"

@@ -1,0 +1,6 @@
+---
+zh-CN:
+  reports:
+    index:
+      sections_aria_label: "报表分区"
+      section_reorder_aria: "%{title}分区。按回车键或空格键选中分区以调整顺序，然后使用方向键移动。"

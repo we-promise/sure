@@ -1,0 +1,6 @@
+---
+it:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Entrata una tantum (esclusa dalle medie)"
+      one_time_expense_tooltip: "Spesa una tantum (esclusa dalle medie)"

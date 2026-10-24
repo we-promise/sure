@@ -1,0 +1,20 @@
+---
+nb:
+  authentication_ui:
+    password:
+      missing_case: "må inneholde både store og små bokstaver"
+      missing_number: "må inneholde minst ett tall"
+      missing_special: "må inneholde minst ett spesialtegn"
+    sso:
+      copy_failed: "Kunne ikke kopiere til utklippstavlen"
+      issuer_valid: "Gyldig OIDC-utsteder"
+      issuer_mismatch_trailing: "Utstederen stemmer ikke: oppdagelsen returnerte %{issuer}. Dette skyldes vanligvis en forskjell i skråstreken til slutt. Kopier utstederen nøyaktig slik den ble returnert."
+      issuer_mismatch: "Utstederen stemmer ikke: oppdagelsen returnerte %{issuer}. Kopier utstederen nøyaktig slik leverandøren returnerer den."
+      browser_validation_unavailable: "Kunne ikke validere fra nettleseren (CORS). Leverandøren kan likevel lagres."
+      testing: "Tester…"
+      request_failed: "Forespørselen mislyktes: %{message}"
+    authorization:
+      authorizing: "Autoriserer…"
+      denying: "Avslår…"
+      explanation: "Ved å autorisere gir du denne appen tilgang til %{product_name}-dataene dine i henhold til tillatelsene ovenfor."
+      title: "%{product_name}-autorisering"

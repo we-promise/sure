@@ -1,0 +1,32 @@
+---
+fr:
+  properties:
+    update:
+      success: Les informations du bien immobilier ont été mises à jour.
+      error: Impossible de mettre à jour les informations du bien immobilier.
+    update_balances:
+      success: Le solde a été mis à jour.
+    update_address:
+      success: L’adresse a été mise à jour.
+      error: Impossible de mettre à jour l’adresse. Vérifiez les champs obligatoires.
+  enable_banking_items:
+    account_types:
+      card: Compte de carte
+      overdraft: Compte avec découvert
+      transacting: Compte de transactions
+      salary: Compte de versement du salaire
+      non_resident_external: Compte externe pour non-résidents
+      tax: Compte fiscal
+      cash_trading: Compte de négociation au comptant
+      overnight_deposit: Dépôt au jour le jour
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Catégorisation automatique
+        auto_detect_merchants: Détection automatique des commerçants
+        enhance_provider_merchants: Enrichissement des commerçants du fournisseur
+        suggest_bill_setup: Suggestions de configuration des factures
+        process_pdf: Traitement de PDF
+        process_pdf_vision: Traitement visuel de PDF
+        extract_bank_statement: Extraction de relevés bancaires
+        chat: Discussion

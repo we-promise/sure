@@ -28,7 +28,7 @@ es:
     marked_inactive: Transacción recurrente marcada como inactiva
     marked_active: Transacción recurrente marcada como activa
     deleted: Transacción recurrente eliminada
-    confirm_delete: ¿Estás seguro de que deseas eliminar esta transacción recurrente?
+    confirm_delete: "¿Eliminar %{name} de tus facturas? Tus transacciones permanecerán intactas. Solo se eliminarán la factura y su calendario de pagos."
     marked_as_recurring: Transacción marcada como recurrente
     already_exists: Ya existe una transacción recurrente manual para este patrón
     creation_failed: Error al crear la transacción recurrente. Por favor, comprueba los detalles e inténtalo de nuevo.
@@ -45,9 +45,13 @@ es:
       last_occurrence: Última Ocurrencia
       status: Estado
       actions: Acciones
+      frequency: Frecuencia
     status:
       active: Activa
       inactive: Inactiva
+      paused: Inactiva
+      ended: Descartada
+      suggested: Posible factura
     badges:
       manual: Manual
     transfer_marked_as_recurring: Transferencia marcada como recurrente
@@ -55,3 +59,152 @@ es:
     transfer_creation_failed: Error al crear la transferencia recurrente. Revisa los detalles de la transferencia e inténtalo de nuevo.
     transfer_feature_disabled: Las transacciones recurrentes están desactivadas para esta familia
     expected_on: Esperado el %{date}
+    actions:
+      delete: Eliminar
+      pause: Pausar
+      resume: Reanudar
+      edit_payment_link: Editar enlace de pago
+    form:
+      amount_label: Importe
+      bill_type_label: Tipo
+      category_blank: Sin categoría
+      category_label: Categoría
+      frequency_interval_unit_label: Unidad
+      income_name_label: Origen
+      name_label: Nombre
+      notes_label: Notas
+      trial_ends_on_label: La prueba finaliza
+      payment_url_label: Enlace de pago
+      account_blank: Cualquier cuenta
+      account_label: Se paga desde
+      amount_edit_hint: Se aplica a las facturas que venzan a partir de ahora. Las que ya hayan vencido conservan su importe.
+      apply_to_siblings:
+        one: Usar también este enlace para la otra factura de %{name}
+        other: Usar también este enlace para las otras %{count} facturas de %{name}
+      autopay_hint: Mantenla en la lista de facturas, pero deja de tratarla como una tarea pendiente.
+      autopay_label: Se paga automáticamente
+      cancelled_on_hint: Registrar la fecha solo sirve como referencia personal. Pausa la factura para que dejen de aparecer futuros vencimientos.
+      cancelled_on_label: Cancelada
+      first_due_on_label: Próximo vencimiento
+      frequency_day_label: El día
+      frequency_hint: Cada cuánto vence esta factura. Elige los detalles del día para que coincidan con tu extracto.
+      frequency_interval_label: Se repite cada
+      frequency_label: Frecuencia
+      frequency_month_label: En
+      frequency_new_hint: Los detalles del día se toman de la fecha de vencimiento anterior. Puedes ajustar el calendario después de guardar.
+      frequency_second_day_label: Y el día
+      frequency_weekday_label: El
+      income_account_label: Se ingresa en
+      income_amount_edit_hint: Se aplica a las fechas de cobro a partir de ahora. Los cobros ya vencidos conservan su importe.
+      income_amount_label: Importe por cobro
+      income_due_on_label: Próxima fecha de cobro
+      income_frequency_hint: Cada cuánto recibes el pago. Elige los detalles del día para que coincidan con tu fecha de cobro.
+      income_frequency_label: Frecuencia de cobro
+      income_frequency_new_hint: Los detalles del día de cobro se toman de la fecha anterior. Puedes ajustar el calendario después de guardar.
+      income_name_placeholder: Empleador, cliente, trabajo adicional
+      income_notes_hint: Cualquier detalle que convenga recordar sobre este ingreso.
+      income_notes_placeholder: Ingreso directo, reparto entre dos cuentas
+      installment_count_hint: El plan termina después de este número de pagos y muestra su progreso hasta entonces.
+      installment_count_label: Número de pagos
+      more_options: Más opciones
+      name_placeholder: Alquiler, PG&E, Netflix
+      notes_hint: Lo que quieras tener a la vista al pagar. Se muestra en la factura.
+      notes_placeholder: Cuenta 4821, cargo en la Amex
+      payment_url_hint: La página a la que vas para pagar esta factura. Se abre en una pestaña nueva desde tus listas de pagos recurrentes y próximos.
+      payment_url_placeholder: bank.example.com/pay
+      renews_on_label: Se renueva
+      submit: Guardar factura
+      submit_income: Guardar ingreso
+    frequency_presets:
+      monthly: Mensual
+      quarterly: Trimestral
+      annual: Anual
+      biweekly: Cada 2 semanas
+      interval: Intervalo personalizado
+      semiannual: Cada 6 meses
+      semimonthly: Dos veces al mes
+      weekly: Semanal
+      custom: Calendario personalizado
+    confirm_delete_income: "¿Eliminar %{name} como ingreso? Tus transacciones permanecerán intactas. Solo se eliminarán el ingreso y su calendario."
+    confirmed: Factura añadida a tus transacciones recurrentes
+    create:
+      account_invalid: Elige una cuenta a la que puedas añadir facturas o déjala en blanco
+      already_exists: Esta factura ya existe
+      amount_invalid: Introduce el importe como un número simple
+      due_date_required: Introduce la próxima fecha de vencimiento de la factura
+      success: Factura añadida
+      success_income: Ingreso añadido
+    deleted_income: Ingreso eliminado. Tus transacciones no se han modificado.
+    dismissed: Descartado. No se volverá a sugerir este patrón.
+    edit:
+      income_title: Editar ingreso · %{name}
+      title: Editar %{name}
+      trigger_label: Editar factura
+    frequency:
+      annual: Cada año, el %{day} de %{month}
+      biweekly: Cada 2 semanas, el %{weekday}
+      custom: Calendario personalizado
+      every_n_months: Cada %{interval} meses, el %{day}
+      every_n_weeks: Cada %{interval} semanas, el %{weekday}
+      every_n_years: Cada %{interval} años, el %{day} de %{month}
+      last_day: último día
+      monthly: Cada mes, el %{day}
+      quarterly: Cada trimestre, el %{day}
+      semiannual: Cada 6 meses, el %{day}
+      semimonthly: Dos veces al mes, los días %{first} y %{second}
+      weekly: Cada semana, el %{weekday}
+    frequency_interval_units:
+      monthly: meses
+      weekly: semanas
+      yearly: años
+    identify_already_running: La detección ya está en curso. Vuelve a comprobarlo en un momento.
+    manage:
+      cta: Abrir todas las facturas
+      description: Añade, edita, pausa y paga todo desde allí. Esta página controla la detección.
+      title: Tus facturas están en la página Facturas
+    new:
+      candidate_meta: "%{count}× · última el %{date}"
+      income_title: Añadir ingreso
+      pick_different: Partir de otra transacción
+      search_all_cta: Buscar en todas tus transacciones
+      search_all_prompt: "¿No ves lo que buscas?"
+      smart_fill: Completar con IA
+      smart_fill_applied: La IA ha sugerido estos valores a partir del historial de cargos. Revísalos antes de guardar.
+      start_from_hint: Opcional. Elegir una solo rellena el formulario; puedes cambiar cualquier dato.
+      start_from_income_title: Partir de un ingreso recurrente que hemos detectado
+      start_from_title: Partir de un cargo recurrente que hemos detectado
+      title: Añadir una factura
+    pay_action:
+      add_link: Añadir enlace
+      add_link_aria: Añadir un enlace de pago para %{name}
+      autopay: Pago automático
+      autopay_aria: "%{name} se paga automáticamente; abre su portal en una pestaña nueva"
+      open_site: Abrir sitio de la factura
+      pay: Pagar
+      pay_aria: Pagar %{name} (se abre en una pestaña nueva)
+    pick_entry:
+      back: Volver al formulario
+      hint: Elegir una solo rellena el formulario; puedes cambiar cualquier dato.
+      income_title: Buscar un ingreso del que partir
+      no_results: No hay coincidencias con «%{query}». Prueba con menos palabras o vuelve y rellena el formulario manualmente.
+      search_placeholder: Buscar por nombre, notas o comercio
+      showing_recent: Se muestran tus %{count} transacciones más recientes. Busca para acotar los resultados.
+      title: Buscar una transacción de la que partir
+    picker_row:
+      claimed: Parte de %{name}
+    smart_fills:
+      create:
+        failed: No se ha podido analizar el historial de cargos ahora. El formulario ha conservado los valores de la propia transacción.
+    suggested:
+      collapsed_hint: Toca para revisar
+      confirm: Añadir factura
+      dismiss: No es una factura
+      seen_count:
+        one: vista una vez
+        other: vista %{count} veces
+      title: Posibles facturas nuevas
+    update:
+      success: Factura actualizada
+      success_with_siblings:
+        one: Factura actualizada; el enlace de pago se ha copiado a otra factura
+        other: Factura actualizada; el enlace de pago se ha copiado a otras %{count} facturas

@@ -4,8 +4,8 @@ es:
     access_denied: Acceso denegado
     create:
       success: Exportación iniciada. Podrás descargarla en breve.
-    delete_confirmation: ¿Estás seguro de que quieres eliminar esta exportación? Esta acción no se puede deshacer.
-    delete_failed_confirmation: ¿Estás seguro de que quieres eliminar esta exportación fallida?
+    delete_confirmation: "¿Estás seguro de que quieres eliminar esta exportación? Esta acción no se puede deshacer."
+    delete_failed_confirmation: "¿Estás seguro de que quieres eliminar esta exportación fallida?"
     destroy:
       success: Exportación eliminada con éxito
     export_not_ready: La exportación no está lista para descargar
@@ -40,4 +40,9 @@ es:
         actions:
           delete: Eliminar
           download: Descargar
+          confirm_mark_failed: Esta exportación lleva un tiempo inactiva y es probable que su tarea en segundo plano se haya interrumpido. ¿Marcarla como fallida? Puedes crear una nueva exportación de inmediato.
+          mark_failed: Marcar como fallida
       empty: Aún no hay exportaciones.
+    cancel:
+      cancelled: Exportación marcada como fallida. Puedes crear una nueva exportación de inmediato.
+      not_cancellable: Esta exportación no puede marcarse como fallida ahora; su tarea puede seguir en ejecución. Inténtalo de nuevo cuando lleve una hora inactiva.

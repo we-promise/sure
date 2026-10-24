@@ -1,0 +1,32 @@
+---
+vi:
+  properties:
+    update:
+      success: Đã cập nhật thông tin bất động sản.
+      error: Không thể cập nhật thông tin bất động sản.
+    update_balances:
+      success: Đã cập nhật số dư.
+    update_address:
+      success: Đã cập nhật địa chỉ.
+      error: Không thể cập nhật địa chỉ. Vui lòng kiểm tra các trường bắt buộc.
+  enable_banking_items:
+    account_types:
+      card: Tài khoản thẻ
+      overdraft: Tài khoản thấu chi
+      transacting: Tài khoản giao dịch
+      salary: Tài khoản nhận lương
+      non_resident_external: Tài khoản bên ngoài dành cho người không cư trú
+      tax: Tài khoản thuế
+      cash_trading: Tài khoản giao dịch tiền mặt
+      overnight_deposit: Tiền gửi qua đêm
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Tự động phân loại
+        auto_detect_merchants: Tự động nhận diện người bán
+        enhance_provider_merchants: Bổ sung thông tin người bán từ nhà cung cấp
+        suggest_bill_setup: Gợi ý thiết lập hóa đơn
+        process_pdf: Xử lý PDF
+        process_pdf_vision: Xử lý PDF bằng hình ảnh
+        extract_bank_statement: Trích xuất sao kê ngân hàng
+        chat: Trò chuyện

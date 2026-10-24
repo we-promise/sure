@@ -1,0 +1,13 @@
+---
+nl:
+  upload_interface:
+    too_many_files: Te veel bestanden (maximaal %{max})
+    file_too_large: Bestand te groot (maximaal %{max} MB)
+    uploading: "%{filename} wordt geüpload…"
+    qif_invalid: Het moet een geldig QIF-bestand zijn
+    amount_type_strategies:
+      signed_amount: Bedrag met teken
+      custom_column: Aangepaste kolom
+    upload_files:
+      one: "%{count} bestand uploaden"
+      other: "%{count} bestanden uploaden"

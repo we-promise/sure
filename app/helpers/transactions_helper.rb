@@ -1,4 +1,15 @@
 module TransactionsHelper
+  # Render every allowed count with Rails locale rules; Stimulus only selects the
+  # complete label, including locales with more than singular/plural forms.
+  def attachment_upload_labels(max_files:)
+    {
+      upload: t("transactions.attachments.upload"),
+      too_many_files: t("upload_interface.too_many_files", max: max_files),
+      file_too_large: t("upload_interface.file_too_large", max: Transaction::MAX_ATTACHMENT_SIZE / 1.megabyte),
+      upload_files: (1..max_files).index_with { |count| t("upload_interface.upload_files", count: count) }
+    }
+  end
+
   # @return [Array<Hash>] the filters offered above the transaction list, each
   #   with the key its partial is named for, a translated label and an icon
   def transaction_search_filters

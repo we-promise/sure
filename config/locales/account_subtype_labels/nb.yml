@@ -1,0 +1,40 @@
+---
+nb:
+  investments:
+    subtypes:
+      non-registered:
+        long: Ikke-registrert investeringskonto
+      fhsa:
+        long: Sparekonto for førstegangskjøp av bolig (FHSA)
+      rdsp:
+        long: Registrert spareordning for personer med funksjonsnedsettelse (RDSP)
+      dpsp:
+        long: Ordning for utsatt overskuddsdeling (DPSP)
+      prpp:
+        long: Felles registrert pensjonsordning (PRPP)
+      lif:
+        long: Fond for livsvarig pensjonsinntekt (LIF)
+      lrif:
+        long: Bundet fond for pensjonsinntekt (LRIF)
+      prif:
+        long: Særregulert registrert fond for pensjonsinntekt (PRIF)
+      rlif:
+        long: Begrenset fond for livsvarig pensjonsinntekt (RLIF)
+      assurance_vie:
+        long: Fransk livsforsikring (Assurance Vie)
+  loans:
+    subtypes:
+      home_equity:
+        long: Lån med sikkerhet i boligens egenkapital
+      line_of_credit:
+        long: Kredittramme
+      business:
+        long: Bedriftslån
+      mortgage:
+        long: Boliglån
+      student:
+        long: Studielån
+      auto:
+        long: Billån
+      other:
+        long: Annet lån

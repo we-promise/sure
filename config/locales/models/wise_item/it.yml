@@ -1,0 +1,13 @@
+---
+it:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: Chiave privata SCA
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: non può essere salvata perché la crittografia
+                Active Record non è configurata in questa installazione

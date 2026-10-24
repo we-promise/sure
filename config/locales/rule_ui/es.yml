@@ -1,0 +1,18 @@
+---
+es:
+  rules:
+    new:
+      back: Volver a las reglas
+      title: Nueva regla para %{resource}
+    form:
+      for: PARA
+    edit:
+      title: Editar regla de %{resource}
+      title_with_name: Editar regla de %{resource} «%{name}»
+  transfers:
+    account_links:
+      missing_account: 'Error de datos: falta una cuenta'
+      transfer_id: 'ID de la transferencia: %{id}'
+  tags:
+    create:
+      failed: No se pudo crear la etiqueta

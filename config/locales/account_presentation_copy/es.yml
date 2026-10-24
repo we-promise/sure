@@ -1,0 +1,32 @@
+---
+es:
+  properties:
+    update:
+      success: Los datos del inmueble se han actualizado.
+      error: No se pudieron actualizar los datos del inmueble.
+    update_balances:
+      success: El saldo se ha actualizado.
+    update_address:
+      success: La dirección se ha actualizado.
+      error: No se pudo actualizar la dirección. Revisa los campos obligatorios.
+  enable_banking_items:
+    account_types:
+      card: Cuenta de tarjeta
+      overdraft: Cuenta con descubierto
+      transacting: Cuenta transaccional
+      salary: Cuenta nómina
+      non_resident_external: Cuenta externa para no residentes
+      tax: Cuenta fiscal
+      cash_trading: Cuenta de operaciones al contado
+      overnight_deposit: Depósito a un día
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Categorización automática
+        auto_detect_merchants: Detección automática de comercios
+        enhance_provider_merchants: Enriquecimiento de comercios del proveedor
+        suggest_bill_setup: Sugerencias de configuración de facturas
+        process_pdf: Procesamiento de PDF
+        process_pdf_vision: Procesamiento visual de PDF
+        extract_bank_statement: Extracción de extractos bancarios
+        chat: Conversación

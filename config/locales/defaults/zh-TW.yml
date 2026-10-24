@@ -1,8 +1,8 @@
 ---
 zh-TW:
   defaults:
-    brand_name: '%{brand_name}'
-    product_name: '%{product_name}'
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
     common:
       close: 關閉
   global:
@@ -25,7 +25,7 @@ zh-TW:
     - 週五
     - 週六
     abbr_month_names:
-    - null
+    -
     - 1月
     - 2月
     - 3月
@@ -47,13 +47,13 @@ zh-TW:
     - 星期五
     - 星期六
     formats:
-      default: '%Y-%m-%d'
-      long: '%Y年%-m月%-d日'
-      short: '%m月%d日'
-      month_year: '%Y年%-m月'
-      short_month_year: '%Y年%b'
+      default: "%Y-%m-%d"
+      long: "%Y年%-m月%-d日"
+      short: "%m月%d日"
+      month_year: "%Y年%-m月"
+      short_month_year: "%Y年%b"
     month_names:
-    - null
+    -
     - 一月
     - 二月
     - 三月
@@ -95,20 +95,20 @@ zh-TW:
         one: 超過 %{count} 年
         other: 超過 %{count} 年
       x_days:
-        one: '%{count} 天'
-        other: '%{count} 天'
+        one: "%{count} 天"
+        other: "%{count} 天"
       x_minutes:
-        one: '%{count} 分鐘'
-        other: '%{count} 分鐘'
+        one: "%{count} 分鐘"
+        other: "%{count} 分鐘"
       x_months:
-        one: '%{count} 個月'
-        other: '%{count} 個月'
+        one: "%{count} 個月"
+        other: "%{count} 個月"
       x_seconds:
-        one: '%{count} 秒'
-        other: '%{count} 秒'
+        one: "%{count} 秒"
+        other: "%{count} 秒"
       x_years:
-        one: '%{count} 年'
-        other: '%{count} 年'
+        one: "%{count} 年"
+        other: "%{count} 年"
     prompts:
       day: 日
       hour: 時
@@ -117,7 +117,7 @@ zh-TW:
       second: 秒
       year: 年
   errors:
-    format: '%{attribute} %{message}'
+    format: "%{attribute} %{message}"
     messages:
       accepted: 必須接受
       blank: 不能為空白
@@ -170,15 +170,15 @@ zh-TW:
         significant: false
         strip_insignificant_zeros: false
     format:
-      delimiter: ','
+      delimiter: ","
       precision: 3
       round_mode: default
-      separator: .
+      separator: "."
       significant: false
       strip_insignificant_zeros: false
     human:
       decimal_units:
-        format: '%n %u'
+        format: "%n %u"
         units:
           billion: 十億
           million:
@@ -196,7 +196,7 @@ zh-TW:
         significant: true
         strip_insignificant_zeros: true
       storage_units:
-        format: '%n %u'
+        format: "%n %u"
         units:
           byte:
             one: 位元組 (Byte)
@@ -210,19 +210,26 @@ zh-TW:
     percentage:
       format:
         delimiter: ''
-        format: '%n%'
+        format: "%n%"
     precision:
       format:
         delimiter: ''
   support:
     array:
-      last_word_connector: ' 與 '
-      two_words_connector: ' 與 '
-      words_connector: 、
+      last_word_connector: " 與 "
+      two_words_connector: " 與 "
+      words_connector: "、"
   time:
     am: 上午
     formats:
-      default: '%Y年%m月%d日 (%a) %H:%M:%S %z'
-      long: '%Y年%m月%d日 %H:%M'
-      short: '%m月%d日 %H:%M'
+      default: "%Y年%m月%d日 (%a) %H:%M:%S %z"
+      long: "%Y年%m月%d日 %H:%M"
+      short: "%m月%d日 %H:%M"
     pm: 下午
+  mcp:
+    errors:
+      invalid_session_id: 無效的 MCP 工作階段 ID
+      unsupported_protocol_version: 不支援的 MCP 協定版本：%{version}
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris 必須使用 HTTPS、迴路 HTTP，或原生應用程式 URI 配置

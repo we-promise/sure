@@ -1,0 +1,32 @@
+---
+tr:
+  properties:
+    update:
+      success: Gayrimenkul bilgileri güncellendi.
+      error: Gayrimenkul bilgileri güncellenemedi.
+    update_balances:
+      success: Bakiye güncellendi.
+    update_address:
+      success: Adres güncellendi.
+      error: Adres güncellenemedi. Lütfen zorunlu alanları kontrol edin.
+  enable_banking_items:
+    account_types:
+      card: Kart hesabı
+      overdraft: Kredili mevduat hesabı
+      transacting: İşlem hesabı
+      salary: Maaş hesabı
+      non_resident_external: Yerleşik olmayanlara ait dış hesap
+      tax: Vergi hesabı
+      cash_trading: Nakit işlem hesabı
+      overnight_deposit: Gecelik mevduat
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Otomatik kategorilendirme
+        auto_detect_merchants: Otomatik iş yeri tespiti
+        enhance_provider_merchants: Sağlayıcının iş yeri bilgilerini zenginleştirme
+        suggest_bill_setup: Fatura kurulumu önerileri
+        process_pdf: PDF işleme
+        process_pdf_vision: Görsel PDF işleme
+        extract_bank_statement: Banka hesap özetini çıkarma
+        chat: Sohbet

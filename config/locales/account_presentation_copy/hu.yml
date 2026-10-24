@@ -1,0 +1,32 @@
+---
+hu:
+  properties:
+    update:
+      success: Az ingatlan adatai frissültek.
+      error: Nem sikerült frissíteni az ingatlan adatait.
+    update_balances:
+      success: Az egyenleg frissült.
+    update_address:
+      success: A cím frissült.
+      error: Nem sikerült frissíteni a címet. Ellenőrizze a kötelező mezőket.
+  enable_banking_items:
+    account_types:
+      card: Kártyaszámla
+      overdraft: Folyószámlahiteles számla
+      transacting: Tranzakciós számla
+      salary: Bérszámla
+      non_resident_external: Külső számla nem rezidenseknek
+      tax: Adószámla
+      cash_trading: Azonnali kereskedési számla
+      overnight_deposit: Egynapos betét
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: Automatikus kategorizálás
+        auto_detect_merchants: Kereskedők automatikus felismerése
+        enhance_provider_merchants: Szolgáltatói kereskedőadatok kiegészítése
+        suggest_bill_setup: Javaslatok a fizetendő számlák beállításához
+        process_pdf: PDF-feldolgozás
+        process_pdf_vision: Vizuális PDF-feldolgozás
+        extract_bank_statement: Bankszámlakivonatok kinyerése
+        chat: Beszélgetés

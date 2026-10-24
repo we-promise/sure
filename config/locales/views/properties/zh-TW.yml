@@ -3,6 +3,7 @@ zh-TW:
   properties:
     edit:
       edit: 編輯 %{account}
+      title: 手動輸入不動產資料
     form:
       address_line1: 街道地址
       address_line1_placeholder: 例如：忠孝東路一段 123 號
@@ -30,11 +31,11 @@ zh-TW:
       avm_option: 透過 %{provider} 新增
       avm_title: 透過 %{provider} 新增房產
       avm_description: 輸入房產名稱與地址，%{provider} 會為您查詢房產細節與估計市值。
-      avm_us_only: '%{provider} 僅支援位於美國的房產。'
+      avm_us_only: "%{provider} 僅支援位於美國的房產。"
       avm_submit: 查詢房產
       avm_preview_title: 確認房產資訊
       avm_preview_description: 以下是 %{provider} 查到的資料。新增前請先確認，目前尚未建立任何項目。
-      avm_preview_no_record: '%{provider} 在這個地址找不到房產紀錄，因此顯示的價值是根據周邊區域推估的。繼續前請再次確認地址。'
+      avm_preview_no_record: "%{provider} 在這個地址找不到房產紀錄，因此顯示的價值是根據周邊區域推估的。繼續前請再次確認地址。"
       avm_preview_back: 返回
       avm_preview_confirm: 新增房產
     address:
@@ -100,3 +101,7 @@ zh-TW:
       agri_land:
         short: 農地
         long: 農業用地
+    form_tabs:
+      address: 地址
+      overview: 概覽
+      value: 價值

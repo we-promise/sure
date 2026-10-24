@@ -342,7 +342,7 @@ class ReportsController < ApplicationController
         expenses = income_statement.expense_totals(period: period).total
 
         trends << {
-          month: month_start.strftime("%b %Y"),
+          month: I18n.l(month_start, format: :month_year),
           is_current_month: (month_start.month == Date.current.month && month_start.year == Date.current.year),
           income: income,
           expenses: expenses,
@@ -794,7 +794,7 @@ class ReportsController < ApplicationController
         entry = transaction.entry
         is_expense = entry.amount > 0
         type = is_expense ? "expense" : "income"
-        category_name = transaction.category&.name || "Uncategorized"
+        category_name = transaction.category&.name
         month_key = entry.date.beginning_of_month
 
         # Convert to family currency
@@ -804,8 +804,10 @@ class ReportsController < ApplicationController
           converted_amount = entry.amount.abs
         end
 
-        key = [ category_name, type ]
-        breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }
+        # Keep user names as grouping keys; missing categories use a stable,
+        # distinct sentinel so localized display text cannot merge their totals.
+        key = [ category_name || :uncategorized, type ]
+        breakdown[key] ||= { category: category_name || "Uncategorized", uncategorized: category_name.nil?, type: type, months: {}, total: 0 }
         breakdown[key][:months][month_key] ||= 0
         breakdown[key][:months][month_key] += converted_amount
         breakdown[key][:total] += converted_amount
@@ -815,6 +817,7 @@ class ReportsController < ApplicationController
       result = breakdown.map do |key, data|
         {
           category: data[:category],
+          uncategorized: data[:uncategorized],
           type: data[:type],
           months: data[:months],
           total: data[:total]
@@ -837,16 +840,16 @@ class ReportsController < ApplicationController
 
       CSV.generate do |csv|
         # Build header row: Category + Month columns + Total
-        month_headers = @export_data[:months].map { |m| m.strftime("%b %Y") }
-        header_row = [ "Category" ] + month_headers + [ "Total" ]
+        month_headers = @export_data[:months].map { |m| I18n.l(m, format: :month_year) }
+        header_row = [ t("reports.transactions_breakdown.table.category") ] + month_headers + [ t("reports.trends.total") ]
         csv << header_row
 
         # Income section
         if @export_data[:income].any?
-          csv << [ "INCOME" ] + Array.new(month_headers.length + 1, "")
+          csv << [ t("reports.transactions_breakdown.table.income") ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:income].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ category_data[:uncategorized] ? t("reports.transactions_breakdown.table.uncategorized") : category_data[:category] ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -860,7 +863,7 @@ class ReportsController < ApplicationController
           end
 
           # Income totals row
-          totals_row = [ "TOTAL INCOME" ]
+          totals_row = [ t("reports.summary.total_income") ]
           @export_data[:months].each do |month|
             month_total = @export_data[:income].sum { |c| c[:months][month] || 0 }
             totals_row << Money.new(month_total, Current.family.currency).format
@@ -875,10 +878,10 @@ class ReportsController < ApplicationController
 
         # Expenses section
         if @export_data[:expenses].any?
-          csv << [ "EXPENSES" ] + Array.new(month_headers.length + 1, "")
+          csv << [ t("reports.transactions_breakdown.table.expense") ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:expenses].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ category_data[:uncategorized] ? t("reports.transactions_breakdown.table.uncategorized") : category_data[:category] ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -892,7 +895,7 @@ class ReportsController < ApplicationController
           end
 
           # Expenses totals row
-          totals_row = [ "TOTAL EXPENSES" ]
+          totals_row = [ t("reports.summary.total_expenses") ]
           @export_data[:months].each do |month|
             month_total = @export_data[:expenses].sum { |c| c[:months][month] || 0 }
             totals_row << Money.new(month_total, Current.family.currency).format

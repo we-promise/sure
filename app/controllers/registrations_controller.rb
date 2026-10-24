@@ -95,19 +95,19 @@ class RegistrationsController < ApplicationController
       return if password.blank? # Let Rails built-in validations handle blank passwords
 
       if password.length < 8
-        @user.errors.add(:password, "must be at least 8 characters")
+        @user.errors.add(:password, :too_short, count: 8)
       end
 
       unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)
-        @user.errors.add(:password, "must include both uppercase and lowercase letters")
+        @user.errors.add(:password, t("authentication_ui.password.missing_case"))
       end
 
       unless password.match?(/\d/)
-        @user.errors.add(:password, "must include at least one number")
+        @user.errors.add(:password, t("authentication_ui.password.missing_number"))
       end
 
       unless password.match?(/[!@#$%^&*(),.?":{}|<>]/)
-        @user.errors.add(:password, "must include at least one special character")
+        @user.errors.add(:password, t("authentication_ui.password.missing_special"))
       end
 
       if @user.errors.present?

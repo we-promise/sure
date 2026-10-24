@@ -43,7 +43,7 @@
         size: :lg,
         full_width: true,
         href: oauth_authorization_path,
-        data: { disable_with: "Authorizing..." }
+        data: { disable_with: t("authentication_ui.authorization.authorizing") }
       ) %>
     <% end %>
 
@@ -65,12 +65,12 @@
         size: :lg,
         full_width: true,
         href: oauth_authorization_path,
-        data: { disable_with: "Denying..." }
+        data: { disable_with: t("authentication_ui.authorization.denying") }
       ) %>
     <% end %>
   </div>
 
   <p class="text-xs text-subdued text-center">
-    By authorizing, you allow this app to access your <%= product_name %> data according to the permissions above.
+    <%= t("authentication_ui.authorization.explanation", product_name: product_name) %>
   </p>
 </div>

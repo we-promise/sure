@@ -14,6 +14,7 @@ export default class extends Controller {
 
   static values = {
     createUrl: String,
+    createError: String,
     fieldName: String,
     defaultColor: String,
     disabled: Boolean,
@@ -454,7 +455,7 @@ export default class extends Controller {
   showCreateError(message) {
     if (!this.hasCreateErrorTarget) return;
 
-    this.createErrorTarget.textContent = message || "Could not create tag";
+    this.createErrorTarget.textContent = message || this.createErrorValue;
     this.createErrorTarget.classList.remove("hidden");
     this.searchTarget.setAttribute("aria-invalid", "true");
     this.searchTarget.focus({ preventScroll: true });

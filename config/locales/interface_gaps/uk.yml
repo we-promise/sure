@@ -1,0 +1,16 @@
+---
+uk:
+  binance_items:
+    setup_accounts:
+      historical_import: Імпорт історичних даних
+  enable_banking_items:
+    setup_accounts:
+      psd2_savings_notice: 'Примітка: Доступ до деяких регульованих ощадних рахунків
+        у Франції (Livret A, PEL, LEP, LDDS) через Open Banking (PSD2) може бути обмеженим
+        або відсутнім. Якщо ощадний рахунок не відображається, його можна додати вручну.'
+  reports:
+    index:
+      period_aria: Період звіту
+  shared:
+    transaction_tabs:
+      aria: Тип транзакції

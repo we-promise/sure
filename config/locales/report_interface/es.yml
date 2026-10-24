@@ -1,0 +1,6 @@
+---
+es:
+  reports:
+    index:
+      sections_aria_label: "Secciones del informe"
+      section_reorder_aria: "Sección %{title}. Pulsa Intro o Espacio para seleccionarla y cambiar su posición; después, usa las teclas de flecha para moverla."

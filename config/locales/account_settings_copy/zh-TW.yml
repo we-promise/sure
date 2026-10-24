@@ -1,0 +1,17 @@
+---
+zh-TW:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: 可透過環境變數設定，也可在下方覆寫。
+        optional: 選填
+      update:
+        failed: 無法更新服務供應商設定，請再試一次。
+    llm_usages:
+      show:
+        http_status: HTTP 狀態：%{status}
+  shared:
+    async_loading:
+      timeout: 逾時
+      failed_with_status: 載入失敗（%{status}）
+      network_error: 網路錯誤

@@ -1,0 +1,56 @@
+---
+pt-PT:
+  recurring_occurrences:
+    history_status:
+      missed: Não paga
+      paid: Paga
+      scheduled: Aberto
+      skipped: Ignorada
+    mark_paid:
+      success: Despesa marcada como paga
+    override_amount:
+      success: Montante previsto atualizado
+    reopen:
+      success: Despesa a pagar reaberta
+    show:
+      add_heading: Adicionar outro pagamento
+      cant_find: Não encontra a transação?
+      due_on: 'Vencimento: %{date}'
+      find_heading: Encontrar um pagamento
+      link_payment: Associar pagamento
+      manual_amount_label: Montante
+      manual_date_label: Data
+      manual_explainer: >-
+        Registe um pagamento que sabe ter ocorrido quando nenhuma transação aqui lhe
+        corresponde.
+      manual_payment: Pagamento manual
+      mark_paid: Marcar como paga
+      mark_paid_hint: Liquida o restante sem registar uma transação.
+      missed: Marcada como não paga
+      no_candidates: Nenhuma transação próxima para associar.
+      no_ranked_candidates: Ainda não há nenhuma transação que pareça ser um pagamento
+        desta despesa.
+      no_search_results: Nenhum resultado para %{query}.
+      not_this_one: Não é esta
+      other_matches: Outras correspondências prováveis
+      overpaid: acima do esperado
+      paid_headline: "%{amount} pagos"
+      paid_of: "%{paid} de %{expected} pagos"
+      payments: Pagamentos
+      record_payment: Registar pagamento
+      remaining: "%{amount} restantes"
+      reopen: Reabrir
+      review_heading: Rever pagamento
+      search_all: Pesquisar todas as transações
+      search_placeholder: Pesquisar transações
+      settled: Paga integralmente
+      skip: Ignorar
+      skipped: Ignorada
+      snooze_week: Adiar uma semana
+      unlink: Desassociar
+      view_bill: Ver despesa completa
+    skip:
+      success: Despesa a pagar ignorada
+    snooze:
+      invalid_date: Não foi possível interpretar essa data
+      success: Adiada até %{date}

@@ -2,10 +2,11 @@
 pt-PT:
   concerns:
     self_hostable:
-      redis_configured: O Redis está agora configurado corretamente! Pode agora configurar
-        a sua aplicação Sure.
+      redis_configured: >-
+        O Redis está agora configurado corretamente! Pode agora configurar a sua aplicação
+        Sure.
   shared:
-    preview: Preview
+    preview: Pré-visualização
     dot_separator: "·"
     sync_toast:
       message: Novos dados disponíveis
@@ -48,17 +49,23 @@ pt-PT:
       transfer: Transferência
     sidekiq_health_banner:
       title: Alguns dados podem estar desatualizados
-      body: Os trabalhos em segundo plano não estão a ser processados, pelo que os
-        saldos, o património líquido e as sincronizações de contas podem estar obsoletos
-        ou em falta.
+      body: >-
+        Os trabalhos em segundo plano não estão a ser processados, pelo que os saldos,
+        o património líquido e as sincronizações de contas podem estar obsoletos ou
+        em falta.
       cta: Ver estado do sistema
       reasons:
-        redis_unreachable: A aplicação não consegue contactar o Redis. Verifique a
-          sua REDIS_URL e se o Redis está em execução.
-        no_worker_processes: Nenhum processo de worker Sidekiq está ligado. Inicie
-          o contentor do worker ou a unidade systemd.
-        stale_heartbeat: O worker Sidekiq não reportou um heartbeat recentemente.
-          Pode estar bloqueado ou ter falhado.
-        queue_backed_up: O trabalho mais antigo enfileirado está à espera para além
-          do orçamento de latência. O worker está ativo, mas está a ficar para trás.
+        redis_unreachable: >-
+          A aplicação não consegue contactar o Redis. Verifique a sua REDIS_URL e
+          se o Redis está em execução.
+        no_worker_processes: >-
+          Nenhum processo de worker Sidekiq está ligado. Inicie o contentor do worker
+          ou a unidade systemd.
+        stale_heartbeat: >-
+          O worker Sidekiq não reportou um heartbeat recentemente. Pode estar bloqueado
+          ou ter falhado.
+        queue_backed_up: >-
+          O trabalho mais antigo enfileirado está à espera para além do orçamento
+          de latência. O worker está ativo, mas está a ficar para trás.
     submitting: A enviar…
+    require_connector_owner: Só pode gerir ligações que adicionou

@@ -1,0 +1,6 @@
+---
+tr:
+  reports:
+    index:
+      sections_aria_label: "Rapor bölümleri"
+      section_reorder_aria: "%{title} bölümü. Sırasını değiştirmek için Enter veya Boşluk tuşuyla bölümü seçin, ardından ok tuşlarıyla taşıyın."

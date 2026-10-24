@@ -1,0 +1,17 @@
+---
+tr:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: Yapılandırma ortam değişkenleriyle ayarlanabilir veya aşağıdan geçersiz kılınabilir.
+        optional: İsteğe bağlı
+      update:
+        failed: Sağlayıcı ayarları güncellenemedi. Lütfen tekrar deneyin.
+    llm_usages:
+      show:
+        http_status: 'HTTP durumu: %{status}'
+  shared:
+    async_loading:
+      timeout: Zaman aşımı
+      failed_with_status: Yükleme başarısız (%{status})
+      network_error: Ağ hatası

@@ -28,7 +28,7 @@ zh-TW:
     marked_inactive: 定期交易已標記為停用
     marked_active: 定期交易已標記為啟用
     deleted: 定期交易已刪除
-    confirm_delete: 您確定要刪除此定期交易嗎？
+    confirm_delete: 要將 %{name} 從帳單中移除嗎？您的交易會維持原樣，只移除此帳單及其付款排程。
     marked_as_recurring: 交易已標記為定期交易
     already_exists: 此規律已存在手動建立的定期交易
     creation_failed: 建立定期交易失敗。請檢查交易詳情並再試一次。
@@ -45,9 +45,13 @@ zh-TW:
       last_occurrence: 最近一次發生
       status: 狀態
       actions: 操作
+      frequency: 頻率
     status:
       active: 啟用中
       inactive: 已停用
+      ended: 已移除
+      paused: 已暫停
+      suggested: 可能的帳單
     badges:
       manual: 手動
     transfer_marked_as_recurring: 轉帳已標記為定期
@@ -55,3 +59,152 @@ zh-TW:
     transfer_creation_failed: 建立定期轉帳失敗，請檢查轉帳內容後再試一次。
     transfer_feature_disabled: 這個家庭已停用定期交易
     expected_on: 預計於 %{date}
+    actions:
+      delete: 移除
+      edit_payment_link: 編輯付款連結
+      pause: 暫停
+      resume: 恢復
+    confirm_delete_income: 要將 %{name} 從收入中移除嗎？您的交易會維持原樣，只移除此收入及其排程。
+    confirmed: 帳單已加入您的定期交易
+    create:
+      account_invalid: 請選擇可新增帳單的帳戶，或留白
+      already_exists: 此帳單已存在
+      amount_invalid: 請以純數字輸入金額
+      due_date_required: 請輸入帳單的下次到期日
+      success: 帳單已新增
+      success_income: 收入已新增
+    deleted_income: 收入已移除，您的交易未受影響。
+    dismissed: 已忽略，不會再次建議此模式。
+    edit:
+      income_title: 編輯收入 · %{name}
+      title: 編輯 %{name}
+      trigger_label: 編輯帳單
+    form:
+      account_blank: 任何帳戶
+      account_label: 付款帳戶
+      amount_edit_hint: 適用於從現在起到期的帳單，已到期項目的金額維持不變。
+      amount_label: 金額
+      apply_to_siblings:
+        one: 也將此連結用於另一筆 %{name} 帳單
+        other: 也將此連結用於其他 %{count} 筆 %{name} 帳單
+      autopay_hint: 仍保留在帳單清單中，但不再列為待辦事項。
+      autopay_label: 自動付款
+      bill_type_label: 種類
+      cancelled_on_hint: 此日期僅供您參考。若不希望未來帳單繼續出現，請暫停帳單。
+      cancelled_on_label: 已取消
+      category_blank: 未分類
+      category_label: 分類
+      first_due_on_label: 下次到期
+      frequency_day_label: 日期
+      frequency_hint: 此帳單多久到期一次。請選擇符合對帳單的日期細節。
+      frequency_interval_label: 每隔
+      frequency_interval_unit_label: 單位
+      frequency_label: 頻率
+      frequency_month_label: 月份
+      frequency_new_hint: 日期細節取自上方到期日，儲存後可再調整排程。
+      frequency_second_day_label: 以及
+      frequency_weekday_label: 開啟
+      income_account_label: 入帳帳戶
+      income_amount_edit_hint: 適用於從現在起的發薪日，已到期項目的金額維持不變。
+      income_amount_label: 每次收入金額
+      income_due_on_label: 下次發薪日
+      income_frequency_hint: 您多久領取一次收入。請選擇符合發薪日的日期細節。
+      income_frequency_label: 收入頻率
+      income_frequency_new_hint: 發薪日細節取自上方日期，儲存後可再調整排程。
+      income_name_label: 來源
+      income_name_placeholder: 雇主、客戶、兼職
+      income_notes_hint: 關於這筆收入值得記住的事項。
+      income_notes_placeholder: 直接入帳、分入兩個帳戶
+      installment_count_hint: 達到此付款次數後計畫便結束，期間會顯示進度。
+      installment_count_label: 付款期數
+      more_options: 更多選項
+      name_label: 名稱
+      name_placeholder: 房租、台電、Netflix
+      notes_hint: 付款時希望看到的提醒，會顯示在帳單上。
+      notes_label: 備註
+      notes_placeholder: 帳戶尾碼 4821，由 Amex 扣款
+      payment_url_hint: 繳付此帳單的網址，會從定期與近期清單開啟新分頁。
+      payment_url_label: 付款連結
+      payment_url_placeholder: bank.example.com/pay
+      renews_on_label: 續訂日
+      submit: 儲存帳單
+      submit_income: 儲存收入
+      trial_ends_on_label: 試用結束
+    frequency:
+      annual: 每年 %{month} %{day}
+      biweekly: 每 2 週的%{weekday}
+      custom: 自訂排程
+      every_n_months: 每 %{interval} 個月的 %{day}
+      every_n_weeks: 每 %{interval} 週的%{weekday}
+      every_n_years: 每 %{interval} 年的 %{month} %{day}
+      last_day: 最後一天
+      monthly: 每月 %{day}
+      quarterly: 每季 %{day}
+      semiannual: 每 6 個月的 %{day}
+      semimonthly: 每月兩次，%{first} 與 %{second}
+      weekly: 每週%{weekday}
+    frequency_interval_units:
+      monthly: 個月
+      weekly: 週
+      yearly: 年
+    frequency_presets:
+      annual: 每年
+      biweekly: 每 2 週
+      custom: 自訂排程
+      interval: 自訂間隔
+      monthly: 按月
+      quarterly: 按季
+      semiannual: 每 6 個月
+      semimonthly: 每月兩次
+      weekly: 每週
+    identify_already_running: 偵測已在執行中，請稍後查看。
+    manage:
+      cta: 開啟所有帳單
+      description: 可在該處新增、編輯、暫停與繳付所有款項；本頁用於控制偵測。
+      title: 您的帳單位於「帳單」頁面
+    new:
+      candidate_meta: "%{count} 次 · 最近 %{date}"
+      income_title: 新增收入
+      pick_different: 改從其他交易開始
+      search_all_cta: 搜尋所有交易
+      search_all_prompt: 找不到您要的項目？
+      smart_fill: 使用 AI 智慧填入
+      smart_fill_applied: AI 已根據扣款紀錄建議這些值，儲存前請先確認。
+      start_from_hint: 選填。選擇項目只會填入表單，您仍可修改任何內容。
+      start_from_income_title: 從我們找到的定期入帳開始
+      start_from_title: 從我們找到的定期扣款開始
+      title: 新增帳單
+    pay_action:
+      add_link: 新增連結
+      add_link_aria: 為 %{name} 新增付款連結
+      autopay: 自動扣款
+      autopay_aria: "%{name} 會自動付款，在新分頁開啟其網站"
+      open_site: 開啟帳單網站
+      pay: 付款
+      pay_aria: 支付 %{name}（在新分頁開啟）
+    pick_entry:
+      back: 返回表單
+      hint: 選擇項目只會填入表單，您仍可修改任何內容。
+      income_title: 選擇一筆入帳作為起點
+      no_results: 沒有符合「%{query}」的項目。請減少搜尋字詞，或返回自行填寫表單。
+      search_placeholder: 依名稱、備註或商家搜尋
+      showing_recent: 顯示最近 %{count} 筆，搜尋可縮小範圍。
+      title: 選擇一筆交易作為起點
+    picker_row:
+      claimed: 屬於 %{name}
+    smart_fills:
+      create:
+        failed: 目前無法分析扣款紀錄，表單保留交易原有的值。
+    suggested:
+      collapsed_hint: 點選以審閱
+      confirm: 新增帳單
+      dismiss: 不是帳單
+      seen_count:
+        one: 出現過一次
+        other: 出現過 %{count} 次
+      title: 可能的新帳單
+    update:
+      success: 帳單已更新
+      success_with_siblings:
+        one: 帳單已更新，付款連結也已複製至另一筆帳單
+        other: 帳單已更新，付款連結也已複製至其他 %{count} 筆帳單

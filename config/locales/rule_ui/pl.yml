@@ -1,0 +1,18 @@
+---
+pl:
+  rules:
+    new:
+      back: Powrót do reguł
+      title: 'Nowa reguła: %{resource}'
+    form:
+      for: ZAKRES
+    edit:
+      title: 'Edytuj regułę: %{resource}'
+      title_with_name: 'Edytuj regułę „%{name}”: %{resource}'
+  transfers:
+    account_links:
+      missing_account: 'Błąd danych: brak konta'
+      transfer_id: 'ID przelewu: %{id}'
+  tags:
+    create:
+      failed: Nie udało się utworzyć tagu

@@ -30,28 +30,36 @@ it:
       page_title: Regole
       delete_all_rules: Elimina tutte le regole
       new_rule: Nuova regola
-      ai_cost_warning: Le azioni delle regole con AI comporteranno dei costi. Filtra nel modo più specifico possibile per evitare costi inutili.
+      ai_cost_warning: Le azioni delle regole con AI comporteranno dei costi. Filtra
+        nel modo più specifico possibile per evitare costi inutili.
       rules_heading: Regole
-      sort_by: "Ordina per:"
+      sort_by: 'Ordina per:'
       sort_name: Nome
       sort_updated_at: Data aggiornamento
       toggle_sort_direction: Cambia direzione ordinamento
       no_rules_title: Nessuna regola ancora
-      no_rules_description: Configura regole per eseguire azioni sulle tue transazioni e altri dati ad ogni sincronizzazione del conto.
+      no_rules_description: Configura regole per eseguire azioni sulle tue transazioni
+        e altri dati ad ogni sincronizzazione del conto.
     confirm:
       title: Conferma modifiche
-      title_with_name: "Conferma modifiche a \"%{name}\""
-      apply_notice_html: "Stai per applicare questa regola a <span class=\"text-primary font-medium\">%{count} %{resource}</span> che soddisfano i criteri specificati. Conferma se desideri procedere con questa modifica."
+      title_with_name: Conferma modifiche a "%{name}"
+      apply_notice_html: Stai per applicare questa regola a <span class="text-primary
+        font-medium">%{count} %{resource}</span> che soddisfano i criteri specificati.
+        Conferma se desideri procedere con questa modifica.
       ai_cost_title: Stima costo AI
-      ai_cost_with_estimate_html: "Verrà usata l'AI per categorizzare %{count} transazione/i. Costo stimato: <span class=\"font-semibold\">~$%{cost}</span>"
-      ai_cost_no_estimate_html: "Verrà usata l'AI per categorizzare %{count} transazione/i."
-      cost_unavailable_model: "Stima costo non disponibile per il modello \"%{model}\"."
-      cost_unavailable_no_provider: Stima costo non disponibile (nessun provider LLM configurato).
-      cost_warning: Potrebbero verificarsi dei costi, consulta il provider del modello per i prezzi più aggiornati.
+      ai_cost_with_estimate_html: 'Verrà usata l''AI per categorizzare %{count} transazione/i.
+        Costo stimato: <span class="font-semibold">~$%{cost}</span>'
+      ai_cost_no_estimate_html: Verrà usata l'AI per categorizzare %{count} transazione/i.
+      cost_unavailable_model: Stima costo non disponibile per il modello "%{model}".
+      cost_unavailable_no_provider: Stima costo non disponibile (nessun provider LLM
+        configurato).
+      cost_warning: Potrebbero verificarsi dei costi, consulta il provider del modello
+        per i prezzi più aggiornati.
       view_usage_history: Vedi cronologia utilizzo
       confirm_changes: Conferma modifiche
     actions:
       value_placeholder: Inserisci un valore
+      to_label: a
     update:
       success: Regola aggiornata
     destroy:
@@ -61,19 +69,23 @@ it:
     apply_all:
       button: Applica tutte
       confirm_title: Applica tutte le regole
-      confirm_message: Stai per applicare %{count} regole che influenzano %{transactions} transazioni uniche. Conferma se desideri procedere.
+      confirm_message: Stai per applicare %{count} regole che influenzano %{transactions}
+        transazioni uniche. Conferma se desideri procedere.
       confirm_button: Conferma e applica tutte
       success: Tutte le regole sono state messe in coda per l'esecuzione
       ai_cost_title: Stima costo AI
       ai_cost_message: Verrà usata l'AI per categorizzare fino a %{transactions} transazioni.
-      estimated_cost: "Costo stimato: ~$%{cost}"
+      estimated_cost: 'Costo stimato: ~$%{cost}'
       cost_unavailable_model: Stima costo non disponibile per il modello "%{model}".
-      cost_unavailable_no_provider: Stima costo non disponibile (nessun provider LLM configurato).
-      cost_warning: Potrebbero verificarsi dei costi, consulta il provider del modello per i prezzi più aggiornati.
+      cost_unavailable_no_provider: Stima costo non disponibile (nessun provider LLM
+        configurato).
+      cost_warning: Potrebbero verificarsi dei costi, consulta il provider del modello
+        per i prezzi più aggiornati.
       view_usage: Vedi cronologia utilizzo
     recent_runs:
       title: Esecuzioni recenti
-      description: Visualizza la cronologia di esecuzione delle tue regole incluso lo stato di successo/errore e i conteggi delle transazioni.
+      description: Visualizza la cronologia di esecuzione delle tue regole incluso
+        lo stato di successo/errore e i conteggi delle transazioni.
       unnamed_rule: Regola senza nome
       columns:
         date_time: Data/Ora
@@ -95,7 +107,9 @@ it:
     clear_ai_cache:
       button: Reimposta cache AI
       confirm_title: Reimpostare la cache AI?
-      confirm_body: Sei sicuro di voler reimpostare la cache AI? Questo permetterà alle regole AI di rielaborare tutte le transazioni. Potrebbero verificarsi costi API aggiuntivi.
+      confirm_body: Sei sicuro di voler reimpostare la cache AI? Questo permetterà
+        alle regole AI di rielaborare tutte le transazioni. Potrebbero verificarsi
+        costi API aggiuntivi.
       confirm_button: Reimposta cache
       success: La cache AI è in fase di svuotamento. Potrebbe richiedere alcuni istanti.
     condition_filters:
@@ -104,6 +118,27 @@ it:
         expense: Spesa
         transfer: Bonifico
         equal_to: Uguale a
+      operators:
+        equal_to: Uguale a
+        greater_than: Maggiore di
+        less_than: Minore di
+        contains: Contiene
+        does_not_contain: Non contiene
+        greater_or_equal_to: Maggiore o uguale a
+        is_empty: È vuoto
+        is_equal_to: È uguale a
+        is_not_empty: Non è vuoto
+        less_than_or_equal_to: Minore o uguale a
+        not_equal_to: Diverso da
+    category_rule_cta:
+      close: Chiudi
+      create_rule: Crea regola
+      description: Puoi creare una regola per classificare automaticamente transazioni
+        come questa
+      dont_show_again: Non mostrare più
+      hide_for_today: Nascondi per oggi
+      hide_for_today_hint: Nascondi per oggi sospende questi suggerimenti per 24 ore.
+      message: Aggiornato a %{category_name}
   rule:
     conditions:
       condition_group:
@@ -113,3 +148,5 @@ it:
         any: almeno una
         of_the_following_conditions: delle seguenti condizioni
         add_condition: Aggiungi condizione
+      condition:
+        value_placeholder: Inserisci un valore

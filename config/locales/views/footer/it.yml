@@ -1,0 +1,6 @@
+---
+it:
+  layouts:
+    shared:
+      footer:
+        community_fork: "(versione derivata di %{original_product} gestita dalla comunità)"

@@ -1,0 +1,31 @@
+---
+hu:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: Tranzakció neve
+        transaction_amount: Tranzakció összege
+        transaction_type: Tranzakció típusa
+        transaction_merchant: Tranzakció kereskedője
+        transaction_category: Tranzakció kategóriája
+        transaction_tag: Tranzakció címkéje
+        transaction_details: Tranzakció részletei
+        transaction_notes: Tranzakció megjegyzései
+        transaction_account: Tranzakció számlája
+    action_executors:
+      labels:
+        set_transaction_category: Tranzakció kategóriájának beállítása
+        set_transaction_tags: Tranzakció címkéinek beállítása
+        set_transaction_merchant: Tranzakció kereskedőjének beállítása
+        set_transaction_name: Tranzakció nevének beállítása
+        set_investment_activity_label: Befektetési tevékenység típusának beállítása
+        exclude_transaction: Kizárás a költségvetésből és a jelentésekből
+        set_as_transfer_or_payment: Megjelölés átvezetésként vagy fizetésként
+        send_email_notification: E-mail-értesítés küldése
+        auto_categorize: Tranzakciók automatikus kategorizálása MI-vel
+        auto_detect_merchants: Kereskedők automatikus felismerése
+        auto_detect_merchants_with_ai: Kereskedők automatikus felismerése MI-vel ($$)
+      auto_categorize:
+        cost_unavailable: "%{label} (ismeretlen költség)"
+        cost_estimate: "%{label} (kb. %{cost} USD 20 tranzakciónként)"
+        provider_missing: "%{label} (nincs beállítva kategorizálási szolgáltató)"

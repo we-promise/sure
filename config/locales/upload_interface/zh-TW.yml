@@ -1,0 +1,13 @@
+---
+zh-TW:
+  upload_interface:
+    too_many_files: 檔案過多（最多 %{max} 個）
+    file_too_large: 檔案過大（最大 %{max} MB）
+    uploading: 正在上傳 %{filename}…
+    qif_invalid: 必須是有效的 QIF 檔案
+    amount_type_strategies:
+      signed_amount: 帶正負號的金額
+      custom_column: 自訂欄位
+    upload_files:
+      one: 上傳 %{count} 個檔案
+      other: 上傳 %{count} 個檔案

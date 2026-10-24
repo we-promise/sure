@@ -1,0 +1,6 @@
+---
+es:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Ingreso puntual (excluido de los promedios)"
+      one_time_expense_tooltip: "Gasto puntual (excluido de los promedios)"

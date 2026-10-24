@@ -16,6 +16,31 @@ pt-PT:
       rate_type_adjustable: Ajustável
       rate_type_fixed: Fixa
       rate_type_variable: Variável
+      down_payment: Entrada
+      insurance_rate: Taxa do seguro
+      insurance_rate_hint: >-
+        Taxa anual cobrada mensalmente junto à prestação. Na modalidade de capital
+        constante, é calculada sobre o saldo original; na decrescente, sobre o saldo
+        ainda devido.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Tipo de seguro
+      insurance_rate_type_decreasing_life: Capital decrescente
+      insurance_rate_type_level_term: Capital constante
+      rate_change_add: Adicionar alteração de taxa
+      rate_change_effective_date: Data de vigência
+      rate_change_rate: Taxa
+      rate_change_remove: Remover
+      rate_changes: Alterações de taxa
+      rate_changes_empty: Não há alterações de taxa registadas. O empréstimo utiliza
+        a taxa de juro acima.
+      rate_changes_hint: >-
+        Cada linha define a taxa aplicável desde a sua data de entrada em vigor até
+        à seguinte. Voltar a introduzir uma data substitui essa linha em vez de adicionar
+        outra.
+      start_date: Data de contratação
+      start_date_hint: >-
+        Data em que o montante do empréstimo foi disponibilizado. Deixe em branco
+        para utilizar a data de abertura da conta.
     new:
       title: Introduzir dados do empréstimo
     overview:
@@ -27,6 +52,7 @@ pt-PT:
       term: Prazo
       type: Tipo
       unknown: Desconhecido
+      original_payoff_date: Data original de liquidação
     tabs:
       overview:
         interest_rate: Taxa de juro
@@ -37,4 +63,44 @@ pt-PT:
         term: Prazo
         type: Tipo
         unknown: Desconhecido
-        edit_loan_details: "Editar dados do empréstimo"
+        edit_loan_details: Editar dados do empréstimo
+        insurance_rate_only: "%{rate} ao ano"
+        leverage: Alavancagem
+        leverage_band_conservative: Conservadora
+        leverage_band_high: Alta
+        leverage_band_moderate: Moderada
+        leverage_multiple: "%{ratio}x"
+        original_payoff_date: Data original de liquidação
+        total_cost: Custo Total
+        total_cost_with_insurance: Custo total com seguro
+        total_insurance: Seguros
+      repayment_progress:
+        instalment: Pagamento %{number} · %{date}
+        insurance: Seguros
+        interest: Juros
+        of_original: de %{amount}
+        principal: Capital
+        repaid: Amortizado
+        total: Total
+      schedule:
+        date: Data
+        description: >-
+          Projeção com base no saldo, na taxa e no prazo originais, a partir de %{start_date}.
+          Os pagamentos adicionais não são considerados.
+        forecasted_payoff_date: Data prevista de liquidação
+        forecasted_payoff_not_converged: A prestação atual não permite liquidar o
+          empréstimo
+        interest: Juros
+        monthly_payment: Prestação mensal
+        not_applicable: n/d
+        number: "#"
+        opening_payment: Pagamento inicial
+        payment: Pagamento
+        principal: Capital
+        remaining_balance: Saldo restante
+        total_cost: Custo Total
+        total_interest: Total de juros
+        variable_rate_notice: >-
+          A taxa deste empréstimo varia ao longo do tempo. O plano recalcula a amortização
+          a cada alteração registada, mantendo a data original de liquidação e ajustando
+          a prestação. Uma alteração ainda não registada irá modificar estes valores.

@@ -1,0 +1,17 @@
+---
+nl:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: De configuratie kan via omgevingsvariabelen worden ingesteld of hieronder worden overschreven.
+        optional: Optioneel
+      update:
+        failed: De providerinstellingen konden niet worden bijgewerkt. Probeer het opnieuw.
+    llm_usages:
+      show:
+        http_status: 'HTTP-status: %{status}'
+  shared:
+    async_loading:
+      timeout: Time-out
+      failed_with_status: Laden mislukt (%{status})
+      network_error: Netwerkfout

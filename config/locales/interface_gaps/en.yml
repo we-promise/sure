@@ -1,0 +1,16 @@
+---
+en:
+  binance_items:
+    setup_accounts:
+      historical_import: Historical import
+  enable_banking_items:
+    setup_accounts:
+      psd2_savings_notice: 'Note: Some regulated French savings accounts (Livret A,
+        PEL, LEP, LDDS) may have limited or no access through Open Banking (PSD2).
+        If a savings account is missing, you can add it manually.'
+  reports:
+    index:
+      period_aria: Report period
+  shared:
+    transaction_tabs:
+      aria: Transaction type

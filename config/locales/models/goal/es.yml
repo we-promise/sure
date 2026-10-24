@@ -17,9 +17,20 @@ es:
           attributes:
             base:
               at_least_one_linked_account_required: Elige al menos una cuenta para financiar este objetivo.
+              whole_account_conflict_on_restore: 'No se puede restaurar este objetivo: «%{account_name}» está ahora totalmente reservada para «%{goal_name}». Introduce primero un importe en uno de ellos.'
             linked_accounts:
               must_be_fundable: Todas las cuentas vinculadas deben ser cuentas de efectivo o de inversión.
               currency_mismatch: Todas las cuentas vinculadas deben compartir la misma moneda.
               must_belong_to_family: Las cuentas vinculadas deben pertenecer a la misma familia que el objetivo.
             currency:
               locked_after_linked: No se puede cambiar la moneda cuando el objetivo ya está vinculado a cuentas.
+            kind:
+              locked_once_consumed: Este objetivo ya ha registrado dinero como gastado, por lo que no puede convertirse en una reserva.
+              locked_while_released: Reabre este objetivo antes de convertirlo en una reserva.
+            target_amount:
+              below_consumed: No se puede fijar una meta inferior al importe que este objetivo ya ha registrado como gastado.
+            target_mode:
+              months_requires_maintained: Solo una reserva que mantienes puede tener una meta expresada en meses de gastos.
+            target_months:
+              blank: Indica cuántos meses de gastos debe cubrir esta reserva.
+              only_with_months_mode: Los meses de gastos solo se aplican cuando la meta se define de ese modo.

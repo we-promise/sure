@@ -1,0 +1,18 @@
+---
+pt-BR:
+  rules:
+    new:
+      back: Voltar às regras
+      title: Nova regra para %{resource}
+    form:
+      for: APLICAR A
+    edit:
+      title: Editar regra de %{resource}
+      title_with_name: Editar regra de %{resource} “%{name}”
+  transfers:
+    account_links:
+      missing_account: 'Erro nos dados: conta ausente'
+      transfer_id: 'ID da transferência: %{id}'
+  tags:
+    create:
+      failed: Não foi possível criar a tag

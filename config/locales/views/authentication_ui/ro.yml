@@ -1,0 +1,20 @@
+---
+ro:
+  authentication_ui:
+    password:
+      missing_case: "trebuie să conțină litere mari și mici"
+      missing_number: "trebuie să conțină cel puțin o cifră"
+      missing_special: "trebuie să conțină cel puțin un caracter special"
+    sso:
+      copy_failed: "Nu s-a putut copia în clipboard"
+      issuer_valid: "Emitent OIDC valid"
+      issuer_mismatch_trailing: "Emitentul nu corespunde: descoperirea a returnat %{issuer}. De obicei, cauza este o diferență la bara oblică de la final. Copiază emitentul exact cum a fost returnat."
+      issuer_mismatch: "Emitentul nu corespunde: descoperirea a returnat %{issuer}. Copiază emitentul exact cum a fost returnat de furnizor."
+      browser_validation_unavailable: "Nu s-a putut valida din browser (CORS). Furnizorul poate fi salvat în continuare."
+      testing: "Se testează…"
+      request_failed: "Cererea a eșuat: %{message}"
+    authorization:
+      authorizing: "Se autorizează…"
+      denying: "Se refuză…"
+      explanation: "Prin autorizare, permiți acestei aplicații să îți acceseze datele din %{product_name} conform permisiunilor de mai sus."
+      title: "Autorizare %{product_name}"

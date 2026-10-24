@@ -34,6 +34,7 @@ zh-TW:
       idle_cash: 閒置現金
       budget_at_risk: 預算
       budget_on_track: 預算
+      maintained_goal_depleted: 準備金
     meta:
       next_n_days:
         one: 未來一天
@@ -41,7 +42,7 @@ zh-TW:
       last_n_days:
         one: 過去一天
         other: 過去 %{count} 天
-      date_range: '%{from} 至 %{to}'
+      date_range: "%{from} 至 %{to}"
     figures:
       vs_previous: 相較上月
       today: 今天
@@ -62,23 +63,25 @@ zh-TW:
       savings_rate_change: 查看該月份的交易
       idle_cash: 前往帳戶
       budget: 查看預算
+      maintained_goal_depleted: 查看準備金
     titles:
       spending_anomaly:
-        above: '%{category} 的支出正在上升'
-        below: '%{category} 的支出正在下降'
+        above: "%{category} 的支出正在上升"
+        below: "%{category} 的支出正在下降"
       cash_flow_warning:
         low: 您的現金餘額可能會偏低
         negative: 您的現金餘額可能會變成負數
       net_worth_milestone: 淨資產里程碑：%{milestone}
-      subscription_audit: '%{name} 還在使用中嗎？'
+      subscription_audit: "%{name} 還在使用中嗎？"
       savings_rate_change:
         up: 您在%{month}的儲蓄率提高了
         down: 您在%{month}的儲蓄率下降了
-      idle_cash: '%{account} 有閒置現金'
+      idle_cash: "%{account} 有閒置現金"
       budget_at_risk:
         one: 您的預算中有一個分類需要注意
         other: 您的預算中有 %{count} 個分類需要注意
       budget_on_track: 您的預算進度正常
+      maintained_goal_depleted: "%{goal} 已低於應維持的水位"
     templates:
       spending_anomaly:
         above: 依目前進度，您這個月在 %{category} 的支出約為 %{projected_spend}，比近期月均 %{baseline_spend} 高出約 %{deviation_pct}%。
@@ -87,13 +90,14 @@ zh-TW:
         low: 根據即將到來的定期交易與您平常的支出，您的現金餘額可能在 %{projected_low_date} 前後降到 %{projected_low}。
         negative: 根據即將到來的定期交易與您平常的支出，您的現金餘額可能在 %{projected_low_date} 前後跌到 %{projected_low}。
       net_worth_milestone: 您的淨資產已越過 %{milestone}，目前為 %{net_worth}。
-      subscription_audit: '%{name}（%{amount}）自預期的 %{expected_on} 之後就沒有再出現。可能已經取消，或是扣款時間改變了。'
+      subscription_audit: "%{name}（%{amount}）自預期的 %{expected_on} 之後就沒有再出現。可能已經取消，或是扣款時間改變了。"
       savings_rate_change:
         up: 您在%{month}存下了收入的 %{current_rate}%，比前一個月的 %{previous_rate}% 高出 %{change_pp} 個百分點。
         down: 您在%{month}存下了收入的 %{current_rate}%，比前一個月的 %{previous_rate}% 低了 %{change_pp} 個百分點。
         down_negative: 您在%{month}的支出超過收入：儲蓄率從前一個月的 %{previous_rate}% 降到 %{current_rate}%。
-      idle_cash: '%{account} 有 %{balance}，且在過去 %{idle_days} 天內沒有任何活動。'
+      idle_cash: "%{account} 有 %{balance}，且在過去 %{idle_days} 天內沒有任何活動。"
       budget_at_risk:
-        over: '%{categories} 這個月已超出預算。您目前已使用總預算的 %{budget_spent_pct}%。'
-        near: '%{categories} 這個月已接近預算上限。您目前已使用總預算的 %{budget_spent_pct}%。'
+        over: "%{categories} 這個月已超出預算。您目前已使用總預算的 %{budget_spent_pct}%。"
+        near: "%{categories} 這個月已接近預算上限。您目前已使用總預算的 %{budget_spent_pct}%。"
       budget_on_track: 您已使用 %{budgeted} 預算中的 %{spent}（%{budget_spent_pct}%），全部都在上限之內。
+      maintained_goal_depleted: "%{goal} 目前持有 %{saved}，應維持 %{target}，尚差 %{missing}。"

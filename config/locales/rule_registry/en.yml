@@ -1,0 +1,31 @@
+---
+en:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: Transaction name
+        transaction_amount: Transaction amount
+        transaction_type: Transaction type
+        transaction_merchant: Transaction merchant
+        transaction_category: Transaction category
+        transaction_tag: Transaction tag
+        transaction_details: Transaction details
+        transaction_notes: Transaction notes
+        transaction_account: Transaction account
+    action_executors:
+      labels:
+        set_transaction_category: Set transaction category
+        set_transaction_tags: Set transaction tags
+        set_transaction_merchant: Set transaction merchant
+        set_transaction_name: Set transaction name
+        set_investment_activity_label: Set investment activity label
+        exclude_transaction: Exclude from budgeting and reports
+        set_as_transfer_or_payment: Set as transfer or payment
+        send_email_notification: Send email notification
+        auto_categorize: Auto-categorize transactions with AI
+        auto_detect_merchants: Auto-detect merchants
+        auto_detect_merchants_with_ai: Auto-detect merchants with AI ($$)
+      auto_categorize:
+        cost_unavailable: "%{label} (cost: N/A)"
+        cost_estimate: "%{label} (~$%{cost} per 20 transactions)"
+        provider_missing: "%{label} (no categorization provider configured)"

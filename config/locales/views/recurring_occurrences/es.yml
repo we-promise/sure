@@ -1,0 +1,53 @@
+---
+es:
+  recurring_occurrences:
+    history_status:
+      scheduled: Abierto
+      missed: Impagado
+      paid: Pagado
+      skipped: Omitido
+    show:
+      manual_amount_label: Importe
+      manual_date_label: Fecha
+      payments: Pagos
+      skip: Omitir
+      unlink: Desvincular
+      add_heading: Añadir otro pago
+      cant_find: "¿No encuentras la transacción?"
+      due_on: Vence el %{date}
+      find_heading: Buscar un pago
+      link_payment: Vincular pago
+      manual_explainer: Registra un pago que sabes que se realizó cuando ninguna transacción de aquí coincide con él.
+      manual_payment: Pago manual
+      mark_paid: Marcar como pagada
+      mark_paid_hint: Liquida el importe restante sin registrar una transacción.
+      missed: Marcado como impagado
+      no_candidates: No hay transacciones cercanas para vincular.
+      no_ranked_candidates: Todavía no parece haber un pago de esta factura aquí.
+      no_search_results: No hay coincidencias con %{query}.
+      not_this_one: Esta no
+      other_matches: Otras coincidencias probables
+      overpaid: más de lo previsto
+      paid_headline: "%{amount} pagados"
+      paid_of: "%{paid} de %{expected} pagados"
+      record_payment: Registrar pago
+      remaining: Quedan %{amount}
+      reopen: Reabrir
+      review_heading: Revisar pago
+      search_all: Buscar en todas las transacciones
+      search_placeholder: Buscar transacciones
+      settled: Pagada por completo
+      snooze_week: Posponer una semana
+      view_bill: Ver factura completa
+      skipped: Omitido
+    mark_paid:
+      success: Factura marcada como pagada
+    override_amount:
+      success: Importe previsto actualizado
+    reopen:
+      success: Factura reabierta
+    skip:
+      success: Factura omitida
+    snooze:
+      invalid_date: No se pudo interpretar esa fecha
+      success: Pospuesta hasta el %{date}

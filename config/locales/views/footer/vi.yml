@@ -1,0 +1,6 @@
+---
+vi:
+  layouts:
+    shared:
+      footer:
+        community_fork: "(nhánh phát triển cộng đồng của %{original_product})"

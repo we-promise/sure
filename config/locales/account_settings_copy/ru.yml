@@ -1,0 +1,17 @@
+---
+ru:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: Конфигурацию можно задать через переменные окружения или переопределить ниже.
+        optional: Необязательно
+      update:
+        failed: Не удалось обновить настройки провайдеров. Попробуйте ещё раз.
+    llm_usages:
+      show:
+        http_status: 'Статус HTTP: %{status}'
+  shared:
+    async_loading:
+      timeout: Время ожидания истекло
+      failed_with_status: Не удалось загрузить (%{status})
+      network_error: Ошибка сети

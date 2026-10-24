@@ -24,3 +24,6 @@ it:
       savings:
         long: Conto Risparmio
         short: Risparmio
+      cash:
+        long: Liquidità
+        short: Liquidità

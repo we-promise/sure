@@ -47,3 +47,18 @@ it:
       income: Entrata
       transfer: Bonifico
     submitting: Invio in corso…
+    require_connector_owner: Puoi gestire solo le connessioni aggiunte da te
+    sidekiq_health_banner:
+      body: 'Le attività in background non vengono elaborate: saldi, patrimonio netto
+        e sincronizzazioni dei conti potrebbero essere obsoleti o mancanti.'
+      cta: Visualizza stato del sistema
+      reasons:
+        no_worker_processes: Nessun processo Sidekiq è collegato. Avvia il container
+          del processo di lavoro o l'unità systemd.
+        queue_backed_up: L'attività più vecchia in coda ha superato il tempo di attesa
+          previsto. Il processo di lavoro è attivo ma non riesce a tenere il passo.
+        redis_unreachable: L'app non riesce a raggiungere Redis. Controlla REDIS_URL
+          e verifica che Redis sia in esecuzione.
+        stale_heartbeat: Il processo Sidekiq non ha inviato segnali di attività di
+          recente. Potrebbe essere bloccato o arrestato in modo anomalo.
+      title: Alcuni dati potrebbero non essere aggiornati

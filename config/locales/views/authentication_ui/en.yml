@@ -1,0 +1,20 @@
+---
+en:
+  authentication_ui:
+    password:
+      missing_case: "must include both uppercase and lowercase letters"
+      missing_number: "must include at least one number"
+      missing_special: "must include at least one special character"
+    sso:
+      copy_failed: "Failed to copy to clipboard"
+      issuer_valid: "Valid OIDC issuer"
+      issuer_mismatch_trailing: "Issuer mismatch: discovery returned %{issuer}. This is usually a trailing slash mismatch, so copy the issuer exactly as returned."
+      issuer_mismatch: "Issuer mismatch: discovery returned %{issuer}. Copy the issuer exactly as returned by the provider."
+      browser_validation_unavailable: "Could not validate from browser (CORS). Provider can still be saved."
+      testing: "Testing..."
+      request_failed: "Request failed: %{message}"
+    authorization:
+      authorizing: "Authorizing..."
+      denying: "Denying..."
+      explanation: "By authorizing, you allow this app to access your %{product_name} data according to the permissions above."
+      title: "%{product_name} Authorization"

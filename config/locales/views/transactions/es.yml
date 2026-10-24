@@ -12,7 +12,7 @@ es:
         merchant_prompt: Selecciona un comercio
         name_label: Nombre
         name_placeholder: Introduce un nombre que se aplicará a las transacciones seleccionadas
-        none: (ninguno)
+        none: "(ninguno)"
         notes_label: Notas
         notes_placeholder: Introduce una nota que se aplicará a las transacciones seleccionadas
         overview: Resumen
@@ -38,7 +38,7 @@ es:
       expense: Gasto
       income: Ingreso
       merchant_label: Comercio
-      none: (ninguno)
+      none: "(ninguno)"
       note_label: Notas
       note_placeholder: Introduce una nota
       create_tag: Crear
@@ -46,6 +46,12 @@ es:
       tag_search_placeholder: Buscar o crear etiqueta
       tags_label: Etiquetas
       transfer: Transferencia
+      create_merchant: Crear
+      category_search_placeholder: Buscar categorías
+      create_category: Crear «%{name}»
+      create_category_error: No se pudo crear la categoría
+      create_merchant_error: No se pudo crear el comercio
+      merchant_search_placeholder: Buscar o crear un comercio
     create:
       created: Transacción creada
     update:
@@ -81,13 +87,13 @@ es:
       convert_to_trade_description: Convierte esta transacción en una operación de compra o venta con detalles del valor para el seguimiento de la cartera.
       convert_to_trade_button: Convertir en operación
       transfer_matcher_description: Conecta esta transacción con su contrapartida en otra cuenta.
-      pending_duplicate_merger_title: ¿Duplicado de una transacción contabilizada?
+      pending_duplicate_merger_title: "¿Duplicado de una transacción contabilizada?"
       pending_duplicate_merger_description: Fusiona manualmente esta transacción pendiente con su versión contabilizada.
       pending_duplicate_merger_button: Abrir fusionador
       merchant_label: Comercio
       name_label: Nombre
       nature: Tipo
-      none: (ninguno)
+      none: "(ninguno)"
       note_label: Notas
       note_placeholder: Introduce una nota
       overview: Resumen
@@ -95,15 +101,38 @@ es:
       tags_label: Etiquetas
       tab_transactions: Transacciones
       tab_upcoming: Próximas
-      uncategorized: (sin categorizar)
+      uncategorized: "(sin categorizar)"
       additional_details: Detalles adicionales
       payee: Beneficiario
       description: Descripción
       memo: Concepto
       provider_extras: Extras del proveedor
-      transfer_or_debt_payment: ¿Transferencia o pago de deuda?
+      transfer_or_debt_payment: "¿Transferencia o pago de deuda?"
       open_matcher: Abrir emparejador
       convert: Convertir
+      applied_to_unreviewed: Requiere revisión
+      provider_extra_fields:
+        name: Nombre
+        payee: Beneficiario
+        type: Tipo
+        by_order_of: Por orden de
+        confidence_level: Nivel de confianza
+        entity_id: ID de entidad
+        logo_url: URL del logotipo
+        payer: Pagador
+        phone_number: Número de teléfono
+        ppd_id: ID de PPD
+        reason: Motivo
+        reference_number: Número de referencia
+        website: Sitio web
+      applied_to_detail: "%{amount} destinados a la factura que vence el %{date}"
+      applied_to_title: Facturas pagadas con esta transacción
+      create_bill: Crear una factura
+      original_description: Descripción original
+      payment_channel: Canal de pago
+      plaid_counterparty_label: Contraparte %{index}
+      plaid_payment_meta_label: Metadatos de pago · %{name}
+      transaction_code: Código de transacción
     activity_labels:
       buy: Compra
       sell: Venta
@@ -141,7 +170,7 @@ es:
       pending_tooltip: Transacción pendiente — puede cambiar al confirmarse
       linked_with_provider: Vinculado con %{provider}
       activity_type_tooltip: Tipo de actividad de inversión
-      possible_duplicate: ¿Duplicada?
+      possible_duplicate: "¿Duplicada?"
       potential_duplicate_tooltip: Esto puede ser un duplicado de otra transacción
       review_recommended: Revisar
       review_recommended_tooltip: Gran diferencia de importe — se recomienda revisar para comprobar si es un duplicado
@@ -152,8 +181,8 @@ es:
       success: Mantenidas como transacciones separadas
       failure: No se pudo descartar la sugerencia de duplicado
     pending_duplicate_merge:
-      possible_duplicate: ¿Duplicado?
-      possible_duplicate_short: ¿Dup?
+      possible_duplicate: "¿Duplicado?"
+      possible_duplicate_short: "¿Dup?"
       review_recommended: Revisar
       review_recommended_short: Rev
       confirm_title: Fusionar con la transacción contabilizada (%{posted_amount})
@@ -194,10 +223,10 @@ es:
           other: Quedan %{count} transacciones sin categorizar
         transaction_count:
           one: 1 transacción
-          other: '%{count} transacciones'
+          other: "%{count} transacciones"
         transactions_hint: Desmarca para excluir una transacción, o asígnale una categoría distinta directamente en su fila.
         assign_category: Asignar una categoría
-        assign_category_prompt: → asignar
+        assign_category_prompt: "→ asignar"
         filter_placeholder: Buscar categorías...
         col_transaction: Transacción
         col_date: Fecha
@@ -213,7 +242,7 @@ es:
       create:
         categorized:
           one: 1 transacción categorizada
-          other: '%{count} transacciones categorizadas'
+          other: "%{count} transacciones categorizadas"
         rule_creation_failed: Transacciones categorizadas, pero no se pudo crear la regla (puede que ya exista).
       entry_row:
         include_checkbox: Incluir %{name}
@@ -234,6 +263,7 @@ es:
         category: Categoría
         tag: Etiqueta
         merchant: Comercio
+        ai: IA
     convert_to_trade:
       title: Convertir en operación de valores
       description: Convierte esta transacción en una operación con detalles del valor
@@ -242,7 +272,7 @@ es:
       amount_label: 'Importe:'
       security_label: Valor
       security_prompt: Selecciona un valor...
-      security_custom: + Introducir ticker personalizado
+      security_custom: "+ Introducir ticker personalizado"
       security_not_listed_hint: ¿No ves tu valor? Selecciona "Introducir ticker personalizado" al final de la lista.
       ticker_placeholder: AAPL
       ticker_hint: Introduce el símbolo del ticker de la acción/ETF (ej. AAPL, MSFT)
@@ -302,6 +332,8 @@ es:
           transfer: Transferencia
           confirmed: Confirmada
           pending: Pendiente
+          ai_current: IA
+          ai_history: Historial de IA
         type_filter:
           expense: Gasto
           income: Ingreso
@@ -309,6 +341,11 @@ es:
         status_filter:
           confirmed: Confirmada
           pending: Pendiente
+        ai_filter:
+          current_description: La categoría sigue siendo la asignada automáticamente (IA o Bayes).
+          history: Historial de IA
+          history_description: Se clasificó automáticamente, pero la categoría se ha cambiado desde entonces.
+          current: IA
       menu:
         account_filter: Cuenta
         amount_filter: Importe
@@ -332,7 +369,7 @@ es:
     attachments:
       cannot_exceed: No se pueden superar los %{count} adjuntos por transacción
       uploaded_one: Adjunto subido correctamente
-      uploaded_many: '%{count} adjuntos subidos correctamente'
+      uploaded_many: "%{count} adjuntos subidos correctamente"
       failed_upload: 'Error al subir el adjunto: %{error}'
       no_files_selected: No se han seleccionado archivos para subir
       attachment_deleted: Adjunto eliminado correctamente

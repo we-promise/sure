@@ -1,0 +1,6 @@
+---
+ro:
+  reports:
+    index:
+      sections_aria_label: "Secțiunile raportului"
+      section_reorder_aria: "Secțiunea %{title}. Apasă Enter sau Spațiu pentru a o selecta în vederea reordonării, apoi folosește tastele săgeată pentru a o muta."

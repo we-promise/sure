@@ -1,0 +1,40 @@
+---
+hu:
+  investments:
+    subtypes:
+      non-registered:
+        long: Nem regisztrált befektetési számla
+      fhsa:
+        long: Első lakásra szóló megtakarítási számla (FHSA)
+      rdsp:
+        long: Regisztrált megtakarítási program fogyatékossággal élőknek (RDSP)
+      dpsp:
+        long: Halasztott nyereségrészesedési program (DPSP)
+      prpp:
+        long: Közös regisztrált nyugdíjprogram (PRPP)
+      lif:
+        long: Élethosszig tartó jövedelmet biztosító alap (LIF)
+      lrif:
+        long: Zárolt nyugdíjjövedelmi alap (LRIF)
+      prif:
+        long: Külön szabályozású regisztrált nyugdíjjövedelmi alap (PRIF)
+      rlif:
+        long: Korlátozott, élethosszig tartó jövedelmet biztosító alap (RLIF)
+      assurance_vie:
+        long: Francia életbiztosítás (Assurance Vie)
+  loans:
+    subtypes:
+      home_equity:
+        long: Ingatlan saját tőkéjével fedezett hitel
+      line_of_credit:
+        long: Hitelkeret
+      business:
+        long: Vállalkozói hitel
+      mortgage:
+        long: Jelzálog
+      student:
+        long: Diákhitel
+      auto:
+        long: Autóhitel
+      other:
+        long: Egyéb hitel

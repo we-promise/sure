@@ -33,7 +33,9 @@ zh-TW:
       title: 更新 SimpleFin 連線
       header_subtitle: 取得一組新的 Setup Token 以重新連線您的 SimpleFIN 帳戶
       connection_needs_update: 您的 SimpleFIN 連線需要更新：
-      step_1_html: 前往 <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> 建立一組新的 Setup Token
+      step_1_html: >-
+        前往 <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer"
+        class="text-link hover:text-link underline">SimpleFIN Bridge</a> 建立一組新的 Setup Token
       step_2: 複製 Token 並貼到下方
       step_3: 點選「更新」以恢復存取權
       update: 更新
@@ -63,15 +65,15 @@ zh-TW:
       activity:
         recent:
           one: 1 筆交易 • 最近一筆 %{when}
-          other: '%{count} 筆交易 • 最近一筆 %{when}'
-        dormant: '%{days} 天內沒有任何活動'
+          other: "%{count} 筆交易 • 最近一筆 %{when}"
+        dormant: "%{days} 天內沒有任何活動"
         empty: 還沒有匯入任何交易
         likely_closed: 近期沒有活動且餘額為零 - 這張卡可能已經關閉或被換發
         today: 今天
         yesterday: 昨天
         days_ago:
           one: 1 天前
-          other: '%{count} 天前'
+          other: "%{count} 天前"
       stale_accounts:
         title: SimpleFIN 中已不存在的帳戶
         description: 這些帳戶還在您的資料庫中，但 SimpleFIN 已經不再提供。上游的帳戶設定有變動時就可能發生這種情況。
@@ -80,8 +82,8 @@ zh-TW:
         action_move: 把交易移到：
         action_skip: 暫時跳過
         transaction_count:
-          one: '%{count} 筆交易'
-          other: '%{count} 筆交易'
+          one: "%{count} 筆交易"
+          other: "%{count} 筆交易"
     complete_account_setup:
       all_skipped: 已跳過所有帳戶。未建立任何帳戶。
       no_accounts: 沒有需要設定的帳戶。
@@ -98,7 +100,7 @@ zh-TW:
       confirm_body: 這將永久刪除此群組中的所有帳戶及相關資料。
       confirm_title: 確定要刪除 SimpleFIN 連線嗎？
       delete: 刪除
-      deletion_in_progress: （正在刪除...）
+      deletion_in_progress: "（正在刪除...）"
       error: 同步資料時發生錯誤
       no_accounts_description: 此連線目前尚無任何已同步的帳戶。
       no_accounts_title: 找不到帳戶
@@ -119,9 +121,9 @@ zh-TW:
       status_with_summary: 上次同步於 %{timestamp}前 • %{summary}
       syncing: 同步中...
       update: 更新
-      stale_pending_note: （不列入預算）
+      stale_pending_note: "（不列入預算）"
       stale_pending_accounts: 位於：%{accounts}
-      reconciled_details_note: （詳情請見同步摘要）
+      reconciled_details_note: "（詳情請見同步摘要）"
       duplicate_accounts_skipped: 有些帳戶因為重複而被跳過 - 請用「連結現有帳戶」來合併。
     select_existing_account:
       title: 將 %{account_name} 連結至 SimpleFIN
@@ -133,6 +135,7 @@ zh-TW:
       unlink_to_move: 若要更改連結，請先從帳戶的操作選單中解除連結。
       all_accounts_already_linked: 所有的 SimpleFIN 帳戶似乎都已連結。
       currently_linked_to: 目前連結至：%{account_name}
+      check_provider_health: 請在「設定 → 供應商」檢查 SimpleFIN 連線是否正常。
     link_existing_account:
       success: 帳戶已成功連結至 SimpleFIN
       errors:
@@ -143,10 +146,10 @@ zh-TW:
       dismissed: 已忽略換卡建議
     replacement_prompt:
       title: 您的 %{institution} 卡片可能已被換發
-      description: 「%{account_name}」目前連結到「%{old_name}」，該卡近期沒有活動且餘額為零。同一機構下有一張新卡「%{new_name}」已經啟用。重新連結就能完整保留您的紀錄。
+      description: "「%{account_name}」目前連結到「%{old_name}」，該卡近期沒有活動且餘額為零。同一機構下有一張新卡「%{new_name}」已經啟用。重新連結就能完整保留您的紀錄。"
       relink: 重新連結到新卡
       confirm_title: 要重新連結到新卡嗎？
-      confirm_body: 「%{account_name}」會改為連結到「%{new_name}」。您的交易紀錄會保留，之後的交易則來自新卡。
+      confirm_body: "「%{account_name}」會改為連結到「%{new_name}」。您的交易紀錄會保留，之後的交易則來自新卡。"
       dismiss_aria: 忽略換卡建議
     reconciled_status:
       message:
@@ -156,3 +159,21 @@ zh-TW:
       message:
         one: 有 %{count} 筆待處理交易超過 %{days} 天
         other: 有 %{count} 筆待處理交易超過 %{days} 天
+    institution_summary:
+      count:
+        one: "%{count} 個機構"
+        other: "%{count} 個機構"
+      none: 沒有已連線的機構
+    rate_limited:
+      daily_refresh: 您已達到 SimpleFIN 每日更新上限。請在橋接服務更新後再試，最長可能需要 24 小時。
+    stale_sync:
+      last_successful: 上次成功同步是在 %{count} 天前，您的 SimpleFIN 連線可能需要檢查。
+      no_transactions: "%{count} 天內沒有新交易，請在 SimpleFIN 儀表板確認銀行連線仍有效。"
+    sync_status:
+      no_accounts: 找不到帳戶
+      partial_setup:
+        one: 已同步 %{linked} 個，%{unlinked} 個需要設定
+        other: 已同步 %{linked} 個，%{unlinked} 個需要設定
+      synced:
+        one: 已同步 %{count} 個帳戶
+        other: 已同步 %{count} 個帳戶

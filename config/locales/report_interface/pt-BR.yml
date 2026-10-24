@@ -1,0 +1,6 @@
+---
+pt-BR:
+  reports:
+    index:
+      sections_aria_label: "Seções do relatório"
+      section_reorder_aria: "Seção %{title}. Pressione Enter ou Espaço para selecioná-la e alterar a ordem; depois, use as teclas de seta para movê-la."

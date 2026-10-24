@@ -1,6 +1,7 @@
 <%# locals: (transactions:, projected_recurring:, q:, pagy:) %>
 <div id="transactions"
   data-controller="bulk-select checkbox-toggle drag-and-drop-import"
+  data-drag-and-drop-import-invalid-file-type-value="<%= t("imports.create.invalid_file_type") %>"
   data-bulk-select-singular-label-value="<%= t(".transaction") %>"
   data-bulk-select-plural-label-value="<%= t(".transactions") %>"
   data-bulk-select-selected-label-value="<%= t("transactions.selection_bar.selected") %>"

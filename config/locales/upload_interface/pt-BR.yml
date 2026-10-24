@@ -1,0 +1,14 @@
+---
+pt-BR:
+  upload_interface:
+    too_many_files: 'Arquivos demais (máximo: %{max})'
+    file_too_large: 'Arquivo muito grande (máximo: %{max} MB)'
+    uploading: Enviando %{filename}…
+    qif_invalid: Deve ser um arquivo QIF válido
+    amount_type_strategies:
+      signed_amount: Valor com sinal
+      custom_column: Coluna personalizada
+    upload_files:
+      one: Enviar %{count} arquivo
+      many: Enviar %{count} arquivos
+      other: Enviar %{count} arquivos

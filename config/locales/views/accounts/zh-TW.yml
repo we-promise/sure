@@ -27,11 +27,11 @@ zh-TW:
     chart:
       data_not_available: 所選時段內無資料
     create:
-      success: '%{type} 帳戶已建立'
+      success: "%{type} 帳戶已建立"
     set_default:
       depository_only: 只有現金與信用卡帳戶可以設為預設。
     destroy:
-      success: '%{type} 帳戶已排定刪除'
+      success: "%{type} 帳戶已排定刪除"
       cannot_delete_linked: 無法刪除已連結的帳戶。請先解除連結。
       failed: 資源刪除失敗，請稍後再試。
     empty:
@@ -60,6 +60,9 @@ zh-TW:
         other_accounts: 其他帳戶
       new_account: 新增帳戶
       sync: 全部同步
+      financekit_accounts:
+        description: 在 Sure iOS 應用程式管理 Apple Wallet 連線與同步。
+        title: Apple Wallet
     sync_all:
       syncing: 正在同步帳戶...
     new:
@@ -68,6 +71,8 @@ zh-TW:
         select: 選擇
         navigate: 前往
         close: 關閉
+        next: 下一頁
+        previous: 上一頁
       method_selector:
         connected_entry: 連結帳戶
         connected_entry_eu: 連結歐盟 (EU) 帳戶
@@ -83,6 +88,7 @@ zh-TW:
         holdings: 持股
         overview: 概覽
         statements: 對帳單
+        schedule: 排程
       activity:
         amount: 金額
         balance: 餘額
@@ -104,6 +110,8 @@ zh-TW:
         search_placeholder: 以名稱搜尋紀錄
         status: 狀態
         title: 活動紀錄
+        category: 分類
+        uncategorized_only: 僅未分類
       chart:
         balance: 餘額
         owed: 欠款金額
@@ -111,7 +119,7 @@ zh-TW:
         complete_setup: 完成設定
       menu:
         confirm_accept: 刪除「%{name}」
-        confirm_body_html: <p>刪除這個帳戶會抹除它的價值歷史紀錄，並影響您帳戶的各個層面，也會直接影響您的淨資產計算與帳戶圖表。</p><br /> <p>帳戶資料一旦刪除就無法復原，之後若要使用只能重新建立新帳戶。</p>
+        confirm_body_html: "<p>刪除這個帳戶會抹除它的價值歷史紀錄，並影響您帳戶的各個層面，也會直接影響您的淨資產計算與帳戶圖表。</p><br /> <p>帳戶資料一旦刪除就無法復原，之後若要使用只能重新建立新帳戶。</p>"
         confirm_title: 確定要刪除帳戶嗎？
         delete_account: 刪除帳戶
         edit: 編輯
@@ -124,10 +132,10 @@ zh-TW:
         exclude_from_reports: 從所有報表中排除
         include_in_reports: 納入報表
     update:
-      success: '%{type} 帳戶已更新'
+      success: "%{type} 帳戶已更新"
     sidebar:
       missing_data: 缺少歷史資料
-      missing_data_description: '%{product} 會向第三方供應商取得歷史匯率、證券價格等資料。要算出正確的歷史餘額就需要這些資料。'
+      missing_data_description: "%{product} 會向第三方供應商取得歷史匯率、證券價格等資料。要算出正確的歷史餘額就需要這些資料。"
       configure_providers: 在此設定您的供應商。
       tabs:
         all: 全部
@@ -137,6 +145,8 @@ zh-TW:
       new_debt: 新增負債
       new_account: 新增帳戶
       new_account_group: 新增%{account_group}
+      collapse_all: 全部收合
+      expand_all: 全部展開
     types:
       depository: 現金/存款
       investment: 投資
@@ -184,6 +194,8 @@ zh-TW:
       warning_transactions_kept: 所有現有的交易和餘額紀錄將會保留
       warning_can_delete: 解除連結後，您就可以視需要刪除這個帳戶
       confirm_button: 確認並解除連結
+      warning_wallet_connection: 此 Apple Wallet 連線的所有帳戶都將解除連結，交易與餘額仍會保留。您可以透過 Sure iOS 應用程式重新設定 Wallet
+        以再次連線。
     unlink:
       success: 帳戶連結已成功解除。此帳戶現在改為手動管理。
       not_linked: 帳戶未與任何供應商連結

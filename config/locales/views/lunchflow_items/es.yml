@@ -14,6 +14,7 @@ es:
       service_down_label: Servicio caído
       service_down_desc: La API de Lunch Flow puede no estar disponible temporalmente
       check_provider_settings: Revisar ajustes de proveedores
+      unexpected_error: Se ha producido un error inesperado. Inténtalo de nuevo más tarde.
     setup_required:
       title: Configuración de Lunch Flow necesaria
       api_key_not_configured: Clave de API no configurada
@@ -44,10 +45,10 @@ es:
       link_failed: Error al vincular cuentas
       no_accounts_selected: Por favor, selecciona al menos una cuenta
       partial_invalid: Se han vinculado %{created_count} cuenta(s) con éxito, %{already_linked_count} ya estaban vinculadas, %{invalid_count} cuenta(s) tenían nombres no válidos
-      partial_success: '%{created_count} cuenta(s) vinculada(s) con éxito. %{already_linked_count} cuenta(s) ya estaban vinculadas: %{already_linked_names}'
+      partial_success: "%{created_count} cuenta(s) vinculada(s) con éxito. %{already_linked_count} cuenta(s) ya estaban vinculadas: %{already_linked_names}"
       success:
-        one: '%{count} cuenta vinculada con éxito'
-        other: '%{count} cuentas vinculadas con éxito'
+        one: "%{count} cuenta vinculada con éxito"
+        other: "%{count} cuentas vinculadas con éxito"
     lunchflow_item:
       accounts_need_setup: Las cuentas necesitan configuración
       delete: Eliminar conexión
@@ -56,7 +57,7 @@ es:
       no_accounts_description: Esta conexión aún no tiene cuentas vinculadas.
       no_accounts_title: Sin cuentas
       setup_action: Configurar nuevas cuentas
-      setup_description: '%{linked} de %{total} cuentas vinculadas. Elige los tipos de cuenta para tus cuentas de Lunch Flow recién importadas.'
+      setup_description: "%{linked} de %{total} cuentas vinculadas. Elige los tipos de cuenta para tus cuentas de Lunch Flow recién importadas."
       setup_needed: Nuevas cuentas listas para configurar
       status: Sincronizado hace %{timestamp}
       status_never: Nunca sincronizado
@@ -64,6 +65,14 @@ es:
       syncing: Sincronizando...
       total: Total
       unlinked: Desvinculadas
+      sync_status:
+        no_accounts: No se encontraron cuentas
+        partial_setup:
+          other: "%{linked} sincronizadas, %{unlinked} pendientes de configurar"
+          one: "%{linked} sincronizadas, %{unlinked} requiere configuración"
+        synced:
+          one: "%{count} cuenta sincronizada"
+          other: "%{count} cuentas sincronizadas"
     select_accounts:
       accounts_selected: cuentas seleccionadas
       api_error: 'Error de API: %{message}'
@@ -73,7 +82,7 @@ es:
       link_accounts: Vincular cuentas seleccionadas
       no_accounts_found: No se encontraron cuentas. Por favor, verifica la configuración de tu clave API.
       no_api_key: La clave API de Lunch Flow no está configurada. Por favor, configúrala en Configuración.
-      no_name_placeholder: (Sin nombre)
+      no_name_placeholder: "(Sin nombre)"
       title: Seleccionar cuentas de Lunch Flow
     select_existing_account:
       account_already_linked: Esta cuenta ya está vinculada a un proveedor
@@ -86,7 +95,7 @@ es:
       no_account_specified: No se especificó ninguna cuenta
       no_accounts_found: No se encontraron cuentas de Lunch Flow. Por favor, verifica la configuración de tu clave API.
       no_api_key: La clave API de Lunch Flow no está configurada. Por favor, configúrala en Configuración.
-      no_name_placeholder: (Sin nombre)
+      no_name_placeholder: "(Sin nombre)"
       title: Vincular %{account_name} con Lunch Flow
     link_existing_account:
       account_already_linked: Esta cuenta ya está vinculada a un proveedor
@@ -95,7 +104,7 @@ es:
       lunchflow_account_already_linked: Esta cuenta de Lunch Flow ya está vinculada a otra cuenta
       lunchflow_account_not_found: Cuenta de Lunch Flow no encontrada
       missing_parameters: Faltan parámetros requeridos
-      success: '%{account_name} vinculada con Lunch Flow con éxito'
+      success: "%{account_name} vinculada con Lunch Flow con éxito"
     setup_accounts:
       account_type_label: 'Tipo de cuenta:'
       all_accounts_linked: Todas tus cuentas de Lunch Flow ya han sido configuradas.
@@ -155,12 +164,18 @@ es:
       sync_start_date_help: Selecciona cuánto tiempo atrás deseas sincronizar el historial de transacciones. Máximo 3 años de historial disponibles.
       sync_start_date_label: 'Empezar a sincronizar transacciones desde:'
       title: Configura tus cuentas de Lunch Flow
+      page_title: Configurar cuentas de Lunch Flow
     complete_account_setup:
       all_skipped: Se omitieron todas las cuentas. No se creó ninguna cuenta.
       creation_failed: 'Error al crear las cuentas: %{error}'
       no_accounts: No hay cuentas para configurar.
       success: Se han creado %{count} cuenta(s) con éxito.
+      unexpected_error: Se ha producido un error inesperado
     sync:
       success: Sincronización iniciada
     update:
       success: Conexión con Lunch Flow actualizada
+    subtype_select:
+      placeholder:
+        subtype: Selecciona el subtipo
+        type: Selecciona el tipo

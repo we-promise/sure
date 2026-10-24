@@ -1,0 +1,4 @@
+---
+ru:
+  date:
+    day_of_month: "%{day}"

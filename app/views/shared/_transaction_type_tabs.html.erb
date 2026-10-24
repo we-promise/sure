@@ -1,6 +1,6 @@
 <%# locals: (active_tab:, account_id: nil) %>
 
-<%= render DS::SegmentedControl.new(full_width: true, aria_label: t("shared.transaction_tabs.aria", default: "Transaction type")) do |sc| %>
+<%= render DS::SegmentedControl.new(full_width: true, aria_label: t("shared.transaction_tabs.aria")) do |sc| %>
   <% sc.with_segment(
        safe_join([ icon("minus-circle"), tag.span(t("shared.transaction_tabs.expense"), class: "truncate") ]),
        active: active_tab == "expense",

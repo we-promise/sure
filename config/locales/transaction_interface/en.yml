@@ -1,0 +1,6 @@
+---
+en:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "One-time income (excluded from averages)"
+      one_time_expense_tooltip: "One-time expense (excluded from averages)"

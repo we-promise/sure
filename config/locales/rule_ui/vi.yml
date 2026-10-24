@@ -1,0 +1,18 @@
+---
+vi:
+  rules:
+    new:
+      back: Quay lại quy tắc
+      title: Quy tắc mới cho %{resource}
+    form:
+      for: Áp dụng cho
+    edit:
+      title: Chỉnh sửa quy tắc %{resource}
+      title_with_name: Chỉnh sửa quy tắc %{resource} “%{name}”
+  transfers:
+    account_links:
+      missing_account: 'Lỗi dữ liệu: thiếu tài khoản'
+      transfer_id: 'ID chuyển khoản: %{id}'
+  tags:
+    create:
+      failed: Không thể tạo nhãn

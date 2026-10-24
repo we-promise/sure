@@ -1,0 +1,334 @@
+---
+it:
+  bills:
+    add_bill: Aggiungi scadenza
+    add_payment: Aggiungi pagamento
+    ai_prompts:
+      due_before_paycheck: Cosa scade prima del mio prossimo stipendio?
+      monthly_subscriptions: Quanto pago ogni mese per gli abbonamenti?
+      safe_to_spend: Quanto posso spendere in sicurezza in questo periodo?
+      subscriptions_up: Quali abbonamenti sono aumentati quest'anno?
+    all:
+      any_status: Qualsiasi stato
+      any_type: Qualsiasi tipo
+      col_actions: Azioni
+      col_amount: Importo
+      col_frequency: Frequenza
+      col_name: Nome
+      col_next: Prossima scadenza
+      col_status: Stato
+      col_type: Tipo
+      monthly_equivalent: "%{amount}/mese"
+      next_short: 'prossima: %{date}'
+      no_matches_description: Prova a rimuovere un filtro o a cancellare la ricerca.
+      no_matches_title: Nessuna corrispondenza
+      search_placeholder: Cerca scadenze
+      sort_amount: Per importo
+      sort_due: Per prossima scadenza
+      sort_name: Per nome
+      status_filters:
+        due: In scadenza
+        ended: Ignorate
+        overdue: Scadute
+        paid: Pagate
+        partial: Pagate in parte
+        paused: In pausa
+      subscription_active: Attivo
+      subscription_annual: All'anno
+      subscription_monthly: Al mese
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
+      subscription_price_changes: Variazioni di prezzo quest'anno
+      types:
+        bill: Scadenza
+        income: Entrata
+        installment: Piano rateale
+        other: Altro
+        subscription: Abbonamento
+        transfer: Bonifico
+    amount_range: da %{min} a %{max}
+    attention:
+      amount_changed: Importo modificato
+      needs_review: Corrispondenza da verificare
+      overdue:
+        one: 1 giorno di ritardo
+        other: "%{count} giorni di ritardo"
+      partial: Parziale · restano %{amount}
+    calendar:
+      empty_month: Nessun pagamento in scadenza questo mese.
+      month_totals: "%{expected} previsti · %{paid} pagati"
+      next_month: Mese successivo
+      previous_month: Mese precedente
+      reset_feed: Reimposta collegamento
+      subscribe_ical: Iscriviti (iCal)
+      today: Oggi
+    cancelled_still_scheduled: 'Hai contrassegnato questo pagamento come annullato
+      il %{date}, ma è ancora pianificato: continueranno quindi a comparire le scadenze
+      future.'
+    debt_payment: "· rimborso debito"
+    detail:
+      annualized: All'anno
+      around: intorno al %{date}
+      average: Importo medio pagato
+      avg_payment: Pagamento medio
+      cancelled_chip: Annullato il %{date}
+      current: Attuale
+      history: Cronologia
+      history_aria: Pagamenti negli ultimi dodici mesi
+      history_title: Ultimi 12 mesi
+      key_metrics: Per anno
+      last_account: Ultimo conto utilizzato
+      manual_payment: Pagamento manuale
+      next_payment: Prossimo pagamento
+      notes: Note
+      payment_count:
+        one: 1 pagamento
+        other: "%{count} pagamenti"
+      price_change_line: "%{from} → %{to}"
+      price_changes: Variazioni di prezzo
+      range: da %{min} a %{max}
+      recent_payments: Pagamenti recenti
+      renews_chip: Rinnovo il %{date}
+      rule_aliases: Corrisponde anche a %{names}
+      rule_amount_range: da %{min} a %{max}
+      rule_learned_tolerance: Gli importi che differiscono di non più del %{percent}
+        dall'importo abituale corrispondono a questa scadenza
+      rule_named: "%{name}"
+      rules: Come viene individuata questa scadenza
+      spent_per_year: Speso
+      trial_chip: La prova termina il %{date}
+      upcoming: In arrivo
+      year: Anno
+      ytd: Pagato quest'anno
+    detect:
+      already_running: Il rilevamento è già in corso. Ricontrolla tra poco.
+      found:
+        one: Trovata 1 possibile scadenza. Verificala qui sotto.
+        other: Trovate %{count} possibili scadenze. Verificale qui sotto.
+      none_found: Nessun nuovo schema ricorrente trovato. Puoi aggiungere le scadenze
+        manualmente.
+    due_label:
+      due_since: Scadenza %{date}
+      overdue:
+        one: In ritardo di 1 giorno, scadeva il %{date}
+        other: In ritardo di %{count} giorni, scadeva il %{date}
+      settled: Scadeva il %{date}
+      snoozed: Rimandato al %{date}
+      today: In scadenza oggi
+      upcoming:
+        one: In scadenza domani, %{date}
+        other: In scadenza tra %{count} giorni, %{date}
+    feed:
+      calendar_name: Scadenze Sure
+    find_payment: Trova pagamento
+    index:
+      accept: Applica
+      add_bill: Aggiungi scadenza
+      add_income: Aggiungi entrata
+      all_automatic: tutti con pagamento automatico
+      attention_overdue_total: "%{amount} scaduti"
+      confidence: Corrispondenza al %{percent}%
+      detected_review:
+        one: Abbiamo trovato 1 pagamento ricorrente nelle tue transazioni. Verificalo
+          affinché i totali qui corrispondano a quanto paghi effettivamente.
+        other: Abbiamo trovato %{count} pagamenti ricorrenti nelle tue transazioni.
+          Verificali affinché i totali qui corrispondano a quanto paghi effettivamente.
+      detected_review_action: Verifica
+      dormant: Inattivo
+      empty:
+        action: Trova transazioni ricorrenti
+        description: Le scadenze rappresentano le tue spese ricorrenti. Sure le individua
+          automaticamente nella cronologia delle transazioni e puoi aggiungere un
+          collegamento di pagamento a ciascuna per pagare direttamente da qui.
+        no_history_description: 'Non ci sono ancora transazioni. Collega un conto
+          o importa la cronologia: Sure troverà automaticamente le tue scadenze. Puoi
+          anche aggiungerle manualmente.'
+        title: Nessuna scadenza
+      hero_next_seven: "%{amount} in scadenza nei prossimi 7 giorni"
+      hero_past_due: "%{amount} scaduti"
+      kpi_next_seven: In scadenza nei prossimi 7 giorni
+      kpi_paid: Pagato questo mese
+      kpi_past_due: Scaduto
+      kpi_remaining: Rimanente questo mese
+      later: Dopo questo mese
+      left_to_pay: da pagare
+      needs_action_count:
+        one: 1 richiede il tuo intervento
+        other: "%{count} richiedono il tuo intervento"
+      needs_attention: Richiede attenzione
+      needs_review: Da esaminare
+      notice_price: 'Il prezzo di %{name} è cambiato: %{from} → %{to} (%{percent})'
+      notice_renewal: "%{name} si rinnova il %{date}"
+      notice_trial: La prova di %{name} termina il %{date}
+      notices_routine:
+        one: 1 variazione minore
+        other: "%{count} variazioni minori"
+      overdue: Scadute
+      paid_count:
+        one: 1 scadenza saldata
+        other: "%{count} scadenze saldate"
+      paid_so_far: Pagato finora
+      paid_this_month: Pagato questo mese
+      recurring_annual: "%{amount} all'anno"
+      recurring_label: Impegno ricorrente
+      recurring_monthly: "%{amount} al mese"
+      reject: Non è questa scadenza
+      review_with_ai: Verifica con l'AI
+      suggestion_line: "%{entry} sembra un pagamento di %{bill}"
+      suggestion_unknown_entry: Una transazione
+      summary_count:
+        one: 1 pagamento in scadenza
+        other: "%{count} pagamenti in scadenza"
+      summary_label: In scadenza questo mese
+      summary_needs_action:
+        one: 1 richiede il tuo intervento
+        other: "%{count} richiedono il tuo intervento"
+      this_month: Questo mese
+      title: Scadenze
+      unconvertible:
+        one: '1 scadenza non è inclusa: tasso di cambio non disponibile'
+        other: "%{count} scadenze non sono incluse: tasso di cambio non disponibile"
+    installment_progress: Pagamento %{done_plus_one} di %{total}
+    manage: Gestisci
+    manage_payments: Gestisci pagamenti
+    match:
+      amount_off: Differenza di %{amount}
+      days_after:
+        one: 1 giorno dopo la scadenza
+        other: "%{count} giorni dopo la scadenza"
+      days_before:
+        one: 1 giorno prima della scadenza
+        other: "%{count} giorni prima della scadenza"
+      due_date: Data di scadenza corrispondente
+      exact_amount: Importo esatto
+      name_matches: Nome corrispondente
+      same_merchant: Stesso esercente
+    month_pulse:
+      bill_count:
+        one: 1 scadenza
+        other: "%{count} scadenze"
+      date_today: Oggi
+      date_tomorrow: Domani
+      left_to_pay: da pagare
+      next_up: Prossima
+      pulse_bar_aria: Pagato il %{percent}% delle scadenze di questo mese
+      pulse_next_seven: prossimi 7 giorni
+      pulse_overdue: scaduti
+      pulse_paid: pagati
+      unconvertible:
+        one: '1 scadenza non è inclusa: tasso di cambio non disponibile'
+        other: "%{count} scadenze non sono incluse: tasso di cambio non disponibile"
+      view_calendar: Visualizza calendario
+    paid_from: dal conto %{account}
+    paid_label: Pagate
+    paid_over: Pagati %{paid}, più del previsto
+    paid_over_short: Pagato in eccesso
+    pane:
+      close: Comprimi dettagli
+    partial_progress: Pagati %{paid} di %{expected}
+    pay_period:
+      before_next_paycheck: Prima del prossimo stipendio
+      due_before_date: "%{amount} in scadenza prima del %{date}"
+      paycheck_on: Stipendio il %{date}
+    paycheck:
+      add_income: Aggiungi entrata
+      all_clear:
+        description: Non ci sono pagamenti in scadenza da oggi al %{date}, quindi
+          nessuna somma è già impegnata in quel periodo.
+        title: Nessun importo da coprire
+      allocation_aria: Su %{income} di entrate, %{due} sono in scadenza ora, %{reserved}
+        sono riservati per dopo e %{safe} possono essere spesi in sicurezza.
+      allocation_aria_short: "%{income} di entrate coprono gli impegni indicati qui
+        e servono altri %{short}."
+      before_next_paycheck: Prima del %{date}
+      bills_before_payday:
+        one: Scadenze prima del prossimo stipendio · 1
+        other: Scadenze prima del prossimo stipendio · %{count}
+      bills_this_period:
+        one: Scadenze in questo periodo · 1
+        other: Scadenze in questo periodo · %{count}
+      bridge_amount: "· %{amount} in scadenza"
+      bridge_label: Prima del prossimo stipendio
+      bridge_split: In scadenza prima del %{date}, coperti dai %{cash} sui tuoi conti.
+      due_this_period: In scadenza in questo periodo
+      empty:
+        action: Aggiungi entrata
+        description: 'Aggiungi le entrate per vedere cosa deve coprire ogni stipendio.
+          Gli accrediti rilevati non stabiliscono automaticamente le date di pagamento:
+          le decidi tu.'
+        title: Definisci il calendario delle entrate
+      income_amount: "%{amount} di entrate"
+      income_detected: Rilevato automaticamente, non determina le date degli stipendi
+      income_next_payday: 'prossima: %{date}'
+      income_paused: In pausa, non pianificato
+      income_section_title: Calendario delle entrate
+      income_source_count:
+        one: "%{count} fonte di reddito"
+        other: "%{count} fonti di reddito"
+      manage: Gestisci
+      next_on: 'Prossima: %{date}'
+      no_income_arriving: Nessuna entrata in arrivo
+      no_upcoming_income: Nessuna entrata pianificata da questo momento in poi.
+      of_total: di %{amount}
+      period_source: " · %{source}"
+      period_source_multiple: " · %{count} fonti di reddito"
+      reserved_ahead: Riservato per il futuro
+      reserved_footer:
+        one: Riservato in anticipo per 1 scadenza successiva
+        other: Riservato in anticipo per %{count} scadenze successive
+      review_plan: Verifica piano
+      safe_after_bills: Disponibile dopo le scadenze
+      safe_short: Disponibile
+      short_after_bills: Mancante dopo le scadenze
+      short_short: Mancante
+      shortfall_amount: "· %{amount}"
+      shortfall_label: Importo mancante prima del prossimo stipendio
+      shortfall_largest: 'Impegno imminente più elevato:'
+      shortfall_split: "%{obligations} sono in scadenza prima del %{date} e sui tuoi
+        conti ci sono %{cash}."
+      unconvertible:
+        one: '1 impegno non è incluso: tasso di cambio non disponibile'
+        other: "%{count} impegni non sono inclusi: tasso di cambio non disponibile"
+    possible_duplicate: Possibile duplicato
+    remaining_label: rimanente
+    reset_feed_token:
+      confirm: Reimpostare il collegamento al calendario? Tutti i collegamenti condivisi
+        in precedenza smetteranno di funzionare.
+      done: 'Collegamento al calendario reimpostato. Le app che usano il vecchio collegamento
+        non si aggiorneranno più: iscriviti di nuovo con quello nuovo.'
+    resolve: Risolvi
+    review_match: Verifica corrispondenza
+    row_overdue: Scadute
+    row_today: Oggi
+    show:
+      edit: Modifica scadenza
+    smart_configurations:
+      show:
+        apply: Applica selezionati
+        autopay_off: Disattivato
+        autopay_on: Attivato
+        failed: Non è stato possibile analizzare questa scadenza ora. La configurazione
+          non è stata modificata.
+        field_amount: Importo
+        field_autopay: Pagamento automatico
+        field_category: Categoria
+        field_kind: Tipo
+        field_name: Nome
+        field_schedule: Pianificazione
+        intro: Seleziona le modifiche da applicare. Quelle non selezionate rimangono
+          invariate.
+        no_changes: Questa scadenza corrisponde già alla cronologia dei pagamenti.
+          Non c'è nulla da modificare.
+        title: Suggerimenti AI per %{name}
+        trigger: Lascia configurare all'AI
+        uncategorized: Senza categoria
+    summary:
+      cost_line: In media %{average} a pagamento, circa %{annualized} all'anno
+      paid_headline: "%{amount} pagati"
+      remaining: "%{amount} rimanenti"
+    view_full_bill: Visualizza scadenza completa
+    views:
+      all: Tutte le scadenze
+      aria_label: Viste delle scadenze
+      calendar: Calendario
+      overview: Panoramica
+      paycheck: Piano delle entrate

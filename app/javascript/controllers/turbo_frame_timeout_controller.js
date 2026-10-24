@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 // Connects to data-controller="turbo-frame-timeout"
 export default class extends Controller {
-  static values = { timeout: { type: Number, default: 10000 } }
+  static values = { timeout: { type: Number, default: 10000 }, message: String }
 
   connect() {
     this.timeoutId = setTimeout(() => {
@@ -35,8 +35,9 @@ export default class extends Controller {
             <path d="m12 17 .01 0"/>
           </svg>
         </div>
-        <p class="font-mono text-right text-xs text-warning">Timeout</p>
+        <p class="font-mono text-right text-xs text-warning"></p>
       </div>
     `
+    this.element.querySelector("p").textContent = this.messageValue
   }
 } 

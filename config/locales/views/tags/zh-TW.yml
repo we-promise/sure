@@ -24,3 +24,9 @@ zh-TW:
       edit: 編輯
     update:
       updated: 標籤已更新
+    menu:
+      label: 編輯標籤
+      loading: 正在載入標籤…
+    summary:
+      add: 新增標籤
+      title: 標籤：%{names}

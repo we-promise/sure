@@ -3,6 +3,7 @@
 <div id="transaction_attachments_<%= transaction.id %>" class="pb-4">
   <!-- Upload Form -->
   <% if can_upload && transaction.attachments.count < Transaction::MAX_ATTACHMENTS_PER_TRANSACTION %>
+    <% remaining_attachment_slots = Transaction::MAX_ATTACHMENTS_PER_TRANSACTION - transaction.attachments.count %>
     <%= styled_form_with url: transaction_attachments_path(transaction),
           method: :post,
           multipart: true,
@@ -10,7 +11,8 @@
           class: "mb-4",
           data: {
             controller: "attachment-upload",
-            attachment_upload_max_files_value: Transaction::MAX_ATTACHMENTS_PER_TRANSACTION - transaction.attachments.count,
+            attachment_upload_max_files_value: remaining_attachment_slots,
+            attachment_upload_labels_value: attachment_upload_labels(max_files: remaining_attachment_slots),
             attachment_upload_max_size_value: Transaction::MAX_ATTACHMENT_SIZE
           } do |form| %>
       <div class="space-y-3">

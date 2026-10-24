@@ -1,0 +1,16 @@
+---
+nl:
+  binance_items:
+    setup_accounts:
+      historical_import: Historische import
+  enable_banking_items:
+    setup_accounts:
+      psd2_savings_notice: 'Let op: Sommige gereguleerde Franse spaarrekeningen (Livret
+        A, PEL, LEP, LDDS) zijn beperkt of niet toegankelijk via Open Banking (PSD2).
+        Als een spaarrekening ontbreekt, kun je deze handmatig toevoegen.'
+  reports:
+    index:
+      period_aria: Rapportperiode
+  shared:
+    transaction_tabs:
+      aria: Transactietype

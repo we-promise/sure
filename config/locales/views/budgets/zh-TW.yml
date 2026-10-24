@@ -4,7 +4,7 @@ zh-TW:
     budget_donut:
       spent: 已支出
       new_budget: 新增預算
-      of_budget: ／%{amount}
+      of_budget: "／%{amount}"
       unused: 未使用
     budget_header:
       today: 今天
@@ -33,8 +33,8 @@ zh-TW:
       autosuggest_description: 這會依據您的交易紀錄推算。AI 可能會出錯，請確認後再繼續。
       continue: 繼續
     name:
-      custom_range: '%{start} - %{end_date}'
-      month_year: '%{month}'
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
     show:
       categories:
         amount: 金額
@@ -63,6 +63,16 @@ zh-TW:
       success: 已從 %{source_name} 複製預算
       no_source: 找不到可以複製的先前預算
       already_initialized: 這份預算已經設定過了
+    available_cash:
+      available: 可用現金
+      earmarked: 已為目標預留
+      free: 真正可自由運用
+      goals_link: 查看目標
+      heading: 可動用現金
+      subtitle: 供對照上方計畫，並非計畫的一部分。
+    switcher:
+      aria_label: 切換預算
+      household: 家庭
   budget_categories:
     allocation_progress:
       budget_exceeded_html: 預算超支 <span class="text-red-500 privacy-sensitive">%{amount}</span>
@@ -73,6 +83,8 @@ zh-TW:
       monthly_average: 平均每月 %{amount}
       shared_placeholder: 共享
       shared_title: 留白即共用上層分類的預算
+      rollover_label: 結轉
+      rollover_title: 將此分類未用完的款項保留至下個月
     confirm_button:
       confirm: 確認
     no_categories:
@@ -86,7 +98,7 @@ zh-TW:
     show:
       category: 分類
       overview: 概覽
-      spending: '%{date} 的支出'
+      spending: "%{date} 的支出"
       status: 狀態
       overspent: 已超出
       left: 可用
@@ -96,3 +108,28 @@ zh-TW:
       recent_transactions: 近期交易
       view_all_transactions: 查看這個分類的所有交易
       no_transactions: 這個預算期間內沒有任何交易。
+      rolled_over: 已結轉
+    bills_reserved: 帳單已預留 %{amount}
+    bills_reserved_unconvertible:
+      one: 1 筆帳單未預留款項，因為沒有可用匯率
+      other: "%{count} 筆帳單未預留款項，因為沒有可用匯率"
+    budget_category:
+      rolled_over: "+%{amount} 結轉"
+    move:
+      amount_label: 金額
+      available: 可用 %{amount}
+      button_title: 從此分類調撥款項
+      cancel: 取消
+      dialog_title: 調撥款項
+      errors:
+        different_budgets: 兩個分類必須屬於同一份預算。
+        insufficient_funds: 此金額超過已分配給此分類的額度。
+        non_positive_amount: 請輸入大於零的金額。
+        parent_child: 分類與其自身子分類之間不能調撥款項，請直接調整子分類。
+        same_category: 請選擇不同的分類作為調撥目的地。
+        uncategorized: "「未分類」不是真正的預算信封，不能將款項調入或調出。"
+      from_label: 來源
+      no_destination: 目前只有這個信封可用於調撥；分類不能將款項調給自身的父分類或子分類。
+      submit: 調撥
+      success: 款項已調撥。
+      to_label: 目的地

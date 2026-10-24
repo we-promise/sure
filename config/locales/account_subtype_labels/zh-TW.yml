@@ -1,0 +1,40 @@
+---
+zh-TW:
+  investments:
+    subtypes:
+      non-registered:
+        long: 非註冊投資帳戶
+      fhsa:
+        long: 首次購屋儲蓄帳戶（FHSA）
+      rdsp:
+        long: 註冊身心障礙儲蓄計畫（RDSP）
+      dpsp:
+        long: 遞延利潤分享計畫（DPSP）
+      prpp:
+        long: 集合註冊退休金計畫（PRPP）
+      lif:
+        long: 終身收入基金（LIF）
+      lrif:
+        long: 鎖定式退休收入基金（LRIF）
+      prif:
+        long: 特定規則註冊退休收入基金（PRIF）
+      rlif:
+        long: 受限終身收入基金（RLIF）
+      assurance_vie:
+        long: 法國人壽保險儲蓄（Assurance Vie）
+  loans:
+    subtypes:
+      home_equity:
+        long: 房屋淨值貸款
+      line_of_credit:
+        long: 信用額度
+      business:
+        long: 企業貸款
+      mortgage:
+        long: 房屋貸款
+      student:
+        long: 學生貸款
+      auto:
+        long: 汽車貸款
+      other:
+        long: 其他貸款

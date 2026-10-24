@@ -1,0 +1,14 @@
+---
+ca:
+  upload_interface:
+    too_many_files: 'Massa fitxers (màxim: %{max})'
+    file_too_large: 'Fitxer massa gran (màxim: %{max} MB)'
+    uploading: S'està pujant %{filename}…
+    qif_invalid: Ha de ser un fitxer QIF vàlid
+    amount_type_strategies:
+      signed_amount: Import amb signe
+      custom_column: Columna personalitzada
+    upload_files:
+      one: Puja %{count} fitxer
+      many: Puja %{count} fitxers
+      other: Puja %{count} fitxers

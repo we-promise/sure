@@ -3,7 +3,7 @@
 <% action = form.object %>
 <% rule = action.rule %>
 
-<li data-controller="rule--actions" data-rule--actions-action-executors-value="<%= rule.action_executors.to_json %>" class="flex items-center gap-3">
+<li data-controller="rule--actions" data-rule--actions-none-label-value="<%= t("transactions.form.none") %>" data-rule--actions-action-executors-value="<%= rule.action_executors.to_json %>" class="flex items-center gap-3">
   <%= form.hidden_field :_destroy, value: false, data: { rule__actions_target: "destroyField" } %>
 
   <div class="grid grid-cols-1 gap-2 items-center h-full w-full">

@@ -138,12 +138,12 @@ vi:
       submit_income: Lưu thu nhập
       trial_ends_on_label: Kết thúc dùng thử
     frequency:
-      annual: Hằng năm vào ngày %{day}, tháng %{month}
+      annual: Hằng năm vào ngày %{day}, %{month}
       biweekly: Mỗi 2 tuần vào %{weekday}
       custom: Lịch tùy chỉnh
       every_n_months: Mỗi %{interval} tháng vào ngày %{day}
       every_n_weeks: Mỗi %{interval} tuần vào %{weekday}
-      every_n_years: Mỗi %{interval} năm vào ngày %{day}, tháng %{month}
+      every_n_years: Mỗi %{interval} năm vào ngày %{day}, %{month}
       last_day: cuối tháng
       monthly: Hằng tháng vào ngày %{day}
       quarterly: Hằng quý vào ngày %{day}

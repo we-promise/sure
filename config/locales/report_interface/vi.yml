@@ -1,0 +1,6 @@
+---
+vi:
+  reports:
+    index:
+      sections_aria_label: "Các phần của báo cáo"
+      section_reorder_aria: "Phần %{title}. Nhấn Enter hoặc phím cách để chọn phần cần sắp xếp lại, sau đó dùng các phím mũi tên để di chuyển."

@@ -1,0 +1,18 @@
+---
+nb:
+  rules:
+    new:
+      back: Tilbake til regler
+      title: Ny regel for %{resource}
+    form:
+      for: GJELDER
+    edit:
+      title: Rediger regel for %{resource}
+      title_with_name: Rediger regelen «%{name}» for %{resource}
+  transfers:
+    account_links:
+      missing_account: 'Datafeil: konto mangler'
+      transfer_id: 'Overførings-ID: %{id}'
+  tags:
+    create:
+      failed: Kunne ikke opprette tag

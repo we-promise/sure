@@ -1,0 +1,18 @@
+---
+ca:
+  rules:
+    new:
+      back: Torna a les regles
+      title: Nova regla per a %{resource}
+    form:
+      for: PER A
+    edit:
+      title: Edita la regla de %{resource}
+      title_with_name: Edita la regla de %{resource} «%{name}»
+  transfers:
+    account_links:
+      missing_account: 'Error de dades: falta un compte'
+      transfer_id: 'ID de la transferència: %{id}'
+  tags:
+    create:
+      failed: No s’ha pogut crear l’etiqueta

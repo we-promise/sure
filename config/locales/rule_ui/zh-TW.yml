@@ -1,0 +1,18 @@
+---
+zh-TW:
+  rules:
+    new:
+      back: 返回規則
+      title: 新增%{resource}規則
+    form:
+      for: 適用範圍
+    edit:
+      title: 編輯%{resource}規則
+      title_with_name: 編輯%{resource}規則「%{name}」
+  transfers:
+    account_links:
+      missing_account: 資料錯誤：缺少帳戶
+      transfer_id: 轉帳 ID：%{id}
+  tags:
+    create:
+      failed: 無法建立標籤

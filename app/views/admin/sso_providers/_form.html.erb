@@ -18,7 +18,20 @@
   </div>
 <% end %>
 
-<%= styled_form_with model: [:admin, sso_provider], class: "space-y-6", data: { controller: "admin-sso-form" } do |form| %>
+<%= styled_form_with model: [:admin, sso_provider], class: "space-y-6", data: {
+  controller: "admin-sso-form",
+  admin_sso_form_messages_value: {
+    copied: t("settings.api_keys.key_reveal.copied"),
+    copy_failed: t("authentication_ui.sso.copy_failed"),
+    issuer_valid: t("authentication_ui.sso.issuer_valid"),
+    issuer_mismatch_trailing: t("authentication_ui.sso.issuer_mismatch_trailing", issuer: "%{issuer}"),
+    issuer_mismatch: t("authentication_ui.sso.issuer_mismatch", issuer: "%{issuer}"),
+    browser_validation_unavailable: t("authentication_ui.sso.browser_validation_unavailable"),
+    testing: t("authentication_ui.sso.testing"),
+    request_failed: t("authentication_ui.sso.request_failed", message: "%{message}"),
+    test_connection: t("admin.sso_providers.form.test_connection")
+  }
+} do |form| %>
   <div class="space-y-4">
     <h3 class="font-medium text-primary"><%= t("admin.sso_providers.form.basic_information") %></h3>
 

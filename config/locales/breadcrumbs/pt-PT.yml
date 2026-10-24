@@ -34,7 +34,7 @@ pt-PT:
     guides: Guias
     holdings: Posições
     home: Início
-    hostings: Self-Hosting
+    hostings: Alojamento próprio
     ibkr_items: Interactive Brokers
     impersonation_sessions: Representações
     imports: Importações
@@ -54,7 +54,7 @@ pt-PT:
     messages: Mensagens
     mfa: Autenticação de dois fatores
     oidc_accounts: Contas SSO
-    onboardings: Onboarding
+    onboardings: Configuração inicial
     other_assets: Outros Ativos
     other_liabilities: Outros Passivos
     payments: Pagamentos
@@ -73,7 +73,7 @@ pt-PT:
     rules: Regras
     securities: Títulos
     security: Segurança
-    self_hosting: Self-Hosting
+    self_hosting: Alojamento próprio
     sessions: Iniciar sessão
     simplefin_items: SimpleFIN
     snaptrade_items: SnapTrade
@@ -90,3 +90,5 @@ pt-PT:
     users: Utilizadores
     valuations: Avaliações
     vehicles: Veículos
+    monobank_items: Monobank
+    system_health: Saúde do sistema

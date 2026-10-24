@@ -28,6 +28,13 @@
             controller: "split-transaction",
             split_transaction_total_value: (-@entry.amount).to_f,
             split_transaction_currency_value: @entry.currency,
+            split_transaction_labels_value: {
+              name: t("splits.new.name_label"),
+              amount: t("splits.new.amount_label"),
+              name_placeholder: t("splits.new.name_placeholder"),
+              uncategorized: t("splits.new.uncategorized"),
+              remove: t("splits.new.remove_row")
+            },
             turbo_frame: :_top
           }
         ) do %>

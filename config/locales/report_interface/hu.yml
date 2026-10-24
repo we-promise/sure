@@ -1,0 +1,6 @@
+---
+hu:
+  reports:
+    index:
+      sections_aria_label: "Jelentésrészek"
+      section_reorder_aria: "%{title} rész. Nyomd meg az Enter vagy a Szóköz billentyűt a rész átrendezésre való kijelöléséhez, majd mozgasd a nyílbillentyűkkel."

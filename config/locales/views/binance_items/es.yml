@@ -3,7 +3,7 @@ es:
   binance_items:
     create:
       default_name: Binance
-      success: ¡Conexión con Binance establecida con éxito! Tu cuenta se está sincronizando.
+      success: "¡Conexión con Binance establecida con éxito! Tu cuenta se está sincronizando."
     update:
       success: Configuración de Binance actualizada correctamente.
     destroy:
@@ -22,10 +22,11 @@ es:
       creating: Importando...
     complete_account_setup:
       success:
-        one: "Se ha importado %{count} cuenta"
-        other: "Se han importado %{count} cuentas"
+        one: Se ha importado %{count} cuenta
+        other: Se han importado %{count} cuentas
       none_selected: No se ha seleccionado ninguna cuenta
       no_accounts: No hay cuentas para importar
+      invalid_sync_start_date: La fecha de inicio de sincronización debe ser una fecha válida del pasado.
     binance_item:
       provider_name: Binance
       syncing: Sincronizando...
@@ -37,8 +38,8 @@ es:
           one: "%{count} cuenta sincronizada"
           other: "%{count} cuentas sincronizadas"
         partial_sync: "%{linked_count} sincronizadas, %{unlinked_count} necesitan configuración"
-      status: "Sincronizado hace %{timestamp}"
-      status_with_summary: "Sincronizado hace %{timestamp} - %{summary}"
+      status: Sincronizado hace %{timestamp}
+      status_with_summary: Sincronizado hace %{timestamp} - %{summary}
       status_never: Nunca sincronizado
       update_credentials: Actualizar credenciales
       delete: Eliminar
@@ -48,13 +49,13 @@ es:
       setup_description: Selecciona qué carteras de Binance quieres seguir.
       setup_action: Importar cuenta
       import_accounts_menu: Importar cuenta
-      stale_rate_warning: "El saldo es aproximado: el tipo de cambio exacto para %{date} no estaba disponible. Se actualizará en la próxima sincronización."
+      stale_rate_warning: 'El saldo es aproximado: el tipo de cambio exacto para %{date} no estaba disponible. Se actualizará en la próxima sincronización.'
     select_existing_account:
       title: Vincular cuenta de Binance
       no_accounts_found: No se han encontrado cuentas de Binance.
       wait_for_sync: Espera a que Binance termine de sincronizar
       check_provider_health: Comprueba que tus credenciales de la API de Binance sean válidas
-      currently_linked_to: "Actualmente vinculada a: %{account_name}"
+      currently_linked_to: 'Actualmente vinculada a: %{account_name}'
       link: Vincular
       cancel: Cancelar
     link_existing_account:

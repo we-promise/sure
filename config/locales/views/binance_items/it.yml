@@ -11,7 +11,8 @@ it:
     setup_accounts:
       title: Importa conto Binance
       subtitle: Seleziona quali portafogli tracciare
-      instructions: Seleziona i portafogli Binance che vuoi importare. Vengono mostrati solo i portafogli con saldi.
+      instructions: Seleziona i portafogli Binance che vuoi importare. Vengono mostrati
+        solo i portafogli con saldi.
       no_accounts: Tutti i conti sono stati importati.
       accounts_count:
         one: "%{count} conto disponibile"
@@ -22,10 +23,12 @@ it:
       creating: Importazione in corso...
     complete_account_setup:
       success:
-        one: "Importato %{count} conto"
-        other: "Importati %{count} conti"
+        one: Importato %{count} conto
+        other: Importati %{count} conti
       none_selected: Nessun conto selezionato
       no_accounts: Nessun conto da importare
+      invalid_sync_start_date: La data di inizio della sincronizzazione deve essere
+        una data valida nel passato.
     binance_item:
       provider_name: Binance
       syncing: Sincronizzazione in corso...
@@ -37,8 +40,8 @@ it:
           one: "%{count} conto sincronizzato"
           other: "%{count} conti sincronizzati"
         partial_sync: "%{linked_count} sincronizzati, %{unlinked_count} da configurare"
-      status: "Ultima sincronizzazione %{timestamp} fa"
-      status_with_summary: "Ultima sincronizzazione %{timestamp} fa - %{summary}"
+      status: Ultima sincronizzazione %{timestamp} fa
+      status_with_summary: Ultima sincronizzazione %{timestamp} fa - %{summary}
       status_never: Mai sincronizzato
       update_credentials: Aggiorna credenziali
       delete: Elimina
@@ -48,13 +51,14 @@ it:
       setup_description: Seleziona quali portafogli Binance vuoi tracciare.
       setup_action: Importa conto
       import_accounts_menu: Importa conto
-      stale_rate_warning: "Il saldo è approssimativo — il tasso di cambio esatto per %{date} non era disponibile. Verrà aggiornato alla prossima sincronizzazione."
+      stale_rate_warning: Il saldo è approssimativo — il tasso di cambio esatto per
+        %{date} non era disponibile. Verrà aggiornato alla prossima sincronizzazione.
     select_existing_account:
       title: Collega conto Binance
       no_accounts_found: Nessun conto Binance trovato.
       wait_for_sync: Attendi il completamento della sincronizzazione Binance
       check_provider_health: Verifica che le tue credenziali API Binance siano valide
-      currently_linked_to: "Attualmente collegato a: %{account_name}"
+      currently_linked_to: 'Attualmente collegato a: %{account_name}'
       link: Collega
       cancel: Annulla
     link_existing_account:
@@ -65,7 +69,8 @@ it:
   binance_item:
     syncer:
       checking_credentials: Verifica credenziali...
-      credentials_invalid: Credenziali API non valide. Controlla la tua chiave API e il segreto.
+      credentials_invalid: Credenziali API non valide. Controlla la tua chiave API
+        e il segreto.
       importing_accounts: Importazione conti da Binance...
       checking_configuration: Verifica configurazione conto...
       accounts_need_setup:

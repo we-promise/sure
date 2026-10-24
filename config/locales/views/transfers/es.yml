@@ -3,6 +3,9 @@ es:
   transfers:
     create:
       success: Transferencia creada
+      date_invalid: no es válido
+      exchange_rate_unavailable: No hay un tipo de cambio disponible para las monedas y la fecha seleccionadas
+      stale_form: Este formulario ya se envió con otros datos. Actualiza la página e inténtalo de nuevo.
     destroy:
       success: Transferencia eliminada
     form:
@@ -27,7 +30,7 @@ es:
     show:
       delete: Eliminar transferencia
       delete_subtitle: Esto eliminará la transferencia. No se eliminarán las transacciones subyacentes.
-      delete_title: ¿Eliminar transferencia?
+      delete_title: "¿Eliminar transferencia?"
       details: Detalles
       mark_recurring: Marcar como recurrente
       mark_recurring_subtitle: Haz seguimiento de esta transferencia como un patrón recurrente en el feed de próximos movimientos y en la página de recurrentes.

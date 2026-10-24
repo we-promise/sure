@@ -1,0 +1,17 @@
+---
+uk:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: Конфігурацію можна задати через змінні середовища або перевизначити нижче.
+        optional: Необов’язково
+      update:
+        failed: Не вдалося оновити налаштування провайдерів. Спробуйте ще раз.
+    llm_usages:
+      show:
+        http_status: 'Статус HTTP: %{status}'
+  shared:
+    async_loading:
+      timeout: Час очікування вичерпано
+      failed_with_status: Не вдалося завантажити (%{status})
+      network_error: Помилка мережі

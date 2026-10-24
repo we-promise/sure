@@ -130,14 +130,14 @@ nl:
       annual: Jaarlijks op %{day} %{month}
       biweekly: Elke 2 weken op %{weekday}
       custom: Aangepast schema
-      every_n_months: Elke %{interval} maanden op dag %{day}
+      every_n_months: "Elke %{interval} maanden, dag: %{day}"
       every_n_weeks: Elke %{interval} weken op %{weekday}
       every_n_years: Elke %{interval} jaar op %{day} %{month}
       last_day: laatste dag
-      monthly: Maandelijks op dag %{day}
-      quarterly: Elk kwartaal op dag %{day}
-      semiannual: Elke 6 maanden op dag %{day}
-      semimonthly: Tweemaal per maand, op dag %{first} en %{second}
+      monthly: "Maandelijks, dag: %{day}"
+      quarterly: "Elk kwartaal, dag: %{day}"
+      semiannual: "Elke 6 maanden, dag: %{day}"
+      semimonthly: "Tweemaal per maand, dagen: %{first} en %{second}"
       weekly: Wekelijks op %{weekday}
     frequency_interval_units:
       monthly: maanden

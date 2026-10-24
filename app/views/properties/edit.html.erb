@@ -16,7 +16,7 @@
           <!-- Save button -->
           <div class="flex justify-end mt-4">
             <%= render DS::Button.new(
-              text: @account.active? ? "Save" : "Next",
+              text: @account.active? ? t("properties.balances.save") : t("properties.balances.next"),
               variant: "primary",
               type: :submit,
             ) %>

@@ -1,0 +1,31 @@
+---
+zh-TW:
+  rules:
+    condition_filters:
+      labels:
+        transaction_name: 交易名稱
+        transaction_amount: 交易金額
+        transaction_type: 交易類型
+        transaction_merchant: 交易商家
+        transaction_category: 交易分類
+        transaction_tag: 交易標籤
+        transaction_details: 交易明細
+        transaction_notes: 交易備註
+        transaction_account: 交易帳戶
+    action_executors:
+      labels:
+        set_transaction_category: 設定交易分類
+        set_transaction_tags: 設定交易標籤
+        set_transaction_merchant: 設定交易商家
+        set_transaction_name: 設定交易名稱
+        set_investment_activity_label: 設定投資活動類型
+        exclude_transaction: 從預算與報表中排除
+        set_as_transfer_or_payment: 設為轉帳或還款
+        send_email_notification: 傳送電子郵件通知
+        auto_categorize: 使用 AI 自動分類交易
+        auto_detect_merchants: 自動辨識商家
+        auto_detect_merchants_with_ai: 使用 AI 自動辨識商家（$$）
+      auto_categorize:
+        cost_unavailable: "%{label}（費用未知）"
+        cost_estimate: "%{label}（每 20 筆交易約 %{cost} 美元）"
+        provider_missing: "%{label}（尚未設定分類服務）"

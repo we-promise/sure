@@ -1,0 +1,11 @@
+---
+ca:
+  binance_items:
+    setup_accounts:
+      historical_import: Importació de l’historial
+  reports:
+    index:
+      period_aria: Període de l’informe
+  shared:
+    transaction_tabs:
+      aria: Tipus de transacció

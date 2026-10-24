@@ -4,17 +4,17 @@ pt-PT:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
     common:
-      close: "Fechar"
+      close: Fechar
   global:
-    expand: "Expandir"
+    expand: Expandir
   mcp:
     errors:
-      invalid_session_id: "ID de sessão MCP inválido"
-      unsupported_protocol_version: "Versão de protocolo MCP não suportada: %{version}"
+      invalid_session_id: ID de sessão MCP inválido
+      unsupported_protocol_version: 'Versão de protocolo MCP não suportada: %{version}'
   activerecord:
     errors:
       messages:
-        record_invalid: "Foram encontrados erros de validação: %{errors}"
+        record_invalid: 'Foram encontrados erros de validação: %{errors}'
         restrict_dependent_destroy:
           has_many: Não é possível eliminar o registo porque existem %{record} dependentes
           has_one: Não é possível eliminar o registo porque existe um %{record} dependente
@@ -70,9 +70,9 @@ pt-PT:
     - novembro
     - dezembro
     order:
-    - :day
-    - :month
-    - :year
+    - day
+    - month
+    - year
   datetime:
     distance_in_words:
       about_x_hours:
@@ -136,7 +136,7 @@ pt-PT:
       invalid: é inválido
       less_than: deve ser inferior a %{count}
       less_than_or_equal_to: deve ser inferior ou igual a %{count}
-      model_invalid: "Validação falhou: %{errors}"
+      model_invalid: 'Validação falhou: %{errors}'
       not_a_number: não é um número
       not_an_integer: deve ser um número inteiro
       odd: deve ser ímpar
@@ -145,24 +145,24 @@ pt-PT:
       required: é obrigatório
       taken: já existe
       too_long:
-        one: "é demasiado longo (máximo: %{count} caracter)"
-        other: "é demasiado longo (máximo: %{count} caracteres)"
+        one: 'é demasiado longo (máximo: %{count} caracter)'
+        other: 'é demasiado longo (máximo: %{count} caracteres)'
       too_short:
-        one: "é demasiado curto (mínimo: %{count} caracter)"
-        other: "é demasiado curto (mínimo: %{count} caracteres)"
+        one: 'é demasiado curto (mínimo: %{count} caracter)'
+        other: 'é demasiado curto (mínimo: %{count} caracteres)'
       wrong_length:
         one: tem o tamanho errado (deve ter %{count} caracter)
         other: tem o tamanho errado (deve ter %{count} caracteres)
     template:
-      body: "Foram detectados problemas nos seguintes campos:"
+      body: 'Foram detectados problemas nos seguintes campos:'
       header:
         one: "%{count} erro impediu que este %{model} fosse guardado"
         other: "%{count} erros impediram que este %{model} fosse guardado"
   helpers:
     select:
       prompt: Por favor, selecione
-      search_placeholder: "Pesquisar"
-      default_label: "Selecionar..."
+      search_placeholder: Pesquisar
+      default_label: Selecionar...
     submit:
       create: Criar %{model}
       submit: Guardar %{model}
@@ -201,9 +201,9 @@ pt-PT:
           trillion:
             one: trilião
             other: triliões
-          unit: ""
+          unit: ''
       format:
-        delimiter: ""
+        delimiter: ''
         precision: 3
         significant: true
         strip_insignificant_zeros: true
@@ -238,3 +238,8 @@ pt-PT:
       long: "%d de %B de %Y, %H:%M"
       short: "%d de %B %H:%M"
     pm: pm
+  oauth:
+    registration:
+      invalid_redirect_uris: >-
+        redirect_uris tem de utilizar https, http em loopback ou um esquema de URI
+        de aplicação nativa

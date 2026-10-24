@@ -5,38 +5,44 @@ it:
     upcoming: Transazioni ricorrenti in arrivo
     projected: Proiettata
     recurring: Ricorrente
-    expected_today: "Prevista oggi"
+    expected_today: Prevista oggi
     expected_in:
-      one: "Prevista tra %{count} giorno"
-      other: "Prevista tra %{count} giorni"
+      one: Prevista tra %{count} giorno
+      other: Prevista tra %{count} giorni
     day_of_month: Giorno %{day} del mese
     identify_patterns: Identifica schemi
     cleanup_stale: Elimina obsolete
     settings:
       enable_label: Abilita transazioni ricorrenti
-      enable_description: Rileva automaticamente gli schemi di transazioni ricorrenti e mostra le transazioni proiettate in arrivo.
+      enable_description: Rileva automaticamente gli schemi di transazioni ricorrenti
+        e mostra le transazioni proiettate in arrivo.
     settings_updated: Impostazioni transazioni ricorrenti aggiornate
     info:
       title: Rilevamento automatico degli schemi
-      manual_description: Puoi identificare manualmente gli schemi o eliminare le transazioni ricorrenti obsolete usando i pulsanti sopra.
-      automatic_description: "Il rilevamento automatico viene eseguito anche dopo:"
+      manual_description: Puoi identificare manualmente gli schemi o eliminare le
+        transazioni ricorrenti obsolete usando i pulsanti sopra.
+      automatic_description: 'Il rilevamento automatico viene eseguito anche dopo:'
       triggers:
-        - Completamento importazioni CSV (transazioni, operazioni, conti, ecc.)
-        - Completamento di qualsiasi sincronizzazione provider (Plaid, SimpleFIN, ecc.)
+      - Completamento importazioni CSV (transazioni, operazioni, conti, ecc.)
+      - Completamento di qualsiasi sincronizzazione provider (Plaid, SimpleFIN, ecc.)
     identified: Identificati %{count} schemi di transazioni ricorrenti
     cleaned_up: Eliminate %{count} transazioni ricorrenti obsolete
     marked_inactive: Transazione ricorrente contrassegnata come inattiva
     marked_active: Transazione ricorrente contrassegnata come attiva
     deleted: Transazione ricorrente eliminata
-    confirm_delete: Sei sicuro di voler eliminare questa transazione ricorrente?
+    confirm_delete: Rimuovere %{name} dalle scadenze? Le transazioni rimarranno invariate.
+      Verranno rimossi solo la scadenza e il relativo calendario di pagamento.
     marked_as_recurring: Transazione contrassegnata come ricorrente
     already_exists: Esiste già una transazione ricorrente manuale per questo schema
-    creation_failed: Impossibile creare la transazione ricorrente. Verifica i dettagli della transazione e riprova.
-    unexpected_error: Si è verificato un errore imprevisto durante la creazione della transazione ricorrente
-    amount_range: "Intervallo: %{min} a %{max}"
+    creation_failed: Impossibile creare la transazione ricorrente. Verifica i dettagli
+      della transazione e riprova.
+    unexpected_error: Si è verificato un errore imprevisto durante la creazione della
+      transazione ricorrente
+    amount_range: 'Intervallo: %{min} a %{max}'
     empty:
       title: Nessuna transazione ricorrente trovata
-      description: Clicca "Identifica schemi" per rilevare automaticamente le transazioni ricorrenti dalla cronologia delle transazioni.
+      description: Clicca "Identifica schemi" per rilevare automaticamente le transazioni
+        ricorrenti dalla cronologia delle transazioni.
     table:
       merchant: Nome
       amount: Importo
@@ -45,12 +51,189 @@ it:
       last_occurrence: Ultima occorrenza
       status: Stato
       actions: Azioni
+      frequency: Frequenza
     status:
       active: Attiva
       inactive: Inattiva
+      ended: Ignorate
+      paused: In pausa
+      suggested: Possibile scadenza
     badges:
       manual: Manuale
     transfer_marked_as_recurring: Bonifico contrassegnato come ricorrente
-    transfer_already_exists: Esiste già un bonifico ricorrente per questa coppia di conti
-    transfer_creation_failed: Impossibile creare il bonifico ricorrente. Verifica i dettagli e riprova.
-    transfer_feature_disabled: Le transazioni ricorrenti sono disabilitate per questa famiglia
+    transfer_already_exists: Esiste già un bonifico ricorrente per questa coppia di
+      conti
+    transfer_creation_failed: Impossibile creare il bonifico ricorrente. Verifica
+      i dettagli e riprova.
+    transfer_feature_disabled: Le transazioni ricorrenti sono disabilitate per questa
+      famiglia
+    actions:
+      delete: Rimuovi
+      pause: Metti in pausa
+      resume: Riprendi
+      edit_payment_link: Modifica collegamento di pagamento
+    edit:
+      trigger_label: Modifica scadenza
+      income_title: Modifica entrata · %{name}
+      title: Modifica %{name}
+    form:
+      amount_label: Importo
+      category_blank: Nessuna categoria
+      category_label: Categoria
+      first_due_on_label: Prossima scadenza
+      frequency_interval_unit_label: Unità
+      frequency_weekday_label: Attivato
+      name_label: Nome
+      notes_label: Note
+      trial_ends_on_label: Prova scade
+      account_blank: Qualsiasi conto
+      account_label: Pagato dal conto
+      amount_edit_hint: Si applica alle scadenze future. Quelle già scadute mantengono
+        l'importo precedente.
+      apply_to_siblings:
+        one: Usa questo collegamento anche per l'altra scadenza %{name}
+        other: Usa questo collegamento anche per le altre %{count} scadenze %{name}
+      autopay_hint: Mantienilo nell'elenco delle scadenze, ma non considerarlo più
+        un'attività da svolgere.
+      autopay_label: Pagamento automatico
+      bill_type_label: Tipo
+      cancelled_on_hint: La data è registrata solo come riferimento. Metti in pausa
+        la scadenza per impedirne la comparsa futura.
+      cancelled_on_label: Annullato
+      frequency_day_label: Il giorno
+      frequency_hint: Con quale frequenza scade questo pagamento. Scegli i dettagli
+        del giorno in base al tuo estratto conto.
+      frequency_interval_label: Si ripete ogni
+      frequency_label: Frequenza
+      frequency_month_label: Nel mese di
+      frequency_new_hint: I dettagli del giorno derivano dalla data di scadenza indicata
+        sopra. Puoi perfezionare il calendario dopo il salvataggio.
+      frequency_second_day_label: E il giorno
+      income_account_label: Accreditato sul conto
+      income_amount_edit_hint: Si applica alle date di pagamento future. Quelle già
+        trascorse mantengono l'importo precedente.
+      income_amount_label: Importo per stipendio
+      income_due_on_label: Prossimo stipendio
+      income_frequency_hint: Con quale frequenza ricevi il pagamento. Scegli i dettagli
+        del giorno in base alla data dello stipendio.
+      income_frequency_label: Frequenza dei pagamenti ricevuti
+      income_frequency_new_hint: I dettagli del giorno di pagamento derivano dalla
+        data indicata sopra. Puoi perfezionare il calendario dopo il salvataggio.
+      income_name_label: Fonte
+      income_name_placeholder: Datore di lavoro, cliente, attività secondaria
+      income_notes_hint: Informazioni utili da ricordare su questa entrata.
+      income_notes_placeholder: Accredito diretto, suddiviso su due conti
+      installment_count_hint: Il piano termina dopo questo numero di pagamenti e mostra
+        l'avanzamento fino ad allora.
+      installment_count_label: Numero di pagamenti
+      more_options: Altre opzioni
+      name_placeholder: Affitto, utenze, Netflix
+      notes_hint: Ciò che vuoi avere sotto mano al momento del pagamento. Viene mostrato
+        sulla scadenza.
+      notes_placeholder: Conto 4821, addebito su Amex
+      payment_url_hint: Dove vai a pagare questa scadenza. Si apre in una nuova scheda
+        dagli elenchi delle ricorrenze e delle scadenze future.
+      payment_url_label: Collegamento di pagamento
+      payment_url_placeholder: bank.example.com/pay
+      renews_on_label: Rinnovo
+      submit: Salva scadenza
+      submit_income: Salva entrata
+    frequency_presets:
+      monthly: Mensile
+      quarterly: Trimestrale
+      annual: Annuale
+      biweekly: Ogni 2 settimane
+      custom: Calendario personalizzato
+      interval: Intervallo personalizzato
+      semiannual: Ogni 6 mesi
+      semimonthly: Due volte al mese
+      weekly: Settimanale
+    identify_already_running: Il rilevamento è già in corso. Ricontrolla tra poco.
+    new:
+      income_title: Aggiungi entrata
+      candidate_meta: "%{count}× · ultima: %{date}"
+      pick_different: Parti da un'altra transazione
+      search_all_cta: Cerca in tutte le transazioni
+      search_all_prompt: Non trovi ciò che cerchi?
+      smart_fill: Compilazione intelligente con AI
+      smart_fill_applied: L'AI ha suggerito questi valori dalla cronologia degli addebiti.
+        Verificali prima di salvare.
+      start_from_hint: 'Facoltativo. La selezione compila soltanto il modulo: puoi
+        ancora modificare tutto.'
+      start_from_income_title: Parti da un accredito ricorrente che abbiamo rilevato
+      start_from_title: Parti da un addebito ricorrente che abbiamo rilevato
+      title: Aggiungi una scadenza
+    pay_action:
+      autopay: Pagamento automatico
+      add_link: Aggiungi collegamento
+      add_link_aria: Aggiungi un collegamento di pagamento per %{name}
+      autopay_aria: "%{name} viene pagato automaticamente; apri il portale in una
+        nuova scheda"
+      open_site: Apri sito di pagamento
+      pay: Paga
+      pay_aria: Paga %{name} (si apre in una nuova scheda)
+    suggested:
+      confirm: Aggiungi scadenza
+      collapsed_hint: Tocca per verificare
+      dismiss: Non è una scadenza
+      seen_count:
+        one: rilevato una volta
+        other: rilevato %{count} volte
+      title: Possibili nuove scadenze
+    confirm_delete_income: Rimuovere %{name} dalle entrate? Le transazioni rimarranno
+      invariate. Verranno rimossi solo l'entrata e il relativo calendario.
+    confirmed: Scadenza aggiunta alle transazioni ricorrenti
+    create:
+      account_invalid: Scegli un conto a cui puoi aggiungere scadenze oppure lascia
+        vuoto
+      already_exists: Questa scadenza esiste già
+      amount_invalid: Inserisci l'importo come semplice numero
+      due_date_required: Inserisci la prossima data di scadenza
+      success: Scadenza aggiunta
+      success_income: Entrata aggiunta
+    deleted_income: Entrata rimossa. Le transazioni non sono state modificate.
+    dismissed: Ignorato. Questo schema non verrà più suggerito.
+    frequency:
+      annual: Ogni anno il %{day} %{month}
+      biweekly: Ogni 2 settimane, %{weekday}
+      custom: Calendario personalizzato
+      every_n_months: Ogni %{interval} mesi, il %{day}
+      every_n_weeks: Ogni %{interval} settimane, %{weekday}
+      every_n_years: Ogni %{interval} anni, il %{day} %{month}
+      last_day: ultimo giorno
+      monthly: Ogni mese, il %{day}
+      quarterly: Ogni trimestre, il %{day}
+      semiannual: Ogni 6 mesi, il %{day}
+      semimonthly: Due volte al mese, il %{first} e il %{second}
+      weekly: Ogni settimana, %{weekday}
+    frequency_interval_units:
+      monthly: mesi
+      weekly: settimane
+      yearly: anni
+    manage:
+      cta: Apri tutte le scadenze
+      description: Aggiungi, modifica, metti in pausa e paga tutto da lì. Questa pagina
+        gestisce il rilevamento.
+      title: Le tue scadenze si trovano nella pagina Scadenze
+    pick_entry:
+      back: Torna al modulo
+      hint: 'La selezione compila soltanto il modulo: puoi ancora modificare tutto.'
+      income_title: Trova un accredito da cui partire
+      no_results: Nessun risultato per «%{query}». Prova con meno parole oppure torna
+        indietro e compila il modulo manualmente.
+      search_placeholder: Cerca per nome, note o esercente
+      showing_recent: Sono mostrate le %{count} transazioni più recenti. Usa la ricerca
+        per restringere i risultati.
+      title: Trova una transazione da cui partire
+    picker_row:
+      claimed: Parte di %{name}
+    smart_fills:
+      create:
+        failed: Non è stato possibile analizzare la cronologia degli addebiti ora.
+          Il modulo ha mantenuto i valori della transazione.
+    update:
+      success: Scadenza aggiornata
+      success_with_siblings:
+        one: Scadenza aggiornata e collegamento di pagamento copiato su 1 altra scadenza
+        other: Scadenza aggiornata e collegamento di pagamento copiato su %{count}
+          altre scadenze

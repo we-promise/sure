@@ -12,7 +12,8 @@ it:
       subtitle: Risparmia per ciò che conta.
       new_goal: Nuovo obiettivo
       empty_filtered: Nessun obiettivo corrisponde.
-      pending_pledges_callout: Hai impegni in sospeso. L'app li confermerà alla prossima sincronizzazione.
+      pending_pledges_callout: Hai impegni in sospeso. L'app li confermerà alla prossima
+        sincronizzazione.
       kpi:
         contributed_label: Contribuito · ultimi 30gg
         velocity_delta_up: "↑ %{percent}%% vs. 30gg precedenti"
@@ -52,9 +53,9 @@ it:
         placeholder: Cerca obiettivi…
         aria_label: Cerca obiettivi
         empty: Nessun obiettivo corrisponde.
-        empty_with_query: "Nessun obiettivo corrisponde a \"%{query}\"."
+        empty_with_query: Nessun obiettivo corrisponde a "%{query}".
         empty_with_filter: Nessun obiettivo corrisponde a questo filtro.
-        empty_with_both: "Nessun obiettivo corrisponde a \"%{query}\" con questo filtro."
+        empty_with_both: Nessun obiettivo corrisponde a "%{query}" con questo filtro.
         clear_search: Cancella ricerca
         show_all: Mostra tutti
       chips:
@@ -64,6 +65,7 @@ it:
         no_target_date: Aperto
         paused: In pausa
         completed: Completato
+      chips_aria: Filtra obiettivi per stato
     new:
       heading: Nuovo obiettivo
       subtitle: Risparmia per qualcosa di specifico.
@@ -78,7 +80,8 @@ it:
       success: Obiettivo eliminato.
     pause:
       success: Obiettivo messo in pausa.
-      invalid_transition: L'obiettivo non può essere messo in pausa dal suo stato attuale.
+      invalid_transition: L'obiettivo non può essere messo in pausa dal suo stato
+        attuale.
     resume:
       success: Obiettivo ripreso.
       invalid_transition: L'obiettivo non può essere ripreso dal suo stato attuale.
@@ -116,63 +119,82 @@ it:
       funding_last_30d: ultimi 30gg
       funding_last_90d: ultimi 90gg
       status_callout:
-        behind: "risparmia %{amount}/mese in più per recuperare"
-        behind_covered: "gli impegni in sospeso colmano il divario"
-        on_track: "raggiunge l'obiettivo intorno al %{date}"
-        no_target_date: "imposta una data obiettivo per proiettare un traguardo"
+        behind: risparmia %{amount}/mese in più per recuperare
+        behind_covered: gli impegni in sospeso colmano il divario
+        on_track: raggiunge l'obiettivo intorno al %{date}
+        no_target_date: imposta una data obiettivo per proiettare un traguardo
+        depleted: "%{amount} sotto il saldo obiettivo: reintegra per ripristinare
+          la riserva"
       pending_pledge:
         title:
-          zero: "In sospeso: %{amount} in %{account} · scade oggi"
-          one: "In sospeso: %{amount} in %{account} · 1 giorno rimanente"
-          other: "In sospeso: %{amount} in %{account} · %{count} giorni rimanenti"
-        body_transfer: Si conferma automaticamente quando l'app rileva un deposito corrispondente alla prossima sincronizzazione.
+          zero: 'In sospeso: %{amount} in %{account} · scade oggi'
+          one: 'In sospeso: %{amount} in %{account} · 1 giorno rimanente'
+          other: 'In sospeso: %{amount} in %{account} · %{count} giorni rimanenti'
+        body_transfer: Si conferma automaticamente quando l'app rileva un deposito
+          corrispondente alla prossima sincronizzazione.
         body_manual: Si conferma alla prossima modifica manuale del saldo.
-        pledged_at: "Impegnato %{time_ago} fa"
+        pledged_at: Impegnato %{time_ago} fa
         extend: Estendi di 7 giorni
         cancel: Annulla
         confirm_cancel_title: Annullare questo impegno?
-        confirm_cancel_body: "L'impegno di %{amount} verrà rimosso. Puoi registrarne uno nuovo in qualsiasi momento."
+        confirm_cancel_body: L'impegno di %{amount} verrà rimosso. Puoi registrarne
+          uno nuovo in qualsiasi momento.
         confirm_cancel_cta: Annulla impegno
       header:
-        target: "Obiettivo %{amount}"
-        target_by: "Obiettivo %{amount} entro il %{date}"
-        target_by_past: "Obiettivo %{amount} · scaduto il %{date}"
+        target: Obiettivo %{amount}
+        target_by: Obiettivo %{amount} entro il %{date}
+        target_by_past: Obiettivo %{amount} · scaduto il %{date}
       ring:
         saved: Risparmiato
-        of: "di %{target}"
+        of: di %{target}
         to_go: "%{amount} mancanti"
         of_target: dell'obiettivo
-        market_value: "Valore di mercato %{amount}"
-        aria_label: "Obiettivo %{percent}%% completato. %{amount} di %{target} risparmiati."
+        market_value: Valore di mercato %{amount}
+        aria_label: Obiettivo %{percent}%% completato. %{amount} di %{target} risparmiati.
+        aria_label_with_used: Obiettivo completato al %{percent}%. %{amount} su %{target},
+          inclusi %{used} già utilizzati.
+        including_used: Inclusi %{amount} già utilizzati
       projection:
         heading: Proiezione
         legend_saved: Risparmiato
         legend_projection: Proiezione
         legend_required: Richiesto
         reached: Hai raggiunto l'obiettivo. Nessuna proiezione necessaria.
-        no_target_date: Nessuna data obiettivo impostata. Impostane una per proiettare un traguardo.
-        no_pace: Nessun deposito ancora. Aggiungi denaro a un conto collegato per iniziare una proiezione.
+        no_target_date: Nessuna data obiettivo impostata. Impostane una per proiettare
+          un traguardo.
+        no_pace: Nessun deposito ancora. Aggiungi denaro a un conto collegato per
+          iniziare una proiezione.
         behind: In ritardo al ritmo attuale.
-        on_track_html: Al tuo ritmo attuale, raggiungerai questo obiettivo intorno al <strong class="text-primary whitespace-nowrap">%{date}</strong>.
-        aria_label: "Grafico di proiezione per %{name}"
+        on_track_html: Al tuo ritmo attuale, raggiungerai questo obiettivo intorno
+          al <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        aria_label: Grafico di proiezione per %{name}
         today_marker: Oggi
-        tooltip_projected: "Proiettato: %{amount}"
-        tooltip_saved: "Risparmiato: %{amount}"
+        tooltip_projected: 'Proiettato: %{amount}'
+        tooltip_saved: 'Risparmiato: %{amount}'
         tooltip_target_relation: "%{percent}%% di %{target} obiettivo"
+        reserve: Una riserva mantiene un saldo obiettivo, quindi non ha una data di
+          completamento da stimare.
       catch_up:
-        title: "Risparmia %{amount}/mese in più per recuperare"
-        body: "Ritmo attuale %{avg}/mese · necessario %{required}/mese per raggiungere l'obiettivo."
+        title: Risparmia %{amount}/mese in più per recuperare
+        body: Ritmo attuale %{avg}/mese · necessario %{required}/mese per raggiungere
+          l'obiettivo.
         adjust_target_cta: Modifica l'obiettivo invece
       confirm_complete_title: Contrassegnare questo obiettivo come completato?
-      confirm_complete_body: Uscirà dalla lista In corso. Puoi ancora archiviarlo o ripristinarlo in seguito.
-      confirm_complete_body_short: "Sei al %{progress}%%, %{saved} di %{target}. Contrassegnare come completato registra questo come il tuo risultato invece dell'obiettivo originale. Continua, o chiudi e modifica l'obiettivo invece?"
+      confirm_complete_body: Uscirà dalla lista In corso. Puoi ancora archiviarlo
+        o ripristinarlo in seguito.
+      confirm_complete_body_short: Sei al %{progress}%%, %{saved} di %{target}. Contrassegnare
+        come completato registra questo come il tuo risultato invece dell'obiettivo
+        originale. Continua, o chiudi e modifica l'obiettivo invece?
       confirm_complete_cta: Segna come completato
       confirm_archive_title: Archiviare questo obiettivo?
-      confirm_archive_body: Gli obiettivi archiviati scompaiono dalla lista principale. Puoi ripristinarli in seguito.
+      confirm_archive_body: Gli obiettivi archiviati scompaiono dalla lista principale.
+        Puoi ripristinarli in seguito.
       confirm_archive_cta: Archivia
-      confirm_delete_title: "Eliminare questo obiettivo?"
-      confirm_delete_body: "%{name} e la sua cronologia dei versamenti vengono eliminati definitivamente. I conti collegati, i saldi e le transazioni non vengono toccati. Per conservarlo come traccia, archivialo invece."
-      confirm_delete_cta: "Elimina obiettivo"
+      confirm_delete_title: Eliminare questo obiettivo?
+      confirm_delete_body: "%{name} e la sua cronologia dei versamenti vengono eliminati
+        definitivamente. I conti collegati, i saldi e le transazioni non vengono toccati.
+        Per conservarlo come traccia, archivialo invece."
+      confirm_delete_cta: Elimina obiettivo
       paused_banner:
         title: Questo obiettivo è in pausa
         body: Riprendi per continuare a monitorare i tuoi progressi.
@@ -183,19 +205,36 @@ it:
         restore_cta: Ripristina obiettivo
       celebration:
         heading: Obiettivo raggiunto. Ottimo lavoro.
-        body: "Obiettivo chiuso a %{saved} di %{target}. Tienilo come registro o archivialo ora."
+        body: Obiettivo chiuso a %{saved} di %{target}. Tienilo come registro o archivialo
+          ora.
         archive_cta: Archivia obiettivo
+        body_reached: 'Hai raggiunto l''obiettivo con %{saved} su %{target}. Non è
+          ancora chiuso: il denaro resta riservato.'
+        body_reserve: 'La riserva ha raggiunto il saldo obiettivo, %{saved} su %{target}.
+          Non devi fare nulla: il denaro resta riservato.'
+        close_cta: Chiudi questo obiettivo
+        close_hint: La chiusura libera il denaro riservato per gli altri obiettivi
+          sullo stesso conto. Fallo quando lo hai effettivamente speso.
+        frozen: Raggiunto il %{date} · %{amount}
+        heading_reserve: Riserva intatta
       inactive:
         heading_paused: Questo obiettivo è in pausa
         heading_archived: Questo obiettivo è archiviato
         body: "%{saved} di %{target} risparmiati finora."
       no_target_date:
         heading: Aggiungi una data obiettivo
-        body: Imposta una scadenza per proiettare un traguardo e monitorare il ritmo richiesto.
+        body: Imposta una scadenza per proiettare un traguardo e monitorare il ritmo
+          richiesto.
         cta: Imposta data obiettivo
       empty:
         heading: Nessun deposito ancora
-        body: Effettua un trasferimento nel tuo conto collegato. L'app lo rileverà alla prossima sincronizzazione. Oppure aggiorna il saldo del tuo conto manuale.
+        body: Effettua un trasferimento nel tuo conto collegato. L'app lo rileverà
+          alla prossima sincronizzazione. Oppure aggiorna il saldo del tuo conto manuale.
+      consume: Ho usato parte di questo denaro
+      reserve_shortfall:
+        body: Hai %{saved} su %{target}. Aggiungi %{missing} per tornare al saldo
+          obiettivo.
+        heading: Riserva al di sotto del saldo obiettivo
     errors:
       not_found: Questo obiettivo non è stato trovato. Potrebbe essere stato eliminato.
     states:
@@ -211,12 +250,16 @@ it:
       no_target_date: Aperto
       paused: In pausa
       archived: Archiviato
+      depleted: Da reintegrare
+      funded: Riserva intatta
     empty_state:
       heading: Nessun obiettivo ancora
-      body: Imposta un obiettivo, collega i conti in cui risparmi e osserva i tuoi progressi accumularsi.
+      body: Imposta un obiettivo, collega i conti in cui risparmi e osserva i tuoi
+        progressi accumularsi.
       subtitle: Imposta un obiettivo e inizia a risparmiare.
       new_goal: Crea il tuo primo obiettivo
-      no_depository_accounts: Hai bisogno di almeno un conto corrente (conto corrente, risparmio, HSA, CD, mercato monetario) prima di creare un obiettivo.
+      no_depository_accounts: Hai bisogno di almeno un conto corrente (conto corrente,
+        risparmio, HSA, CD, mercato monetario) prima di creare un obiettivo.
       add_account: Aggiungi un conto
     goal_card:
       no_accounts: Nessun conto collegato
@@ -237,7 +280,7 @@ it:
       footer_paused: In pausa
       footer_archived: Archiviato
       footer_reached: Obiettivo raggiunto
-      footer_catch_up: "Risparmia %{amount}/mese per recuperare"
+      footer_catch_up: Risparmia %{amount}/mese per recuperare
       footer_no_deadline: Aperto
       pending_pledge: Impegno in sospeso
       pending_count:
@@ -247,11 +290,15 @@ it:
       footer_last_today: Ultimo impegno abbinato oggi
       footer_last_days:
         one: Ultimo impegno abbinato 1 giorno fa
-        other: "Ultimo impegno abbinato %{count} giorni fa"
+        other: Ultimo impegno abbinato %{count} giorni fa
+      footer_reserve_intact: Riserva intatta
+      footer_reserve_short: "%{amount} da reintegrare"
+      including_used: Inclusi %{amount} già utilizzati
     form:
       create: Crea obiettivo
       save: Salva modifiche
-      suggested_with_date: "Risparmia {monthly}/mese su {accounts} per raggiungerlo in tempo."
+      suggested_with_date: Risparmia {monthly}/mese su {accounts} per raggiungerlo
+        in tempo.
       suggested_no_date: Imposta una data obiettivo per proiettare un traguardo.
       errors:
         name_required: Dai un nome al tuo obiettivo.
@@ -267,9 +314,18 @@ it:
         notes_placeholder: Un promemoria per te in futuro…
         funding_accounts: Conti di finanziamento
         funding_accounts_hint: Il saldo di questo obiettivo è il saldo di questi conti.
-        whole_balance: "Vuoto: tutto il saldo"
+        whole_balance: 'Vuoto: tutto il saldo'
         earmark_for: Accantona un importo per %{account}
-        earmark_hint: Lascia vuoto un importo per dedicare l'intero saldo di quel conto.
+        earmark_hint: Lascia vuoto un importo per dedicare l'intero saldo di quel
+          conto.
+        target_balance: Saldo obiettivo
+        target_balance_hint: Calcolato sulla mediana delle spese mensili nei mesi
+          indicati sopra. Aggiornato ogni mese.
+        target_balance_pending: Calcolato al salvataggio
+        target_mode: Come viene definito il saldo obiettivo
+        target_months: Mesi di spese
+        target_months_hint: Ricalcolato il primo giorno di ogni mese sulla mediana
+          delle spese mensili.
       subtypes:
         checking: Conto corrente
         savings: Risparmio
@@ -277,3 +333,51 @@ it:
         cd: CD
         money_market: Mercato monetario
         other: Altro
+      earmark:
+        headroom: Restano {left} da riservare su questo conto.
+        prorata: 'Gli obiettivi su questo conto ammontano a {total} a fronte di un
+          saldo di {balance}: avanzeranno in proporzione.'
+        whole_balance: Questo conto finanzierà ciò che resta dopo le altre somme riservate.
+        whole_balance_alone: Questo obiettivo userà l'intero saldo del conto.
+      kinds:
+        maintained:
+          hint: Un saldo da mantenere, ad esempio un fondo di emergenza. Non viene
+            mai chiuso.
+          label: Riserva da mantenere
+        one_off:
+          hint: Risparmia per qualcosa e chiudi l'obiettivo quando spendi il denaro.
+          label: Obiettivo una tantum
+      target_modes:
+        fixed: Un importo fisso
+        months_of_expenses: Un numero di mesi di spese
+    consume:
+      cancel: Annulla
+      account_label: Da quale conto?
+      amount_hint: Attualmente %{saved} sono destinati a questo obiettivo.
+      amount_label: Quanto hai usato?
+      earmark_note: 'L''importo registrato non sarà più riservato a questo obiettivo:
+        gli altri obiettivi sullo stesso conto recupereranno così la propria quota.'
+      errors:
+        account_not_linked: Questo conto non finanzia l'obiettivo.
+        account_required: 'Questo obiettivo è finanziato da più conti: indica da quale
+          è uscito il denaro.'
+        exceeds_earmark: L'importo supera quanto riservato a questo obiettivo sul
+          conto.
+        exceeds_target: L'importo supera quanto questo obiettivo prevedeva di risparmiare.
+        maintained: 'Una riserva viene utilizzata e ricostituita, non registrata come
+          spesa: la carenza è già visibile nell''obiettivo.'
+        no_linked_account: Questo obiettivo non ha più conti di finanziamento.
+        non_positive: Inserisci un importo maggiore di zero.
+        not_active: Questo obiettivo non è più attivo, quindi non è possibile registrarvi
+          importi.
+        transaction_already_claimed: Questa uscita è già stata attribuita.
+        transaction_not_found: Questa uscita non è più disponibile per l'attribuzione.
+      submit: Registra
+      subtitle: "%{goal}"
+      success: "%{amount} registrati come utilizzati."
+      title: Registra una spesa
+    unattributed_outflows:
+      attribute: Era questa
+      body: 'Se una di queste somme è stata spesa per %{goal}, indicalo: non verrà
+        più conteggiata contro l''obiettivo.'
+      heading: Denaro uscito da questi conti

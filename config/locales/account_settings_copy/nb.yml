@@ -1,0 +1,17 @@
+---
+nb:
+  settings:
+    providers:
+      provider_form:
+        environment_override_hint: Konfigurasjonen kan angis via miljøvariabler eller overstyres nedenfor.
+        optional: Valgfritt
+      update:
+        failed: Kunne ikke oppdatere leverandørinnstillingene. Prøv igjen.
+    llm_usages:
+      show:
+        http_status: 'HTTP-status: %{status}'
+  shared:
+    async_loading:
+      timeout: Tidsavbrudd
+      failed_with_status: Kunne ikke laste inn (%{status})
+      network_error: Nettverksfeil

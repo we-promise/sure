@@ -1,0 +1,20 @@
+---
+nl:
+  authentication_ui:
+    password:
+      missing_case: "moet hoofdletters en kleine letters bevatten"
+      missing_number: "moet ten minste één cijfer bevatten"
+      missing_special: "moet ten minste één speciaal teken bevatten"
+    sso:
+      copy_failed: "Kopiëren naar het klembord is mislukt"
+      issuer_valid: "Geldige OIDC-uitgever"
+      issuer_mismatch_trailing: "De uitgever komt niet overeen: de ontdekking gaf %{issuer} terug. Dit komt meestal door een verschil in de afsluitende slash. Kopieer de uitgever precies zoals deze is teruggegeven."
+      issuer_mismatch: "De uitgever komt niet overeen: de ontdekking gaf %{issuer} terug. Kopieer de uitgever precies zoals de provider deze teruggeeft."
+      browser_validation_unavailable: "Validatie vanuit de browser is niet gelukt (CORS). De provider kan nog steeds worden opgeslagen."
+      testing: "Bezig met testen…"
+      request_failed: "Verzoek mislukt: %{message}"
+    authorization:
+      authorizing: "Bezig met autoriseren…"
+      denying: "Bezig met weigeren…"
+      explanation: "Door toestemming te geven, sta je deze app toe om je %{product_name}-gegevens te benaderen volgens de bovenstaande rechten."
+      title: "%{product_name}-autorisatie"

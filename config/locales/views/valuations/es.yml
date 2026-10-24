@@ -21,6 +21,8 @@ es:
       recalculate_notice: Todas las transacciones y saldos futuros se recalcularán en función de este %{change_or_update}.
       change: cambio
       update: actualización
+      action_update: actualización
+      action_set: establecer
     create:
       account_updated: Cuenta actualizada
     update:
@@ -58,3 +60,9 @@ es:
       settings: Configuración
       opening_balance: Saldo inicial
       update_value: Actualizar valor
+    confirm_create:
+      confirm: Confirmar
+      title: Confirmar nuevo saldo
+    confirm_update:
+      update: Actualizar
+      title: Actualizar saldo

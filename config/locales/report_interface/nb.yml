@@ -1,0 +1,6 @@
+---
+nb:
+  reports:
+    index:
+      sections_aria_label: "Rapportseksjoner"
+      section_reorder_aria: "Seksjonen %{title}. Trykk Enter eller mellomrom for å velge seksjonen til omordning, og bruk deretter piltastene for å flytte den."

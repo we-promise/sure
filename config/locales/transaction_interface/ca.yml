@@ -1,0 +1,6 @@
+---
+ca:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Ingrés puntual (exclòs de les mitjanes)"
+      one_time_expense_tooltip: "Despesa puntual (exclosa de les mitjanes)"

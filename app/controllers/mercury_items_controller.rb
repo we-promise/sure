@@ -532,15 +532,17 @@ class MercuryItemsController < ApplicationController
     @account_type_options = [ [ t(".account_types.skip"), "skip" ] ] + all_account_type_options
 
     # Helper to translate subtype options
-    translate_subtypes = ->(type_key, subtypes_hash) {
-      subtypes_hash.map { |k, v| [ t(".subtypes.#{type_key}.#{k}", default: v[:long] || k.humanize), k ] }
+    translate_subtypes = ->(type_key, accountable_class) {
+      accountable_class::SUBTYPES.keys.map do |key|
+        [ t(".subtypes.#{type_key}.#{key}", default: accountable_class.long_subtype_label_for(key)), key ]
+      end
     }
 
     # Subtype options for each account type (only include supported types)
     all_subtype_options = {
       "Depository" => {
         label: t(".subtype_labels.depository"),
-        options: translate_subtypes.call("depository", Depository::SUBTYPES)
+        options: translate_subtypes.call("depository", Depository)
       },
       "CreditCard" => {
         label: t(".subtype_labels.credit_card"),
@@ -549,11 +551,11 @@ class MercuryItemsController < ApplicationController
       },
       "Investment" => {
         label: t(".subtype_labels.investment"),
-        options: translate_subtypes.call("investment", Investment::SUBTYPES)
+        options: translate_subtypes.call("investment", Investment)
       },
       "Loan" => {
         label: t(".subtype_labels.loan"),
-        options: translate_subtypes.call("loan", Loan::SUBTYPES)
+        options: translate_subtypes.call("loan", Loan)
       },
       "OtherAsset" => {
         label: t(".subtype_labels.other_asset").presence,

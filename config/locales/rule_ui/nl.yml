@@ -1,0 +1,18 @@
+---
+nl:
+  rules:
+    new:
+      back: Terug naar regels
+      title: Nieuwe regel voor %{resource}
+    form:
+      for: VOOR
+    edit:
+      title: Regel voor %{resource} bewerken
+      title_with_name: Regel voor %{resource} “%{name}” bewerken
+  transfers:
+    account_links:
+      missing_account: 'Gegevensfout: account ontbreekt'
+      transfer_id: 'Overboekings-ID: %{id}'
+  tags:
+    create:
+      failed: Tag kon niet worden aangemaakt

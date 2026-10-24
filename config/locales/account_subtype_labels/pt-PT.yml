@@ -1,0 +1,40 @@
+---
+pt-PT:
+  investments:
+    subtypes:
+      non-registered:
+        long: Conta de investimento não registada
+      fhsa:
+        long: Conta poupança para a primeira habitação (FHSA)
+      rdsp:
+        long: Plano de poupança registado para pessoas com deficiência (RDSP)
+      dpsp:
+        long: Plano de participação diferida nos lucros (DPSP)
+      prpp:
+        long: Plano de pensões registado coletivo (PRPP)
+      lif:
+        long: Fundo de rendimento vitalício (LIF)
+      lrif:
+        long: Fundo bloqueado de rendimento de reforma (LRIF)
+      prif:
+        long: Fundo registado de rendimento de reforma com regulamentação específica (PRIF)
+      rlif:
+        long: Fundo restrito de rendimento vitalício (RLIF)
+      assurance_vie:
+        long: Seguro de vida francês (Assurance Vie)
+  loans:
+    subtypes:
+      home_equity:
+        long: Empréstimo garantido pelo valor líquido da habitação
+      line_of_credit:
+        long: Linha de crédito
+      business:
+        long: Empréstimo empresarial
+      mortgage:
+        long: Hipoteca
+      student:
+        long: Empréstimo de estudos
+      auto:
+        long: Crédito automóvel
+      other:
+        long: Outro empréstimo

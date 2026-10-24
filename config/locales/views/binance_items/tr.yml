@@ -70,7 +70,7 @@ tr:
         other: "%{count} hesap mevcut"
       cancel: İptal
       creating: İçe aktarılıyor...
-      historical_import: ''
+      historical_import: "Geçmiş verileri içe aktarma"
       import_selected: Seçilenleri İçe Aktar
       instructions: İçe aktarmak istediğiniz Binance portföylerini seçin. Yalnızca
         bakiyesi olan portföyler gösterilir.

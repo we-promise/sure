@@ -1,0 +1,6 @@
+---
+nb:
+  layouts:
+    shared:
+      footer:
+        community_fork: "(fellesskapsdrevet videreføring av %{original_product})"

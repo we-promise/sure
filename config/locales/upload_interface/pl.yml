@@ -1,0 +1,15 @@
+---
+pl:
+  upload_interface:
+    too_many_files: Za dużo plików (maksymalnie %{max})
+    file_too_large: Plik jest za duży (maksymalnie %{max} MB)
+    uploading: Przesyłanie %{filename}…
+    qif_invalid: Plik musi być poprawnym plikiem QIF
+    amount_type_strategies:
+      signed_amount: Kwota ze znakiem
+      custom_column: Niestandardowa kolumna
+    upload_files:
+      one: Prześlij %{count} plik
+      few: Prześlij %{count} pliki
+      many: Prześlij %{count} plików
+      other: Prześlij pliki (%{count})

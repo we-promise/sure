@@ -11,7 +11,6 @@ pt-PT:
     show:
       chart_title: Valor total
     subtypes:
-      # United States
       brokerage:
         short: Corretora
         long: Conta de Corretagem
@@ -54,7 +53,6 @@ pt-PT:
       utma:
         short: UTMA
         long: Conta de Curadoria UTMA
-      # United Kingdom
       isa:
         short: ISA
         long: Conta de Poupança Individual (ISA)
@@ -67,7 +65,6 @@ pt-PT:
       workplace_pension_uk:
         short: Pensão
         long: Pensão de Trabalho
-      # Canada
       rrsp:
         short: RRSP
         long: Plano de Poupança de Reforma Registado (RRSP)
@@ -83,14 +80,12 @@ pt-PT:
       rrif:
         short: RRIF
         long: Fundo de Rendimento de Reforma Registado (RRIF)
-      # Australia
       super:
         short: Super
         long: Superannuation
       smsf:
         short: SMSF
         long: Fundo de Super Autogerido (SMSF)
-      # Europe
       pea:
         short: PEA
         long: Plan d'Épargne en Actions
@@ -100,7 +95,6 @@ pt-PT:
       riester:
         short: Riester
         long: Riester-Rente
-      # India
       nps:
         short: NPS
         long: Sistema Nacional de Pensões (NPS)
@@ -167,7 +161,6 @@ pt-PT:
       tax_free_bond:
         short: Obrigação Isenta de Impostos
         long: Obrigação Isenta de Impostos
-      # Generic
       pension:
         short: Pensão
         long: Pensão
@@ -189,9 +182,13 @@ pt-PT:
       other:
         short: Outro
         long: Outro Investimento
+      cash_management:
+        long: Conta de gestão de caixa
+        short: CMA
     value_tooltip:
       cash: Dinheiro
       holdings: Posições
       total: Saldo da carteira
-      total_value_tooltip: O saldo total da carteira é a soma do dinheiro da corretora
-        (disponível para negociação) e o valor de mercado atual das suas posições.
+      total_value_tooltip: >-
+        O saldo total da carteira é a soma do dinheiro da corretora (disponível para
+        negociação) e o valor de mercado atual das suas posições.

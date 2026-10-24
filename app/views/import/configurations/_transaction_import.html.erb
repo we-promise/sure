@@ -44,7 +44,7 @@
 
   <%# Amount Type Strategy %>
   <%= form.select :amount_type_strategy,
-                  Import::AMOUNT_TYPE_STRATEGIES.map { |strategy| [strategy.humanize, strategy] },
+                  Import::AMOUNT_TYPE_STRATEGIES.map { |strategy| [t("upload_interface.amount_type_strategies.#{strategy}"), strategy] },
                   { label: t(".amount_type_strategy_label"), prompt: t(".select_strategy") },
                   required: true,
                   data: {

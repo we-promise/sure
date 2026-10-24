@@ -1,0 +1,6 @@
+---
+de:
+  layouts:
+    shared:
+      footer:
+        community_fork: "(Community-Fork von %{original_product})"

@@ -210,7 +210,7 @@ class WiseItemsController < ApplicationController
     @wise_item = resolve_wise_item_for_selection
 
     unless @account && @wise_item
-      redirect_to accounts_path, alert: t("wise_items.select_existing_account.not_found") and return
+      redirect_to accounts_path, alert: t("wise_items.link_existing_account.not_found") and return
     end
 
     @available_accounts = @wise_item.wise_accounts.unlinked

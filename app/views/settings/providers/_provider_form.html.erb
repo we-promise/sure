@@ -36,7 +36,7 @@
   <% env_configured = configuration.fields.any? { |f| f.env_key && ENV[f.env_key].present? } %>
   <% if env_configured %>
     <p class="text-sm text-secondary">
-      Configuration can be set via environment variables or overridden below.
+      <%= t(".environment_override_hint") %>
     </p>
   <% end %>
 
@@ -63,7 +63,7 @@
           <%= form.text_field field.setting_key,
                               label: field.label,
                               type: input_type,
-                              placeholder: field.default || (field.required ? "" : "Optional"),
+                              placeholder: field.default || (field.required ? "" : t(".optional")),
                               value: display_value %>
           <% if field.description.present? %>
             <p class="text-xs text-secondary px-1"><%= field.description %></p>

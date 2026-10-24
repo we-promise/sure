@@ -1,0 +1,40 @@
+---
+ca:
+  investments:
+    subtypes:
+      non-registered:
+        long: Compte d’inversió no registrat
+      fhsa:
+        long: Compte d’estalvi per al primer habitatge (FHSA)
+      rdsp:
+        long: Pla d’estalvi registrat per a persones amb discapacitat (RDSP)
+      dpsp:
+        long: Pla de participació diferida en beneficis (DPSP)
+      prpp:
+        long: Pla de pensions registrat col·lectiu (PRPP)
+      lif:
+        long: Fons d’ingressos vitalicis (LIF)
+      lrif:
+        long: Fons bloquejat d’ingressos per a la jubilació (LRIF)
+      prif:
+        long: Fons registrat d’ingressos per a la jubilació amb regulació específica (PRIF)
+      rlif:
+        long: Fons restringit d’ingressos vitalicis (RLIF)
+      assurance_vie:
+        long: Assegurança de vida francesa (Assurance Vie)
+  loans:
+    subtypes:
+      home_equity:
+        long: Préstec sobre el valor net de l’habitatge
+      line_of_credit:
+        long: Línia de crèdit
+      business:
+        long: Préstec empresarial
+      mortgage:
+        long: Hipoteca
+      student:
+        long: Préstec d'estudis
+      auto:
+        long: Préstec d'automòbil
+      other:
+        long: Altre préstec

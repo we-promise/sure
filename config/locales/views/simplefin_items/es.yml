@@ -8,7 +8,7 @@ es:
       connect: Conectar
       cancel: Cancelar
     create:
-      success: ¡Conexión SimpleFIN añadida con éxito! Tus cuentas aparecerán en breve mientras se sincronizan en segundo plano.
+      success: "¡Conexión SimpleFIN añadida con éxito! Tus cuentas aparecerán en breve mientras se sincronizan en segundo plano."
       errors:
         blank_token: Por favor, introduce un token de configuración de SimpleFIN.
         invalid_token: Token de configuración no válido. Por favor, verifica que has copiado el token completo desde SimpleFIN Bridge.
@@ -18,7 +18,7 @@ es:
     destroy:
       success: La conexión SimpleFIN será eliminada.
     update:
-      success: ¡Conexión SimpleFIN actualizada con éxito! Tus cuentas se están reconectando.
+      success: "¡Conexión SimpleFIN actualizada con éxito! Tus cuentas se están reconectando."
       errors:
         blank_token: Por favor, introduce un token de configuración de SimpleFIN.
         invalid_token: Token de configuración no válido. Por favor, verifica que has copiado el token completo desde SimpleFIN Bridge.
@@ -63,7 +63,7 @@ es:
       activity:
         recent:
           one: 1 transacción • última %{when}
-          other: '%{count} transacciones • última %{when}'
+          other: "%{count} transacciones • última %{when}"
         dormant: Sin actividad en %{days} días
         empty: Aún no se han importado transacciones
         likely_closed: 'Sin actividad reciente y saldo cero: puede tratarse de una tarjeta cancelada o sustituida'
@@ -75,19 +75,19 @@ es:
       stale_accounts:
         title: Cuentas que ya no están en SimpleFIN
         description: Estas cuentas existen en tu base de datos pero SimpleFIN ya no las proporciona. Esto puede ocurrir cuando cambian las configuraciones de origen.
-        action_prompt: ¿Qué te gustaría hacer?
+        action_prompt: "¿Qué te gustaría hacer?"
         action_delete: Eliminar cuenta y todas las transacciones
         action_move: 'Mover transacciones a:'
         action_skip: Omitir por ahora
         transaction_count:
-          one: '%{count} transacción'
-          other: '%{count} transacciones'
+          one: "%{count} transacción"
+          other: "%{count} transacciones"
     complete_account_setup:
       all_skipped: Se han omitido todas las cuentas. No se ha creado ninguna.
       no_accounts: No hay cuentas para configurar.
       success:
-        one: ¡Se ha creado correctamente %{count} cuenta de SimpleFIN! Tus transacciones y posiciones se están importando en segundo plano.
-        other: ¡Se han creado correctamente %{count} cuentas de SimpleFIN! Tus transacciones y posiciones se están importando en segundo plano.
+        one: "¡Se ha creado correctamente %{count} cuenta de SimpleFIN! Tus transacciones y posiciones se están importando en segundo plano."
+        other: "¡Se han creado correctamente %{count} cuentas de SimpleFIN! Tus transacciones y posiciones se están importando en segundo plano."
       stale_accounts_processed: 'Cuentas obsoletas: %{deleted} eliminadas, %{moved} movidas.'
       stale_accounts_errors:
         one: Error en la acción de %{count} cuenta obsoleta. Revisa los registros para más detalles.
@@ -96,9 +96,9 @@ es:
       add_new: Añadir nueva conexión
       confirm_accept: Eliminar conexión
       confirm_body: Esto eliminará permanentemente todas las cuentas de este grupo y todos los datos asociados.
-      confirm_title: ¿Eliminar conexión SimpleFIN?
+      confirm_title: "¿Eliminar conexión SimpleFIN?"
       delete: Eliminar
-      deletion_in_progress: (eliminación en curso...)
+      deletion_in_progress: "(eliminación en curso...)"
       error: Ha ocurrido un error al sincronizar los datos
       no_accounts_description: Esta conexión aún no tiene cuentas sincronizadas.
       no_accounts_title: No se encontraron cuentas
@@ -119,9 +119,9 @@ es:
       status_with_summary: Última sincronización hace %{timestamp} • %{summary}
       syncing: Sincronizando...
       update: Actualizar
-      stale_pending_note: (excluido de presupuestos)
+      stale_pending_note: "(excluido de presupuestos)"
       stale_pending_accounts: 'en: %{accounts}'
-      reconciled_details_note: (ver resumen de sincronización para detalles)
+      reconciled_details_note: "(ver resumen de sincronización para detalles)"
       duplicate_accounts_skipped: Se omitieron algunas cuentas por estar duplicadas — usa 'Vincular cuentas existentes' para fusionarlas.
     select_existing_account:
       title: Vincular %{account_name} a SimpleFIN
@@ -133,6 +133,7 @@ es:
       unlink_to_move: Para mover un vínculo, primero desvincúlalo desde el menú de acciones de la cuenta.
       all_accounts_already_linked: Todas las cuentas de SimpleFIN parecen estar ya vinculadas.
       currently_linked_to: 'Vinculada actualmente a: %{account_name}'
+      check_provider_health: Comprueba que tu conexión de SimpleFIN funcione correctamente en Ajustes → Proveedores.
     link_existing_account:
       success: Cuenta vinculada correctamente a SimpleFIN
       errors:
@@ -143,16 +144,34 @@ es:
       dismissed: Sugerencia de sustitución descartada
     replacement_prompt:
       title: Puede que hayan sustituido tu tarjeta de %{institution}
-      description: «%{account_name}» está vinculada a «%{old_name}», que no tiene actividad reciente y su saldo es cero. Una nueva tarjeta, «%{new_name}», está ahora activa en la misma entidad. Vuelve a vincular para mantener tu historial intacto.
+      description: "«%{account_name}» está vinculada a «%{old_name}», que no tiene actividad reciente y su saldo es cero. Una nueva tarjeta, «%{new_name}», está ahora activa en la misma entidad. Vuelve a vincular para mantener tu historial intacto."
       relink: Vincular a la tarjeta nueva
-      confirm_title: ¿Vincular a la tarjeta nueva?
-      confirm_body: «%{account_name}» se vinculará a «%{new_name}». Tu historial de transacciones se conserva; las transacciones futuras vendrán de la tarjeta nueva.
+      confirm_title: "¿Vincular a la tarjeta nueva?"
+      confirm_body: "«%{account_name}» se vinculará a «%{new_name}». Tu historial de transacciones se conserva; las transacciones futuras vendrán de la tarjeta nueva."
       dismiss_aria: Descartar sugerencia de sustitución
     reconciled_status:
       message:
-        one: '%{count} transacción pendiente duplicada conciliada'
-        other: '%{count} transacciones pendientes duplicadas conciliadas'
+        one: "%{count} transacción pendiente duplicada conciliada"
+        other: "%{count} transacciones pendientes duplicadas conciliadas"
     stale_pending_status:
       message:
-        one: '%{count} transacción pendiente con más de %{days} días'
-        other: '%{count} transacciones pendientes con más de %{days} días'
+        one: "%{count} transacción pendiente con más de %{days} días"
+        other: "%{count} transacciones pendientes con más de %{days} días"
+    institution_summary:
+      count:
+        one: "%{count} institución"
+        other: "%{count} entidades"
+      none: No hay entidades conectadas
+    sync_status:
+      no_accounts: No se encontraron cuentas
+      partial_setup:
+        one: "%{linked} sincronizadas, %{unlinked} pendientes de configurar"
+        other: "%{linked} sincronizadas, %{unlinked} pendientes de configurar"
+      synced:
+        one: "%{count} cuenta sincronizada"
+        other: "%{count} cuentas sincronizadas"
+    rate_limited:
+      daily_refresh: Has alcanzado el límite diario de actualización de SimpleFIN. Inténtalo de nuevo cuando se actualice el puente (hasta 24 horas).
+    stale_sync:
+      last_successful: La última sincronización correcta fue hace %{count} días. Tu conexión de SimpleFIN puede necesitar atención.
+      no_transactions: No hay transacciones nuevas desde hace %{count} días. Comprueba en tu panel de SimpleFIN que tus conexiones bancarias estén activas.

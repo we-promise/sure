@@ -1,0 +1,20 @@
+---
+vi:
+  authentication_ui:
+    password:
+      missing_case: "phải bao gồm cả chữ hoa và chữ thường"
+      missing_number: "phải bao gồm ít nhất một chữ số"
+      missing_special: "phải bao gồm ít nhất một ký tự đặc biệt"
+    sso:
+      copy_failed: "Không thể sao chép vào bộ nhớ tạm"
+      issuer_valid: "Bên phát hành OIDC hợp lệ"
+      issuer_mismatch_trailing: "Bên phát hành không khớp: quá trình khám phá trả về %{issuer}. Nguyên nhân thường là dấu gạch chéo ở cuối không khớp. Hãy sao chép chính xác địa chỉ bên phát hành được trả về."
+      issuer_mismatch: "Bên phát hành không khớp: quá trình khám phá trả về %{issuer}. Hãy sao chép chính xác địa chỉ bên phát hành do nhà cung cấp trả về."
+      browser_validation_unavailable: "Không thể xác thực từ trình duyệt (CORS). Vẫn có thể lưu nhà cung cấp."
+      testing: "Đang kiểm tra…"
+      request_failed: "Yêu cầu thất bại: %{message}"
+    authorization:
+      authorizing: "Đang cấp quyền…"
+      denying: "Đang từ chối…"
+      explanation: "Khi cấp quyền, bạn cho phép ứng dụng này truy cập dữ liệu %{product_name} của bạn theo các quyền ở trên."
+      title: "Cấp quyền %{product_name}"

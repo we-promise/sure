@@ -1,0 +1,6 @@
+---
+fr:
+  reports:
+    index:
+      sections_aria_label: "Sections du rapport"
+      section_reorder_aria: "Section %{title}. Appuyez sur Entrée ou Espace pour la sélectionner, puis utilisez les touches fléchées pour la déplacer."

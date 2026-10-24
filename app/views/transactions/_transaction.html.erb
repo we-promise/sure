@@ -87,7 +87,7 @@
 
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <% if transaction.one_time? %>
-                      <span class="text-orange-500" title="One-time <%= entry.amount.negative? ? "income" : "expense" %> (excluded from averages)">
+                      <span class="text-orange-500" title="<%= t(entry.amount.negative? ? "transactions.transaction.one_time_income_tooltip" : "transactions.transaction.one_time_expense_tooltip") %>">
                         <%= icon "asterisk", size: "sm", color: "current" %>
                       </span>
                     <% end %>

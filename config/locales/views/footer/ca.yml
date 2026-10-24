@@ -1,0 +1,6 @@
+---
+ca:
+  layouts:
+    shared:
+      footer:
+        community_fork: "(versió derivada comunitària de %{original_product})"

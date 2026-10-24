@@ -15,30 +15,30 @@ zh-TW:
       pending_pledges_callout: 您有待確認投入，Sure 會在下次同步時確認。
       kpi:
         contributed_label: 已投入 · 近 30 天
-        velocity_delta_up: ↑ 比前 30 天多 %{percent}%%
-        velocity_delta_down: ↓ 比前 30 天少 %{percent}%%
+        velocity_delta_up: "↑ 比前 30 天多 %{percent}%%"
+        velocity_delta_down: "↓ 比前 30 天少 %{percent}%%"
         velocity_delta_flat: 與前 30 天相比
         velocity_delta_zero_base: 頭 30 天的紀錄
         needs_this_month_label: 本月需要
         needs_this_month_sub:
           one: 1 個目標落後進度
-          other: '%{count} 個目標落後進度'
+          other: "%{count} 個目標落後進度"
         needs_this_month_zero_sub: 沒有目標落後進度
         on_track_label: 進度正常的目標
-        on_track_value: '%{total} 個中有 %{on_track} 個'
+        on_track_value: "%{total} 個中有 %{on_track} 個"
         on_track_sub_parts:
           reached:
             one: 1 個已達成
-            other: '%{count} 個已達成'
+            other: "%{count} 個已達成"
           behind:
             one: 1 個落後
-            other: '%{count} 個落後'
+            other: "%{count} 個落後"
           no_date:
             one: 1 個未設期限
-            other: '%{count} 個未設期限'
+            other: "%{count} 個未設期限"
           paused:
             one: 1 個已暫停
-            other: '%{count} 個已暫停'
+            other: "%{count} 個已暫停"
         on_track_sub_all_good: 所有進行中的目標都跟得上進度
         on_track_all_caught_up: 全部都跟上了
       goals_section:
@@ -64,6 +64,7 @@ zh-TW:
         no_target_date: 未設期限
         paused: 已暫停
         completed: 已完成
+      chips_aria: 依狀態篩選目標
     new:
       heading: 新增目標
       subtitle: 為某個具體的目標存錢。
@@ -108,7 +109,7 @@ zh-TW:
       pledge_just_saved: 記錄一筆您已存起來的錢
       funding_accounts_heading: 資金帳戶
       funding_accounts:
-        earmarked_of: '%{balance} 中已指定 %{earmarked}'
+        earmarked_of: "%{balance} 中已指定 %{earmarked}"
         empty:
           heading: 尚未連結任何資金帳戶
           body: 編輯這個目標，連結您用來存錢的存款帳戶。
@@ -120,6 +121,7 @@ zh-TW:
         behind_covered: 待確認投入補上了這個缺口
         on_track: 大約在 %{date} 達成目標
         no_target_date: 設定目標日期就能推算完成時間
+        depleted: 低於目標餘額 %{amount}，請補足以恢復準備金
       pending_pledge:
         title:
           zero: 待確認：%{amount} 存入 %{account} · 今天到期
@@ -127,7 +129,7 @@ zh-TW:
           other: 待確認：%{amount} 存入 %{account} · 剩 %{count} 天
         body_transfer: Sure 在下次同步發現相符的存入時會自動確認。
         body_manual: 會在您下次手動編輯餘額時確認。
-        pledged_at: '%{time_ago}前記錄'
+        pledged_at: "%{time_ago}前記錄"
         extend: 延長 7 天
         cancel: 取消
         confirm_cancel_title: 要取消這筆投入紀錄嗎？
@@ -139,11 +141,13 @@ zh-TW:
         target_by_past: 目標 %{amount} · 原定期限 %{date}
       ring:
         saved: 已存
-        of: ／%{target}
+        of: "／%{target}"
         to_go: 還差 %{amount}
         of_target: 佔目標比例
         market_value: 市值 %{amount}
         aria_label: 目標已完成 %{percent}%。目標 %{target} 中已存 %{amount}。
+        aria_label_with_used: 目標已完成 %{percent}%。目前 %{amount}／%{target}，其中 %{used} 已使用。
+        including_used: 包含已使用的 %{amount}
       projection:
         heading: 預測
         legend_saved: 已存
@@ -154,11 +158,12 @@ zh-TW:
         no_pace: 還沒有任何存入。先存錢到已連結的帳戶，才能開始預測。
         behind: 以目前的速度會達不到目標。
         on_track_html: 以您目前的速度，大約會在 <strong class="text-primary whitespace-nowrap">%{date}</strong> 達成這個目標。
-        aria_label: '%{name} 的預測圖表'
+        aria_label: "%{name} 的預測圖表"
         today_marker: 今天
         tooltip_projected: 預測：%{amount}
         tooltip_saved: 已存：%{amount}
         tooltip_target_relation: 佔 %{target} 目標的 %{percent}%
+        reserve: 準備金的用途是維持目標餘額，因此沒有可預測的完成日期。
       catch_up:
         title: 每月多存 %{amount} 就能追上
         body: 目前速度每月 %{avg} · 要達標每月需要 %{required}。
@@ -185,6 +190,12 @@ zh-TW:
         heading: 目標達成，做得好。
         body: 目標在 %{target} 中存到 %{saved} 時結束。留著當紀錄，或是現在就封存。
         archive_cta: 封存目標
+        body_reached: 您已達成目標，目前為 %{saved}／%{target}。目標尚未結案，款項仍為此目標保留。
+        body_reserve: 準備金已達目標餘額，目前為 %{saved}／%{target}。無需操作，款項會繼續保留。
+        close_cta: 將此目標結案
+        close_hint: 結案會釋出預留款項，供同一帳戶的其他目標使用。請在實際花用後再結案。
+        frozen: 已於 %{date} 達成 · %{amount}
+        heading_reserve: 準備金充足
       inactive:
         heading_paused: 這個目標已暫停
         heading_archived: 這個目標已封存
@@ -196,6 +207,10 @@ zh-TW:
       empty:
         heading: 還沒有任何存入
         body: 轉一筆錢到您已連結的帳戶，Sure 會在下次同步時抓到。或者直接更新您手動帳戶的餘額。
+      consume: 我已使用部分款項
+      reserve_shortfall:
+        body: 目前持有 %{saved}／%{target}，再補入 %{missing} 即可恢復目標餘額。
+        heading: 準備金低於目標餘額
     errors:
       not_found: 找不到這個目標，它可能已經被刪除了。
     states:
@@ -211,6 +226,8 @@ zh-TW:
       no_target_date: 未設期限
       paused: 已暫停
       archived: 已封存
+      depleted: 需要補足
+      funded: 準備金充足
     empty_state:
       heading: 還沒有任何目標
       body: 設定一個目標，連結您用來存錢的帳戶，看著進度一點一點累積。
@@ -220,12 +237,12 @@ zh-TW:
       add_account: 新增帳戶
     goal_card:
       no_accounts: 沒有已連結的帳戶
-      n_accounts: '%{first} +%{count}'
+      n_accounts: "%{first} +%{count}"
       left: 剩餘
       aria_progress: 佔 %{target} 的 %{percent}%
       accounts:
         one: 1 個帳戶
-        other: '%{count} 個帳戶'
+        other: "%{count} 個帳戶"
       no_target_date: 未設期限
       completed: 已完成
       past_due: 已逾期
@@ -242,12 +259,15 @@ zh-TW:
       pending_pledge: 待確認投入
       pending_count:
         one: 1 筆待確認
-        other: '%{count} 筆待確認'
+        other: "%{count} 筆待確認"
       footer_no_pledges: 還沒有配對成功的投入
       footer_last_today: 最近一筆投入在今天配對成功
       footer_last_days:
         one: 最近一筆投入在 1 天前配對成功
         other: 最近一筆投入在 %{count} 天前配對成功
+      footer_reserve_intact: 準備金充足
+      footer_reserve_short: 還需補足 %{amount}
+      including_used: 包含已使用的 %{amount}
     form:
       create: 建立目標
       save: 儲存變更
@@ -267,9 +287,15 @@ zh-TW:
         notes_placeholder: 留給未來的自己的提醒...
         funding_accounts: 資金帳戶
         funding_accounts_hint: 這個目標的餘額，就是這些帳戶的餘額（或其中指定的部分）。
-        whole_balance: "留空即全部餘額"
+        whole_balance: 留空即全部餘額
         earmark_for: 為 %{account} 指定金額
         earmark_hint: 把金額留白，就會把該帳戶的全部餘額都投入這個目標。
+        target_balance: 目標餘額
+        target_balance_hint: 依上述月份的每月支出中位數計算，每月更新。
+        target_balance_pending: 儲存時計算
+        target_mode: 目標餘額設定方式
+        target_months: 可支應的支出月數
+        target_months_hint: 每月 1 日依每月支出中位數重新計算。
       subtypes:
         checking: 支票帳戶 (Checking)
         savings: 儲蓄帳戶 (Savings)
@@ -277,3 +303,43 @@ zh-TW:
         cd: 定期存款 (CD)
         money_market: 貨幣市場帳戶
         other: 其他
+      earmark:
+        headroom: 此帳戶尚有 {left} 可預留。
+        prorata: 此帳戶各目標合計 {total}，餘額為 {balance}，進度將依比例分配。
+        whole_balance: 此帳戶將以其他預留額度之外的剩餘金額提供資金。
+        whole_balance_alone: 此目標將使用這個帳戶的全部餘額。
+      kinds:
+        maintained:
+          hint: 需要維持的餘額，例如緊急預備金，不會結案。
+          label: 需維持的準備金
+        one_off:
+          hint: 為特定用途儲蓄，花用後即可結案。
+          label: 一次性目標
+      target_modes:
+        fixed: 固定金額
+        months_of_expenses: 指定月數的支出
+    consume:
+      account_label: 從哪個帳戶？
+      amount_hint: 目前有 %{saved} 為此目標提供資金。
+      amount_label: 您用了多少？
+      cancel: 取消
+      earmark_note: 記錄的金額將不再為此目標保留，同一帳戶中的其他目標可重新分得這筆額度。
+      errors:
+        account_not_linked: 此帳戶未提供此目標的資金。
+        account_required: 此目標由多個帳戶提供資金，請指定款項來自哪個帳戶。
+        exceeds_earmark: 此金額超過目標在此帳戶預留的額度。
+        exceeds_target: 此金額超過目標原本打算儲蓄的總額。
+        maintained: 準備金是動用後再補足，而非作為已完成的支出；缺口已顯示在目標上。
+        no_linked_account: 此目標已無資金來源帳戶。
+        non_positive: 請輸入大於零的金額。
+        not_active: 此目標已停止啟用，無法再記錄支用。
+        transaction_already_claimed: 此筆流出已歸屬至其他項目。
+        transaction_not_found: 此筆流出已無法再指定歸屬。
+      submit: 記錄
+      subtitle: "%{goal}"
+      success: 已將 %{amount} 記錄為已使用。
+      title: 記錄支用
+    unattributed_outflows:
+      attribute: 就是這筆
+      body: 若其中有款項用於 %{goal}，請指定歸屬，便不會再扣減目標進度。
+      heading: 這些帳戶有款項流出

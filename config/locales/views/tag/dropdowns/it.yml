@@ -1,0 +1,9 @@
+---
+it:
+  tag:
+    dropdowns:
+      show:
+        empty: Nessuna etichetta ancora
+        search_placeholder: Cerca
+        manage: Gestisci etichette
+        no_tags: Nessuna etichetta trovata

@@ -24,3 +24,9 @@ es:
       edit: Editar
     update:
       updated: Etiqueta actualizada
+    menu:
+      label: Editar etiquetas
+      loading: Cargando etiquetas...
+    summary:
+      add: Añadir etiquetas
+      title: 'Etiquetas: %{names}'

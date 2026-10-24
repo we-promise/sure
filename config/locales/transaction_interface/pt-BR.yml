@@ -1,0 +1,6 @@
+---
+pt-BR:
+  transactions:
+    transaction:
+      one_time_income_tooltip: "Receita pontual (excluída das médias)"
+      one_time_expense_tooltip: "Despesa pontual (excluída das médias)"

@@ -117,12 +117,33 @@ zh-TW:
         other: 另有 %{count} 個帳戶可以設定
       no_accounts_title: 沒有偵測到任何帳戶
       no_accounts_description: 連結一家券商以匯入您的投資帳戶。
+    complete_oauth_device_flow:
+      access_denied: SnapTrade 授權遭拒。
+      authorization_pending: SnapTrade 尚未收到您的確認。請在 SnapTrade 核准代碼後再試一次。
+      device_code_required: 此連線目前沒有進行中的 SnapTrade 裝置授權。請重新開始以取得新代碼。
+      expired: 此裝置代碼已過期，請重新開始授權。
+      failed: 無法完成 SnapTrade 裝置授權，請再試一次。
+      success: SnapTrade 授權完成。
+    oauth_device_flow:
+      cancel_button: 取消
+      code_label: 裝置代碼
+      complete_button: 我已授權 SnapTrade
+      instructions: 開啟 SnapTrade 並確認此裝置代碼，再返回此處完成設定。
+      missing_client_id: 尚未設定 SnapTrade OAuth。請將 SNAPTRADE_OAUTH_CLIENT_ID 加入 .env.local，重新啟動應用程式後再試一次。
+      open_snaptrade: 開啟 SnapTrade
+      start_button: 開始授權
+      subtitle: 使用裝置代碼授權 Sure 存取 SnapTrade。
+      title: 連結 SnapTrade
+    start_oauth_device_flow:
+      failed: 無法啟動 SnapTrade 裝置授權，請再試一次。
   providers:
     snaptrade:
       name: SnapTrade
       connection_description: 透過 SnapTrade 連結您的券商（支援 25 家以上）
       description: SnapTrade 可連結 25 家以上的主要券商（Fidelity、Vanguard、Schwab、Robinhood 等），並提供含活動標籤與成本基礎的完整交易紀錄。
-      oauth_setup_step_1_html: 在 <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a> 註冊一個 OAuth 應用程式
+      oauth_setup_step_1_html: >-
+        在 <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+        註冊一個 OAuth 應用程式
       oauth_setup_step_2_html: 將這個應用程式的回呼網址（<code>%{callback_url}</code>）加入已註冊的 redirect URI
       oauth_setup_step_3: 在環境變數中設定 SNAPTRADE_OAUTH_CLIENT_ID 與 SNAPTRADE_OAUTH_CLIENT_SECRET，然後重新啟動
       free_tier_warning: SnapTrade 的免費方案涵蓋 20 個券商連線。
@@ -145,8 +166,8 @@ zh-TW:
       loading_connections: 正在載入連線...
       connections_error: 載入連線失敗：%{message}
       accounts_count:
-        one: '%{count} 個帳戶'
-        other: '%{count} 個帳戶'
+        one: "%{count} 個帳戶"
+        other: "%{count} 個帳戶"
       orphaned_connection: 未對應的連線（未同步到本機）
       needs_linking: 需要連結
       no_connections: 找不到任何券商連線。
@@ -155,6 +176,8 @@ zh-TW:
       delete_connection_body: 這會從 SnapTrade 永久移除 %{brokerage} 連線，該券商的所有帳戶都會取消連結。日後要再同步這些帳戶就得重新連結。
       delete_connection_confirm: 刪除連線
       manage_at_snaptrade: 在 SnapTrade 管理連線
+      oauth_device_button: 使用裝置代碼
+      oauth_status_ready_device: 使用裝置代碼授權 Sure 讀取您的 SnapTrade 帳戶資料。
   snaptrade_item:
     sync_status:
       no_accounts: 找不到帳戶
@@ -165,18 +188,18 @@ zh-TW:
     institution_summary:
       none: 沒有已連線的機構
       count:
-        one: '%{count} 個機構'
-        other: '%{count} 個機構'
+        one: "%{count} 個機構"
+        other: "%{count} 個機構"
     brokerage_summary:
       none: 沒有已連結的券商
       count:
-        one: '%{count} 家券商'
-        other: '%{count} 家券商'
+        one: "%{count} 家券商"
+        other: "%{count} 家券商"
     syncer:
       discovering: 正在偵測帳戶...
       importing: 正在從 SnapTrade 匯入帳戶...
       processing: 正在處理持股和活動...
       calculating: 正在計算餘額...
       checking_config: 正在檢查帳戶設定...
-      needs_setup: '%{count} 個帳戶需要設定...'
+      needs_setup: "%{count} 個帳戶需要設定..."
       activities_fetching_async: 正在背景取得交易活動。剛建立的券商連線可能需要一分鐘左右。

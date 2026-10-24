@@ -1,0 +1,8 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: 利率變動的每一列都必須包含生效日與利率。
+          rate_change_before_origination: 利率變動不能早於貸款撥款日生效。

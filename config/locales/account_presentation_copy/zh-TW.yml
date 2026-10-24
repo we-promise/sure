@@ -1,0 +1,32 @@
+---
+zh-TW:
+  properties:
+    update:
+      success: 房產詳細資料已更新。
+      error: 無法更新房產詳細資料。
+    update_balances:
+      success: 餘額已更新。
+    update_address:
+      success: 地址已更新。
+      error: 無法更新地址，請檢查必填欄位。
+  enable_banking_items:
+    account_types:
+      card: 卡片帳戶
+      overdraft: 透支帳戶
+      transacting: 交易帳戶
+      salary: 薪資帳戶
+      non_resident_external: 非居民外部帳戶
+      tax: 稅務帳戶
+      cash_trading: 現金交易帳戶
+      overnight_deposit: 隔夜存款
+  settings:
+    llm_usages:
+      operations:
+        auto_categorize: 自動分類
+        auto_detect_merchants: 自動辨識商家
+        enhance_provider_merchants: 補充服務供應商的商家資訊
+        suggest_bill_setup: 帳單設定建議
+        process_pdf: 處理 PDF
+        process_pdf_vision: 透過影像處理 PDF
+        extract_bank_statement: 擷取銀行對帳單
+        chat: 對話

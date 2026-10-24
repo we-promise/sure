@@ -340,36 +340,36 @@ class EnableBankingItemsController < ApplicationController
       .where(account_providers: { id: nil })
 
     @account_type_options = [
-      [ "Skip this account", "skip" ],
-      [ "Checking or Savings Account", "Depository" ],
-      [ "Credit Card", "CreditCard" ],
-      [ "Investment Account", "Investment" ],
-      [ "Loan or Mortgage", "Loan" ],
-      [ "Other Asset", "OtherAsset" ]
+      [ t("lunchflow_items.setup_accounts.account_types.skip"), "skip" ],
+      [ t("lunchflow_items.setup_accounts.account_types.depository"), "Depository" ],
+      [ t("lunchflow_items.setup_accounts.account_types.credit_card"), "CreditCard" ],
+      [ t("lunchflow_items.setup_accounts.account_types.investment"), "Investment" ],
+      [ t("lunchflow_items.setup_accounts.account_types.loan"), "Loan" ],
+      [ t("lunchflow_items.setup_accounts.account_types.other_asset"), "OtherAsset" ]
     ]
 
     @subtype_options = {
       "Depository" => {
-        label: "Account Subtype:",
-        options: Depository::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t("lunchflow_items.setup_accounts.subtype_labels.depository"),
+        options: Depository.subtype_options_for_select
       },
       "CreditCard" => {
         label: "",
         options: [],
-        message: "Credit cards will be automatically set up as credit card accounts."
+        message: t("lunchflow_items.setup_accounts.subtype_messages.credit_card")
       },
       "Investment" => {
-        label: "Investment Type:",
-        options: Investment::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t("lunchflow_items.setup_accounts.subtype_labels.investment"),
+        options: Investment.subtype_options_for_select
       },
       "Loan" => {
-        label: "Loan Type:",
-        options: Loan::SUBTYPES.map { |k, v| [ v[:long], k ] }
+        label: t("lunchflow_items.setup_accounts.subtype_labels.loan"),
+        options: Loan.subtype_options_for_select
       },
       "OtherAsset" => {
         label: nil,
         options: [],
-        message: "Other assets will be set up as general assets."
+        message: t("lunchflow_items.setup_accounts.subtype_messages.other_asset")
       }
     }
 
