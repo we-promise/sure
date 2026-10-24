@@ -26,10 +26,10 @@ zh-TW:
         title: 自行代管 (Self-Hosting)
         danger_zone: 危險區域
         clear_cache: 清除資料快取
-        clear_cache_warning: 清除資料快取會移除所有匯率、證券價格、帳戶餘額等快取資料。您自己的帳戶、交易紀錄、分類等資料都不會被刪除。
+        clear_cache_warning: "清除資料快取會重新計算您家庭帳戶的餘額與持倉，並重新載入它們使用的匯率與證券價格。僅影響您的家庭；此執行個體上的其他家庭會保留其資料。您自己的帳戶、交易紀錄、分類等資料都不會被刪除。"
         confirm_clear_cache:
           title: 清除資料快取？
-          body: 您確定要清除資料快取嗎？這將移除所有匯率、證券價格、帳戶餘額及其他暫存資料。此操作無法復原。
+          body: "您確定要清除資料快取嗎？您家庭帳戶的餘額與持倉將重新計算，並重新載入它們使用的匯率與證券價格。僅影響您的家庭；此執行個體上的其他家庭會保留其資料。此操作無法復原。"
       provider_selection:
         exchange_rate_title: 匯率資料供應商
         exchange_rate_description: 選擇單一供應商來取得貨幣匯率。

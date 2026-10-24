@@ -1,16 +1,17 @@
 class DataCacheClearJob < ApplicationJob
   queue_as :low_priority
 
+  # Market data is refreshed before anything is deleted: the holdings decide
+  # which security prices are needed, and the account syncs must not start
+  # before the exchange rates are back.
   def perform(family)
-    ActiveRecord::Base.transaction do
-      ExchangeRate.delete_all
-      Security::Price.delete_all
-      family.accounts.each do |account|
-        account.balances.delete_all
-        account.holdings.delete_all
-      end
+    Family::MarketDataRefresher.new(family).refresh
 
-      family.sync_later
+    ActiveRecord::Base.transaction do
+      Balance.where(account_id: family.accounts.select(:id)).delete_all
+      Holding.where(account_id: family.accounts.select(:id)).delete_all
     end
+
+    family.sync_later
   end
 end

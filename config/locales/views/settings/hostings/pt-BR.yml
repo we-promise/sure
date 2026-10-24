@@ -21,10 +21,10 @@ pt-BR:
         title: Self-Hosting
         danger_zone: Zona de Perigo
         clear_cache: Limpar cache de dados
-        clear_cache_warning: Limpar o cache de dados removerá todas as taxas de câmbio, preços de ativos, saldos de contas e outros dados. Isso não excluirá contas, transações, categorias ou outros dados do usuário.
+        clear_cache_warning: "Limpar o cache de dados recalcula os saldos e as posições das contas da sua família e recarrega as taxas de câmbio e os preços de ativos que elas usam. Afeta apenas a sua família; as outras famílias desta instância mantêm seus dados. Isso não excluirá contas, transações, categorias ou outros dados do usuário."
         confirm_clear_cache:
           title: Limpar cache de dados?
-          body: Tem certeza de que deseja limpar o cache de dados? Isso removerá todas as taxas de câmbio, preços de ativos, saldos de contas e outros dados. Esta ação não pode ser desfeita.
+          body: "Tem certeza de que deseja limpar o cache de dados? Os saldos e as posições das contas da sua família serão recalculados, e as taxas de câmbio e os preços de ativos que elas usam serão recarregados. Afeta apenas a sua família; as outras famílias desta instância mantêm seus dados. Esta ação não pode ser desfeita."
       provider_selection:
         title: Seleção de Provedor
         description: Escolha qual serviço usar para buscar taxas de câmbio e preços de ativos. O Yahoo Finance é gratuito e não requer uma chave de API. O Twelve Data requer uma chave de API gratuita, mas pode oferecer maior cobertura de dados.

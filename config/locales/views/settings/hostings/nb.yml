@@ -21,10 +21,10 @@ nb:
         title: Selvhosting
         danger_zone: Fareområde
         clear_cache: Tøm cache
-        clear_cache_warning: Tømming av cache vil fjerne alle valutakurser, verdipapirpriser, kontobalanser og andre data. Dette vil ikke slette kontoer, transaksjoner, kategorier eller andre bruker-eide data.
+        clear_cache_warning: "Tømming av cache beregner kontobalansene og beholdningene til familien din på nytt og laster inn valutakursene og verdipapirprisene de bruker på nytt. Dette gjelder bare familien din; andre familier på denne instansen beholder dataene sine. Dette vil ikke slette kontoer, transaksjoner, kategorier eller andre bruker-eide data."
         confirm_clear_cache:
           title: Tøm cache?
-          body: Er du sikker på at du vil tømme cache? Dette vil fjerne alle valutakurser, verdipapirpriser, kontobalanser og andre data. Denne handlingen kan ikke angres.
+          body: "Er du sikker på at du vil tømme cache? Kontobalansene og beholdningene til familien din beregnes på nytt, og valutakursene og verdipapirprisene de bruker lastes inn på nytt. Dette gjelder bare familien din; andre familier på denne instansen beholder dataene sine. Denne handlingen kan ikke angres."
       update:
         failure: Ugyldig innstillingsverdi
         success: Innstillinger oppdatert

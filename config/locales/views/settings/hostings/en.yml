@@ -34,10 +34,10 @@ en:
         title: Self-Hosting
         danger_zone: Danger Zone
         clear_cache: Clear data cache
-        clear_cache_warning: Clearing the data cache will remove all exchange rates, security prices, account balances, and other data. This will not delete accounts, transactions, categories, or other user-owned data.
+        clear_cache_warning: "Clearing the data cache recalculates your family's account balances and holdings and reloads the exchange rates and security prices they use. Only your family is affected; other families on this instance keep their data. This will not delete accounts, transactions, categories, or other user-owned data."
         confirm_clear_cache:
           title: Clear data cache?
-          body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
+          body: "Are you sure you want to clear the data cache? Your family's account balances and holdings will be recalculated, and the exchange rates and security prices they use will be reloaded. Only your family is affected; other families on this instance keep their data. This action cannot be undone."
       provider_selection:
         exchange_rate_title: Exchange Rate Provider
         exchange_rate_description: Select a single provider for fetching currency exchange rates.

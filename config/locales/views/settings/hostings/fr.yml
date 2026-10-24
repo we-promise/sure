@@ -183,9 +183,9 @@ fr:
       show:
         ai_assistant: Assistant IA
         clear_cache: Effacer le cache de données
-        clear_cache_warning: L'effacement du cache de données supprimera tous les taux de change, les cours des titres, les soldes des comptes et d'autres données. Cela ne supprimera pas les comptes, les transactions, les catégories ou d'autres données possédées par les utilisateurs.
+        clear_cache_warning: "L'effacement du cache de données recalcule les soldes et les positions des comptes de votre famille et recharge les taux de change et les cours des titres qu'ils utilisent. Seule votre famille est concernée ; les autres familles de cette instance conservent leurs données. Cela ne supprimera pas les comptes, les transactions, les catégories ou d'autres données possédées par les utilisateurs."
         confirm_clear_cache:
-          body: Êtes-vous sûr(e) de vouloir effacer le cache de données ? Cela supprimera tous les taux de change, les cours des titres, les soldes des comptes et d'autres données. Cette action ne peut pas être annulée.
+          body: "Êtes-vous sûr(e) de vouloir effacer le cache de données ? Les soldes et les positions des comptes de votre famille seront recalculés, et les taux de change et les cours des titres qu'ils utilisent seront rechargés. Seule votre famille est concernée ; les autres familles de cette instance conservent leurs données. Cette action ne peut pas être annulée."
           title: Effacer le cache de données ?
         danger_zone: Zone dangereuse
         financial_data_providers: Fournisseurs de données financières

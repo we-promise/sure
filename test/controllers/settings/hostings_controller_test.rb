@@ -718,6 +718,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     exchange_rate = exchange_rates(:one)
     security_price = holding.security.prices.first
     account_balance = account.balances.create!(date: Date.current, balance: 1000, currency: "USD")
+    Family::MarketDataRefresher.any_instance.expects(:refresh)
 
     with_self_hosting do
       perform_enqueued_jobs(only: DataCacheClearJob) do
@@ -728,8 +729,9 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_hosting_url
     assert_equal I18n.t("settings.hostings.clear_cache.cache_cleared"), flash[:notice]
 
-    assert_not ExchangeRate.exists?(exchange_rate.id)
-    assert_not Security::Price.exists?(security_price.id)
+    # Market data is shared with other families, so it is refreshed rather than deleted
+    assert ExchangeRate.exists?(exchange_rate.id)
+    assert Security::Price.exists?(security_price.id)
     assert_not Holding.exists?(holding.id)
     assert_not Balance.exists?(account_balance.id)
   end
