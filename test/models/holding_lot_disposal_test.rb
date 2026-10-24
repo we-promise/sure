@@ -210,12 +210,14 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       later = trade(security, 40, 20, 7)
       other = trade(other_security, 40, 20, 4)
       another_sale = trade(security, -1, 25, 5)
+      same_day = trade(security, 5, 20, 6)
       sale = Trade.find(trade(security, -10, 25, 6).entryable_id)
 
       [ later, other, another_sale ].each do |entry|
         assert_not sale.update(lot_source_entry: entry), entry.name
         sale.reload
       end
+      assert sale.update(lot_source_entry: same_day), "an acquisition on the sale's own date"
       assert sale.update(lot_source_entry: earlier)
       assert_not Trade.find(earlier.entryable_id).update(lot_source_entry: earlier), "a buy names no lot"
       transfer_out = Trade.find(trade(security, -1, 25, 6).entryable_id)
@@ -225,6 +227,22 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       sale.update_columns(lot_source_entry_id: nil)
       @account.update!(cost_basis_method: "average")
       assert_not sale.reload.update(lot_source_entry: earlier), "an average account names no lot"
+    end
+  end
+
+  test "editing a sale keeps a choice it already holds, even one it could no longer make" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMK", 30)
+      twenty = trade(security, 40, 20, 4)
+      sale = trade(security, -10, 25, 6)
+      name_lot(sale, twenty)
+      @account.update!(cost_basis_method: "average")
+      sale_trade = Trade.find(sale.entryable_id)
+      assert_empty sale_trade.lot_choices, "an average account offers none"
+
+      assert sale_trade.update(qty: -5, price: 26)
+      assert_equal twenty.id, sale_trade.reload.lot_source_entry_id
     end
   end
 
