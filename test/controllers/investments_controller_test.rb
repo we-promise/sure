@@ -45,6 +45,16 @@ class InvestmentsControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name='account[cost_basis_method]']", count: 0
   end
 
+  test "a new account starts on average whatever the form submits" do
+    assert_difference "Account.count", 1 do
+      post investments_path, params: {
+        account: { name: "New brokerage", currency: "USD", balance: 1000, accountable_type: "Investment", cost_basis_method: "fifo" }
+      }
+    end
+
+    assert Account.order(:created_at).last.cost_basis_average?
+  end
+
   test "an account that does not support trades ignores a submitted method" do
     depository = accounts(:depository)
     Account.any_instance.expects(:sync_later).never
