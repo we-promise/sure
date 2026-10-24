@@ -30,6 +30,10 @@
 # Under fifo the figure is the mean of the open lots a trade acquired rather
 # than the pool, since what remains is no longer a pro-rata share of what was
 # bought. The opening lot stays out of it, as it stays out of the pool.
+#
+# A sale under fifo can name the lot it sold from: that lot is consumed first,
+# and the rest oldest first. A name that matches no open lot is ignored, and
+# under average there is no per-lot consumption to direct.
 class Holding::LotBook
   Lot = Data.define(:source_id, :acquired_on, :qty, :unit_cost)
   # `lot_source_id` and `unit_cost` are nil for the opening lot and for units
@@ -48,13 +52,17 @@ class Holding::LotBook
   end
 
   # Applies a trade by its signed quantity: positive is a buy, negative a sell.
-  def apply(price, qty, source_id: nil, acquired_on: nil)
+  def apply(price, qty, source_id: nil, acquired_on: nil, lot_source_id: nil)
     return if qty.nil?
 
     qty = qty.to_d
     return if qty.zero?
 
-    qty.positive? ? buy(price, qty, source_id: source_id, acquired_on: acquired_on) : sell(qty, sale_id: source_id)
+    if qty.positive?
+      buy(price, qty, source_id: source_id, acquired_on: acquired_on)
+    else
+      sell(qty, sale_id: source_id, lot_source_id: lot_source_id)
+    end
   end
 
   def buy(price, qty, source_id: nil, acquired_on: nil)
@@ -77,11 +85,11 @@ class Holding::LotBook
 
   # A sale with no `sale_id` (a transfer out) consumes lots without recording
   # a disposal: it realises nothing.
-  def sell(qty, sale_id: nil)
+  def sell(qty, sale_id: nil, lot_source_id: nil)
     qty = qty&.to_d
     return if qty.nil? || qty.zero?
 
-    @fifo ? consume_oldest(qty.abs, sale_id) : relieve_lots(qty.abs)
+    @fifo ? consume_oldest(qty.abs, sale_id, lot_source_id) : relieve_lots(qty.abs)
     return if @total_qty.zero?
 
     # Relieve at the current average cost so the per-share average is unchanged.
@@ -154,15 +162,23 @@ class Holding::LotBook
     end
 
     # Lots are booked in the order they were acquired, the opening lot first,
-    # so the oldest is the first open one.
-    def consume_oldest(qty, sale_id)
+    # so the oldest is the first open one. A named lot is taken out of turn,
+    # and what is left of it keeps its place.
+    def consume_oldest(qty, sale_id, named = nil)
+      named_index = named && @lots.index { |lot| lot.source_id == named }
+      order = [ named_index, *@lots.each_index.reject { |i| i == named_index } ].compact
       left = qty
+      taken = Array.new(@lots.size, BigDecimal("0"))
+      order.each do |i|
+        lot = @lots[i]
+        taken[i] = [ left, lot.qty ].min
+        left -= taken[i]
+        record_disposal(sale_id, lot.source_id, taken[i], lot.unit_cost) if taken[i].positive?
+      end
+
       open = []
-      @lots.each do |lot|
-        taken = [ left, lot.qty ].min
-        left -= taken
-        record_disposal(sale_id, lot.source_id, taken, lot.unit_cost) if taken.positive?
-        rest = lot.with(qty: lot.qty - taken)
+      @lots.each_with_index do |lot, i|
+        rest = lot.with(qty: lot.qty - taken[i])
         rest.qty.positive? ? open << rest : @closed << rest
       end
       @lots = open

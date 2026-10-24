@@ -205,7 +205,8 @@ class Holding::ReverseCalculator
           # Buys raise the basis; sells relieve quantity at the running average, and a
           # full liquidation resets it so a later repurchase starts from a clean basis.
           price = manual_cost || effective_trade_price(trade, date: trade_entry.date)
-          book.apply(price, trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
+          book.apply(price, trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date,
+            lot_source_id: trade.lot_source_entry_id)
 
           # Record the basis after each trade — including nil once a position is fully
           # closed — so cost_basis_for returns nil for the sold-out span instead of a
