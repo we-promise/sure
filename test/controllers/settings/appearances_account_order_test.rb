@@ -28,4 +28,18 @@ class Settings::AppearancesAccountOrderTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_appearance_url
     assert_equal "name_asc", @user.reload.default_account_order
   end
+
+  test "saves account order alongside compact preferences without losing existing settings" do
+    @user.update!(preferences: { "preview_features_enabled" => true, "show_split_grouped" => true })
+
+    patch settings_appearance_url, params: { user: {
+      default_account_order: "manual", transactions_compact: "1", transactions_per_page: "50"
+    } }
+
+    assert_redirected_to settings_appearance_url
+    assert_equal "manual", @user.reload.default_account_order
+    assert @user.transactions_compact?
+    assert_equal 50, @user.transactions_per_page
+    assert @user.show_split_grouped?
+  end
 end

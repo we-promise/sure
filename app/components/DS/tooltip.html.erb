@@ -35,7 +35,7 @@
        id="<%= tooltip_id %>"
        data-DS--tooltip-target="tooltip"
        class="<%= class_names("hidden absolute z-50", panel_classes) %>">
-    <%# `max-w-[20rem]` scales with the root font-size so AT users with
+    <%# `max-w-80` scales with the root font-size so AT users with
         a larger base font don't see the tooltip clipped. %>
     <div class="<%= content_classes %>">
       <%= tooltip_content %>

@@ -6,6 +6,7 @@ import {
   shift,
 } from "@floating-ui/dom";
 import { Controller } from "@hotwired/stimulus";
+import { floatingStrategy } from "utils/floating_strategy";
 
 /**
  * Strict action-list menu. Container is `role="menu"`, items are
@@ -119,6 +120,9 @@ export default class extends Controller {
     this.contentTarget.classList.toggle("hidden", !nextShow);
     this.buttonTarget.setAttribute("aria-expanded", nextShow.toString());
     if (nextShow) {
+      // Resolve the positioning mode once, as the panel opens. The layout
+      // around the trigger is stable for the life of the open panel.
+      this.positionStrategy = floatingStrategy(this.element);
       this.update();
       this.#focusFirstMenuItem();
     }
@@ -169,22 +173,26 @@ export default class extends Controller {
 
     const isSmallScreen = !window.matchMedia("(min-width: 768px)").matches;
     const useMobileFullwidth = isSmallScreen && this.mobileFullwidthValue;
+    const strategy = this.positionStrategy || floatingStrategy(this.element);
+    // Commit the positioning mode before measuring so Floating UI resolves
+    // the offset parent under the same mode the coordinates are applied in.
+    this.contentTarget.style.position = strategy;
 
     computePosition(this.buttonTarget, this.contentTarget, {
       placement: useMobileFullwidth ? "bottom" : this.placementValue,
       middleware: [offset(this.offsetValue), flip({ padding: 5 }), shift({ padding: 5 })],
-      strategy: "fixed",
+      strategy,
     }).then(({ x, y }) => {
       if (useMobileFullwidth) {
         Object.assign(this.contentTarget.style, {
-          position: "fixed",
+          position: strategy,
           left: "0px",
           width: "100vw",
           top: `${y}px`,
         });
       } else {
         Object.assign(this.contentTarget.style, {
-          position: "fixed",
+          position: strategy,
           left: `${x}px`,
           top: `${y}px`,
           width: "",

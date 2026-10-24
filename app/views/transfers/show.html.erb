@@ -86,6 +86,7 @@
             it must not be submitted along with every category or notes edit. %>
         <% if @transfer.categorizable? %>
           <%= styled_form_with model: @transfer, data: { controller: "auto-submit-form" } do |f| %>
+            <%= compact_row_context_fields %>
             <%= f.collection_select :category_id, @categories, :id, :name, { label: t(".category"), include_blank: t(".uncategorized"), selected: @transfer.outflow_transaction.category&.id, variant: :badge, searchable: true }, "data-auto-submit-form-target": "auto" %>
           <% end %>
         <% end %>
@@ -102,6 +103,7 @@
         <% end %>
         <%= styled_form_with model: @transfer,
                 data: { controller: "auto-submit-form" }, class: "space-y-2" do |f| %>
+          <%= compact_row_context_fields %>
           <%= render DS::TagSelect.new(
                 form: f,
                 tags: @tags,

@@ -4,6 +4,7 @@
         url: transaction_path(entry),
         data: { controller: "auto-submit-form" } do |f| %>
     <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+    <%= compact_row_context_fields %>
     <%= f.text_area :notes,
             label: t("transactions.show.note_label"),
             placeholder: t("transactions.show.note_placeholder"),

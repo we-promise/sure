@@ -1,0 +1,120 @@
+<%# locals: (transactions:, projected_recurring:, q:, pagy:) %>
+<div id="transactions"
+  data-controller="bulk-select checkbox-toggle drag-and-drop-import"
+  data-bulk-select-singular-label-value="<%= t("transactions.list.transaction") %>"
+  data-bulk-select-plural-label-value="<%= t("transactions.list.transactions") %>"
+  data-bulk-select-selected-label-value="<%= t("transactions.selection_bar.selected") %>"
+  data-bulk-select-edit-label-value="<%= t("transactions.selection_bar.edit") %>"
+  class="@container/compact-table flex flex-col bg-container rounded-xl shadow-border-xs px-2 py-3 lg:p-3 relative group">
+
+  <%= form_with url: imports_path, method: :post, class: "hidden", data: { drag_and_drop_import_target: "form", turbo: false } do |f| %>
+    <%= f.hidden_field "import[type]", value: "TransactionImport" %>
+    <%= f.file_field "import[import_file]", class: "hidden", data: { drag_and_drop_import_target: "input" }, accept: ".csv" %>
+  <% end %>
+
+  <%= render "imports/drag_drop_overlay", title: t("transactions.list.drag_drop_title"), subtitle: t("transactions.list.drag_drop_subtitle") %>
+
+  <%= render "transactions/searches/search" %>
+
+  <div id="entry-selection-bar" data-bulk-select-target="selectionBar" class="flex justify-center hidden">
+    <%= render "transactions/selection_bar" %>
+  </div>
+
+  <% if @pagy.count > 0 || (@projected_recurring.any? && @q.blank?) %>
+    <div class="grow" role="table" aria-label="<%= t("transactions.list.transactions") %>">
+      <% if @transactions.any? %>
+        <div class="bg-container-inset rounded-xl px-2 py-2 mb-2">
+          <% if @group_by_date == false %>
+            <%= render DS::CompactRow.new(header: true, show_date: true, show_notes: Current.user.transactions_show_notes?) do |row| %>
+              <% row.with_checkbox do %>
+                <%= check_box_tag "selection_entry",
+                    class: "checkbox checkbox--light hidden @3xl/compact-table:block",
+                    data: {
+                      action: "bulk-select#togglePageSelection",
+                      checkbox_toggle_target: "selectionEntry"
+                    } %>
+              <% end %>
+              <% row.with_date { t("transactions.show.date_label") } %>
+              <% row.with_primary { t("transactions.list.transaction") } %>
+              <% row.with_notes { t("transactions.show.notes") } if Current.user.transactions_show_notes? %>
+              <% row.with_category { t("transactions.form.category_label") } %>
+              <% row.with_labels { t("transactions.show.labels") } %>
+              <% row.with_amount { t("transactions.show.amount") } %>
+            <% end %>
+          <% else %>
+            <%= render DS::CompactRow.new(header: true, show_notes: Current.user.transactions_show_notes?) do |row| %>
+              <% row.with_checkbox do %>
+                <%= check_box_tag "selection_entry",
+                    class: "checkbox checkbox--light hidden @3xl/compact-table:block",
+                    data: {
+                      action: "bulk-select#togglePageSelection",
+                      checkbox_toggle_target: "selectionEntry"
+                    } %>
+              <% end %>
+              <% row.with_primary { t("transactions.list.transaction") } %>
+              <% row.with_notes { t("transactions.show.notes") } if Current.user.transactions_show_notes? %>
+              <% row.with_category { t("transactions.form.category_label") } %>
+              <% row.with_labels { t("transactions.show.labels") } %>
+              <% row.with_amount { t("transactions.show.amount") } %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if @group_by_date == false %>
+        <div class="bg-container-inset rounded-xl p-1">
+          <div class="bg-container shadow-border-xs rounded-lg">
+            <% entries = dedupe_transfer_entries(@transactions.map(&:entry).compact) %>
+            <% if Current.user.show_split_grouped? %>
+              <% group_split_entries(entries, @split_parents).each do |item| %>
+                <% if item.is_a?(EntriesHelper::SplitGroup) %>
+                  <div class="split-group">
+                    <%= render "transactions/compact_split_parent_row", entry: item.parent, density: :compact, view_ctx: "global", is_filtered: q.present?, flat: true %>
+                    <% item.children.each do |child_entry| %>
+                      <%= render "transactions/compact_transaction", entry: child_entry, density: :compact, view_ctx: "global", in_split_group: true, is_filtered: q.present?, flat: true %>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <%= render "transactions/compact_transaction", entry: item, density: :compact, view_ctx: "global", in_split_group: false, is_filtered: q.present?, flat: true %>
+                <% end %>
+              <% end %>
+            <% else %>
+              <% entries.each do |entry| %>
+                <%= render "transactions/compact_transaction", entry: entry, density: :compact, view_ctx: "global", in_split_group: false, is_filtered: q.present?, flat: true %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      <% else %>
+        <div class="space-y-3">
+          <%= entries_by_date(@transactions.map(&:entry), totals: true, compact: true) do |entries| %>
+            <% if Current.user.show_split_grouped? %>
+              <% group_split_entries(entries, @split_parents).each do |item| %>
+                <% if item.is_a?(EntriesHelper::SplitGroup) %>
+                  <div class="split-group">
+                    <%= render "transactions/compact_split_parent_row", entry: item.parent, density: :compact, view_ctx: "global", is_filtered: q.present? %>
+                    <% item.children.each do |child_entry| %>
+                      <%= render "transactions/compact_transaction", entry: child_entry, density: :compact, view_ctx: "global", in_split_group: true, is_filtered: q.present? %>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <%= render "transactions/compact_transaction", entry: item, density: :compact, view_ctx: "global", in_split_group: false, is_filtered: q.present? %>
+                <% end %>
+              <% end %>
+            <% else %>
+              <% entries.each do |entry| %>
+                <%= render "transactions/compact_transaction", entry: entry, density: :compact, view_ctx: "global", in_split_group: false, is_filtered: q.present? %>
+              <% end %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <%= render "entries/empty" %>
+  <% end %>
+
+  <div class="pt-3">
+    <%= render "shared/pagination", pagy: @pagy %>
+  </div>
+</div>

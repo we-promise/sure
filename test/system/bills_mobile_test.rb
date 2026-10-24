@@ -176,6 +176,74 @@ class BillsMobileTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
+  test "the last All bills row menu opens next to its button without clipping or scrolling" do
+    2.times do |i|
+      @family.recurring_transactions.create!(
+        name: "Row menu bill #{i}",
+        account: accounts(:depository), amount: 10 + i, currency: "USD",
+        expected_day_of_month: Date.current.day, anchor_date: Date.current,
+        last_occurrence_date: Date.current, next_expected_date: Date.current,
+        status: "active", manual: true
+      )
+    end
+
+    page.driver.browser.manage.window.resize_to(1400, 700)
+    visit bills_url(view: "all")
+
+    menu = all("[data-controller='DS--menu']", visible: true).last
+    button = menu.find("button")
+    page.execute_script("arguments[0].scrollIntoView({ block: 'center' })", button)
+    scroll_before = page.evaluate_script("window.scrollY")
+
+    button.click
+    assert_selector "[data-DS--menu-target='content']:not(.hidden)"
+
+    settled = nil
+    deadline = Time.now + 3
+    previous = nil
+    loop do
+      current = page.evaluate_script(<<~JS)
+        (() => {
+          const menus = [...document.querySelectorAll("[data-controller='DS--menu']")]
+            .filter((menu) => !menu.querySelector("[data-DS--menu-target='content']").classList.contains("hidden"));
+          const panel = menus[menus.length - 1].querySelector("[data-DS--menu-target='content']");
+          const r = panel.getBoundingClientRect();
+          return [ r.top, r.bottom, r.left, r.right ];
+        })()
+      JS
+      if previous && current.zip(previous).all? { |a, b| (a - b).abs < 1 }
+        settled = current
+        break
+      end
+      previous = current
+      assert Time.now < deadline, "menu panel geometry never settled"
+      sleep 0.1
+    end
+
+    geometry = page.evaluate_script(<<~JS)
+      (() => {
+        const menus = [...document.querySelectorAll("[data-controller='DS--menu']")]
+          .filter((menu) => !menu.querySelector("[data-DS--menu-target='content']").classList.contains("hidden"));
+        const menu = menus[menus.length - 1];
+        const b = menu.querySelector("button").getBoundingClientRect();
+        return {
+          buttonTop: b.top, buttonBottom: b.bottom, buttonLeft: b.left, buttonRight: b.right,
+          viewportWidth: window.innerWidth, viewportHeight: window.innerHeight
+        };
+      })()
+    JS
+    geometry["panelTop"], geometry["panelBottom"], geometry["panelLeft"], geometry["panelRight"] = settled
+
+    vertical_gap = [ (geometry["panelTop"] - geometry["buttonBottom"]).abs,
+                     (geometry["buttonTop"] - geometry["panelBottom"]).abs ].min
+    assert_operator vertical_gap, :<=, 15, "menu panel should open immediately above or below its button"
+    assert_operator geometry["panelLeft"], :>=, -1
+    assert_operator geometry["panelRight"], :<=, geometry["viewportWidth"] + 1
+    assert_operator geometry["panelTop"], :>=, -1
+    assert_operator geometry["panelBottom"], :<=, geometry["viewportHeight"] + 1
+    assert_equal scroll_before, page.evaluate_script("window.scrollY"), "opening the menu must not scroll the page"
+  end
+
   # A green overflow assertion proves nothing unless it can go red, and this
   # one measures a property that is zero on most pages by accident. So: force
   # an overflow and confirm the measurement sees it.

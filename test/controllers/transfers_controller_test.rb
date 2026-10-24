@@ -1,6 +1,7 @@
 require "test_helper"
 
 class TransfersControllerTest < ActionDispatch::IntegrationTest
+  include ActionView::RecordIdentifier
   include EntriesTestHelper
 
   setup do
@@ -704,6 +705,99 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "turbo_stream update replaces both legs with the compact partial when compact preview is enabled" do
+    users(:family_admin).update!(preferences: { "preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false })
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer),
+      params: { view_ctx: "account", is_filtered: "0", transfer: { notes: "Compact legs" } },
+      as: :turbo_stream
+
+    assert_response :success
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      stream = transfer_leg_stream(entry)
+      assert stream.present?, "Expected a turbo-stream replacing leg #{entry.id}"
+      # Compact rows render a flex row with an inline date column; the
+      # full-size partial renders a grid-cols-12 row with an icon instead.
+      assert_no_match(/grid-cols-12/, stream.to_html)
+      assert_match(/w-24/, stream.to_html)
+      assert stream.at_css("div[role='cell'][class*='shrink-0 justify-end tabular-nums']"), "Expected a balance column for an unfiltered account row"
+    end
+  end
+
+  test "turbo_stream update hides balance on compact legs when filtered" do
+    users(:family_admin).update!(preferences: { "preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false })
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update!(kind: "cc_payment")
+
+    patch transfer_url(transfer),
+      params: { view_ctx: "account", is_filtered: "1", transfer: { notes: "Filtered legs" } },
+      as: :turbo_stream
+
+    assert_response :success
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      assert_no_match(/w-30 shrink-0 justify-end/, transfer_leg_stream(entry).to_html)
+    end
+    assert_equal transfer_path(transfer, view_ctx: "account", is_filtered: true),
+      transfer_leg_stream(transfer.outflow_transaction.entry).at_css("a[data-clickable-row-target='link']")["href"]
+  end
+
+  test "turbo_stream update explicit unfiltered context wins over a filtered referer" do
+    users(:family_admin).update!(preferences: { "preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false })
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer),
+      params: { view_ctx: "account", is_filtered: "0", transfer: { notes: "Explicit context" } },
+      headers: { "Referer" => "#{account_url(transfer.outflow_transaction.entry.account)}?search=coffee" },
+      as: :turbo_stream
+
+    assert_response :success
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      stream = transfer_leg_stream(entry)
+      assert_match(/w-30 shrink-0 justify-end/, stream.to_html,
+        "explicit is_filtered=false must win over a filtered referer")
+    end
+    assert_equal entry_path(transfer.outflow_transaction.entry, view_ctx: "account", is_filtered: false),
+      transfer_leg_stream(transfer.outflow_transaction.entry).at_css("a[data-clickable-row-target='link']")["href"]
+  end
+
+  test "show drawer renders context fields on each form without duplicate ids" do
+    transfer = create_confirmed_transfer(to: accounts(:investment))
+    get transfer_url(transfer, view_ctx: "account", is_filtered: "0")
+
+    assert_response :success
+    assert_select "input[type='hidden'][name='view_ctx'][value='account']", count: 2
+    assert_select "input[type='hidden'][name='is_filtered'][value='0']", count: 2
+    assert_select "input#view_ctx", count: 0
+    assert_select "input#is_filtered", count: 0
+
+    forms = css_select("form[action='#{transfer_path(transfer)}']").select do |form|
+      form.at_css("input[name='_method'][value='patch']")
+    end
+    assert_equal 3, forms.size
+    forms.each do |form|
+      expected_count = form.at_css("input[name='transfer[investment_contribution]']") ? 0 : 1
+      assert_select form, "input[name='view_ctx']", count: expected_count
+      assert_select form, "input[name='is_filtered']", count: expected_count
+    end
+  end
+
+  test "turbo_stream update replaces both legs with the full-size partial when compact preview is disabled" do
+    users(:family_admin).update!(preferences: { "preview_features_enabled" => false, "transactions_compact" => true, "transactions_group_by_date" => false })
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer),
+      params: { view_ctx: "account", is_filtered: "0", transfer: { notes: "Full-size legs" } },
+      as: :turbo_stream
+
+    assert_response :success
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].each do |entry|
+      stream = transfer_leg_stream(entry)
+      assert stream.present?, "Expected a turbo-stream replacing leg #{entry.id}"
+      assert_match(/grid-cols-12/, stream.to_html)
+    end
+  end
+
   test "can reject a match when only the outflow account is accessible" do
     # Confirmed, so the legs carry transfer kinds that rejecting must reset
     transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan, status: "confirmed")
@@ -885,6 +979,13 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    # Extracts a leg row's turbo-stream from an update response, so compact
+    # vs full-size row rendering can be asserted per leg.
+    def transfer_leg_stream(entry)
+      doc = Nokogiri::HTML::Document.parse(response.body)
+      doc.css("turbo-stream[action='replace']").find { |s| s["target"] == dom_id(entry) }
+    end
+
     def create_confirmed_transfer(to:)
       outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
       inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)
