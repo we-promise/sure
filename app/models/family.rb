@@ -15,6 +15,7 @@ class Family < ApplicationRecord
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable
+  include SharesightConnectable
   include AiPromptable
 
   DATE_FORMATS = [

@@ -469,6 +469,24 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_sharesight_account(sharesight_account)
+      family = sharesight_account.sharesight_item.family
+
+      attributes = {
+        family: family,
+        name: sharesight_account.name.presence || I18n.t("sharesight_items.defaults.name"),
+        balance: 0,
+        cash_balance: 0,
+        currency: sharesight_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
     TRADE_REPUBLIC_ACCOUNT_TYPES = {
       "portfolio" => [ "Investment", "brokerage", "Trade Republic Portfolio" ],
       "cash" => [ "Depository", "checking", "Trade Republic Cash" ],

@@ -486,6 +486,7 @@ en:
         onchain_wallet: Track self-custody Bitcoin, EVM, Solana, Cosmos and Polkadot wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
+        sharesight: Sync the portfolios you track in Sharesight using its API.
         trade_republic: Sync your Trade Republic investment account via secure read-only web login.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         questrade: Sync your Questrade investment accounts directly via the Questrade API.
@@ -791,6 +792,22 @@ en:
           other: "%{count} Trade Republic accounts discovered."
         status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
+      sharesight_panel:
+        steps:
+          step_1: Ask Sharesight support to enable API access. It's available on paid plans.
+          step_2: In your Sharesight account settings, open the API page and copy the client ID and client secret.
+          step_3: Paste both below and save. Sure then finds your portfolios so you can link them.
+        client_id_label: Client ID
+        client_id_placeholder_new: Paste your Sharesight client ID
+        client_id_placeholder_existing: Leave blank to keep the current client ID
+        client_secret_label: Client secret
+        client_secret_placeholder_new: Paste your Sharesight client secret
+        client_secret_placeholder_existing: Leave blank to keep the current client secret
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        status_configured_prefix: "Configured. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to link your portfolios.
       trading212_panel:
         steps:
           step_1: Go to Trading 212 → Settings → API (web or mobile app).

@@ -1,0 +1,113 @@
+<%# locals: (sharesight_item:, visible_accounts:) %>
+
+<%= tag.div id: dom_id(sharesight_item) do %>
+  <% unlinked_count = sharesight_item.unlinked_accounts_count %>
+
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <%= render ProviderLogo.new(provider_key: :sharesight) %>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p sharesight_item.institution_display_name, class: "font-medium text-primary" %>
+              <% if sharesight_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+            <% if sharesight_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif sharesight_item.requires_update? %>
+              <div class="text-warning flex items-center gap-1">
+                <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                <%= tag.span t(".requires_update") %>
+              </div>
+            <% elsif sharesight_item.sync_error.present? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= render DS::Tooltip.new(text: sharesight_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+                <%= tag.span t(".error"), class: "text-destructive" %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if sharesight_item.last_synced_at %>
+                  <%= t(".synced", time: time_ago_in_words(sharesight_item.last_synced_at), summary: sharesight_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".never_synced") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_sharesight_item_path(sharesight_item),
+              disabled: sharesight_item.syncing?
+            ) %>
+
+            <%= render DS::Menu.new do |menu| %>
+              <% if unlinked_count > 0 %>
+                <% menu.with_item(
+                  variant: "link",
+                  text: t(".setup_accounts"),
+                  icon: "settings",
+                  href: setup_accounts_sharesight_item_path(sharesight_item),
+                  frame: :modal
+                ) %>
+              <% end %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(".delete"),
+                icon: "trash-2",
+                href: sharesight_item_path(sharesight_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion(sharesight_item.institution_display_name, high_severity: true)
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless sharesight_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+        <% end %>
+
+        <% stats = sharesight_item.syncs.ordered.first&.sync_stats || {} %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: sharesight_item, show_account_details: visible_accounts.size == sharesight_item.accounts.size) %>
+
+        <% if Current.user&.admin? %>
+          <% if unlinked_count > 0 && sharesight_item.accounts.empty? %>
+            <div class="p-4 flex flex-col gap-3 items-center justify-center">
+              <p class="text-primary font-medium text-sm"><%= t(".accounts_need_setup") %></p>
+              <p class="text-secondary text-sm"><%= t(".accounts_need_setup_description") %></p>
+              <%= render DS::Link.new(
+                text: t(".setup_accounts"),
+                icon: "settings",
+                variant: "primary",
+                href: setup_accounts_sharesight_item_path(sharesight_item),
+                frame: :modal
+              ) %>
+            </div>
+          <% elsif sharesight_item.sharesight_accounts.none? %>
+            <div class="p-4 flex flex-col gap-3 items-center justify-center">
+              <p class="text-primary font-medium text-sm"><%= t(".no_accounts_discovered") %></p>
+              <p class="text-secondary text-sm"><%= t(".no_accounts_discovered_description") %></p>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

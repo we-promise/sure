@@ -45,6 +45,7 @@ class AccountsController < ApplicationController
     @coinspot_items = visible_provider_items(family.coinspot_items.ordered.with_attached_logo.includes(:coinspot_accounts, :accounts))
     @trading212_items = visible_provider_items(family.trading212_items.ordered.with_attached_logo.includes(:trading212_accounts)).sort_by(&:created_at)
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
+    @sharesight_items = visible_provider_items(family.sharesight_items.ordered.with_attached_logo.includes(:sharesight_accounts)).sort_by(&:created_at)
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
     @trade_republic_items = visible_provider_items(
       family.trade_republic_items.ordered.includes(trade_republic_accounts: { account_provider: :account })
@@ -469,6 +470,7 @@ class AccountsController < ApplicationController
         @coinspot_items,
         @trading212_items,
         @questrade_items,
+        @sharesight_items,
         @wise_items,
         @trade_republic_items,
         @onchain_wallet_items
