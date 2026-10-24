@@ -91,7 +91,7 @@ Measured with `wc -l` on `2250ba801`. The "after" column is an estimate. For the
 
 That is **roughly 5,000 lines of application code, about 70% of this layer**. Tests would shrink by another **2,500–3,000 lines** of the 5,229 in scope. Transport, parser, formatter, JSON-mode and tracing tests would be deleted. Operation tests would be rewritten as the cross-transport contract tests that 02 already calls for (O-B2). The OpenAI VCR cassettes would be re-recorded.
 
-The bundle would lose `ruby-openai` and `anthropic`, and gain `ruby_llm` and `schematist`. Sure's Rails 8.1.3 and json 2.21 are within RubyLLM's supported range (JSON 3 needs Rails 8.1.4), and Faraday and the OpenTelemetry SDK are already in the bundle.
+The bundle would lose `ruby-openai` and `anthropic`, and gain `ruby_llm` and `schematist`. Sure's Rails 8.1.3.1 and json 2.21.2 are within RubyLLM's supported range (JSON 3 needs Rails 8.1.4), and Faraday and the OpenTelemetry SDK are already in the bundle.
 
 The other side of the ledger: Sure would stop owning about 5,000 lines and start depending on about 47,000 lines of someone else's library.
 

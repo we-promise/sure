@@ -5,7 +5,7 @@ How every workflow in Sure that calls an LLM, an embedding or classification ser
 | | |
 |---|---|
 | **Reference** | `we-promise/sure` `origin/main` @ `56105a3b5` (2026-10-22). It includes **[#4310](https://github.com/we-promise/sure/issues/4310)** (`d07e61b92`, "Add a tunable, self-testing Bayes classifier") and its follow-up [#4435](https://github.com/we-promise/sure/issues/4435). |
-| **Paths** | All paths are repo-relative (`app/...`). `file:line` references were taken at that commit. |
+| **Paths** | All paths are repo-relative (`app/...`). `file:line` references were taken at that commit and re-checked on `main` @ `e5b854536` (2026-10-23): the commits in between change no AI/ML code. |
 | **Milestones** | PRs from [v0.7.6](https://github.com/we-promise/sure/milestone/22) (milestone 22, due 2026-10-31) and [v0.7.7](https://github.com/we-promise/sure/milestone/23) (milestone 23, due 2026-11-30) that shaped or will change a workflow are tagged inline as **Related PRs**. *Open* means not merged yet. |
 | **Out of scope** | Provider-specific bank sync internals (Plaid, SimpleFIN and the 30+ `*_item` syncers) are covered only as far as they feed the AI/ML stages. |
 
@@ -152,7 +152,7 @@ Cron (`config/schedule.yml` + `AutoSyncScheduler`):
 
 | Cron | Job | Notes |
 |---|---|---|
-| `Setting.auto_sync_time` in `auto_sync_timezone` (default 02:22 UTC) | `SyncAllJob` | Created or removed at Sidekiq boot by `AutoSyncScheduler.sync!` (`config/initializers/sidekiq.rb:66`) and on settings save. `AUTO_SYNC_ENABLED`. |
+| `Setting.auto_sync_time` in `auto_sync_timezone` (default 02:22 UTC) | `SyncAllJob` | Created or removed at Sidekiq boot by `AutoSyncScheduler.sync!` (`config/initializers/sidekiq.rb:68`) and on settings save. `AUTO_SYNC_ENABLED`. |
 | hourly | `SyncHourlyJob` | Only `CoinstatsItem`. |
 | 05:30 UTC | `GenerateRecurringOccurrencesJob` | Fans out per family. |
 | 06:00 UTC | `GenerateInsightsJob` | Fans out per preview-enabled family. |
@@ -217,7 +217,7 @@ The `enrichable(:attr)` scope (= "not locked") is the pre-filter used by every A
 
 > **Related PRs:** [#4244](https://github.com/we-promise/sure/issues/4244) chat honours LLM_PROVIDER first · [#4249](https://github.com/we-promise/sure/issues/4249) LLM_PROVIDER env overrides stored choice · [#4245](https://github.com/we-promise/sure/issues/4245) per-task models (issue)
 
-**Key files:** `app/models/provider/registry.rb`, `app/models/provider/llm_concept.rb`, `app/models/family.rb:174-250`, `app/models/assistant/provided.rb`, `app/models/chat.rb:59`.
+**Key files:** `app/models/provider/registry.rb`, `app/models/provider/llm_concept.rb`, `app/models/family.rb:174-250`, `app/models/assistant/provided.rb`, `app/models/chat.rb:60`.
 
 Three different resolution paths exist.
 
@@ -250,7 +250,7 @@ Building the providers (`Registry` private methods):
 
 `Setting.llm_provider` is resolved as `ENV["LLM_PROVIDER"]` first, then the DB field (`setting.rb:236`).
 
-`Chat.default_model` (`chat.rb:59`) picks the model stamped on a new chat message: Anthropic's effective model if `llm_provider == anthropic` and Anthropic is configured; else OpenAI's if OpenAI is configured; else Anthropic's if Anthropic is configured; and, when neither is configured, OpenAI's effective model.
+`Chat.default_model` (`chat.rb:60`) picks the model stamped on a new chat message: Anthropic's effective model if `llm_provider == anthropic` and Anthropic is configured; else OpenAI's if OpenAI is configured; else Anthropic's if Anthropic is configured; and, when neither is configured, OpenAI's effective model.
 
 ## B2. How OpenAI / OpenAI-compatible is called
 
@@ -469,7 +469,7 @@ The orchestrator that runs Bayes (W6), the matcher (W5) and the AI jobs (W8, W9)
 | `app/jobs/apply_all_rules_job.rb` | "Apply all" button: **all** rules, inactive ones included (`rules: family.rules`), `ignore_attribute_locks: true` |
 | `app/jobs/rule_job.rb` | single rule (UI "Apply", assistant `apply_rule`): runs the active rules above first; `discard_on SafeRegex::TimeoutError` |
 | `app/models/rule/runner.rb` | `run` → `with_family_lock` (pg advisory lock) → `run_rules` → `execute(rule)` → `rule.apply(scope:, claimed_ids:)`; `record_claims` |
-| `app/models/rule.rb:233` | `apply`: per action, excludes ids already *claimed* for its attributes, calls `action.apply` |
+| `app/models/rule.rb:253` | `apply`: per action, excludes ids already *claimed* for its attributes, calls `action.apply` |
 | `app/models/rule/action_executor/*.rb` | 13 executors |
 | `app/models/rule/registry/transaction_resource.rb` | `resource_scope` (visible, non-split-parent, `entry.date >= rule.effective_date`), `ACTION_EXECUTOR_CLASSES`, `offered?` (AI actions offered only with a provider) |
 | `app/models/rule_run.rb` | `complete_job!` / `fail_job!` (async AI job callbacks, row-locked) |
@@ -678,7 +678,7 @@ flowchart TD
 ### Key files and functions
 | File | Function |
 |---|---|
-| `app/models/rule/action_executor/auto_categorize.rb` | `execute`: logs cached/blocked ids, `enrichable(:category_id).in_batches(of: max_items_per_call)` → `family.auto_categorize_transactions_later(batch, rule_run_id:)`; returns `{async: true, jobs_count:}`; `label` shows a cost estimate for self-hosters (`LlmUsage.estimate_auto_categorize_cost`) |
+| `app/models/rule/action_executor/auto_categorize.rb` | `execute`: logs cached/blocked ids, `enrichable(:category_id).in_batches(of: max_items_per_call)` → `family.auto_categorize_transactions_later(batch, rule_run_id:)`; returns `{async: true, modified_count:, jobs_count:}` (`modified_count` is the queued count until the jobs report back); `label` shows a cost estimate for self-hosters (`LlmUsage.estimate_auto_categorize_cost`) |
 | `app/models/family.rb:492-502` | `auto_categorize_transactions_later` → `AutoCategorizeJob.perform_later`; `auto_categorize_transactions(ids)` → `Family::AutoCategorizer#auto_categorize` |
 | `app/jobs/auto_categorize_job.rb` | `ai_low_priority`; `rule_run.complete_job!` or `fail_job!` + re-raise (Sidekiq retries) |
 | `app/models/family/auto_categorizer.rb` | `auto_categorize`, `categorization_provider` (memoized), `run_shadow`, `withhold?`, `record_shadow_comparisons`, `transactions_input`, `scope` |
@@ -903,7 +903,7 @@ flowchart LR
 | `app/models/assistant/builtin.rb` | `respond_to`: provider for model → `Responder` → stream text into `AssistantMessage`, persist tool calls, `latest_assistant_response_id` |
 | `app/models/assistant/responder.rb` | tool loop (max `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`=8 rounds; last round `tool_choice: :none`); `group_by_round`; history payloads |
 | `app/models/assistant/function_tool_caller.rb` | executes functions, errors returned as `{error, hint}` data |
-| `app/models/assistant/function/*.rb` | 30 tools by default (16 of them change data), 44 with preview features (statements, valuations, insights, bills) |
+| `app/models/assistant/function/*.rb` | 30 tools by default (16 of them change data), 44 with preview features (statements, valuations, insights, bills; 21 change data). Guests lose the 4 tag and category write tools. |
 | `app/models/assistant/history_trimmer.rb`, `token_budget.rb`, `token_estimator.rb` | context fitting for the generic path |
 
 ### Diagram
@@ -1021,7 +1021,7 @@ Sure is an MCP **server**. It makes no MCP client calls of its own. The server i
 | Tool definitions | `name`, `description`, `inputSchema`. No `annotations` (`readOnlyHint`, `destructiveHint`), so MCP clients can't tell the 16 write tools from the read tools. No `outputSchema`. |
 | Tool results | `{content: [{type: "text", text: result.to_json}]}`. No `structuredContent`. Exceptions become a generic `"The tool failed to run"` with `isError: true`, and the detail goes only to the log. |
 | Gating | Requires an active user and a valid token. **Not** gated by `ai_enabled`, by `assistant_type`, or by a configured LLM provider. |
-| Record of activity | `Current.session` is built but not saved. Tool calls are written only to `Rails.logger`. No audit row, `llm_usages` row (except the nested LLM call in `import_bank_statement`) or Langfuse span.
+| Record of activity | `Current.session` is built but not saved. Tool calls are written only to `Rails.logger`. No audit row, `llm_usages` row (except the nested LLM call in `import_bank_statement`) or Langfuse span. |
 
 ---
 
@@ -1167,7 +1167,7 @@ flowchart LR
 
 `app/jobs/clear_ai_cache_job.rb` → `Transaction.clear_ai_cache(family)` / `Entry.clear_ai_cache(family)` (unlocks and removes `source: "ai"` enrichments so AI can run again).
 
-- **Entry:** the debug or rules page button (`rules_controller.rb:200`), and **automatically for every family whenever `Setting.openai_model` changes** (`setting.rb:253`).
+- **Entry:** the button on the Rules page (`rules_controller.rb:200`), and **automatically for every family whenever `Setting.openai_model` changes** (`setting.rb:253`).
 - **Exit:** a debug log in the `ai_cache_reset` category.
 - **Sync and async:** async, `low_priority`. Fan-out: one job per family on a model change.
 - Related: `ClearBayesLocksJob` (W7) is the Bayes/matcher counterpart (unlocks only, keeps values).
@@ -1271,7 +1271,7 @@ Precedence is **ENV > `Setting` (Settings → Self-hosting) > default** unless n
 `threshold` 0.7, `lock_results` false, `max_training_transactions` 5000, `skip_self_labels` true, `self_label_grace_days` 90, `exclude_transfers` false, `excluded_category_ids`, `include_notes` true, `word_split` ascii, `drop_numbers`, `keep_single_chars` true, `drop_codes`, `spread_filter`/`spread_margin` 0.1, `bigrams`, `merchant_name_words` true, `amount_field`/`amount_by_direction`, `account_field`, `merchant_field`, `complement`, `smoothing` 1.0, `prior`, `binary`, `separate_fields`; matcher: `similar_threshold` 0.9, `similar_min_neighbours` 2, `similar_common_share` 0.2, `similar_skip_self` true, `similar_self_grace_days` 90, `lock_similar_merchants` false. **Rule active/position** for "Merchant matcher" and "Category classifier".
 
 ### Sync and other
-`AUTO_SYNC_ENABLED`, `AUTO_SYNC_TIME`, `AUTO_SYNC_TIMEZONE`, `TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE`, `BRAND_FETCH_CLIENT_ID`, `BRAND_FETCH_HIGH_RES_LOGOS`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`.
+`AI_DEBUG_MODE` (`Chat::Debuggable`), `LANGFUSE_REGION` (eval client only), `AUTO_SYNC_ENABLED`, `AUTO_SYNC_TIME`, `AUTO_SYNC_TIMEZONE`, `TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE`, `BRAND_FETCH_CLIENT_ID`, `BRAND_FETCH_HIGH_RES_LOGOS`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`.
 
 ## D2. Fan-out catalogue
 
@@ -1374,6 +1374,7 @@ These came up during the trace. None were verified at runtime.
 10. **Changing the OpenAI model clears every family's AI cache.** `Setting#openai_model=` enqueues `ClearAiCacheJob` for every family, which unlocks AI-set categories and merchants so they become eligible again. Changing `ANTHROPIC_MODEL`, `LLM_PROVIDER`, or OpenAI via ENV does not do this.
 11. **Confidence-threshold default mismatch.** `db/schema.rb` defaults `families.categorization_confidence_threshold` to **0.7**, but the comment on `Family#effective_categorization_confidence_threshold` says "Zero applies everything and is the default". It only affects Jev decisions (LLM answers are never gated), so on Jev a fresh family withholds every answer under 70% confidence.
 12. **Bill smart-fill is synchronous.** On slow local models it can hit the web server timeout. The controller comment acknowledges this.
+13. **The AI compose file's comment describes an old default.** `compose.example.ai.yml` says the tool-round cap "is lowered to 2 rather than left at 5", but `Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS` is 8. The value the file sets (2) is unaffected; only the reasoning is stale.
 
 ## D5. Interface register
 
@@ -1467,13 +1468,13 @@ Which tests on `main` @ `2250ba801` hold each interface to its contract. That de
 | I7 `VectorSearchable` | none found by name | Covered indirectly through `process_pdf_job_test` and `search_family_files_test` | No direct test of `upload_document` / `search_documents`. | BC6 |
 | I8 `AiHealth` | `ai_health_test` 11, `probe_test` 24, `worker_ai_health_test` 17 | Probes and caching | No test that a probe and the registry-built provider agree (drift 4). | BC3 |
 | I9 `Enrichable` | `concerns/enrichable_test` 8, plus lock assertions in `auto_categorize_transactions_test`, `similar_merchant_filler_test`, `rule/action_test`, `auto_categorizer_test`, `bayes_categorizer_test` and provider processors | Lock and skip behaviour per writer | No single test of the lock **policy** across writers: which sources lock, which override, and `ignore_locks` (A7). Each writer tests its own case. | **BC1** (first) |
-| I10 `ActionExecutor` | `action_executor/auto_categorize_test` 4, `auto_detect_merchants_test` 1, `send_email_notification`, `set_transaction_category`, `split_transaction`; `registry/transaction_resource_test` 5 (which actions are offered) | Two AI executors. Offering rules. | **`FillSimilarMerchants` and `BayesCategorize` have no executor tests.** They are covered through `classifier_rules_test` 6 and the classifier controller. The `{async: true, jobs_count:}` return shape isn't asserted on the executor. | BC2 |
+| I10 `ActionExecutor` | `action_executor/auto_categorize_test` 4, `auto_detect_merchants_test` 1, `send_email_notification`, `set_transaction_category`, `split_transaction`; `registry/transaction_resource_test` 5 (which actions are offered) | Two AI executors. Offering rules. | **`FillSimilarMerchants` and `BayesCategorize` have no executor tests.** They are covered through `classifier_rules_test` 6 and the classifier controller. The `{async: true, modified_count:, jobs_count:}` return shape isn't asserted on the executor. | BC2 |
 | I11 `Rule::Runner` | `rule/runner_test` 25, `rule_test` 31, `rule_job_test` 4, `apply_rules_job_test` 3 | Order, claims, `stop_processing`, lock | Good. Nothing asserts the timing gap A4 (AI results after the run), which BC2 would change. | BC2 |
 | I12 `RuleRun` callbacks | `rule_run_test` 5, `auto_categorize_job_test` 3, `auto_detect_merchants_job_test` 1 | `complete_job!` / `fail_job!` counting | Fine for today. Goes away with BC2. | — |
 | I13 `Family` facade | `family_test` 49, `classifier_rules_test` 6, `auto_categorize_transactions_test` 7 | Most methods | Covered well enough for a pure-move extraction (06 F-H2, step a). | S10 |
 | I14 Sync hooks | `SyncableInterfaceTest` (4 implementers), `family/syncer_test` 5, `sync_job_test` | Contract and post-sync | Good. This is the model to copy for the AI interfaces. | — |
 | I15 `Assistant::Base` | `assistant_test` 28, `responder_test` 4, `external/client_test`, `external_config_test`, `model_catalog_test` | Builtin and External separately | **`AssistantResponseJob` has no test.** Only 4 tests for the tool-loop `Responder`. | BC4 |
-| I16 `Assistant::Function` | 45 test files with 456 tests for 48 registered tools (only `GetHoldings` has no file). `function_test` 5 iterates **all** registered functions for empty enums. `schema_strictness_test` checks every strict schema. `function_tool_caller_test` 8. `mcp_controller_test` 36 checks that `tools/list` equals `Assistant.function_classes(user)`, preview and guest filtering, and `isError` wrapping. | **The strongest contract coverage in the AI area.** Registry-wide tests already exist. | No test of tool names or schemas as a frozen public list (what MCP clients see). `GetHoldings` untested. | BC8 |
+| I16 `Assistant::Function` | 456 tests in 45 files: 43 per-tool files for the 44 tools (30 default plus 14 preview; only `GetHoldings` has no file) and 2 schema-wide files. `function_test` 5 iterates **all** registered functions for empty enums. `schema_strictness_test` checks every strict schema. `function_tool_caller_test` 8. `mcp_controller_test` 36 checks that `tools/list` equals `Assistant.function_classes(user)`, preview and guest filtering, and `isError` wrapping. | **The strongest contract coverage in the AI area.** Registry-wide tests already exist. | No test of tool names or schemas as a frozen public list (what MCP clients see). `GetHoldings` untested. | BC8 |
 | I17 `Chat` / `Message` | `chat_test` 27, `assistant_message_test` 6, `user_message_test` 1, `chats_controller_test` 17, `api/v1/chats_controller_test` 13, `messages_controller_test` 7 | Model behaviour and API | API v1 shape is tested. Behaviour that BC4 changes (`latest_assistant_response_id` chaining) sits in provider tests. | BC4 |
 | I18 `AiPromptable` | `family/ai_promptable_test` 12, `system/settings/ai_prompts_test` | Keys and validation | Good. | — |
 | I19 AI consent | `chats_controller_test`, `system/chats_test`, `api/v1/chats_controller_test`, `user_test` | Chat gating | No test that pins today's policy for rule AI or MCP (D4 #8). That is fine as long as the gap is a decision, but BC10 needs one. | BC10 |

@@ -1,7 +1,7 @@
 # Sure: architecture and workflow review of the AI / ML pipeline
 
 **Role:** open-source project architect
-**Input:** [`01-ai-ml-workflow-map.md`](01-ai-ml-workflow-map.md) (the workflow map traced on `origin/main` @ `56105a3b5`), plus repository metrics taken on 2026-10-23
+**Input:** [`01-ai-ml-workflow-map.md`](01-ai-ml-workflow-map.md) (the workflow map traced on `origin/main` @ `56105a3b5`), plus repository metrics taken on 2026-10-23. Facts re-checked against `main` @ `e5b854536` on 2026-10-24.
 **Scope:** the project, its workflows and its architecture. This is not a line-level code review.
 **Two lenses:** (A) a traditional Rails + Sidekiq application, and (B) a fast-moving open-source project whose contributions mostly come from LLM coding agents
 
@@ -30,7 +30,7 @@ The five changes with the most leverage:
 | Commits on `main`, last 30 days | **376** | Very high change rate. Architecture decisions are made inside PRs. |
 | Distinct authors, last 30 days | **69** | Few contributors hold the whole picture. |
 | `Co-Authored-By: Claude` trailers, last 30 days | **529** (several per commit) | The agent is the main author. Its habits shape the codebase. |
-| Open PRs | **≥200** | Review capacity is the bottleneck, not authoring capacity. |
+| Open PRs | **329** (2026-10-24) | Review capacity is the bottleneck, not authoring capacity. |
 | Commits touching core AI files, last 30 days | **41** | The AI layer is a hot spot. |
 | Guides mentioning `json_mode` / `BatchSlicer` / `Enrichable` | **0 / 0 / 0** | The key contracts are documented only in code comments. |
 | Guides mentioning `capsule`, `LlmConcept`, `preferred_llm_provider` | **1 each** (hosting or classification-provider docs) | No architecture-level AI guide exists. |
@@ -126,8 +126,8 @@ Web and worker each resolve ENV > Setting > default for themselves, and some set
 > **Related PRs:** [#3990](https://github.com/we-promise/sure/issues/3990) rule tools with preview · [#4147](https://github.com/we-promise/sure/issues/4147) mcp_only · [#4283](https://github.com/we-promise/sure/issues/4283) *(open, v0.7.6)* MCP-only `mcp` scope · [#3025](https://github.com/we-promise/sure/issues/3025) *(open, v0.7.7)* MCP-only destructive tools
 
 `/mcp` serves `Assistant.function_classes(user)` directly ([01 W15](01-ai-ml-workflow-map.md#the-interface-sure-exposes)). That keeps chat and MCP at parity, but it also means every function added to the registry is callable by external agents straight away, and MCP has fewer of the guards chat has:
-- **All or nothing.** The only accepted OAuth scope is `read_write`, which also grants JSON API writes. [#4283](https://github.com/we-promise/sure/issues/4283) separates *where* a token works (a new `mcp` scope that the JSON API rejects) but not *what* it can do: `mcp` still covers all 30 tools. A read-only MCP grant would need its own scope (for example `mcp:read`). Reusing the JSON API's `read` scope would undo #4283's separation.
-- **No write signal.** No tool sends `readOnlyHint` or `destructiveHint`, so MCP clients that ask the human before destructive calls can't tell which of the 30 tools write.
+- **All or nothing.** The only accepted OAuth scope is `read_write`, which also grants JSON API writes. [#4283](https://github.com/we-promise/sure/issues/4283) separates *where* a token works (a new `mcp` scope that the JSON API rejects) but not *what* it can do: `mcp` still covers every tool (30, or 44 with preview features). A read-only MCP grant would need its own scope (for example `mcp:read`). Reusing the JSON API's `read` scope would undo #4283's separation.
+- **No write signal.** No tool sends `readOnlyHint` or `destructiveHint`, so MCP clients that ask the human before destructive calls can't tell which tools write (16 of the 30 default tools, 21 of 44 with preview features).
 - **No way back to the human.** With `POST`-only JSON responses the server can't use elicitation to ask for a confirmation. The [#3990](https://github.com/we-promise/sure/issues/3990) preview token is something the model fills in for itself.
 - **No trail.** Tool calls go only to the log. No audit row or trace records which agent changed what.
 - **Different gating.** MCP doesn't check `ai_enabled`, `assistant_type` or a configured provider. That is reasonable, since the client brings its own model, but it isn't written down anywhere.
@@ -148,8 +148,8 @@ Web and worker each resolve ENV > Setting > default for themselves, and some set
 | **S2** | `Ai::StructuredCall` per transport: `(instructions, schema, input) → Hash`. It owns JSON mode and fallback, think-tag stripping, tool-forcing, retries, usage and tracing. Operations become `Ai::Operations::Categorize = {prompt_key, schema, build_input, map_output}`. | 12 worker classes, 5 + 4 + 4 duplicated helper definitions | L | Medium: needs cross-transport contract tests first (see §3.2) |
 | **S3** | A single batching policy: the operation declares a unit (per item or per batch) and a budget; the router or transport decides slicing. | 3 batching layers | M | Low |
 | **S4** | Rule runner phases: run deterministic and Ruby-ML rules, then await AI jobs (a continuation when `pending_jobs_count` reaches 0), then **re-run rules below the AI rule** for the affected IDs only. *Alternative:* when a run contains AI actions, run the whole runner on the `ai` capsule and call AI synchronously. That is simpler and keeps ordering, at the cost of AI-lane occupancy. | the `async: true` special case, the `reserves_claimed_attributes? = false` workaround, `BayesCategorizeJob` as a parallel path | M | Medium: product-visible timing change |
-| **S5** | `AiJob` base class: queue lane, failure policy (an explicit `retry`/`discard`/`record` declaration), RuleRun callbacks, per-family concurrency key, trace context. | 5 AI jobs with copied rescue/callback code | S | Low |
-| **S6** | A config registry: `AiConfig.key :llm_max_items_per_call, env:, setting:, default: 25, clamp:, scope: :instance, on_change: …`. Generates the settings form permit list, the docs table and the AI-health display. | about 40 hand-rolled precedence methods, the one-line permit list, inconsistent cache-clear side effects | M | Low |
+| **S5** | `AiJob` base class: queue lane, failure policy (an explicit `retry`/`discard`/`record` declaration), RuleRun callbacks, per-family concurrency key, trace context. | failure handling that differs across the 5 AI jobs: `AutoCategorizeJob` and `AutoDetectMerchantsJob` copy the same `RuleRun` rescue block, `ProcessPdfJob` has its own `discard_on` and rescue, and `AssistantResponseJob` and `EnhanceProviderMerchantsJob` declare nothing | S | Low |
+| **S6** | A config registry: `AiConfig.key :llm_max_items_per_call, env:, setting:, default: 25, clamp:, scope: :instance, on_change: …`. Generates the settings form permit list, the docs table and the AI-health display. | 68 methods in models, controllers and `lib` that read an AI env var themselves, 41 `ENV` reads in the AI settings views, the one-line permit list, inconsistent cache-clear side effects | M | Low |
 | **S7** | A `Enrichment::Policy` per source (`locks?`, `overrides?`, `trainable?`), referenced by every writer. | lock logic in 5 classes, `locked_by_*` flags | S | Low |
 | **S8** | Move bill smart-fill, the non-PDF document upload and MCP `import_bank_statement` to jobs on the ai lane, with a Turbo stream (UI) or a pending import (MCP) as the response. Keep the health probes as the one allow-listed exception. | the synchronous LLM and embedding calls in user flows (A9) | S–M | Low |
 | **S9** | Delete the Classifier "Run" special path: make it "Apply" on the two classifier rules (`RuleJob`). | `BayesCategorizeJob` semantics that differ from the nightly run | S | Low |
@@ -183,7 +183,7 @@ Features land for one provider and are back-filled later ([#1984](https://github
 The code is heavily commented with narrative and issue history ("the symptom we chased in the [#1984](https://github.com/we-promise/sure/issues/1984) review"). Agents add these generously, and they go stale as fast as the code changes (the BayesRunner comment still describes the pre-[#4310](https://github.com/we-promise/sure/issues/4310) cascade). Stale comments are worse for agents than none: agents trust them.
 
 **B6. Review capacity is the scarce resource.**
-With ≥200 open PRs and 69 active authors, maintainers cannot enforce unwritten invariants by review. The invariants that matter here (lane choice, lock policy, provider parity, usage attribution, consent) are exactly the ones that don't show up in a diff.
+With about 330 open PRs and 69 active authors, maintainers cannot enforce unwritten invariants by review. The invariants that matter here (lane choice, lock policy, provider parity, usage attribution, consent) are exactly the ones that don't show up in a diff.
 
 **B7. Prompt and schema changes are behaviour changes with no behavioural gate.**
 A prompt edit can shift categorization accuracy for every self-hoster, but CI checks only that the code runs. `/settings/ai_prompts` overrides add another variable: the tests cover the default prompts, not the variants users actually run.
@@ -195,7 +195,7 @@ A prompt edit can shift categorization accuracy for every self-hoster, but CI ch
 `.cursor` (7), `.junie`, `.gemini`, `copilot`, `CLAUDE.md` → `AGENTS.md`, and 16 guides. The existence of `instruction-preservation-map.md` shows the maintainers already feel the drift. Adding AI-pipeline guidance in N places would make it worse.
 
 **B9. Hot files cause conflicts.**
-`family.rb`, `setting.rb`, `hostings_controller.rb` (the one-line permit), `config/sidekiq.yml`, `config/locales/*` and `Rule::Registry::TransactionResource` are touched by many parallel agent PRs. Long-lived agent branches rebase repeatedly, and auto-resolved conflicts are where subtle regressions enter.
+`config/routes.rb`, `family.rb`, `config/locales/views/settings/en.yml`, `assistant.rb` (the tool list), `hostings_controller.rb` (the one-line permit) and `setting.rb` are each changed by 7–44 of the open PRs ([06 §1](06-ai-file-split-review.md#1-merge-hotspots-f-h)). Long-lived agent branches rebase repeatedly, and auto-resolved conflicts are where subtle regressions enter.
 
 ### 3.2 Opportunities
 
@@ -214,7 +214,7 @@ A prompt edit can shift categorization accuracy for every self-hoster, but CI ch
 - **O-B4. Generated reference docs.** Generate the env/settings table (from S6), the job/queue table (from `queue_as` plus `sidekiq.yml`), the rule-action table (from the registry) and the provider capability matrix (from O-B1) in CI, failing when stale. Hand-written docs then cover only *why* and *how to extend*, which change slowly.
 - **O-B5. One AI-pipeline guide with "extension recipes".** Add `docs/llm-guides/ai-pipeline.md`, linked from `AGENTS.md`'s "Provider and feature work" section only (avoiding B8). It should contain the one-page cascade diagram, the invariants list (which mirrors O-B1, so prose and tests agree), and recipes: *add an AI operation*, *add a provider*, *add a classifier stage*, *add an AI-triggering assistant tool*. Recipes beat descriptions for agents: they are the "nearest neighbour" you choose deliberately.
 - **O-B6. Lightweight ADRs.** Add `docs/adr/NNNN-*.md`, one page each, for decisions such as "AI runs on its own capsule", "classifiers are rules", "AI writers lock", and "Jev requires explicit opt-in". Agent guidance should say: *if your change contradicts an ADR, stop and open a design issue.* That makes implicit decisions (B4) visible and cheap to respect.
-- **O-B7. Seams as registries.** Wherever Sure already uses registries (provider adapters, rule actions, insight generators, assistant functions), parallel agent PRs rarely conflict and are easy to review. Extending the pattern to AI operations (S2) and config (S6) makes AI work equally parallel-friendly.
+- **O-B7. Seams as registries.** Wherever Sure already uses registries (provider adapters, rule actions, insight generators, assistant functions), each new entry is its own small file, which is easy to review. But each registry is also one hand-written array (`Assistant.function_classes`, `ACTION_EXECUTOR_CLASSES`, `GENERATORS`), and that array is a collision point: 14 open PRs change `assistant.rb` ([06](06-ai-file-split-review.md), F-H4). Registries help parallel work fully once entries register themselves. Extending the pattern to AI operations (S2) and config (S6) should start that way.
 - **O-B8. CODEOWNERS for seams.** Request maintainer review on `Rule::Runner`, `Provider::Registry`/router, `config/sidekiq.yml`, `Enrichable`, and `db/migrate/*` that touch `rules`. This spends review effort where architecture can break and lets leaf PRs move faster.
 - **O-B9. Agent-run maintenance.** The same agents that create duplication can remove it. File well-specified "consolidation" issues (S1–S10), each with acceptance tests from O-B1 and O-B2, and label them `good-agent-task`. Sequenced properly, they are low-risk and high-value work for the contributor pool.
 

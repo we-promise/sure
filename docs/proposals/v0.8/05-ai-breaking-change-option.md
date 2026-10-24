@@ -138,7 +138,7 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
 - **Breaks:**
   - **I10**: the action keys `auto_categorize`, `auto_detect_merchants`, `bayes_categorize` and `fill_similar_merchants` leave `ACTION_EXECUTOR_CLASSES`. Existing `rule_actions` rows with those keys must be migrated.
   - **I11**: users can no longer place a classifier between two deterministic rules. Classifiers always run before all rules.
-  - **I27**: `rule_runs.pending_jobs_count` and the async `{async: true, jobs_count:}` return shape go.
+  - **I27**: `rule_runs.pending_jobs_count` and the async `{async: true, modified_count:, jobs_count:}` return shape go.
 - **Merges or removes:**
   - I12 (`complete_job!`, `fail_job!`), the async branch of `Rule::Runner#run_counts`, `BayesCategorizeJob` and the Classifier "Run" special path (S9).
   - `AutoCategorizeJob` and `AutoDetectMerchantsJob` as rule-driven jobs.
@@ -195,8 +195,8 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
   - ENV keeps only credentials, endpoints and process sizing (`*_ACCESS_TOKEN`, `*_URI_BASE`, `QDRANT_URL`, `RAILS_AI_MAX_THREADS`).
   - Everything else becomes `AiConfig` keys with one source each, editable in the UI, with per-task rows for provider, model, JSON mode, context window, batch size and thresholds.
   - On first boot, existing ENV tuning values are imported into the database, with a deprecation warning for one release.
-- **Breaks:** I26. About 25 tuning variables in D1 stop being read after the deprecation release (for example `LLM_JSON_MODE`, `LLM_MAX_ITEMS_PER_CALL`, `LLM_CONTEXT_WINDOW`, `CATEGORIZATION_*`, `OPENAI_MODEL`, `ANTHROPIC_MODEL`). Compose files, Helm values and quadlets that set them need editing.
-- **Merges or removes:** about 40 precedence methods (S6), the "field disabled when ENV is set in the web process" logic, the web/worker drift table in D3, and the single-line permit list in `hostings_controller.rb` (519 lines).
+- **Breaks:** I26. About 30 tuning variables in D1 (54 AI variables minus secrets, endpoints, identities and process sizing) stop being read after the deprecation release (for example `LLM_JSON_MODE`, `LLM_MAX_ITEMS_PER_CALL`, `LLM_CONTEXT_WINDOW`, `CATEGORIZATION_*`, `OPENAI_MODEL`, `ANTHROPIC_MODEL`). Compose files, Helm values and quadlets that set them need editing.
+- **Merges or removes:** the 68 methods that read an AI env var themselves (S6), the "field disabled when ENV is set in the web process" logic, the web/worker drift table in D3, and the single-line permit list in `hostings_controller.rb` (519 lines).
 - **Pull apart:**
   1. `AiConfig` registry with today's precedence, generating the docs table. No behaviour change.
   2. Move keys onto it one group per PR: budgets, JSON mode, categorization, assistant, vector.
@@ -340,7 +340,7 @@ What happens to each D5 interface under this option. **Kept** = unchanged. **Int
 | Async rule actions, `pending_jobs_count`, `complete_job!`/`fail_job!`, results that arrive after the runner | Pipeline first, rules after, synchronous | BC2 |
 | Classifier "Run" path that differs from the nightly run | One pipeline | BC2 |
 | Native and generic chat paths, one without streaming | One history path, streaming everywhere | BC4 |
-| About 40 precedence methods, web/worker config drift | `AiConfig` keys | BC5 |
+| 68 methods reading AI env vars directly, web/worker config drift | `AiConfig` keys | BC5 |
 | Four LLM paths on web threads | One allow-listed probe path | BC6 |
 | Failure handled four ways (retry, discard, record, ignore) | Declared per `AiJob` | BC7 |
 | Usage in `llm_usages`, traces in Langfuse, nothing for MCP | One `ai_calls` row per call, with correlation | BC9 |
