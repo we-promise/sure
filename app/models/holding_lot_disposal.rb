@@ -29,8 +29,7 @@ class HoldingLotDisposal < ApplicationRecord
     # The stored disposals of each of `trades`, by sale entry id, for the
     # trades whose account sells by fifo and whose position's lots can be read
     # (HoldingLot.in_partition). Any other trade is absent, and reads its basis
-    # from the holding snapshot as before. Expects each trade's entry and
-    # account loaded.
+    # from the holding snapshot. Expects each trade's entry and account loaded.
     def readable_by_sale(trades)
       fifo = trades.select { |trade| trade.entry.account.cost_basis_fifo? }
       return {} if fifo.empty?
