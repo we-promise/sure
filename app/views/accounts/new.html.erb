@@ -17,6 +17,7 @@
     <% end %>
 
     <% unless params[:classification] == "liability" %>
+      <%= render "account_type", accountable: Valuable.new %>
       <%= render "account_type", accountable: OtherAsset.new %>
     <% end %>
 
