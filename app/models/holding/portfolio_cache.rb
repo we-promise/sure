@@ -7,10 +7,13 @@ class Holding::PortfolioCache
     end
   end
 
-  def initialize(account, use_holdings: false, security_ids: nil)
+  # +excluded_entry_ids+ leaves those trades out, so a caller can ask what the
+  # position looks like without a trade that is being edited.
+  def initialize(account, use_holdings: false, security_ids: nil, excluded_entry_ids: nil)
     @account = account
     @use_holdings = use_holdings
     @security_ids = security_ids
+    @excluded_entry_ids = excluded_entry_ids
     load_prices
   end
 
@@ -113,7 +116,11 @@ class Holding::PortfolioCache
     end
 
     def trades
-      @trades ||= account.entries.includes(entryable: :security).trades.chronological.to_a
+      @trades ||= begin
+        scope = account.entries.includes(entryable: :security).trades.chronological
+        scope = scope.where.not(id: @excluded_entry_ids) if @excluded_entry_ids.present?
+        scope.to_a
+      end
     end
 
     def trades_by_date

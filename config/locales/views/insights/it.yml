@@ -30,6 +30,7 @@ it:
       net_worth_milestone: Patrimonio netto
       subscription_audit: Abbonamenti
       savings_rate_change: Tasso di risparmio
+      negative_position: "Posizioni"
       idle_cash: Liquidità inutilizzata
       budget_at_risk: Budget
       budget_on_track: Budget
@@ -59,6 +60,7 @@ it:
       net_worth_milestone: Vedi il report sul patrimonio netto
       subscription_audit: Controlla le transazioni ricorrenti
       savings_rate_change: Vedi le transazioni di quel mese
+      negative_position: "Controlla le posizioni"
       idle_cash: Vai al conto
       budget: Vedi il budget
     titles:
@@ -73,6 +75,7 @@ it:
       savings_rate_change:
         up: Il tuo tasso di risparmio è migliorato in %{month}
         down: Il tuo tasso di risparmio è diminuito in %{month}
+      negative_position: "Le posizioni in %{account} sono scese sotto zero"
       idle_cash: Liquidità inutilizzata in %{account}
       budget_at_risk:
         one: Una categoria del tuo budget richiede attenzione
@@ -91,6 +94,7 @@ it:
         up: "In %{month} hai risparmiato il %{current_rate}% delle tue entrate, %{change_pp} punti percentuali in più rispetto al %{previous_rate}% del mese precedente."
         down: "In %{month} hai risparmiato il %{current_rate}% delle tue entrate, %{change_pp} punti percentuali in meno rispetto al %{previous_rate}% del mese precedente."
         down_negative: "In %{month} hai speso più di quanto hai guadagnato: il tuo tasso di risparmio è sceso al %{current_rate}%, dal %{previous_rate}% del mese precedente."
+      negative_position: "In %{account}, %{security} (%{ticker}) è sceso sotto zero il %{date}, fino a %{qty}. Probabilmente manca un acquisto o un trasferimento; posizioni interessate: %{count}."
       idle_cash: "%{account} contiene %{balance} senza attività negli ultimi %{idle_days} giorni."
       budget_at_risk:
         over: "%{categories} hanno superato il budget questo mese. Finora hai usato il %{budget_spent_pct}% del budget totale."

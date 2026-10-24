@@ -1,6 +1,9 @@
 ---
 en:
   trades:
+    sale_limit:
+      exceeds_holding: "You can't sell %{qty} %{ticker}: the account holds only %{available} on %{date}."
+      exceeds_later_holding: "You can't sell %{qty} %{ticker}: at most %{available} can be sold on this date, otherwise the position goes below zero on %{date}."
     api_errors:
       activity_label_must_match_type: "investment_activity_label must be %{label} when type is %{type}"
       invalid_activity_label: Invalid investment activity label
@@ -26,6 +29,9 @@ en:
       type_interest: Interest
       dividend_requires_security: Security is required for dividends
       trade_requires_security: A security (ticker) is required for buy and sell trades
+      held_security: "%{name} (%{ticker}), %{qty} held"
+      held_security_prompt: Choose a holding
+      held_security_hint: Not listed? Add the purchase first.
     header:
       buy: Buy
       sell: Sell

@@ -1,6 +1,9 @@
 ---
 tr:
   trades:
+    sale_limit:
+      exceeds_holding: "%{qty} %{ticker} satılamaz: hesapta %{date} tarihinde yalnızca %{available} var."
+      exceeds_later_holding: "%{qty} %{ticker} satılamaz: bu tarihte en fazla %{available} satılabilir, aksi halde pozisyon %{date} tarihinde sıfırın altına düşer."
     form:
       account: Transfer hesabı (isteğe bağlı)
       account_prompt: Hesap ara
@@ -15,6 +18,9 @@ tr:
       ticker_placeholder: AAPL
       trade_requires_security: Alım ve satım işlemleri için bir menkul kıymet (sembol)
         gereklidir
+      held_security: "%{name} (%{ticker}), eldeki: %{qty}"
+      held_security_prompt: "Bir pozisyon seçin"
+      held_security_hint: "Listede yok mu? Önce alımı ekleyin."
       type: Tür
       type_buy: Al
       type_deposit: Yatırma

@@ -1,6 +1,9 @@
 ---
 pl:
   trades:
+    sale_limit:
+      exceeds_holding: "Nie możesz sprzedać %{qty} %{ticker}: konto ma tylko %{available} w dniu %{date}."
+      exceeds_later_holding: "Nie możesz sprzedać %{qty} %{ticker}: w tym dniu można sprzedać najwyżej %{available}, inaczej pozycja spadnie poniżej zera w dniu %{date}."
     form:
       account: Konto transferowe (opcjonalnie)
       account_prompt: Wyszukaj konto
@@ -15,6 +18,9 @@ pl:
       ticker_placeholder: AAPL
       trade_requires_security: Transakcje kupna i sprzedaży wymagają podania papieru
         wartościowego (tickera)
+      held_security: "%{name} (%{ticker}), posiadane: %{qty}"
+      held_security_prompt: "Wybierz pozycję"
+      held_security_hint: "Brak na liście? Najpierw dodaj zakup."
       type: Typ
       type_buy: Kupno
       type_deposit: Wpłata

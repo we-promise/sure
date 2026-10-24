@@ -46,6 +46,9 @@ en:
       holdings: Holdings
       name: Name
       new_holding: New activity
+      negative_position: "%{name} (%{ticker}): below zero from %{date}, lowest %{qty}."
+      negative_positions_hint: A purchase or transfer is probably missing. Add it, or correct the trades that took the position below zero.
+      negative_positions_title: Some positions went below zero
       no_holdings: No holdings to show.
       positions:
         one: "%{count} position"

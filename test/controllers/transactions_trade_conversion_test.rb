@@ -44,6 +44,8 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
   %w[Buy Sell].each do |label|
     test "converts a synced crypto exchange transaction to a #{label.downcase}" do
       @entry.update!(external_id: "provider-transaction", amount: label == "Buy" ? 100 : -100)
+      # A sale needs units to sell; the account holds two AAPL from an earlier buy.
+      create_trade(securities(:aapl), account: @account, qty: 2, date: @entry.date - 1.day, price: 50) if label == "Sell"
 
       assert_difference "Trade.count", 1 do
         post create_trade_from_transaction_transaction_url(@entry.transaction), params: {
@@ -63,6 +65,19 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
       assert @entry.reload.excluded?
       assert_equal "provider-transaction", @entry.external_id
     end
+  end
+
+  test "converting to a sale larger than the holding is refused" do
+    @entry.update!(amount: -100)
+
+    assert_no_difference "Trade.count" do
+      post create_trade_from_transaction_transaction_url(@entry.transaction), params: {
+        security_id: securities(:aapl).id, qty: 2, price: 50, investment_activity_label: "Sell"
+      }
+    end
+
+    assert_match "holds only 0", flash[:alert]
+    assert_not @entry.reload.excluded?
   end
 
   test "wallets and bank accounts cannot open or submit the conversion" do
@@ -127,6 +142,9 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
   end
 
   test "inferred conversion values use an amount edited before the source lock" do
+    # The edited amounts make each conversion a sale; give the exchange account units to sell.
+    create_trade(securities(:aapl), account: @account, qty: 6, date: 1.week.ago.to_date, price: 50)
+
     [ @account, accounts(:investment) ].each do |account|
       [ { qty: 2 }, { price: 50 } ].each do |trade_params|
         entry = create_transaction(account: account, amount: 100)
