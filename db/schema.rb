@@ -733,7 +733,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.index ["account_id"], name: "index_entries_on_account_id"
     t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "(((entryable_type)::text = 'Transaction'::text) AND (excluded = false))"
     t.index ["date"], name: "index_entries_on_date"
-    t.index ["entryable_type"], name: "index_entries_on_entryable_type"
+    t.index ["entryable_type", "entryable_id"], name: "index_entries_on_entryable"
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
@@ -836,6 +836,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.index ["from_currency", "to_currency", "date"], name: "index_exchange_rates_on_base_converted_date_unique", unique: true
     t.index ["from_currency"], name: "index_exchange_rates_on_from_currency"
     t.index ["to_currency"], name: "index_exchange_rates_on_to_currency"
+    t.index ["updated_at"], name: "index_exchange_rates_on_updated_at"
     t.check_constraint "rate > 0::numeric AND rate <> 'NaN'::numeric AND rate::text <> 'Infinity'::text", name: "chk_exchange_rates_rate_positive"
   end
 
