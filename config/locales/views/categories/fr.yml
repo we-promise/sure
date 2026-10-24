@@ -33,8 +33,6 @@ fr:
       empty: Aucune catégorie trouvée
       merge: Fusionner les catégories
       new: Nouvelle catégorie
-    menu:
-      loading: Chargement...
     merge:
       description: Sélectionnez une catégorie cible et les catégories à y fusionner. Les transactions et lignes budgétaires correspondantes seront déplacées vers la cible.
       select_target: Sélectionner la catégorie cible...
