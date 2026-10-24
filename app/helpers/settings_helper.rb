@@ -131,6 +131,9 @@ module SettingsHelper
     when "questrade"
       return { status: :off } unless @questrade_items&.any?
       sync_based_summary(key)
+    when "sharesight"
+      return { status: :off } unless @sharesight_items&.any?
+      sync_based_summary(key)
     else
       { status: :off }
     end

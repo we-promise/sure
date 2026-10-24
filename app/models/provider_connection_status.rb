@@ -26,6 +26,7 @@ class ProviderConnectionStatus
     { key: "trading212", type: "Trading212Item", association: :trading212_items, accounts: :trading212_accounts },
     { key: "trade_republic", type: "TradeRepublicItem", association: :trade_republic_items, accounts: :trade_republic_accounts },
     { key: "questrade", type: "QuestradeItem", association: :questrade_items, accounts: :questrade_accounts },
+    { key: "sharesight", type: "SharesightItem", association: :sharesight_items, accounts: :sharesight_accounts },
     { key: "redbark", type: "RedbarkItem", association: :redbark_items, accounts: :redbark_accounts },
     { key: "wise", type: "WiseItem", association: :wise_items, accounts: :wise_accounts }
   ].freeze

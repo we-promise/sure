@@ -1,0 +1,101 @@
+---
+en:
+  providers:
+    sharesight:
+      name: Sharesight
+      connection_description: Connect your Sharesight portfolios via the Sharesight API
+      institution_name: Sharesight
+  sharesight_items:
+    defaults:
+      name: Sharesight
+      portfolio_name: Sharesight portfolio %{id}
+    sharesight_item:
+      deletion_in_progress: Deletion in progress
+      syncing: Syncing
+      requires_update: API client needs attention
+      error: Error
+      synced: Synced %{time} ago. %{summary}.
+      never_synced: Never synced.
+      setup_accounts: Set up portfolios
+      delete: Delete
+      accounts_need_setup: Portfolios need setup
+      accounts_need_setup_description: Your Sharesight portfolios need to be linked to Sure accounts.
+      no_accounts_discovered: No Sharesight portfolios discovered yet.
+      no_accounts_discovered_description: Run a sync after saving your API client to discover your portfolios.
+    setup_accounts:
+      page_title: Set Up Sharesight Portfolios
+      dialog_title: Set Up Your Sharesight Portfolios
+      subtitle: Link your Sharesight portfolios to investment accounts.
+      info_box:
+        title: Sharesight API Import
+        items:
+          item_1: Current holdings with prices and quantities, and the portfolio's value
+          item_2: Buys, sells, opening balances, capital returns and dividends, including reinvested ones
+          item_3: Deposits, withdrawals, interest and fees from any Sharesight cash account
+      status:
+        fetching_accounts: Fetching portfolios from Sharesight...
+        no_accounts_found_title: No portfolios found.
+        no_accounts_found_description: Sure could not find any Sharesight portfolios. Check that your API client is valid.
+      available_accounts:
+        title: Available portfolios
+        account_type_investment: Investment
+        account_summary: "%{account_type} • Balance: %{balance}"
+        account_id: "Portfolio ID: %{account_id}"
+      link_existing:
+        description: Or link a discovered portfolio to an existing manual investment account.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Select an account...
+      linked_accounts:
+        title: Already linked
+        linked_to_html: "Linked to: %{account}"
+      buttons:
+        refresh: Refresh
+        cancel: Cancel
+        back_to_settings: Back to Settings
+        create_selected_accounts: Create selected accounts
+        link: Link
+        done: Done
+    sync:
+      status:
+        checking_credentials: Checking Sharesight credentials...
+        importing_portfolios: Importing Sharesight portfolios...
+        checking_configuration: Checking portfolio configuration...
+        accounts_need_setup:
+          one: 1 Sharesight portfolio needs setup...
+          other: "%{count} Sharesight portfolios need setup..."
+        processing_activity: Processing holdings and activity...
+        calculating_balances: Calculating balances...
+    sync_status:
+      no_accounts: No Sharesight portfolios discovered yet
+      all_linked:
+        one: 1 portfolio linked
+        other: "%{count} portfolios linked"
+      partial: "%{linked} linked, %{unlinked} need setup"
+    select_existing_account:
+      title: Link Sharesight portfolio
+      no_accounts_available: No unlinked Sharesight portfolios are available yet.
+      run_sync_hint: "Run a sync from Settings > Providers after saving your API client."
+      wait_for_sync: Wait for the portfolio discovery sync to finish.
+      balance: Balance
+      link: Link
+      cancel: Cancel
+    create:
+      success: Successfully configured Sharesight.
+    update:
+      success: Successfully updated Sharesight configuration.
+    destroy:
+      success: Scheduled Sharesight connection for deletion.
+    select_accounts:
+      not_configured: Sharesight is not configured.
+    link_existing_account:
+      not_found: Account or Sharesight portfolio not found.
+      only_manual_investment: Only manual investment accounts can be linked to Sharesight.
+      already_linked: This Sharesight portfolio is already linked.
+      success: Successfully linked to Sharesight portfolio.
+      failed: Failed to link Sharesight portfolio.
+    complete_account_setup:
+      success:
+        one: Successfully created %{count} Sharesight account.
+        other: Successfully created %{count} Sharesight accounts.
+      none_selected: No portfolios were selected.
+      none_created: No accounts were created.
