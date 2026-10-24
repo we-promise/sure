@@ -33,6 +33,11 @@ class Balance::SyncCache
     entries_by_date[date]&.select { |e| e.transaction? || e.trade? } || []
   end
 
+  # Every entry converted to the account currency, in date order.
+  def entries
+    converted_entries
+  end
+
   private
     attr_reader :account
 

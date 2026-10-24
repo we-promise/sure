@@ -380,6 +380,14 @@ class Loan < ApplicationRecord
     }
   end
 
+  # What has actually been repaid by `as_of`, split into principal and
+  # interest. This is the cumulative counterpart to `payment_breakdown`.
+  def paid_breakdown(as_of: Date.current)
+    return nil if amortization_schedule.nil?
+
+    PaidBreakdown.new(self, as_of: as_of)
+  end
+
   # How much of what was borrowed has been repaid, as a fraction, measured
   # against the account's current balance rather than the schedule: the
   # schedule says what was promised, the balance says what happened.

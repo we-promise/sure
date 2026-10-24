@@ -58,7 +58,9 @@ en:
         insurance: Insurance
         interest: Interest
         of_original: of %{amount}
+        paid_so_far: Paid so far · %{date}
         principal: Principal
+        principal_and_interest: Principal + interest
         repaid: Repaid
         total: Total
       schedule:
