@@ -45,7 +45,7 @@ Checked and consistent: the tool split above, the 13 rule executors, the 8 insig
 
 Found in the code itself and recorded in 01 D4: the AI compose file's comment still assumes a default of 5 tool rounds (#13), alongside the existing confidence-threshold comment (#11).
 
-Not settled by the code: 03 cites **446 contributors** (from the original brief); the GitHub contributors API lists 419 accounts (424 with anonymous). The figure is left as it was.
+Contributors: the brief gave 446, and the GitHub contributors API lists 419 accounts (424 with anonymous). 03 now says **about 450**.
 
 ## Conventions for editing
 

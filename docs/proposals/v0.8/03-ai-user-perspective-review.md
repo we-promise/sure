@@ -232,7 +232,7 @@ The app *already* runs roughly this pipeline (as rules ordered by position). It 
 | **2. Explain panel** | curious users | "Why this category?": the stages in order, which one answered, confidence, when, and a "This is wrong" button (which feeds Bayes and unlocks). |
 | **3. Report a problem** | anyone filing an issue | One button that assembles a redacted bundle (version, tier, provider and model names without keys, the last runs of the relevant workflow and their errors, the explain-panel data with transaction text masked) and copies it, or opens a pre-filled GitHub issue. |
 
-This turns Sure's existing internals (`DataEnrichment` source and metadata, `RuleRun`, `DebugLogEntry`, AI health) into user value **without** exposing the machinery by default. It also cuts maintainer triage time directly. With 446 contributors and about 330 open PRs, issue quality is a real bottleneck.
+This turns Sure's existing internals (`DataEnrichment` source and metadata, `RuleRun`, `DebugLogEntry`, AI health) into user value **without** exposing the machinery by default. It also cuts maintainer triage time directly. With about 450 contributors and about 330 open PRs, issue quality is a real bottleneck.
 
 The "This is wrong" button closes the loop that users expect from AI ("it learns from my corrections"). Bayes already learns from corrections, but users don't know that.
 
