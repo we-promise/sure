@@ -203,6 +203,17 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
         before { user.update!(ai_enabled: true) }
         run_test!
       end
+
+      response '503', 'the receipt could not be read because storage or a dependency was unavailable; retry' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:attachment_id) { nil }
+        before do
+          user.update!(ai_enabled: true)
+          allow_any_instance_of(Transaction::ReceiptItemizer).to receive(:propose)
+            .and_raise(Transaction::ReceiptItemizer::Unavailable, 'Could not read the receipt (ActiveStorage::FileNotFoundError)')
+        end
+        run_test!
+      end
     end
   end
 end

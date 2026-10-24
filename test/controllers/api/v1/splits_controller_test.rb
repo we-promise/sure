@@ -530,6 +530,16 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_includes JSON.parse(response.body)["errors"], "No receipt attachment found"
   end
 
+  test "itemize returns 503, not 422, when the receipt storage is unavailable" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(nil))
+    Transaction::ReceiptItemizer.any_instance.stubs(:propose).raises(Transaction::ReceiptItemizer::Unavailable, "Could not read the receipt (ActiveStorage::FileNotFoundError)")
+
+    post itemize_api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key), as: :json
+
+    assert_response :service_unavailable
+    assert_equal "service_unavailable", JSON.parse(response.body)["error"]
+  end
+
   test "itemize requires AI to be enabled for the user" do
     attach_receipt
     @user.update!(ai_enabled: false)

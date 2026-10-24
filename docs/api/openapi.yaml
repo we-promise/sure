@@ -9371,6 +9371,13 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '503':
+          description: the receipt could not be read because storage or a dependency
+            was unavailable; retry
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/syncs":
     get:
       summary: Lists sync history
