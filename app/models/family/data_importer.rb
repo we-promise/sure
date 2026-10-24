@@ -330,6 +330,8 @@ class Family::DataImporter
           notes: data["notes"],
           status: importable_account_status(data["status"])
         )
+        # A file from before the setting existed leaves the account's own.
+        account.cost_basis_method = data["cost_basis_method"] if Account.cost_basis_methods.key?(data["cost_basis_method"])
 
         account.save!
 
@@ -1104,6 +1106,8 @@ class Family::DataImporter
     end
 
     def import_trades(records)
+      imported = {}
+
       records.each do |record|
         data = record["data"]
         old_id = data["id"]
@@ -1154,9 +1158,64 @@ class Family::DataImporter
         end
 
         entry.save!
+        imported[old_id] = entry
+        import_lot_total_cost(entry, data["lot_total_cost"])
         @created_entries << entry if created
         increment_summary("Trade", created ? :created : :updated)
       end
+
+      import_lot_sources(records, imported)
+    end
+
+    # The lot is rebuilt from its trade on the next sync, which keeps a cost
+    # already on the row, so the user's cost is seeded on the row now. A file
+    # without one clears a cost an earlier import of this trade set. A value
+    # the lot cannot hold drops the cost, not the trade.
+    def import_lot_total_cost(entry, raw)
+      trade = entry.trade
+      lot = HoldingLot.find_by(account_id: entry.account_id, source_entry_id: entry.id)
+
+      if raw.blank?
+        lot.unlock_cost! if lot&.manual_cost?
+        return
+      end
+
+      total = BigDecimal(raw.to_s, exception: false)
+      return invalid_record!("Trade", "lot_total_cost", raw) unless total&.finite? && !total.negative? && trade.qty.positive?
+
+      lot ||= HoldingLot.new(account_id: entry.account_id, source_entry: entry, security: trade.security,
+                             acquired_on: entry.date, qty: trade.qty, currency: entry.account.currency)
+      lot.manual_total_cost = total
+      invalid_record!("Trade", "lot_total_cost", raw) unless lot.save
+    end
+
+    # A sale names its lot by the acquiring trade, which the export writes
+    # ahead of it: in this file, or in an earlier chunk of the same session.
+    # The choice is restored as stored, whatever the account's method, since
+    # an average account keeps but ignores it (Trade#lot_choices); it must
+    # still name an acquisition of the sale's security, in its account, on or
+    # before its date. A file without one clears an earlier import's choice.
+    def import_lot_sources(records, imported)
+      records.each do |record|
+        data = record["data"]
+        sale = imported[data["id"]]
+        next unless sale
+
+        source_id = data["lot_source_trade_id"]
+        source = imported[source_id] || session_imported_entry(sale.account, "Trade", source_id) if source_id.present?
+
+        if source_id.present? && !(source && lot_source_for?(sale, source))
+          invalid_record!("Trade", "lot_source_trade_id", source_id)
+          next
+        end
+
+        Trade.where(id: sale.entryable_id).update_all(lot_source_entry_id: source&.id)
+      end
+    end
+
+    def lot_source_for?(sale, source)
+      sale.trade.qty.negative? && source.trade.qty.positive? && source.account_id == sale.account_id &&
+        source.trade.security_id == sale.trade.security_id && source.date <= sale.date
     end
 
     def import_holdings(records)
