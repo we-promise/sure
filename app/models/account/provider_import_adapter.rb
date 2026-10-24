@@ -725,6 +725,7 @@ class Account::ProviderImportAdapter
       trade_attributes[:exchange_rate] = exchange_rate unless exchange_rate.nil?
       trade_attributes[:fee] = fee unless fee.nil?
 
+      entry.entryable.provider_importing = true
       entry.entryable.assign_attributes(trade_attributes)
 
       entry.assign_attributes(

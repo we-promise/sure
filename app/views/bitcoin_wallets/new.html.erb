@@ -1,0 +1,15 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("bitcoin_wallets.new_title"), subtitle: @account.name) %>
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <p class="text-sm text-secondary flex items-start gap-2">
+        <%= icon "shield-check", size: "sm", class: "shrink-0 mt-0.5" %>
+        <span><%= t("bitcoin_wallets.read_only_short") %></span>
+      </p>
+      <%= render "onchain_wallet_items/price_provider_warning", currency: @account.currency, retains_valuation: true %>
+      <%= render DS::Alert.new(message: @error_message, variant: :error) if @error_message.present? %>
+      <%= render "source_form", url: account_bitcoin_wallet_path(@account), securities: @securities,
+                                values: @form_values, errors: @field_errors %>
+    </div>
+  <% end %>
+<% end %>

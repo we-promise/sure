@@ -1,0 +1,76 @@
+en:
+  bitcoin_wallets:
+    title: Bitcoin wallet
+    security: Existing Bitcoin position
+    manual_address: Public address
+    bip84: Native SegWit account (xpub / zpub)
+    gap_limit: Unused address gap limit
+    discover: Discover addresses
+    failed: "The wallet could not be fully read. The last complete balance is preserved; retry sync or check the key and gap limit."
+    address_mismatch: "The receive address does not match this account key within the selected gap. Check the account key, address and gap limit."
+    address_conflict: "An address is already tracked by another connected account in this household. Disconnect the overlapping connection first."
+    missing_price: "The Bitcoin quantity is current, but its market value could not be established. The account keeps its previous valuation. Check the price and exchange-rate providers."
+    pricing_warning: "No crypto market data provider is enabled. Known manual prices can still be used; otherwise the account keeps its previous valuation until a quote is available."
+    exchange_rate_warning: "No exchange rate provider is configured for %{currency}. The account keeps its previous valuation when conversion is unavailable. Configure an exchange rate provider in self-hosting settings."
+    stale: "This wallet read is more than two hours old. Sync the wallet to read it again."
+    quantity: "%{quantity} BTC"
+    discovery_progress:
+      one: 1 address checked so far
+      other: "%{count} addresses checked so far"
+    address_count:
+      one: Tracking 1 unique address
+      other: "Tracking %{count} unique addresses"
+    connected: Bitcoin wallet connected.
+    not_ready: Complete wallet discovery before connecting.
+    history_truncated: Some transfer history was not returned. This does not change the observed current balance.
+    add_source: Add another source
+    remove_source: Remove source
+    remove_source_confirm: Stop tracking this source? Remaining sources will be reconciled without deleting account history.
+    disconnect_confirm: Stop tracking this wallet? Your BTC position and history stay in the account and become manual again.
+    disconnected: Bitcoin wallet disconnected; the account and history remain.
+    setup_cancelled: Bitcoin wallet setup cancelled.
+    source_removed: Source removed. The remaining sources are being read again.
+    manage: Manage Bitcoin wallet
+    connect_action: Connect Bitcoin wallet
+    movements:
+      received: "Received %{quantity} BTC"
+      sent: "Sent %{quantity} BTC"
+    new_title: Track a Bitcoin wallet
+    read_only_short: "Watch-only: Sure reads public balances and can never spend. Never paste a seed phrase or private key."
+    key_label: Bitcoin address or xpub / zpub
+    key_placeholder: bc1q… or zpub6r…
+    key_hint: Paste one address, or your wallet's account-level xpub/zpub to follow every address it uses.
+    verification_address: One receive address from this wallet
+    verification_hint: Copy it from your wallet app. Sure checks that it belongs to the key before reading anything.
+    advanced: Advanced
+    gap_limit_hint: How many unused addresses to look ahead. Increase only if a balance is missing.
+    status:
+      tracking: Tracking
+      reading: Reading wallet
+      ready: Ready to track
+      needs_attention: Needs attention
+      retrying: Retrying
+    read_ago: "Read %{time} ago"
+    temporary_failure: "The blockchain moved while we were reading your wallet. We'll retry automatically; your balance is unchanged."
+    discovering_title: Reading your wallet…
+    discovering_address: Fetching the balance of this address.
+    wallet_value: Wallet value
+    pending_amount: "%{amount} BTC unconfirmed"
+    connect_explainer_new: Tracking adds this BTC position to the account and keeps it up to date every hour.
+    connect_explainer_balance: "This account's balance of %{balance} was entered by hand. Tracking replaces it with the wallet value; past balances are kept."
+    connect_explainer_replace: "This account currently records %{previous} BTC. Tracking replaces it with the wallet balance (%{difference} BTC); past activity is kept."
+    start_tracking: Start tracking
+    sync_now: Read now
+    read_again: Read again
+    stop_tracking: Stop tracking
+    cancel: Cancel
+    details: Addresses and sources
+    add_source_submit: Add
+    header_badge: Bitcoin wallet
+    holding_managed: Updated automatically from your Bitcoin wallet
+    manage_short: Manage
+    errors:
+      invalid_address: This doesn't look like a valid Bitcoin address. Check for a missing or extra character.
+      invalid_key: This isn't a valid account-level xpub or zpub. Export it from your wallet's account settings.
+      invalid_verification_address: This address isn't a valid Bitcoin address.
+    reconciliation: "Wallet adjustment"

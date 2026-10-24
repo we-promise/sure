@@ -1,0 +1,30 @@
+---
+de:
+  valuations:
+    cash_anchor: Abgleich des Barguthabens
+  entries:
+    errors:
+      position_managed: Diese Position wird von einem Anbieter verwaltet. Trenne die Verbindung, bevor du ihre Menge änderst.
+  holdings:
+    quantity_reconciliation: Abgleich der Positionsmenge
+    remap_security:
+      managed_position: Trenne den Anbieter, bevor du das verfolgte Bitcoin-Wertpapier änderst.
+  activerecord:
+    errors:
+      models:
+        trade:
+          attributes:
+            security:
+              managed_position: wird von einem Anbieter verwaltet. Trenne die Verbindung, bevor du diese Position änderst.
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: "ist mit einem anderen Anbieter verbunden. Bitcoin-Wallets können nur auf manuellen Krypto-Konten verfolgt werden."
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: "hat oder hatte eine Bitcoin-Wallet und kann daher nicht mit einem anderen Anbieter verbunden werden."
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: erfordert eine konfigurierte Active-Record-Verschlüsselung

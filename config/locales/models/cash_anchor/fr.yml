@@ -1,0 +1,30 @@
+---
+fr:
+  valuations:
+    cash_anchor: Rapprochement du solde de liquidités
+  entries:
+    errors:
+      position_managed: Cette position est gérée par un fournisseur. Déconnectez-le avant de modifier sa quantité.
+  holdings:
+    quantity_reconciliation: Rapprochement de la quantité de la position
+    remap_security:
+      managed_position: Déconnectez le fournisseur avant de modifier le titre Bitcoin suivi.
+  activerecord:
+    errors:
+      models:
+        trade:
+          attributes:
+            security:
+              managed_position: est géré par un fournisseur. Déconnectez-le avant de modifier cette position.
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: "est lié à un autre fournisseur. Les portefeuilles Bitcoin ne peuvent être suivis que sur des comptes crypto manuels."
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: "suit ou a suivi un portefeuille Bitcoin et ne peut donc pas être lié à un autre fournisseur."
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: nécessite que le chiffrement Active Record soit configuré

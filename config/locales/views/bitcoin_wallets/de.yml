@@ -1,0 +1,77 @@
+---
+de:
+  bitcoin_wallets:
+    title: Bitcoin-Wallet
+    security: Bestehende Bitcoin-Position
+    manual_address: Öffentliche Adresse
+    bip84: Native-SegWit-Konto (xpub / zpub)
+    gap_limit: Gap-Limit für ungenutzte Adressen
+    discover: Adressen ermitteln
+    failed: "Die Wallet konnte nicht vollständig gelesen werden. Das letzte vollständige Guthaben bleibt erhalten; synchronisiere erneut oder prüfe Schlüssel und Gap-Limit."
+    address_mismatch: "Die Empfangsadresse passt innerhalb des gewählten Gap-Limits nicht zu diesem Kontoschlüssel. Prüfe Kontoschlüssel, Adresse und Gap-Limit."
+    address_conflict: "Eine Adresse wird bereits von einem anderen verbundenen Konto in diesem Haushalt verfolgt. Trenne zuerst die überschneidende Verbindung."
+    missing_price: "Die Bitcoin-Menge ist aktuell, aber ihr Marktwert konnte nicht ermittelt werden. Das Konto behält seine vorherige Bewertung. Prüfe die Preis- und Wechselkursanbieter."
+    pricing_warning: "Es ist kein Marktdatenanbieter für Krypto aktiviert. Bekannte manuelle Preise können weiterhin verwendet werden; andernfalls behält das Konto seine vorherige Bewertung, bis ein Kurs verfügbar ist."
+    exchange_rate_warning: "Für %{currency} ist kein Wechselkursanbieter eingerichtet. Ist keine Umrechnung möglich, behält das Konto seine vorherige Bewertung. Richte in den Self-Hosting-Einstellungen einen Wechselkursanbieter ein."
+    stale: "Diese Wallet wurde vor mehr als zwei Stunden gelesen. Synchronisiere die Wallet, um sie erneut zu lesen."
+    quantity: "%{quantity} BTC"
+    address_count:
+      one: 1 eindeutige Adresse wird verfolgt
+      other: "%{count} eindeutige Adressen werden verfolgt"
+    connected: Bitcoin-Wallet verbunden.
+    not_ready: Schließ die Adressermittlung der Wallet ab, bevor du sie verbindest.
+    history_truncated: Ein Teil des Übertragungsverlaufs wurde nicht geliefert. Das beobachtete aktuelle Guthaben ändert sich dadurch nicht.
+    add_source: Weitere Quelle hinzufügen
+    remove_source: Quelle entfernen
+    remove_source_confirm: Diese Quelle nicht mehr verfolgen? Die übrigen Quellen werden neu abgeglichen, ohne den Kontoverlauf zu löschen.
+    disconnected: Bitcoin-Wallet getrennt; Konto und Verlauf bleiben erhalten.
+    setup_cancelled: Einrichtung der Bitcoin-Wallet abgebrochen.
+    source_removed: Quelle entfernt. Die übrigen Quellen werden erneut gelesen.
+    manage: Bitcoin-Wallet verwalten
+    connect_action: Bitcoin-Wallet verbinden
+    movements:
+      received: "%{quantity} BTC empfangen"
+      sent: "%{quantity} BTC gesendet"
+    discovery_progress:
+      one: "Bisher 1 Adresse geprüft"
+      other: "Bisher %{count} Adressen geprüft"
+    reconciliation: "Wallet-Anpassung"
+    disconnect_confirm: "Diese Wallet nicht mehr verfolgen? Deine BTC-Position und der Verlauf bleiben im Konto und werden wieder manuell geführt."
+    new_title: "Bitcoin-Wallet verfolgen"
+    read_only_short: "Nur Beobachtung: Sure liest öffentliche Guthaben und kann niemals Geld ausgeben. Füge niemals eine Seed-Phrase oder einen privaten Schlüssel ein."
+    key_label: "Bitcoin-Adresse oder xpub / zpub"
+    key_placeholder: "bc1q… oder zpub6r…"
+    key_hint: "Füge eine Adresse ein oder den xpub/zpub deines Wallet-Kontos, um jeder genutzten Adresse zu folgen."
+    verification_address: "Eine Empfangsadresse aus dieser Wallet"
+    verification_hint: "Kopiere sie aus deiner Wallet-App. Sure prüft, dass sie zum Schlüssel gehört, bevor etwas gelesen wird."
+    advanced: "Erweitert"
+    gap_limit_hint: "Wie viele unbenutzte Adressen im Voraus geprüft werden. Erhöhe den Wert nur, wenn ein Guthaben fehlt."
+    status:
+      tracking: "Wird verfolgt"
+      reading: "Wallet wird gelesen"
+      ready: "Bereit zum Verfolgen"
+      needs_attention: "Prüfung nötig"
+      retrying: "Neuer Versuch"
+    read_ago: "Vor %{time} gelesen"
+    temporary_failure: "Die Blockchain hat sich geändert, während wir deine Wallet gelesen haben. Wir versuchen es automatisch erneut; dein Guthaben bleibt unverändert."
+    discovering_title: "Wallet wird gelesen…"
+    discovering_address: "Guthaben dieser Adresse wird abgerufen."
+    wallet_value: "Wallet-Wert"
+    pending_amount: "%{amount} BTC unbestätigt"
+    connect_explainer_new: "Beim Verfolgen wird diese BTC-Position zum Konto hinzugefügt und stündlich aktualisiert."
+    connect_explainer_balance: "Der Kontostand von %{balance} wurde von Hand eingegeben. Beim Verfolgen wird er durch den Wert des Wallets ersetzt; frühere Kontostände bleiben erhalten."
+    connect_explainer_replace: "Dieses Konto erfasst derzeit %{previous} BTC. Beim Verfolgen wird das durch das Wallet-Guthaben ersetzt (%{difference} BTC); frühere Aktivitäten bleiben erhalten."
+    start_tracking: "Verfolgen starten"
+    sync_now: "Jetzt lesen"
+    read_again: "Erneut lesen"
+    stop_tracking: "Verfolgen beenden"
+    cancel: "Abbrechen"
+    details: "Adressen und Quellen"
+    add_source_submit: "Hinzufügen"
+    header_badge: "Bitcoin-Wallet"
+    holding_managed: "Automatisch aus deiner Bitcoin-Wallet aktualisiert"
+    manage_short: "Verwalten"
+    errors:
+      invalid_address: "Das sieht nicht nach einer gültigen Bitcoin-Adresse aus. Prüfe, ob ein Zeichen fehlt oder zu viel ist."
+      invalid_key: "Das ist kein gültiger xpub oder zpub auf Kontoebene. Exportiere ihn aus den Kontoeinstellungen deiner Wallet."
+      invalid_verification_address: "Diese Adresse ist keine gültige Bitcoin-Adresse."

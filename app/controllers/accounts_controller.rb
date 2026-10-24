@@ -8,13 +8,14 @@ class AccountsController < ApplicationController
 
   helper_method :visible_card_accounts
 
+  # List accessible accounts and provider connections with bounded association reads.
   def index
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
     @manual_accounts = family.accounts
           .listable_manual
           .where(id: @accessible_account_ids)
           .with_attached_logo
-          .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
+          .includes(:accountable, :account_providers, :plaid_account, :simplefin_account, :bitcoin_wallet_account)
           .order(:name)
     @financekit_accounts = Current.family.accounts
       .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
@@ -38,7 +39,9 @@ class AccountsController < ApplicationController
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
     @onchain_wallet_items = visible_provider_items(
-      family.onchain_wallet_items.ordered.includes(:accounts, onchain_wallet_accounts: { account_provider: :account })
+      family.onchain_wallet_items.ordered.includes(:accounts,
+        bitcoin_wallet_accounts: [ :account, :account_provider ],
+        onchain_wallet_accounts: { account_provider: :account })
     )
     @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
     @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
@@ -92,7 +95,9 @@ class AccountsController < ApplicationController
     @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = params.fetch(:q, {}).permit(:search, :uncategorized, status: [])
-    entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
+    # Cash anchors are internal accounting baselines, not user activity.
+    entries = @account.entries.excluding_split_parents.where.not(entryable_id: Valuation.cash_anchor.select(:id))
+      .search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
@@ -425,13 +430,18 @@ class AccountsController < ApplicationController
       item.accounts.select { |account| @accessible_account_id_set.include?(account.id) }
     end
 
+    # Hide connections whose linked accounts are outside the current user's access.
     def visible_provider_items(items)
       accessible_ids = @accessible_account_ids.to_a
 
       items.select do |item|
         next true if Current.user.admin?
 
-        account_ids = item.respond_to?(:accounts) ? item.accounts.map(&:id) : []
+        account_ids = if item.is_a?(OnchainWalletItem)
+          item.accounts_visible_to(nil).map(&:id)
+        else
+          item.respond_to?(:accounts) ? item.accounts.map(&:id) : []
+        end
 
         # Ownership shows a member their own connection, importantly including
         # one just created that has not synced any accounts yet. It must not

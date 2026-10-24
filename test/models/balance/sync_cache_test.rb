@@ -11,6 +11,19 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     )
   end
 
+  test "cash entry totals run through each date and skip valuations" do
+    [ [ 4, 100 ], [ 2, -30 ], [ 2, 10 ] ].each do |days_ago, amount|
+      @account.entries.create!(date: days_ago.days.ago.to_date, name: "Cash", amount: amount, currency: "USD", entryable: Transaction.new)
+    end
+    @account.entries.create!(date: 3.days.ago.to_date, name: "Total", amount: 5000, currency: "USD", entryable: Valuation.new)
+    cache = Balance::SyncCache.new(@account)
+
+    assert_equal 0, cache.cash_entry_total(5.days.ago.to_date)
+    assert_equal 100, cache.cash_entry_total(3.days.ago.to_date)
+    assert_equal 80, cache.cash_entry_total(2.days.ago.to_date)
+    assert_equal 80, cache.cash_entry_total(Date.current)
+  end
+
   test "uses custom exchange rate from transaction extra field when present" do
     # Create a transaction with EUR currency and custom exchange rate
     _entry = @account.entries.create!(

@@ -28,7 +28,7 @@ RSpec.describe "Api::V1::ProviderConnections", type: :request do
 
   path "/api/v1/provider_connections" do
     get "Lists provider connection status summaries" do
-      description "List safe provider connection status metadata for the authenticated user's family without exposing credentials, raw provider payloads, or raw sync errors."
+      description "List safe provider connection status metadata for the authenticated user's family without exposing credentials, raw provider payloads, or raw sync errors. On-chain connections include aggregated Bitcoin wallet status for accessible accounts, without extended public keys or address lists."
       tags "Provider Connections"
       security [ { apiKeyAuth: [] } ]
       produces "application/json"

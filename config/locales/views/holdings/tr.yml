@@ -95,6 +95,8 @@ tr:
       ticker_label: Sembol
       total_return_label: Toplam Getiri
       trade_history_entry: "%{qty} adet %{security} %{price} fiyatından"
+      trade_history_transfer: "%{name}: %{qty}"
+      managed_position_note: Bu pozisyon bağlı bir sağlayıcı tarafından otomatik olarak güncellenir.
       truncated_history_warning: Fiyat geçmişi yalnızca %{date} tarihinden itibaren
         mevcuttur. Bu tarihten öncesi için seçilen sağlayıcıdan veri bulunmamaktadır
         — bu, varlığın işlem tarihinizden sonra listelenmesi veya sağlayıcının mevcut

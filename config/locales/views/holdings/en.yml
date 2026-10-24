@@ -88,6 +88,8 @@ en:
       reset_confirm_body: "This will change the security from %{current} back to %{original} and move all associated trades."
       ticker_label: Ticker
       trade_history_entry: "%{qty} shares of %{security} at %{price}"
+      trade_history_transfer: "%{name}: %{qty}"
+      managed_position_note: This position is updated automatically by a connected provider.
       total_return_label: Total Return
       unknown: Unknown
       cost_basis_locked_label: Cost basis is locked
