@@ -219,6 +219,18 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  test "lots short of the holding fall back to the snapshot figure" do
+    travel_to TODAY do
+      build_reverse_fixture(pre_history: 0)
+      materialize(:reverse)
+      lot = HoldingLot.where(security: @security).where("qty >= 2").order(:id).first
+      lot.update_columns(qty: lot.qty - 2)
+
+      assert_equal 14, HoldingLot.where(security: @security).sum(:qty), "2 short of the holding's 16"
+      assert_equal 4 * 300 - 650, gain(@sale), "the snapshot's $650, not the lot record's $400"
+    end
+  end
+
   private
     def d(day)
       Date.new(2024, 6, day)
