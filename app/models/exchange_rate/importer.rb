@@ -218,12 +218,13 @@ class ExchangeRate::Importer
           end_date: end_date
         )
 
-        if provider_response.success?
+        if provider_response.success? && provider_response.data.present?
           Rails.logger.debug("Fetched #{provider_response.data.size} rates from #{exchange_rate_provider.class.name} for #{from}/#{to} between #{provider_fetch_start_date} and #{end_date}")
           provider_response.data.index_by(&:date)
-        elsif (crossed = usd_cross_rates).any?
-          Rails.logger.info("Derived #{crossed.size} #{from}/#{to} rates from #{exchange_rate_provider.class.name} USD rates between #{provider_fetch_start_date} and #{end_date}")
+        elsif (crossed = usd_cross_rates(provider_response.error)).any?
           crossed.index_by(&:date)
+        elsif provider_response.success?
+          {} # No rates at all; import_provider_rates logs that.
         else
           message = "#{exchange_rate_provider.class.name} could not fetch exchange rate pair from: #{from} to: #{to} between: #{effective_start_date} and: #{Date.current}.  Provider error: #{provider_response.error.message}"
           Rails.logger.warn(message)
@@ -234,9 +235,9 @@ class ExchangeRate::Importer
     end
 
     # The provider has no such pair, but it may still quote both USD legs.
-    def usd_cross_rates
+    def usd_cross_rates(error)
       ExchangeRate::UsdCross.new(exchange_rate_provider)
-        .rates(from: from, to: to, start_date: provider_fetch_start_date, end_date: end_date)
+        .rates(from: from, to: to, start_date: provider_fetch_start_date, end_date: end_date, error: error)
     end
 
     def backfill_inverse_rates_if_needed
