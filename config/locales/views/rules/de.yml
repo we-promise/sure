@@ -99,8 +99,8 @@ de:
       stop_processing_label: Danach keine weiteren Regeln anwenden
       then: DANN
       apply_immediately_label: Sofort bei neuen und geänderten Transaktionen anwenden
-      apply_immediately_description: Läuft direkt, nachdem eine Transaktion von Hand, per Mehrfachbearbeitung, beim Kategorisieren, über die API oder vom Assistenten angelegt oder bearbeitet wurde, und weiterhin nachts. Aufteilungen, Überweisungen und Umwandlungen in Wertpapier-Trades warten auf den nächtlichen Lauf. Die aktiven Regeln darüber laufen vorher auf diesen Transaktionen, diese Regel liefert also dasselbe Ergebnis wie im nächtlichen Lauf. Regeln weiter unten warten auf den nächtlichen Lauf, ebenso die E-Mails der Regeln darüber. Felder, die du selbst gesetzt hast, bleiben unverändert.
-      apply_immediately_ai_cost: KI-Aktionen in dieser Regel oder in einer aktiven Regel darüber kosten je neue oder geänderte Transaktion, die sie treffen, eine KI-Anfrage.
+      apply_immediately_description: Läuft direkt, nachdem eine Transaktion von Hand, per Mehrfachbearbeitung, beim Kategorisieren, über die API oder vom Assistenten angelegt oder bearbeitet wurde, und weiterhin nachts. Aufteilen, als Überweisung markieren oder in einen Wertpapier-Trade umwandeln startet sie nicht; solche Änderungen warten auf den nächtlichen Lauf. Die aktiven Regeln darüber laufen vorher auf diesen Transaktionen, diese Regel liefert also dasselbe Ergebnis wie im nächtlichen Lauf. Regeln weiter unten warten auf den nächtlichen Lauf, ebenso die E-Mails der Regeln darüber. Felder, die du selbst gesetzt hast, bleiben unverändert.
+      apply_immediately_ai_cost: KI-Aktionen in dieser Regel oder in einer aktiven Regel darüber können für jede neue oder geänderte Transaktion, die sie treffen, KI-Kosten verursachen.
     index:
       ai_cost_warning: Regelaktionen mit KI kosten Geld. Filtere so eng wie möglich, damit keine unnötigen Kosten entstehen.
       delete_all_rules: Alle Regeln löschen

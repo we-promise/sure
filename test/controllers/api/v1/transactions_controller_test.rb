@@ -359,6 +359,19 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
   end
 
+  test "a rejected API update runs no immediate rules" do
+    @family.rules.create!(
+      resource_type: "transaction", active: true, apply_immediately: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "API") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @family.categories.first.id) ]
+    )
+
+    put api_v1_transaction_url(@transaction), params: { transaction: { name: "" } }, headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_no_enqueued_jobs(only: ApplyImmediateRulesJob)
+  end
+
   test "should create transaction with external idempotency key" do
     transaction_params = {
       transaction: {

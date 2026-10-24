@@ -50,9 +50,13 @@ class RuleRun < ApplicationRecord
 
   # Thread-safe method to complete a job and update the run
   def complete_job!(modified_count: 0)
+    drained = false
+
     with_lock do
+      drained = pending_jobs_count.positive?
       self.transactions_modified += modified_count
       self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
+      drained &&= pending_jobs_count.zero?
 
       # Preserve a previously recorded failure while still draining pending jobs.
       self.status = "success" if pending_jobs_count <= 0 && !failed?
@@ -60,18 +64,20 @@ class RuleRun < ApplicationRecord
       save!
     end
 
-    # An immediate run with AI actions finishes here, after its job finished.
-    self.class.offer_immediate_result(rule.family) if execution_type == "immediate" && pending_jobs_count.zero? && transactions_modified.positive?
+    offer_job_results if drained
   end
 
   def fail_job!(error:, source:, transaction_ids: [])
     should_log = false
+    drained = false
     current_error_message = "#{error.class}: #{error.message}"
 
     with_lock do
       should_log = !failed?
+      drained = pending_jobs_count.positive?
 
       self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
+      drained &&= pending_jobs_count.zero?
       self.status = "failed"
       existing_error_messages = error_message.to_s.split("\n").reject(&:blank?)
       self.error_message = (existing_error_messages + [ current_error_message ]).uniq.join("\n")
@@ -80,9 +86,20 @@ class RuleRun < ApplicationRecord
     end
 
     capture_failure_debug_log(error:, source:, transaction_ids:) if should_log
+    # Earlier jobs of the run may already have changed transactions. A retry
+    # of a job that already failed drains nothing, so it offers nothing again.
+    offer_job_results if drained
   end
 
   private
+    # The jobs of an immediate run with AI actions offer what they changed once
+    # the last one is done; ApplyImmediateRulesJob offers the run's other changes.
+    def offer_job_results
+      return unless execution_type == "immediate" && transactions_modified.positive?
+
+      self.class.offer_immediate_result(rule.family)
+    end
+
     def capture_failure_debug_log(error:, source:, transaction_ids:)
       DebugLogEntry.capture(
         category: "rule_run",

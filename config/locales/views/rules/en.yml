@@ -45,8 +45,8 @@ en:
       stop_processing_label: Stop processing further rules
       stop_processing_description: Rules further down the list don't change transactions this rule matches.
       apply_immediately_label: Apply immediately to new and changed transactions
-      apply_immediately_description: Runs right after a transaction is created or edited by hand, in a bulk edit, in Categorize, via the API or by the assistant, and still overnight. Splits, transfers and conversions to trades wait for the nightly run. The active rules above it run first on those transactions, so this rule gives the same result as in the nightly run. Rules further down wait for the nightly run, and so do the emails of the rules above. Fields you set yourself stay as they are.
-      apply_immediately_ai_cost: AI actions in this rule or in an active rule above it cost one AI request per new or changed transaction they match.
+      apply_immediately_description: Runs right after a transaction is created or edited by hand, in a bulk edit, in Categorize, via the API or by the assistant, and still overnight. Splitting a transaction, marking it as a transfer or converting it to a trade doesn't start it; those changes wait for the nightly run. The active rules above it run first on those transactions, so this rule gives the same result as in the nightly run. Rules further down wait for the nightly run, and so do the emails of the rules above. Fields you set yourself stay as they are.
+      apply_immediately_ai_cost: AI actions in this rule or in an active rule above it may incur AI usage costs for each new or changed transaction they match.
     index:
       page_title: Rules
       delete_all_rules: Delete all rules

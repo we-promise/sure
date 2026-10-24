@@ -104,6 +104,43 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run.complete_job!(modified_count: 0)
   end
 
+  test "an immediate run whose jobs changed nothing offers no result" do
+    rule_run = create_rule_run(pending_jobs_count: 2)
+    rule_run.update!(execution_type: "immediate")
+
+    RuleRun.expects(:offer_immediate_result).never
+    rule_run.complete_job!(modified_count: 0)
+    rule_run.complete_job!(modified_count: 0)
+  end
+
+  test "an immediate run whose last job fails still offers what earlier jobs changed" do
+    rule_run = create_rule_run(pending_jobs_count: 2)
+    rule_run.update!(execution_type: "immediate")
+
+    RuleRun.expects(:offer_immediate_result).with(@rule.family).once
+    rule_run.complete_job!(modified_count: 3)
+    rule_run.fail_job!(error: StandardError.new("provider down"), source: "test")
+
+    assert_equal "failed", rule_run.reload.status
+  end
+
+  test "retries of a job that already failed don't offer the result again" do
+    rule_run = create_rule_run(pending_jobs_count: 2)
+    rule_run.update!(execution_type: "immediate")
+
+    RuleRun.expects(:offer_immediate_result).with(@rule.family).once
+    rule_run.complete_job!(modified_count: 1)
+    3.times { rule_run.fail_job!(error: StandardError.new("provider down"), source: "test") }
+  end
+
+  test "an immediate run that fails without changes offers no result" do
+    rule_run = create_rule_run
+    rule_run.update!(execution_type: "immediate")
+
+    RuleRun.expects(:offer_immediate_result).never
+    rule_run.fail_job!(error: StandardError.new("provider down"), source: "test")
+  end
+
   test "a failed result broadcast does not fail the job that finished the run" do
     rule_run = create_rule_run
     rule_run.update!(execution_type: "immediate")

@@ -18,9 +18,13 @@ class ApplyImmediateRulesJob < ApplicationJob
       transaction_ids: transaction_ids
     ).run
 
-    # Runs with AI actions are still pending here; they offer their result
-    # once their jobs are done (RuleRun#complete_job!).
-    return unless rule_runs.any? { |rule_run| rule_run.transactions_modified.to_i.positive? }
+    # A run with AI actions is still pending here and counts what its other
+    # actions changed as processed (Rule::Runner#run_counts); its AI jobs offer
+    # their own changes once they are done (RuleRun#complete_job!).
+    changed = rule_runs.any? do |rule_run|
+      (rule_run.pending? ? rule_run.transactions_processed : rule_run.transactions_modified).to_i.positive?
+    end
+    return unless changed
 
     RuleRun.offer_immediate_result(family)
   end

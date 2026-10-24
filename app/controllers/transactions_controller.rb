@@ -267,8 +267,7 @@ class TransactionsController < ApplicationController
       @entry.transaction.toggle_tag!(@toggled_tag)
     elsif params.key?(:previous_tag_ids)
       previous_ids = Array(params[:previous_tag_ids]).reject(&:blank?)
-      wanted_ids = @entry.transaction.tag_ids.map(&:to_s) - (previous_ids - tag_ids_param) | (tag_ids_param - previous_ids)
-      @entry.transaction.tag_ids = Current.family.tags.where(id: wanted_ids).pluck(:id)
+      @entry.transaction.merge_tag_changes!(tag_ids_param, previous_ids, available_tags: Current.family.tags)
     else
       @entry.transaction.tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
     end

@@ -57,11 +57,13 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
 
   test "rules below the last immediate rule wait for the nightly run" do
     create_rule("Immediate", action: Rule::Action.new(action_type: "set_transaction_name", value: "WF Market"), apply_immediately: true)
-    below = create_rule("Below", category: @groceries)
+    # Matches the renamed transaction, so only its position keeps it from running.
+    below = create_rule("Below", match: "WF Market", category: @groceries)
 
     ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
 
-    assert_nil @changed.reload.category
+    assert_equal "WF Market", @changed.reload.entry.name
+    assert_nil @changed.category
     assert_empty below.rule_runs
   end
 
@@ -94,6 +96,18 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
     ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
 
     Family.any_instance.expects(:broadcast_replace_to).never
+    ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
+  end
+
+  test "offers what a rule changed while its AI jobs are still pending" do
+    rule = create_rule("Mixed", category: @groceries, apply_immediately: true)
+    pending_run = rule.rule_runs.create!(
+      rule_name: rule.name, execution_type: "immediate", status: "pending", executed_at: Time.current,
+      transactions_queued: 1, transactions_processed: 1, transactions_modified: 0, pending_jobs_count: 1
+    )
+    Rule::Runner.any_instance.stubs(:run).returns([ pending_run ])
+
+    RuleRun.expects(:offer_immediate_result).with(@family).once
     ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
   end
 

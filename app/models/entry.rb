@@ -302,20 +302,26 @@ class Entry < ApplicationRecord
     entryable.lock_saved_attributes!
   end
 
-  # Columns that record how an entry was edited rather than what it holds.
-  RULE_INPUT_IGNORED_COLUMNS = %w[updated_at locked_attributes user_modified].freeze
+  # Columns no rule condition or action reads: how an entry was edited, and
+  # import and reconciliation bookkeeping. Any other column counts, so a
+  # column rules start reading later can't be missed.
+  RULE_INPUT_IGNORED_COLUMNS = %w[
+    updated_at locked_attributes user_modified
+    import_locked reconciled_at reconciled_by_statement_id
+  ].freeze
 
   # What rules can read from this transaction. Taken before an edit and passed
   # to apply_immediate_rules_later, so an edit that changed nothing (same
   # values, or only fields the person may not change) runs no rules. Tags are
-  # read from the database, since toggle_tag! bypasses the loaded association.
-  def rule_input_snapshot
+  # read from the database, since toggle_tag! bypasses the loaded association,
+  # unless the caller already has them.
+  def rule_input_snapshot(tag_ids: nil)
     return unless transaction?
 
     [
       attributes.except(*RULE_INPUT_IGNORED_COLUMNS),
       entryable.attributes.except(*RULE_INPUT_IGNORED_COLUMNS),
-      Tagging.where(taggable: entryable).pluck(:tag_id).sort
+      (tag_ids || Tagging.where(taggable: entryable).pluck(:tag_id)).map(&:to_s).sort
     ]
   end
 
@@ -639,9 +645,21 @@ class Entry < ApplicationRecord
       return 0 unless has_updates
 
       transaction do
-        all.each do |entry|
+        entries = all.to_a
+
+        # Tags before the edit for all entries in one query, not one per entry.
+        tag_ids_before = if block_given?
+          Tagging.where(taggable_type: "Transaction", taggable_id: entries.map(&:entryable_id))
+                 .pluck(:taggable_id, :tag_id)
+                 .group_by(&:first).transform_values { |pairs| pairs.map(&:last) }
+        end
+
+        entries.each do |entry|
           changed = false
-          before = entry.rule_input_snapshot if block_given?
+          if block_given?
+            tags_before = tag_ids_before.fetch(entry.entryable_id, [])
+            before = entry.rule_input_snapshot(tag_ids: tags_before)
+          end
 
           # Update standard attributes
           if bulk_attributes.present?
@@ -669,7 +687,10 @@ class Entry < ApplicationRecord
           if changed
             entry.lock_saved_attributes!
             entry.mark_user_modified!
-            yield entry if block_given? && before != entry.rule_input_snapshot
+            if block_given?
+              tags_after = update_tags && entry.transaction? ? entry.transaction.tag_ids : tags_before
+              yield entry if before != entry.rule_input_snapshot(tag_ids: tags_after)
+            end
           end
         end
       end
