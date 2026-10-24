@@ -164,9 +164,12 @@ class _TransactionSplitScreenState extends State<TransactionSplitScreen> {
         locale: _locale,
       );
 
+  /// Amount errors are shown as the user types, so they gate Save. A missing
+  /// name does not: tapping Save runs the form validators, which put the
+  /// "name required" error on the row instead of leaving Save disabled
+  /// without a reason.
   bool get _rowsValid => _rows.every(
         (row) =>
-            row.nameController.text.trim().isNotEmpty &&
             SplitMath.validateAmount(
                   row.amountController.text,
                   decimals: _decimals,
@@ -504,6 +507,7 @@ class _TransactionSplitScreenState extends State<TransactionSplitScreen> {
             hint: l.splitEditorNamePlaceholder,
             enabled: !_isSaving,
             validator: _validateName,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: SureSpacing.md),

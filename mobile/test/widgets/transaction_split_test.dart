@@ -380,6 +380,80 @@ void main() {
       expect(harness.transactions.refreshes.single, isEmpty);
     });
 
+    testWidgets('a balanced split with an empty name explains why on Save',
+        (tester) async {
+      await useTallView(tester);
+      final harness = _Harness();
+      await tester.pumpWidget(
+        harness.wrap(_Launcher(TransactionSplitScreen(target: _target()))),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(_field('split-amount-0'), '60');
+      await tester.enterText(_field('split-amount-1'), '40');
+      await tester.pump();
+      expect(_remaining(tester), r'$0.00');
+      expect(_saveEnabled(tester), isTrue);
+
+      await tester.tap(find.byKey(const Key('split-save')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Name is required'), findsOneWidget);
+      expect(harness.requests, isEmpty);
+    });
+
+    testWidgets('edits a split stored with four decimals exactly',
+        (tester) async {
+      await useTallView(tester);
+      final json = jsonDecode(_splitJson(amountDecimal: '100.0012'))
+          as Map<String, dynamic>;
+      final children = json['children'] as List;
+      (children[0] as Map)['amount_decimal'] = '60.0001';
+      (children[1] as Map)['amount_decimal'] = '40.0011';
+      final existing = TransactionSplit.fromJson(json);
+      final harness = _Harness(
+        handler: (_) async => http.Response(jsonEncode(json), 200),
+      );
+      harness.splits.remember(existing);
+
+      await tester.pumpWidget(
+        harness.wrap(
+          _Launcher(
+            TransactionSplitScreen(
+              target: _target(amount: '100.0012'),
+              existing: existing,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('60.0001'), findsOneWidget);
+      expect(find.text('40.0011'), findsOneWidget);
+      expect(_remaining(tester), r'$0.0000');
+      expect(_saveEnabled(tester), isTrue);
+
+      // Replace the second row with a newly added one.
+      await tester.tap(find.byKey(const Key('split-remove-row-1')));
+      await tester.pump();
+      expect(_remaining(tester), r'$40.0011');
+      await tester.tap(find.byKey(const Key('split-add-row')));
+      await tester.pump();
+      await tester.enterText(_field('split-name-1'), 'Household');
+      await tester.enterText(_field('split-amount-1'), '40.0011');
+      await tester.pump();
+      expect(_remaining(tester), r'$0.0000');
+
+      await tester.tap(find.byKey(const Key('split-save')));
+      await tester.pumpAndSettle();
+
+      final request = harness.requests.single;
+      expect(request.method, 'PATCH');
+      final splits =
+          ((jsonDecode(request.body) as Map)['split'] as Map)['splits'] as List;
+      expect(splits.map((s) => s['amount']), ['60.0001', '40.0011']);
+    });
+
     testWidgets('masks amounts in privacy mode', (tester) async {
       await useTallView(tester);
       final harness = _Harness(hidden: true);

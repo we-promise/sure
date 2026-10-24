@@ -144,5 +144,29 @@ void main() {
         contains('1,500'),
       );
     });
+
+    test('formatMoney keeps every digit of large decimal(19,4) values', () {
+      // 123456789012345.6789 has 19 significant digits; a double keeps ~16.
+      expect(
+        SplitMath.formatMoney(
+          u('123456789012345.6789'),
+          'USD',
+          decimals: 2,
+          locale: 'en',
+        ),
+        r'$123,456,789,012,345.6789',
+      );
+      expect(
+        SplitMath.formatMoney(u('-0.5'), 'USD', decimals: 2, locale: 'en'),
+        r'-$0.50',
+      );
+      expect(
+        SplitMath.formatMoney(u('-1234.5'), 'EUR', decimals: 2, locale: 'de'),
+        startsWith('-1.234,50'),
+      );
+      final sv = SplitMath.formatMoney(u('1234.5'), 'SEK', decimals: 2, locale: 'sv');
+      expect(sv, contains('234,50'));
+      expect(sv, contains('kr'));
+    });
   });
 }

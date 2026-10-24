@@ -157,26 +157,74 @@ class SplitMath {
     return negative && abs != BigInt.zero ? '-$body' : body;
   }
 
-  /// Converts scaled units to a double for display formatting only.
-  static double toDouble(BigInt units) => units.toDouble() / _unit.toDouble();
-
-  /// Formats [units] as money in [currency] using [decimals] places.
+  /// Formats [units] as money in [currency] using [decimals] places (more if
+  /// needed to stay exact).
+  ///
+  /// The digits come from the exact decimal units, never from a double:
+  /// decimal(19,4) holds amounts a double cannot represent exactly. The
+  /// locale's currency format supplies the symbol, sign placement, grouping
+  /// and decimal separator.
   static String formatMoney(
     BigInt units,
     String currency, {
     required int decimals,
     String? locale,
   }) {
+    final exact = toDecimalString(units.abs(), decimals: decimals);
     try {
-      return NumberFormat.simpleCurrency(
+      final format = NumberFormat.simpleCurrency(
         locale: locale,
         name: currency.isEmpty ? null : currency.toUpperCase(),
-        decimalDigits: decimals,
-      ).format(toDouble(units));
+        decimalDigits: 0,
+      );
+      final dot = exact.indexOf('.');
+      final whole = BigInt.parse(dot < 0 ? exact : exact.substring(0, dot));
+      final fraction = dot < 0 ? '' : exact.substring(dot + 1);
+
+      // Grouped integer digits, e.g. "1,234,567" (localized digits too).
+      final grouped = _digitRun(format.format(whole.toInt()), format);
+      // A one-digit template carries the symbol and sign placement.
+      final template = format.format(units.isNegative ? -1 : 1);
+      final one = String.fromCharCode(
+        format.symbols.ZERO_DIGIT.codeUnitAt(0) + 1,
+      );
+      final at = template.indexOf(one);
+      if (grouped == null || at < 0 || whole.bitLength > 62) {
+        throw const FormatException('unexpected currency pattern');
+      }
+      final number = fraction.isEmpty
+          ? grouped
+          : '$grouped${format.symbols.DECIMAL_SEP}'
+              '${_localizeDigits(fraction, format)}';
+      return template.replaceRange(at, at + 1, number);
     } catch (_) {
-      final text = toDecimalString(units, decimals: decimals);
+      final text = units.isNegative ? '-$exact' : exact;
       return currency.isEmpty ? text : '$text $currency';
     }
+  }
+
+  /// The span of [formatted] from its first to its last digit, keeping the
+  /// grouping separators between them.
+  static String? _digitRun(String formatted, NumberFormat format) {
+    final zero = format.symbols.ZERO_DIGIT.codeUnitAt(0);
+    bool isDigit(int c) => c >= zero && c <= zero + 9;
+    var first = -1;
+    var last = -1;
+    for (var i = 0; i < formatted.length; i++) {
+      if (isDigit(formatted.codeUnitAt(i))) {
+        if (first < 0) first = i;
+        last = i;
+      }
+    }
+    return first < 0 ? null : formatted.substring(first, last + 1);
+  }
+
+  static String _localizeDigits(String asciiDigits, NumberFormat format) {
+    final zero = format.symbols.ZERO_DIGIT.codeUnitAt(0);
+    if (zero == 0x30) return asciiDigits;
+    return String.fromCharCodes(
+      asciiDigits.codeUnits.map((c) => c - 0x30 + zero),
+    );
   }
 
   /// Validates one row's typed amount. Returns null when it is acceptable.
