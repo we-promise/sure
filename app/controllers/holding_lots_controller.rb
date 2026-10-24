@@ -11,8 +11,7 @@ class HoldingLotsController < ApplicationController
     # Strict, since String#to_d reads "abc" as 0 and "12abc" as 12.
     total = BigDecimal(lot_params[:total_cost_basis].to_s, exception: false)
 
-    if total && total >= 0
-      @lot.set_manual_total_cost!(total)
+    if total && @lot.update(manual_total_cost: total)
       restate
       flash[:notice] = t(".success")
     else

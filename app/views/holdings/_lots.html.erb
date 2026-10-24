@@ -5,8 +5,8 @@
   <ul class="space-y-2">
     <% lots.each do |lot| %>
       <li class="rounded-lg border border-secondary px-3 py-2 text-sm">
-        <details class="group">
-          <summary class="flex items-center justify-between gap-2 <%= lot.opening? ? "" : "cursor-pointer" %>">
+        <%= render DS::Disclosure.new(variant: :bare, summary_class: class_names("list-none flex items-center justify-between gap-2 focus-ring", "cursor-pointer" => !lot.opening?)) do |disclosure| %>
+          <% disclosure.with_summary_content do %>
             <span class="text-secondary">
               <%= lot.opening? ? t("holdings.lots.opening") : l(lot.acquired_on, format: :long) %>
               &middot;
@@ -23,7 +23,7 @@
                 <%= icon "pencil", size: "xs", class: "text-secondary group-open:text-primary" %>
               <% end %>
             </span>
-          </summary>
+          <% end %>
 
           <% unless lot.opening? %>
             <div class="mt-3 space-y-3">
@@ -49,14 +49,16 @@
                 </div>
               <% end %>
               <% if lot.manual_cost? %>
-                <%= button_to t("holdings.lots.unlock"), unlock_holding_lot_path(holding, lot),
+                <%= render DS::Button.new(text: t("holdings.lots.unlock"),
+                      variant: :ghost,
+                      size: :sm,
+                      href: unlock_holding_lot_path(holding, lot),
                       method: :post,
-                      class: "text-xs text-secondary hover:text-primary",
-                      form: { data: { turbo_frame: "_top" } } %>
+                      form: { data: { turbo_frame: "_top" } }) %>
               <% end %>
             </div>
           <% end %>
-        </details>
+        <% end %>
       </li>
     <% end %>
   </ul>
