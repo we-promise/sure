@@ -1787,7 +1787,9 @@ components:
           - one_time
           - investment_contribution
           description: How budgets and reports treat the transaction. loan_payment
-            and investment_contribution count as expenses; funds_movement, cc_payment
+            counts as an expense; investment_contribution does too when the family
+            counts investment contributions as spending, and is otherwise reported
+            as invested and left out of spending and income; funds_movement, cc_payment
             and one_time are left out of budget totals.
         excluded:
           type: boolean

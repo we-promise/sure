@@ -112,7 +112,7 @@ A transaction response includes:
 | `amount` | Formatted for display and rounded to the currency's precision. Don't parse it. |
 | `amount_cents` / `signed_amount_cents` | Integer minor units, also rounded. |
 | `amount_decimal` | The exact stored amount as an unrounded decimal string (for example `"12.3456"`), independent of locale. Positive is an outflow, negative an inflow. Use it when the amount has to match exactly, such as the split amounts sent to `POST /api/v1/transactions/{id}/split`. |
-| `kind` | One of `standard`, `funds_movement`, `cc_payment`, `loan_payment`, `one_time`, `investment_contribution`. Budgets and reports count `loan_payment` and `investment_contribution` as expenses whatever the sign of their amount, and leave `funds_movement`, `cc_payment` and `one_time` out. `classification` only follows the amount's sign. |
+| `kind` | One of `standard`, `funds_movement`, `cc_payment`, `loan_payment`, `one_time`, `investment_contribution`. Budgets and reports count `loan_payment` as an expense whatever the sign of its amount, and leave `funds_movement`, `cc_payment` and `one_time` out. `investment_contribution` also counts as an expense when the family counts investment contributions as spending (the default); when that setting is off it is reported as invested and left out of spending and income. `classification` only follows the amount's sign. |
 | `excluded` | `true` when the transaction is left out of budget and report totals. |
 | `split_parent` | `true` when the transaction has been split. Splitting a transaction marks it excluded, and its split children carry the amount. |
 
