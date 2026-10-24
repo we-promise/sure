@@ -67,14 +67,36 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
     assert_nil opening.reload.manual_total_cost
   end
 
-  test "a negative, blank or non-numeric total is rejected and the lot is unchanged" do
-    [ "-1", "", "abc", "12abc" ].each do |total|
+  test "a negative, blank, non-numeric, non-finite or oversized total is rejected and the lot is unchanged" do
+    [ "-1", "", "abc", "12abc", "Infinity", "NaN", "40000000000" ].each do |total|
       patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: total } }
 
       assert_redirected_to account_path(@account, tab: "holdings")
       assert_equal I18n.t("holding_lots.update.error"), flash[:alert]
       assert_nil @lot.reload.manual_total_cost, total.inspect
     end
+  end
+
+  # 40 units: a cost per unit must stay below 10^9, as a trade's price does.
+  test "a total is accepted only while its cost per unit fits a trade's price" do
+    patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: "39999999999.9999" } }
+
+    assert_equal I18n.t("holding_lots.update.success"), flash[:notice]
+    assert_equal BigDecimal("39999999999.9999"), @lot.reload.manual_total_cost
+  end
+
+  test "a total is accepted only while it fits its column, however many units it spreads over" do
+    entry = create_trade(@security, account: @account, qty: 2_000_000, price: 1, date: Date.current)
+    materialize
+    big = HoldingLot.find_by!(source_entry: entry)
+
+    patch holding_lot_path(@holding, big), params: { holding_lot: { total_cost_basis: "1000000000000000" } }
+    assert_equal I18n.t("holding_lots.update.error"), flash[:alert]
+    assert_nil big.reload.manual_total_cost
+
+    patch holding_lot_path(@holding, big), params: { holding_lot: { total_cost_basis: "999999999999999.9999" } }
+    assert_equal I18n.t("holding_lots.update.success"), flash[:notice]
+    assert_equal BigDecimal("999999999999999.9999"), big.reload.manual_total_cost
   end
 
   test "qty and acquired_on are not permitted on a derived lot" do
