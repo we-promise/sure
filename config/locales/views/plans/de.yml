@@ -4,6 +4,16 @@ de:
     show:
       title: Plan
       subtitle: "Entscheide, wohin dein Geld geht: was du ausgibst und was du sparst."
+    bills_card:
+      nothing_owed: "Diesen Monat ist nichts mehr zu zahlen."
+      overdue_count:
+        one: "1 überfällig"
+        other: "%{count} überfällig"
+      owed_count:
+        one: "1 Rechnung diesen Monat noch zu zahlen"
+        other: "%{count} Rechnungen diesen Monat noch zu zahlen"
+      title: Rechnungen
+      view_bills: Rechnungen ansehen
     budget_card:
       title: Dieser Monat
       edit_budget: Budget bearbeiten

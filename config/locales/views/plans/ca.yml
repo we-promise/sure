@@ -4,6 +4,16 @@ ca:
     show:
       title: Pla
       subtitle: 'Decideix on van els teus diners: què gastes i què estalvies.'
+    bills_card:
+      nothing_owed: "No queda res per pagar aquest mes."
+      overdue_count:
+        one: "1 vençuda"
+        other: "%{count} vençudes"
+      owed_count:
+        one: "1 factura per pagar aquest mes"
+        other: "%{count} factures per pagar aquest mes"
+      title: Factures
+      view_bills: Mostra les factures
     budget_card:
       title: Aquest mes
       edit_budget: Edita el pressupost

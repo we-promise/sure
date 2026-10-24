@@ -34,6 +34,40 @@ class RecurringOccurrence < ApplicationRecord
   scope :closed, -> { where.not(status: :scheduled) }
   scope :due_between, ->(from, to) { where(due_on: from..to) }
 
+  # An upgraded instance can arrive with series but no occurrence rows,
+  # because nothing under the old build ever materialized them. One inline,
+  # idempotent generation covers every page that reads them. The cache is a
+  # cost gate, not correctness -- the exists? probe stays authoritative; the
+  # guard only stops an all-ended-series family from re-running generation on
+  # every GET.
+  #
+  # Family-wide, not user-scoped: occurrence materialization is the same
+  # machinery the sync job runs, and a partial per-user generation would
+  # leave the family half-materialized forever.
+  def self.materialize_missing_for(family)
+    cache_key = "bills:materialized:#{family.id}"
+    return if family.recurring_occurrences.exists? || Rails.cache.read(cache_key)
+
+    family.recurring_transactions.active.find_each do |series|
+      RecurringTransaction::OccurrenceGenerator.new(series).generate!
+    end
+    Rails.cache.write(cache_key, true, expires_in: 12.hours)
+  end
+
+  # What the user's bills owe right now: open occurrences of their active
+  # payable series falling due by month end, overdue ones included. The same
+  # set the Bills overview counts as owed now.
+  def self.owed_summary_for(user)
+    series_ids = user.family.recurring_transactions.payable.accessible_by(user).select(:id)
+    owed = user.family.recurring_occurrences.open_status
+               .where(recurring_transaction_id: series_ids)
+               .where("due_on <= ?", Date.current.end_of_month)
+               .includes(:recurring_transaction)
+               .to_a
+
+    { owed_count: owed.size, overdue_count: owed.count(&:overdue?) }
+  end
+
   # The amount this occurrence expects, resolving NULL through the series'
   # amount strategy, which is what lets a price edit update every open
   # occurrence with no sweep. `series_amount` overrides what the series says it
