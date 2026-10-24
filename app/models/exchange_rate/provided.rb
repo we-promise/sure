@@ -34,7 +34,7 @@ module ExchangeRate::Provided
       else
         # The provider has no such pair, but it may still quote both USD legs.
         ExchangeRate::UsdCross.new(provider)
-          .rates(from: from, to: to, start_date: date - NEAREST_RATE_LOOKBACK_DAYS, end_date: date).last
+          .rates(from: from, to: to, start_date: date - NEAREST_RATE_LOOKBACK_DAYS, end_date: date, error: response.error).last
       end
 
       return nil unless rate # Provider error, and no USD legs either
