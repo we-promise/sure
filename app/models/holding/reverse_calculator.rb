@@ -187,10 +187,12 @@ class Holding::ReverseCalculator
         security_id = trade.security_id
         previous_position = positions[security_id]
         positions[security_id] += trade.qty
+        manual_cost = manual_unit_cost(trade_entry)
 
-        if trade.internal_movement?
-          # Inbound transfers make the basis unknown from that date on; outbound
-          # transfers only remove units, so relieve them at the running average.
+        if trade.internal_movement? && manual_cost.nil?
+          # Inbound transfers make the basis unknown from that date on, unless
+          # the user has said what the lot cost; outbound transfers only remove
+          # units, so relieve them at the running average.
           if trade.qty.positive?
             open_unknown_start[security_id] ||= trade_entry.date
             @lot_books[security_id].add_unknown(trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
@@ -202,7 +204,8 @@ class Holding::ReverseCalculator
           book = @lot_books[security_id]
           # Buys raise the basis; sells relieve quantity at the running average, and a
           # full liquidation resets it so a later repurchase starts from a clean basis.
-          book.apply(effective_trade_price(trade, date: trade_entry.date), trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
+          price = manual_cost || effective_trade_price(trade, date: trade_entry.date)
+          book.apply(price, trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
 
           # Record the basis after each trade — including nil once a position is fully
           # closed — so cost_basis_for returns nil for the sold-out span instead of a
