@@ -712,6 +712,39 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_empty data["errors"]
   end
 
+  test "should not preflight against an account the user cannot write" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Member Read-Write Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "test_member_rw_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+    preflight = ->(account) do
+      post preflight_api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: account.id
+           },
+           headers: api_headers(member_key)
+    end
+
+    [ accounts(:credit_card), accounts(:investment) ].each do |account|
+      preflight.call(account)
+      assert_response :not_found
+    end
+
+    preflight.call(accounts(:depository))
+    assert_response :success
+  end
+
   test "should report missing required CSV headers during preflight" do
     csv_content = "name\nMissing Amount"
 
@@ -1300,7 +1333,22 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     json_response = JSON.parse(response.body)
-    assert_includes json_response["errors"], "Account must belong to your family"
+    assert_equal [ "Account not found" ], json_response["errors"]
+  end
+
+  test "should not create import for unknown or malformed account id" do
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    [ SecureRandom.uuid, "not-a-uuid" ].each do |account_id|
+      assert_no_difference("Import.count") do
+        post api_v1_imports_url,
+             params: { raw_file_content: csv_content, account_id: account_id },
+             headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity
+      assert_equal [ "Account not found" ], JSON.parse(response.body)["errors"]
+    end
   end
 
   test "should reject file upload exceeding max size" do
@@ -1377,6 +1425,49 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
            headers: api_headers(@api_key)
     end
 
+    assert_response :created
+  end
+
+  test "should not create import for account the user cannot write" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Member Read-Write Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "test_member_rw_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    [ accounts(:credit_card), accounts(:investment) ].each do |account|
+      assert_no_difference("Import.count") do
+        post api_v1_imports_url,
+             params: {
+               raw_file_content: csv_content,
+               date_col_label: "date",
+               amount_col_label: "amount",
+               name_col_label: "name",
+               account_id: account.id
+             },
+             headers: api_headers(member_key)
+      end
+      assert_response :unprocessable_entity
+      assert_equal [ "Account not found" ], JSON.parse(response.body)["errors"]
+    end
+
+    assert_difference("Import.count", 1) do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: accounts(:depository).id
+           },
+           headers: api_headers(member_key)
+    end
     assert_response :created
   end
 

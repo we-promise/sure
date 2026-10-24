@@ -180,6 +180,20 @@ class Api::V1::BaseController < ApplicationController
       @current_user
     end
 
+    # Family accounts the API user may use at the given level, matching the
+    # web UI's account shares: :read (any share), :annotate (read_write or
+    # full_control) or :write (full_control). Owners have every level.
+    def accounts_with_permission(level)
+      accounts = current_resource_owner.family.accounts
+
+      case level
+      when :read then accounts.accessible_by(current_resource_owner)
+      when :annotate then accounts.annotatable_by(current_resource_owner)
+      when :write then accounts.writable_by(current_resource_owner)
+      else raise ArgumentError, "Unknown account permission level: #{level.inspect}"
+      end
+    end
+
     # Get current scopes from either authentication method
     def current_scopes
       case @authentication_method
