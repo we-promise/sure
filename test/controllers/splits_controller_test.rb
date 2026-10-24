@@ -385,6 +385,35 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name=?][value=?]", "split[splits][1][amount]", "-66.67"
   end
 
+  test "itemize renders proposed rows through the split row partial with merchant and tag pickers" do
+    attach_receipt
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(receipt(
+      [ "Bananas", 30 ], [ "Detergent", 60 ], tax: 10
+    )))
+
+    post itemize_transaction_split_path(@entry), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    rows = doc.css("[data-split-transaction-target='rowsContainer'] > [data-split-transaction-target='row']")
+    assert_equal 2, rows.size
+
+    [ 0, 1 ].each do |index|
+      %w[category_id merchant_id tag_ids].each do |field|
+        assert_not_nil doc.at_css("label[for='split_splits_#{index}_#{field}']"), "row #{index} is missing its #{field} picker"
+      end
+    end
+    assert_nil rows[0].at_css("[data-action~='click->split-transaction#removeRow']"), "the first row is not removable"
+    assert_not_nil rows[1].at_css("[data-action~='click->split-transaction#removeRow']")
+
+    ids = doc.css("[data-split-transaction-target='rowsContainer'] [id]").map { |node| node["id"] }
+    assert_empty ids.tally.select { |_id, count| count > 1 }.keys
+
+    template = doc.at_css("template[data-split-transaction-target='rowTemplate']")
+    assert_not_nil template
+    assert_includes template.inner_html, 'step="0.01"'
+  end
+
   test "itemize shows proposed amounts at the currency's precision" do
     attach_receipt
     Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(receipt(
