@@ -40,7 +40,7 @@ en:
       month_year: "%{month}"
     available_cash:
       heading: Cash on hand
-      subtitle: Beside the plan above, not part of it.
+      subtitle: "The plan above is what you mean to spend. This is what you have to spend it from."
       available: Available in cash
       earmarked: Already earmarked for goals
       free: Really free
