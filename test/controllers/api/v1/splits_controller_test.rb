@@ -93,6 +93,38 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "returns 422 when an installment plan owns the transaction" do
+    purchase = create_locked_plan_purchase
+
+    post api_v1_transaction_split_url(purchase.entryable), params: halves,
+         headers: api_headers(@api_key), as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "Transaction is owned by an installment plan", JSON.parse(response.body)["message"]
+    assert_not purchase.reload.split_parent?
+  end
+
+  test "returns 422 patching a transaction owned by an installment plan" do
+    purchase = create_locked_plan_purchase
+
+    patch api_v1_transaction_split_url(purchase.entryable), params: halves,
+          headers: api_headers(@api_key), as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "Transaction is owned by an installment plan", JSON.parse(response.body)["message"]
+    assert_not purchase.reload.split_parent?
+  end
+
+  test "returns 422 unsplitting a transaction owned by an installment plan" do
+    purchase = create_locked_plan_purchase
+
+    delete api_v1_transaction_split_url(purchase.entryable), headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "Transaction is owned by an installment plan", JSON.parse(response.body)["message"]
+    assert_not purchase.reload.split_parent?
+  end
+
   test "returns 422 when the transaction is already split" do
     post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
     assert_response :created
@@ -197,6 +229,34 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(key), as: :json
     assert_response :forbidden
     assert_not @entry.reload.split_parent?
+  end
+
+  test "a read-only share gets 403 before the installment-plan ownership check" do
+    other = User.create!(family: @family, email: "viewer-plan-#{SecureRandom.hex(4)}@example.com",
+                         password: "password123", password_confirmation: "password123", role: "member")
+    @account.update!(owner: @user)
+    AccountShare.create!(account: @account, user: other, permission: "read_only")
+    other.api_keys.active.destroy_all
+    key = ApiKey.create!(user: other, name: "Viewer Plan RW", scopes: [ "read_write" ],
+                         display_key: "test_vp_#{SecureRandom.hex(8)}")
+    Redis.new.del("api_rate_limit:#{key.id}")
+    @family.recurring_transactions.create!(
+      name: "Locked plan",
+      account: @account,
+      amount: 100,
+      currency: "USD",
+      bill_type: "installment",
+      expected_day_of_month: 1,
+      last_occurrence_date: Date.current,
+      next_expected_date: Date.current,
+      status: "active",
+      manual: true,
+      financed_source_entry_id: @entry.id
+    )
+
+    post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(key), as: :json
+
+    assert_response :forbidden
   end
 
   test "rejects a category belonging to another family" do
@@ -499,4 +559,21 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     get api_v1_transaction_split_url("not-a-uuid"), headers: api_headers(@api_key)
     assert_response :not_found
   end
+
+  private
+    def create_locked_plan_purchase
+      card = @family.accounts.create!(
+        name: "Plan Card", accountable: CreditCard.new, balance: 0,
+        currency: "USD", owner: @user, status: "active"
+      )
+      purchase = card.entries.create!(
+        date: Date.current, name: "Laptop", amount: 1200, currency: "USD",
+        entryable: Transaction.new(kind: "standard", category: @family.categories.first)
+      )
+      RecurringTransaction::InstallmentPlan.new(
+        family: @family, user: @user, entry: purchase,
+        interest_rate: 0, term_months: 12
+      ).call
+      purchase
+    end
 end

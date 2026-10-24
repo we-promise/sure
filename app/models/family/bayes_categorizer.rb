@@ -92,7 +92,9 @@ class Family::BayesCategorizer
     categorized_ids = []
     modified_count = 0
 
-    scope = family.transactions.where(id: transaction_ids, category_id: nil).enrichable(:category_id)
+    scope = family.transactions.where(id: transaction_ids, category_id: nil)
+                               .excluding_installment_plan_purchases
+                               .enrichable(:category_id)
     scope.includes(*preloads).find_each do |transaction|
       category_id, confidence = classify(transaction)
       next if category_id.nil?

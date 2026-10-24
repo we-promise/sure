@@ -234,7 +234,7 @@ class TransactionsController < ApplicationController
               dom_id(@entry, :mark_recurring),
               partial: "transactions/mark_recurring",
               locals: { entry: @entry }
-            ) if can_edit_entry? && !@entry.split_child?),
+            ) if can_edit_entry? && !@entry.split_child? && !@entry.installment_plan_locked?),
             turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",
@@ -248,6 +248,16 @@ class TransactionsController < ApplicationController
       assign_mark_recurring_state
       render :show, status: :unprocessable_entity
     end
+  end
+
+  def destroy
+    if @entry.installment_plan_locked?
+      redirect_back_or_to account_path(@entry.account),
+        alert: t("transactions.show.installment_plan_locked")
+      return
+    end
+
+    super
   end
 
   def update_tags
@@ -547,7 +557,9 @@ class TransactionsController < ApplicationController
     end
 
     def mark_recurring_blocked_message(transaction)
-      if covering_series_for(transaction.entry)
+      if transaction.entry.installment_plan_locked?
+        t("transactions.show.installment_plan_locked")
+      elsif covering_series_for(transaction.entry)
         t("recurring_transactions.already_covered")
       elsif RecurringTransaction.identity_taken_by(transaction)
         t("recurring_transactions.already_exists")

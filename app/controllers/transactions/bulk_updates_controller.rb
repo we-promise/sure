@@ -16,12 +16,24 @@ class Transactions::BulkUpdatesController < ApplicationController
     full_ids = rows.select(&:last).map(&:first).uniq
     annotate_ids = rows.map(&:first).uniq - full_ids
 
+    locked_count = 0
+
     updated = Entry.transaction do
+      locked_count = selected.where(id: Entry.installment_plan_locked_source_ids).count
       bulk_update_entries(full_ids, scoped_params) +
         bulk_update_entries(annotate_ids, scoped_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES))
     end
 
-    redirect_back_or_to transactions_path, notice: "#{updated} transactions updated"
+    if locked_count.positive? && updated.zero?
+      redirect_back_or_to transactions_path,
+        alert: t("transactions.bulk_updates.locked", count: locked_count)
+    elsif locked_count.positive?
+      redirect_back_or_to transactions_path,
+        alert: t("transactions.bulk_updates.partial", updated: updated, count: locked_count)
+    else
+      redirect_back_or_to transactions_path,
+        notice: t("transactions.bulk_updates.updated", count: updated)
+    end
   end
 
   private

@@ -2,6 +2,15 @@
 en:
   transactions:
     bulk_updates:
+      updated:
+        one: "1 transaction updated"
+        other: "%{count} transactions updated"
+      locked:
+        one: "1 transaction could not be updated because an installment plan owns it"
+        other: "%{count} transactions could not be updated because an installment plan owns them"
+      partial:
+        one: "%{updated} updated; 1 could not be updated because an installment plan owns it"
+        other: "%{updated} updated; %{count} could not be updated because an installment plan owns them"
       new:
         cancel: Cancel
         category_label: Category
@@ -19,6 +28,16 @@ en:
         save: Save
         tags_label: Tags
         transactions_section: Transactions
+    bulk_deletions:
+      deleted:
+        one: "1 transaction deleted"
+        other: "%{count} transactions deleted"
+      locked:
+        one: "1 transaction could not be deleted because an installment plan owns it"
+        other: "%{count} transactions could not be deleted because an installment plan owns them"
+      partial:
+        one: "%{destroyed} deleted; 1 could not be deleted because an installment plan owns it"
+        other: "%{destroyed} deleted; %{count} could not be deleted because an installment plan owns them"
     unknown_name: Unknown transaction
     selection_bar:
       duplicate: Duplicate
@@ -71,6 +90,10 @@ en:
       loan_payment: Loan Payment
       mark_recurring: Mark as Recurring
       create_bill: Create a bill
+      installment_plan_title: Installment plan
+      installment_plan_description: Replace this card purchase with fixed monthly charges, including the issuer's interest.
+      installment_plan_action: Set up plan
+      installment_plan_locked: "Locked: this purchase is owned by an installment plan."
       mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
       mark_recurring_title: Recurring Transaction
       applied_to_title: Bills this paid

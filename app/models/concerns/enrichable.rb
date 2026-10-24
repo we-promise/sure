@@ -61,6 +61,12 @@ module Enrichable
   # - Have changed value from the last saved value
   # Returns true if any attributes were actually changed, false otherwise
   def enrich_attributes(attrs, source:, metadata: {}, ignore_locks: false)
+    # A plan-owned purchase belongs to its plan. Automated writers must not
+    # dirty it or report the rejected write as applied. Entry reaches this
+    # method directly; entryables (Transaction, Valuation, Trade) include
+    # Enrichable through Entryable and expose their entry.
+    return false if plan_owned_purchase?
+
     # Track current values before modification for virtual attributes (like tag_ids)
     current_values = {}
     enrichable_attrs = Array(attrs).reject do |attr_key, attr_value|
@@ -188,6 +194,14 @@ module Enrichable
   end
 
   private
+    # True while an installment plan still owns this record's purchase. Entry
+    # carries the lock directly; entryables reach it through their entry.
+    def plan_owned_purchase?
+      return installment_plan_locked? if is_a?(Entry)
+
+      respond_to?(:entry) && entry&.installment_plan_locked?
+    end
+
     def log_enrichment(attribute_name:, attribute_value:, source:, metadata: {})
       de = DataEnrichment.find_or_create_by(
         enrichable: self,

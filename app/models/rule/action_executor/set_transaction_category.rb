@@ -19,7 +19,7 @@ class Rule::ActionExecutor::SetTransactionCategory < Rule::ActionExecutor
     category = family.categories.find_by_id(value)
     return 0 unless category
 
-    scope = transaction_scope
+    scope = transaction_scope.excluding_installment_plan_purchases
 
     unless ignore_attribute_locks
       scope = scope.enrichable(:category_id)

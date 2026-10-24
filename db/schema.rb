@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2154,6 +2154,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.decimal "expected_amount_min", precision: 19, scale: 4
     t.integer "expected_day_of_month", null: false
     t.uuid "family_id", null: false
+    t.uuid "financed_interest_category_id"
+    t.decimal "financed_interest_rate", precision: 10, scale: 3
+    t.decimal "financed_principal_amount", precision: 19, scale: 4
+    t.uuid "financed_source_entry_id"
     t.string "holiday_calendar"
     t.date "last_occurrence_date", null: false
     t.boolean "manual", default: false, null: false
@@ -2184,6 +2188,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.index ["family_id", "account_id", "name", "amount", "currency", "dedup_scope"], name: "idx_recurring_txns_acct_name", unique: true, where: "((name IS NOT NULL) AND (merchant_id IS NULL) AND (destination_account_id IS NULL))"
     t.index ["family_id", "status"], name: "index_recurring_transactions_on_family_id_and_status"
     t.index ["family_id"], name: "index_recurring_transactions_on_family_id"
+    t.index ["financed_interest_category_id"], name: "index_recurring_transactions_on_financed_interest_category_id"
+    t.index ["financed_source_entry_id"], name: "index_recurring_transactions_on_financed_source_entry_id"
+    t.index ["financed_source_entry_id"], name: "index_recurring_transactions_one_live_plan_per_source", unique: true, where: "((status)::text = ANY ((ARRAY['active'::character varying, 'paused'::character varying])::text[]))"
     t.index ["merchant_id"], name: "index_recurring_transactions_on_merchant_id"
     t.index ["next_expected_date"], name: "index_recurring_transactions_on_next_expected_date"
     t.check_constraint "destination_account_id IS NULL OR account_id IS NOT NULL", name: "chk_recurring_txns_transfer_requires_source"
@@ -3096,7 +3103,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
   add_foreign_key "recurring_price_changes", "recurring_transactions", on_delete: :cascade
   add_foreign_key "recurring_transactions", "accounts", column: "destination_account_id", on_delete: :cascade
   add_foreign_key "recurring_transactions", "accounts", on_delete: :cascade
+  add_foreign_key "recurring_transactions", "categories", column: "financed_interest_category_id", on_delete: :nullify
   add_foreign_key "recurring_transactions", "categories", on_delete: :nullify
+  add_foreign_key "recurring_transactions", "entries", column: "financed_source_entry_id", on_delete: :nullify
   add_foreign_key "recurring_transactions", "families"
   add_foreign_key "recurring_transactions", "merchants"
   add_foreign_key "recurring_transactions", "recurring_transactions", column: "replaced_by_id", on_delete: :nullify

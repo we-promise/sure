@@ -117,6 +117,19 @@ class FamilyTest < ActiveSupport::TestCase
       lucide_icon: "trending-up"
     )
 
+    plan = family.recurring_transactions.create!(
+      name: "Plan with duplicated interest category",
+      amount: 100,
+      currency: "USD",
+      bill_type: "installment",
+      expected_day_of_month: 1,
+      last_occurrence_date: Date.current,
+      next_expected_date: Date.current,
+      status: "active",
+      manual: true,
+      financed_interest_category_id: french_category.id
+    )
+
     # Create transactions pointing to both categories
     account = family.accounts.first
     txn1 = Transaction.create!(category: english_category)
@@ -150,6 +163,7 @@ class FamilyTest < ActiveSupport::TestCase
       # Both transactions should now point to the keeper
       assert_equal english_category.id, txn1.reload.category_id
       assert_equal english_category.id, txn2.reload.category_id
+      assert_equal english_category.id, plan.reload.financed_interest_category_id
 
       # Reassignment must touch entries so entry-keyed caches bust
       # (only txn2 is reassigned — txn1 already points at the keeper)

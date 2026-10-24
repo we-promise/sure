@@ -92,6 +92,7 @@ class Family::AutoMerchantDetector
 
     def scope
       family.transactions.where(id: transaction_ids)
+                         .excluding_installment_plan_purchases
                          .enrichable(:merchant_id)
                          .includes(:merchant, :entry)
     end

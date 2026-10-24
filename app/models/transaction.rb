@@ -24,6 +24,7 @@ class Transaction < ApplicationRecord
   ].freeze
 
   validate :validate_attachments, if: -> { attachments.attached? }
+  validate :planned_purchase_terms_locked
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
@@ -63,6 +64,17 @@ class Transaction < ApplicationRecord
           errors.add(:exchange_rate, "must be greater than 0")
         end
       end
+    end
+
+    # The plan owns the purchase's category and kind. The entry-level lock
+    # guards the financial fields; this guards the fields on the entryable.
+    def planned_purchase_terms_locked
+      return unless will_save_change_to_category_id? ||
+                    will_save_change_to_merchant_id? ||
+                    will_save_change_to_kind?
+      return unless entry&.installment_plan_locked?
+
+      errors.add(:base, :installment_plan_locked)
     end
 
   public
@@ -204,6 +216,17 @@ class Transaction < ApplicationRecord
 
   scope :excluding_pending, -> { where(Transaction.not_pending_sql) }
 
+  # Automated category and merchant writers must not dirty a purchase that a
+  # plan owns: its terms and categories belong to the plan.
+  scope :excluding_installment_plan_purchases, -> {
+    where.not(
+      id: Entry.where(
+        entryable_type: "Transaction",
+        id: Entry.installment_plan_locked_source_ids
+      ).select(:entryable_id)
+    )
+  }
+
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.
   #
@@ -255,7 +278,12 @@ class Transaction < ApplicationRecord
   # every normal save relies on (Family#entries_cache_version) never happens.
   # Expects a relation without eager loading so reselect(:id) produces
   # a single-column subquery for the IN clause.
-  def self.reassign_category!(scope, category_id)
+  def self.reassign_category!(scope, category_id, from_category_ids: nil)
+    from_category_ids = Array(from_category_ids).compact
+    if from_category_ids.empty?
+      from_category_ids = scope.reselect(:category_id).distinct.pluck(:category_id).compact
+    end
+
     transaction do
       # Lock inside the scope so a concurrent category edit is rechecked before
       # its ID reaches the UPDATE, rather than overwriting the new category.
@@ -271,7 +299,26 @@ class Transaction < ApplicationRecord
       updated_ids = connection.exec_query(sql, "Transaction Reassign Category").rows.flatten
       connection.clear_query_cache
 
+      # An interest category can be used by a plan even when no transaction
+      # uses it, so move it before the empty-update shortcut.
+      if from_category_ids.any?
+        RecurringTransaction.where(financed_interest_category_id: from_category_ids)
+                            .update_all(financed_interest_category_id: category_id)
+      end
+
       next 0 if updated_ids.empty?
+
+      # Move plan metadata only from the rows actually reassigned, and only
+      # while the plan still points at the category being replaced.
+      if from_category_ids.any?
+        source_entry_ids = Entry.where(
+          entryable_type: "Transaction",
+          entryable_id: updated_ids
+        ).select(:id)
+        RecurringTransaction
+          .where(financed_source_entry_id: source_entry_ids, category_id: from_category_ids)
+          .update_all(category_id: category_id)
+      end
 
       # Touch exactly the rows the UPDATE reassigned (RETURNING), so a
       # transaction entering the scope mid-merge can't be updated without its
@@ -440,6 +487,13 @@ class Transaction < ApplicationRecord
     merge_succeeded = false
 
     ApplicationRecord.transaction(requires_new: true) do
+      # Match Entry#with_split_lock and the transfer path: lock Transaction
+      # rows before Entry rows, in id order. `lock` (not `lock!`) tolerates a
+      # concurrently destroyed pending side; the entry locks below keep their
+      # per-role rescues.
+      transaction_ids = [ pending_entry.entryable_id, posted_entry.entryable_id ].compact
+      Transaction.where(id: transaction_ids).order(:id).lock.to_a
+
       # Row-level locks prevent concurrent merges on the same pair of entries.
       # If a concurrent request already destroyed the pending entry, lock! raises
       # RecordNotFound — treat that as an idempotent success.
