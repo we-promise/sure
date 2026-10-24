@@ -896,7 +896,19 @@ class Provider::YahooFinance < Provider
 
         chart_data = data.dig("chart", "result", 0)
         return nil unless chart_data
-        return nil unless chart_data.dig("meta", "currency") == currency
+
+        quote_currency = chart_data.dig("meta", "currency")
+        unless quote_currency == currency
+          DebugLogEntry.capture(
+            category: "exchange_rates",
+            level: "warn",
+            message: "Yahoo Finance quote for #{symbol} is in #{quote_currency.presence || "no currency"}, not #{currency}; ignored",
+            source: self.class.name,
+            provider_key: "yahoo_finance",
+            metadata: { symbol: symbol, expected_currency: currency, quote_currency: quote_currency }
+          )
+          return nil
+        end
 
         timestamps = chart_data.dig("timestamp") || []
         quotes = chart_data.dig("indicators", "quote", 0) || {}
