@@ -41,8 +41,9 @@ module AccountableResource
       nil
     end || (Time.zone.today - 2.years)
     Account.transaction do
+      # A new account has no sales to restate, so it starts on the default method.
       @account = Current.family.accounts.create_and_sync(
-        account_params.except(:return_to, :opening_balance_date).merge(owner: Current.user),
+        account_params.except(:return_to, :opening_balance_date, :cost_basis_method).merge(owner: Current.user),
         opening_balance_date: opening_balance_date
       )
       @account.lock_saved_attributes!
