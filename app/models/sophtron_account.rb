@@ -18,7 +18,13 @@
 # @attr [DateTime] last_updated When Sophtron last updated this account
 # @attr [String, nil] balance_sign_override Credit card meaning: "credit", "debt", or nil for automatic
 class SophtronAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+  end
 
   belongs_to :sophtron_item
 
