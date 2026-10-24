@@ -1024,7 +1024,7 @@
   "splitUnsplitFailed": "Failed to unsplit transaction",
   "@splitUnsplitFailed": { "description": "Fallback snackbar when removing a split fails." },
 
-  "splitOfflineNotice": "Connect to the internet to view or edit splits.",
+  "splitOfflineNotice": "Connect to the internet to load or edit split details.",
   "@splitOfflineNotice": { "description": "Shown on the detail screen while offline, since splits need the server." },
 
   "splitLoadFailed": "Couldn't load split details.",
@@ -1109,5 +1109,8 @@
   "@splitEditorOffline": { "description": "Shown in the split editor while offline." },
 
   "transactionsListSplitDeleteBlocked": "Unsplit this transaction before deleting it.",
-  "@transactionsListSplitDeleteBlocked": { "description": "Snackbar when deleting a split parent or child directly." }
+  "@transactionsListSplitDeleteBlocked": { "description": "Snackbar when deleting a split parent or child directly." },
+
+  "transactionsListSplitStatusUnknown": "Couldn't check whether this transaction is split. Please try again.",
+  "@transactionsListSplitStatusUnknown": { "description": "Snackbar when a delete is blocked because the split lookup failed while online." }
 }

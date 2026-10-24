@@ -1098,7 +1098,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get splitOfflineNotice =>
-      'Anslut till internet för att visa eller redigera uppdelningar.';
+      'Anslut till internet för att läsa in eller redigera uppdelningar.';
 
   @override
   String get splitLoadFailed => 'Det gick inte att läsa in uppdelningen.';
@@ -1184,5 +1184,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get transactionsListSplitDeleteBlocked =>
-      'Dela upp transaktionen igen innan du tar bort den.';
+      'Ta bort uppdelningen innan du tar bort transaktionen.';
+
+  @override
+  String get transactionsListSplitStatusUnknown =>
+      'Det gick inte att kontrollera om transaktionen är uppdelad. Försök igen.';
 }

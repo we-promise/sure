@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/account.dart';
 import '../models/transaction.dart';
 import '../providers/accounts_provider.dart';
+import '../providers/transaction_splits_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/privacy_provider.dart';
@@ -115,7 +116,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _log.debug('CalendarScreen',
         'Starting to calculate daily changes for ${transactions.length} transactions');
 
+    // A split parent's amount is carried by its children, which are cached
+    // too, so counting both doubles the day. The index does not flag split
+    // parents, so this covers the splits this device knows about.
+    final splits = Provider.of<TransactionSplitsProvider?>(
+      context,
+      listen: false,
+    );
+
     for (var transaction in transactions) {
+      final id = transaction.id;
+      if (id != null && splits != null && splits.isSplitParent(id)) continue;
       try {
         final date = DateTime.parse(transaction.date);
         final dateKey = DateFormat('yyyy-MM-dd').format(date);

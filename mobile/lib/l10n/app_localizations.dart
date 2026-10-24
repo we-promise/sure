@@ -2015,7 +2015,7 @@ abstract class AppLocalizations {
   /// Shown on the detail screen while offline, since splits need the server.
   ///
   /// In en, this message translates to:
-  /// **'Connect to the internet to view or edit splits.'**
+  /// **'Connect to the internet to load or edit split details.'**
   String get splitOfflineNotice;
 
   /// Shown when the split details request fails.
@@ -2173,6 +2173,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unsplit this transaction before deleting it.'**
   String get transactionsListSplitDeleteBlocked;
+
+  /// Snackbar when a delete is blocked because the split lookup failed while online.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check whether this transaction is split. Please try again.'**
+  String get transactionsListSplitStatusUnknown;
 }
 
 class _AppLocalizationsDelegate
