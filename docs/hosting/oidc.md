@@ -134,6 +134,13 @@ production:
   - When **set**, JIT SSO account creation is only allowed if the email domain is in this list.
   - Applies uniformly to all SSO providers (OIDC, Google, GitHub, etc.) that supply an email.
 
+- Onboarding mode (self-hosted, **Settings > Self-Hosting > Onboarding**)
+  - **Open**: JIT SSO account creation follows the two settings above.
+  - **Invite-only** and **Closed**: JIT SSO account creation is only allowed for an email with a pending invitation (**Settings > Profile Info > Household > Add member**). SSO has no invite code to check, so codeless signups into the invite-only default family stay a registration-form path.
+  - Applies to the web sign-in and to the mobile app.
+
+> **Upgrading:** earlier versions ignored the onboarding mode for SSO. If your instance is **Invite-only** or **Closed** and new colleagues joined by signing in through SSO (for example with `ALLOWED_OIDC_DOMAINS` set), they now see "SSO account creation is disabled". Invite each new user, or switch onboarding to **Open** and rely on `ALLOWED_OIDC_DOMAINS` to limit who can join. Existing users and linking to existing accounts are not affected.
+
 ### 3.4 Providers and buttons
 
 Each provider entry in `providers` configures an SSO button on the login page:
@@ -212,7 +219,7 @@ ALLOWED_OIDC_DOMAINS=""   # or unset
 Behavior:
 
 - Users can sign in with email/password or via any configured SSO providers.
-- JIT SSO account creation is allowed for all verified email domains.
+- JIT SSO account creation is allowed for all verified email domains while onboarding is **Open** (see 3.3 for Invite-only and Closed).
 
 ### 4.2 Pure SSO‑only
 

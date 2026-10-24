@@ -143,6 +143,12 @@ class Rack::Attack
     credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/api/v1/auth/sso_link")
   end
 
+  # Signup takes an 8-hex-character invite code, so it is a guessing
+  # surface too.
+  throttle("api_signup/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if request.post? && credential_guess_path.call(request, "/api/v1/auth/signup")
+  end
+
   # Self-service password change checks the current password
   # (password_challenge) for a signed-in user, so there's no email param. The
   # signed session cookie leads to the user whose password is being checked
