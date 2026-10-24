@@ -40,7 +40,6 @@ RSpec.describe 'API V1 Rule Runs', type: :request do
       name: 'No Read Docs Key',
       key: key,
       scopes: [],
-      display_key: key,
       source: 'mobile'
     ).tap { |api_key| api_key.save!(validate: false) }
   end

@@ -1335,7 +1335,7 @@ class UserTest < ActiveSupport::TestCase
     api_key = ApiKey.create!( # pipelock:ignore
       user: user,
       name: "Test Key",
-      display_key: "test_revoke_key_#{SecureRandom.hex(8)}",
+      key: "test_revoke_key_#{SecureRandom.hex(8)}",
       scopes: [ "read" ]
     )
     app = Doorkeeper::Application.create!(
