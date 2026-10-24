@@ -2084,6 +2084,12 @@ abstract class AppLocalizations {
   /// **'Offline. Showing the figures loaded earlier.'**
   String get budgetsOfflineCached;
 
+  /// Banner shown when refreshing a budget fails but the month loaded earlier is still on screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t refresh. Showing the figures loaded earlier.'**
+  String get budgetsRefreshFailed;
+
   /// Title shown when loading budgets fails.
   ///
   /// In en, this message translates to:

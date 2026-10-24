@@ -1084,6 +1084,9 @@
   "budgetsOfflineCached": "Offline. Showing the figures loaded earlier.",
   "@budgetsOfflineCached": { "description": "Banner shown when offline and the budget shown was loaded earlier in the session." },
 
+  "budgetsRefreshFailed": "Couldn't refresh. Showing the figures loaded earlier.",
+  "@budgetsRefreshFailed": { "description": "Banner shown when refreshing a budget fails but the month loaded earlier is still on screen." },
+
   "budgetsLoadFailed": "Couldn't load budgets",
   "@budgetsLoadFailed": { "description": "Title shown when loading budgets fails." },
 

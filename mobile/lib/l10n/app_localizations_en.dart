@@ -1137,6 +1137,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Offline. Showing the figures loaded earlier.';
 
   @override
+  String get budgetsRefreshFailed =>
+      'Couldn\'t refresh. Showing the figures loaded earlier.';
+
+  @override
   String get budgetsLoadFailed => 'Couldn\'t load budgets';
 
   @override
