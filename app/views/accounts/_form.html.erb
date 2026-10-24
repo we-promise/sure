@@ -34,6 +34,15 @@
       </div>
     <% end %>
 
+    <% if account.persisted? && account.supports_trades? %>
+      <div class="space-y-1">
+        <%= form.select :cost_basis_method,
+            Account.cost_basis_methods.keys.map { |method| [ t(".cost_basis_methods.#{method}"), method ] },
+            { label: t(".cost_basis_method_label") } %>
+        <p class="text-secondary text-sm"><%= t(".cost_basis_method_hint") %></p>
+      </div>
+    <% end %>
+
     <details class="group">
       <summary class="cursor-pointer text-sm text-secondary hover:text-primary flex items-center gap-1 py-2">
         <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>
