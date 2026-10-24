@@ -80,15 +80,29 @@ class AuthConfig
       domains.map(&:downcase).include?(domain)
     end
 
+    # Load normalized enabled providers live so cache refreshes take effect without rebooting.
     def sso_providers
       if FeatureFlags.db_sso_providers?
-        # After boot, OmniAuth registers successfully configured providers into
-        # Rails.configuration.x.auth.sso_providers. Prefer that filtered list
-        # so we never render login buttons for providers that couldn't be
-        # registered (e.g., missing required fields in YAML fallback).
-        # Fall back to ProviderLoader for pre-boot contexts.
-        registered = Rails.configuration.x.auth.sso_providers
-        registered&.any? ? registered : ProviderLoader.load_providers
+        # Load live DB-backed providers so login paths see provider changes
+        # without an app restart; avoid memoizing stale OmniAuth config here.
+        # Validate live settings using the same builders as middleware registration,
+        # including YAML fallback entries that may have no client credentials.
+        registered_providers = Rails.configuration.x.auth.sso_providers || []
+        ProviderLoader.load_providers.filter_map do |config|
+          registration = OmniauthProviderRegistry.registration_for(config)
+          next unless registration
+
+          # Only OIDC routes are dynamic; other strategies still need boot-time registration.
+          unless registration.strategy == :openid_connect
+            next unless registered_providers.any? do |registered|
+              registered = registered.deep_symbolize_keys
+              registered[:name].to_s == registration.config[:name].to_s &&
+                registered[:strategy].to_s == registration.strategy.to_s
+            end
+          end
+
+          registration.config
+        end
       else
         Rails.configuration.x.auth.sso_providers || []
       end

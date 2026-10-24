@@ -11,6 +11,7 @@ zh-CN:
     openid_connect:
       account_linked: 已成功将账户链接到 %{provider}
       failed: 无法通过 OpenID Connect 进行认证。
+      legacy_issuer_relink_required: 此旧版 OIDC 关联需要重新验证。请输入 Sure 密码重新绑定；如果没有本地密码，请联系管理员。
     failure:
       failed: 认证失败。
       sso_provider_unavailable: 当前 SSO 提供商不可用。请稍后再试或联系管理员。

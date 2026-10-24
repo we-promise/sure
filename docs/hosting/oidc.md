@@ -340,7 +340,9 @@ AUTH_PROVIDERS_SOURCE=db
 
 When enabled:
 - Providers are loaded from the `sso_providers` database table
-- Changes take effect immediately (no server restart required)
+- Valid database-backed OIDC changes take effect after the provider cache is refreshed, without a server restart.
+- Google, GitHub, and SAML strategies are registered at startup. Restart the application after adding, renaming, or changing their client settings. New names are not offered for login until their strategy has been registered.
+- Provider lists omit entries with missing required credentials, including entries returned by YAML fallback.
 - Providers can be managed through the admin UI at `/admin/sso_providers`
 
 When disabled (default):
@@ -565,6 +567,36 @@ Each provider requires a callback URL configured in your identity provider:
 - OIDC identities store the issuer claim from the ID token
 - On subsequent logins, Sure verifies the issuer matches the configured provider
 - This prevents issuer impersonation attacks
+
+### Recover older identities without an issuer
+
+Check existing OIDC identities before deploying issuer-continuity enforcement.
+An identity with a blank `issuer` cannot establish which identity provider
+originally authenticated its account. Sure rejects automatic login for that
+identity instead of trusting the current provider name and subject alone.
+
+People with a local Sure password can complete the web relinking flow using
+that password. SSO-only accounts have no local password, and Sure intentionally
+blocks password reset for them. These accounts need an instance operator's
+help; there is no self-service recovery for this case. Mobile and desktop
+clients return `issuer_relink_required`.
+
+For an SSO-only account, the instance operator must:
+
+1. Independently verify ownership of the existing Sure account and its original
+   IdP identity using trusted historical or organizational identity records.
+   A matching email address, provider name, or subject from a replacement IdP
+   is insufficient.
+2. Use the Rails console to select the existing `OidcIdentity` by its row ID.
+   Confirm its `user_id`, `provider`, and `uid` against those verified records,
+   then set only its blank `issuer` to the confirmed original issuer URL.
+   Preserve the account and identity association, and record the recovery.
+3. Confirm that the enabled provider still uses that same trusted issuer, then
+   ask the person to restart SSO login. Existing MFA requirements still apply.
+
+Do not bulk-fill blank issuers from current provider configuration. If ownership
+or the original issuer cannot be established, leave the identity blocked while
+the instance operator resolves account recovery.
 
 ### Admin access
 
