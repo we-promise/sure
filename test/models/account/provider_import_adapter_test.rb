@@ -36,6 +36,40 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "leaves an entry alone when the user deleted it during the import" do
+    entry = @adapter.import_transaction(
+      external_id: "deleted_mid_sync", amount: 10, currency: "USD",
+      date: Date.current, name: "Original", source: "plaid"
+    )
+    Entry.any_instance.stubs(:lock_with_entryable!).raises(ActiveRecord::RecordNotFound)
+
+    assert_no_difference "@account.entries.count" do
+      @adapter.import_transaction(
+        external_id: "deleted_mid_sync", amount: 10, currency: "USD",
+        date: Date.current, name: "Renamed", source: "plaid"
+      )
+    end
+    assert_equal "Original", entry.reload.name
+  end
+
+  test "does not claim a manual duplicate the user protected during the import" do
+    manual = @account.entries.create!(
+      name: "Manual", date: Date.current, amount: 42, currency: "USD", entryable: Transaction.new
+    )
+    stale = Entry.find(manual.id)
+    manual.mark_user_modified!
+    @adapter.stubs(:find_duplicate_transaction).returns(stale)
+
+    @adapter.import_transaction(
+      external_id: "claimed_mid_edit", amount: 42, currency: "USD",
+      date: Date.current, name: "Provider name", source: "plaid"
+    )
+
+    manual.reload
+    assert_equal "Manual", manual.name
+    assert_equal "claimed_mid_edit", manual.external_id
+  end
+
   test "imports transaction with minimal parameters" do
     assert_difference "@account.entries.count", 1 do
       entry = @adapter.import_transaction(

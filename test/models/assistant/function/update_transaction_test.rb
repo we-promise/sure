@@ -24,6 +24,8 @@ class Assistant::Function::UpdateTransactionTest < ActiveSupport::TestCase
     assert_equal category, @transaction.category
     assert_equal "Updated by assistant", @transaction.entry.notes
     assert_equal [ tag.id ], @transaction.tag_ids
+    assert @transaction.locked?(:category_id)
+    assert @transaction.locked?(:tag_ids)
   end
 
   test "clears category merchant notes and tags when explicitly requested" do

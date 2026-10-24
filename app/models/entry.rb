@@ -302,6 +302,56 @@ class Entry < ApplicationRecord
     entryable.lock_saved_attributes!
   end
 
+  # Saves a user's edit, locks what it changed and, if asked, flags the entry
+  # as user-modified, all in one database transaction (see
+  # Enrichable#save_and_lock_attributes).
+  #
+  # @param user_modified [Boolean] also mark the entry user-modified
+  # @param lock_tags [Symbol, nil] also lock the transaction's tags: :if_any
+  #   when it has tags, :always even when the edit removed them all
+  # @yieldreturn [Boolean] whether the save succeeded
+  # @return [Boolean] the block's result
+  def save_and_lock_attributes(user_modified: false, lock_tags: nil)
+    saved = false
+    self.class.transaction(requires_new: true) do
+      reload_locked_attributes_for_update if persisted?
+      raise ActiveRecord::Rollback unless yield
+
+      lock_saved_attributes!
+      # After lock_saved_attributes!: lock_attr! saves the transaction again,
+      # which replaces the saved changes that method reads.
+      if transaction? && (lock_tags == :always || (lock_tags == :if_any && transaction.tags.any?))
+        transaction.lock_attr!(:tag_ids)
+      end
+      mark_user_modified! if user_modified
+      saved = true
+    end
+    saved
+  end
+
+  # Locks the entryable's row, then this entry's, and refreshes the locks of
+  # both (see Enrichable#reload_locked_attributes_for_update).
+  #
+  # Saves write the entryable's row before the entry's (has_one touch), so
+  # every row lock on an entry takes them in that order. An edit that only
+  # writes the entry and then its tag lock would otherwise deadlock with a
+  # sync or rule.
+  #
+  # @return [void]
+  def reload_locked_attributes_for_update
+    entryable.reload_locked_attributes_for_update
+    super
+  end
+
+  # Takes a row lock on the entryable, then on this entry (see
+  # #reload_locked_attributes_for_update), and reloads this entry.
+  #
+  # @raise [ActiveRecord::RecordNotFound] when the entry was deleted meanwhile
+  def lock_with_entryable!
+    lock_entryable_row
+    lock!
+  end
+
   # Enqueues an account sync whose window starts at the earliest date this
   # entry has occupied since it was loaded, so balances are recomputed from
   # wherever the entry used to sit.
@@ -611,6 +661,7 @@ class Entry < ApplicationRecord
       transaction do
         all.each do |entry|
           changed = false
+          entry.reload_locked_attributes_for_update
 
           # Update standard attributes
           if bulk_attributes.present?
@@ -623,6 +674,8 @@ class Entry < ApplicationRecord
               attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
               entry.update! attrs
               entry.transaction.record_category_usage! if entry.transaction?
+              # Before the tag save below, which replaces the saved changes this reads.
+              entry.lock_saved_attributes!
               changed = true
             end
           end
@@ -635,10 +688,7 @@ class Entry < ApplicationRecord
             changed = true
           end
 
-          if changed
-            entry.lock_saved_attributes!
-            entry.mark_user_modified!
-          end
+          entry.mark_user_modified! if changed
         end
       end
 
@@ -660,6 +710,10 @@ class Entry < ApplicationRecord
         lock!
         yield txn
       end
+    end
+
+    def lock_entryable_row
+      entryable_class.uncached { entryable_class.unscoped.where(id: entryable_id).lock.pick(:id) }
     end
 
     # Remembers the earliest date this entry had before any save that changed

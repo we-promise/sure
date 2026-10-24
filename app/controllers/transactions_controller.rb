@@ -160,11 +160,8 @@ class TransactionsController < ApplicationController
 
     @entry = account.entries.new(entry_params_with_idempotency_key(idempotency_key))
 
-    if @entry.save
+    if @entry.save_and_lock_attributes(user_modified: true, lock_tags: :if_any) { @entry.save }
       @entry.sync_account_later
-      @entry.lock_saved_attributes!
-      @entry.mark_user_modified!
-      @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
       respond_with_created_entry(@entry)
     else
@@ -185,7 +182,11 @@ class TransactionsController < ApplicationController
   end
 
   def update
-    if @entry.update(permitted_entry_params)
+    sync_needed = false
+    saved = @entry.save_and_lock_attributes(user_modified: true, lock_tags: :if_any) do
+      next false unless @entry.update(permitted_entry_params)
+
+      # Read the saved changes before the locks are saved over them.
       sync_needed = @entry.saved_changes_affect_balances?
       transaction = @entry.transaction
       transaction.record_category_usage!
@@ -197,10 +198,10 @@ class TransactionsController < ApplicationController
           category_name: transaction.category.name
         }
       end
+      true
+    end
 
-      @entry.lock_saved_attributes!
-      @entry.mark_user_modified!
-      @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+    if saved
       @entry.sync_account_later if sync_needed
 
       notes_changed = @entry.saved_change_to_notes?
@@ -253,18 +254,17 @@ class TransactionsController < ApplicationController
   def update_tags
     return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
 
-    # The transaction-row tag picker toggles one tag at a time; the drawer's
-    # multiselect sends the full set.
-    if params[:toggle_tag_id].present?
-      @toggled_tag = Current.family.tags.find(params[:toggle_tag_id])
-      @entry.transaction.toggle_tag!(@toggled_tag)
-    else
-      @entry.transaction.tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
+    @entry.save_and_lock_attributes(user_modified: true, lock_tags: :always) do
+      # The transaction-row tag picker toggles one tag at a time; the drawer's
+      # multiselect sends the full set.
+      if params[:toggle_tag_id].present?
+        @toggled_tag = Current.family.tags.find(params[:toggle_tag_id])
+        @entry.transaction.toggle_tag!(@toggled_tag)
+      else
+        @entry.transaction.tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
+      end
+      true
     end
-
-    @entry.lock_saved_attributes!
-    @entry.mark_user_modified!
-    @entry.transaction.lock_attr!(:tag_ids)
 
     respond_to do |format|
       # JSON stays first so Accept: */* callers keep the original response.

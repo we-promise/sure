@@ -76,4 +76,39 @@ class EnrichableTest < ActiveSupport::TestCase
 
     refute_includes Account.enrichable(:name), @enrichable
   end
+
+  test "does not enrich an attribute locked after the record was loaded" do
+    stale = Account.find(@enrichable.id)
+    Account.find(@enrichable.id).tap { |account| account.update!(name: "User Override") }.lock_saved_attributes!
+
+    assert_no_difference "DataEnrichment.count" do
+      assert_not stale.enrich_attribute(:name, "Provider Name", source: "plaid")
+    end
+
+    assert_equal "User Override", @enrichable.reload.name
+  end
+
+  test "save_and_lock_attributes saves and locks the changed attributes" do
+    assert @enrichable.save_and_lock_attributes { @enrichable.update(name: "User Override") }
+
+    assert @enrichable.reload.locked?(:name)
+    assert_equal "User Override", @enrichable.name
+  end
+
+  test "save_and_lock_attributes locks nothing when the save fails" do
+    assert_not @enrichable.save_and_lock_attributes { @enrichable.update(name: "") }
+
+    assert_empty @enrichable.reload.locked_attributes
+  end
+
+  test "save_and_lock_attributes rolls the save back when locking fails" do
+    original_name = @enrichable.name
+    @enrichable.stubs(:lock_saved_attributes!).raises(ActiveRecord::RecordInvalid.new(@enrichable))
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      @enrichable.save_and_lock_attributes { @enrichable.update(name: "User Override") }
+    end
+
+    assert_equal original_name, @enrichable.reload.name
+  end
 end
