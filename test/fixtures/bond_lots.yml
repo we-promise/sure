@@ -1,0 +1,21 @@
+one:
+  bond: one
+  purchased_on: <%= Date.current - 3.months %>
+  amount: 10000
+  term_months: 12
+  maturity_date: <%= Date.current + 9.months %>
+  interest_rate: 4.25
+  subtype: other
+  rate_type: fixed
+  coupon_frequency: at_maturity
+
+two:
+  bond: one
+  purchased_on: <%= Date.current - 1.month %>
+  amount: 5000
+  term_months: 6
+  maturity_date: <%= Date.current + 5.months %>
+  interest_rate: 4.15
+  subtype: other
+  rate_type: fixed
+  coupon_frequency: semi_annual
