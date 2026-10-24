@@ -16,7 +16,7 @@ class DemoFamilyRefreshJob < ApplicationJob
       period_start = period_end - 24.hours
 
       demo_email = Rails.application.config_for(:demo).with_indifferent_access.fetch(:email)
-      demo_user = User.find_by(email: demo_email)
+      demo_user = User.find_by_email(demo_email)
       old_family = demo_user&.family
 
       if Rails.application.config.app_mode.self_hosted?

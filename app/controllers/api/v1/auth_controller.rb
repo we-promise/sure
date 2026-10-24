@@ -82,7 +82,7 @@ module Api
       end
 
       def login
-        user = User.find_by(email: params[:email])
+        user = User.find_by_email(params[:email])
 
         unless local_login_permitted_for?(user)
           render json: { error: "Local login is disabled. Please use SSO." }, status: :forbidden
@@ -188,7 +188,7 @@ module Api
         cached = validate_linking_code(linking_code)
         return unless cached
 
-        user = User.authenticate_by(email: params[:email], password: params[:password])
+        user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
         unless user
           render json: { error: "Invalid email or password" }, status: :unauthorized

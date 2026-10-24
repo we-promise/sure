@@ -62,6 +62,20 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert session[:pending_oidc_auth].present?
   end
 
+  test "links a user whose email row is still legacy plaintext" do
+    session[:pending_oidc_auth] = pending_auth
+    email = store_legacy_plaintext_email(@user)
+
+    get :link
+    assert @controller.instance_variable_get(:@user_exists)
+
+    assert_difference "OidcIdentity.count", 1 do
+      post :create_link, params: { email: email, password: user_password_test }
+    end
+
+    assert_redirected_to root_path
+  end
+
   test "should reject linking with invalid password" do
     session[:pending_oidc_auth] = pending_auth
 
