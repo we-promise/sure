@@ -30,8 +30,11 @@ class TransferMatchesController < ApplicationController
     Transfer.transaction do
       entries.sort_by { |entry| RecurringTransaction::Allocator.entry_lock_id(entry) }
              .each { |entry| RecurringTransaction::Allocator.lock_entry!(entry) }
-      # Row locks in one canonical order, so two requests locking the same pair
-      # cannot deadlock, and the duplicate-merge path cannot disagree.
+      # Match Entry#with_split_lock: lock the Transaction rows before the Entry
+      # rows, both in id order. Otherwise a concurrent split (Transaction then
+      # Entry) and Transfer#confirm! (Entry then Transaction) can deadlock.
+      transaction_ids = entries.select { |entry| entry.entryable_type == "Transaction" }.map(&:entryable_id)
+      Transaction.where(id: transaction_ids).order(:id).lock.to_a
       entries.sort_by(&:id).each(&:lock!)
 
       if entries.any?(&:installment_plan_locked?)

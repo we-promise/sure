@@ -518,6 +518,20 @@ class RecurringTransaction::InstallmentPlanTest < ActiveSupport::TestCase
     assert_not purchase.reload.excluded?
   end
 
+  test "rejecting the last confirmed payment releases an ended plan's purchase" do
+    purchase = create_purchase
+    plan = build_plan(entry: purchase)
+    charge = pay_instalment(plan)
+    plan.update!(status: "ended")
+    assert purchase.reload.excluded?
+
+    allocation = charge.reload.recurring_allocations.confirmed.sole
+    occurrence = plan.recurring_occurrences.order(:due_on).first
+    RecurringTransaction::Allocator.new(occurrence).reject_suggestion!(allocation)
+
+    assert_not purchase.reload.excluded?
+  end
+
   test "a plan that is over gives the purchase back" do
     purchase = create_purchase
     plan = build_plan(entry: purchase)

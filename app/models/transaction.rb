@@ -487,6 +487,13 @@ class Transaction < ApplicationRecord
     merge_succeeded = false
 
     ApplicationRecord.transaction(requires_new: true) do
+      # Match Entry#with_split_lock and the transfer path: lock Transaction
+      # rows before Entry rows, in id order. `lock` (not `lock!`) tolerates a
+      # concurrently destroyed pending side; the entry locks below keep their
+      # per-role rescues.
+      transaction_ids = [ pending_entry.entryable_id, posted_entry.entryable_id ].compact
+      Transaction.where(id: transaction_ids).order(:id).lock.to_a
+
       # Row-level locks prevent concurrent merges on the same pair of entries.
       # If a concurrent request already destroyed the pending entry, lock! raises
       # RecordNotFound — treat that as an idempotent success.

@@ -208,7 +208,7 @@ class RecurringTransaction
         end
       end
 
-      release_financed_purchase_if_over unless was_confirmed
+      release_financed_purchase_if_over
     end
 
     # Settles the remainder with no transaction, as a user decision, so it
