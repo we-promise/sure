@@ -1,0 +1,9 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        lunchflow_item:
+          attributes:
+            base_url:
+              official_hosts_only: must be blank or https://lunchflow.app/api/v1

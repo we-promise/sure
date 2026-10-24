@@ -215,4 +215,26 @@ class SophtronItemTest < ActiveSupport::TestCase
     assert_empty manual_item.automatic_sync_sophtron_accounts
     assert_equal [ first_account, second_account ], manual_item.manual_sync_sophtron_accounts.to_a
   end
+
+  # base_url decides where the app sends this connection's access key, so a
+  # value pointing anywhere else is refused at save time and ignored at read
+  # time. Both layers matter: rows can be written by console or raw SQL.
+  test "refuses a base_url that is not Sophtron's own host" do
+    [
+      "https://evil.example.com/api",
+      "http://169.254.169.254/api",
+      "https://localhost/api"
+    ].each do |value|
+      @item.base_url = value
+
+      assert_not @item.valid?, "#{value} must be refused"
+      assert_includes @item.errors.attribute_names, :base_url
+    end
+  end
+
+  test "a value that slipped past validation is not used" do
+    @item.update_column(:base_url, "https://evil.example.com/api")
+
+    assert_equal Provider::Sophtron::DEFAULT_BASE_URL, @item.reload.effective_base_url
+  end
 end
