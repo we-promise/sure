@@ -21,8 +21,6 @@ pt-PT:
           trial_expiring_soon: "Expira em 7 dias"
           trial_trialing: "Em período experimental"
           submit: "Filtrar"
-        summary:
-          trials_expiring_7_days: "Períodos experimentais que expiram nos próximos 7 dias"
         table:
           user: "Utilizador"
           trial_ends_at: "Fim do período experimental"
@@ -94,6 +92,7 @@ pt-PT:
         failure: "Falha ao atualizar os dados do utilizador (função ou associação à família/grupo)."
         family_required: "Selecione uma família/grupo existente ou introduza um nome para uma nova."
         password_and_family_conflict: "A palavra-passe e a associação à família/grupo não podem ser atualizadas ao mesmo tempo."
+        password_disabled: "Definir uma palavra-passe está desativado porque os utilizadores só podem iniciar sessão com SSO."
         password_too_short: "A palavra-passe tem de ter pelo menos 8 caracteres."
         password_missing_case: "A palavra-passe tem de incluir letras maiúsculas e minúsculas."
         password_missing_number: "A palavra-passe tem de incluir pelo menos um número."

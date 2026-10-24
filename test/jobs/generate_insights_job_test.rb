@@ -17,9 +17,9 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_enqueued_with(job: GenerateInsightsJob, args: [ { family_id: @family.id } ])
   end
 
-  # Insights is a preview feature and the job manufactures data (and can spend
-  # LLM budget) per family, so families with nobody opted in are skipped
-  # entirely rather than generated for and hidden.
+  # Insights is a preview feature and the job manufactures data per family,
+  # so families with nobody opted in are skipped entirely rather than
+  # generated for and hidden.
   test "without args enqueues nothing when no family has preview access" do
     disable_preview_features(@family)
 
@@ -87,6 +87,32 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal "idle_cash", insight.insight_type
     assert insight.body.present?
     assert_equal 5000.0, insight.metadata["balance"]
+  end
+
+  # The badge rides the family stream every layout subscribes to, so new unread
+  # insights bump the lightbulb count on whatever page is open.
+  test "broadcasts the unread badge alongside the refreshed list" do
+    stub_generated([ generated_insight ])
+    Turbo::StreamsChannel.stubs(:broadcast_replace_to)
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).with(
+      @family,
+      targets: "[data-insights-badge]",
+      partial: "layouts/shared/insights_badge",
+      locals: { count: @family.insights.active.count + 1 }
+    )
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+  end
+
+  test "broadcasts the feed in the family's locale" do
+    @family.update!(locale: "de")
+    stub_generated([ generated_insight ])
+    locales = []
+    Turbo::StreamsChannel.stubs(:broadcast_replace_to).with { locales << I18n.locale; true }
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert_equal [ :de ], locales.uniq
   end
 
   test "enqueues notifications for newly created high priority insights" do
@@ -170,7 +196,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
 
     insight.reload
     assert_equal "Idle cash in Holiday Fund", insight.title
-    assert_equal original_body, insight.body, "a rename is not worth an LLM rewrite"
+    assert_equal original_body, insight.body, "a rename doesn't rewrite the body"
     assert insight.read?, "a rename is not a reason to nag the user again"
   end
   test "a reactivated insight also picks up a renamed subject" do
@@ -266,6 +292,20 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_nil insight.read_at
   end
 
+  test "expires an insight hidden because its account is no longer shared with everyone" do
+    insight = @family.insights.create!(
+      insight_type: "idle_cash", priority: "low", status: "active", title: "Idle", body: "body",
+      metadata: { "account_id" => accounts(:connected).id }, dedup_key: "idle_cash:private",
+      generated_at: Time.current
+    )
+    assert_not @family.insights.visible.exists?(id: insight.id), "precondition: the row must be hidden, not just stale"
+    stub_generated([], succeeded_types: [ "idle_cash" ])
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert insight.reload.expired?, "a hidden row whose condition cleared must not come back stale once access returns"
+  end
+
   private
     def enable_preview_features(family)
       family.users.each { |user| set_preview_features(user, true) }
@@ -297,7 +337,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
         title: title,
         template_key: "idle_cash",
         facts: { account: "Test Checking", balance: "$#{(display_balance || balance).to_i}", idle_days: 60 },
-        metadata: { account_id: "test-account", balance: balance },
+        metadata: { account_id: accounts(:depository).id, balance: balance },
         currency: "USD",
         period_start: nil,
         period_end: nil,

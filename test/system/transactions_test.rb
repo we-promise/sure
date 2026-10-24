@@ -140,6 +140,147 @@ class TransactionsTest < ApplicationSystemTestCase
     assert_text @transaction.name
   end
 
+  test "confirms an auto-matched transfer from beside the amount" do
+    outflow = create_transaction("Payment to credit card", Date.current, 100)
+    inflow = create_transaction("Payment received", Date.current, -100, account: accounts(:credit_card))
+    transfer = Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+    match = "##{dom_id(outflow.entryable, :transfer_match)}"
+    visit transactions_url(per_page: @page_size)
+
+    assert_selector match
+    assert_no_selector "[data-tag-fit-bounds='0.5'] #{match}"
+
+    within(match) { click_button I18n.t("transactions.transfer_match.confirm_match") }
+
+    assert_no_selector "#{match} button"
+    assert transfer.reload.confirmed?
+
+    page.current_window.resize_to(390, 900)
+    visit transactions_url(per_page: @page_size)
+    indicator_bounds = find(match).evaluate_script("this.getBoundingClientRect().toJSON()")
+    amount_bounds = find("##{dom_id(outflow)} p.privacy-sensitive").evaluate_script("this.getBoundingClientRect().toJSON()")
+    assert_in_delta indicator_bounds["y"] + indicator_bounds["height"] / 2,
+                    amount_bounds["y"] + amount_bounds["height"] / 2, 1,
+                    "confirmed matches should stay beside the amount on phones"
+  end
+
+  test "rejects an auto-matched transfer from a mobile row" do
+    outflow = create_transaction("Payment to credit card", Date.current, 100)
+    inflow = create_transaction("Payment received", Date.current, -100, account: accounts(:credit_card))
+    transfer = Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+    match = "##{dom_id(outflow.entryable, :transfer_match)}"
+    page.current_window.resize_to(390, 900)
+    visit transactions_url(per_page: @page_size)
+
+    within(match) do
+      assert_text I18n.t("transactions.transfer_match.auto_matched_short")
+      assert_selector "button[aria-label='#{I18n.t("transactions.transfer_match.confirm_match")}']"
+      click_button I18n.t("transactions.transfer_match.reject_match")
+    end
+
+    assert_no_selector match
+    assert_not Transfer.exists?(transfer.id)
+    assert Entry.exists?(outflow.id)
+    assert Entry.exists?(inflow.id)
+  end
+
+  test "keeps long auto-matched tablet and desktop rows contained" do
+    @user.update!(show_ai_sidebar: false)
+    outflow = create_transaction("Bank of America online payment with a long bank descriptor", Date.current, 4321.09, tags: [ tags(:one), tags(:two) ])
+    inflow = create_transaction("Payment received", Date.current, -4321.09, account: accounts(:credit_card))
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+    outflow.entryable.update!(kind: "funds_movement", extra: { "plaid" => { "pending" => true }, "potential_posted_match" => { "entry_id" => inflow.id, "confidence" => "low" } })
+    [ 820, 1024, 1440 ].each do |width|
+      page.current_window.resize_to(width, 900)
+      visit transactions_url(per_page: @page_size)
+
+      row = find("##{dom_id(outflow)} [data-controller='clickable-row']")
+      row_bounds = row.evaluate_script("this.getBoundingClientRect().toJSON()")
+      amount_bounds = row.find("p.privacy-sensitive").evaluate_script("this.getBoundingClientRect().toJSON()")
+      tags_bounds = row.find("[id^='tag_summary_desktop']").evaluate_script("this.getBoundingClientRect().toJSON()")
+      match_bounds = row.find("[id^='transfer_match']").evaluate_script("this.getBoundingClientRect().toJSON()")
+      controls_bounds = row.find("[data-tag-fit-bounds='1']").find(:xpath, "..").evaluate_script("this.getBoundingClientRect().toJSON()")
+
+      assert_operator match_bounds["left"], :>=, controls_bounds["left"], "matching controls must not spill into the category at #{width}px"
+      assert_operator match_bounds["right"], :<=, controls_bounds["right"]
+
+      assert_operator amount_bounds["right"], :<=, row_bounds["right"]
+      assert_operator amount_bounds["left"], :>=, row_bounds["left"]
+      assert_operator amount_bounds["height"], :<=, 24, "the amount should stay on one line at #{width}px"
+      assert tags_bounds["right"] <= match_bounds["left"] || tags_bounds["bottom"] <= match_bounds["top"],
+             "tags and matching controls must not overlap at #{width}px"
+    end
+  end
+
+  test "can toggle tags from the transaction row" do
+    transaction = @transaction.entryable
+    summary_id = dom_id(transaction, "tag_summary_desktop")
+    option_id = "#{dom_id(@transaction, :tag_option)}_#{tags(:two).id}"
+
+    within "##{summary_id}" do
+      assert_text tags(:one).name
+    end
+
+    find("##{summary_id}").click
+    find("##{option_id} button").click
+
+    assert_selector "##{option_id}[aria-selected='true']"
+    assert_selector "##{summary_id} [data-tag-fit-target=compact] [data-tag-initial]", count: 2, visible: :all
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
+  end
+
+  test "tags show as full pills when they fit and collapse when the column shrinks" do
+    transaction = @transaction.entryable
+    short_tags = %w[Ab Cd].map { |name| @user.family.tags.create!(name: name, color: Tag::COLORS.first) }
+    transaction.update!(tag_ids: short_tags.map(&:id))
+    visit transactions_url(per_page: @page_size)
+
+    summary = "##{dom_id(transaction, "tag_summary_desktop")}"
+    cell = "document.querySelector('#{summary}').closest('[data-tag-fit-bounds]')"
+
+    # Control the actual available width even when the tag cell is a flex item.
+    page.execute_script("#{cell}.style.flex = 'none'")
+    page.execute_script("#{cell}.style.width = '400px'")
+    assert_selector "#{summary} [data-tag-fit-target=full]", text: "Ab"
+    assert_no_selector "#{summary} [data-tag-fit-target=compact]"
+
+    page.execute_script("#{cell}.style.width = '48px'")
+    assert_selector "#{summary} [data-tag-fit-target=compact] [data-tag-initial]", count: 2
+    assert_no_selector "#{summary} [data-tag-fit-target=full]"
+
+    page.execute_script("#{cell}.style.width = '400px'")
+    assert_selector "#{summary} [data-tag-fit-target=full]", text: "Cd"
+  end
+
+  test "a first tag added on desktop also shows on the mobile row" do
+    transaction = @uncategorized_transaction.entryable
+    assert_empty transaction.tags
+    option_id = "#{dom_id(@uncategorized_transaction, :tag_option)}_#{tags(:one).id}"
+
+    find("##{dom_id(@uncategorized_transaction)}").hover
+    find("##{dom_id(transaction, "tag_summary_desktop")}").click
+    find("##{option_id} button").click
+    assert_selector "##{option_id}[aria-selected='true']"
+
+    page.current_window.resize_to(390, 900)
+    assert_selector "##{dom_id(transaction, "tag_summary_mobile")}", text: tags(:one).name
+  ensure
+    page.current_window.resize_to(1400, 1400)
+  end
+
+  test "keyboard focus stays on a tag option after toggling it" do
+    summary_id = dom_id(@transaction.entryable, "tag_summary_desktop")
+    option_id = "#{dom_id(@transaction, :tag_option)}_#{tags(:two).id}"
+
+    find("##{summary_id}").click
+    button = find("##{option_id} button")
+    button.send_keys(:enter)
+
+    assert_selector "##{option_id}[aria-selected='true']"
+    assert page.evaluate_script("document.activeElement.closest('##{option_id}') !== null"),
+      "focus should remain on the toggled option"
+  end
+
   test "can select and deselect entire page of transactions" do
     all_transactions_checkbox.check
     assert_selection_count(number_of_transactions_on_page)
@@ -207,6 +348,8 @@ class TransactionsTest < ApplicationSystemTestCase
     outflow_entry = create_transaction("outflow", Date.current, 500, account: asset_account)
     inflow_entry = create_transaction("inflow", 1.day.ago.to_date, -500, account: depository_account)
     @user.family.auto_match_transfers!
+    # Entry.delete_all in setup orphans the fixture transfer, so confirm only this one
+    Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).confirm!
     visit transactions_url
 
     within "#entry-group-" + Date.current.to_s + "-totals" do

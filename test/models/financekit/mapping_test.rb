@@ -32,6 +32,39 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 3, 1), Financekit::Mapping.ledger_date(record, "America/Los_Angeles")
   end
 
+  { "present" => Date.new(2026, 9, 1), "omitted" => Date.new(2026, 8, 31) }.each do |posted_at, expected_date|
+    test "booked transactions with posted_at #{posted_at} import using the existing ledger date precedence" do
+      events = financekit_events
+      events.last.fetch("transaction").delete("posted_at") if posted_at == "omitted"
+
+      batch = accept_and_apply(financekit_payload(events: events))
+
+      assert_equal "applied", batch.status
+      entry = @source.account.entries.sole
+      assert_equal expected_date, entry.date
+      assert_equal "booked", @source.financekit_transactions.sole.status
+      assert_not entry.transaction.pending?
+    end
+  end
+
+  test "pending transactions settle without posted_at while preserving identity and transacted date" do
+    events = financekit_events
+    transaction = events.last.fetch("transaction")
+    transaction["status"] = "pending"
+    transaction.delete("posted_at")
+    first = accept_and_apply(financekit_payload(events: events))
+    entry = @source.account.entries.sole
+    assert entry.transaction.pending?
+    assert_equal Date.new(2026, 8, 31), entry.date
+
+    transaction["status"] = "booked"
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest, events: events))
+
+    assert_equal entry.id, @source.account.entries.sole.id
+    assert_equal Date.new(2026, 8, 31), entry.reload.date
+    assert_not entry.transaction.reload.pending?
+  end
+
   test "a malformed event rejects the whole batch before it enters the inbox" do
     events = financekit_events
     events.last.fetch("transaction")["amount"]["amount"] = 12.34
@@ -189,14 +222,240 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     first = accept_and_apply
     event = financekit_events.find { |record| record["kind"] == "balance_upsert" }
     event["balance"]["money"] = money("999.00", "credit")
-    second, = accept_batch(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest, events: [ event ]))
 
-    assert_not Financekit::Processor.new(@item).apply_next!
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ event ]))
 
-    assert_equal "balance_observation_conflict", second.reload.error_code
-    assert_equal "failed", second.status
+    # The stored observation is immutable and the canonical balance is untouched,
+    # but the disagreement is a conflict for the family, not a protocol failure:
+    # fencing here would clear a credential only a foreground repair can reissue.
+    assert_equal "applied", second.status
+    assert_equal 1, second.counts.fetch("review_required")
     assert_equal BigDecimal("112.66"), @source.account.reload.balance
     assert_equal BigDecimal("112.66"), @source.financekit_balance_observations.sole.amount
+    conflict = @item.financekit_conflicts.sole
+    assert_equal "balance_observation_conflict", conflict.kind
+    assert_equal @balance_id, conflict.details.fetch("source_id")
+    assert_equal "active", @item.reload.status
+    assert @item.authenticate_credential?(@credential)
+  end
+
+  test "a repeated balance disagreement does not pile up open conflicts" do
+    first = accept_and_apply
+    event = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    event["balance"]["money"] = money("999.00", "credit")
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ event ]))
+    accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest,
+      events: [ event ]))
+
+    assert_equal 1, @item.financekit_conflicts.open.count
+    assert_equal "active", @item.reload.status
+  end
+
+  test "a balance decision the family keeps is not reopened by an identical replay" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+    @item.financekit_conflicts.open.sole.resolve!(user: @user, resolution: "keep_sure")
+
+    third = accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest,
+      events: [ disagreement ]))
+
+    assert_empty @item.financekit_conflicts.open
+    assert_equal 1, @item.financekit_conflicts.count
+    assert_equal 1, third.counts.fetch("settled")
+    assert_equal BigDecimal("112.66"), @source.account.reload.balance
+  end
+
+  test "a balance decision survives replacing the publishing device" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+    @item.financekit_conflicts.open.sole.resolve!(user: @user, resolution: "keep_sure")
+    account = @source.account
+    lineage = @source.financekit_account_lineage
+
+    enrollment = @enrollment.deep_dup
+    enrollment["enrollment_id"] = SecureRandom.uuid
+    enrollment["replaces_connection_id"] = @item.id
+    replacement = Financekit::Enrollment.create!(@user, enrollment).item
+    @source = FinancekitAccount.map!(replacement, @source_id,
+      @mapping_input.except("booked_balance", "observed_at").merge(
+        "action" => "link", "account_id" => account.id, "lineage_id" => lineage.id))
+    replacement.activate!
+
+    # Rebuilt so it carries the replacement's mapping_version; the observation
+    # identity is unchanged because the clock is frozen. The observation lives
+    # on the lineage and outlives the publisher, so the decision must too.
+    replayed = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    replayed["balance"]["money"] = money("999.00", "credit")
+    batch = accept_and_apply(financekit_payload(item: replacement, events: [ replayed ]),
+      item: replacement)
+
+    assert_empty FinancekitConflict.where(family: @family).open
+    assert_equal 1, batch.counts.fetch("settled")
+  end
+
+  test "the lineage records whether FinanceKit created the canonical account" do
+    assert_equal "created", @source.financekit_account_lineage.account_origin
+
+    account = @family.accounts.create!(name: "Everyday", balance: 0, currency: "USD",
+      accountable: Depository.new(subtype: "checking"))
+    enrollment = @enrollment.deep_dup
+    enrollment["enrollment_id"] = SecureRandom.uuid
+    other_source_id = SecureRandom.uuid
+    enrollment["consent"]["selected_source_account_ids"] = [ other_source_id ]
+    other_item = Financekit::Enrollment.create!(@user, enrollment).item
+    linked = FinancekitAccount.map!(other_item, other_source_id,
+      @mapping_input.except("booked_balance", "observed_at").merge("action" => "link",
+        "account_id" => account.id))
+
+    # Only an account FinanceKit brought into existence is FinanceKit's to destroy
+    # when a family disconnects and asks for the import to be undone.
+    assert_equal "linked", linked.financekit_account_lineage.account_origin
+  end
+
+  test "one lineage keeps one open balance question when two publishers race" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+    raised = @item.financekit_conflicts.open.sole
+
+    # A replacement device keeps the lineage of the device it replaces, so both
+    # connections can look for an open question, find none, and then both
+    # insert. Checking first cannot settle that; the index has to.
+    enrollment = @enrollment.deep_dup
+    enrollment["enrollment_id"] = SecureRandom.uuid
+    enrollment["replaces_connection_id"] = @item.id
+    replacement = Financekit::Enrollment.create!(@user, enrollment).item
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      replacement.financekit_conflicts.create!(family: @family,
+        financekit_account_lineage: raised.financekit_account_lineage,
+        kind: "balance_observation_conflict", status: "open", details: raised.details)
+    end
+    assert_equal 1, FinancekitConflict.where(family: @family).open.count
+  end
+
+  test "losing the race for a balance question still applies the rest of the capture" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    # Stands in for the other publisher inserting between the check and this
+    # insert: the question is open either way, so the import carries on rather
+    # than failing the batch and spending an attempt.
+    FinancekitConflict.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique.new("duplicate key"))
+
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+
+    assert_equal "applied", second.status
+    assert_equal 1, second.counts.fetch("review_required")
+    assert_equal "active", @item.reload.status
+    assert_equal BigDecimal("112.66"), @source.account.reload.balance
+  end
+
+  test "a balance decision matches an equivalent timestamp in another format" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    disagreement["balance"]["observed_at"] = "2026-09-10T12:00:00Z"
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+    @item.financekit_conflicts.open.sole.resolve!(user: @user, resolution: "keep_sure")
+
+    # Same instant, different spelling: it resolves to one stored observation,
+    # so it has to resolve to one decision.
+    reformatted = disagreement.deep_dup
+    reformatted["balance"]["observed_at"] = "2026-09-10T12:00:00.000Z"
+    accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest,
+      events: [ reformatted ]))
+
+    assert_empty @item.financekit_conflicts.open
+    assert_equal 1, @item.financekit_conflicts.count
+  end
+
+  test "a settled balance decision does not suppress a different disagreement" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+    @item.financekit_conflicts.open.sole.resolve!(user: @user, resolution: "keep_sure")
+
+    other = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    other["balance"]["observed_at"] = 1.minute.from_now.iso8601
+    other["balance"]["money"] = money("222.00", "credit")
+    accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest,
+      events: [ other ], captured_at: 1.minute.from_now.iso8601))
+    accept_and_apply(financekit_payload(sequence: 4, predecessor_digest: FinancekitBatch.order(:sequence).last.payload_digest,
+      events: [ other.deep_dup.tap { |event| event["balance"]["money"] = money("333.00", "credit") } ],
+      captured_at: 1.minute.from_now.iso8601))
+
+    assert_equal 1, @item.financekit_conflicts.open.count
+  end
+
+  test "retry after repair releases the observation blocking the replay" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+
+    # An immutable observation would disagree again after the repair, so the
+    # retry only means something once the declined one is out of the way.
+    @item.financekit_conflicts.open.sole.resolve!(user: @user, resolution: "retry_after_repair")
+
+    assert_equal "repair_required", @item.reload.status
+    assert_empty @source.financekit_balance_observations.where(source_id: @balance_id, kind: "booked")
+  end
+
+  test "a tombstone leaves review open while another conflict is unresolved" do
+    accept_and_apply
+    entry = @source.account.entries.sole
+    entry.update!(locked_attributes: { "name" => Time.current.iso8601 })
+    identity = @source.financekit_transactions.sole
+    tombstone = {
+      "kind" => "transaction_tombstone",
+      "tombstone" => {
+        "source_id" => @transaction_id,
+        "source_account_id" => @source_id,
+        "lineage_id" => @source.financekit_account_lineage_id,
+        "mapping_version" => @source.mapping_version
+      }
+    }
+    upsert = accept_and_apply(financekit_payload(sequence: 2,
+      predecessor_digest: FinancekitBatch.order(:sequence).last.payload_digest,
+      events: [ financekit_events.last ]))
+    retraction = accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: upsert.payload_digest,
+      events: [ tombstone ]))
+    identity.financekit_conflicts.open.find_by!(kind: "protected_entry")
+      .resolve!(user: @user, resolution: "keep_sure")
+
+    accept_and_apply(financekit_payload(sequence: 4, predecessor_digest: retraction.payload_digest,
+      events: [ tombstone ]))
+
+    assert_equal [ "protected_tombstone" ], identity.financekit_conflicts.open.pluck(:kind)
+    assert identity.reload.review_required, "review must stay open while a conflict about the record is"
+    assert_equal 1, @source.account.entries.reload.count
+  end
+
+  test "a source identifier outside the v1-v5 range is accepted" do
+    uuidv7 = "01890a5d-ac96-774b-bcce-b302099a8057"
+    event = financekit_events.last
+    event.fetch("transaction")["source_id"] = uuidv7
+
+    batch = accept_and_apply(financekit_payload(events: [ event ]))
+
+    assert_equal "applied", batch.status
+    assert_equal uuidv7, @source.financekit_transactions.sole.source_id
   end
 
   test "a second wallet account cannot map onto an already mapped canonical account" do

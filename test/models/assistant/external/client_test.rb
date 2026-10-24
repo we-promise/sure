@@ -5,6 +5,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     @client = Assistant::External::Client.new(
       url: "http://localhost:18789/v1/chat",
       token: "test-token",
+      model: "openclaw/test-agent",
       agent_id: "test-agent"
     )
   end
@@ -44,6 +45,8 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
 
   test "retries transient errors then raises Assistant::Error" do
     Net::HTTP.any_instance.stubs(:request).raises(Net::OpenTimeout, "connection timed out")
+    # Skip the real 1s/2s retry backoff sleeps
+    Assistant::External::Client.any_instance.stubs(:sleep)
 
     error = assert_raises(Assistant::Error) do
       @client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
@@ -98,7 +101,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
     ) { |_| }
 
     body = JSON.parse(capture[0].body)
-    assert_equal "test-agent", body["model"]
+    assert_equal "openclaw/test-agent", body["model"]
     assert_equal true, body["stream"]
     assert_equal 3, body["messages"].size
     assert_equal "sure-family-42", body["user"]

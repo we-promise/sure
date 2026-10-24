@@ -93,7 +93,15 @@ class Account::ReconciliationManager
         amount: balance,
         currency: account.currency
       )
-      valuation_record.name = name if name.present?
+
+      # A provider may have labelled this day's reconciliation (see
+      # Property#name_avm_valuation!); a later write — e.g. a manual edit —
+      # goes back to the default name, and providers relabel after their own.
+      if name.present?
+        valuation_record.name = name
+      elsif valuation_record.entryable.is_a?(Valuation) && valuation_record.entryable.reconciliation?
+        valuation_record.name = Valuation.build_reconciliation_name(account.accountable_type)
+      end
 
       valuation_record
     end

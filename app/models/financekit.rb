@@ -21,11 +21,6 @@ module Financekit
     raise Error.new(code, status) unless condition
   end
 
-  def self.enabled?(family)
-    ENV["FINANCEKIT_ENABLED"] == "true" &&
-      ENV.fetch("FINANCEKIT_FAMILY_IDS", "").split(",").map(&:strip).include?(family.id)
-  end
-
   def self.issue_credential
     SecureRandom.urlsafe_base64(TOKEN_BYTES, false)
   end

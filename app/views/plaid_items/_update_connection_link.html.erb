@@ -1,0 +1,14 @@
+<%# locals: (plaid_item:, variant: :outline) %>
+
+<%# Opens Plaid's update mode for the existing connection, which is the only way Plaid
+    changes one. turbo_prefetch is off because GET edit mints an update-mode link token
+    as a side effect, so a hover would call /link/token/create. %>
+<%= render DS::Link.new(
+      text: t("plaid_items.duplicate_warning.update_existing"),
+      href: edit_plaid_item_path(plaid_item, add_accounts: true),
+      variant: variant,
+      size: :sm,
+      full_width: true,
+      frame: "modal",
+      data: { turbo_prefetch: "false" }
+    ) %>

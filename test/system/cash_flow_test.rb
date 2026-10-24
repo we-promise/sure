@@ -12,6 +12,7 @@ class CashFlowTest < ApplicationSystemTestCase
     account = @user.family.accounts.create!(name: "Sankey checking", currency: "USD", balance: 0, accountable: Depository.new)
     create_transaction(account: account, category: parent, amount: 100, date: @month)
     create_transaction(account: account, category: child, amount: 50, date: @month)
+    @child, @account = child, account
   end
 
   test "loads the dashboard graph, expands, zooms, and preserves transaction date filters" do
@@ -20,6 +21,13 @@ class CashFlowTest < ApplicationSystemTestCase
     chart = find("#cashflow-preview [data-preview-sankey-chart-target='chart']", match: :first)
     assert_selector "#cashflow-preview svg .sankey-link"
     assert page.evaluate_script("performance.getEntriesByType('resource').some(e => e.name.includes('/dashboard/cash_flow?'))")
+    # A label hidden to avoid a collision can sit over another node; it must
+    # not catch that node's clicks.
+    assert page.evaluate_script(<<~JS)
+      Array.from(document.querySelectorAll("#cashflow-preview svg text"))
+        .filter(text => text.style.opacity === "0")
+        .every(text => getComputedStyle(text).pointerEvents === "none")
+    JS
     within "#cashflow-preview" do
       click_button "Expand", enable_aria_label: true
     end
@@ -39,8 +47,7 @@ class CashFlowTest < ApplicationSystemTestCase
       })
     JS
     page.execute_script("document.querySelector('#cashflow-preview-expanded-dialog').close()")
-    parent = chart.find("svg text", text: "Sankey Shopping", match: :first)
-    parent.find(:xpath, "..").find("path").click
+    chart.find("g[role='button'][aria-label^='Sankey Shopping,']").find("path").click
     assert_selector "[data-preview-sankey-chart-target='zoomOutButton']:not([hidden])"
     find("[data-preview-sankey-chart-target='zoomOutButton']", match: :first).click
     chart.find("svg text", text: "Sankey Groceries", match: :first).find(:xpath, "..").find("path").click
@@ -52,6 +59,9 @@ class CashFlowTest < ApplicationSystemTestCase
   end
 
   test "bars labels Enter and Space share zoom and transaction actions" do
+    # With the assistant panel open the chart is ~500px wide, and Sankey
+    # Shopping's label would cover Cash Flow's, so it yields; give it room.
+    @user.update!(show_ai_sidebar: false)
     sign_in @user
     [ :bar, :label, :enter, :space ].each do |activation|
       visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
@@ -90,7 +100,7 @@ class CashFlowTest < ApplicationSystemTestCase
       end
       assert_no_selector "#cashflow-preview-expanded-dialog[open]"
       assert_selector "#cashflow-preview [data-sankey-preview-target='expandButton']:focus"
-      assert_equal "true", find("[data-section-key='cashflow_sankey']")["draggable"]
+      assert_selector "[data-section-key='cashflow_sankey'][draggable='true']"
     end
   end
 
@@ -167,12 +177,12 @@ class CashFlowTest < ApplicationSystemTestCase
       click_button "Expand", enable_aria_label: true
     end
     assert_selector "#cashflow-preview-expanded-dialog[open] svg .sankey-link"
-    assert_equal "false", find("[data-section-key='cashflow_sankey']")["draggable"]
+    assert_selector "[data-section-key='cashflow_sankey'][draggable='false']"
     assert_event_count "sankey_preview_displayed", 2
     within "#cashflow-preview-expanded-dialog" do
       find("button[data-action='DS--dialog#close']").click
     end
-    assert_equal "true", find("[data-section-key='cashflow_sankey']")["draggable"]
+    assert_selector "[data-section-key='cashflow_sankey'][draggable='true']"
 
     [ "Looks right", "Something looks wrong" ].each_with_index do |rating, index|
       within "#cashflow-preview" do
@@ -241,7 +251,7 @@ class CashFlowTest < ApplicationSystemTestCase
     sign_in @user
     assert_selector "#cashflow-preview svg .sankey-link"
     install_posthog_fake
-    find("#cashflow-preview svg text", text: "Sankey Shopping", match: :first).hover
+    find("#cashflow-preview g[aria-label^='Sankey Shopping,'] path", match: :first).hover
     assert_selector ".chart-tooltip.ph-no-capture", text: "Sankey Shopping"
     within "#cashflow-preview" do
       click_button "Something looks wrong"
@@ -312,11 +322,11 @@ class CashFlowTest < ApplicationSystemTestCase
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
     # A previous lifetime marker must no longer suppress comparisons.
     @user.update!(preferences: @user.preferences.merge("sankey_comparison_result" => "mismatch"))
+    add_refunded_subcategory
     sign_in @user
     visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
     assert_selector "#cashflow-preview svg .sankey-link"
     install_posthog_fake
-    # Expense-only input adds an explicit deficit in the new graph.
     assert_event_count "new_sankey_mismatch", 1
     page.execute_script("document.dispatchEvent(new Event('posthog:ready'))")
     find("#cashflow-preview [data-sankey-preview-target='expandButton']").click
@@ -343,6 +353,7 @@ class CashFlowTest < ApplicationSystemTestCase
   end
 
   test "feedback buttons highlight the current comparison without analytics and reset on loading" do
+    add_refunded_subcategory
     sign_in @user
     visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
     assert_selector "#cashflow-preview[data-sankey-comparison='mismatch']"
@@ -422,5 +433,11 @@ class CashFlowTest < ApplicationSystemTestCase
       assert_selector "body" do
         page.evaluate_script("window.sankeyEvents.filter(e => e.event === #{event.to_json}).length") == count
       end
+    end
+
+    # A subcategory refunded beyond its spending nests under its parent in the
+    # new graph but links straight to Cash Flow in the original, so they differ.
+    def add_refunded_subcategory
+      create_transaction(account: @account, category: @child, amount: -80, date: @month)
     end
 end

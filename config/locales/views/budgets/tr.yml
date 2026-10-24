@@ -11,6 +11,8 @@ tr:
       monthly_average: "%{amount}/ay ort."
       shared_placeholder: Paylaşılan
       shared_title: Üst kategorinin bütçesini paylaşmak için boş bırakın
+      rollover_label: Sonraki aya devret
+      rollover_title: Bu kategoride harcanmayan parayı bir aydan diğerine aktar
     confirm_button:
       confirm: Onayla
     index:
@@ -36,6 +38,31 @@ tr:
       spending: "%{date} harcaması"
       status: Durum
       view_all_transactions: Tüm kategori işlemlerini görüntüle
+      rolled_over: Devredildi
+    bills_reserved: '%{amount} faturalar için ayrıldı'
+    bills_reserved_unconvertible:
+      one: '%{count} fatura için tutar ayrılamadı, döviz kuru mevcut değil'
+      other: '%{count} fatura için tutar ayrılamadı, döviz kuru mevcut değil'
+    budget_category:
+      rolled_over: +%{amount} devredildi
+    move:
+      button_title: Bu kategoriden para taşı
+      cancel: İptal
+      dialog_title: Para taşı
+      no_destination: Şu anda para taşınabilecek tek zarf bu — bir kategori kendi üst veya alt kategorisine para gönderemez.
+      submit: Taşı
+      amount_label: Tutar
+      available: '%{amount} kullanılabilir'
+      from_label: Kaynak
+      to_label: Hedef
+      success: Para taşındı.
+      errors:
+        different_budgets: Her iki kategori de aynı bütçeye ait olmalıdır.
+        insufficient_funds: Bu tutar, bu kategoriye ayrılan tutardan fazla.
+        non_positive_amount: Sıfırdan büyük bir tutar girin.
+        parent_child: Para, bir kategori ile kendi alt kategorisi arasında taşınamaz — alt kategoriyi doğrudan düzenleyin.
+        same_category: Parayı taşımak için farklı bir kategori seçin.
+        uncategorized: Kategorisiz gerçek bir zarf değildir, bu yüzden içine veya dışına para taşınamaz.
   budgets:
     actuals_summary:
       expenses: Giderler
@@ -103,3 +130,13 @@ tr:
       tabs:
         actual: Gerçekleşen
         budgeted: Bütçelenen
+    switcher:
+      aria_label: Bütçe değiştir
+      household: Hane
+    available_cash:
+      heading: Eldeki nakit
+      subtitle: Yukarıdaki planın yanında, planın bir parçası değil.
+      available: Nakit olarak kullanılabilir
+      earmarked: Hedefler için zaten ayrılmış
+      free: Gerçekten serbest
+      goals_link: Hedefleri görüntüle

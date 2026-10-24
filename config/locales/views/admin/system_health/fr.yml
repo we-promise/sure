@@ -2,12 +2,72 @@
 fr:
   admin:
     system_health:
+      hosted_usage:
+        loading: "Chargement de l’usage hébergé…"
+        title: "Usage hébergé"
+        snapshot: "État de la base en lecture seule au %{time}"
+        summary:
+          trial_households_count: "Foyers en essai (30 derniers jours)"
+          trial_members_count: "Comptes membres actuels des essais"
+          trials_expiring_soon_count: "Essais expirant sous 7 jours"
+          cleanup_eligible_count: "Foyers éligibles au nettoyage"
+          active_supporter_households_count: "Foyers contributeurs actifs (local)"
+          supporter_subscription_count: "Lignes d’abonnement liées à Stripe"
+        summary_help: "Les totaux d’essais concernent les abonnements enregistrés sur les 30 derniers jours. Les totaux d’expiration, de nettoyage et de contribution couvrent toutes les lignes actuelles correspondantes, sans la limite des tableaux."
+        limitations_title: "Ce que ces chiffres permettent de savoir"
+        limitations: "Les tables actuelles ne conservent pas l’historique complet des essais, paiements ou activités des sessions. La création d’un abonnement peut provenir d’un import. Les comptes membres ne sont pas des personnes uniques vérifiées. Cette vue ne modifie aucune donnée de foyer ou d’abonnement. Les réinitialisations de la démo partagée suppriment les anciens foyers et sessions ; l’historique des visiteurs ne peut donc pas être reconstitué."
+        trials:
+          title: "Foyers d’essai récents"
+          description: "Abonnements enregistrés depuis le %{date} conservant une date de fin d’essai, y compris les essais convertis. Affichage limité à %{limit} foyers."
+          sessions_help: "Les sessions sont des connexions conservées pour les utilisateurs activés, pas des utilisateurs actuellement en ligne ni des visites. Se déconnecter supprime une session. La dernière création n’indique pas la dernière activité."
+          empty: "Aucun foyer d’essai enregistré sur cette période"
+        cleanup:
+          title: "Éligibilité au nettoyage"
+          description: "Périmètre existant du nettoyage : abonnement en pause ou en essai terminé depuis plus de 14 jours, ou aucun abonnement et foyer âgé de plus de 45 + 14 jours. Affichage limité à %{limit} foyers."
+          eligibility_help: "Les connexions récentes n’empêchent pas l’éligibilité. Celle-ci ne confirme pas une suppression ; les 90 jours correspondent à la conservation des archives, pas au seuil de nettoyage des essais."
+          disabled: "Le nettoyage planifié des essais est désactivé hors du mode géré. Seules les correspondances au périmètre sont affichées."
+          empty: "Aucun foyer ne correspond au périmètre de nettoyage"
+          reasons:
+            expired_trial_grace_elapsed: "Essai terminé ; délai de grâce de 14 jours écoulé"
+            no_subscription_grace_elapsed: "Aucun abonnement ; 45 + 14 jours écoulés"
+        supporters:
+          title: "État local des contributeurs"
+          description: "Lignes d’abonnement locales actuelles avec des identifiants client et abonnement au format Stripe ; l’abonnement de démonstration synthétique est exclu. Les statuts ne vérifient ni les paiements reçus ni les dates de premier paiement. Aucune requête Stripe n’est effectuée."
+          empty: "Aucune ligne d’abonnement liée à Stripe"
+        columns:
+          household: "Identifiant du foyer"
+          recorded_at: "Abonnement enregistré"
+          trial_ends_at: "Fin de l’essai"
+          status: "État actuel"
+          members: "Comptes membres"
+          retained_sessions: "Sessions de connexion conservées"
+          recent_sessions: "Sessions conservées créées sur 30 jours"
+          latest_session: "Dernière connexion conservée"
+          cleanup_eligible: "Éligible au nettoyage"
+          cleanup_reason: "Motif"
+          subscription_rows: "Lignes d’abonnement"
+        statuses:
+          unknown: "Inconnu"
+          incomplete: "Incomplet"
+          incomplete_expired: "Incomplet, expiré"
+          trialing: "En essai"
+          active: "Actif"
+          past_due: "En retard"
+          canceled: "Annulé"
+          unpaid: "Impayé"
+          paused: "En pause"
+          no_subscription: "Aucun abonnement"
+        not_recorded: "Non enregistré"
+        eligible: "Éligible"
+        not_eligible: "Non éligible"
+        synthetic_demo: "Démo synthétique"
       push_notifications:
         send_test: "Envoyer une notification de test"
         queueing: "Mise en file…"
         title: "Notifications push"
         requested_at: "Dernier test demandé le %{time}"
         result_help: "L’acceptation par APNs ne confirme pas la réception sur votre appareil. Actualisez pour voir les résultats du worker. Les résultats sont conservés pendant 24 heures."
+        results_label: "Résultats du test"
         device: "Appareil %{number}"
         pending: "En attente"
         refresh: "Actualiser les résultats"
@@ -150,6 +210,7 @@ fr:
           llm:
             description: Les vérifications en direct contrôlent le modèle configuré, lui demandent un appel de fonction trivial comme le fait l'assistant, puis testent séparément l'extraction de texte et le traitement vision / natif à l'aide d'un PDF synthétique d'une page ne contenant aucune donnée client. Les valeurs des identifiants ne sont jamais affichées.
             title: LLM et traitement des PDF
+          loading: "Vérifications en direct en cours…"
           local_setup:
             description: Faites tourner le LLM via votre point de terminaison local compatible OpenAI, stockez les vecteurs de documents dans pgvector et faites pointer les paramètres d'embeddings vers un point de terminaison d'embeddings compatible OpenAI. L'image PostgreSQL doit inclure l'extension vector, et les dimensions d'embedding doivent correspondre au modèle sélectionné.
             title: Installation locale recommandée
@@ -242,6 +303,7 @@ fr:
         status_section_description: État actuel du worker en arrière-plan qui assure les synchronisations, les soldes et les calculs de patrimoine net.
         status_section_title: Statut de Sidekiq
         tabs:
+          hosted_usage: "Usage hébergé"
           ai: Statut de l'IA
           background_jobs: Tâches en arrière-plan
         title: Santé du système

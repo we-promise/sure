@@ -1,0 +1,12 @@
+---
+tr:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: SCA özel anahtarı
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: bu kurulumda Active Record şifrelemesi yapılandırılmadığı için saklanamıyor

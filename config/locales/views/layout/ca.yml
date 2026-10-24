@@ -8,10 +8,17 @@ ca:
         home: Inici
         reports: Informes
         transactions: Transaccions
+        bills: Factures
+        plan: Pla
+        goals: Objectius
       privacy_mode: Commuta el mode de privadesa
       resize_left_sidebar: Redimensiona la barra lateral de comptes
       resize_right_sidebar: Redimensiona la barra lateral de l'assistent
       skip_to_main: Salta al contingut principal
+      insights: Observacions
+      release_highlight:
+        title: Novetats
+        done: Entesos
     auth:
       existing_account: Ja tens un compte?
       no_account: Ets nou a %{product_name}?
@@ -25,6 +32,10 @@ ca:
       footer:
         privacy_policy: Política de privadesa
         terms_of_service: Condicions del servei
+      notification_tray:
+        download_complete: Baixada completada
+        download_failed: No s'ha pogut baixar. Torna-ho a provar.
+        download_location: El fitxer és a la carpeta Baixades.
     trial:
       contribute: Contribueix
       data_deleted_in_days: Les dades s'eliminaran en %{days} dies

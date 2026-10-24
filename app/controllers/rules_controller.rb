@@ -1,17 +1,11 @@
 class RulesController < ApplicationController
   include StreamExtensions
 
+  before_action :require_non_guest!, except: %i[index]
   before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
 
   def index
-    @sort_by = params[:sort_by] || "name"
-    @direction = params[:direction] || "asc"
-
-    allowed_columns = [ "name", "updated_at" ]
-    @sort_by = "name" unless allowed_columns.include?(@sort_by)
-    @direction = "asc" unless [ "asc", "desc" ].include?(@direction)
-
-    @rules = Current.family.rules.includes(conditions: :sub_conditions).order(@sort_by => @direction)
+    @rules = Current.family.rules.includes(conditions: :sub_conditions).ordered
 
     # Fetch recent rule runs with pagination
     recent_runs_scope = RuleRun
@@ -27,7 +21,7 @@ class RulesController < ApplicationController
 
   def new
     @rule = Current.family.rules.build(
-      resource_type: params[:resource_type] || "transaction",
+      resource_type: params[:resource_type].presence_in(Rule::SUPPORTED_RESOURCE_TYPES) || "transaction",
     )
 
     if params[:name].present?
@@ -39,7 +33,7 @@ class RulesController < ApplicationController
       )
     end
 
-    if params[:action_type].present? && params[:action_value].present?
+    if params[:action_type].in?(Rule::Action::SUPPORTED_ACTION_TYPES) && params[:action_value].present?
       @rule.actions.build(
         action_type: params[:action_type],
         value: params[:action_value]
@@ -53,30 +47,28 @@ class RulesController < ApplicationController
     if @rule.save
       redirect_to confirm_rule_path(@rule, reload_on_close: true)
     else
-      render :new, status: :unprocessable_entity
+      render_invalid_rule :new
     end
   end
 
   def apply
     @rule.update!(active: true)
+
+    # The rule stayed off, so running it now would only repeat the slow query.
+    if @rule.notification_baseline_timed_out?
+      redirect_back_or_to rules_path, alert: t("rules.notification_baseline_timed_out")
+      return
+    end
+
     @rule.apply_later(ignore_attribute_locks: true)
     redirect_back_or_to rules_path, notice: "#{@rule.resource_type.humanize} rule activated"
   end
 
   def confirm
+    @active_rules_above_count = @rule.active_rules_above.count
     # Compute provider, model, and cost estimation for auto-categorize actions
     if @rule.actions.any? { |a| a.action_type == "auto_categorize" }
-      # Use the same provider determination logic as Family::AutoCategorizer
-      llm_provider = Provider::Registry.get_provider(:openai)
-
-      if llm_provider
-        @selected_model = Provider::Openai.effective_model
-        @estimated_cost = LlmUsage.estimate_auto_categorize_cost(
-          transaction_count: @rule.affected_resource_count,
-          category_count: @rule.family.categories.count,
-          model: @selected_model
-        )
-      end
+      @selected_model, @estimated_cost = auto_categorize_estimate(@rule)
     end
   end
 
@@ -85,18 +77,31 @@ class RulesController < ApplicationController
 
   def update
     if @rule.update(rule_params)
+      flash_message = if @rule.notification_baseline_timed_out?
+        { alert: t("rules.notification_baseline_timed_out") }
+      else
+        { notice: t(".success") }
+      end
+
       respond_to do |format|
-        format.html { redirect_back_or_to rules_path, notice: t(".success") }
-        format.turbo_stream { stream_redirect_back_or_to rules_path, notice: t(".success") }
+        format.html { redirect_back_or_to rules_path, **flash_message }
+        format.turbo_stream { stream_redirect_back_or_to rules_path, **flash_message }
       end
     else
-      render :edit, status: :unprocessable_entity
+      render_invalid_rule :edit
     end
   end
 
   def destroy
     @rule.destroy
     redirect_to rules_path, notice: t(".success")
+  end
+
+  def reorder
+    Rule.update_positions!(Current.family, params.require(:rule_ids))
+    head :no_content
+  rescue ArgumentError
+    head :unprocessable_entity
   end
 
   def destroy_all
@@ -110,16 +115,10 @@ class RulesController < ApplicationController
 
     # Compute AI cost estimation if any rule has auto_categorize action
     if @rules.any? { |r| r.actions.any? { |a| a.action_type == "auto_categorize" } }
-      llm_provider = Provider::Registry.get_provider(:openai)
-
-      if llm_provider
-        @selected_model = Provider::Openai.effective_model
-        @estimated_cost = LlmUsage.estimate_auto_categorize_cost(
-          transaction_count: @total_affected_count,
-          category_count: Current.family.categories.count,
-          model: @selected_model
-        )
-      end
+      @selected_model, @estimated_cost = auto_categorize_estimate(
+        Current.family,
+        transaction_count: @total_affected_count
+      )
     end
   end
 
@@ -134,6 +133,47 @@ class RulesController < ApplicationController
   end
 
   private
+    def render_invalid_rule(template)
+      # A native select cannot preserve an invalid option on resubmission. An
+      # action marked for destruction is not validated, but is still rendered.
+      invalid_selector = @rule.errors[:resource_type].any? ||
+        @rule.actions.any? { |action| action.errors[:action_type].any? || !action.action_type.in?(Rule::Action::SUPPORTED_ACTION_TYPES) } ||
+        @rule.conditions.any? { |condition| invalid_condition_selector?(condition) }
+
+      if invalid_selector
+        render plain: @rule.errors.full_messages.to_sentence, status: :unprocessable_entity
+        return
+      end
+
+      render template, status: :unprocessable_entity
+    end
+
+    def invalid_condition_selector?(condition)
+      condition.errors[:condition_type].any? || condition.errors[:operator].any? ||
+        condition.sub_conditions.any? { |sub_condition| invalid_condition_selector?(sub_condition) }
+    end
+
+    # Names the provider that will actually run, and prices against it.
+    #
+    # This previously hardcoded :openai, so an Anthropic install was quoted the
+    # wrong model and a family on Jev was quoted a provider that would not run
+    # at all. LlmUsage has no pricing for Jev, so the cost comes back nil and the
+    # view says so rather than inventing a figure.
+    def auto_categorize_estimate(scope, transaction_count: nil)
+      family = scope.is_a?(Rule) ? scope.family : scope
+      count = transaction_count || scope.affected_resource_count
+      model = family.categorization_model_name
+      return [ nil, nil ] if model.blank?
+
+      cost = LlmUsage.estimate_auto_categorize_cost(
+        transaction_count: count,
+        category_count: family.categories.count,
+        model: model
+      )
+
+      [ model, cost ]
+    end
+
     # The reset itself happens in a background job, so an enqueue that never
     # lands looks exactly like a job that ran and found nothing. Logging the
     # request separately from the job's own "started" entry tells those apart.
@@ -185,13 +225,14 @@ class RulesController < ApplicationController
 
     def rule_params
       params.require(:rule).permit(
-        :resource_type, :effective_date, :active, :name,
+        :resource_type, :effective_date, :active, :name, :stop_processing,
         conditions_attributes: [
           :id, :condition_type, :operator, :value, :_destroy,
           sub_conditions_attributes: [ :id, :condition_type, :operator, :value, :_destroy ]
         ],
         actions_attributes: [
-          :id, :action_type, :value, :_destroy, { value: [] }
+          :id, :action_type, :value, :_destroy, { value: [] },
+          split_rows: [ :type, :name, :share, :category_id, :merchant_id, tag_ids: [] ]
         ]
       )
     end

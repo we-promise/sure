@@ -8,7 +8,7 @@ class HoldingsController < ApplicationController
     @account = accessible_accounts.find(params[:account_id])
     raise ActiveRecord::RecordNotFound unless @account.supports_holdings?
 
-    @current_holdings = @account.current_holdings
+    @current_holdings = @account.current_holdings.includes(:security)
     @trade_republic_categories = trade_republic_categories_for(@account)
   end
 
@@ -17,12 +17,17 @@ class HoldingsController < ApplicationController
   end
 
   def update
-    total_cost_basis = holding_params[:cost_basis].to_d
+    # The editor sends the per-share cost, which is what cost_basis stores, so a
+    # price below a cent is not lost to a total rounded to cents. A total is still
+    # accepted and divided by the quantity. Zero is valid for gifted/inherited shares,
+    # an empty field is not: it would lock an unknown basis as 0.
+    per_share_cost = if holding_params.key?(:per_share_cost_basis)
+      holding_params[:per_share_cost_basis].presence&.to_d
+    elsif @holding.qty.positive? && (total_cost_basis = holding_params[:cost_basis].presence)
+      total_cost_basis.to_d / @holding.qty
+    end
 
-    if total_cost_basis >= 0 && @holding.qty.positive?
-      # Convert total cost basis to per-share cost (the cost_basis field stores per-share)
-      # Zero is valid for gifted/inherited shares
-      per_share_cost = total_cost_basis / @holding.qty
+    if per_share_cost && per_share_cost >= 0 && @holding.qty.positive?
       @holding.set_manual_cost_basis!(per_share_cost)
       flash[:notice] = t(".success")
     else
@@ -158,7 +163,7 @@ class HoldingsController < ApplicationController
       end
       return if provider.blank?
 
-      values = Array(provider.raw_positions_payload).group_by { |position| position["category"].presence || "brokerage" }
+      values = provider.positions.group_by { |position| position["category"].presence || "brokerage" }
       TradeRepublicClientCategories::ALL.index_with do |category|
         positions = values.fetch(category, [])
         {
@@ -183,6 +188,6 @@ class HoldingsController < ApplicationController
     end
 
     def holding_params
-      params.require(:holding).permit(:cost_basis)
+      params.require(:holding).permit(:cost_basis, :per_share_cost_basis)
     end
 end

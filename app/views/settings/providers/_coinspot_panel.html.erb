@@ -1,12 +1,10 @@
 <div id="coinspot-providers-panel" class="space-y-4">
-  <% items = local_assigns[:coinspot_items] || @coinspot_items %>
+  <% items = local_assigns[:coinspot_items] || @coinspot_items || Current.family.coinspot_items.active.ordered %>
 
   <%= render DS::Alert.new(
         variant: :warning,
-        message: safe_join([
-          content_tag(:p, t("settings.providers.coinspot_panel.read_only_title"), class: "font-medium"),
-          content_tag(:p, t("settings.providers.coinspot_panel.read_only_body"), class: "mt-1")
-        ])
+        title: t("settings.providers.coinspot_panel.read_only_title"),
+        message: t("settings.providers.coinspot_panel.read_only_body")
       ) %>
 
   <%= render "settings/providers/setup_steps",
@@ -50,7 +48,7 @@
                 icon: "refresh-cw",
                 variant: :outline,
                 size: :sm,
-                href: sync_coinspot_item_path(item),
+                href: sync_coinspot_item_path(item, source: "panel"),
                 method: :post,
                 disabled: item.syncing?
               ) %>
@@ -108,10 +106,7 @@
 
   <% coinspot_item = Current.family.coinspot_items.build(name: t("settings.providers.coinspot_panel.default_connection_name")) %>
   <% if items.any? %>
-    <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
-      <%= icon "plus", size: "sm" %>
-      <%= t("settings.providers.coinspot_panel.add_connection") %>
-    </h3>
+    <%= render "settings/providers/add_connection_heading", label: t("settings.providers.coinspot_panel.add_connection") %>
   <% end %>
 
   <%= styled_form_with model: coinspot_item,

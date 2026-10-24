@@ -37,10 +37,12 @@ en:
       current: Current
       next_payment: Next payment
       around: "around %{date}"
+      overview: Overview
       rules: How this bill is matched
       rule_named: "%{name}"
       rule_amount_range: "from %{min} to %{max}"
       rule_aliases: "Also matches %{names}"
+      rule_detected: "Matches transactions named %{name}"
       rule_learned_tolerance: "Amounts within %{percent} of the usual amount match this bill"
       history_title: Last 12 months
       history_aria: Payments over the last twelve months
@@ -54,7 +56,6 @@ en:
       ytd: Paid this year
       last_account: Last account used
       upcoming: Coming up
-      recent_payments: Recent payments
       manual_payment: Manual payment
       history: History
       payment_count:
@@ -76,7 +77,7 @@ en:
       pulse_next_seven: next 7 days
       pulse_bar_aria: "%{percent}% of this month's bills paid"
       next_up: Next up
-      view_upcoming: View upcoming
+      view_calendar: View calendar
       # The strip has a column to itself, so the date stands alone rather than
       # reading as a sentence the way the row sublines do.
       date_today: Today
@@ -87,20 +88,17 @@ en:
     summary:
       remaining: "%{amount} remaining"
       paid_headline: "%{amount} paid"
-      cost_line: "Averages %{average} a payment, about %{annualized} a year"
-    pane:
-      close: Collapse details
     add_bill: Add bill
-    manage: Manage
+    manage: View
     find_payment: Find payment
     add_payment: Add payment
     review_match: Review match
     resolve: Resolve
     manage_payments: Manage payments
-    view_full_bill: View full bill
     match:
       same_merchant: Same merchant
       name_matches: Name matches
+      same_transfer: Transfer to the same account
       exact_amount: Exact amount
       amount_off: "%{amount} off"
       due_date: Due-date match
@@ -111,8 +109,9 @@ en:
         one: 1 day after due
         other: "%{count} days after due"
     attention:
+      paused: Paused
       needs_review: Match needs review
-      partial: "Partial · %{amount} remaining"
+      partial: Partial
       amount_changed: Amount changed
       overdue:
         one: 1 day overdue
@@ -124,7 +123,7 @@ en:
     cancelled_still_scheduled: "You marked this cancelled on %{date}, but it is still scheduled, so future bills will keep appearing."
     paid_over: "Paid %{paid}, more than expected"
     remaining_label: remaining
-    debt_payment: "· debt payment"
+    debt_payment: Debt payment
     paid_from: "from %{account}"
     amount_range: "ranges %{min} to %{max}"
     possible_duplicate: Possible duplicate
@@ -207,6 +206,12 @@ en:
       bridge_label: Before your next paycheck
       bridge_amount: "· %{amount} due"
       bridge_split: "Due before %{date}, covered by the %{cash} in your accounts."
+      bridge_left: "%{amount} left after bills"
+      bridge_show_more:
+        one: Show 1 more
+        other: "Show %{count} more"
+      bridge_allocation_aria: "Of %{cash} in your accounts, %{due} is due before your next paycheck and %{left} is left."
+      item_overdue: Overdue
       shortfall_label: Short before your next payday
       shortfall_amount: "· %{amount}"
       shortfall_split: "%{obligations} is due before %{date} and your accounts hold %{cash}."
@@ -247,12 +252,8 @@ en:
       no_matches_title: Nothing matches
       no_matches_description: Try clearing a filter or the search.
       col_name: Name
-      col_type: Type
-      col_frequency: Frequency
       col_amount: Amount
       col_next: Next due
-      next_short: "next %{date}"
-      col_status: Status
       col_actions: Actions
       monthly_equivalent: "%{amount}/mo"
       types:
@@ -269,13 +270,14 @@ en:
       paid_so_far: Paid so far
       hero_past_due: "%{amount} past due"
       hero_next_seven: "%{amount} due in the next 7 days"
-      add_bill: Add bill
-      add_income: Add income
+      add_bill: New bill
+      add_income: New income
       review_with_ai: Review with AI
       detected_review:
         one: We found 1 recurring payment in your transactions. Check it over so the totals here match what you actually pay.
         other: We found %{count} recurring payments in your transactions. Check them over so the totals here match what you actually pay.
       detected_review_action: Review them
+      notices_heading: Changes
       needs_review: Needs review
       notice_trial: "%{name}'s trial ends %{date}"
       notice_renewal: "%{name} renews %{date}"
@@ -309,7 +311,7 @@ en:
       this_month: This month
       later: After this month
       paid_this_month: Paid this month
-      dormant: Dormant
+      dormant: Paused
       kpi_remaining: Remaining this month
       kpi_paid: Paid this month
       kpi_next_seven: Due next 7 days

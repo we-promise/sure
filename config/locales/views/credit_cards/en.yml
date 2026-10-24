@@ -13,6 +13,12 @@ en:
       expiration_date: Expiration date
       minimum_payment: Minimum payment
       minimum_payment_placeholder: '100'
+      sophtron_balance_sign_auto: Automatic
+      sophtron_balance_sign_credit: Credit (bank owes you)
+      sophtron_balance_sign_debt: Debt (you owe the bank)
+      sophtron_balance_sign_description: Use an override only when Sophtron reports
+        an ambiguous sign. Automatic continues negating credit card balances.
+      sophtron_balance_sign_label: Sophtron balance meaning
       simplefin_balance_sign_auto: Automatic
       simplefin_balance_sign_credit: Credit (bank owes you)
       simplefin_balance_sign_debt: Debt (you owe the bank)
@@ -28,12 +34,6 @@ en:
       treat_balance_as_available_credit_label: Balance is available credit
     new:
       title: Enter credit card details
-    overview:
-      amount_owed: Amount Owed
-      annual_fee: Annual Fee
-      apr: APR
-      available_credit: Available Credit
-      edit_account_details: Edit account details
-      expiration_date: Expiration Date
-      minimum_payment: Minimum Payment
-      unknown: Unknown
+    update:
+      sophtron_balance_sign_error: Could not apply the Sophtron balance meaning.
+        Your previous setting was kept. Please try again.

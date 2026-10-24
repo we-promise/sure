@@ -1,0 +1,8 @@
+---
+uk:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Для кожної зміни ставки потрібні дата набрання чинності та ставка.
+          rate_change_before_origination: Зміна ставки не може набрати чинності раніше за дату видачі позики.

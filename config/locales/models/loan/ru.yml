@@ -1,0 +1,8 @@
+---
+ru:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Для каждого изменения ставки нужно указать дату вступления в силу и ставку.
+          rate_change_before_origination: Изменение ставки не может вступить в силу раньше даты выдачи кредита.

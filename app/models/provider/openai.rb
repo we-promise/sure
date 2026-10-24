@@ -1,19 +1,34 @@
 class Provider::Openai < Provider
   include LlmConcept
+  include LangfuseTraceable
 
   # Subclass so errors caught in this provider are raised as Provider::Openai::Error
   Error = Class.new(Provider::Error)
 
+  # Raised when a successful HTTP response can't be parsed into the expected
+  # structure; used by Auto JSON mode to decide whether to retry without
+  # response_format.
+  ResponseFormatError = Class.new(Error)
+
   DEFAULT_MODEL = "gpt-4.1".freeze
   DEFAULT_REQUEST_TIMEOUT = 60
   MIN_REQUEST_TIMEOUT = 1
-  SUPPORTED_MODELS = %w[gpt-4 gpt-5 o1 o3].freeze
-  VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
+  SUPPORTED_MODELS = %w[gpt-4 gpt-5 gpt-6 o1 o3].freeze
+  VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 gpt-6 o1 o3].freeze
+  PDF_COMPLETION_LIMIT_MODEL_PREFIXES = %w[gpt-6 o1 o3].freeze
+
+  # Keep the provider's response budget and the PDF request parameter in sync.
+  # @return [Boolean] whether native PDF vision uses max_completion_tokens
+  def self.native_pdf_completion_limit?(model:, custom_provider:)
+    !custom_provider && PDF_COMPLETION_LIMIT_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
+  end
 
   # Returns the effective model that would be used by the provider.
-  # Priority: explicit ENV > Setting > DEFAULT_MODEL.
+  # Priority: explicit ENV > Setting > DEFAULT_MODEL. A blank ENV value is
+  # treated as unset and falls through to the Setting.
   def self.effective_model
-    ENV.fetch("OPENAI_MODEL") { Setting.openai_model }.presence || DEFAULT_MODEL
+    configured_model = ENV["OPENAI_MODEL"].presence || Setting.openai_model
+    configured_model.presence || DEFAULT_MODEL
   end
 
   def self.configured?
@@ -174,10 +189,6 @@ class Provider::Openai < Provider
     [ context_window - max_response_tokens - system_prompt_reserve, 256 ].max
   end
 
-  def max_items_per_call
-    positive_budget(ENV["LLM_MAX_ITEMS_PER_CALL"], Setting.llm_max_items_per_call, 25)
-  end
-
   def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
       if user_categories.blank?
@@ -208,9 +219,12 @@ class Provider::Openai < Provider
         ).auto_categorize
       end
 
-      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
@@ -233,9 +247,12 @@ class Provider::Openai < Provider
         family: family
       ).suggest
 
-      upsert_langfuse_trace(trace: trace, output: result.to_h)
+      finish_langfuse_trace(trace: trace, output: result.to_h)
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
@@ -263,9 +280,12 @@ class Provider::Openai < Provider
         ).auto_detect_merchants
       end
 
-      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
@@ -292,9 +312,12 @@ class Provider::Openai < Provider
         ).enhance_merchants
       end
 
-      upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
@@ -310,7 +333,12 @@ class Provider::Openai < Provider
     VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
   end
 
-  def process_pdf(pdf_content:, model: "", family: nil)
+  # Analyze PDF bytes with the selected model and attribute usage to the family.
+  # @param pdf_content [String] PDF bytes
+  # @param model [String] optional override of the configured model
+  # @param family [Family, nil] usage attribution
+  # @return [Provider::Response] structured result or provider failure
+  def process_pdf(pdf_content:, model: "", family: nil, json_mode: nil)
     with_provider_response do
       effective_model = model.presence || @default_model
       raise Error, "Model does not support PDF/vision processing: #{effective_model}" unless supports_pdf_processing?(model: effective_model)
@@ -320,6 +348,14 @@ class Provider::Openai < Provider
         input: { pdf_size: pdf_content&.bytesize }
       )
 
+      # Reasoning-model completion limits include reasoning; the fallback is a budget reserve.
+      response_limit =
+        if self.class.native_pdf_completion_limit?(model: effective_model, custom_provider: custom_provider?)
+          explicit_max_response_tokens
+        else
+          max_response_tokens
+        end
+
       result = PdfProcessor.new(
         client,
         model: effective_model,
@@ -327,16 +363,20 @@ class Provider::Openai < Provider
         custom_provider: custom_provider?,
         langfuse_trace: trace,
         family: family,
-        max_response_tokens: max_response_tokens
+        max_response_tokens: response_limit,
+        json_mode: json_mode
       ).process
 
-      upsert_langfuse_trace(trace: trace, output: result.to_h)
+      finish_langfuse_trace(trace: trace, output: result.to_h)
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
-  def extract_bank_statement(pdf_content:, model: "", family: nil)
+  def extract_bank_statement(pdf_content:, model: "", family: nil, json_mode: nil)
     with_provider_response do
       effective_model = model.presence || @default_model
 
@@ -348,12 +388,16 @@ class Provider::Openai < Provider
       result = BankStatementExtractor.new(
         client: client,
         pdf_content: pdf_content,
-        model: effective_model
+        model: effective_model,
+        json_mode: json_mode
       ).extract
 
-      upsert_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })
+      finish_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
@@ -446,7 +490,6 @@ class Provider::Openai < Provider
     def slice_for_context(items, fixed: nil)
       BatchSlicer.call(
         Array(items),
-        max_items: max_items_per_call,
         max_tokens: max_input_tokens,
         fixed_tokens: fixed ? Assistant::TokenEstimator.estimate(fixed) : 0
       )
@@ -491,6 +534,8 @@ class Provider::Openai < Provider
 
         input_payload = chat_config.build_input(prompt: prompt)
 
+        start_time = Time.current
+
         begin
           request_params = {
             model: model,
@@ -528,7 +573,8 @@ class Provider::Openai < Provider
               output: response.messages.map(&:output_text).join("\n"),
               usage: usage,
               session_id: session_id,
-              user_identifier: user_identifier
+              user_identifier: user_identifier,
+              start_time: start_time
             )
             record_llm_usage(family: family, model: model, operation: "chat", usage: usage)
             response
@@ -542,7 +588,8 @@ class Provider::Openai < Provider
               output: parsed.messages.map(&:output_text).join("\n"),
               usage: raw_response["usage"],
               session_id: session_id,
-              user_identifier: user_identifier
+              user_identifier: user_identifier,
+              start_time: start_time
             )
             record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
             parsed
@@ -554,7 +601,8 @@ class Provider::Openai < Provider
             input: input_payload,
             error: e,
             session_id: session_id,
-            user_identifier: user_identifier
+            user_identifier: user_identifier,
+            start_time: start_time
           )
           record_llm_usage(family: family, model: model, operation: "chat", error: e)
           raise
@@ -596,6 +644,8 @@ class Provider::Openai < Provider
         params[:tool_choice] = "none" if tool_choice == :none && tools.present?
         params[:max_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
+        start_time = Time.current
+
         begin
           raw_response = session_client.chat(parameters: params)
 
@@ -608,7 +658,8 @@ class Provider::Openai < Provider
             output: parsed.messages.map(&:output_text).join("\n"),
             usage: raw_response["usage"],
             session_id: session_id,
-            user_identifier: user_identifier
+            user_identifier: user_identifier,
+            start_time: start_time
           )
 
           record_llm_usage(family: family, model: model, operation: "chat", usage: raw_response["usage"])
@@ -635,7 +686,8 @@ class Provider::Openai < Provider
             input: messages,
             error: e,
             session_id: session_id,
-            user_identifier: user_identifier
+            user_identifier: user_identifier,
+            start_time: start_time
           )
           record_llm_usage(family: family, model: model, operation: "chat", error: e)
           raise
@@ -662,16 +714,17 @@ class Provider::Openai < Provider
         payload << { role: "user", content: prompt }
       end
 
-      # If there are function results, we need to add the assistant message that made the tool calls
-      # followed by the tool messages with the results
-      if function_results.any?
+      # For each tool round, add the assistant message that made the tool calls
+      # followed by the tool messages with the results, in order, so each
+      # follow-up request extends the previous one and prefix caches stay valid.
+      Assistant::Responder.group_by_round(function_results).each do |round_results|
         # Build assistant message with tool_calls
-        tool_calls = function_results.map do |fn_result|
-          # Convert arguments to JSON string if it's not already a string
-          arguments = fn_result[:arguments]
-          arguments_str = arguments.is_a?(String) ? arguments : arguments.to_json
+        tool_calls = round_results.map do |fn_result|
+          # Shared with ToolCall::Function.serialize_arguments so history and
+          # follow-up payloads stay in sync for strict OpenAI-compatible endpoints.
+          arguments_str = ToolCall::Function.serialize_arguments(fn_result[:arguments])
 
-          {
+          call = {
             id: fn_result[:call_id],
             type: "function",
             function: {
@@ -679,6 +732,8 @@ class Provider::Openai < Provider
               arguments: arguments_str
             }
           }
+          call[:extra_content] = fn_result[:extra_content] if fn_result[:extra_content].present?
+          call
         end
 
         payload << {
@@ -688,7 +743,7 @@ class Provider::Openai < Provider
         }
 
         # Add function results as tool messages
-        function_results.each do |fn_result|
+        round_results.each do |fn_result|
           # Convert output to JSON string if it's not already a string
           # OpenAI API requires content to be either a string or array of objects
           # Handle nil explicitly to avoid serializing to "null"
@@ -704,7 +759,6 @@ class Provider::Openai < Provider
           payload << {
             role: "tool",
             tool_call_id: fn_result[:call_id],
-            name: fn_result[:name],
             content: content
           }
         end
@@ -729,41 +783,22 @@ class Provider::Openai < Provider
       end
     end
 
-    def langfuse_client
-      return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
-
-      @langfuse_client = Langfuse.new
-    end
-
-    def create_langfuse_trace(name:, input:, session_id: nil, user_identifier: nil)
-      return unless langfuse_client
-
-      langfuse_client.trace(
-        name: name,
-        input: input,
-        session_id: session_id,
-        user_id: user_identifier,
-        environment: Rails.env
-      )
-    rescue => e
-      Rails.logger.warn("Langfuse trace creation failed: #{e.message}\n#{e.full_message}")
-      nil
-    end
-
-    def log_langfuse_generation(name:, model:, input:, output: nil, usage: nil, error: nil, session_id: nil, user_identifier: nil)
+    def log_langfuse_generation(name:, model:, input:, output: nil, usage: nil, error: nil, session_id: nil, user_identifier: nil, start_time: nil)
       return unless langfuse_client
 
       trace = create_langfuse_trace(
         name: "openai.#{name}",
         input: input,
         session_id: session_id,
-        user_identifier: user_identifier
+        user_identifier: user_identifier,
+        start_time: start_time
       )
 
       generation = trace&.generation(
         name: name,
         model: model,
-        input: input
+        input: input,
+        start_time: start_time
       )
 
       if error
@@ -771,32 +806,17 @@ class Provider::Openai < Provider
           output: { error: error.message, details: error.respond_to?(:details) ? error.details : nil },
           level: "ERROR"
         )
-        upsert_langfuse_trace(
+        finish_langfuse_trace(
           trace: trace,
           output: { error: error.message },
           level: "ERROR"
         )
       else
         generation&.end(output: output, usage: usage)
-        upsert_langfuse_trace(trace: trace, output: output)
+        finish_langfuse_trace(trace: trace, output: output)
       end
     rescue => e
       Rails.logger.warn("Langfuse logging failed: #{e.message}\n#{e.full_message}")
-    end
-
-    def upsert_langfuse_trace(trace:, output:, level: nil)
-      return unless langfuse_client && trace&.id
-
-      payload = {
-        id: trace.id,
-        output: output
-      }
-      payload[:level] = level if level.present?
-
-      langfuse_client.trace(**payload)
-    rescue => e
-      Rails.logger.warn("Langfuse trace upsert failed for trace_id=#{trace&.id}: #{e.message}\n#{e.full_message}")
-      nil
     end
 
     def record_llm_usage(family:, model:, operation:, usage: nil, error: nil)

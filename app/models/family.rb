@@ -34,7 +34,16 @@ class Family < ApplicationRecord
 
 
   MONIKERS = [ "Family", "Group" ].freeze
-  ASSISTANT_TYPES = %w[builtin external].freeze
+  # `mcp_only` removes the in-app assistant (chat, sidebar, chat-seeding
+  # buttons) without touching MCP: /mcp serves the same tool registry to
+  # external agents whatever this says. "Off" stays free for a future
+  # no-LLM-at-all switch; categorization still runs under `mcp_only`.
+  ASSISTANT_TYPES = %w[builtin external mcp_only].freeze
+
+  # Which provider categorizes this family's transactions. Family-level rather
+  # than a global Setting because it decides whose transaction descriptions get
+  # sent to a third party — the same reason assistant_type lives here.
+  CATEGORIZATION_PROVIDERS = %w[llm jev].freeze
   SHARING_DEFAULTS = %w[shared private].freeze
 
   has_many :users, dependent: :destroy
@@ -55,6 +64,7 @@ class Family < ApplicationRecord
 
   has_many :tags, dependent: :destroy
   has_many :categories, dependent: :destroy
+  has_many :categorization_comparisons, dependent: :destroy
   has_many :merchants, dependent: :destroy, class_name: "FamilyMerchant"
 
   has_many :budgets, dependent: :destroy
@@ -153,12 +163,103 @@ class Family < ApplicationRecord
   validates :month_start_day, inclusion: { in: 1..28 }
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
+  validates :categorization_provider, inclusion: { in: CATEGORIZATION_PROVIDERS }
+  validates :categorization_confidence_threshold,
+            numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
+  validates :categorization_shadow_rate,
+            numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
+
+  # Single definition of the ENV-over-column precedence, so the resolver and the
+  # settings UI can never disagree about which provider is actually in force.
+  def effective_categorization_provider
+    ENV["CATEGORIZATION_PROVIDER"].presence || categorization_provider
+  end
+
+  # ENV-over-column precedence for the assistant, same shape as the provider
+  # above. Unknown ENV values pass through; callers treat them as builtin.
+  def effective_assistant_type
+    ENV["ASSISTANT_TYPE"].presence || assistant_type.presence || "builtin"
+  end
+
+  def assistant_enabled?
+    effective_assistant_type != "mcp_only"
+  end
+
+  # The provider that will actually categorize this family's transactions,
+  # falling back to the LLM path when Jev is unselected or unconfigured.
+  # Credentials alone never select Jev; the family has to choose it, because
+  # this decides whose transaction descriptions reach a third party.
+  #
+  # Anything naming the provider calls this, including the rule confirmation
+  # screen's cost estimate, or it quotes a provider that will not run. Views
+  # call it while rendering, so it writes nothing itself; a caller that runs
+  # categorization passes a block to hear why Jev could not be built.
+  def resolved_categorization_provider(&on_jev_error)
+    jev = configured_jev_provider(&on_jev_error) if effective_categorization_provider == "jev"
+
+    # Honors Setting.llm_provider (#2113); Provider::Anthropic gained
+    # auto_categorize in #1984, so either LLM provider can serve this.
+    jev || Provider::Registry.preferred_llm_provider
+  end
+
+  def categorization_model_name
+    provider = resolved_categorization_provider
+    return unless provider
+
+    case provider
+    when Provider::Jev then Provider::Jev.effective_model
+    when Provider::Anthropic then Provider::Anthropic.effective_model
+    else Provider::Openai.effective_model
+    end
+  end
+
+  # Answers below this confidence are not applied. Zero applies everything and
+  # is the default. Only providers reporting calibrated confidence can be gated;
+  # the LLM providers return a bare category name. Clamped because the ENV
+  # override bypasses both the column validation and the DB check constraint.
+  def effective_categorization_confidence_threshold
+    (ENV["CATEGORIZATION_CONFIDENCE_THRESHOLD"].presence || categorization_confidence_threshold).to_f.clamp(0.0, 1.0)
+  end
+
+  # Fraction of categorization runs that also ask the provider not in use, for
+  # comparison only. Zero disables it. Doubles spend on the runs it samples, so
+  # it is sampled rather than all-or-nothing. Clamped because `rand < rate` on
+  # an unbounded override samples every run.
+  def effective_categorization_shadow_rate
+    (ENV["CATEGORIZATION_SHADOW_RATE"].presence || categorization_shadow_rate).to_f.clamp(0.0, 1.0)
+  end
+
+  # The provider to run alongside the one in use, for comparison. Symmetric —
+  # returns whichever of the two is not selected, so either can be trialled
+  # against the other without a second mechanism.
+  def shadow_categorization_provider(&on_jev_error)
+    if effective_categorization_provider == "jev"
+      Provider::Registry.preferred_llm_provider
+    else
+      configured_jev_provider(&on_jev_error)
+    end
+  end
+
+  # Returns Jev, or nil when it cannot be built. The registry constructs a fresh
+  # Provider::Jev per lookup and its constructor rejects a cleartext endpoint,
+  # which JEV_ENDPOINT can set without passing the settings form's check.
+  def configured_jev_provider
+    Provider::Registry.get_provider(:jev)
+  rescue Provider::Error => error
+    yield error if block_given?
+    nil
+  end
+  private :configured_jev_provider
+
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }
+  validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
+  validates :categories_locked, inclusion: { in: [ true, false ] }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
 
   before_validation :normalize_enabled_currencies!
+  after_create_commit :add_classifier_rules
 
   def primary_currency_code
     self.class.normalize_currency_code(currency) || "USD"
@@ -323,6 +424,19 @@ class Family < ApplicationRecord
     Merchant.where(id: merchant_ids)
   end
 
+  # Generates missing Brandfetch logos for provider merchants that have a
+  # website, so records that got their website before Brandfetch was configured
+  # self-heal (issue #2925). Returns the number of logos generated.
+  #
+  # Logos are cosmetic: a failure here must not fail the callers (post-sync
+  # rule application, LLM merchant enhancement).
+  def backfill_provider_merchant_logos
+    ProviderMerchant.where(id: transactions.select(:merchant_id)).backfill_logos
+  rescue StandardError => e
+    Rails.logger.error("Failed to backfill provider merchant logos for family #{id}: #{e.message}")
+    0
+  end
+
   def available_merchants
     assigned_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
     recently_unlinked_ids = FamilyMerchantAssociation
@@ -365,34 +479,110 @@ class Family < ApplicationRecord
     Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
   end
 
+  def bayes_settings_object
+    Family::BayesSettings.new(bayes_settings)
+  end
+
+  # Merges changes into the stored classifier settings; a blank number goes
+  # back to its default.
+  def update_bayes_settings!(changes)
+    update!(bayes_settings: bayes_settings_object.merge(changes).to_stored)
+  end
+
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
     AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end
 
+  # The LLM only: Bayes is its own rule (Category classifier), so what it
+  # categorized is no longer uncategorized here.
   def auto_categorize_transactions(transaction_ids)
-    bayes_result = Family::BayesCategorizer.new(self).classify_and_apply(transaction_ids)
-    remaining_ids = Array(transaction_ids) - bayes_result.categorized_ids
+    AutoCategorizer.new(self, transaction_ids: transaction_ids).auto_categorize
+  end
 
-    # Bayes handled everything with sufficient confidence — skip the LLM
-    # categorizer entirely (including its no-provider error contract).
-    if bayes_result.categorized_ids.any? && remaining_ids.empty?
-      DebugLogEntry.capture(
-        category: "auto_categorization",
-        level: "info",
-        message: "Bayesian categorization handled all transactions; skipped LLM categorization",
-        source: self.class.name,
-        family: self,
-        metadata: {
-          requested_transaction_ids: Array(transaction_ids),
-          categorized_transaction_ids: bayes_result.categorized_ids,
-          modified_count: bayes_result.modified_count
-        }
-      )
-      return bayes_result.modified_count
+  # Runs Bayes over the uncategorized transactions in scope the user hasn't
+  # locked, transfer legs aside (they never belong in Uncategorized); those
+  # it isn't sure about are tried again with a better model next time.
+  # Returns the modified count.
+  def bayes_categorize_uncategorized(scope = categorizable_transactions)
+    scope = scope.where(category_id: nil).where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS).enrichable(:category_id)
+    requested = scope.count
+    return 0 if requested.zero?
+
+    result = Family::BayesCategorizer.new(self, settings: bayes_settings_object).classify_and_apply(scope.select(:id))
+    DebugLogEntry.capture(
+      category: "auto_categorization",
+      level: "info",
+      message: "Bayesian categorization categorized #{result.categorized_ids.size} of #{requested} transactions",
+      source: self.class.name,
+      family: self,
+      metadata: { requested_count: requested, categorized_count: result.categorized_ids.size, modified_count: result.modified_count }
+    )
+    result.modified_count
+  end
+
+  # Copies near-duplicates' merchant to every transaction in scope without
+  # one the user hasn't locked, transfers aside. Returns how many got one.
+  def fill_similar_merchants(scope = categorizable_transactions)
+    ids = scope.where(merchant_id: nil).where.not(kind: Transaction::TRANSFER_KINDS).enrichable(:merchant_id).pluck(:id)
+    return 0 if ids.empty?
+
+    filled = Family::SimilarMerchantFiller.new(self).fill(ids)
+    DebugLogEntry.capture(
+      category: "auto_categorization",
+      level: "info",
+      message: "Near-duplicate merchant fill gave #{filled} of #{ids.size} transactions a merchant",
+      source: self.class.name,
+      family: self,
+      metadata: { requested_count: ids.size, filled_count: filled }
+    )
+    filled
+  end
+
+  # The matcher and Bayes are rules (Merchant matcher, Category classifier),
+  # so they run in the family's rule order; whether one is on is whether a
+  # rule with its action is. Settings → Classifier switches them.
+  CLASSIFIER_ACTION_TYPES = %w[fill_similar_merchants bayes_categorize].freeze
+
+  def self.classifier_rule_name(action_type)
+    action_type == "bayes_categorize" ? I18n.t("rules.classifier_rules.category_classifier") : I18n.t("rules.classifier_rules.merchant_matcher")
+  end
+
+  def classifier_rules(action_type)
+    rules.where(id: Rule::Action.where(action_type: action_type).select(:rule_id))
+  end
+
+  def classifier_rule_active?(action_type)
+    classifier_rules(action_type).exists?(active: true)
+  end
+
+  def set_classifier_rule_active!(action_type, active)
+    classifier_rules(action_type).find_each { |rule| rule.update!(active: active) }
+  end
+
+  # A rule with no conditions at the top of the order, the others moving
+  # down one.
+  def add_classifier_rule!(action_type, active: true)
+    Rule.transaction do
+      Rule.lock_positions!(self)
+      rules.update_all("position = position + 1")
+      rules.create!(name: self.class.classifier_rule_name(action_type), resource_type: "transaction", active: active, position: 1,
+                    actions_attributes: [ { action_type: action_type } ])
     end
+  end
 
-    llm_modified_count = AutoCategorizer.new(self, transaction_ids: remaining_ids).auto_categorize
-    bayes_result.modified_count + llm_modified_count
+  # Unlocks the categories Bayes locked itself (lock_results) and the
+  # merchants the matcher did (lock_similar_merchants) that are still what
+  # they set, so rules and AI may change them again. The values stay. All or
+  # none; returns how many were unlocked.
+  def clear_bayes_locks!
+    locked_by_bayes = transactions.where("transactions.locked_attributes ? 'category_id'")
+                                  .category_from("bayes", metadata: { locked_by_bayes: true })
+    locked_by_matcher = transactions.where("transactions.locked_attributes ? 'merchant_id'")
+                                    .where(Transaction.enriched_from_sql("merchant_id", "similar", metadata: { locked_by_similar: true }))
+    Transaction.transaction do
+      unlock_own_locks(locked_by_bayes, "category_id", "bayes", "locked_by_bayes") +
+        unlock_own_locks(locked_by_matcher, "merchant_id", "similar", "locked_by_similar")
+    end
   end
 
   def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil)
@@ -419,6 +609,15 @@ class Family < ApplicationRecord
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
   # This is used for auto-categorizing transfers to investment accounts.
   # Always uses the family's locale to ensure consistent category naming across all users.
+  # Transaction kinds left out of spending/income lists. With
+  # investment_contributions_as_spending off, money moved into investment
+  # accounts is reported as invested rather than spent.
+  def analytics_excluded_kinds
+    return Transaction::BUDGET_EXCLUDED_KINDS if investment_contributions_as_spending?
+
+    Transaction::BUDGET_EXCLUDED_KINDS + [ "investment_contribution" ]
+  end
+
   def investment_contributions_category
     # Find ALL legacy categories (created under old request-locale behavior)
     legacy = categories.where(name: Category.all_investment_contributions_names).order(:created_at).to_a
@@ -431,7 +630,7 @@ class Family < ApplicationRecord
       if duplicates.any?
         duplicate_ids = duplicates.map(&:id)
         categories.where(parent_id: duplicate_ids).update_all(parent_id: keeper.id)
-        Transaction.where(category_id: duplicate_ids).update_all(category_id: keeper.id)
+        Transaction.reassign_category!(transactions.where(category_id: duplicate_ids), keeper.id)
         BudgetCategory.where(category_id: duplicate_ids).update_all(category_id: keeper.id)
         categories.where(id: duplicate_ids).delete_all
       end
@@ -540,6 +739,15 @@ class Family < ApplicationRecord
     entries.order(:date).first&.date || Date.current
   end
 
+  # Earliest Transaction/Trade entry date: the family's first real activity.
+  # Unlike oldest_entry_date (any entry type; kept as-is for budgets and the
+  # AI balance sheet), valuations and opening balances don't count here, so a
+  # single old valuation can't stretch All-range charts back for years (#4007).
+  # Returns nil when the family has no Transaction/Trade entries yet.
+  def earliest_activity_date
+    entries.where(entryable_type: %w[Transaction Trade]).minimum(:date)
+  end
+
   # Used for invalidating family / balance sheet related aggregation queries
   def build_cache_key(key, invalidate_on_data_updates: false)
     # Our data sync process updates this timestamp whenever any family account successfully completes a data update.
@@ -548,24 +756,29 @@ class Family < ApplicationRecord
 
     [
       id,
+      currency,
       key,
       data_invalidation_key,
-      accounts.maximum(:updated_at)
+      accounts_status_version
     ].compact.join("_")
   end
 
   # Used for invalidating entry related aggregation queries
   def entries_cache_version
-    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f || 0}"
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f || 0}-#{categories_version}"
   end
 
-  # Used for invalidating caches keyed on entries (e.g. the transactions
-  # index's uncategorized count). Unlike #entries_cache_version, includes
-  # .count so a hard-deleted entry busts the cache even when it didn't hold
-  # the current max updated_at, and uses full-precision timestamps so two
-  # updates within the same second still produce distinct versions.
+  # Used for caches keyed on entries (e.g. the transactions index's
+  # uncategorized count). Counts capture deletions, and full-precision
+  # timestamps distinguish updates within the same second.
   def entries_version
-    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}"
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}-#{categories_version}"
+  end
+
+  # Category deletion can nullify a late assignment without touching its
+  # entry; category metadata also affects cached entry results.
+  def categories_version
+    "#{categories.count}-#{categories.maximum(:updated_at)&.to_f || 0}"
   end
 
   # Used for invalidating caches keyed on recurring transactions (e.g. the
@@ -580,7 +793,8 @@ class Family < ApplicationRecord
   # nothing on entries, but changes which entries `uncategorized_transactions`
   # considers accessible).
   def accounts_status_version
-    "#{accounts.count}-#{accounts.maximum(:updated_at)&.to_f}"
+    count, max_at = accounts.pick(Arel.sql("count(*)"), Arel.sql('max("accounts"."updated_at")'))
+    "#{count}-#{max_at&.to_f}"
   end
 
   # Used for invalidating caches that render merchant name/logo for recurring
@@ -646,6 +860,30 @@ class Family < ApplicationRecord
   end
 
   private
+    # Bayes first, so the matcher lands above it.
+    def add_classifier_rules
+      CLASSIFIER_ACTION_TYPES.reverse_each { |action_type| add_classifier_rule!(action_type) }
+    end
+
+    def categorizable_transactions
+      transactions.visible.with_entry.merge(Entry.excluding_split_parents)
+    end
+
+    # In batches, like Transaction.reassign_category!. update_all skips the
+    # touch a save carries to the entry (Family#entries_cache_version), so the
+    # entries are touched too.
+    def unlock_own_locks(scope, attribute, source, flag)
+      ids = scope.lock("FOR UPDATE OF transactions").pluck(:id)
+      ids.each_slice(Transaction::REASSIGN_TOUCH_BATCH_SIZE) do |batch|
+        Transaction.where(id: batch).update_all([ "locked_attributes = locked_attributes - ?, updated_at = ?", attribute, Time.current ])
+        # Without the flag, a lock the user sets later counts as confirming it.
+        DataEnrichment.where(enrichable_type: "Transaction", enrichable_id: batch, attribute_name: attribute, source: source)
+                      .update_all([ "metadata = metadata - ?", flag ])
+        Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
+      end
+      ids.size
+    end
+
     # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
     # `tax_advantaged_account_ids`. Joins `depositories` and filters by
     # `Depository::TAX_ADVANTAGED_SUBTYPES` (currently `%w[hsa]`). Extracted
