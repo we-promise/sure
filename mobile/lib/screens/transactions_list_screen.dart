@@ -231,7 +231,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       }
       if (blocked) return;
     }
-    if (!mounted) return;
+    // The lookup can take a round trip; the user may have left selection mode.
+    if (!mounted || (selecting && !_isSelectionMode)) return;
     setState(() {
       if (selecting) {
         _selectedTransactions.add(transactionId);
