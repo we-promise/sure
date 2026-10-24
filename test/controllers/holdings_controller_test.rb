@@ -286,4 +286,58 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(@holding.account, tab: "holdings")
     assert_equal "Yahoo Finance rate limit exceeded", flash[:alert]
   end
+
+  # The holding's account is linked but its provider sends no holdings, so its
+  # positions come from trades (#4302). Refreshing one security's prices must
+  # keep them.
+  test "sync_prices keeps trade-derived positions on a linked account without a provider snapshot" do
+    account, security = linked_account_with_trade(users(:family_admin).family)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    holding = account.current_holdings.find_by!(security: security)
+    Security.any_instance.stubs(:import_provider_prices).returns([ 1, nil ])
+    Security.any_instance.stubs(:import_provider_details)
+
+    post sync_prices_holding_path(holding)
+
+    assert_redirected_to account_path(account, tab: "holdings")
+    assert_equal 2, account.reload.current_holdings.find_by!(security: security).qty
+    assert_equal 10_000 - 2 * 200, account.cash_balance
+  end
+
+  test "remap_security keeps trade-derived positions on a linked account without a provider snapshot" do
+    account, security = linked_account_with_trade(users(:family_admin).family)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    holding = account.current_holdings.find_by!(security: security)
+    remapped = Security.create!(ticker: "RMPX", name: "Remapped", exchange_operating_mic: "XNAS")
+    (5.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: remapped, date: date, price: 200) }
+
+    patch remap_security_holding_path(holding), params: { security_id: "RMPX|XNAS" }
+
+    assert_redirected_to account_path(account, tab: "holdings")
+    assert_equal 2, account.reload.current_holdings.find_by!(security: remapped).qty
+    assert_equal 10_000 - 2 * 200, account.cash_balance
+  end
+
+  private
+    # A linked account whose provider sends no holdings, holding 2 shares
+    # bought five days ago at 200.
+    def linked_account_with_trade(family)
+      account = family.accounts.create!(
+        name: "Linked brokerage", balance: 10_000, cash_balance: 10_000, currency: "USD", accountable: Investment.new
+      )
+      item = family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+      account.account_providers.create!(provider: item.coinstats_accounts.create!(name: "Provider", currency: "USD"))
+      security = Security.create!(ticker: "TRDX", name: "Traded")
+      (5.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: security, date: date, price: 200) }
+      account.entries.create!(
+        name: "Buy", date: 5.days.ago.to_date, amount: 400, currency: "USD",
+        entryable: Trade.new(qty: 2, price: 200, security: security, currency: "USD", investment_activity_label: "Buy")
+      )
+      account.entries.create!(
+        name: "Balance", date: 1.day.ago.to_date, amount: 10_000, currency: "USD",
+        entryable: Valuation.new(kind: "current_anchor")
+      )
+      account.auto_share_with_family!
+      [ account, security ]
+    end
 end
