@@ -7,9 +7,10 @@ class DestroyJob < ApplicationJob
   # transaction commits, never against an uncommitted/rolled-back record.
 
   # A deadlock (say, with a sync writing to the same account) is transient, so
-  # it is retried instead of failing the deletion. Once the attempts run out it
-  # is handled like any other failure.
-  retry_on ActiveRecord::Deadlocked, wait: 3.seconds, attempts: 3 do |job, error|
+  # it is retried with growing waits (about 3s, 18s, 83s, 258s) so a long sync
+  # can finish first. Once the attempts run out it is handled like any other
+  # failure.
+  retry_on ActiveRecord::Deadlocked, wait: :polynomially_longer, attempts: 5 do |job, error|
     job.send(:handle_failure, job.arguments.first, error)
   end
 
@@ -25,11 +26,21 @@ class DestroyJob < ApplicationJob
   private
     def handle_failure(model, error)
       report_failure(model, error)
-      # Lets the user try again by resetting the state. update_column skips
-      # validations, as in DestroyableLater: a validation that fails here (or one
-      # that depends on the flag) would raise out of this rescue and send the job
-      # into Sidekiq's retries, failing and reporting the same way each time.
-      model.update_column(:scheduled_for_deletion, false) if model.respond_to?(:scheduled_for_deletion) && !model.destroyed?
+      restore(model) unless model.destroyed?
+    end
+
+    # Lets the user try again by resetting the state. update_column skips
+    # validations, as in DestroyableLater. Anything raised here (a validation
+    # that depends on the flag, or a partial unique index the flag gates) would
+    # send the job into Sidekiq's retries, failing and reporting each time.
+    def restore(model)
+      if model.is_a?(Account)
+        model.restore_after_failed_destroy
+      elsif model.respond_to?(:scheduled_for_deletion)
+        model.update_column(:scheduled_for_deletion, false)
+      end
+    rescue ActiveRecord::ActiveRecordError => e
+      Rails.logger.error("DestroyJob could not restore #{model.class.name} #{model.try(:id)}: #{e.class}: #{e.message}")
     end
 
     # Apart from deadlocks, a failed destroy ends the job instead of retrying,
@@ -49,6 +60,8 @@ class DestroyJob < ApplicationJob
           record_id: model.try(:id),
           error_class: error.class.name,
           error_message: error.message.to_s.truncate(500),
+          # Why a callback aborted the destroy, for RecordNotDestroyed.
+          record_errors: error.try(:record).try(:errors)&.full_messages.presence,
           backtrace: error.backtrace&.first(5)
         }
       )

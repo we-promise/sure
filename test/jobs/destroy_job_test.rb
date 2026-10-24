@@ -187,6 +187,74 @@ class DestroyJobTest < ActiveJob::TestCase
     assert_not item.reload.scheduled_for_deletion?
   end
 
+  test "an account stays pending_deletion while a deadlock is retried" do
+    account = accounts(:depository)
+    account.mark_for_deletion!
+    account.stubs(:cleanup_transfers).raises(ActiveRecord::Deadlocked, "deadlock detected")
+
+    assert_enqueued_with(job: DestroyJob, args: [ account ]) do
+      DestroyJob.perform_now(account)
+    end
+
+    assert_equal "pending_deletion", account.reload.status
+  end
+
+  test "an account whose deadlock outlasts the retries is recorded and left disabled" do
+    account = accounts(:depository)
+    account.mark_for_deletion!
+    Account.any_instance.stubs(:cleanup_transfers).raises(ActiveRecord::Deadlocked, "deadlock detected")
+
+    assert_difference -> { DebugLogEntry.where(source: "DestroyJob").count }, 1 do
+      perform_enqueued_jobs { DestroyJob.perform_later(account) }
+    end
+
+    assert_equal "ActiveRecord::Deadlocked", DebugLogEntry.recent.first.metadata["error_class"]
+    assert_equal "disabled", account.reload.status
+  end
+
+  test "an account whose destroy a callback aborts is recorded with the reason and left disabled" do
+    account = accounts(:depository)
+    account.mark_for_deletion!
+    account.define_singleton_method(:cleanup_transfers) do
+      errors.add(:base, "Still in use")
+      throw :abort
+    end
+
+    DestroyJob.perform_now(account)
+
+    entry = DebugLogEntry.recent.first
+    assert_equal "ActiveRecord::RecordNotDestroyed", entry.metadata["error_class"]
+    assert_equal [ "Still in use" ], entry.metadata["record_errors"]
+    assert_equal "disabled", account.reload.status
+  end
+
+  test "an error after the account delete committed is recorded as itself" do
+    account = accounts(:depository)
+    account.mark_for_deletion!
+    account.stubs(:move_account_statements_to_inbox).raises(StandardError, "inbox move failed")
+
+    assert_difference -> { DebugLogEntry.where(source: "DestroyJob").count }, 1 do
+      DestroyJob.perform_now(account)
+    end
+
+    entry = DebugLogEntry.recent.first
+    assert_equal "StandardError", entry.metadata["error_class"]
+    assert_equal account.family, entry.family
+    assert_nil entry.account_id
+    assert_not Account.exists?(account.id)
+  end
+
+  test "a reset that the database rejects does not raise out of the job" do
+    item = plaid_items(:one)
+    item.update_column(:scheduled_for_deletion, true)
+    item.stubs(:destroy).raises(StandardError, "destroy failed")
+    item.stubs(:update_column).raises(ActiveRecord::RecordNotUnique, "duplicate key")
+
+    assert_difference -> { DebugLogEntry.where(source: "DestroyJob").count }, 1 do
+      assert_nothing_raised { DestroyJob.perform_now(item) }
+    end
+  end
+
   test "inherits the deferred-enqueue policy from ApplicationJob" do
     account = accounts(:depository)
     enqueued_mid_transaction = nil

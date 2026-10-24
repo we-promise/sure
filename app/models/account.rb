@@ -717,16 +717,25 @@ class Account < ApplicationRecord
   # Override destroy to handle error recovery for accounts
   def destroy
     super
+  rescue ActiveRecord::Deadlocked
+    # DestroyJob retries a deadlock, so the account stays pending_deletion (and
+    # out of the user's reach) until it gives up and restores it.
+    raise
   rescue => e
-    # If destruction fails, leave the account disabled so it stays visible and
-    # can be deleted again. DestroyJob's scheduled_for_deletion reset is for
-    # provider items; accounts track deletion in `status`.
+    # An error after the delete committed leaves a frozen record to restore.
+    restore_after_failed_destroy unless destroyed?
+    raise e
+  end
+
+  # Leaves the account disabled so it stays visible and can be deleted again.
+  # DestroyJob's scheduled_for_deletion reset is for provider items; accounts
+  # track deletion in `status`.
+  def restore_after_failed_destroy
     if may_restore_after_failed_deletion?
       restore_after_failed_deletion!
     elsif may_disable?
       disable!
     end
-    raise e
   end
 
   def current_holdings
