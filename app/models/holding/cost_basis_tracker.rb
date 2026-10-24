@@ -54,6 +54,15 @@ class Holding::CostBasisTracker
     reset if @total_qty <= 0
   end
 
+  # Restarts the position at a per-share figure the user stated for the units
+  # held, so later trades roll forward from it rather than from the trades
+  # that came before.
+  def open_at(average_cost, qty)
+    reset
+    @total_qty = qty.to_d
+    @total_cost = average_cost.to_d * @total_qty
+  end
+
   # A split changes the share count and not the money invested, so total cost
   # stays and the per-share average moves by the inverse of the ratio.
   def split(ratio)

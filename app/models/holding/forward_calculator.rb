@@ -24,6 +24,7 @@ class Holding::ForwardCalculator
       account.start_date.upto(Date.current).each do |date|
         trades = portfolio_cache.get_trades(date: date)
         next_portfolio = apply_trades(apply_splits(current_portfolio, date), trades)
+        apply_manual_cost_bases(next_portfolio, date)
         holdings.concat(build_holdings(next_portfolio, date))
         current_portfolio = next_portfolio
       end
@@ -123,6 +124,19 @@ class Holding::ForwardCalculator
       end
 
       portfolio
+    end
+
+    # A figure the user locked for a date is the basis of the units held at
+    # the end of it, including transferred-in units nothing else could cost.
+    def apply_manual_cost_bases(portfolio, date)
+      manual_cost_bases.each do |security_id, by_date|
+        cost = by_date[date]
+        qty = portfolio[security_id]
+        next unless cost && qty&.positive?
+
+        @cost_basis_trackers[security_id].open_at(cost, qty)
+        @transferred_security_ids.delete(security_id)
+      end
     end
 
     # Returns the current cost basis for a security, or nil if nothing is held

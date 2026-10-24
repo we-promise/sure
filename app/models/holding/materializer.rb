@@ -2,7 +2,7 @@
 # into a series of records we can easily query and join with other data.
 class Holding::Materializer
   # Chunk upserts so the intermediate attribute-hash arrays
-  # (holdings_to_upsert_with_cost / _without_cost) don't sit in memory
+  # (the with-cost, without-cost and lock-state buffers) don't sit in memory
   # alongside the full @holdings collection. Reduces peak RSS during sync.
   PERSIST_BATCH_SIZE = 2_000
 
@@ -58,10 +58,11 @@ class Holding::Materializer
       existing_holdings_map = load_existing_holdings_map
 
       # Separate holdings into categories based on cost_basis reconciliation.
-      # Use two buffers that flush at PERSIST_BATCH_SIZE so peak memory is bounded
+      # Use buffers that flush at PERSIST_BATCH_SIZE so peak memory is bounded
       # rather than accumulating the full upsert payload before writing.
       holdings_buffer_to_upsert_with_cost = []
       holdings_buffer_to_upsert_without_cost = []
+      holdings_buffer_to_upsert_lock_state = []
 
       flush = ->(buf) do
         account.holdings.upsert_all(buf, unique_by: %i[account_id security_id date currency])
@@ -99,10 +100,32 @@ class Holding::Materializer
           "updated_at" => current_time
         }
 
-        if existing&.cost_basis_locked?
-          # For locked holdings, preserve ALL cost_basis fields
+        if existing&.cost_basis_locked? && !existing.cost_basis_carried?
+          # For holdings the user locked, preserve ALL cost_basis fields
           holdings_buffer_to_upsert_without_cost << base_attrs
           flush.call(holdings_buffer_to_upsert_without_cost) if holdings_buffer_to_upsert_without_cost.size >= PERSIST_BATCH_SIZE
+        elsif (carried = carried_manual_cost_basis(holding))
+          # The user's figure still describes this row: nothing has traded
+          # since, so it is the same units at the same cost, and stays theirs.
+          # Marked carried, it is re-derived on every run rather than kept.
+          holdings_buffer_to_upsert_lock_state << base_attrs.merge(
+            "cost_basis" => carried,
+            "cost_basis_source" => "manual",
+            "cost_basis_locked" => true,
+            "cost_basis_carried" => true
+          )
+          flush.call(holdings_buffer_to_upsert_lock_state) if holdings_buffer_to_upsert_lock_state.size >= PERSIST_BATCH_SIZE
+        elsif existing&.cost_basis_carried?
+          # A carry no longer holds (a trade landed since the user's figure),
+          # so the row is the calculation's again.
+          calculated = holding.cost_basis unless holding.cost_basis_unknown
+          holdings_buffer_to_upsert_lock_state << base_attrs.merge(
+            "cost_basis" => calculated,
+            "cost_basis_source" => calculated && "calculated",
+            "cost_basis_locked" => false,
+            "cost_basis_carried" => false
+          )
+          flush.call(holdings_buffer_to_upsert_lock_state) if holdings_buffer_to_upsert_lock_state.size >= PERSIST_BATCH_SIZE
         elsif holding.cost_basis_unknown && clearable_calculated_basis?(existing)
           # The position took in a transfer, so it has no cost basis this app
           # can know. A nil from the calculator alone would leave the previous
@@ -154,6 +177,46 @@ class Holding::Materializer
       # Flush remaining items in each buffer
       flush.call(holdings_buffer_to_upsert_with_cost) unless holdings_buffer_to_upsert_with_cost.empty?
       flush.call(holdings_buffer_to_upsert_without_cost) unless holdings_buffer_to_upsert_without_cost.empty?
+      flush.call(holdings_buffer_to_upsert_lock_state) unless holdings_buffer_to_upsert_lock_state.empty?
+    end
+
+    # The figure of the latest earlier row the user locked for this position,
+    # while the row holds the same units with no trade since; nil otherwise.
+    # Once a trade moves the position on, the calculators roll forward from
+    # that figure instead, and the row is theirs.
+    def carried_manual_cost_basis(holding)
+      anchor = manual_cost_basis_anchors[[ holding.security_id, holding.currency ]]&.reverse_each&.find { |row| row.date < holding.date }
+      return unless anchor && anchor_qty(anchor) == holding.qty
+
+      dates = trade_dates_by_security[holding.security_id]
+      next_trade = dates.bsearch { |date| date > anchor.date }
+      return if next_trade && next_trade <= holding.date
+
+      anchor.cost_basis
+    end
+
+    # The units held on the lock's date as this run works them out, since a
+    # trade entered on or before that date changes them from the stored row.
+    def anchor_qty(anchor)
+      @holdings_by_key ||= @holdings.index_by { |holding| holding_key(holding) }
+      @holdings_by_key[holding_key(anchor)]&.qty || anchor.qty
+    end
+
+    # The user's own locks, oldest first, by position. A lock on a row in
+    # another currency than the position's calculated rows carries only
+    # within that currency.
+    def manual_cost_basis_anchors
+      @manual_cost_basis_anchors ||= account.holdings
+        .where(cost_basis_locked: true, cost_basis_carried: false).where.not(cost_basis: nil)
+        .order(:date).group_by { |row| [ row.security_id, row.currency ] }
+    end
+
+    # Each security's trade dates, sorted.
+    def trade_dates_by_security
+      @trade_dates_by_security ||= account.entries.where(entryable_type: "Trade")
+        .joins("INNER JOIN trades ON trades.id = entries.entryable_id")
+        .order("entries.date").pluck("trades.security_id", "entries.date")
+        .each_with_object(Hash.new { |h, k| h[k] = [] }) { |(security_id, date), dates| dates[security_id] << date }
     end
 
     # Nothing to clear, or a figure somebody asserted rather than one this app

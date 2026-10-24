@@ -123,13 +123,32 @@ class Holding < ApplicationRecord
     update!(
       cost_basis: value,
       cost_basis_source: "manual",
-      cost_basis_locked: true
+      cost_basis_locked: true,
+      cost_basis_carried: false
     )
   end
 
-  # Unlock cost_basis to allow provider/calculated updates
+  # Unlock cost_basis to allow provider/calculated updates. A lock rolls
+  # forward to later rows (Holding::Materializer), so unlocking also releases
+  # this position's earlier locks, which would otherwise roll forward again
+  # on the next sync, and the rows they were carried onto. A carried row
+  # loses the figure too, for the next sync to work out again. A later lock
+  # the user set is theirs and stays, with the rows carried from it.
   def unlock_cost_basis!
-    update!(cost_basis_locked: false)
+    transaction do
+      if cost_basis_carried?
+        update!(cost_basis_locked: false, cost_basis_carried: false, cost_basis: nil, cost_basis_source: nil)
+      else
+        update!(cost_basis_locked: false)
+      end
+
+      position = account.holdings.where(security_id: security_id, cost_basis_locked: true)
+      next_lock = position.where(cost_basis_carried: false).where("date > ?", date).minimum(:date)
+      carried = position.where(cost_basis_carried: true)
+      carried = carried.where("date < ?", next_lock) if next_lock
+      carried.update_all(cost_basis_locked: false, cost_basis_carried: false, cost_basis: nil, cost_basis_source: nil, updated_at: Time.current)
+      position.where(cost_basis_carried: false).where("date < ?", date).update_all(cost_basis_locked: false, updated_at: Time.current)
+    end
   end
 
   # Check if this holding's security can be changed by provider sync

@@ -1200,6 +1200,7 @@ class Family::DataImporter
           cost_basis: data["cost_basis"]&.to_d,
           cost_basis_source: importable_cost_basis_source(data["cost_basis_source"]),
           cost_basis_locked: truthy?(data["cost_basis_locked"]) || false,
+          cost_basis_carried: truthy?(data["cost_basis_carried"]) || false,
           security_locked: truthy?(data["security_locked"]) || false
         }
 

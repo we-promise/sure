@@ -2,6 +2,32 @@
 # Expects the including class to expose an `account` reader.
 module Holding::TradeCalculatorHelpers
   private
+    # The per-share figures the user locked on this account's holdings, by
+    # security and date, in the account's currency as the trackers count.
+    # Each is the basis of the units held at the end of its date, so the
+    # calculators open the position at it there and roll later trades forward
+    # from it. Rows a lock was only carried onto (cost_basis_carried) are not
+    # the user's statement, so they are left out. A figure with no rate for
+    # its day is left out too, rather than read as the account's currency.
+    def manual_cost_bases
+      @manual_cost_bases ||= begin
+        scope = account.holdings.where(cost_basis_locked: true, cost_basis_carried: false).where.not(cost_basis: nil)
+        scope = scope.where(security_id: @security_ids) if @security_ids
+        scope.order(Arel.sql("holdings.currency = #{ActiveRecord::Base.connection.quote(account.currency)}"))
+          .pluck(:security_id, :date, :cost_basis, :currency)
+          .each_with_object(Hash.new { |h, k| h[k] = {} }) do |(security_id, date, cost, currency), bases|
+            converted = currency == account.currency ? cost : manual_cost_in_account_currency(cost, currency, date)
+            bases[security_id][date] = converted if converted
+          end
+      end
+    end
+
+    def manual_cost_in_account_currency(cost, currency, date)
+      Money.new(cost, currency).exchange_to(account.currency, date: date).amount
+    rescue Money::ConversionError
+      nil
+    end
+
     # Converts a trade's price into the account's currency at the rate of the
     # day it was made, or nil when there is no rate for that day.
     def converted_trade_price(trade, date:)
