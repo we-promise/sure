@@ -64,7 +64,7 @@ class Property::AvmImport
         )
       )
 
-      result = account.set_current_balance(data.valuation)
+      result = account.set_current_balance(data.valuation, apply_provider_adjustment: true)
       raise Error.new(result.error) unless result.success?
       account.property.name_avm_valuation!
 
