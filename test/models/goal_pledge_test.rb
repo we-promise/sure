@@ -72,6 +72,20 @@ class GoalPledgeTest < ActiveSupport::TestCase
     assert_not @pledge.matches?(entry)
   end
 
+  # A crypto wallet's valuation moves with the price, so a rise is not a
+  # deposit and must not satisfy a pledge, exactly as for an investment account.
+  test "matches? ignores a positive valuation delta on a crypto account" do
+    wallet, pledge = crypto_pledge
+    entry = OpenStruct.new(account_id: wallet.id, amount: BigDecimal("0"), date: pledge.created_at.to_date, entryable: Valuation.new)
+    assert_not pledge.matches?(entry, valuation_delta: 200)
+  end
+
+  test "matches? still takes a transfer into a crypto account" do
+    wallet, pledge = crypto_pledge(kind: "transfer")
+    entry = build_entry(account: wallet, amount: -200, date: pledge.created_at.to_date)
+    assert pledge.matches?(entry)
+  end
+
   test "matches? returns false on already-matched pledge" do
     matched = goal_pledges(:matched_transfer)
     entry = build_entry(account: matched.account, amount: -matched.amount.to_d, date: matched.created_at.to_date)
@@ -160,6 +174,15 @@ class GoalPledgeTest < ActiveSupport::TestCase
   end
 
   private
+    # A pledge on a manual wallet. manual_save is the kind a positive
+    # valuation delta would otherwise be allowed to satisfy.
+    def crypto_pledge(kind: "manual_save")
+      wallet = Account.create!(family: @goal.family, accountable: Crypto.new, name: "Pledge wallet", currency: "USD", balance: 1_000)
+      @goal.goal_accounts.create!(account: wallet, allocated_amount: 100)
+      pledge = @goal.goal_pledges.create!(account: wallet, amount: 200, kind: kind)
+      [ wallet, pledge ]
+    end
+
     def build_entry(account:, amount:, date:)
       OpenStruct.new(account_id: account.id, amount: BigDecimal(amount.to_s), date: date.to_date)
     end
