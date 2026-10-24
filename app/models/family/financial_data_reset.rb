@@ -24,6 +24,7 @@ class Family::FinancialDataReset
     balances
     recurring_transactions
     rules
+    rule_groups
     rule_actions
     rule_conditions
     rule_runs
@@ -156,6 +157,7 @@ class Family::FinancialDataReset
       scope(:account_providers).destroy_all
       scope(:recurring_transactions).destroy_all
       scope(:rules).destroy_all
+      scope(:rule_groups).destroy_all
       scope(:budgets).destroy_all
       scope(:categories).destroy_all
       scope(:tags).destroy_all
@@ -284,6 +286,7 @@ class Family::FinancialDataReset
           balances: Balance.where(account_id: account_ids),
           recurring_transactions: RecurringTransaction.where(family_id: family.id),
           rules: rule_scope,
+          rule_groups: RuleGroup.where(family_id: family.id),
           rule_actions: Rule::Action.where(rule_id: rule_ids),
           rule_conditions: Rule::Condition.where(rule_id: rule_ids),
           rule_runs: RuleRun.where(rule_id: rule_ids),
