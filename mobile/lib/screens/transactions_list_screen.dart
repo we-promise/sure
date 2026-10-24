@@ -5,6 +5,7 @@ import '../models/transaction.dart';
 import '../models/offline_transaction.dart';
 import '../providers/auth_provider.dart';
 import '../providers/categories_provider.dart';
+import '../providers/transaction_splits_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../screens/transaction_edit_screen.dart';
 import '../screens/transaction_form_screen.dart';
@@ -16,7 +17,9 @@ import '../theme/sure_tokens.dart';
 import '../providers/privacy_provider.dart';
 import '../utils/amount_parser.dart';
 import '../utils/money_masker.dart';
+import '../utils/split_list_grouping.dart';
 import '../widgets/money_text.dart';
+import '../widgets/transaction_split_section.dart' show SplitBadge;
 import '../l10n/app_localizations.dart';
 
 class TransactionsListScreen extends StatefulWidget {
@@ -143,12 +146,98 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     });
   }
 
-  void _toggleTransactionSelection(String transactionId) {
+  /// Split parents and children can't be deleted like plain transactions: the
+  /// server refuses a child, and deleting a parent cascades to its children,
+  /// which this list would keep showing. Point the user at "Unsplit" instead.
+  ///
+  /// The list never loads split state itself, so a split made on the web or
+  /// another device is unknown here: [TransactionSplitsProvider.checkBeforeDelete]
+  /// looks it up, and a lookup that fails while online blocks the delete.
+  Future<bool> _blockSplitDelete(
+    String? transactionId, {
+    bool fresh = false,
+  }) async {
+    if (transactionId == null) return false;
+    return _blockSplitDeletes([transactionId], fresh: fresh);
+  }
+
+  /// Checks every id in [transactionIds] and returns true (after telling the
+  /// user why) when any of them must not be deleted. Split rows are dropped
+  /// from the selection, since they can never be bulk-deleted.
+  Future<bool> _blockSplitDeletes(
+    List<String> transactionIds, {
+    bool fresh = false,
+  }) async {
+    if (transactionIds.isEmpty) return false;
+    final splits =
+        Provider.of<TransactionSplitsProvider>(context, listen: false);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = splits.isOnline ? await auth.getValidAccessToken() : null;
+    if (!mounted) return true;
+
+    final statuses = await Future.wait(
+      transactionIds.map(
+        (id) => splits.checkBeforeDelete(
+          accessToken: token,
+          transactionId: id,
+          fresh: fresh,
+        ),
+      ),
+    );
+    if (!mounted) return true;
+
+    final splitIds = <String>[
+      for (var i = 0; i < transactionIds.length; i++)
+        if (statuses[i] == SplitDeleteStatus.split) transactionIds[i],
+    ];
+    final anyUnknown = statuses.contains(SplitDeleteStatus.unknown);
+    if (splitIds.isEmpty && !anyUnknown) return false;
+
+    final l = AppLocalizations.of(context);
+    if (splitIds.isNotEmpty && _selectedTransactions.any(splitIds.contains)) {
+      setState(() => _selectedTransactions.removeAll(splitIds));
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          splitIds.isNotEmpty
+              ? l.transactionsListSplitDeleteBlocked
+              : l.transactionsListSplitStatusUnknown,
+        ),
+      ),
+    );
+    return true;
+  }
+
+  /// Rows whose split lookup is in flight; a repeat tap on one is ignored so a
+  /// double tap can't select and then deselect it.
+  final Set<String> _selectionLookups = {};
+
+  Future<void> _toggleTransactionSelection(String transactionId) async {
+    if (_selectionLookups.contains(transactionId)) return;
+    // Decide select or deselect before the lookup, so the outcome doesn't
+    // depend on the state after the await.
+    final selecting = !_selectedTransactions.contains(transactionId);
+    if (selecting) {
+      // Selecting is for deleting, so check against the server now; the delete
+      // re-checks only rows still unconfirmed (selected offline, say), which
+      // keeps a bulk delete from issuing one lookup per row twice.
+      _selectionLookups.add(transactionId);
+      final bool blocked;
+      try {
+        blocked = await _blockSplitDelete(transactionId, fresh: true);
+      } finally {
+        _selectionLookups.remove(transactionId);
+      }
+      if (blocked) return;
+    }
+    // The lookup can take a round trip; the user may have left selection mode.
+    if (!mounted || (selecting && !_isSelectionMode)) return;
     setState(() {
-      if (_selectedTransactions.contains(transactionId)) {
-        _selectedTransactions.remove(transactionId);
-      } else {
+      if (selecting) {
         _selectedTransactions.add(transactionId);
+      } else {
+        _selectedTransactions.remove(transactionId);
       }
     });
   }
@@ -180,6 +269,13 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     );
 
     if (confirmed != true || !mounted) return;
+
+    // Re-check at delete time: a row selected offline (or whose lookup has
+    // not succeeded) is looked up now, and known splits are refused.
+    if (await _blockSplitDeletes(_selectedTransactions.toList())) {
+      return;
+    }
+    if (!mounted || _selectedTransactions.isEmpty) return;
 
     final count = _selectedTransactions.length;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -285,6 +381,8 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
   Future<bool> _confirmAndDeleteTransaction(Transaction transaction) async {
     if (transaction.id == null) return false;
+    if (await _blockSplitDelete(transaction.id, fresh: true)) return false;
+    if (!mounted) return false;
 
     // Show confirmation dialog
     // Capture providers and localizations before async gap
@@ -468,6 +566,15 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
           }
 
           final transactions = _getFilteredTransactions(allTransactions);
+          // Group known split children under their parent, like the web list.
+          final splits = context.watch<TransactionSplitsProvider>();
+          final entries = groupSplitEntries<OfflineTransaction>(
+            transactions,
+            idOf: (t) => t.id,
+            childIdsOf: (id) =>
+                splits.isSplitParent(id) ? splits.splitFor(id)?.childIds : null,
+            parentIdOf: splits.parentIdFor,
+          );
 
           return RefreshIndicator(
             onRefresh: _loadTransactions,
@@ -510,9 +617,12 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                       )
                     : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: transactions.length,
+              itemCount: entries.length,
               itemBuilder: (context, index) {
-                final transaction = transactions[index];
+                final entry = entries[index];
+                final transaction = entry.item;
+                final isSplitParent = entry.role == SplitRole.parent;
+                final isSplitChild = entry.role == SplitRole.child;
                 final isSelected = transaction.id != null &&
                     _selectedTransactions.contains(transaction.id);
                 final isPending = transaction.syncStatus == SyncStatus.pending;
@@ -543,9 +653,13 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                   ),
                   confirmDismiss: (direction) => _confirmAndDeleteTransaction(transaction),
                   child: Opacity(
-                    opacity: hasPendingStatus ? 0.5 : 1.0,
+                    // Split parents are dimmed: their children carry the amounts.
+                    opacity: hasPendingStatus || isSplitParent ? 0.5 : 1.0,
                     child: Card(
-                      margin: const EdgeInsets.only(bottom: 12),
+                      margin: EdgeInsets.only(
+                        bottom: 12,
+                        left: entry.grouped ? 24 : 0,
+                      ),
                       child: InkWell(
                         onTap: _isSelectionMode && transaction.id != null
                             ? () => _toggleTransactionSelection(transaction.id!)
@@ -593,6 +707,17 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
+                                      if (isSplitParent) ...[
+                                        const SizedBox(width: 8),
+                                        SplitBadge(label: l.splitBadge),
+                                      ] else if (isSplitChild && !entry.grouped) ...[
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          Icons.call_split,
+                                          size: 14,
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                      ],
                                       if (transaction.categoryName != null) ...[
                                         const SizedBox(width: 8),
                                         Flexible(

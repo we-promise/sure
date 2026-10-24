@@ -8,7 +8,9 @@ import '../providers/auth_provider.dart';
 import '../providers/categories_provider.dart';
 import '../providers/merchants_provider.dart';
 import '../providers/tags_provider.dart';
+import '../providers/transaction_splits_provider.dart';
 import '../providers/transactions_provider.dart';
+import '../widgets/transaction_split_section.dart';
 import '../l10n/app_localizations.dart';
 
 class TransactionEditScreen extends StatefulWidget {
@@ -79,9 +81,16 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
 
   Future<void> _save() async {
     final l = AppLocalizations.of(context);
-    if (!_formKey.currentState!.validate() || widget.transaction.id == null) {
+    final id = widget.transaction.id;
+    if (!_formKey.currentState!.validate() || id == null) {
       return;
     }
+    // Re-check: the API rejects direct edits to split children.
+    final splits = Provider.of<TransactionSplitsProvider>(
+      context,
+      listen: false,
+    );
+    if (!splits.canEditAfterLookup(id) || splits.isSplitChild(id)) return;
 
     setState(() {
       _isSaving = true;
@@ -214,7 +223,8 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
       items.add(
         DropdownMenuItem<String?>(
           value: _selectedCategoryId,
-          child: Text(widget.transaction.categoryName ?? l.transactionEditCurrentCategory),
+          child: Text(widget.transaction.categoryName ??
+              l.transactionEditCurrentCategory),
         ),
       );
     }
@@ -249,7 +259,8 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
       items.add(
         DropdownMenuItem<String?>(
           value: _selectedMerchantId,
-          child: Text(widget.transaction.merchantName ?? l.transactionEditCurrentMerchant),
+          child: Text(widget.transaction.merchantName ??
+              l.transactionEditCurrentMerchant),
         ),
       );
     }
@@ -284,7 +295,9 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
         combinedTags.add(
           TransactionTag(
             id: selectedId,
-            name: fallbackName.isNotEmpty ? fallbackName : l.transactionEditUnknownTag,
+            name: fallbackName.isNotEmpty
+                ? fallbackName
+                : l.transactionEditUnknownTag,
           ),
         );
       }
@@ -317,8 +330,20 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final canEdit = widget.transaction.id != null &&
+    final transactionId = widget.transaction.id;
+    // Split children are owned by their parent's split: the API rejects direct
+    // edits to them, so only the split editor can change them. The transaction
+    // index omits split membership, so the form stays locked until the split
+    // lookup below has confirmed this is not a split child.
+    final splits = context.watch<TransactionSplitsProvider>();
+    final isSplitChild =
+        transactionId != null && splits.isSplitChild(transactionId);
+    final isSynced = transactionId != null &&
         widget.transaction.syncStatus == SyncStatus.synced;
+    final canEdit = transactionId != null &&
+        isSynced &&
+        splits.canEditAfterLookup(transactionId) &&
+        !isSplitChild;
 
     final l = AppLocalizations.of(context);
 
@@ -329,7 +354,14 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (!canEdit) ...[
+            if (isSplitChild) ...[
+              SplitNoticeBanner(text: l.splitChildEditLocked),
+              const SizedBox(height: 16),
+            ] else if (isSynced &&
+                !splits.canEditAfterLookup(transactionId)) ...[
+              SplitNoticeBanner(text: l.splitStatusUnknownLocked),
+              const SizedBox(height: 16),
+            ] else if (!isSynced) ...[
               Card(
                 color: colorScheme.errorContainer,
                 child: Padding(
@@ -402,7 +434,8 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
               },
             ),
             const SizedBox(height: 24),
-            Text(l.transactionEditTagsLabel, style: Theme.of(context).textTheme.titleMedium),
+            Text(l.transactionEditTagsLabel,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Consumer<TagsProvider>(
               builder: (context, tagsProvider, _) =>
@@ -419,6 +452,15 @@ class _TransactionEditScreenState extends State<TransactionEditScreen> {
                     )
                   : const Icon(Icons.save),
               label: Text(_isSaving ? l.transactionEditSaving : l.commonSave),
+            ),
+            const SizedBox(height: 24),
+            TransactionSplitSection(
+              transaction: widget.transaction,
+              // After a split write the list behind this screen is reloading;
+              // close when this transaction itself was replaced or removed.
+              onChanged: (removed) {
+                if (removed && mounted) Navigator.pop(context, true);
+              },
             ),
           ],
         ),
