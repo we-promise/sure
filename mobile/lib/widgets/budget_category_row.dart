@@ -119,6 +119,7 @@ class BudgetCategoryRow extends StatelessWidget {
                     color: color,
                     overBudget: over,
                     nearLimit: near,
+                    hidden: hideAmounts,
                   ),
                   const SizedBox(height: SureSpacing.sm),
                   Row(
@@ -191,7 +192,11 @@ class _CategoryAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
+    // First user-perceived character, so a name starting with an emoji (a
+    // surrogate pair or a ZWJ sequence) isn't cut in half.
+    final trimmed = name.trim();
+    final initial =
+        trimmed.isEmpty ? '?' : trimmed.characters.first.toUpperCase();
     return Container(
       width: size,
       height: size,

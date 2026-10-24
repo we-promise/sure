@@ -12,6 +12,7 @@ import 'package:sure_mobile/services/budgets_service.dart';
 import 'package:sure_mobile/services/preferences_service.dart';
 import 'package:sure_mobile/theme/sure_theme.dart';
 import 'package:sure_mobile/widgets/budget_category_row.dart';
+import 'package:sure_mobile/widgets/budget_progress_bar.dart';
 
 import '../support/budget_fixtures.dart';
 
@@ -32,12 +33,13 @@ void main() {
     BudgetsProvider provider, {
     required bool hidden,
     Future<String?> Function()? loader,
+    Locale locale = const Locale('en'),
   }) {
     return ChangeNotifierProvider<PrivacyProvider>(
       create: (_) => PrivacyProvider(initialHidden: hidden),
       child: MaterialApp(
         theme: SureTheme.light,
-        locale: const Locale('en'),
+        locale: locale,
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: const [
           AppLocalizations.delegate,
@@ -58,11 +60,14 @@ void main() {
     BudgetsProvider provider, {
     bool hidden = false,
     Future<String?> Function()? loader,
+    Locale locale = const Locale('en'),
   }) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.5;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(harness(provider, hidden: hidden, loader: loader));
+    await tester.pumpWidget(
+      harness(provider, hidden: hidden, loader: loader, locale: locale),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -111,6 +116,23 @@ void main() {
     expect(find.textContaining(r'$1,500.00'), findsNothing);
     expect(find.text(r'$••••'), findsWidgets);
     expect(find.text(r'$•••• over'), findsOneWidget);
+    // The bars would give the share spent away.
+    final bars =
+        tester.widgetList<BudgetProgressBar>(find.byType(BudgetProgressBar));
+    expect(bars, isNotEmpty);
+    expect(bars.every((bar) => bar.hidden), isTrue);
+  });
+
+  testWidgets('formats the month in Swedish without extra date setup',
+      (tester) async {
+    await pumpScreen(
+      tester,
+      buildProvider(budgets: []),
+      locale: const Locale('sv'),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('oktober 2026'), findsWidgets);
   });
 
   testWidgets('month without a budget shows the empty state', (tester) async {

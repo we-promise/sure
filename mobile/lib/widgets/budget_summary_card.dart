@@ -66,7 +66,8 @@ class BudgetSummaryCard extends StatelessWidget {
             BudgetProgressBar(
               fraction: budget.spentFraction,
               overBudget: over,
-              nearLimit: !over && budget.spentFraction >= 0.9,
+              nearLimit: budget.isNearLimit,
+              hidden: hideAmounts,
               height: 8,
             ),
           ],

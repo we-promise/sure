@@ -7,6 +7,10 @@ import '../theme/sure_colors.dart';
 /// [fraction] is spent / available (1.0 == 100%). The fill is capped at full
 /// width; colour follows the web budget card: the category colour while on
 /// track, `warning` when near the limit and `destructive` once over.
+///
+/// With [hidden] (privacy mode) only the empty track is drawn and the
+/// percentage is left out of the semantics, since the share spent gives the
+/// masked amounts away.
 class BudgetProgressBar extends StatelessWidget {
   const BudgetProgressBar({
     super.key,
@@ -14,6 +18,7 @@ class BudgetProgressBar extends StatelessWidget {
     this.color,
     this.overBudget = false,
     this.nearLimit = false,
+    this.hidden = false,
     this.height = 6,
   });
 
@@ -21,6 +26,7 @@ class BudgetProgressBar extends StatelessWidget {
   final Color? color;
   final bool overBudget;
   final bool nearLimit;
+  final bool hidden;
   final double height;
 
   @override
@@ -31,10 +37,11 @@ class BudgetProgressBar extends StatelessWidget {
         : nearLimit
             ? palette.warning
             : (color ?? palette.success);
-    final clamped = fraction.isNaN ? 0.0 : fraction.clamp(0.0, 1.0);
+    final clamped =
+        hidden || fraction.isNaN ? 0.0 : fraction.clamp(0.0, 1.0);
 
     return Semantics(
-      value: '${(clamped * 100).round()}%',
+      value: hidden ? null : '${(clamped * 100).round()}%',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(height),
         child: SizedBox(

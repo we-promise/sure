@@ -19,6 +19,15 @@ void main() {
       expect(budget.spentFraction, closeTo(0.75, 0.0001));
     });
 
+    test('isNearLimit uses the same 90% rule as category lines', () {
+      Budget budget(int actual, int available) => Budget.fromJson(
+            budgetJson(actualCents: actual, availableCents: available),
+          );
+      expect(budget(180000, 20000).isNearLimit, isTrue); // 90%
+      expect(budget(170000, 30000).isNearLimit, isFalse); // 85%
+      expect(budget(210000, -10000).isNearLimit, isFalse); // over, not near
+    });
+
     test('index payload has no derived amounts', () {
       final json = budgetJson()..remove('actual_spending_cents');
       expect(Budget.fromJson(json).hasDerivedAmounts, isFalse);

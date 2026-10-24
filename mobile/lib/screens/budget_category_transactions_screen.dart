@@ -69,7 +69,9 @@ class _BudgetCategoryTransactionsScreenState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadPage(reset: true));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadPage(reset: true);
+    });
   }
 
   Future<String?> _accessToken() {
