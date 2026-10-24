@@ -250,6 +250,21 @@ class Transaction::ReceiptItemizerTest < ActiveSupport::TestCase
     assert_match(/more decimals/, error.message)
   end
 
+  test "caps rows at the four decimals entries store for currencies with a finer precision" do
+    entry = create_transaction(account: accounts(:depository), name: "Node hosting", currency: "BTC", amount: BigDecimal("0.5"))
+    entry.transaction.attachments.attach(io: StringIO.new("%PDF-1.4 receipt"), filename: "receipt.pdf", content_type: "application/pdf")
+    provider = stub_provider(extraction(items: [ [ "Hosting", "0.12345678" ], [ "Bandwidth", "0.2" ] ], currency: "BTC"))
+
+    proposal = Transaction::ReceiptItemizer.new(entry.transaction, provider: provider).propose
+
+    assert_equal 4, Transaction::ReceiptItemizer.amount_precision("BTC")
+    assert_equal [ BigDecimal("0.1235"), BigDecimal("0.2"), BigDecimal("0.1765") ], proposal.rows.map(&:amount)
+
+    entry.split!(proposal.rows.map { |row| { name: row.name, amount: row.amount } })
+    assert_equal entry.amount, entry.reload.child_entries.sum(:amount)
+    assert entry.child_entries.all? { |child| child.amount.nonzero? }
+  end
+
   test "available needs AI consent, a capable provider, a receipt and a splittable transaction" do
     provider = stub_provider(nil)
 
