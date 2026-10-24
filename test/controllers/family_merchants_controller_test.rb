@@ -224,7 +224,7 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     # raw DB constraint instead, surfacing as RecordNotUnique rather than
     # the RecordInvalid a normal duplicate submission would raise.
     FamilyMerchant.any_instance.stubs(:save).raises(
-      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_iban"')
     )
 
     assert_no_difference "FamilyMerchant.count" do
@@ -233,6 +233,48 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_match "has already been taken", response.body
+  end
+
+  test "a raw unique-index race on the merchant name is reported on the name, not the iban" do
+    FamilyMerchant.any_instance.stubs(:save).raises(
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_name"')
+    )
+
+    post family_merchants_url, params: { family_merchant: { name: "Race Landlord", iban: "AT611904300234573201" } } # pipelock:ignore IBAN
+
+    assert_response :unprocessable_entity
+    assert_match "Name has already been taken", response.body
+    assert_no_match "Iban has already been taken", response.body
+  end
+
+  test "a raw unique-index race on a rename is reported on the name" do
+    FamilyMerchant.any_instance.stubs(:update).raises(
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_name"')
+    )
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { name: "Renamed" } }
+
+    assert_response :unprocessable_entity
+    assert_match "Name has already been taken", response.body
+  end
+
+  test "a unique violation on another index is not turned into a form error" do
+    FamilyMerchant.any_instance.stubs(:save).raises(
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "some_other_index"')
+    )
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      post family_merchants_url, params: { family_merchant: { name: "Race Landlord" } }
+    end
+  end
+
+  test "a failed update still offers to remove the stored iban" do
+    merchant = FamilyMerchant.create!(name: "Stored Landlord", family: @user.family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch family_merchant_url(merchant), params: { family_merchant: { name: "", remove_iban: "1" } }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=checkbox][name='family_merchant[remove_iban]']", 1
   end
 
   test "a failed iban conversion preserves the submitted color" do
@@ -255,7 +297,7 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
     transactions(:one).update!(merchant: provider_merchant)
     ProviderMerchant.any_instance.stubs(:convert_to_family_merchant_for).raises(
-      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_iban"')
     )
 
     patch family_merchant_url(provider_merchant), params: { provider_merchant: { iban: "AT611904300234573201" } } # pipelock:ignore IBAN

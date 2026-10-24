@@ -195,16 +195,25 @@ class EnableBankingAccount < ApplicationRecord
 
         # A failed save (e.g. another account in the family already has this
         # IBAN) is worth surfacing in the support debug log rather than only
-        # a Rails log line.
-        capture_propagation_failure(target, target.errors.full_messages.join(", ")) unless saved
+        # a Rails log line. Once per message: every sync fails the same way.
+        capture_propagation_failure_once(target, target.errors.full_messages.join(", ")) unless saved
       rescue ActiveRecord::RecordNotUnique
         # Deliberately not e.message: PostgreSQL's unique-violation DETAIL
         # clause embeds the actual conflicting IBAN value in plaintext,
         # which would defeat the point of encrypting the column at rest by
         # persisting it into an unrelated log table instead.
-        capture_propagation_failure(target, "Concurrent iban conflict on the family_id+iban+currency unique index")
+        capture_propagation_failure_once(target, "Concurrent iban conflict on the family_id+iban+currency unique index")
       end
     end
+  end
+
+  # On relink the IBAN follows the provider to the chosen account. The
+  # previously linked account (deleted only after the relink commits, if at
+  # all) would otherwise keep holding it and block the chosen account.
+  def release_iban_from!(previous_account)
+    return if iban.blank? || previous_account.iban != iban
+
+    previous_account.update_column(:iban, nil)
   end
 
   private
@@ -254,7 +263,7 @@ class EnableBankingAccount < ApplicationRecord
       else
         "Enable Banking Account"
       end
-  end
+    end
 
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for EnableBanking account #{id}, defaulting to EUR")

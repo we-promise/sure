@@ -109,7 +109,7 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     # constraint instead, surfacing as RecordNotUnique rather than the
     # RecordInvalid the previous test covers.
     Account.any_instance.stubs(:save!).raises(
-      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_accounts_on_family_id_and_iban_and_currency"')
     )
 
     assert_no_difference -> { Account.count } do
@@ -124,7 +124,7 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
   test "update re-renders the form instead of a 500 on a raw unique-index race" do
     linked_account = accounts(:connected)
     Account.any_instance.stubs(:update).raises(
-      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_accounts_on_family_id_and_iban_and_currency"')
     )
 
     patch depository_path(linked_account), params: {
@@ -169,6 +169,41 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
     assert_equal "Renamed", linked_account.reload.name
+  end
+
+  test "update with an iban that normalizes to nothing leaves the stored iban unchanged" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { iban: " - " }
+    }
+
+    assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "a failed update still offers to remove the stored iban" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { name: "", remove_iban: "1" }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=checkbox][name='account[remove_iban]']", 1
+  end
+
+  test "create re-renders the form with a stray remove_iban when the account must be rebuilt" do
+    # A failure whose record is neither the account nor tied to one makes
+    # #create rebuild the account from the submitted params.
+    Account.any_instance.stubs(:lock_saved_attributes!).raises(ActiveRecord::RecordInvalid.new(Depository.new))
+
+    post depositories_path, params: {
+      account: { name: "Rebuilt Checking", currency: "USD", balance: 100, accountable_type: "Depository", remove_iban: "1" }
+    }
+
+    assert_response :unprocessable_entity
   end
 
   test "update with remove_iban checked clears the stored iban even with a blank field" do

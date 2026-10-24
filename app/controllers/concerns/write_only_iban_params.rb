@@ -8,12 +8,14 @@ module WriteOnlyIbanParams
     # touch it," not "clear it," or every edit that doesn't retype the IBAN
     # would silently wipe it. clear_flag (an explicit "remove IBAN" checkbox,
     # only rendered once a value is already stored) is the only way to
-    # actually clear it.
+    # actually clear it. A value that normalizes to nothing (just "-" or
+    # spaces) counts as blank too; otherwise it would reach the model, be
+    # normalized to nil there, and clear the stored IBAN.
     def resolve_write_only_iban(params_hash, clear_flag:)
       params_hash = params_hash.to_h
       if ActiveModel::Type::Boolean.new.cast(clear_flag)
         params_hash[:iban] = nil
-      elsif params_hash[:iban].blank?
+      elsif IbanNormalizable.normalize(params_hash[:iban]).nil?
         params_hash.delete(:iban)
       end
       params_hash

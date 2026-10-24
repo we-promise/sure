@@ -55,13 +55,13 @@ class FamilyMerchantsController < ApplicationController
     else
       render_create_error
     end
-  rescue ActiveRecord::RecordNotUnique
-    # A raw DB-level race on the partial (family_id, iban) unique index: two
-    # concurrent creates both passed the Rails uniqueness validation before
-    # either committed, so it surfaces here instead of the `save` branch
-    # above. #save doesn't rescue this on its own since it's a raw
-    # PG::UniqueViolation, not a validation failure.
-    @family_merchant.errors.add(:iban, :taken)
+  rescue ActiveRecord::RecordNotUnique => e
+    # A raw DB-level race on a partial unique index: two concurrent creates
+    # both passed the Rails uniqueness validation before either committed,
+    # so it surfaces here instead of the `save` branch above. #save doesn't
+    # rescue this on its own since it's a raw PG::UniqueViolation, not a
+    # validation failure.
+    @family_merchant.errors.add(taken_attribute_for(e), :taken)
     render_create_error
   end
 
@@ -108,12 +108,13 @@ class FamilyMerchantsController < ApplicationController
     restore_merchant_after_failed_conversion!
     e.record.errors.each { |error| @merchant.errors.add(error.attribute, error.type, **error.options) }
     render :edit, status: :unprocessable_entity
-  rescue ActiveRecord::RecordNotUnique
+  rescue ActiveRecord::RecordNotUnique => e
     # Same race as above, surfaced through the raw DB constraint instead of
     # the Rails-level validation: two concurrent conversions in the same
     # family both passed uniqueness before either committed.
+    attribute = taken_attribute_for(e)
     restore_merchant_after_failed_conversion!
-    @merchant.errors.add(:iban, :taken)
+    @merchant.errors.add(attribute, :taken)
     render :edit, status: :unprocessable_entity
   end
 
@@ -243,6 +244,19 @@ class FamilyMerchantsController < ApplicationController
     def restore_merchant_after_failed_conversion!
       @merchant.assign_attributes(effective_merchant_params.slice(:name, :website_url, :iban))
       @selected_color = effective_merchant_params[:color]
+    end
+
+    # FamilyMerchant rows are unique per family by name and by IBAN; only the
+    # violated index's name tells the two races apart. It is read from the
+    # error line itself: the DETAIL line after it repeats the submitted
+    # values. Any other index violation is not a form error, so it is
+    # raised again.
+    def taken_attribute_for(error)
+      case error.message[/unique constraint "([^"]+)"/, 1]
+      when "index_merchants_on_family_id_and_iban" then :iban
+      when "index_merchants_on_family_id_and_name" then :name
+      else raise error
+      end
     end
 
     def merchant_json(merchant)

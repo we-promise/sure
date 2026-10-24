@@ -158,12 +158,16 @@ class I18nTest < ActiveSupport::TestCase
       "accounts" => [ "institution_domain_label", %w[iban_label iban_placeholder iban_set_placeholder iban_remove_label] ],
       "merchants" => [ "website_hint", %w[iban_placeholder iban_set_placeholder iban_hint iban_remove_label] ]
     }.each do |dir, (sibling, keys)|
+      checked = 0
       Dir[Rails.root.join("config/locales/views/#{dir}/*.yml")].each do |path|
         parent = hash_containing_key(YAML.load_file(path, aliases: true), sibling)
         next unless parent
 
+        checked += 1
         keys.each { |key| assert parent[key].present?, "#{key} missing next to #{sibling} in #{path}" }
       end
+      # A renamed sibling key would otherwise skip every file and pass.
+      assert checked.positive?, "no #{dir} locale file defines #{sibling}"
     end
   end
 

@@ -21,7 +21,24 @@ class ScopeAccountIbanUniquenessToCurrency < ActiveRecord::Migration[8.1]
 
   def down
     # Restoring the stricter index fails while two accounts in a family
-    # share an IBAN across currencies; clear one of them first.
+    # share an IBAN across currencies. Name them (ids only: the column is
+    # encrypted at rest) instead of leaving PostgreSQL's raw unique-violation
+    # error and an invalid index behind.
+    conflicting_account_ids = select_values(<<~SQL.squish)
+      SELECT STRING_AGG(id::text, ',' ORDER BY id)
+      FROM accounts
+      WHERE iban IS NOT NULL
+      GROUP BY family_id, iban
+      HAVING COUNT(*) > 1
+    SQL
+
+    if conflicting_account_ids.any?
+      raise "Cannot restore the family-scoped iban uniqueness index: " \
+            "accounts #{conflicting_account_ids.join(', ')} share an iban within " \
+            "the same family. Clear the iban on all but one per group before " \
+            "rolling back this migration."
+    end
+
     unless valid_index_exists?(OLD_INDEX_NAME)
       execute "DROP INDEX CONCURRENTLY IF EXISTS #{OLD_INDEX_NAME}"
       add_index :accounts, [ :family_id, :iban ],

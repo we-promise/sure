@@ -42,9 +42,10 @@ namespace :security do
     # Note: otp_backup_codes excluded - it's a PostgreSQL array column incompatible with AR encryption
     results[:users] = backfill_model(User, %i[otp_secret email unconfirmed_email first_name last_name], batch_size, dry_run)
 
-    # IBAN fields (accounts/merchants are new columns, so no legacy plaintext
-    # rows exist there yet; enable_banking_accounts.iban is added to its
-    # existing entry below since it previously stored plaintext)
+    # IBAN fields. Account and Merchant IBANs are written in plaintext while
+    # encryption is not configured; these lines encrypt those rows once it
+    # is. enable_banking_accounts.iban is added to its existing entry below,
+    # since it stored plaintext before it was encrypted at all.
     results[:accounts] = backfill_model(Account, %i[iban], batch_size, dry_run)
     results[:merchants] = backfill_model(Merchant, %i[iban], batch_size, dry_run)
 
@@ -118,8 +119,8 @@ namespace :security do
           # validations/callbacks that might read other encrypted fields)
           encryptor = model_class.new
           plaintext_values.each do |field, value|
-            # EnableBankingAccount#iban is the one legacy-plaintext IBAN column
-            # here; Account/Merchant#iban are new columns with no legacy rows.
+            # IBANs written before encryption was configured (and every legacy
+            # EnableBankingAccount#iban) may be unnormalized plaintext.
             # Writing bypasses validations/callbacks as above, so normalize
             # here the way the normalize_iban callback would; a formatted or
             # lowercase legacy value then compares equal to new rows.

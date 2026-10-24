@@ -40,10 +40,10 @@
       <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
         <%= f.password_field :iban,
               value: nil,
-              placeholder: family_merchant.iban.present? ? t(".iban_set_placeholder") : t(".iban_placeholder") %>
+              placeholder: family_merchant.iban_in_database.present? ? t(".iban_set_placeholder") : t(".iban_placeholder") %>
       </div>
       <p class="text-xs text-subdued"><%= t(".iban_hint") %></p>
-      <% if family_merchant.iban.present? %>
+      <% if family_merchant.iban_in_database.present? %>
         <div class="flex items-center justify-between gap-2">
           <span id="<%= f.object_name %>_remove_iban_label" class="text-sm"><%= t(".iban_remove_label") %></span>
           <%# Not a real model attribute (the field is write-only, so there's

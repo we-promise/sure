@@ -99,6 +99,31 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 1, result[:summary].dig("account_ibans", "skipped")
   end
 
+  test "clears a kept account iban that a re-import's currency change makes taken" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    account_data = {
+      balance: "100.00",
+      accountable_type: "Depository",
+      accountable: { subtype: "checking" },
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    }
+
+    Family::DataImporter.new(@family, build_ndjson([
+      { type: "Account", data: account_data.merge(id: "old-account-1", name: "Dollar", currency: "USD") },
+      { type: "Account", data: account_data.merge(id: "old-account-2", name: "Euro", currency: "EUR") }
+    ]), import_session: session).import!
+
+    result = Family::DataImporter.new(@family, build_ndjson([
+      { type: "Account", data: account_data.except(:iban).merge(id: "old-account-2", name: "Euro", currency: "USD") }
+    ]), import_session: session).import!
+
+    accounts = @family.accounts.index_by(&:name)
+    assert_equal "USD", accounts["Euro"].currency
+    assert_nil accounts["Euro"].iban
+    assert_equal "DE89370400440532013000", accounts["Dollar"].iban # pipelock:ignore IBAN
+    assert_equal 1, result[:summary].dig("account_ibans", "skipped")
+  end
+
   test "ignores an iban on an account type without one, even when it is taken" do
     account_data = {
       balance: "100.00",

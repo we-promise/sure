@@ -168,7 +168,7 @@ module AccountableResource
     # `accountable`, and the form came back without any of the type's own
     # inputs, which is the opposite of what this rescue exists to do.
     def rebuilt_account_from_submission
-      attributes = account_params.except(:return_to, :opening_balance_date)
+      attributes = account_params.except(:return_to, :opening_balance_date, :remove_iban)
       attributes[:accountable_attributes] ||= {}
       Current.family.accounts.build(attributes)
     end

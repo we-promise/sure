@@ -289,6 +289,59 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "DE89370400440532013000", manual_account.reload.iban # pipelock:ignore IBAN
   end
 
+  test "link_existing_account keeps a different iban the manual account already has" do
+    @item.update!(session_id: "test_session")
+    enable_banking_account = @item.enable_banking_accounts.create!(
+      uid: "acct_uid_4",
+      name: "Checking",
+      currency: "EUR",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+    manual_account = @family.accounts.create!(name: "Manual Checking", balance: 0, currency: "EUR", accountable: Depository.new, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    post link_existing_account_enable_banking_items_url,
+         params: { account_id: manual_account.id, enable_banking_account_id: enable_banking_account.id }
+
+    assert_equal "AT611904300234573201", manual_account.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "link_existing_account moves the iban from the orphaned account to the chosen one" do
+    @item.update!(session_id: "test_session")
+    enable_banking_account = @item.enable_banking_accounts.create!(
+      uid: "acct_uid_5",
+      name: "Checking",
+      currency: "EUR",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+    previous_account = @family.accounts.create!(name: "Synced Checking", balance: 0, currency: "EUR", accountable: Depository.new, iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    AccountProvider.create!(account: previous_account, provider: enable_banking_account)
+    manual_account = @family.accounts.create!(name: "Manual Checking", balance: 0, currency: "EUR", accountable: Depository.new)
+
+    post link_existing_account_enable_banking_items_url,
+         params: { account_id: manual_account.id, enable_banking_account_id: enable_banking_account.id }
+
+    assert_equal "DE89370400440532013000", manual_account.reload.iban # pipelock:ignore IBAN
+    assert_nil previous_account.reload.iban
+  end
+
+  test "link_accounts ties an iban propagation failure to the new account provider" do
+    @item.update!(session_id: "test_session")
+    enable_banking_account = @item.enable_banking_accounts.create!(
+      uid: "acct_uid_6",
+      name: "Checking",
+      currency: "EUR",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+    @family.accounts.create!(name: "Other Checking", balance: 0, currency: "EUR", accountable: Depository.new, iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    post link_accounts_enable_banking_items_url,
+         params: { account_uids: [ "acct_uid_6" ], accountable_type: "Depository" }
+
+    debug_entry = DebugLogEntry.where(source: "EnableBankingAccount").last
+    assert_not_nil debug_entry
+    assert_equal enable_banking_account.reload.account_provider.id, debug_entry.account_provider_id
+  end
+
   test "authorize sends a random state instead of the item id" do
     stub_authorization_start
 

@@ -62,9 +62,9 @@
           <%= form.password_field :iban,
               value: nil,
               label: t(".iban_label"),
-              placeholder: account.iban.present? ? t(".iban_set_placeholder") : t(".iban_placeholder") %>
+              placeholder: account.iban_in_database.present? ? t(".iban_set_placeholder") : t(".iban_placeholder") %>
 
-          <% if account.iban.present? %>
+          <% if account.iban_in_database.present? %>
             <div class="flex items-center justify-between gap-2">
               <span id="account_remove_iban_label" class="text-sm"><%= t(".iban_remove_label") %></span>
               <%# Not a real model attribute (the field is write-only, so there's

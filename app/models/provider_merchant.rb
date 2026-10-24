@@ -8,9 +8,9 @@ class ProviderMerchant < Merchant
   validates :name, uniqueness: { scope: [ :source ] }
   validates :source, presence: true
   # Mirrors the DB-level partial unique index (source, iban) added alongside
-  # merchants.iban — without this, a duplicate submitted via the manual edit
-  # form raises ActiveRecord::RecordNotUnique (a 500) instead of a normal
-  # validation error the controller already knows how to render.
+  # merchants.iban, so a duplicate saved directly on a ProviderMerchant
+  # fails validation rather than raising ActiveRecord::RecordNotUnique. The
+  # manual edit form never saves one: it converts to a FamilyMerchant.
   validates :iban, uniqueness: { scope: :source }, allow_nil: true
 
   def self.find_by_import_data(data, source)

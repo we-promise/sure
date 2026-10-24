@@ -19,6 +19,8 @@ class AccountTest < ActiveSupport::TestCase
   test "only bank-held account types support an iban" do
     assert Account.new(accountable_type: "Depository").supports_iban?
     assert Account.new(accountable_type: "Loan").supports_iban?
+    assert Account.new(accountable_type: "CreditCard").supports_iban?
+    assert Account.new(accountable_type: "Investment").supports_iban?
     assert_not Account.new(accountable_type: "Vehicle").supports_iban?
     assert_not Account.new(accountable_type: "Property").supports_iban?
     assert_not Account.new.supports_iban?

@@ -269,11 +269,10 @@ class EnableBankingItemsController < ApplicationController
           )
 
           # Link account to enable_banking_account via account_providers
-          # Uses create! so any failure will rollback the entire transaction
-          AccountProvider.create!(
-            account: account,
-            provider: enable_banking_account
-          )
+          # Uses create! so any failure will rollback the entire transaction.
+          # Built through the association: the already-linked check above
+          # cached a nil account_provider, which propagation's debug log reads.
+          enable_banking_account.create_account_provider!(account: account)
 
           # Account discovery (which stored enable_banking_account.iban) ran
           # before this link existed, so it couldn't propagate to the new
@@ -461,19 +460,13 @@ class EnableBankingItemsController < ApplicationController
       ap.account_id = @account.id
       ap.save!
 
-      # Account discovery (which stored enable_banking_account.iban) ran
-      # before this link existed, so it couldn't propagate to @account --
-      # do it now that there's a target. Unlike the two creation flows,
-      # this links to an EXISTING manual account the user picked, so it
-      # may already have its own iban; propagate_iban_to_account! only
-      # fills a blank one, same as everywhere else.
-      enable_banking_account.propagate_iban_to_account!
-
       # If the provider was previously linked to a different account in this family,
       # and that account is now orphaned, quietly disable it so it disappears from the
       # visible manual list. This mirrors the unified flow expectation that the provider
       # follows the chosen account.
       if previous_account && previous_account.id != @account.id && previous_account.family_id == @account.family_id
+        enable_banking_account.release_iban_from!(previous_account)
+
         begin
           # Disabled accounts still appear (greyed-out) in the manual list after a full refresh.
           # Use the app's standard deletion path (async) so the duplicate disappears and the
@@ -483,6 +476,14 @@ class EnableBankingItemsController < ApplicationController
           Rails.logger.warn("Failed to cleanup orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
         end
       end
+
+      # Account discovery (which stored enable_banking_account.iban) ran
+      # before this link existed, so it couldn't propagate to @account --
+      # do it now that there's a target. Unlike the two creation flows,
+      # this links to an EXISTING manual account the user picked, so it
+      # may already have its own iban; propagate_iban_to_account! only
+      # fills a blank one, same as everywhere else.
+      enable_banking_account.propagate_iban_to_account!
     end
 
     # Queue the orphan for deletion only after the relink commits. destroy_later
