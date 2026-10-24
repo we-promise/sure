@@ -6,10 +6,11 @@ Working documents for discussing how Sure's AI and ML features should evolve tow
 |---|---|---|
 | [`00-ai-ml-block-diagram.md`](00-ai-ml-block-diagram.md) | **Orientation.** One flowchart of the main blocks (entry points, Sidekiq capsules, assistant tools, provider layer, datastores, external services), an ER diagram of the AI/ML models, a legend, and how a request flows. Inferred parts are flagged. | are new to the AI code and want the map before the detail |
 | [`01-ai-ml-workflow-map.md`](01-ai-ml-workflow-map.md) | **Reference.** Every workflow that calls an LLM, Jev, embeddings or a Ruby ML model (W1–W23): key files and functions, a diagram, entry and exit, settings and env vars, fan-outs, sync vs async, plus a list of quirks. W15 also documents the MCP server interface. **D5** is the interface register (I1–I27): each interface's contract on `main`, its consumers, whether it is a boundary, and where declared and actual contracts have drifted. | are changing anything AI-, rules- or sync-related |
-| [`02-ai-architecture-review.md`](02-ai-architecture-review.md) | **Proposal.** Architecture and workflow review from two angles, Rails + Sidekiq and agent-written contributions: challenges, opportunities, simplifications (S1–S10, P1–P5), suggested sequencing, and §7: files to split, by MVC-boundary crossings, resource spread and open-PR collisions (F-H, F-M, F-R). | maintain the codebase or review PRs |
+| [`02-ai-architecture-review.md`](02-ai-architecture-review.md) | **Proposal.** Architecture and workflow review from two angles, Rails + Sidekiq and agent-written contributions: challenges, opportunities, simplifications (S1–S10, P1–P5), suggested sequencing. | maintain the codebase or review PRs |
 | [`03-ai-user-perspective-review.md`](03-ai-user-perspective-review.md) | **Proposal.** The same workflows from the user's side. It covers three personas, settings scope, understandability, bug reporting, migration (Maybe v0.6.0 upgraders first, then YNAB, Actual, Firefly III, Securo, ChatGPT Finances), personal-finance book concepts, and recommendations U1–U24. | work on UX, onboarding, settings or docs |
 | [`04-rubyllm-thought-experiment.md`](04-rubyllm-thought-experiment.md) | **Thought experiment.** What if every model call went through [RubyLLM](https://github.com/crmne/ruby_llm)? Code that would go, past PRs that would not have been needed, fit with S1 and S2, the three setups and the transitions between them (T1–T6), regressions, and open questions (Q1–Q18). Not a proposal. | are weighing a client library against the S1/S2 refactor |
 | [`05-ai-breaking-change-option.md`](05-ai-breaking-change-option.md) | **Option.** What the refactor would look like if breaking changes were allowed (BC1–BC11): suggestions plus a resolver, classifiers out of Rules, one AI gateway, config, MCP and consent changes. For each change, the D5 interfaces it breaks, merges or removes, and how to split it into reviewable PRs. Not a decision. | decide the scope of the AI/ML refactor |
+| [`06-ai-file-split-review.md`](06-ai-file-split-review.md) | **Review.** Files to split: merge hotspots by six-month churn and overlap across all 330 open PRs, MVC-boundary crossings, and files spanning several resources (F-H, F-M, F-R). A table says whether each split belongs before the refactor, with it, or at any time. | plan the refactor's first PRs, or keep hitting merge conflicts |
 
 ## Status
 
@@ -28,7 +29,7 @@ Working documents for discussing how Sure's AI and ML features should evolve tow
 
 ## PR traceability index
 
-Every PR or issue referenced in the documents, grouped by milestone. "Referenced in" gives the document (01, 02, 03, 04, 05) and the section ID. State was taken on 2026-10-23, and on 2026-10-24 for the 05 and 01 D5 references.
+Every PR or issue referenced in the documents, grouped by milestone. "Referenced in" gives the document (01–06) and the section ID. State was taken on 2026-10-23, and on 2026-10-24 for the 05 and 01 D5 references.
 
 ### v0.7.6: [milestone 22](https://github.com/we-promise/sure/milestone/22), due 2026-10-31
 
@@ -47,7 +48,7 @@ Every PR or issue referenced in the documents, grouped by milestone. "Referenced
 | [#4295](https://github.com/we-promise/sure/issues/4295) | Update demo assistant banner to credit Vercel AI Gateway | open | 01: W13 |
 | [#4291](https://github.com/we-promise/sure/issues/4291) | feat(ai): support Gemini 4 Argon reasoning model | merged | 01: B2; 02: A1; 04: §4 |
 | [#4286](https://github.com/we-promise/sure/issues/4286) | Eager-load recurrence rules during occurrence generation to prevent N+1 | merged | 01: W19 |
-| [#4283](https://github.com/we-promise/sure/issues/4283) | Constrain dynamic MCP OAuth scope to MCP-only token | open | 01: W15, D5; 02: A13, §7; 03: §3, §10; 05: header, BC8 |
+| [#4283](https://github.com/we-promise/sure/issues/4283) | Constrain dynamic MCP OAuth scope to MCP-only token | open | 01: W15, D5; 02: A13; 03: §3, §10; 05: header, BC8; 06: header, §1, §4, §5 |
 | [#4263](https://github.com/we-promise/sure/issues/4263) | fix(devcontainer): use the pgvector Postgres image so document import works | merged | 01: W11, W12, D5 |
 | [#4262](https://github.com/we-promise/sure/issues/4262) | fix(development): run background jobs through Sidekiq | merged | 01: A2; 02: A8 |
 | [#4261](https://github.com/we-promise/sure/issues/4261) | bugfix : honor json_mode in the PDF document extraction path | merged | 01: B2, W11; 02: A2; 04: §4 |
@@ -69,8 +70,8 @@ Every PR or issue referenced in the documents, grouped by milestone. "Referenced
 | [#4175](https://github.com/we-promise/sure/issues/4175) | Validate rule action and resource types against known types | merged | 01: W4 |
 | [#4163](https://github.com/we-promise/sure/issues/4163) | Fix MCP rule previews after matching scope rename | merged | 01: W15 |
 | [#4158](https://github.com/we-promise/sure/issues/4158) | fix(transfers): reset the kept leg's kind when a transfer leg is deleted | merged | 01: W2 |
-| [#4157](https://github.com/we-promise/sure/issues/4157) | feat(mcp): add unmatch_transfer tool | merged | 01: W15; 02: §7 |
-| [#4147](https://github.com/we-promise/sure/issues/4147) | Add an "mcp_only" assistant type: no in-app chat, MCP stays available | merged | 01: W14, W15; 02: A13, §7; 03: §3; 05: header, BC8 |
+| [#4157](https://github.com/we-promise/sure/issues/4157) | feat(mcp): add unmatch_transfer tool | merged | 01: W15; 06: header, §1 |
+| [#4147](https://github.com/we-promise/sure/issues/4147) | Add an "mcp_only" assistant type: no in-app chat, MCP stays available | merged | 01: W14, W15; 02: A13; 03: §3; 05: header, BC8; 06: header, §1 |
 | [#4136](https://github.com/we-promise/sure/issues/4136) | fix(bills): preload recurrence rules and accounts when claiming recurring patterns | merged | 01: W19 |
 | [#4133](https://github.com/we-promise/sure/issues/4133) | fix(ai): replay each in-flight tool round as its own message pair | merged | 01: B2, W13; 04: §4; 05: BC4 |
 | [#4109](https://github.com/we-promise/sure/issues/4109) | Reject null bytes in rule fields | merged | 01: W4 |
@@ -87,7 +88,7 @@ Every PR or issue referenced in the documents, grouped by milestone. "Referenced
 | [#4004](https://github.com/we-promise/sure/issues/4004) | Prevent guests from mutating family configuration | merged | 02: A11; 03: §4 |
 | [#4002](https://github.com/we-promise/sure/issues/4002) | feat(reports): spending vs normal section (preview) | open | 01: W17; 03: §6 |
 | [#4001](https://github.com/we-promise/sure/issues/4001) | Skip account sync for descriptive transaction edits | merged | 01: W1 |
-| [#3990](https://github.com/we-promise/sure/issues/3990) | feat(mcp): rule tools with a mandatory preview | merged | 01: W15, W16; 02: A13, B3, §7; 03: §10, §3, §7.1; 05: BC8 |
+| [#3990](https://github.com/we-promise/sure/issues/3990) | feat(mcp): rule tools with a mandatory preview | merged | 01: W15, W16; 02: A13, B3; 03: §10, §3, §7.1; 05: BC8; 06: header, §1 |
 | [#3989](https://github.com/we-promise/sure/issues/3989) | fix(sync): keep a locked date and amount when a provider sync re-imports a transaction | merged | 01: W1 |
 | [#3979](https://github.com/we-promise/sure/issues/3979) | feat(ai): support Gemini 3 models and preserve tool call thought signatures | merged | 01: B2; 02: A1; 04: §2, §4 |
 | [#3974](https://github.com/we-promise/sure/issues/3974) | Support multi-currency goal funding | merged | 03: §8 |

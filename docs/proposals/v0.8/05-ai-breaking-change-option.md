@@ -360,7 +360,7 @@ What happens to each D5 interface under this option. **Kept** = unchanged. **Int
 
 ### Files to split first
 
-These are the largest AI/ML files on `main`. Each split is a pure-move PR that unblocks parallel work. [02 §7](02-ai-architecture-review.md#7-files-to-split) adds the evidence: MVC-boundary crossings, files spanning several resources, and the files most open PRs collide on.
+These are the largest AI/ML files on `main`. Each split is a pure-move PR that unblocks parallel work. [06](06-ai-file-split-review.md) adds the evidence: MVC-boundary crossings, files spanning several resources, and the files most open PRs collide on, and says whether each split belongs before, with or independently of the refactor.
 
 | File | Lines | Split |
 |---|---|---|
