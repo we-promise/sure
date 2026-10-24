@@ -5,7 +5,8 @@
 # quantity, acquisition date and per-unit cost. A transfer-in is a lot whose
 # cost nothing here knows. Under the average method a disposal relieves every
 # open lot pro rata, so each lot keeps its own cost and only its quantity
-# shrinks.
+# shrinks. Under fifo it consumes the oldest lot first, and each sale records
+# what it took from which lot as a disposal.
 #
 # The figure the calculators report, #average_cost, comes from a running pool
 # of priced acquisitions rather than from the lots. The two agree, but pro-rata
@@ -25,13 +26,22 @@
 #
 # Prices are expected in the account's currency (callers convert before
 # applying), so the book itself is currency-agnostic.
+#
+# Under fifo the figure is the mean of the open lots a trade acquired rather
+# than the pool, since what remains is no longer a pro-rata share of what was
+# bought. The opening lot stays out of it, as it stays out of the pool.
 class Holding::LotBook
   Lot = Data.define(:source_id, :acquired_on, :qty, :unit_cost)
+  # `lot_source_id` and `unit_cost` are nil for the opening lot and for units
+  # sold beyond what was held.
+  Disposal = Data.define(:sale_id, :lot_source_id, :qty, :unit_cost)
 
-  attr_reader :lots
+  attr_reader :lots, :disposals
 
-  def initialize
+  def initialize(method: "average")
+    @fifo = method.to_s == "fifo"
     @lots = []
+    @disposals = []
     @closed = []
     @shortfall = BigDecimal("0")
     reset
@@ -44,7 +54,7 @@ class Holding::LotBook
     qty = qty.to_d
     return if qty.zero?
 
-    qty.positive? ? buy(price, qty, source_id: source_id, acquired_on: acquired_on) : sell(qty)
+    qty.positive? ? buy(price, qty, source_id: source_id, acquired_on: acquired_on) : sell(qty, sale_id: source_id)
   end
 
   def buy(price, qty, source_id: nil, acquired_on: nil)
@@ -65,11 +75,13 @@ class Holding::LotBook
     add_lot(source_id, acquired_on, qty, nil)
   end
 
-  def sell(qty)
+  # A sale with no `sale_id` (a transfer out) consumes lots without recording
+  # a disposal: it realises nothing.
+  def sell(qty, sale_id: nil)
     qty = qty&.to_d
     return if qty.nil? || qty.zero?
 
-    relieve_lots(qty.abs)
+    @fifo ? consume_oldest(qty.abs, sale_id) : relieve_lots(qty.abs)
     return if @total_qty.zero?
 
     # Relieve at the current average cost so the per-share average is unchanged.
@@ -100,9 +112,15 @@ class Holding::LotBook
   # Current weighted-average cost per share, or nil when nothing is held or
   # the cost of what is held is unknown.
   def average_cost
+    return lot_average_cost if @fifo
     return nil if @total_qty.zero? || @unknown
 
     @total_cost / @total_qty
+  end
+
+  # An open lot a trade brought in at a cost nothing here knows.
+  def unknown_cost?
+    @lots.any? { |lot| lot.source_id && lot.unit_cost.nil? }
   end
 
   def open_qty
@@ -126,6 +144,38 @@ class Holding::LotBook
       @shortfall -= filled
       lot = Lot.new(source_id: source_id, acquired_on: acquired_on, qty: qty - filled, unit_cost: unit_cost)
       lot.qty.positive? ? @lots << lot : @closed << lot
+    end
+
+    def lot_average_cost
+      acquired = @lots.select(&:source_id)
+      return nil if acquired.empty? || unknown_cost?
+
+      acquired.sum(BigDecimal("0")) { |lot| lot.qty * lot.unit_cost } / acquired.sum(BigDecimal("0"), &:qty)
+    end
+
+    # Lots are booked in the order they were acquired, the opening lot first,
+    # so the oldest is the first open one.
+    def consume_oldest(qty, sale_id)
+      left = qty
+      open = []
+      @lots.each do |lot|
+        taken = [ left, lot.qty ].min
+        left -= taken
+        record_disposal(sale_id, lot.source_id, taken, lot.unit_cost) if taken.positive?
+        rest = lot.with(qty: lot.qty - taken)
+        rest.qty.positive? ? open << rest : @closed << rest
+      end
+      @lots = open
+      return unless left.positive?
+
+      @shortfall += left
+      record_disposal(sale_id, nil, left, nil)
+    end
+
+    def record_disposal(sale_id, lot_source_id, qty, unit_cost)
+      return unless sale_id
+
+      @disposals << Disposal.new(sale_id: sale_id, lot_source_id: lot_source_id, qty: qty, unit_cost: unit_cost)
     end
 
     # Pro-rata relief across every open lot; an oversell closes them all and

@@ -503,7 +503,7 @@ class Holding::LotBookTest < ActiveSupport::TestCase
 
       run = -> { Holding::Materializer.new(@account.reload, strategy: strategy).materialize_holdings }
       if reference
-        Holding::LotBook.stub(:new, -> { ReferenceCalculatorTracker.new }) { run.call }
+        Holding::LotBook.stub(:new, ->(**) { ReferenceCalculatorTracker.new }) { run.call }
       else
         run.call
       end
