@@ -63,10 +63,15 @@ class Budget {
 
   bool get isOverBudget => (availableToSpendCents ?? 0) < 0;
 
-  /// Share of the spendable amount already spent, 0..∞ (1.0 == 100%).
+  /// Same rule as [BudgetCategory.isNearLimit]: 90% or more spent, not over.
+  bool get isNearLimit =>
+      !isOverBudget && spentFraction >= BudgetCategory.nearLimitFraction;
+
+  /// Share of the budget already spent, 0..∞ (1.0 == 100%).
   ///
-  /// `available_to_spend` is the budget (plus any rollover) minus actual
-  /// spending, so `actual + available` reconstructs what there was to spend.
+  /// `available_to_spend` is the budget minus actual spending (Rails
+  /// `Budget#available_to_spend`; rollover only applies per category), so
+  /// `actual + available` reconstructs the budget.
   double get spentFraction {
     final actual = actualSpendingCents ?? 0;
     final available = availableToSpendCents ?? 0;
@@ -242,7 +247,10 @@ class BudgetCategory {
   }
 
   /// Within 10% of the limit but not over it (web: `near_limit?`).
-  bool get isNearLimit => !isOverBudget && spentFraction >= 0.9;
+  /// Spent share at which a line counts as near its limit (web: 90%).
+  static const double nearLimitFraction = 0.9;
+
+  bool get isNearLimit => !isOverBudget && spentFraction >= nearLimitFraction;
 
   /// Whether the web budget page would show this line at all: budgeted lines
   /// (shared subcategories only once they have spending) and anything with
