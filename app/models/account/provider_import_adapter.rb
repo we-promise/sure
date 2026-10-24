@@ -495,7 +495,11 @@ class Account::ProviderImportAdapter
           end
         end
 
-        holding ||= account.holdings.new(
+        # Built outside account.holdings, as below: a record built there joins
+        # the account's holdings unsaved, and an import that fails after that
+        # (a collision, a validation) would leave the account unable to save.
+        holding ||= Holding.new(
+          account: account,
           security: security,
           date: date,
           currency: currency,
@@ -510,11 +514,8 @@ class Account::ProviderImportAdapter
         remapped_attrs[:account_provider_id] = account_provider_id if account_provider_id.present?
         holding = account.holdings.find_by(remapped_attrs)
 
-        holding ||= account.holdings.find_or_initialize_by(
-          security: security,
-          date: date,
-          currency: currency
-        )
+        holding ||= account.holdings.find_by(security: security, date: date, currency: currency) ||
+          Holding.new(account: account, security: security, date: date, currency: currency)
       end
 
       # Early cross-provider composite-key conflict guard: avoid attempting a write
