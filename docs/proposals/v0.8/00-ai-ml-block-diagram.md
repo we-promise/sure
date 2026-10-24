@@ -196,7 +196,7 @@ Read directly from `origin/main`: `Gemfile` (`ruby-openai`, `anthropic ~> 1.0`, 
 **Inferred or simplified (flagged):**
 
 - `FAMILY ||--o{ ACCOUNT` and `ACCOUNT ||--o{ ENTRY`: I didn't grep these two associations. I took them from the `Entry belongs_to :account` side and from Sure's core domain.
-- `VECTOR_STORE_CHUNK` isn't an ActiveRecord model. It's the raw-SQL `vector_store_chunks` table that `VectorStore::Pgvector` writes to, keyed by store id and file id. It isn't in `db/schema.rb`, and the adapter checks whether it exists at runtime. The link to `FAMILY_DOCUMENT` is logical, not a foreign key.
+- `VECTOR_STORE_CHUNK` isn't an ActiveRecord model. It's the raw-SQL `vector_store_chunks` table that `VectorStore::Pgvector` writes to, keyed by store id and file id. Migration `20260316120000_create_vector_store_chunks` creates it only when the pgvector extension is available, so it isn't in `db/schema.rb`, and the adapter checks at runtime whether it exists. The link to `FAMILY_DOCUMENT` is logical, not a foreign key.
 - **Redis for ActionCable:** `config/cable.yml` has a `redis` adapter on its third entry. I assumed that entry is production (dev uses `async`).
 - **Channels:** there are no custom channels, only `ApplicationCable`. Every real-time update is a Turbo Stream broadcast, from `Message`, `Chat#add_error`, `GenerateInsightsJob` and the Bayes evaluation progress.
 - **Langfuse** is called through a local `LangfuseTracing` class (`lib/`), not a gem.
