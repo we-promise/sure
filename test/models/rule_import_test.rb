@@ -667,6 +667,52 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal "ני\"ע-קניה", condition.value
   end
 
+  test "imports the group column and reuses existing groups" do
+    existing = @family.rule_groups.create!(name: "Food")
+    csv = CSV.generate do |out|
+      out << %w[name resource_type active effective_date conditions actions group]
+      out << [ "Grocery rule", "transaction", true, "", [ { condition_type: "transaction_name", operator: "like", value: "grocery" } ].to_json, [ { action_type: "set_transaction_category", value: "Groceries" } ].to_json, "Food" ]
+      out << [ "Rent rule", "transaction", true, "", [ { condition_type: "transaction_name", operator: "like", value: "rent" } ].to_json, [ { action_type: "exclude_transaction" } ].to_json, "Housing" ]
+      out << [ "Loose rule", "transaction", true, "", [ { condition_type: "transaction_name", operator: "like", value: "misc" } ].to_json, [ { action_type: "exclude_transaction" } ].to_json, "" ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { @family.rule_groups.count }, 1 do
+      import.send(:import!)
+    end
+
+    assert_equal existing, @family.rules.find_by!(name: "Grocery rule").rule_group
+    assert_equal "Housing", @family.rules.find_by!(name: "Rent rule").rule_group.name
+    assert_nil @family.rules.find_by!(name: "Loose rule").rule_group
+    assert_equal [ { condition_type: "transaction_name", operator: "like", value: "rent" }.stringify_keys ],
+      @family.rules.find_by!(name: "Rent rule").conditions.map { |condition| condition.slice(:condition_type, :operator, :value) }
+  end
+
+  test "reads the group of a row whose JSON was split into extra fields" do
+    headers = %w[name resource_type active effective_date conditions actions group]
+    # CSV pads the headers with nil for fields beyond the named columns.
+    row = CSV::Row.new(headers + [ nil ], [ "Split rule", "transaction", "true", nil, '[{"a":1}', '{"b":2}]', "[]", "Food" ])
+
+    normalized = RuleImport.new.send(:normalize_rule_row, row)
+
+    assert_equal "Food", normalized[:rule_group]
+    assert_equal "Split rule", normalized[:name]
+  end
+
+  test "a file without the group column keeps the group of an updated rule" do
+    group = @family.rule_groups.create!(name: "Food")
+    @family.rules.create!(name: "Categorize groceries", resource_type: "transaction", rule_group: group,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    assert_equal group, @family.rules.find_by!(name: "Categorize groceries").rule_group
+  end
+
   test "imports wrapped JSON payloads from legacy rows" do
     wrapped_conditions = [ { condition_type: "transaction_name", operator: "like", value: "legacy grocery" } ].to_json.to_json
     wrapped_actions = [ { action_type: "set_transaction_category", value: "Groceries" } ].to_json.to_json

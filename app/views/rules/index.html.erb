@@ -49,45 +49,47 @@
   </div>
 <% end %>
 <div class="bg-container rounded-xl shadow-border-xs p-4">
-  <% if @rules.any? %>
-    <div class="bg-container-inset rounded-xl">
-      <div class="flex justify-between px-4 py-2 text-xs uppercase">
-        <div class="flex items-center gap-1.5 font-medium text-secondary">
-          <p><%= t(".rules_heading") %></p>
-          <span class="text-subdued">&middot;</span>
-          <p><%= @rules.count %></p>
-        </div>
-      </div>
-      <p class="px-4 pb-2 text-sm text-secondary"><%= t(".order_hint") %></p>
-      <div class="p-1">
-        <div class="flex flex-col bg-container rounded-lg shadow-border-xs divide-y divide-subdued"
-             data-controller="sortable-list"
-             data-sortable-list-url-value="<%= reorder_rules_path %>"
-             data-sortable-list-param-value="rule_ids"
-             data-action="dragover->sortable-list#dragOver drop->sortable-list#drop"
-             role="list"
-             aria-label="<%= t(".rules_heading") %>">
-          <% @rules.each do |rule| %>
-            <div class="flex items-center"
-                 data-sortable-list-target="item"
-                 data-sortable-list-id="<%= rule.id %>"
-                 draggable="true"
-                 role="listitem"
-                 aria-grabbed="false"
-                 data-action="dragstart->sortable-list#dragStart dragend->sortable-list#dragEnd">
-              <%= render DS::Button.new(
-                variant: :icon,
-                icon: "grip-vertical",
-                size: :sm,
-                class: "ml-2 shrink-0 cursor-grab active:cursor-grabbing",
-                aria_label: t(".reorder_rule", name: rule.name.presence || rule.primary_condition_title),
-                data: { action: "touchstart->sortable-list#touchStart touchmove->sortable-list#touchMove touchend->sortable-list#touchEnd touchcancel->sortable-list#touchCancel contextmenu->sortable-list#suppressContextMenu keydown->sortable-list#handleKeyDown" }
-              ) %>
-              <div class="grow min-w-0">
-                <%= render "rule", rule: rule %>
-              </div>
-            </div>
+  <% if @layout.items.any? %>
+    <div data-controller="rules-filter">
+      <%= render "rules/filters", list_filter: @list_filter, groups: @layout.groups %>
+
+      <div class="bg-container-inset rounded-xl">
+        <div class="flex justify-between items-center px-4 py-2">
+          <div class="flex items-center gap-1.5 text-xs uppercase font-medium text-secondary">
+            <p><%= t(".rules_heading") %></p>
+            <span class="text-subdued">&middot;</span>
+            <p><%= @rules.size %></p>
+          </div>
+          <% unless Current.user&.guest? %>
+            <%= render DS::Link.new(
+              text: t(".new_group"),
+              variant: "ghost",
+              size: "sm",
+              href: new_rule_group_path,
+              icon: "folder-plus",
+              frame: :modal
+            ) %>
           <% end %>
+        </div>
+        <p class="px-4 pb-2 text-sm text-secondary"><%= t(".order_hint") %></p>
+        <p class="hidden px-4 pb-2 text-sm text-secondary" data-rules-filter-target="dragHint"><%= t(".filters.drag_disabled") %></p>
+        <div class="p-1">
+          <div class="flex flex-col bg-container rounded-lg shadow-border-xs divide-y divide-subdued"
+               data-controller="sortable-list"
+               data-sortable-list-url-value="<%= reorder_rules_path %>"
+               data-sortable-list-param-value="items"
+               data-action="dragover->sortable-list#dragOver drop->sortable-list#drop"
+               role="list"
+               aria-label="<%= t(".rules_heading") %>">
+            <% @layout.items.each do |item| %>
+              <% if item.group? %>
+                <%= render "rules/group", item: item, list_filter: @list_filter %>
+              <% else %>
+                <%= render "rules/list_rule", rule: item.rule, sortable_id: item.key, list_filter: @list_filter, foldable: true %>
+              <% end %>
+            <% end %>
+          </div>
+          <p class="hidden px-4 py-6 text-sm text-center text-secondary" data-rules-filter-target="empty"><%= t(".filters.no_matches") %></p>
         </div>
       </div>
     </div>

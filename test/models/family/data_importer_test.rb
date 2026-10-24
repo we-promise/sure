@@ -1896,6 +1896,40 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not @family.rules.find_by(name: "Second").stop_processing
   end
 
+  test "imports rule groups by name and keeps each group in one block" do
+    existing = @family.rule_groups.create!(name: "Food")
+    rule_record = ->(name, position, group) do
+      data = {
+        name: name,
+        resource_type: "transaction",
+        active: true,
+        position: position,
+        conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+        actions: [ { action_type: "exclude_transaction" } ]
+      }
+      data[:group] = group unless group == :absent
+      { type: "Rule", version: 1, data: data }
+    end
+    ndjson = build_ndjson([
+      rule_record.call("Loose", 1, nil),
+      rule_record.call("Groceries", 2, "Food"),
+      rule_record.call("Restaurants", 3, "Food"),
+      rule_record.call("Rent", 4, "Housing"),
+      rule_record.call("Old export", 5, :absent)
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    rules = @family.rules.index_by(&:name)
+    assert_nil rules["Loose"].rule_group
+    assert_equal existing, rules["Groceries"].rule_group
+    assert_equal existing, rules["Restaurants"].rule_group
+    assert_equal "Housing", rules["Rent"].rule_group.name
+    assert_nil rules["Old export"].rule_group
+    # Rules joining a group that already exists run where that group stands.
+    assert_equal [ "Groceries", "Restaurants", "Loose", "Rent", "Old export" ], @family.rules.ordered.pluck(:name).last(5)
+  end
+
   test "imports rules with conditions and actions" do
     ndjson = build_ndjson([
       {

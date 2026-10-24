@@ -6,6 +6,7 @@ class Rule < ApplicationRecord
   SUPPORTED_RESOURCE_TYPES = %w[transaction].freeze
 
   belongs_to :family
+  belongs_to :rule_group, optional: true
   has_many :conditions, dependent: :destroy
   has_many :actions, dependent: :destroy
   has_many :rule_runs, dependent: :destroy
@@ -13,7 +14,12 @@ class Rule < ApplicationRecord
   accepts_nested_attributes_for :conditions, allow_destroy: true
   accepts_nested_attributes_for :actions, allow_destroy: true
 
+  # A name typed into the form's "new group" field. The rule joins that group,
+  # which is created unless the family already has one with that name.
+  attribute :new_rule_group_name, :string
+
   before_validation :normalize_name
+  before_validation :assign_new_rule_group
   before_create :assign_next_position
 
   # Rules run top to bottom. created_at breaks ties, e.g. for rules created at
@@ -27,6 +33,8 @@ class Rule < ApplicationRecord
   validates :name, length: { minimum: 1 }, allow_nil: true, if: -> { name.to_s.valid_encoding? }
   validates_with DatabaseTextValidator, attributes: %i[name resource_type]
   validate :no_nested_compound_conditions
+  validate :rule_group_of_same_family
+  validate :new_rule_group_valid
 
   # Every rule must have at least 1 action
   validate :min_actions
@@ -62,6 +70,11 @@ class Rule < ApplicationRecord
   # fails the edit rolls back rather than leaving a stale baseline behind.
   before_update :note_match_criteria_change
   after_update :seed_notification_baseline, if: :notification_baseline_out_of_date?
+
+  # Joining a group puts the rule at the end of that group; leaving one keeps
+  # it right below the group. Either way the rules still run in the order the
+  # list shows (see Rule::Layout).
+  after_save :place_in_rule_group, if: :saved_change_to_rule_group_id?
 
   # Set when this save's after_update took the baseline, or tried to and timed
   # out. Rule::Action's commit callback for an email action added in the same
@@ -148,34 +161,24 @@ class Rule < ApplicationRecord
     matching_scope.pluck(:id)
   end
 
-  # Holds the family's rule positions until the transaction ends. with_connection
-  # is the transaction's own connection and isn't leased to the thread for good.
+  # Serializes position changes per family with a transaction-scoped advisory
+  # lock. Without it, two rules created at the same time both read the same
+  # MAX(position) and share a position, so their run order would silently fall
+  # back to the created_at/id tie-break. The lock is held until the transaction
+  # ends. with_connection is the transaction's own connection and isn't leased
+  # to the thread for good.
   def self.lock_positions!(family)
     with_connection do |connection|
       connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family.id.to_s ]))
     end
   end
 
-  # Sets the run order of all rules of a family. ordered_ids must list every
-  # rule of the family exactly once, so a stale page (a rule added or deleted
-  # meanwhile) cannot leave rules with clashing or missing positions.
-  def self.update_positions!(family, ordered_ids)
-    ordered_ids = Array(ordered_ids).map(&:to_s)
-    family_rule_ids = family.rules.pluck(:id)
-
-    unless ordered_ids.size == family_rule_ids.size && ordered_ids.sort == family_rule_ids.sort
-      raise ArgumentError, "ordered_ids must list every rule of the family exactly once"
-    end
-
-    return if ordered_ids.empty?
-
-    encoder = PG::TextEncoder::Array.new
-    sql = sanitize_sql_array([ <<~SQL.squish, encoder.encode(ordered_ids), encoder.encode((1..ordered_ids.size).to_a), family.id ])
-      UPDATE rules SET position = new_positions.position
-      FROM unnest(?::uuid[], ?::integer[]) AS new_positions(id, position)
-      WHERE rules.id = new_positions.id AND rules.family_id = ?
-    SQL
-    with_connection { |connection| connection.update(sql, "Rule Update Positions") }
+  # The position after every rule and rule group of the family, which share one
+  # sequence (see Rule::Layout). Takes the lock, so call it inside the
+  # transaction that writes the position.
+  def self.next_position_for(family)
+    lock_positions!(family)
+    [ family.rules.maximum(:position).to_i, family.rule_groups.maximum(:position).to_i ].max + 1
   end
 
   # Excludes transaction ids with one array parameter. where.not(id: ids) sends
@@ -331,16 +334,52 @@ class Rule < ApplicationRecord
   end
 
   private
-    # Serialized per family with a transaction-scoped advisory lock: without
-    # it, two rules created at the same time both read the same MAX(position)
-    # and share a position, so their run order would silently fall back to
-    # the created_at/id tie-break. before_create runs inside the save
-    # transaction, so the lock is held until the new row is committed.
+    # before_create runs inside the save transaction, so the lock taken by
+    # next_position_for is held until the new row is committed.
     def assign_next_position
       return if position.to_i.positive?
 
-      self.class.lock_positions!(family)
-      self.position = family.rules.maximum(:position).to_i + 1
+      self.position = Rule.next_position_for(family)
+    end
+
+    def assign_new_rule_group
+      name = new_rule_group_name.to_s
+      return if family.nil?
+
+      # A name the database will not store is left to RuleGroup's validation.
+      unless DatabaseTextValidator.acceptable?(name)
+        self.rule_group = family.rule_groups.build(name: name)
+        return
+      end
+
+      name = name.strip
+      return if name.empty?
+
+      self.rule_group = family.rule_groups.find_or_initialize_by(name: name)
+    end
+
+    # An id that names no group would otherwise fail on the foreign key.
+    def rule_group_of_same_family
+      if rule_group.nil?
+        errors.add(:rule_group, :invalid) if rule_group_id.present?
+      elsif rule_group.family_id != family_id
+        errors.add(:rule_group, :invalid)
+      end
+    end
+
+    # A group built from the form's name is saved with the rule; its errors are
+    # shown on the name field instead of being dropped.
+    def new_rule_group_valid
+      return unless rule_group&.new_record? && rule_group.invalid?
+
+      rule_group.errors.each do |error|
+        errors.add(:new_rule_group_name, error.message)
+      end
+    end
+
+    def place_in_rule_group
+      group = rule_group || RuleGroup.find_by(id: rule_group_id_before_last_save)
+      Rule::Layout.new(family).place_after_group!(self, group) if group
     end
 
     def min_actions

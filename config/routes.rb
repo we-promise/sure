@@ -672,6 +672,13 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :rule_groups, only: %i[new create edit update destroy] do
+    member do
+      patch :reorder
+      patch :activation
+    end
+  end
+
   resources :accounts, only: %i[index new show destroy], shallow: true do
     member do
       post :sync

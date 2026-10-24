@@ -200,7 +200,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       # Check rules.csv
       rules_csv = zip.read("rules.csv")
-      assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions")
+      assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions,group")
     end
   end
 
@@ -444,6 +444,19 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal false, rule_data["data"]["stop_processing"]
       assert rule_data["data"].key?("conditions")
       assert rule_data["data"].key?("actions")
+    end
+  end
+
+  test "exports the rule group name in CSV and NDJSON" do
+    @rule.update!(rule_group: @family.rule_groups.create!(name: "Food"))
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rules_csv = CSV.parse(zip.read("rules.csv"), headers: true)
+      assert_equal "Food", rules_csv.find { |row| row["name"] == "Test Rule" }["group"]
+
+      rule_line = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        .find { |line| line["type"] == "Rule" && line["data"]["name"] == "Test Rule" }
+      assert_equal "Food", rule_line["data"]["group"]
     end
   end
 

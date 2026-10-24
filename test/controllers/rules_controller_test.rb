@@ -308,13 +308,84 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     family = @user.family
     newest = family.rules.create!(resource_type: "transaction",
       actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
-    ordered_ids = [ newest.id ] + (family.rules.ordered.pluck(:id) - [ newest.id ])
-    Rule.update_positions!(family, ordered_ids)
+    ordered_keys = [ "rule:#{newest.id}" ] + (family.rules.ordered.pluck(:id) - [ newest.id ]).map { |id| "rule:#{id}" }
+    Rule::Layout.new(family).reorder!(ordered_keys)
 
     get rules_url
 
     assert_response :success
-    assert_equal ordered_ids, css_select("[data-sortable-list-target='item']").map { |item| item["data-sortable-list-id"] }
+    assert_equal ordered_keys, css_select("[data-sortable-list-target='item']").map { |item| item["data-sortable-list-id"] }
+  end
+
+  test "index shows groups with their rules in run order" do
+    family = @user.family
+    group = family.rule_groups.create!(name: "Groceries")
+    grouped = family.rules.create!(resource_type: "transaction", name: "Grouped rule", rule_group: group,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+
+    get rules_url
+
+    assert_response :success
+    assert_select "[data-sortable-list-id='group:#{group.id}']" do
+      assert_select "[data-sortable-list-id='#{grouped.id}'][data-rule-group='#{group.id}']"
+    end
+    assert_select "input[type='radio'][name='group'][value='#{group.id}'][data-filter-label='Groceries']"
+  end
+
+  test "index keeps the filters of the URL and ignores values it does not offer" do
+    get rules_url(q: "rent", status: "inactive")
+
+    assert_response :success
+    assert_select "input[name='q'][value='rent']"
+    assert_select "input[type='radio'][name='status'][value='inactive'][checked]"
+    assert_select "label[for='rule_filter_status_inactive']", text: "Inactive"
+    assert_select "[data-rules-filter-target='badge'][data-filter-param='status']:not(.hidden) [data-badge-value]", text: "Inactive"
+
+    get rules_url(status: "bogus")
+
+    assert_select "input[type='radio'][name='status'][value=''][checked]"
+    assert_select "input[type='radio'][name='status'][checked]", count: 1
+    assert_select "[data-rules-filter-target='badges'].hidden"
+  end
+
+  test "index renders search and filter data for each rule" do
+    family = @user.family
+    category = family.categories.first
+    3.times do |index|
+      family.rules.create!(resource_type: "transaction", name: "Rule #{index}",
+        conditions: [ Rule::Condition.new(condition_type: "transaction_category", operator: "=", value: category.id) ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id) ])
+    end
+
+    get rules_url
+
+    assert_response :success
+    assert_select "[data-rule-search*='#{category.name}']", minimum: 3
+    assert_select "input[type='radio'][name='action_type'][value='set_transaction_category'][data-filter-param='action_type']"
+    assert_select "[data-rules-filter-target='badge'][data-filter-param='action_type']"
+  end
+
+  test "index runs the same number of queries for more rules" do
+    family = @user.family
+    category = family.categories.first
+    add_rule = lambda do |index|
+      family.rules.create!(resource_type: "transaction", name: "Rule #{index}",
+        conditions: [ Rule::Condition.new(condition_type: "transaction_category", operator: "=", value: category.id) ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id), Rule::Action.new(action_type: "exclude_transaction") ])
+    end
+    count_queries = lambda do
+      count = 0
+      counter = ->(*, payload) { count += 1 unless payload[:name] == "SCHEMA" || payload[:sql].match?(/SAVEPOINT|BEGIN|COMMIT/) }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { get rules_url }
+      count
+    end
+
+    add_rule.call(1)
+    get rules_url
+    few = count_queries.call
+    3.times { |index| add_rule.call(index + 2) }
+
+    assert_equal few, count_queries.call
   end
 
   test "reorder saves the new order" do
@@ -323,7 +394,7 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
       actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
     ordered_ids = family.rules.ordered.pluck(:id).reverse
 
-    patch reorder_rules_url, params: { rule_ids: ordered_ids }, as: :json
+    patch reorder_rules_url, params: { items: ordered_ids.map { |id| "rule:#{id}" } }, as: :json
 
     assert_response :no_content
     assert_equal ordered_ids, family.rules.ordered.pluck(:id)
@@ -336,11 +407,90 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
       actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
     before = family.rules.ordered.pluck(:id, :position)
 
-    patch reorder_rules_url, params: { rule_ids: family.rules.pluck(:id) + [ other_rule.id ] }, as: :json
+    patch reorder_rules_url, params: { items: (family.rules.pluck(:id) + [ other_rule.id ]).map { |id| "rule:#{id}" } }, as: :json
 
     assert_response :unprocessable_entity
     assert_equal before, family.rules.ordered.pluck(:id, :position)
     assert_equal 1, other_rule.reload.position
+  end
+
+  test "creates a rule in a new group" do
+    assert_difference [ "Rule.count", "RuleGroup.count" ], 1 do
+      post rules_url, params: { rule: {
+        resource_type: "transaction",
+        new_rule_group_name: "  Subscriptions ",
+        conditions_attributes: { "0" => { condition_type: "transaction_name", operator: "like", value: "netflix" } },
+        actions_attributes: { "0" => { action_type: "exclude_transaction" } }
+      } }
+    end
+
+    assert_equal "Subscriptions", Rule.order(:created_at).last.rule_group.name
+  end
+
+  test "saves the rule when its new group is created by another request at the same moment" do
+    family = @user.family
+    conflicted = false
+    # Inserts the same group right before the rule's own insert of it, as a
+    # parallel request would.
+    RuleGroup.any_instance.stubs(:assign_next_position).with do
+      unless conflicted
+        conflicted = true
+        RuleGroup.insert!({ family_id: family.id, name: "Bills", position: 0 })
+      end
+      true
+    end
+
+    assert_difference "Rule.count", 1 do
+      post rules_url, params: { rule: {
+        resource_type: "transaction",
+        new_rule_group_name: "Bills",
+        conditions_attributes: { "0" => { condition_type: "transaction_name", operator: "like", value: "power" } },
+        actions_attributes: { "0" => { action_type: "exclude_transaction" } }
+      } }
+    end
+
+    assert conflicted
+    assert_equal "Bills", Rule.order(:created_at).last.rule_group.name
+  end
+
+  test "shows the error of an invalid new group name" do
+    rule = rules(:one)
+
+    patch rule_url(rule), params: { rule: { new_rule_group_name: "x" * 101 } }
+
+    assert_response :unprocessable_entity
+    assert_nil rule.reload.rule_group_id
+    assert_match "New group", response.body
+  end
+
+  test "rejects a group id that does not exist" do
+    rule = rules(:one)
+
+    patch rule_url(rule), params: { rule: { rule_group_id: SecureRandom.uuid } }
+
+    assert_response :unprocessable_entity
+    assert_nil rule.reload.rule_group_id
+  end
+
+  test "deleting all rules deletes their groups too" do
+    family = @user.family
+    family.rule_groups.create!(name: "Bills")
+
+    delete destroy_all_rules_url
+
+    assert_redirected_to rules_url
+    assert_empty family.rules.reload
+    assert_empty family.rule_groups.reload
+  end
+
+  test "rejects a group of another family" do
+    rule = rules(:one)
+    foreign_group = families(:empty).rule_groups.create!(name: "Foreign")
+
+    patch rule_url(rule), params: { rule: { rule_group_id: foreign_group.id } }
+
+    assert_response :unprocessable_entity
+    assert_nil rule.reload.rule_group_id
   end
 
   test "can destroy conditions and actions while editing" do
