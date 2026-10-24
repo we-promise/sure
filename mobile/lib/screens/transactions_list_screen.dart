@@ -151,35 +151,70 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   /// which this list would keep showing. Point the user at "Unsplit" instead.
   ///
   /// The list never loads split state itself, so a split made on the web or
-  /// another device is unknown here: look it up first.
-  Future<bool> _blockSplitDelete(String? transactionId) async {
+  /// another device is unknown here: [TransactionSplitsProvider.checkBeforeDelete]
+  /// looks it up, and a lookup that fails while online blocks the delete.
+  Future<bool> _blockSplitDelete(
+    String? transactionId, {
+    bool fresh = false,
+  }) async {
     if (transactionId == null) return false;
+    return _blockSplitDeletes([transactionId], fresh: fresh);
+  }
+
+  /// Checks every id in [transactionIds] and returns true (after telling the
+  /// user why) when any of them must not be deleted. Split rows are dropped
+  /// from the selection, since they can never be bulk-deleted.
+  Future<bool> _blockSplitDeletes(
+    List<String> transactionIds, {
+    bool fresh = false,
+  }) async {
+    if (transactionIds.isEmpty) return false;
     final splits =
         Provider.of<TransactionSplitsProvider>(context, listen: false);
-    if (!splits.isSplitStatusKnown(transactionId) && splits.isOnline) {
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      final token = await auth.getValidAccessToken();
-      if (!mounted) return false;
-      if (token != null) {
-        await splits.loadSplit(accessToken: token, transactionId: transactionId);
-        if (!mounted) return false;
-      }
-    }
-    if (!splits.isSplitParent(transactionId) &&
-        !splits.isSplitChild(transactionId)) {
-      return false;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = splits.isOnline ? await auth.getValidAccessToken() : null;
+    if (!mounted) return true;
+
+    final statuses = await Future.wait(
+      transactionIds.map(
+        (id) => splits.checkBeforeDelete(
+          accessToken: token,
+          transactionId: id,
+          fresh: fresh,
+        ),
+      ),
+    );
+    if (!mounted) return true;
+
+    final splitIds = <String>[
+      for (var i = 0; i < transactionIds.length; i++)
+        if (statuses[i] == SplitDeleteStatus.split) transactionIds[i],
+    ];
+    final anyUnknown = statuses.contains(SplitDeleteStatus.unknown);
+    if (splitIds.isEmpty && !anyUnknown) return false;
+
+    final l = AppLocalizations.of(context);
+    if (splitIds.isNotEmpty && _selectedTransactions.any(splitIds.contains)) {
+      setState(() => _selectedTransactions.removeAll(splitIds));
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(AppLocalizations.of(context).transactionsListSplitDeleteBlocked),
+        content: Text(
+          splitIds.isNotEmpty
+              ? l.transactionsListSplitDeleteBlocked
+              : l.transactionsListSplitStatusUnknown,
+        ),
       ),
     );
     return true;
   }
 
   Future<void> _toggleTransactionSelection(String transactionId) async {
+    // Selecting is for deleting, so check against the server now; the delete
+    // re-checks only rows still unconfirmed (selected offline, say), which
+    // keeps a bulk delete from issuing one lookup per row twice.
     if (!_selectedTransactions.contains(transactionId) &&
-        await _blockSplitDelete(transactionId)) {
+        await _blockSplitDelete(transactionId, fresh: true)) {
       return;
     }
     if (!mounted) return;
@@ -219,6 +254,13 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     );
 
     if (confirmed != true || !mounted) return;
+
+    // Re-check at delete time: a row selected offline (or whose lookup has
+    // not succeeded) is looked up now, and known splits are refused.
+    if (await _blockSplitDeletes(_selectedTransactions.toList())) {
+      return;
+    }
+    if (!mounted || _selectedTransactions.isEmpty) return;
 
     final count = _selectedTransactions.length;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -324,7 +366,7 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
 
   Future<bool> _confirmAndDeleteTransaction(Transaction transaction) async {
     if (transaction.id == null) return false;
-    if (await _blockSplitDelete(transaction.id)) return false;
+    if (await _blockSplitDelete(transaction.id, fresh: true)) return false;
     if (!mounted) return false;
 
     // Show confirmation dialog

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -74,6 +75,63 @@ void main() {
 
       expect(result['success'], isTrue);
       expect(result['split'], isNull);
+    });
+
+    test('GET reports a missing transaction instead of "not split"',
+        () async {
+      final service = TransactionSplitsService(
+        client: MockClient(
+          (_) async => http.Response(
+            '{"error":"record_not_found",'
+            '"message":"The requested resource was not found"}',
+            404,
+          ),
+        ),
+      );
+
+      final result = await service.getSplit(
+        accessToken: 'token',
+        transactionId: 'gone_1',
+      );
+
+      expect(result['success'], isFalse);
+      expect(result['error'], 'The requested resource was not found');
+    });
+
+    test('GET treats a non-JSON 404 as a failure', () async {
+      final service = TransactionSplitsService(
+        client: MockClient((_) async => http.Response('<html></html>', 404)),
+      );
+
+      final result = await service.getSplit(
+        accessToken: 'token',
+        transactionId: 'tx_1',
+      );
+
+      expect(result['success'], isFalse);
+    });
+
+    test('the write timeout also covers a stalled response body', () async {
+      final body = StreamController<List<int>>();
+      addTearDown(body.close);
+      final service = TransactionSplitsService(
+        timeout: const Duration(milliseconds: 50),
+        client: MockClient.streaming((request, _) async {
+          // Headers arrive at once; the body never finishes.
+          return http.StreamedResponse(body.stream, 201);
+        }),
+      );
+
+      final result = await service
+          .createSplit(
+            accessToken: 'token',
+            transactionId: 'tx_1',
+            rows: const [SplitRowInput(name: 'A', amount: '1.0000')],
+          )
+          .timeout(const Duration(seconds: 5));
+
+      expect(result['success'], isFalse);
+      expect(result['error'], startsWith('Network error:'));
     });
 
     test('POST and PATCH send the split payload', () async {

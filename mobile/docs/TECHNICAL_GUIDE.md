@@ -260,7 +260,7 @@ The app interacts with the backend through the following API endpoints:
 - `GET /api/v1/accounts` - Get account list (supports pagination)
 
 ### Transaction Splits
-- `GET /api/v1/transactions/:id/split` - Get a split (404 when not split; a child id resolves to its parent)
+- `GET /api/v1/transactions/:id/split` - Get a split (404 "Transaction is not split" when not split, told apart from a missing transaction's 404; a child id resolves to its parent)
 - `POST /api/v1/transactions/:id/split` - Split a transaction
 - `PATCH /api/v1/transactions/:id/split` - Replace every child of a split
 - `DELETE /api/v1/transactions/:id/split` - Unsplit

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -537,7 +538,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Connect to the internet to view or edit splits.'),
+        find.text('Connect to the internet to load or edit split details.'),
         findsOneWidget,
       );
       expect(
@@ -666,6 +667,119 @@ void main() {
           .unsplit(accessToken: 'token', transactionId: 'parent_1');
       expect(unsplit.success, isFalse);
       expect(unsplit.error, isNull);
+    });
+
+    group('checkBeforeDelete', () {
+      const notSplit = '{"error":"not_found","message":"Transaction is not split"}';
+
+      test('blocks split parents and children, allows unsplit rows', () async {
+        final harness = _Harness();
+        expect(
+          await harness.splits
+              .checkBeforeDelete(accessToken: 'token', transactionId: 'child_1'),
+          SplitDeleteStatus.split,
+        );
+        expect(
+          await harness.splits.checkBeforeDelete(
+              accessToken: 'token', transactionId: 'parent_1'),
+          SplitDeleteStatus.split,
+        );
+
+        final plain = _Harness(
+          handler: (_) async => http.Response(notSplit, 404),
+        );
+        expect(
+          await plain.splits
+              .checkBeforeDelete(accessToken: 'token', transactionId: 'tx_1'),
+          SplitDeleteStatus.allowed,
+        );
+      });
+
+      test('a failed lookup while online is unknown, not unsplit', () async {
+        final harness = _Harness(
+          handler: (_) async => http.Response('{"error":"boom"}', 500),
+        );
+        expect(
+          await harness.splits.checkBeforeDelete(
+              accessToken: 'token', transactionId: 'parent_1'),
+          SplitDeleteStatus.unknown,
+        );
+        expect(
+          await harness.splits
+              .checkBeforeDelete(accessToken: null, transactionId: 'parent_1'),
+          SplitDeleteStatus.unknown,
+        );
+      });
+
+      test('fresh re-checks a row that was split elsewhere', () async {
+        var split = false;
+        final harness = _Harness(
+          handler: (_) async => split
+              ? http.Response(_splitJson(), 200)
+              : http.Response(notSplit, 404),
+        );
+        expect(
+          await harness.splits.checkBeforeDelete(
+              accessToken: 'token', transactionId: 'parent_1'),
+          SplitDeleteStatus.allowed,
+        );
+
+        split = true; // split on the web after the first lookup
+        expect(
+          await harness.splits.checkBeforeDelete(
+              accessToken: 'token', transactionId: 'parent_1'),
+          SplitDeleteStatus.allowed,
+          reason: 'cached status is reused when not fresh',
+        );
+        expect(
+          await harness.splits.checkBeforeDelete(
+            accessToken: 'token',
+            transactionId: 'parent_1',
+            fresh: true,
+          ),
+          SplitDeleteStatus.split,
+        );
+        expect(harness.requests, hasLength(2));
+      });
+
+      test('offline, only splits known on the device are blocked', () async {
+        final harness = _Harness(online: false);
+        expect(
+          await harness.splits
+              .checkBeforeDelete(accessToken: null, transactionId: 'tx_1'),
+          SplitDeleteStatus.allowed,
+        );
+        harness.splits.remember(
+          TransactionSplit.fromJson(
+            jsonDecode(_splitJson()) as Map<String, dynamic>,
+          ),
+        );
+        expect(
+          await harness.splits.checkBeforeDelete(
+            accessToken: null,
+            transactionId: 'child_2',
+            fresh: true,
+          ),
+          SplitDeleteStatus.split,
+        );
+        expect(harness.requests, isEmpty);
+      });
+    });
+
+    test('clear() drops a lookup that was still in flight', () async {
+      final response = Completer<http.Response>();
+      final harness = _Harness(handler: (_) => response.future);
+
+      final pending = harness.splits
+          .loadSplit(accessToken: 'token', transactionId: 'parent_1');
+      await Future<void>.delayed(Duration.zero);
+      harness.splits.clear();
+      response.complete(http.Response(_splitJson(), 200));
+      await pending;
+
+      expect(harness.splits.isSplitParent('parent_1'), isFalse);
+      expect(harness.splits.isSplitStatusKnown('parent_1'), isFalse);
+      expect(harness.splits.isLoading('parent_1'), isFalse);
     });
   });
 }

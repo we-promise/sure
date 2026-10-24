@@ -319,7 +319,7 @@
   "splitUnsplitConfirm": "Detta tar bort alla delade poster och återställer den ursprungliga transaktionen.",
   "splitUnsplitSuccess": "Uppdelningen har tagits bort",
   "splitUnsplitFailed": "Det gick inte att ta bort uppdelningen",
-  "splitOfflineNotice": "Anslut till internet för att visa eller redigera uppdelningar.",
+  "splitOfflineNotice": "Anslut till internet för att läsa in eller redigera uppdelningar.",
   "splitLoadFailed": "Det gick inte att läsa in uppdelningen.",
   "splitEditorNewTitle": "Dela upp transaktion",
   "splitEditorEditTitle": "Redigera uppdelning",
@@ -346,5 +346,7 @@
   "splitEditorSaveFailed": "Det gick inte att spara uppdelningen",
   "splitEditorOffline": "Du är offline. Uppdelningar kan bara sparas när du är ansluten.",
 
-  "transactionsListSplitDeleteBlocked": "Dela upp transaktionen igen innan du tar bort den."
+  "transactionsListSplitDeleteBlocked": "Ta bort uppdelningen innan du tar bort transaktionen.",
+
+  "transactionsListSplitStatusUnknown": "Det gick inte att kontrollera om transaktionen är uppdelad. Försök igen."
 }

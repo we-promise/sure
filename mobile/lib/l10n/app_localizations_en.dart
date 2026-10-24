@@ -1087,7 +1087,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get splitOfflineNotice =>
-      'Connect to the internet to view or edit splits.';
+      'Connect to the internet to load or edit split details.';
 
   @override
   String get splitLoadFailed => 'Couldn\'t load split details.';
@@ -1174,4 +1174,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get transactionsListSplitDeleteBlocked =>
       'Unsplit this transaction before deleting it.';
+
+  @override
+  String get transactionsListSplitStatusUnknown =>
+      'Couldn\'t check whether this transaction is split. Please try again.';
 }

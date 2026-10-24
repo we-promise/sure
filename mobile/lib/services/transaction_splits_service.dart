@@ -13,8 +13,14 @@ import 'transactions_service.dart';
 class TransactionSplitsService {
   final http.Client _client;
 
-  TransactionSplitsService({http.Client? client})
-      : _client = client ?? http.Client();
+  /// Deadline for each request, response body included.
+  final Duration _timeout;
+
+  TransactionSplitsService({
+    http.Client? client,
+    Duration timeout = const Duration(seconds: 30),
+  })  : _client = client ?? http.Client(),
+        _timeout = timeout;
 
   Uri _url(String transactionId) => Uri.parse(
         '${ApiConfig.baseUrl}/api/v1/transactions/'
@@ -26,8 +32,10 @@ class TransactionSplitsService {
         'Content-Type': 'application/json',
       };
 
-  /// Returns `{'success': true, 'split': TransactionSplit?}`. A 404 means the
-  /// transaction is not split, so `split` is null rather than an error.
+  /// Returns `{'success': true, 'split': TransactionSplit?}`. The server's
+  /// "Transaction is not split" 404 means `split` is null rather than an
+  /// error. Any other 404 (the transaction was deleted or is not visible to
+  /// this user) is a failure, so it is never cached as a confirmed unsplit.
   Future<Map<String, dynamic>> getSplit({
     required String accessToken,
     required String transactionId,
@@ -35,7 +43,7 @@ class TransactionSplitsService {
     try {
       final response = await _client
           .get(_url(transactionId), headers: _headers(accessToken))
-          .timeout(const Duration(seconds: 30));
+          .timeout(_timeout);
 
       if (response.statusCode == 200) {
         return {
@@ -45,7 +53,7 @@ class TransactionSplitsService {
           ),
         };
       }
-      if (response.statusCode == 404) {
+      if (response.statusCode == 404 && _isNotSplitResponse(response.body)) {
         return {'success': true, 'split': null};
       }
       return _failure(response, 'Failed to load split');
@@ -92,7 +100,7 @@ class TransactionSplitsService {
     try {
       final response = await _client
           .delete(_url(transactionId), headers: _headers(accessToken))
-          .timeout(const Duration(seconds: 30));
+          .timeout(_timeout);
 
       if (response.statusCode == 204 || response.statusCode == 200) {
         return {'success': true};
@@ -118,9 +126,12 @@ class TransactionSplitsService {
       final request = http.Request(method, _url(transactionId))
         ..headers.addAll(_headers(accessToken))
         ..body = body;
-      final response = await http.Response.fromStream(
-        await _client.send(request).timeout(const Duration(seconds: 30)),
-      );
+      // One deadline for the headers and the body: a stream that stalls after
+      // the headers would otherwise leave the save pending forever.
+      final response = await _client
+          .send(request)
+          .then(http.Response.fromStream)
+          .timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {
@@ -133,6 +144,20 @@ class TransactionSplitsService {
       return _failure(response, fallback);
     } catch (e) {
       return {'success': false, 'error': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  /// Api::V1::SplitsController#show answers an unsplit transaction with
+  /// `{"error": "not_found", "message": "Transaction is not split"}`; a
+  /// missing record is `{"error": "record_not_found", ...}`.
+  static bool _isNotSplitResponse(String body) {
+    try {
+      final payload = jsonDecode(body);
+      return payload is Map &&
+          (payload['message'] == 'Transaction is not split' ||
+              payload['error'] == 'not_found');
+    } on FormatException {
+      return false;
     }
   }
 

@@ -24,6 +24,19 @@ class SplitActionResult {
   });
 }
 
+/// Whether a transaction may be deleted like a plain one, as far as splits go.
+enum SplitDeleteStatus {
+  /// Not split (confirmed by the server, or offline with nothing cached).
+  allowed,
+
+  /// A split parent or child: it has to be unsplit first.
+  split,
+
+  /// Online, but the split lookup failed, so deleting could cascade to
+  /// children this device does not know about.
+  unknown,
+}
+
 /// Loads and edits transaction splits, and remembers the split structure it
 /// has seen so the transaction list can group children under their parent.
 ///
@@ -46,6 +59,10 @@ class TransactionSplitsProvider with ChangeNotifier {
   final Set<String> _loading = {};
   ConnectivityService? _connectivityService;
   bool _isDisposed = false;
+
+  /// Bumped by [clear]. Requests that started before a clear must not write
+  /// their result back into the reset cache.
+  int _generation = 0;
 
   static const offlineError = 'offline';
 
@@ -112,11 +129,22 @@ class TransactionSplitsProvider with ChangeNotifier {
     required String accessToken,
     required String transactionId,
   }) async {
+    await _lookup(accessToken: accessToken, transactionId: transactionId);
+    return splitFor(transactionId);
+  }
+
+  /// Asks the server for [transactionId]'s split membership and records it.
+  /// Returns true only when the server answered.
+  Future<bool> _lookup({
+    required String accessToken,
+    required String transactionId,
+  }) async {
     if (!isOnline) {
       _lastError = offlineError;
-      return splitFor(transactionId);
+      return false;
     }
 
+    final generation = _generation;
     _loading.add(transactionId);
     _lastError = null;
     _notify();
@@ -126,6 +154,7 @@ class TransactionSplitsProvider with ChangeNotifier {
         accessToken: accessToken,
         transactionId: transactionId,
       );
+      if (generation != _generation) return false;
       if (result['success'] == true) {
         final split = result['split'] as TransactionSplit?;
         if (split == null) {
@@ -135,23 +164,53 @@ class TransactionSplitsProvider with ChangeNotifier {
         }
         _known.add(transactionId);
         _failedLookups.remove(transactionId);
-        return split;
+        return true;
       }
       _lastError = result['error'] as String?;
       _allowEditingAfterFailedLookup(transactionId);
-      return splitFor(transactionId);
+      return false;
     } catch (e) {
       _log.error(
         'TransactionSplitsProvider',
         'loadSplit failed with ${e.runtimeType}',
       );
+      if (generation != _generation) return false;
       _lastError = 'Something went wrong. Please try again.';
       _allowEditingAfterFailedLookup(transactionId);
-      return splitFor(transactionId);
+      return false;
     } finally {
       _loading.remove(transactionId);
       _notify();
     }
+  }
+
+  /// Decides whether [transactionId] may go through the plain delete
+  /// endpoint. The server refuses a split child and cascades a split parent's
+  /// delete to its children, which an upsert-only sync would leave behind.
+  ///
+  /// Online, membership is looked up first: always when [fresh] is true (the
+  /// row may have been split on the web or another device since it was last
+  /// seen), otherwise only when it is not known yet. A failed lookup returns
+  /// [SplitDeleteStatus.unknown] so the caller blocks the delete. Offline,
+  /// only splits already known on this device are blocked, so offline delete
+  /// keeps working; the transactions index does not say which rows are split.
+  Future<SplitDeleteStatus> checkBeforeDelete({
+    required String? accessToken,
+    required String transactionId,
+    bool fresh = false,
+  }) async {
+    if (isOnline && (fresh || !_known.contains(transactionId))) {
+      if (accessToken == null) return SplitDeleteStatus.unknown;
+      final ok = await _lookup(
+        accessToken: accessToken,
+        transactionId: transactionId,
+      );
+      if (!ok) return SplitDeleteStatus.unknown;
+    }
+    if (isSplitParent(transactionId) || isSplitChild(transactionId)) {
+      return SplitDeleteStatus.split;
+    }
+    return SplitDeleteStatus.allowed;
   }
 
   /// Creates a split, or replaces the existing one when [replace] is true.
@@ -166,6 +225,7 @@ class TransactionSplitsProvider with ChangeNotifier {
     }
 
     final previous = splitFor(transactionId);
+    final generation = _generation;
     try {
       final result = replace
           ? await _service.updateSplit(
@@ -191,9 +251,11 @@ class TransactionSplitsProvider with ChangeNotifier {
       final removed = (previous?.childIds ?? const <String>[])
           .where((id) => !newIds.contains(id))
           .toList();
-      if (previous != null) _forget(previous.transactionId);
-      _remember(split);
-      _notify();
+      if (generation == _generation) {
+        if (previous != null) _forget(previous.transactionId);
+        _remember(split);
+        _notify();
+      }
       return SplitActionResult(
         success: true,
         split: split,
@@ -218,6 +280,7 @@ class TransactionSplitsProvider with ChangeNotifier {
     }
 
     final previous = splitFor(transactionId);
+    final generation = _generation;
     try {
       final result = await _service.deleteSplit(
         accessToken: accessToken,
@@ -230,9 +293,11 @@ class TransactionSplitsProvider with ChangeNotifier {
         );
       }
 
-      if (previous != null) _forget(previous.transactionId);
-      _forget(transactionId);
-      _notify();
+      if (generation == _generation) {
+        if (previous != null) _forget(previous.transactionId);
+        _forget(transactionId);
+        _notify();
+      }
       return SplitActionResult(
         success: true,
         removedChildIds: previous?.childIds ?? const [],
@@ -253,7 +318,11 @@ class TransactionSplitsProvider with ChangeNotifier {
     _notify();
   }
 
+  /// Drops everything this provider learned (sign-out, clearing local
+  /// data). Lookups and writes still in flight finish without repopulating it.
   void clear() {
+    _generation++;
+    _loading.clear();
     _splitsByParent.clear();
     _parentByChild.clear();
     _known.clear();
