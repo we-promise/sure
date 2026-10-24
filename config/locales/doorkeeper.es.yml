@@ -1,0 +1,4 @@
+es:
+  doorkeeper:
+    scopes:
+      mcp: "Acceder a tus datos financieros y utilizar herramientas a través de MCP"

@@ -27,6 +27,6 @@ class OauthMetadataControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "code" ], json["response_types_supported"]
     assert_equal [ "authorization_code" ], json["grant_types_supported"]
     assert_equal [ "S256" ], json["code_challenge_methods_supported"]
-    assert_equal [ "read_write" ], json["scopes_supported"]
+    assert_equal [ "mcp" ], json["scopes_supported"]
   end
 end

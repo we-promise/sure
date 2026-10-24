@@ -19,6 +19,9 @@ en:
               not_match_configured: "doesn't match configured on the server."
 
   doorkeeper:
+    scopes:
+      mcp: "Access your financial data and use tools through MCP"
+
     applications:
       confirmations:
         destroy: 'Are you sure?'

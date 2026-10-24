@@ -1,5 +1,8 @@
 ---
 vi:
+  mcp:
+    errors:
+      insufficient_scope: "Mã thông báo này không cấp quyền truy cập MCP. Hãy cấp quyền lại với phạm vi mcp hoặc thêm lại trình kết nối này."
   activerecord:
     errors:
       messages:

@@ -19,6 +19,9 @@ nb:
               not_match_configured: "samsvarer ikke med det som er konfigurert på serveren."
 
   doorkeeper:
+    scopes:
+      mcp: "Få tilgang til dine økonomiske data og bruke verktøy via MCP"
+
     applications:
       confirmations:
         destroy: 'Er du sikker?'

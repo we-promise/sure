@@ -23,7 +23,7 @@ This is the best option for Claude.ai and other MCP clients that support OAuth. 
 - `/.well-known/oauth-authorization-server`
 - `POST /register` for dynamic client registration
 
-These endpoints let compatible MCP clients register a public OAuth client, redirect you back to Sure for sign-in, and receive a bearer token with the `read_write` scope.
+These endpoints let compatible MCP clients register a public OAuth client, redirect you back to Sure for sign-in, and receive a bearer token with the MCP-only `mcp` scope.
 
 ### 2. Static bearer token via environment variables
 
@@ -101,9 +101,27 @@ POST /mcp
 
 MCP supports OAuth authorization-code flow for clients such as Claude Code.
 Clients should discover the protected-resource metadata, register dynamically,
-request the advertised `read_write` scope, and send the resulting access token
-as a Bearer token. Dynamically registered clients are assigned this scope so
-their tokens can authenticate to MCP.
+request the advertised MCP scope, and send the resulting access token as a
+Bearer token. Dynamically registered clients are assigned the MCP-only `mcp`
+scope so their tokens can authenticate to MCP without granting global JSON API
+write access.
+
+On upgrade, a data migration changes public applications whose scope is exactly
+`read_write` to `mcp`. Client IDs and redirect URIs stay the same, so existing
+connectors can reauthorize with `mcp` without registering again. Clients that
+omit the scope receive `mcp` automatically; clients that explicitly request
+`read_write` must request `mcp` when reauthorizing.
+
+Existing tokens are not changed by the migration. `/mcp` accepts tokens with
+only the legacy `read_write` scope until **January 20, 2027 at 00:00 UTC**.
+At that instant and afterward, they receive HTTP 403 `insufficient_scope`;
+reauthorize the existing connector with `mcp` to restore access. Tokens with
+`mcp` continue to work, including tokens that also contain `read_write`.
+
+Existing `read_write` tokens retain their JSON API permissions, and refreshing
+them can preserve that scope. To remove those permissions, revoke the existing
+tokens or authorizations and reauthorize with `mcp`. The MCP cutoff does not
+revoke tokens or change JSON API authorization.
 
 For self-hosted deployments or clients without OAuth support, requests may use
 the legacy `MCP_API_TOKEN` as a Bearer token:
@@ -263,7 +281,7 @@ The authorization-server metadata includes:
 - `authorization_endpoint`: `https://your-sure-instance/oauth/authorize`
 - `token_endpoint`: `https://your-sure-instance/oauth/token`
 - `registration_endpoint`: `https://your-sure-instance/register`
-- `scopes_supported`: `["read_write"]`
+- `scopes_supported`: `["mcp"]`
 
 ### Call a Tool
 
@@ -446,6 +464,17 @@ MCP does not depend on the in-app assistant. To use only your own agent, set the
 - The email is correct
 - The user exists in the database
 - There are no typos or extra spaces
+
+### "insufficient_scope" error
+
+**Symptom:** Requests return HTTP 403 with `insufficient_scope`.
+
+**Fix:** The bearer token is valid but does not grant MCP access. Reauthorize
+with the `mcp` scope. If the existing client registration does not allow that
+scope, remove and re-add the connector to register a new MCP-only client.
+The `WWW-Authenticate` header advertises the required scope and the protected
+resource metadata URL. Missing, expired, revoked, or otherwise invalid
+credentials continue to return HTTP 401.
 
 ### Pipelock connection refused
 
