@@ -24,6 +24,7 @@ class Account < ApplicationRecord
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
   has_many :holdings, dependent: :destroy
   has_many :holding_lots
+  has_many :holding_lot_disposals
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
   has_many :goal_accounts, dependent: :destroy
@@ -41,6 +42,8 @@ class Account < ApplicationRecord
   monetize :balance, :cash_balance
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
+  # Which lots a sale consumes: pro rata (today's figures) or oldest first.
+  enum :cost_basis_method, { average: "average", fifo: "fifo" }, prefix: :cost_basis, validate: true
 
   VISIBLE_STATUSES = %w[draft active].freeze
   HISTORICAL_STATUSES = (VISIBLE_STATUSES + %w[disabled]).freeze

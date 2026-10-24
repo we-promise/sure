@@ -14,6 +14,11 @@ class Holding::ReverseCalculator
     lots_from(@lot_books)
   end
 
+  # What each sale of each security took from which lot, once #calculate has run.
+  def lot_disposals_by_security
+    disposals_from(@lot_books)
+  end
+
   # Securities whose provider quantity is below what their trades add up to.
   attr_reader :clamped_security_ids
 
@@ -135,7 +140,7 @@ class Holding::ReverseCalculator
       # Spans [start, end) during which a security still holds transferred-in units
       # of unknown cost. `end` is nil while a span is still open at the last trade.
       @unknown_spans = Hash.new { |h, k| h[k] = [] }
-      @lot_books = Hash.new { |h, k| h[k] = Holding::LotBook.new }
+      @lot_books = Hash.new { |h, k| h[k] = Holding::LotBook.new(method: account.cost_basis_method) }
       open_unknown_start = {}
 
       # get_trades is already chronological (date, then created_at, then id).
@@ -173,7 +178,7 @@ class Holding::ReverseCalculator
 
           positions[security_id] = Security::Split.scale(positions[security_id], event.ratio)
           @lot_books[security_id].split(event.ratio)
-          @cost_basis_snapshots[security_id] << [ event.ex_date, @lot_books[security_id].average_cost ]
+          record_cost_basis(security_id, event.ex_date)
           next
         end
 
@@ -191,8 +196,8 @@ class Holding::ReverseCalculator
             @lot_books[security_id].add_unknown(trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
           else
             @lot_books[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
-            @cost_basis_snapshots[security_id] << [ trade_entry.date, @lot_books[security_id].average_cost ]
           end
+          record_cost_basis(security_id, trade_entry.date)
         else
           book = @lot_books[security_id]
           # Buys raise the basis; sells relieve quantity at the running average, and a
@@ -202,7 +207,7 @@ class Holding::ReverseCalculator
           # Record the basis after each trade — including nil once a position is fully
           # closed — so cost_basis_for returns nil for the sold-out span instead of a
           # stale figure carried forward from the last buy.
-          @cost_basis_snapshots[security_id] << [ trade_entry.date, book.average_cost ]
+          record_cost_basis(security_id, trade_entry.date)
         end
 
         # Close an open unknown span only on a genuine downward crossing through
@@ -244,21 +249,36 @@ class Holding::ReverseCalculator
       events.sort_by { |date, kind, index, _| [ date, kind, index ] }.map(&:last)
     end
 
+    # [date, cost basis, whether an open lot's cost is unknown]. A transfer-in
+    # leaves the average where it was, so its entry repeats the last figure.
+    def record_cost_basis(security_id, date)
+      book = @lot_books[security_id]
+      @cost_basis_snapshots[security_id] << [ date, book.average_cost, account.cost_basis_fifo? && book.unknown_cost? ]
+    end
+
+    # Under fifo a transfer-in stops mattering once its lot is sold, so the
+    # book's own answer on the day counts; under average it is unknown until
+    # the position closes.
     def transferred_by?(security_id, date)
+      return cost_basis_snapshot(security_id, date)&.last || false if account.cost_basis_fifo?
+
       @unknown_spans[security_id].any? { |start, stop| start <= date && (stop.nil? || date < stop) }
     end
 
     def cost_basis_for(security_id, date)
       return nil if transferred_by?(security_id, date)
 
-      snapshots = @cost_basis_snapshots[security_id]
-      return nil if snapshots.empty?
+      cost_basis_snapshot(security_id, date)&.second
+    end
 
+    # The last entry on or before `date`.
+    def cost_basis_snapshot(security_id, date)
+      snapshots = @cost_basis_snapshots[security_id]
       lo, hi, result = 0, snapshots.size - 1, nil
       while lo <= hi
         mid = (lo + hi) / 2
         if snapshots[mid][0] <= date
-          result = snapshots[mid][1]
+          result = snapshots[mid]
           lo = mid + 1
         else
           hi = mid - 1
