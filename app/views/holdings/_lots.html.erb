@@ -1,0 +1,63 @@
+<%# locals: (holding:, lots:) %>
+
+<div class="space-y-2 pt-1">
+  <p class="text-xs text-secondary"><%= t("holdings.lots.title") %></p>
+  <ul class="space-y-2">
+    <% lots.each do |lot| %>
+      <li class="rounded-lg border border-secondary px-3 py-2 text-sm">
+        <details class="group">
+          <summary class="flex items-center justify-between gap-2 <%= lot.opening? ? "" : "cursor-pointer" %>">
+            <span class="text-secondary">
+              <%= lot.opening? ? t("holdings.lots.opening") : l(lot.acquired_on, format: :long) %>
+              &middot;
+              <span class="privacy-sensitive"><%= t("holdings.holding.shares", qty: format_quantity(lot.qty, exact: true)) %></span>
+            </span>
+            <span class="text-primary flex items-center gap-1">
+              <span class="privacy-sensitive">
+                <%= lot.unit_cost ? format_money(Money.new(lot.unit_cost, lot.currency)) : t("holdings.lots.unknown") %>
+              </span>
+              <% if lot.manual_cost? %>
+                <%= icon "lock", size: "xs", class: "text-secondary" %>
+              <% end %>
+              <% unless lot.opening? %>
+                <%= icon "pencil", size: "xs", class: "text-secondary group-open:text-primary" %>
+              <% end %>
+            </span>
+          </summary>
+
+          <% unless lot.opening? %>
+            <div class="mt-3 space-y-3">
+              <%= styled_form_with url: holding_lot_path(holding, lot),
+                    method: :patch,
+                    scope: :holding_lot,
+                    namespace: dom_id(lot),
+                    class: "space-y-3",
+                    data: { turbo_frame: "_top" } do |f| %>
+                <%= f.money_field :total_cost_basis,
+                      label: t("holdings.lots.total_cost_label"),
+                      hide_currency: true,
+                      currency_value_override: lot.currency,
+                      value: lot.manual_total_cost,
+                      required: true,
+                      placeholder: "0.00",
+                      input_class: "privacy-sensitive privacy-sensitive-interactive",
+                      step: "any",
+                      min: 0 %>
+                <p class="text-xs text-secondary"><%= t("holdings.lots.total_cost_hint") %></p>
+                <div class="flex justify-end">
+                  <%= render DS::Button.new(text: t("holdings.lots.save"), type: "submit") %>
+                </div>
+              <% end %>
+              <% if lot.manual_cost? %>
+                <%= button_to t("holdings.lots.unlock"), unlock_holding_lot_path(holding, lot),
+                      method: :post,
+                      class: "text-xs text-secondary hover:text-primary",
+                      form: { data: { turbo_frame: "_top" } } %>
+              <% end %>
+            </div>
+          <% end %>
+        </details>
+      </li>
+    <% end %>
+  </ul>
+</div>

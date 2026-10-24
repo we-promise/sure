@@ -11,6 +11,22 @@ module Holding::TradeCalculatorHelpers
       books.filter_map { |security_id, book| [ security_id, book.disposals ] if book.respond_to?(:disposals) }.to_h
     end
 
+    # The cost per unit the user set for the lot an acquisition opened: the
+    # parcel's total over the units the trade brought in, so later splits and
+    # sales scale it like any other lot cost. nil where the lot has none.
+    def manual_unit_cost(trade_entry)
+      trade = trade_entry.entryable
+      return unless trade.qty&.positive?
+
+      total = manual_lot_costs[trade_entry.id]
+      total / trade.qty if total
+    end
+
+    def manual_lot_costs
+      @manual_lot_costs ||= HoldingLot.derived.where(account_id: account.id).where.not(manual_total_cost: nil)
+        .pluck(:source_entry_id, :manual_total_cost).to_h
+    end
+
     # Converts a trade's price into the account's currency at the rate of the
     # day it was made, or nil when there is no rate for that day.
     def converted_trade_price(trade, date:)

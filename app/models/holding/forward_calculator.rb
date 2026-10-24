@@ -114,12 +114,14 @@ class Holding::ForwardCalculator
         trade = trade_entry.entryable
         security_id = trade.security_id
         previous_quantity = portfolio[security_id] || 0
+        manual_cost = manual_unit_cost(trade_entry)
 
-        if trade.internal_movement?
+        if trade.internal_movement? && manual_cost.nil?
           # An inbound transfer brings in units at a price nothing here knows, so
-          # it makes the whole position's cost basis unknowable. An outbound
-          # transfer only removes units, so relieve them at the running average
-          # (like a sell) rather than leaving them to contaminate a later buy.
+          # it makes the whole position's cost basis unknowable, unless the user
+          # has said what its lot cost. An outbound transfer only removes units,
+          # so relieve them at the running average (like a sell) rather than
+          # leaving them to contaminate a later buy.
           if trade.qty.positive?
             @transferred_security_ids << security_id
             @lot_books[security_id].add_unknown(trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
@@ -127,7 +129,8 @@ class Holding::ForwardCalculator
             @lot_books[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
           end
         else
-          @lot_books[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
+          price = manual_cost || effective_trade_price(trade, date: trade_entry.date)
+          @lot_books[security_id].apply(price, trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
         end
 
         portfolio[security_id] = previous_quantity + trade.qty
