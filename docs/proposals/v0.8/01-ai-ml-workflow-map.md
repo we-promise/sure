@@ -985,7 +985,7 @@ flowchart LR
 
 ## W15. MCP endpoint
 
-> **Related PRs:** [#4147](https://github.com/we-promise/sure/issues/4147) mcp_only assistant type · [#3990](https://github.com/we-promise/sure/issues/3990) rule tools with mandatory preview · [#4157](https://github.com/we-promise/sure/issues/4157) unmatch_transfer tool · [#4163](https://github.com/we-promise/sure/issues/4163) MCP rule previews fix · [#4193](https://github.com/we-promise/sure/issues/4193) harden OAuth client registration · [#4063](https://github.com/we-promise/sure/issues/4063) *(open, v0.7.6)* delete_category, move categories · [#3025](https://github.com/we-promise/sure/issues/3025) *(open, v0.7.7)* practical financial CRUD tools
+> **Related PRs:** [#4147](https://github.com/we-promise/sure/issues/4147) mcp_only assistant type · [#3990](https://github.com/we-promise/sure/issues/3990) rule tools with mandatory preview · [#4157](https://github.com/we-promise/sure/issues/4157) unmatch_transfer tool · [#4163](https://github.com/we-promise/sure/issues/4163) MCP rule previews fix · [#4193](https://github.com/we-promise/sure/issues/4193) harden OAuth client registration · [#4283](https://github.com/we-promise/sure/issues/4283) *(open, v0.7.6)* MCP-only `mcp` scope · [#4063](https://github.com/we-promise/sure/issues/4063) *(open, v0.7.6)* delete_category, move categories · [#3025](https://github.com/we-promise/sure/issues/3025) *(open, v0.7.7)* practical financial CRUD tools
 
 `app/controllers/mcp_controller.rb` (`POST /mcp`, JSON-RPC: `initialize`, `tools/list`, `tools/call`), `settings/mcp_controller.rb` (token management), Doorkeeper OAuth.
 
@@ -1003,6 +1003,24 @@ flowchart LR
 - **Exit:** a JSON-RPC response (synchronous).
 - **Env:** `MCP_API_TOKEN`, `MCP_USER_EMAIL`.
 - **Sync and async:** synchronous HTTP. Side effects can be async (RuleJob). `import_bank_statement` makes its LLM call inside this web request (W16), unlike the same tool called from chat, which runs in the worker.
+
+### The interface Sure exposes
+
+Sure is an MCP **server**. It makes no MCP client calls of its own. The server is hand-written (`mcp_controller.rb`, 244 lines) and uses no MCP gem.
+
+| Aspect | Today |
+|---|---|
+| Transport | Streamable HTTP, `POST /mcp` only. Each request gets one JSON response. There is no `GET` SSE stream, so the server cannot send requests to the client (elicitation, progress, sampling). |
+| Protocol versions | `2025-06-18` (default) and `2025-03-26`. The version is negotiated on `initialize` and read from the `Mcp-Protocol-Version` header after that. |
+| Methods | `initialize`, `tools/list`, `tools/call`. Notifications get `204`. Everything else, including `ping`, gets `-32601 Method not found`. |
+| Capabilities | `tools` only. No resources or prompts. |
+| Sessions | `Mcp-Session-Id` held in `Rails.cache` for one day, bound to the user. The header is optional. |
+| Auth | A Doorkeeper OAuth token with the `read_write` scope (the same scope as JSON API write access; dynamically registered clients are given it), or `MCP_API_TOKEN` + `MCP_USER_EMAIL`. A `read` token (the Doorkeeper default scope) is **rejected**, so a read-only MCP grant is not possible. The `WWW-Authenticate` header points to `/.well-known/oauth-protected-resource`. [#4283](https://github.com/we-promise/sure/issues/4283) *(open, v0.7.6)* adds an MCP-only `mcp` scope for new registrations, migrates public `read_write` apps to it, accepts legacy `read_write` tokens on `/mcp` until 2027-01-20, and returns `403 insufficient_scope` for valid tokens without MCP access. `mcp` still covers every tool, writes included. |
+| Tool list | `Assistant.function_classes(user)`, the same registry as W13. Preview tools are listed only for users with preview features. Family-config tools are left out for guests. `tools/call` resolves the name against the same per-user list, so a hidden tool can't be called by guessing its name. |
+| Tool definitions | `name`, `description`, `inputSchema`. No `annotations` (`readOnlyHint`, `destructiveHint`), so MCP clients can't tell the 16 write tools from the read tools. No `outputSchema`. |
+| Tool results | `{content: [{type: "text", text: result.to_json}]}`. No `structuredContent`. Exceptions become a generic `"The tool failed to run"` with `isError: true`, and the detail goes only to the log. |
+| Gating | Requires an active user and a valid token. **Not** gated by `ai_enabled`, by `assistant_type`, or by a configured LLM provider. |
+| Record of activity | `Current.session` is built but not saved. Tool calls are written only to `Rails.logger`. No audit row, `llm_usages` row (except the nested LLM call in `import_bank_statement`) or Langfuse span.
 
 ---
 

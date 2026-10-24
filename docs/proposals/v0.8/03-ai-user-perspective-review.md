@@ -106,12 +106,13 @@ Users think in **jobs**. Here is how each job maps to Sure's workflows (W-number
 
 ### P3: custom setup (likely configured by Claude Code)
 
-> **Related PRs:** [#4147](https://github.com/we-promise/sure/issues/4147) mcp_only assistant type · [#3025](https://github.com/we-promise/sure/issues/3025) *(open, v0.7.7)* MCP CRUD with idempotency keys · [#3990](https://github.com/we-promise/sure/issues/3990) rule tools with preview
+> **Related PRs:** [#4147](https://github.com/we-promise/sure/issues/4147) mcp_only assistant type · [#3025](https://github.com/we-promise/sure/issues/3025) *(open, v0.7.7)* MCP CRUD with idempotency keys · [#3990](https://github.com/we-promise/sure/issues/3990) rule tools with preview · [#4283](https://github.com/we-promise/sure/issues/4283) *(open, v0.7.6)* MCP-only `mcp` scope
 
 **What happens today**
 - Configuration is spread across **env vars** (about 50 AI-related), **instance settings** (Self-hosting), **family columns** (assistant type, categorization provider, threshold, shadow rate, prompts, classifier tuning) and **user flags** (consent, preview features, layout). ENV values override the UI silently.
 - Per-task routing (chat on Claude, background on local, Jev for categories) is only partly possible. "One provider for everything except Jev for categories" is what exists today (per-task models are proposed in [#4245](https://github.com/we-promise/sure/issues/4245)).
 - The external agent and MCP clients act with the user's permissions. There is no view of "changes made by my agent", and agent-made changes look like user edits.
+- Connecting an MCP client is all or nothing: the OAuth grant has to be `read_write` (`mcp` after [#4283](https://github.com/we-promise/sure/issues/4283), which still covers every tool), so "let my agent read, but not change, my data" can't be expressed. Write tools carry no `destructiveHint`, so the client can't warn before a delete ([01 W15](01-ai-ml-workflow-map.md#the-interface-sure-exposes), [02 A13](02-ai-architecture-review.md)).
 
 **Works by default?** It works once configured. The risk is **configuration the human can't see**: an agent sets `CATEGORIZATION_PROVIDER=jev` or `LLM_JSON_MODE=none` in `.env`, and the UI shows a disabled selector, or a value that differs from what runs. When something goes wrong, neither the human nor the next agent session can easily reconstruct the effective configuration.
 
@@ -404,7 +405,7 @@ The assistant and insights can then refer to the chosen plan ("You're 4% over yo
 
 ## 10. Summary of recommendations (user-facing)
 
-> **Related PRs:** [#3694](https://github.com/we-promise/sure/issues/3694) *(open, v0.7.7)* supports U2/U11 · [#3990](https://github.com/we-promise/sure/issues/3990) partial U18 · [#4021](https://github.com/we-promise/sure/issues/4021) reuse for U22 · [#4328](https://github.com/we-promise/sure/issues/4328) context for U23 · [#3858](https://github.com/we-promise/sure/issues/3858) *(open, v0.7.7)* supports U15/U17 · [#3442](https://github.com/we-promise/sure/issues/3442) *(open, v0.7.7)* supports U5/U9
+> **Related PRs:** [#3694](https://github.com/we-promise/sure/issues/3694) *(open, v0.7.7)* supports U2/U11 · [#3990](https://github.com/we-promise/sure/issues/3990) partial U18 · [#4021](https://github.com/we-promise/sure/issues/4021) reuse for U22 · [#4328](https://github.com/we-promise/sure/issues/4328) context for U23 · [#3858](https://github.com/we-promise/sure/issues/3858) *(open, v0.7.7)* supports U15/U17 · [#3442](https://github.com/we-promise/sure/issues/3442) *(open, v0.7.7)* supports U5/U9 · [#4283](https://github.com/we-promise/sure/issues/4283) *(open, v0.7.6)* MCP-only scope, groundwork for U18
 
 | # | Recommendation | Persona | Effort | Value |
 |---|---|---|---|---|
@@ -420,12 +421,12 @@ The assistant and insights can then refer to the chosen plan ("You're 4% over yo
 | U10 | AI results as suggestions (confirm, like transfers) instead of hard locks, or with auto-accept after N days | P2 | M | Medium |
 | U11 | Local-model defaults: context window from the model, streaming or progress text, recommended models | P2 | S | Medium |
 | U12 | Effective-config page and an optional `ai.yml` for agent-managed setups | P3 | M | Medium |
-| U13 | Agent / API-key activity view | P3 | M | Medium |
+| U13 | Agent / API-key activity view, including MCP tool calls (today they go only to the log) | P3 | M | Medium |
 | U14 | "Coming from…" onboarding with an importer and glossary | migrants | S | Medium |
 | U15 | Plan templates (Barefoot, CSP, 50/30/20, zero-based, pay-yourself-first, debt snowball) | all | L | High (differentiator) |
 | U16 | Make onboarding goals do something (e.g. "AI insights" → the Turn on AI flow) | all | S | Low-medium |
 | U17 | Un-preview Insights when stable, and add a "Finances overview" landing view (spending, subscriptions, upcoming bills, investments) | all | S | Medium |
-| U18 | Confirm before the assistant writes data, or a household "AI may change data" switch. Extend the preview-token pattern of [#3990](https://github.com/we-promise/sure/issues/3990) from rules to all writes, with a human confirming | P2, P3 | S | High (trust) |
+| U18 | Confirm before the assistant writes data, or a household "AI may change data" switch. Extend the preview-token pattern of [#3990](https://github.com/we-promise/sure/issues/3990) from rules to all writes, with a human confirming. For MCP: add a read-only MCP scope beside `mcp` and mark write tools with `destructiveHint` | P2, P3 | S | High (trust) |
 | U19 | A "What AI uses" page: session context, prompts and documents, each viewable and deletable | P2, P3 | M | Medium |
 | U20 | OFX / CAMT import (Securo, Firefly III data-importer users, European bank exports) | migrants | M | Medium |
 | U22 | "Upgrading from Maybe v0.6.0" hosting guide and a one-time in-app "Welcome from Maybe" screen with an action per behaviour change (reuse the What's new dialog, [#3505](https://github.com/we-promise/sure/issues/3505), [#4021](https://github.com/we-promise/sure/issues/4021)) | Maybe upgraders | S–M | **Highest** (largest existing user base) |

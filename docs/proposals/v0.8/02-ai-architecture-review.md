@@ -121,6 +121,17 @@ Chat and bill AI respect `User#ai_enabled?`. Rule-driven AI only needs a configu
 **A12. Two processes, one configuration story.**
 Web and worker each resolve ENV > Setting > default for themselves, and some settings are read by only one of them: `AI_RESPONSE_TIMEOUT` only by the web (the chat watchdog), `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` only by the worker, `RAILS_AI_MAX_THREADS` by both for different purposes ([01 D3](01-ai-ml-workflow-map.md#which-process-reads-which-setting)). Compose hides this by sharing one env file. Helm, quadlet and bare-metal installs set env per process, and a drift shows up as "the settings page says X but the jobs do Y". The on-demand worker AI health check (W22) exists because the processes can differ. It shows the worker's provider, model, endpoints, request timeout and embedding settings beside the web's, but not batch size, context window, JSON mode, tool rounds or the chat watchdog.
 
+**A13. MCP is a second front door to the tool registry, with weaker guards than chat.**
+
+> **Related PRs:** [#3990](https://github.com/we-promise/sure/issues/3990) rule tools with preview · [#4147](https://github.com/we-promise/sure/issues/4147) mcp_only · [#4283](https://github.com/we-promise/sure/issues/4283) *(open, v0.7.6)* MCP-only `mcp` scope · [#3025](https://github.com/we-promise/sure/issues/3025) *(open, v0.7.7)* MCP-only destructive tools
+
+`/mcp` serves `Assistant.function_classes(user)` directly ([01 W15](01-ai-ml-workflow-map.md#the-interface-sure-exposes)). That keeps chat and MCP at parity, but it also means every function added to the registry is callable by external agents straight away, and MCP has fewer of the guards chat has:
+- **All or nothing.** The only accepted OAuth scope is `read_write`, which also grants JSON API writes. [#4283](https://github.com/we-promise/sure/issues/4283) separates *where* a token works (a new `mcp` scope that the JSON API rejects) but not *what* it can do: `mcp` still covers all 30 tools. A read-only MCP grant would need its own scope (for example `mcp:read`). Reusing the JSON API's `read` scope would undo #4283's separation.
+- **No write signal.** No tool sends `readOnlyHint` or `destructiveHint`, so MCP clients that ask the human before destructive calls can't tell which of the 30 tools write.
+- **No way back to the human.** With `POST`-only JSON responses the server can't use elicitation to ask for a confirmation. The [#3990](https://github.com/we-promise/sure/issues/3990) preview token is something the model fills in for itself.
+- **No trail.** Tool calls go only to the log. No audit row or trace records which agent changed what.
+- **Different gating.** MCP doesn't check `ai_enabled`, `assistant_type` or a configured provider. That is reasonable, since the client brings its own model, but it isn't written down anywhere.
+
 ### 2.2 Opportunities
 
 - **O-A1. Name the cascade as the product.** Matcher → Bayes → (Jev | LLM), from free to cheap to paid, ordered by rules, with confidence and provenance recorded. The pieces exist (rule order, `enrich_attribute` metadata, shadow comparisons, `BayesEvaluation`, evals). Promoting "the classification cascade" to an explicit concept with one diagram, one settings page and one report gives users a cost/quality dial and gives contributors a frame for where a new stage belongs.
@@ -188,7 +199,7 @@ A prompt edit can shift categorization accuracy for every self-hoster, but CI ch
 
 ### 3.2 Opportunities
 
-- **O-B1. Executable architecture (highest leverage).** Encode invariants as tests and cops that fail with a *prescriptive message* (agents act on these reliably):
+- **O-B1. Executable architecture (highest leverage).** Encode invariants as tests and cops that fail with a *prescriptive message* (agents act on these reliably). Write the cops as custom RuboCop cops in `lib/rubocop/cop/`. RuboCop already runs in CI through `rubocop-rails-omakase`, so no new tool is needed.
   - Every class including `LlmConcept` implements every operation or declares `unsupported :op` (a parity matrix test, which fixes B3).
   - Every job that calls `Provider::Registry`/`Ai::Router` is on an `ai_*` queue, and nothing else is (a lane test, for A8).
   - No controller action reaches an LLM or embedding call, except an explicit allow-list (the health probes). A test that stubs the provider to raise when called outside a job would catch it (for A9).
@@ -196,6 +207,7 @@ A prompt edit can shift categorization accuracy for every self-hoster, but CI ch
   - Every call to an `enrich_attribute` writer passes a `source` that has a registered `Enrichment::Policy` (for A7).
   - No `Provider::Registry.get_provider(:openai|:anthropic)` outside the router (a cop, for A1).
   - Every provider operation receives `family:` (usage attribution).
+  - Every `Assistant::Function` declares whether it writes data, and MCP `tools/list` maps that to `readOnlyHint` / `destructiveHint` (for A13).
   - An ENV read for an AI key goes through the config registry (a cop, for A6).
 - **O-B2. Cross-transport contract tests with recorded fixtures.** Use one shared test suite per operation, run against OpenAI native, OpenAI-compatible (with JSON modes none, json_object and strict), and Anthropic. Fixtures should include "bad" model output (think tags, wrong keys, prose around JSON). This is the safety net that makes S2 possible, and it turns "works with my Ollama" PRs into checkable claims.
 - **O-B3. A prompt-change eval gate.** When a PR touches `instructions`, a schema or `ai_prompt` defaults, CI runs `evals:ci_regression` on a small committed dataset using recorded responses (free), and comments the metric delta. A live-model run stays a maintainer-triggered label. This gives agents a number to optimize instead of a vibe.
