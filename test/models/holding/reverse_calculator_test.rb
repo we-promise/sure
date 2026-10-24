@@ -589,7 +589,236 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_equal 50, after.find { |h| h.security_id == @wmt.id && h.date == wmt_split_date - 1 }.qty, "the split security itself did change"
   end
 
+  # Each provider snapshot is what the account held on its date. Walking back
+  # from today's alone gave every earlier day today's quantities.
+  test "days before a provider snapshot derive from that snapshot, not from today's" do
+    fund = offline_fund
+    start_history(8.days.ago.to_date)
+    provider_holding(fund, 5.days.ago.to_date, qty: 10)
+    provider_holding(fund, 2.days.ago.to_date, qty: 15)
+    provider_holding(fund, Date.current, qty: 20)
+
+    holdings = calculate_for(fund)
+
+    assert_equal 20, holdings[Date.current].qty
+    assert_equal 20, holdings[1.day.ago.to_date].qty
+    assert_equal 15, holdings[2.days.ago.to_date].qty
+    assert_equal 15, holdings[4.days.ago.to_date].qty
+    assert_equal 10, holdings[5.days.ago.to_date].qty
+    assert_equal 10, holdings[7.days.ago.to_date].qty, "before the first snapshot, its position"
+    assert_equal 1000, holdings[7.days.ago.to_date].amount, "at the first snapshot's price"
+  end
+
+  test "a security with market data is not given a price from another day" do
+    voo = Security.create!(ticker: "VOO", name: "Vanguard S&P 500 ETF")
+    (2.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: voo, date: date, price: 500) }
+    start_history(6.days.ago.to_date)
+    provider_holding(voo, Date.current, qty: 10, price: 500)
+
+    holdings = calculate_for(voo)
+
+    assert_equal 5000, holdings[2.days.ago.to_date].amount
+    assert_nil holdings[4.days.ago.to_date], "no market price that day, so no row"
+  end
+
+  test "a carried price is scaled back across a split" do
+    fund = offline_fund
+    start_history(6.days.ago.to_date)
+    provider_holding(fund, Date.current, qty: 20, price: 50)
+    add_split(fund, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+
+    holdings = calculate_for(fund)
+
+    assert_equal 10, holdings[4.days.ago.to_date].qty
+    assert_equal 100, holdings[4.days.ago.to_date].price, "one pre-split share is two today"
+    assert_equal 1000, holdings[4.days.ago.to_date].amount
+  end
+
+  test "a carried price is scaled forward across a split" do
+    fund = offline_fund
+    start_history(6.days.ago.to_date)
+    provider_holding(fund, 3.days.ago.to_date, qty: 10, price: 100)
+    add_split(fund, ex_date: 1.day.ago.to_date, numerator: 2, denominator: 1)
+
+    holdings = calculate_for(fund)
+
+    assert_equal 20, holdings[Date.current].qty
+    assert_equal 50, holdings[Date.current].price
+    assert_equal 1000, holdings[Date.current].amount
+  end
+
+  test "a carried price is in the account's currency" do
+    fund = offline_fund
+    start_history(6.days.ago.to_date)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 2.days.ago.to_date, rate: 1.1)
+    provider_holding(fund, 2.days.ago.to_date, qty: 10, price: 100, currency: "EUR")
+
+    holdings = calculate_for(fund)
+
+    assert_equal "USD", holdings[Date.current].currency
+    assert_equal 110, holdings[Date.current].price
+  end
+
+  # With no exchange rate the price is not in the account's currency, so it
+  # must not be carried to price the position on other days.
+  test "a provider price with no exchange rate is not carried" do
+    fund = offline_fund
+    start_history(6.days.ago.to_date)
+    provider_holding(fund, 2.days.ago.to_date, qty: 10, price: 100, currency: "EUR")
+
+    holdings = calculate_for(fund)
+
+    assert_nil holdings[3.days.ago.to_date]
+    assert_nil holdings[5.days.ago.to_date]
+  end
+
+  test "a gone security with no exchange rate still has zero rows after it" do
+    fund = offline_fund
+    gone = offline_fund(ticker: "GONE")
+    start_history(8.days.ago.to_date)
+    provider_holding(fund, 5.days.ago.to_date, qty: 10)
+    provider_holding(gone, 5.days.ago.to_date, qty: 7, currency: "EUR")
+    provider_holding(fund, Date.current, qty: 20)
+
+    holdings = calculate_for(gone)
+
+    assert_equal 0, holdings[4.days.ago.to_date].qty
+    assert_equal 0, holdings[Date.current].qty, "not carried forward to today"
+    assert_equal 0, holdings[Date.current].amount
+  end
+
+  test "a security a snapshot reported and that is now gone has zero rows after it" do
+    fund = offline_fund
+    gone = offline_fund(ticker: "GONE")
+    start_history(8.days.ago.to_date)
+    provider_holding(fund, 5.days.ago.to_date, qty: 10)
+    provider_holding(gone, 5.days.ago.to_date, qty: 7)
+    provider_holding(fund, Date.current, qty: 20)
+
+    holdings = calculate_for(gone)
+
+    assert_equal 7, holdings[6.days.ago.to_date].qty
+    assert_equal 7, holdings[5.days.ago.to_date].qty
+    assert_equal 0, holdings[4.days.ago.to_date].qty
+    assert_equal 0, holdings[Date.current].qty, "not carried forward to today"
+    assert_equal 0, holdings[Date.current].amount
+  end
+
+  # Plaid dates each holding by its own price date, so one sync can write two
+  # positions days apart. Neither date is the whole portfolio: reaching the
+  # older one must not zero the newer position as if it had been bought since.
+  test "a per-position provider's older holding does not zero its other positions" do
+    voo = market_security("VOO", 8.days.ago.to_date)
+    bond = market_security("BNDX", 8.days.ago.to_date)
+    start_history(8.days.ago.to_date)
+    plaid = AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    provider_holding(voo, 1.day.ago.to_date, qty: 10, account_provider: plaid)
+    provider_holding(bond, 4.days.ago.to_date, qty: 5, account_provider: plaid)
+
+    holdings = calculate_for(voo)
+    assert_equal 10, holdings[1.day.ago.to_date].qty
+    assert_equal 10, holdings[4.days.ago.to_date].qty, "still held when the bond was priced"
+    assert_equal 10, holdings[7.days.ago.to_date].qty
+
+    holdings = calculate_for(bond)
+    assert_equal 5, holdings[4.days.ago.to_date].qty
+    assert_equal 5, holdings[7.days.ago.to_date].qty
+    assert_equal 5, holdings[Date.current].qty, "a position priced days ago is not gone"
+  end
+
+  # Each provider's snapshot sets only its own quantities. One provider
+  # dropping a security does not zero another provider's holding of it, and
+  # while both hold it the day's quantity is their sum.
+  test "two snapshot providers holding the same security keep their own quantities" do
+    voo = market_security("VOO", 8.days.ago.to_date)
+    bond = market_security("BNDX", 8.days.ago.to_date)
+    start_history(8.days.ago.to_date)
+    other = AccountProvider.create!(account: @account, provider: snaptrade_accounts(:fidelity_401k))
+    provider_holding(voo, 1.day.ago.to_date, qty: 10)
+    provider_holding(voo, 4.days.ago.to_date, qty: 10)
+    provider_holding(voo, 5.days.ago.to_date, qty: 4, account_provider: other)
+    provider_holding(bond, 5.days.ago.to_date, qty: 1, account_provider: other)
+    provider_holding(bond, 2.days.ago.to_date, qty: 1, account_provider: other)
+
+    holdings = calculate_for(voo)
+
+    assert_equal 10, holdings[1.day.ago.to_date].qty
+    assert_equal 10, holdings[2.days.ago.to_date].qty, "the other provider no longer holds it"
+    assert_equal 10, holdings[4.days.ago.to_date].qty
+    assert_equal 14, holdings[5.days.ago.to_date].qty, "both providers hold it"
+    assert_equal 14, holdings[7.days.ago.to_date].qty
+  end
+
+  # A row without a provider was written by an earlier rebuild. For an offline
+  # security it must not stand in for a price: the nearest later provider price
+  # does, or a carried price would never be replaced.
+  test "a calculated row from an earlier rebuild does not price an offline security" do
+    fund = offline_fund
+    start_history(8.days.ago.to_date)
+    provider_holding(fund, 5.days.ago.to_date, qty: 10, price: 100)
+    provider_holding(fund, 2.days.ago.to_date, qty: 10, price: 150)
+    @account.holdings.create!(security: fund, date: 4.days.ago.to_date, qty: 10, price: 100, amount: 1000, currency: "USD")
+
+    holdings = calculate_for(fund)
+
+    assert_equal 150, holdings[4.days.ago.to_date].price
+    assert_equal 100, holdings[5.days.ago.to_date].price
+  end
+
+  test "market data still prices an offline security over a provider holding" do
+    fund = offline_fund
+    start_history(6.days.ago.to_date)
+    provider_holding(fund, Date.current, qty: 10, price: 150)
+    Security::Price.create!(security: fund, date: 3.days.ago.to_date, price: 120)
+
+    holdings = calculate_for(fund)
+
+    assert_equal 150, holdings[2.days.ago.to_date].price
+    assert_equal 120, holdings[3.days.ago.to_date].price
+    assert_equal 120, holdings[4.days.ago.to_date].price, "carried from the nearest later price"
+  end
+
   private
+    def offline_fund(ticker: "FUNDX")
+      Security.create!(ticker: ticker, name: "#{ticker} Fund", offline: true)
+    end
+
+    # Account history starts the day before its first entry.
+    def start_history(date)
+      @account.entries.create!(
+        name: "Opening", date: date + 1.day, amount: 0, currency: "USD",
+        entryable: Valuation.new(kind: "opening_anchor")
+      )
+    end
+
+    def provider_holding(security, date, qty:, price: 100, currency: "USD", account_provider: snapshot_provider)
+      @account.holdings.create!(
+        security: security, date: date, qty: qty, price: price, amount: qty * price,
+        currency: currency, account_provider: account_provider
+      )
+    end
+
+    def market_security(ticker, since)
+      Security.create!(ticker: ticker, name: ticker).tap do |security|
+        (since..Date.current).each { |date| Security::Price.create!(security: security, date: date, price: 100) }
+      end
+    end
+
+    def snapshot_provider
+      @snapshot_provider ||= begin
+        item = @account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+        AccountProvider.create!(account: @account, provider: item.coinstats_accounts.create!(name: "Provider", currency: "USD"))
+      end
+    end
+
+    def calculate_for(security)
+      Holding::ReverseCalculator
+        .new(@account, portfolio_snapshot: Holding::PortfolioSnapshot.new(@account))
+        .calculate
+        .select { |h| h.security_id == security.id }
+        .index_by(&:date)
+    end
+
     def split_security(before:, after:)
       security = Security.create!(ticker: "SPLT", name: "Split Test")
       (5.days.ago.to_date..Date.current).each do |date|
