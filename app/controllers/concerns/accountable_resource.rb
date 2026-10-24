@@ -35,14 +35,9 @@ module AccountableResource
   end
 
   def create
-    opening_balance_date = begin
-      account_params[:opening_balance_date].presence&.to_date
-    rescue Date::Error
-      nil
-    end || (Time.zone.today - 2.years)
     Account.transaction do
       @account = Current.family.accounts.create_and_sync(
-        account_params.except(:return_to, :opening_balance_date).merge(owner: Current.user),
+        submitted_account_attributes.merge(owner: Current.user),
         opening_balance_date: opening_balance_date
       )
       @account.lock_saved_attributes!
@@ -73,6 +68,8 @@ module AccountableResource
       e.record.try(:account) || rebuilt_account_from_submission
     end
     @error_message = e.record.errors.full_messages.join(", ").presence || e.message
+    # The form's date field defaults per type; keep the one that was submitted.
+    @opening_balance_date = account_params[:opening_balance_date]
     # The `new` template's method-selection branch reads `@provider_configs`,
     # which the `new` action's before_action sets up; this render needs it too.
     set_link_options
@@ -83,7 +80,7 @@ module AccountableResource
     # Assigning a balance can fail before the normal update path assigns the
     # other submitted fields. Keep them available for the 422 form without
     # persisting them.
-    update_params = account_params.except(:return_to, :balance, :opening_balance_date)
+    update_params = account_params.except(:return_to, :balance, :opening_balance_date, :accountable_type)
 
     # The balance change and the attribute update are one form, so they commit
     # or roll back as one. `set_current_balance` writes a valuation and the
@@ -139,9 +136,26 @@ module AccountableResource
     # `accountable`, and the form came back without any of the type's own
     # inputs, which is the opposite of what this rescue exists to do.
     def rebuilt_account_from_submission
-      attributes = account_params.except(:return_to, :opening_balance_date)
+      attributes = submitted_account_attributes
       attributes[:accountable_attributes] ||= {}
       Current.family.accounts.build(attributes)
+    end
+
+    # The account attributes a create builds from. The type comes from the
+    # controller, not the form: each controller (and the gates on it) is
+    # responsible for one account type, so posting another type to it must not
+    # create that type.
+    def submitted_account_attributes
+      account_params.except(:return_to, :opening_balance_date).merge(accountable_type: accountable_type.name)
+    end
+
+    # The opening valuation's date: the submitted date, or two years back.
+    def opening_balance_date
+      begin
+        account_params[:opening_balance_date].presence&.to_date
+      rescue Date::Error
+        nil
+      end || (Time.zone.today - 2.years)
     end
 
     def set_link_options

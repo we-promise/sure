@@ -57,7 +57,7 @@ class UI::AccountPage < ApplicationComponent
       [ :activity, :holdings ]
     when "Loan"
       account.loan.amortizable? ? [ :activity, :overview, :schedule ] : [ :activity, :overview ]
-    when "Property", "Vehicle"
+    when "Property", "Vehicle", "GiftCard"
       [ :activity, :overview ]
     else
       [ :activity ]
@@ -99,7 +99,7 @@ class UI::AccountPage < ApplicationComponent
       # page's one reference date, like its Schedule tab.
       locals = { account: account }
       locals[:as_of] = as_of if account.accountable_type == "Loan"
-      render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", **locals
+      render "#{account.accountable_type.underscore.pluralize}/tabs/#{tab}", **locals
     when :holdings
       # Accountable is responsible for implementing the partial in the correct folder
       render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account

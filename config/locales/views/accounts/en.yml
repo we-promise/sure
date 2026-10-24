@@ -163,6 +163,7 @@ en:
       crypto: Crypto
       property: Property
       vehicle: Vehicle
+      gift_card: Gift Card
       other_asset: Other Asset
       credit_card: Credit Card
       loan: Loan
@@ -173,6 +174,7 @@ en:
       crypto: Crypto
       property: Properties
       vehicle: Vehicles
+      gift_card: Gift Cards
       other_asset: Other Assets
       credit_card: Credit Cards
       loan: Loans

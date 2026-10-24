@@ -337,6 +337,22 @@ class Demo::Generator
 
       # Other asset (USD)
       @jewelry = family.accounts.create!(accountable: OtherAsset.new, name: "Jewelry Collection", balance: 0, currency: "USD")
+
+      # Gift cards (USD): a digital card part spent, and a physical one that
+      # expires soon, so the overview shows the expiry warning.
+      @amazon_gift_card = family.accounts.create!(
+        accountable: GiftCard.new(card_format: "digital", face_value: 100, face_value_currency: "USD",
+                                  expires_on: 8.months.from_now.to_date, card_number: "DEMO-AMZN-4821-7730",
+                                  redeem_url: "https://www.amazon.com/gc/redeem"),
+        name: "Amazon Gift Card", balance: 0, currency: "USD"
+      )
+      @bookstore_gift_card = family.accounts.create!(
+        accountable: GiftCard.new(card_format: "physical", face_value: 50, face_value_currency: "USD",
+                                  expires_on: 20.days.from_now.to_date, card_number: "DEMO-BOOK-0034-5521", pin: "4417"),
+        name: "Bookstore Gift Card", balance: 0, currency: "USD"
+      )
+      open_demo_gift_card!(@amazon_gift_card, received_on: 4.months.ago.to_date)
+      open_demo_gift_card!(@bookstore_gift_card, received_on: 10.months.ago.to_date)
     end
 
     def create_realistic_transactions!(family)
@@ -389,6 +405,9 @@ class Demo::Generator
 
       puts "   🔒 Generating crypto & misc asset transactions..."
       generate_crypto_and_misc_assets!
+
+      puts "   🎁 Generating gift card spending..."
+      generate_gift_card_spending!
 
       puts "   👛 Generating Apple Wallet transactions..."
       @financekit_generator.create_transactions!
@@ -794,6 +813,18 @@ class Demo::Generator
         name: Valuation.build_opening_anchor_name(account.accountable_type),
         currency: account.currency,
         date: loan.start_date
+      )
+    end
+
+    # The opening anchor a gift card created through the form would carry: its
+    # face value at the end of the day before it was received.
+    def open_demo_gift_card!(account, received_on:)
+      account.entries.create!(
+        entryable: Valuation.new(kind: "opening_anchor"),
+        amount: account.gift_card.face_value,
+        name: Valuation.build_opening_anchor_name(account.accountable_type),
+        currency: account.currency,
+        date: received_on.prev_day
       )
     end
 
@@ -1293,6 +1324,15 @@ class Demo::Generator
       # One-time USDC deposit 18 months ago
       deposit_date = 18.months.ago.to_date
       create_transaction!(@coinbase_usdc, -3_500, "Initial USDC Deposit", nil, deposit_date)
+    end
+
+    # Spending from the demo gift cards: the Amazon card has 37.51 left of 100,
+    # the bookstore card 18.00 of 50.
+    def generate_gift_card_spending!
+      create_transaction!(@amazon_gift_card, 24.99, "Amazon - Kitchen Scale", @shopping_cat, 3.months.ago.to_date)
+      create_transaction!(@amazon_gift_card, 37.50, "Amazon - Headphones", @shopping_cat, 6.weeks.ago.to_date)
+      create_transaction!(@bookstore_gift_card, 18.50, "Bookstore - Novel", @shopping_cat, 9.months.ago.to_date)
+      create_transaction!(@bookstore_gift_card, 13.50, "Bookstore - Cookbook", @shopping_cat, 4.months.ago.to_date)
     end
 
     # ---------------------------------------------------------------------------

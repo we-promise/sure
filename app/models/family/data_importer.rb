@@ -34,7 +34,7 @@ class Family::DataImporter
   SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant ProviderMerchant RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
-    "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
+    "Property" => Property, "Vehicle" => Vehicle, "GiftCard" => GiftCard, "OtherAsset" => OtherAsset,
     "CreditCard" => CreditCard, "Loan" => Loan, "OtherLiability" => OtherLiability
   }.freeze
 
@@ -310,6 +310,7 @@ class Family::DataImporter
 
           # Copy any other accountable attributes
           safe_accountable_attrs = %w[subtype locked_attributes]
+          safe_accountable_attrs += accountable_class::IMPORTABLE_ATTRIBUTES if accountable_class.const_defined?(:IMPORTABLE_ATTRIBUTES, false)
           safe_accountable_attrs.each do |attr|
             if accountable.respond_to?("#{attr}=") && accountable_data[attr].present?
               accountable.send("#{attr}=", accountable_data[attr])

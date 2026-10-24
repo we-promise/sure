@@ -25,10 +25,13 @@ en:
         family_id: "%{moniker}"
         name: Name
         subtype: Subtype
+      account/accountable:
+        face_value: Initial amount
     models:
       account: Account
       account/credit: Credit Card
       account/depository: Bank Account
+      account/gift_card: Gift Card
       account/investment: Investment
       account/loan: Loan
       account/other_asset: Other Asset

@@ -1,0 +1,85 @@
+<%# locals: (account:) %>
+
+<% gift_card = account.gift_card %>
+
+<div class="grid grid-cols-3 gap-2">
+  <%= summary_card title: t(".remaining") do %>
+    <%= format_money account.balance_money %>
+  <% end %>
+
+  <%= summary_card title: t(".initial_amount") do %>
+    <%= gift_card.initial_amount ? format_money(gift_card.initial_amount) : t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".spent") do %>
+    <%= gift_card.spent_amount ? format_money(gift_card.spent_amount) : t(".unknown") %>
+  <% end %>
+
+  <%= summary_card title: t(".expires_on") do %>
+    <span class="flex items-center gap-2 flex-wrap">
+      <%= gift_card.expires_on ? l(gift_card.expires_on, format: :long) : t(".no_expiry") %>
+
+      <% if gift_card.expired? %>
+        <%= render DS::Pill.new(label: t(".expired"), tone: :error, marker: false) %>
+      <% elsif gift_card.expiring_soon? %>
+        <%= render DS::Pill.new(label: t(".expires_in", count: gift_card.days_until_expiry), tone: :warning, marker: false) %>
+      <% end %>
+    </span>
+  <% end %>
+
+  <%= summary_card title: t(".card_format") do %>
+    <%= t("gift_cards.card_formats.#{gift_card.card_format}") %>
+  <% end %>
+</div>
+
+<% codes = gift_card.visible_codes_for(Current.user) %>
+<% redeem_url = gift_card.visible_redeem_url_for(Current.user) %>
+
+<% if codes.any? || redeem_url.present? %>
+  <div class="mt-4">
+    <%= render DS::Disclosure.new(title: t(".card_details"), align: :left) do %>
+      <dl class="space-y-2 px-3">
+        <% codes.each do |attribute, value| %>
+          <%= render DS::DetailRow.new(label: t(".#{attribute}"), align: :center) do |row| %>
+            <% row.with_value do %>
+              <span class="flex items-center gap-2" data-controller="clipboard" data-clipboard-copied-text-value="<%= t(".copied") %>">
+                <code class="font-mono text-sm text-primary break-all privacy-sensitive" data-clipboard-target="source"><%= value %></code>
+                <%= render DS::Button.new(
+                  text: t(".copy"),
+                  variant: :ghost,
+                  icon: "copy",
+                  size: :sm,
+                  data: { action: "clipboard#copy" }
+                ) %>
+              </span>
+            <% end %>
+          <% end %>
+        <% end %>
+
+        <% if redeem_url.present? %>
+          <%= render DS::DetailRow.new(label: t(".redeem_url"), align: :center) do |row| %>
+            <% row.with_value do %>
+              <%= render DS::Link.new(
+                text: t(".open_redeem_url"),
+                href: redeem_url,
+                icon: "external-link",
+                variant: "ghost",
+                size: "sm",
+                target: "_blank"
+              ) %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </dl>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="flex justify-center py-8">
+  <%= render DS::Link.new(
+    text: t(".edit_account_details"),
+    variant: "ghost",
+    href: edit_gift_card_path(account),
+    frame: :modal
+  ) %>
+</div>

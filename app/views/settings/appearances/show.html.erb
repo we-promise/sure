@@ -61,7 +61,7 @@
         </div>
         <div class="grid gap-2 sm:grid-cols-2">
           <% selected = @user.always_expanded_account_groups %>
-          <% Accountable::TYPES.each do |type| %>
+          <% Accountable.types_for(@user).each do |type| %>
             <% key = type.underscore %>
             <% checked = selected.include?(key) %>
             <label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-surface-inset transition-colors"

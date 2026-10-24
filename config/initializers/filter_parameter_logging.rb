@@ -8,6 +8,11 @@ Rails.application.config.filter_parameters += [
   :client_id, :application_id, :consumer_key, :snaptrade_user_id, :snaptrade_user_secret,
   :oauth_access_token, :oauth_refresh_token, :code_verifier, :code_challenge,
   /\Apin\z/i,
+  # A gift card's code and redeem link spend the card (a link often carries
+  # its own token). Filtered by name: the encrypted attribute filter Rails
+  # adds (gift_card.card_number) does not match the nested account form
+  # parameter, and encryption is optional.
+  /\Acard_number\z/i, /\Aredeem_url\z/i,
   # One-time codes that act as credentials: MFA TOTP/backup codes, OAuth and
   # bank authorization codes and the desktop SSO exchange all arrive as
   # "code". Anchored so currency_code, country_code and postal_code stay
