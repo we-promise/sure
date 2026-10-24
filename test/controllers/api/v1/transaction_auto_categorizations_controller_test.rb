@@ -36,7 +36,7 @@ class Api::V1::TransactionAutoCategorizationsControllerTest < ActionDispatch::In
   end
 
   test "queues the requested uncategorized transactions" do
-    assert_enqueued_with(job: AutoCategorizeJob, args: [ @family, { transaction_ids: [ @uncategorized.id ] } ]) do
+    assert_enqueued_with(job: AutoCategorizeJob, args: [ @family, { transaction_ids: [ @uncategorized.id ], recheck_eligibility: true } ]) do
       post auto_categorize_api_v1_transactions_url,
            params: { transaction_ids: [ @uncategorized.id ] },
            headers: api_headers(@api_key), as: :json
@@ -119,6 +119,84 @@ class Api::V1::TransactionAutoCategorizationsControllerTest < ActionDispatch::In
   ensure
     stub_const.send(:remove_const, :MAX_TRANSACTION_IDS)
     stub_const.const_set(:MAX_TRANSACTION_IDS, 1_000)
+  end
+
+  test "pages through eligible transactions with after_transaction_id" do
+    stub_const = Api::V1::TransactionAutoCategorizationsController
+    stub_const.send(:remove_const, :MAX_TRANSACTION_IDS)
+    stub_const.const_set(:MAX_TRANSACTION_IDS, 1)
+    create_transaction(account: @account, name: "Hardware store 5")
+    eligible = @family.auto_categorizable_transactions_for(@user).order(:id).pluck(:id)
+    assert_operator eligible.size, :>=, 2
+
+    post auto_categorize_api_v1_transactions_url, headers: api_headers(@api_key), as: :json
+    first = JSON.parse(response.body)
+    assert_equal [ eligible[0] ], first["transaction_ids"]
+    assert_equal eligible[0], first["next_after_transaction_id"]
+
+    # The same page again without the cursor (nothing was categorized yet);
+    # with it, the next one.
+    post auto_categorize_api_v1_transactions_url,
+         params: { after_transaction_id: first["next_after_transaction_id"].upcase },
+         headers: api_headers(@api_key), as: :json
+    assert_response :accepted
+    second = JSON.parse(response.body)
+    assert_equal [ eligible[1] ], second["transaction_ids"]
+    assert_equal eligible.size > 2, second["truncated"]
+
+    post auto_categorize_api_v1_transactions_url,
+         params: { after_transaction_id: eligible.last },
+         headers: api_headers(@api_key), as: :json
+    last = JSON.parse(response.body)
+    assert_equal 0, last["queued_count"]
+    assert_equal false, last["truncated"]
+    assert_nil last["next_after_transaction_id"]
+  ensure
+    stub_const.send(:remove_const, :MAX_TRANSACTION_IDS)
+    stub_const.const_set(:MAX_TRANSACTION_IDS, 1_000)
+  end
+
+  test "returns 422 for an invalid after_transaction_id or one combined with transaction_ids" do
+    [
+      { after_transaction_id: "not-a-uuid" },
+      { after_transaction_id: [ @uncategorized.id ] },
+      { after_transaction_id: @uncategorized.id, transaction_ids: [ @uncategorized.id ] }
+    ].each do |params|
+      assert_no_enqueued_jobs(only: AutoCategorizeJob) do
+        post auto_categorize_api_v1_transactions_url, params: params, headers: api_headers(@api_key), as: :json
+      end
+
+      assert_response :unprocessable_entity, "expected 422 for #{params.inspect}"
+    end
+  end
+
+  test "503 message names the retry set" do
+    AutoCategorizeJob.stubs(:perform_later).returns(false)
+
+    post auto_categorize_api_v1_transactions_url,
+         params: { transaction_ids: [ @uncategorized.id ] },
+         headers: api_headers(@api_key), as: :json
+
+    assert_response :service_unavailable
+    body = JSON.parse(response.body)
+    assert_match(/unqueued_transaction_ids/, body["message"])
+    assert_equal false, body["truncated"]
+    assert body.key?("next_after_transaction_id")
+  end
+
+  test "records a debug log entry when the queue adapter raises" do
+    AutoCategorizeJob.stubs(:perform_later).raises(Redis::CannotConnectError)
+
+    assert_difference -> { DebugLogEntry.where(category: "auto_categorization", level: "error").count }, 1 do
+      post auto_categorize_api_v1_transactions_url,
+           params: { transaction_ids: [ @uncategorized.id ] },
+           headers: api_headers(@api_key), as: :json
+    end
+
+    assert_response :service_unavailable
+    entry = DebugLogEntry.where(category: "auto_categorization").order(:created_at).last
+    assert_equal @family, entry.family
+    assert_equal [ @uncategorized.id ], entry.metadata["batch_transaction_ids"]
   end
 
   test "returns 503 when the queue adapter raises" do
@@ -218,7 +296,7 @@ class Api::V1::TransactionAutoCategorizationsControllerTest < ActionDispatch::In
   end
 
   test "treats uppercase ids as the same transaction" do
-    assert_enqueued_with(job: AutoCategorizeJob, args: [ @family, { transaction_ids: [ @uncategorized.id ] } ]) do
+    assert_enqueued_with(job: AutoCategorizeJob, args: [ @family, { transaction_ids: [ @uncategorized.id ], recheck_eligibility: true } ]) do
       post auto_categorize_api_v1_transactions_url,
            params: { transaction_ids: [ @uncategorized.id.upcase, @uncategorized.id ] },
            headers: api_headers(@api_key), as: :json
