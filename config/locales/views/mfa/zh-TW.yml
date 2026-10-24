@@ -11,7 +11,9 @@ zh-TW:
     create:
       code_already_used: 該驗證碼已被使用。請輸入驗證器應用程式中的下一個驗證碼。
       invalid_code: 驗證碼無效。請再試一次。
+      setup_failed: 啟用雙重驗證時發生錯誤,請再試一次。
     disable:
+      failure: 停用雙重驗證時發生錯誤,請再試一次。
       success: 雙重驗證已停用
     new:
       code_label: 驗證碼
