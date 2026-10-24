@@ -47,6 +47,11 @@ class PagesController < ApplicationController
     @balance_sheet = Current.family.balance_sheet
     @investment_statement = Current.family.investment_statement
     @accounts = Current.user.accessible_accounts.visible.with_attached_logo
+    @reconciliation_indicators = if Current.family.manual_reconciliation?
+      Account::ReconciliationIndicator.for_accounts(@accounts)
+    else
+      {}
+    end
 
     @dashboard_view_params = dashboard_view_params
     @dashboard_sections, @hidden_dashboard_sections = build_dashboard_sections

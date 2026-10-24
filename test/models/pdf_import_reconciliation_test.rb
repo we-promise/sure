@@ -126,7 +126,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
     @import.assign_account!(other)
 
-    assert_not on_first.reload.reconciled?, "the old account's entry is no longer evidence-backed"
+    assert_not on_first.reload.statement_reconciled?, "the old account's entry is no longer evidence-backed"
     assert_equal 1, @import.reload.rows_count, "nothing on the new account matches, so it is offered"
   end
 
@@ -231,18 +231,18 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     on_first = create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
     @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
     @import.generate_rows_from_extracted_data
-    assert on_first.reload.reconciled?
+    assert on_first.reload.statement_reconciled?
 
     @import.assign_account!(other)
 
     # Both fields matter: reconciled_at is the state, reconciled_by_statement_id
     # is the evidence, and Entry#unmark_reconciled! clears the pair.
     on_first.reload
-    assert_not on_first.reconciled?, "the account being left is released"
+    assert_not on_first.statement_reconciled?, "the account being left is released"
     assert_nil on_first.reconciled_by_statement_id, "its statement evidence is cleared too"
 
     on_other.reload
-    assert on_other.reconciled?, "another account's evidence must survive"
+    assert on_other.statement_reconciled?, "another account's evidence must survive"
     assert_equal @statement.id, on_other.reconciled_by_statement_id
   end
 
@@ -285,7 +285,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     drifted = create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
     @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
     @import.generate_rows_from_extracted_data
-    assert drifted.reload.reconciled?
+    assert drifted.reload.statement_reconciled?
     @import.update!(status: :complete)
 
     # Corrected after the fact, so the statement line no longer describes it.
@@ -294,7 +294,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     @import.revert
 
     drifted.reload
-    assert_not drifted.reconciled?, "a statement that no longer matches must stop claiming the entry"
+    assert_not drifted.statement_reconciled?, "a statement that no longer matches must stop claiming the entry"
     assert_nil drifted.reconciled_by_statement_id
     assert_equal 1, @import.reload.rows_count
     assert @import.pending?, "expected pending, got #{@import.status}"

@@ -92,6 +92,32 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert @member.family.reload.investment_contributions_as_spending?
   end
 
+  test "admin can enable manual reconciliation" do
+    patch user_url(@user), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @user.family.id, manual_reconciliation: "1" }
+      }
+    }
+
+    assert_redirected_to settings_preferences_url
+    assert @user.family.reload.manual_reconciliation?
+  end
+
+  test "non-admin cannot enable manual reconciliation" do
+    sign_in @member = users(:family_member)
+
+    patch user_url(@member), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @member.family.id, manual_reconciliation: "1" }
+      }
+    }
+
+    assert_redirected_to settings_profile_url
+    assert_not @member.family.reload.manual_reconciliation?
+  end
+
   test "admin can reset family data" do
     account = accounts(:investment)
     category = categories(:income)

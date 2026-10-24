@@ -449,6 +449,34 @@ class TransactionsController < ApplicationController
     redirect_back_or_to transactions_path
   end
 
+  # Advances the manual reconciled_status through unreconciled -> cleared ->
+  # reconciled -> unreconciled. Scoped to manual (unsynced) accounts — synced
+  # accounts already get duplicate-matching (Account::ProviderImportAdapter)
+  # and statement-level reconciliation (AccountStatement).
+  def reconcile
+    return head :not_found unless Current.family.manual_reconciliation?
+
+    transaction = accessible_transactions.includes(entry: :account).find(params[:id])
+    entry = transaction.entry
+
+    return unless require_account_permission!(entry.account)
+
+    unless entry.account.manual?
+      flash[:alert] = t("transactions.reconcile.not_manual_account")
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    entry.advance_reconciled_status!
+    flash[:notice] = t("transactions.reconcile.success", status: t("transactions.reconcile.statuses.#{entry.reconciled_status}"))
+
+    redirect_back_or_to transactions_path
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error("Failed to update reconciled_status for transaction #{params[:id]}: #{e.message}")
+    flash[:alert] = t("transactions.reconcile.failure")
+    redirect_back_or_to transactions_path
+  end
+
   def mark_as_recurring
     transaction = accessible_transactions.includes(entry: :account).find(params[:id])
 
@@ -742,7 +770,7 @@ class TransactionsController < ApplicationController
                 :amount_operator, :active_accounts_only,
                 accounts: [], account_ids: [],
                 categories: [], merchants: [], types: [], tags: [], status: [], ai_status: [],
-                attachment_status: []
+                attachment_status: [], reconcile_status: []
               )
               .to_h
               .compact_blank

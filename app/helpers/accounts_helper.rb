@@ -56,7 +56,9 @@ module AccountsHelper
       end
 
     [
-      family.build_cache_key("account_sidebar_tabs_v5", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v6", invalidate_on_data_updates: true),
+      family.entries_cache_version,
+      family.manual_reconciliation?,
       Current.user&.id,
       shares_version,
       active_tab,

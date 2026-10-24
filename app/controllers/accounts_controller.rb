@@ -16,6 +16,11 @@ class AccountsController < ApplicationController
           .with_attached_logo
           .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
+    @reconciliation_indicators = if Current.family.manual_reconciliation?
+      Account::ReconciliationIndicator.for_accounts(@manual_accounts)
+    else
+      {}
+    end
     @financekit_accounts = Current.family.accounts
       .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
       .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
@@ -91,6 +96,9 @@ class AccountsController < ApplicationController
     # date beside a table shaded against another.
     @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
+    @reconciliation_indicator = if Current.family.manual_reconciliation?
+      Account::ReconciliationIndicator.for_accounts([ @account ])[@account.id]
+    end
     @q = params.fetch(:q, {}).permit(:search, :uncategorized, status: [])
     entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?

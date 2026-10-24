@@ -1567,6 +1567,80 @@ end
                  "Expected transfer counterparty accounts to be preloaded"
   end
 
+  test "reconcile is unavailable when manual reconciliation is disabled" do
+    manual_account = accounts(:depository)
+    entry = create_transaction(account: manual_account, amount: 50)
+
+    patch reconcile_transaction_path(entry.transaction)
+
+    assert_response :not_found
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile cycles through unreconciled -> cleared -> reconciled -> unreconciled on a manual account" do
+    @user.family.update!(manual_reconciliation: true)
+    manual_account = accounts(:depository)
+    assert manual_account.manual?, "fixture precondition: depository account must be manual"
+
+    entry = create_transaction(account: manual_account, amount: 50)
+    assert_equal "unreconciled", entry.reconciled_status
+
+    patch reconcile_transaction_path(entry.transaction)
+    assert_redirected_to transactions_path
+    assert_equal "cleared", entry.reload.reconciled_status
+    assert_equal "Marked as Cleared", flash[:notice]
+
+    patch reconcile_transaction_path(entry.transaction)
+    assert_equal "reconciled", entry.reload.reconciled_status
+
+    patch reconcile_transaction_path(entry.transaction)
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile is rejected for accounts with a live bank sync connection" do
+    @user.family.update!(manual_reconciliation: true)
+    linked_account = accounts(:connected)
+    assert_not linked_account.manual?, "fixture precondition: connected account must not be manual"
+
+    entry = create_transaction(account: linked_account, amount: 50)
+
+    patch reconcile_transaction_path(entry.transaction)
+
+    assert_redirected_to transactions_path
+    assert_equal "Reconciliation status only applies to manually-entered accounts (no bank sync)", flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  # The badge used to render for any manual account, so a read_only share got a
+  # control the action refuses -- the click redirected back with an alert and
+  # the status never moved. Reconciling needs write access, not annotate access.
+  test "reconcile is rejected on a manual account shared with read-only access" do
+    @user.family.update!(manual_reconciliation: true)
+    read_only_account = accounts(:credit_card)
+    assert read_only_account.manual?, "fixture precondition: credit_card account must be manual"
+
+    entry = create_transaction(account: read_only_account, amount: 75)
+
+    sign_in users(:family_member)
+    patch reconcile_transaction_path(entry.transaction)
+
+    assert_redirected_to account_path(read_only_account)
+    assert_equal "You don't have permission to manage this account", flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+  end
+
+  test "reconcile is not accessible for another family's transaction" do
+    @user.family.update!(manual_reconciliation: true)
+    other_family = families(:empty)
+    other_account = other_family.accounts.create!(name: "Other family manual account", balance: 0, currency: "USD", accountable: Depository.new)
+    other_entry = create_transaction(account: other_account, amount: 25)
+
+    patch reconcile_transaction_path(other_entry.transaction)
+
+    assert_response :not_found
+    assert_equal "unreconciled", other_entry.reload.reconciled_status
+  end
+
   test "index caches uncategorized_count and projected_recurring across requests" do
     # Test environment uses null_store; swap in a memory store so the cache
     # actually persists between the two requests below.

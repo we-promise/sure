@@ -195,6 +195,10 @@ en:
         date_format: Date format
         general_subtitle: Configure your preferences
         general_title: General
+        transactions_title: Transactions
+        transactions_subtitle: Configure how transactions behave
+        manual_reconciliation: Manual reconciliation
+        manual_reconciliation_hint: Show reconcile controls on manually-entered accounts. Accounts with a bank sync use statement reconciliation instead.
         default_period: Default Period
         default_account_order: Default Account Order
         default_account_order_hint: With Manual, drag accounts in the sidebar to set their order.
