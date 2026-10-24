@@ -455,13 +455,26 @@ class Account::ProviderImportAdapter
           # Security::Resolver returns a different security instance for the same ticker)
           # Scope by account_provider_id to avoid cross-provider overwrites
           # Skip if ticker is blank to avoid matching NULL tickers
+          # External ids are unique per account, so a same-day row with an id of
+          # its own is another of the provider's positions, not this one under
+          # another security: only a row stored without an id (nil, or blank as
+          # the branch below stores a blank one) can match.
+          # The same ticker on another exchange can be a different company, so a
+          # known exchange has to agree with this one's, the same listing coming
+          # before one stored without an exchange. A row matches only when no
+          # other candidate is as good a match: two rows on the same exchange,
+          # or two without one, leave the holding unmatched.
           unless holding || security.ticker.blank?
             scope = account.holdings
               .joins("INNER JOIN securities AS ps ON ps.id = holdings.provider_security_id")
-              .where(date: date, currency: currency)
+              .where(date: date, currency: currency, external_id: [ nil, "" ])
               .where("ps.ticker = ?", security.ticker)
+            venues = Security.exchange_operating_mic_lookup_values(security.exchange_operating_mic)
+            scope = scope.where("COALESCE(ps.exchange_operating_mic, '') = '' OR UPPER(ps.exchange_operating_mic) IN (?)", venues) if venues.any?
             scope = scope.where(account_provider_id: account_provider_id) if account_provider_id.present?
-            holding = scope.first
+            first, second = scope.select("holdings.*, COALESCE(ps.exchange_operating_mic, '') AS provider_mic")
+                                 .order(Arel.sql("COALESCE(ps.exchange_operating_mic, '') = ''"), :id).limit(2).to_a
+            holding = first if first && (second.nil? || (venues.any? && first.provider_mic.present? && second.provider_mic.blank?))
           end
 
           # Fallback path 2: match by (security, date, currency) — and when provided,
