@@ -5,7 +5,10 @@ class BalanceSheet::AccountGroup
 
   attr_reader :name, :color, :accountable_type, :accounts
 
-  def initialize(name:, color:, accountable_type:, accounts:, classification_group:)
+  # accountable_type is nil for a group formed by another dimension than the
+  # account type (see AccountGrouping); such groups pass their own key.
+  def initialize(name:, color:, accountable_type:, accounts:, classification_group:, key: nil)
+    @key = key
     @name = name
     @color = color
     @accountable_type = accountable_type
@@ -30,13 +33,24 @@ class BalanceSheet::AccountGroup
   end
 
   def key
-    accountable_type.to_s.underscore
+    @key || accountable_type.to_s.underscore
+  end
+
+  # Whether this group holds exactly one account type, so type-specific
+  # extras (sparkline, "new account" link) apply.
+  def type_group?
+    accountable_type.present?
   end
 
   # Counts the same accounts as the classification total and net worth, so the
   # group weights add up and the sidebar sparkline matches this figure.
   def total
     BalanceSheet::ClassificationGroup.counted_accounts(accounts).sum(&:converted_balance)
+  end
+
+  # Total of all assets or all debts this group belongs to.
+  def classification_total
+    classification_group.total
   end
 
   def weight
@@ -47,6 +61,28 @@ class BalanceSheet::AccountGroup
 
   def syncing?
     accounts.any?(&:syncing?)
+  end
+
+  # Color for an account row: the group color in a type group, otherwise the
+  # account's own type color, so an account looks the same in every grouping.
+  def color_for(account)
+    type_group? ? color : account.accountable.color
+  end
+
+  # Splits the group's accounts by a second dimension (see AccountGrouping).
+  # Every group shows the level, even when all its accounts share one value,
+  # so the list reads the same in every group. Unknown dimensions, and
+  # dimensions this group's account type does not offer, return an empty
+  # array. So does the account type inside a type group (e.g. the type
+  # fallback of another first level): its only subgroup would repeat the
+  # group name.
+  def subgroups(dimension, user:)
+    return [] unless AccountGrouping.valid_dimension?(dimension)
+    return [] if type_group? && (dimension.to_s == AccountGrouping::DEFAULT_PRIMARY || !AccountGrouping.applies_to?(dimension, accountable_type))
+
+    AccountGrouping.new(dimension, user: user).group(accounts).map do |group|
+      BalanceSheet::AccountSubgroup.new(key: group.key, name: group.name, accounts: group.accounts, account_group: self)
+    end
   end
 
   # "asset" or "liability"

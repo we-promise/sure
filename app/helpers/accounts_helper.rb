@@ -72,7 +72,78 @@ module AccountsHelper
       # order, must re-render the sidebar right away rather than after the
       # 12h expiry.
       Current.user&.default_account_order,
-      Current.user&.account_order&.manual? ? Digest::SHA256.hexdigest(Current.user.manual_account_order.to_json) : nil
+      Current.user&.account_order&.manual? ? Digest::SHA256.hexdigest(Current.user.manual_account_order.to_json) : nil,
+      account_grouping_primary(:sidebar),
+      account_grouping_dimension(:sidebar)
     ]
+  end
+
+  # The first grouping dimension for an account list view (default: account
+  # type). Preview-only for now.
+  def account_grouping_primary(view)
+    return AccountGrouping::DEFAULT_PRIMARY unless Current.user&.preview_features_enabled?
+
+    Current.user.account_grouping_primary_for(view)
+  end
+
+  # First-level account groups of a balance sheet or one of its
+  # classification groups, as chosen for the given view.
+  def account_groups_for(source, view:)
+    source.account_groups(by: account_grouping_primary(view), user: Current.user)
+  end
+
+  # Sections of the sidebar's "All" tab as [classification group or nil,
+  # account groups]. Grouped by account type, every group belongs to one side,
+  # so the tab stays one flat list. Grouped by another field, the same value
+  # (e.g. "Not set" or one owner) forms a group among assets and among debts,
+  # so each side gets its own section instead of two rows with one name.
+  def account_group_sections_for(balance_sheet, view:)
+    if account_grouping_primary(view) == AccountGrouping::DEFAULT_PRIMARY
+      return [ [ nil, account_groups_for(balance_sheet, view: view) ] ]
+    end
+
+    balance_sheet.classification_groups.filter_map do |classification_group|
+      groups = account_groups_for(classification_group, view: view)
+      [ classification_group, groups ] if groups.any?
+    end
+  end
+
+  # The second grouping dimension for an account list view, or nil when the
+  # view groups by account type only. Preview-only for now. Reads the flag
+  # from Current.user so the helper also works outside a controller render.
+  def account_grouping_dimension(view)
+    return nil unless Current.user&.preview_features_enabled?
+
+    Current.user&.account_grouping_for(view)
+  end
+
+  # Accounts can be dragged into a manual order only where every group is
+  # one account type, because the order is stored per type; with a second
+  # level, each subgroup is reordered within its type. Other first levels
+  # still show that order but offer no sort mode.
+  def account_sidebar_sortable?
+    Current.user&.account_order&.manual? &&
+      account_grouping_primary(:sidebar) == AccountGrouping::DEFAULT_PRIMARY
+  end
+
+  # Subgroups to render inside a first-level group for the given view, or
+  # an empty array when the view has no second level (see AccountGrouping).
+  def account_subgroups(account_group, view:)
+    dimension = account_grouping_dimension(view)
+    return [] unless dimension
+
+    account_group.subgroups(dimension, user: Current.user)
+  end
+
+  # Values already used for the custom group field on accounts the user can
+  # see, offered as suggestions in the account form.
+  def account_custom_group_suggestions
+    return [] unless Current.user
+
+    Current.user.accessible_accounts
+      .where.not(custom_group: nil)
+      .distinct
+      .order(:custom_group)
+      .pluck(:custom_group)
   end
 end
