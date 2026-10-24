@@ -225,7 +225,7 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
             context,
             icon: Icons.error_outline,
             title: l.budgetsLoadFailed,
-            body: provider.errorMessage,
+            body: null,
             onRetry: () => _load(forceRefresh: true),
           ),
         ];
