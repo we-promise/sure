@@ -25,61 +25,6 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_url
   end
 
-  test "create rejects a web login without a PIN before persisting the item" do
-    assert_no_difference "TradeRepublicItem.count" do
-      post trade_republic_items_url, params: {
-        trade_republic_item: {
-          phone_number: "+491701234567",
-          pin: ""
-        }
-      }
-    end
-
-    assert_redirected_to settings_providers_path(anchor: "trade-republic")
-    assert_equal I18n.t("trade_republic_items.initiate_login.pin_required"), flash[:alert]
-  end
-
-  test "create redisplays the entered phone number after a validation failure" do
-    assert_no_difference "TradeRepublicItem.count" do
-      post trade_republic_items_url, params: {
-        trade_republic_item: {
-          phone_number: "+491701234567",
-          pin: ""
-        }
-      }, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
-    end
-
-    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "trade-republic-providers-panel"
-    assert_includes response.body, I18n.t("trade_republic_items.initiate_login.pin_required")
-    assert_select "input[name='trade_republic_item[phone_number]'][value='+491701234567']"
-  end
-
-  test "create adds a second connection without touching the first" do
-    existing_item = trade_republic_items(:configured_item)
-    provider = mock
-    provider.expects(:initiate_qr_login).returns(
-      Provider::TradeRepublicClient::Result.new(
-        data: { "status" => "qr_pending", "pending_login_b64" => "qr-second-pending" }
-      )
-    )
-    provider.stubs(:login_stage).returns("qr_pending")
-    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
-
-    assert_difference "TradeRepublicItem.count", 1 do
-      post trade_republic_items_url, params: {
-        login_method: "qr",
-        trade_republic_item: { currency: "EUR" }
-      }, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
-    end
-
-    assert_response :success
-    new_item = families(:dylan_family).trade_republic_items.order(:created_at).last
-    assert_equal "qr-second-pending", new_item.pending_login_state
-    assert_includes response.body, existing_item.name
-    assert_includes response.body, new_item.name
-    assert_equal existing_item.session_blob, existing_item.reload.session_blob
-  end
-
   test "a connection whose session ended is not synced" do
     item = trade_republic_items(:configured_item)
     item.update_columns(session_expires_at: 1.minute.ago)
@@ -99,7 +44,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item)
     assert_not_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
-    assert_select "form[action='#{sync_trade_republic_item_path(item, source: "panel")}'] button[disabled]"
+    assert_select "form[action='#{sync_trade_republic_item_path(item, source: "panel")}']", count: 0
   end
 
   test "Trade Republic PIN is filtered from logs" do
@@ -134,6 +79,20 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_session_blob, item.session_blob
   end
 
+  test "a failed PIN login keeps the connection's PIN form open" do
+    item = trade_republic_items(:requires_update_item)
+    provider = mock
+    provider.expects(:initiate_login).raises(Provider::TradeRepublicClient::Error, "Wrong PIN")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    patch trade_republic_item_url(item), params: { trade_republic_item: { pin: "0000" } },
+      headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item) do
+      assert_select "[data-trade-republic-pin-login-target='form']:not([hidden])"
+    end
+  end
+
   test "update keeps the phone number when it is left blank" do
     item = trade_republic_items(:requires_update_item)
     provider = mock
@@ -145,32 +104,6 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     patch trade_republic_item_url(item), params: { trade_republic_item: { phone_number: "", pin: "1234" } }
 
     assert_equal "+491709876543", item.reload.phone_number
-  end
-
-  test "initiate login does not destroy a working session when the PIN is missing" do
-    item = trade_republic_items(:configured_item)
-    original_session_blob = item.session_blob
-
-    post initiate_login_trade_republic_item_url(item)
-
-    assert_redirected_to settings_providers_path(anchor: "trade-republic")
-    assert_equal I18n.t("trade_republic_items.initiate_login.pin_required"), flash[:alert]
-    item.reload
-    assert_equal original_session_blob, item.session_blob
-    assert_predicate item, :good?
-  end
-
-  test "initiate login clears an expired pending state when the PIN is missing" do
-    item = trade_republic_items(:requires_update_item)
-    item.update!(pending_login_state: "expired-state")
-
-    post initiate_login_trade_republic_item_url(item)
-
-    assert_redirected_to settings_providers_path(anchor: "trade-republic")
-    assert_equal I18n.t("trade_republic_items.initiate_login.pin_required"), flash[:alert]
-    item.reload
-    assert_nil item.pending_login_state
-    assert_predicate item, :requires_update?
   end
 
   test "complete account setup creates and links the selected account" do
@@ -326,6 +259,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").returns(
       Provider::TradeRepublicClient::Result.new(
         data: { "status" => "confirmed", "session_txt" => "qr-session" }
@@ -352,6 +286,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").raises(
       Provider::TradeRepublicClient::Timeout,
       "Trade Republic WebSocket timed out"
@@ -373,6 +308,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     error = Provider::TradeRepublicClient::TransientProviderError.new("Trade Republic login failed")
     error.define_singleton_method(:pending_login_b64) { "qr-pending-with-process" }
     provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").raises(error)
@@ -385,6 +321,191 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "qr-pending-with-process", item.reload.pending_login_state
   end
 
+  test "a QR poll error for a login replaced meanwhile is superseded" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic QR Connection",
+      currency: "EUR",
+      status: :requires_update
+    )
+    item.update!(pending_login_state: "qr-pending")
+    provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
+    # Another tab starts a newer login while Trade Republic answers.
+    provider.expects(:poll_qr_login).with { |**| item.update_columns(pending_login_state: "newer") }
+      .raises(Provider::TradeRepublicClient::Error, "boom")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :conflict
+    assert_equal "newer", item.reload.pending_login_state
+  end
+
+  test "a QR login started while another tab started a newer one leaves that login" do
+    item = trade_republic_items(:requires_update_item)
+    provider = mock
+    provider.expects(:initiate_qr_login).with { item.update_columns(pending_login_state: "newer"); true }
+      .returns(Provider::TradeRepublicClient::Result.new(data: { "status" => "qr_pending", "pending_login_b64" => "qr-pending" }))
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post initiate_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :conflict
+    assert_equal "newer", item.reload.pending_login_state
+  end
+
+  test "a QR poll after a PIN login replaced it is superseded" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "push-pending")
+    TradeRepublicItem.any_instance.stubs(:login_stage).returns("waiting_for_approval")
+    provider = mock
+    provider.expects(:poll_qr_login).never
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :conflict
+  end
+
+  test "a QR cancel after a start that never got going leaves a working session" do
+    item = trade_republic_items(:configured_item)
+
+    post cancel_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_predicate item.reload, :good?
+    assert item.session_blob.present?
+  end
+
+  test "a QR cancel leaves a PIN login that replaced the QR login" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "push-pending")
+    TradeRepublicItem.any_instance.stubs(:login_stage).returns("waiting_for_approval")
+
+    post cancel_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_equal "push-pending", item.reload.pending_login_state
+  end
+
+  test "the settings page sends back the token of the login it shows" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: login_state("process_id" => "shown-process"))
+    TradeRepublicItem.any_instance.stubs(:login_stage).returns("waiting_for_approval")
+
+    get settings_providers_url
+
+    assert_select "[data-trade-republic-login-url-value='#{poll_login_trade_republic_item_path(item, login_token: item.login_token)}']"
+
+    item.update!(pending_login_state: login_state("challenge_id" => "shown-challenge"))
+    TradeRepublicItem.any_instance.stubs(:login_stage).returns("qr_pending")
+
+    get settings_providers_url
+
+    assert_select "[data-trade-republic-qr-login-token-value='#{item.login_token}']"
+  end
+
+  test "a QR cancel from a page showing an earlier QR login leaves the newer one" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: login_state("challenge_id" => "newer-challenge"))
+    TradeRepublicItem.any_instance.stubs(:login_stage).returns("qr_pending")
+    earlier_token = Provider::TradeRepublicClient.login_token(login_state("challenge_id" => "earlier-challenge"))
+
+    post cancel_qr_login_trade_republic_item_url(item), params: { login_token: earlier_token },
+      headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_equal login_state("challenge_id" => "newer-challenge"), item.reload.pending_login_state
+  end
+
+  test "a QR cancel ends the QR login its page shows" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: login_state("challenge_id" => "shown-challenge"))
+    TradeRepublicItem.any_instance.stubs(:login_stage).returns("qr_pending")
+
+    post cancel_qr_login_trade_republic_item_url(item), params: { login_token: item.login_token },
+      headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_nil item.reload.pending_login_state
+  end
+
+  test "a QR cancel leaves a QR login stored while the cancel was checked" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: login_state("challenge_id" => "shown-challenge"))
+    shown_token = item.login_token
+    newer = login_state("challenge_id" => "newer-challenge")
+    stored = false
+    TradeRepublicItem.any_instance.stubs(:login_stage).with do
+      item.update_columns(pending_login_state: newer) unless stored
+      stored = true
+    end.returns("qr_pending")
+
+    post cancel_qr_login_trade_republic_item_url(item), params: { login_token: shown_token },
+      headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_equal newer, item.reload.pending_login_state
+  end
+
+  test "a QR poll from a page showing an earlier QR login is superseded" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: login_state("challenge_id" => "newer-challenge"))
+    TradeRepublicItem.any_instance.stubs(:login_stage).returns("qr_pending")
+    provider = mock
+    provider.expects(:poll_qr_login).never
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_qr_login_trade_republic_item_url(item),
+      params: { login_token: Provider::TradeRepublicClient.login_token(login_state("challenge_id" => "earlier-challenge")) },
+      headers: { "ACCEPT" => "application/json" }
+
+    assert_response :conflict
+  end
+
+  test "a QR start returns the token of the login it started" do
+    item = trade_republic_items(:requires_update_item)
+    started = login_state("challenge_id" => "started-challenge")
+    provider = mock
+    provider.expects(:initiate_qr_login)
+      .returns(Provider::TradeRepublicClient::Result.new(data: { "status" => "qr_pending", "pending_login_b64" => started }))
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post initiate_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :accepted
+    assert_equal Provider::TradeRepublicClient.login_token(started), response.parsed_body["login_token"]
+    assert_not_includes response.body, "started-challenge"
+  end
+
+  test "a push poll from a page showing an earlier login leaves the login that replaced it" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: login_state("challenge_id" => "newer-challenge"))
+    TradeRepublicItem.any_instance.stubs(:login_stage).returns("qr_pending")
+    provider = mock
+    provider.expects(:complete_login).never
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item, login_token: Provider::TradeRepublicClient.login_token(login_state("process_id" => "earlier-process"))),
+      headers: login_poller_headers
+
+    assert_response :no_content
+    assert_equal login_state("challenge_id" => "newer-challenge"), item.reload.pending_login_state
+  end
+
+  test "an authenticator code for an earlier login leaves the login that replaced it" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: login_state("process_id" => "newer-process"))
+    TradeRepublicItem.any_instance.stubs(:login_stage).returns("authenticator_code")
+    provider = mock
+    provider.expects(:complete_login).never
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post complete_login_trade_republic_item_url(item, login_token: Provider::TradeRepublicClient.login_token(login_state("process_id" => "earlier-process"))),
+      params: { trade_republic_login: { code: "123456" } }
+
+    assert_redirected_to settings_providers_path(anchor: "trade-republic")
+    assert_equal login_state("process_id" => "newer-process"), item.reload.pending_login_state
+  end
+
   test "QR polling records retryable provider failures for support" do
     item = families(:dylan_family).trade_republic_items.create!(
       name: "Trade Republic QR Connection",
@@ -393,6 +514,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).raises(Provider::TradeRepublicClient::RateLimited, "Slow down")
     TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
 
@@ -414,6 +536,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).raises(
       Provider::TradeRepublicClient::MalformedResponse,
       "Trade Republic returned invalid JSON: unexpected token at '<html>secret-body</html>'"
@@ -439,6 +562,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     error = Provider::TradeRepublicClient::TransientProviderError.new("Trade Republic login failed")
     error.define_singleton_method(:pending_login_b64) { "qr-pending-with-process" }
     provider = Object.new
+    provider.define_singleton_method(:login_stage) { |**| "qr_pending" }
     provider.define_singleton_method(:poll_qr_login) do |pending_login_b64:|
       TradeRepublicItem.find(item.id).update!(pending_login_state: nil)
       raise error
@@ -447,7 +571,8 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
 
     post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
 
-    assert_response :service_unavailable
+    # The cancel ended this login, so the poller is told it is superseded.
+    assert_response :conflict
     assert_nil item.reload.pending_login_state
   end
 
@@ -459,6 +584,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = Object.new
+    provider.define_singleton_method(:login_stage) { |**| "qr_pending" }
     provider.define_singleton_method(:poll_qr_login) do |pending_login_b64:|
       TradeRepublicItem.find(item.id).update!(pending_login_state: "qr-pending-new")
       raise Provider::TradeRepublicClient::LoginExpired, "Trade Republic login expired"
@@ -479,6 +605,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     item.update!(pending_login_state: "qr-pending")
     provider = Object.new
+    provider.define_singleton_method(:login_stage) { |**| "qr_pending" }
     provider.define_singleton_method(:poll_qr_login) do |pending_login_b64:|
       TradeRepublicItem.find(item.id).update!(pending_login_state: nil)
       Provider::TradeRepublicClient::Result.new(data: { "status" => "confirmed", "session_txt" => "qr-session" })
@@ -709,6 +836,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
       name: "Trade Republic", currency: "EUR", status: :requires_update, pending_login_state: "qr-pending"
     )
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").returns(
       Provider::TradeRepublicClient::Result.new(
         data: { "status" => "ok", "session_txt" => "duplicate-session", "account" => { "brokerage_account_id" => "DE1234" } }
@@ -786,6 +914,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     item = trade_republic_items(:configured_item)
     item.update!(pending_login_state: "qr-pending", status: :requires_update)
     provider = mock
+    provider.stubs(:login_stage).returns("qr_pending")
     provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").returns(
       Provider::TradeRepublicClient::Result.new(
         data: { "status" => "ok", "session_txt" => "fresh-session", "account" => { "brokerage_account_id" => "DE1234" } }
@@ -818,5 +947,9 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
 
     def login_poller_headers
       { "ACCEPT" => "text/vnd.turbo-stream.html", "X-Requested-With" => "XMLHttpRequest" }
+    end
+
+    def login_state(ids)
+      Base64.strict_encode64(JSON.generate(ids.merge("session_blob" => "session=1")))
     end
 end

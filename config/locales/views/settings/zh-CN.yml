@@ -519,6 +519,65 @@ zh-CN:
         accounts_tab: 账户
         status_configured_suffix: 标签页以管理已发现的账户。
         not_configured: 未配置。
+      trade_republic_panel:
+        encryption_warning:
+          title: 未配置加密
+          message: 在配置 Active Record Encryption 之前，无法安全地存储 Trade Republic 凭据和会话数据。
+        steps:
+          step_1: "在“添加连接”中选择 QR 登录或 PIN 登录。"
+          step_2: "QR 登录：使用手机相机扫描二维码，然后在 Trade Republic 应用中批准登录。"
+          step_3: "PIN 登录：输入您在 Trade Republic 应用中使用的电话号码和 PIN 或密码，然后输入身份验证器应用中的验证码，并在 Trade Republic 应用中批准登录。"
+        phone_number_label: 电话号码
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: 留空以保留当前电话号码
+        pin_label: PIN 或密码
+        pin_placeholder_new: 您的 Trade Republic PIN 或密码
+        currency_label: 账户货币
+        connect: 登录
+        complete_login: 继续
+        authenticator_code_label: 身份验证器验证码（如有提示）
+        authenticator_code_placeholder: 6 位验证码
+        push_login_notice: 请立即在 Trade Republic 应用中批准登录。Sure 会在后台自动检查，您也可以自行检查状态。
+        check_login_status: 立即检查状态
+        authenticator_code_notice: 请输入身份验证器应用中的验证码。
+        approval_pending: 登录已开始。请在 Trade Republic 应用中批准；Sure 正在自动检查。
+        awaiting_confirmation: 正在等待在 Trade Republic 应用中批准。
+        awaiting_authenticator_code: 需要身份验证器验证码。
+        login_expired: 批准请求已过期。
+        connection_success:
+          title: Trade Republic 已成功连接
+          message: 您的 Trade Republic 连接已就绪。
+          description: Sure 正在后台同步您的 Trade Republic 数据。
+          close: 完成
+        qr_login: QR 登录
+        qr_cancel: 取消 QR 登录
+        qr_loading: 正在准备二维码…
+        qr_instruction: 使用手机相机扫描二维码，然后在 Trade Republic 应用中批准登录。
+        qr_success: 登录已批准。Sure 正在刷新提供商页面。
+        qr_error: 无法启动 QR 登录。请重试。
+        requires_update: 请重新登录以恢复同步。
+        session_expires_in: 登录将在 %{time}后过期（%{at}）。
+        pin_login: PIN 登录
+        pin_cancel: "取消 PIN 登录"
+        remove: 移除
+        new_connection: 新建连接
+        cancel_login: 取消
+        add_connection: "添加连接"
+        pin_login_hint: "输入您在 Trade Republic 应用中使用的电话号码和 PIN 或密码。"
+        sync: 同步
+        syncing: 正在同步...
+        disconnect_confirm: 断开 Trade Republic？您已同步的账户将变为手动账户。
+        disconnect_confirm_with_identifier: 断开尾号为 %{last4} 的 Trade Republic 连接？您已同步的账户将变为手动账户。
+        identifier_phone: 电话
+        identifier_account: 账户
+        status_configured_prefix: 已连接。请访问
+        accounts_tab: 账户
+        setup_accounts: 设置账户
+        accounts_discovered:
+          one: 已发现 1 个 Trade Republic 账户。
+          other: "已发现 %{count} 个 Trade Republic 账户。"
+        status_configured_suffix: 标签页以管理已发现的账户。
+        not_configured: 未配置。
       akahu_panel:
         step_1_html: 前往 %{link} 并创建个人应用。
         step_2: 复制 App Token 和 User Token。

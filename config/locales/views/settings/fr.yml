@@ -578,7 +578,6 @@ fr:
         awaiting_confirmation: L'approbation dans l'application Trade Republic est en attente.
         check_login_status: Vérifier maintenant
         complete_login: Continuer
-        confirm_login: Vérifier la connexion
         connect: Se connecter
         connection_success:
           close: Terminé
@@ -586,7 +585,6 @@ fr:
           message: Votre connexion Trade Republic est prête.
           title: Trade Republic connecté avec succès
         currency_label: Devise du compte
-        disconnect: Déconnecter Trade Republic
         disconnect_confirm: Déconnecter Trade Republic ? Vos comptes synchronisés deviendront des comptes manuels.
         disconnect_confirm_with_identifier: "Déconnecter la connexion Trade Republic se terminant par %{last4} ? Vos comptes synchronisés deviendront des comptes manuels."
         identifier_phone: Téléphone
@@ -600,31 +598,32 @@ fr:
         phone_number_placeholder_existing: Laissez vide pour conserver le numéro actuel
         phone_number_placeholder_new: "+33 6 12 34 56 78"
         pin_label: Code PIN ou mot de passe
-        pin_placeholder_existing: Laissez vide pour conserver le code PIN ou le mot de passe actuel
         pin_placeholder_new: Le code PIN ou le mot de passe de votre application Trade Republic
         push_login_notice: Approuvez la connexion dans votre application Trade Republic dès maintenant. Sure vérifie automatiquement en arrière-plan. Vous pouvez aussi vérifier l'état vous-même.
-        qr_back_to_credentials: Revenir au numéro de téléphone et au code PIN ou mot de passe
         qr_cancel: Annuler la connexion par QR code
         qr_error: La connexion par QR code n'a pas pu être lancée. Veuillez réessayer.
         requires_update: "Reconnectez-vous pour reprendre la synchronisation."
         session_expires_in: "La connexion expire dans %{time} (%{at})."
+        pin_login: "Connexion PIN"
+        pin_cancel: "Annuler la connexion PIN"
+        remove: "Supprimer"
+        new_connection: "Nouvelle connexion"
+        cancel_login: "Annuler"
         qr_instruction: Scannez le QR code avec l'appareil photo de votre téléphone, puis approuvez la connexion dans l'application Trade Republic.
         qr_loading: Préparation du QR code …
-        qr_login: Se connecter avec un QR code
+        qr_login: Connexion QR
         qr_success: Connexion approuvée. Sure actualise la page du fournisseur.
-        restart_login: Relancer la connexion
-        add_account: "Ajouter une autre connexion"
-        save_configuration: Enregistrer et lancer la connexion
+        add_connection: "Ajouter une connexion"
+        pin_login_hint: "Saisissez le numéro de téléphone et le code PIN ou le mot de passe de l'application Trade Republic."
         setup_accounts: Configurer les comptes
         status_configured_prefix: Connecté. Ouvrez l'onglet
         status_configured_suffix: pour gérer les comptes détectés.
         steps:
-          step_1: Saisissez le numéro de téléphone et le code PIN ou le mot de passe que vous utilisez pour l'application Trade Republic, puis enregistrez.
-          step_2: Saisissez le code de votre application d'authentification lorsqu'il vous est demandé.
-          step_3: Approuvez la connexion dans votre application Trade Republic lorsque vous y êtes invité.
+          step_1: "Sous Ajouter une connexion, choisissez Connexion QR ou Connexion PIN."
+          step_2: "Connexion QR : scannez le QR code avec l'appareil photo de votre téléphone, puis approuvez la connexion dans l'application Trade Republic."
+          step_3: "Connexion PIN : saisissez le numéro de téléphone et le code PIN ou le mot de passe de l'application Trade Republic, puis le code de votre application d'authentification, et approuvez la connexion dans l'application Trade Republic."
         sync: Synchroniser
         syncing: "Synchronisation..."
-        update_configuration: Mettre à jour la configuration
       trading212_panel:
         accounts_tab: Comptes
         api_key_label: Identifiant d'API

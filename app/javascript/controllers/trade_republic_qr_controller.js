@@ -7,6 +7,7 @@ export default class extends Controller {
     pollUrl: String,
     cancelUrl: String,
     returnUrl: String,
+    loginToken: String,
     autoPoll: { type: Boolean, default: false },
     loadingText: String,
     instructionText: String,
@@ -30,6 +31,7 @@ export default class extends Controller {
       this.panelTarget.hidden = false;
       this.setButtonLabel(this.cancelTextValue);
       this.statusTarget.textContent = this.instructionTextValue;
+      this.dispatch("started");
       this.poll();
     }
   }
@@ -50,27 +52,34 @@ export default class extends Controller {
     this.startedAt = Date.now();
     this.panelTarget.hidden = false;
     this.setButtonLabel(this.cancelTextValue);
+    this.dispatch("started");
     this.codeTarget.replaceChildren();
     this.statusTarget.textContent = this.loadingTextValue;
+    // Until the server answers, a cancel ends whichever QR login is current.
+    this.loginTokenValue = "";
 
     let initiation = null;
     try {
       // A cancel waits for this request: sent earlier, it would be overtaken
-      // by the login this request stores.
+      // by the login this request stores. It also needs that login's token,
+      // so a login another tab stores meanwhile stays.
       initiation = fetch(this.initiateUrlValue, {
         method: "POST",
         headers: { ...this.headers(), Accept: "text/vnd.turbo-stream.html" },
         credentials: "same-origin",
         body: this.body(),
+      }).then(async (response) => {
+        const result = response.ok ? await response.json() : null;
+        this.loginTokenValue = result?.login_token || "";
+        return { response, result };
       });
       this.initiation = initiation;
-      const response = await initiation;
+      const { response, result } = await initiation;
       if (this.stopped) return;
+      if (response.status === 409) return this.showCurrentLogin();
       if (!response.ok)
         throw new Error(`QR login initiation failed: ${response.status}`);
 
-      const result = await response.json();
-      if (this.stopped) return;
       this.renderQr(result);
 
       await this.poll();
@@ -94,6 +103,8 @@ export default class extends Controller {
         body: this.body(),
         signal: this.pollRequest.signal,
       });
+      if (response.status === 409) return this.showCurrentLogin();
+
       const result = await this.jsonResponse(response);
       if (!response.ok) {
         const error = new Error(result.error || "QR login failed");
@@ -170,12 +181,28 @@ export default class extends Controller {
     }
   }
 
+  // A newer login (from another tab, say) replaced this one. Cancelling
+  // would end that login, so show the current state instead.
+  showCurrentLogin() {
+    this.stopped = true;
+    window.Turbo.visit(this.returnUrlValue, { action: "replace" });
+  }
+
+  // The login may still be pending on the server, so it stays the running
+  // login until it is cancelled: the button cancels it, and the PIN login
+  // returns only once that is done.
   showError(error) {
     if (this.stopped) return;
     console.warn("[Trade Republic] QR login failed", error);
-    this.polling = false;
-    this.setButtonLabel(this.loginTextValue);
-    this.buttonTarget.disabled = false;
+    this.showFailure();
+  }
+
+  showFailure() {
+    clearTimeout(this.timer);
+    this.polling = true;
+    this.panelTarget.hidden = false;
+    this.setButtonLabel(this.cancelTextValue);
+    this.setButtonDisabled(false);
     this.statusTarget.textContent = this.errorTextValue;
   }
 
@@ -196,8 +223,9 @@ export default class extends Controller {
     this.panelTarget.hidden = true;
     this.codeTarget.replaceChildren();
     // A login started before the server confirms the cancellation would be
-    // cleared by it, so the button stays disabled until then.
-    this.buttonTarget.disabled = true;
+    // cleared by it, so the button stays disabled until then, and the PIN
+    // login stays hidden ("stopped" is only sent once the cancel is done).
+    this.setButtonDisabled(true);
     this.setButtonLabel(this.loginTextValue);
 
     try {
@@ -220,11 +248,14 @@ export default class extends Controller {
       // new card brings an enabled one. The Accounts page has no such card.
       const replacesCard = this.streamReplacesElement(stream);
       Turbo.renderStreamMessage(stream);
-      if (!replacesCard) this.buttonTarget.disabled = false;
+      if (!replacesCard) {
+        this.setButtonDisabled(false);
+        this.dispatch("stopped");
+      }
     } catch (error) {
-      this.stopped = false;
-      this.buttonTarget.disabled = false;
+      // The login may still be pending, so the button offers the cancel again.
       console.warn("[Trade Republic] QR login cancellation failed", error);
+      this.showFailure();
     }
   }
 
@@ -252,12 +283,18 @@ export default class extends Controller {
     return remaining > 0 && remaining <= 1500 ? 100 : this.intervalValue;
   }
 
+  // A new connection's card shows no QR button; it has its own Cancel.
+  setButtonDisabled(disabled) {
+    if (this.hasButtonTarget) this.buttonTarget.disabled = disabled;
+  }
+
   setButtonLabel(label) {
     // DS::Button renders its text in a span, so without a label target the
     // button's own text is updated.
-    const target = this.hasLabelTarget
-      ? this.labelTarget
-      : this.buttonTarget.querySelector("span");
+    let target = null;
+    if (this.hasLabelTarget) target = this.labelTarget;
+    else if (this.hasButtonTarget)
+      target = this.buttonTarget.querySelector("span");
     if (target) target.textContent = label;
   }
 
@@ -273,6 +310,10 @@ export default class extends Controller {
   body() {
     const csrfToken =
       document.querySelector("meta[name='csrf-token']")?.content || "";
-    return new URLSearchParams({ authenticity_token: csrfToken });
+    const body = new URLSearchParams({ authenticity_token: csrfToken });
+    // Tells the server which login this page shows, so a poll or cancel
+    // leaves a newer one (from another tab, say) alone.
+    if (this.loginTokenValue) body.set("login_token", this.loginTokenValue);
+    return body;
   }
 }

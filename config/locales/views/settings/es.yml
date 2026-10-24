@@ -565,5 +565,64 @@ es:
         accounts_tab: Cuentas
         status_configured_suffix: para gestionar las cuentas detectadas.
         not_configured: Sin configurar.
+      trade_republic_panel:
+        encryption_warning:
+          title: El cifrado no está configurado
+          message: Las credenciales y los datos de sesión de Trade Republic no se pueden guardar de forma segura hasta que se configure el cifrado de Active Record.
+        steps:
+          step_1: "En Añadir una conexión, elige Acceso con QR o Acceso con PIN."
+          step_2: "Acceso con QR: escanea el código QR con la cámara de tu teléfono y luego aprueba el inicio de sesión en la aplicación de Trade Republic."
+          step_3: "Acceso con PIN: introduce el número de teléfono y el PIN o la contraseña que usas en la aplicación de Trade Republic, luego el código de tu aplicación de autenticación, y aprueba el inicio de sesión en la aplicación de Trade Republic."
+        phone_number_label: Número de teléfono
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: Déjalo en blanco para conservar el número de teléfono actual
+        pin_label: PIN o contraseña
+        pin_placeholder_new: Tu PIN o contraseña de Trade Republic
+        currency_label: Moneda de la cuenta
+        connect: Iniciar sesión
+        complete_login: Continuar
+        authenticator_code_label: Código de autenticación (si se solicita)
+        authenticator_code_placeholder: Código de 6 dígitos
+        push_login_notice: Aprueba ahora el inicio de sesión en tu aplicación de Trade Republic. Sure lo comprueba automáticamente en segundo plano. También puedes comprobar el estado tú mismo.
+        check_login_status: Comprobar estado ahora
+        authenticator_code_notice: Introduce el código de tu aplicación de autenticación.
+        approval_pending: Inicio de sesión iniciado. Apruébalo en la aplicación de Trade Republic; Sure lo está comprobando automáticamente.
+        awaiting_confirmation: Aprobación pendiente en la aplicación de Trade Republic.
+        awaiting_authenticator_code: Se requiere el código de autenticación.
+        login_expired: La solicitud de aprobación ha caducado.
+        connection_success:
+          title: Trade Republic se ha conectado correctamente
+          message: Tu conexión con Trade Republic está lista.
+          description: Sure está sincronizando ahora tus datos de Trade Republic en segundo plano.
+          close: Listo
+        qr_login: Acceso con QR
+        qr_cancel: Cancelar acceso con QR
+        qr_loading: Preparando el código QR …
+        qr_instruction: Escanea el código QR con la cámara de tu teléfono y luego aprueba el inicio de sesión en la aplicación de Trade Republic.
+        qr_success: Inicio de sesión aprobado. Sure está actualizando la página de proveedores.
+        qr_error: No se pudo iniciar el acceso con QR. Inténtalo de nuevo.
+        requires_update: Vuelve a iniciar sesión para reanudar la sincronización.
+        session_expires_in: "El inicio de sesión caduca en %{time} (%{at})."
+        pin_login: Acceso con PIN
+        pin_cancel: "Cancelar acceso con PIN"
+        remove: Eliminar
+        new_connection: Nueva conexión
+        cancel_login: Cancelar
+        add_connection: "Añadir una conexión"
+        pin_login_hint: "Introduce el número de teléfono y el PIN o la contraseña que usas en la aplicación de Trade Republic."
+        sync: Sincronizar
+        syncing: Sincronizando...
+        disconnect_confirm: "¿Desconectar Trade Republic? Tus cuentas sincronizadas pasarán a ser cuentas manuales."
+        disconnect_confirm_with_identifier: "¿Desconectar la conexión de Trade Republic que termina en %{last4}? Tus cuentas sincronizadas pasarán a ser cuentas manuales."
+        identifier_phone: Teléfono
+        identifier_account: Cuenta
+        status_configured_prefix: Conectado. Visita la pestaña
+        accounts_tab: Cuentas
+        setup_accounts: Configurar cuentas
+        accounts_discovered:
+          one: 1 cuenta de Trade Republic descubierta.
+          other: "%{count} cuentas de Trade Republic descubiertas."
+        status_configured_suffix: para gestionar las cuentas detectadas.
+        not_configured: Sin configurar.
       show:
         coinbase_title: Coinbase

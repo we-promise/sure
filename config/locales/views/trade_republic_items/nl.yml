@@ -6,18 +6,22 @@ nl:
       connection_description: "Verbind een Trade Republic-beleggingsrekening via een veilige webaanmelding"
       institution_name: Trade Republic
   trade_republic_items:
-    duplicate_connection: "Deze Trade Republic-rekening is al gekoppeld. De nieuwe koppeling is verwijderd."
     portfolio_categories:
-      brokerage: "Brokeragerekening"
-      private_markets: "Privémarkten"
-      interest_products: "Renteproducten"
-      crypto_wallet: "Cryptowallet"
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
+      interest_products: "Vaste Rente"
+      crypto_wallet: "Crypto Wallet"
+    duplicate_connection: "Deze Trade Republic-rekening is al gekoppeld. De nieuwe koppeling is verwijderd."
+    defaults:
+      name: Trade Republic
     trade_republic_item:
+      deletion_in_progress: "Bezig met verwijderen"
       syncing: "Bezig met synchroniseren"
       requires_update: "Opnieuw authenticeren vereist"
       session_expires_in: "Login verloopt over %{time} (%{at})."
       error: "Fout"
       synced: "Gesynchroniseerd %{time} geleden. %{summary}."
+      never_synced: "Nog nooit gesynchroniseerd."
       setup_accounts: "Rekeningen instellen"
       delete: "Verwijderen"
       accounts_need_setup: "Rekening moet worden ingesteld"
@@ -27,15 +31,65 @@ nl:
       data_quality:
         title: "Datakwaliteit en synchronisatiedetails"
         repair: "Geïmporteerde gegevens herstellen"
+        positions:
+          one: "%{count} positie"
+          other: "%{count} posities"
+        unpriced:
+          one: "%{count} zonder actuele koers"
+          other: "%{count} zonder actuele koers"
+        events:
+          one: "%{count} activiteit"
+          other: "%{count} activiteiten"
+        unknown:
+          one: "%{count} onbekende activiteit"
+          other: "%{count} onbekende activiteiten"
         pending_trade_details:
           one: "%{count} beleggingsactiviteit wacht op details"
           other: "%{count} beleggingsactiviteiten wachten op details"
+        expenses:
+          one: "%{count} uitgave in de afgelopen 30 dagen (%{amount})"
+          other: "%{count} uitgaven in de afgelopen 30 dagen (%{amount})"
+        reconciliation: "%{matched}/%{total} rekeningsaldi afgestemd"
+        sync_history: "Recente synchronisaties"
+        sync_status:
+          completed: "Voltooid"
+          failed: "Mislukt"
+          pending: "In behandeling"
+          syncing: "Bezig met synchroniseren"
+          stale: "Verouderd"
     setup_accounts:
       page_title: "Trade Republic-rekening instellen"
+      dialog_title: "Je Trade Republic-rekening instellen"
       subtitle: "Koppel je Trade Republic-beleggingsrekening."
+      info_box:
+        title: "Trade Republic-import"
+        items:
+          item_1: "Huidige posities met koersen en aantallen"
+          item_2: "Uitgevoerde transacties (aankopen en verkopen)"
+          item_3: "Stortingen, opnames en rente-uitkeringen"
+      status:
+        fetching_accounts: "Rekening ophalen bij Trade Republic..."
+        no_accounts_found_title: "Geen rekening gevonden."
+        no_accounts_found_description: "Sure kon geen Trade Republic-rekening vinden. Controleer of je sessie nog geldig is."
+      available_accounts:
+        title: "Beschikbare rekening"
+        account_type_investment: "Beleggingsportefeuille"
+        account_type_cash: "Geldrekening"
+        account_type_crypto: "Cryptorekening"
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "Rekening-ID: %{account_id}"
+      link_existing:
+        description: "Of koppel de gevonden Trade Republic-rekening aan een bestaande handmatige beleggingsrekening."
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: "Selecteer een rekening..."
+      linked_accounts:
+        title: "Al gekoppeld"
+        linked_to_html: "Gekoppeld aan: %{account}"
       buttons:
         refresh: "Vernieuwen"
         cancel: "Annuleren"
+        back_to_settings: "Terug naar instellingen"
+        create_selected_accounts: "Geselecteerde rekeningen aanmaken"
         link: "Koppelen"
         done: "Gereed"
     sync:
@@ -45,27 +99,64 @@ nl:
       status:
         checking_credentials: "Trade Republic-inloggegevens controleren..."
         importing_account: "Trade Republic-rekening importeren..."
+        checking_configuration: "Rekeningconfiguratie controleren..."
+        accounts_need_setup:
+          one: "1 Trade Republic-rekening moet worden ingesteld..."
+          other: "%{count} Trade Republic-rekeningen moeten worden ingesteld..."
         processing_activity: "Posities en activiteiten verwerken..."
         calculating_balances: "Saldi berekenen..."
     repair:
       scheduled: "Herstel van Trade Republic-gegevens gepland."
+    sync_status:
+      no_accounts: "Nog geen Trade Republic-rekening gevonden"
+      all_linked:
+        one: "1 rekening gekoppeld"
+        other: "%{count} rekeningen gekoppeld"
+      partial: "%{linked} gekoppeld, %{unlinked} moeten worden ingesteld"
     select_existing_account:
       title: "Trade Republic-rekening koppelen"
+      no_accounts_available: "Er zijn nog geen ongekoppelde Trade Republic-rekeningen beschikbaar."
+      run_sync_hint: "Voltooi de aanmelding en voer een synchronisatie uit via Instellingen > Providers."
+      wait_for_sync: "Wacht tot de synchronisatie om rekeningen te vinden is voltooid."
+      balance: "Saldo"
       link: "Koppelen"
       cancel: "Annuleren"
+    update:
+      success: "Trade Republic-configuratie is bijgewerkt."
+      pin_required: "Voer je Trade Republic-pincode of -wachtwoord in om opnieuw te authenticeren."
+    destroy:
+      success: "Verwijdering van de Trade Republic-koppeling is gepland."
+      unlink_failed: "Trade Republic kon niet volledig worden ontkoppeld. De koppeling is behouden zodat je het veilig opnieuw kunt proberen."
+    select_accounts:
+      not_configured: "Trade Republic is niet geconfigureerd."
     initiate_login:
-      verification_required: "Aanmelding gestart. Bevestig via %{method} en klik daarna op Aanmelding bevestigen."
+      pin_required: "Voer je Trade Republic-pincode of -wachtwoord in om een nieuwe aanmelding te starten."
+    initiate_qr_login:
+      not_configured: "Trade Republic is niet geconfigureerd."
+    poll_login:
+      no_pending_login: "Er is momenteel geen aanmelding in behandeling. Start eerst een nieuwe aanmelding."
+      login_expired: "De aanmeldingsaanvraag is verlopen. Start opnieuw."
+    poll_qr_login:
+      no_pending_login: "Er is geen QR-aanmelding in behandeling."
+      success: "Trade Republic is succesvol verbonden."
     complete_login:
+      no_pending_login: "Er is momenteel geen aanmelding in behandeling. Start eerst een nieuwe aanmelding."
       approval_pending: "Nog niet bevestigd. Keur de aanmelding goed in de Trade Republic-app en probeer opnieuw."
+      still_pending: "Nog niet bevestigd. Keur de aanmelding goed in de Trade Republic-app en probeer opnieuw."
       success: "Trade Republic is succesvol verbonden."
       login_expired: "De aanmeldingsaanvraag is verlopen. Start opnieuw."
     link_existing_account:
       not_found: "Rekening of Trade Republic-configuratie niet gevonden."
+      only_manual_investment: "Alleen handmatige beleggingsrekeningen kunnen aan Trade Republic worden gekoppeld."
+      already_linked: "Deze Trade Republic-rekening is al gekoppeld."
       success: "Rekening succesvol aan Trade Republic gekoppeld."
+      processing_failed: "De rekening is gekoppeld, maar de eerste verwerking van de gegevens is mislukt. Er is een synchronisatie gepland; controleer het debuglogboek als de gegevens onvolledig blijven."
+      failed: "Koppelen van de Trade Republic-rekening is mislukt."
     complete_account_setup:
       success:
         one: "%{count} Trade Republic-rekening is aangemaakt."
         other: "%{count} Trade Republic-rekeningen zijn aangemaakt."
+      none_selected: "Er zijn geen rekeningen geselecteerd."
       none_created: "Er zijn geen rekeningen aangemaakt."
       partial_failure:
         one: "Eén geselecteerde Trade Republic-rekening kon niet volledig worden ingesteld. Controleer het debuglogboek en probeer het opnieuw."
@@ -81,4 +172,4 @@ nl:
         card_fee: Kaartkosten
         card_refund: Kaartterugbetaling
         tax_refund: Belastingteruggaaf
-        round_up: Round up
+        round_up: "Round up"

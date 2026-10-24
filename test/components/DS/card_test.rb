@@ -18,4 +18,11 @@ class DS::CardTest < ViewComponent::TestCase
 
     assert_selector "section#budget-card"
   end
+
+  test "the inset variant sets a panel into another surface" do
+    render_inline(DS::Card.new(variant: :inset, tag: :div, id: "pin-form")) { "Form" }
+
+    assert_selector "div#pin-form.bg-container-inset.rounded-lg.border.border-secondary.p-4", text: "Form"
+    assert_no_selector ".shadow-border-xs"
+  end
 end
