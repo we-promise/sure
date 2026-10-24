@@ -74,6 +74,11 @@ class Api::V1::BaseController < ApplicationController
         return false
       end
 
+      # Doorkeeper revokes the refresh token a token was refreshed from only
+      # when the new token is first used (Doorkeeper::OAuth::Token.authenticate).
+      # by_token skips that step, so do it here.
+      access_token.revoke_previous_refresh_token!
+
       # Set the doorkeeper_token for compatibility
       @_doorkeeper_token = access_token
 
