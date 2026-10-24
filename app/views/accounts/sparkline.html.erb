@@ -1,7 +1,8 @@
-<%= turbo_frame_tag dom_id(@account, :sparkline) do %>
+<% frame_id = sparkline_response_frame_id(dom_id(@account, :sparkline)) %>
+<%= turbo_frame_tag frame_id do %>
   <div class="flex items-center justify-end gap-1">
     <div class="w-8 h-5">
-      <%= render "shared/sparkline", id: dom_id(@account, :sparkline_chart), series: @sparkline_series %>
+      <%= render "shared/sparkline", id: "#{frame_id}_chart", series: @sparkline_series %>
     </div>
 
     <%# A previous value of zero makes the percentage infinite, with nothing useful to print %>
