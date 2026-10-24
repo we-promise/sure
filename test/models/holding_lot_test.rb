@@ -202,12 +202,14 @@ class HoldingLotTest < ActiveSupport::TestCase
       materialize(:reverse)
       lot = HoldingLot.opening.find_by!(security: @opening)
       assert_equal [ BigDecimal("1.333333333333333333"), false ], [ lot.qty, lot.clamped ]
+      assert_equal BigDecimal("102.5"), @account.holdings.find_by!(security: @opening, date: d(9)).cost_basis
 
       @account.holdings.find_by!(security: @opening, date: d(10)).update!(qty: 5, amount: 150)
       materialize(:reverse)
 
       lot.reload
       assert_equal [ 0, true ], [ lot.qty, lot.clamped ], "5 reported against 8 traded"
+      assert_nil @account.holdings.find_by!(security: @opening, date: d(9)).cost_basis, "the stored figure is cleared"
     end
   end
 
