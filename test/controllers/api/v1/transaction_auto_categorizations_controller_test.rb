@@ -36,7 +36,7 @@ class Api::V1::TransactionAutoCategorizationsControllerTest < ActionDispatch::In
   end
 
   test "queues the requested uncategorized transactions" do
-    assert_enqueued_with(job: AutoCategorizeJob, args: [ @family, { transaction_ids: [ @uncategorized.id ], recheck_eligibility: true } ]) do
+    assert_enqueued_with(job: AutoCategorizeJob, args: [ @family, { transaction_ids: [ @uncategorized.id ], recheck_eligibility: true, user_id: @user.id } ]) do
       post auto_categorize_api_v1_transactions_url,
            params: { transaction_ids: [ @uncategorized.id ] },
            headers: api_headers(@api_key), as: :json
@@ -296,7 +296,7 @@ class Api::V1::TransactionAutoCategorizationsControllerTest < ActionDispatch::In
   end
 
   test "treats uppercase ids as the same transaction" do
-    assert_enqueued_with(job: AutoCategorizeJob, args: [ @family, { transaction_ids: [ @uncategorized.id ], recheck_eligibility: true } ]) do
+    assert_enqueued_with(job: AutoCategorizeJob, args: [ @family, { transaction_ids: [ @uncategorized.id ], recheck_eligibility: true, user_id: @user.id } ]) do
       post auto_categorize_api_v1_transactions_url,
            params: { transaction_ids: [ @uncategorized.id.upcase, @uncategorized.id ] },
            headers: api_headers(@api_key), as: :json

@@ -129,6 +129,35 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     AutoCategorizeJob.perform_now(@family, transaction_ids: [ transfer_leg.id ], recheck_eligibility: true)
   end
 
+  test "recheck_eligibility with user_id drops transactions the user can no longer annotate" do
+    transaction = create_transaction(account: @account, name: "Coffee").transaction
+    user = users(:family_admin).tap { |u| u.update_columns(family_id: @family.id) }
+
+    @family.expects(:auto_categorizable_transactions_for).with(user).returns(Transaction.none)
+    @family.expects(:auto_categorize_transactions).never
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], recheck_eligibility: true, user_id: user.id)
+  end
+
+  test "recheck_eligibility with user_id keeps what the user can annotate" do
+    transaction = create_transaction(account: @account, name: "Coffee").transaction
+    user = users(:family_admin).tap { |u| u.update_columns(family_id: @family.id) }
+
+    @account.update_columns(owner_id: user.id)
+
+    @family.expects(:auto_categorize_transactions).with([ transaction.id ]).returns(1)
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], recheck_eligibility: true, user_id: user.id)
+  end
+
+  test "recheck_eligibility with a user who no longer exists queues nothing" do
+    transaction = create_transaction(account: @account, name: "Coffee").transaction
+
+    @family.expects(:auto_categorize_transactions).never
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], recheck_eligibility: true, user_id: SecureRandom.uuid)
+  end
+
   test "rule jobs are not rechecked" do
     transfer_leg = create_transaction(account: @account, name: "To savings").transaction
     transfer_leg.update!(kind: "funds_movement")

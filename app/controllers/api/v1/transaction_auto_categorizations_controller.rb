@@ -46,7 +46,7 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
       scope = scope.where(id: ids)
     end
 
-    queued_ids, unqueued_ids = family.queue_auto_categorization(scope)
+    queued_ids, unqueued_ids = family.queue_auto_categorization(scope, user: current_resource_owner)
 
     if unqueued_ids.any?
       return render json: {
