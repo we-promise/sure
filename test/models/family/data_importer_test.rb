@@ -1871,7 +1871,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
   test "imports rules in their exported run order after existing rules" do
     existing = @family.rules.create!(resource_type: "transaction",
       actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
-    rule_record = ->(name, position, stop_processing) do
+    rule_record = ->(name, position, stop_processing, apply_immediately) do
       {
         type: "Rule",
         version: 1,
@@ -1881,12 +1881,13 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           active: true,
           position: position,
           stop_processing: stop_processing,
+          apply_immediately: apply_immediately,
           conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
           actions: [ { action_type: "exclude_transaction" } ]
         }
       }
     end
-    ndjson = build_ndjson([ rule_record.call("Second", 2, false), rule_record.call("First", 1, true) ])
+    ndjson = build_ndjson([ rule_record.call("Second", 2, false, true), rule_record.call("First", 1, true, false) ])
 
     Family::DataImporter.new(@family, ndjson).import!
 
@@ -1894,6 +1895,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       @family.rules.ordered.pluck(:id).last(3)
     assert @family.rules.find_by(name: "First").stop_processing
     assert_not @family.rules.find_by(name: "Second").stop_processing
+    assert_not @family.rules.find_by(name: "First").apply_immediately
+    assert @family.rules.find_by(name: "Second").apply_immediately
   end
 
   test "imports rules with conditions and actions" do
@@ -2231,6 +2234,31 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal [ "set_transaction_name" ], rule.actions.map(&:action_type)
     assert_equal [ "other-old" ], other_rule.reload.conditions.map(&:value)
     assert_equal [ "auto_categorize" ], other_rule.actions.map(&:action_type)
+  end
+
+  test "session rule reimport keeps apply immediately when the export predates it" do
+    rule = @family.rules.create!(name: "Immediate Rule", resource_type: "transaction", active: true, apply_immediately: true,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    session.source_mappings.create!(family: @family, source_type: "Rule", source_id: "rule-1", target: rule)
+
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          id: "rule-1",
+          name: "Immediate Rule",
+          resource_type: "transaction",
+          active: true,
+          actions: [ { action_type: "exclude_transaction" } ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert rule.reload.apply_immediately
   end
 
   test "imports rules from normalized operand value refs" do

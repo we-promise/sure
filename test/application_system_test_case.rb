@@ -79,6 +79,13 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
   private
 
+    # Capybara retries its own matchers; a value read through evaluate_script
+    # or from the database gets no such patience, so give it the same budget.
+    def wait_until(timeout: Capybara.default_max_wait_time)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+      sleep 0.05 until yield || Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+    end
+
     def reset_viewport
       page.current_window.resize_to(DEFAULT_VIEWPORT_WIDTH, DEFAULT_VIEWPORT_HEIGHT) if page&.current_window
     end

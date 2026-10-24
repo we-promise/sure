@@ -245,13 +245,6 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
       )
     end
 
-    # Capybara retries its own matchers; a value read through evaluate_script
-    # gets no such patience, so give it the same budget.
-    def wait_until(timeout: Capybara.default_max_wait_time)
-      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
-      sleep 0.05 until yield || Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
-    end
-
     def all_time_period
       Period.new(key: "all_time", start_date: Date.new(2020, 1, 1), end_date: TODAY)
     end
