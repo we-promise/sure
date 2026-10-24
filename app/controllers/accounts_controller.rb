@@ -58,6 +58,7 @@ class AccountsController < ApplicationController
       visible = item.accounts_visible_to(allowed_ids)
       [ item.id, { accounts: visible, address_count: item.address_count_for(visible) } ]
     end
+    @gocardless_items = visible_provider_items(family.gocardless_items.ordered.includes(:gocardless_accounts, :accounts))
 
     preload_latest_sync_metadata_for_index!
 
@@ -471,7 +472,8 @@ class AccountsController < ApplicationController
         @questrade_items,
         @wise_items,
         @trade_republic_items,
-        @onchain_wallet_items
+        @onchain_wallet_items,
+        @gocardless_items
       ].flatten.compact
 
       accounts = @manual_accounts.to_a + @financekit_accounts.to_a
@@ -739,6 +741,13 @@ class AccountsController < ApplicationController
       @fio_items.each do |item|
         latest_sync = item.latest_sync_record
         @fio_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # GoCardless sync stats
+      @gocardless_sync_stats_map = {}
+      @gocardless_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @gocardless_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
     end
 end
