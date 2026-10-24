@@ -10,6 +10,40 @@ class ValuableItemTest < ActiveSupport::TestCase
     assert_in_delta 7_500, lot.value_for(3_110.34768), 0.01
   end
 
+  test "defaults quantity to one" do
+    assert_equal 1, ValuableItem.new.quantity
+  end
+
+  test "requires a positive whole-number quantity" do
+    item = ValuableItem.new(quantity: "1.5")
+
+    assert_not item.valid?
+    assert_includes item.errors[:quantity], "must be an integer"
+
+    item.quantity = 0
+    assert_not item.valid?
+    assert_includes item.errors[:quantity], "must be greater than 0"
+
+    assert_not ValuableItem.valid_quantity_format?("1e3")
+    assert ValuableItem.valid_quantity_format?("3.0")
+  end
+
+  test "multiplies gross and fine weights by quantity" do
+    account = accounts(:investment).family.accounts.create!(name: "Physical Gold", currency: "USD", balance: 0, accountable: Valuable.new)
+    item = account.valuable.items.create!(description: "Coins", acquired_on: Date.current, weight: 10, weight_unit: "gram", purity: 75, quantity: 3, cost_amount: 1_000)
+
+    assert_in_delta 30, item.total_weight_in_grams, 0.001
+    assert_in_delta 22.5, item.total_fine_weight_in_grams, 0.001
+    assert_in_delta 2_250, item.value_for(3_110.34768), 0.01
+  end
+
+  test "keeps a manual value as a total for the row" do
+    account = accounts(:investment).family.accounts.create!(name: "Physical Gold", currency: "USD", balance: 0, accountable: Valuable.new)
+    item = account.valuable.items.create!(description: "Coins", acquired_on: Date.current, weight: 10, weight_unit: "gram", purity: 75, quantity: 3, cost_amount: 1_000, manual_value: 900)
+
+    assert_equal 900, item.value_for(3_110.34768)
+  end
+
   test "requires a precious metal owner" do
     lot = ValuableItem.new(description: "Coin", acquired_on: Date.current, weight: 1, weight_unit: "gram", karat: 24, cost_amount: 1, currency: "USD")
     assert_not lot.valid?

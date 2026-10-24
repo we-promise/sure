@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2817,6 +2817,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.uuid "merchant_id"
     t.text "notes"
     t.decimal "purity", precision: 6, scale: 3
+    t.integer "quantity", default: 1, null: false
     t.datetime "updated_at", null: false
     t.uuid "valuable_id", null: false
     t.decimal "weight", precision: 19, scale: 6, null: false
@@ -2837,6 +2838,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
   add_check_constraint "valuable_items", "item_type::text = 'bullion'::text AND (material::text = ANY (ARRAY['gold'::character varying, 'silver'::character varying, 'platinum'::character varying, 'palladium'::character varying]::text[])) OR item_type::text = 'gemstone'::text AND (material::text = ANY (ARRAY['diamond'::character varying, 'ruby'::character varying, 'sapphire'::character varying, 'emerald'::character varying, 'other'::character varying]::text[]))", name: "valuable_items_material_matches_item_type"
   add_check_constraint "valuable_items", "item_type::text = 'bullion'::text AND (weight_unit::text = ANY (ARRAY['gram'::character varying, 'troy_ounce'::character varying, 'kilogram'::character varying]::text[])) OR item_type::text = 'gemstone'::text AND weight_unit::text = 'carat'::text", name: "valuable_items_weight_unit_matches_item_type"
   add_check_constraint "valuable_items", "item_type::text = 'bullion'::text OR purity IS NULL", name: "valuable_items_gemstone_purity_absent"
+  add_check_constraint "valuable_items", "quantity > 0", name: "valuable_items_quantity_positive"
 
   create_table "valuables", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false

@@ -14,6 +14,7 @@ class ValuablesTest < ApplicationSystemTestCase
     select "Gold", from: "valuable_item[material]"
     fill_in "valuable_item[weight]", with: "25"
     select "Grams", from: "valuable_item[weight_unit]"
+    fill_in "valuable_item[quantity]", with: "2"
     fill_in "valuable_item[purity]", with: "91.667"
     fill_in "valuable_item[cost_amount]", with: "2000"
     fill_in "valuable_item[manual_value]", with: "2200"
@@ -21,6 +22,7 @@ class ValuablesTest < ApplicationSystemTestCase
     assert_text "Wedding bracelet"
     account = Account.find_by!(name: "Family gold")
     assert_equal 2200, account.balance
+    assert_text "2 ×"
     assert_no_link "Statements"
     assert_no_link "Holdings"
     assert_no_lot_overflow

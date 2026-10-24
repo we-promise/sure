@@ -10,13 +10,14 @@ class ValuableItemsControllerTest < ActionDispatch::IntegrationTest
     assert_difference -> { @account.valuable.lots.count }, 1 do
       post valuable_items_path, params: {
         account_id: @account.id,
-        valuable_item: { description: "Wedding jewelry", acquired_on: Date.current, weight: 10, weight_unit: "gram", karat: 24, cost_amount: 1_000, making_charge: 100, manual_value: 1_100, merchant_id: merchants(:one).id, invoice: fixture_file_upload("test.txt", "application/pdf") }
+        valuable_item: { description: "Wedding jewelry", acquired_on: Date.current, weight: 10, weight_unit: "gram", quantity: 2, karat: 24, cost_amount: 1_000, making_charge: 100, manual_value: 1_100, merchant_id: merchants(:one).id, invoice: fixture_file_upload("test.txt", "application/pdf") }
       }
     end
 
     assert_redirected_to account_path(@account, tab: "overview")
     assert_equal merchants(:one), @account.valuable.lots.last.merchant
     assert_equal "Wedding jewelry", @account.valuable.lots.last.description
+    assert_equal 2, @account.valuable.lots.last.quantity
     assert_equal 100.0, @account.valuable.lots.last.making_charge.to_f
     assert_equal 1_100, @account.valuable.lots.last.manual_value.to_f
     assert @account.valuable.lots.last.invoice.attached?
@@ -84,6 +85,18 @@ class ValuableItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/must belong to the account family/, response.body)
   end
 
+  test "rejects a fractional quantity" do
+    assert_no_difference -> { @account.valuable.lots.count } do
+      post valuable_items_path, params: {
+        account_id: @account.id,
+        valuable_item: { description: "Coin", acquired_on: Date.current, weight: 10, weight_unit: "gram", quantity: 1.5, karat: 24, cost_amount: 1_000 }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match(/Quantity must be an integer/, response.body)
+  end
+
   test "renders a new form that posts to the purchase collection" do
     get new_valuable_item_path(account_id: @account.id)
 
@@ -91,6 +104,7 @@ class ValuableItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{valuable_items_path}'][method='post'][data-turbo-frame='_top']"
     assert_select "input[type='file'][name='valuable_item[invoice]']"
     assert_select "input[name='valuable_item[weight]'][min='0.001']"
+    assert_select "input[name='valuable_item[quantity]'][min='1'][step='1']"
     assert_select "input[name='valuable_item[purity]'][min='0.001'][step='0.001']"
   end
 

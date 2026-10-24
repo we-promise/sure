@@ -15,8 +15,8 @@ class UI::Account::ValuableOverview < ApplicationComponent
 
   def bullion_summaries
     @bullion_summaries ||= bullion_items.group_by(&:material).map do |material, material_items|
-      gross_weight = material_items.sum(&:weight_in_grams)
-      fine_weight = material_items.sum(&:fine_weight_in_grams)
+      gross_weight = material_items.sum(&:total_weight_in_grams)
+      fine_weight = material_items.sum(&:total_fine_weight_in_grams)
 
       BullionSummary.new(
         material:,
@@ -30,7 +30,7 @@ class UI::Account::ValuableOverview < ApplicationComponent
 
   def gemstones = @gemstones ||= items.select(&:gemstone?)
   def gemstones_value = gemstones.sum { |item| item.manual_value.to_d }
-  def gemstones_weight = gemstones.sum { |item| item.weight.to_d }
+  def gemstones_weight = gemstones.sum { |item| item.weight.to_d * item.quantity }
   def rate_for(item)
     rate_for_symbol(item.quote_symbol) if item.spot_valued?
   end

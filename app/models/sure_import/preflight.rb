@@ -77,6 +77,7 @@ class SureImport::Preflight
     validate_duplicate_taxonomy_names
     validate_duplicate_source_ids
     validate_required_fields
+    validate_valuable_item_quantities
     validate_accountables
     validate_split_lines
     validate_references
@@ -282,6 +283,19 @@ class SureImport::Preflight
         add_error(
           :invalid_reference,
           "Line #{record[:line_number]} ValuableItem references account_id #{account_id.inspect}, which must have accountable_type \"Valuable\"."
+        )
+      end
+    end
+
+    def validate_valuable_item_quantities
+      @records["ValuableItem"].each do |record|
+        quantity = record[:data]["quantity"]
+        next if quantity.blank?
+        next if ValuableItem.valid_quantity_format?(quantity) && quantity.to_i.positive?
+
+        add_error(
+          :invalid_quantity,
+          "Line #{record[:line_number]} ValuableItem quantity must be a positive integer."
         )
       end
     end

@@ -327,6 +327,7 @@ class Family::DataExporter
             acquired_on: lot.acquired_on,
             weight: lot.weight,
             weight_unit: lot.weight_unit,
+            quantity: lot.quantity,
             item_type: lot.item_type,
             material: lot.material,
             purity: lot.purity,

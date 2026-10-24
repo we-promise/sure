@@ -31,6 +31,16 @@ class UI::Account::ValuableOverviewTest < ViewComponent::TestCase
     assert_text "Gain: +$796.73 (159%)"
   end
 
+  test "multiplies weights by quantity and shows the piece count" do
+    @gold_item.update!(quantity: 3)
+
+    render_inline UI::Account::ValuableOverview.new(account: @account)
+
+    assert_text "3 ×"
+    assert_text "93.31 g gross"
+    assert_text "93.217 g pure gold (99.9% purity)"
+  end
+
   test "does not calculate a return before a spot quote is available" do
     component = UI::Account::ValuableOverview.new(account: @account)
 

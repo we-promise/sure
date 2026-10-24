@@ -510,6 +510,12 @@ class Family::DataImporter
           next
         end
 
+        quantity = data["quantity"].presence
+        if quantity.present? && !(ValuableItem.valid_quantity_format?(quantity) && quantity.to_i.positive?)
+          invalid_record!("ValuableItem", "quantity", quantity)
+          next
+        end
+
         lot = mapped_record(:valuable_items, old_id, account.valuable.lots, record_type: "ValuableItem")
         created = lot.blank?
         lot ||= account.valuable.lots.build
@@ -518,6 +524,7 @@ class Family::DataImporter
           acquired_on: parse_import_date(data["acquired_on"]),
           weight: data["weight"].to_d,
           weight_unit: data["weight_unit"],
+          quantity: quantity&.to_i || 1,
           item_type: data["item_type"] || "bullion",
           material: data["material"] || "gold",
           purity: imported_valuable_purity(data),

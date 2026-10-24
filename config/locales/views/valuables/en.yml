@@ -42,6 +42,7 @@ en:
         no_items: No items recorded yet.
         material: "%{material}"
         weight_value: "%{amount} %{unit}"
+        quantity_multiplier: "%{quantity} ×"
         bullion_weight_detail: "%{gross_weight} g gross · %{fine_weight} g pure %{material} (%{purity}%% purity)"
         total_paid: "Total paid: %{value}"
         gain: "Gain: +%{value}%{percentage}"

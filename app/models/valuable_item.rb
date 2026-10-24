@@ -5,6 +5,7 @@ class ValuableItem < ApplicationRecord
   GEMSTONE_MATERIALS = %w[diamond ruby sapphire emerald other].freeze
   ITEM_TYPES = %w[bullion gemstone].freeze
   BULLION_WEIGHT_UNITS = %w[gram troy_ounce kilogram].freeze
+  QUANTITY_FORMAT = /\A[+-]?\d+(?:\.0+)?\z/
 
   belongs_to :valuable
   has_one :account, through: :valuable
@@ -21,6 +22,7 @@ class ValuableItem < ApplicationRecord
   validates :description, :acquired_on, :item_type, :material, :weight, :weight_unit, presence: true
   validates :item_type, inclusion: { in: ITEM_TYPES }
   validates :weight, numericality: { greater_than: 0 }
+  validates :quantity, numericality: { only_integer: true, greater_than: 0 }
   validates :cost_amount, numericality: { greater_than_or_equal_to: 0 }
   validates :making_charge, :manual_value, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :currency, :account, presence: true
@@ -28,6 +30,7 @@ class ValuableItem < ApplicationRecord
   validate :material_matches_item_type
   validate :weight_unit_matches_item_type
   validate :purity_rules
+  validate :quantity_is_a_whole_number
   validate :gemstone_requires_manual_value
   validate :currency_matches_account
   validate :merchant_belongs_to_account_family
@@ -41,16 +44,29 @@ class ValuableItem < ApplicationRecord
 
   scope :spot_valued, -> { where(item_type: "bullion").where(manual_value: nil) }
 
+  def self.valid_quantity_format?(value)
+    value.to_s.strip.match?(QUANTITY_FORMAT)
+  end
+
   def bullion? = item_type == "bullion"
   def gemstone? = item_type == "gemstone"
   def spot_valued? = bullion? && !manual_value?
   def quote_symbol = BULLION_MATERIALS[material]
   def weight_in_grams = ValuableWeight.in_grams(weight, weight_unit)
   def fine_weight_in_grams = weight_in_grams * purity.to_d / 100
+
+  # quantity is the count of identical pieces. weight and purity describe one
+  # piece. cost_amount and manual_value are totals for the row.
+  def total_weight_in_grams = weight_in_grams * quantity
+  def total_fine_weight_in_grams
+    return BigDecimal(0) unless bullion?
+    fine_weight_in_grams * quantity
+  end
+
   def value_for(price_per_troy_ounce = nil)
     return manual_value.to_d if manual_value.present?
     return BigDecimal(0) unless spot_valued? && price_per_troy_ounce
-    fine_weight_in_grams * price_per_troy_ounce.to_d / ValuableWeight::TROY_OUNCE_GRAMS
+    total_fine_weight_in_grams * price_per_troy_ounce.to_d / ValuableWeight::TROY_OUNCE_GRAMS
   end
   def manual_value? = manual_value.present?
   def total_cost_amount = cost_amount.to_d + making_charge.to_d
@@ -76,6 +92,12 @@ class ValuableItem < ApplicationRecord
     def weight_unit_matches_item_type
       allowed = bullion? ? BULLION_WEIGHT_UNITS : [ "carat" ]
       errors.add(:weight_unit, :inclusion) unless allowed.include?(weight_unit)
+    end
+
+    def quantity_is_a_whole_number
+      raw = quantity_before_type_cast
+      return if raw.blank?
+      errors.add(:quantity, :not_an_integer) unless self.class.valid_quantity_format?(raw)
     end
 
     def purity_rules

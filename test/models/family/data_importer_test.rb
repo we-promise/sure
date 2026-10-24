@@ -667,6 +667,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       acquired_on: Date.parse("2026-01-15"),
       weight: 25.5,
       weight_unit: "gram",
+      quantity: 3,
       karat: 22,
       cost_amount: 2_000,
       making_charge: 150,
@@ -706,6 +707,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal Date.parse("2026-01-15"), lot.acquired_on
     assert_equal 25.5, lot.weight.to_f
     assert_equal "gram", lot.weight_unit
+    assert_equal 3, lot.quantity
     assert_equal 22.0, lot.karat.to_f
     assert_equal 2_000.0, lot.cost_amount.to_f
     assert_equal 150.0, lot.making_charge.to_f
@@ -735,8 +737,21 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     item = @family.accounts.find_by!(name: "Gem Collection").valuable.items.sole
     assert_predicate item, :gemstone?
     assert_equal "sapphire", item.material
+    assert_equal 1, item.quantity
     assert_nil item.purity
     assert_equal 500, item.manual_value
+  end
+
+  test "skips an imported valuable item with a fractional quantity" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "quantity-account", name: "Quantity Bullion", balance: "0", currency: "USD", accountable_type: "Valuable", accountable: {} } },
+      { type: "ValuableItem", data: { id: "quantity-item", account_id: "quantity-account", description: "Coin", acquired_on: "2026-01-15", weight: "1", weight_unit: "troy_ounce", quantity: "1.5", cost_amount: "100", currency: "USD" } }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    assert_nil @family.accounts.find_by!(name: "Quantity Bullion").valuable.items.find_by(description: "Coin")
+    assert_equal 1, result[:summary]["valuable_items"]["skipped"]
   end
 
   test "imports recurring transactions with unknown status fallback" do

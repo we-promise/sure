@@ -105,6 +105,25 @@ class ValuableValuationTest < ActiveSupport::TestCase
     assert_in_delta 17_500, @account.reload.balance, 0.01
   end
 
+  test "multiplies spot value by quantity" do
+    @account.valuable.lots.first.update!(quantity: 2)
+    ExchangeRate.create!(from_currency: "XAU", to_currency: "USD", date: Date.current, rate: 3_110.34768)
+
+    value = ValuableValuation.new(account: @account).refresh!
+
+    assert_in_delta 20_000, value, 0.01
+    assert_in_delta 20_000, @account.reload.balance, 0.01
+  end
+
+  test "does not multiply a manual value by quantity" do
+    @account.valuable.lots.first.update!(quantity: 2, manual_value: 12_500)
+
+    value = ValuableValuation.new(account: @account).refresh!
+
+    assert_in_delta 12_500, value, 0.01
+    assert_in_delta 12_500, @account.reload.balance, 0.01
+  end
+
   test "values an empty collection at zero" do
     @account.valuable.lots.destroy_all
 

@@ -3,7 +3,7 @@ class ValuableItemsController < ApplicationController
   before_action :set_lot, only: %i[edit update destroy]
 
   def new
-    @lot = @account.valuable.items.build(acquired_on: Date.current, currency: @account.currency, item_type: "bullion", material: "gold", weight_unit: "gram")
+    @lot = @account.valuable.items.build(acquired_on: Date.current, currency: @account.currency, item_type: "bullion", material: "gold", weight_unit: "gram", quantity: 1)
   end
 
   def create
@@ -83,6 +83,6 @@ class ValuableItemsController < ApplicationController
     end
 
     def lot_params
-      params.require(:valuable_item).permit(:description, :acquired_on, :item_type, :material, :weight, :weight_unit, :purity, :karat, :cost_amount, :making_charge, :manual_value, :notes, :merchant_id, :invoice)
+      params.require(:valuable_item).permit(:description, :acquired_on, :item_type, :material, :weight, :weight_unit, :quantity, :purity, :karat, :cost_amount, :making_charge, :manual_value, :notes, :merchant_id, :invoice)
     end
 end
