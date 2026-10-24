@@ -21,3 +21,20 @@ en:
       locked_fields_label: "Locked fields:"
       unlock_button: Allow sync to update
       unlock_confirm: Allow sync to update this entry? Your changes may be overwritten on the next sync.
+    reconciliation:
+      title: Reconciliation
+      statement_label: Statement
+      reconciled_on_label: Reconciled on
+      no_statement: No statement on file
+      states:
+        uncleared: Uncleared
+        cleared: Cleared
+        reconciled: Reconciled
+      descriptions:
+        uncleared: Entered by hand — nothing has confirmed this transaction yet.
+        cleared: The institution has acknowledged this transaction (via sync or import).
+        reconciled: A statement was matched against this transaction.
+      tooltips:
+        uncleared: Not confirmed by an institution or statement
+        cleared: Confirmed by the institution
+        reconciled: Matched to a bank statement
