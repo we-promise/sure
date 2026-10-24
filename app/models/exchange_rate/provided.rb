@@ -29,10 +29,17 @@ module ExchangeRate::Provided
       return nil unless provider.present? # No provider configured (some self-hosted apps)
 
       response = provider.fetch_exchange_rate(from: from, to: to, date: date)
+      rate = if response.success?
+        ExchangeRatePair.record_direct_quote(from: from, to: to)
+        response.data
+      else
+        # The provider has no such pair, but it may still quote both USD legs.
+        ExchangeRate::UsdCross.new(provider)
+          .rates(from: from, to: to, start_date: date - NEAREST_RATE_LOOKBACK_DAYS, end_date: date, error: response.error).last
+      end
 
-      return nil unless response.success? # Provider error
+      return nil unless rate # Provider error, and no USD legs either
 
-      rate = response.data
       begin
         ExchangeRate.find_or_create_by!(
           from_currency: rate.from,
