@@ -137,7 +137,9 @@ class TransactionsController < ApplicationController
     account = Current.user.accessible_accounts.find_by(id: params.dig(:entry, :account_id))
 
     if account.nil?
-      @entry = Current.family.entries.new(entry_params)
+      # The form re-renders with the account error, so a foreign category or
+      # merchant id is dropped here instead of turning the response into a 404.
+      @entry = Current.family.entries.new(build_entry_params(foreign_references: :drop))
       @entry.valid?
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
@@ -621,10 +623,18 @@ class TransactionsController < ApplicationController
     end
 
     def entry_params
+      @entry_params ||= build_entry_params
+    end
+
+    def build_entry_params(foreign_references: :reject)
       entry_params = params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
         entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
+
+      if entry_params[:entryable_attributes]
+        scope_entryable_associations!(entry_params[:entryable_attributes], foreign_references: foreign_references)
+      end
 
       nature = entry_params.delete(:nature)
 
@@ -637,6 +647,32 @@ class TransactionsController < ApplicationController
       end
 
       entry_params
+    end
+
+    # The ids arrive straight from the form, so resolve them through the family
+    # (Family::TransactionReferences). A foreign category or merchant is a 404,
+    # as in the categorize flow, unless the caller only re-renders the form;
+    # foreign tag ids are dropped, as in #update_tags. A merchant id that is
+    # already on the transaction is kept without a lookup: the drawer resends it
+    # with every unrelated change.
+    def scope_entryable_associations!(attrs, foreign_references:)
+      if attrs[:category_id].present?
+        attrs[:category_id] = resolve_reference(Current.family.transaction_category_id_for(attrs[:category_id]), foreign_references)
+      end
+
+      if attrs[:merchant_id].present? && attrs[:merchant_id] != @entry&.transaction&.merchant_id
+        attrs[:merchant_id] = resolve_reference(Current.family.transaction_merchant_id_for(attrs[:merchant_id], user: Current.user), foreign_references)
+      end
+
+      if attrs.key?(:tag_ids)
+        attrs[:tag_ids] = Current.family.transaction_tag_ids_for(attrs[:tag_ids])
+      end
+    end
+
+    def resolve_reference(id, foreign_references)
+      raise ActiveRecord::RecordNotFound if id.nil? && foreign_references == :reject
+
+      id
     end
 
     def entry_params_with_idempotency_key(idempotency_key)
