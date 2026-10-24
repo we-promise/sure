@@ -49,6 +49,7 @@ de:
         general_title: Allgemein
         default_period: Standardzeitraum
         default_account_order: Standardreihenfolge der Konten
+        default_account_order_hint: Bei „Manuell“ ziehst du die Konten in der Seitenleiste in die gewünschte Reihenfolge.
         language: Sprache
         language_auto: Browsersprache
         page_title: Einstellungen
@@ -190,6 +191,7 @@ de:
       accounts_label: Konten
       advanced_section_title: Erweitert
       ai_prompts_label: KI-Eingabeaufforderungen
+      auto_matches_label: Automatischer Abgleich
       api_key_label: API-Schlüssel
       payment_label: Zahlung
       categories_label: Kategorien

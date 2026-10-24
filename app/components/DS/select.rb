@@ -8,13 +8,14 @@ module DS
     RGB_COLOR_REGEX = /\Argb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)\z/
     DEFAULT_COLOR = "#737373"
 
-    def initialize(form:, method:, items:, selected: nil, placeholder: I18n.t("helpers.select.default_label"), variant: :simple, include_blank: nil, searchable: false, menu_placement: :auto, **options)
+    def initialize(form:, method:, items:, selected: nil, placeholder: I18n.t("helpers.select.default_label"), variant: :simple, include_blank: nil, searchable: false, menu_placement: :auto, scoped_ids: false, **options)
       @form = form
       @method = method
       @placeholder = placeholder
       @variant = variant
       @searchable = searchable
       @menu_placement = normalize_menu_placement(menu_placement)
+      @scoped_ids = scoped_ids
       @options = options
 
       normalized_items = normalize_items(items)
@@ -31,11 +32,17 @@ module DS
       @selected_value = selected
     end
 
-    # Excludes the synthetic include_blank item (value: nil) so an unselected
-    # field falls back to @placeholder on the trigger button rather than
-    # showing the blank item's own label (e.g. "(none)") — see is_selected in
-    # select.html.erb for the separate, unfiltered check used for the
-    # checkmark/aria-selected state inside the menu itself.
+    # Ids are "<method>_label"/"<method>_trigger" by default. Repeated rows (e.g. split rows) pass
+    # scoped_ids so each row gets its own ids from the form scope and aria-labelledby resolves to
+    # that row's label rather than the first one in the document.
+    def label_id
+      @scoped_ids ? form.field_id(method, :label) : "#{method}_label"
+    end
+
+    def trigger_id
+      @scoped_ids ? form.field_id(method, :trigger) : "#{method}_trigger"
+    end
+
     def selected_item
       items.find { |item| !item[:value].nil? && item[:value] == selected_value }
     end

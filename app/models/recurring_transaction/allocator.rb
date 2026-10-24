@@ -30,6 +30,22 @@ class RecurringTransaction
 
     attr_reader :occurrence
 
+    # Takes the entry's advisory lock for the rest of the caller's transaction
+    # (it is transaction-scoped, so the caller must have one open). Allocation
+    # writes take it, and so does anything that decides from an entry's
+    # allocations whether to make a new series for it, so the two serialize.
+    def self.lock_entry!(entry)
+      RecurringOccurrence.lease_connection.execute(
+        ActiveRecord::Base.sanitize_sql_array(
+          [ "SELECT pg_advisory_xact_lock(?::int, ?::int)", ENTRY_LOCK_NAMESPACE, entry_lock_id(entry) ]
+        )
+      )
+    end
+
+    def self.entry_lock_id(entry)
+      Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
+    end
+
     def initialize(occurrence)
       @occurrence = occurrence
     end
@@ -184,17 +200,8 @@ class RecurringTransaction
       def with_entry_lock(entry)
         return yield if entry.nil?
 
-        occurrence.class.lease_connection.execute(
-          ActiveRecord::Base.sanitize_sql_array(
-            [ "SELECT pg_advisory_xact_lock(?::int, ?::int)", ENTRY_LOCK_NAMESPACE, entry_lock_id(entry) ]
-          )
-        )
-
+        self.class.lock_entry!(entry)
         yield
-      end
-
-      def entry_lock_id(entry)
-        Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
       end
 
       # A confirmed payment pins the obligation it was made against. Open rows
@@ -309,7 +316,7 @@ class RecurringTransaction
         hints = series.matcher_hints.deep_dup
 
         if series.merchant_id.blank? && series.name.present?
-          known = ([ series.name ] + Array(hints["name_aliases"]))
+          known = ([ series.matcher_name ] + Array(hints["name_aliases"]))
                     .map { |name| Matcher.normalize_name(name) }
 
           unless known.include?(Matcher.normalize_name(entry.name))

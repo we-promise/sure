@@ -197,6 +197,7 @@ en:
         general_title: General
         default_period: Default Period
         default_account_order: Default Account Order
+        default_account_order_hint: With Manual, drag accounts in the sidebar to set their order.
         language: Language
         language_auto: Browser language
         page_title: Preferences
@@ -358,6 +359,8 @@ en:
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
+      auto_matches_label: Auto Matches
+      classifier_label: Classifier
       background_jobs_label: Background jobs
       api_key_label: API Keys
       payment_label: Payment
