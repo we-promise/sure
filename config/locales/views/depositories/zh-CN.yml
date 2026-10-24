@@ -24,3 +24,6 @@ zh-CN:
       savings:
         long: 储蓄账户
         short: 储蓄账户
+      cash:
+        long: 现金
+        short: 现金

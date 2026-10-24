@@ -1,0 +1,7 @@
+---
+zh-CN:
+  assistant:
+    external:
+      model_catalog:
+        default_agent_label: 默认智能体（%{id}）
+        named_agent_label: "%{name}（%{id}）"

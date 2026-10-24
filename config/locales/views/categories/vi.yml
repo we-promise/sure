@@ -13,20 +13,21 @@ vi:
     edit:
       edit: Chỉnh sửa danh mục
     form:
-      emoji_label: "Emoji (không bắt buộc)"
-      emoji_placeholder: "Dán một emoji"
-      emoji_help: "Chọn hoặc dán một emoji hoàn chỉnh, kể cả cờ hoặc gia đình. Xóa emoji để dùng biểu tượng."
-      emoji_clear: "Dùng biểu tượng"
-      emoji_pick: "Dùng %{emoji}"
+      emoji_label: Emoji (không bắt buộc)
+      emoji_placeholder: Dán một emoji
+      emoji_help: Chọn hoặc dán một emoji hoàn chỉnh, kể cả cờ hoặc gia đình. Xóa
+        emoji để dùng biểu tượng.
+      emoji_clear: Dùng biểu tượng
+      emoji_pick: Dùng %{emoji}
       placeholder: Tên danh mục
       name_label: Tên
       unassigned: "(chưa gán)"
-      parent_category_label: "Danh mục cha (tùy chọn)"
+      parent_category_label: Danh mục cha (tùy chọn)
       trigger_label: Chọn màu và biểu tượng
       color: Màu sắc
       icon: Biểu tượng
       auto_adjust: tự động điều chỉnh.
-      poor_contrast: "Độ tương phản kém, chọn màu tối hơn hoặc"
+      poor_contrast: Độ tương phản kém, chọn màu tối hơn hoặc
     destroy_all:
       success: Đã xóa tất cả danh mục
     index:
@@ -52,7 +53,22 @@ vi:
       show:
         bootstrap: Tạo danh mục mặc định
         empty: Không tìm thấy danh mục
-        match_transfer: "Khớp chuyển khoản/thanh toán"
-        one_time: "Một lần %{type}"
-        income: "thu nhập"
-        expense: "chi tiêu"
+        match_transfer: Khớp chuyển khoản/thanh toán
+        one_time: Một lần %{type}
+        income: thu nhập
+        expense: chi tiêu
+  helpers:
+    submit:
+      category:
+        create: Tạo danh mục
+        update: Cập nhật danh mục
+  activerecord:
+    attributes:
+      category:
+        emoji: Biểu tượng cảm xúc
+    errors:
+      models:
+        category:
+          attributes:
+            emoji:
+              invalid: phải là một biểu tượng cảm xúc hoàn chỉnh

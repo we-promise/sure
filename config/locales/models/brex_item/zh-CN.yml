@@ -3,9 +3,9 @@ zh-CN:
   activerecord:
     attributes:
       brex_item:
-        base_url: Base URL
+        base_url: "基础 URL"
         name: 连接名称
-        token: Token
+        token: "令牌"
     errors:
       models:
         brex_item:

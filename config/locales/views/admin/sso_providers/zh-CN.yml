@@ -37,9 +37,11 @@ zh-CN:
       new:
         title: 添加 SSO 提供商
         description: 配置一个新的单点登录认证提供商
+        provider_configuration: 提供商配置
       edit:
         title: 编辑 SSO 提供商
         description: 更新 %{label} 的配置
+        provider_configuration: 提供商配置
       create:
         success: SSO 提供商创建成功。
       update:
@@ -72,15 +74,15 @@ zh-CN:
         icon_help: 登录按钮的 Lucide 图标名称
         enabled_label: 启用此提供商
         enabled_help: 启用后，用户可以使用此提供商登录
-        issuer_label: Issuer URL
+        issuer_label: "签发方 URL"
         issuer_placeholder: https://your-idp.example.com/realms/your-realm
         issuer_help: OIDC issuer URL（会验证 .well-known/openid-configuration）
-        client_id_label: Client ID
+        client_id_label: "客户端 ID"
         client_id_placeholder: your-client-id
         client_id_help: 来自身份提供商的 OAuth client ID
-        client_secret_label: Client Secret
+        client_secret_label: "客户端密钥"
         client_secret_placeholder_new: your-client-secret
-        client_secret_placeholder_existing: ••••••••
+        client_secret_placeholder_existing: "••••••••"
         client_secret_help: OAuth client secret（在数据库中加密存储）
         client_secret_help_existing: 留空以保留现有密钥
         redirect_uri_label: 回调 URL
@@ -126,7 +128,7 @@ zh-CN:
         idp_metadata_url_help: 您的 IdP 的 SAML 元数据 URL。如果提供，其余 SAML 设置将自动配置。
         manual_saml_config: 手动配置（如果不使用元数据 URL）
         manual_saml_help: 仅当您的 IdP 不提供元数据 URL 时才使用这些设置。
-        idp_sso_url: IdP SSO URL
+        idp_sso_url: "身份提供商单点登录 URL"
         idp_slo_url: IdP SLO URL（可选）
         idp_certificate: IdP 证书
         idp_certificate_help: PEM 格式的 X.509 证书。如果不使用元数据 URL，则必填。

@@ -64,6 +64,7 @@ zh-CN:
         no_target_date: 开放
         paused: 已暂停
         completed: 已完成
+      chips_aria: 按状态筛选目标
     new:
       heading: 新建目标
       subtitle: 为具体目标储蓄。
@@ -120,6 +121,7 @@ zh-CN:
         behind_covered: 待确认承诺可以补足差距
         on_track: 预计在 %{date} 左右达成目标
         no_target_date: 设置目标日期以预测完成时间
+        depleted: 距目标余额尚差 %{amount}，请补足以恢复储备金
       pending_pledge:
         title:
           zero: 待确认：%{amount} 存入 %{account} · 今天过期
@@ -144,6 +146,9 @@ zh-CN:
         of_target: 目标进度
         market_value: 市值 %{amount}
         aria_label: 目标已完成 %{percent}%。已存 %{target} 中的 %{amount}。
+        aria_label_with_used: 目标已完成 %{percent}%。当前为 %{amount}，目标为 %{target}，其中 %{used}
+          已使用。
+        including_used: 含已使用的 %{amount}
       projection:
         heading: 预测
         legend_saved: 已存
@@ -153,12 +158,14 @@ zh-CN:
         no_target_date: 尚未设置目标日期。设置后可预测完成时间。
         no_pace: 还没有存入资金。向关联账户存钱后即可开始预测。
         behind: 按当前进度会低于目标。
-        on_track_html: 按当前进度，你大约会在 <strong class="text-primary whitespace-nowrap">%{date}</strong> 达成此目标。
+        on_track_html: 按当前进度，你大约会在 <strong class="text-primary whitespace-nowrap">%{date}</strong>
+          达成此目标。
         aria_label: "%{name} 的预测图表"
         today_marker: 今天
         tooltip_projected: 预计：%{amount}
         tooltip_saved: 已存：%{amount}
         tooltip_target_relation: 目标 %{target} 的 %{percent}%
+        reserve: 储备金需要持续维持目标余额，因此不预测完成日期。
       catch_up:
         title: 每月多存 %{amount} 以赶上进度
         body: 当前进度 %{avg}/月 · 达成目标需要 %{required}/月。
@@ -170,9 +177,9 @@ zh-CN:
       confirm_archive_title: 归档此目标？
       confirm_archive_body: 归档后的目标会从主列表隐藏。之后可以恢复。
       confirm_archive_cta: 归档
-      confirm_delete_title: "删除此目标？"
+      confirm_delete_title: 删除此目标？
       confirm_delete_body: "%{name} 及其存款记录将被永久删除。你的关联账户、余额和交易不受影响。如果想保留记录，请改为归档。"
-      confirm_delete_cta: "删除目标"
+      confirm_delete_cta: 删除目标
       paused_banner:
         title: 此目标已暂停
         body: 恢复它以继续跟踪进度。
@@ -185,6 +192,12 @@ zh-CN:
         heading: 目标已达成。做得不错。
         body: 目标以 %{saved}/%{target} 关闭。可以保留记录，或现在归档。
         archive_cta: 归档目标
+        body_reached: 你已达到目标，当前为 %{saved}，目标为 %{target}。目标尚未结项，资金仍为此目标预留。
+        body_reserve: 储备金已达到目标余额，当前为 %{saved}，目标为 %{target}。无需操作，资金将继续预留。
+        close_cta: 结项目标
+        close_hint: 结项会释放预留资金，供同一账户上的其他目标使用。请在实际使用这笔资金后再结项。
+        frozen: 于 %{date} 达成 · %{amount}
+        heading_reserve: 储备金充足
       inactive:
         heading_paused: 此目标已暂停
         heading_archived: 此目标已归档
@@ -196,6 +209,10 @@ zh-CN:
       empty:
         heading: 还没有存入资金
         body: 向关联账户转入资金。Sure 会在下次同步时识别，或你也可以更新手动账户余额。
+      consume: 我已使用部分资金
+      reserve_shortfall:
+        body: 当前储备金为 %{saved}，目标为 %{target}。再补充 %{missing} 即可恢复至目标余额。
+        heading: 储备金低于目标余额
     errors:
       not_found: 找不到该目标。它可能已被删除。
     states:
@@ -211,6 +228,8 @@ zh-CN:
       no_target_date: 开放
       paused: 已暂停
       archived: 已归档
+      depleted: 需要补足
+      funded: 储备金充足
     empty_state:
       heading: 还没有目标
       body: 设定目标，关联储蓄账户，并查看进度累积。
@@ -248,6 +267,9 @@ zh-CN:
       footer_last_days:
         one: 上次承诺 1 天前已匹配
         other: 上次承诺 %{count} 天前已匹配
+      footer_reserve_intact: 储备金充足
+      footer_reserve_short: 还需补足 %{amount}
+      including_used: 含已使用的 %{amount}
     form:
       create: 创建目标
       save: 保存更改
@@ -267,9 +289,15 @@ zh-CN:
         notes_placeholder: 给未来自己的提醒…
         funding_accounts: 资金账户
         funding_accounts_hint: 此目标余额等于这些账户的余额（或预留的部分）。
-        whole_balance: "留空即全部余额"
+        whole_balance: 留空即全部余额
         earmark_for: 为「%{account}」预留的金额
         earmark_hint: 留空则使用该账户的全部余额。
+        target_balance: 目标余额
+        target_balance_hint: 根据上述月份的月度支出中位数计算，每月更新。
+        target_balance_pending: 保存时计算
+        target_mode: 目标余额设置方式
+        target_months: 支出月数
+        target_months_hint: 每月 1 日根据月度支出中位数重新计算。
       subtypes:
         checking: 支票账户
         savings: 储蓄账户
@@ -277,3 +305,43 @@ zh-CN:
         cd: 定期存单
         money_market: 货币市场
         other: 其他
+      earmark:
+        headroom: 此账户还有 {left} 可供预留。
+        prorata: 此账户的各项目标合计 {total}，账户余额为 {balance}；各项目标将按比例分配资金、累积进度。
+        whole_balance: 此账户将使用其他预留金额之外的剩余资金为此目标提供资金。
+        whole_balance_alone: 此目标将使用该账户的全部余额。
+      kinds:
+        maintained:
+          hint: 需要持续保持的余额，例如应急资金。不会结项。
+          label: 持续维持的储备金
+        one_off:
+          hint: 为某项用途储蓄，实际使用后即可结项目标。
+          label: 一次性目标
+      target_modes:
+        fixed: 固定金额
+        months_of_expenses: 若干个月的支出
+    consume:
+      account_label: 从哪个账户支出？
+      amount_hint: 目前已为此目标预留 %{saved}。
+      amount_label: 你使用了多少？
+      cancel: 取消
+      earmark_note: 记录的已用金额将不再为此目标预留，同一账户上的其他目标便可重新分配这部分资金。
+      errors:
+        account_not_linked: 该账户不是此目标的资金账户。
+        account_required: 此目标由多个账户提供资金，请指定资金从哪个账户支出。
+        exceeds_earmark: 该金额超过此目标在该账户上预留的金额。
+        exceeds_target: 该金额超过此目标原定的储蓄总额。
+        maintained: 储备金在动用后应补足，无需另行记录已用金额；资金缺口已显示在目标中。
+        no_linked_account: 此目标已没有关联的资金账户。
+        non_positive: 请输入大于零的金额。
+        not_active: 此目标已不再进行，无法再记录已用金额。
+        transaction_already_claimed: 这笔流出资金已归属至目标。
+        transaction_not_found: 这笔流出资金已无法再归属至目标。
+      submit: 记录
+      subtitle: "%{goal}"
+      success: 已将 %{amount} 记录为已用金额。
+      title: 记录已用金额
+    unattributed_outflows:
+      attribute: 就是这笔
+      body: 若其中有支出用于 %{goal}，请在此确认，相应金额便不再计入目标尚需积累的部分。
+      heading: 这些账户发生了资金流出

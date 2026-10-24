@@ -2,7 +2,8 @@
 vi:
   concerns:
     self_hostable:
-      redis_configured: "Redis đã được cấu hình đúng! Bây giờ bạn có thể thiết lập ứng dụng Sure của mình."
+      redis_configured: Redis đã được cấu hình đúng! Bây giờ bạn có thể thiết lập
+        ứng dụng Sure của mình.
   shared:
     dot_separator: "·"
     confirm_modal:
@@ -20,23 +21,25 @@ vi:
       exchange_rate_help: Chọn cách nhập số tiền.
     syncing_notice:
       syncing: Đang đồng bộ dữ liệu tài khoản...
-    require_admin: "Chỉ quản trị viên mới có thể thực hiện hành động này"
+    require_admin: Chỉ quản trị viên mới có thể thực hiện hành động này
     custom_confirm:
-      default_title: "Bạn có chắc không?"
-      default_body: "Thao tác này không thể hoàn tác."
-      default_btn_text: "Xác nhận"
-      resource_deletion_title: "Xóa %{resource}?"
-      resource_deletion_body: "Bạn có chắc muốn xóa %{resource} không? Thao tác này không thể hoàn tác."
-      resource_deletion_btn_text: "Xóa %{resource}"
+      default_title: Bạn có chắc không?
+      default_body: Thao tác này không thể hoàn tác.
+      default_btn_text: Xác nhận
+      resource_deletion_title: Xóa %{resource}?
+      resource_deletion_body: Bạn có chắc muốn xóa %{resource} không? Thao tác này
+        không thể hoàn tác.
+      resource_deletion_btn_text: Xóa %{resource}
     family_moniker:
       group_plural: Nhóm
       group_singular: Nhóm
       plural: Hộ gia đình
       singular: Hộ gia đình
     trend_change:
-      no_change: "không thay đổi"
+      no_change: không thay đổi
     cancel: Hủy
     transaction_tabs:
       expense: Chi tiêu
       income: Thu nhập
       transfer: Chuyển khoản
+    submitting: Đang gửi…

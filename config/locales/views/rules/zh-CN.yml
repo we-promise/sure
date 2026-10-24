@@ -52,6 +52,7 @@ zh-CN:
       confirm_changes: 确认更改
     actions:
       value_placeholder: 输入值
+      to_label: 为
     update:
       success: 规则已更新
     destroy:
@@ -104,6 +105,26 @@ zh-CN:
         expense: 支出
         transfer: 转账
         equal_to: 等于
+      operators:
+        contains: 包含
+        does_not_contain: 不包含
+        equal_to: 等于
+        greater_or_equal_to: 大于或等于
+        greater_than: 大于
+        is_empty: 为空
+        is_equal_to: 等于
+        is_not_empty: 不为空
+        less_than: 小于
+        less_than_or_equal_to: 小于或等于
+        not_equal_to: 不等于
+    category_rule_cta:
+      close: 关闭
+      create_rule: 创建规则
+      description: 您可以创建规则，为此类交易自动分类
+      dont_show_again: 不再显示
+      hide_for_today: 今天不再显示
+      hide_for_today_hint: 选择“今天不再显示”会暂停这些建议 24 小时。
+      message: 已更新为 %{category_name}
   rule:
     conditions:
       condition_group:
@@ -113,3 +134,5 @@ zh-CN:
         any: 任一
         of_the_following_conditions: 以下条件
         add_condition: 添加条件
+      condition:
+        value_placeholder: 输入值

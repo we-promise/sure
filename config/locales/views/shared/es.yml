@@ -2,7 +2,8 @@
 es:
   concerns:
     self_hostable:
-      redis_configured: ¡Redis ya está configurado correctamente! Ahora puedes configurar tu aplicación Sure.
+      redis_configured: "¡Redis ya está configurado correctamente! Ahora puedes configurar
+        tu aplicación Sure."
   shared:
     preview: Vista previa
     dot_separator: "·"
@@ -11,9 +12,9 @@ es:
       refresh: Actualizar
     confirm_modal:
       accept: Confirmar
-      body_html: <p>No podrás deshacer esta decisión</p>
+      body_html: "<p>No podrás deshacer esta decisión</p>"
       cancel: Cancelar
-      title: ¿Estás seguro?
+      title: "¿Estás seguro?"
     money_field:
       label: Importe
     exchange_rate_tabs:
@@ -26,11 +27,12 @@ es:
       syncing: Sincronizando datos de cuentas...
     require_admin: Solo los administradores pueden realizar esta acción
     custom_confirm:
-      default_title: ¿Estás seguro?
+      default_title: "¿Estás seguro?"
       default_body: Esto no es reversible.
       default_btn_text: Confirmar
-      resource_deletion_title: ¿Eliminar %{resource}?
-      resource_deletion_body: ¿Estás seguro de que deseas eliminar %{resource}? Esto no es reversible.
+      resource_deletion_title: "¿Eliminar %{resource}?"
+      resource_deletion_body: "¿Estás seguro de que deseas eliminar %{resource}? Esto
+        no es reversible."
       resource_deletion_btn_text: Eliminar %{resource}
     family_moniker:
       group_plural: Grupos
@@ -44,3 +46,4 @@ es:
       expense: Gasto
       income: Ingreso
       transfer: Transferencia
+    submitting: Enviando…

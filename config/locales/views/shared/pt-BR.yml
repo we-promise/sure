@@ -23,4 +23,5 @@ pt-BR:
       plural: Famílias
       singular: Família
     trend_change:
-      no_change: "sem alteração"
+      no_change: sem alteração
+    submitting: Enviando…

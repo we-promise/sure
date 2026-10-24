@@ -13,19 +13,20 @@ hu:
     edit:
       edit: Kategória szerkesztése
     form:
-      emoji_label: "Emodzsi (nem kötelező)"
-      emoji_placeholder: "Illessz be egy emodzsit"
-      emoji_help: "Válassz vagy illessz be egy teljes emodzsit, akár zászlót vagy családot is. Töröld, ha az ikont szeretnéd használni."
-      emoji_clear: "Ikon használata"
+      emoji_label: Emodzsi (nem kötelező)
+      emoji_placeholder: Illessz be egy emodzsit
+      emoji_help: Válassz vagy illessz be egy teljes emodzsit, akár zászlót vagy családot
+        is. Töröld, ha az ikont szeretnéd használni.
+      emoji_clear: Ikon használata
       emoji_pick: "%{emoji} használata"
       placeholder: Kategória neve
       name_label: Név
       unassigned: "(nincs hozzárendelve)"
-      parent_category_label: "Szülőkategória (nem kötelező)"
+      parent_category_label: Szülőkategória (nem kötelező)
       trigger_label: Szín és ikon választása
       color: Szín
       icon: Ikon
-      poor_contrast: "Gyenge kontraszt, válassz sötétebb színt vagy"
+      poor_contrast: Gyenge kontraszt, válassz sötétebb színt vagy
     destroy_all:
       success: Összes kategória törölve
     index:
@@ -51,7 +52,22 @@ hu:
       show:
         bootstrap: Alapértelmezett kategóriák létrehozása
         empty: Nem található kategória
-        match_transfer: "Átutalás/fizetés párosítása"
-        one_time: "Egyszeri %{type}"
-        income: "bevétel"
-        expense: "kiadás"
+        match_transfer: Átutalás/fizetés párosítása
+        one_time: Egyszeri %{type}
+        income: bevétel
+        expense: kiadás
+  helpers:
+    submit:
+      category:
+        create: Kategória létrehozása
+        update: Kategória frissítése
+  activerecord:
+    attributes:
+      category:
+        emoji: Emodzsi
+    errors:
+      models:
+        category:
+          attributes:
+            emoji:
+              invalid: csak egy teljes emodzsi lehet

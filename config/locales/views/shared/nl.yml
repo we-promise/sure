@@ -23,4 +23,5 @@ nl:
       plural: Families
       singular: Familie
     trend_change:
-      no_change: "geen verandering"
+      no_change: geen verandering
+    submitting: Verzenden…

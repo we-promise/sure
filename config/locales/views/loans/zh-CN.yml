@@ -1,37 +1,90 @@
----
 zh-CN:
   loans:
     edit:
-      edit: 编辑%{account}
+      edit: "编辑%{account}"
     form:
-      initial_balance: 原始贷款余额
-      interest_rate: 利率
-      interest_rate_placeholder: '5.25'
-      rate_type: 利率类型
-      term_months: 期限（月）
-      term_months_placeholder: '360'
-      none: 无
-      subtype_prompt: 选择贷款类型
-      subtype_none: 无
+      initial_balance: "原始贷款余额"
+      interest_rate: "利率"
+      interest_rate_placeholder: "5.25"
+      rate_type: "利率类型"
+      term_months: "期限（月）"
+      term_months_placeholder: "360"
+      none: "无"
+      subtype_prompt: "选择贷款类型"
+      subtype_none: "无"
+      down_payment: "首付"
+      insurance_rate: "保险费率"
+      insurance_rate_hint: "填写年费率，保费按月随还款一并收取。固定保额型按初始贷款余额计算，递减保额型按剩余欠款计算。"
+      insurance_rate_placeholder: "0.36"
+      insurance_rate_type: "保险类型"
+      insurance_rate_type_decreasing_life: "递减保额"
+      insurance_rate_type_level_term: "固定保额"
+      rate_change_add: "添加利率变更"
+      rate_change_effective_date: "生效日期"
+      rate_change_rate: "利率"
+      rate_change_remove: "移除"
+      rate_changes: "利率变更"
+      rate_changes_empty: "尚无利率变更记录，贷款将按上方的利率计算。"
+      rate_changes_hint: "每行设置自生效日起至下一次变更前适用的利率。重复输入同一日期会替换该行，不会再添加一行。"
+      rate_type_adjustable: "可调整利率"
+      rate_type_fixed: "固定利率"
+      rate_type_variable: "浮动利率"
+      start_date: "放款日期"
+      start_date_hint: "实际提取贷款的日期。留空则使用账户的开立日期。"
     new:
-      title: 请输入贷款详情
+      title: "请输入贷款详情"
     overview:
-      interest_rate: 利率
-      monthly_payment: 月还款额
-      not_applicable: 不适用
-      original_principal: 原始本金
-      remaining_principal: 剩余本金
-      term: 期限
-      type: 类型
-      unknown: 未知
+      interest_rate: "利率"
+      monthly_payment: "月还款额"
+      not_applicable: "不适用"
+      original_principal: "原始本金"
+      remaining_principal: "剩余本金"
+      term: "期限"
+      type: "类型"
+      unknown: "未知"
+      original_payoff_date: "原定结清日期"
     tabs:
       overview:
-        interest_rate: 利率
-        monthly_payment: 月供
-        not_applicable: 不适用
-        original_principal: 原始本金
-        remaining_principal: 剩余本金
-        term: 期限
-        type: 类型
-        unknown: 未知
-        edit_loan_details: 编辑贷款详情
+        interest_rate: "利率"
+        monthly_payment: "月供"
+        not_applicable: "不适用"
+        original_principal: "原始本金"
+        remaining_principal: "剩余本金"
+        term: "期限"
+        type: "类型"
+        unknown: "未知"
+        edit_loan_details: "编辑贷款详情"
+        insurance_rate_only: "年费率 %{rate}"
+        leverage: "杠杆率"
+        leverage_band_conservative: "保守"
+        leverage_band_high: "高"
+        leverage_band_moderate: "适中"
+        leverage_multiple: "%{ratio} 倍"
+        original_payoff_date: "原定结清日期"
+        total_cost: "总成本"
+        total_cost_with_insurance: "总成本（含保险）"
+        total_insurance: "保险费"
+      repayment_progress:
+        instalment: "第 %{number} 期还款 · %{date}"
+        insurance: "保险费"
+        interest: "利息"
+        of_original: "原始本金 %{amount}"
+        principal: "本金"
+        repaid: "已偿还"
+        total: "合计"
+      schedule:
+        date: "日期"
+        description: "根据初始余额、利率和期限，自 %{start_date} 起预测，不包含额外还款。"
+        forecasted_payoff_date: "预计结清日期"
+        forecasted_payoff_not_converged: "按当前还款额无法结清"
+        interest: "利息"
+        monthly_payment: "月还款额"
+        not_applicable: "不适用"
+        number: "序号"
+        opening_payment: "初始还款额"
+        payment: "还款额"
+        principal: "本金"
+        remaining_balance: "剩余余额"
+        total_cost: "总成本"
+        total_interest: "利息总额"
+        variable_rate_notice: "此贷款的利率会随时间变化。还款计划会在每次已记录的利率变更时重新摊还，保留原定结清日期并调整还款额；尚未记录的利率变更会影响这些数值。"

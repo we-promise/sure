@@ -109,6 +109,20 @@ zh-CN:
         instructions: 选择继续即可解析 CSV 并进入清理步骤。
       mint_import:
         date_format_label: 日期格式
+        account_optional: 账户（可选）
+        amount: 金额
+        apply_configuration: 应用配置
+        category_optional: 分类（可选）
+        currency: 币种
+        date: 日期
+        format: 格式
+        incomes_negative: 收入为负数
+        incomes_positive: 收入为正数
+        intro: Mint 导入已预先配置好，请继续下一步。
+        leave_empty: 留空
+        name_optional: 名称（可选）
+        select_format: 选择格式
+        tags_optional: 标签（可选）
       actual_import:
         preconfigured_notice: 我们已为您的 Actual Budget 导入预先配置好了。请继续下一步。
         leave_empty: 留空
@@ -130,10 +144,26 @@ zh-CN:
       show:
         description: 选择与 CSV 中每个字段对应的列。
         title: 配置您的导入
+        apply_template: 应用模板
+        manually_configure: 手动配置
+        sample_caption: 来自所上传 CSV 的样例数据
+        template_description: 找到了此账户上次导入时使用的配置。是否将其应用到本次导入？
+        template_found: 已找到配置模板
       merchant_import:
         button_label: 继续
         description: 导入商户列表，用于补全交易商户信息。
         instructions: 上传包含商户名称、网站和颜色等字段的 CSV 文件。
+      ynab_import:
+        account_label: 账户（可选）
+        amount_notice: 金额将从 Outflow（流出）和 Inflow（流入）列自动识别。
+        apply_configuration: 应用配置
+        category_label: 分类（可选）
+        date_format_label: 日期格式
+        date_label: 日期
+        leave_empty: 留空
+        name_label: 收款方（可选）
+        notes_label: 备注（可选）
+        preconfigured_notice: YNAB 导入已预先配置好，请继续下一步。
     confirms:
       sure_import:
         title: 确认您的导入
@@ -163,6 +193,7 @@ zh-CN:
     uploads:
       handle_qif_upload:
         qif_uploaded: QIF 文件上传成功。
+        qif_account_required: 请选择用于 QIF 导入的账户
       update:
         qif_uploaded: QIF 文件上传成功。
       show:
@@ -247,6 +278,7 @@ zh-CN:
     update:
       account_saved: 账户已保存。
       invalid_account: 未找到账户。
+      account_locked: 此导入已提交，无法再更改所属账户。如需导入到其他账户，请先回滚。
     publish:
       started: 您的导入已在后台开始。
       max_rows_exceeded: 您的导入超过了最大行数 %{max}。
@@ -275,6 +307,8 @@ zh-CN:
           confirm_revert: 这将删除已导入的交易记录，但您仍然可以随时查看和重新导入您的数据。
           delete: 删除
           view: 查看
+          confirm_mark_failed: 此导入已长时间没有活动，后台任务可能已被中断。是否将其标记为失败以便重试？已导入的数据不会保留。
+          mark_failed: 标记为失败
         type_labels:
           transaction_import: 交易
           trade_import: 投资交易
@@ -288,6 +322,7 @@ zh-CN:
           pdf_import: PDF
           document_import: 文档
           sure_import: Sure
+          ynab_import: YNAB
       empty: 暂无导入记录。
     new:
       description: 您可以通过 CSV 手动导入多种类型数据，或使用我们的导入模板（如 Mint 格式）。
@@ -319,6 +354,28 @@ zh-CN:
       empty_summary: 在此文件中未找到可导入的记录。文件可能为空，或各行不符合预期的导出格式（每行应为包含「type」和「data」键的 JSON 对象，且类型须为本导入支持的类型）。
       publish_import: 发布导入
       back_to_imports: 返回导入列表
+      missing_merchant_warning_description:
+        one: 此文件中有 1 处商户引用指向了未包含在导出中的商户。这可能是因为导出文件生成于 Sure 开始导出提供商指定商户之前。您仍可提交导入，受影响的记录将不带商户导入，之后可再补充标记。
+        other: 此文件中有 %{count} 处商户引用指向了未包含在导出中的商户。这可能是因为导出文件生成于 Sure 开始导出提供商指定商户之前。您仍可提交导入，受影响的记录将不带商户导入，之后可再补充标记。
+      missing_merchant_warning_title: 此导出文件缺少部分商户
+      provider_merchant_diff_description:
+        one: 此文件中有 1 个商户已存在，但详情不同。系统将保留现有商户，不应用文件中的值。
+        other: 此文件中有 %{count} 个商户已存在，但详情不同。系统将保留现有商户，不应用文件中的值。
+      provider_merchant_diff_fields:
+        name: 名称
+        provider_merchant_id: 提供商 ID
+        website_url: 网站
+      provider_merchant_diff_none: 无
+      provider_merchant_diff_row: "%{field}：保留 %{kept}，文件中的值为 %{imported}"
+      provider_merchant_diff_summary: 查看差异
+      provider_merchant_diff_title: 部分商户已存在，但详情不同
+      reused_taxonomy_notice_description:
+        one: 此文件中有 1 个分类、标签或商户已存在于您的账户中，例如入门设置创建的默认分类。系统将复用该项并用文件中的数据更新，而不会重复创建。
+        other: 此文件中有 %{count} 个分类、标签或商户已存在于您的账户中，例如入门设置创建的默认分类。系统将复用这些项并用文件中的数据更新，而不会重复创建。
+      reused_taxonomy_notice_title: 部分分类、标签或商户已存在
+      skipped_recurring_description:
+        one: 有 1 笔循环交易没有名称且缺少商户，将被跳过。自动检测的循环交易会在导入后重新生成。
+        other: 有 %{count} 笔循环交易没有名称且缺少商户，将被跳过。自动检测的循环交易会在导入后重新生成。
     apply_template:
       template_applied: 模板已应用。
       no_template_found: 找不到可用模板。
@@ -370,6 +427,7 @@ zh-CN:
       pdf_import: PDF 导入
       document_import: 文档导入
       sure_import: Sure 导入
+      ynab_import: YNAB 导入
     steps:
       upload: 上传
       configure: 配置
@@ -378,6 +436,7 @@ zh-CN:
       confirm: 确认
       select: 选择
       progress: 第 %{step} 步，共 %{total} 步
+      label: 第 %{step} 步
     empty:
       message: 未找到导入记录。
     create:
@@ -400,6 +459,8 @@ zh-CN:
       finalize_mappings: 完成映射
     errors:
       custom_column_requires_inflow: 自定义列需要选择流入金额列。
+      interrupted: 后台任务在完成前被中断，已导入的数据已回滚，您可以安全重试。
+      presumed_lost: 后台任务被判定为已丢失，因此导入已标记为失败。已导入的数据已回滚，您可以安全重试。
     document_types:
       bank_statement: 银行账单
       credit_card_statement: 信用卡账单
@@ -429,7 +490,9 @@ zh-CN:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: 处理失败：%{error}
       ready_for_review_title: 可供审核
-      ready_for_review_description: 已提取 %{count} 条交易，请审核后发布。
+      ready_for_review_description:
+        one: 已提取 %{count} 条交易，请审核后发布。
+        other: 已提取 %{count} 条交易，请审核后发布。
       transactions_extracted: 已提取交易
       transactions_extracted_count:
         one: "%{count} 笔交易"
@@ -446,3 +509,30 @@ zh-CN:
       review_transactions: 审核交易
       select_account_to_continue: 请选择账户后继续。
       unknown_document_type: 未知
+      already_recorded_note:
+        one: "%{count} 笔交易已存在于此账户，并已与对账单匹配。"
+        other: "%{count} 笔交易已存在于此账户，并已与对账单匹配。"
+      complete_fully_reconciled:
+        one: 对账单中的交易已全部存在于您的账户中。已匹配并核对 %{count} 笔交易，无需导入新记录。
+        other: 对账单中的交易已全部存在于您的账户中。已匹配并核对全部 %{count} 笔交易，无需导入新记录。
+      errors:
+        provider_no_pdf_support: AI 提供商不支持 PDF 处理
+        provider_not_configured: 尚未配置 AI 提供商
+      view_summary: 查看导入摘要
+    cancel:
+      cancelled: 导入已标记为失败，您可以从导入页面重试。
+      not_cancellable: 目前无法将此导入标记为失败，其后台任务可能仍在运行。请在任务停止活动一小时后重试。
+    summary:
+      already_recorded: 已有记录
+      already_recorded_hint: 已与此账户中已有的交易匹配，并标记为已对账。
+      awaiting_review: 等待导入
+      close: 关闭
+      extracted: 对账单中识别到的交易
+      fully_reconciled:
+        one: 无需导入新记录，对账单中唯一的交易已存在。
+        other: 无需导入新记录，对账单中的 %{count} 笔交易均已存在。
+      imported: 已作为新记录导入
+      statement_evidence_html: 已根据 %{statement} 完成对账。
+      subtitle: 此对账单中的每笔交易在 %{account} 中的处理结果。
+      subtitle_no_account: 此对账单中每笔交易的处理结果。
+      title: 导入摘要

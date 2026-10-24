@@ -5,9 +5,9 @@ zh-CN:
       name: Sophtron 连接
     new:
       title: 连接 Sophtron
-      user_id: User ID
+      user_id: "用户 ID"
       user_id_placeholder: 粘贴您的 Sophtron User ID
-      access_key: Access Key
+      access_key: "访问密钥"
       access_key_placeholder: 粘贴您的 Sophtron Access Key
       connect: 连接
       cancel: 取消
@@ -268,15 +268,15 @@ zh-CN:
         base_url_html: "<strong>Base URL：</strong>Sophtron API 端点 URL，通常为 https://api.sophtron.com/api"
       fields:
         user_id:
-          label: "User ID"
+          label: "用户 ID"
           placeholder_new: "粘贴您的 Sophtron User ID"
           placeholder_edit: "••••••••"
         access_key:
-          label: "Access Key"
+          label: "访问密钥"
           placeholder_new: "粘贴您的 Sophtron Access Key"
           placeholder_edit: "••••••••"
         base_url:
-          label: "Base URL"
+          label: "基础 URL"
           placeholder: "https://api.sophtron.com/api"
       save: "保存配置"
       update: "更新配置"

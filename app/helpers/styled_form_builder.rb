@@ -126,7 +126,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
       DS::Button.new(
         text: value,
         type: "submit",
-        data: (options[:data] || {}).merge({ turbo_submits_with: "Submitting..." }),
+        data: (options[:data] || {}).merge({ turbo_submits_with: @template.t("shared.submitting") }),
         full_width: true
       )
     )

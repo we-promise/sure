@@ -35,6 +35,11 @@ zh-CN:
         actions: 操作
         source: 来源
       import: 导入商户
+      no_family_merchants_found: 未找到匹配的家庭商户
+      no_provider_merchants_found: 未找到匹配的提供商商户
+      per_page: 每页
+      search_family_merchants: 搜索家庭商户...
+      search_provider_merchants: 搜索提供商商户...
     family_merchant:
       edit: 编辑
       delete: 删除
@@ -52,6 +57,8 @@ zh-CN:
       sources_label: 要合并的商户
       sources_hint: 所选商户将合并到目标商户。家庭商户将被删除，提供商商户将解除关联。
       submit: 合并所选项
+      no_merchants_found: 未找到匹配的商户
+      sources_search_placeholder: 搜索商户...
     new:
       title: 新建商户
     perform_merge:

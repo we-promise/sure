@@ -42,7 +42,7 @@ zh-CN:
       update_connection: 更新 连接
       connection_name_label: 连接名称
       connection_name_placeholder: 主 Akahu 连接
-      app_token_label: App Token
+      app_token_label: "应用令牌"
       app_token_placeholder: 粘贴 Akahu App Token
       keep_app_token_placeholder: 留空以保留现有 App Token
       user_token_label: 用户 令牌

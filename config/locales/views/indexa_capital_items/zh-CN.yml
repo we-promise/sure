@@ -37,7 +37,7 @@ zh-CN:
       update_button: 更新配置
       fields:
         api_token:
-          label: API Token
+          label: "API 令牌"
           description: 来自 Indexa Capital 仪表盘的只读 API token
           placeholder_new: 在此粘贴您的 API token
           placeholder_update: 输入新的 API token 以更新
@@ -47,7 +47,7 @@ zh-CN:
           placeholder_new: 在此粘贴用户名
           placeholder_update: 输入新的用户名以更新
         document:
-          label: Document ID
+          label: "证件号码"
           description: 您的 Indexa Capital document/ID
           placeholder_new: 在此粘贴 document ID
           placeholder_update: 输入新的 document ID 以更新

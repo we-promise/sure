@@ -21,14 +21,14 @@ zh-CN:
       manual_description: 您可以使用上方按钮手动识别模式或清理过期的循环交易。
       automatic_description: 自动识别也会在以下情况后运行：
       triggers:
-        - CSV 导入完成（交易、证券交易、账户等）
-        - 任一提供商同步完成（Plaid、SimpleFIN 等）
+      - CSV 导入完成（交易、证券交易、账户等）
+      - 任一提供商同步完成（Plaid、SimpleFIN 等）
     identified: 已识别 %{count} 个循环交易模式
     cleaned_up: 已清理 %{count} 个过期循环交易
     marked_inactive: 循环交易已标记为停用
     marked_active: 循环交易已标记为启用
     deleted: 循环交易已删除
-    confirm_delete: "要从账单中移除“%{name}”吗？已有交易保持不变，只移除此账单及其付款计划。"
+    confirm_delete: 要从账单中移除“%{name}”吗？已有交易保持不变，只移除此账单及其付款计划。
     marked_as_recurring: 交易已标记为循环
     already_exists: 此模式已存在手动循环交易
     creation_failed: 创建循环交易失败。请检查交易详情后重试。
@@ -45,12 +45,165 @@ zh-CN:
       last_occurrence: 上次发生
       status: 状态
       actions: 操作
+      frequency: 频率
     status:
       active: 启用
       inactive: 停用
+      ended: 已忽略
+      paused: 已暂停
+      suggested: 可能的账单
     badges:
       manual: 手动
     transfer_marked_as_recurring: 转账已标记为循环
     transfer_already_exists: 此账户对已存在循环转账
     transfer_creation_failed: 创建循环转账失败。请检查转账详情后重试。
     transfer_feature_disabled: 此家庭已禁用循环交易
+    actions:
+      delete: 移除
+      edit_payment_link: 编辑付款链接
+      pause: 暂停
+      resume: 恢复
+    confirm_delete_income: 要将“%{name}”从收入计划中移除吗？已有交易保持不变，只移除此收入及其收款计划。
+    confirmed: 账单已添加到循环交易
+    create:
+      account_invalid: 请选择您有权限添加账单的账户，也可以留空
+      already_exists: 此账单已存在
+      amount_invalid: 请输入纯数字金额
+      due_date_required: 请输入账单的下次到期日期
+      success: 账单已添加
+      success_income: 收入已添加
+    deleted_income: 收入已移除，已有交易保持不变。
+    dismissed: 已忽略，以后不会再推荐此模式。
+    edit:
+      income_title: 编辑收入 · %{name}
+      title: 编辑 %{name}
+      trigger_label: 编辑账单
+    form:
+      account_blank: 任意账户
+      account_label: 付款账户
+      amount_edit_hint: 适用于从现在起到期的账单。已经到期的账单仍保留原金额。
+      amount_label: 金额
+      apply_to_siblings:
+        one: 也将此链接用于另一笔 %{name} 账单
+        other: 也将此链接用于另外 %{count} 笔 %{name} 账单
+      autopay_hint: 账单仍保留在列表中，但不再列为待办事项。
+      autopay_label: 自动付款
+      bill_type_label: 类型
+      cancelled_on_hint: 此日期仅供您参考。如需停止生成后续账单，请暂停此账单。
+      cancelled_on_label: 取消日期
+      category_blank: 无分类
+      category_label: 分类
+      first_due_on_label: 下次到期
+      frequency_day_label: 日期
+      frequency_hint: 设置账单的到期频率，并选择与对账单一致的具体日期。
+      frequency_interval_label: 重复间隔
+      frequency_interval_unit_label: 单位
+      frequency_label: 频率
+      frequency_month_label: 月份
+      frequency_new_hint: 具体日期取自上方的到期日期。保存后可进一步调整计划。
+      frequency_second_day_label: 另一个日期
+      frequency_weekday_label: 星期
+      income_account_label: 收款账户
+      income_amount_edit_hint: 适用于从现在起的发薪日。已经到期的收入仍保留原金额。
+      income_amount_label: 每次收入金额
+      income_due_on_label: 下次发薪日
+      income_frequency_hint: 设置收入到账频率，并选择与发薪日一致的具体日期。
+      income_frequency_label: 收入频率
+      income_frequency_new_hint: 发薪日期取自上方的日期。保存后可进一步调整计划。
+      income_name_label: 收入来源
+      income_name_placeholder: 雇主、客户、兼职
+      income_notes_hint: 记录关于这项收入需要留意的事项。
+      income_notes_placeholder: 工资直接入账、分存两个账户
+      installment_count_hint: 计划将在完成这些期数后结束，并持续显示付款进度。
+      installment_count_label: 付款期数
+      more_options: 更多选项
+      name_label: 名称
+      name_placeholder: 房租、PG&E、Netflix
+      notes_hint: 记录付款时需要查看的信息，将显示在账单上。
+      notes_label: 备注
+      notes_placeholder: 账户尾号 4821，使用 Amex 付款
+      payment_url_hint: 用于支付此账单的网址。可从循环交易和即将到期列表中打开，新标签页显示。
+      payment_url_label: 付款链接
+      payment_url_placeholder: bank.example.com/pay
+      renews_on_label: 续订日期
+      submit: 保存账单
+      submit_income: 保存收入
+      trial_ends_on_label: 试用结束日期
+    frequency:
+      annual: 每年%{month}%{day}
+      biweekly: 每两周的 %{weekday}
+      custom: 自定义计划
+      every_n_months: 每 %{interval} 个月的 %{day}
+      every_n_weeks: 每 %{interval} 周的 %{weekday}
+      every_n_years: 每 %{interval} 年的%{month}%{day}
+      last_day: 最后一天
+      monthly: 每月 %{day}
+      quarterly: 每季度的 %{day}
+      semiannual: 每六个月的 %{day}
+      semimonthly: 每月两次，分别为 %{first} 和 %{second}
+      weekly: 每周 %{weekday}
+    frequency_interval_units:
+      monthly: 个月
+      weekly: 周
+      yearly: 年
+    frequency_presets:
+      annual: 每年
+      biweekly: 每两周
+      custom: 自定义计划
+      interval: 自定义间隔
+      monthly: 每月
+      quarterly: 每季度
+      semiannual: 每六个月
+      semimonthly: 每月两次
+      weekly: 每周
+    identify_already_running: 检测正在进行中，请稍后查看。
+    manage:
+      cta: 查看全部账单
+      description: 请前往账单页面添加、编辑、暂停和支付账单。本页用于控制自动检测。
+      title: 请在账单页面管理您的账单
+    new:
+      candidate_meta: "%{count} 次 · 最近一次 %{date}"
+      income_title: 添加收入
+      pick_different: 选择其他交易作为起点
+      search_all_cta: 搜索全部交易
+      search_all_prompt: 没有找到您需要的交易？
+      smart_fill: 使用 AI 智能填写
+      smart_fill_applied: AI 已根据历史扣款推荐以下内容，请检查后再保存。
+      start_from_hint: 可选。选择交易仅用于预填表单，所有内容仍可修改。
+      start_from_income_title: 从检测到的定期入账开始
+      start_from_title: 从检测到的定期扣款开始
+      title: 添加账单
+    pay_action:
+      add_link: 添加链接
+      add_link_aria: 为 %{name} 添加付款链接
+      autopay: 自动付款
+      autopay_aria: "%{name} 已设置自动付款，在新标签页中打开其付款网站"
+      open_site: 打开账单网站
+      pay: 付款
+      pay_aria: 支付 %{name}（在新标签页中打开）
+    pick_entry:
+      back: 返回表单
+      hint: 选择交易仅用于预填表单，所有内容仍可修改。
+      income_title: 选择一笔入账作为起点
+      no_results: 没有找到与“%{query}”匹配的交易。请减少关键词，或返回自行填写表单。
+      search_placeholder: 按名称、备注或商户搜索
+      showing_recent: 显示最近的 %{count} 笔交易，可搜索以缩小范围。
+      title: 选择一笔交易作为起点
+    picker_row:
+      claimed: 属于 %{name}
+    smart_fills:
+      create:
+        failed: 暂时无法分析历史扣款，表单保留了所选交易的原始内容。
+    suggested:
+      collapsed_hint: 点击查看
+      confirm: 添加账单
+      dismiss: 不是账单
+      seen_count:
+        one: 出现过 1 次
+        other: 出现过 %{count} 次
+      title: 可能的新账单
+    update:
+      success: 账单已更新
+      success_with_siblings:
+        one: 账单已更新，付款链接已复制到另外 1 笔账单
+        other: 账单已更新，付款链接已复制到另外 %{count} 笔账单

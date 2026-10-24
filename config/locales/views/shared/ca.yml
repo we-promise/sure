@@ -16,9 +16,10 @@ ca:
       default_body: Aquesta acció no es pot desfer.
       default_btn_text: Confirma
       default_title: Segur que vols continuar?
-      resource_deletion_title: "Vols eliminar %{resource}?"
-      resource_deletion_body: "Segur que vols eliminar %{resource}? Aquesta acció no es pot desfer."
-      resource_deletion_btn_text: "Elimina %{resource}"
+      resource_deletion_title: Vols eliminar %{resource}?
+      resource_deletion_body: Segur que vols eliminar %{resource}? Aquesta acció no
+        es pot desfer.
+      resource_deletion_btn_text: Elimina %{resource}
     exchange_rate_tabs:
       calculate_rate_tab: Calcular la taxa FX
       convert_tab: Convertir amb la taxa FX
@@ -48,10 +49,18 @@ ca:
     require_connector_owner: Només pots gestionar les connexions que has afegit tu
     sidekiq_health_banner:
       title: Algunes dades poden estar desactualitzades
-      body: Les tasques en segon pla no s'estan processant, així que els saldos, el patrimoni net i les sincronitzacions de comptes poden estar desactualitzats o incomplets.
+      body: Les tasques en segon pla no s'estan processant, així que els saldos, el
+        patrimoni net i les sincronitzacions de comptes poden estar desactualitzats
+        o incomplets.
       cta: Mostra l'estat del sistema
       reasons:
-        redis_unreachable: L'aplicació no pot connectar amb Redis. Comprova el teu REDIS_URL i que Redis estigui en execució.
-        no_worker_processes: No hi ha cap procés worker de Sidekiq connectat. Inicia el contenidor del worker o la unitat de systemd.
-        stale_heartbeat: El worker de Sidekiq fa estona que no envia cap senyal d'activitat. Pot estar encallat o haver-se aturat.
-        queue_backed_up: La tasca més antiga de la cua fa més temps que espera del que permet la latència màxima acceptable. El worker funciona, però s'està endarrerint.
+        redis_unreachable: L'aplicació no pot connectar amb Redis. Comprova el teu
+          REDIS_URL i que Redis estigui en execució.
+        no_worker_processes: No hi ha cap procés worker de Sidekiq connectat. Inicia
+          el contenidor del worker o la unitat de systemd.
+        stale_heartbeat: El worker de Sidekiq fa estona que no envia cap senyal d'activitat.
+          Pot estar encallat o haver-se aturat.
+        queue_backed_up: La tasca més antiga de la cua fa més temps que espera del
+          que permet la latència màxima acceptable. El worker funciona, però s'està
+          endarrerint.
+    submitting: S'està enviant…

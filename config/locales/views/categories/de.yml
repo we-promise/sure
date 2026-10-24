@@ -13,10 +13,11 @@ de:
     edit:
       edit: Kategorie bearbeiten
     form:
-      emoji_label: "Emoji (optional)"
-      emoji_placeholder: "Ein Emoji einfügen"
-      emoji_help: "Wähle oder füge ein vollständiges Emoji ein, auch eine Flagge oder eine Familie. Leere das Feld, um das Symbol zu verwenden."
-      emoji_clear: "Symbol verwenden"
+      emoji_label: Emoji (optional)
+      emoji_placeholder: Ein Emoji einfügen
+      emoji_help: Wähle oder füge ein vollständiges Emoji ein, auch eine Flagge oder
+        eine Familie. Leere das Feld, um das Symbol zu verwenden.
+      emoji_clear: Symbol verwenden
       emoji_pick: "%{emoji} verwenden"
       placeholder: Kategoriename
       auto_adjust: automatisch anpassen.
@@ -45,9 +46,11 @@ de:
     destroy_all:
       success: Alle Kategorien gelöscht
     merge:
-      description: Wähl eine Zielkategorie und die Kategorien, die darin aufgehen sollen. Passende Transaktionen und Budgetzeilen wandern ins Ziel.
+      description: Wähl eine Zielkategorie und die Kategorien, die darin aufgehen
+        sollen. Passende Transaktionen und Budgetzeilen wandern ins Ziel.
       select_target: Zielkategorie wählen …
-      sources_hint: Die gewählten Kategorien werden gelöscht, sobald ihre Transaktionen und Budgetzeilen ins Ziel gewandert sind. Wähl das Ziel nicht als Quelle.
+      sources_hint: Die gewählten Kategorien werden gelöscht, sobald ihre Transaktionen
+        und Budgetzeilen ins Ziel gewandert sind. Wähl das Ziel nicht als Quelle.
       sources_label: Kategorien zum Zusammenführen
       submit: Auswahl zusammenführen
       target_label: Zusammenführen in (Ziel)
@@ -73,4 +76,18 @@ de:
         income: Einnahme
         match_transfer: Überweisung/Zahlung zuordnen
         one_time: Einmalige %{type}
-
+  helpers:
+    submit:
+      category:
+        create: Kategorie erstellen
+        update: Kategorie aktualisieren
+  activerecord:
+    attributes:
+      category:
+        emoji: Emoji
+    errors:
+      models:
+        category:
+          attributes:
+            emoji:
+              invalid: muss ein einzelnes vollständiges Emoji sein

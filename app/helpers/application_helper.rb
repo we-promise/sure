@@ -15,7 +15,7 @@ module ApplicationHelper
   end
 
   # Locale-aware ordinal label for integers.
-  # English falls through to Ruby's ordinalize ("1st"); Catalan returns "1r"/"2n"/...
+  # Prefer a locale's day format where supplied; Catalan keeps its ordinal suffixes.
   def localized_ordinal(number)
     case I18n.locale
     when :ca
@@ -28,7 +28,7 @@ module ApplicationHelper
       end
       "#{n}#{suffix}"
     else
-      number.to_i.ordinalize
+      I18n.t("date.day_of_month", day: number.to_i, default: number.to_i.ordinalize)
     end
   end
 

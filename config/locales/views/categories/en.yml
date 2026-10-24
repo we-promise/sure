@@ -13,20 +13,21 @@ en:
     edit:
       edit: Edit category
     form:
-      emoji_label: "Emoji (optional)"
-      emoji_placeholder: "Paste one emoji"
-      emoji_help: "Choose or paste one complete emoji, including a flag or a family. Clear it to use the icon."
-      emoji_clear: "Use icon"
-      emoji_pick: "Use %{emoji}"
+      emoji_label: Emoji (optional)
+      emoji_placeholder: Paste one emoji
+      emoji_help: Choose or paste one complete emoji, including a flag or a family.
+        Clear it to use the icon.
+      emoji_clear: Use icon
+      emoji_pick: Use %{emoji}
       placeholder: Category name
       name_label: Name
       unassigned: "(unassigned)"
-      parent_category_label: "Parent category (optional)"
+      parent_category_label: Parent category (optional)
       trigger_label: Choose color and icon
       color: Color
       icon: Icon
       auto_adjust: auto-adjust.
-      poor_contrast: "Poor contrast, choose a darker color or"
+      poor_contrast: Poor contrast, choose a darker color or
     destroy_all:
       success: All categories deleted
     index:
@@ -40,11 +41,13 @@ en:
       new: New category
     merge:
       title: Merge categories
-      description: Select a target category and the categories to merge into it. Matching transactions and budget lines will move to the target.
+      description: Select a target category and the categories to merge into it. Matching
+        transactions and budget lines will move to the target.
       target_label: Merge into (target)
       select_target: Select target category...
       sources_label: Categories to merge
-      sources_hint: Selected categories will be deleted after their transactions and budget lines move to the target. Do not select the target as a source.
+      sources_hint: Selected categories will be deleted after their transactions and
+        budget lines move to the target. Do not select the target as a source.
       submit: Merge selected
     menu:
       loading: Loading...
@@ -69,7 +72,22 @@ en:
       show:
         bootstrap: Generate default categories
         empty: No categories found
-        match_transfer: "Match transfer/payment"
-        one_time: "One-time %{type}"
-        income: "income"
-        expense: "expense"
+        match_transfer: Match transfer/payment
+        one_time: One-time %{type}
+        income: income
+        expense: expense
+  helpers:
+    submit:
+      category:
+        create: Create category
+        update: Update category
+  activerecord:
+    attributes:
+      category:
+        emoji: Emoji
+    errors:
+      models:
+        category:
+          attributes:
+            emoji:
+              invalid: must be one complete emoji

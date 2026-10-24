@@ -1,0 +1,102 @@
+---
+zh-CN:
+  providers:
+    trading212:
+      connection_description: 通过 API 密钥连接 Trading 212 投资账户
+      institution_name: Trading 212
+      name: Trading 212
+  trading212_items:
+    complete_account_setup:
+      none_created: 未创建任何账户。
+      none_selected: 未选择任何账户。
+      success:
+        one: 已成功创建 %{count} 个 Trading 212 账户。
+        other: 已成功创建 %{count} 个 Trading 212 账户。
+    create:
+      success: Trading 212 已配置成功。
+    defaults:
+      name: Trading 212
+    destroy:
+      success: 已安排删除 Trading 212 连接。
+    link_existing_account:
+      already_linked: 此 Trading 212 账户已关联。
+      failed: 关联 Trading 212 账户失败。
+      not_found: 未找到账户或 Trading 212 配置。
+      only_manual_investment: 只有手工投资账户可以关联到 Trading 212。
+      success: 已成功关联到 Trading 212 账户。
+    select_accounts:
+      not_configured: 尚未配置 Trading 212。
+    select_existing_account:
+      balance: 余额
+      cancel: 取消
+      link: 关联
+      no_accounts_available: 暂无可供关联的 Trading 212 账户。
+      run_sync_hint: 保存 API 密钥后，请在“设置 > 提供商”中运行同步。
+      title: 关联 Trading 212 账户
+      wait_for_sync: 请等待账户发现同步完成。
+    setup_accounts:
+      available_accounts:
+        account_id: 账户 ID：%{account_id}
+        account_summary: "%{account_type} • 余额：%{balance}"
+        account_type_investment: 投资
+        title: 可用账户
+      buttons:
+        back_to_settings: 返回设置
+        cancel: 取消
+        create_selected_accounts: 创建所选账户
+        done: 完成
+        link: 关联
+        refresh: 刷新
+      dialog_title: 设置您的 Trading 212 账户
+      info_box:
+        items:
+          item_1: 当前持仓及其价格和数量
+          item_2: 完整订单历史（买入和卖出）
+          item_3: 股息和现金交易
+        title: Trading 212 API 导入
+      link_existing:
+        description: 也可以将发现的 Trading 212 账户关联到现有的手工投资账户。
+        manual_account_option: "%{name}（%{balance}）"
+        select_prompt: 选择账户…
+      linked_accounts:
+        linked_to_html: 已关联到：%{account}
+        title: 已关联
+      page_title: 设置 Trading 212 账户
+      status:
+        fetching_accounts: 正在从 Trading 212 获取账户…
+        no_accounts_found_description: Sure 未找到 Trading 212 账户。请检查 API 密钥是否有效。
+        no_accounts_found_title: 未找到账户。
+      subtitle: 关联您的 Trading 212 投资账户。
+    sync:
+      status:
+        accounts_need_setup:
+          one: 1 个 Trading 212 账户需要设置…
+          other: "%{count} 个 Trading 212 账户需要设置…"
+        calculating_balances: 正在计算余额…
+        checking_configuration: 正在检查账户配置…
+        checking_credentials: 正在检查 Trading 212 凭据…
+        importing_account: 正在导入 Trading 212 账户…
+        processing_activity: 正在处理持仓和交易活动…
+    sync_status:
+      all_linked:
+        one: 已关联 1 个账户
+        other: 已关联 %{count} 个账户
+      no_accounts: 尚未发现 Trading 212 账户
+      partial: 已关联 %{linked} 个，%{unlinked} 个需要设置
+    trading212_item:
+      accounts_need_setup: 账户需要设置
+      accounts_need_setup_description: 您的 Trading 212 账户需要关联到 Sure 账户。
+      delete: 删除
+      deletion_in_progress: 正在删除
+      environment_label_demo: 模拟账户
+      environment_label_live: 实盘账户
+      error: 错误
+      never_synced: 从未同步。
+      no_accounts_discovered: 尚未发现 Trading 212 账户。
+      no_accounts_discovered_description: 保存 API 密钥后，请运行同步以发现账户。
+      requires_update: API 密钥需要检查
+      setup_accounts: 设置账户
+      synced: "%{time}前已同步。%{summary}。"
+      syncing: 正在同步
+    update:
+      success: Trading 212 配置已更新成功。

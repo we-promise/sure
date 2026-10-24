@@ -35,6 +35,9 @@ zh-CN:
       unavailable_description_html: 要使用 AI 助手，您需要设置 <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> 环境变量，或在您的实例的自托管设置中进行配置。
       enable_button: 启用 AI 聊天
       disable_note: 可随时关闭。发送给我们的 LLM 提供商的所有数据都会被匿名化。
+    new:
+      default_title: 新聊天 %{timestamp}
+    worker_unhealthy_warning: AI 回复目前可能无法送达：后台工作进程似乎已停止或存在任务积压。请检查 Sidekiq 工作进程是否正在运行。
   assistant_messages:
     assistant_message:
       assistant_reasoning: 助手推理

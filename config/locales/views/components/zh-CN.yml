@@ -68,11 +68,34 @@ zh-CN:
           holdings_value: 持仓价值
           remaining_principal_balance: 剩余本金余额
           total_account_value: 账户总价值
+          loan_remaining_balance: 剩余余额
+          total_gains: 总收益
         views:
           cash: 现金
           holdings: 持仓
           total_value: 总价值
+          gains: 收益／投资回报率
         vs_available_history: 与可用历史相比
+        loan:
+          actual: 已记录余额
+          aria_actual_history_starts: 余额历史记录始于 %{date}。
+          aria_description: 贷款余额图表。已记录余额为 %{current_balance}。原计划还清日期为 %{scheduled_payoff_date}。根据今日余额预测的还清日期为
+            %{projected_payoff_date}。
+          interactive_chart: 交互式图表
+          interest_saved: 节省利息
+          legend: 图表数据系列
+          months_saved:
+            one: 比计划提前 %{count} 个月
+            other: 比计划提前 %{count} 个月
+          no_payoff: 按当前还款计划无法还清
+          not_converged: 按当前还款计划，此余额无法在原定到期日前还清，届时仍欠 %{balloon}。
+          on_schedule: 符合计划
+          projected: 从今日起预测
+          projected_payoff: 预计还清日期
+          projection_basis: 将今日已记录余额与计划中同一天的余额进行比较。提前于计划日期入账的还款，在该日期到来前会显示为进度超前；晚于计划日期入账的还款则会显示为进度落后。
+          scheduled: 原还款计划
+          since_start: 自贷款开始以来
+          today: 今天
       activity_date:
         balance_tooltip: 当日结束余额，已包含所有交易和调整
         no_balance_data: 此日期没有余额数据
@@ -94,22 +117,22 @@ zh-CN:
       tooltip:
         trigger_label: 更多信息
       link:
-        opens_in_new_tab: （在新标签页打开）
+        opens_in_new_tab: "（在新标签页打开）"
     provider_sync_summary:
       title: 同步摘要
-      last_sync: "上次同步：%{time_ago} 前"
+      last_sync: 上次同步：%{time_ago} 前
       accounts:
         title: 账户
-        total: "总计：%{count}"
-        linked: "已关联：%{count}"
-        unlinked: "未关联：%{count}"
-        institutions: "机构：%{count}"
+        total: 总计：%{count}
+        linked: 已关联：%{count}
+        unlinked: 未关联：%{count}
+        institutions: 机构：%{count}
       transactions:
         title: 交易
-        seen: "已看到：%{count}"
-        imported: "已导入：%{count}"
-        updated: "已更新：%{count}"
-        skipped: "已跳过：%{count}"
+        seen: 已看到：%{count}
+        imported: 已导入：%{count}
+        updated: 已更新：%{count}
+        skipped: 已跳过：%{count}
         fetching: 正在从券商获取...
         protected:
           one: 已保护 %{count} 条记录（未覆盖）
@@ -122,19 +145,19 @@ zh-CN:
         protected: 受保护
       holdings:
         title: 持仓
-        found: "已找到：%{count}"
-        processed: "已处理：%{count}"
+        found: 已找到：%{count}
+        processed: 已处理：%{count}
       trades:
         title: 交易
-        imported: "已导入：%{count}"
-        skipped: "已跳过：%{count}"
+        imported: 已导入：%{count}
+        skipped: 已跳过：%{count}
         fetching: 正在从券商获取活动...
       health:
         title: 健康状况
         view_error_details: 查看错误详情
         rate_limited: "%{time_ago} 前触发限流"
         recently: 最近
-        errors: "错误：%{count}"
+        errors: 错误：%{count}
         pending_reconciled:
           one: 已核对 %{count} 笔重复待处理交易
           other: 已核对 %{count} 笔重复待处理交易
@@ -157,8 +180,8 @@ zh-CN:
         stale_unmatched_count:
           one: "%{count} 笔交易"
           other: "%{count} 笔交易"
-        data_warnings: "数据警告：%{count}"
-        notices: "通知：%{count}"
+        data_warnings: 数据警告：%{count}
+        notices: 通知：%{count}
         view_data_quality: 查看数据质量详情
     period_picker:
       aria_label: 时间范围：%{period}
@@ -181,6 +204,9 @@ zh-CN:
       trigger_label: 更多信息
     link:
       opens_in_new_tab: "（在新标签页打开）"
+    icon_picker:
+      no_matching_icons: 没有匹配的图标
+      search_placeholder: 搜索图标…
   provider_sync_summary:
     title: 同步摘要
     last_sync: 上次同步：%{time_ago} 前

@@ -1,6 +1,23 @@
 require "test_helper"
 
 class ApplicationHelperTest < ActionView::TestCase
+  test "#localized_ordinal formats Chinese days without English suffixes" do
+    %w[zh-CN zh-TW].each do |locale|
+      I18n.with_locale(locale) do
+        assert_equal %w[1日 2日 3日 31日], [ 1, 2, 3, 31 ].map { |day| localized_ordinal(day) }
+      end
+    end
+  end
+
+  test "#localized_ordinal retains English and Catalan labels" do
+    I18n.with_locale(:en) do
+      assert_equal %w[1st 2nd 3rd 4th 31st], [ 1, 2, 3, 4, 31 ].map { |day| localized_ordinal(day) }
+    end
+    I18n.with_locale(:ca) do
+      assert_equal %w[1r 2n 3r 4t 31è], [ 1, 2, 3, 4, 31 ].map { |day| localized_ordinal(day) }
+    end
+  end
+
   test "#icon normalizes icon names to lowercase" do
     capture = []
 

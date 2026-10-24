@@ -13,20 +13,21 @@ it:
     edit:
       edit: Modifica categoria
     form:
-      emoji_label: "Emoji (opzionale)"
-      emoji_placeholder: "Incolla una sola emoji"
-      emoji_help: "Scegli o incolla un'emoji completa, anche una bandiera o una famiglia. Cancellala per usare l'icona."
-      emoji_clear: "Usa l'icona"
-      emoji_pick: "Usa %{emoji}"
+      emoji_label: Emoji (opzionale)
+      emoji_placeholder: Incolla una sola emoji
+      emoji_help: Scegli o incolla un'emoji completa, anche una bandiera o una famiglia.
+        Cancellala per usare l'icona.
+      emoji_clear: Usa l'icona
+      emoji_pick: Usa %{emoji}
       placeholder: Nome categoria
       name_label: Nome
       unassigned: "(non assegnata)"
-      parent_category_label: "Categoria genitore (opzionale)"
+      parent_category_label: Categoria genitore (opzionale)
       trigger_label: Scegli colore e icona
       color: Colore
       icon: Icona
       auto_adjust: adattamento automatico.
-      poor_contrast: "Contrasto scarso, scegli un colore più scuro o"
+      poor_contrast: Contrasto scarso, scegli un colore più scuro o
     destroy_all:
       success: Tutte le categorie eliminate
     index:
@@ -40,11 +41,15 @@ it:
       new: Nuova categoria
     merge:
       title: Unisci categorie
-      description: Seleziona una categoria di destinazione e le categorie da unire in essa. Le transazioni e le righe di budget corrispondenti si sposteranno nella destinazione.
+      description: Seleziona una categoria di destinazione e le categorie da unire
+        in essa. Le transazioni e le righe di budget corrispondenti si sposteranno
+        nella destinazione.
       target_label: Unisci in (destinazione)
       select_target: Seleziona categoria di destinazione...
       sources_label: Categorie da unire
-      sources_hint: Le categorie selezionate verranno eliminate dopo che le loro transazioni e righe di budget si saranno spostate nella destinazione. Non selezionare la destinazione come sorgente.
+      sources_hint: Le categorie selezionate verranno eliminate dopo che le loro transazioni
+        e righe di budget si saranno spostate nella destinazione. Non selezionare
+        la destinazione come sorgente.
       submit: Unisci selezionate
     menu:
       loading: Caricamento...
@@ -57,7 +62,8 @@ it:
       no_categories_selected: Nessuna categoria selezionata da unire
       target_not_found: Categoria di destinazione non trovata
       invalid_categories: Categorie non valide selezionate
-      target_selected_as_source: Scegli categorie diverse per la destinazione e le sorgenti.
+      target_selected_as_source: Scegli categorie diverse per la destinazione e le
+        sorgenti.
     update:
       success: Categoria aggiornata con successo
     virtual:
@@ -69,7 +75,22 @@ it:
       show:
         bootstrap: Genera categorie predefinite
         empty: Nessuna categoria trovata
-        match_transfer: "Abbina bonifico/pagamento"
+        match_transfer: Abbina bonifico/pagamento
         one_time: "%{type} una tantum"
-        income: "entrata"
-        expense: "spesa"
+        income: entrata
+        expense: spesa
+  helpers:
+    submit:
+      category:
+        create: Crea categoria
+        update: Aggiorna categoria
+  activerecord:
+    attributes:
+      category:
+        emoji: Emoji
+    errors:
+      models:
+        category:
+          attributes:
+            emoji:
+              invalid: deve essere un unico emoji completo

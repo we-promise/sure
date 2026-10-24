@@ -105,6 +105,27 @@ class RecurringTransaction::FrequencyPresetTest < ActiveSupport::TestCase
     assert_equal "Monthly on the last day", Preset.label(@recurring.reload)
   end
 
+  test "Chinese cadence labels use local day names and joined month and day" do
+    I18n.with_locale(:"zh-CN") do
+      assert_equal "每月 5日", Preset.label(@recurring)
+
+      Preset.apply(@recurring, preset: "semimonthly", day_of_month: 1, second_day_of_month: 15)
+      assert_equal "每月两次，分别为 1日 和 15日", Preset.label(@recurring)
+
+      Preset.apply(@recurring, preset: "annual", day_of_month: 2, month_of_year: 1)
+      assert_equal "每年一月2日", Preset.label(@recurring)
+
+      Preset.apply(@recurring, preset: "interval", interval: 2, interval_unit: "monthly", day_of_month: 12)
+      assert_equal "每 2 个月的 12日", Preset.label(@recurring)
+
+      Preset.apply(@recurring, preset: "interval", interval: 2, interval_unit: "yearly", day_of_month: 2, month_of_year: 1)
+      assert_equal "每 2 年的一月2日", Preset.label(@recurring)
+
+      Preset.apply(@recurring, preset: "monthly", day_of_month: RecurrenceRule::LAST)
+      assert_equal "每月 最后一天", Preset.label(@recurring)
+    end
+  end
+
   test "monthly equivalent amount normalizes cadence" do
     assert_in_delta @recurring.amount, @recurring.monthly_equivalent_amount.amount.to_f, 0.01
 

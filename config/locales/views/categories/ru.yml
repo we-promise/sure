@@ -15,11 +15,12 @@ ru:
     edit:
       edit: Редактировать категорию
     form:
-      emoji_label: "Эмодзи (необязательно)"
-      emoji_placeholder: "Вставьте один эмодзи"
-      emoji_help: "Выберите или вставьте один целый эмодзи, в том числе флаг или семью. Удалите его, чтобы использовать иконку."
-      emoji_clear: "Использовать иконку"
-      emoji_pick: "Использовать %{emoji}"
+      emoji_label: Эмодзи (необязательно)
+      emoji_placeholder: Вставьте один эмодзи
+      emoji_help: Выберите или вставьте один целый эмодзи, в том числе флаг или семью.
+        Удалите его, чтобы использовать иконку.
+      emoji_clear: Использовать иконку
+      emoji_pick: Использовать %{emoji}
       auto_adjust: авто-настройка.
       trigger_label: Выбрать цвет и иконку
       color: Цвет
@@ -77,3 +78,18 @@ ru:
         income: доход
         match_transfer: Сопоставить с переводом/платежом
         one_time: Одноразовый %{type}
+  helpers:
+    submit:
+      category:
+        create: Создать категорию
+        update: Обновить категорию
+  activerecord:
+    attributes:
+      category:
+        emoji: Эмодзи
+    errors:
+      models:
+        category:
+          attributes:
+            emoji:
+              invalid: должен быть одним целым эмодзи

@@ -13,11 +13,12 @@ pt-BR:
     edit:
       edit: Editar categoria
     form:
-      emoji_label: "Emoji (opcional)"
-      emoji_placeholder: "Cole um emoji"
-      emoji_help: "Escolha ou cole um emoji completo, incluindo uma bandeira ou uma família. Apague-o para usar o ícone."
-      emoji_clear: "Usar ícone"
-      emoji_pick: "Usar %{emoji}"
+      emoji_label: Emoji (opcional)
+      emoji_placeholder: Cole um emoji
+      emoji_help: Escolha ou cole um emoji completo, incluindo uma bandeira ou uma
+        família. Apague-o para usar o ícone.
+      emoji_clear: Usar ícone
+      emoji_pick: Usar %{emoji}
       placeholder: Nome da categoria
     index:
       bootstrap: Usar padrões (recomendado)
@@ -37,3 +38,18 @@ pt-BR:
       show:
         bootstrap: Gerar categorias padrão
         empty: Nenhuma categoria encontrada
+  helpers:
+    submit:
+      category:
+        create: Criar categoria
+        update: Atualizar categoria
+  activerecord:
+    attributes:
+      category:
+        emoji: Emoji
+    errors:
+      models:
+        category:
+          attributes:
+            emoji:
+              invalid: deve ser um único emoji completo

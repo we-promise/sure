@@ -13,6 +13,8 @@ zh-CN:
       model_placeholder: 凯美瑞
       year: 年份
       year_placeholder: '2023'
+      mileage_unit_kilometers: 公里
+      mileage_unit_miles: 英里
     new:
       title: 请输入车辆详情
     overview:

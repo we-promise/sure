@@ -23,4 +23,5 @@ ro:
       plural: Familii
       singular: Familie
     trend_change:
-      no_change: "fără schimbare"
+      no_change: fără schimbare
+    submitting: Se trimite…

@@ -13,20 +13,21 @@ pt-PT:
     edit:
       edit: Editar categoria
     form:
-      emoji_label: "Emoji (opcional)"
-      emoji_placeholder: "Cole um emoji"
-      emoji_help: "Escolha ou cole um emoji completo, incluindo uma bandeira ou uma família. Limpe o campo para utilizar o ícone."
-      emoji_clear: "Utilizar ícone"
-      emoji_pick: "Utilizar %{emoji}"
+      emoji_label: Emoji (opcional)
+      emoji_placeholder: Cole um emoji
+      emoji_help: Escolha ou cole um emoji completo, incluindo uma bandeira ou uma
+        família. Limpe o campo para utilizar o ícone.
+      emoji_clear: Utilizar ícone
+      emoji_pick: Utilizar %{emoji}
       placeholder: Nome da categoria
       name_label: Designação
       unassigned: "(sem atribuição)"
-      parent_category_label: "Categoria principal (opcional)"
+      parent_category_label: Categoria principal (opcional)
       trigger_label: Escolher cor e ícone
       color: Cor
       icon: Ícone
       auto_adjust: ajuste automático.
-      poor_contrast: "Contraste fraco, escolha uma cor mais escura ou"
+      poor_contrast: Contraste fraco, escolha uma cor mais escura ou
     destroy_all:
       success: Todas as categorias eliminadas
     index:
@@ -40,11 +41,14 @@ pt-PT:
       new: Nova categoria
     merge:
       title: Unir categorias
-      description: Selecione uma categoria de destino e as categorias a unir. As transações e linhas de orçamento correspondentes serão movidas para o destino.
+      description: Selecione uma categoria de destino e as categorias a unir. As transações
+        e linhas de orçamento correspondentes serão movidas para o destino.
       target_label: Unir em (destino)
       select_target: Selecionar categoria de destino...
       sources_label: Categorias a unir
-      sources_hint: As categorias selecionadas serão eliminadas depois de as suas transações e linhas de orçamento serem movidas para o destino. Não selecione o destino como origem.
+      sources_hint: As categorias selecionadas serão eliminadas depois de as suas
+        transações e linhas de orçamento serem movidas para o destino. Não selecione
+        o destino como origem.
       submit: Unir selecionadas
     menu:
       loading: A carregar...
@@ -57,7 +61,8 @@ pt-PT:
       no_categories_selected: Nenhuma categoria selecionada para unir
       target_not_found: Categoria de destino não encontrada
       invalid_categories: Categorias selecionadas inválidas
-      target_selected_as_source: Escolha categorias diferentes para o destino e as origens.
+      target_selected_as_source: Escolha categorias diferentes para o destino e as
+        origens.
     update:
       success: Categoria atualizada com sucesso
     virtual:
@@ -69,7 +74,22 @@ pt-PT:
       show:
         bootstrap: Gerar categorias predefinidas
         empty: Nenhuma categoria encontrada
-        match_transfer: "Corresponder transferência/pagamento"
+        match_transfer: Corresponder transferência/pagamento
         one_time: "%{type} único(a)"
-        income: "rendimento"
-        expense: "despesa"
+        income: rendimento
+        expense: despesa
+  helpers:
+    submit:
+      category:
+        create: Criar categoria
+        update: Atualizar categoria
+  activerecord:
+    attributes:
+      category:
+        emoji: Emoji
+    errors:
+      models:
+        category:
+          attributes:
+            emoji:
+              invalid: tem de ser um único emoji completo

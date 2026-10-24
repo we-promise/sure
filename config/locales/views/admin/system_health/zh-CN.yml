@@ -1,0 +1,340 @@
+---
+zh-CN:
+  admin:
+    system_health:
+      hosted_usage:
+        cleanup:
+          description: 符合现有清理范围：暂停或试用中的订阅已结束超过 14 天，或没有订阅且家庭创建已超过 45 + 14 天。最多显示 %{limit}
+            个家庭。
+          disabled: 非托管模式下不会执行定时试用清理。此处仅列出符合清理范围的家庭。
+          eligibility_help: 近期登录不会使家庭排除在范围之外。符合条件并不代表已删除；90 天是归档保留期，不是试用清理的时间门槛。
+          empty: 没有家庭符合清理范围
+          reasons:
+            expired_trial_grace_elapsed: 试用已结束；14 天宽限期已过
+            no_subscription_grace_elapsed: 无订阅；已超过 45 + 14 天
+          title: 清理条件
+        columns:
+          cleanup_eligible: 符合清理条件
+          cleanup_reason: 原因
+          household: 家庭 ID
+          latest_session: 最近保留的登录记录
+          members: 成员账户
+          recent_sessions: 过去 30 天创建且仍保留的会话
+          recorded_at: 订阅记录时间
+          retained_sessions: 保留的登录会话
+          status: 当前状态
+          subscription_rows: 订阅记录数
+          trial_ends_at: 试用结束时间
+        eligible: 符合条件
+        limitations: 现有数据表没有保留完整的试用、付款或会话活动历史。订阅创建记录可能来自导入。成员账户未经去重，不能视为实际人数。此页面不会更改任何家庭或订阅数据。共享演示环境重置时会删除旧家庭和会话，因此无法还原访客历史。
+        limitations_title: 如何理解这些数字
+        loading: 正在加载托管使用情况…
+        not_eligible: 不符合条件
+        not_recorded: 未记录
+        snapshot: 截至 %{time} 的只读数据库快照
+        statuses:
+          active: 有效
+          canceled: 已取消
+          incomplete: 未完成
+          incomplete_expired: 未完成且已过期
+          no_subscription: 无订阅
+          past_due: 已逾期
+          paused: 已暂停
+          trialing: 试用中
+          unknown: 未知
+          unpaid: 未付款
+        summary:
+          active_supporter_households_count: 有效支持者家庭数（本地）
+          cleanup_eligible_count: 符合清理条件的家庭数
+          supporter_subscription_count: 关联 Stripe 的订阅记录数
+          trial_households_count: 试用家庭数（过去 30 天）
+          trial_members_count: 当前试用成员账户数
+          trials_expiring_soon_count: 未来 7 天到期的试用数
+        summary_help: 试用总数统计过去 30 天记录的订阅。即将到期的试用、符合清理条件的家庭及支持者总数统计当前所有匹配记录，不受表格显示条数限制。
+        supporters:
+          description: 当前本地订阅记录中的客户 ID 和订阅 ID 符合 Stripe 格式；不包含虚构演示订阅。这些状态不能证明已收款或确认首次付款日期。此处不会向
+            Stripe 发起请求。
+          empty: 没有关联 Stripe 的订阅记录
+          title: 本地支持者状态
+        synthetic_demo: 虚构演示
+        title: 托管使用情况
+        trials:
+          description: 自 %{date} 起记录、且仍保留试用结束日期的订阅，包括已转为正式订阅的试用。最多显示 %{limit} 个家庭。
+          empty: 此时间范围内没有试用家庭记录
+          sessions_help: 会话是已启用用户仍保留的登录记录，不代表当前在线用户或访问次数。退出登录会删除记录。最近创建时间不等于最后活跃时间。
+          title: 近期试用家庭
+      push_notification:
+        body: 这是一条发往你的 Sure 账户的测试推送通知。
+        title: Sure 测试通知
+      push_notifications:
+        columns:
+          checked_at: 最后更新
+          device: 设备
+          environment: APNs 环境
+          status: 结果
+        device: 设备 %{number}
+        environments:
+          production: 生产环境
+          sandbox: 沙盒环境
+        messages:
+          cooldown: 请等待 30 秒后再发送测试通知。
+          disabled: 运营方已停用推送发送。
+          enqueue_failed: 无法将测试加入队列。请检查 Sidekiq 并刷新下方结果。
+          hosted_only: 推送通知仅在托管模式下可用。
+          ineligible: 只有已启用的超级管理员才能发送测试通知。
+          no_devices: 请在 Sure iOS 应用中为此账户启用推送通知，然后再发送测试。
+          not_configured: 尚未配置 APNs 凭据。
+          queued: 测试通知已加入队列。请刷新下方结果查看状态。
+          ready: 向已注册到你的账户且已启用的 iOS 设备发送测试通知。
+          storage_unavailable: 无法保存测试请求。请检查共享缓存配置。
+        pending: 待处理
+        queueing: 正在加入队列…
+        refresh: 刷新结果
+        requested_at: 最近一次测试请求时间：%{time}
+        result_help: APNs 接受请求并不代表通知已送达设备。请刷新查看后台任务结果。结果保留 24 小时。
+        results_label: 测试结果
+        send_test: 发送测试推送通知
+        statuses:
+          accepted: APNs 已接受
+          enqueue_failed: 无法加入队列；请检查 Sidekiq
+          expired: 已过期，未获得最终结果
+          failed: 失败；请检查推送调试日志
+          queued: 已加入队列
+          rejected: APNs 已拒绝；请检查推送调试日志
+          retrying: 临时故障，正在重试
+          skipped: 已跳过：不再符合条件
+          unregistered: 设备注册已失效
+        title: 推送通知
+      show:
+        ai:
+          adapters:
+            openai: OpenAI 托管向量存储
+            pgvector: pgvector
+            qdrant: Qdrant
+          alerts:
+            custom_openai:
+              message: 配置的端点未通过 /v1/vector_stores 可用性检查。大多数本地端点及兼容 OpenAI 的端点没有实现此
+                API。聊天和 PDF 处理可能仍然可用；常见的本地部署方式是使用 pgvector，并配置独立的嵌入端点。失败信息已记录在“设置
+                → 调试日志”和 Rails.logger 中。
+              title: 此自定义端点的托管向量存储检查失败
+            embedding_dimensions_mismatch:
+              message: 嵌入端点返回的向量长度与 EMBEDDING_DIMENSIONS 不一致。请根据模型文档中的向量维数设置 EMBEDDING_MODEL
+                和 EMBEDDING_DIMENSIONS，然后重启 Sure 以确保环境配置生效。若现有数据使用了不同的维数，还需修改或重建 pgvector
+                的嵌入列或表，并重新生成文档嵌入。
+              title: 嵌入维数不匹配
+            embedding_probe_failed:
+              message: Sure 无法通过配置的端点和模型生成简短的测试嵌入。请检查 EMBEDDING_URI_BASE、EMBEDDING_MODEL、EMBEDDING_ACCESS_TOKEN
+                及嵌入服务商日志。失败信息已记录在“设置 → 调试日志”和 Rails.logger 中。
+              title: 嵌入服务在线检查失败
+            embedding_probe_timeout:
+              message: 嵌入端点未在 AI_HEALTH_PROBE_TIMEOUT 指定的时限内响应。如果服务商响应较慢，请增加此健康检查超时时间，然后重启
+                Sure，确保所有进程应用该环境配置。如果常规 AI 聊天请求也超时，请另行增大 OPENAI_REQUEST_TIMEOUT。
+              title: 嵌入服务在线检查超时
+            function_calling_not_used:
+              message: 端点接受了 tools 参数，但模型回复了文本，没有调用健康检查工具。AI 助手必须调用工具才能读取财务数据，因此聊天可能没有答案，或给出编造的数字。建议选择服务商文档明确支持函数调用的模型。
+              title: 模型未按要求调用工具，而是直接作答
+            function_calling_unsupported:
+              message: 端点能够处理普通聊天请求，却拒绝了附带 tools 参数的相同请求。AI 助手通过函数调用读取账户、交易和持仓，因此在改用支持工具的模型前，聊天会持续失败，且常常只返回没有具体说明的
+                404 错误。请选择服务商文档明确支持函数调用的模型。失败信息已记录在“设置 → 调试日志”和 Rails.logger 中。
+              title: 此模型不支持函数调用
+            llm_model_not_available:
+              message: 端点已响应，但没有列出或提供所配置的模型。请选择当前服务商可用的模型，然后重新检查。如果通过兼容 OpenAI 的转换层使用
+                Gemini，请选择目前受支持的模型，例如 gemini-2.5-flash。
+              title: 配置的 AI 模型不可用
+            llm_probe_failed:
+              message: Sure 无法同时验证所配置的端点和模型。失败信息已记录在“设置 → 调试日志”和 Rails.logger 中。
+              title: 大语言模型在线检查失败
+            missing_vector_store:
+              message: 配置向量存储适配器并满足其要求后，才能为上传的文档建立索引和执行搜索。
+              title: 尚未配置向量存储
+            pdf_text_extraction_failed:
+              message: Sure 未能完成文本优先处理流程：在本地提取 PDF 内嵌文本，再将其发送给配置的模型。没有发送客户数据。失败信息已记录在“设置
+                → 调试日志”和 Rails.logger 中。
+              title: 合成 PDF 文本提取检查失败
+            pdf_vision_processing_failed:
+              message: Sure 未能通过配置的模型完成 PDF 图像处理或原生文档处理流程。没有发送客户数据。失败信息已记录在“设置 → 调试日志”和
+                Rails.logger 中。
+              title: 合成 PDF 视觉／原生处理检查失败
+            pgvector_extension_not_enabled:
+              message: 已选择 pgvector 适配器，但 PostgreSQL 尚未为此数据库启用 vector 扩展。请使用包含 pgvector
+                的 PostgreSQL 镜像，以数据库所有者或超级用户身份启用扩展，然后在 VECTOR_STORE_PROVIDER=pgvector
+                的配置下重新运行迁移。
+              title: PostgreSQL vector 扩展未启用
+            pgvector_probe_failed:
+              message: Sure 无法查询 pgvector 的文本块表。请检查 PostgreSQL 权限、vector 扩展和 vector_store_chunks
+                迁移。失败信息已记录在“设置 → 调试日志”和 Rails.logger 中。
+              title: pgvector 存储检查失败
+            pgvector_table_not_found:
+              message: pgvector 扩展已启用，但未找到文本块表。请检查迁移状态，然后在 VECTOR_STORE_PROVIDER=pgvector
+                的配置下重新运行向量存储迁移，以便 Sure 创建 vector_store_chunks。
+              title: 缺少 vector_store_chunks 表
+            qdrant:
+              message: Qdrant 适配器目前只有基础框架，文档上传和搜索操作尚无法使用。请使用 OpenAI 或 pgvector 进行文档搜索。
+              title: Qdrant 支持尚未实现
+            unavailable_vector_store:
+              message: 请检查下方的适配器要求。使用 pgvector 时，数据库必须提供 vector 扩展或已有的 vector_store_chunks
+                表。
+              title: 所选向量存储不可用
+            vector_probe_failed:
+              message: Sure 无法验证所选向量存储及其所需的全部嵌入服务。失败信息已记录在“设置 → 调试日志”和 Rails.logger
+                中。
+              title: 文档搜索在线检查失败
+          failure_codes:
+            dimensions_mismatch: 嵌入向量维数与配置的维数不一致
+            extension_not_enabled: PostgreSQL vector 扩展未启用
+            invalid_response: 服务返回了非预期响应
+            model_not_available: 服务商未返回所配置的模型
+            no_tool_call: 模型直接作答，未调用健康检查工具
+            render_missing_binary: 此容器中没有可用的 pdftoppm 渲染器（poppler-utils）
+            request_failed: 服务请求失败
+            table_not_found: 未找到 vector_store_chunks 表
+            timeout: 服务未在探测超时时限内响应
+            tools_refused: 相同请求不附带工具时可执行，附带工具时被服务拒绝
+            unsupported_provider: 此服务商不支持这项检查
+          function_calling_statuses:
+            failing: 在线检查失败
+            not_checked: 未检查
+            not_used: 工具参数已接受，但模型未调用任何工具
+            supported: 在线工具调用成功
+            unavailable: 配置大语言模型服务商后才可用
+            unsupported: 当前实际使用的服务商或模型不支持
+          labels:
+            adapter: 适配器
+            adapter_available: 适配器可用
+            anthropic_credentials: Anthropic 凭据
+            effective_provider: 实际使用的服务商
+            embedding_dimensions: 嵌入维数
+            embedding_endpoint: 嵌入端点
+            embedding_model: 嵌入模型
+            embedding_probe: 嵌入端点检查
+            endpoint: 端点
+            failure_reason: 失败原因
+            function_calling: 函数调用（工具）
+            function_calling_failure_reason: 函数调用失败原因
+            llm_request_timeout: 大语言模型请求超时
+            model: 模型
+            openai_compatible_credentials: 兼容 OpenAI 的 API 凭据
+            openai_credentials: OpenAI 凭据
+            pdf_text_extraction: PDF 文本提取流程
+            pdf_text_extraction_failure_reason: 文本提取失败原因
+            pdf_vision_processing: PDF 视觉／原生处理流程
+            pdf_vision_processing_failure_reason: 视觉／原生处理失败原因
+            pgvector_extension: PostgreSQL vector 扩展
+            pgvector_table: 向量文本块表
+            probe_request_timeout: 健康检查探测超时
+            selected_provider: 所选服务商
+            storage_probe: pgvector 存储检查
+          last_checked: 在线检查于 %{time_ago}前完成。结果会短暂缓存。
+          llm:
+            description: 在线检查会验证配置的模型，以助手使用的方式要求模型执行一次简单的函数调用，然后用不含客户数据的单页合成 PDF，分别测试文本提取及视觉／原生处理流程。凭据值不会显示。
+            title: 大语言模型与 PDF 处理
+          loading: 正在运行在线检查…
+          local_setup:
+            description: 通过本地兼容 OpenAI 的端点运行大语言模型，将文档向量存储在 pgvector 中，并将嵌入设置指向兼容 OpenAI
+              的嵌入端点。PostgreSQL 镜像必须包含 vector 扩展，且嵌入维数必须与所选模型一致。
+            title: 推荐的本地部署配置
+          not_checked_help: 直接打开 AI 状态页面地址，或运行检查以验证服务是否可用。
+          pdf_statuses:
+            failing: 合成 PDF 检查失败
+            not_checked: 未检查
+            supported: 合成 PDF 检查通过
+            unavailable: 配置大语言模型服务商后才可用
+            unsupported: 已禁用，或当前实际使用的服务商或模型不支持
+          probe_statuses:
+            failing: 在线检查失败
+            not_checked: 未检查
+            not_configured: 未配置
+            passing: 在线检查通过
+          providers:
+            anthropic: Anthropic
+            cloudflare: Cloudflare
+            custom_openai_compatible: 自定义端点
+            kilo: Kilo
+            ollama: Ollama
+            openai: OpenAI
+            openai_compatible: 兼容 OpenAI
+            openrouter: OpenRouter
+            together: Together
+          run_checks: 重新运行检查
+          values:
+            available: 可用
+            available_not_enabled: 可用但未启用
+            configured: 已配置
+            enabled: 已启用
+            fallback: "（备用）"
+            'no': 否
+            not_available: 不可用
+            not_configured: 未配置
+            not_found: 未找到
+            not_set: 未设置
+            'yes': 是
+          vector_statuses:
+            failing: 在线检查失败
+            missing: 未配置
+            not_checked: 未检查
+            not_configured: 未配置
+            passing: 在线检查通过
+            scaffolded: 仅有基础框架
+          vector_store:
+            description: 在线检查会查询托管向量存储 API，或测试 pgvector 表并生成一条简短嵌入，但不会保存该嵌入。
+            title: 向量存储与文档搜索
+          worker:
+            configuration_statuses:
+              match: 与 Web 进程一致
+              mismatch: 与 Web 进程不同
+            coverage_notice: 每次检查只验证一个后台工作进程，即实际从队列中取出该任务的进程。如果部署了多个工作进程副本，一次检查通过并不能证明所有进程都健康；可再次提交检查，抽查其他进程。
+            description: 以上检查由当前 Web 进程执行。大部分 AI 工作，包括助手回复、PDF 处理、嵌入生成、自动分类和商户识别，实际上由
+              Sidekiq 工作进程执行，其网络访问、DNS、代理规则，甚至已加载的凭据都可能不同。请提交检查任务，验证工作进程自身的配置和连接状态。
+            empty:
+              description: 点击“验证工作进程配置”提交异步检查任务。工作进程取出任务后，结果会显示在这里。
+              title: 尚无工作进程返回检查结果
+            labels:
+              checked_at: 检查时间
+              configuration: 配置
+              process: 工作进程
+            settings_origin:
+              database_backed: 在“设置 → 自托管”中更改的服务商、模型和 API 密钥设置存储于数据库。rails-settings-cached
+                会在写入时使共享缓存失效，因此 Web 进程和工作进程会在下一次请求或队列任务中读取新值，无需重启。
+              env_backed: 嵌入配置以及仅通过环境变量设置的任何值，在各容器启动时即已固定。Rails 无法更改其他容器的环境，因此修改这些设置后，必须重启或重建
+                Web 服务和工作进程服务。如果部署工具只重启其中一个服务，例如局部发布，或更新 Secret 后未重启 Pod，未重启的进程就不会应用更改。
+              title: 哪些设置需要重启？
+            statuses:
+              failing: 检查失败
+              passing: 检查通过
+              stale: 结果已过期
+            title: 工作进程验证
+            verify_button: 验证工作进程配置
+        alert:
+          title: 后台任务未运行
+        counters_section_description: 汇总所有队列的 Sidekiq 计数。
+        counters_section_title: 任务计数
+        labels:
+          enqueued: 已入队
+          failed: 失败
+          last_heartbeat: 最近心跳
+          latency: 等待时间
+          max_queue_latency: 最早入队任务的等待时长
+          processed_total: 累计已处理
+          processes: 工作进程
+          queue: 队列
+          retries: 重试
+          size: 数量
+          status: 状态
+        queues_section_description: 各队列的任务数量及最早入队任务的等待时长。“等待时间”以秒为单位。
+        queues_section_title: 队列
+        status_section_description: 执行同步、余额计算和净资产计算的后台工作进程的当前状态。
+        status_section_title: Sidekiq 状态
+        tabs:
+          ai: AI 状态
+          background_jobs: 后台任务
+          hosted_usage: 托管使用情况
+        title: 系统健康
+        values:
+          healthy: 正常
+          never: 从未
+          no_queues: 没有已注册的队列，工作进程可能未运行。
+          seconds: "%{seconds} 秒"
+          time_ago: "%{time_ago}前"
+          unhealthy: 状态异常
+      verify_worker_ai:
+        queued: 工作进程检查已加入队列。工作进程取出任务后，结果将显示在下方，通常只需几秒。

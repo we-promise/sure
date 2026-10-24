@@ -25,9 +25,9 @@ zh-CN:
       default_title: 确定吗？
       default_body: 此操作不可逆。
       default_btn_text: 确认
-      resource_deletion_title: "删除%{resource}？"
-      resource_deletion_body: "确定要删除%{resource}吗？此操作不可逆。"
-      resource_deletion_btn_text: "删除%{resource}"
+      resource_deletion_title: 删除%{resource}？
+      resource_deletion_body: 确定要删除%{resource}吗？此操作不可逆。
+      resource_deletion_btn_text: 删除%{resource}
     family_moniker:
       group_plural: 组
       group_singular: 组
@@ -44,3 +44,14 @@ zh-CN:
     sync_toast:
       message: 有新数据可用
       refresh: 刷新
+    require_connector_owner: 您只能管理自己添加的连接
+    sidekiq_health_banner:
+      body: 后台任务未得到处理，因此余额、净资产和账户同步数据可能已过期或缺失。
+      cta: 查看系统健康状态
+      reasons:
+        no_worker_processes: 没有已连接的 Sidekiq 工作进程，请启动工作容器或 systemd 服务单元。
+        queue_backed_up: 队列中等待最久的任务已超过允许的延迟。工作进程仍在运行，但处理进度落后。
+        redis_unreachable: 应用无法连接 Redis，请检查 REDIS_URL 并确认 Redis 正在运行。
+        stale_heartbeat: Sidekiq 工作进程最近未上报心跳，可能已卡住或崩溃。
+      title: 部分数据可能已过期
+    submitting: 正在提交…

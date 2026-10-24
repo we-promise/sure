@@ -1,0 +1,106 @@
+---
+zh-CN:
+  insights:
+    actions:
+      budget: 查看预算
+      cash_flow_warning: 核对循环交易
+      idle_cash: 前往账户
+      maintained_goal_depleted: 查看储备金
+      net_worth_milestone: 查看净资产报表
+      savings_rate_change: 查看该月交易
+      spending_anomaly: 查看%{category}交易
+      subscription_audit: 核对循环交易
+    card:
+      acknowledge: 知道了
+      acknowledge_title: 在数据变化前隐藏此条洞察
+      acknowledged: 已忽略此条洞察
+      new: 新
+    feed:
+      acknowledge_aria: 知道了：%{title}
+      header: 最新
+      header_new: 新
+      view_all: 查看全部洞察
+    figures:
+      days_overdue:
+        one: 已逾期 %{count} 天
+        other: 已逾期 %{count} 天
+      idle_days:
+        one: 已闲置 %{count} 天
+        other: 已闲置 %{count} 天
+      need_attention: 需要关注
+      of_budget: 占预算
+      on_pace: 按当前进度
+      today: 今天
+      vs_previous: 与上月相比
+    index:
+      empty:
+        description: 账户有足够的交易活动后，这里就会显示洞察，并于每晚自动更新。
+        title: 暂无洞察
+      refresh: 检查新洞察
+      subtitle: 了解您的财务动态，每晚更新。
+      title: 洞察
+    meta:
+      date_range: "%{from} 至 %{to}"
+      last_n_days:
+        one: 过去 1 天
+        other: 过去 %{count} 天
+      next_n_days:
+        one: 未来 1 天
+        other: 未来 %{count} 天
+    notification:
+      body: 打开 Sure，查看最新的 AI 财务洞察。
+      title: 新的财务洞察
+    refresh:
+      checking: 正在检查……
+      queued: 正在生成新的洞察，请稍后查看。
+    templates:
+      budget_at_risk:
+        near: 本月%{categories}已接近预算上限。截至目前，您已使用总预算的 %{budget_spent_pct}%。
+        over: 本月%{categories}已超出预算。截至目前，您已使用总预算的 %{budget_spent_pct}%。
+      budget_on_track: 总预算 %{budgeted} 中已支出 %{spent}（%{budget_spent_pct}%），所有分类均未超出预算。
+      cash_flow_warning:
+        low: 根据即将发生的循环交易和通常支出，您的现金余额可能在 %{projected_low_date} 左右降至 %{projected_low}。
+        negative: 根据即将发生的循环交易和通常支出，您的现金余额可能在 %{projected_low_date} 左右降至 %{projected_low}。
+      idle_cash: "%{account} 的余额为 %{balance}，过去 %{idle_days} 天没有交易活动。"
+      maintained_goal_depleted: "%{goal} 的目标储备为 %{target}，目前有 %{saved}，尚差 %{missing}。"
+      net_worth_milestone: 您的净资产已突破 %{milestone}，目前为 %{net_worth}。
+      savings_rate_change:
+        down: 您在 %{month} 将收入的 %{current_rate}% 存了下来，比前一个月的 %{previous_rate}% 下降了
+          %{change_pp} 个百分点。
+        down_negative: 您在 %{month} 的支出超过了收入：储蓄率从前一个月的 %{previous_rate}% 降至 %{current_rate}%。
+        up: 您在 %{month} 将收入的 %{current_rate}% 存了下来，比前一个月的 %{previous_rate}% 提高了 %{change_pp}
+          个百分点。
+      spending_anomaly:
+        above: 按当前进度，您本月在%{category}上的支出预计为 %{projected_spend}，比近期月均支出 %{baseline_spend}
+          高约 %{deviation_pct}%。
+        below: 按当前进度，您本月在%{category}上的支出预计为 %{projected_spend}，比近期月均支出 %{baseline_spend}
+          低约 %{deviation_pct}%。
+      subscription_audit: "%{name}（%{amount}）原预计于 %{expected_on} 扣款，但此后一直未出现。该订阅可能已取消，也可能更改了扣款安排。"
+    titles:
+      budget_at_risk:
+        one: 预算中有 1 个分类需要关注
+        other: 预算中有 %{count} 个分类需要关注
+      budget_on_track: 您的预算执行正常
+      cash_flow_warning:
+        low: 您的现金余额可能不足
+        negative: 您的现金余额可能变为负数
+      idle_cash: "%{account} 中有闲置资金"
+      maintained_goal_depleted: "%{goal} 已低于目标储备水平"
+      net_worth_milestone: 净资产里程碑：%{milestone}
+      savings_rate_change:
+        down: 您的储蓄率在 %{month} 下降了
+        up: 您的储蓄率在 %{month} 提高了
+      spending_anomaly:
+        above: "%{category}支出呈上升趋势"
+        below: "%{category}支出呈下降趋势"
+      subscription_audit: "%{name} 还在使用吗？"
+    types:
+      budget_at_risk: 预算
+      budget_on_track: 预算
+      cash_flow_warning: 现金流
+      idle_cash: 闲置资金
+      maintained_goal_depleted: 储备金
+      net_worth_milestone: 净资产
+      savings_rate_change: 储蓄率
+      spending_anomaly: 支出
+      subscription_audit: 订阅

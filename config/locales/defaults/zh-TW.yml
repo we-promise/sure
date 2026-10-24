@@ -15,6 +15,7 @@ zh-TW:
           has_many: 因為仍有相關聯的 %{record}，所以無法刪除這筆紀錄
           has_one: 因為仍有相關聯的 %{record}，所以無法刪除這筆紀錄
   date:
+    day_of_month: "%{day}日"
     abbr_day_names:
     - 週日
     - 週一

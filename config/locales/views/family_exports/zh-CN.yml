@@ -28,6 +28,8 @@ zh-CN:
         actions:
           delete: 删除
           download: 下载
+          confirm_mark_failed: 此导出已一段时间没有活动，其后台任务可能已中断。要将它标记为失败吗？之后您可以立即创建新的导出。
+          mark_failed: 标记为失败
       empty: 暂无导出记录
     new:
       dialog_title: 导出你的数据
@@ -41,3 +43,6 @@ zh-CN:
       note_description: 导出文件可能包含敏感财务信息，请妥善保管。
       cancel: 取消
       export_data: 导出数据
+    cancel:
+      cancelled: 导出已标记为失败，您可以立即创建新的导出。
+      not_cancellable: 暂时无法将此导出标记为失败，其任务可能仍在运行。请在它停止活动满一小时后重试。

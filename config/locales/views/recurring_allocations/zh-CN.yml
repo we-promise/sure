@@ -1,0 +1,14 @@
+zh-CN:
+  recurring_allocations:
+    already_allocated: "这笔交易已计入此账单。"
+    confirm:
+      success: "付款已计入此账单。"
+    create:
+      success: "付款已关联。"
+    destroy:
+      success: "已取消付款关联。"
+    invalid: "无法记录此笔付款。"
+    missing_rate: "暂无可用汇率，请手动填写金额。"
+    over_allocation: "分配金额将超过该笔交易的金额。"
+    reject:
+      success: "已忽略，不会再为此账单推荐这笔交易。"

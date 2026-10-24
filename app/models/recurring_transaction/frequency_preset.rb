@@ -252,7 +252,7 @@ class RecurringTransaction
         def day_phrase(day)
           return I18n.t("recurring_transactions.frequency.last_day") if day == RecurrenceRule::LAST
 
-          day.ordinalize
+          I18n.t("date.day_of_month", day: day, default: day.ordinalize)
         end
 
         def weekday_name(weekday)

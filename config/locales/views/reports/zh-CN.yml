@@ -33,6 +33,7 @@ zh-CN:
       next_year: 下一年
       previous_decade: 上一个十年
       next_decade: 下一个十年
+      shortcut_hint: "%{action}（%{key}）"
     invalid_date_range: 结束日期不能早于开始日期，日期已为您对调。
     summary:
       total_income: 总收入

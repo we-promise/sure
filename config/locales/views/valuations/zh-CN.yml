@@ -16,11 +16,13 @@ zh-CN:
       asset_value: 资产价值
       liability_balance: 负债余额
       balance: 余额
-      "on": 在
+      'on': 在
       to: 到
       recalculate_notice: 所有未来的交易和余额都将根据此%{change_or_update}重新计算。
       change: 变更
       update: 更新
+      action_set: 设置
+      action_update: 更新
     create:
       account_updated: 账户已更新
     update:
@@ -60,3 +62,9 @@ zh-CN:
       settings: 设置
       opening_balance: 开始余额
       update_value: 更新价值
+    confirm_create:
+      confirm: 确认
+      title: 确认新余额
+    confirm_update:
+      title: 更新余额
+      update: 更新

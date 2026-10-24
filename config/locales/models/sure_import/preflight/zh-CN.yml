@@ -1,0 +1,9 @@
+---
+zh-CN:
+  sure_import:
+    preflight:
+      missing_reference: 第 %{line} 行的 %{type} 引用了不存在的 %{field}：%{value}。
+      provider_merchant_diff: 第 %{line} 行的提供商商户（ProviderMerchant）%{name} 已存在，但 %{fields} 不同。将保留现有商户。
+      skipped_missing_merchant_reference: 第 %{line} 行的 %{type} 引用了此导出文件未包含的商户（%{value}）。这可能是因为导出文件生成于 Sure 开始导出提供商指定商户之前。该记录将不带此商户导入。
+      skipped_missing_reference: 第 %{line} 行的 %{type} 引用了不存在的 %{field}：%{value}，导入时将跳过该记录。
+      skipped_unnamed_recurring: 第 %{line} 行的 %{type} 没有名称，且引用了此导出文件未包含的商户（%{value}），导入时将跳过该记录。

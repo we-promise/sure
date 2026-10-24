@@ -1,0 +1,92 @@
+---
+zh-CN:
+  coinspot_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} 个账户需要设置"
+        other: "%{count} 个账户需要设置"
+      calculating_balances: 正在计算余额……
+      checking_configuration: 正在检查账户配置……
+      checking_credentials: 正在检查凭据……
+      credentials_invalid: CoinSpot API 凭据无效，请检查您的 API Key 和 API Secret。
+      importing_accounts: 正在从 CoinSpot 导入账户……
+      processing_accounts: 正在处理账户数据……
+      processing_failed:
+        one: "%{count} 个 CoinSpot 账户处理失败"
+        other: "%{count} 个 CoinSpot 账户处理失败"
+  coinspot_items:
+    coinspot_item:
+      delete: 删除
+      deletion_in_progress: 正在删除……
+      import_accounts_menu: 导入账户
+      no_accounts_message: 同步后，您的 CoinSpot 交易所账户将显示在这里。
+      no_accounts_title: 未找到账户
+      provider_name: CoinSpot
+      reconnect: 需要更新凭据
+      setup_action: 导入账户
+      setup_description: 将此 CoinSpot 连接导入为加密货币交易所账户。
+      setup_needed: 账户已准备好导入
+      stale_rate_warning: 由于没有 %{date} 的准确汇率，当前余额为估算值，将在下次同步时更新。
+      status: 上次同步于 %{timestamp} 前
+      status_never: 从未同步
+      status_with_summary: 上次同步于 %{timestamp} 前 · %{summary}
+      sync_status:
+        all_synced:
+          one: 已同步 %{count} 个账户
+          other: 已同步 %{count} 个账户
+        no_accounts: 未找到账户
+        partial_sync: 已同步 %{linked_count} 个，%{unlinked_count} 个待设置
+      syncing: 正在同步……
+    complete_account_setup:
+      no_accounts: 没有可导入的账户
+      none_selected: 未选择账户
+      setup_failed:
+        one: "%{count} 个账户导入失败"
+        other: "%{count} 个账户导入失败"
+      success:
+        one: 已导入 %{count} 个账户
+        other: 已导入 %{count} 个账户
+    create:
+      default_name: CoinSpot
+      success: 已成功连接 CoinSpot，正在同步您的交易所账户。
+    destroy:
+      success: 已安排删除 CoinSpot 连接。
+      unlink_failed: 无法断开 CoinSpot 连接
+    link_accounts:
+      select_connection: 请先选择 CoinSpot 连接，再关联账户。
+    link_existing_account:
+      errors:
+        coinspot_account_already_linked: 此 CoinSpot 账户已关联
+        invalid_coinspot_account: CoinSpot 账户无效
+        only_manual: 仅有未关联其他提供商的手动加密货币交易所账户才能关联 CoinSpot
+      select_connection: 请先选择 CoinSpot 连接，再关联账户。
+      success: 已成功关联 CoinSpot 账户
+    provider_connection:
+      default_description: 关联 CoinSpot 交易所账户
+      default_name: CoinSpot
+      description: 关联至 %{name}
+      name: CoinSpot - %{name}
+    select_accounts:
+      no_credentials_configured: 请先添加 CoinSpot API 凭据，再设置账户。
+      select_connection: 请在提供商设置中选择一个 CoinSpot 连接。
+    select_existing_account:
+      cancel: 取消
+      check_provider_health: 请检查您的 CoinSpot API 凭据是否有效。
+      link: 关联
+      no_accounts_found: 未找到 CoinSpot 账户。
+      title: 关联 CoinSpot 账户
+      wait_for_sync: 请等待 CoinSpot 完成同步。
+    setup_accounts:
+      accounts_count:
+        one: 有 %{count} 个可用账户
+        other: 有 %{count} 个可用账户
+      cancel: 取消
+      creating: 正在导入……
+      import_selected: 导入所选账户
+      instructions: CoinSpot 会将此连接导入为一个合并的加密货币交易所账户，包含余额、澳元估值、转账、存入、提取和订单历史。
+      no_accounts: 所有 CoinSpot 账户均已导入。
+      select_all: 全选
+      subtitle: 选择要跟踪的交易所账户
+      title: 导入 CoinSpot 账户
+    update:
+      success: 已成功更新 CoinSpot 连接。

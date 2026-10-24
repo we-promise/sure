@@ -15,6 +15,7 @@ zh-CN:
           has_many: 由于%{record}需要此记录，所以无法移除记录
           has_one: 由于%{record}需要此记录，所以无法移除记录
   date:
+    day_of_month: "%{day}日"
     abbr_day_names:
     - 周日
     - 周一
@@ -225,3 +226,10 @@ zh-CN:
       long: "%Y年%m月%d日 %H:%M"
       short: "%m月%d日 %H:%M"
     pm: 下午
+  mcp:
+    errors:
+      invalid_session_id: MCP 会话 ID 无效
+      unsupported_protocol_version: 不支持的 MCP 协议版本：%{version}
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris 必须使用 https、环回地址的 http 或原生应用 URI 协议

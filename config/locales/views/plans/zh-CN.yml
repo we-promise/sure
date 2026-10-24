@@ -1,0 +1,36 @@
+---
+zh-CN:
+  plans:
+    budget_card:
+      days_left:
+        one: 剩余 1 天
+        other: 剩余 %{count} 天
+      edit_budget: 编辑预算
+      empty_body: 设置每月支出目标和各分类限额，了解本月的预算执行情况。
+      of_total: 共 %{total}
+      percent_used: 已使用 %{percent}%
+      set_up: 设置本月预算
+      title: 本月
+      top_categories: 主要分类
+      view_budget: 查看完整预算
+    goals_card:
+      active_count:
+        one: 1 个进行中
+        other: "%{count} 个进行中"
+      active_goals: 进行中的目标
+      all_goals: 全部目标
+      all_on_pace: 所有目标均按计划推进
+      behind_count:
+        one: 1 个进度落后
+        other: "%{count} 个进度落后"
+      new_goal: 新建目标
+      of_targets: 各项目标合计 %{total}
+      pending_count:
+        one: 1 项待确认承诺
+        other: "%{count} 项待确认承诺"
+      pending_marker: 待确认
+      runway: 可支撑 %{months} 个月 · %{pace}/月
+      title: 您的目标
+    show:
+      subtitle: 规划资金用途，安排支出与储蓄。
+      title: 规划

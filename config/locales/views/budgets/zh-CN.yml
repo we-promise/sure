@@ -63,9 +63,19 @@ zh-CN:
       success: 已从 %{source_name} 复制预算
       no_source: 未找到可复制的上一个预算
       already_initialized: 此预算已设置过
+    available_cash:
+      available: 可用现金
+      earmarked: 已为目标预留
+      free: 可自由使用
+      goals_link: 查看目标
+      heading: 现有现金
+      subtitle: 独立于上方计划展示，不计入该计划。
+    switcher:
+      aria_label: 切换预算
+      household: 家庭
   budget_categories:
     allocation_progress:
-      budget_exceeded_html: '预算超出 <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      budget_exceeded_html: 预算超出 <span class="text-red-500 privacy-sensitive">%{amount}</span>
       left_to_allocate: 待分配
       over_set: 超过 100%
       percent_set: 已设置 %{percent}
@@ -73,6 +83,8 @@ zh-CN:
       monthly_average: 月均 %{amount}
       shared_placeholder: 共享
       shared_title: 留空以共享父级预算
+      rollover_label: 结转
+      rollover_title: 将此分类当月未使用的资金保留到下个月
     confirm_button:
       confirm: 确认
     no_categories:
@@ -96,3 +108,28 @@ zh-CN:
       recent_transactions: 最近交易
       view_all_transactions: 查看该分类的全部交易
       no_transactions: 此预算周期内未找到交易。
+      rolled_over: 已结转
+    bills_reserved: 已为账单预留 %{amount}
+    bills_reserved_unconvertible:
+      one: 有 1 笔账单因缺少汇率而未预留资金
+      other: 有 %{count} 笔账单因缺少汇率而未预留资金
+    budget_category:
+      rolled_over: 结转 +%{amount}
+    move:
+      amount_label: 金额
+      available: 可用 %{amount}
+      button_title: 从此分类转移资金
+      cancel: 取消
+      dialog_title: 转移预算资金
+      errors:
+        different_budgets: 两个分类必须属于同一预算。
+        insufficient_funds: 该金额超过此分类已分配的金额。
+        non_positive_amount: 请输入大于零的金额。
+        parent_child: 分类与其子分类之间不能转移资金，请直接调整子分类。
+        same_category: 请选择其他分类接收资金。
+        uncategorized: "“未分类”并非真正的预算分配项，因此不能转入或转出资金。"
+      from_label: 转出分类
+      no_destination: 当前没有其他可转移资金的预算分配项；分类不能向其父分类或子分类转移资金。
+      submit: 转移
+      success: 预算资金已转移。
+      to_label: 转入分类

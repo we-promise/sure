@@ -88,7 +88,7 @@ zh-CN:
       setup_accounts: 设置账户
       setup_title: "设置说明："
       sync: 同步
-      token_label: Token
+      token_label: "令牌"
       token_placeholder: 在此粘贴 token
       update_connection: 更新连接
     provider_connection:

@@ -60,3 +60,4 @@ pl:
       transfer: Przelew
     trend_change:
       no_change: bez zmian
+    submitting: Wysyłanie…

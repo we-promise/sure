@@ -33,7 +33,9 @@ zh-CN:
       title: 更新 SimpleFIN 连接
       header_subtitle: 获取新的设置令牌以重新连接您的 SimpleFIN 账户
       connection_needs_update: 您的 SimpleFIN 连接需要更新：
-      step_1_html: 前往 <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> 创建新的设置令牌
+      step_1_html: 前往 <a href="https://bridge.simplefin.org/simplefin/create" target="_blank"
+        rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN
+        Bridge</a> 创建新的设置令牌
       step_2: 复制令牌并粘贴到下方
       step_3: 点击“更新”以恢复访问
       update: 更新
@@ -98,7 +100,7 @@ zh-CN:
       confirm_body: 这将永久删除此组中的所有账户及其相关数据。
       confirm_title: 删除 SimpleFIN 连接？
       delete: 删除
-      deletion_in_progress: （正在删除中……）
+      deletion_in_progress: "（正在删除中……）"
       error: 同步数据时发生错误
       no_accounts_description: 此连接尚未包含任何已同步账户。
       no_accounts_title: 未找到账户
@@ -112,16 +114,16 @@ zh-CN:
         other: 还有 %{count} 个账户可设置
       accounts_skipped_tooltip: 某些账户因同步错误被跳过
       accounts_skipped_label: 已跳过：%{count}
-      rate_limited_ago: （%{time} 前被限流）
+      rate_limited_ago: "（%{time} 前被限流）"
       rate_limited_recently: 最近被限流
       status: 上次同步于 %{timestamp} 前
       status_never: 从未同步
       status_with_summary: 上次同步于 %{timestamp} 前 • %{summary}
       syncing: 正在同步……
       update: 更新
-      stale_pending_note: （不计入预算）
+      stale_pending_note: "（不计入预算）"
       stale_pending_accounts: 在：%{accounts}
-      reconciled_details_note: （详情请查看同步摘要）
+      reconciled_details_note: "（详情请查看同步摘要）"
       duplicate_accounts_skipped: 某些账户因重复被跳过——请使用“链接现有账户”进行合并。
     select_existing_account:
       title: 将 %{account_name} 连接到 SimpleFIN
@@ -144,10 +146,11 @@ zh-CN:
       dismissed: 已忽略替换建议
     replacement_prompt:
       title: 您的 %{institution} 卡片可能已被替换
-      description: “%{account_name}” 连接到 “%{old_name}”，该卡片近期没有活动且余额为零。现在，同一机构中有一张新卡 “%{new_name}” 已激活。重新关联可保留您的历史记录。
+      description: "“%{account_name}” 连接到 “%{old_name}”，该卡片近期没有活动且余额为零。现在，同一机构中有一张新卡
+        “%{new_name}” 已激活。重新关联可保留您的历史记录。"
       relink: 重新关联到新卡
       confirm_title: 重新关联到新卡？
-      confirm_body: “%{account_name}” 将连接到 “%{new_name}”。您的交易历史将保留，未来交易将来自新卡。
+      confirm_body: "“%{account_name}” 将连接到 “%{new_name}”。您的交易历史将保留，未来交易将来自新卡。"
       dismiss_aria: 忽略替换建议
     reconciled_status:
       message:
@@ -157,3 +160,21 @@ zh-CN:
       message:
         one: "%{count} 笔待处理交易早于 %{days} 天"
         other: "%{count} 笔待处理交易早于 %{days} 天"
+    institution_summary:
+      count:
+        one: "%{count} 家机构"
+        other: "%{count} 家机构"
+      none: 尚未连接任何机构
+    rate_limited:
+      daily_refresh: 您已达到 SimpleFIN 的每日刷新上限。请在桥接服务刷新后重试，最长需等待 24 小时。
+    stale_sync:
+      last_successful: 上次成功同步是在 %{count} 天前，您的 SimpleFIN 连接可能需要检查。
+      no_transactions: 已连续 %{count} 天没有新交易。请查看 SimpleFIN 控制面板，确认银行连接是否正常。
+    sync_status:
+      no_accounts: 未找到账户
+      partial_setup:
+        one: 已同步 %{linked} 个，%{unlinked} 个需要设置
+        other: 已同步 %{linked} 个，%{unlinked} 个需要设置
+      synced:
+        one: 已同步 %{count} 个账户
+        other: 已同步 %{count} 个账户

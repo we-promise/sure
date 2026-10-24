@@ -6,7 +6,7 @@ zh-CN:
         title: 用户管理
         description: 管理您实例中的用户角色。超级管理员可以访问 SSO 提供商设置和用户管理。
         section_title: 家庭 / 组
-        you: （您）
+        you: "（您）"
         trial_ends_at: 试用结束于
         not_available: 不适用
         no_users: 未找到用户。
@@ -30,6 +30,15 @@ zh-CN:
           session_count: 会话数
           never: 从未
           role: 角色
+          actions: 操作
+          create_new_family_option: "+ 创建新的家庭/组"
+          family: 家庭 / 组
+          keep_current_family: 保留当前家庭/组
+          new_family_moniker: 新家庭/组类型
+          new_family_name: 新家庭/组名称
+          new_family_name_placeholder: 输入名称以创建新的家庭/组
+          password_placeholder: 留空以保留当前密码
+          set_password: 设置新密码
         role_descriptions_title: 角色说明
         roles:
           guest: 访客
@@ -46,6 +55,64 @@ zh-CN:
           expires: 于 %{date} 过期
           delete: 删除
           delete_all: 全部删除
+        actions:
+          delete_user: 删除用户
+          last_super_admin_role_locked: 您是系统中最后一位超级管理员，无法更改角色。
+          manage_user: 管理用户
+          self_edit_warning: 更改您自己的角色会影响您的管理权限。
+          self_update_confirm: 确定要更新您自己账户的角色或所属家庭吗？
+          update: 更新用户
+        auth_types:
+          local: 本地
+          local_and_sso: 本地 + SSO
+          sso: SSO
+          sso_provider_tooltip: SSO 提供商：%{providers}
+        delete_confirm: 确定要删除此用户吗？此操作无法撤销。
+        delete_confirm_last_user: 确定要删除此用户吗？该用户是其家庭/组中的最后一位成员，因此删除用户也会删除整个家庭/组及所有关联数据。此操作无法撤销。
+        family_monikers:
+          family: 家庭
+          group: 组
+        remove: 删除用户
+        removed_sso_identities:
+          allow_again: 重新允许
+          confirm: 是否允许 %{email} 再次通过 SSO 登录或创建账户？
+          description: 这些身份无法创建或重新关联账户。仅在误删除的情况下才应重新允许该身份。
+          title: 已移除的 SSO 身份
+        unused_families:
+          delete: 删除未使用的家庭
+          delete_confirm: 确定要删除此未使用的家庭/组吗？此操作无法撤销。
+          empty: 未找到未使用的家庭/组。
+          family_id: 家庭 ID：%{id}
+          title: 未使用的家庭 / 组
       update:
         success: 用户角色更新成功。
         failure: 更新用户角色失败。
+        family_required: 请选择现有家庭/组，或输入名称以创建新的家庭/组。
+        last_super_admin_error: 无法降低系统中最后一位超级管理员的角色权限。
+        password_and_family_conflict: 密码与家庭/组归属无法同时更新。
+        password_missing_case: 密码必须同时包含大写和小写字母。
+        password_missing_number: 密码必须包含至少一个数字。
+        password_missing_special: 密码必须包含至少一个特殊字符。
+        password_too_short: 密码长度必须至少为 8 个字符。
+        success_family: 用户所属家庭/组已成功更新。
+        success_password: 用户密码已成功更新。
+        success_role: 用户角色已成功更新。
+        success_role_and_password: 用户角色和密码已成功更新。
+      deletion:
+        cancel: 取消
+        email_label: 用户邮箱
+        instruction: 请输入 %{email} 以确认。
+        submit: 永久移除用户
+        title: 永久移除用户
+        warning: 这会立即撤销用户的访问权限，并安排永久删除该用户及其数据。此操作无法撤销。
+      destroy:
+        cannot_remove_last_super_admin: 无法移除最后一位仍在使用中的超级管理员。
+        cannot_remove_self: 您无法在此移除自己的账户。
+        confirmation_mismatch: 输入的邮箱地址不匹配，用户未被移除。
+        failure: 移除用户失败。
+        success: 用户访问权限已撤销，并已安排永久删除。
+    families:
+      destroy:
+        family_has_active_subscription: 此家庭/组有有效订阅，取消订阅后才能删除。
+        family_has_users: 此家庭/组仍有用户，无法删除。
+        success: 家庭/组已成功删除。

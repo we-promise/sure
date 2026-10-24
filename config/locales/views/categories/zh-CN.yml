@@ -13,14 +13,14 @@ zh-CN:
     edit:
       edit: 编辑分类
     form:
-      emoji_label: "Emoji（可选）"
-      emoji_placeholder: "粘贴一个 emoji"
-      emoji_help: "选择或粘贴一个完整 emoji，也支持旗帜、家庭等组合。清空后使用原图标。"
-      emoji_clear: "使用图标"
-      emoji_pick: "使用 %{emoji}"
+      emoji_label: Emoji（可选）
+      emoji_placeholder: 粘贴一个 emoji
+      emoji_help: 选择或粘贴一个完整 emoji，也支持旗帜、家庭等组合。清空后使用原图标。
+      emoji_clear: 使用图标
+      emoji_pick: 使用 %{emoji}
       placeholder: 分类名称
       name_label: 名称
-      unassigned: （未分配）
+      unassigned: "（未分配）"
       parent_category_label: 父分类（可选）
       trigger_label: 选择颜色和图标
       color: 颜色
@@ -73,3 +73,18 @@ zh-CN:
         one_time: 一次性%{type}
         income: 收入
         expense: 支出
+  helpers:
+    submit:
+      category:
+        create: 新建分类
+        update: 更新分类
+  activerecord:
+    attributes:
+      category:
+        emoji: 表情符号
+    errors:
+      models:
+        category:
+          attributes:
+            emoji:
+              invalid: 必须是一个完整的表情符号

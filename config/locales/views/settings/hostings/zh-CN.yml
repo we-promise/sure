@@ -4,7 +4,7 @@ zh-CN:
     hostings:
       brand_fetch_settings:
         description: 请输入 Brandfetch 提供的 Client ID
-        label: Client ID
+        label: "客户端 ID"
         placeholder: 在此输入您的 Client ID
         title: Brandfetch 设置
         env_configured_message: 已通过环境变量配置 Brandfetch。
@@ -55,6 +55,16 @@ zh-CN:
         max_response_tokens_help: 限制模型单次回答可生成的 Token 数。
         max_items_per_call_label: 每次调用最大项目数
         max_items_per_call_help: 限制单次请求传给模型的数据项数量。
+        ai_response_timeout_help: 默认值为 90。仅适用于聊天整轮响应的超时监控，请按总耗时设置：（1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS）×
+          请求超时时间，再加上工具执行和排队时间。AI_RESPONSE_TIMEOUT 会覆盖此字段。
+        ai_response_timeout_label: 响应超时时间，单位为秒（可选）
+        model_function_calling_help: AI 助手通过函数调用读取您的数据，因此请选择提供商明确支持工具 / 函数调用的模型。不支持此功能的模型会导致聊天失败，并返回难以理解的提供商错误。
+        model_function_calling_link: 检查已配置的模型
+        openai_request_timeout_help: 默认值为 60。适用于每次 OpenAI 兼容 HTTP 请求，包括自动分类、商户识别、聊天、PDF
+          处理和向量存储调用。OPENAI_REQUEST_TIMEOUT 会覆盖此字段。
+        openai_request_timeout_label: 请求超时时间，单位为秒（可选）
+        timeout_description: 控制 OpenAI 兼容模型调用在 Sure 放弃等待前允许运行多久。如果在较慢的硬件上运行本地模型，可以增大这些值。
+        timeout_heading: 超时设置
       provider_selection:
         description: 选择用于获取汇率和证券价格的服务。Yahoo Finance 免费且无需 API 密钥。Twelve Data 需要免费的
           API 密钥，但可能提供更全面的数据覆盖。
@@ -69,6 +79,9 @@ zh-CN:
           mfapi: MFAPI.in
           binance_public: Binance
           moex_public: MOEX
+          frankfurter: Frankfurter
+          mansa: Mansa
+          tinkoff_invest: T-Invest（T-Bank）
         securities_provider_label: 证券（股票价格）数据提供商
         title: 数据提供商选择
         exchange_rate_title: 汇率提供商
@@ -83,6 +96,8 @@ zh-CN:
         mfapi_hint: MFAPI.in 可用于部分印度基金数据。
         binance_public_hint: Binance 公共接口可用于加密资产行情。
         moex_public_hint: 免费，无需 API 密钥 -- 俄罗斯股票、基金和债券（MOEX），包括 RUB 外汇
+        requires_api_key_mansa: 需要 API 密钥，免费套餐每天 100 次调用，仅支持 NGX（尼日利亚交易所）
+        tinkoff_invest_hint: 需要只读令牌，提供俄罗斯股票、基金、债券价格和品牌标志
       show:
         clear_cache: 清除数据缓存
         clear_cache_warning: 清除数据缓存将移除所有汇率、证券价格、账户余额及其他数据。这不会删除账户、交易记录、分类或其他用户自有数据。
@@ -96,6 +111,8 @@ zh-CN:
         title: 自托管配置
         ai_assistant: AI 助手
         sync_settings: 同步设置
+        demo_refresh: 演示数据刷新
+        property_valuation_providers: 房产估值提供商
       twelve_data_settings:
         api_calls_used: 已使用 %{used} / %{limit} 次每日 API 调用（%{percentage}）
         description: 请输入 Twelve Data 提供的 API 密钥
@@ -106,7 +123,8 @@ zh-CN:
         title: Twelve Data 设置
         show_details: "（显示详情）"
         step_1_html: 注册或登录 Twelve Data。
-        step_2_html: 前往 <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a> 页面。
+        step_2_html: 前往 <a href="https://twelvedata.com/account/api-keys" target="_blank"
+          rel="noopener noreferrer" class="underline">API Keys</a> 页面。
         step_3: 显示 API 密钥并粘贴到下方。
         plan_upgrade_warning_title: 部分代码需要付费计划
         plan_upgrade_warning_description: 当前 Twelve Data 计划无法同步下列持仓价格。
@@ -121,6 +139,10 @@ zh-CN:
         invalid_anthropic_base_url: Anthropic Base URL 无效。
         anthropic_model_required_for_base_url: 设置 Anthropic Base URL 时必须填写模型。
         scheduler_sync_failed: 设置已保存，但同步计划更新失败。请重试或检查服务器日志。
+        invalid_categorization_rate: "%{field} 必须是 0 到 1 之间的数字。"
+        invalid_demo_family: 所选家庭必须包含已配置演示邮箱对应的用户。
+        invalid_jev_endpoint: Jev 端点必须使用 https URL。只有 localhost 可以使用普通 http。
+        select_demo_family: 请先选择一个可丢弃的演示家庭。
       yahoo_finance_settings:
         connection_failed: 无法连接到 Yahoo Finance
         description: Yahoo Finance 提供免费的股票价格、汇率和金融数据访问，无需 API 密钥。
@@ -128,6 +150,14 @@ zh-CN:
         status_inactive: Yahoo Finance 连接失败
         title: Yahoo Finance 设置
         troubleshooting: 请检查您的互联网连接和防火墙设置。Yahoo Finance 可能暂时不可用。
+        rate_limited_message: 无需操作。Sure 将在 30 分钟内暂停额外的健康检查。价格和汇率操作仍会独立进行。
+        rate_limited_title: 已达到 Yahoo Finance 请求频率限制。
+        status_healthy: Yahoo Finance 已启用且运行正常。
+        status_rate_limited: Yahoo Finance 暂时限制了请求频率。
+        status_unavailable: Yahoo Finance 当前不可用。
+        status_unknown: 正在检查 Yahoo Finance 状态。
+        unavailable_message: 无法连接 Yahoo Finance，或其返回了异常响应。请检查网络连接，稍后重试。
+        unavailable_title: 无法验证 Yahoo Finance 状态。
       assistant_settings:
         title: AI 助手
         description: 配置 Sure 使用的 AI 助手模式。
@@ -154,6 +184,18 @@ zh-CN:
         confirm_disconnect:
           title: 断开外部助手？
           body: 断开后将无法继续使用此远程助手。
+        agent_discovery_configure_first: 请保存有效的端点 URL 和 API 令牌，以加载可用智能体。
+        agent_discovery_error: 无法加载智能体：%{error}
+        external_agent_invalid: 请选择已配置端点返回的智能体。
+        external_agent_required: 保存前请选择一个外部智能体。
+        external_agent_reselect: 端点已更改，先前选择的智能体在新端点不可用。请从新端点选择智能体。
+        external_info:
+          items:
+          - 请输入完整的 OpenAI 兼容端点 URL，并以 /v1/chat/completions 结尾。
+          - 保存端点和令牌后，Sure 会通过 /v1/models 发现可用智能体。
+          - 外部服务决定每个智能体使用的模型，Sure 只选择智能体路由。
+          - 身份验证、端点或智能体错误由外部服务返回。请求失败时，请检查该服务的日志。
+          title: 外部 AI 配置
       llm_provider_selector:
         title: AI 提供商
         description: 选择 Sure 调用的 LLM 提供商。
@@ -184,7 +226,8 @@ zh-CN:
         placeholder: 粘贴 Tiingo API Token
         show_details: "（显示详情）"
         step_1_html: 注册或登录 Tiingo。
-        step_2_html: 前往 <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a> 页面。
+        step_2_html: 前往 <a href="https://www.tiingo.com/account/api/token" target="_blank"
+          rel="noopener noreferrer" class="underline">API Token</a> 页面。
         step_3: 复制 API Token 并粘贴到下方。
       eodhd_settings:
         title: EODHD
@@ -224,3 +267,92 @@ zh-CN:
         include_pending_label: 包含待处理交易
         include_pending_description: 同步时同时拉取提供商返回的待处理交易。
         env_configured_message: 已通过环境变量配置同步设置。
+      categorization_provider_selector:
+        confidence_threshold_env_notice: 已由 CATEGORIZATION_CONFIDENCE_THRESHOLD 环境变量锁定。
+        confidence_threshold_help: 低于此置信度时，不会应用分类，交易将保持未分类状态，以便后续重新尝试。不会丢弃任何数据。设为
+          0 可应用所有分类结果。
+        confidence_threshold_label: 最低置信度（0–1）
+        data_retention_direct: 交易描述、金额和您的分类名称会发送至 TypeSafe 进行分类。在真实数据上启用前，请查看其数据保留政策。
+        data_retention_heading: 数据共享
+        data_retention_proxied: 交易描述、金额和您的分类名称会发送至 %{host}，再由其转发给 TypeSafe。在真实数据上启用前，请查看这两家提供商的数据保留政策。
+        description: 选择用于交易分类的提供商。此设置独立于上方负责聊天和 PDF 处理的 AI 提供商。
+        env_notice: 已通过环境变量设为 %{type}。
+        jev_configured: 已配置 Jev API 密钥。
+        jev_not_configured: 已选择 Jev，但尚未配置 API 密钥。在您于下方添加密钥之前，分类仍会使用 AI 提供商。
+        preview_pill: 预览
+        provider_help: AI 提供商会读取一批交易并返回分类名称。Jev 会从您的分类列表中选择分类，并为每笔交易返回经过校准的置信度。
+        provider_jev: Jev（TypeSafe）
+        provider_label: 分类提供商
+        provider_llm: AI 提供商（OpenAI 或 Anthropic）
+        shadow_rate_env_notice: 已由 CATEGORIZATION_SHADOW_RATE 环境变量锁定。
+        shadow_rate_help: 同时运行已选和未选的提供商，只记录分类分歧，不修改任何分类。每次被抽样的分类任务都会产生双倍 API 费用。设为
+          0 可关闭。
+        shadow_rate_label: 影子对比采样率（0–1）
+        title: 交易分类
+      categorization_shadow_results:
+        shadow_disagreement_confidence: "（置信度 %{confidence}）"
+        shadow_disagreement_row: "%{applied_provider} 选择了 %{applied_category}；%{shadow_provider}
+          选择了 %{shadow_category}。"
+        shadow_disagreements_heading: 最近的分类分歧
+        shadow_no_category: 无分类
+        shadow_no_disagreements: 两家提供商对所有抽样交易的分类结果均一致。
+        shadow_results_empty: 尚未记录任何对比结果。请将影子对比采样率设为大于 0 的值，再运行分类以收集结果。
+        shadow_results_heading: 影子对比
+        shadow_results_summary: "%{count} 笔抽样交易的一致率为 %{agreement}%%。"
+      demo_refresh_settings:
+        description: 仅自动刷新选定的演示家庭。该家庭的所有数据和登录信息都会被移除，其他家庭不受影响。此功能需要正在运行且至少配有 2 GiB
+          内存的后台任务进程。请先使用演示数据生成器创建一个可丢弃的演示家庭，再在此选择它。请勿选择真实用户的家庭。
+        enabled_label: 启用每日演示家庭刷新
+        family_label: 可丢弃的演示家庭
+        none: 尚未选择演示家庭
+        save_family: 保存演示家庭
+      jev_settings:
+        api_key_label: API 密钥
+        api_key_placeholder: 输入您的 TypeSafe API 密钥
+        endpoint_label: 端点（可选）
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone（默认）
+        env_configured_message: 已通过环境变量成功配置。
+        model_help: 默认直接连接 TypeSafe。如需通过 OpenRouter 使用 Jev，请将端点设为 https://openrouter.ai/api/alpha/decisions，并将模型设为
+          ~typesafe/jev-latest。
+        model_label: 模型（可选）
+        model_placeholder: jev-latest（默认）
+      mansa_settings:
+        description: 输入 Mansa API 提供的 API 密钥。它支持此处其他提供商未覆盖的 NGX（尼日利亚交易所）。Mansa 还覆盖其他非洲交易所，但此集成仅验证了
+          NGX。
+        env_configured_message: 已通过 MANSA_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 Mansa API 密钥
+        rate_limit_warning: Mansa 免费套餐每天限 100 次 API 调用，且仅提供当前报价；历史价格需要付费套餐。此集成仅验证了
+          NGX（尼日利亚交易所），暂不支持 Mansa 覆盖的其他非洲交易所。
+        show_details: "（显示详情）"
+        step_1_html: 访问 <a href="https://mansaapi.com" target="_blank" rel="noopener
+          noreferrer" class="underline">mansaapi.com</a> 领取免费 API 密钥，无需提供银行卡。
+        step_2: 复制您的 API 密钥并粘贴到下方。
+        title: Mansa
+      realie_settings:
+        description: 输入您的 Realie API 密钥，以便在添加房产时查询美国房产详情和估值。免费套餐每月限 25 次 API 请求，由房产查询和每日估值刷新共用。使用付费套餐时，可通过
+          REALIE_MAX_REQUESTS_PER_MONTH 环境变量提高上限。
+        env_configured_message: 已通过 REALIE_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 Realie API 密钥
+        title: Realie
+        usage: 本月已使用 %{used} 次请求，上限为 %{limit} 次
+      rentcast_settings:
+        description: 输入您的 RentCast API 密钥，以便在添加房产时查询美国房产详情和估值。免费套餐每月限 50 次 API 请求，由房产查询和每日估值刷新共用。使用付费套餐时，可通过
+          RENTCAST_MAX_REQUESTS_PER_MONTH 环境变量提高上限。
+        env_configured_message: 已通过 RENTCAST_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 RentCast API 密钥
+        title: RentCast
+        usage: 本月已使用 %{used} 次请求，上限为 %{limit} 次
+      tinkoff_invest_settings:
+        description: 输入只读的 T-Invest API 令牌。令牌用于获取证券的品牌标志，包括基金和债券，即使其价格由 MOEX 提供；若在上方启用了价格服务，也会用于获取俄罗斯金融产品的价格。
+        env_configured_message: 已通过 TINKOFF_INVEST_API_KEY 环境变量成功配置。
+        label: API 令牌
+        moex_only_notice: 上方未启用价格服务。只要配置了令牌，T-Invest 仍会用于获取全部证券的品牌标志，不受上方复选框影响。
+        placeholder: 在此输入您的 T-Invest API 令牌
+        show_details: "（显示详情）"
+        step_1: 打开 T-Bank 投资，依次进入设置和 API 令牌（需要已开通的 T-Bank 证券经纪账户）。
+        step_2: 创建具有只读权限的令牌。
+        step_3: 复制令牌并粘贴到下方。
+        title: T-Invest（T-Bank）

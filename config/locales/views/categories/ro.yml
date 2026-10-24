@@ -13,11 +13,12 @@ ro:
     edit:
       edit: Editează categoria
     form:
-      emoji_label: "Emoji (opțional)"
-      emoji_placeholder: "Lipește un emoji"
-      emoji_help: "Alege sau lipește un emoji complet, inclusiv un steag sau o familie. Șterge-l pentru a folosi pictograma."
-      emoji_clear: "Folosește pictograma"
-      emoji_pick: "Folosește %{emoji}"
+      emoji_label: Emoji (opțional)
+      emoji_placeholder: Lipește un emoji
+      emoji_help: Alege sau lipește un emoji complet, inclusiv un steag sau o familie.
+        Șterge-l pentru a folosi pictograma.
+      emoji_clear: Folosește pictograma
+      emoji_pick: Folosește %{emoji}
       placeholder: Nume categorie
     index:
       bootstrap: Folosește valorile implicite (recomandat)
@@ -37,3 +38,18 @@ ro:
       show:
         bootstrap: Generează categoriile implicite
         empty: Nicio categorie găsită
+  helpers:
+    submit:
+      category:
+        create: Creează categoria
+        update: Actualizează categoria
+  activerecord:
+    attributes:
+      category:
+        emoji: Emoji
+    errors:
+      models:
+        category:
+          attributes:
+            emoji:
+              invalid: trebuie să fie un singur emoji complet

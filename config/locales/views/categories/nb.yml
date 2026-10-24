@@ -13,11 +13,12 @@ nb:
     edit:
       edit: Rediger kategori
     form:
-      emoji_label: "Emoji (valgfritt)"
-      emoji_placeholder: "Lim inn én emoji"
-      emoji_help: "Velg eller lim inn én komplett emoji, for eksempel et flagg eller en familie. Fjern den for å bruke ikonet."
-      emoji_clear: "Bruk ikon"
-      emoji_pick: "Bruk %{emoji}"
+      emoji_label: Emoji (valgfritt)
+      emoji_placeholder: Lim inn én emoji
+      emoji_help: Velg eller lim inn én komplett emoji, for eksempel et flagg eller
+        en familie. Fjern den for å bruke ikonet.
+      emoji_clear: Bruk ikon
+      emoji_pick: Bruk %{emoji}
       placeholder: Kategorinavn
     index:
       bootstrap: Bruk standarder (anbefalt)
@@ -37,3 +38,18 @@ nb:
       show:
         bootstrap: Generer standardkategorier
         empty: Ingen kategorier funnet
+  helpers:
+    submit:
+      category:
+        create: Opprett kategori
+        update: Oppdater kategori
+  activerecord:
+    attributes:
+      category:
+        emoji: Emoji
+    errors:
+      models:
+        category:
+          attributes:
+            emoji:
+              invalid: må være én fullstendig emoji

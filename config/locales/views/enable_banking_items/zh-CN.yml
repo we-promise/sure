@@ -102,7 +102,7 @@ zh-CN:
       invalid_redirect: 收到的授权 URL 无效。请重试。
       reauthorization_failed: 重新授权失败
     select_bank:
-      beta_label: Beta
+      beta_label: "测试版（Beta）"
       cancel: 取消
       check_country: 请检查您的国家/地区代码设置。
       credentials_required: 请先配置您的 Enable Banking 凭据。

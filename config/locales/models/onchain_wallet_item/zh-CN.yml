@@ -1,0 +1,17 @@
+---
+zh-CN:
+  onchain:
+    chains:
+      arbitrum: Arbitrum
+      base: Base
+      bitcoin: 比特币
+      ethereum: 以太坊
+      gnosis: Gnosis
+      optimism: Optimism
+      polygon: Polygon
+      solana: Solana
+    institution_name: 自托管钱包
+  onchain_wallet_item:
+    movement:
+      received: 收到 %{quantity} %{symbol}
+      sent: 发送 %{quantity} %{symbol}

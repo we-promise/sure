@@ -1,0 +1,16 @@
+---
+zh-CN:
+  rule_notification_mailer:
+    digest:
+      account: 账户
+      amount: 金额
+      cta: 查看交易
+      date: 日期
+      heading:
+        one: 1 笔新交易匹配您的规则
+        other: "%{count} 笔新交易匹配您的规则"
+      intro: 以下交易匹配规则“%{rule}”：
+      name: 名称
+      subject:
+        one: "%{product_name} 上有 1 笔新交易匹配您的规则"
+        other: "%{product_name} 上有 %{count} 笔新交易匹配您的规则"

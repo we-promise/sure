@@ -50,7 +50,7 @@ zh-CN:
       step1_html: 访问 <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats 公共 API 仪表盘</a> 获取 API key。
       step2: 在下方输入您的 API key，然后点击配置。
       step3_html: 连接成功后，前往 <a href="%{accounts_url}" class="link" data-turbo-frame="_top">账户</a> 标签页设置您的加密账户。
-      api_key_label: API Key
+      api_key_label: "API 密钥"
       api_key_placeholder: 必填
       configure: 配置
       update_configuration: 重新配置

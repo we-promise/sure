@@ -37,9 +37,21 @@ zh-CN:
     dashboard:
       cashflow_preview:
         node_labels:
-          cash_flow: "现金流"
-          surplus: "盈余"
-          deficit: "赤字"
+          cash_flow: 现金流
+          surplus: 盈余
+          deficit: 赤字
+        feedback_loading: 正在加载反馈表单…
+        feedback_privacy: 您的反馈将发送至 PostHog。描述问题时，请勿包含账号、余额或其他私人财务信息。
+        feedback_prompt: 请将此图表与上方原图对比，并告诉我们除排序外是否还有其他差异。
+        feedback_submit: 发送反馈
+        feedback_thanks: 感谢您帮助改进图表！
+        feedback_title: 现金流图表反馈
+        feedback_unavailable: 反馈功能暂时不可用，请稍后重试。
+        negative: 看起来有问题
+        positive: 看起来正确
+        preview: 预览
+        preview_tooltip: 此图表使用与移动端 Swift 客户端共享的新 API，将替换上方的可视化图表。
+        title: 新版桑基图
       welcome: 欢迎回来，%{name}
       subtitle: 以下是您的财务状况概览
       new: 新建
@@ -66,12 +78,17 @@ zh-CN:
         classifications:
           asset: 资产
           liability: 负债
+        collapse_all: 全部收起
+        expand_all: 全部展开
       cashflow_sankey:
         title: 现金流
         zoom_out: 返回完整现金流
         no_data_title: 此时间段内没有现金流数据
         no_data_description: 添加交易以显示现金流数据，或扩大时间范围
         add_transaction: 添加交易
+        load_error: 无法加载现金流，请重试。
+        loading: 正在加载现金流…
+        retry: 重试
       no_accounts:
         title: 暂无账户
         description: 添加账户以显示净资产数据
@@ -95,6 +112,41 @@ zh-CN:
         trades: 交易
         no_investments: 暂无投资账户
         add_investment: 添加投资账户以跟踪您的投资组合
+      insights_feed:
+        title: 洞察
+      money_flow:
+        apply: 应用
+        balance: 交易结余
+        chart_span: 最近 %{count} 个月
+        date_range: "%{start_date}至%{end_date}"
+        expenses: 支出
+        filter_accounts: 筛选账户（%{count}）
+        filter_accounts_all: 全部账户
+        income: 收入
+        month_picker_aria_label: 选择月份
+        period_scope_hint: 显示您在此选择的月份，不受仪表盘顶部时间范围影响。
+        search_accounts: 搜索账户
+        title: 资金流入 / 流出
+      sections_aria_label: 仪表盘分区
+      spending_trend:
+        date_range: "%{start_date}至%{end_date}"
+        date_range_short: "%{year}年 %{start_date}至%{end_day}日"
+        date_range_short_single: "%{year}年 %{date}"
+        month_picker_aria_label: 选择月份
+        no_data: 本月暂无支出数据
+        period_scope_hint: 显示您在此选择的月份，不受仪表盘顶部时间范围影响。
+        previous_comparison_days: "（1–%{end_day}日）"
+        title: 支出
+      widget_size:
+        auto: 自动
+        compact: 紧凑
+        full: 全宽
+        half: 半宽
+        height_label: 高度
+        label: 调整大小
+        tall: 加高
+        width_label: 宽度
     release_notes_unavailable:
       name: 发布说明暂不可用
-      body_html: "<p>暂时无法获取最新发布说明。请稍后再试，或直接访问 <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub releases 页面</a>。</p>"
+      body_html: "<p>暂时无法获取最新发布说明。请稍后再试，或直接访问 <a href='https://github.com/we-promise/sure/releases'
+        target='_blank' rel='noopener noreferrer'>GitHub releases 页面</a>。</p>"

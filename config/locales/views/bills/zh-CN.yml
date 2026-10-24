@@ -1,0 +1,313 @@
+---
+zh-CN:
+  bills:
+    add_bill: 添加账单
+    add_payment: 添加付款
+    ai_prompts:
+      due_before_paycheck: 下次发薪前有哪些账单到期？
+      monthly_subscriptions: 我每月在订阅上花了多少钱？
+      safe_to_spend: 本期有多少钱可以安心支出？
+      subscriptions_up: 今年有哪些订阅涨价了？
+    all:
+      any_status: 所有状态
+      any_type: 所有类型
+      col_actions: 操作
+      col_amount: 金额
+      col_frequency: 频率
+      col_name: 名称
+      col_next: 下次到期
+      col_status: 状态
+      col_type: 类型
+      monthly_equivalent: "%{amount}/月"
+      next_short: 下次 %{date}
+      no_matches_description: 请尝试清除筛选条件或搜索内容。
+      no_matches_title: 没有匹配结果
+      search_placeholder: 搜索账单
+      sort_amount: 按金额
+      sort_due: 按下次到期日
+      sort_name: 按名称
+      status_filters:
+        due: 即将到期
+        ended: 已忽略
+        overdue: 已逾期
+        paid: 已付款
+        partial: 部分已付
+        paused: 已暂停
+      subscription_active: 有效
+      subscription_annual: 每年
+      subscription_monthly: 每月
+      subscription_price_change_line: "%{from} → %{to}（%{percent}%）"
+      subscription_price_changes: 今年的价格变动
+      types:
+        bill: 账单
+        income: 收入
+        installment: 分期计划
+        other: 其他
+        subscription: 订阅
+        transfer: 转账
+    amount_range: 范围为 %{min} 至 %{max}
+    attention:
+      amount_changed: 金额已变更
+      needs_review: 匹配结果待核对
+      overdue:
+        one: 已逾期 1 天
+        other: 已逾期 %{count} 天
+      partial: 部分已付 · 尚余 %{amount}
+    calendar:
+      empty_month: 本月没有到期账单。
+      month_totals: 预计 %{expected} · 已付 %{paid}
+      next_month: 下个月
+      previous_month: 上个月
+      reset_feed: 重置链接
+      subscribe_ical: 订阅（iCal）
+      today: 今天
+    cancelled_still_scheduled: 您于 %{date} 将此账单标记为已取消，但它仍在计划中，因此后续账单仍会出现。
+    debt_payment: "· 债务还款"
+    detail:
+      annualized: 每年
+      around: "%{date} 左右"
+      average: 平均已付金额
+      avg_payment: 平均每笔付款
+      cancelled_chip: 已于 %{date} 取消
+      current: 当前
+      history: 历史记录
+      history_aria: 过去十二个月的付款记录
+      history_title: 最近 12 个月
+      key_metrics: 每年
+      last_account: 上次使用的账户
+      manual_payment: 手动付款
+      next_payment: 下次付款
+      notes: 备注
+      payment_count:
+        one: 1 笔付款
+        other: "%{count} 笔付款"
+      price_change_line: "%{from} → %{to}"
+      price_changes: 价格变动
+      range: "%{min} 至 %{max}"
+      recent_payments: 近期付款
+      renews_chip: 于 %{date} 续订
+      rule_aliases: 也匹配 %{names}
+      rule_amount_range: 从 %{min} 到 %{max}
+      rule_learned_tolerance: 与通常金额的差异在 %{percent} 以内的交易会匹配此账单
+      rule_named: "%{name}"
+      rules: 此账单的匹配规则
+      spent_per_year: 已支出
+      trial_chip: 试用于 %{date} 结束
+      upcoming: 即将到来
+      year: 年份
+      ytd: 今年已付
+    detect:
+      already_running: 正在检测，请稍后再查看。
+      found:
+        one: 发现 1 个可能的账单，请在下方核对。
+        other: 发现 %{count} 个可能的账单，请在下方核对。
+      none_found: 未发现新的循环交易模式，您可以手动添加账单。
+    due_label:
+      due_since: 于 %{date} 到期
+      overdue:
+        one: 已逾期 1 天，原定 %{date} 到期
+        other: 已逾期 %{count} 天，原定 %{date} 到期
+      settled: 原定 %{date} 到期
+      snoozed: 已延后至 %{date}
+      today: 今天到期
+      upcoming:
+        one: 明天到期，%{date}
+        other: "%{count} 天后到期，%{date}"
+    feed:
+      calendar_name: Sure 账单
+    find_payment: 查找付款
+    index:
+      accept: 应用
+      add_bill: 添加账单
+      add_income: 添加收入
+      all_automatic: 全部自动付款
+      attention_overdue_total: "%{amount} 已逾期"
+      confidence: 匹配度 %{percent}%
+      detected_review:
+        one: 在您的交易中发现了 1 笔循环付款。请核对，以便这里的合计与您的实际付款一致。
+        other: 在您的交易中发现了 %{count} 笔循环付款。请核对，以便这里的合计与您的实际付款一致。
+      detected_review_action: 前往核对
+      dormant: 长期无活动
+      empty:
+        action: 查找循环交易
+        description: 账单是您的周期性支出。Sure 会从交易历史中自动识别账单；您也可以为每笔账单添加付款链接，直接从这里前往付款。
+        no_history_description: 尚无交易记录。连接账户或导入历史记录后，Sure 会自动识别账单，您也可以手动添加。
+        title: 暂无账单
+      hero_next_seven: 未来 7 天有 %{amount} 到期
+      hero_past_due: "%{amount} 已逾期"
+      kpi_next_seven: 未来 7 天到期
+      kpi_paid: 本月已付
+      kpi_past_due: 已逾期
+      kpi_remaining: 本月剩余应付
+      later: 本月之后
+      left_to_pay: 尚待支付
+      needs_action_count:
+        one: 1 项待您处理
+        other: "%{count} 项待您处理"
+      needs_attention: 需要关注
+      needs_review: 待核对
+      notice_price: "%{name} 价格变动：%{from} → %{to}（%{percent}）"
+      notice_renewal: "%{name} 将于 %{date} 续订"
+      notice_trial: "%{name} 的试用将于 %{date} 结束"
+      notices_routine:
+        one: 1 项较小变动
+        other: "%{count} 项较小变动"
+      overdue: 已逾期
+      paid_count:
+        one: 1 笔账单已结清
+        other: "%{count} 笔账单已结清"
+      paid_so_far: 截至目前已付
+      paid_this_month: 本月已付
+      recurring_annual: 每年 %{amount}
+      recurring_label: 周期性应付
+      recurring_monthly: 每月 %{amount}
+      reject: 不是这笔账单
+      review_with_ai: 使用 AI 核对
+      suggestion_line: "%{entry} 可能是 %{bill} 的付款"
+      suggestion_unknown_entry: 一笔交易
+      summary_count:
+        one: 1 笔账单到期
+        other: "%{count} 笔账单到期"
+      summary_label: 本月到期
+      summary_needs_action:
+        one: 1 项待您处理
+        other: "%{count} 项待您处理"
+      this_month: 本月
+      title: 账单
+      unconvertible:
+        one: 1 笔账单未计入，因为没有可用汇率
+        other: "%{count} 笔账单未计入，因为没有可用汇率"
+    installment_progress: 第 %{done_plus_one} 期，共 %{total} 期
+    manage: 管理
+    manage_payments: 管理付款
+    match:
+      amount_off: 相差 %{amount}
+      days_after:
+        one: 到期后 1 天
+        other: 到期后 %{count} 天
+      days_before:
+        one: 到期前 1 天
+        other: 到期前 %{count} 天
+      due_date: 到期日匹配
+      exact_amount: 金额完全一致
+      name_matches: 名称匹配
+      same_merchant: 同一商户
+    month_pulse:
+      bill_count:
+        one: 1 笔账单
+        other: "%{count} 笔账单"
+      date_today: 今天
+      date_tomorrow: 明天
+      left_to_pay: 尚待支付
+      next_up: 接下来
+      pulse_bar_aria: 本月账单已支付 %{percent}%
+      pulse_next_seven: 未来 7 天
+      pulse_overdue: 已逾期
+      pulse_paid: 已付
+      unconvertible:
+        one: 1 笔账单未计入，因为没有可用汇率
+        other: "%{count} 笔账单未计入，因为没有可用汇率"
+      view_calendar: 查看日历
+    paid_from: 从 %{account} 支付
+    paid_label: 已付款
+    paid_over: 已付 %{paid}，超出预计金额
+    paid_over_short: 已超额支付
+    pane:
+      close: 收起详情
+    partial_progress: 已付 %{paid}，应付 %{expected}
+    pay_period:
+      before_next_paycheck: 下次发薪前
+      due_before_date: "%{date} 前有 %{amount} 到期"
+      paycheck_on: "%{date} 发薪"
+    paycheck:
+      add_income: 添加收入
+      all_clear:
+        description: 从现在到 %{date} 没有账单到期，因此无需为这段时间预留付款资金。
+        title: 暂无应付账单
+      allocation_aria: 在 %{income} 的收入中，%{due} 为本期应付，%{reserved} 已为之后预留，%{safe} 可安心支出。
+      allocation_aria_short: 收入中的 %{income} 将用于这里的既定支出，仍需补足 %{short}。
+      before_next_paycheck: "%{date} 之前"
+      bills_before_payday:
+        one: 下次发薪前的账单 · 1 笔
+        other: 下次发薪前的账单 · %{count} 笔
+      bills_this_period:
+        one: 本期账单 · 1 笔
+        other: 本期账单 · %{count} 笔
+      bridge_amount: "· %{amount} 到期"
+      bridge_label: 下次发薪前
+      bridge_split: 这些账单于 %{date} 前到期，可由账户中的 %{cash} 支付。
+      due_this_period: 本期应付
+      empty:
+        action: 添加收入
+        description: 添加收入后，可查看每次发薪需要覆盖哪些支出。自动识别的入账不会自行设定发薪日，发薪日由您设置。
+        title: 设置收入时间安排
+      income_amount: 收入 %{amount}
+      income_detected: 自动识别，不用于设定发薪日
+      income_next_payday: 下次 %{date}
+      income_paused: 已暂停，未纳入计划
+      income_section_title: 收入时间安排
+      income_source_count:
+        one: "%{count} 个收入来源"
+        other: "%{count} 个收入来源"
+      manage: 管理
+      next_on: 下次 %{date}
+      no_income_arriving: 没有收入入账
+      no_upcoming_income: 此后尚无计划中的收入。
+      of_total: 共 %{amount}
+      period_source: " · %{source}"
+      period_source_multiple: " · %{count} 个收入来源"
+      reserved_ahead: 为之后预留
+      reserved_footer:
+        one: 已为之后的 1 笔账单预留
+        other: 已为之后的 %{count} 笔账单预留
+      review_plan: 查看计划
+      safe_after_bills: 付清账单后可用
+      safe_short: 可用
+      short_after_bills: 付清账单所需缺口
+      short_short: 缺口
+      shortfall_amount: "· %{amount}"
+      shortfall_label: 下次发薪前的资金缺口
+      shortfall_largest: 即将到期的最大一笔应付款：
+      shortfall_split: "%{date} 前有 %{obligations} 到期，您的账户共有 %{cash}。"
+      unconvertible:
+        one: 1 笔应付款未计入，因为没有可用汇率
+        other: "%{count} 笔应付款未计入，因为没有可用汇率"
+    possible_duplicate: 可能重复
+    remaining_label: 剩余
+    reset_feed_token:
+      confirm: 重置日历订阅链接？此前分享的所有链接都将失效。
+      done: 订阅链接已重置。使用旧链接的日历应用将停止更新，请使用新链接重新订阅。
+    resolve: 处理
+    review_match: 核对匹配结果
+    row_overdue: 已逾期
+    row_today: 今天
+    show:
+      edit: 编辑账单
+    smart_configurations:
+      show:
+        apply: 应用所选更改
+        autopay_off: 关闭
+        autopay_on: 开启
+        failed: 暂时无法分析此账单，其配置未作更改。
+        field_amount: 金额
+        field_autopay: 自动付款
+        field_category: 分类
+        field_kind: 类型
+        field_name: 名称
+        field_schedule: 时间安排
+        intro: 请勾选要应用的更改，未勾选的项目将保持原样。
+        no_changes: 此账单已与付款历史相符，无需更改。
+        title: "%{name} 的 AI 建议"
+        trigger: 让 AI 配置
+        uncategorized: 未分类
+    summary:
+      cost_line: 平均每笔付款 %{average}，每年约 %{annualized}
+      paid_headline: 已付 %{amount}
+      remaining: 剩余 %{amount}
+    view_full_bill: 查看完整账单
+    views:
+      all: 全部账单
+      aria_label: 账单视图
+      calendar: 日历
+      overview: 概览
+      paycheck: 收入计划
