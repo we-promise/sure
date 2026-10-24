@@ -4,10 +4,18 @@ class AutoCategorizeJob < ApplicationJob
   # recheck_eligibility: the API endpoint filters what it queues, but a
   # transaction can become a transfer leg (transfer matching runs on account
   # sync) or a split parent, or get a category by hand, before this low
-  # priority job runs; those are dropped here instead of categorized.
-  def perform(family, transaction_ids: [], rule_run_id: nil, recheck_eligibility: false)
+  # priority job runs; those are dropped here instead of categorized. With
+  # user_id (the API caller), access is rechecked too: an account share revoked
+  # after queueing, or a deleted user, drops those transactions.
+  def perform(family, transaction_ids: [], rule_run_id: nil, recheck_eligibility: false, user_id: nil)
     if recheck_eligibility
-      transaction_ids = family.auto_categorizable_transactions.where(id: transaction_ids).pluck(:id)
+      scope = if user_id.present?
+        user = family.users.find_by(id: user_id)
+        user ? family.auto_categorizable_transactions_for(user) : Transaction.none
+      else
+        family.auto_categorizable_transactions
+      end
+      transaction_ids = scope.where(id: transaction_ids).pluck(:id)
       return if transaction_ids.empty?
     end
 
