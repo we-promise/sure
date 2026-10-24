@@ -102,6 +102,14 @@ class SharesightItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#modal", count: 1
   end
 
+  test "the link dialog needs a portfolio picked before it submits" do
+    sharesight_item.sharesight_accounts.create!(name: "Shares", currency: "AUD", sharesight_account_id: "42")
+
+    get select_existing_account_sharesight_items_url(account_id: investment_account(owner: @user).id)
+
+    assert_select "input[type=radio][name=sharesight_account_id][required]", count: 1
+  end
+
   test "links a portfolio to an existing manual investment account" do
     item = sharesight_item
     portfolio = item.sharesight_accounts.create!(name: "Shares", currency: "AUD", sharesight_account_id: "42", current_balance: 1500)

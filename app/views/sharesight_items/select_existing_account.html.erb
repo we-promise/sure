@@ -16,7 +16,7 @@
         <div class="space-y-2 max-h-64 overflow-auto">
           <% @available_sharesight_accounts.each do |sharesight_account| %>
             <label class="flex items-center gap-3 p-2 rounded border border-secondary hover:border-primary cursor-pointer">
-              <%= radio_button_tag :sharesight_account_id, sharesight_account.id, false %>
+              <%= radio_button_tag :sharesight_account_id, sharesight_account.id, false, required: true %>
               <div class="flex flex-col">
                 <span class="text-sm text-primary font-medium"><%= sharesight_account.name.presence || sharesight_account.sharesight_account_id %></span>
                 <span class="text-xs text-secondary">
