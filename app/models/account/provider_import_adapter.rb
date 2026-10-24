@@ -70,10 +70,11 @@ class Account::ProviderImportAdapter
           begin
             entry.lock_with_entryable!
           rescue ActiveRecord::RecordNotFound
-            # Deleted since it was loaded; the user's delete wins.
-            return entry
+            # Deleted since it was loaded: import it as a new entry, as the
+            # next sync would, rather than return a row that no longer exists.
+            entry = account.entries.new(external_id: external_id, source: source, entryable: Transaction.new)
           end
-          skip_reason = determine_skip_reason(entry)
+          skip_reason = determine_skip_reason(entry) if entry.persisted?
         end
         if skip_reason
           # Pending→booked bypass for user_modified entries: clear the stale pending flag

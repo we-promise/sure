@@ -41,6 +41,9 @@ class Entry < ApplicationRecord
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
 
+  # Deleting removes the entry before its entryable (dependent: :destroy), the
+  # reverse of the row order syncs lock in (#reload_locked_attributes_for_update).
+  before_destroy :lock_entryable_row, prepend: true
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
 
@@ -504,9 +507,10 @@ class Entry < ApplicationRecord
   #
   # @return [void]
   def unlock_for_sync!
+    # Entryable first: the row order syncs lock in (#reload_locked_attributes_for_update).
     self.class.transaction do
-      update!(user_modified: false, import_locked: false, locked_attributes: {})
       entryable&.update!(locked_attributes: {})
+      update!(user_modified: false, import_locked: false, locked_attributes: {})
     end
   end
 

@@ -36,20 +36,27 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
-  test "leaves an entry alone when the user deleted it during the import" do
+  test "imports an entry the user deleted during the import as a new one" do
     entry = @adapter.import_transaction(
       external_id: "deleted_mid_sync", amount: 10, currency: "USD",
       date: Date.current, name: "Original", source: "plaid"
     )
-    Entry.any_instance.stubs(:lock_with_entryable!).raises(ActiveRecord::RecordNotFound)
+    # The import loads the entry, then the user deletes it before the row lock.
+    stale = Entry.find(entry.id).tap(&:entryable)
+    entry.destroy!
+    entries = @account.entries
+    entries.stubs(:find_or_initialize_by).returns(stale)
+    @account.stubs(:entries).returns(entries)
 
-    assert_no_difference "@account.entries.count" do
-      @adapter.import_transaction(
-        external_id: "deleted_mid_sync", amount: 10, currency: "USD",
-        date: Date.current, name: "Renamed", source: "plaid"
-      )
-    end
-    assert_equal "Original", entry.reload.name
+    imported = @adapter.import_transaction(
+      external_id: "deleted_mid_sync", amount: 10, currency: "USD",
+      date: Date.current, name: "Renamed", source: "plaid"
+    )
+
+    assert imported.persisted?
+    assert_not_equal entry.id, imported.id
+    assert_equal "Renamed", imported.reload.name
+    assert_not Entry.exists?(entry.id)
   end
 
   test "does not claim a manual duplicate the user protected during the import" do

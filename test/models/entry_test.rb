@@ -111,6 +111,15 @@ class EntryTest < ActiveSupport::TestCase
     assert entry.locked?(:name)
   end
 
+  test "unlock_for_sync! and destroy write the transaction row before the entry row" do
+    entry = create_transaction(account: accounts(:depository))
+    entry.lock_attr!(:name)
+    entry.transaction.lock_attr!(:category_id)
+
+    assert_transaction_row_first { entry.unlock_for_sync! }
+    assert_transaction_row_first { entry.reload.destroy! }
+  end
+
   test "descriptive edits do not affect balances" do
     entry = create_transaction(account: accounts(:depository), amount: 100)
     entry = Entry.find(entry.id)
@@ -149,4 +158,17 @@ class EntryTest < ActiveSupport::TestCase
     entry.update!(entryable_attributes: { id: entry.entryable_id, exchange_rate: 1.2 })
     assert entry.saved_changes_affect_balances?
   end
+
+  private
+    # Syncs lock the transaction row before the entry row; a writer that takes
+    # the entry row first can deadlock with them.
+    def assert_transaction_row_first(&block)
+      statements = []
+      callback = ->(*, payload) { statements << payload[:sql] }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+
+      row_sql = ->(table) { statements.index { |sql| sql.match?(/\A(UPDATE|DELETE FROM) "#{table}"|FROM "#{table}".*FOR UPDATE/m) } }
+      assert row_sql.call("transactions"), "no transaction row statement"
+      assert_operator row_sql.call("transactions"), :<, row_sql.call("entries")
+    end
 end
