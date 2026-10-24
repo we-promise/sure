@@ -95,11 +95,29 @@ icon, optional notes, currency, and an AASM `state` (`active` / `paused` /
 `completed` / `archived`). It links cash and investment accounts via the join
 table `goal_accounts`.
 
-The goal's *progress* is its allocated share of linked accounts, converted to
-its currency at request time. `Goal#current_balance` preserves native account
-allocations and shared-pool limits before conversion. Investment-backed goals
-default to contribution progress, excluding cumulative market gains from their
-backing; `market_value_money` separately shows the current market value.
+The goal's *progress* is computed live from its linked accounts. There is
+no ledger of contributions. `Goal#current_balance` sums, over the linked
+accounts, this goal's share of each one: its earmark
+(`goal_accounts.allocated_amount`, scaled down pro rata when the earmarks
+on an account exceed its figure), or for an unallocated link the remainder
+after other goals' earmarks (`Goal#backing_share_for`). The share is taken
+in the account's native currency, preserving shared-pool limits, and then
+converted to the goal's currency at request time.
+
+`progress_basis` says what each account's figure counts before that share
+is taken, and the user chooses it on the form: `balance` (the default) is
+the account's balance, what it is worth today; `contributions` is the
+balance minus the account's cumulative market gain or loss (the sum of
+its signed `balances.net_market_flows`, so a loss adds back), floored at
+zero. Nothing re-bases a goal on save or when an account is linked, so an
+explicit choice is kept (#3964).
+`market_value_money` separately shows the backing's current market value,
+whatever the basis.
+
+A goal that has completed reports `completed_amount`, frozen on the basis
+it had when it closed, instead of the live figure; its basis is locked
+until it is reopened. An archived goal that never completed has no
+snapshot and keeps the live calculation.
 
 A `GoalPledge` is an intent: amount, account, kind, status, expires_at.
 The status enum is `open` / `matched` / `cancelled` / `expired`. The kind

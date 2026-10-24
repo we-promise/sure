@@ -1,0 +1,12 @@
+<%# locals: (form:, attribute:, value:, label:, hint:, radio_options: {}, disabled: false) %>
+<%# One option of a radio-card picker: the kind picker and the progress
+    basis picker share this shape. radio_options goes straight to
+    radio_button, so a caller that needs `checked:` passes it there and one
+    that doesn't leaves Rails to check the radio from the attribute. %>
+<label class="flex items-start gap-2 rounded-lg border border-primary p-3 <%= disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer" %> has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
+  <%= form.radio_button attribute, value, radio_options.merge(disabled: disabled, class: "radio mt-0.5 shrink-0") %>
+  <span class="min-w-0">
+    <span class="block text-sm font-medium text-primary"><%= label %></span>
+    <span class="block text-xs text-secondary"><%= hint %></span>
+  </span>
+</label>

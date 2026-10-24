@@ -43,3 +43,5 @@ pl:
               blank: Podaj, ile miesięcy wydatków ma pokrywać ta rezerwa.
               only_with_months_mode: Miesiące wydatków mają zastosowanie tylko wtedy,
                 gdy cel jest tak ustawiony.
+            progress_basis:
+              locked_once_completed: Otwórz ponownie ten cel, zanim zmienisz, co się do niego liczy.

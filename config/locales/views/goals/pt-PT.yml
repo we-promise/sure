@@ -177,6 +177,12 @@ pt-PT:
         market_value: "Valor de mercado %{amount}"
         aria_label: "Objetivo %{percent}% concluído. %{amount} de %{target} reservados."
         aria_label_with_used: "Objetivo %{percent}% concluído. %{amount} de %{target}, incluindo %{used} já utilizados."
+        basis:
+          balance: Considera o que as contas valem hoje
+          contributions: Considera apenas o que depositou
+        basis_at_completion:
+          balance: Considerou o que as contas valiam quando o objetivo foi concluído
+          contributions: Considerou apenas o que tinha depositado quando o objetivo foi concluído
       projection:
         heading: Projeção
         legend_saved: Reservado
@@ -336,6 +342,7 @@ pt-PT:
         whole_balance: "Vazio: saldo total"
         earmark_for: Reservar o montante de %{account}
         earmark_hint: Deixe um montante em branco para dedicar o saldo total dessa conta.
+        progress_basis: O que conta para este objetivo
       subtypes:
         checking: Conta à ordem
         savings: Poupança
@@ -343,3 +350,11 @@ pt-PT:
         cd: CD
         money_market: Mercado monetário
         other: Outro
+      progress_basis_locked: Este objetivo está concluído. Reabra-o para alterar o que conta para ele.
+      progress_bases:
+        balance:
+          label: O que as contas valem hoje
+          hint: Valor de mercado. Os ganhos e perdas dos investimentos contam para o objetivo.
+        contributions:
+          label: Apenas o que depositei
+          hint: Contribuições líquidas. Os ganhos e perdas de mercado ficam de fora.

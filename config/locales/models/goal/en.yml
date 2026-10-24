@@ -30,6 +30,8 @@ en:
             kind:
               locked_while_released: Reopen this goal before turning it into a reserve.
               locked_once_consumed: This goal has already recorded money as spent, so it cannot become a reserve.
+            progress_basis:
+              locked_once_completed: Reopen this goal before changing what counts toward it.
             target_amount:
               below_consumed: Can't set a target below what this goal has already recorded as spent.
             currency:
