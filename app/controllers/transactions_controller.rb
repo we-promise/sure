@@ -188,6 +188,8 @@ class TransactionsController < ApplicationController
     if @entry.update(permitted_entry_params)
       sync_needed = @entry.saved_changes_affect_balances?
       transaction = @entry.transaction
+      # A split parent's merchant change is passed on to its split rows.
+      split_rows_changed = transaction.saved_change_to_merchant_id?
       transaction.record_category_usage!
 
       if needs_rule_notification?(transaction)
@@ -240,6 +242,13 @@ class TransactionsController < ApplicationController
               partial: "entries/entry",
               locals: { entry: @entry, in_split_group: in_split_group }
             ),
+            *(split_rows_changed ? @entry.child_entries : []).map { |child|
+              turbo_stream.replace(
+                dom_id(child),
+                partial: "entries/entry",
+                locals: { entry: child, in_split_group: helpers.in_split_group?(child, params[:grouped]) }
+              )
+            },
             *flash_notification_stream_items
           ].compact
         end

@@ -500,6 +500,48 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tag.id ], child.reload.entryable.tag_ids
   end
 
+  test "split child drawer lets the user change the merchant" do
+    parent = create_transaction(account: accounts(:depository), amount: 100)
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    child = parent.child_entries.first
+
+    get transaction_url(child), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "[data-merchant-select-disabled-value='false']", count: 1
+  end
+
+  test "a merchant changed on a split child survives a merchant change on the parent" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, merchant: merchants(:amazon))
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    changed = parent.child_entries.find_by(name: "Part 1")
+    inherited = parent.child_entries.find_by(name: "Part 2")
+
+    patch transaction_url(changed), params: {
+      entry: { entryable_attributes: { id: changed.entryable_id, merchant_id: merchants(:netflix).id } }
+    }
+    patch transaction_url(parent), params: {
+      entry: { entryable_attributes: { id: parent.entryable_id, merchant_id: merchants(:one).id } }
+    }
+
+    assert_equal merchants(:netflix), changed.reload.entryable.merchant
+    assert_equal merchants(:one), inherited.reload.entryable.merchant
+  end
+
+  test "a merchant change on a split parent refreshes the split rows" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, merchant: merchants(:amazon))
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+
+    patch transaction_url(parent, format: :turbo_stream), params: {
+      entry: { entryable_attributes: { id: parent.entryable_id, merchant_id: merchants(:one).id } }
+    }
+
+    assert_response :success
+    parent.child_entries.each do |child|
+      assert_select "turbo-stream[action=replace][target=?]", dom_id(child)
+    end
+  end
+
   test "can update tags through tag-only endpoint" do
     patch tags_transaction_url(@entry, format: :json), params: {
       tag_ids: [ tags(:one).id, tags(:two).id ]

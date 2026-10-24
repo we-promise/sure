@@ -28,6 +28,7 @@ class Transaction < ApplicationRecord
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
+  after_update :pass_merchant_to_split_children, if: :saved_change_to_merchant_id?
 
   # Accessors for exchange_rate stored in extra jsonb field
   def exchange_rate
@@ -648,5 +649,18 @@ class Transaction < ApplicationRecord
       return unless family
 
       FamilyMerchantAssociation.where(family: family, merchant: merchant).delete_all
+    end
+
+    # Split children inherit the parent's merchant when the split is created.
+    # Keep them in step when it changes later. Children with a merchant of
+    # their own (different from the parent's, or locked by the user) keep it.
+    def pass_merchant_to_split_children
+      parent_entry_ids = Entry.where(entryable_type: self.class.name, entryable_id: id).select(:id)
+
+      Transaction.joins(:entry)
+                 .where(entries: { parent_entry_id: parent_entry_ids })
+                 .where(merchant_id: merchant_id_before_last_save)
+                 .enrichable(:merchant_id)
+                 .find_each { |child| child.update!(merchant_id: merchant_id) }
     end
 end
