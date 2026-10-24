@@ -71,22 +71,37 @@ class Holding < ApplicationRecord
   # row, or an open lot with no cost, is unknown: the trades' pooled average
   # is the average method's figure, not this one.
   def self.fifo_avg_costs(holdings)
+    open_lots = open_lots_for(holdings)
+
+    holdings.to_h do |holding|
+      open = open_lots[holding.id]&.reject(&:opening?)
+      value = if open&.any? && open.none? { |lot| lot.unit_cost.nil? }
+        Money.new(open.sum { |lot| lot.qty * lot.unit_cost } / open.sum(&:qty), holding.currency)
+      end
+      [ holding.id, value ]
+    end
+  end
+
+  # Each holding's open lots, by holding id, the opening lot first and then by
+  # acquisition: an array for the position's latest row while its stored lots
+  # add up to it (HoldingLot.in_partition), and nil for any other row, since
+  # the lots are the position as it stands. Four queries for any number of
+  # holdings.
+  def self.open_lots_for(holdings)
     return {} if holdings.empty?
 
     account_ids = holdings.map(&:account_id).uniq
     security_ids = holdings.map(&:security_id).uniq
     readable = HoldingLot.in_partition(account_ids, security_ids)
     latest = Holding.where(account_id: account_ids, security_id: security_ids).group(:account_id, :security_id).maximum(:date)
-    lots = HoldingLot.derived.where(account_id: account_ids, security_id: security_ids).where("qty > 0")
+    lots = HoldingLot.where(account_id: account_ids, security_id: security_ids).where("holding_lots.qty > 0")
+      .left_joins(:source_entry).select("holding_lots.*, entries.entryable_id AS trade_id")
+      .order(Arel.sql("holding_lots.acquired_on ASC NULLS FIRST"), "holding_lots.created_at")
       .group_by { |lot| [ lot.account_id, lot.security_id ] }
 
     holdings.to_h do |holding|
       key = [ holding.account_id, holding.security_id ]
-      open = lots.fetch(key, [])
-      value = if readable.include?(key) && latest[key] == holding.date && open.any? && open.none? { |lot| lot.unit_cost.nil? }
-        Money.new(open.sum { |lot| lot.qty * lot.unit_cost } / open.sum(&:qty), holding.currency)
-      end
-      [ holding.id, value ]
+      [ holding.id, (lots.fetch(key, []) if readable.include?(key) && latest[key] == holding.date) ]
     end
   end
 
