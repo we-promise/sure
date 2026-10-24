@@ -774,6 +774,7 @@ Rails.application.routes.draw do
       resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ] do
+        post :auto_categorize, on: :collection, to: "transaction_auto_categorizations#create"
         resource :split, only: [ :show, :create, :update, :destroy ]
       end
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]

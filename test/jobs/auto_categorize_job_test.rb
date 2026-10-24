@@ -108,4 +108,62 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     assert_equal [ transaction.id ], categorization_entry.metadata["requested_transaction_ids"]
     assert_equal "No categories available for auto-categorization", rule_run_entry.metadata["error_message"]
   end
+  test "recheck_eligibility drops transactions that became transfers or split parents after queuing" do
+    eligible = create_transaction(account: @account, name: "Coffee").transaction
+    transfer_leg = create_transaction(account: @account, name: "To savings").transaction
+    split_parent = create_transaction(account: @account, name: "Market", amount: 100).transaction
+    transfer_leg.update!(kind: "funds_movement")
+    split_parent.entry.split!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+
+    @family.expects(:auto_categorize_transactions).with([ eligible.id ]).returns(1)
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ eligible.id, transfer_leg.id, split_parent.id ], recheck_eligibility: true)
+  end
+
+  test "recheck_eligibility skips the categorizer when nothing is still eligible" do
+    transfer_leg = create_transaction(account: @account, name: "To savings").transaction
+    transfer_leg.update!(kind: "funds_movement")
+
+    @family.expects(:auto_categorize_transactions).never
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transfer_leg.id ], recheck_eligibility: true)
+  end
+
+  test "recheck_eligibility with user_id drops transactions the user can no longer annotate" do
+    transaction = create_transaction(account: @account, name: "Coffee").transaction
+    user = users(:family_admin).tap { |u| u.update_columns(family_id: @family.id) }
+
+    @family.expects(:auto_categorizable_transactions_for).with(user).returns(Transaction.none)
+    @family.expects(:auto_categorize_transactions).never
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], recheck_eligibility: true, user_id: user.id)
+  end
+
+  test "recheck_eligibility with user_id keeps what the user can annotate" do
+    transaction = create_transaction(account: @account, name: "Coffee").transaction
+    user = users(:family_admin).tap { |u| u.update_columns(family_id: @family.id) }
+
+    @account.update_columns(owner_id: user.id)
+
+    @family.expects(:auto_categorize_transactions).with([ transaction.id ]).returns(1)
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], recheck_eligibility: true, user_id: user.id)
+  end
+
+  test "recheck_eligibility with a user who no longer exists queues nothing" do
+    transaction = create_transaction(account: @account, name: "Coffee").transaction
+
+    @family.expects(:auto_categorize_transactions).never
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], recheck_eligibility: true, user_id: SecureRandom.uuid)
+  end
+
+  test "rule jobs are not rechecked" do
+    transfer_leg = create_transaction(account: @account, name: "To savings").transaction
+    transfer_leg.update!(kind: "funds_movement")
+
+    @family.expects(:auto_categorize_transactions).with([ transfer_leg.id ]).returns(0)
+
+    AutoCategorizeJob.perform_now(@family, transaction_ids: [ transfer_leg.id ])
+  end
 end
