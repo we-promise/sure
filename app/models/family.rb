@@ -493,20 +493,26 @@ class Family < ApplicationRecord
     AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
   end
 
-  # Transactions the AI categorizer may fill in on this user's behalf: still
-  # uncategorized, on an account the user may annotate, not one leg of a
-  # transfer between the family's own accounts (nothing to categorize, the
-  # same kinds the Uncategorized filter leaves out), not a split parent (its
-  # children carry the categories), and without a locked category -- a
-  # category the user set or cleared by hand is never overwritten.
-  def auto_categorizable_transactions_for(user)
+  # Transactions the AI categorizer may fill in: still uncategorized, not one
+  # leg of a transfer between the family's own accounts (nothing to
+  # categorize, the same kinds the Uncategorized filter leaves out), not a
+  # split parent (its children carry the categories), and without a locked
+  # category -- a category the user set or cleared by hand is never
+  # overwritten. AutoCategorizeJob re-applies this when it runs, since a
+  # transaction can become a transfer or a split parent after it was queued.
+  def auto_categorizable_transactions
     transactions
       .visible
       .merge(Entry.excluding_split_parents)
-      .where(entries: { account_id: accounts.annotatable_by(user).select(:id) })
       .where(category_id: nil)
       .where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS)
       .enrichable(:category_id)
+  end
+
+  # The same, limited to accounts this user may annotate.
+  def auto_categorizable_transactions_for(user)
+    auto_categorizable_transactions
+      .where(entries: { account_id: accounts.annotatable_by(user).select(:id) })
   end
 
   # Queues AI categorization in the batch size the provider accepts, the way
@@ -516,7 +522,8 @@ class Family < ApplicationRecord
   #
   # Returns [queued_ids, unqueued_ids]. perform_later can return false when
   # the adapter refuses a job, so a batch only counts as queued when it was
-  # actually enqueued (an adapter error counts as refused); after the first refused batch the rest are left unqueued.
+  # actually enqueued (an adapter error counts as refused); after the first
+  # refused batch the rest are left unqueued.
   def queue_auto_categorization(transactions)
     batch_size = Provider::LlmConcept.max_items_per_call
     ids = transactions.order(:id).pluck(:id)
@@ -535,9 +542,17 @@ class Family < ApplicationRecord
   # error (e.g. Redis down) both count as not queued, so the endpoint can
   # report exactly which ids still need a retry instead of failing with a 500.
   def enqueue_auto_categorization_batch(batch_ids)
-    AutoCategorizeJob.perform_later(self, transaction_ids: batch_ids).present?
+    AutoCategorizeJob.perform_later(self, transaction_ids: batch_ids, recheck_eligibility: true).present?
   rescue => error
     Rails.logger.error("Auto-categorization enqueue failed for family #{id}: #{error.class}: #{error.message}")
+    DebugLogEntry.capture(
+      category: "auto_categorization",
+      level: "error",
+      message: "Auto-categorization enqueue failed: #{error.class}: #{error.message}",
+      source: self.class.name,
+      family: self,
+      metadata: { error_class: error.class.name, batch_transaction_ids: batch_ids }
+    )
     false
   end
   private :enqueue_auto_categorization_batch
