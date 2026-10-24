@@ -61,6 +61,21 @@ class Account::ProviderImportAdapter
       # This prevents sync from overwriting user edits, CSV imports, or excluded entries.
       if entry.persisted?
         skip_reason = determine_skip_reason(entry)
+        # The entry was read without a row lock, so a user edit can commit its
+        # flags and locks right after. Skipping on a stale flag only defers the
+        # import to the next sync, but writing needs the current state: lock the
+        # rows and check again, which also waits for an edit still in progress
+        # (Entry#save_and_lock_attributes).
+        unless skip_reason
+          begin
+            entry.lock_with_entryable!
+          rescue ActiveRecord::RecordNotFound
+            # Deleted since it was loaded: import it as a new entry, as the
+            # next sync would, rather than return a row that no longer exists.
+            entry = account.entries.new(external_id: external_id, source: source, entryable: Transaction.new)
+          end
+          skip_reason = determine_skip_reason(entry) if entry.persisted?
+        end
         if skip_reason
           # Pending→booked bypass for user_modified entries: clear the stale pending flag
           # when the provider delivers a booked version of the same transaction.
@@ -111,6 +126,14 @@ class Account::ProviderImportAdapter
       # Note: We don't pass name here to allow matching even when provider formats names differently
       if entry.new_record? && allow_heuristic_matching
         duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
+        # Same as above: claiming writes, so check protection again under a row lock.
+        unless duplicate.nil? || duplicate.protected_from_sync?
+          begin
+            duplicate.lock_with_entryable!
+          rescue ActiveRecord::RecordNotFound
+            duplicate = nil
+          end
+        end
         if duplicate
           # Check if duplicate is protected - if so, link but don't modify
           if duplicate.protected_from_sync?

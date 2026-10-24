@@ -57,7 +57,9 @@ class Api::V1::TradesController < Api::V1::BaseController
     model = ApplicationRecord.transaction do
       created_model = Trade::CreateForm.new(create_params).create
       created_trade = trade_from_created_model(created_model)
-      created_trade.update!(create_options) if created_model.persisted? && created_trade && create_options.any?
+      if created_model.persisted? && created_trade && create_options.any?
+        created_trade.save_and_lock_attributes { created_trade.update!(create_options) }
+      end
       created_model
     end
 
@@ -67,8 +69,6 @@ class Api::V1::TradesController < Api::V1::BaseController
     end
 
     if model.is_a?(Entry)
-      model.lock_saved_attributes!
-      model.mark_user_modified!
       model.sync_account_later
 
       if model.entryable.is_a?(Transaction)
@@ -99,9 +99,7 @@ class Api::V1::TradesController < Api::V1::BaseController
 
     updatable = build_entry_params_for_update
 
-    if @entry.update(updatable.except(:nature))
-      @entry.lock_saved_attributes!
-      @entry.mark_user_modified!
+    if @entry.save_and_lock_attributes(user_modified: true) { @entry.update(updatable.except(:nature)) }
       @entry.sync_account_later
       @trade = @entry.trade
       render :show

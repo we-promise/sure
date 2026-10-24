@@ -36,6 +36,47 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "imports an entry the user deleted during the import as a new one" do
+    entry = @adapter.import_transaction(
+      external_id: "deleted_mid_sync", amount: 10, currency: "USD",
+      date: Date.current, name: "Original", source: "plaid"
+    )
+    # The import loads the entry, then the user deletes it before the row lock.
+    stale = Entry.find(entry.id).tap(&:entryable)
+    entry.destroy!
+    entries = @account.entries
+    entries.stubs(:find_or_initialize_by).returns(stale)
+    @account.stubs(:entries).returns(entries)
+
+    imported = @adapter.import_transaction(
+      external_id: "deleted_mid_sync", amount: 10, currency: "USD",
+      date: Date.current, name: "Renamed", source: "plaid"
+    )
+
+    assert imported.persisted?
+    assert_not_equal entry.id, imported.id
+    assert_equal "Renamed", imported.reload.name
+    assert_not Entry.exists?(entry.id)
+  end
+
+  test "does not claim a manual duplicate the user protected during the import" do
+    manual = @account.entries.create!(
+      name: "Manual", date: Date.current, amount: 42, currency: "USD", entryable: Transaction.new
+    )
+    stale = Entry.find(manual.id)
+    manual.mark_user_modified!
+    @adapter.stubs(:find_duplicate_transaction).returns(stale)
+
+    @adapter.import_transaction(
+      external_id: "claimed_mid_edit", amount: 42, currency: "USD",
+      date: Date.current, name: "Provider name", source: "plaid"
+    )
+
+    manual.reload
+    assert_equal "Manual", manual.name
+    assert_equal "claimed_mid_edit", manual.external_id
+  end
+
   test "imports transaction with minimal parameters" do
     assert_difference "@account.entries.count", 1 do
       entry = @adapter.import_transaction(

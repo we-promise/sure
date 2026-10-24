@@ -99,10 +99,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     @entry = account.entries.new(entry_params_for_create)
 
-    if @entry.save
-      @entry.lock_saved_attributes!
-      @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.mark_user_modified! if user_modified_requested?
+    if @entry.save_and_lock_attributes(user_modified: user_modified_requested?, lock_tags: :if_any) { @entry.save }
       @entry.sync_account_later
 
       @transaction = @entry.transaction
@@ -143,8 +140,11 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     Entry.transaction do
+      @entry.reload_locked_attributes_for_update
       if @entry.update(entry_params_for_update)
         sync_needed = @entry.saved_changes_affect_balances?
+        # Before the tag save below, which replaces the saved changes this reads.
+        @entry.lock_saved_attributes!
 
         # Handle tags separately - only when explicitly provided in the request
         # This allows clearing tags with tag_ids: [] while preserving tags when not specified
@@ -155,7 +155,6 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         end
 
         @entry.sync_account_later if sync_needed
-        @entry.lock_saved_attributes!
         @entry.mark_user_modified! if user_modified_requested?
 
         @transaction = @entry.transaction

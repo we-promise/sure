@@ -444,14 +444,14 @@ class Transaction < ApplicationRecord
       # If a concurrent request already destroyed the pending entry, lock! raises
       # RecordNotFound — treat that as an idempotent success.
       begin
-        pending_entry.lock!
+        pending_entry.lock_with_entryable!
       rescue ActiveRecord::RecordNotFound
         Rails.logger.info("Pending entry #{pending_entry_id} already destroyed (concurrent merge), skipping")
         return true
       end
 
       begin
-        posted_entry.lock!
+        posted_entry.lock_with_entryable!
       rescue ActiveRecord::RecordNotFound
         Rails.logger.info("Posted entry #{posted_entry.id} deleted concurrently; aborting merge")
         raise ActiveRecord::Rollback

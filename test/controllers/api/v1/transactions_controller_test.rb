@@ -778,6 +778,17 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "update locks the category when it also changes tags" do
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { category_id: categories(:income).id, tag_ids: [ Tag.first.id ] } },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    @transaction.reload
+    assert @transaction.locked?(:category_id)
+    assert @transaction.locked?(:tag_ids)
+  end
+
   test "should preserve tags when tag_ids not provided in update" do
     # Set up transaction with existing tags
     original_tags = [ Tag.first, Tag.second ]

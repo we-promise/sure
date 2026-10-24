@@ -340,6 +340,18 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2.days.ago.to_date, @entry.reload.date
   end
 
+  test "update rolls the edit back when its locks cannot be saved" do
+    original_name = @entry.name
+    Entry.any_instance.stubs(:mark_user_modified!).raises(ActiveRecord::RecordInvalid.new(@entry))
+
+    patch transaction_url(@entry), params: { entry: { name: "User name", entryable_type: @entry.entryable_type } }
+    assert_response :unprocessable_entity
+
+    @entry.reload
+    assert_equal original_name, @entry.name
+    assert_not @entry.locked?(:name)
+  end
+
   test "updates with transaction details" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       patch transaction_url(@entry), params: {
