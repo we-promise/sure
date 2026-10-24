@@ -45,6 +45,20 @@ class Family::MarketDataRefresherTest < ActiveSupport::TestCase
     Family::MarketDataRefresher.new(@family).refresh
   end
 
+  test "logs a price refresh the provider reports as failed" do
+    security = Security.create!(ticker: "RFSH", exchange_operating_mic: "XNAS")
+    account = @family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "USD")
+
+    Security.any_instance.expects(:import_provider_prices).returns([ 0, "Rate limit exceeded" ])
+    Security.any_instance.stubs(:import_provider_details)
+
+    assert_difference -> { DebugLogEntry.where(family: @family, level: "error").count }, 1 do
+      Family::MarketDataRefresher.new(@family).refresh
+    end
+    assert_match "Rate limit exceeded", DebugLogEntry.where(family: @family).order(:created_at).last.message
+  end
+
   test "logs a pair that fails and goes on with the others" do
     @family.accounts.create!(name: "Savings", currency: "CAD", balance: 100, accountable: Depository.new)
     @family.accounts.create!(name: "Card", currency: "GBP", balance: 100, accountable: CreditCard.new)

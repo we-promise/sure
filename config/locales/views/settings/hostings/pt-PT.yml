@@ -27,10 +27,10 @@ pt-PT:
         title: Self-Hosting
         danger_zone: Zona de Perigo
         clear_cache: Limpar cache de dados
-        clear_cache_warning: "Limpar a cache de dados recalcula os saldos e as posições das contas da sua família e volta a carregar as taxas de câmbio e os preços de títulos que utilizam. Afeta apenas a sua família; as outras famílias desta instância mantêm os seus dados. Isto não eliminará contas, transações, categorias ou outros dados pertencentes ao utilizador."
+        clear_cache_warning: "Limpar a cache de dados recalcula os saldos e as posições das contas da sua família e volta a carregar as taxas de câmbio e os preços de títulos que utilizam. Apenas os saldos e as posições da sua família são eliminados; as taxas de câmbio e os preços de títulos são partilhados com as outras famílias desta instância e também são atualizados para elas. Isto não eliminará contas, transações, categorias ou outros dados pertencentes ao utilizador."
         confirm_clear_cache:
           title: Limpar a cache de dados?
-          body: "Tem a certeza de que pretende limpar a cache de dados? Os saldos e as posições das contas da sua família serão recalculados, e as taxas de câmbio e os preços de títulos que utilizam serão carregados novamente. Afeta apenas a sua família; as outras famílias desta instância mantêm os seus dados. Esta ação é irreversível."
+          body: "Tem a certeza de que pretende limpar a cache de dados? Os saldos e as posições das contas da sua família serão recalculados, e as taxas de câmbio e os preços de títulos que utilizam serão carregados novamente. Apenas os saldos e as posições da sua família são eliminados; as taxas de câmbio e os preços de títulos são partilhados com as outras famílias desta instância e também são atualizados para elas. Esta ação é irreversível."
       provider_selection:
         exchange_rate_title: Serviço de Taxas de Câmbio
         exchange_rate_description: Selecione um único serviço para obter taxas de câmbio de moedas.

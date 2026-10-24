@@ -26,10 +26,10 @@ es:
         title: Autoalojamiento
         danger_zone: Zona de Peligro
         clear_cache: Limpiar caché de datos
-        clear_cache_warning: "Limpiar la caché de datos recalcula los saldos y las posiciones de las cuentas de tu familia y vuelve a cargar los tipos de cambio y los precios de valores que utilizan. Solo afecta a tu familia; las demás familias de esta instancia conservan sus datos. Esto no eliminará cuentas, transacciones, categorías ni otros datos del usuario."
+        clear_cache_warning: "Limpiar la caché de datos recalcula los saldos y las posiciones de las cuentas de tu familia y vuelve a cargar los tipos de cambio y los precios de valores que utilizan. Solo se eliminan los saldos y las posiciones de tu familia; los tipos de cambio y los precios de valores se comparten con las demás familias de esta instancia y también se actualizan para ellas. Esto no eliminará cuentas, transacciones, categorías ni otros datos del usuario."
         confirm_clear_cache:
           title: ¿Limpiar caché de datos?
-          body: "¿Estás seguro de que deseas limpiar la caché de datos? Se recalcularán los saldos y las posiciones de las cuentas de tu familia y se volverán a cargar los tipos de cambio y los precios de valores que utilizan. Solo afecta a tu familia; las demás familias de esta instancia conservan sus datos. Esta acción no se puede deshacer."
+          body: "¿Estás seguro de que deseas limpiar la caché de datos? Se recalcularán los saldos y las posiciones de las cuentas de tu familia y se volverán a cargar los tipos de cambio y los precios de valores que utilizan. Solo se eliminan los saldos y las posiciones de tu familia; los tipos de cambio y los precios de valores se comparten con las demás familias de esta instancia y también se actualizan para ellas. Esta acción no se puede deshacer."
       provider_selection:
         exchange_rate_title: Proveedor de tipos de cambio
         exchange_rate_description: Selecciona un único proveedor para obtener los tipos de cambio de divisas.

@@ -26,10 +26,10 @@ hu:
         title: Lokális futtatás
         danger_zone: Veszélyzóna
         clear_cache: Adatcache törlése
-        clear_cache_warning: "Az adatcache törlése újraszámolja a családod fiókjainak egyenlegeit és pozícióit, és újratölti az általuk használt árfolyamokat és értékpapír-árakat. Ez csak a családodat érinti; a példány többi családja megtartja az adatait. Ez nem törli a fiókokat, tranzakciókat, kategóriákat és egyéb felhasználói adatokat."
+        clear_cache_warning: "Az adatcache törlése újraszámolja a családod fiókjainak egyenlegeit és pozícióit, és újratölti az általuk használt árfolyamokat és értékpapír-árakat. Csak a családod egyenlegei és pozíciói törlődnek; az árfolyamokon és értékpapír-árakon a példány összes családja osztozik, így náluk is frissülnek. Ez nem törli a fiókokat, tranzakciókat, kategóriákat és egyéb felhasználói adatokat."
         confirm_clear_cache:
           title: Törli az adatcache-t?
-          body: "Biztosan törölni szeretnéd az adatcache-t? A családod fiókjainak egyenlegei és pozíciói újraszámolódnak, az általuk használt árfolyamok és értékpapír-árak pedig újratöltődnek. Ez csak a családodat érinti; a példány többi családja megtartja az adatait. Ez a művelet nem vonható vissza."
+          body: "Biztosan törölni szeretnéd az adatcache-t? A családod fiókjainak egyenlegei és pozíciói újraszámolódnak, az általuk használt árfolyamok és értékpapír-árak pedig újratöltődnek. Csak a családod egyenlegei és pozíciói törlődnek; az árfolyamokon és értékpapír-árakon a példány összes családja osztozik, így náluk is frissülnek. Ez a művelet nem vonható vissza."
       provider_selection:
         exchange_rate_title: Árfolyam-szolgáltató
         exchange_rate_description: Válassz egyetlen szolgáltatót az árfolyamok lekéréséhez.

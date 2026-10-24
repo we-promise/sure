@@ -10,8 +10,8 @@ class DataCacheClearJob < ApplicationJob
     ActiveRecord::Base.transaction do
       Balance.where(account_id: family.accounts.select(:id)).delete_all
       Holding.where(account_id: family.accounts.select(:id)).delete_all
-    end
 
-    family.sync_later
+      family.sync_later
+    end
   end
 end

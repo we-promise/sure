@@ -32,7 +32,8 @@ class Family::MarketDataRefresher
 
       Security.online.where(id: windows.keys).find_each do |security|
         window = windows[security.id]
-        security.import_provider_prices(start_date: window.start_date, end_date: window.end_date, clear_cache: true)
+        _, provider_error = security.import_provider_prices(start_date: window.start_date, end_date: window.end_date, clear_cache: true)
+        report_provider_error(provider_error, provider: security.price_data_provider, security_id: security.id) if provider_error.present?
         security.import_provider_details
       rescue => e
         report_failure(e, provider: security.price_data_provider, security_id: security.id)
@@ -58,10 +59,14 @@ class Family::MarketDataRefresher
 
     def report_failure(error, provider:, **metadata)
       Sentry.capture_exception(error)
+      report_provider_error("#{error.class}: #{error.message}", provider: provider, **metadata)
+    end
+
+    def report_provider_error(error_message, provider:, **metadata)
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "error",
-        message: "Could not refresh market data: #{error.class}: #{error.message}",
+        message: "Could not refresh market data: #{error_message}",
         source: self.class.name,
         family: family,
         provider: provider,

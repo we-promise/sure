@@ -71,4 +71,14 @@ class DataCacheClearJobTest < ActiveJob::TestCase
     assert_empty @account.balances.reload
     assert_empty @account.holdings.reload
   end
+
+  test "keeps the cached balances when the sync cannot be enqueued" do
+    Family::MarketDataRefresher.any_instance.stubs(:refresh)
+    balance = @account.balances.create!(date: 1.day.ago.to_date, balance: 1000, currency: "CAD")
+    @family.stubs(:sync_later).raises(ActiveRecord::StatementInvalid, "connection lost")
+
+    assert_raises(ActiveRecord::StatementInvalid) { DataCacheClearJob.perform_now(@family) }
+
+    assert Balance.exists?(balance.id)
+  end
 end
