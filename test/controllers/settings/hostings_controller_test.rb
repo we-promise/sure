@@ -28,8 +28,64 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id].each do |key|
+    %i[brand_fetch_api_key anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id].each do |key|
       Setting.public_send("#{key}=", nil)
+    end
+  end
+
+  test "Brandfetch usage requires an API key rather than a logo client ID" do
+    Provider::Brandfetch.stubs(:configured_api_key).returns(nil)
+    Provider::Brandfetch.expects(:new).never
+    with_self_hosting do
+      get settings_hosting_url
+      assert_response :success
+      assert_select "section[aria-label=?]", "Brandfetch API usage" do
+        assert_select "p", text: /Add a Brandfetch API key/
+        assert_select "a[href='https://developers.brandfetch.com/'][rel='noopener noreferrer']"
+        assert_select "[role=progressbar]", count: 0
+      end
+    end
+  end
+
+  test "Brandfetch credits show usage without exposing the bearer key" do
+    Provider::Brandfetch.stubs(:configured_api_key).returns("private-test-key")
+    Provider::Brandfetch.any_instance.stubs(:usage).returns(provider_success_response(
+      Provider::Brandfetch::Usage.new(used: 2, quota: 800)))
+    with_self_hosting do
+      get settings_hosting_url
+      assert_response :success
+      assert_select "section[aria-label=?]", "Brandfetch API usage" do
+        assert_select "p", text: /2 \/ 800 API credits used/
+        assert_select "[role=progressbar][aria-valuenow='0.25']"
+        assert_select "input[name='setting[brand_fetch_api_key]'][value='********']"
+      end
+      assert_not_includes response.body, "private-test-key"
+    end
+  end
+
+  test "Brandfetch request failure leaves hosting settings usable" do
+    Provider::Brandfetch.stubs(:configured_api_key).returns("private-test-key")
+    Provider::Brandfetch.any_instance.stubs(:usage).returns(
+      Provider::Response.new(success?: false, data: nil, error: Provider::Error.new("upstream error")))
+    with_self_hosting do
+      get settings_hosting_url
+      assert_response :success
+      assert_select "section[aria-label=?]", "Brandfetch API usage" do
+        assert_select "p", text: /Could not load usage/
+        assert_select "[role=progressbar]", count: 0
+      end
+    end
+  end
+
+  test "Brandfetch API key is encrypted and masked updates preserve it" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { brand_fetch_api_key: "private-test-key" } }
+      assert_equal "private-test-key", Setting.brand_fetch_api_key
+      assert_not_equal "private-test-key", Setting.find_by!(var: "brand_fetch_api_key").value
+      patch settings_hosting_url, params: { setting: { brand_fetch_api_key: "********" } }
+      assert_equal "private-test-key", Setting.brand_fetch_api_key
+      patch settings_hosting_url, params: { setting: { brand_fetch_api_key: "" } }
+      assert_nil Setting.brand_fetch_api_key
     end
   end
 

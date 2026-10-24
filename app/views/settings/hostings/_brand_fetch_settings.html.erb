@@ -57,4 +57,41 @@
                       data: { auto_submit_form_target: "auto" } %>
     <% end %>
   </div>
+  <section aria-label="<%= t(".usage_title") %>" class="space-y-4">
+    <h3 class="text-sm font-medium text-primary"><%= t(".usage_title") %></h3>
+    <p class="text-sm text-secondary"><%= t(".usage_description") %></p>
+    <%= styled_form_with model: Setting.new, url: settings_hosting_path, method: :patch,
+          data: { controller: "auto-submit-form", "auto-submit-form-trigger-event-value": "blur" } do |form| %>
+      <%= form.text_field :brand_fetch_api_key, label: t(".api_key_label"),
+            type: "password", autocomplete: "new-password",
+            value: Provider::Brandfetch.configured_api_key.present? ? "********" : "",
+            disabled: ENV["BRAND_FETCH_API_KEY"].present?,
+            data: { "auto-submit-form-target": "auto" } %>
+    <% end %>
+    <% if @brand_fetch_usage&.success? %>
+      <% usage = @brand_fetch_usage.data %>
+      <div class="space-y-2">
+        <p class="text-sm text-secondary">
+          <%= t(".api_credits_used", used: number_with_delimiter(usage.used), quota: number_with_delimiter(usage.quota)) %>
+          <% if usage.utilization %>
+            (<%= number_to_percentage(usage.utilization, precision: 1) %>)
+          <% end %>
+        </p>
+        <% if usage.bar_percentage %>
+          <div class="w-52 h-1.5 bg-surface-inset rounded-2xl" role="progressbar"
+               aria-label="<%= t(".usage_title") %>" aria-valuemin="0" aria-valuemax="100"
+               aria-valuenow="<%= usage.bar_percentage %>">
+            <div class="h-full bg-success rounded-2xl" style="width: <%= usage.bar_percentage %>%;"></div>
+          </div>
+        <% end %>
+        <p class="text-xs text-secondary"><%= t(".usage_period") %></p>
+      </div>
+    <% elsif @brand_fetch_usage %>
+      <p class="text-sm text-secondary"><%= t(".usage_error") %></p>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t(".usage_requires_key") %></p>
+    <% end %>
+    <%= link_to t(".usage_dashboard"), "https://developers.brandfetch.com/",
+          target: "_blank", rel: "noopener noreferrer", class: "text-sm text-link underline" %>
+  </section>
 </div>

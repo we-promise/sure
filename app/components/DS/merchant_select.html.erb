@@ -23,7 +23,7 @@
         <span data-merchant-select-target="selectionContainer" class="flex items-center gap-2 truncate">
           <% if selected_merchant %>
             <% if selected_merchant_logo_url %>
-              <%= image_tag selected_merchant_logo_url, class: "w-5 h-5 rounded-full border border-secondary shrink-0", loading: "lazy" %>
+              <%= render DS::Logo.new(src: selected_merchant_logo_url, name: selected_merchant.name, class_name: "w-5 h-5 rounded-full border border-secondary shrink-0") %>
             <% else %>
               <%= render DS::FilledIcon.new(variant: :text, text: selected_merchant.name, size: "sm", rounded: true) %>
             <% end %>
