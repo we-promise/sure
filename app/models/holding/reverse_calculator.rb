@@ -130,7 +130,7 @@ class Holding::ReverseCalculator
           currency: price.currency,
           amount: qty * price.price,
           cost_basis: cost_basis_for(security_id, date),
-          cost_basis_unknown: transferred_by?(security_id, date)
+          cost_basis_unknown: transferred_by?(security_id, date) || @clamped_security_ids.include?(security_id)
         )
       end.compact
     end
@@ -268,8 +268,10 @@ class Holding::ReverseCalculator
       @unknown_spans[security_id].any? { |start, stop| start <= date && (stop.nil? || date < stop) }
     end
 
+    # A clamped position holds fewer units than its trades bought, so no
+    # figure drawn from those trades is the position's.
     def cost_basis_for(security_id, date)
-      return nil if transferred_by?(security_id, date)
+      return nil if transferred_by?(security_id, date) || @clamped_security_ids.include?(security_id)
 
       cost_basis_snapshot(security_id, date)&.second
     end
