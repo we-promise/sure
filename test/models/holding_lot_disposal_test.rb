@@ -394,6 +394,98 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  # --- The avg-cost fallback on a fifo account --------------------------------
+
+  test "a linked fifo account's current row falls back to the open lots" do
+    travel_to TODAY do
+      linked_example(method: "average")
+      assert_nil current_row.cost_basis
+      assert_equal BigDecimal("15.2"), fallback_cost(current_row), "average: the pool, unchanged"
+
+      twenty, sale = linked_example(method: "fifo")
+      assert_nil current_row.cost_basis, "the provider gives no cost, so the fallback answers"
+      assert_in_delta BigDecimal("17.3333"), fallback_cost(current_row), BigDecimal("0.0001")
+
+      name_lot(sale, twenty)
+      materialize(:reverse)
+      assert_equal 12, fallback_cost(current_row)
+    end
+  end
+
+  test "a fifo row the lots cannot describe is unknown, not the pooled average" do
+    travel_to TODAY do
+      linked_example(method: "fifo")
+      earlier = @account.holdings.find_by!(security: @security, date: d(9))
+      earlier.update_columns(cost_basis: nil)
+      assert_nil fallback_cost(earlier), "an earlier row: the lots are today's"
+
+      lot = HoldingLot.derived.where(account: @account).where("qty > 0").first
+      lot.update_columns(qty: lot.qty - 1)
+      assert_nil fallback_cost(current_row), "lots out of partition"
+    end
+  end
+
+  test "a sold-off transfer-in no longer blanks a fifo fallback" do
+    travel_to TODAY do
+      figures = %w[average fifo].map do |method|
+        setup_account(method: method)
+        link_account
+        @security = priced_security("LFT#{method[0]}", 30)
+        trade(@security, 10, 30, 2).entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+        trade(@security, 10, 12, 3)
+        trade(@security, -10, 30, 5)
+        @account.holdings.create!(security: @security, date: d(10), qty: 10, price: 30, amount: 300, currency: "USD",
+          account_provider: @account_provider)
+        materialize(:reverse)
+        fallback_cost(current_row)
+      end
+
+      assert_equal [ nil, 12 ], figures
+    end
+  end
+
+  test "an open transfer-in lot with no cost leaves the fifo fallback unknown" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      link_account
+      @security = priced_security("LFU", 30)
+      trade(@security, 10, 30, 2).entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+      trade(@security, 10, 12, 3)
+      @account.holdings.create!(security: @security, date: d(10), qty: 20, price: 30, amount: 600, currency: "USD",
+        account_provider: @account_provider)
+      materialize(:reverse)
+
+      assert_nil fallback_cost(current_row)
+    end
+  end
+
+  test "units held before the first trade stay out of the fifo fallback, as they stay out of the book" do
+    travel_to TODAY do
+      build_reverse_fixture(pre_history: 5)
+      materialize(:reverse)
+      assert HoldingLot.opening.where(account: @account).sole.qty.positive?, "1 of the 5 is still open"
+
+      assert_equal 150, fallback_cost(current_row)
+      assert_equal 150, @account.holdings.find_by!(security: @security, date: d(9)).cost_basis, "the calculators' figure"
+    end
+  end
+
+  test "a clamped fifo position stays unknown" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      link_account
+      @security = priced_security("LFK", 30)
+      trade(@security, 5, 100, 2)
+      trade(@security, 5, 150, 3)
+      @account.holdings.create!(security: @security, date: d(10), qty: 3, price: 30, amount: 90, currency: "USD",
+        account_provider: @account_provider)
+      materialize(:reverse)
+      assert HoldingLot.where(account: @account, clamped: true).exists?
+
+      assert_nil fallback_cost(current_row)
+    end
+  end
+
   test "realized gain reads the persisted consumption, not the post-sale snapshot" do
     travel_to TODAY do
       setup_account(method: "fifo")
@@ -590,5 +682,29 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
 
     def avg_cost_on(date)
       @account.holdings.find_by!(security: @security, date: date).avg_cost.amount
+    end
+
+    # The Example on a linked account whose provider holds the remaining 60
+    # and gives no cost for them.
+    def linked_example(method:)
+      setup_account(method: method)
+      link_account
+      @security = priced_security("LFX#{method[0]}", 30)
+      trade(@security, 60, 12, 2)
+      twenty = trade(@security, 40, 20, 4)
+      sale = trade(@security, -40, 25, 6)
+      @account.holdings.create!(security: @security, date: d(10), qty: 60, price: 30, amount: 1800, currency: "USD",
+        account_provider: @account_provider)
+      materialize(:reverse)
+      [ twenty, sale ]
+    end
+
+    def current_row
+      @account.holdings.find_by!(security: @security, date: d(10))
+    end
+
+    # Holding#avg_cost on a fresh copy, so no earlier answer is reused.
+    def fallback_cost(holding)
+      Holding.find(holding.id).avg_cost&.amount
     end
 end
