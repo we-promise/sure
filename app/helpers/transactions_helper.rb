@@ -2,12 +2,11 @@ module TransactionsHelper
   # @return [Array<Hash>] the filters offered above the transaction list, each
   #   with the key its partial is named for, a translated label and an icon
   def transaction_search_filters
-    [
+    filters = [
       { key: "account_filter", label: t("transactions.search.filters.account"), icon: "layers" },
       { key: "date_filter", label: t("transactions.search.filters.date"), icon: "calendar" },
       { key: "type_filter", label: t("transactions.search.filters.type"), icon: "tag" },
       { key: "status_filter", label: t("transactions.search.filters.status"), icon: "clock" },
-      { key: "reconcile_status_filter", label: t("transactions.search.filters.reconcile_status"), icon: "check-circle" },
       { key: "amount_filter", label: t("transactions.search.filters.amount"), icon: "hash" },
       { key: "category_filter", label: t("transactions.search.filters.category"), icon: "shapes" },
       { key: "tag_filter", label: t("transactions.search.filters.tag"), icon: "tags" },
@@ -15,6 +14,12 @@ module TransactionsHelper
       { key: "ai_filter", label: t("transactions.search.filters.ai"), icon: "sparkles" },
       { key: "attachment_filter", label: t("transactions.search.filters.attachment"), icon: "paperclip" }
     ]
+
+    if Current.family&.manual_reconciliation?
+      filters.insert(4, { key: "reconcile_status_filter", label: t("transactions.search.filters.reconcile_status"), icon: "check-circle" })
+    end
+
+    filters
   end
 
   # @param label [String] a stored investment_activity_label such as "Sweep In"

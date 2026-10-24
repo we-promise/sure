@@ -416,6 +416,7 @@ class BillsController < ApplicationController
 
       @by_day = occurrences.group_by(&:due_on)
       month_occurrences = occurrences.select { |occurrence| occurrence.due_on.between?(@month, @month.end_of_month) }
+      @month_bill_count = month_occurrences.size
       @month_expected, @month_unconvertible = total_of(month_occurrences) { |occurrence| occurrence.resolved_expected_amount_money }
       @month_paid, _ = total_of(month_occurrences) { |occurrence| occurrence.confirmed_allocated_money }
     end

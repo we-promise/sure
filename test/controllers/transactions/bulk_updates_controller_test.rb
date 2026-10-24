@@ -272,6 +272,7 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "bulk update sets reconciled_status on manual accounts" do
+    @user.family.update!(manual_reconciliation: true)
     manual_entry = create_transaction(account: accounts(:depository))
     assert accounts(:depository).manual?
 
@@ -287,6 +288,7 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "bulk update ignores reconciled_status on synced accounts" do
+    @user.family.update!(manual_reconciliation: true)
     synced_entry = create_transaction(account: accounts(:connected))
     assert_not accounts(:connected).manual?
 
@@ -302,6 +304,7 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "bulk update rejects an invalid reconciled_status value without raising" do
+    @user.family.update!(manual_reconciliation: true)
     manual_entry = create_transaction(account: accounts(:depository))
 
     assert_no_changes -> { manual_entry.reload.reconciled_status } do
@@ -315,5 +318,21 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to transactions_url
     assert_equal I18n.t("transactions.reconcile.failure"), flash[:alert]
+  end
+
+  test "bulk update rejects reconciled_status when manual reconciliation is disabled" do
+    manual_entry = create_transaction(account: accounts(:depository))
+
+    assert_no_changes -> { manual_entry.reload.reconciled_status } do
+      post transactions_bulk_update_url, params: {
+        bulk_update: {
+          entry_ids: [ manual_entry.id ],
+          reconciled_status: "cleared"
+        }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.reconcile.unavailable"), flash[:alert]
   end
 end

@@ -28,23 +28,25 @@
     <%# Quick bulk-reconcile — works across accounts in one selection; entries
         belonging to synced (non-manual) accounts are silently skipped
         server-side (see Entry.bulk_update!). %>
-    <%= render DS::Menu.new(variant: "button") do |menu| %>
-      <% menu.with_button(
-          class: "p-1.5 group/reconcile hover:bg-inverse flex items-center justify-center rounded-md",
-          aria: { label: t("transactions.selection_bar.reconcile") }
-        ) do %>
-        <%= icon "check-circle", class: "group-hover/reconcile:text-inverse" %>
-      <% end %>
+    <% if Current.family&.manual_reconciliation? %>
+      <%= render DS::Menu.new(variant: "button") do |menu| %>
+        <% menu.with_button(
+            class: "p-1.5 group/reconcile hover:bg-inverse flex items-center justify-center rounded-md",
+            aria: { label: t("transactions.selection_bar.reconcile") }
+          ) do %>
+          <%= icon "check-circle", class: "group-hover/reconcile:text-inverse" %>
+        <% end %>
 
-      <% Entry.reconciled_statuses.keys.each do |status| %>
-        <% menu.with_item(
-            variant: "button",
-            text: t("transactions.reconcile.statuses.#{status}"),
-            icon: reconcile_status_icon(status),
-            href: transactions_bulk_update_path(bulk_update: { reconciled_status: status }),
-            method: :post,
-            data: { action: "bulk-select#submitBulkRequest", bulk_select_scope_param: "bulk_update" }
-          ) %>
+        <% Entry.reconciled_statuses.keys.each do |status| %>
+          <% menu.with_item(
+              variant: "button",
+              text: t("transactions.reconcile.statuses.#{status}"),
+              icon: reconcile_status_icon(status),
+              href: transactions_bulk_update_path(bulk_update: { reconciled_status: status }),
+              method: :post,
+              data: { action: "bulk-select#submitBulkRequest", bulk_select_scope_param: "bulk_update" }
+            ) %>
+        <% end %>
       <% end %>
     <% end %>
 

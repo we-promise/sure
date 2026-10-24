@@ -16,7 +16,11 @@ class AccountsController < ApplicationController
           .with_attached_logo
           .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
-    @reconciliation_indicators = Account::ReconciliationIndicator.for_accounts(@manual_accounts)
+    @reconciliation_indicators = if Current.family.manual_reconciliation?
+      Account::ReconciliationIndicator.for_accounts(@manual_accounts)
+    else
+      {}
+    end
     @financekit_accounts = Current.family.accounts
       .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
       .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
@@ -92,7 +96,9 @@ class AccountsController < ApplicationController
     # date beside a table shaded against another.
     @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
-    @reconciliation_indicator = Account::ReconciliationIndicator.for_accounts([ @account ])[@account.id]
+    @reconciliation_indicator = if Current.family.manual_reconciliation?
+      Account::ReconciliationIndicator.for_accounts([ @account ])[@account.id]
+    end
     @q = params.fetch(:q, {}).permit(:search, :uncategorized, status: [])
     entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?
@@ -208,6 +214,15 @@ class AccountsController < ApplicationController
     if stale?(etag: etag_key, last_modified: @account.family.latest_sync_completed_at)
       @sparkline_series = @account.sparkline_series
       render layout: false
+    end
+  end
+
+  # Saves the drag-and-drop order of one account group for the current user.
+  def reorder
+    if Current.user.update_manual_account_order(params[:group], params[:account_ids])
+      head :ok
+    else
+      head :unprocessable_entity
     end
   end
 

@@ -8,6 +8,16 @@ class TransactionsHelperTest < ActionView::TestCase
     OpenStruct.new(extra: extra)
   end
 
+  test "reconcile filter is hidden unless manual reconciliation is enabled" do
+    Current.session = Session.create!(user: users(:family_admin))
+
+    assert_not_includes transaction_search_filters.map { |filter| filter[:key] }, "reconcile_status_filter"
+
+    Current.family.update!(manual_reconciliation: true)
+
+    assert_includes transaction_search_filters.map { |filter| filter[:key] }, "reconcile_status_filter"
+  end
+
   test "can_reconcile_account? mirrors the write access the reconcile action requires" do
     Current.session = Session.create!(user: users(:family_member))
 

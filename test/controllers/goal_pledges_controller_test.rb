@@ -25,6 +25,17 @@ class GoalPledgesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "new labels a foreign-currency account with its currency" do
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "Euro Savings", currency: "EUR", balance: 1_000)
+    @goal.goal_accounts.create!(account: eur, allocated_amount: 500)
+
+    get new_goal_pledge_url(@goal), headers: { "Turbo-Frame" => "modal" }
+
+    assert_select "option", text: "Euro Savings · EUR"
+    assert_select "option", text: @account.name
+  end
+
   test "new redirects to the goal show page on a non-frame GET" do
     get new_goal_pledge_url(@goal)
     assert_redirected_to goal_path(@goal)

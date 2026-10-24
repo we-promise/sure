@@ -11,6 +11,22 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "admins see the investing-as-spending toggle" do
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[family_attributes][investment_contributions_as_spending]']"
+    assert_match I18n.t("settings.preferences.show.investment_contributions_as_spending"), response.body
+  end
+
+  test "members do not see the investing-as-spending toggle" do
+    sign_in users(:family_member)
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[family_attributes][investment_contributions_as_spending]']", count: 0
+  end
+
   test "group moniker uses group currencies copy and hides legacy currency field" do
     users(:family_admin).family.update!(moniker: "Group")
 
@@ -78,5 +94,34 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.preferences.show.household_budget_enabled")
     assert_not_includes response.body, I18n.t("settings.preferences.show.budget_sharing_title")
+  end
+
+  test "admins with preview access see the manual reconciliation toggle" do
+    user = users(:family_admin)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[family_attributes][manual_reconciliation]']"
+    assert_match I18n.t("settings.preferences.show.manual_reconciliation"), response.body
+  end
+
+  test "hides the manual reconciliation toggle without preview access" do
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[family_attributes][manual_reconciliation]']", count: 0
+  end
+
+  test "members with preview access do not see the manual reconciliation toggle" do
+    user = users(:family_member)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in user
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[family_attributes][manual_reconciliation]']", count: 0
   end
 end

@@ -11,6 +11,11 @@ class Transactions::BulkUpdatesController < ApplicationController
     # value from RECONCILED_STATUS_CYCLE), but this form field takes
     # arbitrary user input, so it needs the same graceful-failure handling.
     reconciled_status = bulk_update_params[:reconciled_status]
+    if reconciled_status.present? && !Current.family.manual_reconciliation?
+      redirect_back_or_to transactions_path, alert: t("transactions.reconcile.unavailable")
+      return
+    end
+
     if reconciled_status.present? && !Entry.reconciled_statuses.key?(reconciled_status)
       redirect_back_or_to transactions_path, alert: t("transactions.reconcile.failure")
       return

@@ -19,6 +19,16 @@ class AssistantTest < ActiveSupport::TestCase
     assert_includes preview_classes, Assistant::Function::GetValuations
   end
 
+  test "guest registry leaves out the tools that change categories and tags" do
+    guest_classes = Assistant.function_classes(family_guest)
+
+    Assistant::FAMILY_CONFIG_FUNCTION_CLASSES.each do |fn_class|
+      assert_not_includes guest_classes, fn_class
+      assert_includes Assistant.function_classes(users(:family_admin)), fn_class
+    end
+    assert_includes guest_classes, Assistant::Function::GetCategories
+  end
+
   setup do
     @chat = chats(:two)
     @message = @chat.messages.create!(

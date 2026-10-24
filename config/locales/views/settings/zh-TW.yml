@@ -385,6 +385,8 @@ zh-TW:
         sync_error: 同步錯誤
         no_recent_sync: 同步逾期
         reconsent_required: 需要重新授權
+        login_required: "需要登入"
+        login_expires_soon: "登入將在 %{time}後過期（%{at}）"
         reconsent_needed:
           one: 1 天後需要重新授權
           other: '%{count} 天後需要重新授權'
