@@ -60,4 +60,18 @@ class Rule::ListFilterTest < ActiveSupport::TestCase
     assert_includes text, I18n.t("rules.actions.split.summary", count: 2)
     assert_not_includes text, "percentage"
   end
+
+  test "leaves out accounts the user cannot see" do
+    other = @family.users.create!(email: "other-member@example.com", password: "password123456", first_name: "Other", role: "member")
+    hidden = @family.accounts.create!(name: "Private", balance: 0, currency: "USD", owner: other, accountable: Depository.new)
+    rule = @family.rules.create!(name: "Private rule", resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_account", operator: "=", value: hidden.id) ],
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+
+    filter = Rule::ListFilter.new(@family.rules.includes(:actions, conditions: :sub_conditions))
+
+    assert_empty filter.account_ids(rule)
+    assert_equal [ @account.id ], filter.account_ids(@rule)
+    assert_equal [ [ "Checking", @account.id ] ], filter.account_options
+  end
 end

@@ -33,8 +33,9 @@ class Rule::ListFilter
     leaf_conditions(rule).map(&:condition_type).uniq
   end
 
+  # Only accounts the user can see, so the page holds no ids of others.
   def account_ids(rule)
-    leaf_conditions(rule).select { |condition| condition.condition_type == "transaction_account" }.map(&:value).compact_blank.uniq
+    condition_account_ids(rule) & account_options.map { |_name, id| id.to_s }
   end
 
   # [label, key] pairs for the types the family's rules use.
@@ -49,15 +50,19 @@ class Rule::ListFilter
   # [name, id] pairs for the accounts the rules' conditions name. Accounts the
   # user cannot see are left out, as they are in the rule form.
   def account_options
-    ids = rules.flat_map { |rule| account_ids(rule) }.to_set
-    condition = rules.lazy.flat_map { |rule| leaf_conditions(rule) }.find { |c| c.condition_type == "transaction_account" }
-    return [] unless condition
-
-    Array(condition_options_for(condition)).select { |_name, id| ids.include?(id.to_s) }
+    @account_options ||= begin
+      ids = rules.flat_map { |rule| condition_account_ids(rule) }.to_set
+      condition = rules.lazy.flat_map { |rule| leaf_conditions(rule) }.find { |c| c.condition_type == "transaction_account" }
+      condition ? Array(condition_options_for(condition)).select { |_name, id| ids.include?(id.to_s) } : []
+    end
   end
 
   private
     attr_reader :rules
+
+    def condition_account_ids(rule)
+      leaf_conditions(rule).select { |condition| condition.condition_type == "transaction_account" }.map(&:value).compact_blank.uniq
+    end
 
     # Conditions inside a condition group count like those at the top.
     def leaf_conditions(rule)

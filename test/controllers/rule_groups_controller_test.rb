@@ -98,6 +98,15 @@ class RuleGroupsControllerTest < ActionDispatch::IntegrationTest
 
     patch activation_rule_group_url(foreign, active: true)
     assert_response :not_found
+
+    get edit_rule_group_url(foreign)
+    assert_response :not_found
+
+    patch reorder_rule_group_url(foreign), params: { rule_ids: [] }, as: :json
+    assert_response :not_found
+
+    delete rule_group_url(foreign)
+    assert_response :not_found
     assert_equal "Foreign", foreign.reload.name
   end
 
