@@ -1,6 +1,8 @@
 require "test_helper"
 
 class HoldingsControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     sign_in users(:family_admin)
     @account = accounts(:investment)
@@ -286,4 +288,104 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(@holding.account, tab: "holdings")
     assert_equal "Yahoo Finance rate limit exceeded", flash[:alert]
   end
+
+  test "remap_security on a negative-amount holding redirects with success notice" do
+    # The materializer writes such rows with upsert_all, skipping validations.
+    @holding.update_columns(qty: -22, amount: BigDecimal("-3187.80"))
+    msft = securities(:msft)
+    Balance::Materializer.any_instance.stubs(:materialize_balances)
+
+    patch remap_security_holding_path(@holding), params: { security_id: "MSFT|XNAS" }
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.success"), flash[:notice]
+    assert_nil flash[:alert]
+    @holding.reload
+    assert_equal msft.id, @holding.security_id
+    assert @holding.security_locked?
+  end
+
+  test "remap_security rolls the remap back when re-materialising fails" do
+    old_security_id = @holding.security_id
+    create_trade(@holding.security, account: @account, qty: 3, price: 10, date: Date.current)
+    trades_before = @account.trades.where(security_id: old_security_id).count
+    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(StandardError, "forced test failure")
+
+    assert_error_reported(StandardError) do
+      assert_no_difference -> { Security.count } do
+        patch remap_security_holding_path(@holding), params: { security_id: "NEWREMAP|XNAS" }
+      end
+    end
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.failed"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_equal old_security_id, @holding.reload.security_id
+    assert_not @holding.security_locked?
+    assert_equal trades_before, @account.trades.where(security_id: old_security_id).count
+  end
+
+  test "remap_security with a security that cannot be saved shows an alert" do
+    # An unknown price provider fails the Security inclusion validation.
+    old_security_id = @holding.security_id
+
+    assert_no_difference -> { Security.count } do
+      patch remap_security_holding_path(@holding), params: { security_id: "NEWREMAP|XNAS|not_a_provider" }
+    end
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.failed"), flash[:alert]
+    assert_equal old_security_id, @holding.reload.security_id
+  end
+
+  # The drawer's remap form submits as a turbo-stream inside the drawer's
+  # turbo-frame, where a plain redirect lands as "Content missing".
+  test "remap_security failure answers a turbo-stream request with a redirect action" do
+    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(StandardError, "forced test failure")
+
+    assert_error_reported(StandardError) do
+      patch remap_security_holding_path(@holding), params: { security_id: "MSFT|XNAS" }, as: :turbo_stream
+    end
+
+    assert_turbo_stream_redirect_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.failed"), flash[:alert]
+  end
+
+  test "remap_security without a ticker answers a turbo-stream request with a redirect action" do
+    patch remap_security_holding_path(@holding), params: { security_id: "" }, as: :turbo_stream
+
+    assert_turbo_stream_redirect_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.remap_security.security_not_found"), flash[:alert]
+  end
+
+  test "reset_security rolls the reset back when a holding write fails" do
+    original = @holding.security
+    remapped = securities(:msft)
+    create_trade(original, account: @account, qty: 3, price: 10, date: Date.current)
+    @holding.remap_security!(remapped)
+    trades_on_remapped = @account.trades.where(security: remapped).count
+    assert_operator trades_on_remapped, :>, 0
+
+    # Fail the holding write, which runs after the trades have moved back.
+    Holding.any_instance.stubs(:update_columns).raises(ActiveRecord::StatementInvalid, "forced test failure")
+    Holding.any_instance.stubs(:update!).raises(ActiveRecord::StatementInvalid, "forced test failure")
+
+    assert_error_reported(ActiveRecord::StatementInvalid) do
+      post reset_security_holding_path(@holding)
+    end
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.reset_security.failed"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_equal remapped.id, @holding.reload.security_id
+    assert_equal trades_on_remapped, @account.trades.where(security: remapped).count
+  end
+
+  private
+    def assert_turbo_stream_redirect_to(url)
+      assert_response :success
+      assert_equal "text/vnd.turbo-stream.html", response.media_type
+      assert_includes response.body, %(action="redirect")
+      assert_includes response.body, %(target="#{ERB::Util.html_escape(url)}")
+    end
 end

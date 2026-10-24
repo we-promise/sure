@@ -160,19 +160,51 @@ class Holding < ApplicationRecord
         .pluck(:date, :currency)
         .to_set
 
-      # Process each holding for the old security
-      account.holdings.where(security: old_security).find_each do |holding|
+      # Process each holding for the old security. Lock the rows as they are
+      # loaded, under the old security's predicate: Postgres re-checks the
+      # WHERE after waiting for a lock, so a row another remap, reset or
+      # delete changed first is not returned, and a row returned here cannot
+      # be moved or deleted until this transaction ends. Locking by id after
+      # loading would merge or overwrite a row that already moved.
+      account.holdings.where(security: old_security).lock.find_each do |holding|
         if collision_keys.include?([ holding.date, holding.currency ])
-          # Collision: merge into existing holding for new_security (same date AND currency)
-          existing = account.holdings.find_by!(security: new_security, date: holding.date, currency: holding.currency)
+          # Collision: merge into existing holding for new_security (same date AND currency).
+          # Lock the target too, so a concurrent delete waits for this merge,
+          # or wins first and makes find_by! raise, rather than the merge
+          # writing onto a gone row.
+          existing = account.holdings.lock.find_by!(security: new_security, date: holding.date, currency: holding.currency)
           merged_qty = existing.qty + holding.qty
           merged_amount = existing.amount + holding.amount
 
-          # Calculate weighted average cost basis if both holdings have cost_basis
-          merged_cost_basis = if existing.cost_basis.present? && holding.cost_basis.present? && merged_qty.positive?
-            ((existing.cost_basis * existing.qty) + (holding.cost_basis * holding.qty)) / merged_qty
+          # Weighted average cost basis when both rows hold units. A negative
+          # row is units gone, not units bought, so it adds no cost: when only
+          # one side holds units, the merged row keeps that side's basis, as a
+          # sale leaves the per-share basis unchanged.
+          merged_cost_basis = if !merged_qty.positive?
+            existing.cost_basis
+          elsif existing.qty.positive? && holding.qty.positive?
+            if existing.cost_basis.present? && holding.cost_basis.present?
+              ((existing.cost_basis * existing.qty) + (holding.cost_basis * holding.qty)) / merged_qty
+            else
+              existing.cost_basis # Keep existing if we can't calculate weighted average
+            end
           else
-            existing.cost_basis # Keep existing if we can't calculate weighted average
+            (existing.qty.positive? ? existing : holding).cost_basis
+          end
+
+          # amount / qty, as the calculators write amount = qty x price with
+          # a positive price; that holds for a negative merged row too. Two
+          # rows priced differently can net to a qty and an amount of opposite
+          # signs, where that ratio would be negative. The materializer prices
+          # this row at the target security's own price for the date, so keep
+          # the target's price then. A merge that nets to zero units gets a
+          # zero price even if the amounts leave a remainder, as before.
+          merged_price = if merged_qty.zero?
+            0
+          elsif (merged_amount.negative? && merged_qty.positive?) || (merged_amount.positive? && merged_qty.negative?)
+            existing.price
+          else
+            merged_amount / merged_qty
           end
 
           # Preserve provider tracking from the holding being destroyed
@@ -180,7 +212,7 @@ class Holding < ApplicationRecord
           merge_attrs = {
             qty: merged_qty,
             amount: merged_amount,
-            price: merged_qty.positive? ? merged_amount / merged_qty : 0,
+            price: merged_price,
             cost_basis: merged_cost_basis
           }
           merge_attrs[:external_id] ||= holding.external_id if existing.external_id.blank? && holding.external_id.present?
@@ -188,14 +220,30 @@ class Holding < ApplicationRecord
           merge_attrs[:account_provider_id] ||= holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
           merge_attrs[:security_locked] = true # Lock merged holding to prevent provider overwrites
 
-          existing.update!(merge_attrs)
+          # Holdings are derived rows the materializer rebuilds (with
+          # upsert_all, skipping validations), and a merged qty or amount can
+          # legitimately be negative, e.g. after a full in-kind transfer out.
+          # The >= 0 validations guard user edits and must not veto the merge,
+          # so write only these columns. update_columns skips updated_at,
+          # which update! set and other readers rely on, so set it here.
+          # Destroy the source row first: its external_id is under a unique
+          # index on (account_id, external_id) and is being moved onto
+          # existing.
           holding.destroy!
+          existing.update_columns(merge_attrs.merge(updated_at: Time.current))
         else
-          # No collision: update to new security
-          holding.provider_security_id ||= old_security.id
-          holding.security = new_security
-          holding.security_locked = true
-          holding.save!
+          # No collision: update to new security. Write only the columns this
+          # remap owns, for the same reason as the merge above: a negative
+          # derived row must still move.
+          # The row is locked, so update_columns should always write it; it
+          # returns false rather than raising if not, so fail and roll back.
+          moved = holding.update_columns(
+            security_id: new_security.id,
+            security_locked: true,
+            provider_security_id: holding.provider_security_id || old_security.id,
+            updated_at: Time.current
+          )
+          raise ActiveRecord::RecordNotSaved.new("Holding #{holding.id} was deleted during remap", holding) unless moved
         end
       end
 
@@ -231,12 +279,19 @@ class Holding < ApplicationRecord
       account.trades.where(security: current_security).update_all(security_id: original_security.id)
 
       # Reset ALL holdings that were remapped from this provider_security
-      account.holdings.where(security: current_security, provider_security: original_security).find_each do |holding|
-        holding.update!(
-          security: original_security,
+      # Write only the columns the reset owns, so a negative derived row
+      # still moves back (see remap_security!). Lock the rows as they are
+      # loaded, under this predicate, for the same reason as there.
+      account.holdings.where(security: current_security, provider_security: original_security).lock.find_each do |holding|
+        reset = holding.update_columns(
+          security_id: original_security.id,
           security_locked: false,
-          provider_security_id: nil
+          provider_security_id: nil,
+          updated_at: Time.current
         )
+        # As in remap_security!: should the write miss, fail and roll back
+        # the trade move.
+        raise ActiveRecord::RecordNotSaved.new("Holding #{holding.id} was deleted during reset", holding) unless reset
       end
     end
 
