@@ -17,8 +17,10 @@ class DestroyJob < ApplicationJob
   def perform(model)
     # destroy returns false instead of raising when a callback aborts it.
     model.destroy || raise(ActiveRecord::RecordNotDestroyed.new("#{model.class.name} #{model.try(:id)} was not destroyed", model))
-  rescue ActiveRecord::Deadlocked
-    raise
+  rescue ActiveRecord::Deadlocked => e
+    # Once the row is gone (a deadlock in an after-commit step) a retry could not
+    # load the record and would be discarded, so report it now.
+    model.destroyed? ? handle_failure(model, e) : raise
   rescue => e
     handle_failure(model, e)
   end
@@ -26,6 +28,7 @@ class DestroyJob < ApplicationJob
   private
     def handle_failure(model, error)
       report_failure(model, error)
+    ensure
       restore(model) unless model.destroyed?
     end
 
@@ -40,7 +43,7 @@ class DestroyJob < ApplicationJob
         model.update_column(:scheduled_for_deletion, false)
       end
     rescue ActiveRecord::ActiveRecordError => e
-      Rails.logger.error("DestroyJob could not restore #{model.class.name} #{model.try(:id)}: #{e.class}: #{e.message}")
+      report_failure(model, e)
     end
 
     # Apart from deadlocks, a failed destroy ends the job instead of retrying,

@@ -244,15 +244,44 @@ class DestroyJobTest < ActiveJob::TestCase
     assert_not Account.exists?(account.id)
   end
 
-  test "a reset that the database rejects does not raise out of the job" do
+  test "a reset that the database rejects is recorded and does not raise out of the job" do
     item = plaid_items(:one)
     item.update_column(:scheduled_for_deletion, true)
     item.stubs(:destroy).raises(StandardError, "destroy failed")
     item.stubs(:update_column).raises(ActiveRecord::RecordNotUnique, "duplicate key")
 
-    assert_difference -> { DebugLogEntry.where(source: "DestroyJob").count }, 1 do
+    assert_difference -> { DebugLogEntry.where(source: "DestroyJob").count }, 2 do
       assert_nothing_raised { DestroyJob.perform_now(item) }
     end
+
+    assert_equal %w[StandardError ActiveRecord::RecordNotUnique].sort,
+      DebugLogEntry.where(source: "DestroyJob").map { |entry| entry.metadata["error_class"] }.sort
+  end
+
+  test "the flag is reset even when recording the failure raises" do
+    item = plaid_items(:one)
+    item.update_column(:scheduled_for_deletion, true)
+    item.stubs(:destroy).raises(StandardError, "destroy failed")
+    DebugLogEntry.stubs(:capture).raises(StandardError, "log write failed")
+
+    assert_raises(StandardError) { DestroyJob.perform_now(item) }
+
+    assert_not item.reload.scheduled_for_deletion?
+  end
+
+  test "a deadlock after the account delete committed is recorded instead of retried" do
+    account = accounts(:depository)
+    account.mark_for_deletion!
+    account.stubs(:move_account_statements_to_inbox).raises(ActiveRecord::Deadlocked, "deadlock detected")
+
+    assert_no_enqueued_jobs(only: DestroyJob) do
+      assert_difference -> { DebugLogEntry.where(source: "DestroyJob").count }, 1 do
+        DestroyJob.perform_now(account)
+      end
+    end
+
+    assert_equal "ActiveRecord::Deadlocked", DebugLogEntry.recent.first.metadata["error_class"]
+    assert_not Account.exists?(account.id)
   end
 
   test "inherits the deferred-enqueue policy from ApplicationJob" do
