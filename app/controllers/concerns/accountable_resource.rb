@@ -84,6 +84,9 @@ module AccountableResource
     # other submitted fields. Keep them available for the 422 form without
     # persisting them.
     update_params = account_params.except(:return_to, :balance, :opening_balance_date)
+    # Every account type posts through here; only one with trades has lots to sell.
+    update_params = update_params.except(:cost_basis_method) unless @account.supports_trades?
+    previous_cost_basis_method = @account.cost_basis_method
 
     # The balance change and the attribute update are one form, so they commit
     # or roll back as one. `set_current_balance` writes a valuation and the
@@ -124,6 +127,11 @@ module AccountableResource
       render :edit, status: :unprocessable_entity
       return
     end
+
+    # The stored figures were worked out under the old method; a sync restates
+    # them. Compared by hand: lock_saved_attributes! saves again, which clears
+    # saved_change_to_cost_basis_method?.
+    @account.sync_later if @account.cost_basis_method != previous_cost_basis_method
 
     redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: accountable_type.name.underscore.humanize)
   end
@@ -172,7 +180,7 @@ module AccountableResource
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
         :institution_name, :institution_domain, :notes, :exclude_from_reports,
-        :enable_category_matcher,
+        :enable_category_matcher, :cost_basis_method,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end
