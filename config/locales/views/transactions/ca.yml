@@ -315,6 +315,10 @@ ca:
       exclude: Exclou
       exclude_description: Les transaccions excloses es retiraran dels càlculs i informes
         de pressupost.
+      auto_excluded_title: "Exclosa automàticament"
+      auto_excluded_stale_pending: "El %{date} la sincronització bancària va excloure aquesta transacció pendent perquè no s'havia comptabilitzat en %{days} dies."
+      auto_excluded_posted_match: "El %{date} la sincronització bancària va excloure aquesta transacció pendent perquè la seva versió comptabilitzada va arribar com a transacció separada."
+      auto_excluded_other: "El %{date} la sincronització bancària va excloure aquesta transacció."
       keep_both: 'No, mantén-les totes dues'
       loan_payment: Pagament de préstec
       mark_recurring: Marca com a recurrent

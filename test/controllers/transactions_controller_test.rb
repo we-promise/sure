@@ -90,6 +90,40 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
       "the preview-gated bill link must not render for a user without the flag"
   end
 
+  test "a transaction excluded by the sync explains why" do
+    @entry.entryable.update!(extra: { "simplefin" => { "pending" => true } })
+    @entry.update_columns(date: 10.days.ago.to_date)
+    Entry.auto_exclude_stale_pending(account: @entry.account)
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_match I18n.t("transactions.show.auto_excluded_title"), response.body
+    assert_match "had not posted within 8 days", response.body
+  end
+
+  test "turning Exclude off removes the sync explanation without locking provider data" do
+    @entry.entryable.update!(extra: { "simplefin" => { "pending" => true } })
+    @entry.update_columns(date: 10.days.ago.to_date)
+    Entry.auto_exclude_stale_pending(account: @entry.account)
+
+    patch transaction_url(@entry), params: { entry: { excluded: "0" } }, as: :turbo_stream
+
+    assert_response :success
+    assert_match %(action="remove" target="#{ActionView::RecordIdentifier.dom_id(@entry, :auto_exclusion)}"), response.body
+    assert_nil @entry.reload.auto_exclusion
+    assert_not @entry.transaction.locked?(:extra)
+  end
+
+  test "a transaction excluded by hand shows no sync explanation" do
+    @entry.update!(excluded: true)
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_no_match I18n.t("transactions.show.auto_excluded_title"), response.body
+  end
+
   test "the investment activity badge shows translated labels" do
     @user.update!(locale: "ru")
     accounts(:investment).entries.create!(

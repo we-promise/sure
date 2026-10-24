@@ -92,6 +92,10 @@ en:
       attachments: Attachments
       exclude: Exclude
       exclude_description: Excluded transactions will be removed from budgeting calculations and reports.
+      auto_excluded_title: Excluded automatically
+      auto_excluded_stale_pending: On %{date} the bank sync excluded this pending transaction because it had not posted within %{days} days.
+      auto_excluded_posted_match: On %{date} the bank sync excluded this pending transaction because its posted version arrived as a separate transaction.
+      auto_excluded_other: On %{date} the bank sync excluded this transaction.
       activity_type: Activity Type
       activity_type_description: Type of investment activity (Buy, Sell, Dividend, etc.). Auto-detected or set manually.
       one_time_title: One-time %{type}

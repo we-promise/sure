@@ -235,6 +235,8 @@ class TransactionsController < ApplicationController
               partial: "transactions/mark_recurring",
               locals: { entry: @entry }
             ) if can_edit_entry? && !@entry.split_child?),
+            # Toggling Exclude by hand ends the sync's explanation.
+            (turbo_stream.remove(dom_id(@entry, :auto_exclusion)) if params[:entry]&.key?(:excluded) && !@entry.auto_exclusion),
             turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",

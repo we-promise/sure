@@ -53,6 +53,21 @@ module TransactionsHelper
     @annotatable_account_ids.include?(account.id)
   end
 
+  # Sentence explaining Entry#auto_exclusion, e.g. "On October 3, 2026 the bank sync excluded …".
+  def auto_exclusion_description(enrichment)
+    metadata = enrichment.metadata || {}
+    date = l(enrichment.updated_at.to_date, format: :long)
+
+    case metadata["reason"]
+    when "stale_pending"
+      t("transactions.show.auto_excluded_stale_pending", date: date, days: metadata["days"])
+    when "posted_match"
+      t("transactions.show.auto_excluded_posted_match", date: date)
+    else
+      t("transactions.show.auto_excluded_other", date: date)
+    end
+  end
+
   # ---- Transaction extra details helpers ----
   # Returns a structured hash describing extra details for a transaction.
   # Input can be a Transaction or an Entry (responds_to :transaction).

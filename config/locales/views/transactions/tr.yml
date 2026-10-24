@@ -315,6 +315,10 @@ tr:
       exclude: Hariç Tut
       exclude_description: Hariç tutulan işlemler bütçe hesaplamalarından ve raporlardan
         çıkarılacaktır.
+      auto_excluded_title: "Otomatik olarak hariç tutuldu"
+      auto_excluded_stale_pending: "%{date} tarihinde banka senkronizasyonu bu bekleyen işlemi %{days} gün içinde kesinleşmediği için hariç tuttu."
+      auto_excluded_posted_match: "%{date} tarihinde banka senkronizasyonu bu bekleyen işlemi, kesinleşmiş hali ayrı bir işlem olarak geldiği için hariç tuttu."
+      auto_excluded_other: "%{date} tarihinde banka senkronizasyonu bu işlemi hariç tuttu."
       keep_both: Hayır, ikisini de tut
       loan_payment: Kredi Ödemesi
       mark_recurring: Yinelenen olarak işaretle
