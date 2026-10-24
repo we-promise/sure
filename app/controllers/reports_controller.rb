@@ -544,6 +544,9 @@ class ReportsController < ApplicationController
       # per foreign disposal.
       Trade.preload_exchange_rates(sell_trades)
 
+      # Whether each was traded again later on its day, in one query too.
+      Trade.preload_same_day_trades(sell_trades)
+
       trades_by_treatment = sell_trades.group_by { |t| t.entry.account.tax_treatment || :taxable }
 
       # Unwrap helper: Trend#value / realized_gain_loss#value are Money objects,
