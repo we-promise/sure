@@ -32,16 +32,22 @@ module Assistant
     Function::GetBillAudit,
     Function::CreateBill,
     Function::UpdateBill,
-    Function::RecordBillPayment
+    Function::RecordBillPayment,
+    # Writes proposals that change nothing until a person approves them, and
+    # nothing in the app lists or approves them yet. Preview until it does.
+    Function::SuggestSecurityClassification
   ].freeze
 
   # Guests may view family configuration but not change it, so these tools are
-  # left out of a guest's registry (chat and MCP alike).
+  # left out of a guest's registry (chat and MCP alike). A classification
+  # proposal replaces the family's pending one for that security, so a guest
+  # could otherwise overwrite a member's.
   FAMILY_CONFIG_FUNCTION_CLASSES = [
     Function::CreateTag,
     Function::UpdateTag,
     Function::CreateCategory,
-    Function::UpdateCategory
+    Function::UpdateCategory,
+    Function::SuggestSecurityClassification
   ].freeze
 
   class << self
