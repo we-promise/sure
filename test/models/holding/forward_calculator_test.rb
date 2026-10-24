@@ -86,6 +86,23 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_holdings(expected, calculated)
   end
 
+  test "one invalid security price does not prevent other holdings from materializing" do
+    bad_security = Security.create!(ticker: "BADPRICE")
+    good_security = Security.create!(ticker: "GOODPRICE")
+    trade_date = 1.day.ago.to_date
+    create_trade(bad_security, qty: 1, date: trade_date, price: 100, account: @account)
+    create_trade(good_security, qty: 1, date: trade_date, price: 200, account: @account)
+
+    bad_price = Security::Price.create!(security: bad_security, date: Date.current, price: 999, currency: "USD")
+    bad_price.update_column(:currency, "")
+    Security::Price.create!(security: good_security, date: Date.current, price: 210, currency: "USD")
+
+    current_holdings = Holding::ForwardCalculator.new(@account).calculate.select { |holding| holding.date == Date.current }
+
+    assert_equal 210, current_holdings.find { |holding| holding.security_id == good_security.id }.price
+    assert_equal 100, current_holdings.find { |holding| holding.security_id == bad_security.id }.price
+  end
+
   # Carries the previous record forward if no holding exists for a date
   # to ensure that net worth historical rollups have a value for every date
   test "uses locf to fill missing holdings" do

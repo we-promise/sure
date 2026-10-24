@@ -1,6 +1,7 @@
 class Security::Price::Importer
   MissingSecurityPriceError = Class.new(StandardError)
   MissingStartPriceError    = Class.new(StandardError)
+  INVALID_CURRENCY_ERROR   = "Provider returned prices with invalid currency".freeze
 
   PROVISIONAL_LOOKBACK_DAYS = 7
 
@@ -22,134 +23,174 @@ class Security::Price::Importer
       return 0
     end
 
-    if provider_prices.empty?
+    if provider_prices.empty? && @invalid_currency_dates.blank?
       Rails.logger.warn("Could not fetch prices for #{security.ticker} between #{start_date} and #{end_date} because provider returned no prices")
       return 0
     end
 
-    prev_price_value = start_price_value
-    prev_currency = prev_price_currency || db_price_currency || "USD"
-
-    # Fallback for holdings that predate the asset's listing on the provider
-    # (e.g. a 2018 BTCEUR trade vs. Binance's 2020-01-03 listing date, or a
-    # 2023 RDDT trade vs. the 2024-03-21 IPO on Yahoo/Twelve Data). We can't
-    # anchor a price on or before start_date, but provider_prices has real
-    # data later in the range — advance fill_start_date to the earliest
-    # available provider date and use that price as the LOCF anchor. Days
-    # before that are intentionally left out of the DB (honest gap) rather
-    # than backfilled from a future price.
-    advanced_first_price_on = nil
-
-    if prev_price_value.blank?
-      # Filter for valid rows BEFORE picking the earliest — otherwise a
-      # single listing-day / halt-day row with a nil or zero price would
-      # cause us to fall through to the MissingStartPriceError bail even
-      # when plenty of valid prices exist later in the window.
-      earliest_provider_price = provider_prices.values
-        .select { |p| p.price.present? && p.price.to_f > 0 }
-        .min_by(&:date)
-
-      if earliest_provider_price
-        Rails.logger.info(
-          "#{security.ticker}: no provider price on or before #{start_date}; " \
-          "advancing gapfill start to earliest valid provider date #{earliest_provider_price.date}"
-        )
-        prev_price_value        = earliest_provider_price.price
-        prev_currency           = earliest_provider_price.currency || prev_currency
-        @fill_start_date        = earliest_provider_price.date
-        advanced_first_price_on = earliest_provider_price.date
-      end
+    # Fetch outside the lock; serialize only the shared price recovery transition.
+    Security.transaction(requires_new: true) do
+      security.lock!
+      @db_prices = nil
+      @legacy_invalid_currency_dates = nil
+      @clamped_start_date = nil
+      @fill_start_date = nil
+      persist_provider_prices
     end
-
-    unless prev_price_value.present?
-      Rails.logger.error("Could not find a start price for #{security.ticker} on or before #{fill_start_date}")
-
-      Sentry.capture_exception(MissingStartPriceError.new("Could not determine start price for ticker")) do |scope|
-        scope.set_tags(security_id: security.id)
-        scope.set_context("security", {
-          id: security.id,
-          start_date: fill_start_date
-        })
-      end
-
-      return 0
-    end
-
-    gapfilled_prices = fill_start_date.upto(end_date).map do |date|
-      db_price             = db_prices[date]
-      db_price_value       = db_price&.price
-      provider_price       = provider_prices[date]
-      provider_price_value = provider_price&.price
-      provider_currency    = provider_price&.currency
-
-      has_provider_price = provider_price_value.present? && provider_price_value.to_f > 0
-      has_db_price = db_price_value.present? && db_price_value.to_f > 0
-      is_provisional = db_price&.provisional
-
-      # Choose price and currency from the same source to avoid mismatches
-      chosen_price, chosen_currency = if clear_cache || is_provisional
-        # For provisional/cache clear: only use provider price, let gap-fill handle missing
-        # This ensures stale DB values don't persist when provider has no weekend data
-        [ provider_price_value, provider_currency ]
-      elsif has_db_price
-        # For non-provisional with valid DB price: preserve existing value (user edits)
-        [ db_price_value, db_price&.currency ]
-      else
-        # Fill gaps with provider data
-        [ provider_price_value, provider_currency ]
-      end
-
-      # Gap-fill using LOCF (last observation carried forward)
-      # Treat nil or zero prices as invalid and use previous price/currency
-      used_locf = false
-      if chosen_price.nil? || chosen_price.to_f <= 0
-        chosen_price = prev_price_value
-        chosen_currency = prev_currency
-        used_locf = true
-      end
-      prev_price_value = chosen_price
-      prev_currency = chosen_currency || prev_currency
-
-      provisional = determine_provisional_status(
-        date: date,
-        has_provider_price: has_provider_price,
-        used_locf: used_locf,
-        existing_provisional: db_price&.provisional
-      )
-
-      {
-        security_id: security.id,
-        date:        date,
-        price:       chosen_price,
-        currency:    chosen_currency || "USD",
-        provisional: provisional
-      }
-    end
-
-    result = upsert_rows(gapfilled_prices)
-
-    # Persist the advanced start date so subsequent syncs can clamp
-    # expected_count and short-circuit via all_prices_exist? instead of
-    # re-iterating the full (start_date..end_date) range every time.
-    #
-    # Update when the column is currently blank, OR when we've discovered
-    # an EARLIER date than the stored one — the latter covers the
-    # clear_cache-driven case where a provider has extended its backward
-    # coverage (e.g. Binance backfilling older BTCEUR history) and we
-    # want subsequent syncs to reflect the new earlier clamp. We never
-    # move the column forward from a previously-discovered earlier value,
-    # since that would silently hide older rows already in the DB.
-    if advanced_first_price_on.present? &&
-       (security.first_provider_price_on.blank? ||
-        advanced_first_price_on < security.first_provider_price_on)
-      security.update_column(:first_provider_price_on, advanced_first_price_on)
-    end
-
-    result
   end
 
   private
     attr_reader :security, :security_provider, :start_date, :end_date, :clear_cache
+
+    # Re-read shared quotes under the security lock and commit recovery atomically.
+    def persist_provider_prices
+      prev_price_value = start_price_value
+      prev_currency = prev_price_currency || db_price_currency || "USD"
+
+      # Fallback for holdings that predate the asset's listing on the provider
+      # (e.g. a 2018 BTCEUR trade vs. Binance's 2020-01-03 listing date, or a
+      # 2023 RDDT trade vs. the 2024-03-21 IPO on Yahoo/Twelve Data). We can't
+      # anchor a price on or before start_date, but provider_prices has real
+      # data later in the range — advance fill_start_date to the earliest
+      # available provider date and use that price as the LOCF anchor. Days
+      # before that are intentionally left out of the DB (honest gap) rather
+      # than backfilled from a future price.
+      advanced_first_price_on = nil
+
+      if prev_price_value.blank?
+        # Filter for valid rows BEFORE picking the earliest — otherwise a
+        # single listing-day / halt-day row with a nil or zero price would
+        # cause us to fall through to the MissingStartPriceError bail even
+        # when plenty of valid prices exist later in the window.
+        earliest_provider_price = provider_prices.values
+          .select { |p| p.price.present? && p.price.to_f > 0 }
+          .min_by(&:date)
+
+        if earliest_provider_price
+          Rails.logger.info(
+            "#{security.ticker}: no provider price on or before #{start_date}; " \
+            "advancing gapfill start to earliest valid provider date #{earliest_provider_price.date}"
+          )
+          prev_price_value        = earliest_provider_price.price
+          prev_currency           = Security::Price.normalized_currency(earliest_provider_price.currency)
+          @fill_start_date        = earliest_provider_price.date
+          advanced_first_price_on = earliest_provider_price.date
+        end
+      end
+
+      unless prev_price_value.present?
+        Rails.logger.error("Could not find a start price for #{security.ticker} on or before #{fill_start_date}")
+
+        Sentry.capture_exception(MissingStartPriceError.new("Could not determine start price for ticker")) do |scope|
+          scope.set_tags(security_id: security.id)
+          scope.set_context("security", {
+            id: security.id,
+            start_date: fill_start_date
+          })
+        end
+
+        return 0
+      end
+
+      gapfilled_prices = fill_start_date.upto(end_date).map do |date|
+        db_price             = db_prices[date]
+        db_price_value       = db_price&.price
+        provider_price       = provider_prices[date]
+        provider_price_value = provider_price&.price
+        provider_currency    = Security::Price.normalized_currency(provider_price&.currency)
+
+        has_provider_price = provider_price_value.present? && provider_price_value.to_f > 0
+        has_db_price = db_price_value.present? && db_price_value.to_f > 0
+        is_provisional = db_price&.provisional || db_price&.currency_retry_generated
+        preserve_authoritative = has_db_price && !is_provisional && (!clear_cache || !has_provider_price)
+
+        # Choose price and currency from the same source to avoid mismatches
+        chosen_price, chosen_currency = if preserve_authoritative
+          [ db_price_value, Security::Price.normalized_currency(db_price.currency) ]
+        elsif clear_cache || is_provisional
+          # For provisional/cache clear: only use provider price, let gap-fill handle missing
+          # This ensures stale DB values don't persist when provider has no weekend data
+          [ provider_price_value, provider_currency ]
+        elsif has_db_price
+          # For non-provisional with valid DB price: preserve existing value (user edits)
+          [ db_price_value, Security::Price.normalized_currency(db_price&.currency) ]
+        else
+          # Fill gaps with provider data
+          [ provider_price_value, provider_currency ]
+        end
+
+        # Gap-fill using LOCF (last observation carried forward)
+        # Treat nil or zero prices as invalid and use previous price/currency
+        used_locf = false
+        if chosen_price.nil? || chosen_price.to_f <= 0
+          chosen_price = prev_price_value
+          chosen_currency = prev_currency
+          used_locf = true
+        end
+        prev_price_value = chosen_price
+        prev_currency = chosen_currency || prev_currency
+
+        provisional = determine_provisional_status(
+          date: date,
+          has_provider_price: has_provider_price,
+          used_locf: used_locf,
+          existing_provisional: db_price&.provisional
+        )
+
+        retry_required = !has_provider_price &&
+          (Array(@invalid_currency_dates).include?(date) ||
+           legacy_invalid_currency_dates.include?(date) || db_price&.currency_retry_required == true)
+
+        {
+          security_id: security.id,
+          date:        date,
+          price:       chosen_price,
+          currency:    chosen_currency,
+          provisional: provisional,
+          currency_retry_required: retry_required,
+          currency_retry_generated: retry_required && !preserve_authoritative
+        }
+      end
+
+      result = upsert_rows(gapfilled_prices)
+      remove_recovered_fallbacks(gapfilled_prices)
+
+      # Persist the advanced start date so subsequent syncs can clamp
+      # expected_count and short-circuit via all_prices_exist? instead of
+      # re-iterating the full (start_date..end_date) range every time.
+      #
+      # Update when the column is currently blank, OR when we've discovered
+      # an EARLIER date than the stored one — the latter covers the
+      # clear_cache-driven case where a provider has extended its backward
+      # coverage (e.g. Binance backfilling older BTCEUR history) and we
+      # want subsequent syncs to reflect the new earlier clamp. We never
+      # move the column forward from a previously-discovered earlier value,
+      # since that would silently hide older rows already in the DB.
+      if advanced_first_price_on.present? &&
+         !invalid_currency_price_on_or_before?(advanced_first_price_on) &&
+         (security.first_provider_price_on.blank? ||
+          advanced_first_price_on < security.first_provider_price_on)
+        security.update_column(:first_provider_price_on, advanced_first_price_on)
+      end
+
+      result
+    end
+
+
+    # Remove only generated retry fallbacks replaced by real persisted quotes.
+    def remove_recovered_fallbacks(gapfilled_prices)
+      recovered_quotes = gapfilled_prices.filter_map do |row|
+        price = provider_prices[row[:date]]
+        row if price&.price.present? && price.price.to_f > 0 &&
+          row[:price] == price.price && row[:currency] == Security::Price.normalized_currency(price.currency)
+      end
+      recovered_quotes.group_by { |row| row[:currency] }.each do |currency, rows|
+        # A replacement quote may use another currency. Remove only generated
+        # retry fallbacks so they cannot compete with the recovered quote.
+        Security::Price.requiring_currency_retry.where(currency_retry_generated: true).where(security: security, date: rows.map { |row| row[:date] })
+          .where.not(currency: currency).delete_all
+      end
+    end
 
     # The start date sent to the provider API, clamped to the provider's max
     # lookback window when applicable. Computed independently of provider_prices
@@ -172,6 +213,7 @@ class Security::Price::Importer
       end
     end
 
+    # Normalize accepted quotes and track rejected dates within the provider fetch window.
     def provider_prices
       @provider_prices ||= begin
         response = security_provider.fetch_security_prices(
@@ -183,7 +225,32 @@ class Security::Price::Importer
 
         if response.success?
           Security.clear_plan_restriction(security.id, provider: security_provider.class.name.demodulize)
-          response.data.index_by(&:date)
+          valid_prices, invalid_prices = response.data.partition do |price|
+            Security::Price.normalized_currency(price.currency).present?
+          end
+          @invalid_currency_dates = invalid_prices.filter_map(&:date)
+
+          if invalid_prices.any?
+            if @invalid_currency_dates.any? { |date| date.between?(start_date, end_date) }
+              @provider_error = INVALID_CURRENCY_ERROR
+            end
+            DebugLogEntry.capture(
+              category: "security_price_fetch",
+              level: "warn",
+              message: "Ignored provider prices with invalid currency",
+              source: self.class.name,
+              provider: security_provider,
+              metadata: {
+                security_id: security.id,
+                ticker: security.ticker,
+                count: invalid_prices.size,
+                dates: invalid_prices.map(&:date).first(10),
+                currencies: invalid_prices.map(&:currency).uniq
+              }
+            )
+          end
+
+          valid_prices.index_by(&:date)
         else
           error_message = response.error.message
           Rails.logger.warn("#{security_provider.class.name} could not fetch prices for #{security.ticker} between #{provider_fetch_start_date} and #{end_date}. Provider error: #{error_message}")
@@ -217,29 +284,33 @@ class Security::Price::Importer
       end
     end
 
+    # Load recognized-currency prices so legacy malformed rows cannot anchor gap filling.
     def db_prices
-      @db_prices ||= Security::Price.where(security_id: security.id, date: start_date..end_date)
-                                    .order(:date)
+      @db_prices ||= Security::Price.with_known_currency.where(security_id: security.id, date: start_date..end_date)
+                                    .order(:date, currency_retry_generated: :desc)
                                     .to_a
                                     .index_by(&:date)
     end
 
+    # Require usable prices and no unresolved currency retries across the requested range.
     def all_prices_exist?
+      return false if Security::Price.requiring_currency_retry.where(security: security, date: start_date..end_date).exists?
       return false if has_refetchable_provisional_prices?
 
       # Count only prices in the clamped range so pre-listing / pre-IPO gaps
       # don't perpetually trip the "expected_count mismatch" re-sync. Query
       # directly rather than via db_prices (which stays at the full range to
       # preserve any user-entered rows pre-listing).
-      persisted_count = Security::Price
+      persisted_count = Security::Price.with_known_currency
         .where(security_id: security.id, date: clamped_start_date..end_date)
-        .count
+        .distinct.count(:date)
 
       persisted_count == expected_count
     end
 
+    # Check only recognized-currency provisional quotes within the retry window.
     def has_refetchable_provisional_prices?
-      Security::Price.where(security_id: security.id, date: start_date..end_date)
+      Security::Price.with_known_currency.where(security_id: security.id, date: start_date..end_date)
                      .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
                      .exists?
     end
@@ -271,13 +342,13 @@ class Security::Price::Importer
     def effective_start_date
       return start_date if clear_cache
 
-      refetchable_dates = Security::Price.where(security_id: security.id, date: clamped_start_date..end_date)
+      refetchable_dates = Security::Price.with_known_currency.where(security_id: security.id, date: clamped_start_date..end_date)
                                          .refetchable_provisional(lookback_days: PROVISIONAL_LOOKBACK_DAYS)
                                          .pluck(:date)
                                          .to_set
 
       (clamped_start_date..end_date).detect do |d|
-        !db_prices.key?(d) || refetchable_dates.include?(d)
+        !db_prices.key?(d) || refetchable_dates.include?(d) || db_prices[d].currency_retry_required
       end || end_date
     end
 
@@ -289,6 +360,7 @@ class Security::Price::Importer
       @fill_start_date ||= [ provider_fetch_start_date, effective_start_date ].max
     end
 
+    # Choose a recognized provider or stored quote as the carry-forward anchor.
     def start_price_value
       # When processing full range (first sync), use original behavior
       if fill_start_date == start_date
@@ -315,12 +387,12 @@ class Security::Price::Importer
 
       # Fall back to most recent DB price before cutoff
       currency = prev_price_currency || db_price_currency
-      Security::Price
+      Security::Price.with_known_currency
         .where(security_id: security.id)
         .where("date < ?", cutoff_date)
         .where("price > 0")
         .where(provisional: false)
-        .then { |q| currency.present? ? q.where(currency: currency) : q }
+        .then { |q| currency.present? ? q.in_currency(currency) : q }
         .order(date: :desc)
         .limit(1)
         .pick(:price)
@@ -361,12 +433,30 @@ class Security::Price::Importer
       total_upsert_count
     end
 
+    # Return a recognized currency from the persisted prices used by this import.
     def db_price_currency
-      db_prices.values.first&.currency
+      Security::Price.normalized_currency(db_prices.values.first&.currency)
     end
 
+    # Use the first accepted provider quote currency as the gap-fill anchor.
     def prev_price_currency
-      @prev_price_currency ||= provider_prices.values.first&.currency
+      @prev_price_currency ||= Security::Price.normalized_currency(provider_prices.values.first&.currency)
+    end
+
+    # An invalid earlier quote is not evidence that the instrument was unlisted.
+    # Keep retrying that date instead of clamping future syncs past it.
+    def invalid_currency_price_on_or_before?(date)
+      return true if Array(@invalid_currency_dates).any? { |invalid_date| invalid_date <= date }
+
+      Security::Price.with_unknown_currency
+                     .where(security_id: security.id, date: [ provider_fetch_start_date, start_date ].min..date)
+                     .exists?
+    end
+
+    # Keep malformed legacy dates retryable until a real quote has replaced their fallback.
+    def legacy_invalid_currency_dates
+      @legacy_invalid_currency_dates ||= Security::Price.with_unrecovered_currency
+        .where(security: security, date: start_date..end_date).pluck(:date).to_set
     end
 
     # Clamp to today (EST) so we never call our price API for a future date (our API is in EST/EDT timezone)

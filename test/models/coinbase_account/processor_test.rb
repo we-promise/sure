@@ -102,4 +102,17 @@ class CoinbaseAccount::ProcessorTest < ActiveSupport::TestCase
     holding = @account.holdings.find_by!(security: @security, date: Date.current)
     assert_equal quantity, holding.qty
   end
+
+  test "fallback price ignores a newer legacy row with invalid currency" do
+    @coinbase_account.update!(raw_payload: {})
+    CoinbaseItem.any_instance.stubs(:coinbase_provider).returns(nil)
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:resolve_security).returns(@security)
+    Security::Price.create!(security: @security, date: 1.day.ago.to_date, price: 100, currency: "USD")
+    bad_price = Security::Price.create!(security: @security, date: Date.current, price: 999, currency: "USD")
+    bad_price.update_column(:currency, "")
+
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    assert_equal 50, @account.reload.balance
+  end
 end
