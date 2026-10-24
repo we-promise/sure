@@ -574,11 +574,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.decimal "apr", precision: 10, scale: 2
     t.decimal "available_credit", precision: 10, scale: 2
     t.datetime "created_at", null: false
+    t.integer "due_day"
     t.date "expiration_date"
     t.jsonb "locked_attributes", default: {}
     t.decimal "minimum_payment", precision: 10, scale: 2
+    t.integer "statement_close_day"
     t.string "subtype"
     t.datetime "updated_at", null: false
+    t.check_constraint "due_day >= 1 AND due_day <= 31", name: "chk_credit_cards_due_day"
+    t.check_constraint "statement_close_day >= 1 AND statement_close_day <= 31", name: "chk_credit_cards_statement_close_day"
   end
 
   create_table "cryptos", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
