@@ -42,6 +42,13 @@ namespace :security do
     # Note: otp_backup_codes excluded - it's a PostgreSQL array column incompatible with AR encryption
     results[:users] = backfill_model(User, %i[otp_secret email unconfirmed_email first_name last_name], batch_size, dry_run)
 
+    # IBAN fields. Account and Merchant IBANs are written in plaintext while
+    # encryption is not configured; these lines encrypt those rows once it
+    # is. enable_banking_accounts.iban is added to its existing entry below,
+    # since it stored plaintext before it was encrypted at all.
+    results[:accounts] = backfill_model(Account, %i[iban], batch_size, dry_run)
+    results[:merchants] = backfill_model(Merchant, %i[iban], batch_size, dry_run)
+
     # Invitation tokens and email
     results[:invitations] = backfill_model(Invitation, %i[token email], batch_size, dry_run)
 
@@ -64,7 +71,7 @@ namespace :security do
     results[:plaid_accounts] = backfill_model(PlaidAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload], batch_size, dry_run)
     results[:simplefin_accounts] = backfill_model(SimplefinAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
     results[:lunchflow_accounts] = backfill_model(LunchflowAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload iban], batch_size, dry_run)
     results[:snaptrade_accounts] = backfill_model(SnaptradeAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload account_number], batch_size, dry_run)
     results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
@@ -112,6 +119,12 @@ namespace :security do
           # validations/callbacks that might read other encrypted fields)
           encryptor = model_class.new
           plaintext_values.each do |field, value|
+            # IBANs written before encryption was configured (and every legacy
+            # EnableBankingAccount#iban) may be unnormalized plaintext.
+            # Writing bypasses validations/callbacks as above, so normalize
+            # here the way the normalize_iban callback would; a formatted or
+            # lowercase legacy value then compares equal to new rows.
+            value = IbanNormalizable.normalize(value) if field == :iban
             encryptor.send("#{field}=", value)
           end
 

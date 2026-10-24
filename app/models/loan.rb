@@ -487,6 +487,10 @@ class Loan < ApplicationRecord
   end
 
   class << self
+    def supports_iban?
+      true
+    end
+
     def color
       "#D444F1"
     end

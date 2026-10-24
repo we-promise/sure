@@ -8,6 +8,10 @@ class FamilyMerchant < Merchant
 
   validates :color, presence: true, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }
   validates :name, uniqueness: { scope: :family }
+  # Mirrors the DB-level partial unique index (family_id, iban), so a
+  # duplicate IBAN is a validation error on the form instead of a
+  # RecordNotUnique.
+  validates :iban, uniqueness: { scope: :family }, allow_nil: true
 
   # Reuses a family's existing merchant of this name instead of raising on the
   # uniqueness validation, and survives a concurrent create for the same name
@@ -25,7 +29,13 @@ class FamilyMerchant < Merchant
       [ merchant, true ]
     rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
       raise if e.is_a?(ActiveRecord::RecordInvalid) && !e.record.errors.of_kind?(:name, :taken)
-      [ family.merchants.find_by!(name: name), false ]
+      # Another unique index (e.g. family_id + iban) can raise the same
+      # RecordNotUnique; only a same-name row means a concurrent create won.
+      begin
+        [ family.merchants.find_by!(name: name), false ]
+      rescue ActiveRecord::RecordNotFound
+        raise e
+      end
     end
   end
 

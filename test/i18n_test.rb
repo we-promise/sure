@@ -151,6 +151,26 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
+  # The IBAN form strings sit next to the institution domain and merchant
+  # website strings, so every locale that translates those translates them too.
+  def test_iban_form_keys_exist_wherever_their_sibling_keys_do
+    {
+      "accounts" => [ "institution_domain_label", %w[iban_label iban_placeholder iban_set_placeholder iban_remove_label] ],
+      "merchants" => [ "website_hint", %w[iban_placeholder iban_set_placeholder iban_hint iban_remove_label] ]
+    }.each do |dir, (sibling, keys)|
+      checked = 0
+      Dir[Rails.root.join("config/locales/views/#{dir}/*.yml")].each do |path|
+        parent = hash_containing_key(YAML.load_file(path, aliases: true), sibling)
+        next unless parent
+
+        checked += 1
+        keys.each { |key| assert parent[key].present?, "#{key} missing next to #{sibling} in #{path}" }
+      end
+      # A renamed sibling key would otherwise skip every file and pass.
+      assert checked.positive?, "no #{dir} locale file defines #{sibling}"
+    end
+  end
+
   private
     # { "months_saved.one" => "...", ... } for UI.account.chart.loan in one locale.
     def loan_chart_leaves(locale)
@@ -164,6 +184,17 @@ class I18nTest < ActiveSupport::TestCase
         path = [ prefix, key ].compact.join(".")
         value.is_a?(Hash) ? leaves.merge!(flatten_leaves(value, path)) : leaves[path] = value
       end
+    end
+
+    def hash_containing_key(node, key)
+      return unless node.is_a?(Hash)
+      return node if node.key?(key)
+
+      node.each_value do |child|
+        found = hash_containing_key(child, key)
+        return found if found
+      end
+      nil
     end
 
     def german_locale_paths

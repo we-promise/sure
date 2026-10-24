@@ -60,6 +60,11 @@ class Family::DataImporter
     "Category" => "categories",
     "Tag" => "tags",
     "Merchant" => "merchants",
+    # An imported IBAN another account (same currency) or merchant of the
+    # family already holds is dropped, as is a kept account IBAN that a
+    # currency change makes taken; the record itself is still imported.
+    "AccountIban" => "account_ibans",
+    "MerchantIban" => "merchant_ibans",
     "ProviderMerchant" => "provider_merchants",
     "RecurringTransaction" => "recurring_transactions",
     "RecurrenceRule" => "recurrence_rules",
@@ -330,6 +335,13 @@ class Family::DataImporter
           notes: data["notes"],
           status: importable_account_status(data["status"])
         )
+        # Older or hand-built files omit iban; don't clear an existing one.
+        # Types without an IBAN (vehicle, property, ...) ignore it, like
+        # Account#clear_unsupported_iban does on every save. A currency change
+        # re-checks the kept IBAN, which may be taken in the new currency.
+        if account.supports_iban? && (data.key?("iban") || account.currency_changed?)
+          assign_imported_iban(account, data.fetch("iban", account.iban), @family.accounts.where(currency: account.currency), "AccountIban")
+        end
 
         account.save!
 
@@ -349,6 +361,23 @@ class Family::DataImporter
         @created_accounts << account if created
         increment_summary("Account", created ? :created : :updated)
       end
+    end
+
+    # Leaves the record's IBAN unchanged when another record in +taken_scope+
+    # already holds the imported one, so the uniqueness validation cannot
+    # abort the whole import. The kept IBAN is cleared if it is taken there
+    # too, as after a currency change.
+    def assign_imported_iban(record, raw_iban, taken_scope, record_type)
+      iban = IbanNormalizable.normalize(raw_iban)
+      taken = ->(value) { value.present? && taken_scope.where.not(id: record.id).exists?(iban: value) }
+
+      unless taken.call(iban)
+        record.iban = iban
+        return
+      end
+
+      increment_summary(record_type, :skipped)
+      record.iban = nil if taken.call(record.iban)
     end
 
     def importable_account_status(status)
@@ -493,8 +522,9 @@ class Family::DataImporter
           color: data["color"],
           logo_url: data["logo_url"]
         )
-        # Older or hand-built files omit website_url; don't clear an existing one.
+        # Older or hand-built files omit website_url and iban; don't clear existing ones.
         merchant.website_url = data["website_url"] if data.key?("website_url")
+        assign_imported_iban(merchant, data["iban"], @family.merchants, "MerchantIban") if data.key?("iban")
         merchant.save!
         map_source!(:merchants, old_id, merchant)
         increment_summary("Merchant", created ? :created : :updated)
