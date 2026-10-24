@@ -43,3 +43,7 @@
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile*
+
+# Local financial source files must never enter an image build context.
+/imports/
+/compose.local*.yml

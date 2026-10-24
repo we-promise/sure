@@ -100,6 +100,12 @@
                   "data-auto-submit-form-target": "auto" %>
       <% end %>
     <% end %>
+    <% if (icost_record = @transfer.outflow_transaction.entry.icost_record) && icost_record_visible?(icost_record) %>
+      <% dialog.with_section(title: t("icost_imports.transaction_details"), open: true) do %>
+        <%= render "icost_records/details", record: icost_record %>
+      <% end %>
+    <% end %>
+
     <% dialog.with_section(title: t(".settings")) do %>
       <div class="pb-4">
         <% if @can_mark_as_recurring_transfer %>

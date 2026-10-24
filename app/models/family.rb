@@ -46,6 +46,7 @@ class Family < ApplicationRecord
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
 
+  has_many :icost_imports, dependent: :destroy
   has_many :imports, dependent: :destroy
   has_many :import_sessions, dependent: :destroy
   has_many :import_source_mappings, dependent: :destroy

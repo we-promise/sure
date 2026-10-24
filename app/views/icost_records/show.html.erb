@@ -1,0 +1,35 @@
+<div class="ph-no-capture privacy-sensitive space-y-4" data-icost-page>
+  <% content_for :page_title, t("icost_imports.record_title", row: @record.source_row) %>
+  <% content_for :page_actions do %>
+    <%= render DS::Link.new(text: t("icost_imports.preview"), href: icost_import_path(@import), variant: :outline) %>
+  <% end %>
+  <% if @record.issues.any? %>
+    <%= render DS::Alert.new(title: t("icost_imports.review_required"), variant: :warning) do %>
+      <ul class="list-disc pl-5 space-y-1">
+        <% @record.issues.each do |issue| %>
+          <li><%= icost_issue(issue) %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  <% end %>
+  <%= render DS::Card.new do %>
+    <%= render "icost_records/details", record: @record %>
+  <% end %>
+  <% unless @record.status == "published" || Current.user.guest? %>
+    <%= render DS::Card.new(class: "space-y-4") do %>
+      <h2 class="text-lg font-medium text-primary"><%= t("icost_imports.review") %></h2>
+      <p class="text-sm text-secondary"><%= t("icost_imports.review_help") %></p>
+      <%= styled_form_with url: icost_import_record_path(@import, @record), method: :patch, scope: :resolution, class: "space-y-4" do |form| %>
+        <% if icost_account_resolution?(@record) %>
+          <%= form.select :account_id, @accounts.map { |account| [account.name, account.id] }, { include_blank: t("icost_imports.choose_account"), label: t("icost_imports.fields.resolved_account"), selected: @record.resolution["account_id"] }, { required: true } %>
+        <% end %>
+        <% if icost_transfer_resolution?(@record) %>
+          <%= form.select :from_account_id, @accounts.map { |account| [account.name, account.id] }, { include_blank: t("icost_imports.choose_account"), label: t("icost_imports.fields.from_account"), selected: @record.resolution["from_account_id"] }, { required: true } %>
+          <%= form.select :to_account_id, @accounts.map { |account| [account.name, account.id] }, { include_blank: t("icost_imports.choose_account"), label: t("icost_imports.fields.to_account"), selected: @record.resolution["to_account_id"] }, { required: true } %>
+        <% end %>
+        <%= form.text_area :review_note, label: t("icost_imports.fields.review_note"), value: @record.review_note, rows: 4 %>
+        <%= render DS::Button.new(text: t("icost_imports.save_review"), type: :submit) %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

@@ -77,6 +77,13 @@ module Family::AutoTransferMatchable
     end.uniq
     transactions_by_id = Transaction.includes(entry: :account).where(id: transaction_ids).index_by(&:id)
 
+    # iCost explicitly labels ordinary income/expenses. Coincidental amounts
+    # must not reinterpret that source fact as an inferred transfer.
+    explicit_icost_entry_ids = IcostRecord.where(
+      entry_id: transactions_by_id.values.map { |transaction| transaction.entry.id },
+      transaction_type: %w[支出 收入]
+    ).pluck(:entry_id).to_set
+
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
     investment_category = nil
@@ -86,6 +93,10 @@ module Family::AutoTransferMatchable
       candidates_scope.each do |match|
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
+
+        next if [ match.inflow_transaction_id, match.outflow_transaction_id ].any? do |id|
+          explicit_icost_entry_ids.include?(transactions_by_id.fetch(id).entry.id)
+        end
 
         # Skip this candidate when the transfer for this exact pair was not created
         # (a concurrent sync claimed one of the transactions for a different pairing);

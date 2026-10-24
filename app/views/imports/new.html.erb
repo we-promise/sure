@@ -2,6 +2,9 @@
   <% dialog.with_header(title: t(".title"), subtitle: t(".description")) %>
 
   <% dialog.with_body do %>
+    <div class="mb-4">
+      <%= render DS::Link.new(text: t("icost_imports.new_import"), href: new_icost_import_path, icon: "file-spreadsheet", variant: :outline, frame: "_top") %>
+    </div>
     <% has_accounts = accessible_accounts.any? %>
     <% requires_account_message = t(".requires_account") %>
 

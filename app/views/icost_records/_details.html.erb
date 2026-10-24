@@ -1,0 +1,35 @@
+<div class="space-y-4 ph-no-capture privacy-sensitive" data-icost-details>
+  <dl class="space-y-2">
+    <%= render DS::DetailRow.new(label: t("icost_imports.fields.status"), value: icost_status(record)) %>
+    <% icost_structured_fields(record).each do |label, value| %>
+      <%= render DS::DetailRow.new(label: label, value: value, value_class: "privacy-sensitive whitespace-pre-wrap") %>
+    <% end %>
+  </dl>
+  <%= render DS::Disclosure.new(title: t("icost_imports.location"), open: true) do %>
+    <div class="space-y-3" data-icost-location>
+      <dl class="space-y-2">
+        <% %w[location_text latitude longitude coordinate_system].each do |field| %>
+          <%= render DS::DetailRow.new(label: t("icost_imports.fields.#{field}"), value: field == "coordinate_system" && record.coordinate_system == "unknown" ? t("icost_imports.unknown_coordinate_system") : icost_value(record.public_send(field)), value_class: "privacy-sensitive") %>
+        <% end %>
+      </dl>
+      <p class="text-xs text-secondary"><%= t("icost_imports.location_help") %></p>
+    </div>
+  <% end %>
+  <%= render DS::Disclosure.new(title: t("icost_imports.source")) do %>
+    <dl class="space-y-2">
+      <% %w[source_row source_id row_sha256].each do |field| %>
+        <%= render DS::DetailRow.new(label: t("icost_imports.fields.#{field}"), value: record.public_send(field).to_s) %>
+      <% end %>
+      <%= render DS::DetailRow.new(label: t("icost_imports.fields.review_note"), value: icost_value(record.review_note)) %>
+      <%= render DS::DetailRow.new(label: t("icost_imports.fields.resolution"), value: icost_value(record.resolution)) %>
+    </dl>
+    <p class="mt-3 text-xs text-secondary"><%= t("icost_imports.source_help") %></p>
+  <% end %>
+  <%= render DS::Disclosure.new(title: t("icost_imports.raw_fields")) do %>
+    <dl class="space-y-2" data-icost-raw-fields>
+      <% icost_source_fields(record).each do |label, value| %>
+        <%= render DS::DetailRow.new(label: label, value: value, value_class: "privacy-sensitive whitespace-pre-wrap") %>
+      <% end %>
+    </dl>
+  <% end %>
+</div>

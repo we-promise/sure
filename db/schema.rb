@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1231,6 +1231,66 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_ibkr_items_on_family_id"
     t.index ["status"], name: "index_ibkr_items_on_status"
+  end
+
+  create_table "icost_imports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "file_sha256", null: false
+    t.string "filename", null: false
+    t.jsonb "headers", default: [], null: false
+    t.string "sheet_name", null: false
+    t.binary "source_bytes", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["family_id"], name: "index_icost_imports_on_family_id"
+    t.index ["user_id", "file_sha256"], name: "index_icost_imports_on_user_id_and_file_sha256", unique: true
+    t.index ["user_id"], name: "index_icost_imports_on_user_id"
+  end
+
+  create_table "icost_records", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_name"
+    t.decimal "amount"
+    t.string "book_name"
+    t.jsonb "category_path", default: [], null: false
+    t.string "coordinate_system", default: "unknown", null: false
+    t.uuid "counterpart_entry_id"
+    t.string "counterparty_name"
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "discount_amount"
+    t.uuid "entry_id"
+    t.uuid "family_id", null: false
+    t.decimal "fee_amount"
+    t.uuid "icost_import_id", null: false
+    t.jsonb "image_references", default: {}, null: false
+    t.jsonb "issues", default: [], null: false
+    t.decimal "latitude"
+    t.text "location_text"
+    t.decimal "longitude"
+    t.text "note"
+    t.jsonb "raw_fields", default: {}, null: false
+    t.string "recorded_at_text"
+    t.decimal "refund_amount"
+    t.jsonb "resolution", default: {}, null: false
+    t.text "review_note"
+    t.string "row_sha256", null: false
+    t.string "source_id", null: false
+    t.integer "source_row", null: false
+    t.jsonb "source_values", default: [], null: false
+    t.string "status", default: "needs_review", null: false
+    t.jsonb "tags", default: [], null: false
+    t.string "transaction_type"
+    t.jsonb "unknown_fields", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["counterpart_entry_id"], name: "index_icost_records_on_counterpart_entry_id", unique: true
+    t.index ["entry_id"], name: "index_icost_records_on_entry_id", unique: true
+    t.index ["family_id", "row_sha256"], name: "index_icost_records_on_family_id_and_row_sha256"
+    t.index ["family_id", "source_id"], name: "index_icost_records_on_family_id_and_source_id", unique: true
+    t.index ["family_id"], name: "index_icost_records_on_family_id"
+    t.index ["icost_import_id", "status"], name: "index_icost_records_on_icost_import_id_and_status"
+    t.index ["icost_import_id"], name: "index_icost_records_on_icost_import_id"
+    t.check_constraint "status::text = ANY (ARRAY['ready'::character varying, 'needs_review'::character varying, 'published'::character varying]::text[])", name: "icost_records_status"
   end
 
   create_table "impersonation_session_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3009,6 +3069,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
   add_foreign_key "holdings", "securities", column: "provider_security_id"
   add_foreign_key "ibkr_accounts", "ibkr_items"
   add_foreign_key "ibkr_items", "families"
+  add_foreign_key "icost_imports", "families"
+  add_foreign_key "icost_imports", "users"
+  add_foreign_key "icost_records", "entries", column: "counterpart_entry_id", on_delete: :nullify
+  add_foreign_key "icost_records", "entries", on_delete: :nullify
+  add_foreign_key "icost_records", "families"
+  add_foreign_key "icost_records", "icost_imports"
   add_foreign_key "impersonation_session_logs", "impersonation_sessions"
   add_foreign_key "impersonation_sessions", "users", column: "impersonated_id"
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"

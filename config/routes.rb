@@ -2,6 +2,11 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :icost_imports, only: %i[index new create show] do
+    post :publish, on: :member
+    resources :records, controller: "icost_records", only: %i[show update]
+  end
+
   resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts

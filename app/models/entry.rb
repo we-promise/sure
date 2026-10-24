@@ -8,6 +8,7 @@ class Entry < ApplicationRecord
 
   monetize :amount
 
+  has_one :icost_record, dependent: :nullify
   belongs_to :account
   belongs_to :transfer, optional: true
   belongs_to :import, optional: true
