@@ -39,6 +39,15 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_match(/rails\/active_storage\/disk/, response.header["Location"])
   end
 
+  test "protected redirects are not cacheable" do
+    sign_in @user_a
+
+    get rails_blob_path(@statement_a.original_file)
+
+    assert_response :redirect
+    assert_equal "no-store", response.headers["Cache-Control"]
+  end
+
   test "disk service urls require authentication" do
     sign_in @user_a
 

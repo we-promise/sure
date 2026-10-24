@@ -40,7 +40,7 @@ class AccountStatement::AccountMatcher
       excluded = Array.wrap(exclude_account_ids).compact
 
       candidates = family.accounts.visible.to_a.filter_map do |account|
-        next if excluded.include?(account.id)
+        next if excluded.include?(account.id) || !account.supports_statements?
 
         confidence = confidence_for(
           account,
