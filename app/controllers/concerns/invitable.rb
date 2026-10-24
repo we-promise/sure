@@ -2,10 +2,14 @@ module Invitable
   extend ActiveSupport::Concern
 
   included do
-    helper_method :invite_code_required?
+    helper_method :invite_code_required?, :signup_closed?
   end
 
   private
+    def signup_closed?
+      self_hosted? && Setting.onboarding_state == "closed"
+    end
+
     def invite_code_required?
       return false if @invitation.present?
       if self_hosted?
