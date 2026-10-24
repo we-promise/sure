@@ -40,6 +40,26 @@ class ExchangeRatePairTest < ActiveSupport::TestCase
     end
   end
 
+  test "record_direct_quote flags the pair for the current provider" do
+    ExchangeRatePair.delete_all
+
+    ExchangeRatePair.record_direct_quote(from: "KZT", to: "RUB", provider_name: "yahoo_finance")
+
+    pair = ExchangeRatePair.find_by!(from_currency: "KZT", to_currency: "RUB")
+    assert pair.quoted_directly?
+    assert_equal "yahoo_finance", pair.provider_name
+  end
+
+  test "for_pair forgets a direct quote when the provider changes" do
+    ExchangeRatePair.delete_all
+    ExchangeRatePair.create!(from_currency: "KZT", to_currency: "RUB", quoted_directly: true, provider_name: "twelve_data")
+
+    refreshed = ExchangeRatePair.for_pair(from: "KZT", to: "RUB", provider_name: "yahoo_finance")
+
+    assert_not refreshed.quoted_directly?
+    assert_equal "yahoo_finance", refreshed.provider_name
+  end
+
   test "record_first_provider_rate_on sets date on NULL" do
     ExchangeRatePair.delete_all
     ExchangeRatePair.for_pair(from: "USD", to: "EUR")

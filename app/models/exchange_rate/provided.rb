@@ -30,6 +30,7 @@ module ExchangeRate::Provided
 
       response = provider.fetch_exchange_rate(from: from, to: to, date: date)
       rate = if response.success?
+        ExchangeRatePair.record_direct_quote(from: from, to: to)
         response.data
       else
         # The provider has no such pair, but it may still quote both USD legs.
