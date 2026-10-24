@@ -43,10 +43,12 @@ class Provider::Anthropic::ReceiptExtractor
     response = client.messages.create(
       model: model,
       max_tokens: max_tokens,
-      system_: instructions,
+      system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),
       messages: [ { role: "user", content: content } ],
       tools: [ output_tool ],
-      tool_choice: { type: "tool", name: TOOL_NAME, disable_parallel_tool_use: true }
+      # Models that reject a forced tool_choice get `auto`; extract_tool_input
+      # still raises if the model answers without calling the tool.
+      tool_choice: Provider::Anthropic.structured_output_tool_choice(model, TOOL_NAME)
     )
 
     # The call is billed even when its tool input cannot be parsed, so usage
