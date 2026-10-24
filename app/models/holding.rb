@@ -176,21 +176,7 @@ class Holding < ApplicationRecord
           merged_qty = existing.qty + holding.qty
           merged_amount = existing.amount + holding.amount
 
-          # Weighted average cost basis when both rows hold units. A negative
-          # row is units gone, not units bought, so it adds no cost: when only
-          # one side holds units, the merged row keeps that side's basis, as a
-          # sale leaves the per-share basis unchanged.
-          merged_cost_basis = if !merged_qty.positive?
-            existing.cost_basis
-          elsif existing.qty.positive? && holding.qty.positive?
-            if existing.cost_basis.present? && holding.cost_basis.present?
-              ((existing.cost_basis * existing.qty) + (holding.cost_basis * holding.qty)) / merged_qty
-            else
-              existing.cost_basis # Keep existing if we can't calculate weighted average
-            end
-          else
-            (existing.qty.positive? ? existing : holding).cost_basis
-          end
+          merged_basis = merged_cost_basis_attrs(existing, holding, merged_qty)
 
           # amount / qty, as the calculators write amount = qty x price with
           # a positive price; that holds for a negative merged row too. Two
@@ -212,9 +198,8 @@ class Holding < ApplicationRecord
           merge_attrs = {
             qty: merged_qty,
             amount: merged_amount,
-            price: merged_price,
-            cost_basis: merged_cost_basis
-          }
+            price: merged_price
+          }.merge(merged_basis)
           merge_attrs[:external_id] ||= holding.external_id if existing.external_id.blank? && holding.external_id.present?
           merge_attrs[:provider_security_id] ||= holding.provider_security_id || old_security.id if existing.provider_security_id.blank?
           merge_attrs[:account_provider_id] ||= holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
@@ -312,6 +297,31 @@ class Holding < ApplicationRecord
   end
 
   private
+    # The cost basis columns for a remap merge of `moved` into `existing`.
+    # The merged figure is made of the rows that hold units: a negative row
+    # is units gone, not units bought, so it adds no cost, as a sale leaves
+    # the per-share basis unchanged, and a lock on it is dropped with it.
+    # Both holding units: the weighted blend. A figure the user locked on
+    # either of those rows locks the result, so the next sync keeps it;
+    # otherwise the result keeps the source of the target, or of the moved
+    # row when the target holds none. If any of them has no known basis (an
+    # unlocked 0 is none, as in #known_cost_basis), the merged basis is
+    # unknown and unlocked: never state a cost for units nobody costed. A
+    # merge that leaves no units held keeps the target's basis.
+    def merged_cost_basis_attrs(existing, moved, merged_qty)
+      return {} unless merged_qty.positive?
+
+      held = [ existing, moved ].select { |row| row.qty.positive? }
+      return { cost_basis: nil, cost_basis_source: nil, cost_basis_locked: false } if held.any? { |row| row.known_cost_basis.nil? }
+
+      locked = held.any?(&:cost_basis_locked?)
+      {
+        cost_basis: held.sum { |row| row.known_cost_basis * row.qty } / held.sum(&:qty),
+        cost_basis_source: locked ? "manual" : held.first.cost_basis_source,
+        cost_basis_locked: locked
+      }
+    end
+
     def amount_in_account_currency
       return amount if currency == account.currency
 
