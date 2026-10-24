@@ -1,6 +1,10 @@
 class FamilyMerchantsController < ApplicationController
   before_action :require_non_guest!, except: %i[index]
   before_action :set_merchant, only: %i[edit update destroy]
+  before_action :store_params!, only: :index
+
+  LIST_PARAMS = %w[family_search family_page provider_search provider_page per_page].freeze
+  NUMERIC_LIST_PARAMS = %w[family_page provider_page per_page].freeze
 
   def index
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.merchants"), nil ] ]
@@ -156,6 +160,24 @@ class FamilyMerchantsController < ApplicationController
   end
 
   private
+    # Like TransactionsController#store_params!: remembers the list state per
+    # session, so redirects back to the bare index (after edit, delete, merge,
+    # ...) keep the chosen page size, page and search.
+    def store_params!
+      if request.query_parameters.blank? && stored_params.present?
+        redirect_to family_merchants_path(stored_params)
+      else
+        list_params = params.slice(*LIST_PARAMS).permit(*LIST_PARAMS).to_h.compact_blank
+        # A page Pagy rejects (0, "abc") must not be replayed on every later visit.
+        list_params.reject! { |key, value| NUMERIC_LIST_PARAMS.include?(key) && !value.to_s.match?(/\A[1-9]\d*\z/) }
+        Current.session.set_merchant_page_params(list_params) unless list_params == stored_params
+      end
+    end
+
+    def stored_params
+      Current.session.merchant_page_params
+    end
+
     def set_merchant
       # Find merchant that either belongs to family OR is assigned to family's transactions
       @merchant = Current.family.merchants.find_by(id: params[:id]) ||

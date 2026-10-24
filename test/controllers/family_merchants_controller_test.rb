@@ -79,6 +79,72 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "#000000", @merchant.reload.color
   end
 
+  test "index restores the list state remembered for this session" do
+    get family_merchants_path(per_page: 100, family_page: 2, family_search: "net")
+    assert_response :success
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100, family_page: 2, family_search: "net")
+  end
+
+  test "editing a merchant returns to the list with the chosen page size" do
+    get family_merchants_path(per_page: 100)
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { name: "new name", color: "#000000" } }
+    follow_redirect!
+
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "deleting a merchant returns to the list with the chosen page size" do
+    get family_merchants_path(per_page: 100)
+
+    delete family_merchant_url(@merchant)
+    follow_redirect!
+
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "clearing the search forgets it for the session" do
+    get family_merchants_path(per_page: 100, family_search: "net")
+    get family_merchants_path(per_page: 100, family_search: "")
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "index ignores unknown and non-scalar params when remembering the list state" do
+    get family_merchants_path(per_page: 100, family_search: [ "net" ], other: "x")
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "index does not remember page values pagination would reject" do
+    get family_merchants_path(per_page: 100)
+    # The request itself still fails once; it just must not be replayed.
+    assert_raises(Pagy::VariableError) do
+      get family_merchants_path(per_page: 100, family_page: "0", provider_page: "abc")
+    end
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "index remembers list params sent as JSON numbers" do
+    get family_merchants_path, params: { per_page: 100 }, headers: { "Accept" => "text/html" }, as: :json
+    assert_response :success
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "pagination links are not prefetched so a clicked page is remembered" do
+    get family_merchants_path
+
+    assert_select "div[data-turbo-prefetch=false] nav", minimum: 1
+  end
+
   test "should destroy merchant" do
     assert_difference("FamilyMerchant.count", -1) do
       delete family_merchant_url(@merchant)

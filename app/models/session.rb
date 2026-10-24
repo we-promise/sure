@@ -21,6 +21,15 @@ class Session < ApplicationRecord
   end
 
 
+  def merchant_page_params
+    data["merchant_page_params"] || {}
+  end
+
+  def set_merchant_page_params(params)
+    data["merchant_page_params"] = params
+    save!
+  end
+
   def get_preferred_tab(tab_key)
     data.dig("tab_preferences", tab_key)
   end
