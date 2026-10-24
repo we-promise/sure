@@ -58,7 +58,7 @@ module Provider::LlmConcept
       parsed = parsed.to_h.with_indifferent_access
 
       line_items = Array(parsed[:line_items]).filter_map do |item|
-        next unless item.respond_to?(:to_h)
+        next unless item.is_a?(Hash)
 
         item = item.to_h.with_indifferent_access
         amount = decimal_or_nil(item[:amount])
