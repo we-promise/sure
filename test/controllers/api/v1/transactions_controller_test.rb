@@ -1013,6 +1013,11 @@ end
     assert_equal false, rows["Kept"]["excluded"]
     assert_equal false, rows["Left out"]["split_parent"]
     assert_equal true, rows["Left out"]["excluded"]
+
+    # show renders the same partial without the batched ids and must still report it
+    get api_v1_transaction_url(parent.transaction), headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal true, JSON.parse(response.body)["split_parent"]
   end
 
   test "index works out split_parent without a query per row" do
