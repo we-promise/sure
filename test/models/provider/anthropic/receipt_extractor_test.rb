@@ -39,6 +39,18 @@ class Provider::Anthropic::ReceiptExtractorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("52"), result.total
   end
 
+  test "uses auto tool choice and asks for the tool in the prompt for models that reject a forced tool" do
+    Pdf::TextExtractor.expects(:pages).returns([ "HAMMER 30.00" ])
+    captured = nil
+    client = stub_client(tool_response(RECEIPT_INPUT)) { |params| captured = params }
+
+    result = build_extractor(client, content_type: "application/pdf", model: "claude-sonnet-5-5").extract
+
+    assert_equal({ type: "auto", disable_parallel_tool_use: true }, captured[:tool_choice])
+    assert_match "calling the report_receipt tool", captured[:system_]
+    assert_equal 2, result.line_items.size
+  end
+
   test "sends a scanned PDF as a native document block" do
     Pdf::TextExtractor.expects(:pages).returns([ "", "  " ])
     captured = nil
@@ -149,10 +161,10 @@ class Provider::Anthropic::ReceiptExtractorTest < ActiveSupport::TestCase
   end
 
   private
-    def build_extractor(client, content_type:, file_content: @pdf_content, family: nil, vision: true)
+    def build_extractor(client, content_type:, file_content: @pdf_content, family: nil, vision: true, model: "claude-sonnet-4-6")
       Provider::Anthropic::ReceiptExtractor.new(
         client,
-        model: "claude-sonnet-4-6",
+        model: model,
         file_content: file_content,
         content_type: content_type,
         family: family,
