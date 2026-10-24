@@ -8,7 +8,8 @@
 #
 # Use `DS::Menu` instead when the panel is a flat list of clickable actions.
 class DS::Popover < DesignSystemComponent
-  attr_reader :variant, :avatar_url, :initials, :placement, :offset, :icon, :no_padding, :testid, :mobile_fullwidth, :max_width, :panel_id
+  attr_reader :variant, :avatar_url, :initials, :placement, :offset, :icon, :no_padding, :testid, :mobile_fullwidth, :max_width, :panel_id,
+              :frame_id, :frame_src
 
   renders_one :button, ->(**button_options, &block) do
     options_with_target = button_options.deep_dup
@@ -35,7 +36,13 @@ class DS::Popover < DesignSystemComponent
 
   VARIANTS = %i[icon button avatar].freeze
 
-  def initialize(variant: "icon", avatar_url: nil, initials: nil, placement: "bottom-end", offset: 12, icon: "more-horizontal", no_padding: false, testid: nil, mobile_fullwidth: true, max_width: nil, aria_label: nil)
+  # `frame_id:` / `frame_src:` make the panel a lazily loaded Turbo Frame: the
+  # `<turbo-frame>` is only created (and its `src` fetched) the first time the
+  # popover opens. Use it for panels repeated per list row — a transactions
+  # page renders hundreds of them, and eager frame markup for each was a
+  # measurable share of the page's HTML and render time even though almost
+  # none is ever opened.
+  def initialize(variant: "icon", avatar_url: nil, initials: nil, placement: "bottom-end", offset: 12, icon: "more-horizontal", no_padding: false, testid: nil, mobile_fullwidth: true, max_width: nil, aria_label: nil, frame_id: nil, frame_src: nil)
     @variant = variant.to_sym
     @avatar_url = avatar_url
     @initials = initials
@@ -47,9 +54,16 @@ class DS::Popover < DesignSystemComponent
     @mobile_fullwidth = mobile_fullwidth
     @max_width = max_width
     @aria_label = aria_label
+    @frame_id = frame_id
+    @frame_src = frame_src
     @panel_id = "popover-#{SecureRandom.hex(4)}"
 
     raise ArgumentError, "Invalid variant: #{@variant}" unless VARIANTS.include?(@variant)
+    raise ArgumentError, "frame_id and frame_src must be given together" if frame_id.present? ^ frame_src.present?
+  end
+
+  def lazy_frame?
+    frame_src.present?
   end
 
   # Accessible name for the trigger button. The `:avatar` variant has no
