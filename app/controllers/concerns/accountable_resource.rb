@@ -84,9 +84,11 @@ module AccountableResource
     # Assigning a balance can fail before the normal update path assigns the
     # other submitted fields. Keep them available for the 422 form without
     # persisting them.
-    update_params = account_params.except(:return_to, :balance, :opening_balance_date)
-    # Every account type posts through here; only one with trades has lots to sell.
-    update_params = update_params.except(:cost_basis_method) unless @account.supports_trades?
+    update_params = account_params.except(:return_to, :balance, :opening_balance_date, :cost_basis_method)
+    # Every account type posts through here; only one with trades has lots to
+    # sell. Applied after the other fields, since the same form can change a
+    # crypto account's subtype and with it whether the account trades.
+    cost_basis_method = account_params[:cost_basis_method]
     previous_cost_basis_method = @account.cost_basis_method
 
     # The balance change and the attribute update are one form, so they commit
@@ -108,7 +110,8 @@ module AccountableResource
       # Update remaining account attributes. Note: currency is intentionally allowed
       # here so all account types (depositories, credit cards, loans, etc.) can
       # have their currency changed via this shared update path.
-      unless @account.update(update_params)
+      unless @account.update(update_params) &&
+          (cost_basis_method.nil? || !@account.supports_trades? || @account.update(cost_basis_method: cost_basis_method))
         @error_message = @account.errors.full_messages.join(", ")
         raise ActiveRecord::Rollback
       end

@@ -1,5 +1,4 @@
 require "test_helper"
-require "ostruct"
 
 class Account::SyncerTest < ActiveSupport::TestCase
   test "post-sync auto matches only transfers touching the synced account" do
@@ -8,6 +7,37 @@ class Account::SyncerTest < ActiveSupport::TestCase
     account.family.expects(:auto_match_transfers!).with(account: account).once
 
     Account::Syncer.new(account).perform_post_sync
+  end
+
+  test "a cost basis method changed while the sync ran starts another sync once it completes" do
+    account = accounts(:investment)
+    sync = account.syncs.create!
+    Account::MarketDataImporter.any_instance.stubs(:import_all)
+    Balance::Materializer.any_instance.stubs(:materialize_balances).with do
+      # The form saves the new method while this run is calculating.
+      Account.where(id: account.id).update_all(cost_basis_method: "fifo")
+      true
+    end
+
+    assert_difference -> { account.syncs.count }, 1 do
+      sync.perform
+    end
+
+    assert sync.reload.completed?
+    assert account.syncs.where.not(id: sync.id).sole.pending?
+  end
+
+  test "an unchanged cost basis method starts no further sync" do
+    account = accounts(:investment)
+    sync = account.syncs.create!
+    Account::MarketDataImporter.any_instance.stubs(:import_all)
+    Balance::Materializer.any_instance.stubs(:materialize_balances)
+
+    assert_no_difference -> { account.syncs.count } do
+      sync.perform
+    end
+
+    assert sync.reload.completed?
   end
 
   test "applies IBKR historical balance overrides after materialization" do
@@ -34,7 +64,7 @@ class Account::SyncerTest < ActiveSupport::TestCase
     Balance::Materializer.any_instance.expects(:materialize_balances).once
     IbkrAccount::HistoricalBalancesSync.any_instance.expects(:sync!).once
 
-    Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
+    Account::Syncer.new(account).perform_sync(account.syncs.create!)
   end
 
   # A provider that dates its holdings itself, but anchors the balance on the
@@ -162,6 +192,6 @@ class Account::SyncerTest < ActiveSupport::TestCase
       Account::MarketDataImporter.any_instance.stubs(:import_all)
       Balance::Materializer.any_instance.stubs(:materialize_balances)
       IbkrAccount::HistoricalBalancesSync.any_instance.stubs(:sync!)
-      Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
+      Account::Syncer.new(account).perform_sync(account.syncs.create!)
     end
 end
