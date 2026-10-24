@@ -101,6 +101,14 @@ class Transaction::ReceiptItemizer
     rescue Error => e
       capture_failure(e, attachment, provider_error: response&.error)
       raise
+    rescue StandardError => e
+      # Anything else (a receipt blob missing from storage, an unknown currency
+      # code) still gets the debug-log entry and the "could not read" handling
+      # instead of a 500. Only the class is recorded: messages from arbitrary
+      # errors can carry receipt content.
+      capture_failure(e, attachment, provider_error: response&.error, unexpected: true)
+      Rails.error.report(e, handled: true, context: { transaction_id: transaction.id, attachment_id: attachment&.id })
+      raise Error, "Could not read the receipt (#{e.class.name})"
     end
   end
 
@@ -197,11 +205,11 @@ class Transaction::ReceiptItemizer
     # it read cannot be turned into a split) go to the debug log so operators
     # can see them with family and provider context. Receipt content is not
     # logged.
-    def capture_failure(error, attachment, provider_error: nil)
+    def capture_failure(error, attachment, provider_error: nil, unexpected: false)
       DebugLogEntry.capture(
         category: "receipt_itemization",
-        level: "warn",
-        message: "Receipt itemization failed: #{error.message}",
+        level: unexpected ? "error" : "warn",
+        message: unexpected ? "Receipt itemization failed unexpectedly: #{error.class.name}" : "Receipt itemization failed: #{error.message}",
         source: self.class.name,
         family: entry.account.family,
         account: entry.account,
@@ -210,7 +218,8 @@ class Transaction::ReceiptItemizer
           transaction_id: transaction.id,
           attachment_id: attachment&.id,
           content_type: attachment&.content_type,
-          provider_error_class: provider_error&.class&.name
+          provider_error_class: provider_error&.class&.name,
+          error_class: (error.class.name if unexpected)
         }.compact
       )
     end

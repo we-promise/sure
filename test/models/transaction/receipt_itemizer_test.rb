@@ -265,6 +265,25 @@ class Transaction::ReceiptItemizerTest < ActiveSupport::TestCase
     assert entry.child_entries.all? { |child| child.amount.nonzero? }
   end
 
+  test "turns an unexpected error into an itemizer error and records it without its message" do
+    provider = stub_provider(extraction(items: [ [ "Hammer", 54 ] ]))
+    ActiveStorage::Attachment.any_instance.stubs(:download).raises(ActiveStorage::FileNotFoundError, "secret receipt line")
+
+    error = nil
+    assert_difference -> { DebugLogEntry.where(category: "receipt_itemization").count }, 1 do
+      error = assert_raises(Transaction::ReceiptItemizer::Error) do
+        Transaction::ReceiptItemizer.new(@transaction, provider: provider).propose
+      end
+    end
+
+    assert_match "ActiveStorage::FileNotFoundError", error.message
+    assert_instance_of ActiveStorage::FileNotFoundError, error.cause
+    log = DebugLogEntry.where(category: "receipt_itemization").recent.first
+    assert_equal "error", log.level
+    assert_equal "ActiveStorage::FileNotFoundError", log.metadata["error_class"]
+    assert_no_match "secret receipt line", log.message
+  end
+
   test "available needs AI consent, a capable provider, a receipt and a splittable transaction" do
     provider = stub_provider(nil)
 
