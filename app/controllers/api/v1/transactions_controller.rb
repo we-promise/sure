@@ -8,18 +8,15 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_transaction, only: [ :show, :update, :destroy ]
+  # Outside index's catch-all rescue so a bad filter is a 404/422, not a 500.
+  before_action :set_report_filters, only: :index
 
   def index
-    family = current_resource_owner.family
-    accessible_account_ids = family.accounts
-      .accessible_by(current_resource_owner)
-      .where.not(status: "pending_deletion")
-      .select(:id)
-    transactions_query = family.transactions
-      .joins(:entry).where(entries: { account_id: accessible_account_ids })
+    transactions_query = @budget ? budget_transactions : accessible_transactions
 
     # Apply filters
     transactions_query = apply_filters(transactions_query)
+    transactions_query = apply_report_filters(transactions_query)
 
     # Apply search
     transactions_query = apply_search(transactions_query) if params[:search].present?
@@ -213,6 +210,83 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       authorize_scope!(:read)
     end
 
+    def accessible_account_ids
+      current_resource_owner.family.accounts
+        .accessible_by(current_resource_owner)
+        .where.not(status: "pending_deletion")
+        .select(:id)
+    end
+
+    def accessible_transactions
+      current_resource_owner.family.transactions
+        .joins(:entry).where(entries: { account_id: accessible_account_ids })
+    end
+
+    # The rows the web budget category drill-down lists for this budget
+    # (BudgetCategoriesController#show): Budget#transactions limits them to
+    # the budget's period and to the accounts its spending is computed from
+    # (the owner's report accounts for a personal budget, the caller's for
+    # the household one), minus the kinds budgets leave out (plus investment
+    # contributions when the family does not count investing as spending,
+    # Family#analytics_excluded_kinds, as the drill-down does).
+    #
+    # A budget share does not grant access to the owner's accounts, so the
+    # rows are also limited to accounts the caller can access, the same scope
+    # as the unfiltered index and GET /api/v1/transactions/:id. Without that,
+    # a viewer of a shared personal budget would get full transaction details
+    # (notes, external ids, account) for accounts nobody shared with them.
+    def budget_transactions
+      @budget.current_user = current_resource_owner
+      @budget.reportable_transactions
+        .where(entries: { account_id: accessible_account_ids })
+    end
+
+    def set_report_filters
+      if params.key?(:budget_id)
+        raise InvalidFilterError, "budget_id must be a valid UUID" unless valid_uuid?(params[:budget_id].to_s)
+
+        # Same visibility as GET /api/v1/budgets/:id: the household budget,
+        # the caller's own, or one its owner shared with the caller.
+        @budget = current_resource_owner.family.budgets.find_by(id: params[:budget_id])
+        raise ActiveRecord::RecordNotFound, "Budget not found" unless @budget&.viewable_by?(current_resource_owner)
+      end
+
+      @exclude_split_parents = boolean_filter_param(:exclude_split_parents)
+      @excluded = boolean_filter_param(:excluded)
+      @start_date = date_filter_param(:start_date)
+      @end_date = date_filter_param(:end_date)
+    end
+
+    # Parsed here, outside index's catch-all rescue, so a malformed date is a
+    # 422 rather than a 500. Date.parse keeps the formats the filter accepted.
+    def date_filter_param(key)
+      return nil if params[key].blank?
+
+      Date.parse(params[key].to_s)
+    rescue Date::Error
+      raise InvalidFilterError, "#{key} must be a valid date"
+    end
+
+    def apply_report_filters(query)
+      # Same scope the web transactions list uses (Transaction::Search).
+      query = query.merge(Entry.excluding_split_parents) if @exclude_split_parents
+      query = query.where(entries: { excluded: @excluded }) unless @excluded.nil?
+      query
+    end
+
+    # nil only when the key is absent, so a filter can be left off entirely.
+    # A present but empty value (`?excluded=`) is invalid, not "off".
+    # The spellings are the shared strict ones (BaseController), the same
+    # the security filters accept.
+    def boolean_filter_param(key)
+      return nil unless params.key?(key)
+
+      value = strict_boolean_filter_value(params[key])
+      raise InvalidFilterError, "#{key} must be true or false" if value.nil?
+
+      value
+    end
+
     def ensure_write_scope
       authorize_scope!(:write)
     end
@@ -249,12 +323,12 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       end
 
       # Date range filtering
-      if params[:start_date].present?
-        query = query.where("entries.date >= ?", Date.parse(params[:start_date]))
+      if @start_date
+        query = query.where("entries.date >= ?", @start_date)
       end
 
-      if params[:end_date].present?
-        query = query.where("entries.date <= ?", Date.parse(params[:end_date]))
+      if @end_date
+        query = query.where("entries.date <= ?", @end_date)
       end
 
       # Amount filtering
