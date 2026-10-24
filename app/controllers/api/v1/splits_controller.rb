@@ -109,6 +109,12 @@ class Api::V1::SplitsController < Api::V1::BaseController
         splits: proposal.rows.map { |row| { name: row.name, amount: row.amount.to_s("F") } }
       }
     }
+  rescue Transaction::ReceiptItemizer::Unavailable => e
+    render json: {
+      error: "service_unavailable",
+      message: "The receipt could not be read right now. Try again shortly.",
+      errors: [ e.message ]
+    }, status: :service_unavailable
   rescue Transaction::ReceiptItemizer::Error => e
     render_unprocessable("Could not itemize the receipt", [ e.message ])
   end

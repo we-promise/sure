@@ -18,6 +18,21 @@
 class Transaction::ReceiptItemizer
   Error = Class.new(StandardError)
 
+  # The receipt or the provider could not be reached (storage, network, database),
+  # which a retry can fix, unlike a receipt that is unreadable or does not add up.
+  # The API answers these with a 5xx instead of a validation error.
+  Unavailable = Class.new(Error)
+
+  UNAVAILABLE_ERRORS = [
+    ActiveStorage::FileNotFoundError,
+    ActiveRecord::ActiveRecordError,
+    SystemCallError,
+    IOError,
+    SocketError,
+    Timeout::Error,
+    Faraday::Error
+  ].freeze
+
   # entries.amount is decimal(19,4): crypto currencies with a finer default
   # precision (BTC, ETH: 8) are capped here so no row rounds away on save.
   STORED_AMOUNT_SCALE = 4
@@ -108,7 +123,7 @@ class Transaction::ReceiptItemizer
       # errors can carry receipt content.
       capture_failure(e, attachment, provider_error: response&.error, unexpected: true)
       Rails.error.report(e, handled: true, context: { transaction_id: transaction.id, attachment_id: attachment&.id })
-      raise Error, "Could not read the receipt (#{e.class.name})"
+      raise (UNAVAILABLE_ERRORS.any? { |klass| e.is_a?(klass) } ? Unavailable : Error), "Could not read the receipt (#{e.class.name})"
     end
   end
 

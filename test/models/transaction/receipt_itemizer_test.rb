@@ -276,12 +276,24 @@ class Transaction::ReceiptItemizerTest < ActiveSupport::TestCase
       end
     end
 
+    assert_instance_of Transaction::ReceiptItemizer::Unavailable, error
     assert_match "ActiveStorage::FileNotFoundError", error.message
     assert_instance_of ActiveStorage::FileNotFoundError, error.cause
     log = DebugLogEntry.where(category: "receipt_itemization").recent.first
     assert_equal "error", log.level
     assert_equal "ActiveStorage::FileNotFoundError", log.metadata["error_class"]
     assert_no_match "secret receipt line", log.message
+  end
+
+  test "an unexpected non-infrastructure error is a plain itemizer error, not unavailable" do
+    provider = stub_provider(extraction(items: [ [ "Hammer", 54 ] ]))
+    ActiveStorage::Attachment.any_instance.stubs(:download).raises(ArgumentError, "bad")
+
+    error = assert_raises(Transaction::ReceiptItemizer::Error) do
+      Transaction::ReceiptItemizer.new(@transaction, provider: provider).propose
+    end
+
+    assert_not_kind_of Transaction::ReceiptItemizer::Unavailable, error
   end
 
   test "available needs AI consent, a capable provider, a receipt and a splittable transaction" do
