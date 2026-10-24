@@ -955,7 +955,10 @@ RSpec.configure do |config|
               kind: {
                 type: :string,
                 enum: Transaction.kinds.keys,
-                description: 'How budgets and reports treat the transaction. loan_payment and investment_contribution count as expenses; funds_movement, cc_payment and one_time are left out of budget totals.'
+                description: 'How budgets and reports treat the transaction. loan_payment counts as an expense; ' \
+                             'investment_contribution does too when the family counts investment contributions as ' \
+                             'spending, and is otherwise reported as invested and left out of spending and income; ' \
+                             'funds_movement, cc_payment and one_time are left out of budget totals.'
               },
               excluded: { type: :boolean, description: 'Whether the transaction is excluded from budget and report totals. Splitting a transaction marks it excluded.' },
               split_parent: { type: :boolean, description: 'Whether the transaction has been split; its amount is then carried by its split children.' },

@@ -18,8 +18,10 @@ json.signed_amount_cents(transaction.entry.classification == "income" ? amount_c
 # precision, but entries store decimal(19,4). Expose the stored value
 # unrounded, as a locale-independent string in the entry's own sign
 # convention (positive = outflow, negative = inflow), the same field split
-# show returns, so a client can build a split that sums exactly.
-json.amount_decimal transaction.entry.amount.to_s
+# show returns, so a client can build a split that sums exactly. "F" keeps
+# it fixed-point (12.3456, never 0.123456e2) without relying on
+# ActiveSupport's BigDecimal#to_s default.
+json.amount_decimal transaction.entry.amount.to_s("F")
 
 json.currency transaction.entry.currency
 json.name transaction.entry.name
@@ -29,8 +31,10 @@ json.source transaction.entry.source
 json.user_modified transaction.entry.user_modified
 json.classification transaction.entry.classification
 
-# How budgets and reports treat the row: loan_payment and
-# investment_contribution count as expenses whatever the amount's sign, and
+# How budgets and reports treat the row: loan_payment counts as an expense
+# whatever the amount's sign; investment_contribution does too unless the
+# family turned off investment_contributions_as_spending, in which case it is
+# reported as invested and left out (Family#analytics_excluded_kinds); and
 # Transaction::BUDGET_EXCLUDED_KINDS are left out entirely.
 json.kind transaction.kind
 
