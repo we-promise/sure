@@ -92,6 +92,26 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to confirm_rule_url(rule, reload_on_close: true)
   end
 
+  test "creating an email rule through the form records its current matches as the baseline" do
+    account = @user.family.accounts.create!(name: "Baseline", balance: 1000, currency: "USD", accountable: Depository.new)
+    match = account.entries.create!(
+      name: "Baseline cafe", date: Date.current, amount: 10, currency: "USD", entryable: Transaction.new
+    ).transaction
+
+    post rules_url, params: {
+      rule: {
+        name: "Baseline cafe alerts",
+        resource_type: "transaction",
+        conditions_attributes: { "0" => { condition_type: "transaction_name", operator: "like", value: "baseline cafe" } },
+        actions_attributes: { "0" => { action_type: "send_email_notification" } }
+      }
+    }
+
+    rule = @user.family.rules.find_by!(name: "Baseline cafe alerts")
+    assert_redirected_to confirm_rule_url(rule, reload_on_close: true)
+    assert_equal [ match.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+  end
+
   test "creates rule with a split_transaction action from split_rows params" do
     category = categories(:food_and_drink)
 
