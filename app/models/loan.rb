@@ -185,7 +185,10 @@ class Loan < ApplicationRecord
     (variable_rate_schedule_in_database || {}).to_json
   end
 
-  attr_writer :rate_schedule_snapshot
+  def rate_schedule_snapshot=(snapshot)
+    @rate_schedule_snapshot = snapshot
+    @rate_schedule_reconciliation = nil
+  end
 
   # Rows the form submitted that could not be parsed. Kept so the save can be
   # rejected and the form re-rendered with what the user actually typed --
@@ -195,6 +198,7 @@ class Loan < ApplicationRecord
 
   validate :rate_changes_must_be_parseable
   validate :rate_changes_must_not_precede_origination
+  validate :rate_schedule_snapshot_must_be_valid
   before_validation :merge_submitted_rate_changes
   after_save :clear_rate_submission
 
@@ -245,11 +249,13 @@ class Loan < ApplicationRecord
 
     @invalid_rate_changes = invalid
     @submitted_rate_changes = parsed
+    @rate_schedule_reconciliation = nil
     self.variable_rate_schedule = parsed
   end
 
   private def merge_submitted_rate_changes
     return unless @submitted_rate_changes && @rate_schedule_snapshot
+    return if @rate_schedule_reconciliation
 
     baseline = JSON.parse(@rate_schedule_snapshot)
     raise JSON::ParserError unless baseline.is_a?(Hash)
@@ -258,9 +264,16 @@ class Loan < ApplicationRecord
       @submitted_rate_changes, baseline: baseline,
       current: variable_rate_schedule_in_database
     )
+    @rate_schedule_reconciliation = :valid
   rescue JSON::ParserError, TypeError
     self.variable_rate_schedule = variable_rate_schedule_in_database || {}
-    errors.add(:base, I18n.t("activerecord.errors.models.loan.invalid_rate_change"))
+    @rate_schedule_reconciliation = :invalid
+  end
+
+  private def rate_schedule_snapshot_must_be_valid
+    if @rate_schedule_reconciliation == :invalid
+      errors.add(:base, I18n.t("activerecord.errors.models.loan.invalid_rate_change"))
+    end
   end
 
   private def merge_rate_schedule(submitted, baseline:, current: variable_rate_schedule)
@@ -276,6 +289,7 @@ class Loan < ApplicationRecord
   private def clear_rate_submission
     @rate_schedule_snapshot = nil
     @submitted_rate_changes = nil
+    @rate_schedule_reconciliation = nil
   end
 
   # The form reaches this record through Account's nested attributes, which
@@ -304,7 +318,8 @@ class Loan < ApplicationRecord
   # Invalid rows come back too, so a rejected save redisplays what was typed.
   def rate_change_rows
     # A balance failure can render before validations run. Reconcile the rows
-    # here too, so the rendered snapshot never contains unseen provider dates.
+    # once per submission, so the rendered snapshot never contains unseen dates.
+    # Validation owns errors; repeated reads must not add them to the record.
     merge_submitted_rate_changes
     variable_rates.map { |date, rate| { effective_date: date.iso8601, rate: rate.to_s("F") } } +
       Array(invalid_rate_changes)

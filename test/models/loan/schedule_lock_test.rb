@@ -73,6 +73,50 @@ class Loan::ScheduleLockTest < ActiveSupport::TestCase
     assert @loan.errors.any?
   end
 
+  test "a committed loan retries after a real rollback by explicitly reloading the same instance" do
+    assert_equal 0, Loan.connection.open_transactions
+    loan = @loan
+    loan.update!(variable_rate_schedule: { "2026-01-01" => "7" })
+    snapshot = loan.rate_schedule_snapshot
+    rows = [ { effective_date: "2026-03-01", rate: "9" } ]
+
+    Loan.transaction do
+      loan.update!(rate_schedule_snapshot: snapshot, rate_changes: rows)
+      assert_not loan.changed_for_autosave?
+      assert_equal({ "2026-03-01" => "9.0" }, Loan.find(loan.id).variable_rate_schedule)
+      raise ActiveRecord::Rollback
+    end
+
+    assert_equal 0, Loan.connection.open_transactions
+    assert_equal({ "2026-01-01" => "7" }, Loan.find(loan.id).variable_rate_schedule)
+    assert loan.has_changes_to_save?
+    error = assert_raises(RuntimeError) { loan.with_schedule_lock { flunk "Dirty retries must not acquire the lock" } }
+    assert_includes error.message, "unpersisted changes"
+
+    loan_id = loan.id
+    Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        Loan.find(loan_id).enrich_attributes(
+          { variable_rate_schedule: { "2026-01-01" => "7", "2026-02-01" => "8" } }, source: "redbark"
+        )
+      end
+    end.value
+
+    assert_same loan, loan.reload
+    assert_not loan.has_changes_to_save?
+    loan.with_schedule_lock do
+      loan.assign_attributes(rate_schedule_snapshot: snapshot, rate_changes: rows)
+      2.times do
+        assert loan.valid?
+        assert_equal [ "2026-02-01", "2026-03-01" ], loan.rate_change_rows.pluck(:effective_date)
+      end
+      loan.save!
+    end
+
+    assert_equal({ "2026-02-01" => "8", "2026-03-01" => "9.0" }, Loan.find(loan.id).variable_rate_schedule)
+    assert_not loan.changed_for_autosave?
+  end
+
   test "concurrent connections serialize provider schedule writes" do
     held = Queue.new
     release = Queue.new
