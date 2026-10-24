@@ -289,6 +289,7 @@ class Import < ApplicationRecord
     import!
 
     family.sync_later
+    EntryScheduledSyncJob.schedule_for_entries(entries)
 
     update! status: :complete
   rescue => error

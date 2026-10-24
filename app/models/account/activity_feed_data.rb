@@ -2,7 +2,7 @@
 # This data object is useful for avoiding N+1 queries and having an easy way to pass around the required data to the
 # activity feed component in controllers and background jobs that refresh it.
 class Account::ActivityFeedData
-  ActivityDateData = Data.define(:date, :entries, :balance, :transfers, :split_parents)
+  ActivityDateData = Data.define(:date, :entries, :balance, :projected_balance_money, :transfers, :split_parents)
 
   attr_reader :account, :entries, :split_parents
 
@@ -15,10 +15,16 @@ class Account::ActivityFeedData
   def entries_by_date
     @entries_by_date_objects ||= begin
       grouped_entries.map do |date, date_entries|
+        balance = balance_for_date(date)
+
         ActivityDateData.new(
           date: date,
           entries: date_entries,
-          balance: balance_for_date(date),
+          balance: balance,
+          # Scheduled (future-dated) entries have no Balance row yet -- see
+          # Entry#scheduled?. Project one instead of leaving the date group
+          # with nothing to show.
+          projected_balance_money: balance ? nil : projected_balance_money_for(date),
           transfers: transfers_for_date(date),
           split_parents: split_parents
         )
@@ -29,6 +35,12 @@ class Account::ActivityFeedData
   private
     def balance_for_date(date)
       balances_by_date[date]
+    end
+
+    def projected_balance_money_for(date)
+      return nil unless date > Date.current
+
+      account.balance_money + account.scheduled_entries_total_money(through_date: date)
     end
 
     def transfers_for_date(date)
