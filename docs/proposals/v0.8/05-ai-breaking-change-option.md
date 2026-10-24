@@ -378,7 +378,7 @@ These are the largest AI/ML files on `main`. Each split is a pure-move PR that u
 
 | Step | PRs | Kind | Reviewer load |
 |---|---|---|---|
-| 1 | Contract tests per interface (I1, I2, I9, I10, I16, I23, I24) | Tests only | Low |
+| 1 | Contract tests where [01 D5.7](01-ai-ml-workflow-map.md#d57-test-coverage-of-the-interfaces) finds gaps: I9 lock policy, I1/I2 shared LLM contract (`LLMInterfaceTest` is empty today), I23 lane test, I10 executors, I6 adapters, `AssistantResponseJob` | Tests only | Low |
 | 2 | Pure-move splits from the table above, BC11 namespaces | Move | Low |
 | 3 | `AiJob` base, one job per PR | Internal | Low |
 | 4 | `Ai::Router` delegating, then callers one by one | Internal | Low |
