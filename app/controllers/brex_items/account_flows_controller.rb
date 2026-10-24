@@ -32,6 +32,7 @@ class BrexItems::AccountFlowsController < ApplicationController
 
     @account = Current.family.accounts.find_by(id: params[:account_id])
     return redirect_to accounts_path, alert: t("brex_items.select_existing_account.no_account_specified") unless @account
+    return unless require_linkable_account!(@account)
 
     result = brex_account_flow.select_existing_account_result(account: @account)
 
@@ -49,6 +50,7 @@ class BrexItems::AccountFlowsController < ApplicationController
 
     account = Current.family.accounts.find_by(id: params[:account_id])
     return redirect_to accounts_path, alert: t("brex_items.link_existing_account.no_account_specified") unless account
+    return unless require_linkable_account!(account)
 
     result = brex_account_flow.link_existing_account_result(
       account: account,
