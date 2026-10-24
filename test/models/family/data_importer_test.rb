@@ -2745,6 +2745,73 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       "the later chunk's allocation must resolve its occurrence through the persisted mapping"
   end
 
+  test "restores category emoji with lucide fallbacks and parent relationships from NDJSON" do
+    records = [
+      { type: "Category", data: { id: "emoji-parent", name: "Synthetic parent", color: "#123456", lucide_icon: "utensils", emoji: "🍽️" } },
+      { type: "Category", data: { id: "emoji-child", name: "Synthetic child", color: "#654321", lucide_icon: "coffee", emoji: "👩🏽‍💻", parent_id: "emoji-parent" } }
+    ]
+    Family::DataImporter.new(@family, build_ndjson(records)).import!
+
+    parent = @family.categories.find_by!(name: "Synthetic parent")
+    child = @family.categories.find_by!(name: "Synthetic child")
+    assert_equal "🍽️", parent.emoji
+    assert_equal "👩🏽‍💻", child.emoji
+    assert_equal "utensils", parent.lucide_icon
+    assert_equal "coffee", child.lucide_icon
+    assert_equal parent.id, child.parent_id
+    assert_equal parent.color, child.color
+  end
+
+  test "category emoji survives a generated archive round trip" do
+    parent = @family.categories.create!(name: "Synthetic emoji archive parent", color: "#123456", lucide_icon: "utensils", emoji: "🍽️")
+    child = @family.categories.create!(name: "Synthetic emoji archive child", color: "#123456", lucide_icon: "coffee", emoji: "👩🏽‍💻", parent: parent)
+    archive = Family::DataExporter.new(@family).generate_export
+    target = families(:dylan_family)
+
+    Zip::File.open_buffer(archive) do |zip|
+      exported = zip.read("all.ndjson")
+      exported_child = exported.each_line.map { |line| JSON.parse(line) }.find { |record| record["type"] == "Category" && record.dig("data", "id") == child.id }
+      assert_equal "👩🏽‍💻", exported_child.dig("data", "emoji")
+      Family::DataImporter.new(target, StringIO.new(exported)).import!
+    end
+
+    restored_parent = target.categories.find_by!(name: parent.name)
+    restored_child = target.categories.find_by!(name: child.name)
+    assert_equal "🍽️", restored_parent.emoji
+    assert_equal "👩🏽‍💻", restored_child.emoji
+    assert_equal "utensils", restored_parent.lucide_icon
+    assert_equal "coffee", restored_child.lucide_icon
+    assert_equal restored_parent.id, restored_child.parent_id
+    assert_equal "👩🏽‍💻", child.reload.emoji
+  end
+
+  test "legacy NDJSON without an emoji field preserves the existing override" do
+    category = @family.categories.create!(name: "Synthetic existing", color: "#123456", lucide_icon: "coffee", emoji: "👩🏽‍💻")
+    records = [ { type: "Category", data: { id: "old-category", name: category.name, color: "#123456", lucide_icon: "coffee" } } ]
+    assert_no_difference "Category.count" do
+      Family::DataImporter.new(@family, build_ndjson(records)).import!
+    end
+    assert_equal "👩🏽‍💻", category.reload.emoji
+    assert_equal "coffee", category.lucide_icon
+  end
+
+  test "explicit null emoji in NDJSON clears an existing override" do
+    category = @family.categories.create!(name: "Synthetic existing", color: "#123456", lucide_icon: "coffee", emoji: "👩🏽‍💻")
+    records = [ { type: "Category", data: { id: "old-category", name: category.name, color: "#123456", lucide_icon: "coffee", emoji: nil } } ]
+    Family::DataImporter.new(@family, build_ndjson(records)).import!
+    assert_nil category.reload.emoji
+    assert_equal "coffee", category.lucide_icon
+  end
+
+  test "invalid emoji in NDJSON does not create a category" do
+    records = [ { type: "Category", data: { id: "invalid-emoji", name: "Synthetic invalid", color: "#123456", emoji: "😀😀" } } ]
+    assert_no_difference "Category.count" do
+      assert_raises(ActiveRecord::RecordInvalid) do
+        Family::DataImporter.new(@family, build_ndjson(records)).import!
+      end
+    end
+  end
+
   private
 
     def build_ndjson(records)

@@ -134,6 +134,12 @@ export default class extends Controller {
     const label = selectedElement.dataset.filterName || selectedElement.textContent.trim()
 
     this.buttonTarget.textContent = label
+    const emojiGlyph = selectedElement.querySelector("[data-emoji-glyph]")
+    if (emojiGlyph) {
+      const glyph = emojiGlyph.cloneNode(true)
+      glyph.classList.add("mr-2", "align-middle")
+      this.buttonTarget.prepend(glyph)
+    }
     if (this.hasInputTarget) {
       this.inputTarget.value = value
       this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))

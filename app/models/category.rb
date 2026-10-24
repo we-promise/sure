@@ -1,4 +1,9 @@
 class Category < ApplicationRecord
+  # Keep one complete Unicode emoji sequence; code points are not characters.
+  # unicode-emoji 4.0.4 supplies the pinned Emoji 16 data, including ZWJ and flags.
+  EMOJI_PATTERN = /\A#{Unicode::Emoji::REGEX_INCLUDE_TEXT}\z/
+  MAX_EMOJI_BYTES = 128
+
   has_many :transactions, dependent: :nullify, class_name: "Transaction"
   has_many :import_mappings, as: :mappable, dependent: :destroy, class_name: "Import::Mapping"
 
@@ -27,6 +32,9 @@ class Category < ApplicationRecord
   validates :name, exclusion: { in: [ UNCATEGORIZED_FILTER_VALUE ] }
 
   validate :category_level_limit
+  validate :single_emoji
+
+  normalizes :emoji, with: ->(value) { value.valid_encoding? ? value.strip.presence : value }
 
   before_save :inherit_color_from_parent
 
@@ -406,6 +414,13 @@ class Category < ApplicationRecord
   end
 
   private
+    def single_emoji
+      return if emoji.nil?
+      valid = emoji.valid_encoding? && emoji.bytesize <= MAX_EMOJI_BYTES &&
+        emoji.grapheme_clusters.one? && EMOJI_PATTERN.match?(emoji)
+      errors.add(:emoji, :invalid) unless valid
+    end
+
     def category_level_limit
       if (subcategory? && parent&.subcategory?) || (parent? && subcategory?)
         errors.add(:parent, "can't have more than 2 levels of subcategories")

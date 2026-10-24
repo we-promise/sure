@@ -66,3 +66,17 @@ Rolling application code back can retain the additive tables and their data.
 
 Tests use synthetic fixtures. Never commit real exports, source archives, database
 backups, `.env.local`, or credentials. `/imports/` is excluded from Docker builds.
+
+## Interface languages
+
+All 19 selectable application locales have explicit iCost interface translations,
+including review reasons, source/location labels and error messages. The raw
+column names and values belong to the imported document and remain untranslated.
+Original timestamps retain source precision and are not assigned a guessed time
+zone. Review creation timestamps use the configured locale's date format, and
+structured decimals use locale separators without floating-point rounding.
+
+The focused localization suite checks key parity, interpolation variables,
+count-bearing messages and rendered pages without missing translations. This
+coverage does not imply that all historical application strings are translated;
+the repository still has wider locale gaps and four skipped global i18n checks.

@@ -20,7 +20,7 @@ class IcostImportsHelperTest < ActionView::TestCase
   end
 
   test "financial decimals are rendered without float rounding" do
-    assert_equal "1234567890123.1234", icost_value(BigDecimal("1234567890123.1234"))
+    assert_equal "1,234,567,890,123.1234", icost_value(BigDecimal("1234567890123.1234"))
     assert_equal "0.0", icost_value(BigDecimal("0"))
   end
 

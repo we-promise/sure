@@ -13,6 +13,11 @@ pt-BR:
     edit:
       edit: Editar categoria
     form:
+      emoji_label: "Emoji (opcional)"
+      emoji_placeholder: "Cole um emoji"
+      emoji_help: "Escolha ou cole um emoji completo, incluindo uma bandeira ou uma família. Apague-o para usar o ícone."
+      emoji_clear: "Usar ícone"
+      emoji_pick: "Usar %{emoji}"
       placeholder: Nome da categoria
     index:
       bootstrap: Usar padrões (recomendado)

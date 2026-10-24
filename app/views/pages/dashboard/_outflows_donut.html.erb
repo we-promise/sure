@@ -69,8 +69,8 @@
                     background-color: color-mix(in oklab, <%= category[:color] %> 10%, transparent);
                     border-color: color-mix(in oklab, <%= category[:color] %> 10%, transparent);
                     color: <%= category[:color] %>;">
-                  <% if category[:icon] %>
-                    <%= icon(category[:icon], color: "current", size: "sm") %>
+                  <% if category[:emoji].present? || category[:icon] %>
+                    <%= render DS::IconGlyph.new(icon: category[:icon], emoji: category[:emoji], size: "sm") %>
                   <% else %>
                     <%= render DS::FilledIcon.new(
                       variant: :text,

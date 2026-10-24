@@ -28,7 +28,7 @@ zh-CN:
     marked_inactive: 循环交易已标记为停用
     marked_active: 循环交易已标记为启用
     deleted: 循环交易已删除
-    confirm_delete: 确定要删除此循环交易吗？
+    confirm_delete: "要从账单中移除“%{name}”吗？已有交易保持不变，只移除此账单及其付款计划。"
     marked_as_recurring: 交易已标记为循环
     already_exists: 此模式已存在手动循环交易
     creation_failed: 创建循环交易失败。请检查交易详情后重试。

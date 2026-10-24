@@ -13,6 +13,11 @@ es:
     edit:
       edit: Editar categoría
     form:
+      emoji_label: "Emoji (opcional)"
+      emoji_placeholder: "Pega un emoji"
+      emoji_help: "Elige o pega un emoji completo, como una bandera o una familia. Borra el contenido para usar el icono."
+      emoji_clear: "Usar icono"
+      emoji_pick: "Usar %{emoji}"
       placeholder: Nombre de la categoría
       name_label: Nombre
       unassigned: (sin asignar)

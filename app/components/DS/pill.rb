@@ -17,7 +17,7 @@ class DS::Pill < DesignSystemComponent
   }.freeze
 
   attr_reader :label, :tone, :style, :size, :show_dot, :dot_only, :title, :icon, :marker, :custom_color,
-              :truncate, :label_testid, :icon_size, :mono
+              :truncate, :label_testid, :icon_size, :mono, :emoji
 
   # Generic inline pill primitive. Two modes:
   #
@@ -45,6 +45,8 @@ class DS::Pill < DesignSystemComponent
   # - `icon:` overrides the dot with a Lucide icon (sized xs, current color).
   #   Useful for status pills that benefit from a glyph (circle-check,
   #   triangle-alert, pause, etc.) rather than the generic dot.
+  # - `emoji:` displays one complete emoji in place of the Lucide icon; the
+  #   caller keeps `icon:` as its fallback when the emoji is cleared.
   # - Tones accept both visual names (`:violet`, `:amber`, …) and
   #   semantic aliases (`:success`, `:warning`, `:error`,
   #   `:destructive`, `:neutral`, `:info`). Aliases resolve via
@@ -63,7 +65,7 @@ class DS::Pill < DesignSystemComponent
   # - `mono: true` applies `font-mono` for technical labels (queue names,
   #   IDs, latencies) where tabular alignment aids scanning.
   def initialize(label: nil, tone: :violet, style: :soft, size: :sm, show_dot: nil, dot_only: false, title: nil, icon: nil, marker: true, custom_color: nil,
-                 truncate: false, label_testid: nil, icon_size: "xs", mono: false)
+                 truncate: false, label_testid: nil, icon_size: "xs", mono: false, emoji: nil)
     resolved_tone = SEMANTIC_TONE_ALIASES.fetch(tone.to_sym, tone.to_sym)
     @label = label || I18n.t("ds.pill.default_label", default: "Beta")
     @tone = TONES.include?(resolved_tone) ? resolved_tone : :violet
@@ -75,6 +77,7 @@ class DS::Pill < DesignSystemComponent
     @dot_only = dot_only
     @title = title
     @icon = icon
+    @emoji = emoji
     @marker = marker
     @custom_color = custom_color
     @truncate = truncate

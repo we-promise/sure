@@ -13,6 +13,11 @@ zh-TW:
     edit:
       edit: 編輯分類
     form:
+      emoji_label: "表情符號（選填）"
+      emoji_placeholder: "貼上一個表情符號"
+      emoji_help: "選擇或貼上一個完整的表情符號，也可以使用旗幟或家庭表情。清除後會改用圖示。"
+      emoji_clear: "使用圖示"
+      emoji_pick: "使用 %{emoji}"
       placeholder: 分類名稱
       name_label: 名稱
       unassigned: （未指定）

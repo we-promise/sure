@@ -963,6 +963,7 @@ DEPENDENCIES
   tailwindcss-rails
   turbo-rails
   tzinfo-data
+  unicode-emoji (= 4.0.4)
   vcr
   vernier
   view_component

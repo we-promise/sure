@@ -13,6 +13,11 @@ hu:
     edit:
       edit: Kategória szerkesztése
     form:
+      emoji_label: "Emodzsi (nem kötelező)"
+      emoji_placeholder: "Illessz be egy emodzsit"
+      emoji_help: "Válassz vagy illessz be egy teljes emodzsit, akár zászlót vagy családot is. Töröld, ha az ikont szeretnéd használni."
+      emoji_clear: "Ikon használata"
+      emoji_pick: "%{emoji} használata"
       placeholder: Kategória neve
       name_label: Név
       unassigned: "(nincs hozzárendelve)"

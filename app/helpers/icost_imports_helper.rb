@@ -21,7 +21,7 @@ module IcostImportsHelper
 
   def icost_value(value)
     return t("icost_imports.empty_value") if value.nil? || value == ""
-    return value.to_s("F") if value.is_a?(BigDecimal)
+    return number_with_delimiter(value.to_s("F")) if value.is_a?(BigDecimal)
     return JSON.generate(value) if value.is_a?(Array) || value.is_a?(Hash)
 
     value.to_s

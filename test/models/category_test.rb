@@ -222,4 +222,63 @@ class CategoryTest < ActiveSupport::TestCase
 
     assert_equal [ c ], result.to_a
   end
+  test "emoji preserves complete Unicode sequences and the lucide fallback" do
+    category = categories(:food_and_drink)
+    category.update!(lucide_icon: "utensils")
+    [ "😀", "☕️", "👨‍👩‍👧‍👦", "👩🏽‍💻", "🇨🇳", "1️⃣", "❤", "❤️", "🏴\u{E0067 E0062 E0065 E006E E0067 E007F}" ].each do |emoji|
+      category.update!(emoji: emoji)
+      assert_equal emoji, category.reload.emoji
+      assert_equal "utensils", category.lucide_icon
+    end
+  end
+
+  test "blank emoji clears the override without changing its fallback" do
+    category = categories(:food_and_drink)
+    [ nil, "", " \t\n " ].each do |blank|
+      category.update!(emoji: "👩🏽‍💻", lucide_icon: "coffee")
+      category.update!(emoji: blank)
+      assert_nil category.reload.emoji
+      assert_equal "coffee", category.lucide_icon
+    end
+    category.update!(emoji: "  👩🏽‍💻  ")
+    assert_equal "👩🏽‍💻", category.reload.emoji
+  end
+
+  test "emoji rejects ordinary text multiple clusters incomplete sequences and oversized input" do
+    category = categories(:food_and_drink)
+    [ "abc", "1", "*", "a\u0308", "😀😀", "😀\u200D", "<script>alert(1)</script>", "😀" + "\u0301" * 70 ].each do |invalid|
+      category.emoji = invalid
+      assert_not category.valid?, "#{invalid.inspect} must not be accepted as one emoji"
+      assert category.errors.of_kind?(:emoji, :invalid)
+    end
+  end
+
+  test "emoji rejects invalid UTF-8 without raising during normalization" do
+    category = categories(:food_and_drink)
+    category.emoji = "\xFF".dup.force_encoding(Encoding::UTF_8)
+    assert_nothing_raised { assert_not category.valid? }
+    assert category.errors.of_kind?(:emoji, :invalid)
+  end
+
+  test "subcategory emoji stays independent while retaining inherited color and hierarchy" do
+    parent = categories(:food_and_drink)
+    child = categories(:subcategory)
+    parent.update!(emoji: "🍽️")
+    child.update!(emoji: "🍜")
+
+    assert_equal parent.id, child.reload.parent_id
+    assert_equal parent.color, child.color
+    assert_equal "🍜", child.emoji
+    assert_equal "🍽️", parent.reload.emoji
+    child.update!(emoji: nil)
+    assert_nil child.reload.emoji
+    assert_equal "🍽️", parent.reload.emoji
+  end
+
+  test "emoji defaults leave existing and synthetic categories on lucide icons" do
+    assert_nil categories(:food_and_drink).emoji
+    assert_equal "shapes", categories(:food_and_drink).lucide_icon
+    assert_nil Category.uncategorized.emoji
+    assert_equal "circle-dashed", Category.uncategorized.lucide_icon
+  end
 end

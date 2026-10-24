@@ -15,6 +15,11 @@ fr:
     edit:
       edit: Éditer la catégorie
     form:
+      emoji_label: "Émoji (facultatif)"
+      emoji_placeholder: "Collez un émoji"
+      emoji_help: "Choisissez ou collez un émoji complet, y compris un drapeau ou une famille. Videz le champ pour utiliser l’icône."
+      emoji_clear: "Utiliser l’icône"
+      emoji_pick: "Utiliser %{emoji}"
       auto_adjust: réglage automatique.
       trigger_label: Choisir la couleur et l'icône
       color: Couleur

@@ -15,6 +15,11 @@ tr:
     edit:
       edit: Kategoriyi düzenle
     form:
+      emoji_label: "Emoji (isteğe bağlı)"
+      emoji_placeholder: "Bir emoji yapıştırın"
+      emoji_help: "Bayrak veya aile emojileri dahil olmak üzere tam bir emoji seçin ya da yapıştırın. Simgeyi kullanmak için emojiyi temizleyin."
+      emoji_clear: "Simge kullan"
+      emoji_pick: "%{emoji} kullan"
       auto_adjust: otomatik ayarla.
       color: Renk
       icon: Simge

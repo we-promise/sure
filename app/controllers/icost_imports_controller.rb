@@ -40,6 +40,10 @@ class IcostImportsController < ApplicationController
   end
 
   private
+    def default_breadcrumbs
+      [ [ I18n.t("breadcrumbs.home"), root_path ], [ I18n.t("icost_imports.title"), nil ] ]
+    end
+
     def own_imports
       Current.family.icost_imports.where(user: Current.user)
     end

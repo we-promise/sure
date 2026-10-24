@@ -20,7 +20,7 @@
     <% icons.each do |icon_name| %>
       <label class="filterable-item relative" data-filter-name="<%= icon_name %>">
         <%= form.radio_button method, icon_name, class: "sr-only peer", data: {
-              action: "change->color-icon-picker#handleIconChange change->color-icon-picker#handleIconColorChange",
+              action: "click->color-icon-picker#handleIconChange change->color-icon-picker#handleIconChange change->color-icon-picker#handleIconColorChange",
               color_icon_picker_target: "icon"
             } %>
         <div class="text-secondary w-7 h-7 flex m-0.5 items-center justify-center rounded-full cursor-pointer hover:bg-container-inset-hover peer-checked:bg-container-inset border border-transparent">

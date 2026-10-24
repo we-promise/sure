@@ -231,6 +231,8 @@ zh-CN:
         sso_confirm_button: 断开连接
         sso_warning_message: 这是您唯一的登录方式。断开前应先在安全设置中设置密码，否则您可能无法再登录账户。
     settings_nav:
+      background_jobs_label: 后台任务
+      system_health_label: 系统健康
       accounts_label: 账户
       advanced_section_title: 高级
       ai_prompts_label: AI 提示词

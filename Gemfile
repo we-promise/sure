@@ -18,6 +18,7 @@ gem "importmap-rails"
 gem "propshaft"
 gem "tailwindcss-rails"
 gem "lucide-rails"
+gem "unicode-emoji", "4.0.4", require: "unicode/emoji"
 
 # Hotwire + UI
 gem "stimulus-rails"

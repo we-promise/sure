@@ -13,8 +13,8 @@
                 background-color: color-mix(in oklab, <%= budget_category.category.color %> 10%, transparent);
                 border-color: color-mix(in oklab, <%= budget_category.category.color %> 10%, transparent);
                 color: <%= budget_category.category.color %>;">
-          <% if budget_category.category.lucide_icon %>
-            <%= icon(budget_category.category.lucide_icon, color: "current") %>
+          <% if budget_category.category.emoji.present? || budget_category.category.lucide_icon %>
+            <%= category_icon(budget_category.category, size: "md") %>
           <% else %>
             <%= render DS::FilledIcon.new(
               variant: :text,
@@ -109,8 +109,8 @@
       <%# Uninitialized budget - show simple view %>
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 flex-shrink-0 group-hover:scale-105 transition-all duration-300 rounded-full flex justify-center items-center" style="color: <%= budget_category.category.color %>">
-          <% if budget_category.category.lucide_icon %>
-            <%= icon(budget_category.category.lucide_icon, color: "current") %>
+          <% if budget_category.category.emoji.present? || budget_category.category.lucide_icon %>
+            <%= category_icon(budget_category.category, size: "md") %>
           <% else %>
             <%= render DS::FilledIcon.new(
               variant: :text,

@@ -13,6 +13,11 @@ vi:
     edit:
       edit: Chỉnh sửa danh mục
     form:
+      emoji_label: "Emoji (không bắt buộc)"
+      emoji_placeholder: "Dán một emoji"
+      emoji_help: "Chọn hoặc dán một emoji hoàn chỉnh, kể cả cờ hoặc gia đình. Xóa emoji để dùng biểu tượng."
+      emoji_clear: "Dùng biểu tượng"
+      emoji_pick: "Dùng %{emoji}"
       placeholder: Tên danh mục
       name_label: Tên
       unassigned: "(chưa gán)"

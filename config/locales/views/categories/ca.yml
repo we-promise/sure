@@ -15,6 +15,11 @@ ca:
     edit:
       edit: Edita la categoria
     form:
+      emoji_label: "Emoji (opcional)"
+      emoji_placeholder: "Enganxa un emoji"
+      emoji_help: "Tria o enganxa un emoji complet, inclosos els de banderes o famílies. Esborra'l per fer servir la icona."
+      emoji_clear: "Fes servir la icona"
+      emoji_pick: "Fes servir %{emoji}"
       trigger_label: Tria color i icona
       color: Color
       icon: Icona

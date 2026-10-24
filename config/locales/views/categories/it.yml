@@ -13,6 +13,11 @@ it:
     edit:
       edit: Modifica categoria
     form:
+      emoji_label: "Emoji (opzionale)"
+      emoji_placeholder: "Incolla una sola emoji"
+      emoji_help: "Scegli o incolla un'emoji completa, anche una bandiera o una famiglia. Cancellala per usare l'icona."
+      emoji_clear: "Usa l'icona"
+      emoji_pick: "Usa %{emoji}"
       placeholder: Nome categoria
       name_label: Nome
       unassigned: "(non assegnata)"

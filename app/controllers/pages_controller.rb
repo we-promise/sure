@@ -444,6 +444,7 @@ class PagesController < ApplicationController
             percentage: ct.weight.round(1),
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
             icon: ct.category.lucide_icon,
+            emoji: ct.category.emoji,
             clickable: !ct.category.other_investments?
           }
         end

@@ -70,8 +70,8 @@
           <div class="flex items-center gap-3 py-2.5 <%= "border-b border-divider" unless index == top_budget_categories.size - 1 %>">
             <div class="w-7 h-7 shrink-0 rounded-full flex items-center justify-center"
                  style="background-color: color-mix(in oklab, <%= budget_category.category.color %> 10%, transparent); color: <%= budget_category.category.color %>;">
-              <% if budget_category.category.lucide_icon %>
-                <%= icon(budget_category.category.lucide_icon, size: "sm", color: "current") %>
+              <% if budget_category.category.emoji.present? || budget_category.category.lucide_icon %>
+                <%= category_icon(budget_category.category, size: "sm") %>
               <% else %>
                 <%= render DS::FilledIcon.new(
                   variant: :text,

@@ -13,6 +13,11 @@ de:
     edit:
       edit: Kategorie bearbeiten
     form:
+      emoji_label: "Emoji (optional)"
+      emoji_placeholder: "Ein Emoji einfügen"
+      emoji_help: "Wähle oder füge ein vollständiges Emoji ein, auch eine Flagge oder eine Familie. Leere das Feld, um das Symbol zu verwenden."
+      emoji_clear: "Symbol verwenden"
+      emoji_pick: "%{emoji} verwenden"
       placeholder: Kategoriename
       auto_adjust: automatisch anpassen.
       color: Farbe

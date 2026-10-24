@@ -13,6 +13,11 @@ en:
     edit:
       edit: Edit category
     form:
+      emoji_label: "Emoji (optional)"
+      emoji_placeholder: "Paste one emoji"
+      emoji_help: "Choose or paste one complete emoji, including a flag or a family. Clear it to use the icon."
+      emoji_clear: "Use icon"
+      emoji_pick: "Use %{emoji}"
       placeholder: Category name
       name_label: Name
       unassigned: "(unassigned)"

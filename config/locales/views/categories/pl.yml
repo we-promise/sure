@@ -15,6 +15,11 @@ pl:
     edit:
       edit: Edytuj kategorię
     form:
+      emoji_label: "Emoji (opcjonalnie)"
+      emoji_placeholder: "Wklej jedno emoji"
+      emoji_help: "Wybierz lub wklej jedno kompletne emoji, także flagę lub rodzinę. Usuń je, aby użyć ikony."
+      emoji_clear: "Użyj ikony"
+      emoji_pick: "Użyj %{emoji}"
       auto_adjust: dostosuj automatycznie.
       color: Kolor
       icon: Ikona

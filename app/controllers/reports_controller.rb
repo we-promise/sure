@@ -397,13 +397,14 @@ class ReportsController < ApplicationController
       family_currency = Current.family.currency
 
       # Helper to initialize a category group hash
-      init_category_group = ->(id, name, color, icon, type, filter_value) do
+      init_category_group = ->(id, name, color, icon, type, filter_value, emoji = nil) do
         {
           category_id: id,
           category_name: name,
           category_filter_value: filter_value,
           category_color: color,
           category_icon: icon,
+          category_emoji: emoji,
           type: type,
           total: 0,
           count: 0,
@@ -420,6 +421,7 @@ class ReportsController < ApplicationController
           category_filter_value: category.filter_value,
           category_color: category.color,
           category_icon: category.lucide_icon,
+          category_emoji: category.emoji,
           total: 0,
           count: 0,
           has_transactions: false
@@ -448,7 +450,7 @@ class ReportsController < ApplicationController
           # This is a subcategory - group under parent
           parent = category.parent
           parent_key = [ parent.id, type ]
-          grouped_data[parent_key] ||= init_category_group.call(parent.id, parent.name, parent.color || Category::UNCATEGORIZED_COLOR, parent.lucide_icon, type, parent.filter_value)
+          grouped_data[parent_key] ||= init_category_group.call(parent.id, parent.name, parent.color || Category::UNCATEGORIZED_COLOR, parent.lucide_icon, type, parent.filter_value, parent.emoji)
 
           # Add to subcategory
           grouped_data[parent_key][:subcategories][category.id] ||= init_subcategory.call(category)
@@ -458,7 +460,7 @@ class ReportsController < ApplicationController
         else
           # This is a root category (no parent)
           parent_key = [ category.id, type ]
-          grouped_data[parent_key] ||= init_category_group.call(category.id, category.name, category.color || Category::UNCATEGORIZED_COLOR, category.lucide_icon, type, category.filter_value)
+          grouped_data[parent_key] ||= init_category_group.call(category.id, category.name, category.color || Category::UNCATEGORIZED_COLOR, category.lucide_icon, type, category.filter_value, category.emoji)
         end
 
         grouped_data[parent_key][:count] += 1

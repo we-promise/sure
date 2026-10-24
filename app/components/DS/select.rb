@@ -55,6 +55,11 @@ module DS
       obj&.respond_to?(:lucide_icon) ? obj.lucide_icon : nil
     end
 
+    def emoji_for(item)
+      obj = item[:object]
+      obj&.respond_to?(:emoji) ? obj.emoji : nil
+    end
+
     # Returns true if the item has a logo (used in :logo variant)
     def logo_for(item)
       obj = item[:object]

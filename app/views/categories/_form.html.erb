@@ -5,6 +5,7 @@
     <section class="space-y-4">
       <div class="w-fit mx-auto relative">
         <%= render partial: "color_avatar", locals: { category: category } %>
+        <template data-color-icon-picker-target="emojiFallback"><%= icon(category.lucide_icon, size: "2xl", color: "current") %></template>
 
         <%= render DS::Disclosure.new(
               variant: :bare,
@@ -60,6 +61,15 @@
       <% end %>
 
       <div class="space-y-2">
+        <%= f.text_field :emoji, label: t(".emoji_label"), placeholder: t(".emoji_placeholder"), autocomplete: "off", spellcheck: false,
+              aria: { describedby: "category_emoji_help" }, data: { color_icon_picker_target: "emojiInput", action: "input->color-icon-picker#handleEmojiInput" } %>
+        <p id="category_emoji_help" class="text-sm text-secondary"><%= t(".emoji_help") %></p>
+        <div class="flex flex-wrap items-center gap-1">
+          <% %w[🍽️ 🛒 🏠 🚲 💼 🎁 ❤️ 👩🏽‍💻 👨‍👩‍👧‍👦 🇨🇳].each do |emoji| %>
+            <%= render DS::Button.new(text: emoji, variant: :ghost, size: :sm, aria: { label: t(".emoji_pick", emoji: emoji) }, data: { action: "click->color-icon-picker#selectEmoji", emoji: emoji }) %>
+          <% end %>
+          <%= render DS::Button.new(text: t(".emoji_clear"), variant: :outline, size: :sm, data: { action: "click->color-icon-picker#clearEmoji" }) %>
+        </div>
         <%= f.text_field :name, placeholder: t(".placeholder"), required: true, autofocus: true, label: t(".name_label"), data: { color_avatar_target: "name" } %>
         <% unless category.parent? %>
           <%= f.select :parent_id, categories.pluck(:name, :id), { include_blank: t(".unassigned"), label: t(".parent_category_label") }, disabled: category.parent?, data: { action: "change->color-icon-picker#handleParentChange" } %>

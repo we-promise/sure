@@ -16,6 +16,8 @@ export default class extends Controller {
     "selection",
     "colorPickerRadioBtn",
     "popup",
+    "emojiInput",
+    "emojiFallback",
   ];
 
   static values = {
@@ -43,6 +45,9 @@ export default class extends Controller {
     document.addEventListener("mousedown", this.handleOutsideClick);
 
     this.selectedIcon = null;
+    this.fallbackIcon = this.hasEmojiFallbackTarget
+      ? this.emojiFallbackTarget.content.firstElementChild.cloneNode(true)
+      : null;
 
     if (!this.presetColorsValue.includes(this.colorInputTarget.value)) {
       this.colorPickerRadioBtnTarget.checked = true;
@@ -124,10 +129,39 @@ export default class extends Controller {
       .closest("label")
       .querySelector("svg")
       .cloneNode(true);
-    this.avatarTarget.innerHTML = "";
+    if (this.hasEmojiInputTarget) this.emojiInputTarget.value = "";
+    this.fallbackIcon = iconSVG.cloneNode(true);
+    this.avatarTarget.replaceChildren();
     iconSVG.style.padding = "0px";
     iconSVG.classList.add("w-8", "h-8");
     this.avatarTarget.appendChild(iconSVG);
+  }
+
+  handleEmojiInput() {
+    if (!this.hasEmojiInputTarget) return;
+    const emoji = this.emojiInputTarget.value.trim();
+    if (emoji) {
+      const glyph = document.createElement("span");
+      glyph.className = "inline-flex items-center justify-center w-8 h-8 text-3xl leading-none";
+      glyph.setAttribute("aria-hidden", "true");
+      glyph.dataset.emojiGlyph = "true";
+      glyph.textContent = emoji;
+      this.avatarTarget.replaceChildren(glyph);
+    } else if (this.fallbackIcon) {
+      const glyph = this.fallbackIcon.cloneNode(true);
+      glyph.classList.add("w-8", "h-8");
+      this.avatarTarget.replaceChildren(glyph);
+    }
+  }
+
+  selectEmoji(event) {
+    this.emojiInputTarget.value = event.currentTarget.dataset.emoji;
+    this.handleEmojiInput();
+  }
+
+  clearEmoji() {
+    this.emojiInputTarget.value = "";
+    this.handleEmojiInput();
   }
 
   updateSelectedIconColor(color) {
@@ -147,15 +181,18 @@ export default class extends Controller {
   }
 
   handleContrastValidation(contrastRatio) {
-    if (contrastRatio < 4.5) {
-      this.colorInputTarget.setCustomValidity(
-        "Poor contrast, choose darker color or auto-adjust.",
-      );
+    const message = this.hasValidationMessageTarget
+      ? this.validationMessageTarget
+      : null;
+    const poorContrast = contrastRatio < 4.5;
+    const localizedMessage = message?.textContent.replace(/\s+/g, " ").trim() || "";
 
-      this.showFlex(this.validationMessageTarget);
-    } else {
-      this.colorInputTarget.setCustomValidity("");
-      this.hideFlex(this.validationMessageTarget);
+    // Keep the existing translated category/goal hint and native validity UI
+    // in agreement. Without a hint, leave native format validation intact.
+    this.colorInputTarget.setCustomValidity(poorContrast ? localizedMessage : "");
+    if (message) {
+      if (poorContrast) this.showFlex(message);
+      else this.hideFlex(message);
     }
   }
 

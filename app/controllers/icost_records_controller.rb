@@ -19,6 +19,14 @@ class IcostRecordsController < ApplicationController
   end
 
   private
+    def default_breadcrumbs
+      [
+        [ I18n.t("breadcrumbs.home"), root_path ],
+        [ I18n.t("icost_imports.title"), icost_imports_path ],
+        [ I18n.t("icost_imports.record_title", row: @record.source_row), nil ]
+      ]
+    end
+
     def set_record
       @import = Current.family.icost_imports.where(user: Current.user).find(params[:icost_import_id])
       @record = @import.records.find(params[:id])

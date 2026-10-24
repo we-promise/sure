@@ -1,4 +1,8 @@
 module CategoriesHelper
+  def category_icon(category, **options)
+    render DS::IconGlyph.new(icon: category.lucide_icon, emoji: category.emoji, **options)
+  end
+
   def transfer_category
     Category.new \
       name: I18n.t("categories.virtual.transfer"),

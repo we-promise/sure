@@ -434,6 +434,9 @@ class Family::DataImporter
           classification_unused: data["classification_unused"] || data["classification"] || "expense",
           lucide_icon: data["lucide_icon"] || "shapes"
         )
+        # Older archives predate the override. Only an explicit field replaces
+        # it; null deliberately restores the saved Lucide fallback.
+        category.emoji = data["emoji"] if data.key?("emoji")
         category.save!
         map_source!(:categories, old_id, category)
         increment_summary("Category", created ? :created : :updated)

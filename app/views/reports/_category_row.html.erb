@@ -19,14 +19,14 @@
           <%= icon "corner-down-right" %>
         </div>
       <% end %>
-      <% if item[:category_icon] %>
+      <% if item[:category_emoji].present? || item[:category_icon] %>
         <div class="h-7 w-7 flex-shrink-0 rounded-full flex justify-center items-center <%= clickable ? "group-hover/category-row:scale-105 transition-all duration-300" : "" %>"
           style="
             background-color: color-mix(in oklab, <%= item[:category_color] %> 10%, transparent);
             border-color: color-mix(in oklab, <%= item[:category_color] %> 10%, transparent);
             color: <%= item[:category_color] %>;
           ">
-          <%= icon(item[:category_icon], color: "current", size: "sm") %>
+          <%= render DS::IconGlyph.new(icon: item[:category_icon], emoji: item[:category_emoji], size: "sm") %>
         </div>
       <% else %>
         <%= render DS::FilledIcon.new(

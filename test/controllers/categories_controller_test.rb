@@ -403,6 +403,33 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert Category.exists?(other.id)
   end
 
+  test "creates and clears a category emoji while preserving its lucide fallback" do
+    post categories_url, params: { category: { name: "Synthetic emoji category", color: "#123456", lucide_icon: "coffee", emoji: "👩🏽‍💻" } }
+    assert_redirected_to categories_url
+    category = @family.categories.find_by!(name: "Synthetic emoji category")
+    assert_equal "👩🏽‍💻", category.emoji
+    assert_equal "coffee", category.lucide_icon
+
+    patch category_url(category), params: { category: { emoji: "" } }
+    assert_redirected_to categories_url
+    assert_nil category.reload.emoji
+    assert_equal "coffee", category.lucide_icon
+  end
+
+  test "invalid category emoji fails without creating a category" do
+    assert_no_difference "Category.count" do
+      post categories_url, params: { category: { name: "Invalid emoji category", color: "#123456", emoji: "😀😀" } }
+    end
+    assert_response :unprocessable_entity
+  end
+
+  test "category emoji updates cannot cross family boundaries" do
+    other = families(:empty).categories.create!(name: "Other family emoji", color: "#123456", emoji: "🏠")
+    patch category_url(other), params: { category: { emoji: "🍜" } }
+    assert_response :not_found
+    assert_equal "🏠", other.reload.emoji
+  end
+
   private
     def capture_sql_queries
       queries = []

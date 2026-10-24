@@ -13,6 +13,11 @@ nl:
     edit:
       edit: Categorie bewerken
     form:
+      emoji_label: "Emoji (optioneel)"
+      emoji_placeholder: "Plak één emoji"
+      emoji_help: "Kies of plak één volledige emoji, bijvoorbeeld een vlag of een gezin. Wis deze om het pictogram te gebruiken."
+      emoji_clear: "Pictogram gebruiken"
+      emoji_pick: "%{emoji} gebruiken"
       placeholder: Categorienaam
     index:
       bootstrap: Gebruik standaardinstellingen (aanbevolen)

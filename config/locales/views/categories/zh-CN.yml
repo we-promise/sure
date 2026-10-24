@@ -13,6 +13,11 @@ zh-CN:
     edit:
       edit: 编辑分类
     form:
+      emoji_label: "Emoji（可选）"
+      emoji_placeholder: "粘贴一个 emoji"
+      emoji_help: "选择或粘贴一个完整 emoji，也支持旗帜、家庭等组合。清空后使用原图标。"
+      emoji_clear: "使用图标"
+      emoji_pick: "使用 %{emoji}"
       placeholder: 分类名称
       name_label: 名称
       unassigned: （未分配）
