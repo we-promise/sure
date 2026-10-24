@@ -1028,6 +1028,60 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_not_includes third_request.to_json, "\"round\":", "the round tag must not leak into the request"
   end
 
+  test "supports_receipt_extraction? reads text PDFs with text-only models and photos with vision models" do
+    assert @openai.supports_receipt_extraction?(model: "gpt-4.1", content_type: "image/png")
+    assert @openai.supports_receipt_extraction?(model: "gpt-4", content_type: "application/pdf")
+    assert @openai.supports_receipt_extraction?(model: "gpt-4")
+    assert_not @openai.supports_receipt_extraction?(model: "gpt-4", content_type: "image/png")
+    assert_not @openai.supports_receipt_extraction?(model: "gpt-4.1", content_type: "text/plain")
+
+    with_env_overrides("OPENAI_SUPPORTS_PDF_PROCESSING" => "false") do
+      assert @openai.supports_receipt_extraction?(model: "gpt-4.1", content_type: "application/pdf")
+      assert_not @openai.supports_receipt_extraction?(model: "gpt-4.1", content_type: "image/jpeg")
+    end
+  end
+
+  test "extract_receipt reads a text PDF with a text-only model and no vision" do
+    extraction = Provider::LlmConcept::ReceiptExtraction.new(
+      merchant_name: "Shop", currency: "USD", line_items: [], tax: nil, discount: nil, total: nil
+    )
+    extractor = mock
+    extractor.expects(:extract).returns(extraction)
+    Provider::Openai::ReceiptExtractor.expects(:new).with do |*args|
+      params = args.last
+      params[:model] == "gpt-4" && params[:vision] == false && params[:content_type] == "application/pdf"
+    end.returns(extractor)
+
+    response = @openai.extract_receipt(file_content: "%PDF-1.4", content_type: "application/pdf", model: "gpt-4")
+
+    assert response.success?
+    assert_equal extraction, response.data
+  end
+
+  test "extract_receipt finishes the Langfuse trace on success and on failure" do
+    trace = mock
+    @openai.stubs(:create_langfuse_trace).returns(trace)
+    extraction = Provider::LlmConcept::ReceiptExtraction.new(
+      merchant_name: "Shop", currency: "USD", line_items: [], tax: nil, discount: nil, total: nil
+    )
+
+    Provider::Openai::ReceiptExtractor.any_instance.expects(:extract).returns(extraction)
+    trace.expects(:end).with(output: { line_item_count: 0 }, level: nil)
+    assert @openai.extract_receipt(file_content: "%PDF-1.4", content_type: "application/pdf", model: "gpt-4.1").success?
+
+    Provider::Openai::ReceiptExtractor.any_instance.expects(:extract).raises(Provider::Openai::Error, "boom")
+    trace.expects(:end).with(output: { error: "boom" }, level: "ERROR")
+    assert_not @openai.extract_receipt(file_content: "%PDF-1.4", content_type: "application/pdf", model: "gpt-4.1").success?
+  end
+
+  test "extract_receipt rejects a photo for a text-only model" do
+    Provider::Openai::ReceiptExtractor.expects(:new).never
+
+    response = @openai.extract_receipt(file_content: "png", content_type: "image/png", model: "gpt-4")
+
+    assert_not response.success?
+  end
+
   private
     # Verify the response budget at the provider-to-processor boundary.
     # @param limit [Integer, nil] expected explicit cap or omitted cap

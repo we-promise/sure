@@ -499,4 +499,109 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     get api_v1_transaction_split_url("not-a-uuid"), headers: api_headers(@api_key)
     assert_response :not_found
   end
+
+  # ITEMIZE
+
+  test "proposes a split from an attached receipt without saving it" do
+    attach_receipt
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(receipt([ "Bananas", 30 ], [ "Detergent", 60 ], tax: 10)))
+
+    assert_no_difference "Entry.count" do
+      post itemize_api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key), as: :json
+    end
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal @transaction.id, body["transaction_id"]
+    assert_equal [ "Bananas", "Detergent" ], body.dig("split", "splits").map { |s| s["name"] }
+    assert_equal [ "33.33", "66.67" ], body.dig("split", "splits").map { |s| s["amount"] }
+    assert_equal "0.0", body["unmatched_amount"]
+
+    post api_v1_transaction_split_url(@transaction), params: { split: body["split"] }, headers: api_headers(@api_key), as: :json
+    assert_response :created
+  end
+
+  test "returns 422 when the receipt cannot be itemized" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(nil))
+
+    post itemize_api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key), as: :json
+
+    assert_response :unprocessable_entity
+    assert_includes JSON.parse(response.body)["errors"], "No receipt attachment found"
+  end
+
+  test "itemize returns 503, not 422, when the receipt storage is unavailable" do
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(nil))
+    Transaction::ReceiptItemizer.any_instance.stubs(:propose).raises(Transaction::ReceiptItemizer::Unavailable, "Could not read the receipt (ActiveStorage::FileNotFoundError)")
+
+    post itemize_api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key), as: :json
+
+    assert_response :service_unavailable
+    assert_equal "service_unavailable", JSON.parse(response.body)["error"]
+  end
+
+  test "itemize requires AI to be enabled for the user" do
+    attach_receipt
+    @user.update!(ai_enabled: false)
+
+    post itemize_api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key), as: :json
+
+    assert_response :forbidden
+  end
+
+  test "itemize returns 401 without an API key" do
+    attach_receipt
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    post itemize_api_v1_transaction_split_url(@transaction), as: :json
+
+    assert_response :unauthorized
+  end
+
+  test "itemize returns 404 for an unknown transaction" do
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    post itemize_api_v1_transaction_split_url(SecureRandom.uuid), headers: api_headers(@api_key), as: :json
+
+    assert_response :not_found
+  end
+
+  test "itemize returns 404 for a malformed transaction id" do
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    post itemize_api_v1_transaction_split_url("not-a-uuid"), headers: api_headers(@api_key), as: :json
+
+    assert_response :not_found
+  end
+
+  test "itemize requires the read_write scope" do
+    post itemize_api_v1_transaction_split_url(@transaction), headers: api_headers(@read_only_api_key), as: :json
+
+    assert_response :forbidden
+  end
+
+  private
+    def attach_receipt
+      @transaction.attachments.attach(io: StringIO.new("%PDF-1.4 receipt"), filename: "receipt.pdf", content_type: "application/pdf")
+    end
+
+    def receipt(*items, tax: nil)
+      Provider::LlmConcept::ReceiptExtraction.new(
+        merchant_name: "Grocery Store",
+        currency: "USD",
+        line_items: items.map { |name, amount| Provider::LlmConcept::ReceiptLineItem.new(name: name, amount: BigDecimal(amount.to_s)) },
+        tax: tax && BigDecimal(tax.to_s),
+        discount: nil,
+        total: nil
+      )
+    end
+
+    def receipt_provider(data)
+      provider = Object.new
+      provider.define_singleton_method(:supports_receipt_extraction?) { |**| true }
+      provider.define_singleton_method(:extract_receipt) do |**|
+        Provider::Response.new(success?: true, data: data, error: nil)
+      end
+      provider
+    end
 end

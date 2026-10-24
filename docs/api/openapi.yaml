@@ -102,6 +102,36 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/SplitChild"
+    SplitReceiptProposal:
+      allOf:
+      - "$ref": "#/components/schemas/SplitRequest"
+      - type: object
+        required:
+        - transaction_id
+        - attachment_id
+        - currency
+        - receipt_total
+        - unmatched_amount
+        properties:
+          transaction_id:
+            type: string
+            format: uuid
+          attachment_id:
+            type: string
+            description: The receipt attachment that was read
+          merchant_name:
+            type: string
+            nullable: true
+          currency:
+            type: string
+          receipt_total:
+            type: string
+            description: What the receipt lines, tax and discounts add up to
+          unmatched_amount:
+            type: string
+            description: Part of the transaction the receipt does not account for
+              (a tip, a fee). When not zero it is the last split row, named like the
+              transaction.
     SplitChild:
       allOf:
       - "$ref": "#/components/schemas/Transaction"
@@ -9300,6 +9330,54 @@ paths:
           description: split removed
         '404':
           description: transaction is not split
+  "/api/v1/transactions/{transaction_id}/split/itemize":
+    parameters:
+    - name: transaction_id
+      in: path
+      description: Transaction ID
+      required: true
+      schema:
+        type: string
+    post:
+      summary: Propose a split from an attached receipt
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: 'Reads a receipt (PDF or image) attached to the transaction with
+        the family''s LLM provider and proposes split rows from its line items. Receipt-level
+        tax and discounts are spread over the items in proportion to their amounts,
+        and the rows sum exactly to the transaction. Nothing is saved: review the
+        `split` body and send it to `POST /api/v1/transactions/{transaction_id}/split`.
+        Requires AI to be enabled for the user.'
+      parameters:
+      - name: attachment_id
+        in: query
+        required: false
+        description: Receipt attachment to read. Defaults to the first PDF or image
+          attachment.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: split proposed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SplitReceiptProposal"
+        '422':
+          description: no readable receipt, or the transaction cannot be split
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '503':
+          description: the receipt could not be read because storage or a dependency
+            was unavailable; retry
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/syncs":
     get:
       summary: Lists sync history
