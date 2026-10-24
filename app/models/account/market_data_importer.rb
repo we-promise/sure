@@ -13,6 +13,7 @@ class Account::MarketDataImporter
   end
 
   def import_exchange_rates
+    return unless needs_exchange_rates?
     return unless ExchangeRate.provider
 
     exchange_rate_pair_dates.each do |(source, target), start_date|

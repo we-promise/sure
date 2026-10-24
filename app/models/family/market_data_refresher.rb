@@ -25,14 +25,7 @@ class Family::MarketDataRefresher
 
       windows = importers.each_with_object({}) do |importer, merged|
         importer.price_windows.each do |security_id, window|
-          merged[security_id] = if merged[security_id]
-            Security::Price::ImportWindows::Window.new(
-              start_date: [ merged[security_id].start_date, window.start_date ].min,
-              end_date: [ merged[security_id].end_date, window.end_date ].max
-            )
-          else
-            window
-          end
+          merged[security_id] = window.merge(merged[security_id])
         end
       end
       return if windows.empty?
@@ -42,12 +35,13 @@ class Family::MarketDataRefresher
         security.import_provider_prices(start_date: window.start_date, end_date: window.end_date, clear_cache: true)
         security.import_provider_details
       rescue => e
-        report_failure(e, security_id: security.id)
+        report_failure(e, provider: security.price_data_provider, security_id: security.id)
       end
     end
 
     def refresh_exchange_rates
-      return unless ExchangeRate.provider
+      provider = ExchangeRate.provider
+      return unless provider
 
       pair_dates = importers.each_with_object({}) do |importer, merged|
         importer.exchange_rate_pair_dates.each do |pair, start_date|
@@ -58,11 +52,11 @@ class Family::MarketDataRefresher
       pair_dates.each do |(from, to), start_date|
         ExchangeRate.import_provider_rates(from: from, to: to, start_date: start_date, end_date: Date.current, clear_cache: true)
       rescue => e
-        report_failure(e, from_currency: from, to_currency: to)
+        report_failure(e, provider: provider, from_currency: from, to_currency: to)
       end
     end
 
-    def report_failure(error, metadata)
+    def report_failure(error, provider:, **metadata)
       Sentry.capture_exception(error)
       DebugLogEntry.capture(
         category: "provider_sync_error",
@@ -70,6 +64,7 @@ class Family::MarketDataRefresher
         message: "Could not refresh market data: #{error.class}: #{error.message}",
         source: self.class.name,
         family: family,
+        provider: provider,
         metadata: metadata
       )
     end

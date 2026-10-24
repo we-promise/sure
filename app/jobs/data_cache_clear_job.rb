@@ -2,8 +2,8 @@ class DataCacheClearJob < ApplicationJob
   queue_as :low_priority
 
   # Market data is refreshed before anything is deleted: the holdings decide
-  # which security prices are needed, and the account syncs must not start
-  # before the exchange rates are back.
+  # which security prices are needed, and the account syncs must start with
+  # the refreshed exchange rates.
   def perform(family)
     Family::MarketDataRefresher.new(family).refresh
 

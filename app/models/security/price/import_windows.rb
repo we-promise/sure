@@ -1,5 +1,11 @@
 class Security::Price::ImportWindows
-  Window = Data.define(:start_date, :end_date)
+  Window = Data.define(:start_date, :end_date) do
+    def merge(other)
+      return self if other.nil?
+
+      with(start_date: [ start_date, other.start_date ].min, end_date: [ end_date, other.end_date ].max)
+    end
+  end
 
   def initialize(account, today: Date.current)
     @account = account

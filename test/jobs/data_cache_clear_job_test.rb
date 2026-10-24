@@ -27,7 +27,7 @@ class DataCacheClearJobTest < ActiveJob::TestCase
 
     assert_enqueued_jobs 1, only: SyncJob
     assert_equal 0.73, ExchangeRate.find_by(from_currency: "CAD", to_currency: "USD", date: Date.current)&.rate&.to_f,
-      "account syncs start with no CAD/USD rate, so balances convert at 1:1 until a later sync"
+      "account syncs must start with the refreshed CAD/USD rate"
   end
 
   test "keeps the market data and cached balances of other families" do
@@ -45,6 +45,20 @@ class DataCacheClearJobTest < ActiveJob::TestCase
     assert Security::Price.exists?(other_price.id)
     assert_equal other_balance_ids.sort, Balance.where(id: other_balance_ids).pluck(:id).sort
     assert_equal other_holding_ids.sort, Holding.where(id: other_holding_ids).pluck(:id).sort
+  end
+
+  test "refreshes the prices of held securities before it deletes the holdings" do
+    @provider.stubs(:fetch_exchange_rates).returns(provider_success_response([]))
+    brokerage = @family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    security = Security.create!(ticker: "CLRC", exchange_operating_mic: "XNAS")
+    brokerage.holdings.create!(security: security, date: 1.day.ago.to_date, qty: 1, price: 200, amount: 200, currency: "USD")
+
+    Security.any_instance.expects(:import_provider_prices).with(has_entry(clear_cache: true)).once
+    Security.any_instance.stubs(:import_provider_details)
+
+    DataCacheClearJob.perform_now(@family)
+
+    assert_empty brokerage.holdings.reload
   end
 
   test "deletes the family's cached balances and holdings" do
