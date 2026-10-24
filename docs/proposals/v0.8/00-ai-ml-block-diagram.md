@@ -1,6 +1,6 @@
 # Sure: AI / ML block diagram
 
-A one-page orientation for developers new to Sure's AI and ML code: the main blocks, the models they write, and how a request moves through them. It covers only the workflows in [`01-ai-ml-workflow-map.md`](01-ai-ml-workflow-map.md), whose `W#` sections give the detail behind each box.
+A one-page orientation for developers new to Sure's AI and ML code: the main blocks, the models they write, and how a request moves through them. It covers only the workflows in [`01-ai-ml-workflow-map.md`](01-ai-ml-workflow-map.md), whose `W#` sections give the detail behind each box. The contract of each interface between the boxes is in the [D5 interface register](01-ai-ml-workflow-map.md#d5-interface-register).
 
 Checked against `main` @ `2250ba801` (2026-10-23). The 10 commits after this folder's reference commit `56105a3b5` don't change any AI path.
 

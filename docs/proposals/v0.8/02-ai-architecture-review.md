@@ -256,6 +256,8 @@ Ordered so that each step makes the next one safer for agents to carry out.
 | **Then (consolidation)** | S2 structured-call primitive, S3 batching, S8 web-thread LLM calls to jobs, S9 classifier Run as rules, S10 / P4 file splits | Large, but mechanical once contracts and tests exist. Good `good-agent-task` material (O-B9). |
 | **Product (decided by maintainers)** | S4 rule-pipeline phases, O-A1 cascade as product, O-A2 per-task models, O-A3 provenance UI, A11 consent policy, O-B3 eval gate | Changes visible behaviour or policy. Needs an ADR and a maintainer decision, not an agent PR. |
 
+[05-ai-breaking-change-option.md](05-ai-breaking-change-option.md) sketches the same refactor with breaking changes allowed, and maps each change to the interfaces it breaks in [01 D5](01-ai-ml-workflow-map.md#d5-interface-register).
+
 ### Non-goals
 
 - Don't introduce a general LLM framework (LangChain-style) or a new dependency. The S2 primitive is about 200 lines over the existing SDKs.
