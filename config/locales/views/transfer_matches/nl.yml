@@ -2,6 +2,7 @@
 nl:
   transfer_matches:
     create:
+      already_matched: "Een van deze transacties hoort al bij een andere overboeking."
       success: Overboeking aangemaakt
     new:
       header:
