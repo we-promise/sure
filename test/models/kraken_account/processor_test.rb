@@ -121,6 +121,35 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal(-119.80.to_d, sell.amount)
   end
 
+  # A fee taken in the base asset puts its units into the sell's quantity: they
+  # left the position too. TradesHistory still reports that fee converted to the
+  # quote currency, so `price * qty - fee` gives back what the fill brought in,
+  # and the gain is measured on every unit that left at its cost.
+  test "a sell whose fee came out in coins realizes the gain on what it brought in" do
+    @kraken_account.update!(
+      raw_transactions_payload: {
+        "trades" => { "sell_tx" => trade_payload("sell", "0.002", "120.00", "0.30") },
+        "ledgers" => {
+          "l1" => ledger_row("sell_tx", "XXBT", amount: "-0.00200000", fee: "0.00000500"),
+          "l2" => ledger_row("sell_tx", "ZUSD", amount: "120.00", fee: "0.00")
+        }
+      }
+    )
+
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    sell = @account.entries.find_by!(external_id: "kraken_trade_sell_tx", source: "kraken")
+    assert_equal(-0.002005.to_d, sell.trade.qty)
+    assert_equal(-120.to_d, sell.amount)
+
+    sell.trade.stubs(:basis_holding).returns(stub(avg_cost: Money.new(50_000, "USD")))
+    gain = sell.trade.realized_gain_loss
+
+    # 120.00 received, against 0.002005 BTC at 50,000 = 100.25
+    assert_equal Money.new(120, "USD"), gain.current
+    assert_equal Money.new(19.75, "USD"), gain.value
+  end
+
   test "falls back to the reported volume and cost when the trade has no ledger rows" do
     KrakenAccount::Processor.new(@kraken_account).process
 

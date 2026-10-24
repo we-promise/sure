@@ -87,8 +87,9 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, fee: 10, date: 1.day.ago.to_date)
     create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, fee: 5, date: Date.current)
 
-    # (10 * 212 + 10 + 15 * 216 + 5) / 25 = 5,375 / 25
-    assert_equal Money.new(BigDecimal("215")), @amzn.avg_cost
+    # (10 * 212 + 10 + 15 * 216 + 5) / 25 = 5,375 / 25. Within a hair: the
+    # tracker carries a fee as fee / qty per unit, as the calculators do.
+    assert_in_delta 215, @amzn.avg_cost.amount, BigDecimal("1e-20")
   end
 
   # The fallback's COALESCE(rate, 1) counted a foreign purchase at 1:1 when its
@@ -129,22 +130,35 @@ class HoldingTest < ActiveSupport::TestCase
   test "the fallback ignores a rate string that is not a plain decimal" do
     entry = create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
 
-    [ "n/a", "1e999999" ].each do |rate|
+    [ "n/a", "1e999999", "0x1" ].each do |rate|
       entry.entryable.update_column(:extra, { "exchange_rate" => rate })
 
-      assert_nil @amzn.avg_cost, rate
+      assert_nil @amzn.reload.avg_cost, rate
     end
   end
 
-  # The missing-rate check rides on the totals query instead of adding a round
-  # trip to a path that exists to avoid N+1 queries.
-  test "the fallback reads the trades in two queries" do
-    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
+  # Rates ride on the trades query instead of a lookup per trade, on a path
+  # that exists to avoid N+1 queries.
+  test "the fallback reads the trades and the splits once each" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 2.days.ago.to_date, currency: "CAD")
+    create_trade(@amzn.security, account: @account, qty: 5, price: 216.00, date: 1.day.ago.to_date, currency: "CAD")
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 2.days.ago.to_date, rate: 0.75)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: 0.75)
     @amzn.account
 
     queries = capture_sql_queries { @amzn.avg_cost }
 
-    assert_equal 2, queries.count { |sql| sql.include?('FROM "trades"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }
+    assert_equal 2, queries.size
+  end
+
+  # A page asks a holding for its average cost several times. The query cache
+  # answers the queries again; the replay of the whole history would run again.
+  test "a holding replays its history once, however often it is asked" do
+    Holding::CostBasisFallback.expects(:new).once.returns(stub(average_cost: nil))
+
+    3.times { assert_nil @amzn.avg_cost }
   end
 
   test "calculates total return trend" do
@@ -532,7 +546,7 @@ class HoldingTest < ActiveSupport::TestCase
       Trade::INTERNAL_MOVEMENT_LABELS.each do |label|
         holding.account.trades.each { |trade| trade.update!(investment_activity_label: label) }
 
-        assert_nil holding.avg_cost,
+        assert_nil holding.reload.avg_cost,
           "a position moved by #{label} has no cost basis this app can know"
       end
     end
