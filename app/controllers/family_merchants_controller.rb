@@ -164,8 +164,9 @@ class FamilyMerchantsController < ApplicationController
     # session, so redirects back to the bare index (after edit, delete, merge,
     # ...) keep the chosen page size, page and search.
     def store_params!
-      if request.query_parameters.blank? && stored_params.present?
-        redirect_to family_merchants_path(stored_params)
+      # Only requests carrying list params (query or JSON body) change the stored state.
+      if (params.keys & LIST_PARAMS).empty?
+        redirect_to family_merchants_path(stored_params) if request.query_parameters.blank? && stored_params.present?
       else
         list_params = params.slice(*LIST_PARAMS).permit(*LIST_PARAMS).to_h.compact_blank
         # A page Pagy rejects (0, "abc") must not be replayed on every later visit.

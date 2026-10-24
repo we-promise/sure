@@ -139,6 +139,25 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to family_merchants_path(per_page: 100)
   end
 
+  test "index uses list params sent in a JSON body instead of the stored state" do
+    get family_merchants_path(per_page: 100)
+
+    get family_merchants_path, params: { per_page: 20 }, headers: { "Accept" => "text/html" }, as: :json
+    assert_response :success
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 20)
+  end
+
+  test "index keeps the stored state when only unknown params are sent" do
+    get family_merchants_path(per_page: 100)
+    get family_merchants_path(other: "x")
+    assert_response :success
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
   test "pagination links are not prefetched so a clicked page is remembered" do
     get family_merchants_path
 
