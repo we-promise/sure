@@ -16,7 +16,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     Security.delete_all
     Entry.delete_all
 
-    @provider = mock("provider")
+    @provider = capable_provider("provider")
     Provider::Registry.any_instance
                       .stubs(:get_provider)
                       .with(:twelve_data)
@@ -240,6 +240,29 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     Account::MarketDataImporter.new(account).import_all
 
     assert_equal 1, Security::Price.where(security: security, date: trade_date).count
+  end
+
+  # Pins the keyword rather than the behaviour it enables. Nothing else does:
+  # the tests above stub `fetch_security_info` and never look at how
+  # `import_provider_details` was called, so a change dropping this keyword
+  # would silently switch off classification backfill with every test green.
+  test "asks for classification when importing security details" do
+    Security.any_instance.stubs(:import_provider_prices)
+    Security.any_instance
+            .expects(:import_provider_details)
+            .with(has_entry(include_classification: true))
+            .at_least_once
+
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
+    account.entries.create!(
+      name: "Buy AAPL", date: 10.days.ago.to_date, amount: 100, currency: "USD",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD",
+                           investment_activity_label: "Buy")
+    )
+
+    Account::MarketDataImporter.new(account).import_security_prices
   end
 
   test "caps a sold security at its closing trade despite later zero holdings" do
