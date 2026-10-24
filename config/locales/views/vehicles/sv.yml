@@ -1,0 +1,37 @@
+---
+sv:
+  vehicles:
+    edit:
+      edit: Redigera %{account}
+    form:
+      make: Märke
+      make_placeholder: Toyota
+      mileage: Miltal
+      mileage_placeholder: '15000'
+      mileage_unit: Enhet
+      model: Modell
+      model_placeholder: Camry
+      year: År
+      year_placeholder: '2023'
+      mileage_unit_kilometers: Kilometer
+      mileage_unit_miles: Miles
+    new:
+      title: Ange fordonsuppgifter
+    overview:
+      current_price: Aktuellt pris
+      make_model: Märke och modell
+      mileage: Miltal
+      purchase_price: Inköpspris
+      trend: Trend
+      unknown: Okänt
+      year: År
+    tabs:
+      overview:
+        current_price: Aktuellt pris
+        make_model: Märke och modell
+        mileage: Miltal
+        purchase_price: Inköpspris
+        trend: Trend
+        unknown: Okänt
+        year: År
+        edit_account_details: "Redigera kontouppgifter"

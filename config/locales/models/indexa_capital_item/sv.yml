@@ -1,0 +1,7 @@
+---
+sv:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: "Antingen miljövariabeln INDEXA_API_TOKEN eller användarnamn/dokument/lösenord krävs"

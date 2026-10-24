@@ -1,0 +1,18 @@
+---
+sv:
+  activerecord:
+    attributes:
+      import:
+        col_sep: Kolumnavgränsare
+        col_seps:
+          comma: Kommatecken (,)
+          semicolon: Semikolon (;)
+        currency: Valuta
+        number_format: Talformat
+    errors:
+      models:
+        import:
+          duplicate_headers: "CSV-rubriker normaliseras till dubbletta kolumner: %{columns}"
+          attributes:
+            raw_file_str:
+              invalid_csv_format: är inte ett giltigt CSV-format

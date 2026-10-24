@@ -1,0 +1,64 @@
+---
+sv:
+  loans:
+    edit:
+      edit: Redigera %{account}
+    form:
+      interest_rate: Ränta
+      interest_rate_placeholder: '5.25'
+      initial_balance: Ursprungligt lånebelopp
+      rate_type: Räntetyp
+      term_months: Löptid (månader)
+      term_months_placeholder: '360'
+      none: Inget
+      subtype_prompt: Välj lånetyp
+      subtype_none: Inget
+      rate_type_adjustable: Rörlig
+      rate_type_fixed: Fast
+      rate_type_variable: Variabel
+      rate_changes: Ränteändringar
+      rate_changes_hint: Varje rad anger den ränta som gäller från sitt startdatum tills nästa. Om du anger ett datum som redan finns ersätts den raden istället för att en ny läggs till.
+      rate_changes_empty: Inga ränteändringar registrerade. Lånet löper på räntan ovan.
+      rate_change_effective_date: Startdatum
+      rate_change_rate: Ränta
+      rate_change_add: Lägg till ränteändring
+      rate_change_remove: Ta bort
+      start_date: Startdatum för lånet
+      start_date_hint: När lånet togs ut. Lämna tomt för att använda kontots öppningsdatum.
+    new:
+      title: Ange lånedetaljer
+    overview:
+      interest_rate: Ränta
+      monthly_payment: Månadsbetalning
+      not_applicable: Ej tillämpligt
+      original_payoff_date: Ursprungligt slutdatum
+      original_principal: Ursprungligt lånebelopp
+      remaining_principal: Kvarvarande lånebelopp
+      term: Löptid
+      type: Typ
+      unknown: Okänt
+    tabs:
+      schedule:
+        date: Datum
+        description: Beräknat utifrån ursprungligt saldo, ränta och löptid, med start %{start_date}. Extra betalningar visas inte.
+        variable_rate_notice: Detta låns ränta ändras över tid. Amorteringsplanen räknas om vid varje registrerad ändring, med bibehållet ursprungligt slutdatum och justerad betalning; en ändring som ännu inte har registrerats kommer att påverka dessa siffror.
+        opening_payment: Öppningsbetalning
+        interest: Ränta
+        monthly_payment: Månadsbetalning
+        number: "#"
+        payment: Betalning
+        principal: Amortering
+        remaining_balance: Kvarvarande saldo
+        total_cost: Total kostnad
+        total_interest: Total ränta
+      overview:
+        interest_rate: Ränta
+        monthly_payment: Månadsbetalning
+        not_applicable: Ej tillämpligt
+        original_payoff_date: Ursprungligt slutdatum
+        original_principal: Ursprungligt lånebelopp
+        remaining_principal: Kvarvarande lånebelopp
+        term: Löptid
+        type: Typ
+        unknown: Okänt
+        edit_loan_details: "Redigera lånedetaljer"

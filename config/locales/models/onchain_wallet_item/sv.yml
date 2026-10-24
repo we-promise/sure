@@ -1,0 +1,17 @@
+---
+sv:
+  onchain:
+    chains:
+      arbitrum: Arbitrum
+      base: Base
+      bitcoin: Bitcoin
+      ethereum: Ethereum
+      gnosis: Gnosis
+      optimism: Optimism
+      polygon: Polygon
+      solana: Solana
+    institution_name: Egenförvaltade plånböcker
+  onchain_wallet_item:
+    movement:
+      received: "Mottog %{quantity} %{symbol}"
+      sent: "Skickade %{quantity} %{symbol}"

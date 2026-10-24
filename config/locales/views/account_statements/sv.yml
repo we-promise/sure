@@ -1,0 +1,116 @@
+sv:
+  account_statements:
+    account_tab:
+      coverage_title: Täckning för kontoutdrag
+      coverage_description: Historiska månader som stöds av uppladdade kontoutdrag och saldokontroller.
+      coverage_range: "%{start} - %{end}"
+      empty: Inga kontoutdrag länkade till det här kontot ännu.
+      open_inbox: Inkorg
+      statements_title: Kontoutdrag
+      year_label: Täckningsår
+    balance:
+      unknown: Okänt
+    coverage:
+      status:
+        ambiguous: Oklart
+        covered: Täckt
+        duplicate: Dubblett
+        mismatched: Avvikande
+        missing: Saknas
+        not_expected: Ej förväntat
+    create:
+      duplicates:
+        one: 1 dubblettutdrag hoppades över.
+        other: "%{count} dubblettutdrag hoppades över."
+      invalid_file_type: Ladda upp ett kontoutdrag i PDF-, CSV- eller XLSX-format under storleksgränsen.
+      no_files: Välj minst en kontoutdragsfil.
+      success:
+        one: 1 kontoutdrag laddades upp.
+        other: "%{count} kontoutdrag laddades upp."
+    destroy:
+      failure: Kontoutdraget kunde inte tas bort.
+      success: Kontoutdraget togs bort.
+    form:
+      account_upload: Ladda upp kontoutdrag
+      files_hint: PDF, CSV eller XLSX. Max %{max_size} MB per fil.
+      files_label: Kontoutdragsfiler
+      inbox_upload: Ladda upp
+    index:
+      account_label: Konto
+      confidence: "%{confidence} matchning"
+      empty_linked: Inga länkade kontoutdrag ännu.
+      empty_unmatched: Inkorgen för kontoutdrag är tom.
+      leave_unmatched: Lämna omatchad
+      linked_title: Länkade kontoutdrag
+      no_suggestion: Inget förslag
+      storage_used: Använt lagringsutrymme
+      title: Kontoutdragsvalv
+      unmatched_title: Omatchad inkorg
+      upload_description: Ladda upp kontoutdrag till inkorgen, eller välj ett konto att länka direkt.
+      upload_title: Ladda upp kontoutdrag
+    link:
+      no_account: Välj ett konto innan du länkar det här kontoutdraget.
+      success: Länkade kontoutdrag till %{account}.
+    period:
+      unknown: Okänd period
+    reconciliation:
+      checks:
+        closing_balance: Utgående saldo
+        opening_balance: Ingående saldo
+        period_movement: Periodens rörelse
+        unknown_check: Okänd kontroll
+      matched: Matchad
+      mismatched: Avvikande
+      unavailable: Inte kontrollerad
+    reject:
+      success: Matchningen av kontoutdraget avvisades.
+    show:
+      account_label: Konto
+      account_last4_hint: Kontots sista fyra siffror
+      account_name_hint: Ledtråd för kontonamn
+      closing_balance: Utgående saldo
+      currency: Valuta
+      delete: Ta bort
+      difference: Skillnad
+      download: Ladda ner
+      institution_name_hint: Ledtråd för institution
+      ledger_amount: Sure-liggare
+      linked_to: Länkat till %{account}.
+      linking_title: Kontolänk
+      link_suggestion: Länkförslag
+      metadata_title: Metadata för kontoutdrag
+      no_suggestion: Inget kontoförslag ännu.
+      opening_balance: Ingående saldo
+      period_end_on: Periodens slut
+      period_start_on: Periodens start
+      reconciliation_title: Avstämning
+      reconciliation_unavailable: Lägg till en period och ett ingående eller utgående saldo för kontoutdraget, och se till att Sure har saldohistorik för dessa datum.
+      reject: Avvisa
+      save: Spara kontoutdrag
+      statement_amount: Kontoutdrag
+      suggested_account: Föreslaget konto är %{account} (%{confidence} säkerhet).
+      title: Kontoutdrag
+      unlink: Ta bort länkning
+      unmatched_account: Omatchad inkorg
+      unknown_value: Okänt
+    status:
+      linked: Länkat
+      rejected: Avvisat
+      unmatched: Omatchat
+    table:
+      account: Konto
+      actions: Åtgärder
+      download: Ladda ner
+      edit: Redigera
+      file: Fil
+      link_suggestion: Länkförslag
+      period: Period
+      reconciliation: Avstämning
+      reject: Avvisa förslag
+      suggestion: Förslag
+      unlink: Ta bort länkning
+      view: Visa
+    unlink:
+      success: Kontoutdraget flyttades tillbaka till omatchad inkorg.
+    update:
+      success: Kontoutdraget uppdaterades.

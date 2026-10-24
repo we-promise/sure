@@ -1,0 +1,53 @@
+---
+sv:
+  recurring_occurrences:
+    history_status:
+      paid: Betald
+      skipped: Överhoppad
+      missed: Missad
+      scheduled: Öppen
+    show:
+      due_on: "Förfaller %{date}"
+      paid_of: "%{paid} av %{expected} betalt"
+      paid_headline: "%{amount} betalt"
+      remaining: "%{amount} kvar"
+      settled: Betald i sin helhet
+      overpaid: mer än förväntat
+      skipped: Överhoppad
+      missed: Markerad missad
+      payments: Betalningar
+      manual_payment: Manuell betalning
+      unlink: Avlänka
+      review_heading: Granska betalning
+      find_heading: Hitta en betalning
+      add_heading: Lägg till en till betalning
+      other_matches: Andra troliga matchningar
+      no_ranked_candidates: Inget här ser ut som en betalning för denna räkning än.
+      search_all: Sök alla transaktioner
+      search_placeholder: Sök transaktioner
+      no_candidates: Inga näraliggande transaktioner att länka.
+      no_search_results: "Inget matchar %{query}."
+      link_payment: Länka betalning
+      not_this_one: Inte den här
+      cant_find: Hittar du inte transaktionen?
+      manual_explainer: Registrera en betalning du vet inträffade när ingen transaktion här matchar den.
+      manual_amount_label: Belopp
+      manual_date_label: Datum
+      record_payment: Registrera betalning
+      mark_paid: Markera betald
+      mark_paid_hint: Reglerar resten utan att registrera en transaktion.
+      skip: Hoppa över
+      snooze_week: Skjut upp en vecka
+      reopen: Återöppna
+      view_bill: Visa hela räkningen
+    mark_paid:
+      success: Räkning markerad betald
+    skip:
+      success: Räkning överhoppad
+    reopen:
+      success: Räkning återöppnad
+    snooze:
+      success: "Uppskjuten till %{date}"
+      invalid_date: Det datumet kunde inte tolkas
+    override_amount:
+      success: Förväntat belopp uppdaterat

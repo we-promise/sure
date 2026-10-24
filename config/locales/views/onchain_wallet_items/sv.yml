@@ -1,0 +1,111 @@
+---
+sv:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Aktivitet hittades
+      explanation: Detta adressformat används av fler än ett nätverk, och saldona på varje nätverk skiljer sig åt. Välj det du vill spåra.
+      no_activity_found: Inget hittades
+      subtitle: "%{address}"
+      title: Vilket nätverk?
+    destroy:
+      success: Självförvaringsanslutningen är schemalagd för borttagning.
+    disconnect_asset:
+      success: "Slutade spåra %{symbol}. Kontot och historiken behölls."
+    disconnect_wallet:
+      success:
+        one: Slutade spåra 1 tillgång på den adressen.
+        other: "Slutade spåra %{count} tillgångar på den adressen."
+    enable_crypto_prices:
+      not_self_hosted: Marknadsdataleverantörer konfigureras av instansoperatören för den här driftsättningen.
+      success: Kryptopriser är aktiverade. Plånboksvärden visas efter nästa synk.
+    errors:
+      address_required: Ange en plånboksadress.
+      already_linked: Den adressen spåras redan på det här nätverket. Använd Granska tokens för att ändra vilka tillgångar som spåras.
+      chain_unreachable: Den publika utforskaren för det här nätverket kunde inte nås. Försök igen om en stund.
+      rate_limited: Den publika utforskaren begränsar förfrågningar just nu. Försök igen om några minuter.
+      unexpected: Något gick fel när plånboken lästes. Detaljerna sparades för support.
+      unrecognized_address: Det ser inte ut som en adress på något av de nätverk som stöds.
+      wallet_not_found: Den plånboken spåras inte av den här anslutningen.
+    link_wallet:
+      errors:
+        none_tracked: "Ingenting spårades: %{assets} kunde inte läggas till. Försök igen om en stund."
+        nothing_selected: Välj minst en tillgång att spåra.
+        some_failed: "%{assets} kunde inte spåras och uteslöts."
+      success:
+        one: Spårar 1 tillgång från den här plånboken.
+        other: "Spårar %{count} tillgångar från den här plånboken."
+    manage:
+      assets_truncated: "Den här adressen innehåller fler tokens än en läsning visar, så bara de %{count} mest trovärdiga listas. Allt som redan spåras fortsätter synka."
+      disconnect_asset: Sluta spåra
+      disconnect_asset_confirm: "Sluta spåra %{symbol}? Kontot och historiken behålls men slutar uppdateras."
+      disconnect_wallet: Koppla från plånbok
+      disconnect_wallet_confirm: Sluta spåra alla tillgångar på den här adressen?
+      history_note: Att koppla från behåller kontona och deras historik; de slutar bara uppdateras.
+      history_truncated: Inte alla överföringar för den här adressen kunde läsas — det finns mer historik än en synk täcker, eller så nekade utforskaren åtkomst. Saldona är fullständiga; vissa överföringar saknas.
+      native: Ursprunglig
+      no_wallets: Inga plånböcker spåras ännu.
+      review_tokens: Granska tokens
+      subtitle: Varje adress den här anslutningen läser, och vad den spårar på var och en.
+      title: Hantera självförvaringsplånböcker
+    new_wallet:
+      address_label: Plånboksadress
+      address_placeholder: bc1..., 0x... eller en Solana-adress
+      bitcoin_single_address_note: Bitcoin spåras en adress i taget. Utökade nycklar (xpub/ypub/zpub) stöds inte, så en plånbok som sprider medel över härledda adresser visar bara saldot för adressen du anger.
+      chain_auto_detect: Identifiera automatiskt
+      chain_label: Nätverk
+      continue: Fortsätt
+      read_only_note: Endast publik kedjedata läses. Ange aldrig en seed-fras eller privat nyckel.
+      subtitle: Spåra en plånbok du har nycklarna till, via dess publika adress.
+      title: Lägg till en självförvaringsplånbok
+    onchain_wallet_item:
+      assets_tracked:
+        one: 1 tillgång spåras
+        other: "%{count} tillgångar spåras"
+      sync: Synka nu
+      syncing: Synkar...
+    wallet_card:
+      addresses_tracked:
+        one: 1 adress spåras
+        other: "%{count} adresser spåras"
+      deletion_in_progress: Tar bort...
+      delete: Ta bort anslutning
+      needs_attention: Behöver åtgärd
+      no_wallets_message: Länka en adress från leverantörsinställningarna för att se den här.
+      no_wallets_title: Inga plånböcker länkade ännu
+      status: Synkad %{timestamp} sedan
+      sync: Synka nu
+      status_never: Inte synkad ännu
+      syncing: Synkar...
+    price_provider_warning:
+      body: Ingen aktiverad marknadsdataleverantör kan prissätta krypto, så dessa plånböcker spårar mängder men visar ett värde på noll.
+      enable: Aktivera kryptopriser
+      exchange_rate_body: "Krypto prissätts i USD, och ingen växelkursleverantör är konfigurerad för att omvandla till %{currency}, så dessa plånböcker spårar mängder men visar ett värde på noll. Ange EXCHANGE_RATE_PROVIDER — Frankfurter behöver ingen API-nyckel."
+      exchange_rate_title: Ingen växelkursleverantör är konfigurerad
+      link: Öppna marknadsdatainställningar
+      title: Kryptopriser är inte konfigurerade
+    provider_connection:
+      description: Spåra en plånbok du har nycklarna till, via dess publika adress.
+      name: Självförvaringsplånbok
+    review_tokens:
+      save: Spara spårade tillgångar
+      subtitle: "%{chain} · %{address}"
+      title: Granska spårade tillgångar
+    token_review:
+      import_selected: Spåra valda tillgångar
+      subtitle: "%{chain} · %{address}"
+      title: Välj vad som ska spåras
+    token_review_form:
+      assets_truncated: "Den här adressen innehåller fler tokens än en läsning visar, så bara de %{count} mest trovärdiga listas."
+      cancel: Avbryt
+      explanation: Tillgångar med känt pris är förbockade. Allt annat lämnas obockat — plånböcker samlar skräp-airdrops, och att spåra dem har inget kopplat värde.
+      native: Ursprunglig
+      no_price: Inget pris tillgängligt; spåras endast efter mängd
+      nothing_found: Den här adressen innehåller inget vi kan se på det här nätverket.
+    update:
+      success: Självförvaringsanslutningen har uppdaterats.
+    update_tokens:
+      errors:
+        no_changes: Ingenting ändrades; samma tillgångar är fortfarande bockade.
+        none_tracked: "Ingenting ändrades: %{assets} kunde inte läggas till. Försök igen om en stund."
+        some_failed: "%{assets} kunde inte spåras och uteslöts."
+      success: "Spårade tillgångar uppdaterade (%{created} tillagda, %{removed} borttagna)."

@@ -1,0 +1,10 @@
+---
+sv:
+  activerecord:
+    errors:
+      models:
+        entry:
+          attributes:
+            base:
+              invalid_sell_quantity: kan inte sälja %{sell_qty} aktier av %{ticker} eftersom
+                du bara äger %{current_qty} aktier

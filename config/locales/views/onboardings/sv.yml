@@ -1,0 +1,66 @@
+---
+sv:
+  onboardings:
+    header:
+      sign_out: Logga ut
+      setup: Konfiguration
+      preferences: Inställningar
+      goals: Mål
+      start: Starta
+    logout:
+      sign_out: Logga ut
+    show:
+      title: Låt oss konfigurera ditt konto
+      subtitle: Först och främst, låt oss ställa in din profil.
+      first_name: Förnamn
+      first_name_placeholder: Förnamn
+      last_name: Efternamn
+      last_name_placeholder: Efternamn
+      group_name: Gruppnamn
+      group_name_placeholder: Gruppnamn
+      household_name: Hushållsnamn
+      household_name_placeholder: Hushållsnamn
+      moniker_prompt: "Kommer att använda %{product_name} med ..."
+      moniker_family: Familjemedlemmar (bara dig själv eller med partner, tonåringar osv.)
+      moniker_group: Grupp av personer (företag, klubb, förening eller annan typ)
+      country: Land
+      submit: Fortsätt
+    preferences:
+      title: Konfigurera dina inställningar
+      subtitle: Låt oss konfigurera dina inställningar.
+      example: Exempelkonto
+      preview: Förhandsgranska hur data visas baserat på inställningarna.
+      color_theme: Färgtema
+      theme_system: System
+      theme_light: Ljust
+      theme_dark: Mörkt
+      locale: Språk
+      currency: Valuta
+      date_format: Datumformat
+      submit: Slutför
+    goals:
+      title: Vad tar dig hit?
+      subtitle: Välj ett eller flera mål du har med att använda %{product_name} som ditt personliga ekonomiverktyg.
+      unified_accounts: Se alla mina konton på ett ställe
+      cashflow: Förstå kassaflöde och utgifter
+      budgeting: Hantera ekonomiska planer och budget
+      partner: Hantera ekonomi tillsammans med en partner
+      investments: Följ investeringar
+      ai_insights: Låt AI hjälpa mig förstå min ekonomi
+      optimization: Analysera och optimera konton
+      reduce_stress: Minska ekonomisk stress eller oro
+      submit: Nästa
+    trial:
+      title: Prova Sure i 45 dagar
+      data_deletion: Data raderas sedan
+      description_html: Från idag kan du ta en ordentlig titt på produkten.<br/>Om du gillar den, självvärd eller bidra för att fortsätta använda den här.
+      try_button: Prova Sure i 45 dagar
+      continue_trial: Fortsätt provperioden
+      upgrade: Uppgradera
+      how_it_works: Hur det fungerar här
+      today: Idag
+      today_description: Du får fri tillgång till Sure i 45 dagar på vårt AWS.
+      in_40_days: Efter 40 dagar (%{date})
+      in_40_days_description: Vi påminner dig om att exportera din data.
+      in_45_days: Efter 45 dagar (%{date})
+      in_45_days_description: Vi tar bort din data — bidra för att fortsätta använda Sure här!

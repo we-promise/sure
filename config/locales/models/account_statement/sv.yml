@@ -1,0 +1,30 @@
+---
+sv:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Konto
+        account_last4_hint: Kontots sista fyra siffror
+        account_name_hint: Ledtråd för kontonamn
+        closing_balance: Utgående saldo
+        content_sha256: Innehållssumma
+        currency: Valuta
+        filename: Filnamn
+        institution_name_hint: Ledtråd för institut
+        opening_balance: Ingående saldo
+        original_file: Kontoutdragsfil
+        period_end_on: Periodens slut
+        period_start_on: Periodens start
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: har redan laddats upp för detta hushåll
+            content_sha256:
+              duplicate_statement_file: har redan laddats upp för detta hushåll
+            original_file:
+              invalid_format: måste vara en PDF-, CSV- eller XLSX-fil
+              too_large: är för stor. Maximal storlek är %{max_mb}MB
+            period_end_on:
+              on_or_after_start: måste vara samma dag som eller efter periodens start
