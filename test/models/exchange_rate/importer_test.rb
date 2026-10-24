@@ -36,6 +36,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal 1.3, db_rates[0].rate
     assert_equal 1.4, db_rates[1].rate
     assert_equal 1.5, db_rates[2].rate
+    assert ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR").quoted_directly?
   end
 
   test "syncs diff when some rates already exist" do
@@ -320,6 +321,23 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     ).import_provider_rates
 
     assert_equal 0.16, ExchangeRate.find_by!(from_currency: "KZT", to_currency: "RUB", date: Date.current).rate.to_f
+  end
+
+  test "does not derive a pair the provider has quoted before from its USD legs" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.record_direct_quote(from: "KZT", to: "RUB")
+
+    @provider.expects(:fetch_exchange_rates).once.returns(provider_error_response(StandardError.new("timeout")))
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "KZT",
+      to: "RUB",
+      start_date: Date.current,
+      end_date: Date.current
+    ).import_provider_rates
+
+    assert_equal 0, ExchangeRate.count
   end
 
   test "handles rate limit error gracefully" do

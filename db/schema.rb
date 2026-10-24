@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -825,6 +825,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.date "first_provider_rate_on"
     t.string "from_currency", null: false
     t.string "provider_name"
+    t.boolean "quoted_directly", default: false, null: false
     t.string "to_currency", null: false
     t.datetime "updated_at", null: false
     t.index ["from_currency", "to_currency"], name: "index_exchange_rate_pairs_on_pair_unique", unique: true

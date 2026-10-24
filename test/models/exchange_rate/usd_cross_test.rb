@@ -63,6 +63,14 @@ class ExchangeRate::UsdCrossTest < ActiveSupport::TestCase
     assert_empty ExchangeRate::UsdCross.new(@provider).rates(from: "RUB", to: "USD", start_date: @day1, end_date: @day2)
   end
 
+  test "is empty without asking the provider for a pair it has quoted before" do
+    ExchangeRatePair.record_direct_quote(from: "KZT", to: "RUB")
+    @provider.expects(:fetch_exchange_rates).never
+
+    assert_empty ExchangeRate::UsdCross.new(@provider)
+      .rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2, error: StandardError.new("timeout"))
+  end
+
   test "is empty when the first leg fails, without fetching the second, and logs the leg" do
     @provider.expects(:fetch_exchange_rates).once.returns(provider_error_response(StandardError.new("no pair")))
 
