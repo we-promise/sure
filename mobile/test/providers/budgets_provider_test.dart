@@ -78,6 +78,158 @@ void main() {
     expect(provider.month, DateTime(2028, 9));
   });
 
+  test("opens on the server's current period, not the device date",
+      () async {
+    // Device is already on April 1 (Tokyo); the family is still on March 31.
+    final provider = buildProvider(
+      now: () => DateTime(2027, 4, 1),
+      budgets: [
+        budgetJson(
+          id: 'budget_apr',
+          startDate: '2027-04-01',
+          endDate: '2027-04-30',
+          name: 'April 2027',
+          current: false,
+        ),
+        budgetJson(
+          id: 'budget_mar',
+          startDate: '2027-03-01',
+          endDate: '2027-03-31',
+          name: 'March 2027',
+        ),
+      ],
+    );
+
+    await provider.loadMonth(accessToken: 'token');
+
+    expect(provider.month, DateTime(2027, 3));
+    expect(provider.budget?.id, 'budget_mar');
+  });
+
+  test('changing month drops the previous load\'s spinner and error',
+      () async {
+    final inner = budgetsMockHandler();
+    final gate = Completer<void>();
+    var gated = false;
+    final provider = buildProvider(
+      client: MockClient((request) async {
+        if (gated && request.url.path.endsWith('/budgets/budget_oct')) {
+          await gate.future;
+          return http.Response('{"error":"boom"}', 500);
+        }
+        return inner(request);
+      }),
+    );
+    await provider.loadMonth(accessToken: 'token');
+
+    gated = true;
+    final refresh = provider.loadMonth(accessToken: 'token', forceRefresh: true);
+    await Future<void>.delayed(Duration.zero);
+    expect(provider.isLoading, isTrue);
+
+    provider.previousMonth();
+    expect(provider.isLoading, isFalse);
+
+    gate.complete();
+    await refresh;
+    expect(provider.month, DateTime(2026, 9));
+    expect(provider.isLoading, isFalse);
+    expect(provider.error, isNull);
+  });
+
+  test('a budget list is only reused for the month it was loaded for',
+      () async {
+    final inner = budgetsMockHandler(
+      budgets: [
+        budgetJson(
+          id: 'budget_sep',
+          startDate: '2026-09-15',
+          endDate: '2026-10-14',
+          name: 'Sep 15 - Oct 14, 2026',
+        ),
+        budgetJson(
+          id: 'budget_oct',
+          startDate: '2026-10-15',
+          endDate: '2026-11-14',
+          name: 'Oct 15 - Nov 14, 2026',
+          current: false,
+        ),
+        budgetJson(
+          id: 'budget_oct_personal',
+          startDate: '2026-10-15',
+          endDate: '2026-11-14',
+          name: 'Oct 15 - Nov 14, 2026',
+          current: false,
+        ),
+      ],
+    );
+    var failFirst = true;
+    final provider = buildProvider(
+      now: () => DateTime(2026, 10, 10),
+      client: MockClient((request) async {
+        if (failFirst) {
+          failFirst = false; // the current-period lookup fails once
+          return http.Response('{"error":"boom"}', 500);
+        }
+        return inner(request);
+      }),
+    );
+
+    await provider.loadMonth(accessToken: 'token');
+    expect(provider.month, DateTime(2026, 10));
+    expect(provider.monthBudgets.map((b) => b.id),
+        ['budget_oct', 'budget_oct_personal']);
+
+    // Selecting retries the period lookup, which moves to September.
+    await provider.selectBudget(
+      accessToken: 'token',
+      budgetId: 'budget_oct_personal',
+    );
+
+    expect(provider.month, DateTime(2026, 9));
+    expect(provider.monthBudgets.map((b) => b.id), ['budget_sep']);
+    expect(provider.budget?.id, 'budget_sep');
+  });
+
+  test('more category pages than the safety stop fail the month', () async {
+    final inner = budgetsMockHandler();
+    final provider = buildProvider(
+      client: MockClient((request) async {
+        final segments = request.url.pathSegments;
+        if (segments.length == 3 && segments[2] == 'budget_categories') {
+          return http.Response(
+            '{"budget_categories":[],"pagination":'
+            '{"page":1,"per_page":100,"total_count":100000,"total_pages":1000}}',
+            200,
+          );
+        }
+        return inner(request);
+      }),
+    );
+
+    await provider.loadMonth(accessToken: 'token');
+
+    expect(provider.error, BudgetsLoadError.failed);
+    expect(provider.hasLoadedMonth, isFalse);
+  });
+
+  test('a load that finishes after dispose does not notify', () async {
+    final inner = budgetsMockHandler();
+    final gate = Completer<void>();
+    final provider = buildProvider(
+      client: MockClient((request) async {
+        await gate.future;
+        return inner(request);
+      }),
+    );
+
+    final load = provider.loadMonth(accessToken: 'token');
+    await Future<void>.delayed(Duration.zero);
+    provider.dispose();
+    gate.complete();
+    await load; // would throw "used after being disposed" without the guard
+  });
+
   test('a network failure on a category line fails the month uncached',
       () async {
     final inner = budgetsMockHandler();
@@ -240,6 +392,7 @@ void main() {
           id: 'budget_sep',
           startDate: '2026-09-15',
           endDate: '2026-10-14',
+          current: false, // today (Oct 19) is in the October period
         ),
         budgetJson(
           id: 'budget_oct',

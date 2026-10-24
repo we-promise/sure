@@ -35,14 +35,17 @@ class BudgetsProvider with ChangeNotifier {
   static const int _categoryConcurrency = 6;
   static const int _perPage = 100;
 
+  /// Safety stop for a server that keeps reporting more pages (10,000 lines).
+  static const int _maxCategoryPages = 100;
+
   late DateTime _month;
   final Map<String, _MonthData> _cache = {};
   final Map<String, String> _selectedBudgetByMonth = {};
   bool _isLoading = false;
   BudgetsLoadError? _error;
-  String? _errorMessage;
   bool _showingCachedWhileOffline = false;
   int _generation = 0;
+  bool _isDisposed = false;
 
   /// First month of the budget period that contains today. For a family whose
   /// month starts on, say, the 15th, on October 10 that is September. Starts
@@ -54,7 +57,6 @@ class BudgetsProvider with ChangeNotifier {
   DateTime get month => _month;
   bool get isLoading => _isLoading;
   BudgetsLoadError? get error => _error;
-  String? get errorMessage => _errorMessage;
 
   /// True when the device is offline and the month shown came from memory.
   bool get showingCachedWhileOffline => _showingCachedWhileOffline;
@@ -120,9 +122,13 @@ class BudgetsProvider with ChangeNotifier {
   }
 
   void _setMonth(DateTime month) {
+    // A load still running for the previous month must not clear the spinner
+    // or set an error on the month now shown (its result is still cached
+    // under its own month).
+    _generation++;
+    _isLoading = false;
     _month = _firstOfMonth(month);
     _error = null;
-    _errorMessage = null;
     _showingCachedWhileOffline = false;
     notifyListeners();
   }
@@ -141,6 +147,7 @@ class BudgetsProvider with ChangeNotifier {
       accessToken: accessToken,
       forceRefresh: true,
       knownBudgets: _cache[key]?.budgets,
+      knownBudgetsMonthKey: key,
     );
   }
 
@@ -149,7 +156,6 @@ class BudgetsProvider with ChangeNotifier {
     _generation++;
     _isLoading = false;
     _error = BudgetsLoadError.unauthorized;
-    _errorMessage = null;
     _showingCachedWhileOffline = false;
     notifyListeners();
   }
@@ -165,24 +171,26 @@ class BudgetsProvider with ChangeNotifier {
     required String accessToken,
     bool forceRefresh = false,
     List<Budget>? knownBudgets,
+    String? knownBudgetsMonthKey,
   }) async {
     if (!_currentPeriodResolved && !_isOffline()) {
       // Show the spinner while the current period resolves; every branch
       // below resets the flag or re-sets it for the month fetch.
       _isLoading = true;
       _error = null;
-      _errorMessage = null;
       notifyListeners();
       await _resolveCurrentPeriod(accessToken);
     }
     final key = _monthKey(_month);
     final month = _month;
     final generation = ++_generation;
+    // Resolving the current period above can move [_month]; a budget list
+    // captured for another month must not be reused for this one.
+    if (knownBudgetsMonthKey != key) knownBudgets = null;
 
     if (_isOffline()) {
       _showingCachedWhileOffline = _cache.containsKey(key);
       _error = _showingCachedWhileOffline ? null : BudgetsLoadError.offline;
-      _errorMessage = null;
       _isLoading = false;
       notifyListeners();
       return;
@@ -199,7 +207,6 @@ class BudgetsProvider with ChangeNotifier {
 
     _isLoading = true;
     _error = null;
-    _errorMessage = null;
     _showingCachedWhileOffline = false;
     notifyListeners();
 
@@ -209,7 +216,14 @@ class BudgetsProvider with ChangeNotifier {
         month,
         knownBudgets: knownBudgets,
       );
-      if (generation != _generation) return;
+      if (_isDisposed) return;
+      if (generation != _generation) {
+        // Superseded (the user moved to another month). The data is complete
+        // for its own month, so keep it unless a newer load already did; the
+        // UI state belongs to the latest load.
+        _cache.putIfAbsent(key, () => data);
+        return;
+      }
       _cache[key] = data;
       _log.info(
         'BudgetsProvider',
@@ -218,13 +232,13 @@ class BudgetsProvider with ChangeNotifier {
       );
     } on _BudgetsFetchException catch (e) {
       if (generation != _generation) return;
+      // The raw error (server message, network exception text) is logged,
+      // not shown: the screen shows its own localized failure message.
       _error = e.error;
-      _errorMessage = e.message;
       _log.error('BudgetsProvider', 'Failed to load budgets for $key: $e');
     } catch (e) {
       if (generation != _generation) return;
       _error = BudgetsLoadError.failed;
-      _errorMessage = null;
       _log.error('BudgetsProvider', 'Exception loading budgets for $key: $e');
     } finally {
       if (generation == _generation) {
@@ -250,12 +264,28 @@ class BudgetsProvider with ChangeNotifier {
       );
       if (result['success'] != true) return;
       _currentPeriodResolved = true;
-      for (final b in result['budgets'] as List<Budget>) {
-        if (!b.startDate.isAfter(day) && !b.endDate.isBefore(day)) {
-          _currentPeriodMonth = _firstOfMonth(b.startDate);
-          if (_month == initialMonth) _month = _currentPeriodMonth;
+      final budgets = result['budgets'] as List<Budget>;
+      // The server knows the family's date (`current`); the device's
+      // calendar can be a day off near a period boundary. The local date
+      // is only a fallback for servers that don't send the flag.
+      Budget? current;
+      for (final b in budgets) {
+        if (b.current) {
+          current = b;
           break;
         }
+      }
+      if (current == null) {
+        for (final b in budgets) {
+          if (!b.startDate.isAfter(day) && !b.endDate.isBefore(day)) {
+            current = b;
+            break;
+          }
+        }
+      }
+      if (current != null) {
+        _currentPeriodMonth = _firstOfMonth(current.startDate);
+        if (_month == initialMonth) _month = _currentPeriodMonth;
       }
     } catch (e) {
       _log.error('BudgetsProvider', 'Could not resolve current period: $e');
@@ -344,7 +374,14 @@ class BudgetsProvider with ChangeNotifier {
 
       final pagination = result['pagination'] as Map<String, dynamic>?;
       final totalPages = (pagination?['total_pages'] as num?)?.toInt() ?? 1;
-      if (page >= totalPages || page >= 20) break;
+      if (page >= totalPages) break;
+      if (page >= _maxCategoryPages) {
+        // Never cache a truncated month as if it were complete.
+        throw const _BudgetsFetchException(
+          BudgetsLoadError.failed,
+          'too many budget category pages',
+        );
+      }
       page++;
     }
     return all;
@@ -389,6 +426,19 @@ class BudgetsProvider with ChangeNotifier {
           : BudgetsLoadError.failed,
       error == 'unauthorized' ? null : error,
     );
+  }
+
+  @override
+  void notifyListeners() {
+    // A month load can complete after the owning screen disposed this.
+    if (!_isDisposed) super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _generation++;
+    super.dispose();
   }
 
   static DateTime _firstOfMonth(DateTime date) =>
