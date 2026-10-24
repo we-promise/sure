@@ -54,6 +54,28 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     assert_equal 12, fifo.average_cost
   end
 
+  test "a transfer-in sold under fifo leaves the remaining position's basis known, forward and reverse" do
+    travel_to TODAY do
+      %i[forward reverse].each do |strategy|
+        figures = %w[average fifo].map do |method|
+          setup_account(method: method)
+          security = priced_security("FIFT#{strategy.to_s[0]}#{method[0]}", 30)
+          trade(security, 10, 30, 2).entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+          trade(security, 10, 12, 3)
+          trade(security, -10, 30, 5)
+          if strategy == :reverse
+            link_account
+            @account.holdings.create!(security: security, date: d(10), qty: 10, price: 30, amount: 300, currency: "USD", account_provider: @account_provider)
+          end
+          materialize(strategy)
+          @account.holdings.find_by!(security: security, date: d(9)).cost_basis
+        end
+
+        assert_equal [ nil, 12 ], figures, "#{strategy}: average stays unknown until the position closes"
+      end
+    end
+  end
+
   # --- The Example from the lot cost basis proposal ---------------------------
   # 60 bought at $12, 40 at $20; 40 sold at $25.
 
@@ -208,6 +230,12 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
         accountable: Investment.new, cost_basis_method: method)
     end
 
+    def link_account
+      coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+      coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+      @account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+    end
+
     def priced_security(ticker, price)
       security = Security.create!(ticker: ticker, name: ticker)
       Security::Price.insert_all((d(1)..d(10)).map { |date| { security_id: security.id, date: date, price: price, currency: "USD" } })
@@ -241,9 +269,7 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     # imported trade: 10 bought at $100, 10 at $200, then 4 sold at $300.
     def build_reverse_fixture(pre_history:)
       setup_account(method: "fifo")
-      coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
-      coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
-      @account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+      link_account
       @security = priced_security("FIFR", 30)
       @first = trade(@security, 10, 100, 3)
       trade(@security, 10, 200, 4)
