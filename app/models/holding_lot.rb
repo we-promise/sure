@@ -40,6 +40,22 @@ class HoldingLot < ApplicationRecord
       end
     end
 
+    # The [account_id, security_id] pairs among those given whose stored lots
+    # add up to the holding's quantity on its latest date. A forward sync keeps
+    # opening lots it cannot rebuild, so after an unlink the lots can hold more
+    # than the position, and a reader trusts them only where the two agree.
+    def in_partition(account_ids, security_ids)
+      lots = where(account_id: account_ids, security_id: security_ids).group(:account_id, :security_id).sum(:qty)
+      return Set.new if lots.empty?
+
+      holdings = Holding.where(account_id: account_ids, security_id: security_ids)
+      latest = holdings.group(:account_id, :security_id).select(:account_id, :security_id, "MAX(date)")
+      held = holdings.where("(holdings.account_id, holdings.security_id, holdings.date) IN (#{latest.to_sql})")
+        .group(:account_id, :security_id).sum(:qty)
+
+      lots.filter_map { |key, qty| key if held[key] == qty }.to_set
+    end
+
     # Moves lots to another security with their trades. Lots are never merged:
     # derived lots keep their own rows, and an opening lot moves only where the
     # target has none, since the target's own is restated over the moved units
