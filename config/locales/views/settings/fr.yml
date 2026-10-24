@@ -492,10 +492,14 @@ fr:
         etherscan_api_key_placeholder: Collez une clé d'API Etherscan
         etherscan_hint: La lecture d'Ethereum fonctionne sans clé. Ajouter une clé Etherscan ne fait qu'augmenter la limite de débit pour Ethereum.
         keep_etherscan_api_key: Laissez vide pour conserver la clé existante
+        keep_sochain_api_key: Laissez vide pour conserver la clé existante
         keyless_body: Sure ne lit que des données publiques de la chaîne. Aucune clé, phrase de récupération ni signature n'est en jeu, et rien ne peut être dépensé.
         keyless_title: Lecture seule, aucune clé requise
         manage_wallets: Gérer les portefeuilles
         save: Enregistrer
+        sochain_api_key_label: Clé d'API SoChain (facultative)
+        sochain_api_key_placeholder: Collez une clé d'API SoChain
+        sochain_hint: La lecture de Litecoin, Dogecoin et Zcash fonctionne sans clé. Une clé SoChain obtenue sur sochain.com/dashboard augmente la limite de requêtes.
         sync_start_date_hint: Les transferts antérieurs à cette date sont ignorés. Laissez vide pour importer tout ce que l'explorateur remonte.
         sync_start_date_label: Ignorer les transferts avant le
       plaid_eu_panel:
@@ -554,7 +558,7 @@ fr:
         kraken: Synchronisez vos soldes Kraken et transactions spot à l'aide d'une clé API en lecture seule.
         lunchflow: Connectez plus de 20k banques dans plus de 40 pays (UK, UE, USA, etc.)
         mercury: Synchronisez automatiquement vos comptes professionnels Mercury.
-        onchain_wallet: Suivez vos portefeuilles Bitcoin, EVM, Solana, Cosmos et Polkadot en autoconservation à partir de leurs adresses publiques.
+        onchain_wallet: Suivez vos portefeuilles Bitcoin, Litecoin, Dogecoin, Zcash, EVM, Solana, Cosmos et Polkadot en autoconservation à partir de leurs adresses publiques.
         plaid: Connectez des milliers d'institutions financières américaines via Plaid.
         plaid_eu: Connectez des institutions financières européennes via Plaid (PSD2 / Open Banking).
         questrade: Synchronisez directement vos comptes d'investissement Questrade via l'API Questrade.

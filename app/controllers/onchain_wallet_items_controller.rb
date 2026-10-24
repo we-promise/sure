@@ -203,9 +203,9 @@ class OnchainWalletItemsController < ApplicationController
 
 
     def onchain_wallet_item_params
-      permitted = params.require(:onchain_wallet_item).permit(:sync_start_date, :etherscan_api_key)
+      permitted = params.require(:onchain_wallet_item).permit(:sync_start_date, :etherscan_api_key, :sochain_api_key)
       # Blank means "leave the stored key alone", not "clear it".
-      permitted.delete(:etherscan_api_key) if permitted[:etherscan_api_key].blank?
+      %i[etherscan_api_key sochain_api_key].each { |key| permitted.delete(key) if permitted[key].blank? }
       permitted
     end
 

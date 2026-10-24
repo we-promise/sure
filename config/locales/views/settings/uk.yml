@@ -462,7 +462,7 @@ uk:
         redbark: Синхронізуйте австралійські банківські рахунки через open banking Redbark.
         fio: Синхронізуйте рахунок у Fio banka за допомогою токена API лише для читання.
         coinspot: Синхронізуйте баланси CoinSpot, вартість в AUD, перекази, поповнення, виведення коштів та історію ордерів за допомогою ключа API лише для читання.
-        onchain_wallet: Відстежуйте некастодіальні гаманці Bitcoin, EVM, Solana, Cosmos і Polkadot за їхніми публічними адресами.
+        onchain_wallet: Відстежуйте некастодіальні гаманці Bitcoin, Litecoin, Dogecoin, Zcash, EVM, Solana, Cosmos і Polkadot за їхніми публічними адресами.
         trading212: Синхронізуйте свій інвестиційний портфель Trading 212 за допомогою ключа API лише для читання.
         trade_republic: Синхронізуйте свій інвестиційний рахунок Trade Republic через захищений вхід у вебверсію лише для читання.
       search_filters:
@@ -697,10 +697,14 @@ uk:
         etherscan_api_key_placeholder: Вставте ключ API Etherscan
         etherscan_hint: Дані Ethereum можна зчитувати без ключа. Ключ Etherscan лише підвищує ліміт запитів для Ethereum.
         keep_etherscan_api_key: Залиште порожнім, щоб зберегти наявний ключ
+        keep_sochain_api_key: Залиште порожнім, щоб зберегти наявний ключ
         manage_wallets: Керувати гаманцями
         keyless_body: Sure лише зчитує публічні дані блокчейну. Жодні ключі, сид-фрази чи підписи не використовуються, і нічого не може бути витрачено.
         keyless_title: Лише читання, ключі не потрібні
         save: Зберегти
+        sochain_api_key_label: Ключ API SoChain (необов'язково)
+        sochain_api_key_placeholder: Вставте ключ API SoChain
+        sochain_hint: Дані Litecoin, Dogecoin і Zcash можна зчитувати без ключа. Ключ SoChain із sochain.com/dashboard підвищує ліміт запитів.
         sync_start_date_hint: Перекази до цієї дати ігноруються. Залиште порожнім, щоб імпортувати все, що повідомляє оглядач блоків.
         sync_start_date_label: Ігнорувати перекази до
       fio_panel:

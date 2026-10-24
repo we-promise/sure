@@ -618,7 +618,7 @@ tr:
         monobank: Ukrayna Monobank kartlarını ve kumbaralarını kişisel bir API token ile senkronize edin.
         fio: Bir Fio banka hesabını salt okunur bir API token ile senkronize edin.
         coinspot: CoinSpot bakiyelerini, AUD değerlerini, transferleri, para yatırma, para çekme ve emir geçmişini salt okunur bir API anahtarıyla senkronize edin.
-        onchain_wallet: Gözetimsiz Bitcoin, EVM, Solana, Cosmos ve Polkadot cüzdanlarını herkese açık adresleri üzerinden takip edin.
+        onchain_wallet: Gözetimsiz Bitcoin, Litecoin, Dogecoin, Zcash, EVM, Solana, Cosmos ve Polkadot cüzdanlarını herkese açık adresleri üzerinden takip edin.
         trading212: Trading 212 yatırım portföyünüzü salt okunur bir API anahtarıyla senkronize edin.
         trade_republic: Trade Republic yatırım hesabınızı güvenli, salt okunur web girişiyle senkronize edin.
       up_panel:
@@ -664,10 +664,14 @@ tr:
         etherscan_api_key_placeholder: Bir Etherscan API anahtarı yapıştırın
         etherscan_hint: Ethereum verileri anahtar olmadan da okunabilir. Etherscan anahtarı eklemek yalnızca Ethereum için hız sınırını yükseltir.
         keep_etherscan_api_key: Mevcut anahtarı korumak için boş bırakın
+        keep_sochain_api_key: Mevcut anahtarı korumak için boş bırakın
         manage_wallets: Cüzdanları yönet
         keyless_body: Sure yalnızca herkese açık zincir verilerini okur. Hiçbir anahtar, kurtarma ifadesi veya imza kullanılmaz ve hiçbir şey harcanamaz.
         keyless_title: Salt okunur, anahtar gerekmez
         save: Kaydet
+        sochain_api_key_label: SoChain API anahtarı (isteğe bağlı)
+        sochain_api_key_placeholder: Bir SoChain API anahtarı yapıştırın
+        sochain_hint: Litecoin, Dogecoin ve Zcash verileri anahtar olmadan da okunabilir. sochain.com/dashboard adresinden alınan bir SoChain anahtarı istek sınırını yükseltir.
         sync_start_date_hint: Bu tarihten önceki transferler yok sayılır. Blok gezgininin bildirdiği her şeyi içe aktarmak için boş bırakın.
         sync_start_date_label: Şu tarihten önceki transferleri yok say
       monobank_panel:

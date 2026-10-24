@@ -566,7 +566,7 @@ ca:
         fio: Sincronitza un compte de Fio banka amb un token API de només lectura.
         wise: Sincronitza automàticament els teus saldos multidivisa i les transferències internacionals de Wise.
         coinspot: Sincronitza saldos, valors en AUD, transferències, dipòsits, retirades i historial d'ordres de CoinSpot amb una clau API de només lectura.
-        onchain_wallet: Fes el seguiment de carteres Bitcoin, EVM, Solana, Cosmos i Polkadot d'autocustòdia a partir de les seves adreces públiques.
+        onchain_wallet: Fes el seguiment de carteres Bitcoin, Litecoin, Dogecoin, Zcash, EVM, Solana, Cosmos i Polkadot d'autocustòdia a partir de les seves adreces públiques.
         trading212: Sincronitza la teva cartera d'inversió de Trading 212 amb una clau API de només lectura.
         trade_republic: Sincronitza el teu compte d'inversió de Trade Republic mitjançant un inici de sessió web segur de només lectura.
         questrade: Sincronitza els teus comptes d'inversió de Questrade directament a través de l'API de Questrade.
@@ -610,10 +610,14 @@ ca:
         etherscan_api_key_placeholder: Enganxa una clau API d'Etherscan
         etherscan_hint: Les lectures d'Ethereum funcionen sense clau. Afegir una clau d'Etherscan només augmenta el límit de sol·licituds per a Ethereum.
         keep_etherscan_api_key: Deixa-ho en blanc per mantenir la clau existent
+        keep_sochain_api_key: Deixa-ho en blanc per mantenir la clau existent
         manage_wallets: Gestiona les carteres
         keyless_body: Sure només llegeix dades públiques de la cadena de blocs. No intervenen claus, frases de recuperació ni signatures, i no es pot gastar res.
         keyless_title: Només lectura, sense claus
         save: Desa
+        sochain_api_key_label: Clau API de SoChain (opcional)
+        sochain_api_key_placeholder: Enganxa una clau API de SoChain
+        sochain_hint: Les lectures de Litecoin, Dogecoin i Zcash funcionen sense clau. Una clau de SoChain de sochain.com/dashboard augmenta el límit de sol·licituds.
         sync_start_date_hint: Les transferències anteriors a aquesta data s'ignoren. Deixa-ho en blanc per importar tot el que mostri l'explorador.
         sync_start_date_label: Ignora les transferències anteriors al
       akahu_panel:

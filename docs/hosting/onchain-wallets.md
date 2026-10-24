@@ -1,7 +1,7 @@
 # On-chain (self-custody) wallets
 
-Sure can track wallets you hold the keys to — Bitcoin, six EVM networks,
-Solana, Polkadot and the Cosmos Hub — from their **public addresses only**. Nothing is signed, no key or seed
+Sure can track wallets you hold the keys to — Bitcoin, Litecoin, Dogecoin,
+Zcash, six EVM networks, Solana, Polkadot and the Cosmos Hub — from their **public addresses only**. Nothing is signed, no key or seed
 phrase is ever entered, and no API key is required for any chain.
 
 This document covers where the data comes from, what needs configuring, the
@@ -80,6 +80,7 @@ listed, so the cause is visible without having to reproduce it.
 | Solana token names | Jupiter token search (`lite-api.jup.ag`) | No | `SOLANA_TOKEN_LIST_URL` |
 | Cosmos Hub | Public REST node (`cosmos-rest.publicnode.com`) | No | `COSMOS_REST_URL` |
 | Polkadot | Parity's public Asset Hub Sidecar | No | `POLKADOT_SIDECAR_URL` (must be an Asset Hub Sidecar) |
+| Litecoin, Dogecoin, Zcash | [SoChain](https://sochain.com) v3 REST API | No | `SOCHAIN_URL` |
 
 Every override expects the base URL of a compatible instance, without a trailing
 slash — useful if you run your own indexer or node, or if a public endpoint rate
@@ -100,6 +101,15 @@ history cap. History is the paginated, rate-limited half of the work, so that is
 where a key actually helps. Leave the field empty unless you are being rate
 limited.
 
+### Optional SoChain key
+
+Litecoin, Dogecoin and Zcash are read from SoChain, which answers keyless
+requests up to a daily limit per IP address. A key raises that limit; get one at
+[sochain.com/dashboard](https://sochain.com/dashboard). Add it under
+**Settings → Providers → On-chain wallets → Advanced**, where it is stored
+encrypted, per family, or set `SOCHAIN_API_KEY` to use one key for every family
+on the instance. A family's own key takes precedence.
+
 ## Rate limits and request cost
 
 All the default endpoints are free and shared, so they throttle. Each client
@@ -113,9 +123,10 @@ address, the cost is roughly:
 | Solana | ~2 + up to 25 transaction reads |
 | Cosmos Hub | 3, plus a page per extra 200 validators staked with |
 | Polkadot | 1 |
+| Litecoin, Dogecoin, Zcash | 1 + up to 10 history pages |
 
 History is capped by default at 10 pages per source — 250 transactions for
-Bitcoin, 10 pages per EVM collection — and at 25 transactions for Solana, which
+Bitcoin, 100 for Litecoin, Dogecoin and Zcash, 10 pages per EVM collection — and at 25 transactions for Solana, which
 spends one request per transaction rather than per page. Wallets with more
 history than that keep their **current balance correct** — balances come from an
 address summary, never from history — but their oldest transfers are not
@@ -164,8 +175,8 @@ whole flow; you can still pick it by hand.
 1. Paste the public address. Leave the network on "Detect automatically" unless
    you know which one you want.
 2. If the address format belongs to several networks — every `0x` address is
-   valid on all six EVM networks, and Bitcoin's Base58 shape overlaps Solana's —
-   Sure probes each and asks you to choose, marking the ones where it found
+   valid on all six EVM networks, Bitcoin's and Dogecoin's Base58 shapes overlap
+   Solana's, and a `3…` address can be Bitcoin or Litecoin — Sure probes each and asks you to choose, marking the ones where it found
    activity.
 3. Pick the assets to track. The native coin and assets the data source treats
    as notable are ticked; everything else is listed unticked. "Notable" means a
@@ -227,7 +238,7 @@ of its value in a staking or lending protocol will report a fraction of it. This
 is a scope limit, not a bug — nothing in the UI claims those positions were
 checked.
 
-**Bitcoin is one address at a time.** Extended keys (`xpub`, `ypub`, `zpub`) are
+**Bitcoin, Litecoin, Dogecoin and Zcash are one address at a time.** Extended keys (`xpub`, `ypub`, `zpub`) are
 not supported and are rejected as addresses. This matters: most Bitcoin wallets
 are HD wallets, where one extended key derives thousands of addresses and change
 is sent to derived ones. Tracking a single address of such a wallet reports only
@@ -235,6 +246,10 @@ that address's balance, which is usually a fraction of the wallet. Supporting
 extended keys would require BIP32 derivation — a dependency this codebase
 deliberately avoids — or a descriptor-indexing backend. If you use a single-address
 setup, or want to follow one specific address, this works exactly as expected.
+
+**Zcash is transparent addresses only.** `t1…` and `t3…` addresses are read;
+shielded and unified addresses (`zs…`, `u1…`) are not accepted, because shielded
+balances are not visible on chain.
 
 **Solana token names depend on a token list.** RPC returns mints, not names, so
 names come from Jupiter's token search — and only for mints it reports as

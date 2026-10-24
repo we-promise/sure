@@ -10,6 +10,7 @@ class OnchainWalletItem < ApplicationRecord
 
   if encryption_ready?
     encrypts :etherscan_api_key
+    encrypts :sochain_api_key
   end
 
   validates :name, presence: true
@@ -27,7 +28,7 @@ class OnchainWalletItem < ApplicationRecord
   before_validation :strip_credentials
 
   # Self-custody needs no credentials: every chain is readable keyless. The
-  # optional Etherscan key only raises Ethereum's rate limit.
+  # optional Etherscan and SoChain keys only raise rate limits.
   def credentials_configured?
     true
   end
@@ -141,8 +142,10 @@ class OnchainWalletItem < ApplicationRecord
 
   private
     def strip_credentials
-      return unless etherscan_api_key_changed? && !etherscan_api_key.nil?
+      %i[etherscan_api_key sochain_api_key].each do |attribute|
+        next unless attribute_changed?(attribute) && !self[attribute].nil?
 
-      self.etherscan_api_key = etherscan_api_key.to_s.strip.presence
+        self[attribute] = self[attribute].to_s.strip.presence
+      end
     end
 end
