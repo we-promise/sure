@@ -6,6 +6,7 @@ en:
       current_balance: Current balance
       current_loan_balance: Current loan balance
       current_market_value: Current market value
+      current_valuation: Current valuation
       manual_balance_update: Manual balance update
       manual_principal_update: Manual principal update
       manual_value_update: Manual value update

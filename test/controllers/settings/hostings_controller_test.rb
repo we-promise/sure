@@ -194,6 +194,33 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the GoldAPI toggle is not part of the securities provider form" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      document = Nokogiri::HTML(response.body)
+      checkbox = document.at_css("input[name='setting[gold_api_enabled]'][type='checkbox']")
+      assert checkbox, "expected a GoldAPI checkbox"
+      form = checkbox.ancestors("form").first
+      assert form, "expected the GoldAPI checkbox to sit inside a form"
+      assert_nil form.at_css("input[name='setting[securities_providers][]']")
+    end
+  end
+
+  test "toggling GoldAPI does not clear environment-managed securities providers" do
+    security = Security.create!(ticker: "CSPX3", exchange_operating_mic: "XLON", price_provider: "tiingo", offline: false)
+
+    with_env_overrides("SECURITIES_PROVIDERS" => "tiingo") do
+      with_self_hosting do
+        patch settings_hosting_url, params: { setting: { gold_api_enabled: "1", securities_providers: [ "" ] } }
+
+        assert_redirected_to settings_hosting_url
+        assert_equal [ "tiingo" ], Setting.enabled_securities_providers
+        refute security.reload.offline?, "securities must stay online when the environment sets their provider"
+      end
+    end
+  end
+
   test "can update realie api key when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { realie_api_key: "realie-token" } }

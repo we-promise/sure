@@ -29,6 +29,12 @@ class Transfer::Creator
     raise ArgumentError, "source_fee_amount must be non-negative" if source_fee_amount.negative?
     raise ArgumentError, "destination_fee_amount must be non-negative" if destination_fee_amount.negative?
 
+    # Accounts such as Gems and Bullion derive their balance from their own
+    # records. A transfer must not write a generic entry on either endpoint.
+    unless source_account.supports_manual_entries? && destination_account.supports_manual_entries?
+      raise ActiveRecord::RecordNotFound
+    end
+
     # Sequential double-submit guard: the form was already submitted
     # successfully once (double-click, browser retry, user reopening the
     # dialog after a slow response) and the first request already committed

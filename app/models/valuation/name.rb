@@ -78,7 +78,7 @@ class Valuation::Name
       case accountable_type
       when "Property", "Vehicle" then :original_purchase_price
       when "Loan" then :original_principal
-      when "Investment", "Crypto", "OtherAsset" then :opening_account_value
+      when "Investment", "Crypto", "Valuable", "OtherAsset" then :opening_account_value
       else :opening_balance
       end
     end
@@ -88,7 +88,7 @@ class Valuation::Name
       case accountable_type
       when "Property", "Vehicle" then :current_market_value
       when "Loan" then :current_loan_balance
-      when "Investment", "Crypto", "OtherAsset" then :current_account_value
+      when "Investment", "Crypto", "Valuable", "OtherAsset" then :current_account_value
       else :current_balance
       end
     end
@@ -96,6 +96,7 @@ class Valuation::Name
     # Selects the translation key for a manual reconciliation valuation.
     def reconciliation_translation_key
       case accountable_type
+      when "Valuable" then :current_valuation
       when "Property", "Investment", "Vehicle", "Crypto", "OtherAsset" then :manual_value_update
       when "Loan" then :manual_principal_update
       else :manual_balance_update

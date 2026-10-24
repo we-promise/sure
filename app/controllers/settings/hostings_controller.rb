@@ -123,7 +123,9 @@ class Settings::HostingsController < ApplicationController
       Setting.securities_provider = hosting_params[:securities_provider]
     end
 
-    if hosting_params.key?(:securities_providers)
+    # The environment owns the provider list when it sets one. Ignore submitted
+    # values so an unrelated form submit cannot mark their securities offline.
+    if hosting_params.key?(:securities_providers) && !securities_providers_managed_by_env?
       new_providers = Array(hosting_params[:securities_providers]).reject(&:blank?) & Security.valid_price_providers
       old_providers = Setting.enabled_securities_providers
 
@@ -486,6 +488,10 @@ class Settings::HostingsController < ApplicationController
 
       assistant_type = params[:family][:assistant_type]
       Current.family.update!(assistant_type: assistant_type) if Family::ASSISTANT_TYPES.include?(assistant_type)
+    end
+
+    def securities_providers_managed_by_env?
+      ENV["SECURITIES_PROVIDERS"].present? || ENV["SECURITIES_PROVIDER"].present?
     end
 
     def ensure_admin
