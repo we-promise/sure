@@ -114,6 +114,22 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     assert_equal extraction, response.data
   end
 
+  test "extract_receipt finishes the Langfuse trace on success and on failure" do
+    trace = mock
+    @subject.stubs(:create_langfuse_trace).returns(trace)
+    extraction = Provider::LlmConcept::ReceiptExtraction.new(
+      merchant_name: "Shop", currency: "USD", line_items: [], tax: nil, discount: nil, total: nil
+    )
+
+    Provider::Anthropic::ReceiptExtractor.any_instance.expects(:extract).returns(extraction)
+    trace.expects(:end).with(output: { line_item_count: 0 }, level: nil)
+    assert @subject.extract_receipt(file_content: "png-bytes", content_type: "image/png", model: "claude-sonnet-4-6").success?
+
+    Provider::Anthropic::ReceiptExtractor.any_instance.expects(:extract).raises(Provider::Anthropic::Error, "boom")
+    trace.expects(:end).with(output: { error: "boom" }, level: "ERROR")
+    assert_not @subject.extract_receipt(file_content: "png-bytes", content_type: "image/png", model: "claude-sonnet-4-6").success?
+  end
+
   test "effective_model defers to ENV when set without consulting Setting" do
     ClimateControl.modify("ANTHROPIC_MODEL" => "claude-haiku-4-5") do
       Setting.expects(:anthropic_model).never

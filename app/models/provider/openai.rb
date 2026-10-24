@@ -445,9 +445,12 @@ class Provider::Openai < Provider
         vision: supports_pdf_processing?(model: effective_model)
       ).extract
 
-      upsert_langfuse_trace(trace: trace, output: { line_item_count: result.line_items.size })
+      finish_langfuse_trace(trace: trace, output: { line_item_count: result.line_items.size })
 
       result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
     end
   end
 
