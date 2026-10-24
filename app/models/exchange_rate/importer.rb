@@ -58,9 +58,14 @@ class ExchangeRate::Importer
       db_rate_value = db_rates[date]&.rate
       provider_rate_value = provider_rates[date]&.rate
 
+      # A cache clear replaces the stored rates the provider covers, so the
+      # dates it skips carry its last rate forward rather than keep the old
+      # value. Stored history before the provider's first rate is kept.
+      replace_db_rate = clear_cache && earliest_valid_provider_date.present? && date >= earliest_valid_provider_date
+
       chosen_rate = if provider_rate_value.present? && provider_rate_value.to_f > 0
         provider_rate_value
-      elsif db_rate_value.present? && db_rate_value.to_f > 0
+      elsif !replace_db_rate && db_rate_value.present? && db_rate_value.to_f > 0
         db_rate_value
       else
         prev_rate_value

@@ -298,13 +298,9 @@ pl:
       show:
         ai_assistant: Asystent AI
         clear_cache: Wyczyść pamięć podręczną danych
-        clear_cache_warning: Wyczyszczenie pamięci podręcznej danych usunie wszystkie
-          kursy walut, ceny papierów wartościowych, salda kont i inne dane. Nie usunie
-          to kont, transakcji, kategorii ani innych danych należących do użytkownika.
+        clear_cache_warning: "Wyczyszczenie pamięci podręcznej danych przelicza ponownie salda i pozycje kont Twojej rodziny oraz ponownie pobiera używane przez nie kursy walut i ceny papierów wartościowych. Usuwane są tylko salda i pozycje Twojej rodziny; kursy walut i ceny papierów wartościowych są wspólne dla wszystkich rodzin w tej instancji i zostaną zaktualizowane także dla nich. Nie usunie to kont, transakcji, kategorii ani innych danych użytkowników."
         confirm_clear_cache:
-          body: Czy na pewno chcesz wyczyścić pamięć podręczną danych? Spowoduje to
-            usunięcie wszystkich kursów walut, cen papierów wartościowych, sald kont
-            i innych danych. Tej akcji nie można cofnąć.
+          body: "Czy na pewno chcesz wyczyścić pamięć podręczną danych? Salda i pozycje kont Twojej rodziny zostaną przeliczone ponownie, a używane przez nie kursy walut i ceny papierów wartościowych zostaną ponownie pobrane. Usuwane są tylko salda i pozycje Twojej rodziny; kursy walut i ceny papierów wartościowych są wspólne dla wszystkich rodzin w tej instancji i zostaną zaktualizowane także dla nich. Tej operacji nie można cofnąć."
           title: Wyczyścić pamięć podręczną danych?
         danger_zone: Strefa ryzyka
         financial_data_providers: Dostawcy danych finansowych

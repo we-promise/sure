@@ -233,13 +233,9 @@ tr:
       show:
         ai_assistant: Yapay Zeka Asistanı
         clear_cache: Veri önbelleğini temizle
-        clear_cache_warning: Veri önbelleğini temizlemek tüm döviz kurları, menkul
-          kıymet fiyatları, hesap bakiyeleri ve diğer verileri kaldıracaktır. Bu işlem
-          hesapları, işlemleri, kategorileri veya diğer kullanıcıya ait verileri silmez.
+        clear_cache_warning: "Veri önbelleğini temizlemek, ailenizin hesaplarındaki bakiyeleri ve pozisyonları yeniden hesaplar ve bunların kullandığı döviz kurlarını ve menkul kıymet fiyatlarını yeniden yükler. Yalnızca ailenizin bakiyeleri ve pozisyonları silinir; döviz kurları ve menkul kıymet fiyatları bu sunucudaki diğer ailelerle ortaktır ve onlar için de güncellenir. Bu işlem hesapları, işlemleri, kategorileri veya kullanıcıya ait diğer verileri silmez."
         confirm_clear_cache:
-          body: Veri önbelleğini temizlemek istediğinizden emin misiniz? Bu işlem
-            tüm döviz kurları, menkul kıymet fiyatları, hesap bakiyeleri ve diğer
-            verileri kaldıracaktır. Bu işlem geri alınamaz.
+          body: "Veri önbelleğini temizlemek istediğinizden emin misiniz? Ailenizin hesaplarındaki bakiyeler ve pozisyonlar yeniden hesaplanacak, bunların kullandığı döviz kurları ve menkul kıymet fiyatları yeniden yüklenecek. Yalnızca ailenizin bakiyeleri ve pozisyonları silinir; döviz kurları ve menkul kıymet fiyatları bu sunucudaki diğer ailelerle ortaktır ve onlar için de güncellenir. Bu işlem geri alınamaz."
           title: Veri önbelleği temizlensin mi?
         danger_zone: Tehlikeli Bölge
         financial_data_providers: Finansal Veri Sağlayıcıları
