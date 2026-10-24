@@ -2,8 +2,8 @@
 hu:
   valuations:
     confirmation_contents:
-      this_will: "Ez %{action_verb} a számlaértéket"
-      to_colon: "erre:"
+      this_will: Ez %{action_verb} a számlaértéket
+      to_colon: 'erre:'
       total_account_value: Számla teljes értéke
       holdings_value: Portfólió értéke
       brokerage_cash: Brókeri készpénz
@@ -16,11 +16,14 @@ hu:
       asset_value: vagyonérték
       liability_balance: kötelezettségegyenleg
       balance: egyenleg
-      "on": "ezen:"
-      to: "erre:"
-      recalculate_notice: "Minden jövőbeli tranzakció és egyenleg újraszámításra kerül ezen %{change_or_update} alapján."
+      'on': 'ezen:'
+      to: 'erre:'
+      recalculate_notice: Minden jövőbeli tranzakció és egyenleg újraszámításra kerül ezen %{change_or_update}
+        alapján.
       change: változás
       update: frissítés
+      action_set: beállítás
+      action_update: frissítés
     create:
       account_updated: Számla frissítve
     update:
@@ -56,5 +59,11 @@ hu:
       note_placeholder: Adj meg további részleteket erről a bejegyzésről
       overview: Áttekintés
       settings: Beállítások
-      opening_balance: "Nyitóegyenleg"
+      opening_balance: Nyitóegyenleg
       update_value: Érték frissítése
+    confirm_create:
+      confirm: Megerősítés
+      title: Új egyenleg megerősítése
+    confirm_update:
+      title: Egyenleg frissítése
+      update: Frissítés

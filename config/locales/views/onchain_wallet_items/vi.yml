@@ -1,0 +1,139 @@
+---
+vi:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Đã tìm thấy hoạt động
+      explanation: Định dạng địa chỉ này được dùng trên nhiều mạng, và số dư ở mỗi
+        mạng khác nhau. Chọn mạng muốn theo dõi.
+      no_activity_found: Không tìm thấy dữ liệu
+      subtitle: "%{address}"
+      title: Mạng nào?
+    destroy:
+      success: Đã lên lịch xóa kết nối ví tự quản lý.
+    disconnect_asset:
+      success: Đã ngừng theo dõi %{symbol}. Tài khoản và lịch sử được giữ lại.
+    disconnect_wallet:
+      success:
+        one: Đã ngừng theo dõi 1 tài sản tại địa chỉ đó.
+        other: Đã ngừng theo dõi %{count} tài sản tại địa chỉ đó.
+    enable_crypto_prices:
+      not_self_hosted: Trong bản triển khai này, nhà cung cấp dữ liệu thị trường do
+        người vận hành cấu hình.
+      success: Đã bật giá tiền mã hóa. Giá trị ví sẽ xuất hiện sau lần đồng bộ tiếp
+        theo.
+    errors:
+      address_required: Nhập địa chỉ ví.
+      already_linked: Địa chỉ đó đã được theo dõi trên mạng này. Dùng Xem lại token
+        để đổi các tài sản được theo dõi.
+      chain_unreachable: Không kết nối được trình khám phá công khai của mạng này.
+        Hãy thử lại sau giây lát.
+      rate_limited: Trình khám phá công khai hiện đang giới hạn tần suất yêu cầu.
+        Hãy thử lại sau vài phút.
+      unexpected: Đã xảy ra lỗi khi đọc ví này. Chi tiết đã được ghi lại để hỗ trợ
+        xử lý.
+      unrecognized_address: Địa chỉ này không giống địa chỉ trên mạng được hỗ trợ
+        nào.
+      wallet_not_found: Kết nối này không theo dõi ví đó.
+    link_wallet:
+      errors:
+        none_tracked: 'Chưa theo dõi được gì: không thể thêm %{assets}. Hãy thử lại
+          sau giây lát.'
+        nothing_selected: Chọn ít nhất một tài sản để theo dõi.
+        some_failed: Không thể theo dõi %{assets} nên đã bỏ qua.
+      success:
+        one: Đang theo dõi 1 tài sản từ ví này.
+        other: Đang theo dõi %{count} tài sản từ ví này.
+    manage:
+      assets_truncated: Địa chỉ này có nhiều token hơn mức hiển thị trong một lần
+        đọc, nên chỉ liệt kê %{count} token đáng tin cậy nhất. Các tài sản đã theo
+        dõi vẫn tiếp tục đồng bộ.
+      disconnect_asset: Ngừng theo dõi
+      disconnect_asset_confirm: Ngừng theo dõi %{symbol}? Tài khoản và lịch sử được
+        giữ lại nhưng ngừng cập nhật.
+      disconnect_wallet: Ngắt kết nối ví
+      disconnect_wallet_confirm: Ngừng theo dõi mọi tài sản tại địa chỉ này?
+      history_note: Ngắt kết nối giữ lại tài khoản và lịch sử; chúng chỉ ngừng cập
+        nhật.
+      history_truncated: Không đọc được mọi chuyển khoản tại địa chỉ này — lịch sử
+        vượt quá phạm vi một lần đồng bộ hoặc trình khám phá từ chối. Số dư đầy đủ;
+        một số chuyển khoản bị thiếu.
+      native: Gốc của mạng
+      no_wallets: Chưa theo dõi ví nào.
+      review_tokens: Xem lại token
+      subtitle: Mọi địa chỉ kết nối này đọc và các tài sản được theo dõi tại từng
+        địa chỉ.
+      title: Quản lý ví tự quản lý
+    new_wallet:
+      address_label: Địa chỉ ví
+      address_placeholder: bc1..., 0x... hoặc địa chỉ Solana
+      bitcoin_single_address_note: Bitcoin được theo dõi từng địa chỉ. Không hỗ trợ
+        khóa mở rộng (xpub/ypub/zpub), nên ví phân bổ tiền trên nhiều địa chỉ dẫn
+        xuất chỉ hiển thị số dư của địa chỉ bạn nhập.
+      chain_auto_detect: Tự động nhận diện
+      chain_label: Mạng
+      continue: Tiếp tục
+      read_only_note: Chỉ đọc dữ liệu công khai trên chuỗi. Không bao giờ nhập cụm
+        từ khôi phục hoặc khóa riêng.
+      subtitle: Theo dõi ví bạn tự giữ khóa từ địa chỉ công khai.
+      title: Thêm ví tự quản lý
+    onchain_wallet_item:
+      assets_tracked:
+        one: Đang theo dõi 1 tài sản
+        other: Đang theo dõi %{count} tài sản
+      sync: Đồng bộ ngay
+      syncing: Đang đồng bộ...
+    price_provider_warning:
+      body: Không có nhà cung cấp dữ liệu thị trường đang bật nào định giá được tiền
+        mã hóa, nên các ví này theo dõi số lượng nhưng hiển thị giá trị bằng 0.
+      enable: Bật giá tiền mã hóa
+      exchange_rate_body: Tiền mã hóa được định giá bằng USD, nhưng chưa cấu hình
+        nhà cung cấp tỷ giá để đổi sang %{currency}, nên các ví này theo dõi số lượng
+        nhưng hiển thị giá trị bằng 0. Đặt EXCHANGE_RATE_PROVIDER — Frankfurter không
+        cần khóa API.
+      exchange_rate_title: Chưa cấu hình nhà cung cấp tỷ giá
+      link: Mở cài đặt dữ liệu thị trường
+      title: Chưa cấu hình giá tiền mã hóa
+    provider_connection:
+      description: Theo dõi ví bạn tự giữ khóa từ địa chỉ công khai.
+      name: Ví tự quản lý
+    review_tokens:
+      save: Lưu tài sản được theo dõi
+      subtitle: "%{chain} · %{address}"
+      title: Xem lại tài sản được theo dõi
+    token_review:
+      import_selected: Theo dõi tài sản đã chọn
+      subtitle: "%{chain} · %{address}"
+      title: Chọn tài sản để theo dõi
+    token_review_form:
+      assets_truncated: Địa chỉ này có nhiều token hơn mức hiển thị trong một lần
+        đọc, nên chỉ liệt kê %{count} token đáng tin cậy nhất.
+      cancel: Hủy
+      explanation: Tài sản có giá đã biết được chọn sẵn. Các mục khác không được chọn
+        — ví có thể nhận airdrop rác, và việc theo dõi chúng không kèm giá trị định
+        giá.
+      native: Gốc của mạng
+      no_price: Chưa có giá; chỉ theo dõi số lượng
+      nothing_found: Không thấy tài sản nào tại địa chỉ này trên mạng đã chọn.
+    update:
+      success: Đã cập nhật kết nối ví tự quản lý.
+    update_tokens:
+      errors:
+        no_changes: Không có thay đổi; các tài sản được chọn vẫn như cũ.
+        none_tracked: 'Không có thay đổi: không thể thêm %{assets}. Hãy thử lại sau
+          giây lát.'
+        some_failed: Không thể theo dõi %{assets} nên đã bỏ qua.
+      success: Đã cập nhật tài sản được theo dõi (thêm %{created}, bỏ %{removed}).
+    wallet_card:
+      addresses_tracked:
+        one: Đang theo dõi 1 địa chỉ
+        other: Đang theo dõi %{count} địa chỉ
+      delete: Xóa kết nối
+      deletion_in_progress: Đang xóa...
+      needs_attention: Cần chú ý
+      no_wallets_message: Liên kết địa chỉ trong cài đặt nhà cung cấp để hiển thị
+        tại đây.
+      no_wallets_title: Chưa liên kết ví nào
+      status: Đã đồng bộ %{timestamp} trước
+      status_never: Chưa đồng bộ
+      sync: Đồng bộ ngay
+      syncing: Đang đồng bộ...

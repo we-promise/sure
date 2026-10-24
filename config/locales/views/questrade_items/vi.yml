@@ -1,0 +1,282 @@
+---
+vi:
+  questrade_items:
+    complete_account_setup:
+      all_skipped: Đã bỏ qua tất cả tài khoản. Không tạo tài khoản nào.
+      creation_failed: 'Không thể tạo tài khoản: %{error}'
+      no_accounts: Không có tài khoản cần thiết lập.
+      success: Đã tạo thành công %{count} tài khoản.
+    create:
+      success: Đã tạo kết nối Questrade thành công
+    default_name: Kết nối Questrade
+    destroy:
+      success: Đã xóa kết nối Questrade
+    errors:
+      provider_not_configured: Chưa cấu hình nhà cung cấp Questrade
+    index:
+      title: Kết nối Questrade
+    institution_summary:
+      count:
+        one: "%{count} tổ chức"
+        other: "%{count} tổ chức"
+      none: Chưa kết nối tổ chức nào
+    link_accounts:
+      all_already_linked:
+        one: Tài khoản đã chọn (%{names}) đã được liên kết
+        other: 'Tất cả %{count} tài khoản đã chọn đều được liên kết: %{names}'
+      api_error: 'Lỗi API: %{message}'
+      invalid_account_names:
+        one: Không thể liên kết tài khoản có tên trống
+        other: Không thể liên kết %{count} tài khoản có tên trống
+      link_failed: Không thể liên kết tài khoản
+      no_accounts_selected: Vui lòng chọn ít nhất một tài khoản
+      no_api_key: Không tìm thấy khóa API Questrade. Hãy cấu hình trong Cài đặt nhà
+        cung cấp.
+      partial_invalid: Đã liên kết thành công %{created_count} tài khoản, %{already_linked_count}
+        đã liên kết từ trước, %{invalid_count} tài khoản có tên không hợp lệ
+      partial_success: 'Đã liên kết thành công %{created_count} tài khoản. %{already_linked_count}
+        tài khoản đã được liên kết: %{already_linked_names}'
+      success:
+        one: Đã liên kết thành công %{count} tài khoản
+        other: Đã liên kết thành công %{count} tài khoản
+    link_existing_account:
+      account_already_linked: Tài khoản này đã liên kết với một nhà cung cấp
+      api_error: 'Lỗi API: %{message}'
+      invalid_account_name: Không thể liên kết tài khoản có tên trống
+      missing_parameters: Thiếu tham số bắt buộc
+      no_api_key: Không tìm thấy khóa API Questrade. Hãy cấu hình trong Cài đặt nhà
+        cung cấp.
+      provider_account_already_linked: Tài khoản Questrade này đã liên kết với tài
+        khoản khác
+      provider_account_not_found: Không tìm thấy tài khoản Questrade
+      success: Đã liên kết %{account_name} với Questrade thành công
+    loading:
+      loading_message: Đang tải tài khoản Questrade...
+      loading_title: Đang tải
+    panel:
+      disconnect: Ngắt kết nối
+      disconnect_confirm: Ngắt kết nối Questrade? Thao tác này xóa kết nối và hủy
+        liên kết các tài khoản đã đồng bộ.
+      eyebrow: Thiết lập · chỉ trên máy tính
+      field_descriptions: 'Mô tả trường:'
+      fields:
+        api_server:
+          description: Máy chủ API Questrade của bạn
+          label: Máy chủ API
+          placeholder_new: Dán máy chủ API tại đây
+          placeholder_update: Nhập máy chủ API mới để cập nhật
+        refresh_token:
+          description: Token làm mới Questrade của bạn
+          label: Token làm mới
+          placeholder_new: Dán token làm mới tại đây
+          placeholder_update: Nhập token làm mới mới để cập nhật
+      help_text: Tài liệu API Questrade
+      optional: "(Không bắt buộc)"
+      optional_with_default: "(không bắt buộc, mặc định %{default_value})"
+      required: "(bắt buộc)"
+      save_button: Lưu cấu hình
+      setup_instructions: 'Hướng dẫn thiết lập:'
+      status_configured_html: Đã cấu hình và sẵn sàng. Mở thẻ <a href="%{accounts_path}"
+        class="link">Tài khoản</a> để quản lý và thiết lập tài khoản.
+      status_not_configured: Chưa cấu hình
+      step_1: Mở bảng điều khiển Questrade để lấy thông tin xác thực
+      step_2: Nhập thông tin xác thực bên dưới và nhấn Lưu
+      step_3: Sau khi kết nối thành công, vào thẻ Tài khoản để thiết lập tài khoản
+        mới
+      steps:
+        s1_html: Đăng nhập <a href="https://my.questrade.com" target="_blank" rel="noopener
+          noreferrer" class="text-primary font-medium underline">cổng Questrade</a>
+          bằng trình duyệt máy tính. Cài đặt API không có trong ứng dụng di động.
+        s2: Mở Settings rồi chỉnh sửa IQ API trong General settings.
+        s3_html: Trong hộp thoại truy cập API, nhấn <strong>Manage</strong> dưới <strong>My
+          applications</strong>.
+        s4: Đăng ký ứng dụng cá nhân với tên và mô tả, rồi lưu.
+        s5: Thêm thiết bị mới và tạo token.
+        s6: Dán token vừa tạo bên dưới và lưu.
+      token_refresh_hint: Token Questrade tự gia hạn mỗi khi tài khoản đồng bộ. Nếu
+        kết nối không được dùng hơn 7 ngày và hết hiệu lực, dán token mới tại đây
+        để kích hoạt lại mà không cần ngắt kết nối.
+      update_button: Cập nhật cấu hình
+    preload_accounts:
+      no_credentials_configured: Hãy cấu hình thông tin xác thực Questrade trong Cài
+        đặt nhà cung cấp trước.
+    questrade_item:
+      accounts_need_setup: Tài khoản cần thiết lập
+      delete: Xóa kết nối
+      deletion_in_progress: đang xóa...
+      error: Lỗi
+      kind: Môi giới chứng khoán
+      more_accounts_available:
+        one: Còn %{count} tài khoản khả dụng
+        other: Còn %{count} tài khoản khả dụng
+      no_accounts_description: Kết nối này chưa có tài khoản liên kết.
+      no_accounts_title: Không có tài khoản
+      provider_name: Questrade
+      requires_update: Cần cập nhật kết nối
+      setup_action: Thiết lập tài khoản mới
+      setup_description: Đã liên kết %{linked} trên %{total} tài khoản. Chọn loại
+        tài khoản cho các tài khoản Questrade vừa nhập.
+      setup_needed: Tài khoản mới sẵn sàng để thiết lập
+      status: Đã đồng bộ %{timestamp} trước
+      status_never: Chưa từng đồng bộ
+      status_with_summary: Đồng bộ gần nhất %{timestamp} trước - %{summary}
+      syncing: Đang đồng bộ...
+      total: Tổng
+      unlinked: Chưa liên kết
+      update_credentials: Cập nhật thông tin xác thực
+    select_accounts:
+      accounts_selected: tài khoản đã chọn
+      api_error: 'Lỗi API: %{message}'
+      cancel: Hủy
+      configure_name_in_provider: Không thể nhập — hãy đặt tên tài khoản trong Questrade
+      description: Chọn tài khoản muốn liên kết với tài khoản %{product_name} của
+        bạn.
+      link_accounts: Liên kết tài khoản đã chọn
+      no_accounts_found: Không tìm thấy tài khoản. Hãy kiểm tra cấu hình khóa API.
+      no_api_key: Chưa cấu hình khóa API Questrade. Hãy cấu hình trong Cài đặt.
+      no_credentials_configured: Hãy cấu hình thông tin xác thực Questrade trong Cài
+        đặt nhà cung cấp trước.
+      no_name_placeholder: "(Chưa có tên)"
+      title: Chọn tài khoản Questrade
+    select_existing_account:
+      account_already_linked: Tài khoản này đã liên kết với một nhà cung cấp
+      all_accounts_already_linked: Tất cả tài khoản Questrade đã được liên kết
+      api_error: 'Lỗi API: %{message}'
+      balance_label: 'Số dư:'
+      buttons:
+        cancel: Hủy
+        link: Liên kết
+      cancel: Hủy
+      cancel_button: Hủy
+      configure_name_in_provider: Không thể nhập — hãy đặt tên tài khoản trong Questrade
+      connect_hint: Kết nối tài khoản Questrade để bật đồng bộ tự động.
+      description: Chọn tài khoản Questrade để liên kết với tài khoản này. Giao dịch
+        sẽ được đồng bộ và loại trùng tự động.
+      dialog_title: Liên kết với tài khoản Questrade
+      header: Liên kết với Questrade
+      link_account: Liên kết tài khoản
+      link_button: Liên kết tài khoản này
+      linking_label: Đang liên kết
+      linking_to: 'Liên kết với:'
+      no_account_specified: Chưa chỉ định tài khoản
+      no_accounts: Không tìm thấy tài khoản Questrade chưa liên kết.
+      no_accounts_found: Không tìm thấy tài khoản Questrade. Hãy kiểm tra cấu hình
+        khóa API.
+      no_api_key: Chưa cấu hình khóa API Questrade. Hãy cấu hình trong Cài đặt.
+      no_credentials_configured: Hãy cấu hình thông tin xác thực Questrade trong Cài
+        đặt nhà cung cấp trước.
+      no_name_placeholder: "(Chưa có tên)"
+      none_available: Không còn tài khoản Questrade chưa liên kết.
+      page_title: Liên kết tài khoản Questrade
+      settings_link: Mở Cài đặt nhà cung cấp
+      subtitle: Kết nối tài khoản này với một tài khoản Questrade của bạn
+      title: Liên kết %{account_name} với Questrade
+    setup_accounts:
+      account_type_label: 'Loại tài khoản:'
+      account_types:
+        credit_card: Thẻ tín dụng
+        crypto: Tài khoản tiền mã hóa
+        depository: Tài khoản thanh toán hoặc tiết kiệm
+        investment: Tài khoản đầu tư
+        loan: Khoản vay hoặc vay thế chấp
+        other_asset: Tài sản khác
+        skip: Bỏ qua tài khoản này
+      accounts_count:
+        one: "%{count} tài khoản khả dụng"
+        other: "%{count} tài khoản khả dụng"
+      all_accounts_linked: Tất cả tài khoản Questrade của bạn đã được thiết lập.
+      all_linked: Tất cả tài khoản Questrade đã được liên kết.
+      api_error: 'Lỗi API: %{message}'
+      balance: Số dư
+      buttons:
+        cancel: Hủy
+        create: Tạo tài khoản
+        done: Xong
+      cancel: Hủy
+      choose_account_type: 'Chọn đúng loại cho mỗi tài khoản Questrade:'
+      create_accounts: Tạo tài khoản
+      creating: Đang tạo tài khoản...
+      creating_accounts: Đang tạo tài khoản...
+      dialog_title: Thiết lập tài khoản Questrade
+      fetch_failed: Không thể lấy tài khoản
+      historical_data_range: 'Phạm vi dữ liệu lịch sử:'
+      import_as: Nhập dưới dạng
+      import_selected: Nhập tài khoản đã chọn
+      instructions: Chọn tài khoản muốn nhập từ Questrade. Bạn có thể chọn nhiều tài
+        khoản.
+      no_accounts: Không tìm thấy tài khoản chưa liên kết trong kết nối Questrade
+        này.
+      no_accounts_to_setup: Không có tài khoản cần thiết lập
+      no_api_key: Chưa cấu hình khóa API Questrade. Hãy kiểm tra cài đặt kết nối.
+      page_title: Thiết lập tài khoản Questrade
+      select_all: Chọn tất cả
+      subtitle: Chọn cách nhập từng tài khoản
+      subtype_labels:
+        credit_card: ''
+        crypto: ''
+        depository: 'Loại tài khoản phụ:'
+        investment: 'Loại đầu tư:'
+        loan: 'Loại khoản vay:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Thẻ tín dụng sẽ tự động được thiết lập thành tài khoản thẻ tín
+          dụng.
+        crypto: Tài khoản tiền mã hóa sẽ được thiết lập để theo dõi tài sản nắm giữ
+          và giao dịch.
+        other_asset: Tài sản khác không cần tùy chọn bổ sung.
+      subtypes:
+        depository:
+          cd: Chứng chỉ tiền gửi
+          checking: Thanh toán
+          hsa: Tài khoản tiết kiệm y tế
+          money_market: Thị trường tiền tệ
+          savings: Tiết kiệm
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: Kế hoạch 529
+          angel: Đầu tư thiên thần
+          brokerage: Môi giới chứng khoán
+          hsa: Tài khoản tiết kiệm y tế
+          ira: IRA truyền thống
+          mutual_fund: Quỹ tương hỗ
+          pension: Lương hưu
+          retirement: Hưu trí
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Kế hoạch tiết kiệm hưu trí TSP
+        loan:
+          auto: Vay mua ô tô
+          mortgage: Vay thế chấp
+          other: Khoản vay khác
+          student: Vay sinh viên
+      sync_start_date_help: Chọn thời điểm bắt đầu lấy lịch sử giao dịch.
+      sync_start_date_label: 'Bắt đầu đồng bộ giao dịch từ:'
+      title: Thiết lập tài khoản Questrade
+      types:
+        depository: Tiền mặt / Tiền gửi
+        investment: Đầu tư
+        skip: Bỏ qua tài khoản này
+    setup_required:
+      go_to_provider_settings: Mở cài đặt nhà cung cấp
+      not_configured_description: Thêm kết nối Questrade trong Cài đặt nhà cung cấp,
+        rồi quay lại đây để liên kết tài khoản.
+      not_configured_title: Chưa kết nối Questrade
+      title: Kết nối Questrade trước
+    sync:
+      status:
+        calculating: Đang tính số dư...
+        checking_setup: Đang kiểm tra cấu hình tài khoản...
+        importing: Đang nhập tài khoản từ Questrade...
+        importing_data: Đang nhập dữ liệu tài khoản...
+        needs_setup: "%{count} tài khoản cần thiết lập..."
+        processing: Đang xử lý tài sản nắm giữ và hoạt động...
+      success: Đã bắt đầu đồng bộ
+    sync_status:
+      no_accounts: Không tìm thấy tài khoản
+      synced:
+        one: Đã đồng bộ %{count} tài khoản
+        other: Đã đồng bộ %{count} tài khoản
+      synced_with_setup: Đã đồng bộ %{linked}, cần thiết lập %{unlinked}
+    update:
+      success: Đã cập nhật kết nối Questrade

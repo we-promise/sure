@@ -44,6 +44,14 @@ vi:
       submit: Thêm giao dịch
       tags_label: Nhãn
       transfer: Chuyển khoản
+      category_search_placeholder: Tìm danh mục
+      create_category: Tạo "%{name}"
+      create_category_error: Không thể tạo danh mục
+      create_merchant: Tạo
+      create_merchant_error: Không thể tạo người bán
+      create_tag: Tạo
+      merchant_search_placeholder: Tìm hoặc tạo người bán
+      tag_search_placeholder: Tìm hoặc tạo thẻ
     create:
       created: Đã tạo giao dịch
     update:
@@ -102,6 +110,29 @@ vi:
       transfer_or_debt_payment: "Chuyển khoản hay Thanh toán nợ?"
       open_matcher: "Mở công cụ khớp"
       convert: "Chuyển đổi"
+      applied_to_detail: "%{amount} cho hóa đơn đến hạn %{date}"
+      applied_to_title: Các hóa đơn đã được trả bằng khoản này
+      applied_to_unreviewed: Cần xem lại
+      create_bill: Tạo hóa đơn
+      original_description: Mô tả gốc
+      payment_channel: Kênh thanh toán
+      plaid_counterparty_label: Đối tác %{index}
+      plaid_payment_meta_label: Dữ liệu thanh toán · %{name}
+      provider_extra_fields:
+        by_order_of: Theo lệnh của
+        confidence_level: Mức độ tin cậy
+        entity_id: ID thực thể
+        logo_url: URL logo
+        name: Tên
+        payee: Người nhận
+        payer: Người trả
+        phone_number: Số điện thoại
+        ppd_id: ID PPD
+        reason: Lý do
+        reference_number: Số tham chiếu
+        type: Loại
+        website: Trang web
+      transaction_code: Mã giao dịch
     activity_labels:
       buy: Mua
       sell: Bán
@@ -233,6 +264,7 @@ vi:
         category: Danh mục
         tag: Nhãn
         merchant: Nhà cung cấp
+        ai: AI
     convert_to_trade:
       title: Chuyển đổi thành giao dịch chứng khoán
       description: Chuyển giao dịch này thành giao dịch với thông tin chứng khoán
@@ -293,6 +325,8 @@ vi:
           transfer: Chuyển khoản
           confirmed: Đã xác nhận
           pending: Đang chờ
+          ai_current: AI
+          ai_history: Lịch sử AI
         type_filter:
           expense: Chi tiêu
           income: Thu nhập
@@ -300,6 +334,19 @@ vi:
         status_filter:
           confirmed: Đã xác nhận
           pending: Đang chờ
+        account_filter:
+          filter_accounts: Lọc tài khoản
+        ai_filter:
+          current: AI
+          current_description: Danh mục vẫn là danh mục được gán tự động (AI hoặc Bayes).
+          history: Lịch sử AI
+          history_description: Đã được phân loại tự động nhưng danh mục đã thay đổi sau đó.
+        category_filter:
+          filter_category: Lọc danh mục
+        merchant_filter:
+          filter_merchants: Lọc người bán
+        tag_filter:
+          filter_tags: Lọc thẻ
       menu:
         account_filter: Tài khoản
         amount_filter: Số tiền

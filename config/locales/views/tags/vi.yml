@@ -24,3 +24,9 @@ vi:
       edit: Chỉnh sửa
     update:
       updated: Nhãn đã được cập nhật
+    menu:
+      label: Chỉnh sửa thẻ
+      loading: Đang tải thẻ...
+    summary:
+      add: Thêm thẻ
+      title: 'Thẻ: %{names}'

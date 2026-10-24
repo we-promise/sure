@@ -24,3 +24,6 @@ vi:
       savings:
         long: Tài khoản tiết kiệm
         short: Tiết kiệm
+      cash:
+        long: Tiền mặt
+        short: Tiền mặt

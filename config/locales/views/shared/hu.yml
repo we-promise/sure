@@ -2,8 +2,7 @@
 hu:
   concerns:
     self_hostable:
-      redis_configured: A Redis most megfelelően van konfigurálva! Mostantól beállíthatod
-        a Sure alkalmazásodat.
+      redis_configured: A Redis most megfelelően van konfigurálva! Mostantól beállíthatod a Sure alkalmazásodat.
   shared:
     dot_separator: "·"
     confirm_modal:
@@ -27,8 +26,7 @@ hu:
       default_body: Ez a művelet nem vonható vissza.
       default_btn_text: Megerősítés
       resource_deletion_title: 'Törli a következőt: %{resource}?'
-      resource_deletion_body: 'Biztosan törli a következőt: %{resource}? Ez a művelet
-        nem vonható vissza.'
+      resource_deletion_body: 'Biztosan törli a következőt: %{resource}? Ez a művelet nem vonható vissza.'
       resource_deletion_btn_text: "%{resource} törlése"
     family_moniker:
       group_plural: Csoportok
@@ -43,3 +41,24 @@ hu:
       income: Bevétel
       transfer: Átutalás
     submitting: Küldés…
+    preview: Előzetes
+    require_connector_owner: Csak a saját magad által hozzáadott kapcsolatokat kezelheted
+    sidekiq_health_banner:
+      body: >-
+        A háttérfeladatok feldolgozása leállt, ezért az egyenlegek, a nettó vagyon és a számlaszinkronizálások
+        adatai elavultak vagy hiányosak lehetnek.
+      cta: Rendszerállapot megtekintése
+      reasons:
+        no_worker_processes: Nem kapcsolódik Sidekiq-feldolgozó. Indítsd el a feldolgozó konténerét vagy
+          systemd-egységét.
+        queue_backed_up: >-
+          A legrégebbi sorban álló feladat várakozása túllépte a megengedett késleltetést. A feldolgozó
+          működik, de lemaradásban van.
+        redis_unreachable: Az alkalmazás nem éri el a Redist. Ellenőrizd a REDIS_URL értékét, és hogy
+          fut-e a Redis.
+        stale_heartbeat: A Sidekiq-feldolgozó nem küldött mostanában életjelet. Lehet, hogy elakadt vagy
+          összeomlott.
+      title: Egyes adatok elavultak lehetnek
+    sync_toast:
+      message: Új adatok érhetők el
+      refresh: Frissítés

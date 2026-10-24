@@ -30,37 +30,47 @@ hu:
       page_title: Szabályok
       delete_all_rules: Összes szabály törlése
       new_rule: Új szabály
-      ai_cost_warning: Az AI-t igénybe vevő szabályakciók pénzbe kerülnek. Szűrj minél szűkebbre a felesleges költségek elkerülése érdekében.
+      ai_cost_warning: >-
+        Az AI-t igénybe vevő szabályakciók pénzbe kerülnek. Szűrj minél szűkebbre a felesleges költségek
+        elkerülése érdekében.
       rules_heading: Szabályok
-      sort_by: "Rendezés:"
+      sort_by: 'Rendezés:'
       sort_name: Név szerint
       sort_updated_at: Módosítás dátuma szerint
       toggle_sort_direction: Rendezési irány váltása
       no_rules_title: Még nincsenek szabályok
-      no_rules_description: Állíts be szabályokat, amelyek minden fiókszinkronizáláskor automatikusan elvégzik a megadott műveleteket a tranzakciókon és egyéb adatokon.
+      no_rules_description: >-
+        Állíts be szabályokat, amelyek minden fiókszinkronizáláskor automatikusan elvégzik a megadott
+        műveleteket a tranzakciókon és egyéb adatokon.
     confirm:
       title: Változtatások megerősítése
-      title_with_name: "Változtatások megerősítése: \"%{name}\""
-      apply_notice_html: "Ezzel a szabályt <span class=\"text-primary font-medium\">%{count} %{resource}</span> elemre alkalmazod, amelyek megfelelnek a feltételeknek. Kérjük, erősítsd meg, ha folytatni szeretnéd."
+      title_with_name: 'Változtatások megerősítése: "%{name}"'
+      apply_notice_html: >-
+        Ezzel a szabályt <span class="text-primary font-medium">%{count} %{resource}</span> elemre alkalmazod,
+        amelyek megfelelnek a feltételeknek. Kérjük, erősítsd meg, ha folytatni szeretnéd.
       ai_cost_title: AI-költség becslése
-      ai_cost_with_estimate_html: "Ez AI segítségével kategorizál %{count} tranzakciót. Becsült költség: <span class=\"font-semibold\">~$%{cost}</span>"
-      ai_cost_no_estimate_html: "Ez AI segítségével kategorizál %{count} tranzakciót."
-      cost_unavailable_model: "A(z) \"%{model}\" modellhez nem érhető el költségbecslés."
+      ai_cost_with_estimate_html: >-
+        Ez AI segítségével kategorizál %{count} tranzakciót. Becsült költség: <span class="font-semibold">~$%{cost}</span>
+      ai_cost_no_estimate_html: Ez AI segítségével kategorizál %{count} tranzakciót.
+      cost_unavailable_model: A(z) "%{model}" modellhez nem érhető el költségbecslés.
       cost_unavailable_no_provider: A költségbecslés nem érhető el (nincs LLM-szolgáltató beállítva).
       cost_warning: Költségek merülhetnek fel – a legfrissebb árakért ellenőrizd a modellszolgáltatónál.
       view_usage_history: Felhasználási előzmények megtekintése
       confirm_changes: Változtatások megerősítése
     actions:
       value_placeholder: Adj meg egy értéket
+      to_label: 'erre:'
     apply_all:
       button: Összes alkalmazása
       confirm_title: Összes szabály alkalmazása
-      confirm_message: Ezzel %{count} szabályt alkalmazol, amelyek %{transactions} egyedi tranzakciót érintenek. Kérjük, erősítsd meg, ha folytatni szeretnéd.
+      confirm_message: >-
+        Ezzel %{count} szabályt alkalmazol, amelyek %{transactions} egyedi tranzakciót érintenek. Kérjük,
+        erősítsd meg, ha folytatni szeretnéd.
       confirm_button: Megerősítés és összes alkalmazása
       success: Minden szabály végrehajtásra van ütemezve
       ai_cost_title: AI-költség becslése
       ai_cost_message: Ez AI segítségével kategorizál legfeljebb %{transactions} tranzakciót.
-      estimated_cost: "Becsült költség: ~$%{cost}"
+      estimated_cost: 'Becsült költség: ~$%{cost}'
       cost_unavailable_model: A(z) „%{model}" modellhez nem érhető el költségbecslés.
       cost_unavailable_no_provider: A költségbecslés nem érhető el (nincs LLM-szolgáltató beállítva).
       cost_warning: Költségek merülhetnek fel – a legfrissebb árakért ellenőrizd a modellszolgáltatónál.
@@ -73,7 +83,9 @@ hu:
       success: Összes szabály törölve
     recent_runs:
       title: Legutóbbi futtatások
-      description: Tekintsd meg a szabályok végrehajtási előzményeit, beleértve a sikeres/sikertelen állapotot és a tranzakciók számát.
+      description: >-
+        Tekintsd meg a szabályok végrehajtási előzményeit, beleértve a sikeres/sikertelen állapotot és
+        a tranzakciók számát.
       unnamed_rule: Névtelen szabály
       columns:
         date_time: Dátum/Idő
@@ -95,7 +107,9 @@ hu:
     clear_ai_cache:
       button: AI-gyorsítótár visszaállítása
       confirm_title: Visszaállítod az AI-gyorsítótárat?
-      confirm_body: Biztosan visszaállítod az AI-gyorsítótárat? Ez lehetővé teszi az AI-szabályok számára az összes tranzakció újrafeldolgozását. Ez további API-költségeket okozhat.
+      confirm_body: >-
+        Biztosan visszaállítod az AI-gyorsítótárat? Ez lehetővé teszi az AI-szabályok számára az összes
+        tranzakció újrafeldolgozását. Ez további API-költségeket okozhat.
       confirm_button: Gyorsítótár visszaállítása
       success: Az AI-gyorsítótár törlése folyamatban van. Ez néhány percet igénybe vehet.
     condition_filters:
@@ -104,6 +118,26 @@ hu:
         expense: Kiadás
         transfer: Átutalás
         equal_to: Egyenlő
+      operators:
+        contains: Tartalmazza
+        does_not_contain: Nem tartalmazza
+        equal_to: Egyenlő
+        greater_or_equal_to: Nagyobb vagy egyenlő
+        greater_than: Nagyobb, mint
+        is_empty: Üres
+        is_equal_to: Egyenlő
+        is_not_empty: Nem üres
+        less_than: Kisebb, mint
+        less_than_or_equal_to: Kisebb vagy egyenlő
+        not_equal_to: Nem egyenlő
+    category_rule_cta:
+      close: Bezárás
+      create_rule: Szabály létrehozása
+      description: Létrehozhatsz szabályt az ehhez hasonló tranzakciók automatikus kategorizálására
+      dont_show_again: Ne jelenjen meg újra
+      hide_for_today: Elrejtés mára
+      hide_for_today_hint: Az Elrejtés mára 24 órára szünetelteti ezeket a javaslatokat.
+      message: 'Frissítve erre: %{category_name}'
   rule:
     conditions:
       condition_group:
@@ -113,3 +147,5 @@ hu:
         any: bármelyik
         of_the_following_conditions: a következő feltételek közül
         add_condition: Feltétel hozzáadása
+      condition:
+        value_placeholder: Adj meg egy értéket

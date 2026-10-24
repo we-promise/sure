@@ -1,0 +1,9 @@
+---
+hu:
+  tag:
+    dropdowns:
+      show:
+        empty: Még nincsenek címkék
+        manage: Címkék kezelése
+        no_tags: Nem található címke
+        search_placeholder: Keresés

@@ -2,7 +2,7 @@
 hu:
   vehicles:
     edit:
-      edit: '%{account} szerkesztése'
+      edit: "%{account} szerkesztése"
     form:
       make: Márka
       make_placeholder: BMW
@@ -13,6 +13,8 @@ hu:
       model_placeholder: M3
       year: Évjárat
       year_placeholder: '2023'
+      mileage_unit_kilometers: Kilométer
+      mileage_unit_miles: Mérföld
     new:
       title: Add meg a jármű adatait
     overview:
@@ -32,4 +34,4 @@ hu:
         trend: Tendencia
         unknown: Ismeretlen
         year: Évjárat
-        edit_account_details: "Számlaadatok szerkesztése"
+        edit_account_details: Számlaadatok szerkesztése

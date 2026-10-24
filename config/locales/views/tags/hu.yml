@@ -24,3 +24,9 @@ hu:
       edit: Szerkesztés
     update:
       updated: Címke frissítve
+    menu:
+      label: Címkék szerkesztése
+      loading: Címkék betöltése…
+    summary:
+      add: Címkék hozzáadása
+      title: 'Címkék: %{names}'

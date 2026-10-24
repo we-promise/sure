@@ -3,14 +3,17 @@ hu:
   transfers:
     create:
       success: Átutalás létrehozva
+      date_invalid: érvénytelen
+      exchange_rate_unavailable: A kiválasztott pénznemekhez és dátumhoz nem érhető el árfolyam
+      stale_form: Ezt az űrlapot már elküldték más adatokkal. Frissítsd az oldalt, és próbáld újra.
     destroy:
       success: Átutalás eltávolítva
     form:
       amount: Összeg
       date: Dátum
       destination_amount: Célösszeg
-      destination_amount_display: "Célösszeg: %{amount}"
-      exchange_rate_display: "Árfolyam: %{rate}"
+      destination_amount_display: 'Célösszeg: %{amount}'
+      exchange_rate_display: 'Árfolyam: %{rate}'
       expense: Kiadás
       from: Honnan
       income: Bevétel
@@ -19,6 +22,9 @@ hu:
       submit: Átutalás létrehozása
       to: Hova
       transfer: Átutalás
+      bank_charges: Banki díjak
+      incoming_fee: Bejövő átutalás díja
+      outgoing_fee: Kimenő átutalás díja
     new:
       title: Új átutalás
     show:
@@ -27,7 +33,8 @@ hu:
       delete_title: Eltávolítja az átutalást?
       details: Részletek
       mark_recurring: Ismétlődőként jelölés
-      mark_recurring_subtitle: Kövesd ezt az átutalást ismétlődő mintaként a közelgő eseménylistában és az ismétlődők oldalon.
+      mark_recurring_subtitle: Kövesd ezt az átutalást ismétlődő mintaként a közelgő eseménylistában és
+        az ismétlődők oldalon.
       mark_recurring_title: Átutalás ismétlődőként jelölése
       note_label: Megjegyzések
       note_placeholder: Adj meg egy megjegyzést ehhez az átutaláshoz
@@ -39,7 +46,10 @@ hu:
       amount: Összeg
       category: Kategória
       uncategorized: Kategorizálatlan
-      total: '[Total]'
-      transfer_amount: '[Transfer amount]'
+      total: "[Total]"
+      transfer_amount: "[Transfer amount]"
+      bank_charges: Banki díjak
+      destination_fee: Fogadó oldali díj
+      source_fee: Küldő oldali díj
     update:
       success: Átutalás frissítve

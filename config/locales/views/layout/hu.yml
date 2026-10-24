@@ -10,6 +10,15 @@ hu:
         home: Kezdőlap
         reports: Jelentések
         transactions: Tranzakciók
+        bills: Fizetési kötelezettségek
+        goals: Célok
+        plan: Csomag
+      insights: Megállapítások
+      release_highlight:
+        done: Rendben
+        title: Újdonságok
+      resize_left_sidebar: Számlák oldalsávjának átméretezése
+      resize_right_sidebar: Asszisztens oldalsávjának átméretezése
     auth:
       existing_account: Már van fiókod?
       no_account: Még nem ismered a %{product_name}-t?
@@ -23,6 +32,10 @@ hu:
         are_you_sure: Biztosan?
         cannot_be_undone: Ez a művelet nem vonható vissza.
         confirm: Megerősítés
+      notification_tray:
+        download_complete: Letöltés befejezve
+        download_failed: A letöltés sikertelen. Próbáld újra.
+        download_location: A fájl a Letöltések mappádban található.
     trial:
       open_demo: Demo megnyitása
       data_deleted_in_days: Az adatok törlődnek %{days} nap múlva

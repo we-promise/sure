@@ -68,14 +68,43 @@ vi:
           holdings_value: Giá trị danh mục
           remaining_principal_balance: Số dư gốc còn lại
           total_account_value: Tổng giá trị tài khoản
+          loan_remaining_balance: Dư nợ còn lại
+          total_gains: Tổng lãi
         views:
           cash: Tiền mặt
           holdings: Danh mục
           total_value: Tổng giá trị
+          gains: Lãi / ROI
         vs_available_history: so với lịch sử hiện có
+        loan:
+          actual: Dư nợ đã ghi nhận
+          aria_actual_history_starts: Lịch sử dư nợ đã ghi nhận bắt đầu %{date}.
+          aria_description: Biểu đồ dư nợ khoản vay. Dư nợ đã ghi nhận %{current_balance}.
+            Ngày tất toán theo lịch ban đầu %{scheduled_payoff_date}. Ngày tất toán dự báo
+            từ dư nợ hôm nay %{projected_payoff_date}.
+          interactive_chart: biểu đồ tương tác
+          interest_saved: Lãi tiết kiệm được
+          legend: Các chuỗi dữ liệu
+          months_saved:
+            one: Sớm hơn lịch %{count} tháng
+            other: Sớm hơn lịch %{count} tháng
+          no_payoff: không thể với mức trả hiện tại
+          not_converged: Với mức trả hiện tại, dư nợ này không được trả hết khi đến hạn ban
+            đầu; vẫn còn nợ %{balloon}.
+          on_schedule: Đúng lịch
+          projected: Dự báo từ hôm nay
+          projected_payoff: Dự báo tất toán
+          projection_basis: So sánh dư nợ ghi nhận hôm nay với dư nợ theo lịch cùng ngày.
+            Khoản trả được ghi trước ngày dự kiến sẽ hiển thị là đi trước lịch cho đến ngày
+            đó; ghi sau ngày dự kiến sẽ hiển thị là chậm lịch.
+          scheduled: Lịch ban đầu
+          since_start: kể từ khi bắt đầu khoản vay
+          today: Hôm nay
       activity_date:
         balance_tooltip: "Số dư cuối ngày, sau tất cả giao dịch và điều chỉnh"
         no_balance_data: "Không có dữ liệu số dư cho ngày này"
+    period_picker:
+      aria_label: 'Khoảng thời gian: %{period}'
   ds:
     alert:
       variants:
@@ -95,6 +124,9 @@ vi:
       trigger_label: Thêm thông tin
     link:
       opens_in_new_tab: (mở trong tab mới)
+    icon_picker:
+      no_matching_icons: Không có biểu tượng phù hợp
+      search_placeholder: Tìm biểu tượng...
   provider_sync_summary:
     title: Tóm tắt đồng bộ
     last_sync: "Đồng bộ lần cuối: %{time_ago} trước"

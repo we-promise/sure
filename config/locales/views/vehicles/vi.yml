@@ -13,6 +13,8 @@ vi:
       model_placeholder: Camry
       year: Năm sản xuất
       year_placeholder: '2023'
+      mileage_unit_kilometers: Kilômét
+      mileage_unit_miles: Dặm
     new:
       title: Nhập thông tin xe
     overview:

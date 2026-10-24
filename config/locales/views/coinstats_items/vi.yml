@@ -30,7 +30,7 @@ vi:
       link_wallet_description: Theo dõi ví tự quản hoặc địa chỉ on-chain đơn lẻ qua CoinStats.
       address_label: Địa chỉ
       address_placeholder: Bắt buộc
-      blockchain_label: Blockchain
+      blockchain_label: "Chuỗi khối"
       blockchain_placeholder: Bắt buộc
       blockchain_select_blank: Chọn một Blockchain
       link_wallet_submit: Liên kết ví tiền điện tử

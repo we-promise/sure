@@ -21,6 +21,9 @@ vi:
       default_label: Mặc định
       delete: Xóa tài khoản
       sharing: Chia sẻ
+      exclude_from_reports: Loại khỏi mọi báo cáo
+      excluded_from_reports_indicator: Đã loại khỏi báo cáo
+      include_in_reports: Đưa vào báo cáo
     chart:
       data_not_available: Dữ liệu không khả dụng cho khoảng thời gian đã chọn
     create:
@@ -47,12 +50,20 @@ vi:
       institution_domain_placeholder: "ví dụ: vietcombank.com.vn"
       notes_label: Ghi chú
       notes_placeholder: Lưu thêm thông tin như số tài khoản, mã định tuyến, IBAN, v.v.
+      enable_category_matcher_hint: Khi bật, danh mục nhà cung cấp đề xuất được áp dụng
+        cho giao dịch nhập vào. Tắt để giữ giao dịch mới ở trạng thái chưa phân loại.
+      enable_category_matcher_label: Bật đối chiếu danh mục
+      exclude_from_reports: Loại khỏi mọi báo cáo
     index:
       accounts: Tài khoản
       manual_accounts:
         other_accounts: Tài khoản khác
       new_account: Tài khoản mới
       sync: Đồng bộ tất cả
+      cancel_sync: Hủy đồng bộ
+      financekit_accounts:
+        description: Quản lý kết nối Apple Wallet và đồng bộ trong ứng dụng Sure iOS.
+        title: Apple Wallet
     sync_all:
       syncing: "Đang đồng bộ tài khoản..."
     new:
@@ -61,6 +72,8 @@ vi:
         select: Chọn
         navigate: Điều hướng
         close: Đóng
+        next: Tiếp theo
+        previous: Trước
       method_selector:
         connected_entry: Liên kết tài khoản
         connected_entry_eu: Liên kết tài khoản EU
@@ -76,6 +89,7 @@ vi:
         holdings: Danh mục nắm giữ
         overview: Tổng quan
         statements: Sao kê
+        schedule: Lịch
       activity:
         amount: Số tiền
         balance: Số dư
@@ -97,6 +111,8 @@ vi:
         search_placeholder: Tìm kiếm mục nhập theo tên
         status: Trạng thái
         title: Hoạt động
+        category: Danh mục
+        uncategorized_only: Chỉ chưa phân loại
       chart:
         balance: Số dư
         owed: Số tiền nợ
@@ -114,6 +130,8 @@ vi:
         manage: Quản lý tài khoản
         sharing: Chia sẻ
         statements: Sao kê
+        exclude_from_reports: Loại khỏi mọi báo cáo
+        include_in_reports: Đưa vào báo cáo
     update:
       success: "Đã cập nhật tài khoản %{type}"
     sidebar:
@@ -128,6 +146,8 @@ vi:
       new_debt: Nợ mới
       new_account: Tài khoản mới
       new_account_group: "Nhóm %{account_group} mới"
+      collapse_all: Thu gọn tất cả
+      expand_all: Mở rộng tất cả
     types:
       depository: Tiền mặt
       investment: Đầu tư
@@ -175,6 +195,9 @@ vi:
       warning_transactions_kept: Tất cả giao dịch và số dư hiện có sẽ được giữ nguyên
       warning_can_delete: Sau khi hủy liên kết, bạn có thể xóa tài khoản nếu cần
       confirm_button: Xác nhận và hủy liên kết
+      warning_wallet_connection: Mọi tài khoản trong kết nối Apple Wallet này sẽ bị hủy
+        liên kết. Giao dịch và số dư được giữ lại. Bạn có thể kết nối lại qua ứng dụng Sure
+        iOS bằng cách thiết lập Wallet mới.
     unlink:
       success: "Tài khoản đã được hủy liên kết thành công. Bây giờ là tài khoản thủ công."
       not_linked: "Tài khoản chưa được liên kết với nhà cung cấp"

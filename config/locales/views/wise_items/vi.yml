@@ -3,3 +3,179 @@ vi:
     provider_panel:
       instructions:
         open_tokens: Đi tới Settings → Connect and manage apps → Developer tools → API tokens
+        copy_token_html: Sao chép token và dán bên dưới. Sure chỉ dùng token để đồng bộ số
+          dư và giao dịch.
+        create_token: Tạo token API cá nhân mới có quyền chỉ đọc
+        sign_in_html: Truy cập %{link} và đăng nhập tài khoản
+      add_connection: Thêm kết nối Wise
+      connect: Kết nối Wise
+      connection_name_label: Tên kết nối
+      connection_name_placeholder: Wise cá nhân
+      disconnect: Ngắt kết nối
+      disconnect_confirm: Bạn có chắc muốn ngắt kết nối %{name}? Thao tác này sẽ xóa tất
+        cả dữ liệu tài khoản đã đồng bộ.
+      disconnect_label: Ngắt kết nối %{name}
+      encryption_warning:
+        message: Cấu hình khóa mã hóa Active Record trước khi thêm token Wise trong môi
+          trường vận hành thực tế. Nếu không mã hóa, token được lưu dưới dạng văn bản thuần.
+        title: Chưa cấu hình mã hóa cơ sở dữ liệu
+      import_all_history_help: Lấy toàn bộ sao kê Wise trong quá khứ thay vì chỉ năm gần
+        nhất.
+      import_all_history_label: Nhập toàn bộ lịch sử giao dịch
+      keep_token_placeholder: Để trống để giữ token hiện tại
+      sandbox_note_html: Dùng URL cơ sở <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>)
+        để thử nghiệm. Đặt <code>WISE_BASE_URL</code> trong môi trường.
+      sca:
+        copied: Đã sao chép!
+        copy: Sao chép
+        description: Wise yêu cầu thử thách token một lần được ký để đọc sao kê đầy đủ,
+          gồm các khoản tiền vào. Tạo cặp khóa tại đây rồi đăng ký khóa công khai với Wise
+          để bật tính năng này.
+        generate: Tạo cặp khóa
+        public_key_label: Khóa công khai (PEM)
+        regenerate: Tạo lại cặp khóa
+        regenerate_confirm: Thao tác này tạo cặp khóa mới. Wise vẫn chấp nhận khóa công
+          khai cũ cho đến khi bạn tự xóa trong tài khoản Wise — Sure không thể thu hồi từ
+          xa. Bạn cần đăng ký khóa công khai mới với Wise trước khi sao kê có thể đồng bộ
+          lại. Tiếp tục?
+        registered_help_html: 'Đăng ký khóa này với Wise: Settings → Connect and manage
+          apps → Developer tools → Public keys → Add public key.'
+        title: Xác thực khách hàng mạnh (SCA)
+      setup_accounts: Thiết lập tài khoản
+      sync: Đồng bộ
+      sync_start_date_help: Sao kê Wise được nhập từ ngày này trở đi. Giữ mặc định để lấy
+        tối đa một năm lịch sử.
+      sync_start_date_label: Nhập giao dịch từ
+      token_label: Token API
+      token_placeholder: Dán token API cá nhân Wise
+      update_connection: Cập nhật kết nối
+    activities:
+      asset_fee: Phí Wise Assets
+      default_name: Hoạt động Wise
+      interest: Lãi Wise
+      jar_deposit: Chuyển vào hũ tiết kiệm
+      jar_withdrawal: Chuyển từ hũ tiết kiệm
+      transfer_from_jar: Chuyển từ %{jar}
+      transfer_to_jar: Chuyển đến %{jar}
+    complete_account_setup:
+      failed: Không thể tạo tài khoản. Vui lòng thử lại.
+      not_found: Không tìm thấy số dư Wise.
+      success: Đã tạo và liên kết tài khoản thành công.
+    create:
+      connection_failed: Không thể kết nối Wise. Vui lòng thử lại sau.
+      invalid_token: Token API không hợp lệ. Hãy kiểm tra và thử lại.
+      no_profiles_found: Không tìm thấy hồ sơ Wise. Hãy kiểm tra token API.
+    destroy:
+      success: Đã xóa kết nối Wise
+    entries:
+      default_name: Giao dịch Wise
+      fee_name: Phí Wise
+    generate_sca_keypair:
+      failed: Không thể tạo cặp khóa SCA mới. Vui lòng thử lại.
+      success: Đã tạo cặp khóa SCA mới. Đăng ký khóa công khai với Wise để hoàn tất kích
+        hoạt.
+    link_accounts:
+      failed: Không thể liên kết số dư Wise. Vui lòng thử lại.
+      not_found: Không tìm thấy số dư Wise.
+      success: Đã liên kết số dư Wise với tài khoản thành công.
+    link_existing_account:
+      failed: Không thể liên kết tài khoản. Vui lòng thử lại.
+      not_found: Không tìm thấy tài khoản hoặc số dư Wise.
+      success: Đã liên kết %{account_name} với Wise thành công
+    link_profiles:
+      already_connected: Tất cả hồ sơ đã chọn đều đã được kết nối.
+      no_profiles_selected: Vui lòng chọn ít nhất một hồ sơ.
+      session_expired: Phiên đã hết hạn. Hãy thử kết nối lại.
+      success:
+        one: Đã kết nối thành công %{count} hồ sơ Wise
+        other: Đã kết nối thành công %{count} hồ sơ Wise
+    profile_types:
+      business: Doanh nghiệp
+      personal: Cá nhân
+    provider_connection:
+      default_description: Kết nối tài khoản đa tiền tệ Wise
+      default_name: Wise
+      description: Kết nối bằng %{name}
+      name: Wise — %{name}
+    select_accounts:
+      cancel: Hủy
+      description: Chọn số dư tiền tệ Wise muốn liên kết với tài khoản %{product_name}.
+      link_account: Liên kết số dư
+      no_accounts_found: Tất cả số dư Wise đã được liên kết với tài khoản Sure.
+      no_connection: Không tìm thấy kết nối Wise. Hãy kết nối Wise trong Cài đặt nhà cung
+        cấp trước.
+      title: Chọn số dư Wise
+    select_existing_account:
+      cancel: Hủy
+      description: Chọn số dư tiền tệ Wise để liên kết với tài khoản này. Giao dịch sẽ
+        được đồng bộ tự động.
+      link_account: Liên kết số dư
+      no_accounts_found: Không tìm thấy số dư Wise chưa liên kết.
+      title: Liên kết %{account_name} với Wise
+    select_profiles:
+      already_connected_label: Đã kết nối
+      cancel: Hủy
+      connect: Kết nối hồ sơ đã chọn
+      description: Tài khoản Wise của bạn có nhiều hồ sơ. Chọn hồ sơ muốn đồng bộ với
+        Sure.
+      session_expired: Phiên đã hết hạn. Hãy thử kết nối lại.
+      subtitle: Chọn hồ sơ để kết nối
+      title: Chọn hồ sơ Wise
+      unnamed_profile: "(Hồ sơ chưa đặt tên)"
+    setup_accounts:
+      all_accounts_linked: Tất cả số dư tiền tệ Wise đã được liên kết với tài khoản Sure.
+      create_account: Tạo tài khoản
+      description: Tạo một tài khoản Sure cho mỗi số dư tiền tệ Wise muốn theo dõi. Mỗi
+        loại tiền có một tài khoản riêng.
+      done: Xong
+      no_accounts_to_setup: Tất cả tài khoản đã được thiết lập
+      subtitle: Liên kết số dư tiền tệ Wise
+      title: Thiết lập tài khoản Wise
+    sync:
+      success: Đã bắt đầu đồng bộ
+    sync_status:
+      all_synced:
+        one: Đã đồng bộ %{count} tài khoản
+        other: Đã đồng bộ %{count} tài khoản
+      no_accounts: Không tìm thấy tài khoản
+      partial_setup: Đã đồng bộ %{synced}, cần thiết lập %{pending}
+    syncer:
+      account_processing_failed:
+        one: Xử lý thất bại với %{count} tài khoản Wise.
+        other: Xử lý thất bại với %{count} tài khoản Wise.
+      account_sync_failed:
+        one: Không thể lên lịch đồng bộ %{count} tài khoản Wise.
+        other: Không thể lên lịch đồng bộ %{count} tài khoản Wise.
+      accounts_failed:
+        one: Không thể nhập %{count} số dư.
+        other: Không thể nhập %{count} số dư.
+      accounts_need_setup:
+        one: "%{count} tài khoản cần thiết lập..."
+        other: "%{count} tài khoản cần thiết lập..."
+      calculating_balances: Đang tính số dư...
+      checking_account_configuration: Đang kiểm tra cấu hình tài khoản...
+      credentials_invalid: Token API Wise không hợp lệ hoặc thiếu quyền
+      failed: Đồng bộ thất bại. Hãy thử lại hoặc liên hệ hỗ trợ.
+      import_failed: Nhập dữ liệu Wise thất bại.
+      importing_accounts: Đang nhập tài khoản từ Wise...
+      processing_transactions: Đang xử lý giao dịch...
+      transactions_failed:
+        one: "%{count} số dư gặp lỗi khi nhập giao dịch."
+        other: "%{count} số dư gặp lỗi khi nhập giao dịch."
+    update:
+      success: Đã cập nhật kết nối Wise
+    wise_item:
+      delete: Ngắt kết nối
+      deletion_in_progress: đang xóa...
+      error: Lỗi đồng bộ
+      no_accounts_description: Chạy đồng bộ để tìm các số dư Wise, rồi liên kết với tài
+        khoản Sure.
+      no_accounts_title: Chưa liên kết tài khoản nào
+      setup_action: Thiết lập tài khoản
+      setup_description: Đã liên kết %{linked} trên %{total} tài khoản. Tạo tài khoản
+        Sure cho các số dư tiền tệ Wise.
+      setup_needed: Tài khoản mới sẵn sàng để thiết lập
+      status: Đã đồng bộ %{timestamp} trước
+      status_never: Chưa từng đồng bộ
+      status_with_summary: Đồng bộ gần nhất %{timestamp} trước — %{summary}
+      syncing: Đang đồng bộ...

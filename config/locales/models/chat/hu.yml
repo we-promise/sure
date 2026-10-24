@@ -2,7 +2,10 @@
 hu:
   chat:
     errors:
-      rate_limited: "Az AI szolgáltató éppen korlátozott. Próbáld újra néhány perc múlva."
-      temporarily_unavailable: "Az AI szolgáltató jelenleg nem elérhető. Próbáld újra néhány perc múlva."
-      misconfigured: "Az AI szolgáltató nincs megfelelően beállítva. Kérjük, vedd fel a kapcsolatot a rendszergazdával."
-      default: "Nem sikerült választ generálni. Kérjük, próbáld újra."
+      rate_limited: Az AI szolgáltató éppen korlátozott. Próbáld újra néhány perc múlva.
+      temporarily_unavailable: Az AI szolgáltató jelenleg nem elérhető. Próbáld újra néhány perc múlva.
+      misconfigured: Az AI szolgáltató nincs megfelelően beállítva. Kérjük, vedd fel a kapcsolatot a rendszergazdával.
+      default: Nem sikerült választ generálni. Kérjük, próbáld újra.
+      no_response: >-
+        Az asszisztens nem válaszolt. Lehet, hogy a háttérfeldolgozó leállt, vagy az MI nincs teljesen
+        beállítva. Próbáld újra.

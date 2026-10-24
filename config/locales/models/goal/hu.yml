@@ -1,0 +1,41 @@
+---
+hu:
+  activerecord:
+    attributes:
+      goal:
+        color: Szín
+        currency: Pénznem
+        linked_accounts: Összekapcsolt számlák
+        name: Név
+        notes: Megjegyzések
+        state: Állapot
+        target_amount: Célösszeg
+        target_date: Céldátum
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Válassz ki legalább egy számlát a cél finanszírozásához.
+              whole_account_conflict_on_restore: >-
+                A cél nem állítható vissza: a(z) „%{account_name}” számla most teljesen a(z) „%{goal_name}”
+                célra van elkülönítve. Először adj meg konkrét összeget valamelyiknél.
+            currency:
+              locked_after_linked: A pénznem nem módosítható, miután a célt számlákhoz kapcsoltad.
+            kind:
+              locked_once_consumed: Ehhez a célhoz már rögzítettél elköltött pénzt, ezért nem alakítható
+                tartalékká.
+              locked_while_released: Nyisd újra a célt, mielőtt tartalékká alakítod.
+            linked_accounts:
+              currency_mismatch: Minden összekapcsolt számlának azonos pénzneműnek kell lennie.
+              must_be_fundable: Csak pénzforgalmi vagy befektetési számlák kapcsolhatók össze.
+              must_belong_to_family: Az összekapcsolt számláknak a céllal azonos háztartáshoz kell tartozniuk.
+            target_amount:
+              below_consumed: A célösszeg nem lehet kisebb az ennél a célnál már elköltöttként rögzített
+                összegnél.
+            target_mode:
+              months_requires_maintained: Csak fenntartandó tartalék célösszege adható meg havi kiadások
+                számában.
+            target_months:
+              blank: Add meg, hány hónap kiadásait fedezze ez a tartalék.
+              only_with_months_mode: A havi kiadások száma csak az ilyen módon megadott célösszegnél alkalmazható.

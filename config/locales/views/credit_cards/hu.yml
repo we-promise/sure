@@ -2,7 +2,7 @@
 hu:
   credit_cards:
     edit:
-      edit: '%{account} szerkesztése'
+      edit: "%{account} szerkesztése"
     form:
       annual_fee: Éves díj
       annual_fee_placeholder: '99'
@@ -13,5 +13,17 @@ hu:
       expiration_date: Lejárati dátum
       minimum_payment: Minimális törlesztőrészlet
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automatikus
+      simplefin_balance_sign_credit: Követelés (a bank tartozik neked)
+      simplefin_balance_sign_debt: Tartozás (te tartozol a banknak)
+      simplefin_balance_sign_description: >-
+        Csak akkor használd a felülbírálást, ha a SimpleFIN nem egyértelmű előjelet ad meg. Az Automatikus
+        továbbra is a tranzakciós előzményeket és a szolgáltatói egyenleget használja.
+      simplefin_balance_sign_label: SimpleFIN-egyenleg jelentése
+      treat_balance_as_available_credit_description: >-
+        Kapcsold be, ha a bank a kártya egyenlegeként a fennmaradó szabad hitelkeretet adja meg a tartozás
+        helyett. A tartozást ilyenkor a bank által közölt teljes hitelkeretből számítjuk ki, vagy ennek
+        hiányában a Rendelkezésre álló hitelkeret mezőből.
+      treat_balance_as_available_credit_label: Az egyenleg szabad hitelkeretet jelent
     new:
       title: Add meg a hitelkártya adatait

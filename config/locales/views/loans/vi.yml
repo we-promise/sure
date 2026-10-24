@@ -13,25 +13,85 @@ vi:
       none: Không có
       subtype_prompt: Chọn loại khoản vay
       subtype_none: Không có
+      down_payment: Khoản trả trước
+      insurance_rate: Tỷ lệ phí bảo hiểm
+      insurance_rate_hint: Tỷ lệ hằng năm, thu hằng tháng cùng khoản trả nợ. Loại mức cố
+        định tính trên dư nợ ban đầu; loại giảm dần tính trên dư nợ còn lại.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Loại bảo hiểm
+      insurance_rate_type_decreasing_life: Giảm dần
+      insurance_rate_type_level_term: Mức cố định trong kỳ hạn
+      rate_change_add: Thêm thay đổi lãi suất
+      rate_change_effective_date: Ngày có hiệu lực
+      rate_change_rate: Lãi suất
+      rate_change_remove: Xóa
+      rate_changes: Thay đổi lãi suất
+      rate_changes_empty: Chưa ghi nhận thay đổi lãi suất. Khoản vay áp dụng lãi suất ở
+        trên.
+      rate_changes_hint: Mỗi dòng xác định lãi suất áp dụng từ ngày có hiệu lực đến lần
+        thay đổi tiếp theo. Nhập lại một ngày sẽ thay thế dòng đó, không tạo dòng thứ hai.
+      rate_type_adjustable: Điều chỉnh định kỳ
+      rate_type_fixed: Cố định
+      rate_type_variable: Thả nổi
+      start_date: Ngày giải ngân
+      start_date_hint: Ngày khoản vay được giải ngân. Để trống để dùng ngày mở tài khoản.
     new:
       title: Nhập thông tin khoản vay
     overview:
       interest_rate: Lãi suất
       monthly_payment: Thanh toán hàng tháng
-      not_applicable: N/A
+      not_applicable: "Không áp dụng"
       original_principal: Vốn gốc ban đầu
       remaining_principal: Vốn gốc còn lại
       term: Kỳ hạn
       type: Loại
       unknown: Không xác định
+      original_payoff_date: Ngày tất toán ban đầu
     tabs:
       overview:
         interest_rate: Lãi suất
         monthly_payment: Thanh toán hàng tháng
-        not_applicable: N/A
+        not_applicable: "Không áp dụng"
         original_principal: Vốn gốc ban đầu
         remaining_principal: Vốn gốc còn lại
         term: Kỳ hạn
         type: Loại
         unknown: Không xác định
         edit_loan_details: "Chỉnh sửa thông tin khoản vay"
+        insurance_rate_only: "%{rate} mỗi năm"
+        leverage: Đòn bẩy
+        leverage_band_conservative: Thận trọng
+        leverage_band_high: Cao
+        leverage_band_moderate: Vừa phải
+        leverage_multiple: "%{ratio}x"
+        original_payoff_date: Ngày tất toán ban đầu
+        total_cost: Tổng chi phí
+        total_cost_with_insurance: Tổng chi phí gồm bảo hiểm
+        total_insurance: Bảo hiểm
+      repayment_progress:
+        instalment: Kỳ trả %{number} · %{date}
+        insurance: Bảo hiểm
+        interest: Lãi
+        of_original: trên %{amount}
+        principal: Gốc
+        repaid: Đã trả
+        total: Tổng
+      schedule:
+        date: Ngày
+        description: Dự báo từ dư nợ, lãi suất và kỳ hạn ban đầu, bắt đầu %{start_date}.
+          Không tính các khoản trả thêm.
+        forecasted_payoff_date: Ngày tất toán dự báo
+        forecasted_payoff_not_converged: Không thể trả hết với mức trả hiện tại
+        interest: Lãi
+        monthly_payment: Khoản trả hằng tháng
+        not_applicable: Không áp dụng
+        number: "#"
+        opening_payment: Khoản trả đầu kỳ
+        payment: Khoản trả
+        principal: Gốc
+        remaining_balance: Dư nợ còn lại
+        total_cost: Tổng chi phí
+        total_interest: Tổng tiền lãi
+        variable_rate_notice: Lãi suất khoản vay thay đổi theo thời gian. Lịch trả nợ được
+          tính lại sau mỗi thay đổi đã ghi nhận, giữ nguyên ngày tất toán ban đầu và điều
+          chỉnh số tiền trả; thay đổi chưa được ghi nhận sẽ làm các số liệu này khác đi.

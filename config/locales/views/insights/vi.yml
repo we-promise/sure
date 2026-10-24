@@ -1,0 +1,119 @@
+---
+vi:
+  insights:
+    actions:
+      budget: Xem ngân sách
+      cash_flow_warning: Xem lại giao dịch định kỳ
+      idle_cash: Mở tài khoản
+      maintained_goal_depleted: Xem quỹ dự phòng
+      net_worth_milestone: Xem báo cáo tài sản ròng
+      savings_rate_change: Xem giao dịch của tháng đó
+      spending_anomaly: Xem giao dịch %{category}
+      subscription_audit: Xem lại giao dịch định kỳ
+    card:
+      acknowledge: Đã hiểu
+      acknowledge_title: Ẩn cho đến khi số liệu thay đổi
+      acknowledged: Đã bỏ qua nhận định
+      new: Mới
+    feed:
+      acknowledge_aria: 'Đã hiểu: %{title}'
+      header: Mới nhất
+      header_new: Mới
+      view_all: Xem tất cả nhận định
+    figures:
+      days_overdue:
+        one: Quá hạn %{count} ngày
+        other: Quá hạn %{count} ngày
+      idle_days:
+        one: không hoạt động %{count} ngày
+        other: không hoạt động %{count} ngày
+      need_attention: cần chú ý
+      of_budget: của ngân sách
+      on_pace: đúng tiến độ
+      today: hôm nay
+      vs_previous: so với tháng trước
+    index:
+      empty:
+        description: Nhận định xuất hiện tại đây khi tài khoản có đủ hoạt động. Nội
+          dung tự làm mới mỗi đêm.
+        title: Chưa có nhận định
+      refresh: Kiểm tra nhận định mới
+      subtitle: Diễn biến tài chính của bạn, được cập nhật mỗi đêm.
+      title: Nhận định
+    meta:
+      date_range: "%{from} đến %{to}"
+      last_n_days:
+        one: Ngày qua
+        other: "%{count} ngày qua"
+      next_n_days:
+        one: Ngày tới
+        other: "%{count} ngày tới"
+    notification:
+      body: Mở Sure để xem nhận định AI mới nhất.
+      title: Nhận định tài chính mới
+    refresh:
+      checking: Đang kiểm tra…
+      queued: Chúng tôi đang tạo nhận định mới. Hãy quay lại sau một phút.
+    templates:
+      budget_at_risk:
+        near: "%{categories} gần chạm giới hạn tháng này. Bạn đã dùng %{budget_spent_pct}%
+          tổng ngân sách."
+        over: "%{categories} đã vượt ngân sách tháng này. Bạn đã dùng %{budget_spent_pct}%
+          tổng ngân sách."
+      budget_on_track: Bạn đã chi %{spent} trên ngân sách %{budgeted} (%{budget_spent_pct}%)
+        và mọi mục vẫn trong giới hạn.
+      cash_flow_warning:
+        low: Dựa trên giao dịch định kỳ sắp tới và mức chi tiêu thông thường, số dư
+          tiền mặt có thể giảm còn %{projected_low} vào khoảng %{projected_low_date}.
+        negative: Dựa trên giao dịch định kỳ sắp tới và mức chi tiêu thông thường,
+          số dư tiền mặt có thể giảm xuống %{projected_low} vào khoảng %{projected_low_date}.
+      idle_cash: "%{account} có %{balance} nhưng không phát sinh hoạt động trong %{idle_days}
+        ngày qua."
+      maintained_goal_depleted: "%{goal} hiện có %{saved} trên mức cần duy trì %{target}.
+        Còn thiếu %{missing}."
+      net_worth_milestone: Tài sản ròng của bạn đã vượt %{milestone} và hiện ở mức
+        %{net_worth}.
+      savings_rate_change:
+        down: Bạn đã tiết kiệm %{current_rate}% thu nhập trong %{month}, giảm %{change_pp}
+          điểm phần trăm so với %{previous_rate}% của tháng trước.
+        down_negative: 'Bạn đã chi nhiều hơn thu nhập trong %{month}: tỷ lệ tiết kiệm
+          giảm xuống %{current_rate}%, so với %{previous_rate}% tháng trước.'
+        up: Bạn đã tiết kiệm %{current_rate}% thu nhập trong %{month}, tăng %{change_pp}
+          điểm phần trăm so với %{previous_rate}% của tháng trước.
+      spending_anomaly:
+        above: Với tiến độ hiện tại, bạn sẽ chi %{projected_spend} cho %{category}
+          tháng này, cao hơn khoảng %{deviation_pct}% so với mức trung bình tháng
+          gần đây là %{baseline_spend}.
+        below: Với tiến độ hiện tại, bạn sẽ chi %{projected_spend} cho %{category}
+          tháng này, thấp hơn khoảng %{deviation_pct}% so với mức trung bình tháng
+          gần đây là %{baseline_spend}.
+      subscription_audit: "%{name} (%{amount}) chưa xuất hiện kể từ ngày dự kiến %{expected_on}.
+        Có thể đã hủy hoặc chuyển ngày thu tiền."
+    titles:
+      budget_at_risk:
+        one: Một danh mục trong ngân sách cần chú ý
+        other: "%{count} danh mục trong ngân sách cần chú ý"
+      budget_on_track: Ngân sách của bạn đúng tiến độ
+      cash_flow_warning:
+        low: Số dư tiền mặt có thể xuống thấp
+        negative: Số dư tiền mặt có thể âm
+      idle_cash: Tiền nhàn rỗi trong %{account}
+      maintained_goal_depleted: "%{goal} đã giảm dưới mức cần duy trì"
+      net_worth_milestone: 'Cột mốc tài sản ròng: %{milestone}'
+      savings_rate_change:
+        down: Tỷ lệ tiết kiệm giảm trong %{month}
+        up: Tỷ lệ tiết kiệm cải thiện trong %{month}
+      spending_anomaly:
+        above: Chi tiêu %{category} có xu hướng tăng
+        below: Chi tiêu %{category} có xu hướng giảm
+      subscription_audit: "%{name} vẫn còn hoạt động chứ?"
+    types:
+      budget_at_risk: Ngân sách
+      budget_on_track: Ngân sách
+      cash_flow_warning: Dòng tiền
+      idle_cash: Tiền nhàn rỗi
+      maintained_goal_depleted: Quỹ dự phòng
+      net_worth_milestone: Tài sản ròng
+      savings_rate_change: Tỷ lệ tiết kiệm
+      spending_anomaly: Chi tiêu
+      subscription_audit: Gói đăng ký

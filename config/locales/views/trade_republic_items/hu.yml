@@ -3,72 +3,159 @@ hu:
   providers:
     trade_republic:
       name: Trade Republic
-      connection_description: "Trade Republic befektetési számla összekapcsolása biztonságos webes bejelentkezéssel"
+      connection_description: Trade Republic befektetési számla összekapcsolása biztonságos webes bejelentkezéssel
       institution_name: Trade Republic
   trade_republic_items:
-    duplicate_connection: "Ez a Trade Republic-fiók már csatlakoztatva van. Az új kapcsolat törölve lett."
+    duplicate_connection: Ez a Trade Republic-fiók már csatlakoztatva van. Az új kapcsolat törölve lett.
     portfolio_categories:
-      brokerage: "Brókerszámla"
-      private_markets: "Privát piacok"
-      interest_products: "Kamatozó termékek"
-      crypto_wallet: "Kriptotárca"
+      brokerage: Brókerszámla
+      private_markets: Privát piacok
+      interest_products: Kamatozó termékek
+      crypto_wallet: Kriptotárca
     trade_republic_item:
-      syncing: "Szinkronizálás"
-      requires_update: "Újrahitelesítés szükséges"
-      error: "Hiba"
-      synced: "Szinkronizálva: %{time}. %{summary}."
-      setup_accounts: "Fiókok beállítása"
-      delete: "Törlés"
-      accounts_need_setup: "A fiókot be kell állítani"
-      accounts_need_setup_description: "A Trade Republic-fiókodat egy Sure-fiókhoz kell kapcsolni."
-      no_accounts_discovered: "Még nem található Trade Republic-fiók."
-      no_accounts_discovered_description: "Fejezd be a bejelentkezést, majd indíts szinkronizálást a fiók felderítéséhez."
+      syncing: Szinkronizálás
+      requires_update: Újrahitelesítés szükséges
+      error: Hiba
+      synced: 'Szinkronizálva: %{time}. %{summary}.'
+      setup_accounts: Fiókok beállítása
+      delete: Törlés
+      accounts_need_setup: A fiókot be kell állítani
+      accounts_need_setup_description: A Trade Republic-fiókodat egy Sure-fiókhoz kell kapcsolni.
+      no_accounts_discovered: Még nem található Trade Republic-fiók.
+      no_accounts_discovered_description: Fejezd be a bejelentkezést, majd indíts szinkronizálást a fiók
+        felderítéséhez.
       data_quality:
-        title: "Adatminőség és szinkronizálási részletek"
-        repair: "Importált adatok javítása"
+        title: Adatminőség és szinkronizálási részletek
+        repair: Importált adatok javítása
         pending_trade_details:
           one: "%{count} befektetési tétel részletekre vár"
           other: "%{count} befektetési tétel részletekre vár"
+        events:
+          one: "%{count} művelet"
+          other: "%{count} művelet"
+        expenses:
+          one: "%{count} kiadás az elmúlt 30 napban (%{amount})"
+          other: "%{count} kiadás az elmúlt 30 napban (%{amount})"
+        positions:
+          one: "%{count} pozíció"
+          other: "%{count} pozíció"
+        reconciliation: "%{total} számlaegyenlegből %{matched} egyeztetve"
+        sync_history: Legutóbbi szinkronizálások
+        sync_status:
+          completed: Teljesített
+          failed: Sikertelen
+          pending: Függőben
+          stale: Elavult
+          syncing: Szinkronizálás
+        unknown:
+          one: "%{count} ismeretlen művelet"
+          other: "%{count} ismeretlen művelet"
+        unpriced:
+          one: "%{count} aktuális árfolyam nélkül"
+          other: "%{count} aktuális árfolyam nélkül"
+      deletion_in_progress: Törlés folyamatban
+      never_synced: Még nem szinkronizált.
     setup_accounts:
-      page_title: "Trade Republic-fiók beállítása"
-      subtitle: "Kapcsold össze a Trade Republic befektetési számládat."
+      page_title: Trade Republic-fiók beállítása
+      subtitle: Kapcsold össze a Trade Republic befektetési számládat.
       buttons:
-        refresh: "Frissítés"
-        cancel: "Mégse"
-        link: "Kapcsolás"
-        done: "Kész"
+        refresh: Frissítés
+        cancel: Mégse
+        link: Kapcsolás
+        done: Kész
+        back_to_settings: Vissza a beállításokhoz
+        create_selected_accounts: Kijelölt számlák létrehozása
+      available_accounts:
+        account_id: 'Számlaazonosító: %{account_id}'
+        account_summary: "%{account_type} • Egyenleg: %{balance}"
+        account_type_cash: Pénzforgalmi számla
+        account_type_crypto: Kriptoszámla
+        account_type_investment: Befektetési portfólió
+        title: Elérhető számla
+      dialog_title: Trade Republic-számlád beállítása
+      info_box:
+        items:
+          item_1: Aktuális pozíciók árfolyamokkal és mennyiségekkel
+          item_2: Teljesült ügyletek (vételek és eladások)
+          item_3: Befizetések, kifizetések és kamatjóváírások
+        title: Trade Republic-importálás
+      link_existing:
+        description: Vagy kapcsold a felismert Trade Republic-számlát egy meglévő, kézzel kezelt befektetési
+          számlához.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Válassz számlát...
+      linked_accounts:
+        linked_to_html: 'Összekapcsolva: %{account}'
+        title: Már összekapcsolt
+      status:
+        fetching_accounts: Számla lekérése a Trade Republictól…
+        no_accounts_found_description: A Sure nem talált Trade Republic-számlát. Ellenőrizd, hogy a munkameneted
+          még érvényes-e.
+        no_accounts_found_title: Nem található számla.
     sync:
       errors:
-        phone_number_missing: "Hiányzik a Trade Republic telefonszáma."
-        reauthentication_required: "A Trade Republic-munkamenet hiányzik vagy lejárt. Csatlakozz újra a Beállítások > Szolgáltatók részen."
+        phone_number_missing: Hiányzik a Trade Republic telefonszáma.
+        reauthentication_required: >-
+          A Trade Republic-munkamenet hiányzik vagy lejárt. Csatlakozz újra a Beállítások > Szolgáltatók
+          részen.
       status:
-        checking_credentials: "Trade Republic-hitelesítő adatok ellenőrzése..."
-        importing_account: "Trade Republic-fiók importálása..."
-        processing_activity: "Pozíciók és tevékenységek feldolgozása..."
-        calculating_balances: "Egyenlegek számítása..."
+        checking_credentials: Trade Republic-hitelesítő adatok ellenőrzése...
+        importing_account: Trade Republic-fiók importálása...
+        processing_activity: Pozíciók és tevékenységek feldolgozása...
+        calculating_balances: Egyenlegek számítása...
+        accounts_need_setup:
+          one: 1 Trade Republic-számla beállításra vár…
+          other: "%{count} Trade Republic-számla beállításra vár…"
+        checking_configuration: Számlakonfiguráció ellenőrzése...
     repair:
-      scheduled: "A Trade Republic-adatok javítása ütemezve."
+      scheduled: A Trade Republic-adatok javítása ütemezve.
     select_existing_account:
-      title: "Trade Republic-fiók kapcsolása"
-      link: "Kapcsolás"
-      cancel: "Mégse"
+      title: Trade Republic-fiók kapcsolása
+      link: Kapcsolás
+      cancel: Mégse
+      balance: Egyenleg
+      no_accounts_available: Még nincs összekapcsolásra váró Trade Republic-számla.
+      run_sync_hint: Fejezd be a bejelentkezést, majd indíts szinkronizálást a Beállítások > Szolgáltatók
+        oldalon.
+      wait_for_sync: Várd meg, amíg a számlafelderítési szinkronizálás befejeződik.
     initiate_login:
-      verification_required: "A bejelentkezés elindult. Erősítsd meg a(z) %{method} segítségével, majd nyomd meg a bejelentkezés megerősítését."
+      verification_required: >-
+        A bejelentkezés elindult. Erősítsd meg a(z) %{method} segítségével, majd nyomd meg a bejelentkezés
+        megerősítését.
+      not_configured: A Trade Republic nincs beállítva.
+      pin_required: Új bejelentkezés indításához add meg a Trade Republic PIN-kódodat vagy jelszavadat.
     complete_login:
-      approval_pending: "Még nincs megerősítve. Hagyd jóvá a bejelentkezést a Trade Republic alkalmazásban, majd próbáld újra."
-      success: "A Trade Republic sikeresen csatlakoztatva."
-      login_expired: "A bejelentkezési kérelem lejárt. Indítsd újra."
+      approval_pending: >-
+        Még nincs megerősítve. Hagyd jóvá a bejelentkezést a Trade Republic alkalmazásban, majd próbáld
+        újra.
+      success: A Trade Republic sikeresen csatlakoztatva.
+      login_expired: A bejelentkezési kérelem lejárt. Indítsd újra.
+      no_pending_login: Jelenleg nincs folyamatban bejelentkezés. Először indíts újat.
+      still_pending: >-
+        Még nincs megerősítve. Hagyd jóvá a bejelentkezést a Trade Republic alkalmazásban, majd próbáld
+        újra.
     link_existing_account:
-      not_found: "A fiók vagy a Trade Republic konfiguráció nem található."
-      success: "A fiók sikeresen összekapcsolva a Trade Republic szolgáltatással."
+      not_found: A fiók vagy a Trade Republic konfiguráció nem található.
+      success: A fiók sikeresen összekapcsolva a Trade Republic szolgáltatással.
+      already_linked: Ez a Trade Republic-számla már össze van kapcsolva.
+      failed: Nem sikerült összekapcsolni a Trade Republic-számlát.
+      only_manual_investment: Csak kézzel kezelt befektetési számlák kapcsolhatók a Trade Republichoz.
+      processing_failed: >-
+        A számla összekapcsolása sikerült, de a kezdeti adatfeldolgozás nem. Szinkronizálást ütemeztünk;
+        ha az adatok továbbra is hiányosak, ellenőrizd a hibakeresési naplót.
     complete_account_setup:
       success:
-        one: "Sikeresen létrejött %{count} Trade Republic-fiók."
-        other: "Sikeresen létrejött %{count} Trade Republic-fiók."
-      none_created: "Nem jött létre fiók."
+        one: Sikeresen létrejött %{count} Trade Republic-fiók.
+        other: Sikeresen létrejött %{count} Trade Republic-fiók.
+      none_created: Nem jött létre fiók.
       partial_failure:
-        one: "Egy kiválasztott Trade Republic-fiók beállítása nem fejeződött be. Ellenőrizd a hibakeresési naplót, majd próbáld újra."
-        other: "%{count} kiválasztott Trade Republic-fiók beállítása nem fejeződött be. Ellenőrizd a hibakeresési naplót, majd próbáld újra."
+        one: >-
+          Egy kiválasztott Trade Republic-fiók beállítása nem fejeződött be. Ellenőrizd a hibakeresési
+          naplót, majd próbáld újra.
+        other: >-
+          %{count} kiválasztott Trade Republic-fiók beállítása nem fejeződött be. Ellenőrizd a hibakeresési
+          naplót, majd próbáld újra.
+      none_selected: Nem lett számla kijelölve.
     activities:
       labels:
         contribution: Befizetés
@@ -81,3 +168,33 @@ hu:
         card_refund: Kártyás visszatérítés
         tax_refund: Adó-visszatérítés
         round_up: Round up
+    create:
+      success: >-
+        A Trade Republic mentve. Az összekapcsolás befejezéséhez hagyd jóvá a bejelentkezést a Trade Republic
+        alkalmazásban.
+    defaults:
+      name: Trade Republic
+    destroy:
+      success: A Trade Republic-kapcsolat törlése ütemezve.
+      unlink_failed: >-
+        Nem sikerült teljesen leválasztani a Trade Republicot. A kapcsolat megmaradt, hogy a művelet biztonságosan
+        újrapróbálható legyen.
+    initiate_qr_login:
+      not_configured: A Trade Republic nincs beállítva.
+    poll_login:
+      login_expired: A bejelentkezési kérelem lejárt. Indítsd újra.
+      no_pending_login: Jelenleg nincs folyamatban bejelentkezés. Először indíts újat.
+    poll_qr_login:
+      no_pending_login: Nincs folyamatban QR-kódos bejelentkezés.
+      success: A Trade Republic sikeresen csatlakoztatva.
+    select_accounts:
+      not_configured: A Trade Republic nincs beállítva.
+    sync_status:
+      all_linked:
+        one: 1 számla összekapcsolva
+        other: "%{count} számla összekapcsolva"
+      no_accounts: Még nincs felismert Trade Republic-számla
+      partial: "%{linked} összekapcsolt, %{unlinked} beállítást igényel"
+    update:
+      pin_required: Az újbóli hitelesítéshez add meg a Trade Republic PIN-kódodat vagy jelszavadat.
+      success: A Trade Republic beállításai sikeresen frissítve.

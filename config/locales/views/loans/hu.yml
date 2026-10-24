@@ -2,7 +2,7 @@
 hu:
   loans:
     edit:
-      edit: '%{account} szerkesztése'
+      edit: "%{account} szerkesztése"
     form:
       interest_rate: Kamatláb
       interest_rate_placeholder: '5.25'
@@ -13,6 +13,29 @@ hu:
       none: Nincs
       subtype_prompt: Válassz hiteltípust
       subtype_none: Nincs
+      down_payment: Önerő
+      insurance_rate: Biztosítási díj mértéke
+      insurance_rate_hint: >-
+        Éves díjmérték, amelyet havonta, a törlesztéssel együtt számítunk fel. Az állandó biztosítási
+        összegű típus alapja az eredeti tartozás, a csökkenőé pedig a még fennálló tartozás.
+      insurance_rate_placeholder: '0,36'
+      insurance_rate_type: Biztosítás típusa
+      insurance_rate_type_decreasing_life: Csökkenő biztosítási összegű
+      insurance_rate_type_level_term: Állandó biztosítási összegű
+      rate_change_add: Kamatváltozás hozzáadása
+      rate_change_effective_date: Hatálybalépés napja
+      rate_change_rate: Kamatláb
+      rate_change_remove: Eltávolítás
+      rate_changes: Kamatváltozások
+      rate_changes_empty: Nincs rögzített kamatváltozás. A hitel a fenti kamatlábbal fut.
+      rate_changes_hint: >-
+        Minden sor a hatálybalépésétől a következő változásig érvényes kamatlábat adja meg. Egy már megadott
+        dátum újbóli bevitele a sort felülírja, nem hoz létre másodikat.
+      rate_type_adjustable: Időszakonként módosuló
+      rate_type_fixed: Rögzített
+      rate_type_variable: Változó
+      start_date: Folyósítás napja
+      start_date_hint: A hitel folyósításának dátuma. Hagyd üresen a számla nyitási dátumának használatához.
     new:
       title: Add meg a hitel adatait
     overview:
@@ -24,6 +47,7 @@ hu:
       term: Futamidő
       type: Típus
       unknown: Ismeretlen
+      original_payoff_date: Eredeti végtörlesztési dátum
     tabs:
       overview:
         interest_rate: Kamatláb
@@ -34,4 +58,43 @@ hu:
         term: Futamidő
         type: Típus
         unknown: Ismeretlen
-        edit_loan_details: "Hitel adatainak szerkesztése"
+        edit_loan_details: Hitel adatainak szerkesztése
+        insurance_rate_only: Évente %{rate}
+        leverage: Tőkeáttétel
+        leverage_band_conservative: Óvatos
+        leverage_band_high: Magas
+        leverage_band_moderate: Mérsékelt
+        leverage_multiple: "%{ratio}×"
+        original_payoff_date: Eredeti végtörlesztési dátum
+        total_cost: Teljes költség
+        total_cost_with_insurance: Teljes költség biztosítással
+        total_insurance: Biztosítás
+      repayment_progress:
+        instalment: "%{number}. törlesztés · %{date}"
+        insurance: Biztosítás
+        interest: Kamat
+        of_original: "%{amount}-ból/ből"
+        principal: Tőke
+        repaid: Visszafizetve
+        total: Összesen
+      schedule:
+        date: Dátum
+        description: >-
+          Az eredeti tartozás, kamatláb és futamidő alapján készített előrejelzés, %{start_date} kezdettel.
+          A rendkívüli befizetéseket nem tartalmazza.
+        forecasted_payoff_date: Előrejelzett végtörlesztési dátum
+        forecasted_payoff_not_converged: A jelenlegi törlesztéssel nem fizethető vissza
+        interest: Kamat
+        monthly_payment: Havi törlesztőrészlet
+        not_applicable: Nem alkalmazható
+        number: "#"
+        opening_payment: Kezdő befizetés
+        payment: Törlesztés
+        principal: Tőke
+        remaining_balance: Fennmaradó egyenleg
+        total_cost: Teljes költség
+        total_interest: Összes kamat
+        variable_rate_notice: >-
+          Ennek a hitelnek a kamata idővel változik. Az ütemezés minden rögzített kamatváltozásnál újraszámítja
+          a törlesztést, megtartva az eredeti végtörlesztési dátumot és módosítva a részlet összegét.
+          A még nem rögzített kamatváltozások módosítani fogják ezeket az értékeket.

@@ -1,0 +1,9 @@
+---
+vi:
+  tag:
+    dropdowns:
+      show:
+        empty: Chưa có thẻ
+        manage: Quản lý thẻ
+        no_tags: Không tìm thấy thẻ
+        search_placeholder: Tìm kiếm

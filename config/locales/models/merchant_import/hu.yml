@@ -1,0 +1,8 @@
+---
+hu:
+  activerecord:
+    errors:
+      models:
+        merchant_import:
+          duplicate_columns: 'Ismétlődő oszlopnevek a normalizálás után: %{columns}'
+          missing_columns: 'Hiányzó kötelező oszlopok: %{columns}'

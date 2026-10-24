@@ -109,6 +109,20 @@ vi:
         instructions: Chọn tiếp tục để phân tích CSV và chuyển sang bước làm sạch.
       mint_import:
         date_format_label: Định dạng ngày
+        account_optional: Tài khoản (không bắt buộc)
+        amount: Số tiền
+        apply_configuration: Áp dụng cấu hình
+        category_optional: Danh mục (không bắt buộc)
+        currency: Tiền tệ
+        date: Ngày
+        format: Định dạng
+        incomes_negative: Thu nhập là số âm
+        incomes_positive: Thu nhập là số dương
+        intro: Chúng tôi đã cấu hình sẵn việc nhập Mint. Hãy tiếp tục sang bước tiếp theo.
+        leave_empty: Để trống
+        name_optional: Tên (không bắt buộc)
+        select_format: Chọn định dạng
+        tags_optional: Thẻ (không bắt buộc)
       actual_import:
         preconfigured_notice: Chúng tôi đã cấu hình sẵn nhập Actual Budget cho bạn. Vui lòng tiến hành bước tiếp theo.
         leave_empty: Để trống
@@ -130,6 +144,28 @@ vi:
       show:
         description: Chọn các cột tương ứng với từng trường trong CSV.
         title: Cấu hình nhập dữ liệu
+        apply_template: Áp dụng mẫu
+        manually_configure: Cấu hình thủ công
+        sample_caption: Dữ liệu mẫu từ CSV bạn đã tải lên
+        template_description: Đã tìm thấy cấu hình từ lần nhập trước cho tài khoản này. Bạn
+          có muốn áp dụng cho lần nhập này không?
+        template_found: Đã tìm thấy cấu hình mẫu
+      merchant_import:
+        button_label: Tiếp tục
+        description: Tải lên tệp CSV chứa người bán. Chúng tôi sẽ tự động ánh xạ các cột.
+        instructions: Chọn Tiếp tục để phân tích CSV và chuyển sang bước làm sạch dữ liệu.
+      ynab_import:
+        account_label: Tài khoản (không bắt buộc)
+        amount_notice: Số tiền được tự động nhận diện từ các cột Outflow và Inflow.
+        apply_configuration: Áp dụng cấu hình
+        category_label: Danh mục (không bắt buộc)
+        date_format_label: Định dạng ngày
+        date_label: Ngày
+        leave_empty: Để trống
+        name_label: Người nhận (không bắt buộc)
+        notes_label: Ghi chú (không bắt buộc)
+        preconfigured_notice: Chúng tôi đã cấu hình sẵn việc nhập YNAB. Hãy tiếp tục sang
+          bước tiếp theo.
     confirms:
       sure_import:
         title: Xác nhận nhập dữ liệu
@@ -197,6 +233,9 @@ vi:
         upload_button: Tải NDJSON lên
         hint_html: Tải lên tệp <strong>all.ndjson</strong> từ tệp ZIP xuất dữ liệu
         ndjson_invalid: Phải là NDJSON hợp lệ với ít nhất một bản ghi
+      handle_qif_upload:
+        qif_account_required: Vui lòng chọn tài khoản để nhập QIF
+        qif_uploaded: Đã tải lên tệp QIF thành công.
   imports:
     mapping_labels:
       account_type: "Loại tài khoản"
@@ -236,9 +275,13 @@ vi:
       category_parent: "Danh mục cha"
       category_color: "Màu sắc"
       category_icon: "Biểu tượng Lucide"
+      merchant_color: Màu sắc
+      merchant_website: URL trang web
     update:
       account_saved: "Đã lưu tài khoản."
       invalid_account: "Không tìm thấy tài khoản."
+      account_locked: Lần nhập này đã được xác nhận nên không thể đổi tài khoản. Hãy hoàn
+        tác trước nếu muốn nhập vào nơi khác.
     publish:
       started: "Quá trình nhập đã bắt đầu trong nền."
       max_rows_exceeded: "Tệp nhập vượt quá số hàng tối đa là %{max}."
@@ -294,6 +337,8 @@ vi:
       pdf_import: "Nhập PDF"
       document_import: "Nhập tài liệu"
       sure_import: "Nhập từ Sure"
+      merchant_import: Nhập người bán
+      ynab_import: Nhập YNAB
     steps:
       upload: Tải lên
       configure: Cấu hình
@@ -302,6 +347,7 @@ vi:
       confirm: Xác nhận
       select: Chọn
       progress: "Bước %{step} trong %{total}"
+      label: Bước %{step}
     empty:
       message: Không tìm thấy nhập dữ liệu.
     index:
@@ -327,6 +373,8 @@ vi:
           pdf_import: "PDF"
           document_import: "Tài liệu"
           sure_import: "Sure"
+          merchant_import: Người bán
+          ynab_import: YNAB
         status:
           in_progress: Đang xử lý
           uploading: Đang xử lý hàng
@@ -339,6 +387,9 @@ vi:
           confirm_revert: Thao tác này sẽ xóa các giao dịch đã nhập, nhưng bạn vẫn có thể xem lại và nhập lại dữ liệu bất cứ lúc nào.
           delete: Xóa
           view: Xem
+          confirm_mark_failed: Lần nhập này đã không hoạt động một thời gian và tác vụ nền có
+            thể đã bị gián đoạn. Đánh dấu thất bại để thử lại? Không giữ lại dữ liệu đã nhập.
+          mark_failed: Đánh dấu thất bại
       empty: Chưa có nhập dữ liệu.
     new:
       description: Nhập từ công cụ tài chính hoặc tải lên tệp dữ liệu thô.
@@ -361,6 +412,7 @@ vi:
       resume: Tiếp tục nhập %{type}
       sources: Nguồn
       title: Nhập mới
+      import_merchants: Nhập người bán
     create:
       file_too_large: Tệp quá lớn. Kích thước tối đa là %{max_size}MB.
       invalid_file_type: Loại tệp không hợp lệ. Vui lòng tải lên tệp CSV.
@@ -375,6 +427,8 @@ vi:
       document_upload_failed: Không thể tải tài liệu lên kho vector. Vui lòng thử lại.
       invalid_ndjson_file_type: Loại hoặc định dạng tệp không hợp lệ. Vui lòng tải lên tệp xuất .ndjson hoặc .json hợp lệ.
       document_provider_not_configured: Chưa cấu hình kho vector để tải tài liệu lên.
+      duplicate_pdf_unavailable: PDF này đã được lưu thành sao kê mà bạn không có quyền
+        truy cập.
     show:
       finalize_upload: Vui lòng hoàn tất tải lên tệp.
       finalize_mappings: Vui lòng hoàn tất ánh xạ trước khi tiếp tục.
@@ -386,8 +440,48 @@ vi:
       empty_summary: Chúng tôi không tìm thấy bản ghi nào có thể nhập trong tệp này.
       publish_import: Xuất bản nhập
       back_to_imports: Quay lại nhập dữ liệu
+      missing_merchant_warning_description:
+        one: 1 tham chiếu người bán trong tệp trỏ đến người bán không có trong bản xuất.
+          Điều này có thể xảy ra với tệp xuất trước khi Sure thêm người bán do nhà cung
+          cấp gán vào dữ liệu xuất. Bạn vẫn có thể xác nhận nhập — bản ghi đó sẽ được nhập
+          không có người bán và có thể bổ sung sau.
+        other: "%{count} tham chiếu người bán trong tệp trỏ đến người bán không có trong
+          bản xuất. Điều này có thể xảy ra với tệp xuất trước khi Sure thêm người bán do
+          nhà cung cấp gán vào dữ liệu xuất. Bạn vẫn có thể xác nhận nhập — các bản ghi
+          đó sẽ được nhập không có người bán và có thể bổ sung sau."
+      missing_merchant_warning_title: Một số người bán không có trong bản xuất này
+      provider_merchant_diff_description:
+        one: 1 người bán trong tệp đã tồn tại với thông tin khác. Người bán hiện có sẽ được
+          giữ lại; giá trị từ tệp không được áp dụng.
+        other: "%{count} người bán trong tệp đã tồn tại với thông tin khác. Người bán hiện
+          có sẽ được giữ lại; giá trị từ tệp không được áp dụng."
+      provider_merchant_diff_fields:
+        name: Tên
+        provider_merchant_id: ID nhà cung cấp
+        website_url: Trang web
+      provider_merchant_diff_none: không có
+      provider_merchant_diff_row: "%{field}: giữ %{kept}, trong tệp là %{imported}"
+      provider_merchant_diff_summary: Xem khác biệt
+      provider_merchant_diff_title: Một số người bán đã tồn tại với thông tin khác
+      reused_taxonomy_notice_description:
+        one: 1 danh mục, thẻ hoặc người bán trong tệp đã có trong tài khoản của bạn (ví
+          dụ danh mục mặc định khi thiết lập ban đầu). Mục hiện có sẽ được dùng lại và cập
+          nhật bằng dữ liệu từ tệp thay vì tạo bản trùng.
+        other: "%{count} danh mục, thẻ hoặc người bán trong tệp đã có trong tài khoản của
+          bạn (ví dụ danh mục mặc định khi thiết lập ban đầu). Các mục hiện có sẽ được dùng
+          lại và cập nhật bằng dữ liệu từ tệp thay vì tạo bản trùng."
+      reused_taxonomy_notice_title: Một số danh mục, thẻ hoặc người bán đã tồn tại
+      skipped_recurring_description:
+        one: 1 giao dịch định kỳ không có tên và thiếu người bán nên sẽ bị bỏ qua. Các giao
+          dịch định kỳ được phát hiện tự động sẽ được dựng lại sau khi nhập.
+        other: "%{count} giao dịch định kỳ không có tên và thiếu người bán nên sẽ bị bỏ
+          qua. Các giao dịch định kỳ được phát hiện tự động sẽ được dựng lại sau khi nhập."
     errors:
       custom_column_requires_inflow: "Nhập cột tùy chỉnh yêu cầu phải chọn cột dòng vào"
+      interrupted: Tiến trình nền bị gián đoạn trước khi hoàn tất. Dữ liệu đã nhập đã được
+        hoàn tác — bạn có thể thử lại an toàn.
+      presumed_lost: Đã đánh dấu thất bại vì tác vụ nền được coi là thất lạc. Dữ liệu đã
+        nhập đã được hoàn tác — bạn có thể thử lại an toàn.
     document_types:
       bank_statement: Sao kê ngân hàng
       credit_card_statement: Sao kê thẻ tín dụng
@@ -416,7 +510,7 @@ vi:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Xử lý thất bại: %{error}"
       ready_for_review_title: Sẵn sàng xem xét
-      ready_for_review_description: "Chúng tôi đã trích xuất %{count} giao dịch từ sao kê. Xem xét và xuất bản để thêm vào tài khoản."
+      ready_for_review_description: "%{count} giao dịch trên sao kê chưa có trong tài khoản này. Xem lại và xác nhận nhập để thêm vào."
       transactions_extracted: Giao dịch đã trích xuất
       transactions_extracted_count:
         one: "%{count} giao dịch"
@@ -433,3 +527,35 @@ vi:
       review_transactions: Xem xét giao dịch
       select_account_to_continue: Vui lòng chọn tài khoản ở trên để tiếp tục.
       unknown_document_type: Không xác định
+      already_recorded_note:
+        one: "%{count} giao dịch đã có trong tài khoản và đã được đối chiếu với sao kê."
+        other: "%{count} giao dịch đã có trong tài khoản và đã được đối chiếu với sao kê."
+      complete_fully_reconciled:
+        one: Mọi giao dịch trên sao kê đã có trong tài khoản. Đã đối chiếu và đánh dấu hoàn
+          tất %{count} giao dịch — không cần nhập thêm.
+        other: Mọi giao dịch trên sao kê đã có trong tài khoản. Đã đối chiếu và đánh dấu
+          hoàn tất cả %{count} giao dịch — không cần nhập thêm.
+      errors:
+        provider_no_pdf_support: Nhà cung cấp AI không hỗ trợ xử lý PDF
+        provider_not_configured: Chưa cấu hình nhà cung cấp AI
+      source_statement: Sao kê nguồn
+      view_summary: Xem tổng kết nhập dữ liệu
+    cancel:
+      cancelled: Đã đánh dấu lần nhập thất bại. Bạn có thể thử lại từ trang nhập dữ liệu.
+      not_cancellable: Hiện không thể đánh dấu lần nhập này thất bại — tác vụ có thể vẫn
+        đang chạy. Hãy thử lại sau khi không có hoạt động trong một giờ.
+    summary:
+      already_recorded: Đã ghi nhận từ trước
+      already_recorded_hint: Đã khớp với giao dịch có sẵn trong tài khoản và được đánh
+        dấu đã đối chiếu.
+      awaiting_review: Đang chờ nhập
+      close: Đóng
+      extracted: Tìm thấy trên sao kê
+      fully_reconciled:
+        one: Không cần nhập thêm — giao dịch duy nhất trên sao kê đã có trong dữ liệu.
+        other: Không cần nhập thêm — tất cả %{count} giao dịch đã có trong dữ liệu.
+      imported: Đã nhập mới
+      statement_evidence_html: Đã đối chiếu với %{statement}.
+      subtitle: Kết quả xử lý từng giao dịch trên sao kê này trong %{account}.
+      subtitle_no_account: Kết quả xử lý từng giao dịch trên sao kê này.
+      title: Tổng kết nhập dữ liệu

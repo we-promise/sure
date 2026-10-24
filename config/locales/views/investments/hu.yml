@@ -2,7 +2,7 @@
 hu:
   investments:
     edit:
-      edit: '%{account} szerkesztése'
+      edit: "%{account} szerkesztése"
     form:
       none: Nincs
       subtype_prompt: Válassz befektetéstípust
@@ -182,8 +182,13 @@ hu:
       other:
         short: Egyéb
         long: Egyéb befektetés
+      cash_management:
+        long: Pénzkezelési számla
+        short: CMA
     value_tooltip:
       cash: Készpénz
       holdings: Portfólió
       total: Portfólió egyenlege
-      total_value_tooltip: A teljes portfólió egyenlege a brókerzámlán lévő készpénz (kereskedésre rendelkezésre álló) és a portfólió aktuális piaci értékének összege.
+      total_value_tooltip: >-
+        A teljes portfólió egyenlege a brókerzámlán lévő készpénz (kereskedésre rendelkezésre álló) és
+        a portfólió aktuális piaci értékének összege.

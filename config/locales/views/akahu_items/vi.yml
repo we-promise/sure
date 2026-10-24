@@ -1,0 +1,128 @@
+---
+vi:
+  akahu_account:
+    fallback: Tài khoản Akahu
+  akahu_entry:
+    notes:
+      code: Mã
+      other_account: Tài khoản khác
+      particulars: Nội dung chi tiết
+      reference: Tham chiếu
+  akahu_item:
+    errors:
+      account_processing_failed: Không thể đồng bộ tài khoản Akahu
+      account_sync_schedule_failed: Không thể lên lịch đồng bộ tài khoản Akahu
+      pending_transactions_failed: Không thể lấy giao dịch Akahu đang chờ
+      sync_failed: Không thể đồng bộ kết nối Akahu
+      transactions_failed: Không thể lấy giao dịch Akahu
+    institution_summary:
+      count:
+        one: 1 tổ chức
+        other: "%{count} tổ chức"
+      none: Chưa kết nối tổ chức nào
+      one: 1 tổ chức
+    sync_status:
+      all_synced:
+        one: Đã đồng bộ 1 tài khoản
+        other: Đã đồng bộ %{count} tài khoản
+      no_accounts: Không tìm thấy tài khoản
+      partial: Đã đồng bộ %{linked}, cần thiết lập %{unlinked}
+  akahu_items:
+    akahu_item:
+      delete: Xóa
+      deletion_in_progress: Đang xóa
+      error: Lỗi
+      no_accounts_description: Lấy danh sách tài khoản Akahu rồi chọn tài khoản để
+        liên kết.
+      no_accounts_title: Chưa nhập tài khoản nào
+      setup_action: Thiết lập tài khoản
+      setup_description: Đã liên kết %{linked} trên %{total} tài khoản.
+      setup_needed: Cần thiết lập tài khoản
+      status_never: Chưa từng đồng bộ
+      status_with_summary: Đã đồng bộ %{timestamp} trước · %{summary}
+      syncing: Đang đồng bộ
+    complete_account_setup:
+      all_skipped: Không tạo tài khoản Akahu nào.
+      creation_failed: Không thể tạo tài khoản Akahu.
+      no_accounts: Chưa chọn tài khoản Akahu nào.
+      success:
+        one: Đã tạo 1 tài khoản Akahu.
+        other: Đã tạo %{count} tài khoản Akahu.
+    create:
+      success: Đã lưu kết nối Akahu.
+    destroy:
+      success: Đã lên lịch xóa kết nối Akahu.
+      unlink_failed: Không thể ngắt kết nối Akahu
+    link_accounts:
+      link_failed: Không có tài khoản nào được liên kết.
+      no_accounts_selected: Chọn ít nhất một tài khoản.
+      no_credentials_configured: Cấu hình Akahu trong cài đặt nhà cung cấp trước.
+      success:
+        one: Đã liên kết 1 tài khoản Akahu.
+        other: Đã liên kết %{count} tài khoản Akahu.
+      unsupported_account_type: Akahu không hỗ trợ loại tài khoản đó.
+    link_existing_account:
+      account_already_linked: Tài khoản này đã liên kết với một nhà cung cấp.
+      akahu_account_already_linked: Tài khoản Akahu này đã được liên kết.
+      success: Đã liên kết tài khoản Akahu với %{account_name}.
+    provider_panel:
+      add_connection: Thêm kết nối Akahu
+      app_token_label: Token ứng dụng
+      app_token_placeholder: Dán token ứng dụng Akahu
+      connection_name_label: Tên kết nối
+      connection_name_placeholder: Akahu chính
+      default_connection_name: Kết nối Akahu
+      disconnect: Ngắt kết nối
+      disconnect_confirm: Bạn có chắc muốn ngắt kết nối %{name}?
+      keep_app_token_placeholder: Để trống để giữ token ứng dụng hiện có
+      keep_user_token_placeholder: Để trống để giữ token người dùng hiện có
+      setup_accounts: Thiết lập tài khoản
+      sync: Đồng bộ
+      syncing: Đang đồng bộ...
+      update_connection: Cập nhật kết nối
+      user_token_label: Token người dùng
+      user_token_placeholder: Dán token người dùng Akahu
+    select_accounts:
+      cancel: Hủy
+      description: Chọn tài khoản Akahu để thêm.
+      link_accounts: Liên kết tài khoản
+      no_accounts_found: Không tìm thấy tài khoản Akahu chưa liên kết.
+      no_credentials_configured: Cấu hình Akahu trong cài đặt nhà cung cấp trước.
+      title: Liên kết tài khoản Akahu
+    select_existing_account:
+      account_already_linked: Tài khoản này đã liên kết với một nhà cung cấp.
+      cancel: Hủy
+      description: Chọn tài khoản Akahu chưa liên kết để kết nối với tài khoản này.
+      link_account: Liên kết tài khoản
+      no_accounts_found: Không tìm thấy tài khoản Akahu chưa liên kết.
+      no_credentials_configured: Cấu hình Akahu trong cài đặt nhà cung cấp trước.
+      title: Liên kết tài khoản Akahu với %{account_name}
+    setup_accounts:
+      account_type_label: Loại tài khoản
+      account_types:
+        credit_card: Thẻ tín dụng
+        depository: Tiền mặt
+        investment: Đầu tư
+        loan: Khoản vay
+        skip: Bỏ qua
+      all_accounts_linked: Tất cả tài khoản Akahu đã được liên kết.
+      api_error: Không thể lấy tài khoản Akahu.
+      cancel: Hủy
+      choose_account_type: Chọn loại tài khoản
+      choose_account_type_description: Bỏ qua tài khoản không muốn theo dõi.
+      create_accounts: Tạo tài khoản
+      fetch_failed: Không thể lấy tài khoản
+      no_accounts_to_setup: Không có tài khoản cần thiết lập
+      no_credentials: Cấu hình thông tin xác thực Akahu trước.
+      subtitle: Chọn cách hiển thị từng tài khoản Akahu trong Sure.
+      title: Thiết lập tài khoản Akahu
+    update:
+      success: Đã cập nhật kết nối Akahu.
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Kết nối Akahu
+  providers:
+    akahu:
+      description: Kết nối tài khoản ngân hàng New Zealand qua Akahu
+      name: Akahu

@@ -3,35 +3,39 @@ hu:
   views:
     settings:
       payments:
-        renewal: "A hozzájárulásod %{date}-én megújul."
-        cancellation: "A hozzájárulásod %{date}-én lejár."
+        renewal: A hozzájárulásod %{date}-én megújul.
+        cancellation: A hozzájárulásod %{date}-én lejár.
   settings:
     llm_usages:
       show:
-        page_title: "LLM-használat és -költségek"
-        subtitle: "Kövesd nyomon az AI-használatot és a becsült költségeket"
-        start_date: "Kezdő dátum"
-        end_date: "Záró dátum"
-        filter: "Szűrő"
-        total_requests: "Összes kérés"
-        total_tokens: "Összes token"
-        prompt: "prompt"
-        completion: "befejezés"
-        total_cost: "Összes költség"
-        avg_cost_per_request: "Átl. költség/kérés"
+        page_title: LLM-használat és -költségek
+        subtitle: Kövesd nyomon az AI-használatot és a becsült költségeket
+        start_date: Kezdő dátum
+        end_date: Záró dátum
+        filter: Szűrő
+        total_requests: Összes kérés
+        total_tokens: Összes token
+        prompt: prompt
+        completion: befejezés
+        total_cost: Összes költség
+        avg_cost_per_request: Átl. költség/kérés
         based_on_requests: "%{total} kérésből %{with_cost} rendelkezik költségadattal"
-        cost_by_operation: "Költség műveletek szerint"
-        cost_by_model: "Költség modellek szerint"
-        recent_usage: "Legutóbbi használat"
-        col_date: "Dátum"
-        col_operation: "Művelet"
-        col_model: "Modell"
-        col_tokens: "Tokenek"
-        col_cost: "Költség"
-        failed: "Sikertelen"
-        no_usage_data: "Nem található használati adat a kiválasztott időszakra"
-        cost_estimates_title: "A költségbecslésekről"
-        cost_estimates_description: "A költségek a szolgáltatók közzétett árai alapján becsültek, utoljára ellenőrizve: %{date}. A tényleges költségek eltérhetnek. Az árazás millió tokenenként van megadva, és modellenként változik. Az egyéni vagy önállóan üzemeltetett modellek \"N/A\"-t mutatnak, és nem szerepelnek a költségösszesítőkben."
+        cost_by_operation: Költség műveletek szerint
+        cost_by_model: Költség modellek szerint
+        recent_usage: Legutóbbi használat
+        col_date: Dátum
+        col_operation: Művelet
+        col_model: Modell
+        col_tokens: Tokenek
+        col_cost: Költség
+        failed: Sikertelen
+        no_usage_data: Nem található használati adat a kiválasztott időszakra
+        cost_estimates_title: A költségbecslésekről
+        cost_estimates_description: >-
+          A költségek a szolgáltatók közzétett árai alapján becsültek, utoljára ellenőrizve: %{date}.
+          A tényleges költségek eltérhetnek. Az árazás millió tokenenként van megadva, és modellenként
+          változik. Az egyéni vagy önállóan üzemeltetett modellek "N/A"-t mutatnak, és nem szerepelnek
+          a költségösszesítőkben.
     ai_prompts:
       show:
         page_title: MI promptok
@@ -40,29 +44,59 @@ hu:
         prompt_instructions: Prompt utasítások
         main_system_prompt:
           title: Fő rendszerprompt
-          subtitle: Alapvető utasítások, amelyek meghatározzák, hogyan viselkedik az MI asszisztens minden csevegési beszélgetésben
+          subtitle: >-
+            Alapvető utasítások, amelyek meghatározzák, hogyan viselkedik az MI asszisztens minden csevegési
+            beszélgetésben
+          label: A csevegés rendszerutasítása
         transaction_categorizer:
           title: Tranzakció-kategorizáló
           subtitle: Az MI automatikusan kategorizálja a tranzakcióidat a meghatározott kategóriák alapján
         merchant_detector:
           title: Kereskedő-felismerő
           subtitle: Az MI azonosítja és kereskedőinformációkkal gazdagítja a tranzakcióadatokat
+        save: Utasítások mentése
+        save_confirm:
+          body: >-
+            Az egyéni utasítások a háztartásodban felülírják a beépített rendszerutasításokat és biztonsági
+            korlátokat, például a pénzügyi tanácsadásra vonatkozó korlátozásokat.
+          cancel: Mégse
+          confirm: Megerősítés
+          dont_show_again: Ne jelenjen meg újra ez a figyelmeztetés
+          title: Mented az egyéni MI-utasításokat?
+      prompt_field:
+        format_risk: >-
+          A(z) %{provider} szolgáltatóhoz tartozó utasításodból hiányzik a {"%{key}": ...} példa. Minden
+          kérés továbbra is ezt a szerkezetet kéri, így a válasz általában feldolgozható, de egy más kimeneti
+          formátumot kérő egyéni utasítás meghiúsítja a feldolgozást.
+        prompt_label: Utasítás
+        provider_anthropic: Anthropic
+        provider_label: Szolgáltató
+        provider_openai: OpenAI
+        reset: Alapértelmezés visszaállítása
+        reset_confirm_body: Ez törli az egyéni utasításodat, és visszaállítja a beépített alapértelmezett
+          utasításokat.
+        reset_confirm_title: Visszaállítod az alapértelmezett utasítást?
+        status_custom: Az egyéni utasításod van használatban
+        status_default: A beépített alapértelmezés van használatban
+      update:
+        multiple_errors: Több utasítás túl hosszú (legfeljebb %{count} karakter engedélyezett)
+        success: Az MI-utasítások frissítve
     payments:
       show:
         page_title: Fizetések
         subscription_subtitle: Frissítsd bankkártyaadataidat
         subscription_title: Hozzájárulások kezelése
-        currently_on_plan: "Jelenleg a"
-        trialing: "Jelenleg a %{product_name} nyílt demóját használod"
+        currently_on_plan: Jelenleg a
+        trialing: Jelenleg a %{product_name} nyílt demóját használod
         trial_days_left:
-          one: "Az adatok %{count} nap múlva törlődnek"
-          other: "Az adatok %{count} nap múlva törlődnek"
-        not_contributing_prefix: "Jelenleg"
-        not_contributing_emphasis: "nem járulsz hozzá"
-        contributions_note: "A(z) %{product_name} felé tett hozzájárulásaid itt jelennek meg."
-        manage: "Kezelés"
-        choose_level: "Szint kiválasztása"
-        payment_via_stripe: "Fizetés Stripe-on keresztül"
+          one: Az adatok %{count} nap múlva törlődnek
+          other: Az adatok %{count} nap múlva törlődnek
+        not_contributing_prefix: Jelenleg
+        not_contributing_emphasis: nem járulsz hozzá
+        contributions_note: A(z) %{product_name} felé tett hozzájárulásaid itt jelennek meg.
+        manage: Kezelés
+        choose_level: Szint kiválasztása
+        payment_via_stripe: Fizetés Stripe-on keresztül
     appearances:
       show:
         page_title: Megjelenés
@@ -74,15 +108,25 @@ hu:
         modals_title: Modális ablakok
         modals_subtitle: Modális ablakok viselkedésének testreszabása
         disable_modal_click_outside_title: Modális ablakok nyitva tartása külső kattintáskor
-        disable_modal_click_outside_description: Megakadályozza, hogy a modális ablakok bezáródjanak külső kattintáskor. Hasznos a nem mentett változtatások véletlen elvesztésének elkerülésére.
+        disable_modal_click_outside_description: >-
+          Megakadályozza, hogy a modális ablakok bezáródjanak külső kattintáskor. Hasznos a nem mentett
+          változtatások véletlen elvesztésének elkerülésére.
         transactions_title: Tranzakciók
         transactions_subtitle: Szabd testre a tranzakciók megjelenítését
         dashboard_title: Irányítópult
         dashboard_subtitle: Szabd testre az irányítópult megjelenítését
         dashboard_two_column_title: Kétoszlopos elrendezés
-        dashboard_two_column_description: Az irányítópult-widgetek megjelenítése két oszlopban nagy képernyőkön. Ha ki van kapcsolva, a widgetek egyetlen oszlopban egymás alatt jelennek meg.
+        dashboard_two_column_description: >-
+          Az irányítópult-widgetek megjelenítése két oszlopban nagy képernyőkön. Ha ki van kapcsolva,
+          a widgetek egyetlen oszlopban egymás alatt jelennek meg.
         split_grouped_title: Felosztott tranzakciók csoportosítása
-        split_grouped_description: A felosztott tranzakciók megjelenítése szülőjük alatt csoportosítva a tranzakciólistában. Ha ki van kapcsolva, a felosztott tételek egyedi sorként jelennek meg.
+        split_grouped_description: >-
+          A felosztott tranzakciók megjelenítése szülőjük alatt csoportosítva a tranzakciólistában. Ha
+          ki van kapcsolva, a felosztott tételek egyedi sorként jelennek meg.
+        dashboard_account_groups_description: >-
+          Ezek a számlacsoportok kezdetben kibontva jelennek meg az irányítópulton és a számlák oldalsávjában.
+          Bármikor összecsukhatod őket kézzel.
+        dashboard_account_groups_title: Alapértelmezés szerint kibontva
     preferences:
       show:
         country: Ország
@@ -98,7 +142,8 @@ hu:
         timezone: Időzóna
         month_start_day: A költségvetési hónap kezdete
         month_start_day_hint: Állítsd be, mikor kezdődjön a költségvetési hónapod (pl. fizetési nap)
-        month_start_day_warning: A költségvetéseid és a hónapközi számítások ezt az egyéni kezdőnapot használják az 1-je helyett.
+        month_start_day_warning: A költségvetéseid és a hónapközi számítások ezt az egyéni kezdőnapot
+          használják az 1-je helyett.
         currencies_title: "%{moniker} pénznemek"
         currencies_subtitle: Válaszd ki, mely pénznemek jelenjenek meg a pénzmezőkben a %{moniker} számára
         base_currency_label: Alappénznem
@@ -107,7 +152,8 @@ hu:
         no_additional_currencies: Nincs kiválasztva
         currencies_more: "+%{count} további"
         manage_currencies: Pénznemek kezelése
-        manage_currencies_subtitle: Szüntess meg olyan pénznemeket, amelyeket sosem használsz, vagy szűkítsd le a listát néhányra.
+        manage_currencies_subtitle: Szüntess meg olyan pénznemeket, amelyeket sosem használsz, vagy szűkítsd
+          le a listát néhányra.
         select_all_currencies: Összes kijelölése
         select_base_only: Csak alappénznem
         currency_search_placeholder: Pénznem keresése
@@ -117,25 +163,53 @@ hu:
           other: "%{count} kijelölve"
         save_currencies: Pénznemek mentése
         sharing_title: "%{moniker} megosztás"
-        sharing_subtitle: "Szabályozd, hogyan kerüljenek megosztásra a számlák a %{moniker} tagjaival"
+        sharing_subtitle: Szabályozd, hogyan kerüljenek megosztásra a számlák a %{moniker} tagjaival
         sharing_default_label: Új számlák alapértelmezett megosztása
         sharing_shared: Megosztás az összes taggal
         sharing_private: Alapértelmezetten privát
+        budget_sharing_no_members: Nincs más tag a(z) %{moniker} csoportodban, akivel megoszthatnád
+        budget_sharing_permission_label: "%{name} hozzáférése"
+        budget_sharing_permissions:
+          none: Nincs hozzáférés
+          read_only: Csak megtekintés
+          read_write: Szerkesztheti
+        budget_sharing_subtitle: Engedélyezd más tagoknak a személyes költségvetésed megtekintését vagy
+          szerkesztését
+        budget_sharing_title: Költségvetés megosztása
+        budget_subtitle: A költségvetéseid működésének beállítása
+        budget_title: Költségvetés
+        household_budget_enabled: Háztartási költségvetés
+        household_budget_enabled_hint: >-
+          Közös háztartási költségvetés használata a személyes költségvetések mellett. Kapcsold ki, ha
+          csak személyes költségvetéseket szeretnél.
+        personal_budgets: Személyes költségvetések
+        personal_budgets_hint: Külön költségvetés engedélyezése minden háztartástagnak.
+        preview:
+          description: Bekapcsolhatod az előzetes vagy canary jelölésű, fejlesztés alatt álló funkciókat.
+          title: Előzetes funkciók engedélyezése
+        translations_notice: A különböző nyelvek fordításán még dolgozunk.
     profiles:
       destroy:
         cannot_remove_self: Nem távolíthatod el magadat a fiókból.
         member_removal_failed: Probléma merült fel a tag eltávolítása során.
         member_removed: A tag sikeresen eltávolítva.
         not_authorized: Nincs jogosultságod tagok eltávolítására.
+        member_owns_other_family_data: >-
+          Ennek a tagnak még vannak számlái egy másik háztartásban, ezért nem távolítható el. Előbb add
+          át vagy töröld azokat a számlákat.
       show:
         confirm_delete:
           body: Biztosan véglegesen törölni szeretnéd a fiókodat? Ez a művelet visszavonhatatlan.
           title: Fiók törlése?
         confirm_reset:
-          body: Biztosan vissza szeretnéd állítani a fiókodat? Ez törli az összes számládat, kategóriádat, kereskedődet, címkédet és egyéb adatodat. Ez a művelet nem vonható vissza.
+          body: >-
+            Biztosan vissza szeretnéd állítani a fiókodat? Ez törli az összes számládat, kategóriádat,
+            kereskedődet, címkédet és egyéb adatodat. Ez a művelet nem vonható vissza.
           title: Fiók visszaállítása?
         confirm_reset_with_sample_data:
-          body: Biztosan vissza szeretnéd állítani a fiókodat és betölteni a mintaadatokat? Ez törli a meglévő adataidat, és demo adatokkal helyettesíti azokat, hogy biztonságosan felfedezhessed a Sure-t.
+          body: >-
+            Biztosan vissza szeretnéd állítani a fiókodat és betölteni a mintaadatokat? Ez törli a meglévő
+            adataidat, és demo adatokkal helyettesíti azokat, hogy biztonságosan felfedezhessed a Sure-t.
           title: Fiók visszaállítása és mintaadatok betöltése?
         confirm_remove_invitation:
           body: Biztosan el szeretnéd távolítani a %{email} részére szóló meghívót?
@@ -145,11 +219,16 @@ hu:
           title: Tag eltávolítása
         danger_zone_title: Veszélyes zóna
         delete_account: Fiók törlése
-        delete_account_warning: A fiók törlése véglegesen eltávolítja az összes adatodat, és nem vonható vissza.
+        delete_account_warning: A fiók törlése véglegesen eltávolítja az összes adatodat, és nem vonható
+          vissza.
         reset_account: Fiók visszaállítása
-        reset_account_warning: A fiók visszaállítása törli az összes számládat, kategóriádat, kereskedődet, címkédet és egyéb adatodat, de a felhasználói fiókod megmarad.
+        reset_account_warning: >-
+          A fiók visszaállítása törli az összes számládat, kategóriádat, kereskedődet, címkédet és egyéb
+          adatodat, de a felhasználói fiókod megmarad.
         reset_account_with_sample_data: Visszaállítás és előtöltés
-        reset_account_with_sample_data_warning: Töröld az összes meglévő adatodat, majd tölts be friss mintaadatokat, hogy egy előre kitöltött környezetben fedezhesd fel az alkalmazást.
+        reset_account_with_sample_data_warning: >-
+          Töröld az összes meglévő adatodat, majd tölts be friss mintaadatokat, hogy egy előre kitöltött
+          környezetben fedezhesd fel az alkalmazást.
         email: E-mail cím
         first_name: Keresztnév
         group_form_input_placeholder: Adj meg egy csoportnevet
@@ -157,7 +236,8 @@ hu:
         group_title: Csoporttagok
         household_form_input_placeholder: Adj meg egy háztartásnevet
         household_form_label: Háztartás neve
-        household_subtitle: A meghívottak bejelentkezhetnek a %{moniker} fiókodba és hozzáférhetnek a megosztott erőforrásokhoz.
+        household_subtitle: A meghívottak bejelentkezhetnek a %{moniker} fiókodba és hozzáférhetnek a
+          megosztott erőforrásokhoz.
         household_title: Háztartás
         invitation_link: Meghívó link
         invite_member: Tag hozzáadása
@@ -169,11 +249,18 @@ hu:
         remove_invitation: Meghívó eltávolítása
         remove_member: Tag eltávolítása
         save: Mentés
+        resend_confirmation_link: kérj új megerősítő e-mailt
+        unconfirmed_email_notice_html: >-
+          Az e-mail-címedet erre szeretnéd módosítani: %{email}. A változtatás érvényesítéséhez erősítsd
+          meg a postafiókodba érkezett üzenetet. Ha nem kaptad meg, nézd meg a levélszemét mappát, vagy
+          %{resend_link}.
     securities:
       show:
         page_title: Biztonság
         mfa_title: Kétlépéses azonosítás
-        mfa_description: Adj hozzá egy extra biztonsági réteget a fiókodhoz azáltal, hogy bejelentkezéskor egy kódot kérsz a hitelesítő alkalmazásodtól
+        mfa_description: >-
+          Adj hozzá egy extra biztonsági réteget a fiókodhoz azáltal, hogy bejelentkezéskor egy kódot
+          kérsz a hitelesítő alkalmazásodtól
         enable_mfa: Kétlépéses azonosítás bekapcsolása
         disable_mfa: Kétlépéses azonosítás kikapcsolása
         disable_mfa_confirm: Biztosan ki szeretnéd kapcsolni a kétlépéses azonosítást?
@@ -186,9 +273,24 @@ hu:
         sso_no_identities: Nincs kapcsolt egyszeri bejelentkezési fiók
         sso_connect_hint: Jelentkezz ki, majd jelentkezz be egy SSO-szolgáltatóval a fiók összekapcsolásához.
         sso_confirm_title: Fiók leválasztása?
-        sso_confirm_body: Biztosan le szeretnéd választani a %{provider} fiókodat? Később újra összekapcsolhatod, ha azzal a szolgáltatóval jelentkezel be.
+        sso_confirm_body: >-
+          Biztosan le szeretnéd választani a %{provider} fiókodat? Később újra összekapcsolhatod, ha azzal
+          a szolgáltatóval jelentkezel be.
         sso_confirm_button: Leválasztás
-        sso_warning_message: Ez az egyetlen bejelentkezési módod. Mielőtt leválasztanád, állíts be jelszót a biztonsági beállításokban, különben kizárhatod magad a fiókodból.
+        sso_warning_message: >-
+          Ez az egyetlen bejelentkezési módod. Mielőtt leválasztanád, állíts be jelszót a biztonsági beállításokban,
+          különben kizárhatod magad a fiókodból.
+        encryption_warning:
+          generate: 'Kulcskészlet létrehozása: bin/rails db:encryption:init'
+          intro: >-
+            Az érzékeny adatokat (API-kulcsokat, szolgáltatói tokeneket, MFA-titkokat és személyes adatokat)
+            a rendszer titkosítás nélkül tárolja. A titkosítás engedélyezéséhez állítsd be az alábbi kulcsokat
+            környezeti változókban vagy a Rails hitelesítőadatai között:
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          title: Titkosítási konfiguráció szükséges
     settings_nav:
       accounts_label: Számlák
       advanced_section_title: Speciális
@@ -221,13 +323,17 @@ hu:
       api_keys_label: API-kulcs
       appearance_label: Megjelenés
       bank_sync_label: Banki szinkronizálás
+      background_jobs_label: Háttérfeladatok
+      debug_label: Hibakeresés
+      mcp_label: MCP
+      system_health_label: Rendszerállapot
     settings_nav_link_large:
       next: Következő
       previous: Vissza
     user_avatar_field:
       accepted_formats: JPG vagy PNG. Maximum 5 MB.
       choose: Fotó feltöltése
-      choose_label: (nem kötelező)
+      choose_label: "(nem kötelező)"
       change: Fotó módosítása
     providers:
       update:
@@ -236,19 +342,23 @@ hu:
       not_authorized: Nincs jogosultság
       bank_sync:
         page_title: Banki szinkronizálás
-        lede: Csatlakoztasd a külső számlákat, hogy a tranzakciók, egyenlegek és portfólióadatok automatikusan áramlanak a Sure-ba.
+        lede: >-
+          Csatlakoztasd a külső számlákat, hogy a tranzakciók, egyenlegek és portfólióadatok automatikusan
+          áramlanak a Sure-ba.
       status:
         ok: Csatlakoztatva
         warn: Beavatkozás szükséges
         err: Hiba
-        off: Nincs konfigurálva
+        'off': Nincs beállítva
       maturity:
         beta: Béta
         alpha: Alfa
-      drawer_trust_statement: "Csak olvasási hozzáférés. A Sure soha nem tud pénzt mozgatni, és a hitelesítő adatok titkosítva vannak tárolva."
+      drawer_trust_statement: >-
+        Csak olvasási hozzáférés. A Sure soha nem tud pénzt mozgatni, és a hitelesítő adatok titkosítva
+        vannak tárolva.
       setup_steps:
         eyebrow: Beállítás
-        need_help: "Segítségre van szükséged?"
+        need_help: Segítségre van szükséged?
       connect: Csatlakozás
       groups:
         your_connections: A te kapcsolataid
@@ -289,6 +399,21 @@ hu:
         sophtron: US és kanadai bankok és közüzemi szolgáltatók csatlakoztatása.
         plaid: Ezernyi US pénzintézet csatlakoztatása Plaid-en keresztül.
         plaid_eu: Európai pénzintézetek csatlakoztatása Plaid-en keresztül (PSD2 / Open Banking).
+        akahu: Új-zélandi pénzintézetek szinkronizálása az Akahu segítségével.
+        coinspot: >-
+          CoinSpot-egyenlegek, AUD-értékek, átvezetések, befizetések, kivétek és megbízási előzmények
+          szinkronizálása csak olvasási API-kulccsal.
+        financekit: Egyes FinanceKit-számlák szinkronizálása a Sure iOS-alkalmazásán keresztül.
+        fio: Fio banka-számla szinkronizálása csak olvasási API-tokennel.
+        monobank: Ukrán Monobank-kártyák és perselyek szinkronizálása személyes API-tokennel.
+        onchain_wallet: Saját kezelésű Bitcoin-, EVM- és Solana-tárcák követése a nyilvános címük alapján.
+        questrade: Questrade-befektetési számláid közvetlen szinkronizálása a Questrade API-n keresztül.
+        redbark: Ausztrál bankszámlák szinkronizálása a Redbark nyílt bankolási szolgáltatásával.
+        trade_republic: >-
+          Trade Republic-befektetési számlád szinkronizálása biztonságos, csak olvasási webes bejelentkezéssel.
+        trading212: Trading 212-befektetési portfóliód szinkronizálása csak olvasási API-kulccsal.
+        up: Ausztrál Up-bankszámlák szinkronizálása személyes hozzáférési tokennel.
+        wise: Wise-egyenlegeid és nemzetközi átutalásaid automatikus szinkronizálása több pénznemben.
       search_filters:
         aria_label: Szolgáltatók keresése
         placeholder: Szolgáltatók keresése
@@ -303,11 +428,19 @@ hu:
         coinbase_title: Coinbase
       encryption_error:
         title: Titkosítási konfiguráció szükséges
-        message: Az Active Record titkosítási kulcsok nincsenek konfigurálva. Kérjük, gondoskodj arról, hogy a titkosítási hitelesítő adatok (active_record_encryption.primary_key, active_record_encryption.deterministic_key és active_record_encryption.key_derivation_salt) megfelelően be legyenek állítva a Rails hitelesítő adataiban vagy a környezeti változókban, mielőtt szinkronizálási szolgáltatókat használnál.
+        message: >-
+          Az Active Record titkosítási kulcsok nincsenek konfigurálva. Kérjük, gondoskodj arról, hogy
+          a titkosítási hitelesítő adatok (active_record_encryption.primary_key, active_record_encryption.deterministic_key
+          és active_record_encryption.key_derivation_salt) megfelelően be legyenek állítva a Rails hitelesítő
+          adataiban vagy a környezeti változókban, mielőtt szinkronizálási szolgáltatókat használnál.
       coinbase_panel:
-        setup_instructions: "A Coinbase csatlakoztatásához:"
-        step1_html: Nyisd meg a <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API beállításait</a>
-        step2: Hozz létre egy új, csak olvasási jogosultsággal rendelkező API-kulcsot (számlák és tranzakciók megtekintése)
+        setup_instructions: 'A Coinbase csatlakoztatásához:'
+        step1_html: >-
+          Nyisd meg a <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener
+          noreferrer" class="text-primary underline">Coinbase API beállításait</a>
+        step2: >-
+          Hozz létre egy új, csak olvasási jogosultsággal rendelkező API-kulcsot (számlák és tranzakciók
+          megtekintése)
         step3: Másold ki az API-kulcsot és az API-titkot, majd illeszd be az alábbiakba
         api_key_label: API-kulcs
         api_key_placeholder: Add meg a Coinbase API-kulcsodat
@@ -317,18 +450,26 @@ hu:
         syncing: Szinkronizálás...
         sync: Szinkronizálás
         disconnect: Lecsatlakozás
-        disconnect_confirm: Biztosan le szeretnéd választani ezt a Coinbase-kapcsolatot? A szinkronizált számlák manuális számlákká válnak.
+        disconnect_confirm: >-
+          Biztosan le szeretnéd választani ezt a Coinbase-kapcsolatot? A szinkronizált számlák manuális
+          számlákká válnak.
       binance_panel:
-        setup_instructions: "A Binance csatlakoztatásához hozz létre egy csak olvasási jogosultsággal rendelkező API-kulcsot:"
-        step1_html: 'Nyisd meg a <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API-kezelőjét</a>'
-        step2: "Hozz létre egy új API-kulcsot, csak olvasási engedéllyel"
-        step3: "Illeszd be az API-kulcsodat és az API-titkodat az alábbiakba"
-        no_withdraw_warning: "Figyelmeztetés: NE engedélyezd a kifizetési jogosultságot"
-        no_withdraw_title: "Csak olvasható kulcs"
-        no_withdraw_body: "Ne engedélyezd a kifizetési jogosultságot a Binance API-kulcs létrehozásakor. A Sure csak olvasási hozzáférést igényel."
-        ip_hint_title: "IP-cím-engedélyezési lista szükséges"
-        ip_hint_body: "Add hozzá az alkalmazásszerver kimenő IP-címét a Binance API-kulcs engedélyezési listájához:"
-        ip_hint_contact_admin: "Az alkalmazásszerver kimenő IP-címéért fordulj a rendszergazdádhoz."
+        setup_instructions: 'A Binance csatlakoztatásához hozz létre egy csak olvasási jogosultsággal
+          rendelkező API-kulcsot:'
+        step1_html: >-
+          Nyisd meg a <a href="https://www.binance.com/en/my/settings/api-management" target="_blank"
+          rel="noopener noreferrer" class="underline">Binance API-kezelőjét</a>
+        step2: Hozz létre egy új API-kulcsot, csak olvasási engedéllyel
+        step3: Illeszd be az API-kulcsodat és az API-titkodat az alábbiakba
+        no_withdraw_warning: 'Figyelmeztetés: NE engedélyezd a kifizetési jogosultságot'
+        no_withdraw_title: Csak olvasható kulcs
+        no_withdraw_body: >-
+          Ne engedélyezd a kifizetési jogosultságot a Binance API-kulcs létrehozásakor. A Sure csak olvasási
+          hozzáférést igényel.
+        ip_hint_title: IP-cím-engedélyezési lista szükséges
+        ip_hint_body: 'Add hozzá az alkalmazásszerver kimenő IP-címét a Binance API-kulcs engedélyezési
+          listájához:'
+        ip_hint_contact_admin: Az alkalmazásszerver kimenő IP-címéért fordulj a rendszergazdádhoz.
         api_key_label: API-kulcs
         api_key_placeholder: Illeszd be a Binance API-kulcsodat
         api_secret_label: API-titok
@@ -337,13 +478,22 @@ hu:
         syncing: Szinkronizálás...
         sync: Szinkronizálás
         disconnect: Lecsatlakozás
-        disconnect_confirm: "Biztosan le szeretnéd választani a Binance-t?"
+        disconnect_confirm: Biztosan le szeretnéd választani a Binance-t?
+        historical_import: Korábbi adatok importálásának beállításai
+        sync_start_date_help: Válaszd ki, meddig visszamenőleg szeretnéd lekérni a korábbi ügyleteket.
+        sync_start_date_label: Adatok importálásának kezdete
       kraken_panel:
-        step1_html: 'Nyisd meg a <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API-beállításait</a>'
-        step2: "Hozz létre egy API-kulcsot csak Lekérdezési alapok és Lekérdezési zárt megbízások & ügyletek jogosultsággal."
-        step3: "Illeszd be az API-kulcsot és a privát kulcsot az alábbiakba."
-        read_only_title: "Csak olvasási tőzsdei szinkronizálás"
-        read_only_body: "Ne adj kereskedési, visszavonási, kifizetési, exportálási, főkönyvi, Earn, staking vagy átutalási jogosultságot. A Sure csak egyenlegeket, pozíciókat és spot ügyletek adatait importálja."
+        step1_html: >-
+          Nyisd meg a <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener
+          noreferrer" class="underline">Kraken API-beállításait</a>
+        step2: >-
+          Hozz létre egy API-kulcsot csak Lekérdezési alapok és Lekérdezési zárt megbízások & ügyletek
+          jogosultsággal.
+        step3: Illeszd be az API-kulcsot és a privát kulcsot az alábbiakba.
+        read_only_title: Csak olvasási tőzsdei szinkronizálás
+        read_only_body: >-
+          Ne adj kereskedési, visszavonási, kifizetési, exportálási, főkönyvi, Earn, staking vagy átutalási
+          jogosultságot. A Sure csak egyenlegeket, pozíciókat és spot ügyletek adatait importálja.
         default_connection_name: Kraken
         add_connection: Kraken-kapcsolat hozzáadása
         update_connection: Kapcsolat frissítése
@@ -359,104 +509,122 @@ hu:
         syncing: Szinkronizálás...
         sync: Szinkronizálás
         disconnect: Lecsatlakozás
-        disconnect_confirm: "Biztosan le szeretnéd választani a(z) %{name}-t?"
+        disconnect_confirm: Biztosan le szeretnéd választani a(z) %{name}-t?
       enable_banking_panel:
-        callback_url_instruction: "A visszahívási URL-hez használd a következőt: %{callback_url}."
+        callback_url_instruction: 'A visszahívási URL-hez használd a következőt: %{callback_url}.'
         connection_error: Kapcsolódási hiba
-        step_1_html: "Menj a(z) %{link} oldalra, és szerezd meg a fejlesztői hitelesítő adataidat."
-        step_2: "Válaszd ki az országodat, és illeszd be az alkalmazásazonosítót és az ügyfél-tanúsítványt alább."
-        step_3: "Mentsd el, majd a Kapcsolat hozzáadása gombbal csatlakoztasd a bankod."
-        config_locked_title: "Konfiguráció zárolva"
-        config_locked_message: "Válassz le minden csatlakoztatott bankot a hitelesítő adatok módosítása előtt."
-        application_id_label: "Alkalmazásazonosító"
-        application_id_placeholder_new: "Add meg az alkalmazásazonosítót"
-        application_id_placeholder_update: "Add meg az új azonosítót a frissítéshez"
-        client_certificate_label: "Ügyfél-tanúsítvány (privát kulccsal)"
-        save_and_connect: "Mentés és csatlakozás"
-        update_connection: "Kapcsolat frissítése"
-        connected_bank: "Csatlakoztatott bank"
-        session_expires: "Munkamenet lejárata: %{date}"
-        unknown: "Ismeretlen"
-        connection: "Kapcsolat"
-        session_expired_reconnect: "Munkamenet lejárt – csatlakozz újra"
-        configured: "Konfigurálva"
-        ready_to_link: "Kész számlák összekapcsolására"
-        sync: "Szinkronizálás"
-        reconnect: "Újracsatlakozás"
-        connect_bank: "Bank csatlakoztatása"
-        remove: "Eltávolítás"
-        remove_confirm: "Biztosan el szeretnéd távolítani ezt a kapcsolatot?"
-        add_connection: "Kapcsolat hozzáadása"
-        syncing: "Szinkronizálás"
-        select_country: "Ország kiválasztása..."
-        country_label: "Ország"
+        step_1_html: Menj a(z) %{link} oldalra, és szerezd meg a fejlesztői hitelesítő adataidat.
+        step_2: Válaszd ki az országodat, és illeszd be az alkalmazásazonosítót és az ügyfél-tanúsítványt
+          alább.
+        step_3: Mentsd el, majd a Kapcsolat hozzáadása gombbal csatlakoztasd a bankod.
+        config_locked_title: Konfiguráció zárolva
+        config_locked_message: Válassz le minden csatlakoztatott bankot a hitelesítő adatok módosítása
+          előtt.
+        application_id_label: Alkalmazásazonosító
+        application_id_placeholder_new: Add meg az alkalmazásazonosítót
+        application_id_placeholder_update: Add meg az új azonosítót a frissítéshez
+        client_certificate_label: Ügyfél-tanúsítvány (privát kulccsal)
+        save_and_connect: Mentés és csatlakozás
+        update_connection: Kapcsolat frissítése
+        connected_bank: Csatlakoztatott bank
+        session_expires: 'Munkamenet lejárata: %{date}'
+        unknown: Ismeretlen
+        connection: Kapcsolat
+        session_expired_reconnect: Munkamenet lejárt – csatlakozz újra
+        configured: Konfigurálva
+        ready_to_link: Kész számlák összekapcsolására
+        sync: Szinkronizálás
+        reconnect: Újracsatlakozás
+        connect_bank: Bank csatlakoztatása
+        remove: Eltávolítás
+        remove_confirm: Biztosan el szeretnéd távolítani ezt a kapcsolatot?
+        add_connection: Kapcsolat hozzáadása
+        syncing: Szinkronizálás
+        select_country: Ország kiválasztása...
+        country_label: Ország
       lunchflow_panel:
-        step_1_html: "Menj a(z) %{link} oldalra és hozz létre egy API-kulcsot."
-        step_2: "Illeszd be a kulcsodat alább és csatlakozz."
-        step_3: "Ezután menj a Számlák menübe a szinkronizált számlák összekapcsolásához."
-        api_key_label: "API-kulcs"
-        api_key_placeholder_new: "Illeszd be ide az API-kulcsot"
-        api_key_placeholder_update: "Add meg az új API-kulcsot a frissítéshez"
-        base_url_label: "Alap URL (nem kötelező)"
-        base_url_placeholder: "https://lunchflow.app/api/v1 (alapértelmezett)"
-        save_and_connect: "Mentés és csatlakozás"
-        update_connection: "Kapcsolat frissítése"
+        step_1_html: Menj a(z) %{link} oldalra és hozz létre egy API-kulcsot.
+        step_2: Illeszd be a kulcsodat alább és csatlakozz.
+        step_3: Ezután menj a Számlák menübe a szinkronizált számlák összekapcsolásához.
+        api_key_label: API-kulcs
+        api_key_placeholder_new: Illeszd be ide az API-kulcsot
+        api_key_placeholder_update: Add meg az új API-kulcsot a frissítéshez
+        base_url_label: Alap URL (nem kötelező)
+        base_url_placeholder: https://lunchflow.app/api/v1 (alapértelmezett)
+        save_and_connect: Mentés és csatlakozás
+        update_connection: Kapcsolat frissítése
       simplefin_panel:
-        step_1_html: "Menj a(z) %{link} oldalra egy egyszeri beállítási tokenért."
-        step_2: "Illeszd be a tokent alább és csatlakozz."
-        step_3: "Ezután menj a Számlák menübe a szinkronizált számlák összekapcsolásához."
-        setup_token_label: "Beállítási token"
-        setup_token_placeholder: "SimpleFIN beállítási token beillesztése"
-        save_and_connect: "Mentés és csatlakozás"
+        step_1_html: Menj a(z) %{link} oldalra egy egyszeri beállítási tokenért.
+        step_2: Illeszd be a tokent alább és csatlakozz.
+        step_3: Ezután menj a Számlák menübe a szinkronizált számlák összekapcsolásához.
+        setup_token_label: Beállítási token
+        setup_token_placeholder: SimpleFIN beállítási token beillesztése
+        save_and_connect: Mentés és csatlakozás
       plaid_panel:
-        step_1_html: "Nyisd meg a(z) %{link} oldalt, és másold ki az ügyfél-azonosítódat és titkos kulcsodat."
-        step_2: "Válassz környezetet. Teszteléshez sandbox, éles számlákhoz production."
-        step_3: "Illeszd be a hitelesítő adataidat alább és csatlakozz."
+        step_1_html: Nyisd meg a(z) %{link} oldalt, és másold ki az ügyfél-azonosítódat és titkos kulcsodat.
+        step_2: Válassz környezetet. Teszteléshez sandbox, éles számlákhoz production.
+        step_3: Illeszd be a hitelesítő adataidat alább és csatlakozz.
       plaid_eu_panel:
-        step_1_html: "Nyisd meg a(z) %{link} oldalt, és másold ki az EU ügyfél-azonosítódat és titkos kulcsodat."
+        step_1_html: Nyisd meg a(z) %{link} oldalt, és másold ki az EU ügyfél-azonosítódat és titkos kulcsodat.
       not_found: Szolgáltató nem található.
       sync_provider_no_items: Nincs elérhető kapcsolat a szinkronizáláshoz.
       ibkr_panel:
         steps:
-          step_1: 'Az IBKR ügyfélportálon menj a „Teljesítmény és Jelentések" > „Flex lekérdezések" menübe.'
-          step_2: 'Kattints a „+" ikonra az „Activity Flex Query" részben egy új lekérdezés létrehozásához.'
-          step_3: 'Nevezd el a lekérdezést (pl. „Sure Sync"), majd tekintsd át az alábbi Flex Query részleteket, és engedélyezd a felsorolt szakaszokat, mezőket és konfigurációs lehetőségeket.'
-          step_4: 'Mentsd el a lekérdezést, jegyezd fel a „Query ID"-t, majd a „Flex Web Service Configuration" részben a fogaskerék ikonnal hozz létre egy hozzáférési tokent.'
-          step_5: "Illeszd be a Query ID-t és a tokent alább, mentsd el a konfigurációt, majd menj a Számlák menübe a felderített IBKR-számlák összekapcsolásához."
+          step_1: Az IBKR ügyfélportálon menj a „Teljesítmény és Jelentések" > „Flex lekérdezések" menübe.
+          step_2: Kattints a „+" ikonra az „Activity Flex Query" részben egy új lekérdezés létrehozásához.
+          step_3: >-
+            Nevezd el a lekérdezést (pl. „Sure Sync"), majd tekintsd át az alábbi Flex Query részleteket,
+            és engedélyezd a felsorolt szakaszokat, mezőket és konfigurációs lehetőségeket.
+          step_4: >-
+            Mentsd el a lekérdezést, jegyezd fel a „Query ID"-t, majd a „Flex Web Service Configuration"
+            részben a fogaskerék ikonnal hozz létre egy hozzáférési tokent.
+          step_5: >-
+            Illeszd be a Query ID-t és a tokent alább, mentsd el a konfigurációt, majd menj a Számlák
+            menübe a felderített IBKR-számlák összekapcsolásához.
         flex_query_details:
           eyebrow: Flex Query
           title: Szakaszok, mezők és konfiguráció
-          summary: Bővítsd ki a pontos szakaszok, mezők és beállítások megtekintéséhez, amelyeket az IBKR Activity Flex Query-nek tartalmaznia kell.
+          summary: >-
+            Bővítsd ki a pontos szakaszok, mezők és beállítások megtekintéséhez, amelyeket az IBKR Activity
+            Flex Query-nek tartalmaznia kell.
           sections_heading: Engedélyezd ezeket a szakaszokat és mezőket
           configuration_heading: Állítsd be ezeket a lekérdezési opciókat
         sections:
-          account_information: "Számla adatai: Számlaazonosító, Pénznem"
-          cash_report: "Készpénzjelentés:"
-          cash_report_options: "Opciók: Nincs"
-          cash_report_fields: "Mezők: Pénznem, Záró készpénz"
-          cash_transactions: "Készpénztranzakciók:"
-          cash_transactions_options: "Opciók: Osztalékok, Befizetések és kifizetések, Részletek"
-          cash_transactions_fields: "Mezők: Összeg, Conid, Pénznem, FX-árfolyam alaphoz, Jelentési dátum, Tranzakció-azonosító, Típus"
-          change_in_position_value_summary: "Pozícióérték változásának összefoglalója: Pénznem, Időszak végi érték"
-          net_asset_value: "Nettó eszközérték (NAV) alapban:"
-          net_asset_value_options: "Opciók: Nincs"
-          net_asset_value_fields: "Mezők: Pénznem, Jelentési dátum, Összesen"
-          open_positions: "Nyitott pozíciók:"
-          open_positions_options: "Opciók: Összefoglalás"
-          open_positions_fields: "Mezők: Eszközosztály, Conid, Bekerülési ár, Pénznem, FX-árfolyam alaphoz, Piaci ár, Mennyiség, Jelentési dátum, Értékpapír-azonosító, Értékpapír-azonosító típus, Oldal, Szimbólum"
-          trades: "Ügyletek:"
-          trades_options: "Opciók: Végrehajtás"
-          trades_fields: "Mezők: Eszközosztály, Vétel/Eladás, Conid, Pénznem, FX-árfolyam alaphoz, IB jutalék, IB jutalék pénzneme, Mennyiség, Szimbólum, Ügylet dátuma, Ügylet-azonosító, Ügylet ára, Tranzakció-azonosító"
+          account_information: 'Számla adatai: Számlaazonosító, Pénznem'
+          cash_report: 'Készpénzjelentés:'
+          cash_report_options: 'Opciók: Nincs'
+          cash_report_fields: 'Mezők: Pénznem, Záró készpénz'
+          cash_transactions: 'Készpénztranzakciók:'
+          cash_transactions_options: 'Opciók: Osztalékok, Befizetések és kifizetések, Részletek'
+          cash_transactions_fields: 'Mezők: Összeg, Conid, Pénznem, FX-árfolyam alaphoz, Jelentési dátum,
+            Tranzakció-azonosító, Típus'
+          change_in_position_value_summary: 'Pozícióérték változásának összefoglalója: Pénznem, Időszak
+            végi érték'
+          net_asset_value: 'Nettó eszközérték (NAV) alapban:'
+          net_asset_value_options: 'Opciók: Nincs'
+          net_asset_value_fields: 'Mezők: Pénznem, Jelentési dátum, Összesen'
+          open_positions: 'Nyitott pozíciók:'
+          open_positions_options: 'Opciók: Összefoglalás'
+          open_positions_fields: >-
+            Mezők: Eszközosztály, Conid, Bekerülési ár, Pénznem, FX-árfolyam alaphoz, Piaci ár, Mennyiség,
+            Jelentési dátum, Értékpapír-azonosító, Értékpapír-azonosító típus, Oldal, Szimbólum
+          trades: 'Ügyletek:'
+          trades_options: 'Opciók: Végrehajtás'
+          trades_fields: >-
+            Mezők: Eszközosztály, Vétel/Eladás, Conid, Pénznem, FX-árfolyam alaphoz, IB jutalék, IB jutalék
+            pénzneme, Mennyiség, Szimbólum, Ügylet dátuma, Ügylet-azonosító, Ügylet ára, Tranzakció-azonosító
         configuration:
-          models: "Modellek: Opcionális"
-          format: "Formátum: XML"
-          period: "Időszak: Utolsó 365 naptári nap"
-          date_format: "Dátumformátum: éééé-HH-nn"
-          time_format: "Időformátum: ÓÓ:pp:mm"
-          date_time_separator: "Dátum/idő elválasztó: ; (pontosvessző)"
-          profit_and_loss: "Nyereség és veszteség: Alapértelmezett"
+          models: 'Modellek: Opcionális'
+          format: 'Formátum: XML'
+          period: 'Időszak: Utolsó 365 naptári nap'
+          date_format: 'Dátumformátum: éééé-HH-nn'
+          time_format: 'Időformátum: ÓÓ:pp:mm'
+          date_time_separator: 'Dátum/idő elválasztó: ; (pontosvessző)'
+          profit_and_loss: 'Nyereség és veszteség: Alapértelmezett'
           all_other_options: 'Minden egyéb konfigurációs opció: „Nem"'
-        report_window_note: "Az IBKR Flex-jelentések az IBKR-ben konfigurált lekérdezési ablakra korlátozódnak. A Sure a teljes aktuális pozíciókat, valamint a jelentésből legfeljebb 365 nap tevékenységet importál."
+        report_window_note: >-
+          Az IBKR Flex-jelentések az IBKR-ben konfigurált lekérdezési ablakra korlátozódnak. A Sure a
+          teljes aktuális pozíciókat, valamint a jelentésből legfeljebb 365 nap tevékenységet importál.
         sync: Szinkronizálás
         disconnect_confirm: Leválasztja az Interactive Brokers-t?
         query_id_label: Lekérdezés azonosítója
@@ -471,3 +639,322 @@ hu:
         accounts_tab: Számlák
         status_configured_suffix: fület a felderített számlák kezeléséhez.
         not_configured: Nincs konfigurálva.
+      akahu_panel:
+        step_1_html: Nyisd meg a(z) %{link} oldalt, és hozz létre személyes alkalmazást.
+        step_2: Másold ki az alkalmazás- és felhasználói tokenedet.
+        step_3: Illeszd be a tokeneket alább, mentsd el őket, majd kapcsold össze a szinkronizált számláidat.
+      coinspot_panel:
+        add_connection: CoinSpot-kapcsolat hozzáadása
+        api_key_label: API-kulcs
+        api_key_placeholder: Illeszd be a CoinSpot API-kulcsodat
+        api_secret_label: API-titok
+        api_secret_placeholder: Illeszd be a CoinSpot API-titkodat
+        connection_name_label: Kapcsolat neve
+        connection_name_placeholder: Fő CoinSpot
+        default_connection_name: CoinSpot
+        disconnect: Kapcsolat bontása
+        disconnect_confirm: 'Biztosan bontod ezt a kapcsolatot: %{name}?'
+        keep_api_key_placeholder: Hagyd üresen a meglévő API-kulcs megtartásához
+        keep_api_secret_placeholder: Hagyd üresen a meglévő API-titok megtartásához
+        read_only_body: >-
+          Ne adj küldési, kivételi, kereskedési vagy átutalási jogosultságot. A Sure csak az egyenlegeket,
+          az AUD-értékeket, az átvezetéseket, a befizetéseket, a kivéteket és a teljesült megbízások előzményeit
+          importálja.
+        read_only_title: Tőzsdei szinkronizálás kizárólag olvasási hozzáféréssel
+        setup_accounts: Számla beállítása
+        step1_html: >-
+          Nyisd meg a <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer"
+          class="underline">CoinSpot API-beállításait</a>
+        step2: >-
+          Hozz létre olyan API-kulcsot, amely csak olvasási hozzáférést ad az egyenlegekhez és az előzményekhez.
+        step3: Illeszd be az API-kulcsot és a titkot alább.
+        sync: Szinkronizálás
+        syncing: Szinkronizálás...
+        update_connection: Kapcsolat frissítése
+      drawer_trust_statement_encryption_unconfigured: >-
+        Csak olvasási hozzáférés. A Sure soha nem mozgathat pénzt. Éles használat előtt állíts be kifejezett
+        titkosítási kulcsokat a szolgáltatói hitelesítő adatok tárolásához.
+      financekit:
+        accounts: Összekapcsolt számlák
+        app_store: App Store
+        coming_soon: Hamarosan!
+        description: >-
+          Az Apple Wallet-kapcsolatokat a Sure iOS-alkalmazásában kezelheted. A Wallet-adatok az alkalmazás
+          megnyitott állapotában szinkronizálódnak; felügyelet nélküli háttérszinkronizálás még nem érhető
+          el.
+        last_accepted_at: A Sure legutóbbi elfogadása
+        last_imported_at: Legutóbbi importálás a háztartásba
+        linked_accounts:
+          one: 1 összekapcsolt számla
+          other: "%{count} összekapcsolt számla"
+        not_yet: Még nem
+        status:
+          active: A szinkronizálás aktív
+          repair_required: Javítás szükséges — nyisd meg a Sure iOS-alkalmazását
+        summary: Wallet-szinkronizálás
+      fio_panel:
+        step_1_html: Jelentkezz be a(z) %{link} internetbankjába, és nyisd meg a Beállítások → API menüt.
+        step_2: >-
+          Hozz létre csak olvasási hozzáférésű tokent („Sledování účtu”). Erős hitelesítés szükséges hozzá,
+          és legfeljebb 180 napig érvényes.
+        step_3: >-
+          Illeszd be a tokent alább, majd mentsd el. Egy token egy számlához fér hozzá, ezért minden Fio-számlához
+          külön kapcsolatot adj hozzá.
+      monobank_panel:
+        step_1_html: >-
+          Nyisd meg a(z) %{link} oldalt, jelentkezz be a Monobank alkalmazással, és hozz létre személyes
+          tokent.
+        step_2: Másold ki a tokent — csak egyszer jelenik meg.
+        step_3: Illeszd be a tokent alább, mentsd el, majd kapcsold össze a követni kívánt kártyákat és
+          perselyeket.
+      onchain_wallet_panel:
+        add_wallet: Tárca hozzáadása
+        advanced: Speciális
+        disconnect_all: Összes tárca leválasztása
+        disconnect_all_confirm: Ez eltávolítja az összes követett címet és a hozzájuk tartozó számlákat.
+          Folytatod?
+        etherscan_api_key_label: Etherscan API-kulcs (nem kötelező)
+        etherscan_api_key_placeholder: Illessz be egy Etherscan API-kulcsot
+        etherscan_hint: >-
+          Az Ethereum-adatok kulcs nélkül is olvashatók. Az Etherscan-kulcs csak az Ethereum lekérési
+          korlátját emeli meg.
+        keep_etherscan_api_key: Hagyd üresen a meglévő kulcs megtartásához
+        keyless_body: >-
+          A Sure kizárólag nyilvános blokkláncadatokat olvas. Nincs szükség kulcsra, helyreállító kifejezésre
+          vagy aláírásra, és nem költhet el pénzt.
+        keyless_title: Csak olvasási hozzáférés, kulcs nélkül
+        manage_wallets: Tárcák kezelése
+        save: Mentés
+        sync_start_date_hint: >-
+          Az ennél korábbi átutalásokat figyelmen kívül hagyja. Hagyd üresen a blokkláncböngésző által
+          jelzett összes adat importálásához.
+        sync_start_date_label: E dátum előtti átutalások kihagyása
+      provider_form:
+        save_and_connect: Mentés és csatlakozás
+      provider_setup_encryption_warning:
+        message: >-
+          Ebben a saját üzemeltetésű példányban nincsenek kifejezetten beállítva az Active Record titkosítási
+          kulcsai. Éles használatban a szolgáltatói hitelesítő adatok mentése előtt állítsd be a primary_key,
+          deterministic_key és key_derivation_salt értékeket.
+        title: Titkosítási konfiguráció szükséges
+      trade_republic_panel:
+        accounts_discovered:
+          one: 1 Trade Republic-számla felderítve.
+          other: "%{count} Trade Republic-számla felderítve."
+        accounts_tab: Számlák
+        add_account: Újabb kapcsolat hozzáadása
+        approval_pending: >-
+          A bejelentkezés elindult. Hagyd jóvá a Trade Republic alkalmazásban; a Sure automatikusan ellenőrzi
+          az állapotot.
+        authenticator_code_label: Hitelesítő kód (ha kéri)
+        authenticator_code_notice: Add meg a hitelesítő alkalmazásodban látható kódot.
+        authenticator_code_placeholder: 6 jegyű kód
+        awaiting_authenticator_code: Hitelesítő kód szükséges.
+        awaiting_confirmation: A Trade Republic alkalmazásban történő jóváhagyásra vár.
+        check_login_status: Állapot ellenőrzése most
+        complete_login: Folytatás
+        confirm_login: Bejelentkezés ellenőrzése
+        connect: Bejelentkezés
+        connection_success:
+          close: Kész
+          description: A Sure most a háttérben szinkronizálja a Trade Republic-adataidat.
+          message: A Trade Republic-kapcsolatod készen áll.
+          title: A Trade Republic sikeresen csatlakoztatva
+        currency_label: Számla pénzneme
+        disconnect: Trade Republic leválasztása
+        disconnect_confirm: Leválasztod a Trade Republic kapcsolatot? A szinkronizált számlák kézi számlákká
+          válnak.
+        disconnect_confirm_with_identifier: >-
+          Leválasztod a(z) %{last4} végződésű Trade Republic-kapcsolatot? A szinkronizált számlák kézi
+          számlákká válnak.
+        encryption_warning:
+          message: >-
+            A Trade Republic hitelesítő adatai és munkamenetadatai nem tárolhatók biztonságosan az Active
+            Record Encryption beállítása nélkül.
+          title: A titkosítás nincs beállítva
+        identifier_account: Számla
+        identifier_phone: Telefon
+        login_expired: A jóváhagyási kérés lejárt.
+        not_configured: Nincs beállítva.
+        phone_number_label: Telefonszám
+        phone_number_placeholder_existing: Hagyd üresen a jelenlegi telefonszám megtartásához
+        phone_number_placeholder_new: "+49 170 1234567"
+        pin_label: PIN-kód vagy jelszó
+        pin_placeholder_existing: Hagyd üresen a jelenlegi PIN-kód vagy jelszó megtartásához
+        pin_placeholder_new: A Trade Republic PIN-kódod vagy jelszavad
+        push_login_notice: >-
+          Most hagyd jóvá a bejelentkezést a Trade Republic alkalmazásban. A Sure automatikusan ellenőrzi
+          az állapotot a háttérben, de te is lekérdezheted.
+        qr_back_to_credentials: Vissza a telefonszámhoz és a PIN-kódhoz vagy jelszóhoz
+        qr_cancel: QR-kódos bejelentkezés megszakítása
+        qr_error: A QR-kódos bejelentkezés nem indítható el. Próbáld újra.
+        qr_instruction: Olvasd be a QR-kódot a Trade Republic alkalmazással, és hagyd jóvá a bejelentkezést.
+        qr_loading: QR-kód előkészítése…
+        qr_login: Bejelentkezés QR-kóddal
+        qr_success: A bejelentkezés jóváhagyva. A Sure frissíti a szolgáltató oldalát.
+        restart_login: Bejelentkezés újraindítása
+        save_configuration: Mentés és bejelentkezés indítása
+        setup_accounts: Számlák beállítása
+        status_configured_prefix: Csatlakoztatva. Nyisd meg a
+        status_configured_suffix: fület a felderített számlák kezeléséhez.
+        steps:
+          step_1: >-
+            Add meg a Trade Republic alkalmazásban használt telefonszámodat és PIN-kódodat vagy jelszavadat,
+            majd mentsd el.
+          step_2: Amikor a rendszer kéri, add meg a hitelesítő alkalmazásodban látható kódot.
+          step_3: Amikor a rendszer kéri, hagyd jóvá a bejelentkezést a Trade Republic alkalmazásban.
+        sync: Szinkronizálás
+        syncing: Szinkronizálás...
+        update_configuration: Konfiguráció frissítése
+      trading212_panel:
+        accounts_tab: Számlák
+        add_account: Újabb számla hozzáadása
+        api_key_label: API-azonosító
+        api_key_placeholder_existing: Hagyd üresen a jelenlegi API-azonosító megtartásához
+        api_key_placeholder_new: Illeszd be a Trading 212 API-azonosítódat
+        api_secret_label: Titkos kulcs
+        api_secret_placeholder_existing: Hagyd üresen a jelenlegi titkos kulcs megtartásához
+        api_secret_placeholder_new: Illeszd be a Trading 212 titkos kulcsodat
+        currency_label: Számla pénzneme
+        default_account_name: Trading 212-számla
+        disconnect: Trading 212-számla leválasztása
+        disconnect_confirm: Leválasztod a Trading 212 kapcsolatot?
+        environment_demo: Demószámla
+        environment_label: Környezet
+        environment_live: Éles számla
+        not_configured: Nincs beállítva.
+        save_configuration: Konfiguráció mentése
+        status_configured_prefix: Beállítva. Nyisd meg a
+        status_configured_suffix: fület a felderített számlák kezeléséhez.
+        steps:
+          step_1: Nyisd meg a Trading 212 → Settings → API menüt a webes vagy mobilalkalmazásban.
+          step_2: Hozz létre új API-kulcsot — a Trading 212 megjelenít egy API-azonosítót és egy titkos
+            kulcsot.
+          step_3: Illeszd be mindkettőt alább, válaszd ki a környezetet és a számla pénznemét, majd mentsd
+            el.
+        sync: Szinkronizálás
+        syncing: Szinkronizálás...
+        update_configuration: Konfiguráció frissítése
+      up_panel:
+        step_1_html: Nyisd meg a(z) %{link} oldalt, és hozz létre személyes hozzáférési tokent.
+        step_2: Másold ki a személyes hozzáférési tokenedet.
+        step_3: Illeszd be a tokent alább, mentsd el, majd kapcsold össze a szinkronizált számláidat.
+    background_jobs:
+      cancel:
+        cancelled: "%{type} elveszettként megjelölve."
+        cancelled_error: Egy rendszergazda sikertelennek jelölte — a háttérfeladat feltehetően elveszett.
+        not_cancellable: >-
+          Ez a művelet most nem módosítható: a feladata még sorban állhat vagy futhat. Próbáld újra, ha
+          már 30 perce nincs aktivitása.
+      operation:
+        actions:
+          mark_failed: Megjelölés sikertelenként
+          mark_stale: Megjelölés elavultként
+          release_claim: Lefoglalás feloldása
+        ago: "%{time} ezelőtt"
+        confirm: >-
+          Elveszettnek jelölöd ezt a műveletet? A rekord lezárt állapotba kerül, így újrapróbálható. Az
+          alapul szolgáló adatok nem változnak.
+        missing_value: "-"
+        queued: Sorban áll
+        recent: Legutóbbi
+        running: Fut
+        stuck: Elakadt — feltehetően elveszett
+        sync_label: Szinkronizálás · %{type}
+        unknown: Ismeretlen
+      show:
+        empty: Nincs folyamatban lévő művelet.
+        missing_value: "-"
+        operations_subtitle: >-
+          Az összes háztartás még le nem zárt szinkronizálásai, importálásai és exportálásai. A több mint
+          30 perce inaktív, látható feladat nélküli műveletek feltehetően elvesztek, és ennek megfelelően
+          megjelölhetők.
+        operations_title: Folyamatban lévő műveletek
+        page_title: Háttérfeladatok
+        redis_unreachable: >-
+          A Sidekiq állapota nem érhető el (a Redis elérhetetlen). Nem állapítható meg, hogy futnak-e
+          a feladatok, ezért a műveletek le vannak tiltva.
+        stats:
+          busy: Foglalt
+          dead: Végleg sikertelen
+          enqueued: Sorba állítva
+          queue_label: "%{name}: %{size} · %{latency} mp várakozás"
+          retries: Újrapróbálkozások
+          scheduled: Ütemezett
+          workers: Feldolgozófolyamatok
+        subtitle: >-
+          A Sidekiq aktuális futási állapota: feldolgozófolyamatok, sorhosszak, újrapróbálásra váró és
+          végleg sikertelen feladatok.
+        table:
+          action: Művelet
+          family: Háztartás
+          last_activity: Utolsó aktivitás
+          liveness: Futási állapot
+          status: Állapot
+          type: Művelet
+        title: Feldolgozófolyamatok állapota
+    budget_shares:
+      update:
+        success: A költségvetés megosztási beállításai frissítve
+    debugs:
+      show:
+        context:
+          account: account=%{value}
+          account_provider: account_provider=%{value}
+          family: family=%{value}
+          provider: provider=%{value}
+          user: user=%{value}
+        empty: Nem található hibakeresési esemény.
+        filters:
+          account_id: Számlaazonosító
+          account_provider_id: Számlaszolgáltató azonosítója
+          all: Összes
+          category: Kategória
+          end_date: Záró dátum
+          family_id: Háztartás-azonosító
+          level: Szint
+          provider: Szolgáltató
+          reset: Visszaállítás
+          source: Forrás
+          start_date: Kezdő dátum
+          submit: Szűrés
+          user_id: Felhasználói azonosító
+        missing_value: "-"
+        page_title: Hibakeresés
+        subtitle: Fontos működési események szuperadminisztrátoroknak, a legújabbal kezdve.
+        table:
+          category: Kategória
+          context: Környezet
+          level: Szint
+          message: Üzenet
+          metadata: Metaadatok
+          source: Forrás
+          time: Időpont
+          view_metadata: Megtekintés
+        title: Hibakeresési eseménynapló
+    mcp:
+      revoke:
+        revoked: A kapcsolat visszavonva.
+      show:
+        connect_subtitle: >-
+          Illeszd be ezt az URL-t a Claude.ai felületén vagy más MCP-kompatibilis kliensben a Sure-fiókodhoz
+          való csatlakozáshoz.
+        connect_title: MI-asszisztens csatlakoztatása
+        connected_ago: Csatlakoztatva %{time} ezelőtt
+        connected_subtitle: >-
+          Ezek az alkalmazások jelenleg hozzáférnek a Sure-adataidhoz. Vond vissza azok hozzáférését,
+          amelyeket már nem használsz.
+        connected_title: Csatlakoztatott kliensek
+        copied: Másolva!
+        copy_url: Másolás
+        how_to_connect_title: A Claude csatlakoztatása
+        page_title: MCP-kiszolgáló
+        revoke: Visszavonás
+        revoke_confirm: Visszavonod ennek a kliensnek a hozzáférését?
+        step_1: Nyisd meg a Claude.ai felületén a Settings → Customize → Connectors menüt.
+        step_2: Kattints az „Add connector” gombra, majd illeszd be a fenti MCP-kiszolgáló URL-jét.
+        step_3: >-
+          Kattints a Connect gombra. A rendszer átirányít a Sure felületére, ahol bejelentkezhetsz és
+          engedélyezheted a hozzáférést.
+        step_4: Az engedélyezés után a Claude olvashatja a számláidat, tranzakcióidat és egyenlegadataidat.
+        unknown_client: Ismeretlen kliens

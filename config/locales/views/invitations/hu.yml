@@ -6,11 +6,14 @@ hu:
       joined_household: Csatlakoztál a háztartáshoz.
       message: "%{inviter} meghívott, hogy csatlakozz %{role} szerepkörben."
       sign_in_existing: Már van fiókom
-      title: "Csatlakozz a következőhöz: %{family}"
+      title: 'Csatlakozz a következőhöz: %{family}'
     create:
       existing_user_added: A felhasználó hozzá lett adva a háztartásodhoz.
       failure: Nem sikerült elküldeni a meghívót.
       success: A meghívó sikeresen elküldve.
+      existing_user_has_family_data: >-
+        Ennek a felhasználónak már van számlákat tartalmazó háztartása. A csatlakozás előtt el kell távolítania
+        vagy át kell helyeznie ezeket a számlákat.
     destroy:
       failure: Hiba történt a meghívó eltávolítása során.
       not_authorized: Nincs jogosultságod a meghívók kezeléséhez.
@@ -23,5 +26,6 @@ hu:
       role_label: Szerepkör
       role_member: Tag
       submit: Meghívó küldése
-      subtitle: Küldj meghívót, hogy valaki csatlakozzon a(z) %{moniker} fiókodhoz a(z) %{product_name} alkalmazásban
+      subtitle: >-
+        Küldj meghívót, hogy valaki csatlakozzon a(z) %{moniker} fiókodhoz a(z) %{product_name} alkalmazásban
       title: Valaki meghívása

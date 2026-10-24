@@ -13,8 +13,8 @@ vi:
     subtypes:
       # United States
       brokerage:
-        short: Brokerage
-        long: Brokerage
+        short: "Môi giới chứng khoán"
+        long: "Môi giới chứng khoán"
       401k:
         short: 401(k)
         long: 401(k)
@@ -29,10 +29,10 @@ vi:
         long: 457(b)
       tsp:
         short: TSP
-        long: Thrift Savings Plan
+        long: "Kế hoạch tiết kiệm hưu trí TSP"
       ira:
         short: IRA
-        long: Traditional IRA
+        long: "IRA truyền thống"
       roth_ira:
         short: Roth IRA
         long: Roth IRA
@@ -43,8 +43,8 @@ vi:
         short: SIMPLE IRA
         long: SIMPLE IRA
       529_plan:
-        short: 529 Plan
-        long: 529 Education Savings Plan
+        short: "Kế hoạch 529"
+        long: "Kế hoạch tiết kiệm giáo dục 529"
       hsa:
         short: HSA
         long: Tài khoản tiết kiệm y tế
@@ -60,7 +60,7 @@ vi:
         long: Tài khoản tiết kiệm cá nhân
       lisa:
         short: LISA
-        long: Lifetime ISA
+        long: "ISA trọn đời"
       sipp:
         short: SIPP
         long: Quỹ hưu trí cá nhân tự quản
@@ -181,7 +181,7 @@ vi:
         short: Vàng
         long: Vàng (vật chất hoặc kỹ thuật số)
       angel:
-        short: Angel
+        short: "Đầu tư thiên thần"
         long: Đầu tư thiên thần
       trust:
         short: Quỹ tín thác
@@ -189,6 +189,9 @@ vi:
       other:
         short: Khác
         long: Đầu tư khác
+      cash_management:
+        long: Tài khoản quản lý tiền mặt
+        short: CMA
     value_tooltip:
       cash: Tiền mặt
       holdings: Danh mục nắm giữ

@@ -1,0 +1,22 @@
+---
+hu:
+  goal_pledges:
+    create:
+      success: A vállalás rögzítve. A Sure a következő szinkronizáláskor igazolja vissza.
+    destroy:
+      not_open: Csak nyitott vállalás mondható le.
+      success: Vállalás lemondva.
+    new:
+      account_label: Erre a számlára
+      amount_label: Összeg
+      helper_manual: A Sure a következő kézi egyenlegmódosításkor rögzíti ezt, és visszaigazolja a hozzájárulást.
+      helper_transfer: >-
+        A Sure megfelelő befizetést keres az összekapcsolt számládon. A vállalás 7 napig függőben marad,
+        és automatikusan visszaigazolódik, amikor a Sure felismeri a befizetést.
+      preview_nonzero: 'Eléri a(z) {percent}%-ot: {newTotal} a(z) {target} célösszegből.'
+      preview_reached: Eléri a(z) {target} célösszeget. Cél teljesítve.
+      preview_zero: Jelenleg {current} van megtakarítva a(z) {target} célösszegből.
+      submit: Vállalás rögzítése
+    renew:
+      not_open: Csak nyitott vállalás hosszabbítható meg.
+      success: A vállalás időablaka 7 nappal meghosszabbítva.

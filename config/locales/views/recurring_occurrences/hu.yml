@@ -1,0 +1,54 @@
+---
+hu:
+  recurring_occurrences:
+    history_status:
+      missed: Elmulasztva
+      paid: Kifizetve
+      scheduled: Nyitott
+      skipped: Kihagyva
+    mark_paid:
+      success: A kötelezettség kifizetettként megjelölve
+    override_amount:
+      success: Várható összeg frissítve
+    reopen:
+      success: A kötelezettség újranyitva
+    show:
+      add_heading: Újabb fizetés hozzáadása
+      cant_find: Nem találod a tranzakciót?
+      due_on: 'Esedékes: %{date}'
+      find_heading: Fizetés keresése
+      link_payment: Fizetés összekapcsolása
+      manual_amount_label: Összeg
+      manual_date_label: Dátum
+      manual_explainer: Rögzíts egy biztosan megtörtént fizetést, ha itt egyik tranzakció sem felel meg
+        neki.
+      manual_payment: Kézzel rögzített fizetés
+      mark_paid: Megjelölés kifizetettként
+      mark_paid_hint: Tranzakció rögzítése nélkül rendezi a fennmaradó összeget.
+      missed: Elmulasztottként megjelölve
+      no_candidates: Nincs közeli dátumú, összekapcsolható tranzakció.
+      no_ranked_candidates: Itt még semmi sem tűnik ehhez a kötelezettséghez tartozó fizetésnek.
+      no_search_results: 'Nincs találat erre: %{query}.'
+      not_this_one: Nem ez az
+      other_matches: További valószínű egyezések
+      overpaid: a vártnál több
+      paid_headline: "%{amount} kifizetve"
+      paid_of: "%{paid} kifizetve a várt %{expected} összegből"
+      payments: Fizetések
+      record_payment: Fizetés rögzítése
+      remaining: "%{amount} fennmaradó"
+      reopen: Újranyitás
+      review_heading: Fizetés áttekintése
+      search_all: Keresés az összes tranzakcióban
+      search_placeholder: Tranzakciók keresése
+      settled: Teljesen kifizetve
+      skip: Kihagyás
+      skipped: Kihagyva
+      snooze_week: Halasztás egy héttel
+      unlink: Szétkapcsolás
+      view_bill: Teljes kötelezettség megtekintése
+    skip:
+      success: A kötelezettség kihagyva
+    snooze:
+      invalid_date: Nem sikerült értelmezni a dátumot
+      success: 'Elhalasztva eddig: %{date}'

@@ -1,0 +1,15 @@
+---
+hu:
+  recurring_allocations:
+    already_allocated: Ez a tranzakció már hozzá van rendelve ehhez a kötelezettséghez
+    confirm:
+      success: Fizetés hozzárendelve a kötelezettséghez
+    create:
+      success: Fizetés hozzárendelve
+    destroy:
+      success: Fizetés leválasztva
+    invalid: Nem sikerült rögzíteni a fizetést
+    missing_rate: Nincs elérhető árfolyam; add meg az összeget közvetlenül
+    over_allocation: Ez a tranzakció összegénél többet rendelne hozzá
+    reject:
+      success: Elutasítva. Ezt a tranzakciót többé nem javasoljuk ehhez a kötelezettséghez.

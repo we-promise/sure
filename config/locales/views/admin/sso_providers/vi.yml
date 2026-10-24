@@ -37,9 +37,11 @@ vi:
       new:
         title: "Thêm nhà cung cấp SSO"
         description: "Cấu hình nhà cung cấp xác thực đăng nhập một lần mới"
+        provider_configuration: Cấu hình nhà cung cấp
       edit:
         title: "Chỉnh sửa nhà cung cấp SSO"
         description: "Cập nhật cấu hình cho %{label}"
+        provider_configuration: Cấu hình nhà cung cấp
       create:
         success: "Nhà cung cấp SSO đã được tạo thành công."
       update:
@@ -75,11 +77,11 @@ vi:
         issuer_label: "URL nhà phát hành"
         issuer_placeholder: "https://your-idp.example.com/realms/your-realm"
         issuer_help: "URL nhà phát hành OIDC (xác thực .well-known/openid-configuration)"
-        client_id_label: "Client ID"
-        client_id_placeholder: "your-client-id"
+        client_id_label: "ID ứng dụng (Client ID)"
+        client_id_placeholder: "ID ứng dụng của bạn"
         client_id_help: "OAuth client ID từ nhà cung cấp danh tính của bạn"
-        client_secret_label: "Client Secret"
-        client_secret_placeholder_new: "your-client-secret"
+        client_secret_label: "Mã bí mật ứng dụng (Client Secret)"
+        client_secret_placeholder_new: "Mã bí mật ứng dụng của bạn"
         client_secret_placeholder_existing: "••••••••"
         client_secret_help: "OAuth client secret (được mã hóa trong cơ sở dữ liệu)"
         client_secret_help_existing: "Để trống để giữ nguyên secret hiện tại"

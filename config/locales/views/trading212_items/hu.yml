@@ -1,0 +1,104 @@
+---
+hu:
+  providers:
+    trading212:
+      connection_description: Trading 212 befektetési számla összekapcsolása API-kulccsal
+      institution_name: Trading 212
+      name: Trading 212
+  trading212_items:
+    complete_account_setup:
+      none_created: Nem jött létre számla.
+      none_selected: Nem lett számla kijelölve.
+      success:
+        one: "%{count} Trading 212-számla sikeresen létrehozva."
+        other: "%{count} Trading 212-számla sikeresen létrehozva."
+    create:
+      success: A Trading 212 sikeresen beállítva.
+    defaults:
+      name: Trading 212
+    destroy:
+      success: A Trading 212-kapcsolat törlése ütemezve.
+    link_existing_account:
+      already_linked: Ez a Trading 212-számla már össze van kapcsolva.
+      failed: Nem sikerült összekapcsolni a Trading 212-számlát.
+      not_found: A számla vagy a Trading 212 beállításai nem találhatók.
+      only_manual_investment: Csak kézzel kezelt befektetési számlák kapcsolhatók a Trading 212-höz.
+      success: A Trading 212-számla sikeresen összekapcsolva.
+    select_accounts:
+      not_configured: A Trading 212 nincs beállítva.
+    select_existing_account:
+      balance: Egyenleg
+      cancel: Mégse
+      link: Összekapcsolás
+      no_accounts_available: Még nincs összekapcsolásra váró Trading 212-számla.
+      run_sync_hint: Az API-kulcs mentése után indíts szinkronizálást a Beállítások > Szolgáltatók oldalon.
+      title: Trading 212-számla összekapcsolása
+      wait_for_sync: Várd meg, amíg a számlafelderítési szinkronizálás befejeződik.
+    setup_accounts:
+      available_accounts:
+        account_id: 'Számlaazonosító: %{account_id}'
+        account_summary: "%{account_type} • Egyenleg: %{balance}"
+        account_type_investment: Befektetés
+        title: Elérhető számla
+      buttons:
+        back_to_settings: Vissza a beállításokhoz
+        cancel: Mégse
+        create_selected_accounts: Kijelölt számlák létrehozása
+        done: Kész
+        link: Összekapcsolás
+        refresh: Frissítés
+      dialog_title: Trading 212-számlád beállítása
+      info_box:
+        items:
+          item_1: Aktuális pozíciók árfolyamokkal és mennyiségekkel
+          item_2: Teljes megbízási előzmény (vételek és eladások)
+          item_3: Osztalékok és pénzmozgások
+        title: Trading 212 API-importálás
+      link_existing:
+        description: Vagy kapcsold a felismert Trading 212-számlát egy meglévő, kézzel kezelt befektetési
+          számlához.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Válassz számlát...
+      linked_accounts:
+        linked_to_html: 'Összekapcsolva: %{account}'
+        title: Már összekapcsolt
+      page_title: Trading 212-számla beállítása
+      status:
+        fetching_accounts: Számla lekérése a Trading 212-től…
+        no_accounts_found_description: A Sure nem talált Trading 212-számlát. Ellenőrizd az API-kulcs
+          érvényességét.
+        no_accounts_found_title: Nem található számla.
+      subtitle: Kapcsold össze Trading 212 befektetési számládat.
+    sync:
+      status:
+        accounts_need_setup:
+          one: 1 Trading 212-számla beállításra vár…
+          other: "%{count} Trading 212-számla beállításra vár…"
+        calculating_balances: Egyenlegek kiszámítása...
+        checking_configuration: Számlakonfiguráció ellenőrzése...
+        checking_credentials: Trading 212 hitelesítési adatainak ellenőrzése…
+        importing_account: Trading 212-számla importálása…
+        processing_activity: Pozíciók és tevékenységek feldolgozása...
+    sync_status:
+      all_linked:
+        one: 1 számla összekapcsolva
+        other: "%{count} számla összekapcsolva"
+      no_accounts: Még nincs felismert Trading 212-számla
+      partial: "%{linked} összekapcsolt, %{unlinked} beállítást igényel"
+    trading212_item:
+      accounts_need_setup: A számlát be kell állítani
+      accounts_need_setup_description: A Trading 212-számládat egy Sure-számlához kell kapcsolni.
+      delete: Törlés
+      deletion_in_progress: Törlés folyamatban
+      environment_label_demo: Demószámla
+      environment_label_live: Éles számla
+      error: Hiba
+      never_synced: Még nem szinkronizált.
+      no_accounts_discovered: Még nincs felismert Trading 212-számla.
+      no_accounts_discovered_description: Az API-kulcs mentése után indíts szinkronizálást a számla felderítéséhez.
+      requires_update: Az API-kulcs ellenőrzést igényel
+      setup_accounts: Számlák beállítása
+      synced: Szinkronizálva %{time} ezelőtt. %{summary}.
+      syncing: Szinkronizálás
+    update:
+      success: A Trading 212 beállításai sikeresen frissítve.

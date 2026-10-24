@@ -134,6 +134,8 @@ vi:
       all_accounts_already_linked: Tất cả tài khoản SimpleFIN có vẻ đã được liên kết.
       currently_linked_to: "Hiện đang liên kết với: %{account_name}"
 
+      check_provider_health: Kiểm tra kết nối SimpleFIN hoạt động tốt trong Cài đặt → Nhà
+        cung cấp.
     link_existing_account:
       success: Tài khoản đã được liên kết thành công với SimpleFIN
       errors:
@@ -157,3 +159,24 @@ vi:
       message:
         one: "%{count} giao dịch đang chờ cũ hơn %{days} ngày"
         other: "%{count} giao dịch đang chờ cũ hơn %{days} ngày"
+    institution_summary:
+      count:
+        one: "%{count} tổ chức"
+        other: "%{count} tổ chức"
+      none: Chưa kết nối tổ chức nào
+    rate_limited:
+      daily_refresh: Bạn đã đạt giới hạn làm mới hằng ngày của SimpleFIN. Hãy thử lại
+        sau khi cầu nối làm mới (tối đa 24 giờ).
+    stale_sync:
+      last_successful: Lần đồng bộ thành công gần nhất là %{count} ngày trước. Có thể
+        cần kiểm tra kết nối SimpleFIN.
+      no_transactions: Không có giao dịch mới trong %{count} ngày. Kiểm tra bảng điều
+        khiển SimpleFIN để bảo đảm các kết nối ngân hàng vẫn hoạt động.
+    sync_status:
+      no_accounts: Không tìm thấy tài khoản
+      partial_setup:
+        one: Đã đồng bộ %{linked}, cần thiết lập %{unlinked}
+        other: Đã đồng bộ %{linked}, cần thiết lập %{unlinked}
+      synced:
+        one: Đã đồng bộ %{count} tài khoản
+        other: Đã đồng bộ %{count} tài khoản

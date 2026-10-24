@@ -1,0 +1,132 @@
+---
+hu:
+  insights:
+    actions:
+      budget: Költségvetés megtekintése
+      cash_flow_warning: Ismétlődő tranzakciók áttekintése
+      idle_cash: Ugrás a számlához
+      maintained_goal_depleted: Tartalék megtekintése
+      net_worth_milestone: Nettó vagyon jelentésének megtekintése
+      savings_rate_change: Az adott hónap tranzakcióinak megtekintése
+      spending_anomaly: A(z) %{category} kategória tranzakcióinak megtekintése
+      subscription_audit: Ismétlődő tranzakciók áttekintése
+    card:
+      acknowledge: Rendben
+      acknowledge_title: Elrejtés az adatok változásáig
+      acknowledged: Megállapítás elrejtve
+      new: Új
+    feed:
+      acknowledge_aria: 'Rendben: %{title}'
+      header: Legfrissebb
+      header_new: Új
+      view_all: Összes megállapítás megtekintése
+    figures:
+      days_overdue:
+        one: "%{count} napos késedelem"
+        other: "%{count} napja lejárt"
+      idle_days:
+        one: "%{count} napja nincs mozgás"
+        other: "%{count} napja nincs mozgás"
+      need_attention: figyelmet igényel
+      of_budget: a költségvetésből
+      on_pace: terv szerint
+      today: ma
+      vs_previous: az előző hónaphoz képest
+    index:
+      empty:
+        description: >-
+          A megállapítások akkor jelennek meg itt, amikor már elegendő számlaművelet áll rendelkezésre.
+          Minden éjjel automatikusan frissülnek.
+        title: Még nincs megállapítás
+      refresh: Új megállapítások keresése
+      subtitle: Pénzügyeid alakulása, minden éjjel frissítve.
+      title: Megállapítások
+    meta:
+      date_range: "%{from} – %{to}"
+      last_n_days:
+        one: Az elmúlt nap
+        other: Az elmúlt %{count} nap
+      next_n_days:
+        one: A következő nap
+        other: A következő %{count} nap
+    notification:
+      body: Nyisd meg a Sure-t a legújabb, MI által készített megállapítás áttekintéséhez.
+      title: Új pénzügyi megállapítás
+    refresh:
+      checking: Ellenőrzés…
+      queued: Új megállapításokat készítünk. Nézz vissza egy perc múlva.
+    templates:
+      budget_at_risk:
+        near: >-
+          Ebben a hónapban ezek a kategóriák közel járnak a keretükhöz: %{categories}. Eddig a teljes
+          költségvetésed %{budget_spent_pct}%-át használtad fel.
+        over: >-
+          Ebben a hónapban ezek a kategóriák túllépték a keretüket: %{categories}. Eddig a teljes költségvetésed
+          %{budget_spent_pct}%-át használtad fel.
+      budget_on_track: >-
+        A(z) %{budgeted} költségvetésből %{spent} összeget költöttél (%{budget_spent_pct}%), és minden
+        kategória a keretén belül van.
+      cash_flow_warning:
+        low: >-
+          A közelgő ismétlődő tranzakcióid és a szokásos kiadásaid alapján a pénzegyenleged %{projected_low_date}
+          körül %{projected_low} összegre csökkenhet.
+        negative: >-
+          A közelgő ismétlődő tranzakcióid és a szokásos kiadásaid alapján a pénzegyenleged %{projected_low_date}
+          körül %{projected_low} összegre eshet.
+      idle_cash: >-
+        A(z) %{account} számlán %{balance} található, és az elmúlt %{idle_days} napban nem történt rajta
+        mozgás.
+      maintained_goal_depleted: >-
+        A(z) %{goal} célban a fenntartandó %{target} összegből %{saved} áll rendelkezésre. Még %{missing}
+        hiányzik.
+      net_worth_milestone: A nettó vagyonod átlépte a(z) %{milestone} határt, és most %{net_worth}.
+      savings_rate_change:
+        down: >-
+          Ebben a hónapban (%{month}) a jövedelmed %{current_rate}%-át takarítottad meg. Ez %{change_pp}
+          százalékponttal kevesebb az előző havi %{previous_rate}%-nál.
+        down_negative: >-
+          Ebben a hónapban (%{month}) többet költöttél, mint amennyit kerestél: a megtakarítási rátád
+          az előző havi %{previous_rate}%-ról %{current_rate}%-ra esett.
+        up: >-
+          Ebben a hónapban (%{month}) a jövedelmed %{current_rate}%-át takarítottad meg. Ez %{change_pp}
+          százalékponttal több az előző havi %{previous_rate}%-nál.
+      spending_anomaly:
+        above: >-
+          A jelenlegi ütem mellett ebben a hónapban várhatóan %{projected_spend} lesz a(z) %{category}
+          kategória kiadása, ami körülbelül %{deviation_pct}%-kal több a közelmúlt %{baseline_spend} havi
+          átlagánál.
+        below: >-
+          A jelenlegi ütem mellett ebben a hónapban várhatóan %{projected_spend} lesz a(z) %{category}
+          kategória kiadása, ami körülbelül %{deviation_pct}%-kal kevesebb a közelmúlt %{baseline_spend}
+          havi átlagánál.
+      subscription_audit: >-
+        A(z) %{name} (%{amount}) nem jelent meg a várt %{expected_on} dátum óta. Lehetséges, hogy lemondtad,
+        vagy megváltozott a terhelés időpontja.
+    titles:
+      budget_at_risk:
+        one: Egy kategória figyelmet igényel a költségvetésedben
+        other: "%{count} kategória figyelmet igényel a költségvetésedben"
+      budget_on_track: A költségvetésed a terv szerint alakul
+      cash_flow_warning:
+        low: A pénzegyenleged alacsonyra csökkenhet
+        negative: A pénzegyenleged negatívba fordulhat
+      idle_cash: Tétlen pénz a(z) %{account} számlán
+      maintained_goal_depleted: A(z) %{goal} a kívánt szint alá csökkent
+      net_worth_milestone: 'Nettó vagyon mérföldköve: %{milestone}'
+      savings_rate_change:
+        down: 'A megtakarítási rátád csökkent ebben a hónapban: %{month}'
+        up: 'A megtakarítási rátád javult ebben a hónapban: %{month}'
+      spending_anomaly:
+        above: A(z) %{category} kiadásai emelkedő tendenciát mutatnak
+        below: A(z) %{category} kiadásai csökkenő tendenciát mutatnak
+      subscription_audit: Még aktív a(z) %{name}?
+    types:
+      budget_at_risk: Költségvetés
+      budget_on_track: Költségvetés
+      cash_flow_warning: Pénzáramlás
+      idle_cash: Tétlen pénz
+      maintained_goal_depleted: Tartalék
+      net_worth_milestone: Nettó vagyon
+      savings_rate_change: Megtakarítási ráta
+      spending_anomaly: Kiadások
+      subscription_audit: Előfizetések

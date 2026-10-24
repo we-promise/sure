@@ -1,0 +1,107 @@
+---
+vi:
+  providers:
+    trading212:
+      connection_description: Kết nối tài khoản đầu tư Trading 212 bằng khóa API
+      institution_name: Trading 212
+      name: Trading 212
+  trading212_items:
+    complete_account_setup:
+      none_created: Không tạo tài khoản nào.
+      none_selected: Chưa chọn tài khoản nào.
+      success:
+        one: Đã tạo thành công %{count} tài khoản Trading 212.
+        other: Đã tạo thành công %{count} tài khoản Trading 212.
+    create:
+      success: Đã cấu hình Trading 212 thành công.
+    defaults:
+      name: Trading 212
+    destroy:
+      success: Đã lên lịch xóa kết nối Trading 212.
+    link_existing_account:
+      already_linked: Tài khoản Trading 212 này đã được liên kết.
+      failed: Không thể liên kết tài khoản Trading 212.
+      not_found: Không tìm thấy tài khoản hoặc cấu hình Trading 212.
+      only_manual_investment: Chỉ tài khoản đầu tư thủ công mới có thể liên kết với
+        Trading 212.
+      success: Đã liên kết với tài khoản Trading 212 thành công.
+    select_accounts:
+      not_configured: Chưa cấu hình Trading 212.
+    select_existing_account:
+      balance: Số dư
+      cancel: Hủy
+      link: Liên kết
+      no_accounts_available: Chưa có tài khoản Trading 212 chưa liên kết nào khả dụng.
+      run_sync_hint: Chạy đồng bộ từ Cài đặt > Nhà cung cấp sau khi lưu khóa API.
+      title: Liên kết tài khoản Trading 212
+      wait_for_sync: Chờ quá trình đồng bộ tìm tài khoản hoàn tất.
+    setup_accounts:
+      available_accounts:
+        account_id: 'ID tài khoản: %{account_id}'
+        account_summary: "%{account_type} • Số dư: %{balance}"
+        account_type_investment: Đầu tư
+        title: Tài khoản khả dụng
+      buttons:
+        back_to_settings: Quay lại Cài đặt
+        cancel: Hủy
+        create_selected_accounts: Tạo tài khoản đã chọn
+        done: Xong
+        link: Liên kết
+        refresh: Làm mới
+      dialog_title: Thiết lập tài khoản Trading 212
+      info_box:
+        items:
+          item_1: Vị thế hiện tại với giá và số lượng
+          item_2: Toàn bộ lịch sử lệnh (mua và bán)
+          item_3: Cổ tức và giao dịch tiền mặt
+        title: Nhập qua API Trading 212
+      link_existing:
+        description: Hoặc liên kết tài khoản Trading 212 đã tìm thấy với tài khoản
+          đầu tư thủ công hiện có.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Chọn tài khoản...
+      linked_accounts:
+        linked_to_html: 'Đã liên kết với: %{account}'
+        title: Đã liên kết
+      page_title: Thiết lập tài khoản Trading 212
+      status:
+        fetching_accounts: Đang lấy tài khoản từ Trading 212...
+        no_accounts_found_description: Sure không tìm thấy tài khoản Trading 212.
+          Hãy kiểm tra khóa API còn hợp lệ.
+        no_accounts_found_title: Không tìm thấy tài khoản.
+      subtitle: Liên kết tài khoản đầu tư Trading 212.
+    sync:
+      status:
+        accounts_need_setup:
+          one: 1 tài khoản Trading 212 cần thiết lập...
+          other: "%{count} tài khoản Trading 212 cần thiết lập..."
+        calculating_balances: Đang tính số dư...
+        checking_configuration: Đang kiểm tra cấu hình tài khoản...
+        checking_credentials: Đang kiểm tra thông tin xác thực Trading 212...
+        importing_account: Đang nhập tài khoản Trading 212...
+        processing_activity: Đang xử lý vị thế và hoạt động...
+    sync_status:
+      all_linked:
+        one: Đã liên kết 1 tài khoản
+        other: Đã liên kết %{count} tài khoản
+      no_accounts: Chưa tìm thấy tài khoản Trading 212
+      partial: Đã liên kết %{linked}, cần thiết lập %{unlinked}
+    trading212_item:
+      accounts_need_setup: Tài khoản cần thiết lập
+      accounts_need_setup_description: Tài khoản Trading 212 cần được liên kết với
+        tài khoản Sure.
+      delete: Xóa
+      deletion_in_progress: Đang xóa
+      environment_label_demo: Tài khoản demo
+      environment_label_live: Tài khoản thực
+      error: Lỗi
+      never_synced: Chưa từng đồng bộ.
+      no_accounts_discovered: Chưa tìm thấy tài khoản Trading 212.
+      no_accounts_discovered_description: Chạy đồng bộ sau khi lưu khóa API để tìm
+        tài khoản.
+      requires_update: Cần kiểm tra khóa API
+      setup_accounts: Thiết lập tài khoản
+      synced: Đã đồng bộ %{time} trước. %{summary}.
+      syncing: Đang đồng bộ
+    update:
+      success: Đã cập nhật cấu hình Trading 212 thành công.

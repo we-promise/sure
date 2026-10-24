@@ -38,6 +38,7 @@ vi:
       delete_all: Xóa tất cả
       empty: Không tìm thấy danh mục
       new: Danh mục mới
+      merge: Hợp nhất danh mục
     menu:
       loading: Đang tải...
     new:
@@ -48,6 +49,24 @@ vi:
       transfer: Chuyển khoản
       payment: Thanh toán
       trade: Giao dịch chứng khoán
+    merge:
+      description: Chọn danh mục đích và các danh mục cần hợp nhất vào đó. Giao dịch và
+        dòng ngân sách tương ứng sẽ chuyển sang danh mục đích.
+      select_target: Chọn danh mục đích...
+      sources_hint: Các danh mục đã chọn sẽ bị xóa sau khi giao dịch và dòng ngân sách
+        chuyển sang danh mục đích. Không chọn danh mục đích làm nguồn.
+      sources_label: Danh mục cần hợp nhất
+      submit: Hợp nhất mục đã chọn
+      target_label: Hợp nhất vào (đích)
+      title: Hợp nhất danh mục
+    perform_merge:
+      invalid_categories: Đã chọn danh mục không hợp lệ
+      no_categories_selected: Chưa chọn danh mục để hợp nhất
+      success:
+        one: Đã hợp nhất thành công %{count} danh mục
+        other: Đã hợp nhất thành công %{count} danh mục
+      target_not_found: Không tìm thấy danh mục đích
+      target_selected_as_source: Chọn danh mục đích và nguồn khác nhau.
   category:
     dropdowns:
       show:

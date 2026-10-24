@@ -1,0 +1,334 @@
+---
+hu:
+  bills:
+    add_bill: Fizetési kötelezettség hozzáadása
+    add_payment: Fizetés hozzáadása
+    ai_prompts:
+      due_before_paycheck: Mi esedékes a következő fizetésem előtt?
+      monthly_subscriptions: Mennyit fizetek havonta az előfizetésekért?
+      safe_to_spend: Mennyit költhetek el biztonságosan ebben az időszakban?
+      subscriptions_up: Mely előfizetések drágultak idén?
+    all:
+      any_status: Bármely állapot
+      any_type: Bármely típus
+      col_actions: Műveletek
+      col_amount: Összeg
+      col_frequency: Gyakoriság
+      col_name: Név
+      col_next: Következő esedékesség
+      col_status: Állapot
+      col_type: Típus
+      monthly_equivalent: "%{amount}/hó"
+      next_short: 'következő: %{date}'
+      no_matches_description: Próbálj meg törölni egy szűrőt vagy a keresést.
+      no_matches_title: Nincs találat
+      search_placeholder: Fizetési kötelezettségek keresése
+      sort_amount: Összeg szerint
+      sort_due: Következő esedékesség szerint
+      sort_name: Név szerint
+      status_filters:
+        due: Hamarosan esedékes
+        ended: Elvetett
+        overdue: Lejárt
+        paid: Kifizetve
+        partial: Részben kifizetve
+        paused: Szüneteltetve
+      subscription_active: Aktív
+      subscription_annual: Évente
+      subscription_monthly: Havonta
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
+      subscription_price_changes: Idei árváltozások
+      types:
+        bill: Fizetési kötelezettség
+        income: Bevétel
+        installment: Részletfizetés
+        other: Egyéb
+        subscription: Előfizetés
+        transfer: Átutalás
+    amount_range: "%{min} és %{max} között"
+    attention:
+      amount_changed: Az összeg megváltozott
+      needs_review: Az egyeztetés ellenőrzést igényel
+      overdue:
+        one: 1 napja lejárt
+        other: "%{count} napja lejárt"
+      partial: Részben fizetve · %{amount} hátralék
+    calendar:
+      empty_month: Ebben a hónapban nincs esedékes fizetési kötelezettség.
+      month_totals: "%{expected} várható · %{paid} kifizetve"
+      next_month: Következő hónap
+      previous_month: Előző hónap
+      reset_feed: Hivatkozás megújítása
+      subscribe_ical: Feliratkozás (iCal)
+      today: Ma
+    cancelled_still_scheduled: >-
+      Ezt %{date} napján lemondottnak jelölted, de az ütemezése még aktív, így a későbbi esedékességek
+      továbbra is megjelennek.
+    debt_payment: "· adósságtörlesztés"
+    detail:
+      annualized: Évente
+      around: "%{date} körül"
+      average: Átlagosan fizetve
+      avg_payment: Átlagos fizetés
+      cancelled_chip: 'Lemondva: %{date}'
+      current: Jelenlegi
+      history: Előzmények
+      history_aria: Az elmúlt tizenkét hónap fizetései
+      history_title: Elmúlt 12 hónap
+      key_metrics: Évente
+      last_account: Legutóbb használt számla
+      manual_payment: Kézzel rögzített fizetés
+      next_payment: Következő fizetés
+      notes: Megjegyzések
+      payment_count:
+        one: 1 fizetés
+        other: "%{count} fizetés"
+      price_change_line: "%{from} → %{to}"
+      price_changes: Árváltozások
+      range: "%{min}–%{max}"
+      recent_payments: Legutóbbi fizetések
+      renews_chip: 'Megújul: %{date}'
+      rule_aliases: 'Ezekkel is egyezik: %{names}'
+      rule_amount_range: "%{min} és %{max} között"
+      rule_learned_tolerance: A szokásos összegtől legfeljebb %{percent} eltérő összegek ehhez a kötelezettséghez
+        illeszkednek
+      rule_named: "%{name}"
+      rules: A fizetési kötelezettség egyeztetésének módja
+      spent_per_year: Elköltve
+      trial_chip: 'A próbaidő vége: %{date}'
+      upcoming: Közelgő
+      year: Év
+      ytd: Idén kifizetve
+    detect:
+      already_running: A felismerés már fut. Nézz vissza egy kicsit később.
+      found:
+        one: 1 lehetséges fizetési kötelezettséget találtunk. Ellenőrizd alább.
+        other: "%{count} lehetséges fizetési kötelezettséget találtunk. Ellenőrizd őket alább."
+      none_found: Nem találtunk új ismétlődő mintát. Kézzel is hozzáadhatsz fizetési kötelezettségeket.
+    due_label:
+      due_since: 'Esedékes: %{date}'
+      overdue:
+        one: 1 napja lejárt, esedékessége %{date} volt
+        other: "%{count} napja lejárt, esedékessége %{date} volt"
+      settled: Esedékessége %{date} volt
+      snoozed: 'Elhalasztva eddig: %{date}'
+      today: Ma esedékes
+      upcoming:
+        one: 'Holnap esedékes: %{date}'
+        other: "%{count} nap múlva esedékes: %{date}"
+    feed:
+      calendar_name: Sure fizetési kötelezettségek
+    find_payment: Fizetés keresése
+    index:
+      accept: Alkalmazás
+      add_bill: Fizetési kötelezettség hozzáadása
+      add_income: Bevétel hozzáadása
+      all_automatic: mind automatikus fizetéssel
+      attention_overdue_total: "%{amount} lejárt tartozás"
+      confidence: "%{percent}% egyezés"
+      detected_review:
+        one: >-
+          1 ismétlődő fizetést találtunk a tranzakcióid között. Ellenőrizd, hogy az itt szereplő összegek
+          a tényleges fizetéseidet tükrözzék.
+        other: >-
+          %{count} ismétlődő fizetést találtunk a tranzakcióid között. Ellenőrizd őket, hogy az itt szereplő
+          összegek a tényleges fizetéseidet tükrözzék.
+      detected_review_action: Ellenőrzés
+      dormant: Szunnyadó
+      empty:
+        action: Ismétlődő tranzakciók keresése
+        description: >-
+          A fizetési kötelezettségek az ismétlődő kiadásaid. A Sure automatikusan felismeri őket a tranzakciós
+          előzményeidből. Mindegyikhez hozzáadhatsz fizetési hivatkozást, így közvetlenül innen fizethetsz.
+        no_history_description: >-
+          Még nincsenek tranzakciók. Csatlakoztass egy számlát vagy importálj előzményeket, és a Sure
+          automatikusan megkeresi a fizetési kötelezettségeidet. Kézzel is hozzáadhatod őket.
+        title: Még nincsenek fizetési kötelezettségek
+      hero_next_seven: "%{amount} esedékes a következő 7 napban"
+      hero_past_due: "%{amount} lejárt tartozás"
+      kpi_next_seven: A következő 7 napban esedékes
+      kpi_paid: Ebben a hónapban kifizetve
+      kpi_past_due: Lejárt határidejű
+      kpi_remaining: Ebben a hónapban fennmaradó
+      later: E hónap után
+      left_to_pay: még fizetendő
+      needs_action_count:
+        one: 1 teendőd van
+        other: "%{count} teendőd van"
+      needs_attention: Figyelmet igényel
+      needs_review: Ellenőrzést igényel
+      notice_price: 'A(z) %{name} ára megváltozott: %{from} → %{to} (%{percent})'
+      notice_renewal: 'A(z) %{name} megújulása: %{date}'
+      notice_trial: 'A(z) %{name} próbaidejének vége: %{date}'
+      notices_routine:
+        one: 1 kisebb változás
+        other: "%{count} kisebb változás"
+      overdue: Lejárt
+      paid_count:
+        one: 1 fizetési kötelezettség rendezve
+        other: "%{count} fizetési kötelezettség rendezve"
+      paid_so_far: Eddig kifizetve
+      paid_this_month: Ebben a hónapban kifizetve
+      recurring_annual: Évente %{amount}
+      recurring_label: Rendszeres kötelezettség
+      recurring_monthly: Havonta %{amount}
+      reject: Nem ehhez tartozik
+      review_with_ai: Ellenőrzés MI-vel
+      suggestion_line: A(z) %{entry} a(z) %{bill} kifizetésének tűnik
+      suggestion_unknown_entry: Egy tranzakció
+      summary_count:
+        one: 1 fizetési kötelezettség esedékes
+        other: "%{count} fizetési kötelezettség esedékes"
+      summary_label: Ebben a hónapban esedékes
+      summary_needs_action:
+        one: 1 teendőd van
+        other: "%{count} teendőd van"
+      this_month: Ez a hónap
+      title: Fizetési kötelezettségek
+      unconvertible:
+        one: 1 fizetési kötelezettség kimaradt, mert nincs hozzá elérhető árfolyam
+        other: "%{count} fizetési kötelezettség kimaradt, mert nincs hozzá elérhető árfolyam"
+    installment_progress: "%{done_plus_one}. fizetés, összesen %{total}"
+    manage: Kezelés
+    manage_payments: Fizetések kezelése
+    match:
+      amount_off: "%{amount} eltérés"
+      days_after:
+        one: 1 nappal az esedékesség után
+        other: "%{count} nappal az esedékesség után"
+      days_before:
+        one: 1 nappal az esedékesség előtt
+        other: "%{count} nappal az esedékesség előtt"
+      due_date: Az esedékességi dátum egyezik
+      exact_amount: Pontos összeg
+      name_matches: A név egyezik
+      same_merchant: Azonos kereskedő
+    month_pulse:
+      bill_count:
+        one: 1 fizetési kötelezettség
+        other: "%{count} fizetési kötelezettség"
+      date_today: Ma
+      date_tomorrow: Holnap
+      left_to_pay: még fizetendő
+      next_up: Következő
+      pulse_bar_aria: Az e havi fizetési kötelezettségek %{percent}%-a kifizetve
+      pulse_next_seven: következő 7 nap
+      pulse_overdue: lejárt
+      pulse_paid: kifizetve
+      unconvertible:
+        one: 1 fizetési kötelezettség kimaradt, mert nincs hozzá elérhető árfolyam
+        other: "%{count} fizetési kötelezettség kimaradt, mert nincs hozzá elérhető árfolyam"
+      view_calendar: Naptár megtekintése
+    paid_from: 'Erről a számláról: %{account}'
+    paid_label: Kifizetve
+    paid_over: "%{paid} kifizetve, a vártnál több"
+    paid_over_short: Kifizetve, túlfizetéssel
+    pane:
+      close: Részletek összecsukása
+    partial_progress: "%{paid} kifizetve a várt %{expected} összegből"
+    pay_period:
+      before_next_paycheck: A következő fizetésed előtt
+      due_before_date: "%{amount} esedékes %{date} előtt"
+      paycheck_on: 'Fizetésnap: %{date}'
+    paycheck:
+      add_income: Bevétel hozzáadása
+      all_clear:
+        description: >-
+          Most és %{date} között nincs esedékes fizetési kötelezettség, így erre az időszakra nincs lekötött
+          összeg.
+        title: Nincs fedezendő kötelezettség
+      allocation_aria: >-
+        A(z) %{income} bevételből %{due} most esedékes, %{reserved} későbbre elkülönítve, %{safe} pedig
+        biztonságosan elkölthető.
+      allocation_aria_short: A(z) %{income} bevétel az itt szereplő kötelezettségekre megy, és még %{short}
+        szükséges.
+      before_next_paycheck: "%{date} előtt"
+      bills_before_payday:
+        one: Kötelezettségek a következő fizetésnap előtt · 1
+        other: Kötelezettségek a következő fizetésnap előtt · %{count}
+      bills_this_period:
+        one: Kötelezettségek ebben az időszakban · 1
+        other: Kötelezettségek ebben az időszakban · %{count}
+      bridge_amount: "· %{amount} esedékes"
+      bridge_label: A következő fizetésed előtt
+      bridge_split: "%{date} előtt esedékes, a számláidon lévő %{cash} fedezi."
+      due_this_period: Ebben az időszakban esedékes
+      empty:
+        action: Bevétel hozzáadása
+        description: >-
+          Add meg a bevételeidet, hogy lásd, mit kell fedeznie az egyes fizetésnapoknak. Az automatikusan
+          felismert beérkező összegek nem határozzák meg önmagukban a fizetésnapjaidat — azokat te adod
+          meg.
+        title: Add meg a bevételeid ütemezését
+      income_amount: "%{amount} bevétel"
+      income_detected: Automatikusan felismert, nem határoz meg fizetésnapot
+      income_next_payday: 'következő: %{date}'
+      income_paused: Szüneteltetve, nincs betervezve
+      income_section_title: Bevételi ütemezés
+      income_source_count:
+        one: "%{count} bevételi forrás"
+        other: "%{count} bevételi forrás"
+      manage: Kezelés
+      next_on: 'Következő: %{date}'
+      no_income_arriving: Nem érkezik bevétel
+      no_upcoming_income: Innentől nincs ütemezett bevétel.
+      of_total: "%{amount}-ból/ből"
+      period_source: " · %{source}"
+      period_source_multiple: " · %{count} bevételi forrás"
+      reserved_ahead: Előre elkülönítve
+      reserved_footer:
+        one: 1 későbbi fizetési kötelezettségre előre elkülönítve
+        other: "%{count} későbbi fizetési kötelezettségre előre elkülönítve"
+      review_plan: Terv ellenőrzése
+      safe_after_bills: A kötelezettségek után biztonságosan elkölthető
+      safe_short: Elkölthető
+      short_after_bills: A kötelezettségek után hiányzó összeg
+      short_short: Hiány
+      shortfall_amount: "· %{amount}"
+      shortfall_label: Hiány a következő fizetésnap előtt
+      shortfall_largest: 'A legnagyobb közelgő kötelezettség:'
+      shortfall_split: "%{obligations} esedékes %{date} előtt, és a számláidon %{cash} áll rendelkezésre."
+      unconvertible:
+        one: 1 kötelezettség kimaradt, mert nincs hozzá elérhető árfolyam
+        other: "%{count} kötelezettség kimaradt, mert nincs hozzá elérhető árfolyam"
+    possible_duplicate: Lehetséges ismétlődés
+    remaining_label: fennmaradó
+    reset_feed_token:
+      confirm: Megújítod a naptárfolyam hivatkozását? Minden korábban megosztott hivatkozás működése megszűnik.
+      done: >-
+        A naptárfolyam hivatkozása megújult. A régi hivatkozást használó naptáralkalmazások nem frissülnek
+        tovább; iratkozz fel újra az új hivatkozással.
+    resolve: Rendezés
+    review_match: Egyeztetés ellenőrzése
+    row_overdue: Lejárt
+    row_today: Ma
+    show:
+      edit: Fizetési kötelezettség szerkesztése
+    smart_configurations:
+      show:
+        apply: Kijelöltek alkalmazása
+        autopay_off: Ki
+        autopay_on: Be
+        failed: A kötelezettség most nem elemezhető. A beállításai változatlanok maradtak.
+        field_amount: Összeg
+        field_autopay: Automatikus fizetés
+        field_category: Kategória
+        field_kind: Jelleg
+        field_name: Név
+        field_schedule: Ütemezés
+        intro: Jelöld be az alkalmazandó változtatásokat. A be nem jelöltek változatlanok maradnak.
+        no_changes: Ez a kötelezettség már megfelel a fizetési előzményeinek. Nincs mit módosítani.
+        title: 'MI-javaslatok ehhez: %{name}'
+        trigger: Beállítás MI-vel
+        uncategorized: Kategorizálatlan
+    summary:
+      cost_line: Fizetésenként átlagosan %{average}, évente körülbelül %{annualized}
+      paid_headline: "%{amount} kifizetve"
+      remaining: "%{amount} fennmaradó"
+    view_full_bill: Teljes kötelezettség megtekintése
+    views:
+      all: Összes fizetési kötelezettség
+      aria_label: Fizetési kötelezettségek nézetei
+      calendar: Naptár
+      overview: Áttekintés
+      paycheck: Bevételi terv

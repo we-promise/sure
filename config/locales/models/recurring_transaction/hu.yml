@@ -4,4 +4,34 @@ hu:
     errors:
       models:
         recurring_transaction:
-          merchant_or_name_required: "Kereskedőt vagy nevet kötelező megadni"
+          merchant_or_name_required: Kereskedőt vagy nevet kötelező megadni
+          attributes:
+            account:
+              required_for_transfer: ismétlődő átvezetésnél kötelező
+              wrong_family: ehhez a háztartáshoz kell tartoznia
+            anchor_date:
+              required_for_intervals: kötelező, ha a szabály 2 vagy több időszakonként ismétlődik
+            bill_type:
+              transfer_shape_mismatch: csak célszámla megadása esetén lehet átvezetés
+            destination_account:
+              family_mismatch: a forrásszámlával azonos háztartáshoz kell tartoznia
+              same_as_source: nem lehet azonos a forrásszámlával
+              wrong_family: ehhez a háztartáshoz kell tartoznia
+            expected_amount_min:
+              greater_than_max: nem lehet nagyobb a várható legnagyobb összegnél
+            payment_url:
+              invalid_scheme: érvényes http:// vagy https:// címnek kell lennie
+    attributes:
+      recurring_transaction:
+        frequency_interval: Ismétlődési időköz
+        payment_url: Fizetési hivatkozás
+  recurring_transactions:
+    allocator:
+      exceeds_remaining: a(z) %{amount} meghaladja az ebben a ciklusban fennmaradó %{remaining} összeget
+      missing_rate: nincs árfolyam a(z) %{from} és %{to} pénznem között; add meg az összeget közvetlenül
+      over_allocated: a(z) %{amount} hozzárendelése meghaladja a tranzakcióból fennmaradó %{capacity}
+        %{currency} összeget
+      unmeasurable: >-
+        ehhez a tranzakcióhoz olyan összeg van hozzárendelve, amely nem váltható át %{currency} pénznemre,
+        ezért a fennmaradó összeg nem határozható meg. Először adj meg árfolyamot a(z) %{date} napra,
+        vagy távolítsd el a meglévő fizetést

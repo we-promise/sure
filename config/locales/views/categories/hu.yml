@@ -15,8 +15,9 @@ hu:
     form:
       emoji_label: Emodzsi (nem kötelező)
       emoji_placeholder: Illessz be egy emodzsit
-      emoji_help: Válassz vagy illessz be egy teljes emodzsit, akár zászlót vagy családot
-        is. Töröld, ha az ikont szeretnéd használni.
+      emoji_help: >-
+        Válassz vagy illessz be egy teljes emodzsit, akár zászlót vagy családot is. Töröld, ha az ikont
+        szeretnéd használni.
       emoji_clear: Ikon használata
       emoji_pick: "%{emoji} használata"
       placeholder: Kategória neve
@@ -27,6 +28,7 @@ hu:
       color: Szín
       icon: Ikon
       poor_contrast: Gyenge kontraszt, válassz sötétebb színt vagy
+      auto_adjust: automatikus igazítás.
     destroy_all:
       success: Összes kategória törölve
     index:
@@ -37,6 +39,7 @@ hu:
       delete_all: Összes törlése
       empty: Nem található kategória
       new: Új kategória
+      merge: Kategóriák egyesítése
     menu:
       loading: Betöltés...
     new:
@@ -47,6 +50,26 @@ hu:
       transfer: Átutalás
       payment: Fizetés
       trade: Ügylet
+    merge:
+      description: >-
+        Válaszd ki a célkategóriát és az abba beolvasztandó kategóriákat. Az érintett tranzakciók és költségvetési
+        sorok a célkategóriába kerülnek.
+      select_target: Célkategória kiválasztása…
+      sources_hint: >-
+        A kiválasztott kategóriák törlődnek, miután tranzakcióik és költségvetési soraik a célkategóriába
+        kerültek. A célkategóriát ne válaszd ki forrásként.
+      sources_label: Egyesítendő kategóriák
+      submit: Kijelöltek egyesítése
+      target_label: Beolvasztás ebbe (cél)
+      title: Kategóriák egyesítése
+    perform_merge:
+      invalid_categories: Érvénytelen kategóriákat választottál
+      no_categories_selected: Nem választottál ki egyesítendő kategóriákat
+      success:
+        one: "%{count} kategória sikeresen egyesítve"
+        other: "%{count} kategória sikeresen egyesítve"
+      target_not_found: A célkategória nem található
+      target_selected_as_source: A célhoz és a forrásokhoz különböző kategóriákat válassz.
   category:
     dropdowns:
       show:

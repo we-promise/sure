@@ -1,4 +1,14 @@
 ---
 hu:
   provider_warnings:
-    limited_investment_data: "A szolgáltató befektetési adatai korlátozottak. A tevékenységcímkék (Vétel, Eladás, Osztalék) nem elérhetők, ami befolyásolhatja a költségvetés pontosságát. Fontold meg szabályok létrehozását a befektetési tranzakciók kizárásához vagy kategorizálásához."
+    limited_investment_data: >-
+      A szolgáltató befektetési adatai korlátozottak. A tevékenységcímkék (Vétel, Eladás, Osztalék) nem
+      elérhetők, ami befolyásolhatja a költségvetés pontosságát. Fontold meg szabályok létrehozását a
+      befektetési tranzakciók kizárásához vagy kategorizálásához.
+    lunchflow_accounts_failed:
+      one: 'Lunchflow-importálás: %{count} számla frissítése sikertelen'
+      other: 'Lunchflow-importálás: %{count} számla frissítése sikertelen'
+    lunchflow_import_error: 'Lunchflow-importálás: %{error}'
+    lunchflow_transactions_failed:
+      one: 'Lunchflow-importálás: %{count} számla tranzakcióinak lekérése sikertelen'
+      other: 'Lunchflow-importálás: %{count} számla tranzakcióinak lekérése sikertelen'

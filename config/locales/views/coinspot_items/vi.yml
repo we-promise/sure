@@ -1,0 +1,99 @@
+---
+vi:
+  coinspot_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} tài khoản cần thiết lập"
+        other: "%{count} tài khoản cần thiết lập"
+      calculating_balances: Đang tính số dư...
+      checking_configuration: Đang kiểm tra cấu hình tài khoản...
+      checking_credentials: Đang kiểm tra thông tin xác thực...
+      credentials_invalid: Thông tin xác thực API CoinSpot không hợp lệ. Hãy kiểm
+        tra khóa API và khóa bí mật.
+      importing_accounts: Đang nhập tài khoản từ CoinSpot...
+      processing_accounts: Đang xử lý dữ liệu tài khoản...
+      processing_failed:
+        one: Không thể xử lý %{count} tài khoản CoinSpot
+        other: Không thể xử lý %{count} tài khoản CoinSpot
+  coinspot_items:
+    coinspot_item:
+      delete: Xóa
+      deletion_in_progress: Đang xóa...
+      import_accounts_menu: Nhập tài khoản
+      no_accounts_message: Tài khoản sàn CoinSpot sẽ xuất hiện tại đây sau khi đồng
+        bộ.
+      no_accounts_title: Không tìm thấy tài khoản
+      provider_name: CoinSpot
+      reconnect: Cần cập nhật thông tin xác thực
+      setup_action: Nhập tài khoản
+      setup_description: Nhập kết nối CoinSpot này dưới dạng tài khoản sàn tiền mã
+        hóa.
+      setup_needed: Tài khoản sẵn sàng để nhập
+      stale_rate_warning: Số dư chỉ là ước tính vì không có tỷ giá chính xác cho %{date}.
+        Sẽ cập nhật trong lần đồng bộ tiếp theo.
+      status: Đồng bộ gần nhất %{timestamp} trước
+      status_never: Chưa từng đồng bộ
+      status_with_summary: Đồng bộ gần nhất %{timestamp} trước - %{summary}
+      sync_status:
+        all_synced:
+          one: Đã đồng bộ %{count} tài khoản
+          other: Đã đồng bộ %{count} tài khoản
+        no_accounts: Không tìm thấy tài khoản
+        partial_sync: Đã đồng bộ %{linked_count}, cần thiết lập %{unlinked_count}
+      syncing: Đang đồng bộ...
+    complete_account_setup:
+      no_accounts: Không có tài khoản để nhập
+      none_selected: Chưa chọn tài khoản
+      setup_failed:
+        one: Không thể nhập %{count} tài khoản
+        other: Không thể nhập %{count} tài khoản
+      success:
+        one: Đã nhập %{count} tài khoản
+        other: Đã nhập %{count} tài khoản
+    create:
+      default_name: CoinSpot
+      success: Đã kết nối CoinSpot thành công. Tài khoản sàn đang được đồng bộ.
+    destroy:
+      success: Đã lên lịch xóa kết nối CoinSpot.
+      unlink_failed: Không thể ngắt kết nối CoinSpot
+    link_accounts:
+      select_connection: Chọn kết nối CoinSpot trước khi liên kết tài khoản.
+    link_existing_account:
+      errors:
+        coinspot_account_already_linked: Tài khoản CoinSpot này đã được liên kết
+        invalid_coinspot_account: Tài khoản CoinSpot không hợp lệ
+        only_manual: Chỉ tài khoản sàn tiền mã hóa thủ công chưa liên kết nhà cung
+          cấp mới có thể liên kết với CoinSpot
+      select_connection: Chọn kết nối CoinSpot trước khi liên kết tài khoản.
+      success: Đã liên kết với tài khoản CoinSpot thành công
+    provider_connection:
+      default_description: Liên kết với tài khoản sàn CoinSpot
+      default_name: CoinSpot
+      description: Liên kết với %{name}
+      name: CoinSpot - %{name}
+    select_accounts:
+      no_credentials_configured: Thêm thông tin xác thực API CoinSpot trước khi thiết
+        lập tài khoản.
+      select_connection: Chọn kết nối CoinSpot trong Cài đặt nhà cung cấp.
+    select_existing_account:
+      cancel: Hủy
+      check_provider_health: Kiểm tra thông tin xác thực API CoinSpot còn hợp lệ.
+      link: Liên kết
+      no_accounts_found: Không tìm thấy tài khoản CoinSpot.
+      title: Liên kết tài khoản CoinSpot
+      wait_for_sync: Chờ CoinSpot đồng bộ xong.
+    setup_accounts:
+      accounts_count:
+        one: "%{count} tài khoản khả dụng"
+        other: "%{count} tài khoản khả dụng"
+      cancel: Hủy
+      creating: Đang nhập...
+      import_selected: Nhập mục đã chọn
+      instructions: CoinSpot nhập một tài khoản sàn tiền mã hóa tổng hợp cho kết nối
+        này, gồm số dư, giá trị AUD, chuyển khoản, tiền gửi, tiền rút và lịch sử lệnh.
+      no_accounts: Tất cả tài khoản CoinSpot đã được nhập.
+      select_all: Chọn tất cả
+      subtitle: Chọn tài khoản sàn để theo dõi
+      title: Nhập tài khoản CoinSpot
+    update:
+      success: Đã cập nhật kết nối CoinSpot thành công.

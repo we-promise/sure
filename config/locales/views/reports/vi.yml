@@ -33,6 +33,7 @@ vi:
       next_year: "Năm tiếp"
       previous_decade: "Thập kỷ trước"
       next_decade: "Thập kỷ tiếp"
+      shortcut_hint: "%{action} (%{key})"
     invalid_date_range: "Ngày kết thúc không thể trước ngày bắt đầu. Các ngày đã được hoán đổi."
     summary:
       total_income: Tổng thu nhập
@@ -166,6 +167,7 @@ vi:
       holdings: Danh mục nắm giữ
       sell_trades: Giao dịch bán
       and_more: "+%{count} khác"
+      period_return: Lợi suất trong kỳ
     investment_flows:
       title: Dòng tiền đầu tư
       description: Theo dõi tiền chảy vào và ra khỏi tài khoản đầu tư qua đóng góp và rút tiền.
@@ -232,6 +234,7 @@ vi:
         weight: Tỷ trọng
         value: Giá trị
         return: Lợi nhuận
+        period_return: Lợi suất trong kỳ
       spending:
         title: Chi tiêu theo danh mục
         income: Thu nhập

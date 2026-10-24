@@ -1,0 +1,17 @@
+---
+vi:
+  sure_import:
+    preflight:
+      missing_reference: 'Dòng %{line}: %{type} tham chiếu đến %{field} %{value} bị
+        thiếu.'
+      provider_merchant_diff: 'Dòng %{line}: ProviderMerchant %{name} đã tồn tại với
+        %{fields} khác. Người bán hiện có sẽ được giữ lại.'
+      skipped_missing_merchant_reference: 'Dòng %{line}: %{type} tham chiếu đến người
+        bán (%{value}) không có trong bản xuất này. Điều này có thể xảy ra với tệp
+        xuất trước khi Sure thêm người bán do nhà cung cấp gán vào dữ liệu xuất. Bản
+        ghi sẽ được nhập mà không có người bán đó.'
+      skipped_missing_reference: 'Dòng %{line}: %{type} tham chiếu đến %{field} %{value}
+        bị thiếu. Bản ghi sẽ bị bỏ qua khi nhập.'
+      skipped_unnamed_recurring: 'Dòng %{line}: %{type} không có tên và tham chiếu
+        đến người bán (%{value}) không có trong bản xuất này. Bản ghi sẽ bị bỏ qua
+        khi nhập.'

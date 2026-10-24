@@ -77,12 +77,38 @@ vi:
         main_system_prompt:
           title: Câu lệnh hệ thống chính
           subtitle: Hướng dẫn cốt lõi xác định cách trợ lý AI hoạt động trong tất cả cuộc trò chuyện
+          label: Lời nhắc hệ thống cho trò chuyện
         transaction_categorizer:
           title: Phân loại giao dịch
           subtitle: AI tự động phân loại giao dịch dựa trên các danh mục bạn định nghĩa
         merchant_detector:
           title: Phát hiện nhà cung cấp
           subtitle: AI xác định và làm phong phú dữ liệu giao dịch với thông tin nhà cung cấp
+        save: Lưu lời nhắc
+        save_confirm:
+          body: Lời nhắc tùy chỉnh sẽ thay thế hướng dẫn hệ thống và các biện pháp bảo vệ
+            tích hợp sẵn (chẳng hạn giới hạn tư vấn tài chính) cho gia đình bạn.
+          cancel: Hủy
+          confirm: Xác nhận
+          dont_show_again: Không hiện lại cảnh báo này
+          title: Lưu lời nhắc AI tùy chỉnh?
+      prompt_field:
+        format_risk: 'Lời nhắc %{provider} của bạn đã bỏ ví dụ {"%{key}": ...}. Mỗi yêu
+          cầu vẫn đề nghị cấu trúc đó nên thường vẫn phân tích được, nhưng nếu lời nhắc
+          ghi đè yêu cầu một định dạng đầu ra khác thì việc phân tích sẽ thất bại.'
+        prompt_label: Lời nhắc
+        provider_anthropic: Anthropic
+        provider_label: Nhà cung cấp
+        provider_openai: OpenAI
+        reset: Đặt lại mặc định
+        reset_confirm_body: Thao tác này sẽ bỏ lời nhắc tùy chỉnh và khôi phục hướng dẫn
+          mặc định tích hợp sẵn.
+        reset_confirm_title: Đặt lại lời nhắc mặc định?
+        status_custom: Đang dùng lời nhắc tùy chỉnh
+        status_default: Đang dùng mặc định tích hợp sẵn
+      update:
+        multiple_errors: Nhiều lời nhắc quá dài (tối đa %{count} ký tự)
+        success: Đã cập nhật lời nhắc AI
     payments:
       show:
         page_title: Thanh toán
@@ -119,6 +145,10 @@ vi:
         dashboard_two_column_description: Hiển thị các widget bảng điều khiển thành hai cột trên màn hình lớn. Khi tắt, các widget xếp chồng thành một cột.
         split_grouped_title: Nhóm giao dịch phân chia
         split_grouped_description: Hiển thị giao dịch phân chia được nhóm dưới giao dịch cha trong danh sách. Khi tắt, các mục con phân chia xuất hiện như các hàng riêng biệt.
+        dashboard_account_groups_description: Các nhóm tài khoản này sẽ được mở rộng sẵn trên
+          bảng tổng quan và thanh bên tài khoản. Bạn vẫn có thể thu gọn thủ công bất cứ lúc
+          nào.
+        dashboard_account_groups_title: Mặc định mở rộng khi bắt đầu
     preferences:
       show:
         country: Quốc gia
@@ -161,6 +191,22 @@ vi:
         preview:
           title: Bật tính năng xem trước
           description: Chọn tham gia các tính năng đang phát triển được gắn thẻ xem trước hoặc canary.
+        budget_sharing_no_members: Không có thành viên khác trong %{moniker} để chia sẻ
+        budget_sharing_permission_label: Quyền truy cập của %{name}
+        budget_sharing_permissions:
+          none: Không có quyền
+          read_only: Chỉ xem
+          read_write: Có thể chỉnh sửa
+        budget_sharing_subtitle: Cho phép thành viên khác xem hoặc chỉnh sửa ngân sách cá
+          nhân của bạn
+        budget_sharing_title: Chia sẻ ngân sách
+        budget_subtitle: Cấu hình cách hoạt động của ngân sách
+        budget_title: Ngân sách
+        household_budget_enabled: Ngân sách gia đình
+        household_budget_enabled_hint: Duy trì ngân sách chung của gia đình bên cạnh ngân
+          sách cá nhân. Tắt để chỉ dùng ngân sách cá nhân.
+        personal_budgets: Ngân sách cá nhân
+        personal_budgets_hint: Bật ngân sách riêng cho từng thành viên gia đình.
     profiles:
       destroy:
         cannot_remove_self: Bạn không thể tự xóa mình khỏi tài khoản.
@@ -210,6 +256,10 @@ vi:
         remove_invitation: Xóa lời mời
         remove_member: Xóa thành viên
         save: Lưu
+        resend_confirmation_link: yêu cầu email xác nhận mới
+        unconfirmed_email_notice_html: Bạn đã yêu cầu đổi email thành %{email}. Hãy mở hộp
+          thư và xác nhận để thay đổi có hiệu lực. Nếu chưa nhận được email, hãy kiểm tra
+          thư rác hoặc %{resend_link}.
     securities:
       show:
         page_title: Bảo mật
@@ -230,6 +280,16 @@ vi:
         sso_confirm_body: Bạn có chắc muốn ngắt kết nối tài khoản %{provider}? Bạn có thể kết nối lại sau bằng cách đăng nhập với nhà cung cấp đó.
         sso_confirm_button: Ngắt kết nối
         sso_warning_message: Đây là phương thức đăng nhập duy nhất của bạn. Hãy đặt mật khẩu trong cài đặt bảo mật trước khi ngắt kết nối, nếu không bạn có thể bị khóa khỏi tài khoản.
+        encryption_warning:
+          generate: 'Tạo một bộ khóa bằng lệnh: bin/rails db:encryption:init'
+          intro: 'Dữ liệu nhạy cảm (khóa API, token nhà cung cấp, bí mật MFA và thông tin
+            định danh cá nhân) đang được lưu mà không mã hóa khi lưu trữ. Để bật mã hóa, đặt
+            các khóa sau trong biến môi trường hoặc thông tin xác thực Rails:'
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          title: Thiếu khóa mã hóa
     settings_nav:
       accounts_label: Tài khoản
       advanced_section_title: Nâng cao
@@ -263,6 +323,9 @@ vi:
       appearance_label: Giao diện
       bank_sync_label: Đồng bộ ngân hàng
       debug_label: Gỡ lỗi
+      background_jobs_label: Tác vụ nền
+      mcp_label: MCP
+      system_health_label: Tình trạng hệ thống
     settings_nav_link_large:
       next: Tiếp theo
       previous: Quay lại
@@ -283,7 +346,7 @@ vi:
         ok: Đã kết nối
         warn: Cần hành động
         err: Lỗi
-        off: Chưa cấu hình
+        'off': Chưa cấu hình
       maturity:
         beta: Beta
         alpha: Alpha
@@ -331,6 +394,20 @@ vi:
         sophtron: Kết nối ngân hàng và tiện ích tại Mỹ & Canada.
         plaid: Kết nối hàng ngàn tổ chức tài chính Mỹ qua Plaid.
         plaid_eu: Kết nối tổ chức tài chính châu Âu qua Plaid (PSD2 / Open Banking).
+        akahu: Đồng bộ các tổ chức tài chính New Zealand qua Akahu.
+        coinspot: Đồng bộ số dư CoinSpot, giá trị AUD, chuyển khoản, tiền gửi, tiền rút và
+          lịch sử lệnh bằng khóa API chỉ đọc.
+        financekit: Đồng bộ các tài khoản FinanceKit được hỗ trợ qua ứng dụng Sure iOS.
+        fio: Đồng bộ tài khoản Fio banka bằng token API chỉ đọc.
+        monobank: Đồng bộ thẻ và hũ tiết kiệm Monobank của Ukraina bằng token API cá nhân.
+        onchain_wallet: Theo dõi ví Bitcoin, EVM và Solana tự quản lý từ địa chỉ công khai.
+        questrade: Đồng bộ trực tiếp tài khoản đầu tư Questrade qua API Questrade.
+        redbark: Đồng bộ tài khoản ngân hàng Úc qua dịch vụ ngân hàng mở Redbark.
+        trade_republic: Đồng bộ tài khoản đầu tư Trade Republic qua đăng nhập web an toàn,
+          chỉ đọc.
+        trading212: Đồng bộ danh mục đầu tư Trading 212 bằng khóa API chỉ đọc.
+        up: Đồng bộ tài khoản ngân hàng Up của Úc bằng token truy cập cá nhân.
+        wise: Tự động đồng bộ số dư đa tiền tệ và chuyển khoản quốc tế Wise.
       search_filters:
         aria_label: Tìm kiếm nhà cung cấp
         placeholder: Tìm kiếm nhà cung cấp
@@ -503,7 +580,7 @@ vi:
         report_window_note: "Báo cáo IBKR Flex bị giới hạn trong cửa sổ truy vấn bạn cấu hình trong IBKR. Sure sẽ nhập toàn bộ danh mục nắm giữ hiện tại cộng với tối đa 365 ngày hoạt động gần nhất từ báo cáo này."
         sync: Đồng bộ
         disconnect_confirm: Ngắt kết nối Interactive Brokers?
-        query_id_label: Query ID
+        query_id_label: "ID truy vấn"
         query_id_placeholder_new: Nhập Query ID IBKR Flex của bạn
         query_id_placeholder_existing: Để trống để giữ Query ID hiện tại
         token_label: Token
@@ -515,3 +592,259 @@ vi:
         accounts_tab: Tài khoản
         status_configured_suffix: để quản lý các tài khoản đã phát hiện.
         not_configured: Chưa cấu hình.
+      akahu_panel:
+        step_1_html: Truy cập %{link} và tạo ứng dụng cá nhân.
+        step_2: Sao chép token ứng dụng và token người dùng.
+        step_3: Dán các token bên dưới, lưu rồi liên kết các tài khoản đã đồng bộ.
+      coinspot_panel:
+        add_connection: Thêm kết nối CoinSpot
+        api_key_label: Khóa API
+        api_key_placeholder: Dán khóa API CoinSpot
+        api_secret_label: Khóa bí mật API
+        api_secret_placeholder: Dán khóa bí mật API CoinSpot
+        connection_name_label: Tên kết nối
+        connection_name_placeholder: CoinSpot chính
+        default_connection_name: CoinSpot
+        disconnect: Ngắt kết nối
+        disconnect_confirm: Bạn có chắc muốn ngắt kết nối %{name}?
+        keep_api_key_placeholder: Để trống để giữ khóa API hiện có
+        keep_api_secret_placeholder: Để trống để giữ khóa bí mật API hiện có
+        read_only_body: Không cấp quyền gửi, rút, giao dịch hoặc chuyển tiền. Sure chỉ nhập
+          số dư, giá trị AUD, chuyển khoản, tiền gửi, tiền rút và lịch sử lệnh đã hoàn tất.
+        read_only_title: Chỉ đồng bộ sàn giao dịch ở chế độ chỉ đọc
+        setup_accounts: Thiết lập tài khoản
+        step1_html: Truy cập <a href="https://www.coinspot.com.au/my/api" target="_blank"
+          rel="noopener noreferrer" class="underline">cài đặt API CoinSpot</a>
+        step2: Tạo khóa API có quyền chỉ đọc số dư và lịch sử.
+        step3: Dán khóa API và khóa bí mật bên dưới.
+        sync: Đồng bộ
+        syncing: Đang đồng bộ...
+        update_connection: Cập nhật kết nối
+      drawer_trust_statement_encryption_unconfigured: Quyền chỉ đọc. Sure không bao giờ
+        có thể chuyển tiền. Hãy cấu hình khóa mã hóa riêng trước khi lưu thông tin xác thực
+        nhà cung cấp trong môi trường vận hành thực tế.
+      financekit:
+        accounts: Tài khoản đã liên kết
+        app_store: App Store
+        coming_soon: Sắp ra mắt!
+        description: Quản lý kết nối Apple Wallet trong ứng dụng Sure iOS. Dữ liệu Wallet
+          được đồng bộ khi ứng dụng đang mở; chưa hỗ trợ tự động đồng bộ nền khi không mở
+          ứng dụng.
+        last_accepted_at: Lần gần nhất Sure tiếp nhận
+        last_imported_at: Lần nhập gần nhất vào gia đình bạn
+        linked_accounts:
+          one: 1 tài khoản đã liên kết
+          other: "%{count} tài khoản đã liên kết"
+        not_yet: Chưa có
+        status:
+          active: Đồng bộ đang hoạt động
+          repair_required: Cần sửa kết nối — mở ứng dụng Sure iOS
+        summary: Đồng bộ Wallet
+      fio_panel:
+        step_1_html: Đăng nhập ngân hàng trực tuyến %{link} và mở Settings → API.
+        step_2: Tạo token có quyền chỉ đọc ("Sledování účtu"). Token cần xác thực mạnh và
+          có hiệu lực tối đa 180 ngày.
+        step_3: Dán token bên dưới và lưu. Mỗi token truy cập một tài khoản, vì vậy hãy
+          thêm một kết nối cho mỗi tài khoản Fio.
+      monobank_panel:
+        step_1_html: Truy cập %{link}, đăng nhập bằng ứng dụng Monobank và tạo token cá
+          nhân.
+        step_2: Sao chép token — token chỉ được hiển thị một lần.
+        step_3: Dán token bên dưới, lưu rồi liên kết các thẻ và hũ tiết kiệm bạn muốn theo
+          dõi.
+      onchain_wallet_panel:
+        add_wallet: Thêm ví
+        advanced: Nâng cao
+        disconnect_all: Ngắt kết nối tất cả ví
+        disconnect_all_confirm: Thao tác này xóa mọi địa chỉ được theo dõi cùng các tài
+          khoản tương ứng. Tiếp tục?
+        etherscan_api_key_label: Khóa API Etherscan (không bắt buộc)
+        etherscan_api_key_placeholder: Dán khóa API Etherscan
+        etherscan_hint: Đọc dữ liệu Ethereum không cần khóa. Thêm khóa Etherscan chỉ tăng
+          giới hạn tần suất cho Ethereum.
+        keep_etherscan_api_key: Để trống để giữ khóa hiện có
+        keyless_body: Sure chỉ đọc dữ liệu công khai trên chuỗi. Không dùng khóa, cụm từ
+          khôi phục hay chữ ký, và không thể chi tiêu tiền.
+        keyless_title: Chỉ đọc, không cần khóa
+        manage_wallets: Quản lý ví
+        save: Lưu
+        sync_start_date_hint: Bỏ qua chuyển khoản trước ngày này. Để trống để nhập tất cả
+          dữ liệu trình khám phá báo về.
+        sync_start_date_label: Bỏ qua chuyển khoản trước
+      provider_setup_encryption_warning:
+        message: Bản cài đặt tự lưu trữ này chưa cấu hình khóa mã hóa Active Record riêng.
+          Hãy cấu hình primary_key, deterministic_key và key_derivation_salt trước khi lưu
+          thông tin xác thực nhà cung cấp trong môi trường vận hành thực tế.
+        title: Thiếu khóa mã hóa
+      trade_republic_panel:
+        accounts_discovered:
+          one: Đã tìm thấy 1 tài khoản Trade Republic.
+          other: Đã tìm thấy %{count} tài khoản Trade Republic.
+        accounts_tab: Tài khoản
+        add_account: Thêm kết nối khác
+        approval_pending: Đã bắt đầu đăng nhập. Hãy phê duyệt trong ứng dụng Trade Republic;
+          Sure đang tự động kiểm tra.
+        authenticator_code_label: Mã ứng dụng xác thực (nếu được yêu cầu)
+        authenticator_code_notice: Nhập mã từ ứng dụng xác thực của bạn.
+        authenticator_code_placeholder: Mã 6 chữ số
+        awaiting_authenticator_code: Cần mã ứng dụng xác thực.
+        awaiting_confirmation: Đang chờ phê duyệt trong ứng dụng Trade Republic.
+        check_login_status: Kiểm tra trạng thái ngay
+        complete_login: Tiếp tục
+        confirm_login: Kiểm tra đăng nhập
+        connect: Đăng nhập
+        connection_success:
+          close: Xong
+          description: Sure đang đồng bộ dữ liệu Trade Republic ở chế độ nền.
+          message: Kết nối Trade Republic của bạn đã sẵn sàng.
+          title: Đã kết nối Trade Republic thành công
+        currency_label: Tiền tệ của tài khoản
+        disconnect: Ngắt kết nối Trade Republic
+        disconnect_confirm: Ngắt kết nối Trade Republic? Các tài khoản đã đồng bộ sẽ trở
+          thành tài khoản thủ công.
+        disconnect_confirm_with_identifier: Ngắt kết nối Trade Republic có số cuối %{last4}?
+          Các tài khoản đã đồng bộ sẽ trở thành tài khoản thủ công.
+        encryption_warning:
+          message: Không thể lưu an toàn thông tin xác thực và dữ liệu phiên Trade Republic
+            cho đến khi cấu hình Active Record Encryption.
+          title: Chưa cấu hình mã hóa
+        identifier_account: Tài khoản
+        identifier_phone: Điện thoại
+        login_expired: Yêu cầu phê duyệt đã hết hạn.
+        not_configured: Chưa cấu hình.
+        phone_number_label: Số điện thoại
+        phone_number_placeholder_existing: Để trống để giữ số điện thoại hiện tại
+        phone_number_placeholder_new: "+49 170 1234567"
+        pin_label: PIN hoặc mật khẩu
+        pin_placeholder_existing: Để trống để giữ PIN hoặc mật khẩu hiện tại
+        pin_placeholder_new: PIN hoặc mật khẩu Trade Republic của bạn
+        push_login_notice: Hãy phê duyệt đăng nhập trong ứng dụng Trade Republic ngay. Sure
+          tự động kiểm tra ở chế độ nền. Bạn cũng có thể tự kiểm tra trạng thái.
+        qr_back_to_credentials: Quay lại số điện thoại và PIN hoặc mật khẩu
+        qr_cancel: Hủy đăng nhập QR
+        qr_error: Không thể bắt đầu đăng nhập QR. Vui lòng thử lại.
+        qr_instruction: Quét mã QR bằng ứng dụng Trade Republic và phê duyệt đăng nhập.
+        qr_loading: Đang chuẩn bị mã QR…
+        qr_login: Đăng nhập bằng mã QR
+        qr_success: Đã phê duyệt đăng nhập. Sure đang làm mới trang nhà cung cấp.
+        restart_login: Bắt đầu đăng nhập lại
+        save_configuration: Lưu và bắt đầu đăng nhập
+        setup_accounts: Thiết lập tài khoản
+        status_configured_prefix: Đã kết nối. Mở thẻ
+        status_configured_suffix: để quản lý các tài khoản đã tìm thấy.
+        steps:
+          step_1: Nhập số điện thoại và PIN hoặc mật khẩu dùng trong ứng dụng Trade Republic,
+            rồi lưu.
+          step_2: Nhập mã từ ứng dụng xác thực khi được yêu cầu.
+          step_3: Phê duyệt đăng nhập trong ứng dụng Trade Republic khi được nhắc.
+        sync: Đồng bộ
+        syncing: Đang đồng bộ...
+        update_configuration: Cập nhật cấu hình
+      trading212_panel:
+        accounts_tab: Tài khoản
+        add_account: Thêm tài khoản khác
+        api_key_label: ID API
+        api_key_placeholder_existing: Để trống để giữ ID API hiện tại
+        api_key_placeholder_new: Dán ID API Trading 212
+        api_secret_label: Khóa bí mật
+        api_secret_placeholder_existing: Để trống để giữ khóa bí mật hiện tại
+        api_secret_placeholder_new: Dán khóa bí mật Trading 212
+        currency_label: Tiền tệ của tài khoản
+        default_account_name: Tài khoản Trading 212
+        disconnect: Ngắt kết nối tài khoản Trading 212
+        disconnect_confirm: Ngắt kết nối Trading 212?
+        environment_demo: Tài khoản demo
+        environment_label: Môi trường
+        environment_live: Tài khoản thực
+        not_configured: Chưa cấu hình.
+        save_configuration: Lưu cấu hình
+        status_configured_prefix: Đã cấu hình. Mở thẻ
+        status_configured_suffix: để quản lý các tài khoản đã tìm thấy.
+        steps:
+          step_1: Vào Trading 212 → Settings → API (trên web hoặc ứng dụng di động).
+          step_2: Tạo khóa API mới — Trading 212 sẽ hiển thị ID API và khóa bí mật.
+          step_3: Dán cả hai bên dưới, chọn môi trường và tiền tệ tài khoản rồi lưu.
+        sync: Đồng bộ
+        syncing: Đang đồng bộ...
+        update_configuration: Cập nhật cấu hình
+      up_panel:
+        step_1_html: Truy cập %{link} và tạo token truy cập cá nhân.
+        step_2: Sao chép token truy cập cá nhân.
+        step_3: Dán token bên dưới, lưu rồi liên kết các tài khoản đã đồng bộ.
+    background_jobs:
+      cancel:
+        cancelled: Đã đánh dấu %{type} là thất lạc.
+        cancelled_error: Quản trị viên đã đánh dấu thất bại — tác vụ nền được coi là thất
+          lạc.
+        not_cancellable: Hiện không thể sửa thao tác này — tác vụ có thể còn trong hàng
+          đợi hoặc đang chạy. Hãy thử lại sau khi không có hoạt động trong 30 phút.
+      operation:
+        actions:
+          mark_failed: Đánh dấu thất bại
+          mark_stale: Đánh dấu đã cũ
+          release_claim: Giải phóng quyền nhận tác vụ
+        ago: "%{time} trước"
+        confirm: Đánh dấu thao tác này là thất lạc? Bản ghi sẽ chuyển sang trạng thái
+          kết thúc để có thể thử lại. Dữ liệu bên dưới không bị thay đổi.
+        missing_value: "-"
+        queued: Đã vào hàng đợi
+        recent: Gần đây
+        running: Đang chạy
+        stuck: Bị kẹt — coi là thất lạc
+        sync_label: Đồng bộ · %{type}
+        unknown: Không rõ
+      show:
+        empty: Không có thao tác đang xử lý.
+        missing_value: "-"
+        operations_subtitle: Các lần đồng bộ, nhập và xuất của mọi gia đình chưa đạt trạng
+          thái kết thúc. Thao tác không hoạt động quá 30 phút và không thấy tác vụ tương
+          ứng được coi là thất lạc, và có thể đánh dấu như vậy.
+        operations_title: Thao tác đang xử lý
+        page_title: Tác vụ nền
+        redis_unreachable: Không xem được trạng thái Sidekiq (không kết nối được Redis).
+          Chưa rõ tiến trình còn hoạt động hay không, nên các thao tác bị tắt.
+        stats:
+          busy: Đang bận
+          dead: Đã ngừng thử
+          enqueued: Đã vào hàng đợi
+          queue_label: "%{name}: %{size} · độ trễ %{latency} giây"
+          retries: Lần thử lại
+          scheduled: Đã lên lịch
+          workers: Tiến trình nền
+        subtitle: 'Trạng thái Sidekiq trực tiếp: tiến trình nền, độ sâu hàng đợi và tập
+          tác vụ thử lại/đã ngừng thử.'
+        table:
+          action: Thao tác
+          family: Gia đình
+          last_activity: Hoạt động gần nhất
+          liveness: Tình trạng hoạt động
+          status: Trạng thái
+          type: Thao tác
+        title: Trạng thái tiến trình nền
+    budget_shares:
+      update:
+        success: Đã cập nhật thiết lập chia sẻ ngân sách
+    mcp:
+      revoke:
+        revoked: Đã thu hồi kết nối.
+      show:
+        connect_subtitle: Dán URL này vào Claude.ai (hoặc ứng dụng tương thích MCP khác)
+          để kết nối với tài khoản Sure của bạn.
+        connect_title: Kết nối trợ lý AI
+        connected_ago: Đã kết nối %{time} trước
+        connected_subtitle: Các ứng dụng này hiện có quyền truy cập dữ liệu Sure của bạn.
+          Thu hồi quyền của ứng dụng không còn sử dụng.
+        connected_title: Ứng dụng đã kết nối
+        copied: Đã sao chép!
+        copy_url: Sao chép
+        how_to_connect_title: Cách kết nối Claude
+        page_title: Máy chủ MCP
+        revoke: Thu hồi
+        revoke_confirm: Thu hồi quyền truy cập của ứng dụng này?
+        step_1: Mở Claude.ai và vào Settings → Customize → Connectors.
+        step_2: Nhấn "Add connector" và dán URL máy chủ MCP ở trên.
+        step_3: Nhấn Connect — bạn sẽ được chuyển đến Sure để đăng nhập và cho phép truy
+          cập.
+        step_4: Sau khi được cấp quyền, Claude có thể đọc tài khoản, giao dịch và dữ liệu
+          số dư của bạn.
+        unknown_client: Ứng dụng không xác định

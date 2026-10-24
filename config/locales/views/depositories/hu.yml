@@ -2,9 +2,28 @@
 hu:
   depositories:
     edit:
-      edit: '%{account} szerkesztése'
+      edit: "%{account} szerkesztése"
     form:
       none: Nincs
       subtype_prompt: Válassz számlatípust
     new:
       title: Add meg a számlaegyenleget
+    subtypes:
+      cash:
+        long: Készpénz
+        short: Készpénz
+      cd:
+        long: Lekötött betét
+        short: CD
+      checking:
+        long: Folyószámla
+        short: Folyószámla
+      hsa:
+        long: Egészségügyi megtakarítási számla
+        short: HSA
+      money_market:
+        long: Pénzpiaci számla
+        short: Pénzpiaci
+      savings:
+        long: Megtakarítási számla
+        short: Megtakarítási számla

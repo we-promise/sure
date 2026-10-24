@@ -1,0 +1,19 @@
+---
+hu:
+  sure_import:
+    preflight:
+      missing_reference: 'A(z) %{line}. sorban a(z) %{type} egy hiányzó elemre hivatkozik: %{field} %{value}.'
+      provider_merchant_diff: >-
+        A(z) %{line}. sorban szereplő ProviderMerchant (%{name}) már létezik, de a(z) %{fields} eltér.
+        A meglévő kereskedő marad meg.
+      skipped_missing_merchant_reference: >-
+        A(z) %{line}. sorban a(z) %{type} olyan kereskedőre (%{value}) hivatkozik, aki nem szerepel ebben
+        az exportban. Ez olyan exportnál fordulhat elő, amely még azelőtt készült, hogy a Sure-exportok
+        tartalmazták volna a szolgáltatók által hozzárendelt kereskedőket. Az importálás e kereskedő nélkül
+        történik.
+      skipped_missing_reference: >-
+        A(z) %{line}. sorban a(z) %{type} hiányzó elemre hivatkozik: %{field} %{value}. Az importálás
+        során kimarad.
+      skipped_unnamed_recurring: >-
+        A(z) %{line}. sorban a(z) %{type} név nélkül szerepel, és olyan kereskedőre (%{value}) hivatkozik,
+        aki nem szerepel ebben az exportban. Az importálás során kimarad.

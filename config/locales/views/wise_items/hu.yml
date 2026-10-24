@@ -1,5 +1,189 @@
+---
 hu:
   wise_items:
     provider_panel:
       instructions:
         open_tokens: Lépjen a Settings → Connect and manage apps → Developer tools → API tokens menüpontra
+        copy_token_html: >-
+          Másold ki a tokent, és illeszd be alább. A Sure csak az egyenlegeid és tranzakcióid szinkronizálására
+          használja.
+        create_token: Hozz létre új személyes API-tokent csak olvasási hozzáféréssel
+        sign_in_html: Nyisd meg a(z) %{link} oldalt, és jelentkezz be a fiókodba
+      add_connection: Wise-kapcsolat hozzáadása
+      connect: Wise csatlakoztatása
+      connection_name_label: Kapcsolat neve
+      connection_name_placeholder: Személyes Wise
+      disconnect: Kapcsolat bontása
+      disconnect_confirm: 'Biztosan bontod ezt a kapcsolatot: %{name}? Ez törli az összes szinkronizált
+        számlaadatot.'
+      disconnect_label: "%{name} szétkapcsolása"
+      encryption_warning:
+        message: >-
+          Éles használatban Wise-token hozzáadása előtt állítsd be az Active Record titkosítási kulcsait.
+          Titkosítás nélkül a tokenek olvasható szövegként tárolódnak.
+        title: Az adatbázis-titkosítás nincs konfigurálva
+      import_all_history_help: Az elmúlt év helyett az összes korábbi Wise-kivonat lekérése.
+      import_all_history_label: Teljes tranzakciós előzmény importálása
+      keep_token_placeholder: Hagyd üresen az aktuális token megtartásához
+      sandbox_note_html: >-
+        Teszteléshez használd a <strong>tesztkörnyezet</strong> alap URL-jét (<code>https://api.sandbox.transferwise.tech</code>).
+        Állítsd be a <code>WISE_BASE_URL</code> környezeti változót.
+      sca:
+        copied: Másolva!
+        copy: Másolás
+        description: >-
+          A Wise a teljes tranzakciós kivonatok — köztük a beérkező fizetések — olvasásához aláírt egyszeri
+          tokenes hitelesítést kér. Hozz létre itt kulcspárt, majd regisztráld a nyilvános kulcsot a Wise-nál
+          az engedélyezéshez.
+        generate: Kulcspár létrehozása
+        public_key_label: Nyilvános kulcs (PEM)
+        regenerate: Kulcspár újragenerálása
+        regenerate_confirm: >-
+          Ez új kulcspárt hoz létre. A Wise továbbra is elfogadja a korábbi nyilvános kulcsot, amíg te
+          el nem távolítod a Wise-fiókodban — a Sure nem tudja távolról visszavonni. A kivonatok újbóli
+          szinkronizálásához regisztrálnod kell az új nyilvános kulcsot a Wise-nál. Folytatod?
+        registered_help_html: >-
+          Regisztráld ezt a kulcsot a Wise felületén: Settings → Connect and manage apps → Developer tools
+          → Public keys → Add public key.
+        title: Erős ügyfél-hitelesítés (SCA)
+      setup_accounts: Számlák beállítása
+      sync: Szinkronizálás
+      sync_start_date_help: >-
+        A Wise-kivonatokat ettől a dátumtól importáljuk. Legfeljebb egyévnyi előzményhez hagyd meg az
+        alapértelmezést.
+      sync_start_date_label: Tranzakciók importálásának kezdete
+      token_label: API-token
+      token_placeholder: Illeszd be a személyes Wise API-tokenedet
+      update_connection: Kapcsolat frissítése
+    activities:
+      asset_fee: Wise Assets díj
+      default_name: Wise-művelet
+      interest: Wise-kamat
+      jar_deposit: Átvezetés perselybe
+      jar_withdrawal: Átvezetés perselyből
+      transfer_from_jar: 'Átvezetés innen: %{jar}'
+      transfer_to_jar: 'Átvezetés ide: %{jar}'
+    complete_account_setup:
+      failed: A számla létrehozása sikertelen. Próbáld újra.
+      not_found: A Wise-egyenleg nem található.
+      success: A számla sikeresen létrehozva és összekapcsolva.
+    create:
+      connection_failed: Nem sikerült csatlakozni a Wise szolgáltatáshoz. Próbáld újra később.
+      invalid_token: Érvénytelen API-token. Ellenőrizd, és próbáld újra.
+      no_profiles_found: Nem található Wise-profil. Ellenőrizd az API-tokenedet.
+    destroy:
+      success: A Wise-kapcsolat eltávolítva
+    entries:
+      default_name: Wise-tranzakció
+      fee_name: Wise-díj
+    generate_sca_keypair:
+      failed: Nem sikerült új SCA-kulcspárt létrehozni. Próbáld újra.
+      success: Az új SCA-kulcspár létrejött. Az aktiválás befejezéséhez regisztráld a nyilvános kulcsot
+        a Wise-nál.
+    link_accounts:
+      failed: A Wise-egyenleg összekapcsolása sikertelen. Próbáld újra.
+      not_found: A Wise-egyenleg nem található.
+      success: A Wise-egyenleg sikeresen összekapcsolva a számlával.
+    link_existing_account:
+      failed: A számla összekapcsolása sikertelen. Próbáld újra.
+      not_found: A számla vagy a Wise-egyenleg nem található.
+      success: A(z) %{account_name} számla sikeresen összekapcsolva a Wise szolgáltatással
+    link_profiles:
+      already_connected: Minden kiválasztott profil már csatlakoztatva van.
+      no_profiles_selected: Válassz legalább egy profilt.
+      session_expired: A munkamenet lejárt. Próbálj újra csatlakozni.
+      success:
+        one: "%{count} Wise-profil sikeresen csatlakoztatva"
+        other: "%{count} Wise-profil sikeresen csatlakoztatva"
+    profile_types:
+      business: Üzleti
+      personal: Személyes
+    provider_connection:
+      default_description: Többpénznemű Wise-számlád csatlakoztatása
+      default_name: Wise
+      description: 'Csatlakozás ezzel: %{name}'
+      name: Wise — %{name}
+    select_accounts:
+      cancel: Mégse
+      description: Válaszd ki a(z) %{product_name} számládhoz kapcsolandó Wise-pénznemegyenleget.
+      link_account: Egyenleg összekapcsolása
+      no_accounts_found: Minden Wise-egyenleg már Sure-számlához van kapcsolva.
+      no_connection: Nincs Wise-kapcsolat. Előbb csatlakoztasd a Wise szolgáltatást a Szolgáltatói beállítások
+        között.
+      title: Wise-egyenleg kiválasztása
+    select_existing_account:
+      cancel: Mégse
+      description: >-
+        Válaszd ki az ehhez a számlához kapcsolandó Wise-pénznemegyenleget. A tranzakciók automatikusan
+        szinkronizálódnak.
+      link_account: Egyenleg összekapcsolása
+      no_accounts_found: Nincs még nem kapcsolt Wise-egyenleg.
+      title: "%{account_name} összekapcsolása a Wise szolgáltatással"
+    select_profiles:
+      already_connected_label: Már csatlakoztatva
+      cancel: Mégse
+      connect: Kiválasztott profilok csatlakoztatása
+      description: >-
+        A Wise-fiókodhoz több profil tartozik. Válaszd ki, melyiket szeretnéd szinkronizálni a Sure alkalmazással.
+      session_expired: A munkamenet lejárt. Próbálj újra csatlakozni.
+      subtitle: Válaszd ki a csatlakoztatandó profilokat
+      title: Wise-profilok kiválasztása
+      unnamed_profile: "(Névtelen profil)"
+    setup_accounts:
+      all_accounts_linked: Már minden Wise-pénznemegyenleged Sure-számlához van kapcsolva.
+      create_account: Számla létrehozása
+      description: >-
+        Hozz létre Sure-számlát minden követni kívánt Wise-pénznemegyenleghez. Minden pénznem külön számlát
+        kap.
+      done: Kész
+      no_accounts_to_setup: Minden számla be van állítva
+      subtitle: Wise-pénznemegyenlegeid összekapcsolása
+      title: Wise-számlák beállítása
+    sync:
+      success: Szinkronizálás elindítva
+    sync_status:
+      all_synced:
+        one: "%{count} számla szinkronizálva"
+        other: "%{count} számla szinkronizálva"
+      no_accounts: Nem találhatók számlák
+      partial_setup: "%{synced} szinkronizálva, %{pending} beállítást igényel"
+    syncer:
+      account_processing_failed:
+        one: "%{count} Wise-számla feldolgozása sikertelen."
+        other: "%{count} Wise-számla feldolgozása sikertelen."
+      account_sync_failed:
+        one: "%{count} Wise-számla szinkronizálását nem sikerült ütemezni."
+        other: "%{count} Wise-számla szinkronizálását nem sikerült ütemezni."
+      accounts_failed:
+        one: "%{count} egyenleg importálása sikertelen."
+        other: "%{count} egyenleg importálása sikertelen."
+      accounts_need_setup:
+        one: "%{count} számla beállítást igényel..."
+        other: "%{count} számla beállítást igényel..."
+      calculating_balances: Egyenlegek kiszámítása...
+      checking_account_configuration: Számlakonfiguráció ellenőrzése...
+      credentials_invalid: Érvénytelen Wise API-token vagy elégtelen jogosultság
+      failed: A szinkronizálás sikertelen volt. Kérlek próbáld újra, vagy lépj kapcsolatba a támogatással.
+      import_failed: A Wise-importálás sikertelen.
+      importing_accounts: Számlák importálása a Wise szolgáltatásból…
+      processing_transactions: Tranzakciók feldolgozása...
+      transactions_failed:
+        one: "%{count} egyenlegnél tranzakcióimportálási hiba történt."
+        other: "%{count} egyenlegnél tranzakcióimportálási hiba történt."
+    update:
+      success: A Wise-kapcsolat frissítve
+    wise_item:
+      delete: Kapcsolat bontása
+      deletion_in_progress: törlés folyamatban...
+      error: Szinkronizálási hiba
+      no_accounts_description: Futtass szinkronizálást a Wise-egyenlegeid felderítéséhez, majd kapcsold
+        őket Sure-számlákhoz.
+      no_accounts_title: Még nincs összekapcsolt számla
+      setup_action: Számlák beállítása
+      setup_description: >-
+        %{linked} számla összekapcsolva a(z) %{total} számlából. Hozz létre Sure-számlákat a Wise-pénznemegyenlegeidhez.
+      setup_needed: Új számlák beállításra várnak
+      status: Szinkronizálva %{timestamp} ezelőtt
+      status_never: Még nem szinkronizált
+      status_with_summary: 'Utolsó szinkronizálás: %{timestamp} ezelőtt — %{summary}'
+      syncing: Szinkronizálás...

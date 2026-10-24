@@ -1,0 +1,16 @@
+---
+hu:
+  rule_notification_mailer:
+    digest:
+      account: Számla
+      amount: Összeg
+      cta: Tranzakciók megtekintése
+      date: Dátum
+      heading:
+        one: 1 új tranzakció megfelelt a szabályodnak
+        other: "%{count} új tranzakció megfelelt a szabályodnak"
+      intro: 'Ezek a tranzakciók megfeleltek a(z) „%{rule}” szabálynak:'
+      name: Név
+      subject:
+        one: '1 új tranzakció megfelelt a szabályodnak itt: %{product_name}'
+        other: "%{count} új tranzakció megfelelt a szabályodnak itt: %{product_name}"

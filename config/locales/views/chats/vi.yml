@@ -35,6 +35,10 @@ vi:
       unavailable_description_html: "Để sử dụng trợ lý AI, bạn cần đặt biến môi trường <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> hoặc cấu hình nó trong phần Cài đặt Self-Hosting của phiên bản của bạn."
       enable_button: "Bật Trò chuyện AI"
       disable_note: "Tắt bất kỳ lúc nào. Tất cả dữ liệu gửi đến các nhà cung cấp LLM của chúng tôi đều được ẩn danh hóa."
+    new:
+      default_title: Cuộc trò chuyện mới %{timestamp}
+    worker_unhealthy_warning: Hiện có thể không nhận được phản hồi AI — tiến trình nền
+      có vẻ đã dừng hoặc bị tồn đọng. Kiểm tra tiến trình Sidekiq đang chạy.
   assistant_messages:
     assistant_message:
       assistant_reasoning: "Lý luận của trợ lý"

@@ -8,7 +8,7 @@ vi:
         section_title: "Gia đình / Nhóm"
         you: "(Bạn)"
         trial_ends_at: "Kết thúc dùng thử"
-        not_available: "n/a"
+        not_available: "Không có"
         no_users: "Không tìm thấy người dùng nào."
         unnamed_family: "Gia đình/Nhóm chưa đặt tên"
         no_subscription: "Không có gói đăng ký"
@@ -30,6 +30,15 @@ vi:
           session_count: "Số phiên"
           never: "Chưa bao giờ"
           role: "Vai trò"
+          actions: Thao tác
+          create_new_family_option: "+ Tạo gia đình/nhóm mới"
+          family: Gia đình / Nhóm
+          keep_current_family: Giữ gia đình/nhóm hiện tại
+          new_family_moniker: Loại gia đình/nhóm mới
+          new_family_name: Tên gia đình/nhóm mới
+          new_family_name_placeholder: Nhập tên để tạo gia đình/nhóm mới
+          password_placeholder: Để trống để giữ nguyên
+          set_password: Đặt mật khẩu mới
         role_descriptions_title: "Mô tả vai trò"
         roles:
           guest: "Khách"
@@ -46,6 +55,74 @@ vi:
           expires: "Hết hạn %{date}"
           delete: "Xóa"
           delete_all: "Xóa tất cả"
+        actions:
+          delete_user: Xóa người dùng
+          last_super_admin_role_locked: Không thể đổi vai trò vì bạn là siêu quản trị viên
+            cuối cùng trong hệ thống.
+          manage_user: Quản lý người dùng
+          self_edit_warning: Đổi vai trò của chính mình sẽ thay đổi quyền quản trị của bạn.
+          self_update_confirm: Bạn có chắc muốn cập nhật vai trò hoặc gia đình của chính mình?
+          update: Cập nhật người dùng
+        auth_types:
+          local: Cục bộ
+          local_and_sso: Cục bộ + SSO
+          sso: SSO
+          sso_provider_tooltip: 'Nhà cung cấp SSO: %{providers}'
+        delete_confirm: Bạn có chắc muốn xóa người dùng này? Không thể hoàn tác thao tác này.
+        delete_confirm_last_user: Bạn có chắc muốn xóa người dùng này? Đây là người dùng cuối
+          cùng trong gia đình/nhóm, nên việc xóa cũng sẽ xóa toàn bộ gia đình/nhóm và mọi
+          dữ liệu liên quan. Không thể hoàn tác.
+        family_monikers:
+          family: Gia đình
+          group: Nhóm
+        remove: Xóa người dùng
+        removed_sso_identities:
+          allow_again: Cho phép lại
+          confirm: Cho phép %{email} đăng nhập hoặc tạo tài khoản qua SSO trở lại?
+          description: Các danh tính này không thể tạo hoặc kết nối lại tài khoản. Chỉ cho
+            phép lại khi việc xóa trước đó là nhầm lẫn.
+          title: Danh tính SSO đã xóa
+        unused_families:
+          delete: Xóa gia đình không sử dụng
+          delete_confirm: Bạn có chắc muốn xóa gia đình/nhóm không sử dụng này? Không thể
+            hoàn tác.
+          empty: Không tìm thấy gia đình/nhóm không sử dụng.
+          family_id: 'ID gia đình: %{id}'
+          title: Gia đình / nhóm không sử dụng
       update:
         success: "Vai trò người dùng đã được cập nhật thành công."
         failure: "Không thể cập nhật vai trò người dùng."
+        family_required: Chọn gia đình/nhóm hiện có hoặc nhập tên cho gia đình/nhóm mới.
+        last_super_admin_error: Không thể hạ quyền siêu quản trị viên cuối cùng trong hệ thống.
+        password_and_family_conflict: Không thể cập nhật mật khẩu và tư cách thành viên gia
+          đình/nhóm cùng lúc.
+        password_missing_case: Mật khẩu phải có cả chữ hoa và chữ thường.
+        password_missing_number: Mật khẩu phải có ít nhất một chữ số.
+        password_missing_special: Mật khẩu phải có ít nhất một ký tự đặc biệt.
+        password_too_short: Mật khẩu phải dài ít nhất 8 ký tự.
+        success_family: Đã cập nhật tư cách thành viên gia đình/nhóm của người dùng thành
+          công.
+        success_password: Đã cập nhật mật khẩu người dùng thành công.
+        success_role: Đã cập nhật vai trò người dùng thành công.
+        success_role_and_password: Đã cập nhật vai trò và mật khẩu người dùng thành công.
+      deletion:
+        cancel: Hủy
+        email_label: Email người dùng
+        instruction: Nhập %{email} để xác nhận.
+        submit: Xóa người dùng vĩnh viễn
+        title: Xóa người dùng vĩnh viễn
+        warning: Thao tác này lập tức thu hồi quyền truy cập và lên lịch xóa vĩnh viễn người
+          dùng cùng dữ liệu của họ. Không thể hoàn tác.
+      destroy:
+        cannot_remove_last_super_admin: Không thể xóa siêu quản trị viên đang hoạt động
+          cuối cùng.
+        cannot_remove_self: Bạn không thể xóa tài khoản của chính mình tại đây.
+        confirmation_mismatch: Địa chỉ email không khớp. Người dùng chưa bị xóa.
+        failure: Không thể xóa người dùng.
+        success: Đã thu hồi quyền truy cập và lên lịch xóa vĩnh viễn người dùng.
+    families:
+      destroy:
+        family_has_active_subscription: Gia đình/nhóm có gói đăng ký đang hoạt động và
+          không thể xóa cho đến khi hủy gói đó.
+        family_has_users: Gia đình/nhóm vẫn còn người dùng nên không thể xóa.
+        success: Đã xóa gia đình/nhóm thành công.

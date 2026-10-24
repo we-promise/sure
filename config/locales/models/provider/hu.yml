@@ -1,0 +1,18 @@
+---
+hu:
+  providers:
+    property_valuation:
+      missing_fields: Adj meg nevet és teljes amerikai címet (utca, város, állam és irányítószám).
+      not_configured: Ez az ingatlan-adatszolgáltató nincs beállítva.
+      preview_expired: Az ingatlan előnézete lejárt — keresd meg újra a címet.
+    realie:
+      errors:
+        location_mismatch: A Realie másik városban vagy irányítószám alatt talált ingatlant. Ellenőrizd
+          még egyszer a címet.
+        no_property: A Realie nem adott vissza ingatlant ehhez a címhez.
+        no_valuation: A Realie nem adott vissza értékbecslést ehhez az ingatlanhoz.
+        not_found: A Realie nem talált a címnek megfelelő ingatlant.
+    rentcast:
+      errors:
+        no_valuation: A RentCast nem adott vissza értékbecslést ehhez a címhez.
+        not_found: A RentCast nem talált a címnek megfelelő ingatlant.

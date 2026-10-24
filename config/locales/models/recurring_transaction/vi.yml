@@ -5,3 +5,32 @@ vi:
       models:
         recurring_transaction:
           merchant_or_name_required: "Phải có nhà cung cấp hoặc tên"
+          attributes:
+            account:
+              required_for_transfer: là bắt buộc đối với chuyển khoản định kỳ
+              wrong_family: phải thuộc gia đình này
+            anchor_date:
+              required_for_intervals: là bắt buộc khi quy tắc lặp lại mỗi 2 kỳ trở lên
+            bill_type:
+              transfer_shape_mismatch: chỉ có thể là chuyển khoản khi đã đặt tài khoản đích
+            destination_account:
+              family_mismatch: phải thuộc cùng gia đình với tài khoản nguồn
+              same_as_source: không được trùng với tài khoản nguồn
+              wrong_family: phải thuộc gia đình này
+            expected_amount_min:
+              greater_than_max: không được lớn hơn số tiền tối đa dự kiến
+            payment_url:
+              invalid_scheme: phải là địa chỉ http:// hoặc https:// hợp lệ
+    attributes:
+      recurring_transaction:
+        frequency_interval: Khoảng lặp
+        payment_url: Liên kết thanh toán
+  recurring_transactions:
+    allocator:
+      exceeds_remaining: "%{amount} vượt quá %{remaining} còn lại trong kỳ này"
+      missing_rate: không có tỷ giá từ %{from} sang %{to}; hãy nhập số tiền cụ thể
+      over_allocated: phân bổ %{amount} vượt quá %{capacity} %{currency} còn lại của
+        giao dịch
+      unmeasurable: giao dịch này có khoản phân bổ không thể đổi sang %{currency}, nên
+        không xác định được phần còn lại. Hãy thêm tỷ giá cho %{date} hoặc xóa khoản
+        thanh toán hiện có trước

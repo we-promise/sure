@@ -1,0 +1,54 @@
+---
+vi:
+  recurring_occurrences:
+    history_status:
+      missed: Đã bỏ lỡ
+      paid: Đã thanh toán
+      scheduled: Chưa thanh toán
+      skipped: Đã bỏ qua
+    mark_paid:
+      success: Đã đánh dấu hóa đơn được thanh toán
+    override_amount:
+      success: Đã cập nhật số tiền dự kiến
+    reopen:
+      success: Đã mở lại hóa đơn
+    show:
+      add_heading: Thêm khoản thanh toán khác
+      cant_find: Không tìm thấy giao dịch?
+      due_on: Đến hạn %{date}
+      find_heading: Tìm khoản thanh toán
+      link_payment: Liên kết khoản thanh toán
+      manual_amount_label: Số tiền
+      manual_date_label: Ngày
+      manual_explainer: Ghi nhận khoản thanh toán bạn biết đã diễn ra khi không có
+        giao dịch nào ở đây khớp với nó.
+      manual_payment: Thanh toán thủ công
+      mark_paid: Đánh dấu đã trả
+      mark_paid_hint: Tất toán phần còn lại mà không ghi giao dịch.
+      missed: Đã đánh dấu bỏ lỡ
+      no_candidates: Không có giao dịch gần ngày này để liên kết.
+      no_ranked_candidates: Chưa có mục nào giống khoản thanh toán cho hóa đơn này.
+      no_search_results: Không có kết quả khớp %{query}.
+      not_this_one: Không phải khoản này
+      other_matches: Các khoản có khả năng khớp khác
+      overpaid: nhiều hơn dự kiến
+      paid_headline: Đã trả %{amount}
+      paid_of: Đã trả %{paid} trên %{expected}
+      payments: Khoản thanh toán
+      record_payment: Ghi nhận thanh toán
+      remaining: Còn lại %{amount}
+      reopen: Mở lại
+      review_heading: Xem lại khoản thanh toán
+      search_all: Tìm tất cả giao dịch
+      search_placeholder: Tìm giao dịch
+      settled: Đã thanh toán đủ
+      skip: Bỏ qua
+      skipped: Đã bỏ qua
+      snooze_week: Hoãn một tuần
+      unlink: Hủy liên kết
+      view_bill: Xem đầy đủ hóa đơn
+    skip:
+      success: Đã bỏ qua hóa đơn
+    snooze:
+      invalid_date: Không đọc được ngày đó
+      success: Đã hoãn đến %{date}

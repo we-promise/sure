@@ -2,5 +2,8 @@
 hu:
   messages:
     chat_form:
-      placeholder: "Kérdezz bármit..."
-      disclaimer: "Az AI-válaszok csak tájékoztató jellegűek. Nem pénzügyi tanácsadás!"
+      placeholder: Kérdezz bármit...
+      disclaimer: Az AI-válaszok csak tájékoztató jellegűek. Nem pénzügyi tanácsadás!
+      coming_soon: Hamarosan
+    create:
+      chat_not_found: Ez a beszélgetés már nem érhető el.

@@ -40,6 +40,21 @@ vi:
           cash_flow: "Dòng tiền"
           surplus: "Thặng dư"
           deficit: "Thâm hụt"
+        feedback_loading: Đang tải biểu mẫu phản hồi…
+        feedback_privacy: Phản hồi của bạn được gửi đến PostHog. Hãy mô tả vấn đề mà không
+          đưa số tài khoản, số dư hay chi tiết tài chính riêng tư khác.
+        feedback_prompt: So sánh biểu đồ này với bản gốc ở trên và cho biết liệu có khác biệt
+          nào ngoài thứ tự sắp xếp.
+        feedback_submit: Gửi phản hồi
+        feedback_thanks: Cảm ơn bạn đã giúp cải thiện biểu đồ!
+        feedback_title: Phản hồi về biểu đồ dòng tiền
+        feedback_unavailable: Hiện chưa thể gửi phản hồi. Vui lòng thử lại sau.
+        negative: Có điều gì đó không đúng
+        positive: Có vẻ đúng
+        preview: Bản xem trước
+        preview_tooltip: Biểu đồ này sẽ thay thế phần hiển thị phía trên vì dùng API dùng
+          chung mới với ứng dụng Swift trên di động.
+        title: Biểu đồ Sankey mới
       welcome: "Chào mừng trở lại, %{name}"
       subtitle: "Đây là tình hình tài chính của bạn"
       new: "Mới"
@@ -66,12 +81,17 @@ vi:
         classifications:
           asset: "Tài sản"
           liability: "Nợ phải trả"
+        collapse_all: Thu gọn tất cả
+        expand_all: Mở rộng tất cả
       cashflow_sankey:
         title: "Dòng tiền"
         zoom_out: "Quay lại toàn bộ dòng tiền"
         no_data_title: "Không có dữ liệu dòng tiền cho khoảng thời gian này"
         no_data_description: "Thêm giao dịch để hiển thị dữ liệu dòng tiền hoặc mở rộng khoảng thời gian"
         add_transaction: "Thêm giao dịch"
+        load_error: Không tải được dòng tiền. Vui lòng thử lại.
+        loading: Đang tải dòng tiền…
+        retry: Thử lại
       no_accounts:
         title: "Chưa có tài khoản nào"
         description: "Thêm tài khoản để hiển thị dữ liệu tài sản ròng"
@@ -95,3 +115,44 @@ vi:
         trades: "Giao dịch"
         no_investments: "Không có tài khoản đầu tư"
         add_investment: "Thêm tài khoản đầu tư để theo dõi danh mục của bạn"
+      insights_feed:
+        title: Nhận định
+      money_flow:
+        apply: Áp dụng
+        balance: Chênh lệch thu chi giao dịch
+        chart_span: "%{count} tháng qua"
+        date_range: "%{start_date} đến %{end_date}"
+        expenses: Chi phí
+        filter_accounts: Lọc tài khoản (%{count})
+        filter_accounts_all: Tất cả tài khoản
+        income: Thu nhập
+        month_picker_aria_label: Chọn tháng
+        period_scope_hint: Hiển thị những tháng bạn chọn tại đây — độc lập với khoảng thời
+          gian của bảng tổng quan ở phía trên.
+        search_accounts: Tìm tài khoản
+        title: Tiền vào / ra
+      sections_aria_label: Các phần của bảng tổng quan
+      spending_trend:
+        date_range: "%{start_date} đến %{end_date}"
+        date_range_short: "%{start_date} - %{end_day}, %{year}"
+        date_range_short_single: "%{date}, %{year}"
+        month_picker_aria_label: Chọn tháng
+        no_data: Không có dữ liệu chi tiêu cho tháng này
+        period_scope_hint: Hiển thị tháng bạn chọn tại đây — độc lập với khoảng thời gian
+          của bảng tổng quan ở phía trên.
+        previous_comparison_days: "(1-%{end_day})"
+        title: Chi tiêu
+      widget_size:
+        auto: Tự động
+        compact: Gọn
+        full: Toàn bộ
+        half: Một nửa
+        height_label: Chiều cao
+        label: Điều chỉnh kích thước
+        tall: Cao
+        width_label: Chiều rộng
+    release_notes_unavailable:
+      body_html: "<p>Hiện không thể lấy ghi chú phát hành mới nhất. Hãy quay lại sau hoặc
+        truy cập trực tiếp <a href='https://github.com/we-promise/sure/releases' target='_blank'
+        rel='noopener noreferrer'>trang phát hành GitHub</a>.</p>"
+      name: Không có ghi chú phát hành

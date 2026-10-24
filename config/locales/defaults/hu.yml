@@ -39,6 +39,7 @@ hu:
       default: "%Y.%m.%d."
       long: "%Y. %B %e."
       short: "%b %e."
+      month_year: "%Y. %B"
     month_names:
     -
     - január
@@ -191,3 +192,18 @@ hu:
       long: "%Y. %B %e., %A, %H:%M"
       short: "%b %e., %H:%M"
     pm: du.
+  defaults:
+    brand_name: "%{brand_name}"
+    common:
+      close: Bezárás
+    product_name: "%{product_name}"
+  global:
+    expand: Kibontás
+  mcp:
+    errors:
+      invalid_session_id: Érvénytelen MCP-munkamenetazonosító
+      unsupported_protocol_version: 'Nem támogatott MCP-protokollverzió: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: >-
+        A redirect_uris értéke HTTPS-t, visszacsatolási HTTP-címet vagy natív alkalmazás URI-sémáját használhatja

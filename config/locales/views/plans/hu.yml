@@ -1,0 +1,36 @@
+---
+hu:
+  plans:
+    budget_card:
+      days_left:
+        one: 1 nap van hátra
+        other: "%{count} nap van hátra"
+      edit_budget: Költségvetés szerkesztése
+      empty_body: Adj meg havi kiadási célt és kategóriánkénti keretet, hogy lásd az aktuális hónap alakulását.
+      of_total: összesen %{total} keretből
+      percent_used: "%{percent}% felhasználva"
+      set_up: Az e havi költségvetés beállítása
+      title: Ez a hónap
+      top_categories: Fő kategóriák
+      view_budget: Teljes költségvetés megtekintése
+    goals_card:
+      active_count:
+        one: 1 aktív
+        other: "%{count} aktív"
+      active_goals: Aktív célok
+      all_goals: Összes cél
+      all_on_pace: Minden a terv szerint halad
+      behind_count:
+        one: 1 elmaradásban
+        other: "%{count} elmaradásban"
+      new_goal: Új cél
+      of_targets: az összes cél %{total} összegéből
+      pending_count:
+        one: 1 függő vállalás
+        other: "%{count} függő vállalás"
+      pending_marker: függőben
+      runway: "%{months} hónapra elegendő · %{pace}/hó"
+      title: Céljaid
+    show:
+      subtitle: Döntsd el, hová kerüljön a pénzed — mennyit költesz, és mennyit takarítasz meg.
+      title: Csomag

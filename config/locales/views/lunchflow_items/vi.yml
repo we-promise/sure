@@ -14,6 +14,7 @@ vi:
       service_down_label: Dịch vụ gián đoạn
       service_down_desc: API Lunchflow có thể tạm thời không khả dụng
       check_provider_settings: Kiểm tra Cài đặt nhà cung cấp
+      unexpected_error: Đã xảy ra lỗi không mong đợi. Vui lòng thử lại sau.
     setup_required:
       title: Cần thiết lập Lunchflow
       api_key_not_configured: Khóa API chưa được cấu hình
@@ -64,6 +65,14 @@ vi:
       syncing: Đang đồng bộ...
       total: Tổng cộng
       unlinked: Chưa liên kết
+      sync_status:
+        no_accounts: Không tìm thấy tài khoản
+        partial_setup:
+          one: Đã đồng bộ %{linked}, cần thiết lập %{unlinked}
+          other: Đã đồng bộ %{linked}, cần thiết lập %{unlinked}
+        synced:
+          one: Đã đồng bộ %{count} tài khoản
+          other: Đã đồng bộ %{count} tài khoản
     select_accounts:
       accounts_selected: tài khoản đã chọn
       api_error: "Lỗi API: %{message}"
@@ -127,19 +136,19 @@ vi:
           cd: Chứng chỉ tiền gửi
           money_market: Thị trường tiền tệ
         investment:
-          brokerage: Brokerage
+          brokerage: "Môi giới chứng khoán"
           pension: Lương hưu
           retirement: Hưu trí
           "401k": "401(k)"
           roth_401k: "Roth 401(k)"
           "403b": "403(b)"
-          tsp: Thrift Savings Plan
-          "529_plan": "529 Plan"
+          tsp: "Kế hoạch tiết kiệm hưu trí TSP"
+          "529_plan": "Kế hoạch 529"
           hsa: Tài khoản tiết kiệm y tế
           mutual_fund: Quỹ tương hỗ
-          ira: Traditional IRA
+          ira: "IRA truyền thống"
           roth_ira: Roth IRA
-          angel: Angel
+          angel: "Đầu tư thiên thần"
         loan:
           mortgage: Thế chấp
           student: Vay sinh viên
@@ -155,12 +164,18 @@ vi:
       sync_start_date_help: Chọn khoảng thời gian lịch sử giao dịch bạn muốn đồng bộ. Tối đa 3 năm lịch sử có sẵn.
       sync_start_date_label: "Bắt đầu đồng bộ giao dịch từ:"
       title: Thiết lập tài khoản Lunchflow của bạn
+      page_title: Thiết lập tài khoản Lunch Flow
     complete_account_setup:
       all_skipped: "Tất cả tài khoản đã bị bỏ qua. Không có tài khoản nào được tạo."
       creation_failed: "Tạo tài khoản thất bại: %{error}"
       no_accounts: "Không có tài khoản nào để thiết lập."
       success: "Đã tạo thành công %{count} tài khoản."
+      unexpected_error: Đã xảy ra lỗi không mong đợi
     sync:
       success: Đã bắt đầu đồng bộ
     update:
       success: Kết nối Lunchflow đã được cập nhật
+    subtype_select:
+      placeholder:
+        subtype: Chọn loại phụ
+        type: Chọn loại

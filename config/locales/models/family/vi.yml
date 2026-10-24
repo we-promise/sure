@@ -1,0 +1,10 @@
+---
+vi:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_categorizer_anthropic: Lời nhắc phân loại giao dịch (Anthropic)
+        ai_prompt_categorizer_openai: Lời nhắc phân loại giao dịch (OpenAI)
+        ai_prompt_chat_system: Lời nhắc hệ thống cho trò chuyện
+        ai_prompt_merchant_anthropic: Lời nhắc nhận diện người bán (Anthropic)
+        ai_prompt_merchant_openai: Lời nhắc nhận diện người bán (OpenAI)

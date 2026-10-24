@@ -1,0 +1,196 @@
+---
+vi:
+  redbark_items:
+    complete_account_setup:
+      all_skipped: Đã bỏ qua tất cả tài khoản. Không tạo tài khoản nào.
+      creation_failed: 'Không thể tạo tài khoản: %{error}'
+      creation_failed_generic: Không thể tạo tài khoản.
+      no_accounts: Không có tài khoản cần thiết lập.
+      setup_failed: Không thể tạo %{count} tài khoản. Không có thay đổi nào khác —
+        hãy sửa lỗi và thử lại.
+      success: Đã tạo thành công %{count} tài khoản.
+    create:
+      success: Đã tạo kết nối Redbark thành công
+    default_name: Kết nối Redbark
+    destroy:
+      success: Đã xóa kết nối Redbark
+      unlink_failed:
+        one: Không thể hủy liên kết %{count} tài khoản. Vui lòng thử lại.
+        other: Không thể hủy liên kết %{count} tài khoản. Vui lòng thử lại.
+    errors:
+      provider_not_configured: Chưa cấu hình nhà cung cấp Redbark
+    index:
+      title: Kết nối Redbark
+    institution_summary:
+      count:
+        one: "%{count} tổ chức"
+        other: "%{count} tổ chức"
+      none: Chưa kết nối tổ chức nào
+    link_existing_account:
+      account_already_linked: Tài khoản này đã liên kết với một nhà cung cấp
+      api_error: 'Lỗi API: %{message}'
+      invalid_account_name: Không thể liên kết tài khoản có tên trống
+      missing_parameters: Thiếu tham số bắt buộc
+      no_api_key: Không tìm thấy khóa API Redbark. Hãy cấu hình trong Cài đặt nhà
+        cung cấp.
+      provider_account_already_linked: Tài khoản Redbark này đã liên kết với tài khoản
+        khác
+      provider_account_not_found: Không tìm thấy tài khoản Redbark
+      success: Đã liên kết %{account_name} với Redbark thành công
+    loading:
+      loading_message: Đang tải tài khoản Redbark...
+      loading_title: Đang tải
+    panel:
+      fields:
+        api_key:
+          label: Khóa API
+          placeholder_new: rbk_live_...
+          placeholder_update: Nhập khóa API mới để cập nhật
+      optional: "(Không bắt buộc)"
+      optional_with_default: "(không bắt buộc, mặc định %{default_value})"
+      save_button: Lưu cấu hình
+      step_1: Tạo khóa API trong Settings tại app.redbark.com
+      step_2: Nhập khóa API bên dưới và nhấn Lưu
+      step_3: Sau khi kết nối thành công, vào thẻ Tài khoản để thiết lập tài khoản
+        mới
+      update_button: Cập nhật cấu hình
+    redbark_item:
+      accounts_need_setup: Tài khoản cần thiết lập
+      delete: Xóa kết nối
+      deletion_in_progress: đang xóa...
+      error: Lỗi
+      more_accounts_available:
+        one: Còn %{count} tài khoản khả dụng
+        other: Còn %{count} tài khoản khả dụng
+      no_accounts_description: Kết nối này chưa có tài khoản liên kết.
+      no_accounts_title: Không có tài khoản
+      provider_name: Redbark
+      requires_update: Cần cập nhật kết nối
+      setup_action: Thiết lập tài khoản mới
+      setup_description: Đã liên kết %{linked} trên %{total} tài khoản. Chọn loại
+        tài khoản cho các tài khoản Redbark vừa nhập.
+      setup_needed: Tài khoản mới sẵn sàng để thiết lập
+      status: Đã đồng bộ %{timestamp} trước
+      status_never: Chưa từng đồng bộ
+      status_with_summary: Đồng bộ gần nhất %{timestamp} trước - %{summary}
+      syncing: Đang đồng bộ...
+      total: Tổng
+      unlinked: Chưa liên kết
+      update_credentials: Cập nhật thông tin xác thực
+    select_accounts:
+      accounts_selected: tài khoản đã chọn
+      api_error: 'Lỗi API: %{message}'
+      cancel: Hủy
+      configure_name_in_provider: Không thể nhập — hãy đặt tên tài khoản trong Redbark
+      description: Chọn tài khoản muốn liên kết với tài khoản %{product_name} của
+        bạn.
+      link_accounts: Liên kết tài khoản đã chọn
+      no_accounts_found: Không tìm thấy tài khoản. Hãy kiểm tra cấu hình khóa API.
+      no_api_key: Chưa cấu hình khóa API Redbark. Hãy cấu hình trong Cài đặt.
+      no_credentials_configured: Hãy cấu hình thông tin xác thực Redbark trong Cài
+        đặt nhà cung cấp trước.
+      no_name_placeholder: "(Chưa có tên)"
+      title: Chọn tài khoản Redbark
+    select_existing_account:
+      account_already_linked: Tài khoản này đã liên kết với một nhà cung cấp
+      all_accounts_already_linked: Tất cả tài khoản Redbark đã được liên kết
+      api_error: 'Lỗi API: %{message}'
+      balance_label: 'Số dư:'
+      cancel: Hủy
+      cancel_button: Hủy
+      configure_name_in_provider: Không thể nhập — hãy đặt tên tài khoản trong Redbark
+      connect_hint: Kết nối tài khoản Redbark để bật đồng bộ tự động.
+      description: Chọn tài khoản Redbark để liên kết với tài khoản này. Giao dịch
+        sẽ được đồng bộ và loại trùng tự động.
+      header: Liên kết với Redbark
+      link_account: Liên kết tài khoản
+      link_button: Liên kết tài khoản này
+      linking_to: 'Liên kết với:'
+      no_account_specified: Chưa chỉ định tài khoản
+      no_accounts: Không tìm thấy tài khoản Redbark chưa liên kết.
+      no_accounts_found: Không tìm thấy tài khoản Redbark. Hãy kiểm tra cấu hình khóa
+        API.
+      no_api_key: Chưa cấu hình khóa API Redbark. Hãy cấu hình trong Cài đặt.
+      no_credentials_configured: Hãy cấu hình thông tin xác thực Redbark trong Cài
+        đặt nhà cung cấp trước.
+      no_name_placeholder: "(Chưa có tên)"
+      settings_link: Mở Cài đặt nhà cung cấp
+      subtitle: Chọn tài khoản Redbark
+      title: Liên kết %{account_name} với Redbark
+    setup_accounts:
+      account_type_label: 'Loại tài khoản:'
+      account_types:
+        credit_card: Thẻ tín dụng
+        depository: Tài khoản thanh toán hoặc tiết kiệm
+        loan: Khoản vay hoặc vay thế chấp
+        other_asset: Tài sản khác
+        skip: Bỏ qua tài khoản này
+      accounts_count:
+        one: "%{count} tài khoản khả dụng"
+        other: "%{count} tài khoản khả dụng"
+      all_accounts_linked: Tất cả tài khoản Redbark của bạn đã được thiết lập.
+      api_error: 'Lỗi API: %{message}'
+      balance: Số dư
+      cancel: Hủy
+      choose_account_type: 'Chọn đúng loại cho mỗi tài khoản Redbark:'
+      create_accounts: Tạo tài khoản
+      creating: Đang tạo tài khoản...
+      creating_accounts: Đang tạo tài khoản...
+      done: Xong
+      fetch_failed: Không thể lấy tài khoản
+      historical_data_range: 'Phạm vi dữ liệu lịch sử:'
+      import_selected: Nhập tài khoản đã chọn
+      instructions: Chọn tài khoản muốn nhập từ Redbark. Bạn có thể chọn nhiều tài
+        khoản.
+      no_accounts: Không tìm thấy tài khoản chưa liên kết trong kết nối Redbark này.
+      no_accounts_to_setup: Không có tài khoản cần thiết lập
+      no_api_key: Chưa cấu hình khóa API Redbark. Hãy kiểm tra cài đặt kết nối.
+      select_all: Chọn tất cả
+      subtitle: Chọn đúng loại cho các tài khoản đã nhập
+      subtype_labels:
+        credit_card: ''
+        depository: 'Loại tài khoản phụ:'
+        loan: 'Loại khoản vay:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Thẻ tín dụng sẽ tự động được thiết lập thành tài khoản thẻ tín
+          dụng.
+        other_asset: Tài sản khác không cần tùy chọn bổ sung.
+      subtypes:
+        depository:
+          cd: Chứng chỉ tiền gửi
+          checking: Thanh toán
+          hsa: Tài khoản tiết kiệm y tế
+          money_market: Thị trường tiền tệ
+          savings: Tiết kiệm
+        loan:
+          auto: Vay mua ô tô
+          mortgage: Vay thế chấp
+          other: Khoản vay khác
+          student: Vay sinh viên
+      sync_start_date_help: Chọn thời điểm bắt đầu lấy lịch sử giao dịch.
+      sync_start_date_label: 'Bắt đầu đồng bộ giao dịch từ:'
+      title: Thiết lập tài khoản Redbark
+    setup_required:
+      go_to_provider_settings: Mở cài đặt nhà cung cấp
+      not_configured_description: Thêm khóa API Redbark trong Cài đặt nhà cung cấp,
+        rồi quay lại đây để liên kết tài khoản.
+      not_configured_title: Chưa kết nối Redbark
+      title: Kết nối Redbark trước
+    sync:
+      status:
+        calculating: Đang tính số dư...
+        checking_setup: Đang kiểm tra cấu hình tài khoản...
+        importing: Đang nhập tài khoản từ Redbark...
+        importing_data: Đang nhập dữ liệu tài khoản...
+        needs_setup: "%{count} tài khoản cần thiết lập..."
+        processing: Đang xử lý giao dịch...
+      success: Đã bắt đầu đồng bộ
+    sync_status:
+      no_accounts: Không tìm thấy tài khoản
+      synced:
+        one: Đã đồng bộ %{count} tài khoản
+        other: Đã đồng bộ %{count} tài khoản
+      synced_with_setup: Đã đồng bộ %{linked}, cần thiết lập %{unlinked}
+    update:
+      success: Đã cập nhật kết nối Redbark

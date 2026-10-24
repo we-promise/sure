@@ -1,0 +1,24 @@
+---
+vi:
+  activerecord:
+    attributes:
+      goal_pledge:
+        account: Tài khoản
+        amount: Số tiền
+        currency: Tiền tệ
+        expires_at: Hết hạn lúc
+        kind: Loại
+        status: Trạng thái
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Chọn một trong các tài khoản liên kết của mục
+                tiêu.
+            currency:
+              must_match_goal: Tiền tệ của cam kết phải trùng với tiền tệ của mục
+                tiêu.
+          duplicate_open_pledge: Bạn đã có cam kết đang mở với số tiền này trên tài
+            khoản này. Hủy hoặc gia hạn cam kết hiện có trước khi ghi nhận cam kết
+            khác.

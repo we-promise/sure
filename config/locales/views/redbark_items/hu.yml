@@ -1,0 +1,195 @@
+---
+hu:
+  redbark_items:
+    complete_account_setup:
+      all_skipped: Minden számla ki lett hagyva. Nem jött létre számla.
+      creation_failed: 'Nem sikerült létrehozni a számlákat: %{error}'
+      creation_failed_generic: Nem sikerült létrehozni a számlákat.
+      no_accounts: Nincs beállítandó számla.
+      setup_failed: >-
+        %{count} számlát nem sikerült létrehozni. Semmi más nem változott — javítsd a hibát, majd próbáld
+        újra.
+      success: "%{count} számla sikeresen létrehozva."
+    create:
+      success: A Redbark-kapcsolat sikeresen létrehozva
+    default_name: Redbark-kapcsolat
+    destroy:
+      success: A Redbark-kapcsolat eltávolítva
+      unlink_failed:
+        one: "%{count} számla leválasztása sikertelen. Próbáld újra."
+        other: "%{count} számla leválasztása sikertelen. Próbáld újra."
+    errors:
+      provider_not_configured: A Redbark szolgáltató nincs beállítva
+    index:
+      title: Redbark-kapcsolatok
+    institution_summary:
+      count:
+        one: "%{count} intézmény"
+        other: "%{count} intézmény"
+      none: Nincs csatlakoztatott intézmény
+    link_existing_account:
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval
+      api_error: 'API hiba: %{message}'
+      invalid_account_name: Nem lehet összekapcsolni üres nevű számlát
+      missing_parameters: Hiányzó kötelező paraméterek
+      no_api_key: Nem található Redbark API-kulcs. Állítsd be a Szolgáltatói beállítások között.
+      provider_account_already_linked: Ez a Redbark-számla már másik számlához van kapcsolva
+      provider_account_not_found: A Redbark-számla nem található
+      success: A(z) %{account_name} számla sikeresen összekapcsolva a Redbark szolgáltatással
+    loading:
+      loading_message: Redbark-számlák betöltése…
+      loading_title: Betöltés
+    panel:
+      fields:
+        api_key:
+          label: API-kulcs
+          placeholder_new: rbk_live_...
+          placeholder_update: Add meg az új API-kulcsot a frissítéshez
+      optional: "(opcionális)"
+      optional_with_default: "(opcionális, alapértelmezett: %{default_value})"
+      save_button: Konfiguráció mentése
+      step_1: Hozz létre API-kulcsot az app.redbark.com oldalon, a Settings menüben
+      step_2: Add meg alább az API-kulcsodat, majd kattints a Mentés gombra
+      step_3: Sikeres csatlakozás után menj a Számlák lapra az új számlák beállításához
+      update_button: Konfiguráció frissítése
+    redbark_item:
+      accounts_need_setup: Számlák beállítást igényelnek
+      delete: Kapcsolat törlése
+      deletion_in_progress: törlés folyamatban...
+      error: Hiba
+      more_accounts_available:
+        one: "%{count} további elérhető számla"
+        other: "%{count} további elérhető számla"
+      no_accounts_description: Ehhez a kapcsolathoz még nincsenek összekapcsolt számlák.
+      no_accounts_title: Nincsenek számlák
+      provider_name: Redbark
+      requires_update: A kapcsolat frissítést igényel
+      setup_action: Új számlák beállítása
+      setup_description: >-
+        %{linked} számla összekapcsolva a(z) %{total} számlából. Válassz típust az újonnan importált Redbark-számláidhoz.
+      setup_needed: Új számlák beállításra várnak
+      status: Szinkronizálva %{timestamp} ezelőtt
+      status_never: Még nem szinkronizált
+      status_with_summary: Utolsó szinkronizálás %{timestamp} ezelőtt - %{summary}
+      syncing: Szinkronizálás...
+      total: Összesen
+      unlinked: Nincs összekapcsolva
+      update_credentials: Hitelesítő adatok frissítése
+    select_accounts:
+      accounts_selected: kiválasztott számla
+      api_error: 'API hiba: %{message}'
+      cancel: Mégse
+      configure_name_in_provider: Nem importálható — állítsd be a számla nevét a Redbark felületén
+      description: Válaszd ki azokat a számlákat, amelyeket össze szeretnél kapcsolni a(z) %{product_name}
+        fiókkal.
+      link_accounts: Kiválasztott számlák összekapcsolása
+      no_accounts_found: Nem találhatók számlák. Kérlek ellenőrizd az API-kulcs konfigurációdat.
+      no_api_key: A Redbark API-kulcs nincs beállítva. Add meg a Beállítások között.
+      no_credentials_configured: Előbb állítsd be a Redbark hitelesítő adatait a Szolgáltatói beállítások
+        között.
+      no_name_placeholder: "(Nincs név)"
+      title: Redbark-számlák kiválasztása
+    select_existing_account:
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval
+      all_accounts_already_linked: Minden Redbark-számla már össze van kapcsolva
+      api_error: 'API hiba: %{message}'
+      balance_label: 'Egyenleg:'
+      cancel: Mégse
+      cancel_button: Mégse
+      configure_name_in_provider: Nem importálható — állítsd be a számla nevét a Redbark felületén
+      connect_hint: Kapcsolj hozzá egy Redbark-számlát az automatikus szinkronizálás engedélyezéséhez.
+      description: >-
+        Válaszd ki az ehhez a számlához kapcsolandó Redbark-számlát. A tranzakciók szinkronizálása és
+        ismétlődéseik kiszűrése automatikusan történik.
+      header: Összekapcsolás a Redbark szolgáltatással
+      link_account: Számla összekapcsolása
+      link_button: A számla összekapcsolása
+      linking_to: 'Összekapcsolás:'
+      no_account_specified: Nem lett megadva számla
+      no_accounts: Nincs még nem kapcsolt Redbark-számla.
+      no_accounts_found: Nem található Redbark-számla. Ellenőrizd az API-kulcs beállítását.
+      no_api_key: A Redbark API-kulcs nincs beállítva. Add meg a Beállítások között.
+      no_credentials_configured: Előbb állítsd be a Redbark hitelesítő adatait a Szolgáltatói beállítások
+        között.
+      no_name_placeholder: "(Nincs név)"
+      settings_link: Szolgáltatói beállítások megnyitása
+      subtitle: Válassz Redbark-számlát
+      title: "%{account_name} összekapcsolása a Redbark szolgáltatással"
+    setup_accounts:
+      account_type_label: 'Számlatípus:'
+      account_types:
+        credit_card: Hitelkártya
+        depository: Folyó- vagy megtakarítási számla
+        loan: Hitel vagy jelzáloghitel
+        other_asset: Egyéb vagyonelem
+        skip: Számla kihagyása
+      accounts_count:
+        one: "%{count} elérhető számla"
+        other: "%{count} elérhető számla"
+      all_accounts_linked: Már minden Redbark-számlád be van állítva.
+      api_error: 'API hiba: %{message}'
+      balance: Egyenleg
+      cancel: Mégse
+      choose_account_type: 'Válaszd ki az egyes Redbark-számlák megfelelő típusát:'
+      create_accounts: Számlák létrehozása
+      creating: Számlák létrehozása...
+      creating_accounts: Számlák létrehozása...
+      done: Kész
+      fetch_failed: Nem sikerült lekérni a számlákat
+      historical_data_range: 'Előzmények időtartama:'
+      import_selected: Kiválasztott számlák importálása
+      instructions: Válaszd ki a Redbark szolgáltatásból importálni kívánt számlákat. Több számlát is
+        választhatsz.
+      no_accounts: Ehhez a Redbark-kapcsolathoz nem található még nem kapcsolt számla.
+      no_accounts_to_setup: Nincs beállítandó számla
+      no_api_key: A Redbark API-kulcs nincs beállítva. Ellenőrizd a kapcsolat beállításait.
+      select_all: Összes kijelölése
+      subtitle: Válaszd ki az importált számlák helyes típusait
+      subtype_labels:
+        credit_card: ''
+        depository: 'Számla altípusa:'
+        loan: 'Hitel típusa:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: A hitelkártyák automatikusan hitelkártya számlákként lesznek beállítva.
+        other_asset: Az egyéb vagyonelemekhez nincs szükség további beállításokra.
+      subtypes:
+        depository:
+          cd: Lekötött betét
+          checking: Folyószámla
+          hsa: Egészségügyi megtakarítási számla
+          money_market: Pénzpiaci számla
+          savings: Megtakarítási számla
+        loan:
+          auto: Autóhitel
+          mortgage: Jelzáloghitel
+          other: Egyéb hitel
+          student: Diákhitel
+      sync_start_date_help: Válaszd ki, milyen messzire szeretnél visszamenni a tranzakciós előzmények
+        szinkronizálásában.
+      sync_start_date_label: 'Tranzakciók szinkronizálásának kezdete:'
+      title: Redbark-számláid beállítása
+    setup_required:
+      go_to_provider_settings: Szolgáltatói beállítások megnyitása
+      not_configured_description: >-
+        Add meg a Redbark API-kulcsodat a Szolgáltatói beállítások között, majd térj vissza ide a számlák
+        összekapcsolásához.
+      not_configured_title: A Redbark még nincs csatlakoztatva
+      title: Előbb csatlakoztasd a Redbark szolgáltatást
+    sync:
+      status:
+        calculating: Egyenlegek kiszámítása...
+        checking_setup: Számlakonfiguráció ellenőrzése...
+        importing: Számlák importálása a Redbark szolgáltatásból…
+        importing_data: Számlaadatok importálása...
+        needs_setup: "%{count} számla beállítást igényel..."
+        processing: Tranzakciók feldolgozása...
+      success: Szinkronizálás elindítva
+    sync_status:
+      no_accounts: Nem találhatók számlák
+      synced:
+        one: "%{count} számla szinkronizálva"
+        other: "%{count} számla szinkronizálva"
+      synced_with_setup: "%{linked} szinkronizálva, %{unlinked} beállítást igényel"
+    update:
+      success: A Redbark-kapcsolat frissítve

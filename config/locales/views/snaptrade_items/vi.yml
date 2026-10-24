@@ -77,6 +77,14 @@ vi:
       link_button: "Liên kết"
       linked_accounts: "Đã liên kết"
       linked_to: "Liên kết với:"
+      account_type_label: Loại tài khoản
+      account_types:
+        credit_card: Thẻ tín dụng
+        crypto: Tài khoản tiền mã hóa
+        depository: Tài khoản thanh toán hoặc tiết kiệm
+        investment: Tài khoản đầu tư
+        loan: Khoản vay hoặc hạn mức tín dụng
+        other_asset: Tài sản khác
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} tài khoản cần thiết lập"
@@ -102,6 +110,38 @@ vi:
       no_accounts_title: "Chưa phát hiện tài khoản nào"
       no_accounts_description: "Kết nối brokerage để nhập tài khoản đầu tư của bạn."
 
+    complete_oauth_device_flow:
+      access_denied: Yêu cầu cấp quyền SnapTrade bị từ chối.
+      authorization_pending: SnapTrade chưa nhận được xác nhận. Hãy phê duyệt mã trong
+        SnapTrade rồi thử lại.
+      device_code_required: Kết nối này không có quá trình cấp quyền thiết bị SnapTrade
+        đang diễn ra. Bắt đầu lại để nhận mã mới.
+      expired: Mã thiết bị này đã hết hạn. Bắt đầu cấp quyền lại.
+      failed: Không thể hoàn tất cấp quyền thiết bị SnapTrade. Vui lòng thử lại.
+      success: Đã hoàn tất cấp quyền SnapTrade.
+    oauth_authorize:
+      not_configured: Cấp quyền SnapTrade qua trình duyệt cần cả SNAPTRADE_OAUTH_CLIENT_SECRET
+        và SNAPTRADE_OAUTH_CLIENT_ID. Đặt giá trị rồi khởi động lại, hoặc dùng mã thiết
+        bị để cấp quyền.
+    oauth_callback:
+      access_denied: Đã hủy cấp quyền SnapTrade.
+      failed: Không thể hoàn tất cấp quyền SnapTrade. Vui lòng thử lại.
+      state_mismatch: Cấp quyền SnapTrade không vượt qua kiểm tra bảo mật. Vui lòng thử
+        lại.
+      success: Đã hoàn tất cấp quyền SnapTrade.
+    oauth_device_flow:
+      cancel_button: Hủy
+      code_label: Mã thiết bị
+      complete_button: Tôi đã cấp quyền SnapTrade
+      instructions: Mở SnapTrade, xác nhận mã thiết bị này rồi quay lại đây để hoàn tất.
+      missing_client_id: Chưa cấu hình OAuth SnapTrade. Thêm SNAPTRADE_OAUTH_CLIENT_ID
+        vào .env.local, khởi động lại ứng dụng rồi thử lại.
+      open_snaptrade: Mở SnapTrade
+      start_button: Bắt đầu cấp quyền
+      subtitle: Cấp quyền Sure truy cập SnapTrade bằng mã thiết bị.
+      title: Kết nối SnapTrade
+    start_oauth_device_flow:
+      failed: Không thể bắt đầu cấp quyền thiết bị SnapTrade. Vui lòng thử lại.
   providers:
     snaptrade:
       name: "SnapTrade"
@@ -132,6 +172,22 @@ vi:
       delete_connection_body: "Thao tác này sẽ xóa vĩnh viễn kết nối %{brokerage} khỏi SnapTrade. Tất cả tài khoản từ brokerage này sẽ bị hủy liên kết. Bạn cần kết nối lại để đồng bộ các tài khoản này."
       delete_connection_confirm: "Xóa kết nối"
 
+      manage_at_snaptrade: Quản lý kết nối tại SnapTrade
+      oauth_connect_button: Kết nối với SnapTrade
+      oauth_device_button: Dùng mã thiết bị
+      oauth_reauthorize_button: Cấp quyền lại
+      oauth_setup_step_1_html: Đăng ký ứng dụng OAuth tại <a href="https://dashboard.snaptrade.com"
+        target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: 'Chỉ với quy trình trình duyệt: thêm URL gọi lại của ứng
+        dụng (<code>%{callback_url}</code>) vào danh sách URI chuyển hướng đã đăng ký'
+      oauth_setup_step_3: Đặt SNAPTRADE_OAUTH_CLIENT_ID trong môi trường và khởi động lại.
+        Chỉ thiết lập đó đã bật quy trình mã thiết bị; thêm SNAPTRADE_OAUTH_CLIENT_SECRET
+        để bật cả quy trình trình duyệt
+      oauth_status_authorized: Đã được SnapTrade cấp quyền.
+      oauth_status_ready: Cho phép Sure đọc dữ liệu tài khoản SnapTrade.
+      oauth_status_ready_device: Cho phép Sure đọc dữ liệu tài khoản SnapTrade bằng mã thiết
+        bị.
+      oauth_title: OAuth SnapTrade
   snaptrade_item:
     sync_status:
       no_accounts: "Không tìm thấy tài khoản"
@@ -147,7 +203,7 @@ vi:
     brokerage_summary:
       none: "Chưa kết nối brokerage nào"
       count:
-        one: "%{count} brokerage"
+        one: "%{count} công ty môi giới"
         other: "%{count} brokerage"
     syncer:
       discovering: "Đang phát hiện tài khoản..."

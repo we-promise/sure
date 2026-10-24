@@ -40,4 +40,11 @@ vi:
         actions:
           delete: Xóa
           download: Tải xuống
+          confirm_mark_failed: Lần xuất này đã không hoạt động một thời gian và tác vụ nền có
+            thể bị gián đoạn. Đánh dấu thất bại? Bạn có thể tạo bản xuất mới ngay.
+          mark_failed: Đánh dấu thất bại
       empty: Chưa có bản xuất nào.
+    cancel:
+      cancelled: Đã đánh dấu lần xuất thất bại. Bạn có thể tạo bản xuất mới ngay.
+      not_cancellable: Hiện không thể đánh dấu lần xuất này thất bại — tác vụ có thể vẫn
+        đang chạy. Hãy thử lại sau khi không có hoạt động trong một giờ.

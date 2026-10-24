@@ -1,0 +1,383 @@
+---
+hu:
+  goals:
+    archive:
+      invalid_transition: A cél jelenlegi állapotában nem archiválható.
+      success: A cél archiválva.
+    color_picker:
+      auto_adjust: automatikus igazítás.
+      color_heading: Szín
+      icon_heading: Ikon
+      poor_contrast: Gyenge kontraszt. Válassz sötétebb színt, vagy
+      trigger_label: Szín és ikon választása
+    complete:
+      invalid_transition: A cél jelenlegi állapotában nem jelölhető teljesítettnek.
+      success: A cél teljesítettként megjelölve.
+    consume:
+      account_label: Melyik számláról?
+      amount_hint: Jelenleg %{saved} biztosít fedezetet ehhez a célhoz.
+      amount_label: Mennyit használtál fel?
+      cancel: Mégse
+      earmark_note: >-
+        A rögzített összeg többé nem lesz elkülönítve ehhez a célhoz, így a számlán lévő többi célod újra
+        részesedhet belőle.
+      errors:
+        account_not_linked: Ez a számla nem finanszírozza ezt a célt.
+        account_required: Ezt a célt több számla finanszírozza — add meg, melyikről ment ki a pénz.
+        exceeds_earmark: Ez meghaladja a célhoz ezen a számlán elkülönített összeget.
+        exceeds_target: Ez több annál, mint amennyit erre a célra összesen meg szerettél volna takarítani.
+        maintained: >-
+          A tartalékot felhasználás után vissza kell tölteni, nem végleg elkölteni — a hiány már látható
+          a célnál.
+        no_linked_account: Ehhez a célhoz már nem tartozik finanszírozó számla.
+        non_positive: Nullánál nagyobb összeget adj meg.
+        not_active: Ez a cél már nem aktív, ezért nem rögzíthető hozzá új felhasználás.
+        transaction_already_claimed: Ezt a kiáramlást már hozzárendelték egy felhasználáshoz.
+        transaction_not_found: Ez a kiáramlás már nem rendelhető hozzá.
+      submit: Rögzítés
+      subtitle: "%{goal}"
+      success: "%{amount} felhasználtként rögzítve."
+      title: Felhasználás rögzítése
+    create:
+      success: A cél létrehozva.
+    destroy:
+      success: A cél törölve.
+    edit:
+      heading: Cél szerkesztése
+      save: Változtatások mentése
+    empty_state:
+      add_account: Számla hozzáadása
+      body: Tűzz ki egy célt, kapcsold hozzá a megtakarítási számláidat, és kövesd az előrehaladást.
+      heading: Még nincsenek célok
+      new_goal: Első cél létrehozása
+      no_depository_accounts: >-
+        Cél létrehozásához legalább egy betéti számla szükséges: folyószámla, megtakarítási, HSA-, lekötött
+        betéti vagy pénzpiaci számla.
+      subtitle: Tűzz ki egy célt, és kezdj el megtakarítani rá.
+    errors:
+      not_found: A cél nem található. Lehet, hogy törölték.
+    form:
+      create: Cél létrehozása
+      earmark:
+        headroom: Ezen a számlán még {left} különíthető el.
+        prorata: >-
+          A számlán lévő céljaid összesen {total} összeget igényelnek, míg az egyenleg {balance} — a célok
+          arányosan haladnak majd.
+        whole_balance: Ez a számla a többi elkülönítés után fennmaradó összeggel finanszírozza a célt.
+        whole_balance_alone: Ez a cél a számla teljes egyenlegét használja.
+      errors:
+        accounts_required: Válassz legalább egy finanszírozó számlát.
+        amount_required: Nullánál nagyobb célösszeget adj meg.
+        name_required: Adj nevet a célnak.
+      fields:
+        color: Szín
+        earmark_for: 'Elkülönítendő összeg ehhez: %{account}'
+        earmark_hint: Hagyd üresen az összeget, ha a számla teljes egyenlegét a célhoz rendeled.
+        funding_accounts: Finanszírozó számlák
+        funding_accounts_hint: A cél egyenlege ezeknek a számláknak a teljes egyenlege vagy elkülönített
+          része.
+        name: Név
+        name_placeholder: Vésztartalék, lakásönerő…
+        notes: Megjegyzések (nem kötelező)
+        notes_placeholder: Emlékeztető a későbbiekre…
+        target_amount: Célösszeg
+        target_balance: Célegyenleg
+        target_balance_hint: A fenti hónapokra számított medián havi kiadásaid alapján. Havonta frissül.
+        target_balance_pending: Mentéskor számítjuk ki
+        target_date: Céldátum
+        target_mode: A célegyenleg meghatározása
+        target_months: Hány havi kiadás
+        target_months_hint: Minden hónap első napján újraszámítjuk a medián havi kiadásaidból.
+        whole_balance: 'Üresen: teljes egyenleg'
+      kinds:
+        maintained:
+          hint: Fenntartandó egyenleg, például vésztartalék. Nem zárul le.
+          label: Fenntartandó tartalék
+        one_off:
+          hint: Takaríts meg valamire, majd zárd le a célt, amikor felhasználtad az összeget.
+          label: Egyszeri cél
+      save: Változtatások mentése
+      subtypes:
+        cd: CD
+        checking: Folyószámla
+        hsa: HSA
+        money_market: Pénzpiaci számla
+        other: Egyéb
+        savings: Megtakarítási számla
+      suggested_no_date: Adj meg céldátumot a várható teljesítés kiszámításához.
+      suggested_with_date: Havi {monthly} megtakarítás szükséges a(z) {accounts} számlákon a határidő
+        tartásához.
+      target_modes:
+        fixed: Rögzített összeg
+        months_of_expenses: Adott számú havi kiadás
+    goal_card:
+      accounts:
+        one: 1 számla
+        other: "%{count} számla"
+      aria_progress: A(z) %{target} cél %{percent}%-a
+      completed: Teljesített
+      days_left:
+        one: 1 nap van hátra
+        other: "%{count} nap van hátra"
+      footer_archived: Archivált
+      footer_catch_up: Havi %{amount} megtakarítással behozható a lemaradás
+      footer_last_days:
+        one: Az utolsó vállalást 1 napja egyeztettük
+        other: Az utolsó vállalást %{count} napja egyeztettük
+      footer_last_today: Az utolsó vállalást ma egyeztettük
+      footer_no_deadline: Nyitott
+      footer_no_pledges: Még nincs egyeztetett vállalás
+      footer_paused: Szüneteltetve
+      footer_reached: A cél elérve
+      footer_reserve_intact: A tartalék teljes
+      footer_reserve_short: "%{amount} feltöltés szükséges"
+      including_used: Beleértve a már felhasznált %{amount} összeget
+      left: maradt
+      n_accounts: "%{first} +%{count}"
+      no_accounts: Nincs összekapcsolt számla
+      no_target_date: Nyitott
+      pace_no_target: 'Havi átlag: %{avg}'
+      pace_with_target: 'Havi %{avg} · cél: havi %{target}'
+      past_due: Lejárt határidejű
+      pending_count:
+        one: 1 függőben
+        other: "%{count} függőben"
+      pending_pledge: Függő vállalás
+    index:
+      archived_section:
+        heading: Archivált
+      chips:
+        all: Összes
+        behind: Lemaradva
+        completed: Teljesített
+        no_target_date: Nyitott
+        on_track: Terv szerint halad
+        paused: Szüneteltetve
+      chips_aria: Célok szűrése állapot szerint
+      empty_filtered: Nincs megfelelő cél.
+      goals_section:
+        heading: Célok
+        subtitle: Takaríts meg arra, ami fontos.
+      kpi:
+        contributed_label: Befizetve · elmúlt 30 nap
+        needs_this_month_label: Ebben a hónapban szükséges
+        needs_this_month_sub:
+          one: 1 cél lemaradásban
+          other: "%{count} cél lemaradásban"
+        needs_this_month_zero_sub: Nincs lemaradt cél
+        on_track_all_caught_up: Minden lemaradás behozva
+        on_track_label: Terv szerint haladó célok
+        on_track_sub_all_good: Minden aktív cél terv szerint halad
+        on_track_sub_parts:
+          behind:
+            one: 1 lemaradva
+            other: "%{count} lemaradva"
+          no_date:
+            one: 1 határidő nélkül
+            other: "%{count} határidő nélkül"
+          paused:
+            one: 1 szüneteltetve
+            other: "%{count} szüneteltetve"
+          reached:
+            one: 1 elérve
+            other: "%{count} elérve"
+        on_track_value: "%{on_track} / %{total}"
+        velocity_delta_down: "↓ %{percent}%% az előző 30 naphoz képest"
+        velocity_delta_flat: az előző 30 naphoz képest
+        velocity_delta_up: "↑ %{percent}%% az előző 30 naphoz képest"
+        velocity_delta_zero_base: Az aktivitás első 30 napja
+      new_goal: Új cél
+      ongoing_section:
+        heading: Célok
+      pending_pledges_callout: Vannak függő vállalásaid. A Sure a következő szinkronizáláskor megerősíti
+        őket.
+      search:
+        aria_label: Célok keresése
+        clear_search: Keresés törlése
+        empty: Nincs megfelelő cél.
+        empty_with_both: 'Ezzel a szűrővel nincs találat erre: „%{query}”.'
+        empty_with_filter: Nincs a szűrőnek megfelelő cél.
+        empty_with_query: 'Nincs találat erre: „%{query}”.'
+        placeholder: Célok keresése…
+        show_all: Összes megjelenítése
+      subtitle: Takaríts meg arra, ami fontos.
+      title: Célok
+    new:
+      heading: Új cél
+      subtitle: Takaríts meg egy konkrét célra.
+    pause:
+      invalid_transition: A cél jelenlegi állapotában nem szüneteltethető.
+      success: A cél szüneteltetve.
+    reopen:
+      invalid_transition: A cél jelenlegi állapotában nem nyitható újra.
+      success: A cél újranyitva.
+    resume:
+      invalid_transition: A cél jelenlegi állapotában nem folytatható.
+      success: A cél folytatva.
+    show:
+      archive: Archiválás
+      archived_banner:
+        body: Állítsd vissza a további megtakarításhoz, vagy őrizd meg előzményként.
+        restore_cta: Cél visszaállítása
+        title: Ez a cél archiválva van
+      catch_up:
+        adjust_target_cta: Inkább a cél módosítása
+        body: 'Jelenlegi ütem: havi %{avg} · a cél eléréséhez havi %{required} szükséges.'
+        title: Havonta további %{amount} megtakarítással behozható a lemaradás
+      celebration:
+        archive_cta: Cél archiválása
+        body: 'A cél lezárva: %{saved} a(z) %{target} célösszegből. Őrizd meg előzményként, vagy archiváld
+          most.'
+        body_reached: >-
+          Elérted a célt: %{saved} a(z) %{target} célösszegből. Még nincs lezárva — a pénz továbbra is
+          ehhez a célhoz van elkülönítve.
+        body_reserve: >-
+          A tartalék elérte a célegyenlegét: %{saved} / %{target}. Nincs további teendő — az összeg elkülönítve
+          marad.
+        close_cta: Cél lezárása
+        close_hint: >-
+          A lezárás felszabadítja az elkülönített pénzt a számla többi céljához. Akkor zárd le, ha valóban
+          felhasználtad az összeget.
+        frozen: 'Elérve: %{date} · %{amount}'
+        heading: Elérted a célt. Szép munka!
+        heading_reserve: A tartalék teljes
+      complete: Megjelölés teljesítettként
+      confirm_archive_body: >-
+        Az archivált célok eltűnnek a fő listából, de később visszaállíthatók. Az archiválás nem rögzíti
+        az elért eredményt — ha azt is megőriznéd, előbb jelöld teljesítettnek a célt.
+      confirm_archive_cta: Archiválás
+      confirm_archive_title: Archiválod ezt a célt?
+      confirm_complete_body: >-
+        A hozzá elkülönített pénz felszabadul a számla többi céljához. Kikerül a folyamatban lévő célok
+        közül, és később továbbra is archiválható vagy visszaállítható.
+      confirm_complete_body_short: >-
+        Most %{progress}%-nál jársz: %{saved} / %{target}. A teljesítettként megjelölés ezt rögzíti elért
+        eredményként az eredeti cél helyett. Folytatod, vagy bezárod ezt az ablakot és inkább módosítod
+        a célt?
+      confirm_complete_cta: Megjelölés teljesítettként
+      confirm_complete_title: Teljesítettnek jelölöd ezt a célt?
+      confirm_delete_body: >-
+        A(z) %{name} cél és a vállalásainak előzményei végleg törlődnek. A hozzákapcsolt számlák, egyenlegek
+        és tranzakciók nem változnak. Ha inkább megőriznéd előzményként, archiváld.
+      confirm_delete_cta: Cél törlése
+      confirm_delete_title: Törlöd ezt a célt?
+      consume: Felhasználtam ebből a pénzből
+      delete: Törlés
+      edit: Szerkesztés
+      empty:
+        body: >-
+          Utalj a hozzákapcsolt számládra. A Sure a következő szinkronizáláskor észleli, vagy frissítsd
+          a kézi számlád egyenlegét.
+        heading: Még nincs befizetés
+      funding_accounts:
+        earmarked_of: "%{earmarked} elkülönítve a(z) %{balance} egyenlegből"
+        empty:
+          body: Szerkeszd a célt, és kapcsold hozzá azokat a betéti számlákat, amelyekre megtakarítasz.
+          heading: Még nincs finanszírozó számla hozzákapcsolva
+      funding_accounts_heading: Finanszírozó számlák
+      funding_last_30d: elmúlt 30 nap
+      funding_last_90d: elmúlt 90 nap
+      header:
+        target: 'Cél: %{amount}'
+        target_by: 'Cél: %{amount}, határidő: %{date}'
+        target_by_past: 'Cél: %{amount} · a határidő %{date} volt'
+      inactive:
+        body: Eddig %{saved} megtakarítva a(z) %{target} célösszegből.
+        heading_archived: Ez a cél archiválva van
+        heading_paused: Ez a cél szünetel
+      no_target_date:
+        body: Adj meg határidőt a várható teljesítés és a szükséges ütem követéséhez.
+        cta: Céldátum megadása
+        heading: Céldátum hozzáadása
+      notes: Megjegyzések
+      pause: Szüneteltetés
+      paused_banner:
+        body: Folytasd az előrehaladás további követéséhez.
+        resume_cta: Cél folytatása
+        title: Ez a cél szünetel
+      pending_pledge:
+        body_manual: A következő kézi egyenlegmódosításkor erősítjük meg.
+        body_transfer: Automatikusan megerősítjük, amikor a Sure a következő szinkronizáláskor megfelelő
+          befizetést talál.
+        cancel: Mégse
+        confirm_cancel_body: A(z) %{amount} összegű vállalás törlődik. Bármikor rögzíthetsz újat.
+        confirm_cancel_cta: Vállalás visszavonása
+        confirm_cancel_title: Visszavonod ezt a vállalást?
+        extend: Meghosszabbítás 7 nappal
+        pledged_at: Vállalás rögzítve %{time_ago} ezelőtt
+        title:
+          one: 'Függőben: %{amount} erre a számlára: %{account} · 1 nap van hátra'
+          other: 'Függőben: %{amount} erre a számlára: %{account} · %{count} nap van hátra'
+          zero: 'Függőben: %{amount} erre a számlára: %{account} · ma jár le'
+      pledge_just_saved: Félretett pénz rögzítése
+      pledge_just_transferred: Elvégzett átutalás rögzítése
+      projection:
+        aria_label: A(z) %{name} cél előrejelzési grafikonja
+        behind: A jelenlegi ütem nem elegendő.
+        heading: Előrejelzés
+        legend_projection: Előrejelzés
+        legend_required: Kötelező
+        legend_saved: Megtakarítva
+        no_pace: Még nincs befizetés. Tegyél pénzt egy hozzákapcsolt számlára az előrejelzés indításához.
+        no_target_date: Nincs céldátum. Adj meg egyet a várható teljesítés kiszámításához.
+        on_track_html: >-
+          A jelenlegi ütemmel várhatóan <strong class="text-primary whitespace-nowrap">%{date}</strong>
+          körül éred el ezt a célt.
+        reached: Elérted a célt. Nincs szükség előrejelzésre.
+        reserve: A tartalék egy célegyenleget tart fenn, ezért nincs előrejelezhető befejezési időpontja.
+        today_marker: Ma
+        tooltip_projected: 'Előrejelzett: %{amount}'
+        tooltip_saved: 'Megtakarítva: %{amount}'
+        tooltip_target_relation: A(z) %{target} cél %{percent}%-a
+      record_pledge_cta: Vállalás rögzítése
+      reopen: Cél újranyitása
+      reserve_shortfall:
+        body: >-
+          Jelenleg %{saved} áll rendelkezésre a(z) %{target} célösszegből. Töltsd fel %{missing} összeggel
+          a célegyenleg visszaállításához.
+        heading: A tartalék nem éri el a célegyenleget
+      resume: Folytatás
+      ring:
+        aria_label: A cél %{percent}%-ban teljesült. %{amount} megtakarítva a(z) %{target} célösszegből.
+        aria_label_with_used: >-
+          A cél %{percent}%-ban teljesült. %{amount} a(z) %{target} célösszegből, beleértve a már felhasznált
+          %{used} összeget.
+        including_used: Beleértve a már felhasznált %{amount} összeget
+        market_value: 'Piaci érték: %{amount}'
+        of: "/ %{target}"
+        of_target: célhoz viszonyítva
+        saved: Megtakarítva
+        to_go: Még %{amount} hiányzik
+      status_callout:
+        behind: Havonta további %{amount} megtakarítással behozható a lemaradás
+        behind_covered: A függő vállalások fedezik a hiányt
+        depleted: "%{amount} hiányzik a célegyenleghez — töltsd vissza a tartalékot"
+        no_target_date: Adj meg céldátumot a várható teljesítés kiszámításához
+        on_track: 'A cél várható elérése: %{date} körül'
+      unarchive: Visszaállítás
+    states:
+      active: Aktív
+      archived: Archivált
+      completed: Teljesített
+      paused: Szüneteltetve
+    status:
+      archived: Archivált
+      behind: Lemaradva
+      completed: Teljesített
+      depleted: Feltöltés szükséges
+      funded: A tartalék teljes
+      no_target_date: Nyitott
+      on_track: Terv szerint halad
+      paused: Szüneteltetve
+      reached: Elérve
+    unarchive:
+      invalid_transition: A cél jelenlegi állapotában nem állítható vissza.
+      success: A cél visszaállítva.
+    unattributed_outflows:
+      attribute: Ez volt az
+      body: >-
+        Ha ebből bármit a(z) %{goal} célra költöttél, jelöld meg, hogy az összeg többé ne számítson bele
+        az elérendő célba.
+      heading: Pénz távozott ezekről a számlákról
+    update:
+      success: A cél frissítve.

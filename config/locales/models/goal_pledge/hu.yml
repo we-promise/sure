@@ -1,0 +1,22 @@
+---
+hu:
+  activerecord:
+    attributes:
+      goal_pledge:
+        account: Számla
+        amount: Összeg
+        currency: Pénznem
+        expires_at: Lejárat
+        kind: Jelleg
+        status: Állapot
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Válassz a célhoz kapcsolt számlák közül.
+            currency:
+              must_match_goal: A vállalás pénznemének meg kell egyeznie a cél pénznemével.
+          duplicate_open_pledge: >-
+            Ezen a számlán már van nyitott vállalásod erre az összegre. Új rögzítése előtt mondd le vagy
+            hosszabbítsd meg a meglévőt.

@@ -208,19 +208,19 @@ vi:
           cd: Chứng chỉ tiền gửi
           money_market: Thị trường tiền tệ
         investment:
-          brokerage: Brokerage
+          brokerage: "Môi giới chứng khoán"
           pension: Lương hưu
           retirement: Hưu trí
           "401k": "401(k)"
           roth_401k: "Roth 401(k)"
           "403b": "403(b)"
-          tsp: Thrift Savings Plan
-          "529_plan": "529 Plan"
+          tsp: "Kế hoạch tiết kiệm hưu trí TSP"
+          "529_plan": "Kế hoạch 529"
           hsa: Tài khoản tiết kiệm y tế
           mutual_fund: Quỹ tương hỗ
-          ira: Traditional IRA
+          ira: "IRA truyền thống"
           roth_ira: Roth IRA
-          angel: Angel
+          angel: "Đầu tư thiên thần"
         loan:
           mortgage: Thế chấp
           student: Vay sinh viên

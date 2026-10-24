@@ -1,0 +1,48 @@
+---
+vi:
+  activerecord:
+    attributes:
+      goal:
+        color: Màu sắc
+        currency: Tiền tệ
+        linked_accounts: Tài khoản liên kết
+        name: Tên
+        notes: Ghi chú
+        state: Trạng thái
+        target_amount: Số tiền mục tiêu
+        target_date: Ngày mục tiêu
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Chọn ít nhất một tài khoản cấp
+                vốn cho mục tiêu này.
+              whole_account_conflict_on_restore: 'Không thể khôi phục mục tiêu: “%{account_name}”
+                hiện được dành toàn bộ cho “%{goal_name}”. Hãy nhập số tiền cho một
+                trong hai mục tiêu trước.'
+            currency:
+              locked_after_linked: Không thể đổi tiền tệ sau khi mục tiêu đã liên
+                kết tài khoản.
+            kind:
+              locked_once_consumed: Mục tiêu này đã ghi nhận tiền đã chi nên không
+                thể chuyển thành quỹ dự phòng.
+              locked_while_released: Mở lại mục tiêu trước khi chuyển thành quỹ dự
+                phòng.
+            linked_accounts:
+              currency_mismatch: Mọi tài khoản liên kết phải dùng cùng một loại tiền.
+              must_be_fundable: Mọi tài khoản liên kết phải là tài khoản tiền mặt
+                hoặc đầu tư.
+              must_belong_to_family: Tài khoản liên kết phải thuộc cùng gia đình với
+                mục tiêu.
+            target_amount:
+              below_consumed: Không thể đặt mục tiêu thấp hơn số tiền đã ghi nhận
+                là đã chi.
+            target_mode:
+              months_requires_maintained: Chỉ quỹ dự phòng cần duy trì mới có thể
+                đặt mục tiêu theo số tháng chi tiêu.
+            target_months:
+              blank: Hãy cho biết quỹ dự phòng cần trang trải bao nhiêu tháng chi
+                tiêu.
+              only_with_months_mode: Số tháng chi tiêu chỉ áp dụng khi mục tiêu được
+                đặt theo cách đó.

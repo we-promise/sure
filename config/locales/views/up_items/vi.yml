@@ -1,0 +1,117 @@
+---
+vi:
+  family:
+    up:
+      create_up_item:
+        default_name: Kết nối Up
+  providers:
+    up:
+      description: Kết nối tài khoản ngân hàng Up của Úc bằng token truy cập cá nhân
+      name: Up
+  up_account:
+    fallback: Tài khoản Up
+  up_item:
+    errors:
+      account_processing_failed: Không thể đồng bộ tài khoản Up
+      account_sync_schedule_failed: Không thể lên lịch đồng bộ tài khoản Up
+      sync_failed: Không thể đồng bộ kết nối Up
+      transactions_failed: Không thể lấy giao dịch Up
+    institution_summary:
+      count:
+        one: 1 tổ chức
+        other: "%{count} tổ chức"
+      none: Chưa kết nối tổ chức nào
+      one: 1 tổ chức
+    sync_status:
+      all_synced:
+        one: Đã đồng bộ 1 tài khoản
+        other: Đã đồng bộ %{count} tài khoản
+      no_accounts: Không tìm thấy tài khoản
+      partial: Đã đồng bộ %{linked}, cần thiết lập %{unlinked}
+  up_items:
+    complete_account_setup:
+      all_skipped: Không tạo tài khoản Up nào.
+      creation_failed: Không thể tạo tài khoản Up.
+      no_accounts: Chưa chọn tài khoản Up nào.
+      success:
+        one: Đã tạo 1 tài khoản Up.
+        other: Đã tạo %{count} tài khoản Up.
+    create:
+      success: Đã lưu kết nối Up.
+    destroy:
+      success: Đã lên lịch xóa kết nối Up.
+      unlink_failed: Không thể ngắt kết nối Up
+    link_accounts:
+      link_failed: Không có tài khoản nào được liên kết.
+      no_accounts_selected: Chọn ít nhất một tài khoản.
+      no_credentials_configured: Cấu hình Up trong cài đặt nhà cung cấp trước.
+      success:
+        one: Đã liên kết 1 tài khoản Up.
+        other: Đã liên kết %{count} tài khoản Up.
+      unsupported_account_type: Up không hỗ trợ loại tài khoản đó.
+    link_existing_account:
+      account_already_linked: Tài khoản này đã liên kết với một nhà cung cấp.
+      no_account_selected: Chọn tài khoản Up để liên kết.
+      success: Đã liên kết tài khoản Up với %{account_name}.
+      up_account_already_linked: Tài khoản Up này đã được liên kết.
+    provider_panel:
+      access_token_label: Token truy cập cá nhân
+      access_token_placeholder: Dán token truy cập cá nhân Up
+      add_connection: Thêm kết nối Up
+      connection_name_label: Tên kết nối
+      connection_name_placeholder: Up chính
+      default_connection_name: Kết nối Up
+      disconnect: Ngắt kết nối
+      disconnect_confirm: Bạn có chắc muốn ngắt kết nối %{name}?
+      keep_access_token_placeholder: Để trống để giữ token hiện có
+      setup_accounts: Thiết lập tài khoản
+      sync: Đồng bộ
+      syncing: Đang đồng bộ...
+      update_connection: Cập nhật kết nối
+    select_accounts:
+      cancel: Hủy
+      description: Chọn tài khoản Up để thêm.
+      link_accounts: Liên kết tài khoản
+      no_accounts_found: Không tìm thấy tài khoản Up chưa liên kết.
+      no_credentials_configured: Cấu hình Up trong cài đặt nhà cung cấp trước.
+      title: Liên kết tài khoản Up
+    select_existing_account:
+      account_already_linked: Tài khoản này đã liên kết với một nhà cung cấp.
+      cancel: Hủy
+      description: Chọn tài khoản Up chưa liên kết để kết nối với tài khoản này.
+      link_account: Liên kết tài khoản
+      no_accounts_found: Không tìm thấy tài khoản Up chưa liên kết.
+      no_credentials_configured: Cấu hình Up trong cài đặt nhà cung cấp trước.
+      title: Liên kết tài khoản Up với %{account_name}
+    setup_accounts:
+      account_type_label: Loại tài khoản
+      account_types:
+        depository: Tiền mặt
+        loan: Khoản vay
+        skip: Bỏ qua
+      all_accounts_linked: Tất cả tài khoản Up đã được liên kết.
+      api_error: Không thể lấy tài khoản Up.
+      cancel: Hủy
+      choose_account_type: Chọn loại tài khoản
+      choose_account_type_description: Bỏ qua tài khoản không muốn theo dõi.
+      create_accounts: Tạo tài khoản
+      fetch_failed: Không thể lấy tài khoản
+      no_accounts_to_setup: Không có tài khoản cần thiết lập
+      no_credentials: Cấu hình thông tin xác thực Up trước.
+      subtitle: Chọn cách hiển thị từng tài khoản Up trong Sure.
+      title: Liên kết tài khoản Up
+    up_item:
+      delete: Xóa
+      deletion_in_progress: Đang xóa
+      error: Lỗi
+      no_accounts_description: Lấy danh sách tài khoản Up rồi chọn tài khoản để liên
+        kết.
+      no_accounts_title: Chưa nhập tài khoản nào
+      setup_action: Thiết lập tài khoản
+      setup_description: Đã liên kết %{linked} trên %{total} tài khoản.
+      setup_needed: Cần thiết lập tài khoản
+      status_never: Chưa từng đồng bộ
+      status_with_summary: Đã đồng bộ %{timestamp} trước · %{summary}
+      syncing: Đang đồng bộ
+    update:
+      success: Đã cập nhật kết nối Up.

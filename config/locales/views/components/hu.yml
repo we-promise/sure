@@ -5,10 +5,109 @@ hu:
       activity_feed:
         toggle_selection_checkboxes: Kijelölés be-/kikapcsolása
       chart:
-        no_data_available: "Nincs elérhető adat"
+        no_data_available: Nincs elérhető adat
+        loan:
+          actual: Nyilvántartott egyenleg
+          aria_actual_history_starts: 'A nyilvántartott egyenleg előzményeinek kezdete: %{date}.'
+          aria_description: >-
+            Hitelegyenleg-diagram. Nyilvántartott egyenleg: %{current_balance}. Eredetileg tervezett végtörlesztés:
+            %{scheduled_payoff_date}. A mai egyenlegből előrejelzett végtörlesztés: %{projected_payoff_date}.
+          interactive_chart: interaktív diagram
+          interest_saved: Megtakarított kamat
+          legend: Diagram adatsorai
+          months_saved:
+            one: "%{count} hónappal a tervezett előtt"
+            other: "%{count} hónappal a tervezett előtt"
+          no_payoff: a jelenlegi törlesztéssel nem érhető el
+          not_converged: >-
+            A jelenlegi törlesztés mellett a tartozás nem fogy el az eredeti lejáratig; még %{balloon}
+            maradna fizetendő.
+          on_schedule: Ütemezés szerint
+          projected: Előrejelzés a mai naptól
+          projected_payoff: Várható végtörlesztés
+          projection_basis: >-
+            A mai nyilvántartott egyenleget az ütemezés ugyanerre a napra eső egyenlegével hasonlítja
+            össze. A tervezett nap előtt könyvelt befizetés addig előrehaladásként jelenik meg, az utána
+            könyvelt pedig elmaradásként.
+          scheduled: Eredeti ütemezés
+          since_start: a hitel indulása óta
+          today: Ma
+        title:
+          balance: Egyenleg
+          cash_value: Pénzérték
+          debt_balance: Tartozásegyenleg
+          estimated_property_value: Becsült ingatlanérték
+          estimated_vehicle_value: Becsült járműérték
+          holdings_value: Portfólió értéke
+          loan_remaining_balance: Fennmaradó egyenleg
+          remaining_principal_balance: Fennmaradó tőketartozás
+          total_account_value: Számla teljes értéke
+          total_gains: Összes nyereség
+        views:
+          cash: Készpénz
+          gains: Nyereség / megtérülés
+          holdings: Pozíciók
+          total_value: Teljes értéke
+        vs_available_history: a rendelkezésre álló előzményekhez képest
       activity_date:
-        balance_tooltip: "A nap végi egyenleg, az összes tranzakció és korrekció után"
-        no_balance_data: "Erre a dátumra nincs elérhető egyenlegadat"
+        balance_tooltip: A nap végi egyenleg, az összes tranzakció és korrekció után
+        no_balance_data: Erre a dátumra nincs elérhető egyenlegadat
+      balance_reconciliation:
+        labels:
+          adjustments: Korrekciók
+          buys: Vételek
+          change_in_brokerage_cash: Brókerszámla pénzegyenlegének változása
+          change_in_holdings_market: Állományváltozás (piaci ármozgás)
+          change_in_holdings_trades: Állományváltozás (vételek/eladások)
+          charges: Terhelések
+          end_balance: Záróegyenleg
+          end_principal: Záró tőketartozás
+          end_value: Záróérték
+          final_balance: Végleges egyenleg
+          final_principal: Végleges tőketartozás
+          final_value: Végleges érték
+          market_changes: Piaci változások
+          net_cash_flow: Nettó pénzáramlás
+          net_principal_change: Tőketartozás nettó változása
+          net_value_change: Nettó értékváltozás
+          payments: Fizetések
+          sells: Eladások
+          start_balance: Nyitóegyenleg
+          start_principal: Nyitó tőketartozás
+          start_value: Nyitóérték
+        tooltips:
+          adjustments: Kézi egyeztetések vagy egyéb korrekciók
+          adjustments_asset: Kézi értékkorrekciók vagy értékbecslések
+          buys: Napon belüli kriptovásárlások
+          change_in_brokerage_cash: A pénzegyenleg nettó változása befizetések, kifizetések és ügyletek
+            alapján
+          change_in_holdings_market: Az állomány értékének piaci ármozgásból eredő változása
+          change_in_holdings_trades: Értékpapír-vételek és -eladások hatása az állományra
+          charges: A nap folyamán keletkezett új terhelések
+          end_balance: Az összes tranzakció után számított egyenleg
+          end_balance_investment: Az összes művelet után számított egyenleg
+          end_principal: Az összes tranzakció után számított tőketartozás
+          end_value: Az összes változás után számított érték
+          final_balance: A számla végleges napi záróegyenlege
+          final_balance_credit: A fennálló tartozás végleges napi egyenlege
+          final_balance_crypto: A kriptoállomány végleges napi értéke
+          final_balance_investment: A portfólió végleges napi értéke
+          final_principal: A tőketartozás végleges napi egyenlege
+          final_value: Az eszköz végleges napi értéke
+          market_changes: Piaci ármozgásból eredő értékváltozások
+          net_cash_flow: Az egyenleg nettó változása a nap összes tranzakciója alapján
+          net_principal_change: Napon belüli tőketörlesztések és új hitelfelvételek
+          net_value_change: Minden értékváltozás, beleértve a fejlesztéseket és az értékcsökkenést
+          payments: A nap folyamán a kártyára befizetett összegek
+          sells: Napon belüli kriptoeladások
+          start_balance: A számla egyenlege a nap kezdetén
+          start_balance_credit: A fennálló tartozás egyenlege a nap kezdetén
+          start_balance_crypto: A kriptoállomány értéke a nap kezdetén
+          start_balance_investment: A teljes portfólió értéke a nap kezdetén
+          start_principal: A tőketartozás egyenlege a nap kezdetén
+          start_value: Az eszköz értéke a nap kezdetén
+    period_picker:
+      aria_label: 'Időszak: %{period}'
   ds:
     alert:
       variants:
@@ -19,22 +118,34 @@ hu:
         destructive: Hiba
     dialog:
       close: Bezárás
+    icon_picker:
+      no_matching_icons: Nincs megfelelő ikon
+      search_placeholder: Ikonok keresése…
+    link:
+      opens_in_new_tab: "(új lapon nyílik meg)"
+    pill:
+      aria_label: "%{label}"
+      default_label: Előzetes
+    popover:
+      avatar_default_label: Menü megnyitása
+    tooltip:
+      trigger_label: További információ
   provider_sync_summary:
     title: Szinkronizálás összegzése
-    last_sync: "Utolsó szinkronizálás: %{time_ago} ezelőtt"
+    last_sync: 'Utolsó szinkronizálás: %{time_ago} ezelőtt'
     accounts:
       title: Számlák
-      total: "Összesen: %{count}"
-      linked: "Csatlakoztatva: %{count}"
-      unlinked: "Nincs csatlakoztatva: %{count}"
-      institutions: "Intézmények: %{count}"
+      total: 'Összesen: %{count}'
+      linked: 'Csatlakoztatva: %{count}'
+      unlinked: 'Nincs csatlakoztatva: %{count}'
+      institutions: 'Intézmények: %{count}'
     transactions:
       title: Tranzakciók
-      seen: "Látott: %{count}"
-      imported: "Importálva: %{count}"
-      updated: "Frissítve: %{count}"
-      skipped: "Kihagyva: %{count}"
-      fetching: "Lekérés a brókertől..."
+      seen: 'Látott: %{count}'
+      imported: 'Importálva: %{count}'
+      updated: 'Frissítve: %{count}'
+      skipped: 'Kihagyva: %{count}'
+      fetching: Lekérés a brókertől...
       protected:
         one: "%{count} bejegyzés védett (nem lett felülírva)"
         other: "%{count} bejegyzés védett (nem lett felülírva)"
@@ -46,19 +157,19 @@ hu:
       protected: Védett
     holdings:
       title: Portfólió
-      found: "Megtalálva: %{count}"
-      processed: "Feldolgozva: %{count}"
+      found: 'Megtalálva: %{count}'
+      processed: 'Feldolgozva: %{count}'
     trades:
       title: Kereskedések
-      imported: "Importálva: %{count}"
-      skipped: "Kihagyva: %{count}"
-      fetching: "Tevékenységek lekérése a brókertől..."
+      imported: 'Importálva: %{count}'
+      skipped: 'Kihagyva: %{count}'
+      fetching: Tevékenységek lekérése a brókertől...
     health:
       title: Állapot
       view_error_details: Hibák részleteinek megtekintése
-      rate_limited: "Forgalomkorlátozva %{time_ago}"
+      rate_limited: Forgalomkorlátozva %{time_ago}
       recently: nemrég
-      errors: "Hibák: %{count}"
+      errors: 'Hibák: %{count}'
       pending_reconciled:
         one: "%{count} duplikált függő tranzakció egyeztetve"
         other: "%{count} duplikált függő tranzakció egyeztetve"
@@ -81,6 +192,6 @@ hu:
       stale_unmatched_count:
         one: "%{count} tranzakció"
         other: "%{count} tranzakció"
-      data_warnings: "Adatfigyelmeztetések: %{count}"
-      notices: "Értesítések: %{count}"
+      data_warnings: 'Adatfigyelmeztetések: %{count}'
+      notices: 'Értesítések: %{count}'
       view_data_quality: Adatminőség részleteinek megtekintése

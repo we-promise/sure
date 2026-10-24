@@ -1,0 +1,7 @@
+---
+vi:
+  syncs:
+    cancel:
+      cancelled: Đã hủy đồng bộ. Dữ liệu đã đồng bộ được giữ lại; công việc trong
+        hàng đợi đã dừng.
+      not_cancellable: Lần đồng bộ này đã hoàn tất.

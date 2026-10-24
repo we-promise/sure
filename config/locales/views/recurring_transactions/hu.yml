@@ -5,7 +5,7 @@ hu:
     upcoming: Közelgő ismétlődő tranzakciók
     projected: Várható
     recurring: Ismétlődő
-    expected_today: "Ma várható"
+    expected_today: Ma várható
     expected_in:
       one: "%{count} nap múlva várható"
       other: "%{count} nap múlva várható"
@@ -14,29 +14,37 @@ hu:
     cleanup_stale: Elavultak törlése
     settings:
       enable_label: Ismétlődő tranzakciók engedélyezése
-      enable_description: Automatikusan felismeri az ismétlődő tranzakciós mintákat, és megjeleníti a közelgő várható tranzakciókat.
+      enable_description: >-
+        Automatikusan felismeri az ismétlődő tranzakciós mintákat, és megjeleníti a közelgő várható tranzakciókat.
     settings_updated: Az ismétlődő tranzakciók beállításai frissítve
     info:
       title: Automatikus mintafelismerés
-      manual_description: A fenti gombokkal manuálisan is azonosíthatod a mintákat, vagy törölheted az elavult ismétlődő tranzakciókat.
-      automatic_description: "Az automatikus azonosítás ezután is lefut:"
+      manual_description: >-
+        A fenti gombokkal manuálisan is azonosíthatod a mintákat, vagy törölheted az elavult ismétlődő
+        tranzakciókat.
+      automatic_description: 'Az automatikus azonosítás ezután is lefut:'
       triggers:
-        - CSV importálás befejeztével (tranzakciók, ügyletek, számlák stb.)
-        - Bármely szolgáltatói szinkronizálás befejeztével (Plaid, SimpleFIN stb.)
+      - CSV importálás befejeztével (tranzakciók, ügyletek, számlák stb.)
+      - Bármely szolgáltatói szinkronizálás befejeztével (Plaid, SimpleFIN stb.)
     identified: "%{count} ismétlődő tranzakciós minta azonosítva"
     cleaned_up: "%{count} elavult ismétlődő tranzakció törölve"
     marked_inactive: Az ismétlődő tranzakció inaktívvá jelölve
     marked_active: Az ismétlődő tranzakció aktívvá jelölve
     deleted: Ismétlődő tranzakció törölve
-    confirm_delete: Biztosan törlöd ezt az ismétlődő tranzakciót?
+    confirm_delete: >-
+      Eltávolítod a(z) %{name} tételt a fizetési kötelezettségeid közül? A tranzakcióid változatlanok
+      maradnak. Csak a kötelezettség és a fizetési ütemezése törlődik.
     marked_as_recurring: Tranzakció ismétlődőként jelölve
     already_exists: Ehhez a mintához már létezik egy manuálisan rögzített ismétlődő tranzakció
-    creation_failed: Nem sikerült létrehozni az ismétlődő tranzakciót. Ellenőrizd a tranzakció adatait, és próbáld újra.
+    creation_failed: Nem sikerült létrehozni az ismétlődő tranzakciót. Ellenőrizd a tranzakció adatait,
+      és próbáld újra.
     unexpected_error: Váratlan hiba történt az ismétlődő tranzakció létrehozása során
-    amount_range: "Tartomány: %{min} és %{max} között"
+    amount_range: 'Tartomány: %{min} és %{max} között'
     empty:
       title: Nem találhatók ismétlődő tranzakciók
-      description: Kattints a „Minták azonosítása" gombra, hogy automatikusan felismerd az ismétlődő tranzakciókat a tranzakcióelőzményeidből.
+      description: >-
+        Kattints a „Minták azonosítása" gombra, hogy automatikusan felismerd az ismétlődő tranzakciókat
+        a tranzakcióelőzményeidből.
     table:
       merchant: Név
       amount: Összeg
@@ -45,12 +53,185 @@ hu:
       last_occurrence: Utolsó előfordulás
       status: Státusz
       actions: Műveletek
+      frequency: Gyakoriság
     status:
       active: Aktív
       inactive: Inaktív
+      ended: Elvetett
+      paused: Szüneteltetve
+      suggested: Lehetséges fizetési kötelezettség
     badges:
       manual: Manuális
     transfer_marked_as_recurring: Átutalás ismétlődőként jelölve
     transfer_already_exists: Ehhez a számlápárhoz már létezik ismétlődő átutalás
-    transfer_creation_failed: Nem sikerült létrehozni az ismétlődő átutalást. Kérlek ellenőrizd az átutalás adatait, és próbáld újra.
+    transfer_creation_failed: >-
+      Nem sikerült létrehozni az ismétlődő átutalást. Kérlek ellenőrizd az átutalás adatait, és próbáld
+      újra.
     transfer_feature_disabled: Az ismétlődő tranzakciók le vannak tiltva ennél a háztartásnál
+    actions:
+      delete: Eltávolítás
+      edit_payment_link: Fizetési hivatkozás szerkesztése
+      pause: Szüneteltetés
+      resume: Folytatás
+    confirm_delete_income: >-
+      Eltávolítod a(z) %{name} bevételt? A tranzakcióid változatlanok maradnak. Csak a bevételi bejegyzés
+      és annak ütemezése törlődik.
+    confirmed: A fizetési kötelezettség hozzáadva az ismétlődő tranzakcióidhoz
+    create:
+      account_invalid: Válassz olyan számlát, amelyhez hozzáadhatsz fizetési kötelezettséget, vagy hagyd
+        üresen
+      already_exists: Ez a fizetési kötelezettség már létezik
+      amount_invalid: Egyszerű számként add meg az összeget
+      due_date_required: Add meg a kötelezettség következő esedékességét
+      success: Fizetési kötelezettség hozzáadva
+      success_income: Bevétel hozzáadva
+    deleted_income: A bevétel eltávolítva. A tranzakcióid nem változtak.
+    dismissed: Elvetve. Ezt a mintát nem javasoljuk újra.
+    edit:
+      income_title: Bevétel szerkesztése · %{name}
+      title: "%{name} szerkesztése"
+      trigger_label: Fizetési kötelezettség szerkesztése
+    form:
+      account_blank: Bármely számla
+      account_label: Fizetés forrása
+      amount_edit_hint: Az ezután esedékes kötelezettségekre érvényes. A már esedékesek összege változatlan
+        marad.
+      amount_label: Összeg
+      apply_to_siblings:
+        one: Ezt a hivatkozást használja a másik %{name} kötelezettséghez is
+        other: Ezt a hivatkozást használja a többi %{count} %{name} kötelezettséghez is
+      autopay_hint: Maradjon a kötelezettségek listáján, de ne jelenjen meg elvégzendő teendőként.
+      autopay_label: Automatikusan fizetve
+      bill_type_label: Jelleg
+      cancelled_on_hint: >-
+        A dátum csak emlékeztetőként szolgál. Szüneteltesd a kötelezettséget, ha nem szeretnél további
+        esedékességeket látni.
+      cancelled_on_label: Lemondva
+      category_blank: Nincs kategória
+      category_label: Kategória
+      first_due_on_label: Következő esedékesség
+      frequency_day_label: Ezen a napon
+      frequency_hint: A kötelezettség esedékességének gyakorisága. A napokat a kivonatodnak megfelelően
+        add meg.
+      frequency_interval_label: Ismétlődés minden
+      frequency_interval_unit_label: Mértékegység
+      frequency_label: Gyakoriság
+      frequency_month_label: Ebben a hónapban
+      frequency_new_hint: >-
+        A napokra vonatkozó adatok a fenti esedékességi dátumból származnak. Mentés után pontosíthatod
+        az ütemezést.
+      frequency_second_day_label: És ezen a napon
+      frequency_weekday_label: Be
+      income_account_label: Jóváírás célja
+      income_amount_edit_hint: Az ezutáni fizetésnapokra érvényes. A már esedékes bevételek összege változatlan
+        marad.
+      income_amount_label: Összeg fizetésenként
+      income_due_on_label: Következő fizetésnap
+      income_frequency_hint: A bevételed gyakorisága. A napokat a fizetésnapodnak megfelelően add meg.
+      income_frequency_label: Milyen gyakran kapsz fizetést
+      income_frequency_new_hint: A fizetésnap adatai a fenti dátumból származnak. Mentés után pontosíthatod
+        az ütemezést.
+      income_name_label: Forrás
+      income_name_placeholder: Munkáltató, ügyfél, mellékállás
+      income_notes_hint: Bármi, amire érdemes emlékezned ezzel a bevétellel kapcsolatban.
+      income_notes_placeholder: Közvetlen átutalás, két számlára osztva
+      installment_count_hint: A terv ennyi fizetés után lezárul, addig pedig mutatja az előrehaladást.
+      installment_count_label: Fizetések száma
+      more_options: További beállítások
+      name_label: Név
+      name_placeholder: Lakbér, közművek, Netflix
+      notes_hint: Bármi, amit fizetéskor látni szeretnél. Megjelenik a kötelezettségnél.
+      notes_label: Megjegyzések
+      notes_placeholder: 4821-es számla, az Amex kártyára terhelve
+      payment_url_hint: Itt fizetheted ki a kötelezettséget. Az ismétlődő és közelgő tételek listájából
+        új lapon nyílik meg.
+      payment_url_label: Fizetési hivatkozás
+      payment_url_placeholder: bank.example.com/pay
+      renews_on_label: Megújulás
+      submit: Fizetési kötelezettség mentése
+      submit_income: Bevétel mentése
+      trial_ends_on_label: Próbaidő vége
+    frequency:
+      annual: Évente, %{month} %{day}. napján
+      biweekly: Kéthetente, %{weekday}
+      custom: Egyéni ütemezés
+      every_n_months: "%{interval} havonta, a hónap %{day}. napján"
+      every_n_weeks: "%{interval} hetente, %{weekday}"
+      every_n_years: "%{interval} évente, %{month} %{day}. napján"
+      last_day: utolsó nap
+      monthly: Havonta, a hónap %{day}. napján
+      quarterly: Negyedévente, a hónap %{day}. napján
+      semiannual: Félévente, a hónap %{day}. napján
+      semimonthly: Havonta kétszer, %{first}. és %{second}. napján
+      weekly: Hetente, %{weekday}
+    frequency_interval_units:
+      monthly: hónap
+      weekly: hét
+      yearly: év
+    frequency_presets:
+      annual: Évente
+      biweekly: Kéthetente
+      custom: Egyéni ütemezés
+      interval: Egyéni időköz
+      monthly: Havi
+      quarterly: Negyedéves
+      semiannual: Félévente
+      semimonthly: Havonta kétszer
+      weekly: Hetente
+    identify_already_running: A felismerés már fut. Nézz vissza egy kicsit később.
+    manage:
+      cta: Összes fizetési kötelezettség megnyitása
+      description: >-
+        Ott veheted fel, szerkesztheted, szüneteltetheted és fizetheted ki a tételeket. Ez az oldal a
+        felismerést kezeli.
+      title: A kötelezettségeidet a Fizetési kötelezettségek oldalon találod
+    new:
+      candidate_meta: "%{count}× · legutóbb %{date}"
+      income_title: Bevétel hozzáadása
+      pick_different: Kiindulás másik tranzakcióból
+      search_all_cta: Keresés az összes tranzakciódban
+      search_all_prompt: Nem találod, amit keresel?
+      smart_fill: Intelligens kitöltés MI-vel
+      smart_fill_applied: Az MI ezeket az értékeket javasolta a terhelési előzmények alapján. Mentés előtt
+        ellenőrizd őket.
+      start_from_hint: Nem kötelező. A kiválasztás csak kitölti az űrlapot; mindent szabadon módosíthatsz.
+      start_from_income_title: Kiindulás egy felismert ismétlődő jóváírásból
+      start_from_title: Kiindulás egy felismert ismétlődő terhelésből
+      title: Fizetési kötelezettség hozzáadása
+    pay_action:
+      add_link: Hivatkozás hozzáadása
+      add_link_aria: 'Fizetési hivatkozás hozzáadása ehhez: %{name}'
+      autopay: Automatikus fizetés
+      autopay_aria: A(z) %{name} automatikusan fizetve; a portál megnyitása új lapon
+      open_site: Fizetési oldal megnyitása
+      pay: Fizetés
+      pay_aria: "%{name} kifizetése (új lapon nyílik meg)"
+    pick_entry:
+      back: Vissza az űrlaphoz
+      hint: A kiválasztás csak kitölti az űrlapot; mindent szabadon módosíthatsz.
+      income_title: Kiinduló jóváírás keresése
+      no_results: >-
+        Nincs találat erre: „%{query}”. Próbálj kevesebb szót, vagy lépj vissza és töltsd ki kézzel az
+        űrlapot.
+      search_placeholder: Keresés név, megjegyzés vagy kereskedő alapján
+      showing_recent: A legutóbbi %{count} tétel látható. Kereséssel szűkítheted a listát.
+      title: Kiinduló tranzakció keresése
+    picker_row:
+      claimed: A(z) %{name} része
+    smart_fills:
+      create:
+        failed: A terhelési előzmények most nem elemezhetők. Az űrlap megőrizte a tranzakció saját értékeit.
+    suggested:
+      collapsed_hint: Koppints az ellenőrzéshez
+      confirm: Fizetési kötelezettség hozzáadása
+      dismiss: Nem fizetési kötelezettség
+      seen_count:
+        one: egyszer észlelve
+        other: "%{count} alkalommal észlelve"
+      title: Lehetséges új fizetési kötelezettségek
+    update:
+      success: A fizetési kötelezettség frissítve
+      success_with_siblings:
+        one: A kötelezettség frissítve, a fizetési hivatkozás pedig 1 másik kötelezettséghez is átmásolva
+        other: A kötelezettség frissítve, a fizetési hivatkozás pedig %{count} másik kötelezettséghez
+          is átmásolva

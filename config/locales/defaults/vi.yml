@@ -42,6 +42,7 @@ vi:
       default: "%d-%m-%Y"
       long: "%d %B, %Y"
       short: "%d %b"
+      month_year: "%m/%Y"
     month_names:
     -
     - Tháng một
@@ -177,3 +178,18 @@ vi:
       long: "%d %B, %Y %H:%M"
       short: "%d %b %H:%M"
     pm: chiều
+  defaults:
+    brand_name: "%{brand_name}"
+    common:
+      close: Đóng
+    product_name: "%{product_name}"
+  global:
+    expand: Mở rộng
+  mcp:
+    errors:
+      invalid_session_id: ID phiên MCP không hợp lệ
+      unsupported_protocol_version: 'Phiên bản giao thức MCP không được hỗ trợ: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris phải dùng https, http qua địa chỉ loopback
+        hoặc lược đồ URI của ứng dụng gốc

@@ -52,6 +52,7 @@ vi:
       confirm_changes: Xác nhận thay đổi
     actions:
       value_placeholder: Nhập một giá trị
+      to_label: thành
     update:
       success: Đã cập nhật quy tắc
     destroy:
@@ -104,6 +105,26 @@ vi:
         expense: Chi tiêu
         transfer: Chuyển khoản
         equal_to: Bằng
+      operators:
+        contains: Chứa
+        does_not_contain: Không chứa
+        equal_to: Bằng
+        greater_or_equal_to: Lớn hơn hoặc bằng
+        greater_than: Lớn hơn
+        is_empty: Trống
+        is_equal_to: Bằng
+        is_not_empty: Không trống
+        less_than: Nhỏ hơn
+        less_than_or_equal_to: Nhỏ hơn hoặc bằng
+        not_equal_to: Không bằng
+    category_rule_cta:
+      close: Đóng
+      create_rule: Tạo quy tắc
+      description: Bạn có thể tạo quy tắc để tự động phân loại các giao dịch tương tự
+      dont_show_again: Không hiện lại
+      hide_for_today: Ẩn hôm nay
+      hide_for_today_hint: Ẩn hôm nay sẽ tạm dừng các gợi ý này trong 24 giờ.
+      message: Đã đổi thành %{category_name}
   rule:
     conditions:
       condition_group:
@@ -113,3 +134,5 @@ vi:
         any: bất kỳ
         of_the_following_conditions: trong các điều kiện sau
         add_condition: Thêm điều kiện
+      condition:
+        value_placeholder: Nhập giá trị

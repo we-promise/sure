@@ -3,21 +3,26 @@ hu:
   sessions:
     create:
       invalid_credentials: Érvénytelen e-mail cím vagy jelszó.
-      local_login_disabled: A helyi jelszavas bejelentkezés le van tiltva. Kérjük, használd az egyszeri bejelentkezést.
+      local_login_disabled: A helyi jelszavas bejelentkezés le van tiltva. Kérjük, használd az egyszeri
+        bejelentkezést.
+      account_deactivated: Ez a fiók deaktiválva lett. Fordulj egy adminisztrátorhoz.
     destroy:
       logout_successful: Sikeresen kijelentkeztél.
     post_logout:
       logout_successful: Sikeresen kijelentkeztél.
     openid_connect:
-      account_linked: "A fiók sikeresen össze lett kapcsolva a következővel: %{provider}"
+      account_linked: 'A fiók sikeresen össze lett kapcsolva a következővel: %{provider}'
       failed: Nem sikerült hitelesíteni az OpenID Connect segítségével.
     failure:
       failed: Nem sikerült hitelesíteni.
-      sso_provider_unavailable: "Az egyszeri bejelentkezés szolgáltatója jelenleg nem elérhető. Kérjük, próbáld újra később, vagy lépj kapcsolatba egy rendszergazdával."
-      sso_invalid_response: "Érvénytelen választ kaptunk az egyszeri bejelentkezés szolgáltatójától. Kérjük, próbáld újra."
-      sso_failed: "Az egyszeri bejelentkezés sikertelen volt. Kérjük, próbáld újra."
+      sso_provider_unavailable: >-
+        Az egyszeri bejelentkezés szolgáltatója jelenleg nem elérhető. Kérjük, próbáld újra később, vagy
+        lépj kapcsolatba egy rendszergazdával.
+      sso_invalid_response: Érvénytelen választ kaptunk az egyszeri bejelentkezés szolgáltatójától. Kérjük,
+        próbáld újra.
+      sso_failed: Az egyszeri bejelentkezés sikertelen volt. Kérjük, próbáld újra.
     mobile_sso_start:
-      redirecting_html: "Átirányítás bejelentkezéshez... <a href=\"%{url}\">Kattints ide</a>, ha nincs átirányítás."
+      redirecting_html: Átirányítás bejelentkezéshez... <a href="%{url}">Kattints ide</a>, ha nincs átirányítás.
     new:
       email: E-mail cím
       email_placeholder: te@pelda.hu
@@ -30,6 +35,11 @@ hu:
       oidc: Bejelentkezés OpenID Connect segítségével
       google_auth_connect: Bejelentkezés Google-lel
       local_login_admin_only: A helyi bejelentkezés csak rendszergazdák számára elérhető.
-      no_auth_methods_enabled: Jelenleg nincs engedélyezett hitelesítési módszer. Kérjük, lépj kapcsolatba egy rendszergazdával.
-      demo_banner_title: "Demó mód aktív"
-      demo_banner_message: "Ez egy bemutató környezet. A bejelentkezési adatok előre ki vannak töltve a kényelmed érdekében. Kérjük, ne adj meg valódi vagy érzékeny adatokat."
+      no_auth_methods_enabled: Jelenleg nincs engedélyezett hitelesítési módszer. Kérjük, lépj kapcsolatba
+        egy rendszergazdával.
+      demo_banner_title: Demó mód aktív
+      demo_banner_message: >-
+        Ez egy bemutató környezet. A bejelentkezési adatok előre ki vannak töltve a kényelmed érdekében.
+        Kérjük, ne adj meg valódi vagy érzékeny adatokat.
+      passkey_button: Bejelentkezés hozzáférési kulccsal
+      passkey_unsupported: Ez a böngésző nem támogatja a hozzáférési kulcsokat.
