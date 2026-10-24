@@ -250,6 +250,20 @@ module Api
         return unless cached
 
         email = cached[:email]
+        # JIT creation and invitation redemption trust the IdP's email, so they
+        # require it to be verified.
+        email_verified = email.present? && cached[:email_verified] == true
+
+        unless email_verified
+          SsoAuditLog.log_jit_blocked!(
+            provider: cached[:provider],
+            request: request,
+            reason: "email_not_verified",
+            metadata: { client: "mobile" }
+          )
+          render json: { error: "Your identity provider did not confirm your email address, so no account can be created. Please contact an administrator." }, status: :forbidden
+          return
+        end
 
         # Check for a pending invitation for this email
         invitation = Invitation.pending.find_by(email: email)

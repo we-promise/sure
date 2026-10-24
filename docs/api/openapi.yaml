@@ -5083,9 +5083,9 @@ paths:
       description: Creates a new user and family from a previously issued linking
         code. Links the SSO identity via OidcIdentity, logs the JIT account creation
         via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have
-        allow_account_creation enabled. The first user on a fresh instance is assigned
-        the super_admin role; later family creators are assigned an admin-capable
-        role.
+        allow_account_creation enabled and an email address the identity provider
+        reported as verified. The first user on a fresh instance is assigned the super_admin
+        role; later family creators are assigned an admin-capable role.
       parameters: []
       responses:
         '200':
@@ -5137,7 +5137,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: SSO identity removed or account creation disabled
+          description: SSO identity removed, account creation disabled or email not
+            verified by the identity provider
           content:
             application/json:
               schema:

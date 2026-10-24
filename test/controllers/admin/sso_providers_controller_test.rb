@@ -52,6 +52,18 @@ class Admin::SsoProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "guest", @provider.reload.settings["default_role"]
   end
 
+  test "update persists the treat_email_as_verified opt-in" do
+    get edit_admin_sso_provider_path(@provider)
+    assert_includes response.body, 'name="sso_provider[settings][treat_email_as_verified]"'
+
+    patch admin_sso_provider_path(@provider), params: {
+      sso_provider: valid_update_params(settings: { default_role: "member", treat_email_as_verified: "1" })
+    }
+
+    assert_redirected_to admin_sso_providers_path
+    assert_equal "1", @provider.reload.settings["treat_email_as_verified"]
+  end
+
   test "update preserves existing client secret when blank" do
     patch admin_sso_provider_path(@provider), params: {
       sso_provider: valid_update_params(client_secret: "", label: "Updated Google")
