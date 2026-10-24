@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sure_mobile/l10n/app_localizations.dart';
@@ -173,6 +175,42 @@ void main() {
     ]);
     expect(screen.startDate, DateTime(2026, 10, 1));
     expect(screen.endDate, DateTime(2026, 10, 31));
+  });
+
+  testWidgets('a failed refresh keeps the loaded month with a banner',
+      (tester) async {
+    final inner = budgetsMockHandler();
+    var fail = false;
+    final provider = BudgetsProvider(
+      service: BudgetsService(
+        client: MockClient((request) async {
+          if (fail) throw http.ClientException('connection reset');
+          return inner(request);
+        }),
+      ),
+      clock: () => DateTime(2026, 10, 19),
+    );
+    await pumpScreen(tester, provider);
+    expect(find.text('Budgeted'), findsOneWidget);
+
+    fail = true;
+    await provider.loadMonth(accessToken: 'token', forceRefresh: true);
+    await tester.pumpAndSettle();
+
+    expect(find.text("Couldn't load budgets"), findsNothing);
+    expect(find.text('Budgeted'), findsOneWidget);
+    expect(
+      find.text("Couldn't refresh. Showing the figures loaded earlier."),
+      findsOneWidget,
+    );
+
+    fail = false;
+    await tester.tap(find.text('Try Again'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text("Couldn't refresh. Showing the figures loaded earlier."),
+      findsNothing,
+    );
   });
 
   testWidgets('without an access token shows the session-expired state',

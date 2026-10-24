@@ -66,6 +66,10 @@ class BudgetsProvider with ChangeNotifier {
   /// Whether the server returned a budget list for the month (possibly empty).
   bool get hasLoadedMonth => _current != null;
 
+  /// A refresh failed but an earlier load of this month is still held, so the
+  /// screen can keep showing it instead of replacing it with an error page.
+  bool get refreshFailed => _error == BudgetsLoadError.failed && hasLoadedMonth;
+
   /// All budgets visible to the user for this month: the household budget
   /// plus any personal or shared ones.
   List<Budget> get monthBudgets => _current?.budgets ?? const [];

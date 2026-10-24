@@ -213,6 +213,29 @@ void main() {
     expect(provider.hasLoadedMonth, isFalse);
   });
 
+  test('a failed refresh keeps the month already loaded', () async {
+    final inner = budgetsMockHandler();
+    var fail = false;
+    final provider = buildProvider(
+      client: MockClient((request) async {
+        if (fail) throw http.ClientException('connection reset');
+        return inner(request);
+      }),
+    );
+
+    await provider.loadMonth(accessToken: 'token');
+    expect(provider.error, isNull);
+    expect(provider.refreshFailed, isFalse);
+
+    fail = true;
+    await provider.loadMonth(accessToken: 'token', forceRefresh: true);
+
+    expect(provider.error, BudgetsLoadError.failed);
+    expect(provider.hasLoadedMonth, isTrue);
+    expect(provider.refreshFailed, isTrue);
+    expect(provider.categories, isNotEmpty);
+  });
+
   test('a load that finishes after dispose does not notify', () async {
     final inner = budgetsMockHandler();
     final gate = Completer<void>();

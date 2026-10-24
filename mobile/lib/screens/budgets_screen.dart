@@ -199,7 +199,10 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
       ];
     }
 
-    switch (provider.error) {
+    // A failed refresh keeps the month already loaded on screen (with a
+    // banner), like the offline path; only a month never loaded gets the
+    // full-screen error.
+    switch (provider.refreshFailed ? null : provider.error) {
       case BudgetsLoadError.offline:
         return [
           _message(
@@ -269,6 +272,33 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                       .bodySmall
                       ?.copyWith(color: palette.textSecondary),
                 ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (provider.refreshFailed) {
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: SureSpacing.lg),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline, size: 16, color: palette.textSecondary),
+              const SizedBox(width: SureSpacing.sm),
+              Expanded(
+                child: Text(
+                  l.budgetsRefreshFailed,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: palette.textSecondary),
+                ),
+              ),
+              TextButton(
+                onPressed: () => _load(forceRefresh: true),
+                child: Text(l.commonTryAgain),
               ),
             ],
           ),
@@ -350,8 +380,7 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
     for (final group in groups) {
       // Like the web, a parent that isn't itself visible only exists as the
       // container of its visible subcategories: no row, no indent.
-      final showParent =
-          provider.showsAllCategories || group.parent.isVisible;
+      final showParent = provider.showsAllCategories || group.parent.isVisible;
       if (filter == _CategoryFilter.overBudget) {
         if (group.parent.isOverBudget) {
           addRow(group.parent, group.categoryIds);

@@ -331,6 +331,7 @@
   "budgetsOfflineTitle": "Du är offline",
   "budgetsOfflineMessage": "Anslut till internet för att läsa in den här månadens budget.",
   "budgetsOfflineCached": "Offline. Visar siffrorna som lästes in tidigare.",
+  "budgetsRefreshFailed": "Kunde inte uppdatera. Visar siffrorna som lästes in tidigare.",
   "budgetsLoadFailed": "Kunde inte läsa in budgetar",
   "budgetsSessionExpired": "Din session har gått ut. Logga in igen.",
   "budgetCategoryTransactionsEmpty": "Inga transaktioner i den här kategorin för {month}.",

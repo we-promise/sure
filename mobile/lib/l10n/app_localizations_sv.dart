@@ -1149,6 +1149,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Offline. Visar siffrorna som lästes in tidigare.';
 
   @override
+  String get budgetsRefreshFailed =>
+      'Kunde inte uppdatera. Visar siffrorna som lästes in tidigare.';
+
+  @override
   String get budgetsLoadFailed => 'Kunde inte läsa in budgetar';
 
   @override
