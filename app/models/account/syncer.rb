@@ -6,6 +6,7 @@ class Account::Syncer
   end
 
   def perform_sync(sync)
+    sync.update!(data: (sync.data || {}).merge("cost_basis_method" => account.cost_basis_method))
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data
     materialize_balances(window_start_date: sync.window_start_date)
@@ -15,9 +16,20 @@ class Account::Syncer
 
   def perform_post_sync
     account.family.auto_match_transfers!(account: account)
+    restate_if_cost_basis_method_changed
   end
 
   private
+    # A method saved while this run was calculating left its figures on the
+    # old one, and the form's sync_later folded into this run. Once it has
+    # completed, a new sync restates them.
+    def restate_if_cost_basis_method_changed
+      used = account.syncs.completed.order(:created_at).last&.data&.dig("cost_basis_method")
+      return if used.nil? || used == Account.where(id: account.id).pick(:cost_basis_method)
+
+      account.sync_later
+    end
+
     def materialize_balances(window_start_date: nil)
       strategy = account.linked? ? :reverse : :forward
       Balance::Materializer.new(account, strategy: strategy, window_start_date: window_start_date).materialize_balances
