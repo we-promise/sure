@@ -174,7 +174,7 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
           user.update!(ai_enabled: true)
           transaction.attachments.attach(io: StringIO.new('%PDF-1.4 receipt'), filename: 'receipt.pdf', content_type: 'application/pdf')
           provider = Object.new
-          provider.define_singleton_method(:supports_receipt_extraction?) { true }
+          provider.define_singleton_method(:supports_receipt_extraction?) { |**| true }
           provider.define_singleton_method(:extract_receipt) do |**|
             Provider::Response.new(
               success?: true,
