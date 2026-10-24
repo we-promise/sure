@@ -61,6 +61,35 @@ class Holding < ApplicationRecord
     calculate_avg_cost
   end
 
+  # The avg-cost fallback for holdings in accounts that sell by fifo, by
+  # holding id.
+  # What a fifo position holds is its open lots, not a share of every
+  # purchase, so the figure is their mean, as Holding::LotBook#average_cost
+  # gives it; the opening lot stays out, as it does there. The stored lots
+  # are the position as it stands, so they answer only for its latest row,
+  # and only while they add up to it (HoldingLot.in_partition). Any other
+  # row, or an open lot with no cost, is unknown: the trades' pooled average
+  # is the average method's figure, not this one.
+  def self.fifo_avg_costs(holdings)
+    return {} if holdings.empty?
+
+    account_ids = holdings.map(&:account_id).uniq
+    security_ids = holdings.map(&:security_id).uniq
+    readable = HoldingLot.in_partition(account_ids, security_ids)
+    latest = Holding.where(account_id: account_ids, security_id: security_ids).group(:account_id, :security_id).maximum(:date)
+    lots = HoldingLot.derived.where(account_id: account_ids, security_id: security_ids).where("qty > 0")
+      .group_by { |lot| [ lot.account_id, lot.security_id ] }
+
+    holdings.to_h do |holding|
+      key = [ holding.account_id, holding.security_id ]
+      open = lots.fetch(key, [])
+      value = if readable.include?(key) && latest[key] == holding.date && open.any? && open.none? { |lot| lot.unit_cost.nil? }
+        Money.new(open.sum { |lot| lot.qty * lot.unit_cost } / open.sum(&:qty), holding.currency)
+      end
+      [ holding.id, value ]
+    end
+  end
+
   def trend
     @trend ||= calculate_trend
   end
@@ -296,6 +325,7 @@ class Holding < ApplicationRecord
       # Fewer units than the trades bought (see Holding::ReverseCalculator), so
       # no figure drawn from those trades is the position's.
       return nil if HoldingLot.where(account_id: account_id, security_id: security_id, clamped: true).exists?
+      return self.class.fifo_avg_costs([ self ])[id] if account.cost_basis_fifo?
 
       trades = account.trades
         .with_entry
