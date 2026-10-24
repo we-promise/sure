@@ -16,6 +16,12 @@ class RecurringTransaction
   #     they sum to the full expected amount.
   class Allocator
     class OverAllocationError < StandardError; end
+    # Nothing of the entry is left: other allocations already take all of it.
+    # Subclasses, so every caller that refuses over-allocation refuses these
+    # too. AlreadyAllocatedError is the case where this occurrence is the one
+    # holding the entry.
+    class EntryExhaustedError < OverAllocationError; end
+    class AlreadyAllocatedError < OverAllocationError; end
     class MissingRateError < StandardError; end
 
     # Postgres keeps single-key and two-key advisory locks in separate spaces,
@@ -23,6 +29,22 @@ class RecurringTransaction
     ENTRY_LOCK_NAMESPACE = 8311
 
     attr_reader :occurrence
+
+    # Takes the entry's advisory lock for the rest of the caller's transaction
+    # (it is transaction-scoped, so the caller must have one open). Allocation
+    # writes take it, and so does anything that decides from an entry's
+    # allocations whether to make a new series for it, so the two serialize.
+    def self.lock_entry!(entry)
+      RecurringOccurrence.lease_connection.execute(
+        ActiveRecord::Base.sanitize_sql_array(
+          [ "SELECT pg_advisory_xact_lock(?::int, ?::int)", ENTRY_LOCK_NAMESPACE, entry_lock_id(entry) ]
+        )
+      )
+    end
+
+    def self.entry_lock_id(entry)
+      Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
+    end
 
     def initialize(occurrence)
       @occurrence = occurrence
@@ -178,17 +200,8 @@ class RecurringTransaction
       def with_entry_lock(entry)
         return yield if entry.nil?
 
-        occurrence.class.lease_connection.execute(
-          ActiveRecord::Base.sanitize_sql_array(
-            [ "SELECT pg_advisory_xact_lock(?::int, ?::int)", ENTRY_LOCK_NAMESPACE, entry_lock_id(entry) ]
-          )
-        )
-
+        self.class.lock_entry!(entry)
         yield
-      end
-
-      def entry_lock_id(entry)
-        Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
       end
 
       # A confirmed payment pins the obligation it was made against. Open rows
@@ -303,7 +316,7 @@ class RecurringTransaction
         hints = series.matcher_hints.deep_dup
 
         if series.merchant_id.blank? && series.name.present?
-          known = ([ series.name ] + Array(hints["name_aliases"]))
+          known = ([ series.matcher_name ] + Array(hints["name_aliases"]))
                     .map { |name| Matcher.normalize_name(name) }
 
           unless known.include?(Matcher.normalize_name(entry.name))
@@ -350,6 +363,21 @@ class RecurringTransaction
         end
 
         capacity = entry_capacity(entry, entry.amount.abs)
+
+        # The default amount is bounded by what the entry has left, so an
+        # exhausted entry defaults to zero. Zero passes the comparison below
+        # and used to surface only as the allocation's own "greater than 0"
+        # validation, which the user read as an unexplained failure.
+        unless capacity.positive?
+          # Used up by THIS occurrence means a repeated link (a double submit,
+          # a stale tab). With capacity left the unique index reports that as
+          # already allocated, and "other payments due" would be untrue here.
+          if occurrence.allocations.exists?(entry: entry)
+            raise AlreadyAllocatedError, I18n.t("recurring_transactions.allocator.already_allocated")
+          end
+
+          raise EntryExhaustedError, I18n.t("recurring_transactions.allocator.entry_exhausted")
+        end
 
         if source_amount > capacity + RecurringOccurrence::CLOSE_EPSILON
           raise OverAllocationError, I18n.t("recurring_transactions.allocator.over_allocated",

@@ -107,6 +107,31 @@ class EnableBankingEntry::Processor
     line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{1,2}[.\/]\d{1,2}\.?\s+\d{2}:\d{2}\z/i)
   end
 
+  # Prefer booking_date, fall back to value_date, then transaction_date.
+  # Timestamps are read in the family's timezone.
+  def self.transaction_date(raw_transaction_data, timezone)
+    data = raw_transaction_data.with_indifferent_access
+    date_value = data[:booking_date] || data[:value_date] || data[:transaction_date]
+
+    case date_value
+    when String
+      if date_value.include?("T") || date_value.include?(":")
+        Time.parse(date_value).in_time_zone(timezone).to_date
+      else
+        Date.parse(date_value)
+      end
+    when Integer, Float
+      Time.at(date_value).in_time_zone(timezone).to_date
+    when Time, DateTime
+      date_value.in_time_zone(timezone).to_date
+    when Date
+      date_value
+    else
+      Rails.logger.error("Enable Banking transaction has invalid date value: #{date_value.inspect}")
+      raise ArgumentError, "Invalid date format: #{date_value.inspect}"
+    end
+  end
+
   # True when the transaction represents an unfinalized card authorization hold
   # (missing provider identifiers, no legitimate counterparty name, and a masked
   # card descriptor in remittance or transaction code).
@@ -608,27 +633,9 @@ class EnableBankingEntry::Processor
     end
 
     def date
-      # Prefer booking_date, fall back to value_date, then transaction_date
-      date_value = data[:booking_date] || data[:value_date] || data[:transaction_date]
-
-      case date_value
-      when String
-        if date_value.include?("T") || date_value.include?(":")
-          Time.parse(date_value).in_time_zone(account&.family&.timezone).to_date
-        else
-          Date.parse(date_value)
-        end
-      when Integer, Float
-        Time.at(date_value).in_time_zone(account&.family&.timezone).to_date
-      when Time, DateTime
-        date_value.in_time_zone(account&.family&.timezone).to_date
-      when Date
-        date_value
-      else
-        Rails.logger.error("Enable Banking transaction has invalid date value: #{date_value.inspect}")
-        raise ArgumentError, "Invalid date format: #{date_value.inspect}"
-      end
+      self.class.transaction_date(data, account&.family&.timezone)
     rescue ArgumentError, TypeError => e
+      date_value = data[:booking_date] || data[:value_date] || data[:transaction_date]
       Rails.logger.error("Failed to parse Enable Banking transaction date '#{date_value}': #{e.message}")
       raise ArgumentError, "Unable to parse transaction date: #{date_value.inspect}"
     end
