@@ -1,0 +1,9 @@
+---
+nb:
+  tag:
+    dropdowns:
+      show:
+        empty: Ingen tagger ennå
+        search_placeholder: Søk
+        manage: Administrer tagger
+        no_tags: Ingen tagger funnet

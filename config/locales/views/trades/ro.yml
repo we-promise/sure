@@ -11,6 +11,18 @@ ro:
       submit: Adaugă tranzacție
       ticker_placeholder: AAPL
       type: Tip
+      type_buy: Cumpără
+      type_interest: Dobândă
+      type_sell: Vinde
+      type_withdrawal: Retragere
+      type_dividend: Dividend
+      dividend_requires_security: Un instrument financiar este obligatoriu pentru
+        dividende
+      fee: Comision de tranzacție
+      holding_optional: Simbol bursier (opțional)
+      trade_requires_security: Un instrument financiar (simbol bursier) este obligatoriu
+        pentru cumpărări și vânzări
+      type_deposit: Depunere
     header:
       buy: Cumpără
       current_market_price_label: Preț curent de piață
@@ -20,6 +32,17 @@ ro:
       sell: Vinde
       symbol_label: Simbol
       total_return_label: Câștig/pierdere nerealizată
+      contribution: Contribuție
+      interest: Dobândă
+      withdrawal: Retragere
+      exchange: Bursă
+      other: Altele
+      transfer: Transfer
+      dividend: Dividend
+      fee: Comision
+      reinvestment: Reinvestire
+      sweep_in: Transfer automat de numerar în cont
+      sweep_out: Transfer automat de numerar din cont
     new:
       title: Tranzacție nouă
     show:
@@ -36,3 +59,19 @@ ro:
       note_placeholder: Adaugă orice notă suplimentară aici...
       quantity_label: Cantitate
       settings: Setări
+      amount_label: Sumă
+      buy: Cumpără
+      category_label: Categorie
+      sell: Vinde
+      type_label: Tip
+      no_category: Fără categorie
+      fee_label: Comision de tranzacție
+      provider_disabled_warning: Actualizările prețului sunt suspendate — furnizorul
+        %{provider} este dezactivat. Reactivează-l din Setări sau reasociază deținerea
+        cu un alt furnizor.
+    api_errors:
+      activity_label_must_match_type: investment_activity_label trebuie să fie %{label}
+        când type este %{type}
+      invalid_activity_label: Etichetă nevalidă a activității de investiții
+      invalid_type: Tip nevalid
+      supported_types: 'type trebuie să fie unul dintre: %{types}'

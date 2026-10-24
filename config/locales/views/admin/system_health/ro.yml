@@ -1,0 +1,451 @@
+---
+ro:
+  admin:
+    system_health:
+      hosted_usage:
+        statuses:
+          active: Activ
+          paused: În pauză
+          unknown: Necunoscut
+          past_due: Scadent în trecut
+          canceled: Anulat
+          incomplete: Incomplet
+          incomplete_expired: Incomplet, expirat
+          no_subscription: Fără abonament
+          trialing: În perioada de probă
+          unpaid: Neplătit
+        columns:
+          trial_ends_at: Perioada de probă se încheie
+          cleanup_eligible: Eligibil pentru curățare
+          cleanup_reason: Motiv
+          household: ID gospodărie
+          latest_session: Cea mai recentă autentificare păstrată
+          members: Conturi de membri
+          recent_sessions: Sesiuni păstrate, create în ultimele 30 de zile
+          recorded_at: Abonament înregistrat
+          retained_sessions: Sesiuni de autentificare păstrate
+          status: Starea actuală
+          subscription_rows: Înregistrări de abonament
+        cleanup:
+          description: 'Respectă criteriile existente de curățare: un abonament în
+            pauză sau de probă încheiat de peste 14 zile ori lipsa unui abonament
+            și o gospodărie mai veche de 45 + 14 zile. Se afișează cel mult %{limit}
+            de gospodării.'
+          disabled: Curățarea programată a perioadelor de probă este dezactivată în
+            afara modului administrat. Acestea sunt doar înregistrări care corespund
+            criteriilor.
+          eligibility_help: Autentificările recente nu împiedică încadrarea. Eligibilitatea
+            nu confirmă ștergerea; cele 90 de zile reprezintă perioada de păstrare
+            a arhivei, nu pragul de curățare a perioadelor de probă.
+          empty: Nicio gospodărie nu corespunde criteriilor de curățare
+          reasons:
+            expired_trial_grace_elapsed: Perioada de probă s-a încheiat; au trecut
+              cele 14 zile de grație
+            no_subscription_grace_elapsed: Fără abonament; au trecut 45 + 14 zile
+          title: Eligibilitate pentru curățare
+        eligible: Eligibil
+        limitations: Tabelele actuale nu păstrează istoricul complet al perioadelor
+          de probă, plăților sau activității sesiunilor. Data creării abonamentului
+          poate reflecta un import. Conturile membrilor nu reprezintă persoane unice
+          verificate. Această vizualizare nu modifică datele gospodăriilor sau abonamentelor.
+          Resetările demonstrației comune elimină gospodăriile și sesiunile vechi,
+          astfel încât istoricul vizitatorilor nu poate fi reconstruit.
+        limitations_title: Ce ne pot spune aceste cifre
+        loading: Se încarcă utilizarea serviciului găzduit…
+        not_eligible: Neeligibil
+        not_recorded: Neînregistrat
+        snapshot: Instantaneu al bazei de date, doar pentru citire, din %{time}
+        summary:
+          active_supporter_households_count: Gospodării cu contribuții active (local)
+          cleanup_eligible_count: Gospodării eligibile pentru curățare
+          supporter_subscription_count: Înregistrări de abonament asociate cu Stripe
+          trial_households_count: Gospodării în probă (ultimele 30 de zile)
+          trial_members_count: Conturi actuale ale membrilor în probă
+          trials_expiring_soon_count: Perioade de probă care expiră în următoarele
+            7 zile
+        summary_help: Totalurile perioadelor de probă includ abonamentele înregistrate
+          în ultimele 30 de zile. Totalurile perioadelor care expiră, ale curățării
+          și ale contributorilor includ toate înregistrările actuale corespunzătoare,
+          fără limitele tabelului.
+        supporters:
+          description: Înregistrări locale actuale de abonament cu ID-uri de client
+            și abonament în format Stripe; abonamentul demonstrativ sintetic este
+            exclus. Stările nu verifică plățile primite sau data primei plăți. Nu
+            se face nicio cerere către Stripe.
+          empty: Nu există înregistrări de abonament asociate cu Stripe
+          title: Starea locală a contributorilor
+        synthetic_demo: Demonstrație sintetică
+        title: Utilizarea serviciului găzduit
+        trials:
+          description: Abonamente înregistrate începând cu %{date}, care păstrează
+            o dată de încheiere a perioadei de probă, inclusiv probele convertite.
+            Se afișează cel mult %{limit} de gospodării.
+          empty: Nu există gospodării în probă înregistrate în acest interval
+          sessions_help: Sesiunile sunt înregistrări de autentificare păstrate pentru
+            utilizatori activați, nu utilizatori conectați în prezent sau vizite.
+            Deconectarea șterge o înregistrare. Cea mai recentă dată de creare nu
+            reprezintă ultima activitate.
+          title: Gospodării recente în probă
+      push_notifications:
+        pending: În așteptare
+        statuses:
+          queued: În coadă
+          accepted: Acceptată de APNs
+          enqueue_failed: Nu a putut fi adăugată în coadă; verifică Sidekiq
+          expired: Expirată fără rezultat final
+          failed: Eșuată; verifică jurnalele de depanare push
+          rejected: Respinsă de APNs; verifică jurnalele de depanare push
+          retrying: Se reîncearcă după o eroare temporară
+          skipped: 'Omisă: nu mai este eligibilă'
+          unregistered: Înregistrarea dispozitivului nu mai este validă
+        columns:
+          checked_at: Ultima actualizare
+          device: Dispozitiv
+          environment: Mediu APNs
+          status: Rezultat
+        device: Dispozitiv %{number}
+        environments:
+          production: Producție
+          sandbox: Mediu de test
+        messages:
+          cooldown: Așteaptă 30 de secunde înainte de a trimite alt test.
+          disabled: Operatorul a dezactivat trimiterea notificărilor push.
+          enqueue_failed: Testul nu a putut fi adăugat în coadă. Verifică Sidekiq
+            și reîmprospătează rezultatele de mai jos.
+          hosted_only: Notificările push sunt disponibile doar în modul găzduit.
+          ineligible: Doar un superadministrator activ poate trimite o notificare
+            de test.
+          no_devices: Activează notificările push în aplicația Sure pentru iOS pentru
+            acest cont, ca să poți trimite un test.
+          not_configured: Datele de autentificare APNs nu sunt configurate.
+          queued: Notificarea de test a fost adăugată în coadă. Reîmprospătează rezultatele
+            de mai jos pentru a verifica starea.
+          ready: Trimite o notificare de test dispozitivelor iOS activate și înregistrate
+            în contul tău.
+          storage_unavailable: Cererea de test nu a putut fi salvată. Verifică configurarea
+            cache-ului comun.
+        queueing: Se adaugă în coadă…
+        refresh: Reîmprospătează rezultatele
+        requested_at: Ultimul test a fost solicitat la %{time}
+        result_help: Acceptarea de către APNs nu confirmă livrarea pe dispozitiv.
+          Reîmprospătează pentru rezultatele proceselor din fundal. Rezultatele sunt
+          păstrate 24 de ore.
+        results_label: Rezultatele testelor
+        send_test: Trimite notificare push de test
+        title: Notificări push
+      show:
+        ai:
+          values:
+            'no': Nu
+            'yes': Da
+            configured: Configurat
+            not_configured: Neconfigurat
+            available: Disponibil
+            enabled: Activat
+            available_not_enabled: Disponibil, dar neactivat
+            fallback: "(de rezervă)"
+            not_available: Indisponibil
+            not_found: Negăsit
+            not_set: Nesetat
+          function_calling_statuses:
+            not_checked: Neverificat
+            failing: Verificarea în timp real a eșuat
+            not_used: Instrumentele au fost acceptate, dar modelul nu a apelat niciunul
+            supported: Apelul instrumentului în timp real a reușit
+            unavailable: Indisponibil până la configurarea unui furnizor LLM
+            unsupported: Neacceptat de furnizorul/modelul efectiv
+          pdf_statuses:
+            not_checked: Neverificat
+            failing: Verificarea PDF-ului sintetic a eșuat
+            supported: Verificarea PDF-ului sintetic a reușit
+            unavailable: Indisponibil până la configurarea unui furnizor LLM
+            unsupported: Dezactivat sau neacceptat de furnizorul/modelul efectiv
+          probe_statuses:
+            not_checked: Neverificat
+            not_configured: Neconfigurat
+            failing: Verificarea în timp real a eșuat
+            passing: Verificarea în timp real a reușit
+          providers:
+            openai: OpenAI
+            anthropic: Anthropic
+            cloudflare: Cloudflare
+            custom_openai_compatible: Endpoint personalizat
+            kilo: Kilo
+            ollama: Ollama
+            openai_compatible: Compatibil OpenAI
+            openrouter: OpenRouter
+            together: Together
+          vector_statuses:
+            missing: Neconfigurat
+            not_checked: Neverificat
+            not_configured: Neconfigurat
+            failing: Verificarea în timp real a eșuat
+            passing: Verificările în timp real au reușit
+            scaffolded: Structură inițială implementată
+          labels:
+            model: Model
+            adapter: Adaptor
+            adapter_available: Adaptor disponibil
+            anthropic_credentials: Date de autentificare Anthropic
+            effective_provider: Furnizor efectiv
+            embedding_dimensions: Dimensiunile reprezentărilor vectoriale
+            embedding_endpoint: Endpoint pentru reprezentări vectoriale
+            embedding_model: Model pentru reprezentări vectoriale
+            embedding_probe: Verificarea endpointului pentru reprezentări vectoriale
+            endpoint: Punct final
+            failure_reason: Motivul eșecului
+            function_calling: Apelarea funcțiilor (instrumente)
+            function_calling_failure_reason: Motivul eșecului apelării funcțiilor
+            llm_request_timeout: Limită de timp pentru cererile LLM
+            openai_compatible_credentials: Date de autentificare API compatibil OpenAI
+            openai_credentials: Date de autentificare OpenAI
+            pdf_text_extraction: Flux de extragere a textului PDF
+            pdf_text_extraction_failure_reason: Motivul eșecului extragerii textului
+            pdf_vision_processing: Flux PDF vizual/nativ
+            pdf_vision_processing_failure_reason: Motivul eșecului procesării vizuale/native
+            pgvector_extension: Extensia vector PostgreSQL
+            pgvector_table: Tabelul fragmentelor vectoriale
+            probe_request_timeout: Limită de timp a verificării stării
+            selected_provider: Furnizor selectat
+            storage_probe: Verificarea stocării pgvector
+          worker:
+            labels:
+              checked_at: Verificat
+              configuration: Configurare
+              process: Proces de lucru
+            configuration_statuses:
+              match: Corespunde procesului web
+              mismatch: Diferă de procesul web
+            coverage_notice: Fiecare verificare testează exact un proces de lucru
+              — cel care preia sarcina din coadă. Dacă există mai multe replici, un
+              rezultat reușit nu confirmă starea tuturor proceselor; adaugă din nou
+              verificarea în coadă pentru a testa alt proces.
+            description: Verificările de mai sus au rulat din acest proces web. Majoritatea
+              operațiunilor AI — răspunsurile asistentului, procesarea PDF, reprezentările
+              vectoriale, clasificarea automată și detectarea comercianților — rulează
+              într-un proces Sidekiq, care poate avea alt acces la rețea, DNS, reguli
+              proxy sau chiar alte date de autentificare încărcate. Adaugă o verificare
+              în coadă pentru a testa configurarea și conectivitatea procesului de
+              lucru.
+            empty:
+              description: Apasă „Verifică configurarea procesului de lucru” pentru
+                a adăuga o verificare asincronă în coadă. Rezultatul apare aici după
+                ce un proces preia sarcina.
+              title: Niciun proces de lucru nu a raportat încă
+            settings_origin:
+              database_backed: Setările furnizorului, modelului și cheii API modificate
+                în Setări → Găzduire proprie sunt stocate în baza de date. rails-settings-cached
+                invalidează cache-ul comun la scriere, astfel încât procesul web și
+                procesul de lucru folosesc noua valoare la următoarea cerere sau sarcină
+                — fără repornire.
+              env_backed: Configurarea reprezentărilor vectoriale și orice valoare
+                setată exclusiv printr-o variabilă de mediu sunt fixate la pornirea
+                fiecărui container. Rails nu poate schimba mediul altui container;
+                modificarea necesită repornirea sau recrearea atât a serviciului web,
+                cât și a procesului de lucru. Instrumentele de implementare care repornesc
+                doar unul (lansare parțială, un Secret actualizat fără repornirea
+                podului) nu vor prelua modificarea.
+              title: Ce setări necesită repornire?
+            statuses:
+              failing: Eșuează
+              passing: Funcționează
+              stale: Învechit
+            title: Verificarea procesului de lucru
+            verify_button: Verifică configurarea procesului de lucru
+          adapters:
+            openai: Depozit vectorial găzduit de OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          alerts:
+            custom_openai:
+              message: Endpointul configurat nu a trecut verificarea disponibilității
+                /v1/vector_stores. Majoritatea endpointurilor locale și compatibile
+                OpenAI nu implementează acest API. Conversațiile și procesarea PDF
+                pot funcționa în continuare; pentru configurarea locală obișnuită,
+                folosește pgvector cu un endpoint separat pentru reprezentări vectoriale.
+                Eroarea a fost înregistrată în Setări → Jurnale de depanare și în
+                Rails.logger.
+              title: Verificarea depozitului vectorial găzduit a eșuat la acest endpoint
+                personalizat
+            embedding_dimensions_mismatch:
+              message: Endpointul pentru reprezentări vectoriale a returnat un vector
+                cu lungimea diferită de EMBEDDING_DIMENSIONS. Setează EMBEDDING_MODEL
+                și EMBEDDING_DIMENSIONS conform dimensiunii documentate a modelului,
+                repornește Sure pentru a păstra mediul configurat, apoi modifică sau
+                recreează coloana/tabelul de vectori pgvector și regenerează reprezentările
+                documentelor dacă datele existente foloseau altă dimensiune.
+              title: Dimensiunile reprezentărilor vectoriale nu corespund
+            embedding_probe_failed:
+              message: Sure nu a putut genera o reprezentare vectorială scurtă de
+                test prin endpointul și modelul configurate. Verifică EMBEDDING_URI_BASE,
+                EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN și jurnalele furnizorului
+                de reprezentări vectoriale. Eroarea a fost înregistrată în Setări
+                → Jurnale de depanare și în Rails.logger.
+              title: Verificarea în timp real a reprezentărilor vectoriale a eșuat
+            embedding_probe_timeout:
+              message: Endpointul pentru reprezentări vectoriale nu a răspuns înainte
+                de expirarea AI_HEALTH_PROBE_TIMEOUT. Mărește această limită dacă
+                furnizorul este lent, apoi repornește Sure pentru ca mediul configurat
+                să fie păstrat în fiecare proces. Dacă expiră și cererile obișnuite
+                de conversație AI, mărește separat OPENAI_REQUEST_TIMEOUT.
+              title: Verificarea în timp real a reprezentărilor vectoriale a expirat
+            function_calling_not_used:
+              message: Endpointul a acceptat parametrul tools, dar modelul a răspuns
+                cu text în loc să apeleze instrumentul de verificare. Asistentul AI
+                nu poate citi date financiare fără apeluri de instrumente, așa că
+                poate răspunde fără informații sau cu cifre inventate. Preferă un
+                model pentru care furnizorul documentează suportul pentru apelarea
+                funcțiilor.
+              title: Modelul a răspuns fără să apeleze instrumentul solicitat
+            function_calling_unsupported:
+              message: Endpointul a procesat o cerere simplă de conversație, dar a
+                respins aceeași cerere cu parametrul tools. Asistentul AI citește
+                conturi, tranzacții și dețineri prin apeluri de funcții, așa că discuțiile
+                continuă să eșueze — adesea cu un mesaj 404 neclar — până la alegerea
+                unui model cu suport pentru instrumente. Alege un model pentru care
+                furnizorul documentează apelarea funcțiilor. Eroarea a fost înregistrată
+                în Setări → Jurnale de depanare și în Rails.logger.
+              title: Modelul nu acceptă apelarea funcțiilor
+            llm_model_not_available:
+              message: Endpointul a răspuns, dar nu a enumerat și nici nu a pus la
+                dispoziție modelul configurat. Alege un model activ pentru furnizorul
+                selectat, apoi repetă verificările. Pentru Gemini printr-un strat
+                de compatibilitate OpenAI, folosește un model acceptat în prezent,
+                precum gemini-2.5-flash.
+              title: Modelul AI configurat nu este disponibil
+            llm_probe_failed:
+              message: Sure nu a putut verifica atât endpointul, cât și modelul configurat.
+                Eroarea a fost înregistrată în Setări → Jurnale de depanare și în
+                Rails.logger.
+              title: Verificarea LLM în timp real a eșuat
+            missing_vector_store:
+              message: Documentele încărcate nu pot fi indexate sau căutate până la
+                configurarea unui adaptor de depozit vectorial și a cerințelor sale.
+              title: Nu este configurat niciun depozit vectorial
+            pdf_text_extraction_failed:
+              message: Sure nu a putut finaliza fluxul care extrage mai întâi local
+                textul încorporat în PDF și îl trimite modelului configurat. Nu au
+                fost trimise date ale clienților. Eroarea a fost înregistrată în Setări
+                → Jurnale de depanare și în Rails.logger.
+              title: Verificarea extragerii textului din PDF-ul sintetic a eșuat
+            pdf_vision_processing_failed:
+              message: Sure nu a putut finaliza procesarea PDF ca imagine sau document
+                nativ prin modelul configurat. Nu au fost trimise date ale clienților.
+                Eroarea a fost înregistrată în Setări → Jurnale de depanare și în
+                Rails.logger.
+              title: Verificarea vizuală/nativă a PDF-ului sintetic a eșuat
+            pgvector_extension_not_enabled:
+              message: Adaptorul pgvector este selectat, dar extensia vector nu este
+                activată în PostgreSQL pentru această bază de date. Folosește o imagine
+                PostgreSQL care include pgvector, activează extensia ca proprietar
+                al bazei sau superutilizator, apoi rulează din nou migrările cu VECTOR_STORE_PROVIDER=pgvector.
+              title: Extensia vector PostgreSQL nu este activată
+            pgvector_probe_failed:
+              message: Sure nu a putut interoga tabelul de fragmente pgvector. Verifică
+                permisiunile PostgreSQL, extensia vector și migrarea vector_store_chunks.
+                Eroarea a fost înregistrată în Setări → Jurnale de depanare și în
+                Rails.logger.
+              title: Verificarea stocării pgvector a eșuat
+            pgvector_table_not_found:
+              message: Extensia pgvector este activată, dar tabelul de fragmente nu
+                a fost găsit. Verifică starea migrărilor, apoi rulează din nou migrarea
+                depozitului vectorial cu VECTOR_STORE_PROVIDER=pgvector, pentru ca
+                Sure să poată crea vector_store_chunks.
+              title: Lipsește tabelul vector_store_chunks
+            qdrant:
+              message: Adaptorul Qdrant are structura inițială, însă încărcarea și
+                căutarea documentelor eșuează în prezent. Selectează OpenAI sau pgvector
+                pentru căutarea documentelor.
+              title: Suportul Qdrant nu este încă implementat
+            unavailable_vector_store:
+              message: Verifică cerințele adaptorului de mai jos. Pentru pgvector,
+                baza de date trebuie să ofere extensia vector sau un tabel vector_store_chunks
+                existent.
+              title: Depozitul vectorial selectat nu este disponibil
+            vector_probe_failed:
+              message: Sure nu a putut verifica depozitul vectorial selectat și toate
+                serviciile necesare pentru reprezentări vectoriale. Eroarea a fost
+                înregistrată în Setări → Jurnale de depanare și în Rails.logger.
+              title: Verificarea în timp real a căutării documentelor a eșuat
+          failure_codes:
+            dimensions_mismatch: Dimensiunile vectorului generat nu corespund dimensiunilor
+              configurate
+            extension_not_enabled: Extensia vector PostgreSQL nu este activată
+            invalid_response: Serviciul a returnat un răspuns neașteptat
+            model_not_available: Modelul configurat nu a fost returnat de furnizor
+            no_tool_call: Modelul a răspuns fără a apela instrumentul de verificare
+            render_missing_binary: Programul de randare pdftoppm (poppler-utils) nu
+              este disponibil în acest container
+            request_failed: Cererea către serviciu a eșuat
+            table_not_found: Tabelul vector_store_chunks nu a fost găsit
+            timeout: Serviciul nu a răspuns înainte de expirarea verificării
+            tools_refused: Serviciul a procesat aceeași cerere fără instrumente și
+              a respins-o când le-a inclus
+            unsupported_provider: Furnizorul nu acceptă această verificare
+          last_checked: Verificările în timp real s-au încheiat acum %{time_ago}.
+            Rezultatele sunt păstrate temporar în cache.
+          llm:
+            description: Verificările în timp real testează modelul configurat, îi
+              cer un apel simplu de funcție în același mod ca asistentul, apoi testează
+              separat extragerea textului și procesarea vizuală/nativă cu un PDF sintetic
+              de o pagină, fără date ale clienților. Valorile datelor de autentificare
+              nu sunt afișate niciodată.
+            title: LLM și procesarea PDF
+          loading: Se execută verificările în timp real…
+          local_setup:
+            description: Rulează LLM-ul prin endpointul tău local compatibil OpenAI,
+              stochează vectorii documentelor în pgvector și configurează reprezentările
+              vectoriale către un endpoint compatibil OpenAI. Imaginea PostgreSQL
+              trebuie să includă extensia vector, iar dimensiunile trebuie să corespundă
+              modelului selectat.
+            title: Configurare locală recomandată
+          not_checked_help: Deschide direct URL-ul stării AI sau rulează verificările
+            pentru a confirma disponibilitatea serviciului.
+          run_checks: Rulează din nou verificările
+          vector_store:
+            description: Verificarea în timp real interoghează API-ul depozitului
+              vectorial găzduit sau testează tabelul pgvector și generează o reprezentare
+              vectorială scurtă fără a o stoca.
+            title: Depozit vectorial și căutarea documentelor
+        labels:
+          failed: Eșuat
+          status: Stare
+          enqueued: În coadă
+          retries: Reîncercări
+          last_heartbeat: Ultimul semnal de activitate
+          latency: Latență
+          max_queue_latency: Vechimea celei mai vechi sarcini
+          processed_total: Total procesate
+          processes: Procese de lucru
+          queue: Coadă
+          size: Dimensiune
+        tabs:
+          background_jobs: Sarcini în fundal
+          ai: Starea AI
+          hosted_usage: Utilizarea serviciului găzduit
+        values:
+          never: Niciodată
+          healthy: Funcțional
+          no_queues: Nu există cozi înregistrate. Este posibil ca procesul de lucru
+            să nu ruleze.
+          seconds: "%{seconds} s"
+          time_ago: acum %{time_ago}
+          unhealthy: Degradat
+        title: Starea sistemului
+        alert:
+          title: Sarcinile din fundal nu rulează
+        counters_section_description: Contoare Sidekiq agregate pentru toate cozile.
+        counters_section_title: Contoare de sarcini
+        queues_section_description: Dimensiunea fiecărei cozi și vechimea celei mai
+          vechi sarcini. Latența este numărul de secunde de așteptare al celei mai
+          vechi sarcini.
+        queues_section_title: Cozi
+        status_section_description: Starea actuală a procesului din fundal care execută
+          sincronizările și calculele soldurilor și averii nete.
+        status_section_title: Starea Sidekiq
+      push_notification:
+        body: Aceasta este o notificare push de test pentru contul tău Sure.
+        title: Notificare de test Sure
+      verify_worker_ai:
+        queued: Verificarea procesului de lucru a fost adăugată în coadă. Va apărea
+          mai jos după preluare, de obicei în câteva secunde.

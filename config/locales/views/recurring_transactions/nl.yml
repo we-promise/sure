@@ -16,21 +16,21 @@ nl:
     info:
       title: Automatische patroondetectie
       manual_description: U kunt handmatig patronen identificeren of verouderde terugkerende transacties opschonen met de knoppen hierboven.
-      automatic_description: "Automatische identificatie wordt ook uitgevoerd na:"
+      automatic_description: 'Automatische identificatie wordt ook uitgevoerd na:'
       triggers:
-        - CSV imports zijn voltooid (transacties, trades, accounts, etc.)
-        - Een provider sync is voltooid (Plaid, SimpleFIN, etc.)
+      - CSV imports zijn voltooid (transacties, trades, accounts, etc.)
+      - Een provider sync is voltooid (Plaid, SimpleFIN, etc.)
     identified: "%{count} terugkerende transactiepatronen geïdentificeerd"
     cleaned_up: "%{count} verouderde terugkerende transacties opgeschoond"
     marked_inactive: Terugkerende transactie gemarkeerd als inactief
     marked_active: Terugkerende transactie gemarkeerd als actief
     deleted: Terugkerende transactie verwijderd
-    confirm_delete: Weet u zeker dat u deze terugkerende transactie wilt verwijderen?
+    confirm_delete: "%{name} uit uw facturen verwijderen? Uw transacties blijven ongewijzigd. Alleen de factuur en het bijbehorende betalingsschema worden verwijderd."
     marked_as_recurring: Transactie gemarkeerd als terugkerend
     already_exists: Er bestaat al een handmatige terugkerende transactie voor dit patroon
     creation_failed: Aanmaken van terugkerende transactie mislukt. Controleer de transactiedetails en probeer het opnieuw.
     unexpected_error: Er is een onverwachte fout opgetreden tijdens het aanmaken van de terugkerende transactie
-    amount_range: "Bereik: %{min} tot %{max}"
+    amount_range: 'Bereik: %{min} tot %{max}'
     empty:
       title: Geen terugkerende transacties gevonden
       description: Klik op "Patronen identificeren" om automatisch terugkerende transacties te detecteren uit uw transactiegeschiedenis.
@@ -42,8 +42,169 @@ nl:
       last_occurrence: Laatste keer
       status: Status
       actions: Acties
+      frequency: Frequentie
     status:
       active: Actief
       inactive: Inactief
+      ended: Genegeerd
+      paused: Gepauzeerd
+      suggested: Mogelijke factuur
     badges:
       manual: Handmatig
+    actions:
+      delete: Verwijderen
+      edit_payment_link: Betaallink bewerken
+      pause: Pauzeren
+      resume: Hervatten
+    form:
+      amount_label: Bedrag
+      bill_type_label: Soort
+      name_label: Naam
+      notes_label: Notities
+      payment_url_label: Betaallink
+      category_label: Categorie
+      account_blank: Elke rekening
+      account_label: Betaald vanaf
+      amount_edit_hint: Geldt voor facturen die vanaf nu vervallen. Al vervallen facturen behouden hun oorspronkelijke bedrag.
+      apply_to_siblings:
+        one: Gebruik deze link ook voor de andere factuur van %{name}
+        other: Gebruik deze link ook voor de andere %{count} facturen van %{name}
+      autopay_hint: Behoud de factuur in je lijst, maar behandel haar niet meer als een uit te voeren taak.
+      autopay_label: Wordt automatisch betaald
+      cancelled_on_hint: Deze datum is alleen voor je eigen administratie. Pauzeer de factuur om te voorkomen dat toekomstige betalingen verschijnen.
+      cancelled_on_label: Opgezegd
+      category_blank: Geen categorie
+      first_due_on_label: Volgende vervaldatum
+      frequency_day_label: Op dag
+      frequency_hint: Hoe vaak deze factuur vervalt. Kies de dagen die overeenkomen met je afschrift.
+      frequency_interval_label: Herhalen elke
+      frequency_interval_unit_label: Eenheid
+      frequency_label: Hoe vaak
+      frequency_month_label: In
+      frequency_new_hint: De daggegevens worden afgeleid van de bovenstaande vervaldatum. Je kunt het schema na het opslaan aanpassen.
+      frequency_second_day_label: En dag
+      frequency_weekday_label: Op
+      income_account_label: Gestort op
+      income_amount_edit_hint: Geldt voor betaaldagen vanaf nu. Al verstreken betaaldagen behouden hun oorspronkelijke bedrag.
+      income_amount_label: Bedrag per uitbetaling
+      income_due_on_label: Volgende betaaldag
+      income_frequency_hint: Hoe vaak je betaald krijgt. Kies de dagen die overeenkomen met je betaaldag.
+      income_frequency_label: Hoe vaak je betaald krijgt
+      income_frequency_new_hint: De betaaldaggegevens worden afgeleid van de bovenstaande datum. Je kunt het schema na het opslaan aanpassen.
+      income_name_label: Bron
+      income_name_placeholder: Werkgever, klant, bijverdienste
+      income_notes_hint: Alles wat je over deze inkomstenbron wilt onthouden.
+      income_notes_placeholder: Rechtstreekse storting, verdeeld over twee rekeningen
+      installment_count_hint: De regeling eindigt na dit aantal betalingen en toont tot die tijd de voortgang.
+      installment_count_label: Aantal betalingen
+      more_options: Meer opties
+      name_placeholder: Huur, energierekening, Netflix
+      notes_hint: Alles wat je bij het betalen wilt zien. Wordt op de factuur getoond.
+      notes_placeholder: Rekening 4821, betaald met Amex
+      payment_url_hint: De website waar je deze factuur betaalt. Opent vanuit je overzichten Terugkerend en Binnenkort in een nieuw tabblad.
+      payment_url_placeholder: bank.example.com/pay
+      renews_on_label: Wordt verlengd
+      submit: Factuur opslaan
+      submit_income: Inkomstenbron opslaan
+      trial_ends_on_label: Proefperiode eindigt
+    confirm_delete_income: "%{name} als inkomstenbron verwijderen? Je transacties blijven precies zoals ze zijn. Alleen de inkomstenbron en het schema worden verwijderd."
+    confirmed: Factuur toegevoegd aan je terugkerende transacties
+    create:
+      account_invalid: Kies een rekening waaraan je facturen kunt toevoegen, of laat dit leeg
+      already_exists: Deze factuur bestaat al
+      amount_invalid: Voer het bedrag in als een gewoon getal
+      due_date_required: Voer de volgende vervaldatum van de factuur in
+      success: Factuur toegevoegd
+      success_income: Inkomstenbron toegevoegd
+    deleted_income: Inkomstenbron verwijderd. Je transacties zijn niet gewijzigd.
+    dismissed: Genegeerd. Dit patroon wordt niet meer voorgesteld.
+    edit:
+      income_title: Inkomstenbron bewerken · %{name}
+      title: "%{name} bewerken"
+      trigger_label: Factuur bewerken
+    expected_in:
+      one: Verwacht over %{count} dag
+      other: Verwacht over %{count} dagen
+    expected_today: Vandaag verwacht
+    frequency:
+      annual: Jaarlijks op %{day} %{month}
+      biweekly: Elke 2 weken op %{weekday}
+      custom: Aangepast schema
+      every_n_months: Elke %{interval} maanden op dag %{day}
+      every_n_weeks: Elke %{interval} weken op %{weekday}
+      every_n_years: Elke %{interval} jaar op %{day} %{month}
+      last_day: laatste dag
+      monthly: Maandelijks op dag %{day}
+      quarterly: Elk kwartaal op dag %{day}
+      semiannual: Elke 6 maanden op dag %{day}
+      semimonthly: Tweemaal per maand, op dag %{first} en %{second}
+      weekly: Wekelijks op %{weekday}
+    frequency_interval_units:
+      monthly: maanden
+      weekly: weken
+      yearly: jaar
+    frequency_presets:
+      annual: Jaarlijks
+      biweekly: Elke 2 weken
+      interval: Aangepast interval
+      monthly: Maandelijks
+      quarterly: Elk kwartaal
+      semiannual: Elke 6 maanden
+      semimonthly: Tweemaal per maand
+      weekly: Wekelijks
+      custom: Aangepast schema
+    identify_already_running: Detectie is al bezig. Kom zo terug.
+    manage:
+      cta: Alle facturen openen
+      description: Leg alles daar vast, bewerk, pauzeer en betaal. Deze pagina regelt de detectie.
+      title: Je facturen staan op de pagina Facturen
+    new:
+      candidate_meta: "%{count}× · laatst %{date}"
+      income_title: Inkomstenbron toevoegen
+      pick_different: Begin met een andere transactie
+      search_all_cta: Al je transacties doorzoeken
+      search_all_prompt: Zie je niet wat je zoekt?
+      smart_fill: Slim invullen met AI
+      smart_fill_applied: AI heeft deze waarden voorgesteld op basis van de afschrijvingsgeschiedenis. Controleer ze voordat je opslaat.
+      start_from_hint: Optioneel. Een keuze vult alleen het formulier in; je kunt alles nog wijzigen.
+      start_from_income_title: Begin met een herkende terugkerende storting
+      start_from_title: Begin met een herkende terugkerende afschrijving
+      title: Een factuur toevoegen
+    pay_action:
+      add_link: Link toevoegen
+      add_link_aria: Een betaallink voor %{name} toevoegen
+      autopay: Automatische betaling
+      autopay_aria: "%{name} wordt automatisch betaald; open het portaal in een nieuw tabblad"
+      open_site: Factuurwebsite openen
+      pay: Betalen
+      pay_aria: "%{name} betalen (opent in een nieuw tabblad)"
+    pick_entry:
+      back: Terug naar het formulier
+      hint: Een keuze vult alleen het formulier in; je kunt alles nog wijzigen.
+      income_title: Zoek een storting als uitgangspunt
+      no_results: Niets gevonden voor ‘%{query}’. Probeer minder woorden of ga terug om het formulier zelf in te vullen.
+      search_placeholder: Zoeken op naam, notities of handelaar
+      showing_recent: Je %{count} meest recente worden getoond. Zoek om de selectie te beperken.
+      title: Zoek een transactie als uitgangspunt
+    picker_row:
+      claimed: Onderdeel van %{name}
+    smart_fills:
+      create:
+        failed: De afschrijvingsgeschiedenis kon momenteel niet worden geanalyseerd. Het formulier heeft de eigen waarden van de transactie behouden.
+    suggested:
+      collapsed_hint: Tik om te controleren
+      confirm: Factuur toevoegen
+      dismiss: Geen factuur
+      seen_count:
+        one: eenmaal gezien
+        other: "%{count} keer gezien"
+      title: Mogelijke nieuwe facturen
+    transfer_already_exists: Er bestaat al een terugkerende overboeking voor dit rekeningpaar
+    transfer_creation_failed: Terugkerende overboeking aanmaken mislukt. Controleer de overboekingsgegevens en probeer het opnieuw.
+    transfer_feature_disabled: Terugkerende transacties zijn uitgeschakeld voor dit huishouden
+    transfer_marked_as_recurring: Overboeking als terugkerend gemarkeerd
+    update:
+      success: Factuur bijgewerkt
+      success_with_siblings:
+        one: Factuur bijgewerkt en de betaallink is naar 1 andere factuur gekopieerd
+        other: Factuur bijgewerkt en de betaallink is naar %{count} andere facturen gekopieerd

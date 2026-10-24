@@ -1,0 +1,122 @@
+---
+nb:
+  enable_banking_items:
+    authorize:
+      unexpected_error: Det oppstod en uventet feil. Prøv igjen.
+      authorization_failed: 'Kunne ikke starte godkjenning: %{message}'
+      bank_required: Velg en bank.
+      invalid_redirect: Den mottatte godkjenningsadressen er ugyldig. Prøv igjen.
+      redirect_uri_not_allowed: Omdirigering er ikke tillatt. Konfigurer `%{callback_url}`
+        i appinnstillingene hos Enable Banking.
+    callback:
+      unexpected_error: Det oppstod en uventet feil. Prøv igjen.
+      authorization_error: Godkjenning mislyktes
+      invalid_callback: Ugyldige returparametere.
+      item_not_found: Fant ikke tilkoblingen.
+      session_failed: Kunne ikke fullføre godkjenningen
+      success: Koblet til banken din. Kontoene dine synkroniseres.
+    enable_banking_item:
+      delete: Slett
+      deletion_in_progress: Sletting pågår
+      never_synced: Aldri synkronisert
+      no_accounts_found: Ingen kontoer funnet
+      reconnect: Koble til på nytt
+      set_up_accounts: Konfigurer kontoer
+      syncing: Synkroniserer...
+      update: Oppdater
+      last_synced: Sist synkronisert for %{time} siden
+      provider_name: Enable Banking
+      no_accounts_found_description: Fant ingen kontoer fra Enable Banking. Prøv å
+        synkronisere på nytt.
+      setup_needed: Oppsett kreves
+      setup_needed_description:
+        one: 1 konto importert fra Enable Banking må settes opp
+        other: "%{count} kontoer importert fra Enable Banking må settes opp"
+    link_accounts:
+      link_failed: Kunne ikke koble til kontoene
+      success: "%{count} kontoer ble koblet til."
+      already_linked: De valgte kontoene er allerede koblet til.
+      no_accounts_selected: Ingen kontoer er valgt.
+      no_session: Ingen aktiv Enable Banking-tilkobling. Koble til en bank først.
+    new:
+      configured: Konfigurert
+      go_to_provider_settings: Gå til leverandørinnstillinger
+      reconnect: Koble til på nytt
+      remove: Fjern
+      setup_step_4: Kom tilbake hit for å koble til kontoene dine
+      setup_steps_title: 'Trinn for oppsett:'
+      sync: Synkroniser
+      unknown: Ukjent
+      add_connection: Legg til tilkobling
+      connected_bank: Tilkoblet bank
+      connection: Tilkobling
+      remove_confirm: Er du sikker på at du vil fjerne denne tilkoblingen?
+      setup_step_1_html: Gå til <strong>Innstillinger → Leverandører</strong>
+      connect_bank: Koble til bank
+      link_enable_banking_title: Koble til Enable Banking
+      not_configured: Enable Banking-tilkoblingen er ikke konfigurert
+      not_configured_description: Før du kan koble til Enable Banking-kontoer, må
+        du konfigurere Enable Banking-tilkoblingen.
+      ready_to_connect: Klar til å koble til en bank
+      session_expired: Økten er utløpt – ny godkjenning kreves
+      session_expires: Økten utløper
+      setup_step_2_html: Finn delen <strong>Enable Banking</strong>
+      setup_step_3: Skriv inn påloggingsopplysningene dine for Enable Banking
+    select_bank:
+      cancel: Avbryt
+      beta_label: Beta
+      check_country: Kontroller innstillingene for landskode.
+      credentials_required: Konfigurer først påloggingsopplysningene for Enable Banking.
+      description: Velg banken du vil knytte til kontoene dine.
+      no_banks: Ingen banker er tilgjengelige for dette landet/denne regionen.
+      no_search_results: Ingen banker samsvarer med søket ditt.
+      search_label: Søk etter banken din
+      search_placeholder: Søk etter banken din …
+      title: Velg banken din
+    select_existing_account:
+      balance: Saldo
+      cancel: Avbryt
+      link: Koble til
+      all_linked: Alle Enable Banking-kontoer ser ut til å være koblet til allerede.
+      title: Koble til Enable Banking-konto
+      try_after_sync: Hvis du nettopp koblet til eller synkroniserte, prøv igjen når
+        synkroniseringen er fullført.
+      unlink_to_move: For å knytte til en annen konto må du først koble den fra via
+        kontoens handlingsmeny.
+    setup_accounts:
+      account_type_label: 'Kontotype:'
+      balance: Saldo
+      cancel: Avbryt
+      create_accounts: Opprett kontoer
+      creating_accounts: Oppretter kontoer...
+      header_subtitle: Velg riktige kontotyper for de importerte kontoene
+      historical_data_range: 'Periode for historiske data:'
+      sync_start_date_label: 'Synkroniser transaksjoner fra:'
+      choose_account_type: 'Velg riktig kontotype for hver Enable Banking-konto:'
+      sync_start_date_help: Velg hvor langt tilbake du vil synkronisere transaksjonshistorikk.
+        Opptil 2 års historikk er tilgjengelig.
+      title: Sett opp Enable Banking-kontoene dine
+    complete_account_setup:
+      all_skipped: Alle kontoer ble hoppet over. Du kan sette dem opp senere på kontosiden.
+      no_accounts: Ingen kontoer er tilgjengelige for oppsett.
+      success: 'Kontoer opprettet: %{count}!'
+    create:
+      success: Enable Banking er konfigurert.
+    destroy:
+      success: Enable Banking-tilkoblingen er lagt i kø for sletting.
+    errors:
+      api_error: Det oppstod en kommunikasjonsfeil med banken.
+      network_unreachable: Banktjenesten er midlertidig utilgjengelig. Prøv igjen
+        senere.
+      session_invalid: Økten er utløpt. Koble til banken på nytt.
+      unexpected: Det oppstod en uventet feil under synkronisering.
+    link_existing_account:
+      errors:
+        invalid_enable_banking_account: Ugyldig Enable Banking-konto valgt
+        only_manual: Bare manuelle kontoer kan kobles til
+      success: Kontoen er koblet til Enable Banking
+    reauthorize:
+      invalid_redirect: Den mottatte godkjenningsadressen er ugyldig. Prøv igjen.
+      reauthorization_failed: Ny godkjenning mislyktes
+    update:
+      success: Enable Banking-konfigurasjonen er oppdatert.

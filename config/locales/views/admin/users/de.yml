@@ -27,6 +27,15 @@ de:
           session_count: "Anzahl Sitzungen"
           never: "Nie"
           role: "Rolle"
+          actions: Aktionen
+          create_new_family_option: "+ Neue Familie/Gruppe erstellen"
+          family: Familie / Gruppe
+          keep_current_family: Aktuelle Familie/Gruppe beibehalten
+          new_family_moniker: Typ der neuen Familie/Gruppe
+          new_family_name: Name der neuen Familie/Gruppe
+          new_family_name_placeholder: Namen für eine neue Familie/Gruppe eingeben
+          password_placeholder: Leer lassen, um das aktuelle Passwort beizubehalten
+          set_password: Neues Passwort festlegen
         role_descriptions_title: "Rollenbeschreibungen"
         removed_sso_identities:
           title: "Entfernte SSO-Identitäten"
@@ -51,6 +60,72 @@ de:
           pending_label: Eingeladen (offen)
         no_subscription: Kein Abo
         unnamed_family: Familie/Gruppe ohne Namen
+        actions:
+          delete_user: Benutzer löschen
+          last_super_admin_role_locked: Die Rolle kann nicht geändert werden, da du der letzte
+            Super-Admin im System bist.
+          manage_user: Benutzer verwalten
+          self_edit_warning: Wenn du deine eigene Rolle änderst, ändern sich auch deine Administratorrechte.
+          self_update_confirm: Möchtest du die Rolle oder Familie deines eigenen Kontos wirklich
+            ändern?
+          update: Benutzer aktualisieren
+        auth_types:
+          local: Lokal
+          local_and_sso: Lokal + SSO
+          sso: SSO
+          sso_provider_tooltip: 'SSO-Anbieter: %{providers}'
+        delete_confirm: Möchtest du diesen Benutzer wirklich löschen? Dies kann nicht rückgängig
+          gemacht werden.
+        delete_confirm_last_user: Möchtest du diesen Benutzer wirklich löschen? Er ist der
+          letzte Benutzer seiner Familie/Gruppe. Daher werden auch die gesamte Familie/Gruppe
+          und alle zugehörigen Daten gelöscht. Dies kann nicht rückgängig gemacht werden.
+        family_monikers:
+          family: Familie
+          group: Gruppe
+        remove: Benutzer löschen
+        unused_families:
+          delete: Ungenutzte Familie löschen
+          delete_confirm: Möchtest du diese ungenutzte Familie/Gruppe wirklich löschen? Dies
+            kann nicht rückgängig gemacht werden.
+          empty: Keine ungenutzten Familien/Gruppen gefunden.
+          family_id: 'Familien-ID: %{id}'
+          title: Ungenutzte Familien / Gruppen
       update:
         success: "Benutzerrolle wurde erfolgreich aktualisiert."
         failure: "Benutzerrolle konnte nicht aktualisiert werden."
+        family_required: Wähle eine bestehende Familie/Gruppe aus oder gib einen Namen für
+          eine neue ein.
+        last_super_admin_error: Der letzte Super-Admin im System kann nicht herabgestuft werden.
+        password_and_family_conflict: Passwort und Familien-/Gruppenzugehörigkeit können nicht
+          gleichzeitig geändert werden.
+        password_missing_case: Das Passwort muss Groß- und Kleinbuchstaben enthalten.
+        password_missing_number: Das Passwort muss mindestens eine Zahl enthalten.
+        password_missing_special: Das Passwort muss mindestens ein Sonderzeichen enthalten.
+        password_too_short: Das Passwort muss mindestens 8 Zeichen lang sein.
+        success_family: Familien-/Gruppenzugehörigkeit des Benutzers erfolgreich aktualisiert.
+        success_password: Benutzerpasswort erfolgreich aktualisiert.
+        success_role: Benutzerrolle erfolgreich aktualisiert.
+        success_role_and_password: Benutzerrolle und Passwort erfolgreich aktualisiert.
+      deletion:
+        cancel: Abbrechen
+        email_label: E-Mail-Adresse des Benutzers
+        instruction: Gib zur Bestätigung %{email} ein.
+        submit: Benutzer dauerhaft entfernen
+        title: Benutzer dauerhaft entfernen
+        warning: Der Zugriff wird sofort entzogen und die dauerhafte Löschung des Benutzers
+          und seiner Daten wird eingeplant. Dies kann nicht rückgängig gemacht werden.
+      destroy:
+        cannot_remove_last_super_admin: Du kannst den letzten aktiven Super-Admin nicht
+          entfernen.
+        cannot_remove_self: Du kannst dein eigenes Konto hier nicht entfernen.
+        confirmation_mismatch: Die E-Mail-Adresse stimmt nicht überein. Der Benutzer wurde
+          nicht entfernt.
+        failure: Benutzer konnte nicht entfernt werden.
+        success: Benutzerzugriff entzogen und dauerhafte Löschung eingeplant.
+    families:
+      destroy:
+        family_has_active_subscription: Die Familie/Gruppe hat ein aktives Abonnement
+          und kann erst nach dessen Kündigung gelöscht werden.
+        family_has_users: Die Familie/Gruppe hat noch Benutzer und kann nicht gelöscht
+          werden.
+        success: Familie/Gruppe erfolgreich gelöscht.

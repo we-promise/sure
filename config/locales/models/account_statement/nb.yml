@@ -1,0 +1,30 @@
+---
+nb:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Konto
+        currency: Valuta
+        opening_balance: Startsaldo
+        account_last4_hint: De fire siste sifrene i kontonummeret
+        account_name_hint: Hint om kontonavn
+        closing_balance: Sluttsaldo
+        content_sha256: Kontrollsum for innhold
+        filename: Filnavn
+        institution_name_hint: Hint om finansinstitusjon
+        original_file: Kontoutskriftsfil
+        period_end_on: Periodens slutt
+        period_start_on: Periodens start
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: er allerede lastet opp for denne husholdningen
+            content_sha256:
+              duplicate_statement_file: er allerede lastet opp for denne husholdningen
+            original_file:
+              invalid_format: må være en PDF-, CSV- eller XLSX-fil
+              too_large: er for stor. Maksimal størrelse er %{max_mb} MB
+            period_end_on:
+              on_or_after_start: må være på eller etter periodens start

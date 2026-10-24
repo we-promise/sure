@@ -4,7 +4,7 @@ ro:
     currency:
       format:
         delimiter: "."
-        format: "%u %n"
+        format: "%n %u"
         precision: 2
         separator: ","
-        unit: "RON"
+        unit: RON

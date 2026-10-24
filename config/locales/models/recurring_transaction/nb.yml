@@ -1,0 +1,39 @@
+---
+nb:
+  activerecord:
+    attributes:
+      recurring_transaction:
+        frequency_interval: Gjentakelsesintervall
+        payment_url: Betalingslenke
+    errors:
+      models:
+        recurring_transaction:
+          attributes:
+            account:
+              required_for_transfer: må være angitt for en gjentakende overføring
+              wrong_family: må tilhøre denne husholdningen
+            anchor_date:
+              required_for_intervals: kreves når en regel gjentas hver 2. periode
+                eller sjeldnere
+            bill_type:
+              transfer_shape_mismatch: kan bare være overføring når en mottakerkonto
+                er angitt
+            destination_account:
+              family_mismatch: må tilhøre samme husholdning som avsenderkontoen
+              same_as_source: kan ikke være den samme som avsenderkontoen
+              wrong_family: må tilhøre denne husholdningen
+            expected_amount_min:
+              greater_than_max: kan ikke være større enn forventet maksimumsbeløp
+            payment_url:
+              invalid_scheme: må være en gyldig http://- eller https://-adresse
+          merchant_or_name_required: Enten forhandler eller navn må være angitt
+  recurring_transactions:
+    allocator:
+      exceeds_remaining: "%{amount} overstiger de resterende %{remaining} i denne
+        perioden"
+      missing_rate: ingen valutakurs fra %{from} til %{to}; angi beløpet selv
+      over_allocated: fordeling av %{amount} overstiger transaksjonens resterende
+        %{capacity} %{currency}
+      unmeasurable: denne transaksjonen har en fordeling som ikke kan omregnes til
+        %{currency}, så restbeløpet kan ikke beregnes. Legg til en valutakurs for
+        %{date} eller fjern den eksisterende betalingen først

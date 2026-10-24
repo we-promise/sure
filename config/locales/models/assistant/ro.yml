@@ -1,0 +1,7 @@
+---
+ro:
+  assistant:
+    external:
+      model_catalog:
+        default_agent_label: Agent implicit (%{id})
+        named_agent_label: "%{name} (%{id})"

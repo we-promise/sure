@@ -15,7 +15,7 @@ nb:
       success: Du har blitt registrert.
     new:
       invitation_message: "%{inviter} har invitert deg til å bli med som %{role}"
-      join_family_title: Bli med i %{family}
+      join_family_title: Bli med i %{moniker} %{family}
       role_admin: administrator
       role_member: medlem
       submit: Opprett konto
@@ -28,4 +28,5 @@ nb:
         length: Minimum 8 tegn
         case: Store og små bokstaver
         number: Et tall (0-9)
-        special: "Et spesialtegn (!, @, #, $, %, etc)"
+        special: 'Et spesialtegn (!, @, #, $, %, etc)'
+      role_guest: gjest

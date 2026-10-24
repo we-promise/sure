@@ -3,8 +3,10 @@ ro:
   settings:
     hostings:
       invite_code_settings:
-        description: Controlează cum se înscriu noii utilizatori pentru instanța ta de %{product}.
-        email_confirmation_description: Când este activată, utilizatorii trebuie să își confirme adresa de email atunci când o modifică.
+        description: Controlează cum se înscriu noii utilizatori pentru instanța ta
+          de %{product}.
+        email_confirmation_description: Când este activată, utilizatorii trebuie să
+          își confirme adresa de email atunci când o modifică.
         email_confirmation_title: Solicită confirmarea emailului
         generate_tokens: Generează cod nou
         generated_tokens: Coduri generate
@@ -13,6 +15,10 @@ ro:
           open: Deschis
           closed: Închis
           invite_only: Doar pe bază de invitație
+        default_family_description: Adaugă utilizatorii noi în această familie/grup
+          doar dacă nu au o invitație.
+        default_family_none: Niciuna (creează o familie nouă)
+        default_family_title: Familia implicită pentru utilizatori noi
       show:
         general: Setări Generale
         financial_data_providers: Furnizori de Date Financiare
@@ -20,44 +26,476 @@ ro:
         title: Găzduire Proprie
         danger_zone: Zonă de Pericol
         clear_cache: Șterge cache-ul de date
-        clear_cache_warning: Ștergerea cache-ului de date va elimina toate ratele de schimb, prețurile titlurilor de valoare, soldurile conturilor și alte date. Aceasta nu va șterge conturile, tranzacțiile, categoriile sau alte date deținute de utilizator.
+        clear_cache_warning: Ștergerea cache-ului de date va elimina toate ratele
+          de schimb, prețurile titlurilor de valoare, soldurile conturilor și alte
+          date. Aceasta nu va șterge conturile, tranzacțiile, categoriile sau alte
+          date deținute de utilizator.
         confirm_clear_cache:
           title: Ștergi cache-ul de date?
-          body: Ești sigur că vrei să ștergi cache-ul de date? Aceasta va elimina toate ratele de schimb, prețurile titlurilor de valoare, soldurile conturilor și alte date. Această acțiune nu poate fi anulată.
+          body: Ești sigur că vrei să ștergi cache-ul de date? Aceasta va elimina
+            toate ratele de schimb, prețurile titlurilor de valoare, soldurile conturilor
+            și alte date. Această acțiune nu poate fi anulată.
+        ai_assistant: Asistent AI
+        demo_refresh: Reîmprospătarea datelor demonstrative
+        property_valuation_providers: Furnizori de evaluări imobiliare
+        sync_settings: Setări de sincronizare
       brand_fetch_settings:
         description: Introdu ID-ul Clientului furnizat de Brandfetch
         label: ID Client
         placeholder: Introdu ID-ul tău de Client aici
         title: Setări Brandfetch
+        show_details: "(afișează detalii)"
+        env_configured_message: ID-ul de client Brandfetch a fost configurat cu succes
+          prin variabila de mediu BRAND_FETCH_CLIENT_ID.
+        high_res_description: Când este activată, siglele vor fi preluate la rezoluția
+          120×120 în loc de 40×40. Astfel, imaginile sunt mai clare pe ecranele cu
+          densitate mare de pixeli.
+        high_res_label: Activează sigle de înaltă rezoluție
+        setup_step_1_html: Accesează <a href="https://brandfetch.com/developers" target="_blank"
+          rel="noopener noreferrer" class="underline">brandfetch.com</a> și creează
+          un cont gratuit Brandfetch Developer.
+        setup_step_2_html: Mergi la pagina <a href="https://developers.brandfetch.com/dashboard/logo-api"
+          target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
+        setup_step_3: Apasă pictograma ochi din secțiunea „Your Client ID” pentru
+          a afișa ID-ul de client și lipește-l mai jos.
       openai_settings:
-        description: Introdu tokenul de acces și configurează opțional un furnizor personalizat compatibil cu OpenAI
+        description: Introdu tokenul de acces și configurează opțional un furnizor
+          personalizat compatibil cu OpenAI
         env_configured_message: Configurat cu succes prin variabile de mediu.
         access_token_label: Token de Acces
         access_token_placeholder: Introdu tokenul tău de acces aici
         uri_base_label: URL de Bază API (Opțional)
-        uri_base_placeholder: "https://api.openai.com/v1 (implicit)"
+        uri_base_placeholder: https://api.openai.com/v1 (implicit)
         model_label: Model (Opțional)
-        model_placeholder: "gpt-4.1 (implicit)"
+        model_placeholder: gpt-4.1 (implicit)
         title: OpenAI
+        ai_response_timeout_help: 'Implicit: 90. Se aplică doar temporizatorului pentru
+          întregul răspuns din conversație; calculează astfel: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS)
+          × limita unei cereri, plus timpul de execuție al instrumentelor și de așteptare
+          în coadă. AI_RESPONSE_TIMEOUT are prioritate față de acest câmp.'
+        ai_response_timeout_label: Limită de timp a răspunsului în secunde (opțional)
+        budget_description: Se aplică apelurilor compatibile OpenAI (conversații,
+          clasificare automată, detectarea comercianților și procesarea PDF). Valorile
+          implicite sunt prudente pentru modelele locale cu context mic. Mărește-le
+          pentru modelele cloud cu ferestre de context mai mari.
+        budget_heading: Buget de tokenuri
+        context_window_help: 'Numărul total de tokenuri acceptat de model. Implicit:
+          2048 — mărește la cel puțin 8192 pentru OpenAI în cloud sau modele locale
+          cu context mare.'
+        context_window_label: Fereastră de context (opțional)
+        json_mode_auto: Automat (recomandat)
+        json_mode_help: Modul strict funcționează mai bine cu modelele de raționament
+          (qwen-thinking, deepseek-reasoner). Modul Fără funcționează mai bine cu
+          modelele standard (llama, mistral, gpt-oss).
+        json_mode_json_object: Obiect JSON
+        json_mode_label: Mod JSON
+        json_mode_none: Fără (recomandat pentru modele standard)
+        json_mode_strict: Strict (recomandat pentru modele de raționament)
+        max_items_per_call_help: 'Limita superioară a loturilor pentru clasificare
+          automată și detectarea comercianților. Implicit: 25. Loturile mai mari sunt
+          împărțite automat pentru a încăpea în fereastra de context.'
+        max_items_per_call_label: Număr maxim de elemente pe lot (opțional)
+        max_response_tokens_help: 'Tokenuri rezervate pentru răspunsul modelului.
+          Implicit: 512. Redu valoarea pentru a lăsa loc unui istoric mai lung.'
+        max_response_tokens_label: Număr maxim de tokenuri în răspuns (opțional)
+        model_function_calling_help: Asistentul AI citește datele prin apeluri de
+          funcții; alege un model pentru care furnizorul documentează suportul pentru
+          instrumente/apelarea funcțiilor. Modelele fără acest suport produc erori
+          neclare ale furnizorului în conversații.
+        model_function_calling_link: Verifică modelul configurat
+        openai_request_timeout_help: 'Implicit: 60. Se aplică fiecărei cereri HTTP
+          compatibile OpenAI, inclusiv clasificării automate, detectării comercianților,
+          conversațiilor, procesării PDF și apelurilor depozitului vectorial. OPENAI_REQUEST_TIMEOUT
+          are prioritate față de acest câmp.'
+        openai_request_timeout_label: Limită de timp a cererii în secunde (opțional)
+        timeout_description: Controlează durata maximă a apelurilor modelelor compatibile
+          OpenAI înainte ca Sure să renunțe. Mărește aceste valori dacă rulezi un
+          model local pe hardware lent.
+        timeout_heading: Limite de timp
       yahoo_finance_settings:
         title: Yahoo Finance
-        description: Yahoo Finance oferă acces gratuit la prețurile acțiunilor, ratele de schimb și date financiare fără a necesita o cheie API.
+        description: Yahoo Finance oferă acces gratuit la prețurile acțiunilor, ratele
+          de schimb și date financiare fără a necesita o cheie API.
         status_active: Yahoo Finance este activ și funcționează
         status_inactive: Conexiunea Yahoo Finance a eșuat
         connection_failed: Nu se poate conecta la Yahoo Finance
-        troubleshooting: Verifică-ți conexiunea la internet și setările firewall-ului. Yahoo Finance poate fi temporar indisponibil.
+        troubleshooting: Verifică-ți conexiunea la internet și setările firewall-ului.
+          Yahoo Finance poate fi temporar indisponibil.
+        rate_limited_message: Nu este necesară nicio acțiune. Sure va evita verificările
+          suplimentare timp de 30 de minute. Operațiunile cu prețuri și cursuri de
+          schimb continuă independent.
+        rate_limited_title: S-a atins limita de cereri Yahoo Finance.
+        status_healthy: Yahoo Finance este activ și funcționează.
+        status_rate_limited: Yahoo Finance limitează temporar cererile.
+        status_unavailable: Yahoo Finance nu este disponibil momentan.
+        status_unknown: Se verifică starea Yahoo Finance.
+        unavailable_message: Yahoo Finance nu a putut fi accesat sau a returnat un
+          răspuns neașteptat. Verifică conexiunea la internet și încearcă din nou
+          mai târziu.
+        unavailable_title: Yahoo Finance nu a putut fi verificat.
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} apeluri API zilnice utilizate (%{percentage})"
         description: Introdu cheia API furnizată de Twelve Data
         env_configured_message: Configurat cu succes prin variabila de mediu TWELVE_DATA_API_KEY.
         label: Cheie API
         placeholder: Introdu cheia ta API aici
-        plan: "planul %{plan}"
+        plan: planul %{plan}
         title: Twelve Data
+        show_details: "(afișează detalii)"
+        plan_upgrade_warning_description: Prețurile următoarelor simboluri din portofoliu
+          nu pot fi sincronizate cu planul tău Twelve Data actual.
+        plan_upgrade_warning_title: Unele simboluri necesită un plan plătit
+        requires_plan: necesită planul %{plan}
+        step_1_html: Accesează <a href="https://twelvedata.com/register" target="_blank"
+          rel="noopener noreferrer" class="underline">twelvedata.com</a> și creează
+          un cont gratuit Twelve Data Developer.
+        step_2_html: Mergi la pagina <a href="https://twelvedata.com/account/api-keys"
+          target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.
+        step_3: Afișează cheia secretă și lipește-o mai jos.
+        view_pricing: Vezi tarifele Twelve Data
       update:
         failure: Valoare setare invalidă
         success: Setări actualizate
         invalid_onboarding_state: Stare de integrare invalidă
+        anthropic_model_required_for_base_url: Modelul Anthropic este obligatoriu
+          când este setat un URL de bază personalizat.
+        invalid_anthropic_base_url: URL-ul de bază Anthropic trebuie să fie un URL
+          http(s).
+        invalid_categorization_rate: "%{field} trebuie să fie un număr între 0 și
+          1."
+        invalid_demo_family: Familia selectată trebuie să dețină adresa de e-mail
+          demonstrativă configurată.
+        invalid_jev_endpoint: Endpointul Jev trebuie să fie un URL https. http simplu
+          este acceptat doar pentru localhost.
+        invalid_llm_budget: "%{field} trebuie să fie un număr întreg ≥ %{minimum}."
+        invalid_sync_time: Format nevalid al orei de sincronizare. Folosește formatul
+          HH:MM (de exemplu, 02:30).
+        scheduler_sync_failed: Setările au fost salvate, dar actualizarea programului
+          de sincronizare a eșuat. Încearcă din nou sau verifică jurnalele serverului.
+        select_demo_family: Selectează mai întâi o familie demonstrativă temporară.
       clear_cache:
-        cache_cleared: Cache-ul de date a fost șters. Acest lucru poate dura câteva momente.
+        cache_cleared: Cache-ul de date a fost șters. Acest lucru poate dura câteva
+          momente.
       not_authorized: Nu ești autorizat să efectuezi această acțiune
+      alpha_vantage_settings:
+        label: Cheie API
+        show_details: "(afișează detalii)"
+        title: Alpha Vantage
+        description: Introdu cheia API Alpha Vantage. Acceptă ETF-uri europene de
+          pe London Stock Exchange, XETRA și alte burse.
+        env_configured_message: Configurat cu succes prin variabila de mediu ALPHA_VANTAGE_API_KEY.
+        no_health_check_note: Verificarea stării conexiunii nu este disponibilă pentru
+          acest furnizor din cauza limitei stricte de cereri.
+        placeholder: Introdu cheia API Alpha Vantage aici
+        rate_limit_warning: Planul gratuit Alpha Vantage este limitat la 25 de apeluri
+          API pe zi. Este potrivit ca furnizor suplimentar pentru ETF-uri europene
+          indisponibile la alți furnizori.
+        step_1_html: Accesează <a href="https://www.alphavantage.co/support/#api-key"
+          target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a>
+          și solicită cheia API gratuită.
+        step_2: Copiază cheia API și lipește-o mai jos.
+      anthropic_settings:
+        access_token_label: Cheie API
+        env_configured_message: Configurat cu succes prin variabile de mediu.
+        base_url_label: URL de bază (opțional)
+        access_token_placeholder: Introdu cheia API Anthropic
+        base_url_placeholder: https://api.anthropic.com (implicit)
+        description: Introdu cheia API Anthropic. Opțional, poți seta URL-ul de bază
+          către AWS Bedrock sau GCP Vertex.
+        model_help: Folosit pentru conversații și procesarea PDF. Operațiunile în
+          lot (clasificare și detectarea comercianților) folosesc implicit Haiku pentru
+          reducerea costului.
+        model_label: Model implicit (opțional)
+        model_placeholder: claude-sonnet-4-6 (implicit)
+        title: Anthropic (Claude)
+      assistant_settings:
+        env_configured_external: Configurat cu succes prin variabile de mediu.
+        disconnect_button: Deconectează
+        external_configured: Configurat
+        token_label: Token API
+        agent_discovery_configure_first: Salvează un URL de endpoint valid și un token
+          API pentru a încărca agenții disponibili.
+        agent_discovery_error: 'Agenții nu au putut fi încărcați: %{error}'
+        agent_id_help: Sure încarcă această listă din răspunsul /v1/models al endpointului.
+          Agentul selectat controlează direcționarea; modelul său este gestionat de
+          serviciul extern.
+        agent_id_label: Agent (obligatoriu)
+        agent_id_placeholder: main (implicit)
+        confirm_disconnect:
+          body: URL-ul, tokenul și ID-ul agentului salvate vor fi eliminate, iar aplicația
+            va folosi asistentul integrat. Te poți reconecta ulterior introducând
+            date de autentificare noi.
+          title: Deconectezi asistentul extern?
+        description: Alege cum răspunde asistentul de conversație. Cel integrat folosește
+          direct furnizorul LLM configurat. Cel extern deleagă unui agent AI la distanță,
+          care poate apela instrumentele financiare Sure prin MCP.
+        disconnect_description: Elimină conexiunea asistentului extern și revino la
+          asistentul integrat.
+        disconnect_title: Conexiune externă
+        env_notice: Tipul asistentului este fixat la „%{type}” prin variabila de mediu
+          ASSISTANT_TYPE.
+        external_agent_invalid: Selectează un agent returnat de endpointul configurat.
+        external_agent_required: Selectează un agent extern înainte de salvare.
+        external_agent_reselect: Endpointul s-a schimbat, iar agentul selectat anterior
+          nu este disponibil acolo. Selectează un agent de la noul endpoint.
+        external_info:
+          title: Configurare AI extern
+          items:
+          - Introdu URL-ul complet al punctului final compatibil OpenAI, terminat
+            în /v1/chat/completions.
+          - Sure descoperă agenții disponibili prin /v1/models după salvarea punctului
+            final și a tokenului.
+          - Serviciul extern alege modelul din spatele fiecărui agent; Sure selectează
+            doar ruta agentului.
+          - Erorile de autentificare, de punct final sau de agent sunt returnate de
+            serviciul extern. Verifică jurnalele acestuia când o solicitare eșuează.
+        external_not_configured: Neconfigurat. Introdu URL-ul și tokenul mai jos sau
+          setează variabilele de mediu EXTERNAL_ASSISTANT_URL și EXTERNAL_ASSISTANT_TOKEN.
+        external_status: Endpointul asistentului extern
+        title: Asistent AI
+        token_help: Tokenul de autentificare oferit de agentul extern. Este trimis
+          ca token Bearer cu fiecare cerere.
+        token_placeholder: Introdu tokenul oferit de furnizorul agentului
+        type_builtin: Integrat (LLM direct)
+        type_external: Extern (agent la distanță)
+        type_label: Tipul asistentului
+        url_help: URL-ul complet al endpointului API al agentului. Îl primești de
+          la furnizorul agentului.
+        url_label: URL endpoint
+        url_placeholder: https://your-agent-host/v1/chat
+      ensure_admin:
+        not_authorized: Nu ești autorizat să efectuezi această acțiune
+      ensure_super_admin_for_onboarding:
+        not_authorized: Nu ești autorizat să efectuezi această acțiune
+      jev_settings:
+        api_key_label: Cheie API
+        env_configured_message: Configurat cu succes prin variabile de mediu.
+        model_label: Model (Opțional)
+        api_key_placeholder: Introdu cheia API TypeSafe
+        endpoint_label: Endpoint (opțional)
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone (implicit)
+        model_help: Implicit folosește direct TypeSafe. Pentru a accesa Jev prin OpenRouter,
+          setează endpointul la https://openrouter.ai/api/alpha/decisions și modelul
+          la ~typesafe/jev-latest.
+        model_placeholder: jev-latest (implicit)
+      mansa_settings:
+        label: Cheie API
+        show_details: "(afișează detalii)"
+        title: Mansa
+        description: Introdu cheia API Mansa. Acceptă NGX (Bursa din Nigeria), care
+          nu este acoperită de niciun alt furnizor de aici. Mansa acoperă și alte
+          burse africane, dar doar NGX este verificată pentru această integrare.
+        env_configured_message: Configurat cu succes prin variabila de mediu MANSA_API_KEY.
+        placeholder: Introdu cheia API Mansa aici
+        rate_limit_warning: Planul gratuit Mansa este limitat la 100 de apeluri API
+          pe zi și oferă doar cotații actuale — prețurile istorice necesită un plan
+          plătit. Doar NGX (Bursa din Nigeria) este verificată pentru această integrare;
+          celelalte burse africane acoperite de Mansa nu sunt încă acceptate aici.
+        step_1_html: Accesează <a href="https://mansaapi.com" target="_blank" rel="noopener
+          noreferrer" class="underline">mansaapi.com</a> și solicită cheia API gratuită
+          — nu este necesar un card.
+        step_2: Copiază cheia API și lipește-o mai jos.
+      realie_settings:
+        label: Cheie API
+        description: Introdu cheia API Realie pentru a căuta detalii și estimări de
+          valoare ale proprietăților din SUA când adaugi o proprietate. Planul gratuit
+          este limitat la 25 de cereri API pe lună, împărțite între căutările de proprietăți
+          și actualizările zilnice ale evaluărilor. Pentru un plan plătit, mărește
+          plafonul prin variabila de mediu REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurat cu succes prin variabila de mediu REALIE_API_KEY.
+        placeholder: Introdu cheia API Realie aici
+        title: Realie
+        usage: 'Cereri lunare folosite: %{used} din %{limit}'
+      rentcast_settings:
+        label: Cheie API
+        description: Introdu cheia API RentCast pentru a căuta detalii și estimări
+          de valoare ale proprietăților din SUA când adaugi o proprietate. Planul
+          gratuit este limitat la 50 de cereri API pe lună, împărțite între căutările
+          de proprietăți și actualizările zilnice ale evaluărilor. Pentru un plan
+          plătit, mărește plafonul prin variabila de mediu RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurat cu succes prin variabila de mediu RENTCAST_API_KEY.
+        placeholder: Introdu cheia API RentCast aici
+        title: RentCast
+        usage: 'Cereri lunare folosite: %{used} din %{limit}'
+      categorization_provider_selector:
+        preview_pill: Previzualizare
+        confidence_threshold_env_notice: Blocat prin variabila de mediu CATEGORIZATION_CONFIDENCE_THRESHOLD.
+        confidence_threshold_help: Sub acest nivel de încredere, categoria nu este
+          aplicată, iar tranzacția rămâne fără categorie, pentru o încercare ulterioară.
+          Nu se elimină nimic. Setează 0 pentru a aplica orice răspuns.
+        confidence_threshold_label: Încredere minimă (0–1)
+        data_retention_direct: Descrierile tranzacțiilor, sumele și numele categoriilor
+          tale sunt trimise către TypeSafe pentru clasificare. Consultă politica lor
+          de păstrare a datelor înainte de a activa opțiunea pentru date reale.
+        data_retention_heading: Partajarea datelor
+        data_retention_proxied: Descrierile tranzacțiilor, sumele și numele categoriilor
+          tale sunt trimise către %{host}, care le transmite către TypeSafe. Consultă
+          politicile de păstrare a datelor ale ambilor furnizori înainte de a activa
+          opțiunea pentru date reale.
+        description: Alege furnizorul care clasifică tranzacțiile. Acesta este separat
+          de furnizorul AI de mai sus, care gestionează conversațiile și procesarea
+          PDF.
+        env_notice: Setat la %{type} prin variabilele de mediu.
+        jev_configured: Cheia API Jev este configurată.
+        jev_not_configured: Jev este selectat, dar nu are o cheie API configurată.
+          Clasificarea continuă să folosească furnizorul AI până când adaugi o cheie
+          mai jos.
+        provider_help: Furnizorul AI citește un lot de tranzacții și returnează numele
+          categoriilor. Jev alege din lista ta de categorii și returnează un nivel
+          de încredere calibrat pentru fiecare tranzacție.
+        provider_jev: Jev (TypeSafe)
+        provider_label: Furnizor de clasificare
+        provider_llm: Furnizor AI (OpenAI sau Anthropic)
+        shadow_rate_env_notice: Blocat prin variabila de mediu CATEGORIZATION_SHADOW_RATE.
+        shadow_rate_help: Rulează furnizorul neselectat alături de cel selectat și
+          înregistrează diferențele fără a modifica vreo categorie. Aceasta dublează
+          costul API pentru fiecare rulare de clasificare inclusă în eșantion. Setează
+          0 pentru dezactivare.
+        shadow_rate_label: Rata comparației paralele (0–1)
+        title: Clasificarea tranzacțiilor
+      eodhd_settings:
+        label: Token API
+        show_details: "(afișează detalii)"
+        title: EODHD
+        description: Introdu tokenul API oferit de EODHD. Acceptă ETF-uri europene
+          de pe LSE, XETRA și alte burse internaționale.
+        env_configured_message: Configurat cu succes prin variabila de mediu EODHD_API_KEY.
+        placeholder: Introdu tokenul API EODHD aici
+        rate_limit_warning: Planul gratuit EODHD este limitat la 20 de apeluri API
+          pe zi. Este potrivit ca furnizor suplimentar pentru ETF-uri europene indisponibile
+          la alți furnizori.
+        step_1_html: Accesează <a href="https://eodhd.com/register" target="_blank"
+          rel="noopener noreferrer" class="underline">eodhd.com</a> și creează un
+          cont gratuit.
+        step_2_html: Mergi la <a href="https://eodhd.com/cp/dashboard" target="_blank"
+          rel="noopener noreferrer" class="underline">panoul de bord</a> pentru a
+          găsi tokenul API.
+        step_3: Copiază tokenul API și lipește-l mai jos.
+      llm_provider_selector:
+        provider_openai: OpenAI
+        data_retention: În mod implicit, datele trimise prin API nu sunt folosite
+          pentru antrenarea modelelor; API-urile găzduite de furnizori păstrează datele
+          aproximativ 30 de zile pentru siguranță și integritate. Endpointurile personalizate
+          sau găzduite local urmează propria ta politică.
+        data_retention_heading: Gestionarea datelor
+        description: Alege LLM-ul folosit pentru conversații AI, detectarea comercianților
+          și procesarea PDF. Clasificarea tranzacțiilor se configurează separat mai
+          jos.
+        env_configured_message: Configurat cu succes prin variabila de mediu LLM_PROVIDER.
+        not_configured_hint: Adaugă mai jos o cheie API %{provider} pentru activare.
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Schimbarea furnizorului se aplică de la următoarea conversație.
+          Configurează mai jos datele de autentificare ale furnizorului activ.
+        provider_label: Furnizor LLM activ
+        title: Furnizor AI
+      provider_selection:
+        providers:
+          binance_public: Binance
+          alpha_vantage: Alpha Vantage
+          eodhd: EODHD
+          mansa: Mansa
+          tiingo: Tiingo
+          frankfurter: Frankfurter
+          mfapi: MFAPI.in
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+        binance_public_hint: gratuit, fără cheie API — doar criptomonede (BTC, ETH
+          etc.)
+        env_configured_message: Selecția furnizorului este dezactivată deoarece sunt
+          setate variabile de mediu. Elimină aceste variabile din configurare pentru
+          a permite selecția aici.
+        exchange_rate_description: Selectează un singur furnizor pentru preluarea
+          cursurilor de schimb valutar.
+        exchange_rate_provider_label: Furnizor de cursuri valutare
+        exchange_rate_title: Furnizor de cursuri valutare
+        mfapi_hint: gratuit, fără cheie API — doar fonduri mutuale indiene
+        moex_public_hint: gratuit, fără cheie API — acțiuni, fonduri și obligațiuni
+          rusești (MOEX), inclusiv cursuri RUB
+        requires_api_key: necesită cheie API
+        requires_api_key_alpha_vantage: necesită cheie API, limită de 25 de apeluri/zi
+        requires_api_key_eodhd: necesită cheie API, limită de 20 de apeluri/zi
+        requires_api_key_mansa: necesită cheie API, plan gratuit cu 100 de apeluri/zi
+          — doar NGX (Bursa din Nigeria)
+        securities_description: Activează unul sau mai mulți furnizori pentru preluarea
+          prețurilor acțiunilor, ETF-urilor și fondurilor mutuale. La căutare, sunt
+          interogați toți furnizorii activați, iar rezultatele sunt reunite.
+        securities_title: Furnizori pentru instrumente financiare
+        tinkoff_invest_hint: necesită token doar pentru citire — prețuri pentru acțiuni/fonduri/obligațiuni
+          rusești și sigle
+        twelve_data_hint: necesită cheie API, 800 de credite/zi
+        yahoo_finance_hint: gratuit, nu necesită cheie API
+      tiingo_settings:
+        label: Token API
+        show_details: "(afișează detalii)"
+        title: Tiingo
+        description: Introdu tokenul API oferit de Tiingo. Planul gratuit acceptă
+          50 de simboluri distincte pe oră, cu peste 30 de ani de date istorice.
+        env_configured_message: Configurat cu succes prin variabila de mediu TIINGO_API_KEY.
+        placeholder: Introdu tokenul API Tiingo aici
+        step_1_html: Accesează <a href="https://www.tiingo.com" target="_blank" rel="noopener
+          noreferrer" class="underline">tiingo.com</a> și creează un cont gratuit.
+        step_2_html: Mergi la pagina <a href="https://www.tiingo.com/account/api/token"
+          target="_blank" rel="noopener noreferrer" class="underline">API Token</a>.
+        step_3: Copiază tokenul API și lipește-l mai jos.
+      tinkoff_invest_settings:
+        label: Token API
+        show_details: "(afișează detalii)"
+        description: Introdu un token API T-Invest cu acces doar pentru citire. Este
+          folosit pentru siglele instrumentelor financiare (inclusiv fonduri și obligațiuni,
+          chiar dacă prețurile vin din MOEX) și, dacă este activat mai sus, pentru
+          prețurile instrumentelor rusești.
+        env_configured_message: Configurat cu succes prin variabila de mediu TINKOFF_INVEST_API_KEY.
+        moex_only_notice: Nu este activat pentru prețuri mai sus — T-Invest preia
+          siglele tuturor instrumentelor financiare ori de câte ori este configurat
+          un token, indiferent de caseta de mai sus.
+        placeholder: Introdu tokenul API T-Invest aici
+        step_1: Deschide investițiile T-Bank, apoi Settings și API tokens (necesită
+          un cont de brokeraj T-Bank deschis).
+        step_2: Creează un token cu acces doar pentru citire.
+        step_3: Copiază tokenul și lipește-l mai jos.
+        title: T-Invest (T-Bank)
+      categorization_shadow_results:
+        shadow_disagreement_confidence: "(încredere %{confidence})"
+        shadow_disagreement_row: "%{applied_provider} a ales %{applied_category};
+          %{shadow_provider} a ales %{shadow_category}."
+        shadow_disagreements_heading: Cele mai recente diferențe
+        shadow_no_category: fără categorie
+        shadow_no_disagreements: Cei doi furnizori au fost de acord pentru fiecare
+          tranzacție din eșantion.
+        shadow_results_empty: Nu există încă comparații înregistrate. Setează o rată
+          de comparație paralelă peste 0 și rulează clasificarea pentru a colecta
+          rezultate.
+        shadow_results_heading: Comparație paralelă
+        shadow_results_summary: Acord de %{agreement}%% pentru %{count} de tranzacții
+          din eșantion.
+      demo_refresh_settings:
+        description: Reîmprospătează automat doar familia demonstrativă selectată.
+          Toate datele și autentificările ei vor fi eliminate. Celelalte familii nu
+          sunt afectate. Necesită un proces de lucru activ cu cel puțin 2 GiB RAM.
+          Creează mai întâi o familie demonstrativă temporară folosind generatorul
+          demo, apoi selecteaz-o aici. Nu alege familia unui utilizator real.
+        enabled_label: Activează reîmprospătarea zilnică a familiei demonstrative
+        family_label: Familie demonstrativă temporară
+        none: Nicio familie demonstrativă selectată
+        save_family: Salvează familia demonstrativă
+      disconnect_external_assistant:
+        external_assistant_disconnected: Asistentul extern a fost deconectat
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Setările au fost salvate, dar actualizarea programului
+          de sincronizare a eșuat. Încearcă din nou sau verifică jurnalele serverului.
+      sync_settings:
+        auto_sync_description: Când este activată, toate conturile se sincronizează
+          automat zilnic la ora specificată.
+        auto_sync_label: Activează sincronizarea automată
+        auto_sync_time_description: Specifică ora la care trebuie să aibă loc sincronizarea
+          automată.
+        auto_sync_time_label: Ora sincronizării (HH:MM)
+        env_configured_message: Această setare este dezactivată deoarece este setată
+          o variabilă de mediu a furnizorului (SIMPLEFIN_INCLUDE_PENDING sau PLAID_INCLUDE_PENDING).
+          Elimin-o pentru a activa setarea.
+        include_pending_description: Când este activată, tranzacțiile în așteptare
+          (nedecontate) sunt importate și reconciliate automat la contabilizare. Dezactivează
+          dacă banca oferă date nesigure despre tranzacțiile în așteptare.
+        include_pending_label: Include tranzacțiile în așteptare

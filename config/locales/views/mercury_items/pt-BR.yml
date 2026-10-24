@@ -1,0 +1,247 @@
+---
+pt-BR:
+  mercury_items:
+    api_error:
+      check_provider_settings: Verificar configurações do serviço
+      common_issues: 'Problemas comuns:'
+      expired_credentials_desc: Gere um novo token de API a partir do Mercury
+      expired_credentials_label: Credenciais expiradas
+      insufficient_permissions_desc: Certifique-se de que seu token tenha acesso somente
+        de leitura
+      insufficient_permissions_label: Permissões insuficientes
+      invalid_api_token_desc: Verifique o seu token de API nas Configurações do serviço
+      invalid_api_token_label: Token de API inválido
+      network_issue_desc: Verifique a sua conexão à internet
+      network_issue_label: Problema de rede
+      service_down_desc: A API do Mercury pode estar temporariamente indisponível
+      service_down_label: Serviço indisponível
+      title: Erro de conexão Mercury
+      unable_to_connect: Não foi possível conectar ao Mercury
+    complete_account_setup:
+      all_skipped: Todas as contas foram ignoradas. Não foi criada nenhuma conta.
+      creation_failed: 'Falha ao criar contas: %{error}'
+      no_accounts: Não existem contas para configurar.
+      success: "%{count} conta(s) criada(s) com sucesso."
+    create:
+      success: Conexão Mercury criada com sucesso
+    destroy:
+      success: Conexão Mercury removida
+    index:
+      title: Conexões Mercury
+    link_accounts:
+      all_already_linked:
+        one: A conta selecionada (%{names}) já está associada
+        other: 'Todas as %{count} contas selecionadas já estão associadas: %{names}'
+      api_error: 'Erro de API: %{message}'
+      invalid_account_names:
+        one: Não é possível associar uma conta com nome em branco
+        other: Não é possível associar %{count} contas com nomes em branco
+      link_failed: Falha ao associar contas
+      no_accounts_selected: Selecione pelo menos uma conta
+      no_api_token: Token de API Mercury não encontrado. Configure-o nas Configurações
+        do serviço.
+      partial_invalid: >-
+        Associadas com sucesso %{created_count} conta(s), %{already_linked_count}
+        já estavam associadas, %{invalid_count} conta(s) tinham nomes inválidos
+      partial_success: >-
+        Associadas com sucesso %{created_count} conta(s). %{already_linked_count}
+        conta(s) já estavam associadas: %{already_linked_names}
+      select_connection: Escolha uma conexão Mercury antes de associar contas.
+      success:
+        one: "%{count} conta associada com sucesso"
+        other: "%{count} contas associadas com sucesso"
+    link_existing_account:
+      account_already_linked: Esta conta já está associada a um serviço
+      api_error: 'Erro de API: %{message}'
+      invalid_account_name: Não é possível associar uma conta com nome em branco
+      mercury_account_already_linked: Esta conta Mercury já está associada a outra
+        conta
+      mercury_account_not_found: Conta Mercury não encontrada
+      missing_parameters: Parâmetros obrigatórios em falta
+      no_api_token: Token de API Mercury não encontrado. Configure-o nas Configurações
+        do serviço.
+      select_connection: Escolha uma conexão Mercury antes de associar contas.
+      success: "%{account_name} associada com sucesso ao Mercury"
+    loading:
+      loading_message: Carregando contas Mercury...
+      loading_title: Carregando
+    mercury_item:
+      accounts_need_setup: As contas precisam de configuração
+      delete: Excluir conexão
+      deletion_in_progress: exclusão em andamento...
+      error: Erro
+      no_accounts_description: Esta conexão ainda não tem contas associadas.
+      no_accounts_title: Sem contas
+      setup_action: Configurar novas contas
+      setup_description: >-
+        %{linked} de %{total} contas associadas. Escolha os tipos de conta para as
+        suas contas Mercury recém-importadas.
+      setup_needed: Novas contas prontas a configurar
+      status: Sincronizada há %{timestamp}
+      status_never: Nunca sincronizada
+      status_with_summary: Última sincronização há %{timestamp} - %{summary}
+      syncing: Sincronizando...
+      total: Total
+      unlinked: Sem vínculo
+    mercury_item_selection_error_payload:
+      select_connection: Escolha uma conexão Mercury antes de carregar as contas.
+    provider_connection:
+      default_description: Conecte-se ao seu banco pelo Mercury
+      default_name: Mercury
+      description: Conectar usando %{name}
+      name: Mercury - %{name}
+    provider_panel:
+      add_connection: Adicionar conexão Mercury
+      base_url_label: Base URL (opcional)
+      base_url_placeholder: https://api.mercury.com/api/v1 (padrão)
+      connection_name_label: Nome da conexão
+      connection_name_placeholder: Conta corrente empresarial
+      default_connection_name: Conexão Mercury
+      disconnect: Desconectar
+      disconnect_confirm: Desconectar %{name}?
+      instructions:
+        copy_token_html: >-
+          Copie o <strong>token completo</strong> (incluindo o prefixo <code>secret-token:</code>)
+          e adicione-o como conexão nomeada abaixo
+        create_token: Crie um novo token de API com acesso "Read Only" (somente leitura)
+        open_tokens: Acesse a Configurações > Desenvolvedor > Tokens de API
+        sign_in_html: Visite %{link} e entre na conta que deseja associar
+        whitelist_ip_html: >-
+          <strong>Importante:</strong> Adicione o endereço IP do seu servidor à lista
+          de permissões do token
+      keep_token_placeholder: Deixe em branco para manter o token atual
+      sandbox_note_html: >-
+        Use uma conexão com nome próprio para cada login/token de API do Mercury que
+        deseja sincronizar. Para testes no ambiente sandbox, use <code>https://api-sandbox.mercury.com/api/v1</code>
+        como URL base. O Mercury exige uma lista de IPs permitidos; adicione seu IP
+        no painel do Mercury.
+      setup_accounts: Configurar contas
+      setup_title: 'Instruções de configuração:'
+      sync: Sincronizar
+      token_label: Token
+      token_placeholder: Cole aqui o token
+      update_connection: Atualizar conexão
+    render_mercury_item_selection_failure:
+      no_credentials_configured: Configure primeiro o seu token de API Mercury nas
+        Configurações do serviço.
+      select_connection: Escolha uma conexão Mercury nas Configurações do serviço.
+    select_accounts:
+      accounts_selected: contas selecionadas
+      api_error: 'Erro de API: %{message}'
+      cancel: Cancelar
+      configure_name_in_mercury: Não é possível importar - configure o nome da conta
+        no Mercury
+      description: Selecione as contas que deseja associar à sua conta %{product_name}.
+      link_accounts: Associar contas selecionadas
+      no_accounts_found: Não foram encontradas contas. Verifique a configuração do
+        seu token de API.
+      no_api_token: O token de API do Mercury não está configurado. Configure-o nas
+        Configurações.
+      no_credentials_configured: Configure primeiro o seu token de API Mercury nas
+        Configurações do serviço.
+      no_name_placeholder: "(Sem nome)"
+      select_connection: Escolha uma conexão Mercury nas Configurações do serviço.
+      title: Selecionar contas Mercury
+    select_existing_account:
+      account_already_linked: Esta conta já está associada a um serviço
+      all_accounts_already_linked: Todas as contas Mercury já estão associadas
+      api_error: 'Erro de API: %{message}'
+      cancel: Cancelar
+      configure_name_in_mercury: Não é possível importar - configure o nome da conta
+        no Mercury
+      description: >-
+        Selecione uma conta do Mercury para vincular a esta conta. As transações serão
+        sincronizadas, com remoção automática de duplicatas.
+      link_account: Associar conta
+      no_account_specified: Nenhuma conta especificada
+      no_accounts_found: >-
+        Não foram encontradas contas Mercury. Verifique a configuração do seu token
+        de API.
+      no_api_token: O token de API do Mercury não está configurado. Configure-o nas
+        Configurações.
+      no_credentials_configured: Configure primeiro o seu token de API Mercury nas
+        Configurações do serviço.
+      no_name_placeholder: "(Sem nome)"
+      select_connection: Escolha uma conexão Mercury nas Configurações do serviço.
+      title: Associar %{account_name} com Mercury
+    setup_accounts:
+      account_type_label: 'Tipo de conta:'
+      account_types:
+        credit_card: Cartão de crédito
+        depository: Conta corrente ou poupança
+        investment: Conta de investimento
+        loan: Empréstimo ou financiamento imobiliário
+        other_asset: Outro ativo
+        skip: Ignorar esta conta
+      all_accounts_linked: Todas as suas contas Mercury já foram configuradas.
+      api_error: 'Erro de API: %{message}'
+      balance: Saldo
+      cancel: Cancelar
+      choose_account_type: 'Escolha o tipo de conta correto para cada conta Mercury:'
+      create_accounts: Criar contas
+      creating_accounts: Criando contas...
+      fetch_failed: Falha ao obter contas
+      historical_data_range: 'Intervalo de dados históricos:'
+      no_accounts_to_setup: Não existem contas para configurar
+      no_api_token: >-
+        O token de API do Mercury não está configurado. Verifique as configurações
+        da sua conexão.
+      subtitle: Escolha os tipos de conta corretos para as suas contas importadas
+      subtype_labels:
+        credit_card: ''
+        depository: 'Subtipo da conta:'
+        investment: 'Tipo de investimento:'
+        loan: 'Tipo de empréstimo:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: >-
+          Os cartões de crédito serão configurados automaticamente como contas de
+          cartão de crédito.
+        other_asset: Não são necessárias opções adicionais para Outros Ativos.
+      subtypes:
+        depository:
+          cd: Certificado de depósito
+          checking: Conta corrente
+          hsa: Conta poupança de saúde
+          money_market: Conta do mercado monetário
+          savings: Poupança
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: Plano 529
+          angel: Investimento-anjo
+          brokerage: Conta em corretora
+          hsa: Conta poupança de saúde
+          ira: IRA Tradicional
+          mutual_fund: Fundo de Investimento
+          pension: Previdência
+          retirement: Aposentadoria
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Thrift Savings Plan
+        loan:
+          auto: Financiamento de veículo
+          mortgage: Financiamento imobiliário
+          other: Outro empréstimo
+          student: Empréstimo estudantil
+      sync_start_date_help: >-
+        Selecione a partir de quando deseja sincronizar o histórico de transações.
+        Estão disponíveis no máximo 3 anos de histórico.
+      sync_start_date_label: 'Iniciar a sincronização de transações a partir de:'
+      title: Configurar as suas contas Mercury
+    setup_required:
+      api_token_description: >-
+        Antes de poder associar contas Mercury, precisa de configurar o seu token
+        de API Mercury.
+      api_token_not_configured: Token de API não configurado
+      go_to_provider_settings: Ir para as configurações do provedor
+      setup_step_1_html: Acesse a <strong>Configurações > Serviços</strong>
+      setup_step_2_html: Encontre a seção <strong>Mercury</strong>
+      setup_step_3: Digite o seu token de API Mercury
+      setup_step_4: Volte aqui para associar as suas contas
+      setup_steps_title: 'Passos de configuração:'
+      title: Configuração do Mercury necessária
+    sync:
+      success: Sincronização iniciada
+    update:
+      success: Conexão Mercury atualizada

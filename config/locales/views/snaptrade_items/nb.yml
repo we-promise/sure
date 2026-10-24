@@ -1,0 +1,228 @@
+---
+nb:
+  providers:
+    snaptrade:
+      delete_connection: Slett
+      name: SnapTrade
+      connect_button: Koble til meglerkonto
+      accounts_count:
+        one: "%{count} konto"
+        other: "%{count} kontoer"
+      connected_brokerages: 'Tilkoblet:'
+      connection_description: Koble til meglerforetaket ditt via SnapTrade (støtter
+        over 25 meglere)
+      connections_error: 'Kunne ikke laste tilkoblinger: %{message}'
+      delete_connection_body: Dette fjerner tilkoblingen til %{brokerage} permanent
+        fra SnapTrade. Alle kontoer hos dette meglerforetaket kobles fra. Du må koble
+        til på nytt for å synkronisere disse kontoene igjen.
+      delete_connection_confirm: Slett tilkobling
+      delete_connection_title: Slette meglertilkoblingen?
+      description: SnapTrade kobler til over 25 store meglerforetak (Fidelity, Vanguard,
+        Schwab, Robinhood osv.) og gir full handelshistorikk med aktivitetsbetegnelser
+        og inngangsverdi.
+      free_tier_warning: Gratisnivået til SnapTrade omfatter 20 meglertilkoblinger.
+      loading_connections: Laster tilkoblinger …
+      manage_at_snaptrade: Administrer tilkoblinger hos SnapTrade
+      manage_connections: Administrer tilkoblinger
+      needs_linking: må knyttes til
+      needs_setup:
+        one: "%{count} krever oppsett"
+        other: "%{count} krever oppsett"
+      no_connections: Fant ingen meglertilkoblinger.
+      oauth_connect_button: Koble til med SnapTrade
+      oauth_device_button: Bruk en enhetskode
+      oauth_reauthorize_button: Godkjenn på nytt
+      oauth_setup_step_1_html: Registrer en OAuth-app på <a href="https://dashboard.snaptrade.com"
+        target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: 'Bare for nettleserflyten: Legg til appens returadresse
+        (<code>%{callback_url}</code>) som en registrert omdirigerings-URI'
+      oauth_setup_step_3: Angi SNAPTRADE_OAUTH_CLIENT_ID i miljøet og start på nytt.
+        Dette alene aktiverer enhetskodeflyten. Legg også til SNAPTRADE_OAUTH_CLIENT_SECRET
+        for nettleserflyten
+      oauth_status_authorized: Godkjent hos SnapTrade.
+      oauth_status_ready: Gi Sure tillatelse til å lese SnapTrade-kontodataene dine.
+      oauth_status_ready_device: Gi Sure tillatelse med en enhetskode til å lese SnapTrade-kontodataene
+        dine.
+      oauth_title: SnapTrade OAuth
+      orphaned_connection: Tilkobling uten lokal tilknytning (synkroniseres ikke lokalt)
+      setup_accounts_button: Sett opp kontoer
+      status_connected:
+        one: "%{count} konto fra SnapTrade"
+        other: "%{count} kontoer fra SnapTrade"
+      status_ready: Klar til å koble til meglerforetak
+  snaptrade_item:
+    institution_summary:
+      count:
+        one: "%{count} finansinstitusjon"
+        other: "%{count} finansinstitusjoner"
+      none: Ingen finansinstitusjoner tilkoblet
+    sync_status:
+      no_accounts: Ingen kontoer funnet
+      synced:
+        one: "%{count} konto synkronisert"
+        other: "%{count} kontoer synkronisert"
+      synced_with_setup: "%{linked} synkronisert, %{unlinked} må konfigureres"
+    syncer:
+      calculating: Beregner saldoer...
+      checking_config: Kontrollerer kontooppsettet...
+      needs_setup: "%{count} kontoer må konfigureres..."
+      processing: Behandler beholdninger og aktiviteter...
+      activities_fetching_async: Aktiviteter hentes i bakgrunnen. For nye meglertilkoblinger
+        kan dette ta opptil ett minutt.
+      discovering: Finner kontoer …
+      importing: Importerer kontoer fra SnapTrade …
+    brokerage_summary:
+      count:
+        one: "%{count} meglerforetak"
+        other: "%{count} meglerforetak"
+      none: Ingen meglerforetak er koblet til
+  snaptrade_items:
+    oauth_device_flow:
+      cancel_button: Avbryt
+      code_label: Enhetskode
+      complete_button: Jeg har godkjent SnapTrade
+      instructions: Åpne SnapTrade, bekreft denne enhetskoden og kom tilbake hit for
+        å fullføre.
+      missing_client_id: SnapTrade OAuth er ikke konfigurert. Legg til SNAPTRADE_OAUTH_CLIENT_ID
+        i .env.local, start appen på nytt og prøv igjen.
+      open_snaptrade: Åpne SnapTrade
+      start_button: Start godkjenning
+      subtitle: Gi Sure tillatelse til SnapTrade med en enhetskode.
+      title: Koble til SnapTrade
+    select_existing_account:
+      balance_label: 'Saldo:'
+      cancel_button: Avbryt
+      link_button: Koble til
+      settings_link: Gå til leverandørinnstillinger
+      connect_hint: Du må kanskje koble til et meglerforetak først.
+      header: Knytt til eksisterende konto
+      linking_to: 'Knytter til konto:'
+      no_accounts: Ingen SnapTrade-kontoer uten tilknytning er tilgjengelige.
+      not_found: Fant ikke kontoen eller SnapTrade-konfigurasjonen.
+      subtitle: Velg en SnapTrade-konto å knytte til
+      title: Knytt til SnapTrade-konto
+    setup_accounts:
+      account_type_label: Kontotype
+      account_types:
+        credit_card: Kredittkort
+        depository: Bruks- eller sparekonto
+        investment: Investeringskonto
+        other_asset: Annet aktivum
+        crypto: Kryptokonto
+        loan: Lån eller kredittramme
+      balance_label: 'Saldo:'
+      cancel_button: Avbryt
+      creating: Oppretter kontoer...
+      done_button: Ferdig
+      link_button: Koble til
+      refresh: Oppdater
+      select_account: Velg en konto...
+      back_to_settings: Tilbake til innstillinger
+      try_again: Koble til meglerkonto
+      info_holdings: Beholdninger med gjeldende priser og mengder
+      account_number: 'Konto:'
+      available_accounts: Tilgjengelige kontoer
+      create_button: Opprett valgte kontoer
+      free_tier_note: Gratisnivået til SnapTrade tillater 20 meglertilkoblinger.
+      header: Sett opp SnapTrade-kontoene dine
+      info_activities: Handelshistorikk med aktivitetsbetegnelser (kjøp, salg, utbytte
+        osv.)
+      info_cost_basis: Inngangsverdi per posisjon (når tilgjengelig)
+      info_history: Opptil 3 års transaksjonshistorikk
+      info_title: SnapTrade-investeringsdata
+      linked_accounts: Allerede tilknyttet
+      linked_to: 'Knyttet til:'
+      loading: Henter kontoer fra SnapTrade …
+      loading_hint: Klikk på Oppdater for å se etter kontoer.
+      no_accounts_message: Fant ingen meglerkontoer. Dette kan skje hvis du avbrøt
+        tilkoblingen, eller hvis meglerforetaket ikke støttes.
+      no_accounts_title: Fant ingen kontoer
+      or_link_existing: 'Eller knytt til en eksisterende konto i stedet for å opprette
+        en ny:'
+      subtitle: Velg hvilke meglerkontoer du vil knytte til
+      sync_start_date_help: La stå tomt for all tilgjengelig historikk
+      sync_start_date_label: 'Importer transaksjoner fra:'
+      syncing: Henter kontoene dine …
+      title: Sett opp SnapTrade-kontoer
+    snaptrade_item:
+      accounts_need_setup:
+        one: "%{count} konto må konfigureres"
+        other: "%{count} kontoer må konfigureres"
+      delete: Slett
+      reconnect: Koble til på nytt
+      setup_needed: Kontoer må konfigureres
+      status: Sist synkronisert for %{timestamp} siden – %{summary}
+      status_never: Aldri synkronisert
+      syncing: Synkroniserer...
+      connect_brokerage: Koble til meglerkonto
+      error: Synkroniseringsfeil
+      requires_update: Tilkoblingen må oppdateres
+      setup_accounts_menu: Konfigurer kontoer
+      more_accounts_available:
+        one: "%{count} konto til er tilgjengelig for oppsett"
+        other: "%{count} kontoer til er tilgjengelige for oppsett"
+      add_another_brokerage: Koble til et annet meglerforetak
+      deletion_in_progress: Sletting pågår …
+      manage_connections: Administrer tilkoblinger
+      no_accounts_description: Koble til et meglerforetak for å importere investeringskontoene
+        dine.
+      no_accounts_title: Ingen kontoer er funnet
+      setup_action: Sett opp kontoer
+      setup_description: Noen kontoer fra SnapTrade må knyttes til Sure-kontoer.
+    complete_account_setup:
+      success:
+        other: "%{count} kontoer ble koblet til."
+        one: Knyttet til %{count} konto.
+      link_failed: 'Kunne ikke knytte til kontoer: %{errors}'
+      no_accounts: Ingen kontoer ble valgt for tilknytning.
+      partial_success:
+        one: Knyttet til %{count} konto. Tilknytning mislyktes for %{failed_count}.
+        other: Knyttet til %{count} kontoer. Tilknytning mislyktes for %{failed_count}.
+    callback:
+      no_item: Fant ikke SnapTrade-konfigurasjonen.
+      success: Meglerforetaket er koblet til! Velg hvilke kontoer du vil knytte til.
+    complete_oauth_device_flow:
+      access_denied: SnapTrade-godkjenningen ble avslått.
+      authorization_pending: SnapTrade har ikke mottatt bekreftelsen din ennå. Godkjenn
+        koden i SnapTrade og prøv igjen.
+      device_code_required: Ingen SnapTrade-enhetsgodkjenning pågår for denne tilkoblingen.
+        Start på nytt for å få en ny kode.
+      expired: Denne enhetskoden er utløpt. Start godkjenningen på nytt.
+      failed: Kunne ikke fullføre SnapTrade-enhetsgodkjenningen. Prøv igjen.
+      success: SnapTrade-godkjenningen er fullført.
+    connect:
+      connection_failed: 'Kunne ikke koble til SnapTrade: %{message}'
+      decryption_failed: Kan ikke lese SnapTrade-påloggingsopplysningene. Slett denne
+        tilkoblingen og opprett den på nytt.
+    connections:
+      unknown_brokerage: Ukjent meglerforetak
+    default_name: SnapTrade-tilkobling
+    delete_connection:
+      api_deletion_failed: Kunne ikke slette tilkoblingen fra SnapTrade fordi denne
+        tilkoblingen ikke er godkjent. Tilkoblingen kan fortsatt finnes i SnapTrade-kontoen
+        din.
+      failed: 'Kunne ikke slette tilkoblingen: %{message}'
+      missing_authorization_id: Godkjennings-ID mangler
+      success: Tilkoblingen er slettet. Én plass er frigjort.
+    destroy:
+      success: SnapTrade-tilkoblingen er planlagt slettet.
+    link_existing_account:
+      failed: 'Kunne ikke knytte til kontoen: %{message}'
+      not_found: Fant ikke kontoen.
+      success: Koblet til SnapTrade-kontoen.
+    oauth_authorize:
+      not_configured: SnapTrade-godkjenning i nettleseren krever både SNAPTRADE_OAUTH_CLIENT_SECRET
+        og SNAPTRADE_OAUTH_CLIENT_ID. Angi den og start på nytt, eller godkjenn med
+        en enhetskode i stedet.
+    oauth_callback:
+      access_denied: SnapTrade-godkjenningen ble avbrutt.
+      failed: Kunne ikke fullføre SnapTrade-godkjenningen. Prøv igjen.
+      state_mismatch: SnapTrade-godkjenningen bestod ikke sikkerhetskontrollen. Prøv
+        igjen.
+      success: SnapTrade-godkjenningen er fullført.
+    preload_accounts:
+      not_configured: SnapTrade er ikke konfigurert.
+    select_accounts:
+      not_configured: SnapTrade er ikke konfigurert.
+    start_oauth_device_flow:
+      failed: Kunne ikke starte SnapTrade-enhetsgodkjenningen. Prøv igjen.

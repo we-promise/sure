@@ -1,0 +1,55 @@
+---
+ro:
+  recurring_occurrences:
+    history_status:
+      scheduled: Deschis
+      paid: Plătit
+      missed: Neachitată
+      skipped: Omisă
+    show:
+      manual_amount_label: Sumă
+      manual_date_label: Dată
+      payments: Plăți
+      skip: Omite
+      unlink: Dezasociază
+      due_on: Scadent la %{date}
+      manual_payment: Plată manuală
+      paid_headline: "%{amount} plătiți"
+      paid_of: S-au plătit %{paid} din %{expected}
+      remaining: "%{amount} rămași"
+      view_bill: Vezi factura completă
+      add_heading: Adaugă o altă plată
+      cant_find: Nu găsești tranzacția?
+      find_heading: Găsește o plată
+      link_payment: Asociază plata
+      manual_explainer: Înregistrează o plată despre care știi că a avut loc atunci
+        când nicio tranzacție de aici nu îi corespunde.
+      mark_paid: Marchează ca plătită
+      mark_paid_hint: Stinge suma rămasă fără a înregistra o tranzacție.
+      missed: Marcată ca neachitată
+      no_candidates: Nu există tranzacții apropiate ca dată pentru asociere.
+      no_ranked_candidates: Deocamdată, nicio tranzacție de aici nu pare să fie o
+        plată pentru această factură.
+      no_search_results: Niciun rezultat pentru %{query}.
+      not_this_one: Nu aceasta
+      other_matches: Alte potriviri probabile
+      overpaid: mai mult decât era așteptat
+      record_payment: Înregistrează plata
+      reopen: Redeschide
+      review_heading: Verifică plata
+      search_all: Caută în toate tranzacțiile
+      search_placeholder: Caută tranzacții
+      settled: Plătită integral
+      skipped: Omisă
+      snooze_week: Amână cu o săptămână
+    snooze:
+      success: Amânat până la %{date}
+      invalid_date: Data respectivă nu a putut fi interpretată
+    mark_paid:
+      success: Factura a fost marcată ca plătită
+    override_amount:
+      success: Suma așteptată a fost actualizată
+    reopen:
+      success: Factura a fost redeschisă
+    skip:
+      success: Factura a fost omisă

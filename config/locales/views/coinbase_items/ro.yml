@@ -1,0 +1,86 @@
+---
+ro:
+  coinbase_item:
+    syncer:
+      calculating_balances: Se calculează soldurile...
+      accounts_need_setup:
+        one: "%{count} cont necesită configurare"
+        other: "%{count} de conturi necesită configurare"
+        few: "%{count} conturi necesită configurare"
+      checking_configuration: Se verifică configurarea contului...
+      checking_credentials: Se verifică datele de autentificare...
+      processing_accounts: Se procesează datele contului...
+      importing_accounts: Se importă conturile din Coinbase...
+      credentials_invalid: Date de autentificare API nevalide. Verifică cheia și secretul
+        API.
+  coinbase_items:
+    coinbase_item:
+      delete: Șterge
+      no_accounts_title: Nu s-au găsit conturi
+      status: Ultima sincronizare acum %{timestamp}
+      status_never: Nu a fost sincronizat niciodată
+      sync_status:
+        no_accounts: Nu s-au găsit conturi
+        all_synced:
+          one: "%{count} cont sincronizat"
+          other: "%{count} de conturi sincronizate"
+          few: "%{count} conturi sincronizate"
+        partial_sync: 'Sincronizate: %{linked_count}; necesită configurare: %{unlinked_count}'
+      syncing: Se sincronizează...
+      deletion_in_progress: Se șterge...
+      reconnect: Datele de autentificare necesită actualizare
+      status_with_summary: Ultima sincronizare acum %{timestamp} - %{summary}
+      update_credentials: Actualizează datele de autentificare
+      provider_name: Coinbase
+      import_wallets_menu: Importă portofele
+      more_wallets_available:
+        one: Încă %{count} portofel disponibil pentru import
+        other: Încă %{count} de portofele disponibile pentru import
+        few: Încă %{count} portofele disponibile pentru import
+      no_accounts_message: Portofelele tale Coinbase vor apărea aici după sincronizare.
+      setup_action: Importă portofele
+      setup_description: Selectează portofelele Coinbase pe care vrei să le urmărești.
+      setup_needed: Portofele gata de import
+    select_existing_account:
+      balance: Sold
+      cancel: Anulează
+      link: Asociază
+      currently_linked_to: 'Conectat în prezent la: %{account_name}'
+      check_provider_health: Verifică dacă datele tale de autentificare API Coinbase
+        sunt valide
+      no_accounts_found: Nu s-au găsit conturi Coinbase.
+      title: Conectează contul Coinbase
+      wait_for_sync: Așteaptă finalizarea sincronizării Coinbase
+    setup_accounts:
+      cancel: Anulează
+      creating: Se importă...
+      import_selected: Importă selecția
+      select_all: Selectează tot
+      accounts_count:
+        one: "%{count} portofel disponibil"
+        other: "%{count} de portofele disponibile"
+        few: "%{count} portofele disponibile"
+      instructions: Selectează portofelele pe care vrei să le imporți. Portofelele
+        neselectate vor rămâne disponibile dacă dorești să le adaugi ulterior.
+      no_accounts: Toate portofelele au fost importate.
+      subtitle: Selectează portofelele de urmărit
+      title: Importă portofele Coinbase
+    create:
+      default_name: Coinbase
+      success: Conectare reușită la Coinbase! Conturile tale sunt în curs de sincronizare.
+    destroy:
+      success: Conexiunea Coinbase a fost programată pentru ștergere.
+    complete_account_setup:
+      no_accounts: Niciun portofel de importat
+      none_selected: Niciun portofel selectat
+      success:
+        one: A fost importat %{count} portofel
+        other: Au fost importate %{count} de portofele
+        few: Au fost importate %{count} portofele
+    link_existing_account:
+      errors:
+        invalid_coinbase_account: Cont Coinbase nevalid
+        only_manual: Doar conturile manuale pot fi asociate cu Coinbase
+      success: Conectat cu succes la contul Coinbase
+    update:
+      success: Configurarea Coinbase a fost actualizată cu succes.

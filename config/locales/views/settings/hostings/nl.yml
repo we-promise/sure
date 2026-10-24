@@ -13,6 +13,9 @@ nl:
           open: Open
           closed: Gesloten
           invite_only: Alleen op uitnodiging
+        default_family_description: Voeg nieuwe gebruikers alleen aan dit huishouden of deze groep toe als ze geen uitnodiging hebben.
+        default_family_none: Geen (nieuw huishouden aanmaken)
+        default_family_title: Standaardhuishouden voor nieuwe gebruikers
       show:
         general: Algemene instellingen
         financial_data_providers: Financiële gegevensproviders
@@ -25,6 +28,9 @@ nl:
         confirm_clear_cache:
           title: Datacache wissen?
           body: Weet u zeker dat u de datacache wilt wissen? Dit verwijdert alle wisselkoersen, effectenprijzen, accountsaldo's en andere gegevens. Deze actie kan niet ongedaan worden gemaakt.
+        demo_refresh: Demogegevens vernieuwen
+        property_valuation_providers: Aanbieders van vastgoedwaarderingen
+        ai_assistant: AI-assistent
       provider_selection:
         title: Providerselectie
         description: Kies welke service te gebruiken voor het ophalen van wisselkoersen en effectenprijzen. Yahoo Finance is gratis en vereist geen API Key. Twelve Data vereist een gratis API Key maar biedt mogelijk meer gegevensdekking.
@@ -34,27 +40,73 @@ nl:
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+          binance_public: Binance
+          mansa: Mansa
+          frankfurter: Frankfurter
+          mfapi: MFAPI.in
+          moex_public: MOEX
+          tiingo: Tiingo
+          tinkoff_invest: T-Invest (T-Bank)
+          alpha_vantage: Alpha Vantage
+          eodhd: EODHD
+        binance_public_hint: gratis, geen API-sleutel — alleen crypto (BTC, ETH enz.)
+        exchange_rate_description: Selecteer één aanbieder voor het ophalen van valutawisselkoersen.
+        exchange_rate_title: Wisselkoersaanbieder
+        mfapi_hint: gratis, geen API-sleutel — alleen Indiase beleggingsfondsen
+        moex_public_hint: gratis, geen API-sleutel — Russische aandelen, fondsen en obligaties (MOEX), inclusief RUB-wisselkoersen
+        requires_api_key: API-sleutel vereist
+        requires_api_key_alpha_vantage: API-sleutel vereist, maximaal 25 aanroepen/dag
+        requires_api_key_eodhd: API-sleutel vereist, maximaal 20 aanroepen/dag
+        requires_api_key_mansa: API-sleutel vereist, gratis abonnement met 100 aanroepen/dag — alleen NGX (Nigerian Exchange)
+        securities_description: Schakel een of meer aanbieders in om koersen van aandelen, ETF's en beleggingsfondsen op te halen. Bij het zoeken worden alle ingeschakelde aanbieders bevraagd en de resultaten samengevoegd.
+        securities_title: Effectenaanbieders
+        tinkoff_invest_hint: alleen-lezen token vereist — koersen van Russische aandelen/fondsen/obligaties en merklogo's
+        twelve_data_hint: API-sleutel vereist, 800 credits/dag
+        yahoo_finance_hint: gratis, geen API-sleutel nodig
       brand_fetch_settings:
         description: Voer het Client ID in dat door Brandfetch is verstrekt
         label: Client ID
         placeholder: Voer hier uw Client ID in
         title: Brandfetch instellingen
+        env_configured_message: Je Brandfetch-client-ID is ingesteld via de omgevingsvariabele BRAND_FETCH_CLIENT_ID.
+        high_res_description: Als dit is ingeschakeld, worden logo's met een resolutie van 120×120 opgehaald in plaats van 40×40. Dit geeft scherpere afbeeldingen op schermen met een hoge pixeldichtheid.
+        high_res_label: Logo's met hoge resolutie inschakelen
+        setup_step_1_html: Ga naar <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> en maak een gratis Brandfetch Developer-account aan.
+        setup_step_2_html: Ga naar de pagina <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
+        setup_step_3: Tik op het oogpictogram bij ‘Your Client ID’ om je client-ID zichtbaar te maken en plak deze hieronder.
+        show_details: "(details tonen)"
       openai_settings:
         description: Voer het toegangstoken in en configureer optioneel een aangepaste OpenAI-compatibele provider
         env_configured_message: Succesvol geconfigureerd via omgevingsvariabelen.
         access_token_label: Toegangstoken
         access_token_placeholder: Voer hier uw toegangstoken in
         uri_base_label: API basis-URL (optioneel)
-        uri_base_placeholder: "https://api.openai.com/v1 (standaard)"
+        uri_base_placeholder: https://api.openai.com/v1 (standaard)
         model_label: Model (optioneel)
-        model_placeholder: "gpt-4.1 (standaard)"
+        model_placeholder: gpt-4.1 (standaard)
         json_mode_label: JSON modus
         json_mode_auto: Auto (aanbevolen)
         json_mode_strict: Strikt (beste voor denkende modellen)
         json_mode_none: Geen (beste voor standaard modellen)
         json_mode_json_object: JSON Object
-        json_mode_help: "Strikte modus werkt het beste met denkende modellen (qwen-thinking, deepseek-reasoner). Geen modus werkt het beste met standaard modellen (llama, mistral, gpt-oss)."
+        json_mode_help: Strikte modus werkt het beste met denkende modellen (qwen-thinking, deepseek-reasoner). Geen modus werkt het beste met standaard modellen (llama, mistral, gpt-oss).
         title: OpenAI
+        ai_response_timeout_help: 'Standaard: 90. Geldt alleen voor de bewaking van een volledige chatbeurt. Bereken dit als (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × de verzoektime-out, plus tijd voor tools en wachtrij. AI_RESPONSE_TIMEOUT heeft voorrang op dit veld.'
+        ai_response_timeout_label: Antwoordtime-out in seconden (optioneel)
+        budget_description: 'Geldt voor OpenAI-compatibele aanroepen: chat, automatische categorisatie, handelaarsherkenning en PDF-verwerking. De standaardwaarden zijn voorzichtig gekozen voor lokale modellen met een klein contextvenster. Verhoog ze voor cloudmodellen met grotere contextvensters.'
+        budget_heading: Tokenbudget
+        context_window_help: 'Het totale aantal tokens dat het model accepteert. Standaard: 2048. Verhoog naar 8192 of meer voor OpenAI in de cloud of lokale modellen met een groot contextvenster.'
+        context_window_label: Contextvenster (optioneel)
+        max_items_per_call_help: 'Bovengrens voor batches voor automatische categorisatie en handelaarsherkenning. Standaard: 25. Grotere batches worden automatisch opgesplitst om binnen het contextvenster te passen.'
+        max_items_per_call_label: Maximaal aantal items per batch (optioneel)
+        max_response_tokens_help: 'Tokens gereserveerd voor het antwoord van het model. Standaard: 512. Verlaag dit om meer ruimte vrij te maken voor langere geschiedenis.'
+        max_response_tokens_label: Maximaal aantal antwoordtokens (optioneel)
+        model_function_calling_help: De AI-assistent leest je gegevens via functieaanroepen. Kies daarom een model waarvoor de aanbieder ondersteuning voor tools/functieaanroepen documenteert. Modellen zonder die ondersteuning laten de chat mislukken met een onduidelijke aanbiederfout.
+        model_function_calling_link: Het ingestelde model controleren
+        openai_request_timeout_help: 'Standaard: 60. Geldt voor elk OpenAI-compatibel HTTP-verzoek, inclusief automatische categorisatie, handelaarsherkenning, chat, PDF-verwerking en vectoropslag. OPENAI_REQUEST_TIMEOUT heeft voorrang op dit veld.'
+        openai_request_timeout_label: Verzoektime-out in seconden (optioneel)
+        timeout_description: Bepaalt hoelang OpenAI-compatibele modelaanroepen mogen duren voordat Sure stopt. Verhoog deze waarden als je een lokaal model op trage hardware draait.
+        timeout_heading: Time-outs
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance biedt gratis toegang tot aandelenkoersen, wisselkoersen en financiële gegevens zonder API Key vereiste.
@@ -62,20 +114,43 @@ nl:
         status_inactive: Yahoo Finance verbinding mislukt
         connection_failed: Kan geen verbinding maken met Yahoo Finance
         troubleshooting: Controleer uw internetverbinding en firewallinstellingen. Yahoo Finance kan tijdelijk niet beschikbaar zijn.
+        rate_limited_message: Er is geen actie nodig. Sure voert 30 minuten lang geen extra statuscontroles uit. Koers- en wisselkoersbewerkingen gaan onafhankelijk verder.
+        rate_limited_title: Verzoeklimiet van Yahoo Finance bereikt.
+        status_healthy: Yahoo Finance is actief en werkt.
+        status_rate_limited: Yahoo Finance beperkt tijdelijk het aantal verzoeken.
+        status_unavailable: Yahoo Finance is momenteel niet beschikbaar.
+        status_unknown: De status van Yahoo Finance wordt gecontroleerd.
+        unavailable_message: Yahoo Finance kon niet worden bereikt of gaf een onverwacht antwoord. Controleer je internetverbinding en probeer het later opnieuw.
+        unavailable_title: Yahoo Finance kon niet worden geverifieerd.
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API dagelijkse oproepen gebruikt (%{percentage})"
         description: Voer de API Key in die door Twelve Data is verstrekt
         env_configured_message: Succesvol geconfigureerd via de TWELVE_DATA_API_KEY omgevingsvariabele.
-        label: API Key
+        label: API-sleutel
         placeholder: Voer hier uw API Key in
-        plan: "%{plan} plan"
+        plan: "%{plan}-abonnement"
         title: Twelve Data
+        plan_upgrade_warning_description: Voor de volgende tickers in je portefeuille kunnen geen koersen worden gesynchroniseerd met je huidige Twelve Data-abonnement.
+        plan_upgrade_warning_title: Sommige tickers vereisen een betaald abonnement
+        requires_plan: vereist abonnement %{plan}
+        step_1_html: Ga naar <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> en maak een gratis Twelve Data Developer-account aan.
+        step_2_html: Ga naar de pagina <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.
+        step_3: Maak je Secret Key zichtbaar en plak deze hieronder.
+        view_pricing: Tarieven van Twelve Data bekijken
+        show_details: "(details tonen)"
       update:
         failure: Ongeldige instellingswaarde
         success: Instellingen bijgewerkt
         invalid_onboarding_state: Ongeldige onboarding status
         invalid_sync_time: Ongeldig synchronisatietijd formaat. Gebruik UU:MM formaat (bijv. 02:30).
         scheduler_sync_failed: Instellingen opgeslagen, maar bijwerken van synchronisatieschema mislukt. Probeer het opnieuw of controleer de serverlogs.
+        anthropic_model_required_for_base_url: Een Anthropic-model is verplicht bij een aangepaste basis-URL.
+        invalid_anthropic_base_url: De Anthropic-basis-URL moet een http(s)-URL zijn.
+        invalid_categorization_rate: "%{field} moet een getal tussen 0 en 1 zijn."
+        invalid_demo_family: Het geselecteerde huishouden moet eigenaar zijn van het ingestelde demo-e-mailadres.
+        invalid_jev_endpoint: Het Jev-eindpunt moet een https-URL zijn. Gewone http wordt alleen voor localhost geaccepteerd.
+        invalid_llm_budget: "%{field} moet een geheel getal ≥ %{minimum} zijn."
+        select_demo_family: Selecteer eerst een tijdelijk demohuishouden.
       clear_cache:
         cache_cleared: Datacache is gewist. Dit kan enkele ogenblikken duren om te voltooien.
       not_authorized: U bent niet geautoriseerd om deze actie uit te voeren
@@ -87,3 +162,182 @@ nl:
         include_pending_label: Transacties in afwachting opnemen
         include_pending_description: Wanneer ingeschakeld, worden transacties in afwachting (niet-vereffende) geïmporteerd en automatisch afgestemd wanneer ze worden geboekt. Schakel uit als uw bank onbetrouwbare transacties in afwachting levert.
         env_configured_message: Deze instelling is uitgeschakeld omdat een provider omgevingsvariabele (SIMPLEFIN_INCLUDE_PENDING of PLAID_INCLUDE_PENDING) is ingesteld. Verwijder deze om deze instelling in te schakelen.
+      alpha_vantage_settings:
+        label: API-sleutel
+        description: Voer de API-sleutel van Alpha Vantage in. Ondersteunt Europese ETF's op de London Stock Exchange, XETRA en andere beurzen.
+        env_configured_message: Ingesteld via de omgevingsvariabele ALPHA_VANTAGE_API_KEY.
+        no_health_check_note: Een verbindingscontrole is voor deze aanbieder niet beschikbaar vanwege de strenge verzoeklimiet.
+        placeholder: Voer hier je Alpha Vantage-API-sleutel in
+        rate_limit_warning: Het gratis abonnement van Alpha Vantage is beperkt tot 25 API-aanroepen per dag. Geschikt als aanvullende aanbieder voor Europese ETF's die niet bij andere aanbieders beschikbaar zijn.
+        show_details: "(details tonen)"
+        step_1_html: Ga naar <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> en vraag je gratis API-sleutel aan.
+        step_2: Kopieer de API-sleutel en plak haar hieronder.
+        title: Alpha Vantage
+      anthropic_settings:
+        access_token_label: API-sleutel
+        access_token_placeholder: Voer je Anthropic-API-sleutel in
+        base_url_label: Basis-URL (optioneel)
+        base_url_placeholder: https://api.anthropic.com (standaard)
+        description: Voer je Anthropic-API-sleutel in. Je kunt de basis-URL eventueel naar AWS Bedrock of GCP Vertex laten verwijzen.
+        env_configured_message: Ingesteld via omgevingsvariabelen.
+        model_help: Gebruikt voor chat en PDF-verwerking. Batchbewerkingen zoals categoriseren en handelaarsherkenning gebruiken standaard Haiku om de kosten te beperken.
+        model_label: Standaardmodel (optioneel)
+        model_placeholder: claude-sonnet-4-6 (standaard)
+        title: Anthropic (Claude)
+      jev_settings:
+        api_key_label: API-sleutel
+        api_key_placeholder: Voer je TypeSafe-API-sleutel in
+        endpoint_label: Eindpunt (optioneel)
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone (standaard)
+        model_help: Standaard wordt TypeSafe rechtstreeks gebruikt. Om Jev via OpenRouter te bereiken, stel je het eindpunt in op https://openrouter.ai/api/alpha/decisions en het model op ~typesafe/jev-latest.
+        model_label: Model (optioneel)
+        model_placeholder: jev-latest (standaard)
+        env_configured_message: Ingesteld via omgevingsvariabelen.
+      mansa_settings:
+        label: API-sleutel
+        title: Mansa
+        description: Voer de API-sleutel van Mansa API in. Ondersteunt NGX (Nigerian Exchange), die geen andere aanbieder hier dekt. Mansa biedt ook andere Afrikaanse beurzen, maar alleen NGX is met deze integratie geverifieerd.
+        env_configured_message: Ingesteld via de omgevingsvariabele MANSA_API_KEY.
+        placeholder: Voer hier je Mansa-API-sleutel in
+        rate_limit_warning: Het gratis abonnement van Mansa is beperkt tot 100 API-aanroepen per dag en biedt alleen actuele koersen; historische koersen vereisen een betaald abonnement. Alleen NGX (Nigerian Exchange) is met deze integratie geverifieerd. Andere Afrikaanse beurzen van Mansa worden hier nog niet ondersteund.
+        step_1_html: Ga naar <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> en vraag je gratis API-sleutel aan. Een betaalkaart is niet nodig.
+        step_2: Kopieer je API-sleutel en plak haar hieronder.
+        show_details: "(details tonen)"
+      realie_settings:
+        label: API-sleutel
+        title: Realie
+        description: Voer je Realie-API-sleutel in om bij het toevoegen van vastgoed Amerikaanse objectgegevens en waardeschattingen op te halen. Het gratis abonnement is beperkt tot 25 API-verzoeken per maand, gedeeld tussen zoekopdrachten en dagelijkse waardevernieuwingen. Verhoog bij een betaald abonnement de limiet met de omgevingsvariabele REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Ingesteld via de omgevingsvariabele REALIE_API_KEY.
+        placeholder: Voer hier je Realie-API-sleutel in
+        usage: "%{used} van %{limit} maandelijkse verzoeken gebruikt"
+      rentcast_settings:
+        label: API-sleutel
+        title: RentCast
+        description: Voer je RentCast-API-sleutel in om bij het toevoegen van vastgoed Amerikaanse objectgegevens en waardeschattingen op te halen. Het gratis abonnement is beperkt tot 50 API-verzoeken per maand, gedeeld tussen zoekopdrachten en dagelijkse waardevernieuwingen. Verhoog bij een betaald abonnement de limiet met de omgevingsvariabele RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Ingesteld via de omgevingsvariabele RENTCAST_API_KEY.
+        placeholder: Voer hier je RentCast-API-sleutel in
+        usage: "%{used} van %{limit} maandelijkse verzoeken gebruikt"
+      assistant_settings:
+        disconnect_button: Ontkoppelen
+        token_label: API-token
+        external_configured: Ingesteld
+        agent_discovery_configure_first: Sla een geldige eindpunt-URL en een API-token op om beschikbare agents te laden.
+        agent_discovery_error: 'Agents laden niet mogelijk: %{error}'
+        agent_id_help: Sure laadt deze lijst uit het /v1/models-antwoord van het eindpunt. De geselecteerde agent bepaalt de routering; het onderliggende model wordt door de externe dienst beheerd.
+        agent_id_label: Agent (verplicht)
+        agent_id_placeholder: main (standaard)
+        confirm_disconnect:
+          body: Hiermee worden de opgeslagen URL, het token en de agent-ID verwijderd en wordt de ingebouwde assistent geactiveerd. Je kunt later opnieuw verbinden door nieuwe toegangsgegevens in te voeren.
+          title: Externe assistent ontkoppelen?
+        description: Kies hoe de chatassistent antwoordt. De ingebouwde assistent gebruikt je ingestelde LLM-aanbieder rechtstreeks. De externe optie besteedt dit uit aan een externe AI-agent die via MCP de financiële tools van Sure kan aanroepen.
+        disconnect_description: Verwijder de externe assistentkoppeling en ga terug naar de ingebouwde assistent.
+        disconnect_title: Externe koppeling
+        env_notice: Het assistenttype is vastgezet op '%{type}' via de omgevingsvariabele ASSISTANT_TYPE.
+        external_agent_invalid: Selecteer een agent die door het ingestelde eindpunt is teruggegeven.
+        external_agent_required: Selecteer een externe agent voordat je opslaat.
+        external_agent_reselect: Het eindpunt is gewijzigd en de eerder gekozen agent is daar niet beschikbaar. Selecteer een agent van het nieuwe eindpunt.
+        external_info:
+          items:
+          - Voer de volledige OpenAI-compatibele eindpunt-URL in die eindigt op /v1/chat/completions.
+          - Sure zoekt beschikbare agents via /v1/models nadat het eindpunt en token zijn opgeslagen.
+          - De externe dienst kiest het model achter elke agent; Sure selecteert alleen de route naar de agent.
+          - Authenticatie-, eindpunt- of agentfouten worden door de externe dienst teruggegeven. Controleer de logboeken daarvan als een verzoek mislukt.
+          title: Externe AI-configuratie
+        external_not_configured: Niet ingesteld. Voer hieronder de URL en het token in, of stel de omgevingsvariabelen EXTERNAL_ASSISTANT_URL en EXTERNAL_ASSISTANT_TOKEN in.
+        external_status: Eindpunt van externe assistent
+        title: AI-assistent
+        token_help: Het authenticatietoken van je externe agent. Dit wordt bij elk verzoek als Bearer-token verstuurd.
+        token_placeholder: Voer het token van je agentaanbieder in
+        type_builtin: Ingebouwd (rechtstreeks LLM)
+        type_external: Extern (agent op afstand)
+        type_label: Assistenttype
+        url_help: De volledige URL naar het API-eindpunt van je agent. Je agentaanbieder geeft je deze.
+        url_label: Eindpunt-URL
+        url_placeholder: https://your-agent-host/v1/chat
+        env_configured_external: Ingesteld via omgevingsvariabelen.
+      eodhd_settings:
+        label: API-token
+        description: Voer het API-token van EODHD in. Ondersteunt Europese ETF's op LSE, XETRA en andere internationale beurzen.
+        env_configured_message: Ingesteld via de omgevingsvariabele EODHD_API_KEY.
+        placeholder: Voer hier je EODHD-API-token in
+        rate_limit_warning: Het gratis abonnement van EODHD is beperkt tot 20 API-aanroepen per dag. Geschikt als aanvullende aanbieder voor Europese ETF's die niet bij andere aanbieders beschikbaar zijn.
+        step_1_html: Ga naar <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> en maak een gratis account aan.
+        step_2_html: Ga naar je <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">dashboard</a> om je API-token te vinden.
+        step_3: Kopieer je API-token en plak het hieronder.
+        title: EODHD
+        show_details: "(details tonen)"
+      tiingo_settings:
+        label: API-token
+        description: Voer het API-token van Tiingo in. Het gratis abonnement ondersteunt 50 unieke symbolen per uur met meer dan 30 jaar aan historische gegevens.
+        env_configured_message: Ingesteld via de omgevingsvariabele TIINGO_API_KEY.
+        placeholder: Voer hier je Tiingo-API-token in
+        step_1_html: Ga naar <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> en maak een gratis account aan.
+        step_2_html: Ga naar de pagina <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a>.
+        show_details: "(details tonen)"
+        step_3: Kopieer je API-token en plak het hieronder.
+        title: Tiingo
+      tinkoff_invest_settings:
+        label: API-token
+        description: Voer een alleen-lezen T-Invest-API-token in. Dit wordt gebruikt om merklogo's voor effecten op te halen, inclusief fondsen en obligaties, ook wanneer MOEX hun koersen levert. Als het hierboven is ingeschakeld, worden ook koersen voor Russische instrumenten opgehaald.
+        env_configured_message: Ingesteld via de omgevingsvariabele TINKOFF_INVEST_API_KEY.
+        moex_only_notice: Hierboven niet ingeschakeld voor koersen. T-Invest haalt met een ingesteld token altijd merklogo's voor al je effecten op, onafhankelijk van het bovenstaande selectievakje.
+        placeholder: Voer hier je T-Invest-API-token in
+        step_1: Open T-Bank-beleggingen, daarna Settings en API tokens. Hiervoor is een geopende effectenrekening bij T-Bank vereist.
+        step_2: Maak een token met alleen-lezen toegang aan.
+        step_3: Kopieer het token en plak het hieronder.
+        show_details: "(details tonen)"
+        title: T-Invest (T-Bank)
+      categorization_provider_selector:
+        preview_pill: Voorvertoning
+        confidence_threshold_env_notice: Vastgezet door de omgevingsvariabele CATEGORIZATION_CONFIDENCE_THRESHOLD.
+        confidence_threshold_help: Onder dit betrouwbaarheidsniveau wordt de categorie niet toegepast en blijft de transactie zonder categorie, zodat een latere uitvoering opnieuw kan proberen. Er wordt niets weggegooid. Stel 0 in om elk antwoord toe te passen.
+        confidence_threshold_label: Minimale betrouwbaarheid (0–1)
+        data_retention_direct: Transactiebeschrijvingen, bedragen en je categorienamen worden naar TypeSafe gestuurd voor categorisatie. Lees het bewaarbeleid voordat je dit voor echte gegevens inschakelt.
+        data_retention_heading: Gegevens delen
+        data_retention_proxied: Transactiebeschrijvingen, bedragen en je categorienamen worden naar %{host} gestuurd, die ze doorstuurt naar TypeSafe. Lees het bewaarbeleid van beide aanbieders voordat je dit voor echte gegevens inschakelt.
+        description: Kies welke aanbieder transacties categoriseert. Dit staat los van de AI-aanbieder hierboven, die chat en PDF-verwerking verzorgt.
+        env_notice: Via omgevingsvariabelen ingesteld op %{type}.
+        jev_configured: Jev-API-sleutel ingesteld.
+        jev_not_configured: Jev is geselecteerd, maar er is geen API-sleutel ingesteld. Categorisatie blijft de AI-aanbieder gebruiken totdat je hieronder een sleutel toevoegt.
+        provider_help: De AI-aanbieder leest een batch transacties en geeft categorienamen terug. Jev kiest uit je categorielijst en geeft voor elke transactie een gekalibreerde betrouwbaarheidsscore terug.
+        provider_jev: Jev (TypeSafe)
+        provider_label: Aanbieder voor categorisatie
+        provider_llm: AI-aanbieder (OpenAI of Anthropic)
+        shadow_rate_env_notice: Vastgezet door de omgevingsvariabele CATEGORIZATION_SHADOW_RATE.
+        shadow_rate_help: Voert de NIET gekozen aanbieder parallel met de gekozen aanbieder uit en legt verschillen vast zonder categorieën te wijzigen. Dit verdubbelt de API-kosten voor elke categorisatie-uitvoering in de steekproef. Stel 0 in om dit uit te schakelen.
+        shadow_rate_label: Aandeel parallelle vergelijkingen (0–1)
+        title: Transactiecategorisatie
+      llm_provider_selector:
+        provider_openai: OpenAI
+        data_retention: API-invoer wordt standaard niet gebruikt om modellen te trainen. De gehoste API's van de aanbieders bewaren gegevens ongeveer 30 dagen voor vertrouwen en veiligheid. Aangepaste of zelf gehoste eindpunten volgen je eigen beleid.
+        data_retention_heading: Verwerking van gegevens
+        description: Kies welk LLM de AI-chat, handelaarsherkenning en PDF-verwerking aanstuurt. Transactiecategorisatie stel je hieronder afzonderlijk in.
+        env_configured_message: Ingesteld via de omgevingsvariabele LLM_PROVIDER.
+        not_configured_hint: Voeg hieronder een API-sleutel voor %{provider} toe om deze te activeren.
+        provider_help: Een andere aanbieder wordt vanaf de volgende chat gebruikt. Stel hieronder de toegangsgegevens van de actieve aanbieder in.
+        provider_label: Actieve LLM-aanbieder
+        title: AI-aanbieder
+        provider_anthropic: Anthropic (Claude)
+      categorization_shadow_results:
+        shadow_disagreement_confidence: "(betrouwbaarheid %{confidence})"
+        shadow_disagreement_row: "%{applied_provider} koos %{applied_category}; %{shadow_provider} koos %{shadow_category}."
+        shadow_disagreements_heading: Meest recente verschillen
+        shadow_no_category: geen categorie
+        shadow_no_disagreements: Beide aanbieders waren het bij elke transactie in de steekproef eens.
+        shadow_results_empty: Nog geen vergelijkingen vastgelegd. Stel een aandeel boven 0 in en voer categorisatie uit om resultaten te verzamelen.
+        shadow_results_heading: Parallelle vergelijking
+        shadow_results_summary: "%{agreement}%% overeenstemming bij %{count} transacties in de steekproef."
+      demo_refresh_settings:
+        description: Vernieuw automatisch alleen het geselecteerde demohuishouden. Alle gegevens en logins daarvan worden verwijderd. Andere huishoudens blijven ongewijzigd. Vereist een actieve worker met ten minste 2 GiB RAM. Maak eerst met de demogenerator een tijdelijk demohuishouden aan en selecteer het hier. Kies geen huishouden van een echte gebruiker.
+        enabled_label: Dagelijkse vernieuwing van demohuishouden inschakelen
+        family_label: Tijdelijk demohuishouden
+        none: Geen demohuishouden geselecteerd
+        save_family: Demohuishouden opslaan
+      disconnect_external_assistant:
+        external_assistant_disconnected: Externe assistent ontkoppeld
+      ensure_admin:
+        not_authorized: Je bent niet bevoegd om deze actie uit te voeren
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Instellingen opgeslagen, maar het synchronisatieschema kon niet worden bijgewerkt. Probeer het opnieuw of controleer de serverlogboeken.
+      ensure_super_admin_for_onboarding:
+        not_authorized: Je bent niet bevoegd om deze actie uit te voeren

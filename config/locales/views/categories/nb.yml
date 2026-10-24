@@ -20,6 +20,14 @@ nb:
       emoji_clear: Bruk ikon
       emoji_pick: Bruk %{emoji}
       placeholder: Kategorinavn
+      color: Farge
+      name_label: Navn
+      auto_adjust: juster automatisk.
+      icon: Ikon
+      parent_category_label: Overordnet kategori (valgfritt)
+      poor_contrast: Lav kontrast. Velg en mørkere farge eller
+      trigger_label: Velg farge og ikon
+      unassigned: "(ikke tilordnet)"
     index:
       bootstrap: Bruk standarder (anbefalt)
       categories: Kategorier
@@ -27,17 +35,47 @@ nb:
       categories_incomes: Inntektskategorier
       empty: Ingen kategorier funnet
       new: Ny kategori
+      delete_all: Slett alle
+      merge: Slå sammen kategorier
     menu:
       loading: Laster...
     new:
       new_category: Ny kategori
     update:
       success: Kategori oppdatert vellykket
+    virtual:
+      payment: Betaling
+      transfer: Overføring
+      trade: Handel
+    destroy_all:
+      success: Alle kategorier er slettet
+    merge:
+      description: Velg en målkategori og kategoriene som skal slås sammen med den.
+        Tilhørende transaksjoner og budsjettposter flyttes til målkategorien.
+      select_target: Velg målkategori...
+      sources_hint: Valgte kategorier slettes etter at transaksjonene og budsjettpostene
+        deres er flyttet til målkategorien. Ikke velg målkategorien som kilde.
+      sources_label: Kategorier som skal slås sammen
+      submit: Slå sammen valgte
+      target_label: Slå sammen til (mål)
+      title: Slå sammen kategorier
+    perform_merge:
+      invalid_categories: Ugyldige kategorier valgt
+      no_categories_selected: Ingen kategorier valgt for sammenslåing
+      success:
+        one: "%{count} kategori er slått sammen"
+        other: "%{count} kategorier er slått sammen"
+      target_not_found: Fant ikke målkategorien
+      target_selected_as_source: Velg forskjellige kategorier som mål og kilder.
   category:
     dropdowns:
       show:
         bootstrap: Generer standardkategorier
         empty: Ingen kategorier funnet
+        expense: utgift
+        income: inntekt
+        match_transfer: Koble sammen overføring/betaling
+        one_time: Engangs%{type}
   helpers:
     submit:
       category:

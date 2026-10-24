@@ -1,0 +1,17 @@
+---
+nb:
+  onchain:
+    chains:
+      arbitrum: Arbitrum
+      base: Base
+      bitcoin: Bitcoin
+      ethereum: Ethereum
+      gnosis: Gnosis
+      optimism: Optimism
+      polygon: Polygon
+      solana: Solana
+    institution_name: Lommebøker med egen nøkkelforvaltning
+  onchain_wallet_item:
+    movement:
+      received: Mottatt %{quantity} %{symbol}
+      sent: Sendt %{quantity} %{symbol}

@@ -6,9 +6,20 @@ nb:
     destroy:
       success: Oppføring slettet
     empty:
-      description: Prøv å legge til en oppføring, redigere filtre eller forfine søket ditt
+      description: Prøv å legge til en oppføring, redigere filtre eller forfine søket
+        ditt
       title: Ingen oppføringer funnet
     loading:
       loading: Laster oppføringer...
     update:
       success: Oppføring oppdatert
+    protection:
+      description: Endringene dine i denne oppføringen blir ikke overskrevet av leverandørsynkronisering.
+      locked_fields_label: 'Låste felt:'
+      title: Beskyttet mot synkronisering
+      tooltip: Beskyttet mot synkronisering
+      unlock_button: Tillat oppdatering ved synkronisering
+      unlock_confirm: Tillate at synkronisering oppdaterer denne oppføringen? Endringene
+        dine kan bli overskrevet ved neste synkronisering.
+    unlock:
+      success: Oppføringen er låst opp. Den kan bli oppdatert ved neste synkronisering.

@@ -1,0 +1,111 @@
+---
+nl:
+  onchain_wallet_items:
+    onchain_wallet_item:
+      syncing: Synchroniseren…
+      sync: Nu synchroniseren
+      assets_tracked:
+        one: 1 activum gevolgd
+        other: "%{count} activa gevolgd"
+    token_review_form:
+      cancel: Annuleren
+      assets_truncated: Dit adres bevat meer tokens dan in één uitlezing beschikbaar zijn. Daarom worden alleen de %{count} meest betrouwbare getoond.
+      explanation: 'Activa met een bekende koers zijn aangevinkt. De overige zijn niet aangevinkt: wallets ontvangen vaak ongewenste airdrops, en het volgen daarvan levert geen waarde op.'
+      no_price: Geen koers beschikbaar; alleen aantallen worden bijgehouden
+      nothing_found: Op dit netwerk zijn geen zichtbare activa op dit adres gevonden.
+      native: Eigen netwerkvaluta
+    wallet_card:
+      status: "%{timestamp} geleden gesynchroniseerd"
+      syncing: Synchroniseren…
+      sync: Nu synchroniseren
+      addresses_tracked:
+        one: 1 adres gevolgd
+        other: "%{count} adressen gevolgd"
+      delete: Koppeling verwijderen
+      deletion_in_progress: Verwijderen…
+      needs_attention: Aandacht vereist
+      no_wallets_message: Koppel een adres via de aanbiederinstellingen om het hier te zien.
+      no_wallets_title: Nog geen wallets gekoppeld
+      status_never: Nog niet gesynchroniseerd
+    choose_chain:
+      activity_found: Activiteit gevonden
+      explanation: Dit adresformaat wordt door meerdere netwerken gebruikt, met op elk netwerk een ander saldo. Kies het netwerk dat je wilt volgen.
+      no_activity_found: Niets gevonden
+      subtitle: "%{address}"
+      title: Welk netwerk?
+    destroy:
+      success: Verwijdering van de koppeling voor de wallet in eigen beheer ingepland.
+    disconnect_asset:
+      success: Bijhouden van %{symbol} gestopt. De rekening en geschiedenis zijn behouden.
+    disconnect_wallet:
+      success:
+        one: Bijhouden van 1 activum op dat adres gestopt.
+        other: Bijhouden van %{count} activa op dat adres gestopt.
+    enable_crypto_prices:
+      not_self_hosted: In deze installatie worden marktgegevensaanbieders door de beheerder ingesteld.
+      success: Cryptokoersen zijn ingeschakeld. Walletwaarden verschijnen na de volgende synchronisatie.
+    errors:
+      address_required: Voer een walletadres in.
+      already_linked: Dat adres wordt al op dit netwerk gevolgd. Gebruik Tokens beoordelen om te wijzigen welke activa worden bijgehouden.
+      chain_unreachable: De openbare blockchainverkenner voor dit netwerk is niet bereikbaar. Probeer het zo opnieuw.
+      rate_limited: De openbare blockchainverkenner beperkt momenteel het aantal verzoeken. Probeer het over enkele minuten opnieuw.
+      unexpected: Er is iets misgegaan bij het uitlezen van deze wallet. De details zijn vastgelegd voor ondersteuning.
+      unrecognized_address: Dit lijkt niet op een adres op een ondersteund netwerk.
+      wallet_not_found: Die wallet wordt niet door deze koppeling gevolgd.
+    link_wallet:
+      errors:
+        none_tracked: 'Er wordt niets bijgehouden: %{assets} konden niet worden toegevoegd. Probeer het zo opnieuw.'
+        nothing_selected: Kies ten minste één activum om bij te houden.
+        some_failed: "%{assets} konden niet worden bijgehouden en zijn overgeslagen."
+      success:
+        one: 1 activum uit deze wallet wordt bijgehouden.
+        other: "%{count} activa uit deze wallet worden bijgehouden."
+    manage:
+      assets_truncated: Dit adres bevat meer tokens dan in één uitlezing beschikbaar zijn. Daarom worden alleen de %{count} meest betrouwbare getoond. Al gevolgde activa blijven synchroniseren.
+      disconnect_asset: Bijhouden stoppen
+      disconnect_asset_confirm: Bijhouden van %{symbol} stoppen? De rekening en geschiedenis blijven behouden, maar worden niet meer bijgewerkt.
+      disconnect_wallet: Wallet ontkoppelen
+      disconnect_wallet_confirm: Bijhouden van alle activa op dit adres stoppen?
+      history_note: Ontkoppelen behoudt de rekeningen en hun geschiedenis; ze worden alleen niet meer bijgewerkt.
+      history_truncated: 'Niet alle overboekingen voor dit adres konden worden gelezen: er is meer geschiedenis dan één synchronisatie omvat, of de verkenner heeft het verzoek geweigerd. De saldi zijn volledig; sommige overboekingen ontbreken.'
+      native: Eigen netwerkvaluta
+      no_wallets: Er worden nog geen wallets gevolgd.
+      review_tokens: Tokens beoordelen
+      subtitle: Alle adressen die deze koppeling uitleest en wat op elk adres wordt bijgehouden.
+      title: Wallets in eigen beheer beheren
+    new_wallet:
+      address_label: Walletadres
+      address_placeholder: bc1..., 0x... of een Solana-adres
+      bitcoin_single_address_note: Bitcoin wordt per adres bijgehouden. Uitgebreide sleutels (xpub/ypub/zpub) worden niet ondersteund. Bij een wallet die geld over afgeleide adressen spreidt, wordt daarom alleen het saldo van het ingevoerde adres getoond.
+      chain_auto_detect: Automatisch detecteren
+      chain_label: Netwerk
+      continue: Doorgaan
+      read_only_note: Alleen openbare blockchaingegevens worden gelezen. Voer nooit een herstelzin of privésleutel in.
+      subtitle: Volg een wallet waarvan je zelf de sleutels bezit via het openbare adres.
+      title: Wallet in eigen beheer toevoegen
+    price_provider_warning:
+      body: Geen ingeschakelde marktgegevensaanbieder kan cryptokoersen leveren. Deze wallets houden daarom aantallen bij, maar tonen een waarde van nul.
+      enable: Cryptokoersen inschakelen
+      exchange_rate_body: Cryptokoersen zijn in USD en er is geen wisselkoersaanbieder ingesteld voor omzetting naar %{currency}. Deze wallets houden daarom aantallen bij, maar tonen een waarde van nul. Stel EXCHANGE_RATE_PROVIDER in; voor Frankfurter is geen API-sleutel nodig.
+      exchange_rate_title: Geen wisselkoersaanbieder ingesteld
+      link: Instellingen voor marktgegevens openen
+      title: Cryptokoersen zijn niet ingesteld
+    provider_connection:
+      name: Wallet in eigen beheer
+      description: Volg een wallet waarvan je zelf de sleutels bezit via het openbare adres.
+    review_tokens:
+      save: Gevolgde activa opslaan
+      subtitle: "%{chain} · %{address}"
+      title: Gevolgde activa beoordelen
+    token_review:
+      import_selected: Geselecteerde activa volgen
+      title: Kies wat je wilt volgen
+      subtitle: "%{chain} · %{address}"
+    update:
+      success: Koppeling voor de wallet in eigen beheer bijgewerkt.
+    update_tokens:
+      errors:
+        no_changes: Niets gewijzigd; dezelfde activa zijn nog aangevinkt.
+        none_tracked: 'Niets gewijzigd: %{assets} konden niet worden toegevoegd. Probeer het zo opnieuw.'
+        some_failed: "%{assets} konden niet worden bijgehouden en zijn overgeslagen."
+      success: Gevolgde activa bijgewerkt (%{created} toegevoegd, %{removed} verwijderd).

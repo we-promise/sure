@@ -4,3 +4,91 @@ nb:
     exports: Eksporter
     home: Hjem
     imports: Importer
+    accounts: Kontoer
+    api_key: API-nøkkel
+    api_keys: API-nøkler
+    appearance: Utseende
+    appearances: Utseende
+    binance_items: Binance
+    brex_items: Brex
+    budgets: Budsjett
+    categories: Kategorier
+    changelog: Hva er nytt
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    cryptos: Krypto
+    debug: Feilsøking
+    debugs: Feilsøking
+    family_exports: Eksporter
+    family_merchants: Forhandlere
+    feedback: Tilbakemelding
+    holdings: Beholdninger
+    hostings: Selvhosting
+    investments: Investeringer
+    kraken_items: Kraken
+    lunchflow_items: Lunch Flow
+    merchants: Forhandlere
+    mercury_items: Mercury
+    payments: Betalinger
+    profile: Profilinformasjon
+    profiles: Profilinformasjon
+    reports: Rapporter
+    rules: Regler
+    securities: Verdipapirer
+    security: Sikkerhet
+    self_hosting: Selvhosting
+    sessions: Logg inn
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Del opp
+    tags: Tagger
+    trades: Handler
+    transactions: Transaksjoner
+    guides: Veiledninger
+    plaid_items: Plaid
+    plan: Plan
+    ai_prompts: KI-instruksjoner
+    chats: Chatter
+    dashboard: Oversikt
+    ibkr_items: Interactive Brokers
+    llm_usage: LLM-bruk
+    llm_usages: LLM-bruk
+    mcp: MCP-server
+    providers: Leverandører
+    recurring_transactions: Gjentakende
+    users: Brukere
+    account_sharings: Kontodeling
+    account_statements: Kontoutskriftsarkiv
+    bank_sync: Banksynkronisering
+    budget_categories: Budsjettkategorier
+    categorize: Kategoriser
+    credit_cards: Kredittkort
+    depositories: Kontantkontoer
+    enable_banking_items: Enable Banking
+    impersonation_sessions: Brukeretterligninger
+    indexa_capital_items: Indexa Capital
+    intro: Introduksjon
+    invitations: Invitasjoner
+    invite_codes: Invitasjonskoder
+    loans: Lån
+    messages: Meldinger
+    mfa: Tofaktorautentisering
+    monobank_items: Monobank
+    oidc_accounts: SSO-kontoer
+    onboardings: Kom i gang
+    other_assets: Andre eiendeler
+    other_liabilities: Annen gjeld
+    pending_duplicate_merges: Gjennomgang av duplikater
+    preferences: Preferanser
+    properties: Eiendommer
+    redbark_items: Redbark
+    registrations: Registrer deg
+    sso_identities: SSO-tilkoblinger
+    sso_providers: SSO-leverandører
+    subscriptions: Abonnement
+    system_health: Systemtilstand
+    transfer_matches: Overføringskoblinger
+    transfers: Overføringer
+    valuations: Verdivurderinger
+    vehicles: Kjøretøy

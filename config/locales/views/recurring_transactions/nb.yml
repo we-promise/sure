@@ -1,0 +1,233 @@
+---
+nb:
+  recurring_transactions:
+    actions:
+      delete: Fjern
+      edit_payment_link: Rediger betalingslenke
+      pause: Sett på pause
+      resume: Gjenoppta
+    badges:
+      manual: Manuell
+    form:
+      amount_label: Beløp
+      category_label: Kategori
+      frequency_interval_unit_label: Enhet
+      income_name_label: Kilde
+      name_label: Navn
+      notes_label: Notater
+      trial_ends_on_label: Prøveperioden slutter
+      bill_type_label: Type
+      payment_url_label: Betalingslenke
+      category_blank: Ingen kategori
+      account_blank: Hvilken som helst konto
+      account_label: Betales fra
+      amount_edit_hint: Gjelder regninger som forfaller fra nå av. Regninger som allerede
+        har forfalt, beholder tidligere beløp.
+      apply_to_siblings:
+        one: Bruk også denne lenken for den andre regningen for %{name}
+        other: Bruk også denne lenken for de %{count} andre regningene for %{name}
+      autopay_hint: Behold regningen i listen, men ikke behandle den som noe du må
+        gjøre.
+      autopay_label: Betales automatisk
+      cancelled_on_hint: Datoen registreres til din egen orientering. Sett regningen
+        på pause for å hindre at fremtidige forfall vises.
+      cancelled_on_label: Avsluttet
+      first_due_on_label: Neste forfall
+      frequency_day_label: På dag
+      frequency_hint: Hvor ofte regningen forfaller. Velg dagdetaljer som samsvarer
+        med kontoutskriften.
+      frequency_interval_label: Gjentas hver
+      frequency_label: Hvor ofte
+      frequency_month_label: I
+      frequency_new_hint: Dagdetaljene hentes fra forfallsdatoen ovenfor. Du kan finjustere
+        planen etter lagring.
+      frequency_second_day_label: Og dag
+      frequency_weekday_label: På
+      income_account_label: Settes inn på
+      income_amount_edit_hint: Gjelder lønningsdager fra nå av. Allerede forfalte
+        utbetalinger beholder tidligere beløp.
+      income_amount_label: Beløp per lønnsutbetaling
+      income_due_on_label: Neste lønningsdag
+      income_frequency_hint: Hvor ofte du får betalt. Velg dagdetaljer som samsvarer
+        med lønningsdagen.
+      income_frequency_label: Hvor ofte du får betalt
+      income_frequency_new_hint: Lønningsdagdetaljene hentes fra datoen ovenfor. Du
+        kan finjustere planen etter lagring.
+      income_name_placeholder: Arbeidsgiver, kunde, ekstrajobb
+      income_notes_hint: Alt som er verdt å huske om denne inntekten.
+      income_notes_placeholder: Direkte innbetaling, fordelt på to kontoer
+      installment_count_hint: Planen avsluttes etter dette antallet betalinger og
+        viser fremdriften frem til da.
+      installment_count_label: Antall betalinger
+      more_options: Flere alternativer
+      name_placeholder: Husleie, strøm, Netflix
+      notes_hint: Alt du vil ha tilgjengelig når du betaler. Vises på regningen.
+      notes_placeholder: Konto 4821, belastes Amex-kortet
+      payment_url_hint: Hvor du betaler denne regningen. Åpnes i en ny fane fra listene
+        over gjentakende og kommende betalinger.
+      payment_url_placeholder: bank.example.com/pay
+      renews_on_label: Fornyes
+      submit: Lagre regning
+      submit_income: Lagre inntekt
+    new:
+      income_title: Legg til inntekt
+      candidate_meta: "%{count}× · sist %{date}"
+      pick_different: Start fra en annen transaksjon
+      search_all_cta: Søk i alle transaksjonene dine
+      search_all_prompt: Finner du ikke det du leter etter?
+      smart_fill: Fyll ut med KI
+      smart_fill_applied: KI foreslo disse verdiene fra belastningshistorikken. Kontroller
+        dem før du lagrer.
+      start_from_hint: Valgfritt. Valget fyller bare ut skjemaet. Du kan fortsatt
+        endre alt.
+      start_from_income_title: Start fra en gjentakende innbetaling vi fant
+      start_from_title: Start fra en gjentakende belastning vi fant
+      title: Legg til en regning
+    status:
+      active: Aktiv
+      inactive: Satt på pause
+      paused: Satt på pause
+      ended: Avvist
+      suggested: Mulig regning
+    table:
+      actions: Handlinger
+      amount: Beløp
+      frequency: Hyppighet
+      merchant: Navn
+      status: Status
+      last_occurrence: Siste forekomst
+      next_date: Neste dato
+    recurring: Gjentakende
+    suggested:
+      confirm: Legg til regning
+      collapsed_hint: Trykk for å gjennomgå
+      dismiss: Ikke en regning
+      seen_count:
+        one: sett én gang
+        other: sett %{count} ganger
+      title: Mulige nye regninger
+    already_exists: En manuell gjentakende transaksjon finnes allerede for dette mønsteret
+    amount_range: 'Område: %{min} til %{max}'
+    cleaned_up: Ryddet opp i %{count} utdaterte gjentakende transaksjoner
+    cleanup_stale: Rydd opp i utdaterte
+    confirm_delete: Fjerne %{name} fra regningene dine? Transaksjonene forblir helt
+      uendret. Dette fjerner bare regningen og betalingsplanen.
+    confirm_delete_income: Fjerne %{name} som inntekt? Transaksjonene forblir helt
+      uendret. Dette fjerner bare inntekten og planen.
+    confirmed: Regningen er lagt til blant gjentakende transaksjoner
+    create:
+      account_invalid: Velg en konto du kan legge til regninger på, eller la feltet
+        stå tomt
+      already_exists: Denne regningen finnes allerede
+      amount_invalid: Skriv inn beløpet som et vanlig tall
+      due_date_required: Skriv inn neste forfallsdato for regningen
+      success: Regningen er lagt til
+      success_income: Inntekten er lagt til
+    creation_failed: Kunne ikke opprette en gjentakende transaksjon. Kontroller transaksjonsdetaljene
+      og prøv igjen.
+    day_of_month: Dag %{day} i måneden
+    deleted: Regningen er fjernet. Transaksjonene dine er uendret.
+    deleted_income: Inntekten er fjernet. Transaksjonene dine er uendret.
+    dismissed: Avvist. Dette mønsteret foreslås ikke igjen.
+    edit:
+      income_title: Rediger inntekt · %{name}
+      title: Rediger %{name}
+      trigger_label: Rediger regning
+    empty:
+      description: Klikk på «Finn mønstre» for automatisk å oppdage gjentakende transaksjoner
+        i transaksjonshistorikken din.
+      title: Fant ingen gjentakende transaksjoner
+    expected_in:
+      one: Forventet om %{count} dag
+      other: Forventet om %{count} dager
+    expected_today: Forventet i dag
+    frequency:
+      annual: Hvert år den %{day} i %{month}
+      biweekly: Hver 2. uke på %{weekday}
+      custom: Egendefinert plan
+      every_n_months: Hver %{interval}. måned, den %{day}
+      every_n_weeks: Hver %{interval}. uke på %{weekday}
+      every_n_years: Hvert %{interval}. år den %{day} i %{month}
+      last_day: siste dagen
+      monthly: Hver måned, den %{day}
+      quarterly: Hvert kvartal, den %{day}
+      semiannual: Hver 6. måned, den %{day}
+      semimonthly: To ganger i måneden, den %{first} og %{second}
+      weekly: Hver uke på %{weekday}
+    frequency_interval_units:
+      monthly: måneder
+      weekly: uker
+      yearly: år
+    frequency_presets:
+      annual: Årlig
+      biweekly: Hver 2. uke
+      custom: Egendefinert plan
+      interval: Egendefinert intervall
+      monthly: Månedlig
+      quarterly: Kvartalsvis
+      semiannual: Hver 6. måned
+      semimonthly: To ganger i måneden
+      weekly: Ukentlig
+    identified: Fant %{count} mønstre for gjentakende transaksjoner
+    identify_already_running: Søket kjører allerede. Kom tilbake om litt.
+    identify_patterns: Finn mønstre
+    info:
+      automatic_description: 'Automatisk identifisering kjøres også etter at:'
+      manual_description: Du kan finne mønstre eller rydde opp i utdaterte gjentakende
+        transaksjoner manuelt med knappene ovenfor.
+      title: Automatisk mønstergjenkjenning
+      triggers:
+      - CSV-importer er fullført (transaksjoner, handler, kontoer osv.)
+      - Synkronisering med en leverandør er fullført (Plaid, SimpleFIN osv.)
+    manage:
+      cta: Åpne alle regninger
+      description: Registrer, rediger, sett på pause og betal alt derfra. Denne siden
+        styrer mønstergjenkjenningen.
+      title: Regningene dine finnes på siden Regninger
+    marked_active: Gjenopptatt.
+    marked_as_recurring: Transaksjonen er merket som gjentakende
+    marked_inactive: Satt på pause. Den vises ikke igjen før du gjenopptar den.
+    pay_action:
+      add_link: Legg til lenke
+      add_link_aria: Legg til en betalingslenke for %{name}
+      autopay: Automatisk betaling
+      autopay_aria: "%{name} betales automatisk. Åpne portalen i en ny fane"
+      open_site: Åpne nettstedet for regningen
+      pay: Betal
+      pay_aria: Betal %{name} (åpnes i ny fane)
+    pick_entry:
+      back: Tilbake til skjemaet
+      hint: Valget fyller bare ut skjemaet. Du kan fortsatt endre alt.
+      income_title: Finn en innbetaling å ta utgangspunkt i
+      no_results: Ingenting samsvarer med «%{query}». Prøv færre ord, eller gå tilbake
+        og fyll ut skjemaet selv.
+      search_placeholder: Søk etter navn, notater eller forhandler
+      showing_recent: Viser de %{count} nyeste. Søk for å avgrense.
+      title: Finn en transaksjon å ta utgangspunkt i
+    picker_row:
+      claimed: Del av %{name}
+    projected: Prognose
+    settings:
+      enable_description: Oppdag automatisk mønstre for gjentakende transaksjoner
+        og vis forventede kommende transaksjoner.
+      enable_label: Aktiver gjentakende transaksjoner
+    settings_updated: Innstillingene for gjentakende transaksjoner er oppdatert
+    smart_fills:
+      create:
+        failed: Kunne ikke analysere belastningshistorikken akkurat nå. Skjemaet beholdt
+          transaksjonens egne verdier.
+    title: Gjentakende transaksjoner
+    transfer_already_exists: En gjentakende overføring finnes allerede for dette kontoparet
+    transfer_creation_failed: Kunne ikke opprette en gjentakende overføring. Kontroller
+      overføringsdetaljene og prøv igjen.
+    transfer_feature_disabled: Gjentakende transaksjoner er deaktivert for denne husholdningen
+    transfer_marked_as_recurring: Overføringen er merket som gjentakende
+    unexpected_error: Det oppstod en uventet feil under oppretting av den gjentakende
+      transaksjonen
+    upcoming: Kommende gjentakende transaksjoner
+    update:
+      success: Regningen er oppdatert
+      success_with_siblings:
+        one: Regningen er oppdatert, og betalingslenken ble kopiert til 1 annen regning
+        other: Regningen er oppdatert, og betalingslenken ble kopiert til %{count}
+          andre regninger

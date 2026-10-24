@@ -3,7 +3,8 @@ ro:
   views:
     settings:
       payments:
-        renewal: "Contribuția ta continuă pe %{date}."
+        renewal: Contribuția ta continuă pe %{date}.
+        cancellation: Contribuția ta se încheie la %{date}.
   settings:
     ai_prompts:
       show:
@@ -13,18 +14,62 @@ ro:
         prompt_instructions: Instrucțiuni pentru prompturi
         main_system_prompt:
           title: Promptul principal de sistem
-          subtitle: Instrucțiuni de bază care definesc modul în care asistentul AI se comportă în toate conversațiile de chat
+          subtitle: Instrucțiuni de bază care definesc modul în care asistentul AI
+            se comportă în toate conversațiile de chat
+          label: Prompt de sistem pentru conversații
         transaction_categorizer:
           title: Categorizator de tranzacții
-          subtitle: AI categorizează automat tranzacțiile tale pe baza categoriilor definite
+          subtitle: AI categorizează automat tranzacțiile tale pe baza categoriilor
+            definite
         merchant_detector:
           title: Detector de comercianți
-          subtitle: AI identifică și îmbogățește datele tranzacțiilor cu informații despre comercianți
+          subtitle: AI identifică și îmbogățește datele tranzacțiilor cu informații
+            despre comercianți
+        save_confirm:
+          cancel: Anulează
+          confirm: Confirmă
+          body: Prompturile personalizate înlocuiesc instrucțiunile de sistem și măsurile
+            de siguranță incluse în aplicație (de exemplu, restricțiile privind sfaturile
+            financiare) pentru familia ta.
+          dont_show_again: Nu mai afișa acest avertisment
+          title: Salvezi prompturile AI personalizate?
+        save: Salvează prompturile
+      prompt_field:
+        provider_openai: OpenAI
+        format_risk: 'Promptul tău pentru %{provider} nu mai include exemplul {"%{key}":
+          ...}. Fiecare cerere solicită în continuare această structură, astfel încât
+          parsarea funcționează de obicei, însă o instrucțiune personalizată care
+          cere alt format de ieșire o va împiedica.'
+        prompt_label: Instrucțiuni
+        provider_anthropic: Anthropic
+        provider_label: Furnizor
+        reset: Restabilește valoarea implicită
+        reset_confirm_body: Promptul personalizat va fi eliminat, iar instrucțiunile
+          implicite ale aplicației vor fi restabilite.
+        reset_confirm_title: Restabilești promptul implicit?
+        status_custom: Se folosește promptul tău personalizat
+        status_default: Se folosește valoarea implicită a aplicației
+      update:
+        multiple_errors: Mai multe prompturi sunt prea lungi (limita este de %{count}
+          de caractere)
+        success: Prompturile AI au fost actualizate
     payments:
       show:
         page_title: Plată
         subscription_subtitle: Actualizează-ți abonamentul și detaliile de plată
         subscription_title: Gestionează abonamentul
+        manage: Gestionează
+        choose_level: Alege nivelul
+        contributions_note: Contribuțiile la %{product_name} vor apărea aici.
+        currently_on_plan: În prezent folosești
+        not_contributing_emphasis: fără contribuție
+        not_contributing_prefix: În prezent ești
+        payment_via_stripe: Plată prin Stripe
+        trial_days_left:
+          one: Datele vor fi șterse peste %{count} zi
+          other: Datele vor fi șterse peste %{count} de zile
+          few: Datele vor fi șterse peste %{count} zile
+        trialing: În prezent folosești versiunea demonstrativă publică a %{product_name}
     preferences:
       show:
         country: Țară
@@ -43,28 +88,114 @@ ro:
         theme_system: Sistem
         theme_title: Temă
         timezone: Fus orar
+        budget_title: Buget
+        select_all_currencies: Selectează tot
+        additional_currencies_label: Monede suplimentare
+        base_currency_badge: Monedă de bază
+        base_currency_label: Monedă de bază
+        budget_sharing_no_members: Nu există alți membri în %{moniker} cu care să
+          partajezi
+        budget_sharing_permission_label: Accesul lui %{name}
+        budget_sharing_permissions:
+          none: Fără acces
+          read_only: Doar vizualizare
+          read_write: Poate edita
+        budget_sharing_subtitle: Permite altor membri să vizualizeze sau să editeze
+          bugetul tău personal
+        budget_sharing_title: Partajarea bugetului
+        budget_subtitle: Configurează comportamentul bugetelor tale
+        currencies_more: încă +%{count}
+        currencies_subtitle: Alege monedele afișate în câmpurile de sume pentru %{moniker}
+        currencies_title: Monede pentru %{moniker}
+        currency_search_placeholder: Caută monede
+        household_budget_enabled: Bugetul gospodăriei
+        household_budget_enabled_hint: Păstrează un buget comun al gospodăriei alături
+          de bugetele personale. Dezactivează pentru a folosi doar bugete personale.
+        manage_currencies: Gestionează monedele
+        manage_currencies_subtitle: Deselectează monedele pe care nu le folosești
+          sau restrânge lista la doar câteva.
+        month_start_day: Luna bugetară începe în ziua
+        month_start_day_hint: Stabilește când începe luna bugetară (de exemplu, în
+          ziua salariului)
+        month_start_day_warning: Bugetele și calculele de la începutul lunii vor folosi
+          această zi de început personalizată în locul primei zile a fiecărei luni.
+        no_additional_currencies: Niciuna selectată
+        no_matching_currencies: Nu s-au găsit monede
+        personal_budgets: Bugete personale
+        personal_budgets_hint: Activează bugete individuale pentru fiecare membru
+          al familiei.
+        preview:
+          description: Activează funcțiile în curs de dezvoltare, marcate „preview”
+            sau „canary”.
+          title: Activează funcțiile în previzualizare
+        save_currencies: Salvează monedele
+        select_base_only: Doar moneda de bază
+        selected_currencies_count:
+          one: 'Selectate: %{count}'
+          other: 'Selectate: %{count}'
+          few: 'Selectate: %{count}'
+        sharing_default_label: Partajarea implicită pentru conturi noi
+        sharing_private: Păstrează privat implicit
+        sharing_shared: Partajează cu toți membrii
+        sharing_subtitle: Controlează partajarea conturilor în %{moniker}
+        sharing_title: Partajare în %{moniker}
+        translations_notice: Traducerile pentru diferite limbi sunt încă în curs de
+          realizare.
     appearances:
       show:
         modals_title: Ferestre modale
         modals_subtitle: Personalizați comportamentul ferestrelor modale
-        disable_modal_click_outside_title: Mențineți ferestrele modale deschise la clic exterior
-        disable_modal_click_outside_description: Previne închiderea ferestrelor modale la clic în afara lor. Util pentru a evita pierderea accidentală a modificărilor nesalvate.
+        disable_modal_click_outside_title: Mențineți ferestrele modale deschise la
+          clic exterior
+        disable_modal_click_outside_description: Previne închiderea ferestrelor modale
+          la clic în afara lor. Util pentru a evita pierderea accidentală a modificărilor
+          nesalvate.
+        theme_dark: Întunecat
+        theme_light: Deschis
+        theme_system: Sistem
+        transactions_title: Tranzacții
+        page_title: Aspect
+        dashboard_account_groups_description: Aceste secțiuni de conturi vor apărea
+          extinse în panoul de bord și în bara laterală a conturilor. Le poți restrânge
+          manual oricând.
+        dashboard_account_groups_title: Extinde implicit
+        dashboard_subtitle: Personalizează afișarea panoului de bord
+        dashboard_title: Panou de bord
+        dashboard_two_column_description: Afișează modulele panoului de bord pe două
+          coloane pe ecranele mari, cu reglaje de lățime și înălțime în antetul fiecărui
+          modul. Dacă opțiunea este dezactivată, modulele sunt așezate într-o singură
+          coloană.
+        dashboard_two_column_title: Aspect pe două coloane
+        split_grouped_description: Afișează tranzacțiile împărțite grupate sub tranzacția
+          principală în lista de tranzacții. Dacă opțiunea este dezactivată, părțile
+          apar pe rânduri individuale.
+        split_grouped_title: Grupează tranzacțiile împărțite
+        theme_subtitle: Alege tema preferată pentru aplicație
+        theme_title: Temă
+        transactions_subtitle: Personalizează afișarea tranzacțiilor
     profiles:
       destroy:
         cannot_remove_self: Nu te poți elimina singur din cont.
         member_removal_failed: A apărut o problemă la eliminarea membrului.
         member_removed: Membrul a fost eliminat cu succes.
         not_authorized: Nu ești autorizat să elimini membri.
+        member_owns_other_family_data: Acest membru încă deține conturi într-o altă
+          gospodărie și nu poate fi eliminat. Transferă sau elimină mai întâi acele
+          conturi.
       show:
         confirm_delete:
           body: Ești sigur că vrei să ștergi definitiv contul tău? Această acțiune
             este ireversibilă.
           title: Ștergi contul?
         confirm_reset:
-          body: Ești sigur că vrei să-ți resetezi contul? Aceasta va șterge toate conturile, categoriile, comercianții, etichetele și alte date. Această acțiune nu poate fi anulată.
+          body: Ești sigur că vrei să-ți resetezi contul? Aceasta va șterge toate
+            conturile, categoriile, comercianții, etichetele și alte date. Această
+            acțiune nu poate fi anulată.
           title: Resetezi contul?
         confirm_reset_with_sample_data:
-          body: Ești sigur că vrei să-ți resetezi contul și să încarci date eșantion? Aceasta va șterge datele existente și le va înlocui cu date demo, astfel încât să poți explora Sure în siguranță.
+          body: Ești sigur că vrei să-ți resetezi contul și să încarci date eșantion?
+            Aceasta va șterge datele existente și le va înlocui cu date demo, astfel
+            încât să poți explora Sure în siguranță.
           title: Resetezi contul și încarci date eșantion?
         confirm_remove_invitation:
           body: Ești sigur că vrei să anulezi invitația pentru %{email}?
@@ -77,15 +208,18 @@ ro:
         delete_account_warning: Ștergerea contului tău va elimina definitiv toate
           datele tale și nu poate fi anulată.
         reset_account: Resetează contul
-        reset_account_warning: Resetarea contului tău va șterge toate conturile, categoriile, comercianții, etichetele și alte date, dar îți va păstra contul de utilizator intact.
+        reset_account_warning: Resetarea contului tău va șterge toate conturile, categoriile,
+          comercianții, etichetele și alte date, dar îți va păstra contul de utilizator
+          intact.
         reset_account_with_sample_data: Resetează și preîncarcă
-        reset_account_with_sample_data_warning: Șterge toate datele existente și apoi încarcă date eșantion noi, astfel încât să poți explora într-un mediu pre-completat.
+        reset_account_with_sample_data_warning: Șterge toate datele existente și apoi
+          încarcă date eșantion noi, astfel încât să poți explora într-un mediu pre-completat.
         email: Email
         first_name: Prenume
         household_form_input_placeholder: Introdu numele gospodăriei
         household_form_label: Numele gospodăriei
-        household_subtitle: Invită membri ai familiei, parteneri și alte persoane. Invitații
-          se pot conecta la gospodăria ta și pot accesa conturile tale partajate.
+        household_subtitle: Persoanele invitate se pot autentifica în contul tău de
+          %{moniker} și pot accesa resursele partajate.
         household_title: Gospodărie
         invitation_link: Link de invitație
         invite_member: Adaugă membru
@@ -97,9 +231,43 @@ ro:
         remove_invitation: Anulează invitația
         remove_member: Elimină membrul
         save: Salvează
+        group_form_label: Numele grupului
+        group_form_input_placeholder: Introdu numele grupului
+        group_title: Membrii grupului
+        resend_confirmation_link: solicită un nou e-mail de confirmare
+        unconfirmed_email_notice_html: Ai solicitat schimbarea adresei de e-mail în
+          %{email}. Deschide e-mailul și confirmă pentru a aplica modificarea. Dacă
+          nu ai primit mesajul, verifică dosarul de spam sau %{resend_link}.
     securities:
       show:
         page_title: Securitate
+        encryption_warning:
+          title: Lipsesc cheile de criptare
+          generate: 'Generează un set cu: bin/rails db:encryption:init'
+          intro: 'Datele sensibile (chei API, tokenuri de furnizor, secrete MFA și
+            date cu caracter personal) sunt stocate necriptat. Pentru a activa criptarea,
+            setează următoarele chei în variabilele de mediu sau în datele de autentificare
+            Rails:'
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+        sso_confirm_button: Deconectează
+        sso_disconnect: Deconectează
+        sso_never: Niciodată
+        sso_confirm_body: Sigur vrei să deconectezi contul %{provider}? Îl poți reconecta
+          ulterior autentificându-te din nou prin acel furnizor.
+        sso_confirm_title: Deconectezi contul?
+        sso_connect_hint: Deconectează-te și autentifică-te printr-un furnizor SSO
+          pentru a conecta un cont.
+        sso_last_used: Ultima utilizare
+        sso_no_email: Fără e-mail
+        sso_no_identities: Niciun cont SSO conectat
+        sso_subtitle: Gestionează conexiunile conturilor cu autentificare unică
+        sso_title: Conturi conectate
+        sso_warning_message: Aceasta este singura ta metodă de autentificare. Setează
+          o parolă în setările de securitate înainte de deconectare, altfel ai putea
+          pierde accesul la cont.
     settings_nav:
       accounts_label: Conturi
       advanced_section_title: Avansat
@@ -111,7 +279,7 @@ ro:
       general_section_title: General
       imports_label: Importuri
       exports_label: Exporturi
-      logout: Logout
+      logout: Deconectare
       merchants_label: Comercianți
       guides_label: Ghiduri
       other_section_title: Mai multe
@@ -126,11 +294,685 @@ ro:
       whats_new_label: Noutăți
       api_keys_label: Cheie API
       bank_sync_label: Sincronizare bancară
+      appearance_label: Aspect
+      background_jobs_label: Sarcini în fundal
+      debug_label: Depanare
+      llm_usage_label: Utilizare LLM
+      mcp_label: MCP
+      providers_label: Furnizori
+      sso_providers_label: Furnizori SSO
+      statement_vault_label: Arhiva extraselor
+      system_health_label: Starea sistemului
+      users_label: Utilizatori
     settings_nav_link_large:
       next: Următorul
       previous: Înapoi
     user_avatar_field:
       accepted_formats: JPG sau PNG. Max. 5MB.
       choose: Încarcă fotografie
-      choose_label: (opțional)
+      choose_label: "(opțional)"
       change: Schimbă fotografia
+    background_jobs:
+      operation:
+        queued: În coadă
+        recent: Recente
+        unknown: Necunoscut
+        missing_value: "-"
+        actions:
+          mark_failed: Marchează ca eșuată
+          mark_stale: Marchează ca expirată
+          release_claim: Eliberează rezervarea
+        ago: acum %{time}
+        confirm: Marchezi această operațiune ca pierdută? Înregistrarea va trece într-o
+          stare finală, pentru ca operațiunea să poată fi reîncercată. Datele aferente
+          nu vor fi modificate.
+        running: În execuție
+        stuck: Blocată — considerată pierdută
+        sync_label: Sincronizare · %{type}
+      show:
+        stats:
+          scheduled: Programat
+          busy: Ocupate
+          dead: Abandonate
+          enqueued: În coadă
+          queue_label: "%{name}: %{size} · întârziere de %{latency} s"
+          retries: Reîncercări
+          workers: Procese de lucru
+        table:
+          family: Familie
+          status: Stare
+          type: Operațiune
+          action: Acțiune
+          last_activity: Ultima activitate
+          liveness: Stare de activitate
+        missing_value: "-"
+        page_title: Sarcini în fundal
+        empty: Nu există operațiuni în curs.
+        operations_subtitle: Sincronizări, importuri și exporturi din toate familiile
+          care nu au ajuns într-o stare finală. Operațiunile inactive de peste 30
+          de minute, fără o sarcină vizibilă, sunt considerate pierdute și pot fi
+          marcate astfel.
+        operations_title: Operațiuni în curs
+        redis_unreachable: Starea Sidekiq nu este disponibilă (Redis este inaccesibil).
+          Nu se poate determina dacă sarcinile sunt active, așa că acțiunile sunt
+          dezactivate.
+        subtitle: 'Starea Sidekiq în timp real: procese de lucru, dimensiunea cozilor
+          și seturile de sarcini pentru reîncercare sau abandonate.'
+        title: Starea proceselor de lucru
+      cancel:
+        cancelled: "%{type} a fost marcată ca pierdută."
+        cancelled_error: Marcată ca eșuată de un administrator — sarcina din fundal
+          a fost considerată pierdută.
+        not_cancellable: Această operațiune nu poate fi modificată acum — sarcina
+          ei poate fi încă în coadă sau în execuție. Încearcă din nou după 30 de minute
+          de inactivitate.
+    debugs:
+      show:
+        filters:
+          all: Toate
+          category: Categorie
+          source: Sursă
+          start_date: De la
+          submit: Filtrează
+          user_id: ID utilizator
+          account_id: ID cont
+          account_provider_id: ID furnizor cont
+          end_date: Până la
+          family_id: ID familie
+          level: Nivel
+          provider: Furnizor
+          reset: Resetează
+        table:
+          category: Categorie
+          source: Sursă
+          view_metadata: Vezi
+          context: Context
+          level: Nivel
+          message: Mesaj
+          metadata: Metadate
+          time: Oră
+        missing_value: "-"
+        page_title: Depanare
+        context:
+          account: account=%{value}
+          account_provider: account_provider=%{value}
+          family: family=%{value}
+          provider: provider=%{value}
+          user: user=%{value}
+        empty: Nu s-au găsit evenimente de depanare.
+        subtitle: Evenimente operaționale relevante pentru superadministratori. Cele
+          mai recente apar primele.
+        title: Jurnalul evenimentelor de depanare
+    llm_usages:
+      show:
+        col_date: Dată
+        col_operation: Operațiune
+        failed: Eșuat
+        filter: Filtrează
+        total_cost: Cost total
+        avg_cost_per_request: Cost mediu/cerere
+        based_on_requests: Pe baza a %{with_cost} din %{total} cereri cu date despre
+          cost
+        col_cost: Cost
+        col_model: Model
+        col_tokens: Tokenuri
+        completion: completare
+        cost_by_model: Cost pe model
+        cost_by_operation: Cost pe operațiune
+        cost_estimates_description: Costurile sunt estimate din tarifele publicate
+          de furnizori, verificate ultima dată la %{date}. Costurile reale pot varia.
+          Tarifele sunt pentru 1 milion de tokenuri și diferă în funcție de model.
+          Modelele personalizate sau găzduite local afișează „N/A” și nu sunt incluse
+          în costul total.
+        cost_estimates_title: Despre estimarea costurilor
+        end_date: Data de sfârșit
+        no_usage_data: Nu s-au găsit date de utilizare pentru perioada selectată
+        page_title: Utilizare și costuri LLM
+        prompt: solicitare
+        recent_usage: Utilizare recentă
+        start_date: Data de început
+        subtitle: Urmărește utilizarea AI și costurile estimate
+        total_requests: Total cereri
+        total_tokens: Total tokenuri
+    mcp:
+      show:
+        revoke: Revocă
+        copied: Copiat!
+        copy_url: Copiază
+        connect_subtitle: Lipește acest URL în Claude.ai (sau în orice client compatibil
+          MCP) pentru a-l conecta la contul tău Sure.
+        connect_title: Conectează un asistent AI
+        connected_ago: Conectat acum %{time}
+        connected_subtitle: Aceste aplicații au acces în prezent la datele tale Sure.
+          Revocă accesul celor pe care nu le mai folosești.
+        connected_title: Clienți conectați
+        how_to_connect_title: Cum conectezi Claude
+        page_title: Server MCP
+        revoke_confirm: Revoci accesul acestui client?
+        step_1: Deschide Claude.ai și mergi la Settings → Customize → Connectors.
+        step_2: Apasă „Add connector” și lipește URL-ul serverului MCP de mai sus.
+        step_3: Apasă Connect — vei fi redirecționat la Sure pentru autentificare
+          și autorizarea accesului.
+        step_4: După autorizare, Claude poate citi conturile, tranzacțiile și soldurile
+          tale.
+        unknown_client: Client necunoscut
+      revoke:
+        revoked: Conexiunea a fost revocată.
+    providers:
+      bank_sync:
+        page_title: Sincronizare bancară
+        lede: Conectează conturi externe pentru a aduce automat tranzacțiile, soldurile
+          și deținerile în Sure.
+      binance_panel:
+        api_key_label: Cheie API
+        syncing: Se sincronizează...
+        api_secret_label: Secret API
+        disconnect: Deconectează
+        sync: Sincronizează
+        api_key_placeholder: Lipește cheia API Binance
+        api_secret_placeholder: Lipește secretul API Binance
+        connect_button: Conectează Binance
+        disconnect_confirm: Sigur vrei să deconectezi Binance?
+        historical_import: Setări pentru importul istoricului
+        ip_hint_body: 'Adaugă adresa IP de ieșire a serverului aplicației în lista
+          de adrese permise pentru cheia API Binance:'
+        ip_hint_contact_admin: Contactează administratorul pentru a afla adresa IP
+          de ieșire a serverului aplicației.
+        ip_hint_title: Este necesară autorizarea adresei IP
+        no_withdraw_body: Nu activa permisiunile de retragere când creezi cheia API
+          Binance. Sure are nevoie doar de acces pentru citire.
+        no_withdraw_title: Doar cheie cu acces pentru citire
+        setup_instructions: 'Pentru a conecta Binance, creează o cheie API cu acces
+          doar pentru citire:'
+        step1_html: Accesează <a href="https://www.binance.com/en/my/settings/api-management"
+          target="_blank" rel="noopener noreferrer" class="underline">gestionarea
+          API Binance</a>
+        step2: Creează o cheie API nouă doar cu permisiunea Enable Reading
+        step3: Lipește cheia API și secretul mai jos
+        sync_start_date_help: Alege de când să fie preluate tranzacțiile bursiere
+          istorice.
+        sync_start_date_label: Importă date începând cu
+      clear_filter: Șterge filtrele
+      coinbase_panel:
+        api_key_label: Cheie API
+        syncing: Se sincronizează...
+        api_secret_label: Secret API
+        disconnect: Deconectează
+        sync: Sincronizează
+        api_key_placeholder: Introdu cheia API Coinbase
+        api_secret_placeholder: Introdu secretul API Coinbase
+        connect_button: Conectează Coinbase
+        disconnect_confirm: Sigur vrei să deconectezi această conexiune Coinbase?
+          Conturile sincronizate vor deveni conturi manuale.
+        setup_instructions: 'Pentru a conecta Coinbase:'
+        step1_html: Accesează <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" rel="noopener noreferrer" class="text-primary underline">setările
+          API Coinbase</a>
+        step2: Creează o cheie API nouă cu permisiuni doar pentru citire (vizualizare
+          conturi și tranzacții)
+        step3: Copiază cheia API și secretul API și lipește-le mai jos
+      coinspot_panel:
+        api_key_label: Cheie API
+        syncing: Se sincronizează...
+        api_secret_label: Secret API
+        connection_name_label: Numele conexiunii
+        default_connection_name: CoinSpot
+        disconnect: Deconectează
+        disconnect_confirm: Sigur vrei să deconectezi %{name}?
+        setup_accounts: Configurează contul
+        sync: Sincronizează
+        update_connection: Actualizează conexiunea
+        add_connection: Adaugă o conexiune CoinSpot
+        api_key_placeholder: Lipește cheia API CoinSpot
+        api_secret_placeholder: Lipește secretul API CoinSpot
+        connection_name_placeholder: CoinSpot principal
+        keep_api_key_placeholder: Lasă necompletat pentru a păstra cheia API existentă
+        keep_api_secret_placeholder: Lasă necompletat pentru a păstra secretul API
+          existent
+        read_only_body: Nu acorda permisiuni de trimitere, retragere, tranzacționare
+          sau transfer. Sure importă doar solduri, valori în AUD, transferuri, depuneri,
+          retrageri și istoricul ordinelor finalizate.
+        read_only_title: Sincronizare cu bursa doar pentru citire
+        step1_html: Accesează <a href="https://www.coinspot.com.au/my/api" target="_blank"
+          rel="noopener noreferrer" class="underline">setările API CoinSpot</a>
+        step2: Creează o cheie API cu acces doar pentru citirea soldurilor și a istoricului.
+        step3: Lipește cheia API și secretul mai jos.
+      connect: Conectează
+      enable_banking_panel:
+        country_label: Țară
+        reconnect: Reconectează
+        syncing: Se sincronizează
+        unknown: Necunoscut
+        configured: Configurat
+        remove: Elimină
+        save_and_connect: Salvează și conectează
+        sync: Sincronizează
+        update_connection: Actualizează conexiunea
+        add_connection: Adaugă o conexiune
+        application_id_label: ID aplicație
+        application_id_placeholder_new: Introdu ID-ul aplicației
+        application_id_placeholder_update: Introdu un ID nou pentru actualizare
+        callback_url_instruction: Pentru URL-ul de callback, folosește %{callback_url}.
+        client_certificate_label: Certificat client (cu cheie privată)
+        config_locked_message: Deconectează toate băncile asociate înainte de a modifica
+          aceste date de autentificare.
+        config_locked_title: Configurare blocată
+        connect_bank: Conectează banca
+        connected_bank: Bancă conectată
+        connection: Conexiune
+        connection_error: Eroare de conectare
+        ready_to_link: Pregătit pentru conectarea conturilor
+        remove_confirm: Sigur vrei să elimini această conexiune?
+        select_country: Selectează țara...
+        session_expired_reconnect: Sesiune expirată — reconectează
+        session_expires: 'Sesiunea expiră la: %{date}'
+        step_1_html: Accesează %{link} și obține datele de autentificare pentru dezvoltatori.
+        step_2: Alege țara și lipește ID-ul aplicației și certificatul client mai
+          jos.
+        step_3: Salvează, apoi folosește Adaugă o conexiune pentru a conecta banca.
+      ibkr_panel:
+        accounts_tab: Conturi
+        not_configured: Neconfigurat.
+        save_configuration: Salvează configurarea
+        status_configured_suffix: pentru a gestiona conturile descoperite.
+        sync: Sincronizează
+        token_label: Token
+        update_configuration: Actualizează configurarea
+        configuration:
+          all_other_options: 'Toate celelalte opțiuni de configurare: „No”'
+          date_format: 'Formatul datei (Date Format): yyyy-MM-dd'
+          date_time_separator: 'Separator dată/oră (Date/Time Separator): ; (punct
+            și virgulă)'
+          format: 'Format: XML'
+          models: 'Modele (Models): opțional'
+          period: 'Perioadă (Period): Last 365 Calendar Days (ultimele 365 de zile
+            calendaristice)'
+          profit_and_loss: 'Profit și pierdere (Profit and Loss): Default'
+          time_format: 'Formatul orei (Time Format): HH:mm:ss'
+        disconnect_confirm: Deconectezi Interactive Brokers?
+        flex_query_details:
+          configuration_heading: Setează aceste opțiuni ale interogării
+          eyebrow: Flex Query
+          sections_heading: Activează aceste secțiuni și câmpuri
+          summary: Extinde pentru a vedea exact secțiunile, câmpurile și setările
+            pe care trebuie să le includă interogarea IBKR Activity Flex Query.
+          title: Secțiuni, câmpuri și configurare
+        query_id_label: ID interogare
+        query_id_placeholder_existing: Lasă necompletat pentru a păstra ID-ul actual
+          al interogării
+        query_id_placeholder_new: Introdu ID-ul IBKR Flex Query
+        report_window_note: Rapoartele IBKR Flex sunt limitate la intervalul interogării
+          configurate în IBKR. Sure va importa toate deținerile actuale și până la
+          ultimele 365 de zile de activitate din acest raport.
+        sections:
+          account_information: 'Informații despre cont (Account Information): Account
+            ID, Currency'
+          cash_report: 'Raport de numerar (Cash Report):'
+          cash_report_fields: 'Câmpuri: Currency, Ending Cash'
+          cash_report_options: 'Opțiuni: None'
+          cash_transactions: 'Tranzacții de numerar (Cash Transactions):'
+          cash_transactions_fields: 'Câmpuri: Amount, Conid, Currency, FX Rate To
+            Base, Report Date, Transaction ID, Type'
+          cash_transactions_options: 'Opțiuni: Dividends, Deposits & Withdrawals,
+            Detail'
+          change_in_position_value_summary: 'Variația valorii poziției — sumar (Change
+            In Position Value Summary): Currency, End Of Period Value'
+          net_asset_value: 'Valoarea activului net în moneda de bază (Net Asset Value
+            (NAV) in Base):'
+          net_asset_value_fields: 'Câmpuri: Currency, Report Date, Total'
+          net_asset_value_options: 'Opțiuni: None'
+          open_positions: 'Poziții deschise (Open Positions):'
+          open_positions_fields: 'Câmpuri: Asset Class, Conid, Cost Basis Price, Currency,
+            FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security
+            ID Type, Side, Symbol'
+          open_positions_options: 'Opțiuni: Summary'
+          trades: 'Tranzacții bursiere (Trades):'
+          trades_fields: 'Câmpuri: Asset Class, Buy/Sell, Conid, Currency, FX Rate
+            To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
+            Date, Trade ID, TradePrice, Transaction ID'
+          trades_options: 'Opțiuni: Execution'
+        status_configured_prefix: "%{summary}. Mergi la fila"
+        steps:
+          step_1: În portalul de client IBKR, mergi la „Performance & Reports” > „Flex
+            Queries”.
+          step_2: Apasă pictograma „+” din secțiunea „Activity Flex Query” pentru
+            a crea o interogare nouă.
+          step_3: Denumește interogarea (de exemplu, „Sure Sync”), apoi consultă detaliile
+            Flex Query de mai jos și activează secțiunile, câmpurile și opțiunile
+            de configurare enumerate.
+          step_4: Salvează interogarea, notează „Query ID”, apoi folosește pictograma
+            rotiță din secțiunea „Flex Web Service Configuration” pentru a genera
+            un token de acces.
+          step_5: Lipește ID-ul interogării și tokenul mai jos, salvează configurarea,
+            apoi mergi la Conturi pentru a conecta conturile IBKR descoperite.
+        token_placeholder_existing: Lasă necompletat pentru a păstra tokenul actual
+        token_placeholder_new: Introdu tokenul IBKR Flex Web Service
+      kraken_panel:
+        api_key_label: Cheie API
+        syncing: Se sincronizează...
+        connection_name_label: Numele conexiunii
+        default_connection_name: Kraken
+        disconnect: Deconectează
+        disconnect_confirm: Sigur vrei să deconectezi %{name}?
+        setup_accounts: Configurează contul
+        sync: Sincronizează
+        update_connection: Actualizează conexiunea
+        add_connection: Adaugă o conexiune Kraken
+        api_key_placeholder: Lipește cheia API Kraken
+        api_secret_label: Cheie privată
+        api_secret_placeholder: Lipește cheia privată Kraken
+        connection_name_placeholder: Kraken principal
+        keep_api_key_placeholder: Lasă necompletat pentru a păstra cheia API existentă
+        keep_api_secret_placeholder: Lasă necompletat pentru a păstra cheia privată
+          existentă
+        read_only_body: Nu acorda permisiuni de tranzacționare, anulare, retragere,
+          export, registru, Earn, staking sau transfer. Sure importă doar solduri,
+          dețineri și execuțiile tranzacțiilor spot.
+        read_only_title: Sincronizare cu bursa doar pentru citire
+        step1_html: Accesează <a href="https://pro.kraken.com/app/settings/api" target="_blank"
+          rel="noopener noreferrer" class="underline">setările API Kraken</a>
+        step2: Creează o cheie API doar cu permisiunile Query Funds și Query Closed
+          Orders & Trades.
+        step3: Lipește cheia API și cheia privată mai jos.
+      lunchflow_panel:
+        api_key_label: Cheie API
+        save_and_connect: Salvează și conectează
+        update_connection: Actualizează conexiunea
+        api_key_placeholder_new: Lipește cheia API aici
+        api_key_placeholder_update: Introdu o cheie API nouă pentru actualizare
+        base_url_label: URL de bază (opțional)
+        base_url_placeholder: https://lunchflow.app/api/v1 (implicit)
+        step_1_html: Accesează %{link} și creează o cheie API.
+        step_2: Lipește cheia mai jos și conectează.
+        step_3: Apoi mergi la Conturi pentru a conecta conturile sincronizate.
+      onchain_wallet_panel:
+        advanced: Avansat
+        save: Salvează
+        add_wallet: Adaugă portofel
+        disconnect_all: Deconectează toate portofelele
+        disconnect_all_confirm: Această acțiune elimină toate adresele urmărite și
+          conturile lor. Continui?
+        etherscan_api_key_label: Cheie API Etherscan (opțional)
+        etherscan_api_key_placeholder: Lipește o cheie API Etherscan
+        etherscan_hint: Datele Ethereum pot fi citite fără cheie. Adăugarea unei chei
+          Etherscan doar mărește limita cererilor pentru Ethereum.
+        keep_etherscan_api_key: Lasă necompletat pentru a păstra cheia existentă
+        keyless_body: Sure citește exclusiv date publice din blockchain. Nu sunt implicate
+          chei, fraze de recuperare sau semnături și nu se pot cheltui fonduri.
+        keyless_title: Doar citire, fără chei
+        manage_wallets: Gestionează portofelele
+        sync_start_date_hint: Transferurile anterioare acestei date sunt ignorate.
+          Lasă necompletat pentru a importa tot ce raportează exploratorul blockchain.
+        sync_start_date_label: Ignoră transferurile anterioare datei
+      search_filters:
+        chips:
+          all: Toate
+          crypto: Criptomonede
+          investment: Investiții
+          bank: Bănci
+        aria_label: Caută furnizori
+        placeholder: Caută furnizori
+      setup_steps:
+        eyebrow: Configurare
+        need_help: Ai nevoie de ajutor?
+      status:
+        err: Eroare
+        'off': Neconfigurat
+        ok: Conectat
+        warn: Este necesară o acțiune
+      sync_all: Sincronizează tot
+      trade_republic_panel:
+        accounts_tab: Conturi
+        complete_login: Continuă
+        connect: Conectează-te
+        connection_success:
+          close: Gata
+          description: Sure sincronizează acum datele Trade Republic în fundal.
+          message: Conexiunea Trade Republic este pregătită.
+          title: Trade Republic a fost conectat cu succes
+        identifier_account: Cont
+        setup_accounts: Configurează conturile
+        syncing: Se sincronizează...
+        not_configured: Neconfigurat.
+        status_configured_suffix: pentru a gestiona conturile descoperite.
+        sync: Sincronizează
+        update_configuration: Actualizează configurarea
+        accounts_discovered:
+          one: A fost descoperit 1 cont Trade Republic.
+          other: Au fost descoperite %{count} de conturi Trade Republic.
+          few: Au fost descoperite %{count} conturi Trade Republic.
+        add_account: Adaugă altă conexiune
+        approval_pending: Autentificarea a început. Aprob-o în aplicația Trade Republic;
+          Sure verifică automat.
+        authenticator_code_label: Cod din aplicația de autentificare (dacă este solicitat)
+        authenticator_code_notice: Introdu codul din aplicația de autentificare.
+        authenticator_code_placeholder: Cod de 6 cifre
+        awaiting_authenticator_code: Este necesar codul din aplicația de autentificare.
+        awaiting_confirmation: Se așteaptă aprobarea în aplicația Trade Republic.
+        check_login_status: Verifică starea acum
+        confirm_login: Verifică autentificarea
+        currency_label: Moneda contului
+        disconnect: Deconectează Trade Republic
+        disconnect_confirm: Deconectezi Trade Republic? Conturile sincronizate vor
+          deveni conturi manuale.
+        disconnect_confirm_with_identifier: Deconectezi conexiunea Trade Republic
+          care se termină în %{last4}? Conturile sincronizate vor deveni conturi manuale.
+        encryption_warning:
+          message: Datele de autentificare și de sesiune Trade Republic nu pot fi
+            stocate în siguranță până la configurarea criptării Active Record.
+          title: Criptarea nu este configurată
+        identifier_phone: Telefon
+        login_expired: Cererea de aprobare a expirat.
+        phone_number_label: Număr de telefon
+        phone_number_placeholder_existing: Lasă necompletat pentru a păstra numărul
+          de telefon actual
+        phone_number_placeholder_new: "+49 170 1234567"
+        pin_label: PIN sau parolă
+        pin_placeholder_existing: Lasă necompletat pentru a păstra PIN-ul sau parola
+          actuală
+        pin_placeholder_new: PIN-ul sau parola Trade Republic
+        push_login_notice: Aprobă acum autentificarea în aplicația Trade Republic.
+          Sure verifică automat în fundal. Poți verifica și manual starea.
+        qr_back_to_credentials: Înapoi la numărul de telefon și PIN sau parolă
+        qr_cancel: Anulează autentificarea prin QR
+        qr_error: Autentificarea prin QR nu a putut fi pornită. Încearcă din nou.
+        qr_instruction: Scanează codul QR cu aplicația Trade Republic și aprobă autentificarea.
+        qr_loading: Se pregătește codul QR…
+        qr_login: Autentificare prin cod QR
+        qr_success: Autentificarea a fost aprobată. Sure reîmprospătează pagina furnizorului.
+        restart_login: Repornește autentificarea
+        save_configuration: Salvează și pornește autentificarea
+        status_configured_prefix: Conectat. Mergi la fila
+        steps:
+          step_1: Introdu numărul de telefon și PIN-ul sau parola folosită în aplicația
+            Trade Republic, apoi salvează.
+          step_2: Introdu codul din aplicația de autentificare atunci când este solicitat.
+          step_3: Aprobă autentificarea în aplicația Trade Republic atunci când ți
+            se solicită.
+      trading212_panel:
+        accounts_tab: Conturi
+        syncing: Se sincronizează...
+        not_configured: Neconfigurat.
+        save_configuration: Salvează configurarea
+        status_configured_suffix: pentru a gestiona conturile descoperite.
+        sync: Sincronizează
+        update_configuration: Actualizează configurarea
+        add_account: Adaugă alt cont
+        api_key_label: ID API
+        api_key_placeholder_existing: Lasă necompletat pentru a păstra ID-ul API actual
+        api_key_placeholder_new: Lipește ID-ul API Trading 212
+        api_secret_label: Cheie secretă
+        api_secret_placeholder_existing: Lasă necompletat pentru a păstra cheia secretă
+          actuală
+        api_secret_placeholder_new: Lipește cheia secretă Trading 212
+        currency_label: Moneda contului
+        default_account_name: Cont Trading 212
+        disconnect: Deconectează contul Trading 212
+        disconnect_confirm: Deconectezi Trading 212?
+        environment_demo: Cont demonstrativ
+        environment_label: Mediu
+        environment_live: Cont real
+        status_configured_prefix: Configurat. Mergi la fila
+        steps:
+          step_1: Mergi la Trading 212 → Settings → API (pe web sau în aplicația mobilă).
+          step_2: Generează o cheie API nouă — Trading 212 va afișa un ID API și o
+            cheie secretă.
+          step_3: Lipește-le pe ambele mai jos, selectează mediul și moneda contului,
+            apoi salvează.
+      encryption_error:
+        title: Lipsesc cheile de criptare
+        message: Sincronizarea bancară necesită configurarea criptării Active Record.
+          Setează primary_key, deterministic_key și key_derivation_salt în datele
+          de autentificare Rails sau în variabilele de mediu.
+      meta:
+        sync_error: Eroare de sincronizare
+        last_synced: Sincronizat acum %{time}
+        no_recent_sync: Sincronizare întârziată
+        reconsent_needed:
+          one: Consimțământul trebuie reînnoit peste 1 zi
+          other: Consimțământul trebuie reînnoit peste %{count} de zile
+          few: Consimțământul trebuie reînnoit peste %{count} zile
+        reconsent_required: Este necesară reînnoirea consimțământului
+      provider_form:
+        save_and_connect: Salvează și conectează
+      provider_setup_encryption_warning:
+        title: Lipsesc cheile de criptare
+        message: Această instalare găzduită local nu are chei explicite de criptare
+          Active Record. Configurează primary_key, deterministic_key și key_derivation_salt
+          înainte de a salva datele de autentificare ale furnizorilor în producție.
+      simplefin_panel:
+        save_and_connect: Salvează și conectează
+        setup_token_label: Token de configurare
+        setup_token_placeholder: Lipește tokenul de configurare SimpleFIN
+        step_1_html: Accesează %{link} pentru un token de configurare de unică folosință.
+        step_2: Lipește tokenul mai jos și conectează.
+        step_3: Apoi mergi la Conturi pentru a conecta conturile sincronizate.
+      sync_provider: Sincronizează acum
+      akahu_panel:
+        step_1_html: Accesează %{link} și creează o aplicație personală.
+        step_2: Copiază tokenul aplicației și tokenul de utilizator.
+        step_3: Lipește tokenurile mai jos, salvează, apoi conectează conturile sincronizate.
+      drawer_trust_statement: Acces doar pentru citire. Sure nu poate transfera bani,
+        iar datele tale de autentificare sunt stocate criptat.
+      drawer_trust_statement_encryption_unconfigured: Acces doar pentru citire. Sure
+        nu poate transfera bani. Configurează explicit cheile de criptare înainte
+        de a stoca datele de autentificare ale furnizorilor în producție.
+      empty_filter: Niciun furnizor nu corespunde filtrului.
+      financekit:
+        accounts: Conturi conectate
+        app_store: App Store
+        coming_soon: În curând!
+        description: Gestionează conexiunile Apple Wallet în aplicația Sure pentru
+          iOS. Datele Wallet se sincronizează cât timp aplicația este deschisă; sincronizarea
+          nesupravegheată în fundal nu este încă disponibilă.
+        last_accepted_at: Ultima acceptare de către Sure
+        last_imported_at: Ultimul import în familia ta
+        linked_accounts:
+          one: 1 cont conectat
+          other: "%{count} de conturi conectate"
+          few: "%{count} conturi conectate"
+        not_yet: Nu încă
+        status:
+          active: Sincronizare activă
+          repair_required: Este necesară remedierea — deschide aplicația Sure pentru
+            iOS
+        summary: Sincronizare Wallet
+      fio_panel:
+        step_1_html: Autentifică-te în serviciul bancar online %{link} și deschide
+          Settings → API.
+        step_2: Creează un token cu acces doar pentru citire („Sledování účtu”). Necesită
+          autorizare strictă și este valabil cel mult 180 de zile.
+        step_3: Lipește tokenul mai jos și salvează. Un token permite accesul la un
+          singur cont, așa că adaugă o conexiune pentru fiecare cont Fio.
+      groups:
+        available: Disponibil
+        empty_available: Toți furnizorii disponibili sunt conectați.
+        your_connections: Conexiunile tale
+      health_strip:
+        accounts_syncing: conturi în curs de sincronizare
+        connected: conectate
+        last_synced: Ultima sincronizare acum %{time}
+        needs_attention: necesită atenție
+      maturity:
+        alpha: Alpha
+        beta: Beta
+      monobank_panel:
+        step_1_html: Accesează %{link}, autentifică-te cu aplicația Monobank și generează
+          un token personal.
+        step_2: Copiază tokenul — este afișat o singură dată.
+        step_3: Lipește tokenul mai jos, salvează, apoi conectează cardurile și pușculițele
+          pe care vrei să le urmărești.
+      not_authorized: Neautorizat
+      not_found: Furnizorul nu a fost găsit.
+      plaid_eu_panel:
+        step_1_html: Deschide %{link} și copiază ID-ul de client UE și cheia secretă.
+      plaid_panel:
+        step_1_html: Deschide %{link} și copiază ID-ul de client și cheia secretă.
+        step_2: Alege un mediu. Folosește mediul sandbox pentru teste și mediul de
+          producție pentru conturi reale.
+        step_3: Lipește datele de autentificare mai jos și conectează.
+      recently_synced: Sincronizat recent. Încearcă din nou peste puțin timp.
+      sync_all_in_progress: Se sincronizează toți furnizorii conectați…
+      sync_all_recently: Sincronizarea este deja în curs. Încearcă din nou peste puțin
+        timp.
+      sync_provider_in_progress: Sincronizarea a început.
+      sync_provider_no_items: Nu există conexiuni disponibile pentru sincronizare.
+      taglines:
+        akahu: Sincronizează instituțiile financiare din Noua Zeelandă prin Akahu.
+        binance: Sincronizează soldurile spot Binance folosind o cheie API cu acces
+          doar pentru citire.
+        brex: Sincronizează activitatea de numerar și cardurile corporative Brex cu
+          acces doar pentru citire.
+        coinbase: Importă deținerile de criptomonede Coinbase și urmărește performanța.
+        coinspot: Sincronizează soldurile CoinSpot, valorile în AUD, transferurile,
+          depunerile, retragerile și istoricul ordinelor folosind o cheie API cu acces
+          doar pentru citire.
+        coinstats: Urmărește întregul portofoliu de criptomonede din portofele și
+          burse.
+        enable_banking: Sincronizează conturile bancare europene prin serviciile bancare
+          deschise PSD2.
+        financekit: Sincronizează unele conturi FinanceKit prin aplicația Sure pentru
+          iOS.
+        fio: Sincronizează un cont Fio banka cu un token API cu acces doar pentru
+          citire.
+        ibkr: Sincronizează conturile de investiții Interactive Brokers prin importuri
+          Flex Query.
+        indexa_capital: Urmărește portofoliul tău de investiții automatizate Indexa
+          Capital.
+        kraken: Sincronizează soldurile Kraken și execuțiile tranzacțiilor spot folosind
+          o cheie API cu acces doar pentru citire.
+        lunchflow: Conectează peste 20.000 de bănci din peste 40 de țări (Regatul
+          Unit, UE, SUA și altele!)
+        mercury: Sincronizează automat conturile bancare de afaceri Mercury.
+        monobank: Sincronizează cardurile și pușculițele Monobank din Ucraina cu un
+          token API personal.
+        onchain_wallet: Urmărește portofele Bitcoin, EVM și Solana cu autocustodie
+          folosind adresele lor publice.
+        plaid: Conectează mii de instituții financiare din SUA prin Plaid.
+        plaid_eu: Conectează instituții financiare europene prin Plaid (PSD2 / servicii
+          bancare deschise).
+        questrade: Sincronizează conturile de investiții Questrade direct prin API-ul
+          Questrade.
+        redbark: Sincronizează conturile bancare australiene prin serviciile bancare
+          deschise Redbark.
+        simplefin: Conectează conturi bancare din SUA prin protocolul deschis SimpleFIN.
+        snaptrade: Conectează conturi de brokeraj prin rețeaua de agregare SnapTrade.
+        sophtron: Conectează bănci și furnizori de utilități din SUA și Canada.
+        trade_republic: Sincronizează contul de investiții Trade Republic prin autentificare
+          web securizată, cu acces doar pentru citire.
+        trading212: Sincronizează portofoliul de investiții Trading 212 folosind o
+          cheie API cu acces doar pentru citire.
+        up: Sincronizează conturile bancare Up din Australia cu un token de acces
+          personal.
+        wise: Sincronizează automat soldurile în mai multe monede și transferurile
+          internaționale Wise.
+      up_panel:
+        step_1_html: Accesează %{link} și generează un token de acces personal.
+        step_2: Copiază tokenul de acces personal.
+        step_3: Lipește tokenul mai jos, salvează, apoi conectează conturile sincronizate.
+      update:
+        no_changes: Nu s-a făcut nicio modificare
+        updated_successfully: Setările furnizorului au fost actualizate cu succes
+    budget_shares:
+      update:
+        success: Setările de partajare a bugetului au fost actualizate

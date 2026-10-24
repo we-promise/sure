@@ -1,0 +1,7 @@
+---
+ro:
+  syncs:
+    cancel:
+      cancelled: Sincronizare anulată. Tot ce a fost deja sincronizat este păstrat;
+        sarcinile din coadă au fost oprite.
+      not_cancellable: Această sincronizare s-a încheiat deja.

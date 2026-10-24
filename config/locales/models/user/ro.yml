@@ -1,3 +1,4 @@
+---
 ro:
   activerecord:
     attributes:
@@ -14,6 +15,16 @@ ro:
         user:
           attributes:
             base:
-              cannot_deactivate_admin_with_other_users: Administratorul nu poate șterge contul cât timp există alți utilizatori. Te rugăm să ștergi toți membrii mai întâi.
+              cannot_deactivate_admin_with_other_users: Administratorul nu poate șterge
+                contul cât timp există alți utilizatori. Te rugăm să ștergi toți membrii
+                mai întâi.
+              cannot_remove_last_super_admin: Ultimul superadministrator activ nu
+                poate fi eliminat. Promovează mai întâi un alt utilizator la rolul
+                de superadministrator.
+              provider_item_has_other_accounts: Utilizatorul deține conturi asociate
+                unei conexiuni la furnizor care include și conturi ale altui utilizator.
+                Mută sau dezasociază acele conturi înainte de a schimba apartenența
+                la familie/grup.
             profile_image:
-              invalid_file_size: dimensiunea fișierului trebuie să fie mai mică de %{max_megabytes}MB
+              invalid_file_size: dimensiunea fișierului trebuie să fie mai mică de
+                %{max_megabytes}MB

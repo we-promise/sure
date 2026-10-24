@@ -3,46 +3,282 @@ ro:
   import:
     cleans:
       show:
-        description: Editează datele tale în tabelul de mai jos. Celulele roșii sunt invalide.
-        errors_notice: Ai erori în datele tale. Trece cu mouse-ul peste eroare pentru a vedea detalii.
-        errors_notice_mobile: Ai erori în datele tale. Atinge tooltip-ul erorii pentru a vedea detalii.
+        description: Editează datele tale în tabelul de mai jos. Celulele roșii sunt
+          invalide.
+        errors_notice: Ai erori în datele tale. Trece cu mouse-ul peste eroare pentru
+          a vedea detalii.
+        errors_notice_mobile: Ai erori în datele tale. Atinge tooltip-ul erorii pentru
+          a vedea detalii.
         title: Curăță-ți datele
+        all_rows: Toate rândurile
+        data_cleaned: Datele tale au fost curățate
+        error_rows: Rânduri cu erori
+        next_step: Pasul următor
+        not_configured: Configurează importul înainte de a continua.
     configurations:
       mint_import:
         date_format_label: Format dată
+        amount: Sumă
+        currency: Monedă
+        date: Dată
+        account_optional: Cont (opțional)
+        apply_configuration: Aplică configurarea
+        leave_empty: Lasă necompletat
+        select_format: Selectează formatul
+        category_optional: Categorie (opțional)
+        format: Format
+        incomes_negative: Veniturile au semn negativ
+        incomes_positive: Veniturile au semn pozitiv
+        intro: Importul Mint a fost preconfigurat. Continuă cu pasul următor.
+        name_optional: Nume (opțional)
+        tags_optional: Etichete (opțional)
       show:
-        description: Selectează coloanele care corespund fiecărui câmp din CSV-ul tău.
+        description: Selectează coloanele care corespund fiecărui câmp din CSV-ul
+          tău.
         title: Configurează importul
+        apply_template: Aplică șablonul
+        manually_configure: Configurează manual
+        sample_caption: Exemplu de date din fișierul CSV încărcat
+        template_description: Am găsit o configurare dintr-un import anterior pentru
+          acest cont. Vrei să o aplici acestui import?
+        template_found: A fost găsit un șablon de configurare
       trade_import:
         date_format_label: Format dată
+        account_label: Cont
+        currency_label: Monedă
+        date_label: Dată
+        name_label: Nume
+        note_label: Notă
+        quantity_label: Cantitate
+        ticker_label: Simbol bursier
+        apply_configuration: Aplică configurarea
+        default: Implicit
+        leave_empty: Lasă necompletat
+        select_format: Selectează formatul
+        buys_are_negative: Cumpărările au cantități negative
+        buys_are_positive: Cumpărările au cantități pozitive
+        format_label: Format
+        no_security_provider_warning: Furnizorul cotațiilor instrumentelor financiare
+          nu este configurat. Importul tranzacțiilor bursiere va funcționa, însă Sure
+          nu va completa istoricul prețurilor. Configurează furnizorul în Setări.
+        price_label: Preț
+        select_column: Selectează coloana
+        stock_exchange_code_label: Codul bursei
       transaction_import:
         date_format_label: Format dată
+        account_label: Cont
+        amount_label: Sumă
+        category_label: Categorie
+        currency_label: Monedă
+        date_label: Dată
+        name_label: Nume
+        notes_label: Notițe
+        tags_label: Etichete
+        apply_configuration: Aplică configurarea
+        default: Implicit
+        leave_empty: Lasă necompletat
+        select_format: Selectează formatul
+        select_type: Selectează tipul
+        amount_type_label: Tipul sumei
+        amount_type_strategy_label: Strategia pentru tipul sumei
+        as_amount_type_column: ca coloană pentru tipul sumei
+        as_identifier_value: ca valoare identificatoare
+        expense_outflow: Cheltuială (ieșire)
+        format_label: Format
+        income_inflow: Venit (intrare)
+        incomes_are_negative: Veniturile au semn negativ
+        incomes_are_positive: Veniturile au semn pozitiv
+        rows_to_skip_label: Omite primele n rânduri
+        select_column: Selectează coloana
+        select_convention: Selectează convenția
+        select_strategy: Selectează strategia
+        select_value: Selectează valoarea
+        set: Setează
+        treat_as_html: Tratează „<span class="font-medium">%{value}</span>” ca
+      account_import:
+        balance: Sold
+        currency: Monedă
+        name: Nume
+        apply_configuration: Aplică configurarea
+        default: Implicit
+        leave_empty: Lasă necompletat
+        select_format: Selectează formatul
+        balance_date: Data soldului
+        date_format: Formatul datei
+        entity_type: Tipul entității
+      actual_import:
+        amount_label: Sumă
+        date_format_label: Format dată
+        date_label: Dată
+        account_label: Cont (opțional)
+        apply_configuration: Aplică configurarea
+        leave_empty: Lasă necompletat
+        category_label: Categorie (opțional)
+        incomes_are_negative: Veniturile au semn negativ
+        incomes_are_positive: Veniturile au semn pozitiv
+        name_label: Beneficiar (opțional)
+        notes_label: Notițe (opțional)
+        preconfigured_notice: Importul Actual Budget a fost preconfigurat. Continuă
+          cu pasul următor.
+        signage_convention_label: Convenția semnelor
+      category_import:
+        button_label: Continuă
+        description: Încarcă un fișier CSV simplu (precum cel generat la exportul
+          datelor). Vom asocia automat coloanele.
+        instructions: Selectează Continuă pentru a parsa fișierul CSV și a trece la
+          curățarea datelor.
+      merchant_import:
+        button_label: Continuă
+        description: Încarcă un fișier CSV cu comercianții tăi. Vom asocia automat
+          coloanele.
+        instructions: Selectează Continuă pentru a parsa fișierul CSV și a trece la
+          curățarea datelor.
+      ynab_import:
+        date_format_label: Format dată
+        date_label: Dată
+        account_label: Cont (opțional)
+        apply_configuration: Aplică configurarea
+        leave_empty: Lasă necompletat
+        amount_notice: Sumele sunt detectate automat din coloanele Outflow și Inflow.
+        category_label: Categorie (opțional)
+        name_label: Beneficiar (opțional)
+        notes_label: Notă (opțional)
+        preconfigured_notice: Importul YNAB a fost preconfigurat. Continuă cu pasul
+          următor.
+      rule_import:
+        description: Configurează importul regulilor. Regulile vor fi create sau actualizate
+          pe baza datelor CSV.
+        process_button: Procesează regulile
+        process_help: Apasă butonul de mai jos pentru a procesa fișierul CSV și a
+          genera rândurile de reguli.
+      update:
+        success: Importul a fost configurat cu succes.
     confirms:
       mappings:
         create_account: Creează cont
         csv_mapping_label: "%{mapping} în CSV"
         sure_mapping_label: "%{mapping} în %{product_name}"
-        no_accounts: Nu ai încă niciun cont. Te rugăm să creezi un cont pe care să-l putem folosi pentru rândurile (neasignate) din CSV-ul tău sau să te întorci la pasul de Curățare și să furnizezi un nume de cont pe care să-l putem folosi.
+        no_accounts: Nu ai încă niciun cont. Te rugăm să creezi un cont pe care să-l
+          putem folosi pentru rândurile (neasignate) din CSV-ul tău sau să te întorci
+          la pasul de Curățare și să furnizezi un nume de cont pe care să-l putem
+          folosi.
         rows_label: Rânduri
         unassigned_account: Trebuie să creezi un cont nou pentru rândurile neasignate?
+        next: Înainte
       show:
-        account_mapping_description: Asignează toate conturile din fișierul tău importat conturilor existente din %{product_name}. Poți adăuga și conturi noi sau le poți lăsa necategorizate.
+        account_mapping_description: Asignează toate conturile din fișierul tău importat
+          conturilor existente din %{product_name}. Poți adăuga și conturi noi sau
+          le poți lăsa necategorizate.
         account_mapping_title: Asignează-ți conturile
-        account_type_mapping_description: Asignează toate tipurile de cont din fișierul tău importat celor din %{product_name}.
+        account_type_mapping_description: Asignează toate tipurile de cont din fișierul
+          tău importat celor din %{product_name}.
         account_type_mapping_title: Asignează-ți tipurile de cont
-        category_mapping_description: Asignează toate categoriile din fișierul tău importat categoriilor existente din %{product_name}. Poți adăuga și categorii noi sau le poți lăsa necategorizate.
+        category_mapping_description: Asignează toate categoriile din fișierul tău
+          importat categoriilor existente din %{product_name}. Poți adăuga și categorii
+          noi sau le poți lăsa necategorizate.
         category_mapping_title: Asignează-ți categoriile
-        tag_mapping_description: Asignează toate etichetele din fișierul tău importat etichetelor existente din %{product_name}. Poți adăuga și etichete noi sau le poți lăsa necategorizate.
+        tag_mapping_description: Asignează toate etichetele din fișierul tău importat
+          etichetelor existente din %{product_name}. Poți adăuga și etichete noi sau
+          le poți lăsa necategorizate.
         tag_mapping_title: Asignează-ți etichetele
+        invalid_data: Există date nevalide; editează-le până la rezolvarea tuturor
+          erorilor
+      sure_import:
+        cancel: Anulează
+        empty_summary: Nu s-au găsit înregistrări importabile în acest fișier. Fișierul
+          poate fi gol sau liniile nu respectă formatul de export așteptat (fiecare
+          linie trebuie să fie un obiect JSON cu cheile „type” și „data”, folosind
+          tipuri acceptate de acest import).
+        description: Verifică datele care vor fi importate din fișierul exportat.
+        publish_button: Pornește importul
+        summary: Rezumatul importului
+        title: Confirmă importul
     uploads:
       show:
-        description: Lipește sau încarcă fișierul tău CSV mai jos. Te rugăm să revizuiești instrucțiunile din tabelul de mai jos înainte de a începe.
-        instructions_1: Mai jos este un exemplu de CSV cu coloane disponibile pentru import.
+        description: Lipește sau încarcă fișierul tău CSV mai jos. Te rugăm să revizuiești
+          instrucțiunile din tabelul de mai jos înainte de a începe.
+        instructions_1: Mai jos este un exemplu de CSV cu coloane disponibile pentru
+          import.
         instructions_2: CSV-ul tău trebuie să aibă un rând de antet.
-        instructions_3: Poți denumi coloanele cum dorești. Le vei mapa într-un pas ulterior.
+        instructions_3: Poți denumi coloanele cum dorești. Le vei mapa într-un pas
+          ulterior.
         instructions_4: Coloanele marcate cu un asterisc (*) sunt date obligatorii.
-        instructions_5: Fără virgule, fără simboluri monetare și fără paranteze în numere.
+        instructions_5: Fără virgule, fără simboluri monetare și fără paranteze în
+          numere.
         title: Importă-ți datele
+        qif_account_label: Cont
+        account_optional_label: Cont (opțional)
+        browse: Răsfoiește
+        copy_paste_tab: Copiază și lipește
+        csv_file_prompt: pentru a adăuga fișierul CSV aici
+        csv_invalid: Trebuie să fie un fișier CSV valid, cu antete și cel puțin un
+          rând de date
+        download_sample_csv: Descarcă un exemplu CSV
+        drop_csv_subtitle: Fișierul va fi încărcat automat
+        drop_csv_title: Trage fișierul CSV aici pentru încărcare
+        multi_account_import: Import pentru mai multe conturi
+        paste_csv_placeholder: Lipește aici conținutul fișierului CSV
+        qif_account_placeholder: Selectează un cont…
+        qif_description: Selectează un cont pentru fișierele cu un singur cont sau
+          lasă necompletat dacă exportul QIF include numele conturilor.
+        qif_file_hint: Doar fișiere .qif
+        qif_file_prompt: pentru a adăuga fișierul QIF aici
+        qif_submit: Încarcă QIF
+        qif_title: Încarcă fișierul QIF
+        to_see_format: pentru a vedea formatul CSV necesar
+        upload_csv_button: Încarcă CSV
+        upload_csv_tab: Încarcă CSV
+      handle_qif_upload:
+        qif_account_required: Selectează un cont pentru importul QIF
+        qif_uploaded: Fișierul QIF a fost încărcat cu succes.
+      sure_import:
+        browse: Răsfoiește
+        browse_hint: pentru a adăuga fișierul all.ndjson aici
+        description: Încarcă fișierul all.ndjson din exportul datelor pentru a restaura
+          conturile, tranzacțiile, categoriile și alte date.
+        drop_subtitle: Fișierul va fi încărcat automat
+        drop_title: Trage fișierul NDJSON aici pentru încărcare
+        hint_html: Încarcă fișierul <strong>all.ndjson</strong> din arhiva ZIP cu
+          datele exportate
+        ndjson_invalid: Trebuie să fie un fișier NDJSON valid, cu cel puțin o înregistrare
+        title: Importă dintr-un export
+        upload_button: Încarcă NDJSON
+      update:
+        qif_uploaded: Fișierul QIF a fost încărcat cu succes.
+    qif_category_selections:
+      show:
+        categories_heading: Categorii
+        category_name_col: Nume categorie
+        tag_name_col: Numele etichetei
+        tags_heading: Etichete
+        transactions_col: Tranzacții
+        categories_found:
+          one: S-a găsit 1 categorie
+          other: S-au găsit %{count} de categorii
+          few: S-au găsit %{count} categorii
+        description: Verifică formatul datei detectat, apoi alege categoriile și etichetele
+          din fișierul QIF pe care vrei să le imporți în %{product_name}.
+        empty_state_primary: Nu s-au găsit categorii sau etichete în acest fișier
+          QIF.
+        empty_state_secondary: Toate tranzacțiile vor fi importate fără categorii
+          sau etichete.
+        split_badge: împărțită
+        split_warning_description: Acest fișier QIF conține tranzacții împărțite.
+          Verifică mai jos categoriile și etichetele părților detectate înainte de
+          import.
+        split_warning_title: Au fost detectate tranzacții împărțite
+        submit: Continuă la verificare
+        tags_found:
+          one: S-a găsit 1 etichetă
+          other: S-au găsit %{count} de etichete
+          few: S-au găsit %{count} etichete
+        title: Configurează și selectează
+        txn_count:
+          one: 1 tranzacție
+          other: "%{count} de tranzacții"
+          few: "%{count} tranzacții"
+      update:
+        success: Categoriile și etichetele au fost salvate.
   imports:
     index:
       title: Importuri
@@ -64,12 +300,33 @@ ro:
           failed: Eșuat
         actions:
           revert: Reveni
-          confirm_revert: Aceasta operațiune va șterge tranzacțiile importate, dar veți putea în continuare să revizuiți și să reimportați datele în orice moment.
+          confirm_revert: Aceasta operațiune va șterge tranzacțiile importate, dar
+            veți putea în continuare să revizuiți și să reimportați datele în orice
+            moment.
           delete: Șterge
           view: Vezi
+          confirm_mark_failed: Acest import este inactiv de ceva timp, iar sarcina
+            din fundal a fost probabil întreruptă. Îl marchezi ca eșuat pentru a putea
+            reîncerca? Nu se păstrează datele importate.
+          mark_failed: Marchează ca eșuat
+        type_labels:
+          account_import: Cont
+          category_import: Categorie
+          merchant_import: Comerciant
+          sure_import: Sure
+          actual_import: Actual
+          document_import: Document
+          mint_import: Mint
+          pdf_import: PDF
+          qif_import: QIF
+          rule_import: Regulă
+          trade_import: Tranzacție bursieră
+          transaction_import: Tranzacție
+          ynab_import: YNAB
       empty: Nu există încă importuri.
     new:
-      description: Poți importa manual diverse tipuri de date prin CSV sau poți folosi unul dintre șabloanele noastre de import, cum ar fi Mint.
+      description: Poți importa manual diverse tipuri de date prin CSV sau poți folosi
+        unul dintre șabloanele noastre de import, cum ar fi Mint.
       import_accounts: Importă conturi
       import_mint: Importă din Mint
       import_portfolio: Importă investiții
@@ -77,11 +334,340 @@ ro:
       resume: Reia %{type}
       sources: Surse
       title: Import CSV nou
+      import_actual: Importă din Actual Budget
+      import_categories: Importă categorii
+      import_file: Importă document
+      import_file_description: Analiză PDF cu AI și încărcare de fișiere în care se
+        poate căuta
+      import_merchants: Importă comercianți
+      import_qif: Importă din Quicken (QIF)
+      import_rules: Importă reguli
+      import_sure: Importă din Sure
+      import_sure_description: Fișier .ndjson cu export complet
+      import_ynab: Importă din YNAB
+      requires_account: Importă mai întâi conturi pentru a activa această opțiune.
+      tab_financial_tools: Instrumente și fișiere financiare
+      tab_raw_data: Date brute
     ready:
-      description: Iată un rezumat al elementelor noi care vor fi adăugate contului tău odată ce vei publica acest import.
+      description: Iată un rezumat al elementelor noi care vor fi adăugate contului
+        tău odată ce vei publica acest import.
       title: Confirmă datele importate
       summary_item_label: Element
       summary_count_label: Număr
-      empty_summary: Nu s-au găsit înregistrări importabile în acest fișier. Fișierul poate fi gol sau liniile nu respectă formatul de export așteptat (fiecare linie trebuie să fie un obiect JSON cu cheile „type” și „data”, folosind tipuri acceptate de acest import).
+      empty_summary: Nu s-au găsit înregistrări importabile în acest fișier. Fișierul
+        poate fi gol sau liniile nu respectă formatul de export așteptat (fiecare
+        linie trebuie să fie un obiect JSON cu cheile „type” și „data”, folosind tipuri
+        acceptate de acest import).
       publish_import: Publică importul
       back_to_imports: Înapoi la importuri
+      provider_merchant_diff_fields:
+        name: Nume
+        provider_merchant_id: ID furnizor
+        website_url: Site web
+      missing_merchant_warning_description:
+        one: 1 referință la un comerciant din acest fișier indică un comerciant neinclus.
+          Acest lucru poate apărea la exporturi realizate înainte ca comercianții
+          atribuiți de furnizori să fie incluși în exporturile Sure. Poți publica
+          în continuare importul — înregistrarea afectată va fi importată fără comerciant,
+          pe care îl poți atribui ulterior.
+        other: "%{count} de referințe la comercianți din acest fișier indică comercianți
+          neincluși. Acest lucru poate apărea la exporturi realizate înainte ca comercianții
+          atribuiți de furnizori să fie incluși în exporturile Sure. Poți publica
+          în continuare importul — înregistrările afectate vor fi importate fără comercianți,
+          pe care îi poți atribui ulterior."
+        few: "%{count} referințe la comercianți din acest fișier indică comercianți
+          neincluși. Acest lucru poate apărea la exporturi realizate înainte ca comercianții
+          atribuiți de furnizori să fie incluși în exporturile Sure. Poți publica
+          în continuare importul — înregistrările afectate vor fi importate fără comercianți,
+          pe care îi poți atribui ulterior."
+      missing_merchant_warning_title: Unii comercianți lipsesc din acest export
+      provider_merchant_diff_description:
+        one: 1 comerciant din acest fișier există deja cu alte detalii. Comerciantul
+          existent va fi păstrat, iar valorile din fișier nu vor fi aplicate.
+        other: "%{count} de comercianți din acest fișier există deja cu alte detalii.
+          Comercianții existenți vor fi păstrați, iar valorile din fișier nu vor fi
+          aplicate."
+        few: "%{count} comercianți din acest fișier există deja cu alte detalii. Comercianții
+          existenți vor fi păstrați, iar valorile din fișier nu vor fi aplicate."
+      provider_merchant_diff_none: niciunul
+      provider_merchant_diff_row: "%{field}: se păstrează %{kept}, în fișier apare
+        %{imported}"
+      provider_merchant_diff_summary: Vezi diferențele
+      provider_merchant_diff_title: Unii comercianți există deja cu alte detalii
+      reused_taxonomy_notice_description:
+        one: 1 categorie, etichetă sau comerciant din acest fișier există deja în
+          cont (de exemplu, din categoriile implicite ale configurării inițiale).
+          Elementul existent va fi reutilizat și actualizat cu datele din fișier,
+          fără a crea un duplicat.
+        other: "%{count} de categorii, etichete sau comercianți din acest fișier există
+          deja în cont (de exemplu, din categoriile implicite ale configurării inițiale).
+          Elementele existente vor fi reutilizate și actualizate cu datele din fișier,
+          fără a crea duplicate."
+        few: "%{count} categorii, etichete sau comercianți din acest fișier există
+          deja în cont (de exemplu, din categoriile implicite ale configurării inițiale).
+          Elementele existente vor fi reutilizate și actualizate cu datele din fișier,
+          fără a crea duplicate."
+      reused_taxonomy_notice_title: Unele categorii, etichete sau comercianți există
+        deja
+      skipped_recurring_description:
+        one: 1 tranzacție recurentă nu are nume, iar comerciantul ei lipsește, așa
+          că va fi omisă. Tranzacțiile recurente detectate automat vor fi reconstruite
+          după import.
+        other: "%{count} de tranzacții recurente nu au nume, iar comercianții lor
+          lipsesc, așa că vor fi omise. Tranzacțiile recurente detectate automat vor
+          fi reconstruite după import."
+        few: "%{count} tranzacții recurente nu au nume, iar comercianții lor lipsesc,
+          așa că vor fi omise. Tranzacțiile recurente detectate automat vor fi reconstruite
+          după import."
+    column_labels:
+      account: Cont
+      amount: Sumă
+      category: Categorie
+      currency: Monedă
+      date: Dată
+      entity_type: Tip
+      name: Nume
+      notes: Notițe
+      qty: Cantitate
+      tags: Etichete
+      ticker: Simbol bursier
+      category_color: Culoare
+      exchange: Bursă
+      merchant_color: Culoare
+      category_icon: Pictogramă Lucide
+      category_parent: Categorie părinte
+      price: Preț
+      merchant_website: URL site web
+    date_format:
+      heading: Format dată
+      description: Formatul datei a fost detectat automat din fișier. Schimbă-l dacă
+        datele par incorecte.
+      error_description: Niciun format de dată acceptat nu a putut interpreta datele
+        din acest fișier. Verifică dacă fișierul conține date calendaristice valide.
+      error_title: Formatul datei nu a putut fi detectat
+      preview: Prima dată interpretată
+    dry_run_resources:
+      accounts: Conturi
+      budgets: Bugete
+      categories: Categorii
+      holdings: Dețineri
+      merchants: Comercianți
+      recurring_transactions: Tranzacții recurente
+      rules: Reguli
+      tags: Etichete
+      transactions: Tranzacții
+      trades: Tranzacții bursiere
+      balances: Solduri
+      budget_categories: Categorii bugetare
+      rejected_transfers: Transferuri respinse
+      transfers: Transferuri
+      valuations: Evaluări
+    mapping_labels:
+      account: Cont
+      category: Categorie
+      tag: Etichetă
+      account_type: Tipul contului
+    pdf_import:
+      back_to_imports: Înapoi la importuri
+      create_account: Creează cont
+      save_account: Salvează
+      unknown_document_type: Necunoscut
+      select_account_placeholder: Selectează un cont...
+      transactions_extracted_count:
+        one: "%{count} tranzacție"
+        other: "%{count} de tranzacții"
+        few: "%{count} tranzacții"
+      try_again: Încearcă din nou
+      back_to_dashboard: Înapoi la panoul de bord
+      already_recorded_note:
+        one: "%{count} exista deja în acest cont și a fost asociată extrasului."
+        other: "%{count} existau deja în acest cont și au fost asociate extrasului."
+        few: "%{count} existau deja în acest cont și au fost asociate extrasului."
+      check_status: Verifică starea
+      complete_description: Am analizat PDF-ul; iată ce am găsit.
+      complete_fully_reconciled:
+        one: Toate tranzacțiile din acest extras existau deja în cont. %{count} a
+          fost asociată și marcată ca reconciliată — nu a fost necesar niciun import.
+        other: Toate tranzacțiile din acest extras existau deja în cont. Toate cele
+          %{count} au fost asociate și marcate ca reconciliate — nu a fost necesar
+          niciun import.
+        few: Toate tranzacțiile din acest extras existau deja în cont. Toate cele
+          %{count} au fost asociate și marcate ca reconciliate — nu a fost necesar
+          niciun import.
+      complete_title: Document analizat
+      delete_import: Șterge importul
+      document_type_label: Tipul documentului
+      email_sent_notice: Ți-a fost trimis un e-mail cu pașii următori.
+      errors:
+        provider_no_pdf_support: Furnizorul AI nu acceptă procesarea PDF
+        provider_not_configured: Furnizorul AI nu este configurat
+      failed_description: Documentul PDF nu a putut fi procesat. Încearcă din nou
+        sau contactează asistența.
+      failed_title: Procesarea a eșuat
+      no_accounts: Nu există conturi disponibile. Creează mai întâi un cont.
+      processing_description: Documentul este analizat cu AI. Procesul poate dura
+        puțin. Vei primi un e-mail când analiza se încheie.
+      processing_failed_generic: 'Procesarea a eșuat: %{error}'
+      processing_failed_with_message: "%{message}"
+      processing_title: Se procesează PDF-ul
+      publish_transactions:
+        one: Publică %{count} tranzacție
+        other: Publică %{count} de tranzacții
+        few: Publică %{count} tranzacții
+      ready_for_review_description:
+        one: "%{count} tranzacție din extras nu există încă în acest cont. Verific-o
+          și public-o pentru a o adăuga."
+        other: "%{count} de tranzacții din extras nu există încă în acest cont. Verifică-le
+          și publică-le pentru a le adăuga."
+        few: "%{count} tranzacții din extras nu există încă în acest cont. Verifică-le
+          și publică-le pentru a le adăuga."
+      ready_for_review_title: Pregătit pentru verificare
+      review_transactions: Verifică tranzacțiile
+      select_account: Importă în contul
+      select_account_hint: Alege contul în care vrei să imporți aceste tranzacții.
+      select_account_to_continue: Selectează un cont mai sus pentru a continua.
+      source_statement: Extrasul sursă
+      summary_label: Rezumat
+      transactions_extracted: Tranzacții extrase
+      unknown_state_description: Acest import se află într-o stare neașteptată. Revino
+        la importuri.
+      unknown_state_title: Stare necunoscută
+      view_summary: Vezi rezumatul importului
+    steps:
+      confirm: Confirmă
+      upload: Încarcă
+      clean: Curăță
+      configure: Configurează
+      label: Pasul %{step}
+      map: Asociază
+      progress: Pasul %{step} din %{total}
+      select: Selectează
+    success:
+      verification:
+        status:
+          failed: Eșuat
+          matched: Potrivire
+          mismatch: Nepotrivire
+          not_verified: Neverificat
+          reverted: Anulat
+        checked: Verificat
+        mismatches: Nepotriviri
+        title: Verificare prin recitire
+      back_to_dashboard: Înapoi la panoul de bord
+      description: Datele importate au fost adăugate cu succes în aplicație și pot
+        fi folosite acum.
+      title: Import reușit
+    failure:
+      try_again: Încearcă din nou
+      description: Verifică formatul fișierului, eventualele erori și completarea
+        tuturor câmpurilor obligatorii, apoi revino și încearcă din nou.
+      title: Importul a eșuat
+    revert_failure:
+      try_again: Încearcă din nou
+      description: Încearcă din nou
+      title: Anularea importului a eșuat
+    summary:
+      close: Închide
+      title: Rezumatul importului
+      already_recorded: Deja înregistrat
+      already_recorded_hint: Asociată unei tranzacții deja existente în acest cont
+        și marcată ca reconciliată.
+      awaiting_review: În așteptarea importului
+      extracted: Găsite în extras
+      fully_reconciled:
+        one: Nu a fost necesar niciun import — singura tranzacție din extras era deja
+          înregistrată.
+        other: Nu a fost necesar niciun import — toate cele %{count} de tranzacții
+          erau deja înregistrate.
+        few: Nu a fost necesar niciun import — toate cele %{count} tranzacții erau
+          deja înregistrate.
+      imported: Importate ca noi
+      statement_evidence_html: Reconciliată cu %{statement}.
+      subtitle: Rezultatul pentru fiecare tranzacție din acest extras în %{account}.
+      subtitle_no_account: Rezultatul pentru fiecare tranzacție din acest extras.
+    apply_template:
+      no_template_found: Nu s-a găsit niciun șablon; configurează manual importul.
+      template_applied: Șablonul a fost aplicat.
+    cancel:
+      cancelled: Importul a fost marcat ca eșuat. Poți încerca din nou din pagina
+        importului.
+      not_cancellable: Acest import nu poate fi marcat acum ca eșuat — sarcina sa
+        poate fi încă în execuție. Încearcă din nou după o oră de inactivitate.
+    importing:
+      back_to_dashboard: Înapoi la panoul de bord
+      check_status: Verifică starea
+      description: Importul este în curs. Consultă meniul de importuri pentru starea
+        actualizată sau apasă „Verifică starea” pentru a reîmprospăta pagina. Poți
+        continua să folosești aplicația.
+      title: Import în curs
+    create:
+      csv_uploaded: Fișierul CSV a fost încărcat cu succes.
+      document_provider_not_configured: Nu este configurat niciun depozit vectorial
+        pentru încărcarea documentelor.
+      document_too_large: Documentul este prea mare. Dimensiunea maximă este de %{max_size}
+        MB.
+      document_upload_failed: Documentul nu a putut fi încărcat în depozitul vectorial.
+        Încearcă din nou.
+      document_uploaded: Documentul a fost încărcat cu succes.
+      duplicate_pdf_unavailable: Acest PDF este deja stocat ca extras la care nu ai
+        acces.
+      file_too_large: Fișierul este prea mare. Dimensiunea maximă este de %{max_size}
+        MB.
+      invalid_document_file_type: Tipul documentului nu este valid pentru depozitul
+        vectorial activ.
+      invalid_file_type: Tip de fișier nevalid. Încarcă un fișier CSV.
+      invalid_ndjson_file_type: Tip sau format de fișier nevalid. Încarcă un export
+        valid .ndjson sau .json.
+      invalid_pdf: Fișierul încărcat nu este un PDF valid.
+      ndjson_uploaded: Fișierul NDJSON a fost încărcat cu succes.
+      pdf_processing: PDF-ul este în curs de procesare. Vei primi un e-mail când analiza
+        se încheie.
+      pdf_too_large: Fișierul PDF este prea mare. Dimensiunea maximă este de %{max_size}
+        MB.
+    destroy:
+      deleted: Importul a fost șters.
+    document_types:
+      bank_statement: Extras bancar
+      contract: Contract
+      credit_card_statement: Extras de card de credit
+      financial_document: Document financiar
+      investment_statement: Extras de investiții
+      other: Alt document
+      unknown: Document necunoscut
+    empty:
+      message: Nu s-au găsit importuri.
+    errors:
+      custom_column_requires_inflow: Importurile cu o coloană personalizată necesită
+        selectarea unei coloane de intrări
+      interrupted: Procesul din fundal a fost întrerupt înainte de finalizare. Modificările
+        datelor importate au fost anulate — poți reîncerca în siguranță.
+      presumed_lost: Marcat ca eșuat după ce sarcina din fundal a fost considerată
+        pierdută. Modificările datelor importate au fost anulate — poți reîncerca
+        în siguranță.
+    publish:
+      max_rows_exceeded: Importul depășește limita de %{max} de rânduri.
+      started: Importul a început în fundal.
+    revert:
+      started: Importul este în curs de anulare în fundal.
+    show:
+      finalize_mappings: Finalizează asocierile înainte de a continua.
+      finalize_upload: Finalizează încărcarea fișierului.
+    type_labels:
+      account_import: Import de conturi
+      actual_import: Import Actual
+      category_import: Import de categorii
+      document_import: Import de documente
+      merchant_import: Import de comercianți
+      mint_import: Import Mint
+      pdf_import: Import PDF
+      qif_import: Import QIF
+      rule_import: Import de reguli
+      sure_import: Import Sure
+      trade_import: Import de tranzacții bursiere
+      transaction_import: Import de tranzacții
+      ynab_import: Import YNAB
+    update:
+      account_locked: Acest import a fost deja publicat, așa că nu îi poți schimba
+        contul. Anulează-l mai întâi dacă vrei să-l imporți în alt cont.
+      account_saved: Contul a fost salvat.
+      invalid_account: Contul nu a fost găsit.

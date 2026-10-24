@@ -15,3 +15,15 @@ nl:
       unauthorized: U bent niet geautoriseerd om deze actie uit te voeren
     reset_with_sample_data:
       success: Uw account is gereset en voorbeeldgegevens worden voorbereid. U zult binnenkort demogegevens zien.
+    user_menu:
+      feedback: Feedback
+      aria_label: Accountmenu openen
+      changelog: Wijzigingenoverzicht
+      contact: Contact
+      log_out: Uitloggen
+      settings: Instellingen
+      version: Versie
+    roles:
+      admin: Beheerder
+      member: Lid
+      super_admin: Superbeheerder

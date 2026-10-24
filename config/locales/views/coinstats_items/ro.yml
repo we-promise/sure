@@ -1,0 +1,88 @@
+---
+ro:
+  coinstats_items:
+    coinstats_item:
+      delete: Șterge
+      reconnect: Reconectează
+      status: Ultima sincronizare acum %{timestamp}
+      status_never: Nu a fost sincronizat niciodată
+      status_with_summary: Ultima sincronizare acum %{timestamp} • %{summary}
+      provider_name: CoinStats
+      deletion_in_progress: Datele portofelului cripto sunt în curs de ștergere…
+      no_wallets_message: În prezent, niciun portofel cripto nu este conectat la CoinStats.
+      no_wallets_title: Niciun portofel cripto conectat
+      sync_status:
+        all_synced:
+          one: "%{count} portofel cripto sincronizat"
+          other: "%{count} de portofele cripto sincronizate"
+          few: "%{count} portofele cripto sincronizate"
+        no_accounts: Nu s-au găsit portofele cripto
+        partial_sync: 'Portofele cripto sincronizate: %{linked_count}; de configurat:
+          %{unlinked_count}'
+      syncing: Se sincronizează…
+      update_api_key: Actualizează cheia API
+    new:
+      api_key_label: Cheie API
+      address_placeholder: Obligatoriu
+      api_key_placeholder: Obligatoriu
+      blockchain_placeholder: Obligatoriu
+      exchange_label: Bursă
+      go_to_settings: Mergi la setările furnizorului
+      not_configured_step1_html: Mergi la <strong>Setări → Furnizori</strong>
+      configure: Configurează
+      default_name: Conexiune CoinStats
+      address_label: Adresă
+      blockchain_fetch_error: Încărcarea blockchainurilor a eșuat. Încearcă din nou
+        mai târziu.
+      blockchain_label: Blockchain
+      blockchain_select_blank: Selectează un blockchain
+      exchange_select_blank: Selectează o platformă
+      link_exchange_description: Folosește o cheie API a platformei cu acces doar
+        pentru citire, astfel încât CoinStats să poată sincroniza solduri și tranzacții
+        din Bitvavo, Binance și alte platforme acceptate.
+      link_exchange_note: Dacă platforma ta necesită activarea cheii API sau confirmarea
+        prin e-mail, finalizează pasul respectiv înainte de asocierea de aici.
+      link_exchange_submit: Asociază platforma
+      link_exchange_title: Asociază API-ul platformei
+      link_wallet_description: Urmărește prin CoinStats un portofel cu custodie proprie
+        sau o singură adresă din blockchain.
+      link_wallet_submit: Asociază portofelul cripto
+      link_wallet_title: Asociază adresa portofelului
+      not_configured_message: Pentru a asocia un portofel cripto sau o platformă,
+        trebuie mai întâi să configurezi conexiunea la furnizorul CoinStats.
+      not_configured_step2_html: Găsește furnizorul <strong>CoinStats</strong>
+      not_configured_step3_html: Urmează <strong>instrucțiunile de configurare</strong>
+        oferite pentru a finaliza configurarea furnizorului
+      not_configured_title: Conexiunea la furnizorul CoinStats nu este configurată
+      setup_instructions: 'Instrucțiuni de configurare:'
+      step1_html: Accesează <a href="https://openapi.coinstats.app/" class="link"
+        target="_blank" rel="noopener noreferrer">panoul API public CoinStats</a>
+        pentru a obține o cheie API.
+      step2: Introdu cheia API mai jos și apasă Configurează.
+      step3_html: După conectarea cu succes, accesează fila <a href="%{accounts_url}"
+        class="link" data-turbo-frame="_top">Conturi</a> pentru a configura conturile
+        cripto.
+      title: Conectează conturi cripto cu CoinStats
+      update_configuration: Reconfigurează
+    create:
+      default_name: Conexiune CoinStats
+      errors:
+        validation_failed: 'Validarea a eșuat: %{message}.'
+      success: Conexiunea la furnizorul CoinStats a fost configurată cu succes.
+    destroy:
+      success: Conexiunea la furnizorul CoinStats a fost programată pentru ștergere.
+    link_exchange:
+      error: 'Asocierea platformei a eșuat: %{message}.'
+      failed: Asocierea platformei a eșuat.
+      invalid_exchange: Platforma selectată nu mai este acceptată.
+      missing_params: Platforma și datele de autentificare sunt obligatorii.
+      success: Platforma %{name} a fost asociată.
+    link_wallet:
+      error: 'Asocierea portofelului cripto a eșuat: %{message}.'
+      failed: Asocierea portofelului cripto a eșuat.
+      missing_params: 'Lipsesc parametrii obligatorii: adresa și blockchainul.'
+      success: 'Portofele cripto asociate cu succes: %{count}.'
+    update:
+      errors:
+        validation_failed: 'Validarea a eșuat: %{message}.'
+      success: Conexiunea la furnizorul CoinStats a fost actualizată cu succes.

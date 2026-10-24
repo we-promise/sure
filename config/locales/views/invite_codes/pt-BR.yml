@@ -2,6 +2,11 @@
 pt-BR:
   invite_codes:
     index:
-      invite_code_description: Gere um novo código para vê-lo exibido aqui. Códigos gerados
-        que foram usados não serão mais mostrados.
+      invite_code_description: >-
+        Gere um novo código para vê-lo exibido aqui. Códigos gerados que foram usados
+        não serão mais mostrados.
       no_invite_codes: Nenhum código para mostrar
+    create:
+      success: Código gerado
+    destroy:
+      success: Código excluído

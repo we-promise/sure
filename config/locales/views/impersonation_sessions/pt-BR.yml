@@ -13,3 +13,13 @@ pt-BR:
       success: Sessão encerrada
     reject:
       success: Solicitação rejeitada
+    super_admin_bar:
+      impersonating: Acessando em nome de
+      jobs: Tarefas
+      join: Entrar
+      join_a_session: Entrar em uma sessão
+      leave: Sair
+      request_impersonation: Solicitar acesso em nome do usuário
+      super_admin: Super Administrador
+      terminate: Terminar
+      uuid_placeholder: UUID

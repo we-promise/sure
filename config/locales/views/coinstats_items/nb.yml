@@ -1,0 +1,86 @@
+---
+nb:
+  coinstats_items:
+    coinstats_item:
+      delete: Slett
+      provider_name: CoinStats
+      reconnect: Koble til på nytt
+      status: Sist synkronisert for %{timestamp} siden
+      status_never: Aldri synkronisert
+      status_with_summary: Sist synkronisert for %{timestamp} siden • %{summary}
+      deletion_in_progress: Kryptolommebokdata slettes…
+      no_wallets_message: Ingen kryptolommebøker er koblet til CoinStats for øyeblikket.
+      no_wallets_title: Ingen kryptolommebøker tilkoblet
+      sync_status:
+        all_synced:
+          one: "%{count} kryptolommebok synkronisert"
+          other: "%{count} kryptolommebøker synkronisert"
+        no_accounts: Ingen kryptolommebøker funnet
+        partial_sync: "%{linked_count} kryptolommebøker synkronisert, %{unlinked_count}
+          må konfigureres"
+      syncing: Synkroniserer…
+      update_api_key: Oppdater API-nøkkel
+    new:
+      address_placeholder: Påkrevd
+      api_key_label: API-nøkkel
+      api_key_placeholder: Påkrevd
+      blockchain_placeholder: Påkrevd
+      go_to_settings: Gå til leverandørinnstillinger
+      exchange_label: Børs
+      not_configured_step1_html: Gå til <strong>Innstillinger → Leverandører</strong>
+      address_label: Adresse
+      blockchain_fetch_error: Kunne ikke laste inn blokkjeder. Prøv igjen senere.
+      blockchain_label: Blokkjede
+      blockchain_select_blank: Velg en blokkjede
+      configure: Konfigurer
+      default_name: CoinStats-tilkobling
+      exchange_select_blank: Velg en børs
+      link_exchange_description: Bruk en API-nøkkel med bare lesetilgang, slik at
+        CoinStats kan synkronisere saldoer og transaksjoner fra Bitvavo, Binance og
+        andre støttede børser.
+      link_exchange_note: Hvis børsen krever aktivering av API-nøkkelen eller e-postbekreftelse,
+        fullfør det før du kobler til her.
+      link_exchange_submit: Koble til børs
+      link_exchange_title: Koble til børs-API
+      link_wallet_description: Følg en lommebok med egen nøkkelforvaltning eller én
+        adresse på en blokkjede via CoinStats.
+      link_wallet_submit: Koble til kryptolommebok
+      link_wallet_title: Koble til lommebokadresse
+      not_configured_message: Du må konfigurere CoinStats-leverandørtilkoblingen før
+        du kan koble til en kryptolommebok eller børs.
+      not_configured_step2_html: Finn leverandøren <strong>CoinStats</strong>
+      not_configured_step3_html: Følg de angitte <strong>oppsettsinstruksjonene</strong>
+        for å fullføre leverandøroppsettet
+      not_configured_title: CoinStats-leverandørtilkoblingen er ikke konfigurert
+      setup_instructions: 'Oppsettsinstruksjoner:'
+      step1_html: Gå til <a href="https://openapi.coinstats.app/" class="link" target="_blank"
+        rel="noopener noreferrer">CoinStats Public API Dashboard</a> for å skaffe
+        en API-nøkkel.
+      step2: Angi API-nøkkelen nedenfor og klikk på Konfigurer.
+      step3_html: Når tilkoblingen er opprettet, går du til <a href="%{accounts_url}"
+        class="link" data-turbo-frame="_top">Kontoer</a>-fanen for å konfigurere kryptokontoene
+        dine.
+      title: Koble til krypto med CoinStats
+      update_configuration: Konfigurer på nytt
+    create:
+      default_name: CoinStats-tilkobling
+      errors:
+        validation_failed: 'Valideringen mislyktes: %{message}.'
+      success: CoinStats-leverandørtilkoblingen er konfigurert.
+    destroy:
+      success: CoinStats-leverandørtilkoblingen er planlagt slettet.
+    link_exchange:
+      error: 'Kunne ikke koble til børsen: %{message}.'
+      failed: Kunne ikke koble til børsen.
+      invalid_exchange: Den valgte børsen støttes ikke lenger.
+      missing_params: Børs og påloggingsopplysninger må angis.
+      success: Børsen %{name} er tilkoblet.
+    link_wallet:
+      error: 'Kunne ikke koble til kryptolommeboken: %{message}.'
+      failed: Kunne ikke koble til kryptolommeboken.
+      missing_params: 'Påkrevde parametere mangler: adresse og blokkjede.'
+      success: 'Kryptolommebøker koblet til: %{count}.'
+    update:
+      errors:
+        validation_failed: 'Valideringen mislyktes: %{message}.'
+      success: CoinStats-leverandørtilkoblingen er oppdatert.

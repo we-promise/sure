@@ -1,0 +1,17 @@
+---
+pt-BR:
+  recurring_allocations:
+    already_allocated: Essa transação já foi aplicada a esta conta a pagar
+    confirm:
+      success: Pagamento aplicado à conta a pagar
+    create:
+      success: Pagamento aplicado
+    destroy:
+      success: Pagamento desvinculado
+    invalid: Não foi possível registrar o pagamento
+    missing_rate: Nenhuma taxa de câmbio disponível; informe o valor explicitamente
+    over_allocation: Isso destinaria um valor maior que o valor da transação
+    reject:
+      success: >-
+        Sugestão dispensada. Essa transação não será sugerida novamente para esta
+        conta a pagar.

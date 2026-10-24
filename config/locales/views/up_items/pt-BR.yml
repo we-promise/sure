@@ -1,0 +1,118 @@
+---
+pt-BR:
+  family:
+    up:
+      create_up_item:
+        default_name: Conexão Up
+  providers:
+    up:
+      description: Associe contas bancárias australianas Up através de um token de
+        acesso pessoal
+      name: Up
+  up_account:
+    fallback: Conta Up
+  up_item:
+    errors:
+      account_processing_failed: Não foi possível sincronizar a conta Up
+      account_sync_schedule_failed: Não foi possível agendar a sincronização da conta
+        Up
+      sync_failed: Não foi possível sincronizar a conexão Up
+      transactions_failed: Não foi possível obter as transações Up
+    institution_summary:
+      count:
+        one: 1 instituição
+        other: "%{count} instituições"
+      none: Não existem instituições conectadas
+      one: 1 instituição
+    sync_status:
+      all_synced:
+        one: 1 conta sincronizada
+        other: "%{count} contas sincronizadas"
+      no_accounts: Não foram encontradas contas
+      partial: "%{linked} sincronizadas, %{unlinked} precisam de configuração"
+  up_items:
+    complete_account_setup:
+      all_skipped: Não foi criada nenhuma conta Up.
+      creation_failed: Não foi possível criar as contas Up.
+      no_accounts: Nenhuma conta Up foi selecionada.
+      success:
+        one: Criada 1 conta Up.
+        other: Criadas %{count} contas Up.
+    create:
+      success: Conexão Up salva.
+    destroy:
+      success: Exclusão da conexão Up agendada.
+      unlink_failed: Não foi possível desconectar a conexão com o Up
+    link_accounts:
+      link_failed: Nenhuma conta foi vinculada.
+      no_accounts_selected: Selecione pelo menos uma conta.
+      no_credentials_configured: Configure a Up nas configurações do serviço primeiro.
+      success:
+        one: Associada 1 conta Up.
+        other: Associadas %{count} contas Up.
+      unsupported_account_type: A Up não suporta esse tipo de conta.
+    link_existing_account:
+      account_already_linked: Esta conta já está vinculada a um provedor.
+      no_account_selected: Selecione uma conta Up para associar.
+      success: Conta Up associada a %{account_name}.
+      up_account_already_linked: Esta conta Up já está associada.
+    provider_panel:
+      access_token_label: Token de acesso pessoal
+      access_token_placeholder: Cole o seu token de acesso pessoal Up
+      add_connection: Adicionar conexão Up
+      connection_name_label: Nome da conexão
+      connection_name_placeholder: Up principal
+      default_connection_name: Conexão Up
+      disconnect: Desconectar
+      disconnect_confirm: Tem certeza de que deseja desconectar %{name}?
+      keep_access_token_placeholder: Deixe em branco para manter o token existente
+      setup_accounts: Configurar contas
+      sync: Sincronizar
+      syncing: Sincronizando...
+      update_connection: Atualizar conexão
+    select_accounts:
+      cancel: Cancelar
+      description: Escolha as contas Up a adicionar.
+      link_accounts: Vincular contas
+      no_accounts_found: Não foram encontradas contas Up por associar.
+      no_credentials_configured: Configure a Up nas configurações do serviço primeiro.
+      title: Associar contas Up
+    select_existing_account:
+      account_already_linked: Esta conta já está vinculada a um provedor.
+      cancel: Cancelar
+      description: Escolha uma conta Up por associar para conectar a esta conta.
+      link_account: Associar conta
+      no_accounts_found: Não foram encontradas contas Up por associar.
+      no_credentials_configured: Configure a Up nas configurações do serviço primeiro.
+      title: Associar conta Up a %{account_name}
+    setup_accounts:
+      account_type_label: Tipo de conta
+      account_types:
+        depository: Dinheiro
+        loan: Empréstimo
+        skip: Pular
+      all_accounts_linked: Todas as contas Up já estão associadas.
+      api_error: Não foi possível obter as contas Up.
+      cancel: Cancelar
+      choose_account_type: Escolha um tipo de conta
+      choose_account_type_description: Ignore as contas que não deseja acompanhar.
+      create_accounts: Criar contas
+      fetch_failed: Não foi possível obter as contas
+      no_accounts_to_setup: Nenhuma conta para configurar
+      no_credentials: Configure primeiro as credenciais Up.
+      subtitle: Escolha a forma como cada conta Up deve aparecer no Sure.
+      title: Associar contas Up
+    up_item:
+      delete: Excluir
+      deletion_in_progress: Exclusão em andamento
+      error: Erro
+      no_accounts_description: Obtenha as contas Up e escolha quais deseja associar.
+      no_accounts_title: Nenhuma conta importada ainda
+      setup_action: Configurar contas
+      setup_description: "%{linked} de %{total} contas vinculadas."
+      setup_needed: Configuração da conta necessária
+      status_never: Nunca sincronizada
+      status_with_summary: Sincronizada há %{timestamp} · %{summary}
+      syncing: Sincronizando
+    update:
+      success: Conexão Up atualizada.

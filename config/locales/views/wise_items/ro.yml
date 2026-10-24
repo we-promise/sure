@@ -1,5 +1,194 @@
+---
 ro:
   wise_items:
     provider_panel:
       instructions:
-        open_tokens: Accesați Settings → Connect and manage apps → Developer tools → API tokens
+        open_tokens: Accesați Settings → Connect and manage apps → Developer tools
+          → API tokens
+        copy_token_html: Copiază tokenul și lipește-l mai jos. Sure îl folosește doar
+          pentru sincronizarea soldurilor și tranzacțiilor.
+        create_token: Creează un token API personal nou, cu acces doar pentru citire
+        sign_in_html: Accesează %{link} și autentifică-te în cont
+      setup_accounts: Configurează conturile
+      connection_name_label: Numele conexiunii
+      disconnect: Deconectează
+      sca:
+        copied: Copiat!
+        copy: Copiază
+        description: Wise solicită semnarea unei provocări cu token de unică folosință
+          pentru citirea extraselor complete, inclusiv a încasărilor. Generează aici
+          o pereche de chei și înregistrează cheia publică în Wise pentru activare.
+        generate: Generează o pereche de chei
+        public_key_label: Cheie publică (PEM)
+        regenerate: Regenerează perechea de chei
+        regenerate_confirm: Se generează o pereche nouă de chei. Wise va continua
+          să accepte cheia publică anterioară până când o elimini manual din contul
+          Wise — Sure nu o poate revoca la distanță. Trebuie să înregistrezi noua
+          cheie publică în Wise înainte de a relua sincronizarea extraselor. Continui?
+        registered_help_html: 'Înregistrează această cheie în Wise: Settings → Connect
+          and manage apps → Developer tools → Public keys → Add public key.'
+        title: Autentificare strictă a clienților (SCA)
+      sync: Sincronizează
+      update_connection: Actualizează conexiunea
+      keep_token_placeholder: Lasă necompletat pentru a păstra tokenul actual
+      add_connection: Adaugă o conexiune Wise
+      connect: Conectează Wise
+      disconnect_label: Deconectează %{name}
+      encryption_warning:
+        title: Criptarea bazei de date nu este configurată
+        message: Configurează cheile de criptare Active Record înainte de a adăuga
+          tokenuri Wise în producție. Fără criptare, tokenurile sunt stocate în text
+          clar.
+      connection_name_placeholder: Wise personal
+      disconnect_confirm: Sigur vrei să deconectezi %{name}? Toate datele conturilor
+        sincronizate vor fi eliminate.
+      import_all_history_help: Preia toate extrasele istorice Wise, nu doar pe cele
+        din ultimul an.
+      import_all_history_label: Importă întregul istoric al tranzacțiilor
+      sandbox_note_html: Folosește URL-ul de bază <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>)
+        pentru teste. Setează <code>WISE_BASE_URL</code> în mediu.
+      sync_start_date_help: Extrasele Wise sunt importate începând cu această dată.
+        Păstrează valoarea implicită pentru până la un an de istoric.
+      sync_start_date_label: Importă tranzacții începând cu
+      token_label: Token API
+      token_placeholder: Lipește tokenul API personal Wise
+    select_accounts:
+      cancel: Anulează
+      description: Selectează soldul valutar Wise pe care vrei să-l conectezi la contul
+        tău %{product_name}.
+      link_account: Conectează soldul
+      no_accounts_found: Toate soldurile Wise sunt deja conectate la conturi Sure.
+      no_connection: Nu s-a găsit nicio conexiune Wise. Conectează mai întâi Wise
+        în setările furnizorului.
+      title: Selectează soldul Wise
+    select_existing_account:
+      cancel: Anulează
+      title: Conectează %{account_name} cu Wise
+      description: Selectează soldul valutar Wise de asociat acestui cont. Tranzacțiile
+        vor fi sincronizate automat.
+      link_account: Conectează soldul
+      no_accounts_found: Nu s-au găsit solduri Wise neconectate.
+    select_profiles:
+      cancel: Anulează
+      already_connected_label: Deja conectat
+      connect: Conectează profilurile selectate
+      description: Contul tău Wise are mai multe profiluri. Selectează-le pe cele
+        pe care vrei să le sincronizezi cu Sure.
+      session_expired: Sesiunea a expirat. Încearcă din nou conectarea.
+      subtitle: Alege profilurile de conectat
+      title: Selectează profilurile Wise
+      unnamed_profile: "(Profil fără nume)"
+    setup_accounts:
+      create_account: Creează cont
+      done: Gata
+      all_accounts_linked: Toate soldurile valutare Wise au fost conectate la conturi
+        Sure.
+      description: Creează un cont Sure pentru fiecare sold valutar Wise pe care vrei
+        să-l urmărești. Fiecare monedă devine un cont separat.
+      no_accounts_to_setup: Toate conturile sunt configurate
+      subtitle: Conectează soldurile valutare Wise
+      title: Configurează conturi Wise
+    sync:
+      success: Sincronizarea a început
+    sync_status:
+      no_accounts: Nu s-au găsit conturi
+      all_synced:
+        one: "%{count} cont sincronizat"
+        other: "%{count} de conturi sincronizate"
+        few: "%{count} conturi sincronizate"
+      partial_setup: 'Sincronizate: %{synced}; necesită configurare: %{pending}'
+    syncer:
+      calculating_balances: Se calculează soldurile...
+      accounts_need_setup:
+        other: "%{count} de conturi necesită configurare..."
+        one: "%{count} cont necesită configurare..."
+        few: "%{count} conturi necesită configurare..."
+      checking_account_configuration: Se verifică configurarea contului...
+      processing_transactions: Se procesează tranzacțiile...
+      importing_accounts: Se importă conturile din Wise...
+      account_processing_failed:
+        one: Procesarea a eșuat pentru %{count} cont Wise.
+        other: Procesarea a eșuat pentru %{count} de conturi Wise.
+        few: Procesarea a eșuat pentru %{count} conturi Wise.
+      account_sync_failed:
+        one: Sincronizarea pentru %{count} cont Wise nu a putut fi programată.
+        other: Sincronizarea pentru %{count} de conturi Wise nu a putut fi programată.
+        few: Sincronizarea pentru %{count} conturi Wise nu a putut fi programată.
+      failed: Sincronizarea a eșuat. Încearcă din nou sau contactează asistența.
+      import_failed: Importul Wise a eșuat.
+      accounts_failed:
+        one: Importul a eșuat pentru %{count} sold.
+        other: Importul a eșuat pentru %{count} de solduri.
+        few: Importul a eșuat pentru %{count} solduri.
+      credentials_invalid: Token API Wise nevalid sau permisiuni insuficiente
+      transactions_failed:
+        one: Importul tranzacțiilor a avut erori pentru %{count} sold.
+        other: Importul tranzacțiilor a avut erori pentru %{count} de solduri.
+        few: Importul tranzacțiilor a avut erori pentru %{count} solduri.
+    wise_item:
+      deletion_in_progress: ștergere în curs...
+      setup_needed: Conturi noi gata de configurare
+      status: Sincronizat acum %{timestamp}
+      status_never: Nu a fost sincronizat niciodată
+      syncing: Se sincronizează...
+      delete: Deconectează
+      error: Eroare de sincronizare
+      setup_action: Configurează conturile
+      no_accounts_description: Rulează o sincronizare pentru a descoperi soldurile
+        Wise, apoi conectează-le la conturi Sure.
+      no_accounts_title: Nu există încă conturi conectate
+      setup_description: 'Conturi conectate: %{linked} din %{total}. Creează conturi
+        Sure pentru soldurile valutare Wise.'
+      status_with_summary: Ultima sincronizare acum %{timestamp} — %{summary}
+    provider_connection:
+      description: Conectează folosind %{name}
+      default_name: Wise
+      default_description: Conectează contul Wise în mai multe monede
+      name: Wise — %{name}
+    destroy:
+      success: Conexiunea Wise a fost eliminată
+    link_existing_account:
+      success: "%{account_name} a fost conectat cu succes la Wise"
+      failed: Contul nu a putut fi conectat. Încearcă din nou.
+      not_found: Contul sau soldul Wise nu au fost găsite.
+    entries:
+      default_name: Tranzacție Wise
+      fee_name: Comision Wise
+    update:
+      success: Conexiunea Wise a fost actualizată
+    activities:
+      asset_fee: Comision Wise Assets
+      default_name: Activitate Wise
+      interest: Dobândă Wise
+      jar_deposit: Transfer către pușculiță
+      jar_withdrawal: Transfer din pușculiță
+      transfer_from_jar: Transfer din %{jar}
+      transfer_to_jar: Transfer către %{jar}
+    complete_account_setup:
+      failed: Contul nu a putut fi creat. Încearcă din nou.
+      not_found: Soldul Wise nu a fost găsit.
+      success: Contul a fost creat și conectat cu succes.
+    create:
+      connection_failed: Conectarea la Wise nu a fost posibilă. Încearcă din nou mai
+        târziu.
+      invalid_token: Token API nevalid. Verifică-l și încearcă din nou.
+      no_profiles_found: Nu s-au găsit profiluri Wise. Verifică tokenul API.
+    generate_sca_keypair:
+      failed: Nu a putut fi generată o pereche nouă de chei SCA. Încearcă din nou.
+      success: A fost generată o pereche nouă de chei SCA. Înregistrează cheia publică
+        în Wise pentru a finaliza activarea.
+    link_accounts:
+      failed: Soldul Wise nu a putut fi conectat. Încearcă din nou.
+      not_found: Soldul Wise nu a fost găsit.
+      success: Soldul Wise a fost conectat cu succes la cont.
+    link_profiles:
+      already_connected: Toate profilurile selectate sunt deja conectate.
+      no_profiles_selected: Selectează cel puțin un profil.
+      session_expired: Sesiunea a expirat. Încearcă din nou conectarea.
+      success:
+        one: S-a conectat cu succes %{count} profil Wise
+        other: S-au conectat cu succes %{count} de profiluri Wise
+        few: S-au conectat cu succes %{count} profiluri Wise
+    profile_types:
+      business: Afaceri
+      personal: Personal

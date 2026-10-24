@@ -1,0 +1,49 @@
+---
+ro:
+  activerecord:
+    attributes:
+      goal:
+        currency: Monedă
+        name: Nume
+        notes: Notițe
+        color: Culoare
+        linked_accounts: Conturi conectate
+        target_amount: Sumă țintă
+        target_date: Data țintă
+        state: Stare
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Alege cel puțin un cont pentru
+                finanțarea acestui obiectiv.
+              whole_account_conflict_on_restore: 'Acest obiectiv nu poate fi restabilit:
+                „%{account_name}” este acum rezervat integral pentru „%{goal_name}”.
+                Introdu mai întâi o sumă pentru unul dintre ele.'
+            currency:
+              locked_after_linked: Moneda nu poate fi schimbată după asocierea obiectivului
+                cu conturi.
+            kind:
+              locked_once_consumed: Acest obiectiv a înregistrat deja bani ca fiind
+                cheltuiți, deci nu poate deveni o rezervă.
+              locked_while_released: Redeschide acest obiectiv înainte de a-l transforma
+                într-o rezervă.
+            linked_accounts:
+              currency_mismatch: Toate conturile asociate trebuie să aibă aceeași
+                monedă.
+              must_be_fundable: Toate conturile asociate trebuie să fie conturi de
+                numerar sau de investiții.
+              must_belong_to_family: Conturile asociate trebuie să aparțină aceleiași
+                familii ca obiectivul.
+            target_amount:
+              below_consumed: Nu poți stabili o țintă mai mică decât suma deja înregistrată
+                ca fiind cheltuită pentru acest obiectiv.
+            target_mode:
+              months_requires_maintained: Doar o rezervă pe care o menții poate avea
+                o țintă exprimată în luni de cheltuieli.
+            target_months:
+              blank: Precizează câte luni de cheltuieli ar trebui să acopere această
+                rezervă.
+              only_with_months_mode: Lunile de cheltuieli se aplică doar când ținta
+                este stabilită în acest mod.

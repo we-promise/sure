@@ -6,9 +6,22 @@ ro:
     destroy:
       success: Înregistrare ștearsă
     empty:
-      description: Încearcă să adaugi o înregistrare, să editezi filtrele sau să rafinezi căutarea
+      description: Încearcă să adaugi o înregistrare, să editezi filtrele sau să rafinezi
+        căutarea
       title: Nicio înregistrare găsită
     loading:
       loading: Se încarcă înregistrările...
     update:
       success: Înregistrare actualizată
+    protection:
+      description: Modificările tale la această înregistrare nu vor fi suprascrise
+        de sincronizarea furnizorului.
+      locked_fields_label: 'Câmpuri blocate:'
+      title: Protejată față de sincronizare
+      tooltip: Protejată față de sincronizare
+      unlock_button: Permite actualizarea prin sincronizare
+      unlock_confirm: Permiți sincronizării să actualizeze această înregistrare? Modificările
+        tale pot fi suprascrise la următoarea sincronizare.
+    unlock:
+      success: Înregistrarea a fost deblocată. Poate fi actualizată la următoarea
+        sincronizare.

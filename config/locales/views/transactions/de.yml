@@ -88,6 +88,25 @@ de:
       transfer: Überweisung
       transfer_matcher_description: Verknüpf diese Transaktion mit ihrem Gegenstück in einem anderen Konto.
       transfer_or_debt_payment: Überweisung oder Schuldentilgung?
+      original_description: Ursprüngliche Beschreibung
+      payment_channel: Zahlungskanal
+      plaid_counterparty_label: Gegenpartei %{index}
+      plaid_payment_meta_label: Zahlungsmetadaten · %{name}
+      provider_extra_fields:
+        by_order_of: Im Auftrag von
+        confidence_level: Konfidenzniveau
+        entity_id: Entitäts-ID
+        logo_url: Logo-URL
+        name: Name
+        payee: Zahlungsempfänger
+        payer: Zahlender
+        phone_number: Telefonnummer
+        ppd_id: PPD-ID
+        reason: Grund
+        reference_number: Referenznummer
+        type: Typ
+        website: Website
+      transaction_code: Transaktionscode
     activity_labels:
       buy: Kaufen
       sell: Verkaufen
@@ -163,6 +182,7 @@ de:
         category: Kategorie
         tag: Tag
         merchant: Händler
+        ai: KI
     convert_to_trade:
       title: In Wertpapier-Trade umwandeln
       description: Diese Transaktion in einen Trade mit Wertpapierdetails umwandeln
@@ -220,6 +240,8 @@ de:
           transfer: Überweisung
           confirmed: Bestätigt
           pending: Ausstehend
+          ai_current: KI
+          ai_history: KI-Verlauf
         type_filter:
           expense: Ausgabe
           income: Einnahme
@@ -238,6 +260,13 @@ de:
           filter_merchants: Händler filtern
         tag_filter:
           filter_tags: Tags filtern
+        ai_filter:
+          current: KI
+          current_description: Die Kategorie entspricht weiterhin der automatischen Zuordnung
+            (KI oder Bayes).
+          history: KI-Verlauf
+          history_description: Wurde automatisch kategorisiert, die Kategorie wurde aber inzwischen
+            geändert.
       menu:
         account_filter: Konto
         amount_filter: Betrag

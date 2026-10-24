@@ -15,11 +15,20 @@ pt-BR:
     form:
       emoji_label: Emoji (opcional)
       emoji_placeholder: Cole um emoji
-      emoji_help: Escolha ou cole um emoji completo, incluindo uma bandeira ou uma
-        família. Apague-o para usar o ícone.
+      emoji_help: >-
+        Escolha ou cole um emoji completo, incluindo uma bandeira ou uma família.
+        Apague-o para usar o ícone.
       emoji_clear: Usar ícone
       emoji_pick: Usar %{emoji}
       placeholder: Nome da categoria
+      auto_adjust: ajuste automático.
+      color: Cor
+      icon: Ícone
+      name_label: Nome
+      parent_category_label: Categoria principal (opcional)
+      poor_contrast: Contraste fraco, escolha uma cor mais escura ou
+      trigger_label: Escolher cor e ícone
+      unassigned: "(sem atribuição)"
     index:
       bootstrap: Usar padrões (recomendado)
       categories: Categorias
@@ -27,17 +36,51 @@ pt-BR:
       categories_incomes: Categorias de receitas
       empty: Nenhuma categoria encontrada
       new: Nova categoria
+      delete_all: Excluir tudo
+      merge: Mesclar categorias
     menu:
       loading: Carregando...
     new:
       new_category: Nova categoria
     update:
       success: Categoria atualizada com sucesso
+    destroy_all:
+      success: Todas as categorias excluídas
+    merge:
+      description: >-
+        Selecione uma categoria de destino e as categorias a unir. As transações e
+        linhas de orçamento correspondentes serão movidas para o destino.
+      select_target: Selecionar categoria de destino...
+      sources_hint: >-
+        As categorias selecionadas serão excluídas depois de as suas transações e
+        linhas de orçamento serem movidas para o destino. Não selecione o destino
+        como origem.
+      sources_label: Categorias para mesclar
+      submit: Mesclar selecionadas
+      target_label: Mesclar em (destino)
+      title: Mesclar categorias
+    perform_merge:
+      invalid_categories: Categorias selecionadas inválidas
+      no_categories_selected: Nenhuma categoria selecionada para mesclar
+      success:
+        one: "%{count} categoria mesclada com sucesso"
+        other: "%{count} categorias mescladas com sucesso"
+      target_not_found: Categoria de destino não encontrada
+      target_selected_as_source: Escolha categorias diferentes para o destino e as
+        origens.
+    virtual:
+      payment: Pagamento
+      trade: Negociação
+      transfer: Transferência
   category:
     dropdowns:
       show:
         bootstrap: Gerar categorias padrão
         empty: Nenhuma categoria encontrada
+        expense: despesa
+        income: receita
+        match_transfer: Associar transferência/pagamento
+        one_time: "%{type} único(a)"
   helpers:
     submit:
       category:

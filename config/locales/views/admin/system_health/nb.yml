@@ -1,0 +1,435 @@
+---
+nb:
+  admin:
+    system_health:
+      hosted_usage:
+        columns:
+          trial_ends_at: Prøveperioden slutter
+          cleanup_eligible: Kvalifiserer for opprydding
+          cleanup_reason: Årsak
+          household: Husholdnings-ID
+          latest_session: Siste bevarte innlogging
+          members: Medlemskontoer
+          recent_sessions: Bevarte økter opprettet siste 30 dager
+          recorded_at: Abonnement registrert
+          retained_sessions: Bevarte innloggingsøkter
+          status: Nåværende status
+          subscription_rows: Abonnementsrader
+        statuses:
+          active: Aktiv
+          paused: Satt på pause
+          unknown: Ukjent
+          past_due: Forfalt
+          no_subscription: Ingen abonnement
+          canceled: Avsluttet
+          incomplete: Ufullstendig
+          incomplete_expired: Ufullstendig, utløpt
+          trialing: I prøveperiode
+          unpaid: Ubetalt
+        cleanup:
+          description: 'Samsvarer med eksisterende oppryddingsomfang: et abonnement
+            som er satt på pause eller er i prøveperiode, sluttet for mer enn 14 dager
+            siden, eller ingen abonnement og en husholdning eldre enn 45 + 14 dager.
+            Viser opptil %{limit} husholdninger.'
+          disabled: Planlagt opprydding av prøveperioder er deaktivert utenfor administrert
+            modus. Dette viser bare samsvar med omfanget.
+          eligibility_help: Nylige innlogginger hindrer ikke et treff. At en husholdning
+            kvalifiserer, bekrefter ikke sletting. 90 dager er arkivlagringstiden,
+            ikke terskelen for opprydding av prøveperioder.
+          empty: Ingen husholdninger samsvarer med oppryddingsomfanget
+          reasons:
+            expired_trial_grace_elapsed: Prøveperioden er avsluttet; fristen på 14
+              dager er utløpt
+            no_subscription_grace_elapsed: Ingen abonnement; 45 + 14 dager er gått
+          title: Kvalifisering for opprydding
+        eligible: Kvalifiserer
+        limitations: De nåværende tabellene bevarer ikke full historikk for prøveperioder,
+          betalinger eller øktaktivitet. Opprettelse av abonnement kan skyldes import.
+          Medlemskontoer er ikke bekreftet som unike personer. Denne visningen endrer
+          ingen husholdnings- eller abonnementsdata. Nullstilling av den delte demoen
+          fjerner gamle husholdninger og økter, så besøkshistorikken kan ikke gjenskapes.
+        limitations_title: Hva tallene kan fortelle oss
+        loading: Laster bruk av driftstjenesten …
+        not_eligible: Kvalifiserer ikke
+        not_recorded: Ikke registrert
+        snapshot: Skrivebeskyttet databaseøyeblikksbilde per %{time}
+        summary:
+          active_supporter_households_count: Aktive støttespillerhusholdninger (lokalt)
+          cleanup_eligible_count: Husholdninger som kvalifiserer for opprydding
+          supporter_subscription_count: Abonnementsrader koblet til Stripe
+          trial_households_count: Prøvehusholdninger (siste 30 dager)
+          trial_members_count: Nåværende medlemskontoer i prøveperiode
+          trials_expiring_soon_count: Prøveperioder som utløper neste 7 dager
+        summary_help: Prøveperiodetall omfatter abonnementer registrert de siste 30
+          dagene. Tall for utløpende prøveperioder, opprydding og støttespillere omfatter
+          alle samsvarende nåværende rader, uten tabellgrensene.
+        supporters:
+          description: Nåværende lokale abonnementsrader med kunde- og abonnements-ID-er
+            i Stripe-format; det syntetiske demoabonnementet er utelatt. Statusene
+            bekrefter verken mottatte betalinger eller dato for første betaling. Ingen
+            forespørsel sendes til Stripe.
+          empty: Ingen abonnementsrader koblet til Stripe
+          title: Lokal støttespillerstatus
+        synthetic_demo: Syntetisk demo
+        title: Bruk av driftstjenesten
+        trials:
+          description: Abonnementer registrert siden %{date} som fortsatt har en sluttdato
+            for prøveperioden, inkludert konverterte prøveperioder. Viser opptil %{limit}
+            husholdninger.
+          empty: Ingen prøvehusholdninger er registrert i dette tidsrommet
+          sessions_help: Økter er bevarte innloggingsposter for aktiverte brukere,
+            ikke brukere på nett nå eller besøk. Utlogging sletter en post. Siste
+            opprettelsestid er ikke tidspunktet brukeren sist ble sett.
+          title: Nylige prøvehusholdninger
+      push_notifications:
+        pending: Venter
+        statuses:
+          queued: I kø
+          accepted: Godtatt av APNs
+          enqueue_failed: Kunne ikke legge i kø; kontroller Sidekiq
+          expired: Utløpt uten endelig resultat
+          failed: Mislyktes; se feilsøkingslogger for pushvarsler
+          rejected: Avvist av APNs; se feilsøkingslogger for pushvarsler
+          retrying: Prøver igjen etter midlertidig feil
+          skipped: 'Hoppet over: kvalifiserer ikke lenger'
+          unregistered: Enhetsregistreringen er ikke lenger gyldig
+        columns:
+          checked_at: Siste oppdatering
+          device: Enhet
+          environment: APNs-miljø
+          status: Resultat
+        device: Enhet %{number}
+        environments:
+          production: Produksjon
+          sandbox: Sandkasse
+        messages:
+          cooldown: Vent 30 sekunder før du sender en ny test.
+          disabled: Levering av pushvarsler er deaktivert av operatøren.
+          enqueue_failed: Testen kunne ikke legges i kø. Kontroller Sidekiq og oppdater
+            resultatene nedenfor.
+          hosted_only: Pushvarsler er bare tilgjengelige i driftet modus.
+          ineligible: Bare en aktiv superadministrator kan sende et testvarsel.
+          no_devices: Aktiver pushvarsler for denne kontoen i Sure-appen for iOS for
+            å sende en test.
+          not_configured: APNs-påloggingsopplysninger er ikke konfigurert.
+          queued: Testvarselet er lagt i kø. Oppdater resultatene nedenfor for å kontrollere
+            statusen.
+          ready: Send et testvarsel til de aktiverte iOS-enhetene som er registrert
+            på kontoen din.
+          storage_unavailable: Testforespørselen kunne ikke lagres. Kontroller konfigurasjonen
+            av den delte hurtigbufferen.
+        queueing: Legger i kø …
+        refresh: Oppdater resultater
+        requested_at: Siste test ble forespurt %{time}
+        result_help: Godkjenning fra APNs bekrefter ikke levering til enheten din.
+          Oppdater for å se resultatene fra arbeidsprosessen. Resultatene beholdes
+          i 24 timer.
+        results_label: Testresultater
+        send_test: Send test-pushvarsel
+        title: Pushvarsler
+      show:
+        ai:
+          adapters:
+            pgvector: pgvector
+            qdrant: Qdrant
+            openai: Vektorlager driftet av OpenAI
+          function_calling_statuses:
+            not_checked: Ikke kontrollert
+            failing: Direkte kontroll mislyktes
+            not_used: Verktøy ble godtatt, men modellen kalte ingen
+            supported: Direkte verktøykall lyktes
+            unavailable: Utilgjengelig frem til en LLM-leverandør er konfigurert
+            unsupported: Støttes ikke av leverandøren/modellen som faktisk brukes
+          labels:
+            model: Modell
+            adapter: Adapter
+            adapter_available: Adapter tilgjengelig
+            anthropic_credentials: Anthropic-påloggingsopplysninger
+            effective_provider: Faktisk leverandør
+            embedding_dimensions: Vektordimensjoner
+            embedding_endpoint: Endepunkt for vektorrepresentasjoner
+            embedding_model: Modell for vektorrepresentasjoner
+            embedding_probe: Kontroll av endepunkt for vektorrepresentasjoner
+            endpoint: Endepunkt
+            failure_reason: Feilårsak
+            function_calling: Funksjonskall (verktøy)
+            function_calling_failure_reason: Årsak til mislykket funksjonskall
+            llm_request_timeout: Tidsgrense for LLM-forespørsler
+            openai_compatible_credentials: OpenAI-kompatible API-påloggingsopplysninger
+            openai_credentials: OpenAI-påloggingsopplysninger
+            pdf_text_extraction: Behandlingsbane for PDF-tekstuttrekk
+            pdf_text_extraction_failure_reason: Årsak til mislykket tekstuttrekk
+            pdf_vision_processing: PDF-behandling via bilde/opprinnelig format
+            pdf_vision_processing_failure_reason: Årsak til mislykket bilde-/dokumentbehandling
+            pgvector_extension: PostgreSQL-utvidelsen vector
+            pgvector_table: Tabell for vektorsegmenter
+            probe_request_timeout: Tidsgrense for helsekontroll
+            selected_provider: Valgt leverandør
+            storage_probe: Lagringskontroll for pgvector
+          pdf_statuses:
+            not_checked: Ikke kontrollert
+            failing: Kontroll av syntetisk PDF mislyktes
+            supported: Kontroll av syntetisk PDF bestått
+            unavailable: Utilgjengelig frem til en LLM-leverandør er konfigurert
+            unsupported: Deaktivert eller ikke støttet av leverandøren/modellen som
+              faktisk brukes
+          probe_statuses:
+            not_checked: Ikke kontrollert
+            not_configured: Ikke konfigurert
+            failing: Direkte kontroll mislyktes
+            passing: Direktekontroll bestått
+          providers:
+            anthropic: Anthropic
+            cloudflare: Cloudflare
+            kilo: Kilo
+            ollama: Ollama
+            openai: OpenAI
+            openrouter: OpenRouter
+            together: Together
+            custom_openai_compatible: Egendefinert endepunkt
+            openai_compatible: OpenAI-kompatibel
+          values:
+            configured: Konfigurert
+            'no': Nei
+            not_configured: Ikke konfigurert
+            'yes': Ja
+            available: Tilgjengelig
+            enabled: Aktivert
+            available_not_enabled: Tilgjengelig, ikke aktivert
+            fallback: "(reservevalg)"
+            not_available: Ikke tilgjengelig
+            not_found: Ikke funnet
+            not_set: Ikke angitt
+          vector_statuses:
+            missing: Ikke konfigurert
+            not_checked: Ikke kontrollert
+            not_configured: Ikke konfigurert
+            failing: Direkte kontroll mislyktes
+            passing: Direktekontroller bestått
+            scaffolded: Grunnstruktur på plass
+          worker:
+            statuses:
+              stale: Utdatert
+              failing: Mislykkes
+              passing: Består
+            configuration_statuses:
+              match: Samsvarer med webprosessen
+              mismatch: Avviker fra webprosessen
+            coverage_notice: Hver kontroll verifiserer nøyaktig én arbeidsprosess,
+              den som henter jobben fra køen. Med flere replikaer bekrefter ikke et
+              bestått resultat at alle arbeidsprosesser fungerer. Legg kontrollen
+              i kø igjen for å teste en annen.
+            description: Kontrollene ovenfor kjørte fra denne webprosessen. Det meste
+              av KI-arbeidet, som assistentsvar, PDF-behandling, vektorrepresentasjoner,
+              automatisk kategorisering og forhandlergjenkjenning, kjører i en Sidekiq-arbeidsprosess.
+              Denne kan ha annen nettverkstilgang, DNS, proxyregler eller innlastede
+              påloggingsopplysninger. Legg en kontroll i kø for å verifisere arbeidsprosessens
+              egen konfigurasjon og tilkobling.
+            empty:
+              description: Klikk på «Verifiser arbeidsprosessens konfigurasjon» for
+                å legge en asynkron kontroll i kø. Resultatet vises her når en arbeidsprosess
+                har hentet den.
+              title: Ingen arbeidsprosess har rapportert ennå
+            labels:
+              checked_at: Kontrollert
+              configuration: Konfigurasjon
+              process: Arbeidsprosess
+            settings_origin:
+              database_backed: Leverandør-, modell- og API-nøkkelinnstillinger som
+                endres i Innstillinger → Egen drift, lagres i databasen. rails-settings-cached
+                ugyldiggjør den delte hurtigbufferen ved skriving, slik at både web-
+                og arbeidsprosessen bruker den nye verdien ved neste forespørsel eller
+                køjobb. Omstart er ikke nødvendig.
+              env_backed: Konfigurasjon av vektorrepresentasjoner og alle verdier
+                som bare angis via miljøvariabler, fastsettes når hver container starter.
+                Rails kan ikke endre miljøet i en annen container. Endringer krever
+                derfor omstart eller nyoppretting av både web- og arbeidsprosesstjenestene.
+                Utrullingsverktøy som bare starter én av dem på nytt, for eksempel
+                en delvis utrulling eller en oppdatert Secret uten pod-omstart, tar
+                ikke i bruk endringen.
+              title: Hvilke innstillinger krever omstart?
+            title: Verifisering av arbeidsprosess
+            verify_button: Verifiser arbeidsprosessens konfigurasjon
+          alerts:
+            custom_openai:
+              message: Det konfigurerte endepunktet bestod ikke tilgjengelighetskontrollen
+                av /v1/vector_stores. De fleste lokale og OpenAI-kompatible endepunkter
+                implementerer ikke dette API-et. Chat og PDF-behandling kan fortsatt
+                fungere. Bruk pgvector med et eget endepunkt for vektorrepresentasjoner
+                for et vanlig lokalt oppsett. Feilen ble registrert i Innstillinger
+                → Feilsøkingslogger og Rails.logger.
+              title: Kontrollen av det driftede vektorlageret mislyktes ved dette
+                egendefinerte endepunktet
+            embedding_dimensions_mismatch:
+              message: Endepunktet for vektorrepresentasjoner returnerte en vektor
+                med lengde som ikke samsvarer med EMBEDDING_DIMENSIONS. Angi EMBEDDING_MODEL
+                og EMBEDDING_DIMENSIONS etter modellens dokumenterte vektorstørrelse,
+                og start Sure på nytt slik at miljøet vedvarer. Endre eller opprett
+                deretter pgvector-kolonnen/-tabellen på nytt, og generer nye dokumentvektorer
+                hvis eksisterende data brukte en annen størrelse.
+              title: Vektordimensjonene samsvarer ikke
+            embedding_probe_failed:
+              message: Sure kunne ikke opprette en kort testvektor via det konfigurerte
+                endepunktet og modellen. Kontroller EMBEDDING_URI_BASE, EMBEDDING_MODEL,
+                EMBEDDING_ACCESS_TOKEN og loggene hos leverandøren av vektorrepresentasjoner.
+                Feilen ble registrert i Innstillinger → Feilsøkingslogger og Rails.logger.
+              title: Direktekontrollen av vektorrepresentasjoner mislyktes
+            embedding_probe_timeout:
+              message: Endepunktet for vektorrepresentasjoner svarte ikke før AI_HEALTH_PROBE_TIMEOUT.
+                Øk denne tidsgrensen hvis leverandøren er treg, og start Sure på nytt
+                slik at miljøet vedvarer i alle prosesser. Hvis vanlige KI-chatsamtaler
+                også får tidsavbrudd, øk OPENAI_REQUEST_TIMEOUT separat.
+              title: Direktekontrollen av vektorrepresentasjoner fikk tidsavbrudd
+            function_calling_not_used:
+              message: Endepunktet godtok tools-parameteren, men modellen svarte med
+                tekst i stedet for å kalle helsekontrollverktøyet. KI-assistenten
+                kan ikke lese økonomidata uten verktøykall, så chatten kan svare uten
+                innhold eller med oppdiktede tall. Velg helst en modell der leverandøren
+                dokumenterer støtte for funksjonskall.
+              title: Modellen svarte uten å kalle verktøyet den ble bedt om å bruke
+            function_calling_unsupported:
+              message: Endepunktet behandlet en vanlig chatforespørsel, men avviste
+                den samme forespørselen med tools-parameteren. KI-assistenten leser
+                kontoer, transaksjoner og beholdninger gjennom funksjonskall. Chatten
+                vil derfor fortsette å feile, ofte med en lite nyttig 404-feil, frem
+                til du velger en modell som støtter verktøy. Velg en modell der leverandøren
+                dokumenterer støtte for funksjonskall. Feilen ble registrert i Innstillinger
+                → Feilsøkingslogger og Rails.logger.
+              title: Modellen støtter ikke funksjonskall
+            llm_model_not_available:
+              message: Endepunktet svarte, men listet ikke opp eller leverte den konfigurerte
+                modellen. Velg en aktiv modell for den valgte leverandøren, og kjør
+                kontrollene på nytt. For Gemini gjennom et OpenAI-kompatibelt oversettelseslag
+                bruker du en modell som støttes nå, for eksempel gemini-2.5-flash.
+              title: Den konfigurerte KI-modellen er ikke tilgjengelig
+            llm_probe_failed:
+              message: Sure kunne ikke verifisere både det konfigurerte endepunktet
+                og modellen. Feilen ble registrert i Innstillinger → Feilsøkingslogger
+                og Rails.logger.
+              title: Direktekontrollen av LLM mislyktes
+            missing_vector_store:
+              message: Opplastede dokumenter kan ikke indekseres eller søkes i før
+                en vektorlageradapter og dens forutsetninger er konfigurert.
+              title: Ingen vektorlager er konfigurert
+            pdf_text_extraction_failed:
+              message: Sure kunne ikke fullføre tekstbanen som trekker ut innebygd
+                PDF-tekst lokalt og sender den til den konfigurerte modellen. Ingen
+                kundedata ble sendt. Feilen ble registrert i Innstillinger → Feilsøkingslogger
+                og Rails.logger.
+              title: Kontrollen av tekstuttrekk fra syntetisk PDF mislyktes
+            pdf_vision_processing_failed:
+              message: Sure kunne ikke fullføre PDF-behandlingen via bilder eller
+                opprinnelig dokumentformat med den konfigurerte modellen. Ingen kundedata
+                ble sendt. Feilen ble registrert i Innstillinger → Feilsøkingslogger
+                og Rails.logger.
+              title: Kontrollen av syntetisk PDF via bilde/opprinnelig format mislyktes
+            pgvector_extension_not_enabled:
+              message: pgvector-adapteren er valgt, men vector-utvidelsen er ikke
+                aktivert for denne PostgreSQL-databasen. Bruk et PostgreSQL-image
+                som inkluderer pgvector, aktiver utvidelsen som databaseeier eller
+                superbruker, og kjør migreringene på nytt med VECTOR_STORE_PROVIDER=pgvector.
+              title: PostgreSQL-utvidelsen vector er ikke aktivert
+            pgvector_probe_failed:
+              message: Sure kunne ikke spørre pgvector-tabellen med tekstsegmenter.
+                Kontroller PostgreSQL-rettigheter, vector-utvidelsen og vector_store_chunks-migreringen.
+                Feilen ble registrert i Innstillinger → Feilsøkingslogger og Rails.logger.
+              title: Lagringskontrollen for pgvector mislyktes
+            pgvector_table_not_found:
+              message: pgvector-utvidelsen er aktivert, men tabellen med tekstsegmenter
+                ble ikke funnet. Kontroller migreringsstatusen og kjør vektorlager-migreringen
+                på nytt med VECTOR_STORE_PROVIDER=pgvector slik at Sure kan opprette
+                vector_store_chunks.
+              title: Tabellen vector_store_chunks mangler
+            qdrant:
+              message: Qdrant-adapteren har bare grunnstrukturen på plass. Dokumentopplasting
+                og søk mislykkes foreløpig. Velg OpenAI eller pgvector for dokumentsøk.
+              title: Qdrant-støtte er ikke implementert ennå
+            unavailable_vector_store:
+              message: Kontroller adapterkravene nedenfor. For pgvector må databasen
+                tilby vector-utvidelsen eller en eksisterende vector_store_chunks-tabell.
+              title: Det valgte vektorlageret er utilgjengelig
+            vector_probe_failed:
+              message: Sure kunne ikke verifisere det valgte vektorlageret og alle
+                nødvendige tjenester for vektorrepresentasjoner. Feilen ble registrert
+                i Innstillinger → Feilsøkingslogger og Rails.logger.
+              title: Direktekontrollen av dokumentsøk mislyktes
+          failure_codes:
+            dimensions_mismatch: Vektordimensjonene samsvarer ikke med de konfigurerte
+              dimensjonene
+            extension_not_enabled: PostgreSQL-utvidelsen vector er ikke aktivert
+            invalid_response: Tjenesten returnerte et uventet svar
+            model_not_available: Den konfigurerte modellen ble ikke returnert av leverandøren
+            no_tool_call: Modellen svarte uten å kalle helsekontrollverktøyet
+            render_missing_binary: pdftoppm-rendereren (poppler-utils) er ikke tilgjengelig
+              i denne containeren
+            request_failed: Tjenesteforespørselen mislyktes
+            table_not_found: Fant ikke tabellen vector_store_chunks
+            timeout: Tjenesten svarte ikke før kontrollens tidsgrense
+            tools_refused: Tjenesten behandlet den samme forespørselen uten verktøy
+              og avviste den med verktøy
+            unsupported_provider: Leverandøren støtter ikke denne kontrollen
+          last_checked: Direktekontroller fullført for %{time_ago} siden. Resultatene
+            hurtigbufres en kort stund.
+          llm:
+            description: Direktekontrollene verifiserer den konfigurerte modellen,
+              ber den om ett enkelt funksjonskall slik assistenten gjør, og tester
+              deretter tekstuttrekk og bilde-/dokumentbehandling separat med en syntetisk
+              PDF på én side uten kundedata. Verdier for påloggingsopplysninger vises
+              aldri.
+            title: LLM- og PDF-behandling
+          loading: Kjører direktekontroller …
+          local_setup:
+            description: Kjør LLM via ditt lokale OpenAI-kompatible endepunkt, lagre
+              dokumentvektorer i pgvector, og pek innstillingene for vektorrepresentasjoner
+              mot et OpenAI-kompatibelt endepunkt for dette. PostgreSQL-imaget må
+              inkludere vector-utvidelsen, og vektordimensjonene må samsvare med den
+              valgte modellen.
+            title: Anbefalt lokalt oppsett
+          not_checked_help: Åpne KI-statusadressen direkte eller kjør kontrollene
+            for å verifisere at tjenesten svarer.
+          run_checks: Kjør kontrollene på nytt
+          vector_store:
+            description: Direktekontrollen spør API-et til det driftede vektorlageret,
+              eller tester pgvector-tabellen og oppretter én kort vektorrepresentasjon
+              uten å lagre den.
+            title: Vektorlager og dokumentsøk
+        labels:
+          failed: Mislyktes
+          status: Status
+          enqueued: Lagt i kø
+          retries: Nye forsøk
+          last_heartbeat: Siste livstegn
+          latency: Ventetid
+          max_queue_latency: Alder på eldste jobb
+          processed_total: Totalt behandlet
+          processes: Arbeidsprosesser
+          queue: Kø
+          size: Størrelse
+        values:
+          never: Aldri
+          healthy: Fungerer
+          no_queues: Ingen køer er registrert. Arbeidsprosessen kjører kanskje ikke.
+          seconds: "%{seconds} s"
+          time_ago: for %{time_ago} siden
+          unhealthy: Redusert funksjon
+        tabs:
+          background_jobs: Bakgrunnsjobber
+          ai: KI-status
+          hosted_usage: Bruk av driftstjenesten
+        title: Systemstatus
+        alert:
+          title: Bakgrunnsjobber kjører ikke
+        counters_section_description: Samlede Sidekiq-tellere på tvers av alle køer.
+        counters_section_title: Jobbtellere
+        queues_section_description: Kølengde og alder på eldste jobb per kø. Ventetiden
+          er antall sekunder den eldste jobben har ventet.
+        queues_section_title: Køer
+        status_section_description: Nåværende tilstand for bakgrunnsprosessen som
+          håndterer synkronisering, saldoer og beregning av nettoformue.
+        status_section_title: Sidekiq-status
+      push_notification:
+        body: Dette er et testvarsel for Sure-kontoen din.
+        title: Sure-testvarsel
+      verify_worker_ai:
+        queued: Kontroll av arbeidsprosessen er lagt i kø. Den vises nedenfor når
+          en arbeidsprosess har hentet den, vanligvis innen noen sekunder.

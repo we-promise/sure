@@ -3,10 +3,14 @@ nb:
   sessions:
     create:
       invalid_credentials: Ugyldig e-post eller passord.
+      account_deactivated: Denne kontoen er deaktivert. Kontakt en administrator.
+      local_login_disabled: Lokal passordinnlogging er deaktivert. Bruk felles pålogging
+        (SSO).
     destroy:
       logout_successful: Du har blitt logget ut.
     openid_connect:
       failed: Kunne ikke autentisere via OpenID Connect.
+      account_linked: Kontoen er koblet til %{provider}
     new:
       email: E-postadresse
       email_placeholder: meg@example.com
@@ -17,3 +21,24 @@ nb:
       password_placeholder: Angi passordet ditt
       openid_connect: Logg inn med OpenID Connect
       oidc: Logg inn med OpenID Connect
+      demo_banner_message: Dette er et demonstrasjonsmiljø. Påloggingsopplysningene
+        er fylt ut på forhånd for enkelhets skyld. Ikke skriv inn ekte eller sensitive
+        opplysninger.
+      demo_banner_title: Demomodus er aktiv
+      google_auth_connect: Logg inn med Google
+      local_login_admin_only: Lokal innlogging er begrenset til administratorer.
+      no_auth_methods_enabled: Ingen autentiseringsmetoder er aktivert akkurat nå.
+        Kontakt en administrator.
+      passkey_button: Logg inn med en tilgangsnøkkel
+      passkey_unsupported: Denne nettleseren støtter ikke tilgangsnøkler.
+    post_logout:
+      logout_successful: Du har blitt logget ut.
+    failure:
+      failed: Kunne ikke autentisere.
+      sso_failed: Felles pålogging mislyktes. Prøv igjen.
+      sso_invalid_response: Mottok et ugyldig svar fra SSO-leverandøren. Prøv igjen.
+      sso_provider_unavailable: SSO-leverandøren er utilgjengelig akkurat nå. Prøv
+        igjen senere eller kontakt en administrator.
+    mobile_sso_start:
+      redirecting_html: Videresender til innlogging... <a href="%{url}">Klikk her</a>
+        hvis du ikke blir videresendt.

@@ -20,6 +20,12 @@ pt-BR:
       household_name_placeholder: Nome da família
       country: País
       submit: Continuar
+      group_name: Nome do grupo
+      group_name_placeholder: Nome do grupo
+      moniker_family: Membros da família (só você ou com parceiro, adolescentes etc.)
+      moniker_group: Grupo de pessoas (empresa, clube, associação, qualquer outro
+        tipo)
+      moniker_prompt: Vou usar o %{product_name} com ...
     preferences:
       title: Configure suas preferências
       subtitle: Vamos configurar suas preferências.
@@ -35,7 +41,9 @@ pt-BR:
       submit: Concluir
     goals:
       title: O que te traz aqui?
-      subtitle: Selecione um ou mais objetivos que você tem com o %{product_name} como sua ferramenta de finanças pessoais.
+      subtitle: >-
+        Selecione um ou mais objetivos que você tem com o %{product_name} como sua
+        ferramenta de finanças pessoais.
       unified_accounts: Ver todas as minhas contas em um só lugar
       cashflow: Entender fluxo de caixa e despesas
       budgeting: Gerenciar planos financeiros e orçamentos
@@ -48,7 +56,9 @@ pt-BR:
     trial:
       title: Experimente o Sure por 45 dias
       data_deletion: Os dados serão excluídos depois
-      description_html: A partir de hoje você pode testar o produto a fundo.<br/>Se gostar, hospede você mesmo ou contribua para continuar usando aqui.
+      description_html: >-
+        A partir de hoje você pode testar o produto a fundo.<br/>Se gostar, hospede
+        você mesmo ou contribua para continuar usando aqui.
       try_button: Experimentar Sure por 45 dias
       continue_trial: Continuar teste
       upgrade: Atualizar
@@ -58,4 +68,5 @@ pt-BR:
       in_40_days: Em 40 dias (%{date})
       in_40_days_description: Notificaremos você para lembrar de exportar seus dados.
       in_45_days: Em 45 dias (%{date})
-      in_45_days_description: Excluímos seus dados — contribua para continuar usando o Sure aqui!
+      in_45_days_description: Excluímos seus dados — contribua para continuar usando
+        o Sure aqui!

@@ -18,10 +18,10 @@ nl:
       new: Nieuwe handelaar
       merge: Handelaren samenvoegen
       title: Handelaren
-      family_title: Familiehandelaren
-      family_empty: Nog geen familiehandelaren
+      family_title: Handelaren van %{moniker}
+      family_empty: Nog geen handelaren voor %{moniker}
       provider_title: Provider handelaren
-      provider_empty: Nog geen provider handelaren gekoppeld aan deze familie
+      provider_empty: Nog geen handelaren van aanbieders gekoppeld aan deze %{moniker}
       provider_read_only: Provider handelaren worden gesynchroniseerd vanuit uw verbonden instellingen. Ze kunnen hier niet worden bewerkt.
       provider_info: Deze handelaren zijn automatisch gedetecteerd door uw bankverbindingen of AI. U kunt ze bewerken om uw eigen kopie aan te maken, of verwijderen om ze los te koppelen van uw transacties.
       unlinked_title: Recent losgekoppeld
@@ -30,6 +30,16 @@ nl:
         merchant: Handelaar
         actions: Acties
         source: Bron
+      enhance_button: Verrijken met AI
+      enhance_info:
+        one: Bij %{count} handelaar van een aanbieder ontbreekt website-informatie. Gebruik AI-verrijking om websites te vinden, logo's te tonen en dubbele handelaren samen te voegen.
+        other: Bij %{count} handelaren van aanbieders ontbreekt website-informatie. Gebruik AI-verrijking om websites te vinden, logo's te tonen en dubbele handelaren samen te voegen.
+      import: Handelaren importeren
+      no_family_merchants_found: Geen overeenkomende handelaren van het huishouden gevonden
+      no_provider_merchants_found: Geen overeenkomende handelaren van aanbieders gevonden
+      per_page: per pagina
+      search_family_merchants: Handelaren van het huishouden zoeken…
+      search_provider_merchants: Handelaren van aanbieders zoeken…
     merchant:
       confirm_accept: Handelaar verwijderen
       confirm_body: Weet u zeker dat u deze handelaar wilt verwijderen? Het verwijderen van deze handelaar zal alle bijbehorende transacties ontkoppelen en kan uw rapportage beïnvloeden.
@@ -44,10 +54,14 @@ nl:
       sources_label: Samen te voegen handelaren
       sources_hint: Geselecteerde handelaren worden samengevoegd in het doel. Familiehandelaren worden verwijderd, provider handelaren worden losgekoppeld.
       submit: Geselecteerde samenvoegen
+      no_merchants_found: Geen overeenkomende handelaren gevonden
+      sources_search_placeholder: Handelaren zoeken…
     new:
       title: Nieuwe handelaar
     perform_merge:
-      success: Succesvol %{count} handelaren samengevoegd
+      success:
+        one: Succesvol %{count} handelaar samengevoegd
+        other: Succesvol %{count} handelaren samengevoegd
       no_merchants_selected: Geen handelaren geselecteerd om samen te voegen
       target_not_found: Doelhandelaar niet gevonden
       invalid_merchants: Ongeldige handelaren geselecteerd
@@ -59,3 +73,9 @@ nl:
     update:
       success: Handelaar succesvol bijgewerkt
       converted_success: Handelaar succesvol geconverteerd en bijgewerkt
+    family_merchant:
+      delete: Verwijderen
+      edit: Bewerken
+    enhance:
+      already_running: Verrijking is al bezig. Wacht tot deze is voltooid.
+      success: Verrijking van handelaren van aanbieders gestart. Handelaren worden binnenkort verrijkt en duplicaten samengevoegd.

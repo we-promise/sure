@@ -1,0 +1,191 @@
+---
+nb:
+  lunchflow_items:
+    api_error:
+      check_provider_settings: Kontroller leverandørinnstillingene
+      unexpected_error: Det oppstod en uventet feil. Prøv igjen senere.
+      common_issues: 'Vanlige problemer:'
+      expired_credentials_desc: Generer en ny API-nøkkel hos Lunch Flow
+      expired_credentials_label: Utløpte påloggingsopplysninger
+      invalid_api_key_desc: Kontroller API-nøkkelen i leverandørinnstillingene
+      invalid_api_key_label: Ugyldig API-nøkkel
+      network_issue_desc: Kontroller internettilkoblingen
+      network_issue_label: Nettverksproblem
+      service_down_desc: Lunch Flow-API-et kan være midlertidig utilgjengelig
+      service_down_label: Tjenesten er nede
+      title: Feil med Lunch Flow-tilkoblingen
+      unable_to_connect: Kan ikke koble til Lunch Flow
+    complete_account_setup:
+      all_skipped: Alle kontoene ble hoppet over. Ingen kontoer ble opprettet.
+      creation_failed: 'Kunne ikke opprette kontoene: %{error}'
+      no_accounts: Ingen kontoer å konfigurere.
+      success: 'Kontoer opprettet: %{count}.'
+      unexpected_error: Det oppstod en uventet feil
+    link_accounts:
+      all_already_linked:
+        one: Den valgte kontoen (%{names}) er allerede tilkoblet
+        other: 'Alle de %{count} valgte kontoene er allerede tilkoblet: %{names}'
+      api_error: 'API-feil: %{message}'
+      invalid_account_names:
+        one: Kan ikke koble til en konto uten navn
+        other: Kan ikke koble til %{count} kontoer uten navn
+      link_failed: Kunne ikke koble til kontoene
+      no_accounts_selected: Velg minst én konto
+      partial_invalid: 'Kontoer koblet til: %{created_count}; allerede tilkoblet:
+        %{already_linked_count}; kontoer med ugyldige navn: %{invalid_count}'
+      partial_success: 'Kontoer koblet til: %{created_count}. Allerede tilkoblede
+        kontoer: %{already_linked_count} – %{already_linked_names}'
+      success:
+        one: "%{count} konto ble koblet til"
+        other: "%{count} kontoer ble koblet til"
+    link_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      api_error: 'API-feil: %{message}'
+      invalid_account_name: Kan ikke koble til en konto uten navn
+      missing_parameters: Påkrevde parametere mangler
+      lunchflow_account_already_linked: Denne Lunch Flow-kontoen er allerede knyttet
+        til en annen konto
+      lunchflow_account_not_found: Fant ikke Lunch Flow-kontoen
+      success: Koblet %{account_name} til Lunch Flow
+    loading:
+      loading_title: Laster inn
+      loading_message: Laster Lunch Flow-kontoer …
+    lunchflow_item:
+      accounts_need_setup: Kontoer må konfigureres
+      delete: Slett tilkobling
+      deletion_in_progress: Sletting pågår...
+      error: Feil
+      no_accounts_description: Denne tilkoblingen har ingen tilknyttede kontoer ennå.
+      no_accounts_title: Ingen kontoer
+      setup_action: Konfigurer nye kontoer
+      setup_needed: Nye kontoer er klare til å konfigureres
+      status: Synkronisert for %{timestamp} siden
+      status_never: Aldri synkronisert
+      status_with_summary: Sist synkronisert for %{timestamp} siden • %{summary}
+      sync_status:
+        no_accounts: Ingen kontoer funnet
+        partial_setup:
+          other: "%{linked} synkronisert, %{unlinked} må konfigureres"
+          one: "%{linked} synkronisert, %{unlinked} krever oppsett"
+        synced:
+          one: "%{count} konto synkronisert"
+          other: "%{count} kontoer synkronisert"
+      syncing: Synkroniserer...
+      total: Totalt
+      unlinked: Ikke tilkoblet
+      setup_description: "%{linked} av %{total} kontoer er tilknyttet. Velg kontotyper
+        for de nylig importerte Lunch Flow-kontoene dine."
+    select_accounts:
+      accounts_selected: kontoer valgt
+      api_error: 'API-feil: %{message}'
+      cancel: Avbryt
+      description: Velg kontoene du vil koble til %{product_name}-kontoen din.
+      link_accounts: Koble til valgte kontoer
+      no_accounts_found: Ingen kontoer funnet. Kontroller API-nøkkelen i oppsettet.
+      no_name_placeholder: "(Uten navn)"
+      configure_name_in_lunchflow: Kan ikke importere. Angi kontonavnet i Lunchflow
+      no_api_key: API-nøkkelen for Lunch Flow er ikke konfigurert. Konfigurer den
+        i innstillingene.
+      title: Velg Lunch Flow-kontoer
+    select_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      api_error: 'API-feil: %{message}'
+      cancel: Avbryt
+      link_account: Koble til konto
+      no_account_specified: Ingen konto er angitt
+      no_name_placeholder: "(Uten navn)"
+      all_accounts_already_linked: Alle Lunch Flow-kontoer er allerede koblet til
+      configure_name_in_lunchflow: Kan ikke importere. Angi kontonavnet i Lunchflow
+      description: Velg en Lunch Flow-konto som skal knyttes til denne kontoen. Transaksjoner
+        synkroniseres og duplikater fjernes automatisk.
+      no_accounts_found: Fant ingen Lunch Flow-kontoer. Kontroller konfigurasjonen
+        av API-nøkkelen.
+      no_api_key: API-nøkkelen for Lunch Flow er ikke konfigurert. Konfigurer den
+        i innstillingene.
+      title: Koble %{account_name} til Lunch Flow
+    setup_accounts:
+      account_type_label: 'Kontotype:'
+      account_types:
+        credit_card: Kredittkort
+        depository: Bruks- eller sparekonto
+        investment: Investeringskonto
+        loan: Lån eller boliglån
+        other_asset: Annet aktivum
+        skip: Hopp over denne kontoen
+      api_error: 'API-feil: %{message}'
+      balance: Saldo
+      cancel: Avbryt
+      create_accounts: Opprett kontoer
+      creating_accounts: Oppretter kontoer...
+      fetch_failed: Kunne ikke hente kontoene
+      historical_data_range: 'Periode for historiske data:'
+      no_accounts_to_setup: Ingen kontoer å konfigurere
+      subtitle: Velg riktige kontotyper for de importerte kontoene
+      subtype_labels:
+        credit_card: ''
+        depository: 'Kontoundertype:'
+        investment: 'Investeringstype:'
+        loan: 'Lånetype:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kredittkort konfigureres automatisk som kredittkortkontoer.
+        other_asset: Ingen flere innstillinger er nødvendige for andre eiendeler.
+      subtypes:
+        depository:
+          cd: Tidsinnskudd (CD)
+          checking: Brukskonto
+          hsa: Helsesparekonto (HSA)
+          money_market: Pengemarked
+          savings: Sparekonto
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: 529-spareordning
+          angel: Engleinvestering
+          brokerage: Meglerkonto
+          hsa: Helsesparekonto (HSA)
+          ira: Tradisjonell IRA
+          mutual_fund: Verdipapirfond
+          pension: Pensjon
+          retirement: Pensjonssparing
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Thrift Savings Plan
+        loan:
+          auto: Billån
+          mortgage: Boliglån
+          other: Annet lån
+          student: Studielån
+      sync_start_date_help: Velg hvor langt tilbake du vil synkronisere transaksjonshistorikken.
+        Opptil 3 års historikk er tilgjengelig.
+      sync_start_date_label: 'Synkroniser transaksjoner fra:'
+      all_accounts_linked: Alle Lunch Flow-kontoene dine er allerede satt opp.
+      choose_account_type: 'Velg riktig kontotype for hver Lunch Flow-konto:'
+      no_api_key: API-nøkkelen for Lunch Flow er ikke konfigurert. Kontroller tilkoblingsinnstillingene.
+      page_title: Sett opp Lunch Flow-kontoer
+      title: Sett opp Lunch Flow-kontoene dine
+    setup_required:
+      go_to_provider_settings: Gå til leverandørinnstillinger
+      setup_step_4: Kom tilbake hit for å koble til kontoene dine
+      setup_steps_title: 'Trinn for oppsett:'
+      setup_step_1_html: Gå til <strong>Innstillinger → Leverandører</strong>
+      api_key_description: Før du kan koble til Lunch Flow-kontoer, må du konfigurere
+        Lunch Flow-API-nøkkelen din.
+      api_key_not_configured: API-nøkkel er ikke konfigurert
+      setup_step_2_html: Finn delen <strong>Lunch Flow</strong>
+      setup_step_3: Skriv inn Lunch Flow-API-nøkkelen din
+      title: Lunch Flow-oppsett kreves
+    subtype_select:
+      placeholder:
+        type: Velg type
+        subtype: Velg undertype
+    sync:
+      success: Synkronisering startet
+    create:
+      success: Lunch Flow-tilkoblingen er opprettet
+    destroy:
+      success: Lunch Flow-tilkoblingen er fjernet
+    index:
+      title: Lunch Flow-tilkoblinger
+    update:
+      success: Lunch Flow-tilkoblingen er oppdatert

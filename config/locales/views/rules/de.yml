@@ -5,6 +5,7 @@ de:
     no_condition: Keine Bedingung
     actions:
       value_placeholder: Wert eingeben
+      to_label: auf
     apply_all:
       button: Alle anwenden
       confirm_title: Alle Regeln anwenden
@@ -51,6 +52,18 @@ de:
         expense: Ausgabe
         transfer: Überweisung
         equal_to: Gleich
+      operators:
+        contains: Enthält
+        does_not_contain: Enthält nicht
+        equal_to: Gleich
+        greater_or_equal_to: Größer oder gleich
+        greater_than: Größer als
+        is_empty: Ist leer
+        is_equal_to: Ist gleich
+        is_not_empty: Ist nicht leer
+        less_than: Kleiner als
+        less_than_or_equal_to: Kleiner oder gleich
+        not_equal_to: Ungleich
     confirm:
       ai_cost_no_estimate_html: Damit kategorisiert die KI %{count} Transaktion(en).
       ai_cost_title: Geschätzte KI-Kosten
@@ -104,6 +117,15 @@ de:
       then: DANN
     update:
       success: Regel aktualisiert
+    category_rule_cta:
+      close: Schließen
+      create_rule: Regel erstellen
+      description: Du kannst eine Regel erstellen, um ähnliche Transaktionen automatisch
+        zu kategorisieren
+      dont_show_again: Nicht mehr anzeigen
+      hide_for_today: Für heute ausblenden
+      hide_for_today_hint: "„Für heute ausblenden“ pausiert diese Vorschläge für 24 Stunden."
+      message: Auf %{category_name} geändert
   rule:
     conditions:
       condition:

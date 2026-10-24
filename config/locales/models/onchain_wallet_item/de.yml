@@ -4,3 +4,14 @@ de:
     movement:
       received: "Eingang: %{quantity} %{symbol}"
       sent: "Ausgang: %{quantity} %{symbol}"
+  onchain:
+    chains:
+      arbitrum: Arbitrum
+      base: Base
+      bitcoin: Bitcoin
+      ethereum: Ethereum
+      gnosis: Gnosis
+      optimism: Optimism
+      polygon: Polygon
+      solana: Solana
+    institution_name: Selbstverwahrte Wallets

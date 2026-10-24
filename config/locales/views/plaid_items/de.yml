@@ -23,6 +23,7 @@ de:
       syncing: Wird synchronisiert...
       update: Verbindung aktualisieren
       deletion_in_progress: "(wird gelöscht …)"
+      provider_name: Plaid
     select_existing_account:
       title: "%{account_name} mit Plaid verknüpfen"
       description: Wähl ein Plaid-Konto zur Verknüpfung mit deinem bestehenden Konto

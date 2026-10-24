@@ -1,0 +1,53 @@
+---
+nl:
+  recurring_occurrences:
+    show:
+      payments: Betalingen
+      skip: Overslaan
+      manual_amount_label: Bedrag
+      manual_date_label: Datum
+      add_heading: Nog een betaling toevoegen
+      cant_find: Kun je de transactie niet vinden?
+      due_on: Vervalt op %{date}
+      find_heading: Een betaling zoeken
+      link_payment: Betaling koppelen
+      manual_explainer: Leg een betaling vast waarvan je weet dat die heeft plaatsgevonden wanneer hier geen passende transactie staat.
+      manual_payment: Handmatige betaling
+      mark_paid: Als betaald markeren
+      mark_paid_hint: Voldoet het resterende bedrag zonder een transactie vast te leggen.
+      missed: Als gemist gemarkeerd
+      no_candidates: Geen transacties rond deze datum om te koppelen.
+      no_ranked_candidates: Nog niets lijkt op een betaling voor deze factuur.
+      no_search_results: Niets gevonden voor %{query}.
+      not_this_one: Deze niet
+      other_matches: Andere waarschijnlijke overeenkomsten
+      overpaid: meer dan verwacht
+      paid_headline: "%{amount} betaald"
+      paid_of: "%{paid} van %{expected} betaald"
+      record_payment: Betaling vastleggen
+      remaining: "%{amount} resterend"
+      reopen: Heropenen
+      review_heading: Betaling controleren
+      search_all: Alle transacties doorzoeken
+      search_placeholder: Transacties zoeken
+      settled: Volledig betaald
+      snooze_week: Een week uitstellen
+      unlink: Ontkoppelen
+      view_bill: Volledige factuur bekijken
+      skipped: Overgeslagen
+    history_status:
+      missed: Gemist
+      paid: Betaald
+      scheduled: Openstaand
+      skipped: Overgeslagen
+    mark_paid:
+      success: Factuur als betaald gemarkeerd
+    override_amount:
+      success: Verwacht bedrag bijgewerkt
+    reopen:
+      success: Factuur heropend
+    skip:
+      success: Factuur overgeslagen
+    snooze:
+      invalid_date: Die datum kon niet worden gelezen
+      success: Uitgesteld tot %{date}

@@ -13,5 +13,17 @@ nb:
       expiration_date: Utløpsdato
       minimum_payment: Minimumsbetaling
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automatisk
+      simplefin_balance_sign_credit: Tilgodebeløp (banken skylder deg)
+      simplefin_balance_sign_debt: Gjeld (du skylder banken)
+      simplefin_balance_sign_description: Overstyr bare når fortegnet fra SimpleFIN
+        er tvetydig. Automatisk bruker fortsatt transaksjonshistorikken og saldoen
+        fra leverandøren.
+      simplefin_balance_sign_label: Betydningen av SimpleFIN-saldoen
+      treat_balance_as_available_credit_description: Aktiver hvis banken rapporterer
+        kortsaldoen som gjenværende tilgjengelig kreditt i stedet for utestående gjeld.
+        Gjelden beregnes da ut fra kredittgrensen banken oppgir, eller feltet «Tilgjengelig
+        kreditt» hvis banken ikke oppgir en grense.
+      treat_balance_as_available_credit_label: Saldoen er tilgjengelig kreditt
     new:
       title: Angi kredittkortdetaljer

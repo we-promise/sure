@@ -15,11 +15,18 @@ nl:
     form:
       emoji_label: Emoji (optioneel)
       emoji_placeholder: Plak één emoji
-      emoji_help: Kies of plak één volledige emoji, bijvoorbeeld een vlag of een gezin.
-        Wis deze om het pictogram te gebruiken.
+      emoji_help: Kies of plak één volledige emoji, bijvoorbeeld een vlag of een gezin. Wis deze om het pictogram te gebruiken.
       emoji_clear: Pictogram gebruiken
       emoji_pick: "%{emoji} gebruiken"
       placeholder: Categorienaam
+      name_label: Naam
+      color: Kleur
+      auto_adjust: automatisch aanpassen.
+      icon: Pictogram
+      parent_category_label: Bovenliggende categorie (optioneel)
+      poor_contrast: Weinig contrast, kies een donkerdere kleur of
+      trigger_label: Kleur en pictogram kiezen
+      unassigned: "(niet toegewezen)"
     index:
       bootstrap: Gebruik standaardinstellingen (aanbevolen)
       categories: Categorieën
@@ -27,17 +34,45 @@ nl:
       categories_incomes: Inkomenscategorieën
       empty: Geen categorieën gevonden
       new: Nieuwe categorie
+      delete_all: Alles verwijderen
+      merge: Categorieën samenvoegen
     menu:
       loading: Laden...
     new:
       new_category: Nieuwe categorie
     update:
       success: Categorie succesvol bijgewerkt
+    virtual:
+      transfer: Overboeking
+      payment: Betaling
+      trade: Effectentransactie
+    destroy_all:
+      success: Alle categorieën verwijderd
+    merge:
+      description: Selecteer een doelcategorie en de categorieën die je daarin wilt samenvoegen. Bijbehorende transacties en budgetregels worden naar de doelcategorie verplaatst.
+      select_target: Selecteer een doelcategorie…
+      sources_hint: De geselecteerde categorieën worden verwijderd nadat hun transacties en budgetregels naar de doelcategorie zijn verplaatst. Selecteer de doelcategorie niet als bron.
+      sources_label: Samen te voegen categorieën
+      submit: Selectie samenvoegen
+      target_label: Samenvoegen in (doel)
+      title: Categorieën samenvoegen
+    perform_merge:
+      invalid_categories: Ongeldige categorieën geselecteerd
+      no_categories_selected: Geen categorieën geselecteerd om samen te voegen
+      success:
+        one: "%{count} categorie samengevoegd"
+        other: "%{count} categorieën samengevoegd"
+      target_not_found: Doelcategorie niet gevonden
+      target_selected_as_source: Kies verschillende categorieën voor het doel en de bronnen.
   category:
     dropdowns:
       show:
         bootstrap: Standaardcategorieën genereren
         empty: Geen categorieën gevonden
+        expense: uitgave
+        income: inkomsten
+        match_transfer: Overboeking/betaling koppelen
+        one_time: Eenmalige %{type}
   helpers:
     submit:
       category:

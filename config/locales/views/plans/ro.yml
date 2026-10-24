@@ -1,0 +1,41 @@
+---
+ro:
+  plans:
+    goals_card:
+      new_goal: Obiectiv nou
+      active_count:
+        one: 1 activ
+        other: "%{count} de obiective active"
+        few: "%{count} obiective active"
+      active_goals: Obiective active
+      all_goals: Toate obiectivele
+      all_on_pace: Totul evoluează conform planului
+      behind_count:
+        one: 1 în întârziere
+        other: "%{count} de obiective în întârziere"
+        few: "%{count} obiective în întârziere"
+      of_targets: din %{total} pentru toate obiectivele
+      pending_count:
+        one: 1 angajament în așteptare
+        other: "%{count} de angajamente în așteptare"
+        few: "%{count} angajamente în așteptare"
+      pending_marker: în așteptare
+      runway: Acoperire pentru %{months} luni · %{pace}/lună
+      title: Obiectivele tale
+    show:
+      title: Plan
+      subtitle: Decide unde se duc banii tăi — ce cheltuiești și ce economisești.
+    budget_card:
+      days_left:
+        one: Mai este 1 zi
+        other: Mai sunt %{count} de zile
+        few: Mai sunt %{count} zile
+      title: Această lună
+      edit_budget: Editează bugetul
+      empty_body: Stabilește o țintă lunară de cheltuieli și limite pe categorii pentru
+        a vedea evoluția lunii curente.
+      of_total: din %{total}
+      percent_used: "%{percent}% utilizat"
+      set_up: Configurează bugetul lunii curente
+      top_categories: Categorii principale
+      view_budget: Vezi bugetul complet

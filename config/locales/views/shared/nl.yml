@@ -25,3 +25,33 @@ nl:
     trend_change:
       no_change: geen verandering
     submitting: Verzenden…
+    cancel: Annuleren
+    sync_toast:
+      refresh: Vernieuwen
+      message: Nieuwe gegevens beschikbaar
+    custom_confirm:
+      default_btn_text: Bevestigen
+      default_title: Weet je het zeker?
+      default_body: Dit kan niet ongedaan worden gemaakt.
+      resource_deletion_body: Weet je zeker dat je %{resource} wilt verwijderen? Dit kan niet ongedaan worden gemaakt.
+      resource_deletion_btn_text: "%{resource} verwijderen"
+      resource_deletion_title: "%{resource} verwijderen?"
+    transaction_tabs:
+      income: Inkomsten
+      expense: Uitgave
+      transfer: Overboeking
+    preview: Voorvertoning
+    require_admin: Alleen beheerders kunnen deze actie uitvoeren
+    require_connector_owner: Je kunt alleen koppelingen beheren die je zelf hebt toegevoegd
+    sidekiq_health_banner:
+      body: Achtergrondtaken worden niet verwerkt. Daardoor kunnen saldi, nettovermogen en rekeningsynchronisaties verouderd zijn of ontbreken.
+      cta: Systeemstatus bekijken
+      reasons:
+        no_worker_processes: Er is geen Sidekiq-workerproces verbonden. Start de workercontainer of systemd-eenheid.
+        queue_backed_up: De oudste taak in de wachtrij wacht langer dan de toegestane wachttijd. De worker draait, maar raakt achterop.
+        redis_unreachable: De app kan Redis niet bereiken. Controleer REDIS_URL en of Redis draait.
+        stale_heartbeat: De Sidekiq-worker heeft onlangs geen teken van leven gemeld. Mogelijk zit deze vast of is deze gecrasht.
+      title: Sommige gegevens zijn mogelijk verouderd
+  concerns:
+    self_hostable:
+      redis_configured: Redis is nu correct ingesteld! Je kunt je Sure-applicatie instellen.

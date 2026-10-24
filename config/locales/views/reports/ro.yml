@@ -14,7 +14,26 @@ ro:
       date_range:
         from: De la
         to: Până la
-      showing_period: "Se afișează date de la %{start} până la %{end}"
+      showing_period: Se afișează date de la %{start} până la %{end}
+      today: Astăzi
+      drag_to_reorder: Trage pentru a reordona secțiunea
+      next_decade: Deceniul următor
+      next_period: Perioada următoare
+      next_year: Anul următor
+      period_label:
+        last_6_months: "%{start} – %{end}"
+        past_year: "%{year}"
+        quarterly: T%{quarter} %{year}
+        ytd: De la începutul anului %{year}
+      period_picker:
+        quarter: T%{quarter} %{year}
+        ytd: De la începutul anului %{year}
+      previous_decade: Deceniul anterior
+      previous_period: Perioada anterioară
+      previous_year: Anul anterior
+      print_report: Tipărește raportul
+      shortcut_hint: "%{action} (%{key})"
+      toggle_section: Comută vizibilitatea secțiunii
     summary:
       total_income: Venit total
       total_expenses: Cheltuieli totale
@@ -26,7 +45,7 @@ ro:
       no_budget_data: Nu există date bugetare pentru această perioadă
     comparison:
       title: Comparație perioade
-      currency: "Monedă: %{symbol}"
+      currency: 'Monedă: %{symbol}'
       income: Venituri
       expenses: Cheltuieli
       net_savings: Economii nete
@@ -50,6 +69,7 @@ ro:
         good: Pe drumul cel bun
         warning: Aproape de limită
         over: Peste buget
+      shared: partajat
     trends:
       title: Tendințe și Perspective
       monthly_breakdown: Defalcare lunară
@@ -70,13 +90,17 @@ ro:
       avg_per_transaction: Medie per tranzacție
       transactions: Tranzacții
       insight_title: Perspectivă
-      insight_higher_weekend: "Cheltuiți cu %{percent}% mai mult per tranzacție în weekend decât în timpul săptămânii"
-      insight_higher_weekday: "Cheltuiți cu %{percent}% mai mult per tranzacție în timpul săptămânii decât în weekend"
-      insight_similar: "Cheltuielile dumneavoastră per tranzacție sunt similare în timpul săptămânii și în weekend"
+      insight_higher_weekend: Cheltuiți cu %{percent}% mai mult per tranzacție în
+        weekend decât în timpul săptămânii
+      insight_higher_weekday: Cheltuiți cu %{percent}% mai mult per tranzacție în
+        timpul săptămânii decât în weekend
+      insight_similar: Cheltuielile dumneavoastră per tranzacție sunt similare în
+        timpul săptămânii și în weekend
       no_spending_data: Nu există date de cheltuieli disponibile pentru această perioadă
     empty_state:
       title: Nu există date disponibile
-      description: Începeți să vă urmăriți finanțele adăugând tranzacții sau conectând conturile pentru a vedea rapoarte complete
+      description: Începeți să vă urmăriți finanțele adăugând tranzacții sau conectând
+        conturile pentru a vedea rapoarte complete
       add_transaction: Adaugă tranzacție
       add_account: Adaugă cont
     transactions_breakdown:
@@ -115,23 +139,136 @@ ro:
         uncategorized: Necategorizate
         transactions: transactions
         percentage: "% din total"
+        entries:
+          one: "%{count} înregistrare"
+          other: "%{count} de înregistrări"
+          few: "%{count} înregistrări"
       pagination:
-        showing: Se afișează %{count} tranzacții
+        showing:
+          one: Se afișează %{count} înregistrare
+          few: Se afișează %{count} înregistrări
+          other: Se afișează %{count} de înregistrări
         previous: Anterioare
         next: Următoarele
     google_sheets_instructions:
       title_with_key: "✅ Copiază URL-ul pentru Google Sheets"
       title_no_key: "⚠️ Cheie API necesară"
       ready: URL-ul tău CSV (cu cheie API) este gata.
-      steps: "Pentru a importa în Google Sheets:\n1. Creează o foaie Google nouă\n2. În celula A1, introdu formula afișată mai jos\n3. Apasă Enter"
-      security_warning: "Acest URL include cheia ta API. Păstreaz-o în siguranță!"
+      steps: |-
+        Pentru a importa în Google Sheets:
+        1. Creează o foaie Google nouă
+        2. În celula A1, introdu formula afișată mai jos
+        3. Apasă Enter
+      security_warning: Acest URL include cheia ta API. Păstreaz-o în siguranță!
       need_key: Pentru a importa date în Google Sheets, ai nevoie de o cheie API.
-      step1: "Mergi la Setări → Chei API"
-      step2: "Creează o cheie API nouă cu permisiunea „citire”"
+      step1: Mergi la Setări → Chei API
+      step2: Creează o cheie API nouă cu permisiunea „citire”
       step3: Copiază cheia API
-      step4: "Adaug-o la acest URL ca: ?api_key=CHEIA_TA"
+      step4: 'Adaug-o la acest URL ca: ?api_key=CHEIA_TA'
       example: Exemplu
       then_use: Apoi utilizează URL-ul complet cu =IMPORTDATA() în Google Sheets.
       open_sheets: Deschide Google Sheets
       go_to_api_keys: Mergi la Chei API
       close: Am înțeles
+    investment_performance:
+      holdings: Dețineri
+      total_return: Randament total
+      value: Valoare
+      weight: Pondere
+      no_data: "-"
+      and_more: încă +%{count}
+      holding: Deținere
+      return: Randament
+      accounts: Conturi de investiții
+      contributions: Contribuții în perioadă
+      gains_by_tax_treatment: Câștiguri după tratamentul fiscal
+      holdings_count:
+        one: "%{count} deținere"
+        other: "%{count} de dețineri"
+        few: "%{count} dețineri"
+      period_return: Randament în perioadă
+      portfolio_value: Valoarea portofoliului
+      realized_gains: Câștiguri realizate
+      sell_trades: Tranzacții de vânzare
+      sells_count:
+        one: "%{count} vânzare"
+        other: "%{count} de vânzări"
+        few: "%{count} vânzări"
+      taxable_realized_note: Aceste câștiguri pot fi supuse impozitării
+      title: Performanța investițiilor
+      top_holdings: Principalele dețineri
+      total_gains: Câștiguri totale
+      unrealized_gains: Câștiguri nerealizate
+      view_details: Vezi detaliile
+      withdrawals: Retrageri în perioadă
+    net_worth:
+      title: Avere netă
+      total_assets: Active
+      total_liabilities: Datorii
+      assets_vs_liabilities: Active și datorii
+      current_net_worth: Avere netă actuală
+      no_assets: Niciun activ
+      no_liabilities: Nicio datorie
+      period_change: Variație în perioadă
+    print:
+      investments:
+        total_return: Randament total
+        value: Valoare
+        weight: Pondere
+        title: Investiții
+        contributions: Contribuții
+        holding: Deținere
+        return: Randament
+        withdrawals: Retrageri
+        period_return: Randament în perioadă
+        portfolio_value: Valoarea portofoliului
+        this_period: această perioadă
+        top_holdings: Principalele dețineri
+      net_worth:
+        assets: Active
+        title: Avere netă
+        liabilities: Datorii
+        current_balance: Sold actual
+        no_liabilities: Nicio datorie
+        this_period: această perioadă
+      spending:
+        amount: Sumă
+        category: Categorie
+        expenses: Cheltuieli
+        income: Venit
+        more_categories: "+ încă %{count} de categorii"
+        percent: "%"
+        title: Cheltuieli pe categorii
+      summary:
+        expenses: Cheltuieli
+        income: Venit
+        net_savings: Economii nete
+        budget: Buget
+        title: Rezumat
+        of_income: "%{percent}% din venit"
+        used: folosit
+        vs_prior: "%{percent}% față de perioada anterioară"
+      trends:
+        expenses: Cheltuieli
+        income: Venit
+        month: Lună
+        savings_rate: Rata de economisire
+        average: Medie
+        current_month_note: "* Luna curentă (date parțiale)"
+        net: Net
+        title: Tendințe lunare
+      document_title: Raport financiar
+      generated_on: Generat la %{date}
+      title: Raport financiar
+    investment_flows:
+      contributions: Contribuții
+      withdrawals: Retrageri
+      contributions_description: Bani adăugați la investiții
+      description: Urmărește banii care intră și ies din conturile de investiții prin
+        contribuții și retrageri.
+      net_flow: Flux net
+      net_flow_description: Variație netă totală
+      title: Fluxuri de investiții
+      withdrawals_description: Bani retrași din investiții
+    invalid_date_range: Data de sfârșit nu poate preceda data de început. Datele au
+      fost inversate.

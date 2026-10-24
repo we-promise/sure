@@ -182,6 +182,9 @@ de:
       tax_free_bond:
         long: Steuerfreie Anleihe
         short: Steuerfreie Anleihe
+      cash_management:
+        long: Cash-Management-Konto
+        short: CMA
     value_tooltip:
       cash: Bargeld
       holdings: Positionen

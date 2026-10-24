@@ -6,8 +6,8 @@ pt-BR:
       subtitle: Insights completos sobre sua saúde financeira
       export: Exportar CSV
       print_report: Imprimir Relatório
-      drag_to_reorder: "Arraste para reordenar a seção"
-      toggle_section: "Alternar visibilidade da seção"
+      drag_to_reorder: Arraste para reordenar a seção
+      toggle_section: Alternar visibilidade da seção
       periods:
         monthly: Mensal
         quarterly: Trimestral
@@ -17,8 +17,25 @@ pt-BR:
       date_range:
         from: De
         to: Até
-      showing_period: "Exibindo dados de %{start} até %{end}"
-    invalid_date_range: "A data final não pode ser anterior à data inicial. As datas foram trocadas."
+      showing_period: Exibindo dados de %{start} até %{end}
+      next_decade: Década seguinte
+      next_period: Período seguinte
+      next_year: Ano seguinte
+      period_label:
+        last_6_months: "%{start} – %{end}"
+        past_year: "%{year}"
+        quarterly: T%{quarter} %{year}
+        ytd: Acumulado %{year}
+      period_picker:
+        quarter: T%{quarter} %{year}
+        ytd: Acumulado %{year}
+      previous_decade: Década anterior
+      previous_period: Período anterior
+      previous_year: Ano anterior
+      shortcut_hint: "%{action} (%{key})"
+      today: Hoje
+    invalid_date_range: A data final não pode ser anterior à data inicial. As datas
+      foram trocadas.
     summary:
       total_income: Receita Total
       total_expenses: Despesa Total
@@ -61,13 +78,20 @@ pt-BR:
       avg_per_transaction: Média por transação
       transactions: Transações
       insight_title: Insight
-      insight_higher_weekend: "Você gasta %{percent}% a mais por transação nos fins de semana do que em dias úteis"
-      insight_higher_weekday: "Você gasta %{percent}% a mais por transação em dias úteis do que nos fins de semana"
-      insight_similar: "Seus gastos por transação são similares em dias úteis e fins de semana"
+      insight_higher_weekend: >-
+        Você gasta %{percent}% a mais por transação nos fins de semana do que em dias
+        úteis
+      insight_higher_weekday: >-
+        Você gasta %{percent}% a mais por transação em dias úteis do que nos fins
+        de semana
+      insight_similar: Seus gastos por transação são similares em dias úteis e fins
+        de semana
       no_spending_data: Sem dados de gastos disponíveis para este período
     empty_state:
       title: Sem Dados Disponíveis
-      description: Comece a controlar suas finanças adicionando transações ou conectando suas contas para ver relatórios completos
+      description: >-
+        Comece a controlar suas finanças adicionando transações ou conectando suas
+        contas para ver relatórios completos
       add_transaction: Adicionar Transação
       add_account: Adicionar Conta
     transactions_breakdown:
@@ -130,7 +154,7 @@ pt-BR:
       contributions: Contribuições do Período
       withdrawals: Saques do Período
       top_holdings: Principais Aplicações
-      holding: Holding
+      holding: Posição
       weight: Peso
       value: Valor
       return: Retorno
@@ -143,31 +167,41 @@ pt-BR:
       no_data: "-"
       view_details: Ver detalhes
       holdings_count:
-        one: "%{count} holding"
-        other: "%{count} holdings"
+        one: "%{count} posição"
+        other: "%{count} posições"
       sells_count:
         one: "%{count} venda"
         other: "%{count} vendas"
-      holdings: Holdings
+      holdings: Posições
       sell_trades: Venda de Negócios
       and_more: "+%{count} mais"
+      period_return: Retorno do Período
     investment_flows:
       title: Fluxos de investimento
-      description: Acompanhe o fluxo de dinheiro que entra e sai de suas contas de investimento.
+      description: Acompanhe o fluxo de dinheiro que entra e sai de suas contas de
+        investimento.
       contributions: Contribuições
       withdrawals: Saques
       net_flow: Fluxo Líquido
+      contributions_description: Dinheiro adicionado aos investimentos
+      net_flow_description: Alteração líquida total
+      withdrawals_description: Dinheiro retirado dos investimentos
     google_sheets_instructions:
       title_with_key: "✅ Copiar URL para Google Sheets"
       title_no_key: "⚠️ Chave de API Necessária"
       ready: Sua URL CSV (com chave de API) está pronta.
-      steps: "Para importar no Google Sheets:\n1. Crie uma nova planilha no Google\n2. Na célula A1, insira a fórmula abaixo\n3. Pressione Enter"
-      security_warning: "Esta URL inclui sua chave de API. Mantenha-a segura!"
-      need_key: Para importar dados no Google Sheets, você precisa de uma chave de API.
-      step1: "Vá em Configurações → Chaves de API"
-      step2: "Crie uma nova chave de API com permissão de \"leitura\""
+      steps: |-
+        Para importar no Google Sheets:
+        1. Crie uma nova planilha no Google
+        2. Na célula A1, insira a fórmula abaixo
+        3. Pressione Enter
+      security_warning: Esta URL inclui sua chave de API. Mantenha-a segura!
+      need_key: Para importar dados no Google Sheets, você precisa de uma chave de
+        API.
+      step1: Vá em Configurações → Chaves de API
+      step2: Crie uma nova chave de API com permissão de "leitura"
       step3: Copie a chave de API
-      step4: "Adicione à URL como: ?api_key=SUA_CHAVE"
+      step4: 'Adicione à URL como: ?api_key=SUA_CHAVE'
       example: Exemplo
       then_use: Então use a URL completa com =IMPORTDATA() no Google Sheets.
       open_sheets: Abrir Google Sheets
@@ -176,8 +210,7 @@ pt-BR:
     print:
       document_title: Relatório Financeiro
       title: Relatório Financeiro
-      generated_on: "Gerado em %{date}"
-      # Summary section
+      generated_on: Gerado em %{date}
       summary:
         title: Resumo
         income: Receita
@@ -187,7 +220,6 @@ pt-BR:
         vs_prior: "%{percent}% vs anterior"
         of_income: "%{percent}% da Receita"
         used: usado
-      # Net Worth section
       net_worth:
         title: Patrimônio Líquido
         current_balance: Saldo Atual
@@ -195,7 +227,6 @@ pt-BR:
         assets: Ativos
         liabilities: Passivos
         no_liabilities: Sem passivos
-      # Monthly Trends section
       trends:
         title: Tendências Mensais
         month: Mês
@@ -205,7 +236,6 @@ pt-BR:
         savings_rate: Taxa de Poupança
         average: Média
         current_month_note: "* Mês atual (dados parciais)"
-      # Investments section
       investments:
         title: Investimentos
         portfolio_value: Valor do Portfólio
@@ -214,11 +244,11 @@ pt-BR:
         withdrawals: Saques
         this_period: este período
         top_holdings: Principais Aplicações
-        holding: Holding
+        holding: Posição
         weight: Peso
         value: Valor
         return: Retorno
-      # Spending by Category section
+        period_return: Retorno do Período
       spending:
         title: Gastos por Categoria
         income: Receita

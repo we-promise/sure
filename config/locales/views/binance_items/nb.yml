@@ -1,0 +1,79 @@
+---
+nb:
+  binance_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} konto må konfigureres"
+        other: "%{count} kontoer må konfigureres"
+      calculating_balances: Beregner saldoer...
+      checking_configuration: Kontrollerer kontooppsettet...
+      checking_credentials: Kontrollerer påloggingsopplysninger...
+      processing_accounts: Behandler kontodata...
+      credentials_invalid: Ugyldige API-opplysninger. Kontroller API-nøkkelen og hemmeligheten.
+      importing_accounts: Importerer kontoer fra Binance...
+  binance_items:
+    binance_item:
+      delete: Slett
+      import_accounts_menu: Importer konto
+      no_accounts_title: Ingen kontoer funnet
+      provider_name: Binance
+      setup_action: Importer konto
+      status: Sist synkronisert for %{timestamp} siden
+      status_never: Aldri synkronisert
+      status_with_summary: Sist synkronisert for %{timestamp} siden – %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} konto synkronisert"
+          other: "%{count} kontoer synkronisert"
+        no_accounts: Ingen kontoer funnet
+        partial_sync: "%{linked_count} synkronisert, %{unlinked_count} må konfigureres"
+      syncing: Synkroniserer...
+      update_credentials: Oppdater påloggingsopplysninger
+      deletion_in_progress: Sletter...
+      reconnect: Påloggingsopplysningene må oppdateres
+      setup_needed: Kontoen er klar til import
+      no_accounts_message: Binance-porteføljen din vises her etter synkronisering.
+      setup_description: Velg Binance-porteføljene du vil følge.
+      stale_rate_warning: Saldoen er omtrentlig. Nøyaktig valutakurs for %{date} var
+        ikke tilgjengelig. Den oppdateres ved neste synkronisering.
+    create:
+      default_name: Binance
+      success: Tilkoblet Binance! Kontoen din synkroniseres.
+    select_existing_account:
+      cancel: Avbryt
+      link: Koble til
+      currently_linked_to: 'For øyeblikket koblet til: %{account_name}'
+      check_provider_health: Kontroller at API-opplysningene for Binance er gyldige
+      no_accounts_found: Ingen Binance-kontoer funnet.
+      title: Koble til Binance-konto
+      wait_for_sync: Vent til Binance er ferdig med å synkronisere
+    setup_accounts:
+      accounts_count:
+        one: "%{count} konto tilgjengelig"
+        other: "%{count} kontoer tilgjengelige"
+      cancel: Avbryt
+      select_all: Velg alle
+      creating: Importerer...
+      import_selected: Importer valgte
+      instructions: Velg Binance-porteføljene du vil importere. Bare porteføljer med
+        saldo vises.
+      no_accounts: Alle kontoer er importert.
+      subtitle: Velg hvilke porteføljer du vil følge
+      title: Importer Binance-konto
+    complete_account_setup:
+      no_accounts: Ingen kontoer å importere
+      none_selected: Ingen kontoer valgt
+      success:
+        one: Importerte %{count} konto
+        other: Importerte %{count} kontoer
+      invalid_sync_start_date: Startdatoen for synkronisering må være en gyldig dato
+        i fortiden.
+    destroy:
+      success: Binance-tilkoblingen er planlagt slettet.
+    link_existing_account:
+      errors:
+        invalid_binance_account: Ugyldig Binance-konto
+        only_manual: Bare manuelle kontoer kan kobles til Binance
+      success: Koblet til Binance-kontoen
+    update:
+      success: Binance-oppsettet er oppdatert.

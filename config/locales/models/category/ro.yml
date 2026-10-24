@@ -1,0 +1,29 @@
+---
+ro:
+  models:
+    category:
+      defaults:
+        income: Venit
+        insurance: Asigurare
+        subscriptions: Abonamente
+        entertainment: Divertisment
+        fees: Comisioane
+        food_and_drink: Mâncare și băuturi
+        gifts_and_donations: Cadouri și donații
+        groceries: Alimente
+        healthcare: Sănătate
+        home_improvement: Amenajarea locuinței
+        loan_payments: Rate la credite
+        mortgage_rent: Ipotecă / Chirie
+        personal_care: Îngrijire personală
+        savings_and_investments: Economii și investiții
+        services: Servicii
+        shopping: Cumpărături
+        sports_and_fitness: Sport și fitness
+        taxes: Impozite și taxe
+        transportation: Transport
+        travel: Călătorii
+        utilities: Utilități
+      uncategorized: Fără categorie
+      investment_contributions: Contribuții la investiții
+      other_investments: Alte investiții

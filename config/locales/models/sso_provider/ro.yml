@@ -1,0 +1,14 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        sso_provider:
+          attributes:
+            settings:
+              metadata_url_invalid: URL-ul metadatelor IdP trebuie să fie un URL valid
+              saml_cert_required: Certificatul IdP sau amprenta certificatului este
+                obligatoriu când nu se folosește un URL de metadate
+              saml_url_required: URL-ul metadatelor IdP sau URL-ul SSO IdP este obligatoriu
+                pentru furnizorii SAML
+              sso_url_invalid: URL-ul SSO IdP trebuie să fie un URL valid

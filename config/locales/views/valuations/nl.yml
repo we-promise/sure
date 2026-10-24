@@ -29,3 +29,40 @@ nl:
       overview: Overzicht
       settings: Instellingen
       opening_balance: Beginsaldo
+      amount_label: Rekeningwaarde op datum
+      update_value: Waarde bijwerken
+    confirm_update:
+      update: Bijwerken
+      title: Saldo bijwerken
+    confirm_create:
+      confirm: Bevestigen
+      title: Nieuw saldo bevestigen
+    confirmation_contents:
+      account_balance: rekeningsaldo
+      action_set: instellen
+      action_update: bijwerken
+      asset_value: waarde van het bezit
+      balance: saldo
+      brokerage_cash: Geld op effectenrekening
+      change: wijziging
+      credit_card_balance: creditcardsaldo
+      crypto_balance: cryptosaldo
+      holdings_value: Waarde van posities
+      liability_balance: schuldsaldo
+      loan_balance: leningsaldo
+      'on': op
+      property_value: vastgoedwaarde
+      recalculate_notice: Alle toekomstige transacties en saldi worden opnieuw berekend op basis van deze %{change_or_update}.
+      this_will: Dit zal de rekeningwaarde %{action_verb} op
+      to: naar
+      to_colon: 'naar:'
+      total_account_value: Totale rekeningwaarde
+      vehicle_value: voertuigwaarde
+      update: bijwerken
+    create:
+      account_updated: Rekening bijgewerkt
+    errors:
+      amount_required: Bedrag is verplicht
+    update:
+      entry_updated: Boeking bijgewerkt
+      account_updated: Rekening bijgewerkt

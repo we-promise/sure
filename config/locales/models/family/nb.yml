@@ -1,0 +1,11 @@
+---
+nb:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_categorizer_anthropic: Instruksjon for transaksjonskategorisering
+          (Anthropic)
+        ai_prompt_categorizer_openai: Instruksjon for transaksjonskategorisering (OpenAI)
+        ai_prompt_chat_system: Systeminstruksjon for chat
+        ai_prompt_merchant_anthropic: Instruksjon for forhandlergjenkjenning (Anthropic)
+        ai_prompt_merchant_openai: Instruksjon for forhandlergjenkjenning (OpenAI)

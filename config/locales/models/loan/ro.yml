@@ -1,0 +1,10 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Rândurile de modificare a dobânzii necesită atât o
+            dată de intrare în vigoare, cât și o rată.
+          rate_change_before_origination: O modificare a dobânzii nu poate intra în
+            vigoare înainte de acordarea creditului.

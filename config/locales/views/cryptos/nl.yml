@@ -5,3 +5,16 @@ nl:
       edit: "%{account} bewerken"
     new:
       title: Saldo invoeren
+    form:
+      subtype_label: Rekeningtype
+      subtype_none: Geen
+      subtype_prompt: Selecteer een rekeningtype
+      tax_treatment_hint: De meeste cryptovaluta worden op normaal belaste rekeningen aangehouden. Kies een andere optie als ze op een fiscaal voordelige rekening staan.
+      tax_treatment_label: Fiscale behandeling
+    subtypes:
+      exchange:
+        short: Cryptobeurs
+        long: Cryptobeurs
+      wallet:
+        long: Cryptowallet
+        short: Wallet

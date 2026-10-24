@@ -1,0 +1,59 @@
+---
+ro:
+  chats:
+    index:
+      chats: Conversații
+      new_chat: Conversație nouă
+    ai_consent:
+      available_description: Conversația AI poate răspunde la întrebări financiare
+        și oferi analize pe baza datelor tale. Pentru a folosi această funcție, trebuie
+        să o activezi explicit.
+      disable_note: Poți dezactiva oricând. Toate datele trimise furnizorilor noștri
+        LLM sunt anonimizate.
+      enable_button: Activează conversațiile AI
+      title: Activează conversațiile AI
+      unavailable_description_html: Pentru a folosi asistentul AI, trebuie să setezi
+        variabila de mediu <code class="bg-surface-inset px-1 py-0.5 rounded font-mono
+        text-xs">OPENAI_ACCESS_TOKEN</code> sau să o configurezi în setările de găzduire
+        proprie ale instanței tale.
+    ai_greeting:
+      commands_hint_html: Poți folosi <span class="bg-container border border-secondary
+        px-1.5 py-0.5 rounded font-mono text-xs">/</span> pentru a accesa comenzile
+      evaluate_portfolio: Evaluează portofoliul de investiții
+      greeting: Salut, %{name}! Sunt un model lingvistic mare bazat pe AI care te
+        poate ajuta cu finanțele tale. Am acces la web și la datele conturilor tale.
+      questions_intro: 'Iată câteva întrebări pe care le poți pune:'
+      spending_insights: Arată analizele cheltuielilor
+      there: prietene
+      unusual_patterns: Găsește tipare neobișnuite
+    chat:
+      delete_chat: Șterge conversația
+      edit_chat_title: Editează titlul conversației
+    chat_nav:
+      all_chats: Toate conversațiile
+      delete_chat: Șterge conversația
+      edit_chat_title: Editează titlul conversației
+      start_new_chat: Începe o conversație nouă
+    demo_banner_message: "Folosești modele LLM prin credite oferite de Cloudflare
+      Workers AI. Rezultatele pot varia, deoarece aplicația a fost testată cu `gpt-4.1`,
+      dar tokenurile tale nu sunt trimise în altă parte pentru antrenare! \U0001F916"
+    demo_banner_title: Mod demonstrativ activ
+    destroy:
+      notice: Conversația a fost ștearsă cu succes
+    error:
+      retry: Reîncearcă
+    new:
+      default_title: Conversație nouă %{timestamp}
+    thinking: Se gândește ...
+    update:
+      success: Conversație actualizată
+    worker_unhealthy_warning: Este posibil ca răspunsurile AI să nu fie livrate acum
+      — procesul de fundal pare oprit sau supraîncărcat. Verifică dacă procesul Sidekiq
+      rulează.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Raționamentul asistentului
+    tool_calls:
+      arguments: 'Argumente:'
+      function: 'Funcție:'
+      tool_calls: Apeluri de instrumente

@@ -1,0 +1,146 @@
+---
+pt-BR:
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Conexão com o Monobank
+  monobank_account:
+    card_types:
+      black: Cartão Black
+      eaid: Cartão eAid
+      fop: Conta empresarial
+      iron: Cartão Iron
+      jar: Reserva
+      platinum: Cartão Platinum
+      unknown: Cartão Monobank
+      white: Cartão White
+      yellow: Cartão Yellow
+    jar_fallback: Reserva do Monobank
+  monobank_item:
+    errors:
+      account_processing_failed: Não foi possível sincronizar a conta do Monobank
+      account_sync_schedule_failed: Não foi possível agendar a sincronização da conta
+        do Monobank
+      sync_failed: Não foi possível sincronizar a conexão com o Monobank
+      transactions_failed: Não foi possível buscar o extrato do Monobank
+    institution_summary:
+      count:
+        one: 1 instituição
+        other: "%{count} instituições"
+      none: Nenhuma instituição conectada
+      one: 1 instituição
+    sync:
+      status:
+        calculating: Calculando saldos...
+        checking_setup: Verificando a configuração da conta...
+        importing: Importando contas do Monobank...
+        needs_setup:
+          one: 1 conta precisa de configuração...
+          other: "%{count} contas precisam de configuração..."
+        processing: Processando transações...
+    sync_status:
+      all_synced:
+        one: 1 conta sincronizada
+        other: "%{count} contas sincronizadas"
+      no_accounts: Nenhuma conta encontrada
+      partial: "%{linked} sincronizadas, %{unlinked} precisam de configuração"
+  monobank_items:
+    complete_account_setup:
+      all_skipped: Nenhuma conta do Monobank foi criada.
+      creation_failed: Não foi possível criar as contas do Monobank.
+      no_accounts: Nenhuma conta do Monobank foi selecionada.
+      success:
+        one: 1 conta do Monobank criada.
+        other: "%{count} contas do Monobank criadas."
+    create:
+      success: Conexão com o Monobank salva.
+    destroy:
+      success: Exclusão da conexão com o Monobank agendada.
+      unlink_failed: Não foi possível desconectar a conexão com o Monobank
+    link_accounts:
+      link_failed: Nenhuma conta foi vinculada.
+      no_accounts_selected: Selecione pelo menos uma conta.
+      no_credentials_configured: Primeiro configure o Monobank nas configurações do
+        provedor.
+      success:
+        one: 1 conta do Monobank vinculada.
+        other: "%{count} contas do Monobank vinculadas."
+      unsupported_account_type: O Monobank não oferece suporte a esse tipo de conta.
+    link_existing_account:
+      account_already_linked: Esta conta já está vinculada a um provedor.
+      monobank_account_already_linked: Esta conta do Monobank já está vinculada.
+      no_account_selected: Selecione uma conta do Monobank para vincular.
+      success: Conta do Monobank vinculada a %{account_name}.
+    monobank_item:
+      delete: Excluir
+      deletion_in_progress: Exclusão em andamento
+      error: Erro
+      no_accounts_description: Busque as contas do Monobank e escolha quais deseja
+        vincular.
+      no_accounts_title: Nenhuma conta importada ainda
+      setup_action: Configurar contas
+      setup_description: "%{linked} de %{total} contas vinculadas."
+      setup_needed: Configuração da conta necessária
+      status_never: Nunca sincronizado
+      status_with_summary: Sincronizada há %{timestamp} · %{summary}
+      syncing: Sincronizando
+    provider_panel:
+      access_token_label: Token de API pessoal
+      access_token_placeholder: Cole seu token pessoal do Monobank
+      add_connection: Adicionar conexão com o Monobank
+      connection_name_label: Nome da conexão
+      connection_name_placeholder: Meu Monobank
+      default_connection_name: Conexão com o Monobank
+      disconnect: Desconectar
+      disconnect_confirm: Tem certeza de que deseja desconectar %{name}?
+      keep_access_token_placeholder: Deixe em branco para manter o token existente
+      rate_limit_notice: >-
+        O Monobank permite uma solicitação por minuto. Por isso, cada sincronização
+        busca algumas contas por vez, e o histórico mais antigo chega ao longo de
+        várias sincronizações.
+      setup_accounts: Configurar contas
+      sync: Sincronizar
+      syncing: Sincronizando...
+      update_connection: Atualizar conexão
+    select_accounts:
+      cancel: Cancelar
+      description: Escolha os cartões ou as reservas do Monobank que deseja adicionar.
+      link_accounts: Vincular contas
+      no_accounts_found: Nenhuma conta do Monobank sem vínculo foi encontrada.
+      no_credentials_configured: Primeiro configure o Monobank nas configurações do
+        provedor.
+      title: Vincular contas do Monobank
+    select_existing_account:
+      account_already_linked: Esta conta já está vinculada a um provedor.
+      cancel: Cancelar
+      description: Escolha uma conta do Monobank sem vínculo para conectar a esta
+        conta.
+      link_account: Vincular conta
+      no_accounts_found: Nenhuma conta do Monobank sem vínculo foi encontrada.
+      no_credentials_configured: Primeiro configure o Monobank nas configurações do
+        provedor.
+      title: Vincular conta do Monobank a %{account_name}
+    setup_accounts:
+      account_type_label: Tipo de conta
+      account_types:
+        depository: Dinheiro
+        skip: Pular
+      all_accounts_linked: Todas as contas do Monobank já estão vinculadas.
+      api_error: >-
+        Não foi possível atualizar as contas do Monobank. As contas salvas na última
+        sincronização são exibidas no lugar delas.
+      cancel: Cancelar
+      choose_account_type: Escolha um tipo de conta
+      choose_account_type_description: Ignore as contas que não deseja acompanhar.
+      create_accounts: Criar contas
+      no_accounts_to_setup: Nenhuma conta para configurar
+      no_credentials: Configure primeiro as credenciais do Monobank.
+      subtitle: Escolha como cada cartão ou reserva do Monobank deve aparecer no Sure.
+      title: Vincular contas do Monobank
+    update:
+      success: Conexão com o Monobank atualizada.
+  providers:
+    monobank:
+      description: Conecte cartões e reservas do Monobank da Ucrânia com um token
+        de API pessoal
+      name: Monobank

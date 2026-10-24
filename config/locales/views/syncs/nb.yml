@@ -1,0 +1,7 @@
+---
+nb:
+  syncs:
+    cancel:
+      cancelled: Synkroniseringen er avbrutt. Alt som allerede er synkronisert, beholdes;
+        arbeid i køen ble stoppet.
+      not_cancellable: Denne synkroniseringen er allerede fullført.

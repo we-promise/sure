@@ -6,13 +6,28 @@ pt-BR:
       link_provider: Vincular ao provedor
       unlink_provider: Desvincular do provedor
       troubleshoot: Solucionar problemas
+      change_simplefin_account: Alterar conta SimpleFIN
+      complete_setup: Concluir configuração
+      default_label: Padrão
+      delete: Excluir conta
+      disable: Desativar conta
+      edit: Editar
+      enable: Ativar conta
+      exclude_from_reports: Excluir de todos os relatórios
+      excluded_from_reports_indicator: Excluída dos relatórios
+      include_in_reports: Incluir nos relatórios
+      remove_default: Remover padrão
+      set_default: Definir como padrão
+      sharing: Compartilhar
     chart:
       data_not_available: Dados não disponíveis para o período selecionado
     create:
-      success: "Conta %{type} criada"
+      success: Conta %{type} criada
     destroy:
-      success: "Conta %{type} agendada para exclusão"
-      cannot_delete_linked: "Não é possível excluir uma conta vinculada. Por favor, desvincule-a primeiro."
+      success: Conta %{type} agendada para exclusão
+      cannot_delete_linked: Não é possível excluir uma conta vinculada. Por favor,
+        desvincule-a primeiro.
+      failed: A exclusão do recurso falhou. Tente novamente mais tarde.
     empty:
       empty_message: Adicione uma conta via conexão, importação ou inserção manual.
       new_account: Nova conta
@@ -21,24 +36,51 @@ pt-BR:
       balance: Saldo atual
       name_label: Nome da conta
       name_placeholder: Nome da conta exemplo
+      additional_details: Detalhes adicionais
+      enable_category_matcher_hint: >-
+        Quando ativado, a categoria sugerida pelo serviço externo é aplicada às transações
+        importadas. Desative para deixar as novas transações sem categoria.
+      enable_category_matcher_label: Ativar correspondência de categorias
+      exclude_from_reports: Excluir de todos os relatórios
+      institution_domain_label: Domínio da instituição
+      institution_domain_placeholder: 'ex.: chase.com'
+      institution_name_label: Nome da instituição
+      institution_name_placeholder: 'ex.: Chase Bank'
+      notes_label: Notas
+      notes_placeholder: >-
+        Guarde informações adicionais, como números de conta, códigos bancários, IBAN,
+        números de roteamento etc.
+      opening_balance_date_label: Data do saldo inicial
     index:
       accounts: Contas
       manual_accounts:
         other_accounts: Outras contas
       new_account: Nova conta
       sync: Sincronizar todas
+      cancel_sync: Cancelar sincronização
+      financekit_accounts:
+        description: >-
+          Gerencie as conexões com a Apple Wallet e sincronize pelo aplicativo Sure
+          para iOS.
+        title: Apple Wallet
     sync_all:
-      syncing: "Sincronizando contas..."
+      syncing: Sincronizando contas...
     new:
       import_accounts: Importar contas
       method_selector:
         connected_entry: Vincular conta
         connected_entry_eu: Vincular conta EU
-        link_with_provider: "Vincular com %{provider}"
+        link_with_provider: Vincular com %{provider}
         lunchflow_entry: Vincular conta do Lunch Flow
         manual_entry: Inserir saldo da conta
         title: Como você gostaria de adicionar?
       title: O que você gostaria de adicionar?
+      container:
+        close: Fechar
+        navigate: Navegar
+        next: Próximo
+        previous: Anterior
+        select: Selecionar
     show:
       activity:
         amount: Valor
@@ -53,25 +95,59 @@ pt-BR:
         search:
           placeholder: Buscar entradas por nome
         title: Atividade
+        category: Categoria
+        confirmed: Confirmado
+        filter: Filtrar
+        new_activity: Nova atividade
+        new_trade: Nova negociação
+        new_transfer: Nova transferência
+        pending: Pendente
+        search_placeholder: Pesquisar registros por nome
+        status: Status
+        uncategorized_only: Somente sem categoria
       chart:
         balance: Saldo
         owed: Valor devido
       menu:
         confirm_accept: Excluir "%{name}"
-        confirm_body_html: "<p>Ao excluir esta conta, você apagará seu histórico de valores,
-          afetando vários aspectos de sua conta geral. Esta ação
-          terá um impacto direto nos cálculos de patrimônio líquido e nos
-          gráficos da conta.</p><br /> <p>Após a exclusão, não há como restaurar
-          as informações da conta porque você precisará adicioná-la como uma nova conta.</p>"
+        confirm_body_html: >-
+          <p>Ao excluir esta conta, você apagará seu histórico de valores, afetando
+          vários aspectos de sua conta geral. Esta ação terá um impacto direto nos
+          cálculos de patrimônio líquido e nos gráficos da conta.</p><br /> <p>Após
+          a exclusão, não há como restaurar as informações da conta porque você precisará
+          adicioná-la como uma nova conta.</p>
         confirm_title: Excluir conta?
         edit: Editar
         import: Importar transações
         manage: Gerenciar contas
+        delete_account: Excluir conta
+        exclude_from_reports: Excluir de todos os relatórios
+        import_trades: Importar negociações
+        import_transactions: Importar transações
+        include_in_reports: Incluir nos relatórios
+        sharing: Compartilhamento
+        statements: Extratos
+      header:
+        complete_setup: Concluir configuração
+      limited_fx_history_warning: >-
+        O histórico de taxas de câmbio só está disponível a partir de %{date}. As
+        transações anteriores a esta data utilizam conversões de moeda aproximadas
+        — tal acontece quando o serviço externo de câmbio apenas oferece uma janela
+        histórica limitada.
+      tabs:
+        activity: Atividade
+        holdings: Posições
+        overview: Visão geral
+        schedule: Agendamento
+        statements: Extratos
     update:
-      success: "Conta %{type} atualizada"
+      success: Conta %{type} atualizada
     sidebar:
       missing_data: Dados históricos ausentes
-      missing_data_description: "%{product} usa provedores terceirizados para buscar taxas de câmbio históricas, preços de títulos e muito mais. Esses dados são necessários para calcular saldos de contas históricos com precisão."
+      missing_data_description: >-
+        %{product} usa provedores terceirizados para buscar taxas de câmbio históricas,
+        preços de títulos e muito mais. Esses dados são necessários para calcular
+        saldos de contas históricos com precisão.
       configure_providers: Configure seus provedores aqui.
       tabs:
         all: Todas
@@ -80,7 +156,9 @@ pt-BR:
       new_asset: Novo ativo
       new_debt: Nova dívida
       new_account: Nova conta
-      new_account_group: "Novo(a) %{account_group}"
+      new_account_group: Novo(a) %{account_group}
+      collapse_all: Recolher tudo
+      expand_all: Expandir tudo
     types:
       depository: Dinheiro
       investment: Investimento
@@ -93,26 +171,70 @@ pt-BR:
       other_liability: Outro Passivo
     confirm_unlink:
       title: Desvincular conta do provedor?
-      description_html: "Você está prestes a desvincular <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Isso a converterá em uma conta manual."
+      description_html: >-
+        Você está prestes a desvincular <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>.
+        Isso a converterá em uma conta manual.
       warning_title: O que isso significa
       warning_no_sync: A conta não sincronizará mais automaticamente com seu banco
-      warning_manual_updates: Você precisará adicionar transações e atualizar saldos manualmente
+      warning_manual_updates: Você precisará adicionar transações e atualizar saldos
+        manualmente
       warning_transactions_kept: Todas as transações e saldos existentes serão preservados
       warning_can_delete: Após desvincular, você poderá excluir a conta, se necessário
       confirm_button: Confirmar e desvincular
+      warning_wallet_connection: >-
+        Todas as contas desta conexão com a Apple Wallet serão desvinculadas. As transações
+        e os saldos serão preservados. Você poderá reconectar pelo aplicativo Sure
+        para iOS com uma nova configuração da Wallet.
     unlink:
-      success: "Conta desvinculada com sucesso. Agora é uma conta manual."
-      not_linked: "A conta não está vinculada a um provedor"
-      error: "Falha ao desvincular conta: %{error}"
-      generic_error: "Ocorreu um erro inesperado. Por favor, tente novamente."
+      success: Conta desvinculada com sucesso. Agora é uma conta manual.
+      not_linked: A conta não está vinculada a um provedor
+      error: 'Falha ao desvincular conta: %{error}'
+      generic_error: Ocorreu um erro inesperado. Por favor, tente novamente.
     select_provider:
       title: Selecione um provedor para vincular
-      description: "Escolha qual provedor você deseja usar para vincular %{account_name}"
-      already_linked: "A conta já está vinculada a um provedor"
-      no_providers: "Nenhum provedor configurado no momento"
-  
+      description: Escolha qual provedor você deseja usar para vincular %{account_name}
+      already_linked: A conta já está vinculada a um provedor
+      no_providers: Nenhum provedor configurado no momento
+    not_authorized: Não tem permissão para gerenciar esta conta
+    set_default:
+      depository_only: >-
+        Apenas as contas de dinheiro e cartões de crédito podem ser definidas como
+        padrão.
+    subtype_regions:
+      au: Austrália
+      ca: Canadá
+      eu: Europa
+      generic: Geral
+      in: Índia
+      uk: Reino Unido
+      us: Estados Unidos
+    tax_treatment_descriptions:
+      tax_advantaged: Benefícios fiscais especiais com condições
+      tax_deferred: Contribuições dedutíveis, tributadas no saque
+      tax_exempt: Contribuições após impostos, ganhos não tributados
+      taxable: Ganhos tributados quando realizados
+    tax_treatments:
+      tax_advantaged: Com Benefícios Fiscais
+      tax_deferred: Imposto Diferido
+      tax_exempt: Isento de Impostos
+      taxable: Tributável
+    types_plural:
+      credit_card: Cartões de Crédito
+      crypto: Cripto
+      depository: Dinheiro
+      investment: Investimentos
+      loan: Empréstimos
+      other_asset: Outros Ativos
+      other_liability: Outros Passivos
+      property: Imóveis
+      vehicle: Veículos
   email_confirmations:
     new:
       invalid_token: Link de confirmação inválido ou expirado.
-      success_login: Seu e-mail foi confirmado. Por favor, faça login com seu novo endereço
-        de e-mail.
+      success_login: >-
+        Seu e-mail foi confirmado. Por favor, faça login com seu novo endereço de
+        e-mail.
+  account:
+    entries:
+      destroy:
+        success: Registro excluído com sucesso.

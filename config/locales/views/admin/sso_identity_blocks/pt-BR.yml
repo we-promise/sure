@@ -1,0 +1,6 @@
+---
+pt-BR:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: A identidade SSO já pode entrar ou criar uma conta novamente.

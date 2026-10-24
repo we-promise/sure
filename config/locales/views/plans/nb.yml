@@ -1,0 +1,37 @@
+---
+nb:
+  plans:
+    show:
+      title: Plan
+      subtitle: Bestem hvor pengene går – hva du bruker, og hva du sparer.
+    budget_card:
+      days_left:
+        one: 1 dag igjen
+        other: "%{count} dager igjen"
+      edit_budget: Rediger budsjett
+      empty_body: Sett et månedlig forbruksmål og grenser per kategori for å følge
+        utviklingen denne måneden.
+      of_total: av %{total}
+      percent_used: "%{percent} % brukt"
+      set_up: Sett opp denne månedens budsjett
+      title: Denne måneden
+      top_categories: Største kategorier
+      view_budget: Vis hele budsjettet
+    goals_card:
+      active_count:
+        one: 1 aktivt
+        other: "%{count} aktive"
+      active_goals: Aktive mål
+      all_goals: Alle mål
+      all_on_pace: Alt følger planen
+      behind_count:
+        one: 1 ligger etter planen
+        other: "%{count} ligger etter planen"
+      new_goal: Nytt mål
+      of_targets: av %{total} på tvers av mål
+      pending_count:
+        one: 1 ventende spareløfte
+        other: "%{count} ventende spareløfter"
+      pending_marker: venter
+      runway: 'Horisont: %{months} md. · %{pace}/md.'
+      title: Målene dine

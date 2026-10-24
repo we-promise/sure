@@ -1,0 +1,56 @@
+---
+nb:
+  period:
+    all_time:
+      label_short: Alle
+      comparison_label: sammenlignet med starten
+      label: Hele perioden
+    current_month:
+      comparison_label: sammenlignet med starten av måneden
+      label: Denne måneden
+      label_short: Mnd. hittil
+    current_week:
+      comparison_label: sammenlignet med starten av uken
+      label: Denne uken
+      label_short: Uke hittil
+    current_year:
+      comparison_label: sammenlignet med starten av året
+      label: Dette året
+      label_short: År hittil
+    custom:
+      comparison_label: "%{start_date} til %{end_date}"
+      label: Egendefinert periode
+      label_short: Egendefinert
+    last_10_years:
+      comparison_label: sammenlignet med for 10 år siden
+      label: Siste 10 år
+      label_short: 10 år
+    last_30_days:
+      comparison_label: sammenlignet med de siste 30 dagene
+      label: Siste 30 dager
+      label_short: 30 d
+    last_365_days:
+      comparison_label: sammenlignet med for 1 år siden
+      label: Siste 365 dager
+      label_short: 365 d
+    last_5_years:
+      comparison_label: sammenlignet med for 5 år siden
+      label: Siste 5 år
+      label_short: 5 år
+    last_7_days:
+      comparison_label: sammenlignet med forrige uke
+      label: Siste 7 dager
+      label_short: 7 d
+    last_90_days:
+      comparison_label: sammenlignet med forrige kvartal
+      label: Siste 90 dager
+      label_short: 90 d
+    last_day:
+      comparison_label: sammenlignet med i går
+      label: Siste dag
+      label_short: 1 d
+    last_month:
+      comparison_label: sammenlignet med forrige måned
+      label: Forrige måned
+      label_short: Forrige mnd.
+    range: "%{start_date} – %{end_date}"

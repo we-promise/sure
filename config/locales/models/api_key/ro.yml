@@ -1,0 +1,8 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        api_key:
+          cannot_destroy_demo_key: Cheia API de monitorizare a mediului demonstrativ
+            nu poate fi ștearsă

@@ -1,0 +1,18 @@
+---
+ro:
+  sure_import:
+    preflight:
+      missing_reference: Linia %{line}, %{type} face referire la %{field} %{value},
+        care lipsește.
+      provider_merchant_diff: 'Linia %{line}: ProviderMerchant %{name} există deja
+        cu alte valori pentru %{fields}. Comerciantul existent va fi păstrat.'
+      skipped_missing_merchant_reference: Linia %{line}, %{type} face referire la
+        un comerciant (%{value}) care nu este inclus în acest export. Acest lucru
+        se poate întâmpla cu un export creat înainte ca exporturile Sure să includă
+        comercianții atribuiți de furnizori. Înregistrarea va fi importată fără acel
+        comerciant.
+      skipped_missing_reference: Linia %{line}, %{type} face referire la %{field}
+        %{value}, care lipsește. Înregistrarea va fi omisă la import.
+      skipped_unnamed_recurring: Linia %{line}, %{type} nu are nume și face referire
+        la un comerciant (%{value}) care nu este inclus în acest export. Înregistrarea
+        va fi omisă la import.

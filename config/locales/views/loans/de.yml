@@ -25,6 +25,15 @@ de:
       none: Keine
       subtype_none: Keine
       subtype_prompt: Kreditart wählen
+      down_payment: Anzahlung
+      insurance_rate: Versicherungssatz
+      insurance_rate_hint: Ein jährlicher Satz, der monatlich zusammen mit der Rate berechnet
+        wird. Bei gleichbleibender Deckung gilt der ursprüngliche Saldo, bei fallender Deckung
+        die verbleibende Restschuld.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Versicherungsart
+      insurance_rate_type_decreasing_life: Fallende Deckung
+      insurance_rate_type_level_term: Gleichbleibende Deckung
     new:
       title: Kreditdetails eingeben
     overview:
@@ -65,3 +74,20 @@ de:
         term: Laufzeit
         type: Art
         unknown: Unbekannt
+        insurance_rate_only: "%{rate} pro Jahr"
+        leverage: Verschuldungshebel
+        leverage_band_conservative: Konservativ
+        leverage_band_high: Hoch
+        leverage_band_moderate: Moderat
+        leverage_multiple: "%{ratio}×"
+        total_cost: Gesamtkosten
+        total_cost_with_insurance: Gesamtkosten inkl. Versicherung
+        total_insurance: Versicherung
+      repayment_progress:
+        instalment: Zahlung %{number} · %{date}
+        insurance: Versicherung
+        interest: Zinsen
+        of_original: von %{amount}
+        principal: Tilgung
+        repaid: Zurückgezahlt
+        total: Gesamt

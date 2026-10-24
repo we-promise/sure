@@ -23,6 +23,10 @@ de:
       default_body: Das lässt sich nicht rückgängig machen.
       default_btn_text: Bestätigen
       default_title: Bist du sicher?
+      resource_deletion_body: Möchtest du %{resource} wirklich löschen? Dies kann nicht
+        rückgängig gemacht werden.
+      resource_deletion_btn_text: "%{resource} löschen"
+      resource_deletion_title: "%{resource} löschen?"
     family_moniker:
       group_plural: Gruppen
       group_singular: Gruppe
@@ -56,6 +60,8 @@ de:
           bereits länger als vorgesehen. Der Worker läuft, kommt aber mit der Verarbeitung
           nicht hinterher.
     submitting: Wird gesendet…
+    require_connector_owner: Du kannst nur Verbindungen verwalten, die du selbst hinzugefügt
+      hast
   concerns:
     self_hostable:
       redis_configured: Redis ist jetzt richtig eingerichtet! Du kannst deine Sure-Installation

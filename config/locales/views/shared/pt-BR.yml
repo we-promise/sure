@@ -25,3 +25,47 @@ pt-BR:
     trend_change:
       no_change: sem alteração
     submitting: Enviando…
+    cancel: Cancelar
+    custom_confirm:
+      default_body: Esta ação não é reversível.
+      default_btn_text: Confirmar
+      default_title: Tem certeza?
+      resource_deletion_body: Tem certeza de que deseja excluir %{resource}? Esta
+        ação não é reversível.
+      resource_deletion_btn_text: Excluir %{resource}
+      resource_deletion_title: Excluir %{resource}?
+    preview: Prévia
+    require_admin: Apenas administradores podem realizar esta ação
+    require_connector_owner: Você só pode gerenciar conexões que adicionou
+    sidekiq_health_banner:
+      body: >-
+        As tarefas em segundo plano não estão sendo processadas. Por isso, saldos,
+        patrimônio líquido e sincronizações de contas podem estar desatualizados ou
+        ausentes.
+      cta: Ver estado do sistema
+      reasons:
+        no_worker_processes: >-
+          Nenhum processo worker do Sidekiq está conectado. Inicie o contêiner do
+          worker ou a unidade systemd.
+        queue_backed_up: >-
+          A tarefa mais antiga na fila está esperando além do limite de latência.
+          O worker está ativo, mas acumulando atraso.
+        redis_unreachable: >-
+          O aplicativo não consegue entrar em contato com o Redis. Verifique a sua
+          REDIS_URL e se o Redis está em execução.
+        stale_heartbeat: >-
+          O worker Sidekiq não reportou um heartbeat recentemente. Pode estar bloqueado
+          ou ter falhado.
+      title: Alguns dados podem estar desatualizados
+    sync_toast:
+      message: Novos dados disponíveis
+      refresh: Atualizar
+    transaction_tabs:
+      expense: Despesa
+      income: Receita
+      transfer: Transferência
+  concerns:
+    self_hostable:
+      redis_configured: >-
+        O Redis está configurado corretamente! Agora você pode configurar seu aplicativo
+        Sure.

@@ -1,0 +1,122 @@
+---
+ro:
+  account_statements:
+    balance:
+      unknown: Necunoscut
+    index:
+      account_label: Cont
+      title: Arhiva extraselor
+      confidence: Potrivire %{confidence}
+      empty_linked: Nu există încă extrase asociate.
+      empty_unmatched: Lista extraselor primite este goală.
+      leave_unmatched: Lasă neasociat
+      linked_title: Extrase asociate
+      no_suggestion: Nicio sugestie
+      storage_used: Spațiu de stocare folosit
+      unmatched_title: Extrase primite neasociate
+      upload_description: Încarcă extrase în lista de primite sau alege un cont pentru
+        asociere imediată.
+      upload_title: Încarcă extrase
+    reconciliation:
+      checks:
+        opening_balance: Sold inițial
+        closing_balance: Sold final
+        period_movement: Variația în perioadă
+        unknown_check: Verificare necunoscută
+      unavailable: Neverificat
+      matched: Potrivire
+      mismatched: Neconcordant
+    show:
+      account_label: Cont
+      currency: Monedă
+      delete: Șterge
+      download: Descarcă
+      opening_balance: Sold inițial
+      unknown_value: Necunoscut
+      closing_balance: Sold final
+      unlink: Dezasociază
+      account_last4_hint: Ultimele patru caractere ale contului
+      account_name_hint: Indiciu privind numele contului
+      difference: Diferență
+      institution_name_hint: Indiciu privind instituția
+      ledger_amount: Registrul Sure
+      link_suggestion: Sugestie de asociere
+      linked_to: Asociat cu %{account}.
+      linking_title: Asocierea contului
+      metadata_title: Metadatele extrasului
+      no_suggestion: Nu există încă o sugestie de cont.
+      period_end_on: Sfârșitul perioadei
+      period_start_on: Începutul perioadei
+      reconciliation_title: Reconciliere
+      reconciliation_unavailable: Adaugă perioada extrasului și soldul inițial sau
+        final, apoi verifică dacă Sure are istoric de sold pentru acele date.
+      reject: Respinge
+      save: Salvează extrasul
+      statement_amount: Extras
+      suggested_account: Contul sugerat este %{account} (încredere %{confidence}).
+      title: Extras
+      unmatched_account: Extrase primite neasociate
+    table:
+      account: Cont
+      actions: Acțiuni
+      download: Descarcă
+      edit: Editează
+      file: Fișier
+      view: Vezi
+      unlink: Dezasociază
+      link_suggestion: Sugestie de asociere
+      period: Perioadă
+      reconciliation: Reconciliere
+      reject: Respinge sugestia
+      suggestion: Sugestie
+    account_tab:
+      statements_title: Extrase
+      coverage_description: Luni din istoric acoperite de extrase încărcate și verificări
+        ale soldului.
+      coverage_range: "%{start} - %{end}"
+      coverage_title: Acoperirea extraselor
+      empty: Nu există încă extrase asociate acestui cont.
+      open_inbox: Mesaje primite
+      year_label: An de acoperire
+    form:
+      inbox_upload: Încarcă
+      account_upload: Încarcă extras
+      files_hint: PDF, CSV sau XLSX. Maximum %{max_size} MB pe fișier.
+      files_label: Fișiere de extrase
+    coverage:
+      status:
+        duplicate: Duplică
+        ambiguous: Ambiguu
+        covered: Acoperit
+        mismatched: Neconcordant
+        missing: Lipsește
+        not_expected: Nu este așteptat
+    create:
+      duplicates:
+        one: 1 extras duplicat a fost omis.
+        other: "%{count} de extrase duplicate au fost omise."
+        few: "%{count} extrase duplicate au fost omise."
+      invalid_file_type: Încarcă un extras PDF, CSV sau XLSX sub limita de dimensiune.
+      no_files: Selectează cel puțin un fișier de extras.
+      success:
+        one: 1 extras încărcat.
+        other: "%{count} de extrase încărcate."
+        few: "%{count} extrase încărcate."
+    destroy:
+      failure: Extrasul nu a putut fi șters.
+      success: Extras șters.
+    link:
+      no_account: Alege un cont înainte de a asocia acest extras.
+      success: Extrasul a fost asociat cu %{account}.
+    period:
+      unknown: Perioadă necunoscută
+    reject:
+      success: Asocierea extrasului a fost respinsă.
+    status:
+      linked: Asociat
+      rejected: Respins
+      unmatched: Neasociat
+    unlink:
+      success: Extrasul a fost mutat înapoi în lista celor neasociate.
+    update:
+      success: Extras actualizat.

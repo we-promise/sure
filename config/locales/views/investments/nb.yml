@@ -16,3 +16,178 @@ nb:
       total: Porteføljebalanse
       total_value_tooltip: Den totale porteføljebalansen er summen av meglerkontanter
         (tilgjengelig for handel) og gjeldende markedsverdi av beholdningene dine.
+    subtypes:
+      401k:
+        long: 401(k)
+        short: 401(k)
+      403b:
+        long: 403(b)
+        short: 403(b)
+      529_plan:
+        short: 529-spareordning
+        long: 529-spareordning for utdanning
+      angel:
+        short: Engleinvestering
+        long: Engleinvestering
+      brokerage:
+        long: Meglerkonto
+        short: Meglerkonto
+      hsa:
+        long: Helsesparekonto (HSA)
+        short: HSA
+      ira:
+        long: Tradisjonell IRA
+        short: IRA
+      mutual_fund:
+        long: Verdipapirfond
+        short: Verdipapirfond
+      other:
+        short: Annet
+        long: Annen investering
+      pension:
+        long: Pensjon
+        short: Pensjon
+      retirement:
+        short: Pensjonssparing
+        long: Pensjonskonto
+      roth_401k:
+        long: Roth 401(k)
+        short: Roth 401(k)
+      roth_ira:
+        long: Roth IRA
+        short: Roth IRA
+      tsp:
+        long: Thrift Savings Plan
+        short: TSP
+      workplace_pension_uk:
+        short: Pensjon
+        long: Tjenestepensjon
+      457b:
+        long: 457(b)
+        short: 457(b)
+      apy:
+        long: Atal Pension Yojana
+        short: APY
+      cash_management:
+        long: Kontantforvaltningskonto
+        short: CMA
+      corporate_bond:
+        long: Selskapsobligasjon
+        short: Selskapsobligasjon
+      fd:
+        long: Tidsbundet innskudd
+        short: FD
+      g_sec:
+        long: Indiske statspapirer (G-Secs)
+        short: G-Sec
+      gold:
+        long: Gull (fysisk eller digitalt)
+        short: Gull
+      gold_etf:
+        long: Gull-ETF
+        short: Gull-ETF
+      gold_mf:
+        long: Gullfond
+        short: Gullfond
+      indian_equity:
+        long: Indiske egenkapitalinvesteringer
+        short: Indiske egenkapitalinvesteringer
+      indian_etf:
+        long: Indisk ETF
+        short: Indisk ETF
+      indian_stocks:
+        long: Indiske aksjer (Demat)
+        short: Indiske aksjer
+      infrastructure_bond:
+        long: Infrastrukturobligasjon
+        short: Infrastrukturobligasjon
+      isa:
+        long: Individuell sparekonto (ISA)
+        short: ISA
+      kvp:
+        long: Kisan Vikas Patra
+        short: KVP
+      life_insurance:
+        long: Livsforsikring
+        short: Livsforsikring
+      lira:
+        long: Låst pensjonskonto (LIRA)
+        short: LIRA
+      lisa:
+        long: Lifetime ISA
+        short: LISA
+      nps:
+        long: National Pension System
+        short: NPS
+      nsc:
+        long: National Savings Certificate
+        short: NSC
+      pea:
+        long: Plan d'Épargne en Actions
+        short: PEA
+      pillar_3a:
+        long: Privat pensjon (Pillar 3a)
+        short: Pillar 3a
+      pomis:
+        long: Post Office Monthly Income Scheme
+        short: POMIS
+      ppf:
+        long: Public Provident Fund
+        short: PPF
+      rd:
+        long: Regelmessig spareinnskudd
+        short: RD
+      resp:
+        long: Registrert utdanningsspareordning (RESP)
+        short: RESP
+      riester:
+        long: Riester-Rente
+        short: Riester
+      rrif:
+        long: Registrert pensjonsutbetalingsfond (RRIF)
+        short: RRIF
+      rrsp:
+        long: Registrert pensjonsspareordning (RRSP)
+        short: RRSP
+      scss:
+        long: Senior Citizens' Savings Scheme
+        short: SCSS
+      sdl:
+        long: Indiske delstatsobligasjoner (SDL)
+        short: SDL
+      sep_ira:
+        long: SEP IRA
+        short: SEP IRA
+      sgb:
+        long: Statsutstedt gullobligasjon
+        short: SGB
+      simple_ira:
+        long: SIMPLE IRA
+        short: SIMPLE IRA
+      sipp:
+        long: Selvforvaltet personlig pensjon (SIPP)
+        short: SIPP
+      smsf:
+        long: Selvforvaltet australsk pensjonsfond (SMSF)
+        short: SMSF
+      ssy:
+        long: Sukanya Samriddhi Yojana
+        short: SSY
+      super:
+        long: Australsk pensjon (Superannuation)
+        short: Super
+      tax_free_bond:
+        long: Skattefri obligasjon
+        short: Skattefri obligasjon
+      tfsa:
+        long: Skattefri sparekonto (TFSA)
+        short: TFSA
+      trust:
+        long: Trustforvaltning
+        short: Trustforvaltning
+      ugma:
+        long: Forvaltningskonto for mindreårig (UGMA)
+        short: UGMA
+      utma:
+        long: Forvaltningskonto for mindreårig (UTMA)
+        short: UTMA

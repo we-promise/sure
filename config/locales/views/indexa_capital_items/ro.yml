@@ -1,0 +1,255 @@
+---
+ro:
+  indexa_capital_items:
+    indexa_capital_item:
+      delete: Șterge conexiunea
+      deletion_in_progress: ștergere în curs...
+      error: Eroare
+      no_accounts_description: Această conexiune nu are încă conturi legate.
+      no_accounts_title: Niciun cont
+      setup_action: Configurează conturi noi
+      setup_needed: Conturi noi gata de configurare
+      status_never: Nu a fost sincronizat niciodată
+      syncing: Se sincronizează...
+      accounts_need_setup: Conturile necesită configurare
+      requires_update: Conexiunea necesită actualizare
+      total: Total
+      unlinked: Neconectat
+      update_credentials: Actualizează datele de autentificare
+      more_accounts_available:
+        one: Încă %{count} cont disponibil
+        other: Încă %{count} de conturi disponibile
+        few: Încă %{count} conturi disponibile
+      provider_name: IndexaCapital
+      setup_description: 'Conturi conectate: %{linked} din %{total}. Alege tipurile
+        conturilor IndexaCapital nou importate.'
+      status: Sincronizat acum %{timestamp} — %{summary}
+    link_accounts:
+      all_already_linked:
+        one: Contul selectat (%{names}) este deja conectat
+        other: 'Toate cele %{count} conturi selectate sunt deja conectate: %{names}'
+        few: 'Toate cele %{count} conturi selectate sunt deja conectate: %{names}'
+      api_error: 'Eroare API: %{message}'
+      link_failed: Conectarea conturilor a eșuat
+      no_accounts_selected: Selectează cel puțin un cont
+      partial_success: 'S-au conectat cu succes %{created_count} cont(uri). %{already_linked_count}
+        cont(uri) erau deja conectate: %{already_linked_names}'
+      success:
+        one: S-a conectat cu succes %{count} cont
+        other: S-au conectat cu succes %{count} de conturi
+        few: S-au conectat cu succes %{count} conturi
+      invalid_account_names:
+        one: Nu se poate conecta un cont fără nume
+        other: Nu se pot conecta %{count} de conturi fără nume
+        few: Nu se pot conecta %{count} conturi fără nume
+      partial_invalid: 'Conturi conectate cu succes: %{created_count}; deja conectate:
+        %{already_linked_count}; cu nume nevalide: %{invalid_count}'
+      no_api_key: Datele de autentificare IndexaCapital nu au fost găsite. Configurează-le
+        în setările furnizorului.
+    link_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor
+      api_error: 'Eroare API: %{message}'
+      missing_parameters: Lipsesc parametrii obligatorii
+      invalid_account_name: Nu se poate conecta un cont fără nume
+      provider_account_already_linked: Acest cont IndexaCapital este deja conectat
+        la alt cont
+      provider_account_not_found: Contul IndexaCapital nu a fost găsit
+      success: "%{account_name} a fost conectat cu succes la IndexaCapital"
+      no_api_key: Datele de autentificare IndexaCapital nu au fost găsite. Configurează-le
+        în setările furnizorului.
+    loading:
+      loading_title: Se încarcă
+      loading_message: Se încarcă conturile IndexaCapital...
+    panel:
+      fields:
+        password:
+          label: Parolă
+          description: Parola Indexa Capital
+          placeholder_new: Lipește parola aici
+          placeholder_update: Introdu o parolă nouă pentru actualizare
+        api_token:
+          label: Token API
+          description: Tokenul API cu acces doar pentru citire din panoul Indexa Capital
+          placeholder_new: Lipește tokenul API aici
+          placeholder_update: Introdu un token API nou pentru actualizare
+        username:
+          label: Nume de utilizator
+          description: Numele de utilizator/e-mailul Indexa Capital
+          placeholder_new: Lipește numele de utilizator aici
+          placeholder_update: Introdu un nume de utilizator nou pentru actualizare
+        document:
+          description: Documentul/ID-ul Indexa Capital
+          label: ID document
+          placeholder_new: Lipește ID-ul documentului aici
+          placeholder_update: Introdu un ID de document nou pentru actualizare
+      save_button: Salvează configurarea
+      setup_instructions: 'Instrucțiuni de configurare:'
+      update_button: Actualizează configurarea
+      field_descriptions: 'Descrierea câmpurilor:'
+      optional: "(Opțional)"
+      optional_with_default: "(opțional, implicit %{default_value})"
+      step_3: După conectare, mergi la fila Conturi pentru a configura conturile noi
+      alternative_auth: Sau autentifică-te cu nume de utilizator și parolă...
+      required: "(obligatoriu)"
+      step_1: Accesează panoul Indexa Capital pentru a genera un token API cu acces
+        doar pentru citire
+      step_2: Lipește tokenul API mai jos și apasă Salvează
+    select_accounts:
+      accounts_selected: conturi selectate
+      api_error: 'Eroare API: %{message}'
+      cancel: Anulează
+      link_accounts: Conectează conturile selectate
+      description: Selectează conturile pe care vrei să le conectezi la contul tău
+        %{product_name}.
+      no_name_placeholder: "(Fără nume)"
+      no_credentials_configured: Configurează mai întâi datele de autentificare IndexaCapital
+        în setările furnizorului.
+      configure_name_in_provider: Importul nu este posibil — configurează numele contului
+        în IndexaCapital
+      title: Selectează conturile IndexaCapital
+      no_accounts_found: Nu s-au găsit conturi. Verifică datele de autentificare IndexaCapital.
+      no_api_key: Datele de autentificare IndexaCapital nu sunt configurate. Configurează-le
+        în Setări.
+    select_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor
+      api_error: 'Eroare API: %{message}'
+      cancel: Anulează
+      cancel_button: Anulează
+      link_account: Conectează contul
+      no_account_specified: Niciun cont specificat
+      balance_label: 'Sold:'
+      no_name_placeholder: "(Fără nume)"
+      settings_link: Mergi la setările furnizorului
+      link_button: Conectează acest cont
+      linking_to: 'Se conectează la:'
+      no_credentials_configured: Configurează mai întâi datele de autentificare IndexaCapital
+        în setările furnizorului.
+      all_accounts_already_linked: Toate conturile IndexaCapital sunt deja conectate
+      configure_name_in_provider: Importul nu este posibil — configurează numele contului
+        în IndexaCapital
+      description: Selectează un cont IndexaCapital pentru a-l conecta cu acest cont.
+        Tranzacțiile vor fi sincronizate și deduplicate automat.
+      title: Conectează %{account_name} cu IndexaCapital
+      connect_hint: Conectează un cont IndexaCapital pentru a activa sincronizarea
+        automată.
+      header: Conectează cu IndexaCapital
+      no_accounts: Nu s-au găsit conturi IndexaCapital neconectate.
+      no_accounts_found: Nu s-au găsit conturi IndexaCapital. Verifică datele de autentificare.
+      no_api_key: Datele de autentificare IndexaCapital nu sunt configurate. Configurează-le
+        în Setări.
+      subtitle: Alege un cont IndexaCapital
+    setup_accounts:
+      account_types:
+        credit_card: Card de credit
+        other_asset: Alt activ
+        depository: Cont curent sau de economii
+        investment: Cont de investiții
+        loan: Împrumut sau credit ipotecar
+        skip: Omite acest cont
+        crypto: Cont de criptomonede
+      api_error: 'Eroare API: %{message}'
+      balance: Sold
+      cancel: Anulează
+      subtype_labels:
+        credit_card: ''
+        crypto: ''
+        other_asset: ''
+        depository: 'Subtipul contului:'
+        investment: 'Tipul investiției:'
+        loan: 'Tipul împrumutului:'
+      subtypes:
+        investment:
+          brokerage: Cont de brokeraj
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: Plan 529
+          angel: Investiție de tip angel
+          hsa: Cont de economii pentru sănătate
+          ira: IRA tradițional
+          mutual_fund: Fond mutual
+          pension: Pensie
+          retirement: Pensie
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Thrift Savings Plan
+        depository:
+          cd: Certificat de depozit
+          checking: Cont curent
+          hsa: Cont de economii pentru sănătate
+          money_market: Piață monetară
+          savings: Economii
+        loan:
+          auto: Credit auto
+          mortgage: Credit ipotecar
+          other: Alt împrumut
+          student: Credit pentru studii
+      account_type_label: 'Tipul contului:'
+      accounts_count:
+        one: "%{count} cont disponibil"
+        other: "%{count} de conturi disponibile"
+        few: "%{count} conturi disponibile"
+      create_accounts: Creează conturi
+      creating_accounts: Se creează conturile...
+      fetch_failed: Preluarea conturilor a eșuat
+      historical_data_range: 'Intervalul datelor istorice:'
+      no_accounts_to_setup: Nu există conturi de configurat
+      select_all: Selectează tot
+      subtitle: Alege tipurile corecte pentru conturile importate
+      subtype_messages:
+        credit_card: Cardurile de credit vor fi configurate automat ca conturi de
+          card de credit.
+        other_asset: Nu sunt necesare opțiuni suplimentare pentru alte active.
+        crypto: Conturile de criptomonede vor fi configurate pentru urmărirea deținerilor
+          și tranzacțiilor.
+      sync_start_date_label: 'Sincronizează tranzacțiile începând cu:'
+      creating: Se creează conturile...
+      import_selected: Importă conturile selectate
+      sync_start_date_help: Alege de când vrei să sincronizezi istoricul tranzacțiilor.
+      all_accounts_linked: Toate conturile IndexaCapital au fost deja configurate.
+      choose_account_type: 'Alege tipul corect pentru fiecare cont IndexaCapital:'
+      instructions: Selectează conturile pe care vrei să le imporți din IndexaCapital.
+        Poți alege mai multe conturi.
+      no_accounts: Nu s-au găsit conturi neconectate în această conexiune IndexaCapital.
+      no_api_key: Datele de autentificare IndexaCapital nu sunt configurate. Verifică
+        setările conexiunii.
+      title: Configurează conturile IndexaCapital
+    sync:
+      status:
+        calculating: Se calculează soldurile...
+        checking_setup: Se verifică configurarea contului...
+        needs_setup: "%{count} de conturi necesită configurare..."
+        importing_data: Se importă datele contului...
+        processing: Se procesează deținerile și activitățile...
+        importing: Se importă conturile din IndexaCapital...
+      success: Sincronizarea a început
+    sync_status:
+      no_accounts: Nu s-au găsit conturi
+      synced:
+        one: "%{count} cont sincronizat"
+        other: "%{count} de conturi sincronizate"
+        few: "%{count} conturi sincronizate"
+      synced_with_setup: 'Sincronizate: %{linked}; necesită configurare: %{unlinked}'
+    complete_account_setup:
+      all_skipped: Toate conturile au fost omise. Nu a fost creat niciun cont.
+      creation_failed: 'Crearea conturilor a eșuat: %{error}'
+      no_accounts: Nu există conturi de configurat.
+      success: 'Conturi create cu succes: %{count}.'
+    institution_summary:
+      count:
+        one: "%{count} instituție"
+        other: "%{count} de instituții"
+        few: "%{count} instituții"
+      none: Nicio instituție conectată
+    preload_accounts:
+      no_credentials_configured: Configurează mai întâi datele de autentificare IndexaCapital
+        în setările furnizorului.
+    create:
+      success: Conexiunea IndexaCapital a fost creată cu succes
+    destroy:
+      success: Conexiunea IndexaCapital a fost eliminată
+    index:
+      title: Conexiuni IndexaCapital
+    errors:
+      provider_not_configured: Furnizorul IndexaCapital nu este configurat
+    update:
+      success: Conexiunea IndexaCapital a fost actualizată

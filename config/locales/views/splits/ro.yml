@@ -1,0 +1,51 @@
+---
+ro:
+  splits:
+    new:
+      amount_label: Sumă
+      cancel: Anulează
+      category_label: Categorie
+      name_label: Nume
+      original_amount: Sumă
+      original_name: 'Nume:'
+      remaining: Rămas
+      uncategorized: "(necategorizat)"
+      remove_row: Elimină
+      submit: Împarte tranzacția
+      title: Împarte tranzacția
+      original_date: 'Dată:'
+      add_row: Adaugă o parte
+      amounts_must_match: Suma părților trebuie să fie egală cu valoarea tranzacției
+        originale.
+      description: Împarte această tranzacție în mai multe înregistrări cu categorii
+        și sume diferite.
+      name_placeholder: Numele părții
+      split_number: Partea nr. %{number}
+    show:
+      button: Împarte
+      button_title: Împarte tranzacția
+      button_description: Împarte această tranzacție în mai multe înregistrări cu
+        categorii și sume diferite.
+      description: Această tranzacție a fost împărțită în următoarele înregistrări.
+      title: Înregistrări rezultate din împărțire
+      unsplit_button: Anulează împărțirea
+      unsplit_confirm: Aceasta va elimina toate înregistrările rezultate din împărțire
+        și va restabili tranzacția originală.
+      unsplit_title: Anulează împărțirea tranzacției
+    child:
+      description: Această înregistrare face parte dintr-o tranzacție împărțită.
+      edit_split: Editează împărțirea
+      title: Parte dintr-o împărțire
+      unsplit: Anulează împărțirea
+    create:
+      not_splittable: Această tranzacție nu poate fi împărțită.
+      success: Tranzacția a fost împărțită cu succes
+    destroy:
+      success: Împărțirea tranzacției a fost anulată cu succes
+    edit:
+      description: Modifică înregistrările rezultate din împărțirea acestei tranzacții.
+      not_split: Această tranzacție nu este împărțită.
+      submit: Actualizează împărțirea
+      title: Editează împărțirea
+    update:
+      success: Împărțirea a fost actualizată cu succes

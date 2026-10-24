@@ -10,6 +10,34 @@ ro:
       rate_type: Tipul ratei
       term_months: Termen (luni)
       term_months_placeholder: '360'
+      none: Niciunul
+      subtype_none: Niciunul
+      rate_change_remove: Elimină
+      down_payment: Avans
+      insurance_rate: Rata primei de asigurare
+      insurance_rate_hint: O rată anuală, percepută lunar împreună cu rata creditului.
+        Asigurarea cu sumă constantă se calculează la soldul inițial, iar cea cu sumă
+        descrescătoare la soldul rămas de rambursat.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Tip de asigurare
+      insurance_rate_type_decreasing_life: Cu sumă descrescătoare
+      insurance_rate_type_level_term: Cu sumă constantă
+      rate_change_add: Adaugă o modificare a dobânzii
+      rate_change_effective_date: Data intrării în vigoare
+      rate_change_rate: Rată
+      rate_changes: Modificări ale dobânzii
+      rate_changes_empty: Nu există modificări ale dobânzii înregistrate. Creditului
+        i se aplică rata dobânzii de mai sus.
+      rate_changes_hint: Fiecare rând stabilește rata aplicabilă de la data intrării
+        în vigoare până la următoarea modificare. Reintroducerea unei date înlocuiește
+        rândul respectiv, fără să adauge un al doilea rând.
+      rate_type_adjustable: Ajustabilă
+      rate_type_fixed: Fixă
+      rate_type_variable: Variabilă
+      start_date: Data acordării
+      start_date_hint: Data la care a fost utilizat creditul. Lasă necompletat pentru
+        a folosi data deschiderii contului.
+      subtype_prompt: Selectează tipul de credit
     new:
       title: Introdu detaliile împrumutului
     overview:
@@ -21,3 +49,53 @@ ro:
       term: Termen
       type: Tip
       unknown: Necunoscut
+      original_payoff_date: Data inițială a rambursării integrale
+    tabs:
+      overview:
+        interest_rate: Rata dobânzii
+        monthly_payment: Plată lunară
+        original_principal: Principalul inițial
+        remaining_principal: Principalul rămas
+        term: Termen
+        type: Tip
+        unknown: Necunoscut
+        total_cost: Cost total
+        total_insurance: Asigurare
+        edit_loan_details: Editează detaliile creditului
+        insurance_rate_only: "%{rate} pe an"
+        leverage: Grad de îndatorare
+        leverage_band_conservative: Prudent
+        leverage_band_high: Ridicat
+        leverage_band_moderate: Moderat
+        leverage_multiple: "%{ratio}x"
+        not_applicable: Nu se aplică
+        original_payoff_date: Data inițială a rambursării integrale
+        total_cost_with_insurance: Cost total, inclusiv asigurarea
+      repayment_progress:
+        interest: Dobândă
+        total: Total
+        insurance: Asigurare
+        of_original: din %{amount}
+        instalment: Plata %{number} · %{date}
+        principal: Principal
+        repaid: Rambursat
+      schedule:
+        date: Dată
+        interest: Dobândă
+        monthly_payment: Plată lunară
+        payment: Plată
+        total_cost: Cost total
+        description: Estimare bazată pe soldul, dobânda și durata inițiale, începând
+          cu %{start_date}. Plățile suplimentare nu sunt incluse.
+        forecasted_payoff_date: Data estimată a rambursării integrale
+        forecasted_payoff_not_converged: Plata curentă nu permite rambursarea integrală
+        not_applicable: Nu se aplică
+        number: "#"
+        opening_payment: Plata inițială
+        principal: Principal
+        remaining_balance: Sold rămas
+        total_interest: Dobândă totală
+        variable_rate_notice: Dobânda acestui credit se modifică în timp. Graficul
+          recalculează amortizarea la fiecare modificare înregistrată, păstrând data
+          inițială a rambursării integrale și ajustând valoarea ratei; o modificare
+          încă neînregistrată va schimba aceste valori.

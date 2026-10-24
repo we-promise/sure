@@ -6,27 +6,54 @@ nb:
       success: Ny forhandler opprettet vellykket
     destroy:
       success: Forhandler slettet vellykket
+      unlinked_success: Forhandleren er fjernet fra transaksjonene dine
     edit:
       title: Rediger forhandler
     form:
       name_placeholder: Forhandlernavn
+      website_hint: Angi forhandlerens nettsted for å vise logoen automatisk
+      website_placeholder: Nettsted (f.eks. starbucks.com)
     index:
       empty: Ingen forhandlere ennå
       new: Ny forhandler
       title: Forhandlere
-      family_title: Familieforhandlere
-      family_empty: Ingen familieforhandlere ennå
+      family_title: Forhandlere for %{moniker}
+      family_empty: Ingen forhandlere for %{moniker} ennå
       provider_title: Leverandørforhandlere
-      provider_empty: Ingen leverandørforhandlere er koblet til denne familien ennå
-      provider_read_only: Leverandørforhandlere synkroniseres fra dine tilkoblede institusjoner. De kan ikke redigeres her.
+      provider_empty: Ingen forhandlere fra leverandører er koblet til %{moniker}
+        ennå
+      provider_read_only: Leverandørforhandlere synkroniseres fra dine tilkoblede
+        institusjoner. De kan ikke redigeres her.
       table:
         merchant: Forhandler
         actions: Handlinger
         source: Kilde
+      enhance_button: Forbedre med KI
+      enhance_info:
+        one: "%{count} forhandler fra leverandører mangler nettstedsinformasjon. Bruk
+          KI for å finne nettsteder, vise logoer og slå sammen dupliserte forhandlere."
+        other: "%{count} forhandlere fra leverandører mangler nettstedsinformasjon.
+          Bruk KI for å finne nettsteder, vise logoer og slå sammen dupliserte forhandlere."
+      import: Importer forhandlere
+      merge: Slå sammen forhandlere
+      no_family_merchants_found: Ingen samsvarende forhandlere i husholdningen funnet
+      no_provider_merchants_found: Ingen samsvarende forhandlere fra leverandører
+        funnet
+      per_page: per side
+      provider_info: Disse forhandlerne ble gjenkjent automatisk via banktilkoblingene
+        dine eller KI. Du kan redigere dem for å lage en egen kopi, eller fjerne dem
+        for å koble dem fra transaksjonene dine.
+      search_family_merchants: Søk etter husholdningens forhandlere...
+      search_provider_merchants: Søk etter forhandlere fra leverandører...
+      unlinked_info: Disse forhandlerne ble nylig fjernet fra transaksjonene dine.
+        De forsvinner fra listen etter 30 dager hvis de ikke blir tilordnet en transaksjon
+        igjen.
+      unlinked_title: Nylig frakoblet
     merchant:
       confirm_accept: Slett forhandler
-      confirm_body: Er du sikker på at du vil slette denne forhandleren? Fjerning av denne forhandleren
-        vil fjerne koblingen til alle tilknyttede transaksjoner og kan påvirke rapporteringen din.
+      confirm_body: Er du sikker på at du vil slette denne forhandleren? Fjerning
+        av denne forhandleren vil fjerne koblingen til alle tilknyttede transaksjoner
+        og kan påvirke rapporteringen din.
       confirm_title: Slett forhandler?
       delete: Slett forhandler
       edit: Rediger forhandler
@@ -34,3 +61,37 @@ nb:
       title: Ny forhandler
     update:
       success: Forhandler oppdatert vellykket
+      converted_success: Forhandleren er konvertert og oppdatert
+    family_merchant:
+      delete: Slett
+      edit: Rediger
+    provider_merchant:
+      edit: Rediger
+      remove: Fjern
+      remove_confirm_body: Er du sikker på at du vil fjerne %{name}? Dette kobler
+        alle tilhørende transaksjoner fra forhandleren, men sletter ikke selve forhandleren.
+      remove_confirm_title: Fjerne forhandler?
+    enhance:
+      already_running: Forbedring pågår allerede. Vent til den er ferdig.
+      success: Forbedring av leverandørforhandlere er startet. Opplysningene blir
+        snart forbedret og duplikater slått sammen.
+    merge:
+      description: Velg en forhandler som skal beholdes, og forhandlerne som skal
+        slås sammen med den. Alle transaksjoner fra de sammenslåtte forhandlerne tilordnes
+        målforhandleren.
+      no_merchants_found: Ingen samsvarende forhandlere funnet
+      select_target: Velg målforhandler...
+      sources_hint: Valgte forhandlere slås sammen med målforhandleren. Husholdningens
+        forhandlere slettes, og forhandlere fra leverandører kobles fra.
+      sources_label: Forhandlere som skal slås sammen
+      sources_search_placeholder: Søk etter forhandlere...
+      submit: Slå sammen valgte
+      target_label: Slå sammen til (mål)
+      title: Slå sammen forhandlere
+    perform_merge:
+      invalid_merchants: Ugyldige forhandlere valgt
+      no_merchants_selected: Ingen forhandlere valgt for sammenslåing
+      success:
+        one: "%{count} forhandler er slått sammen"
+        other: "%{count} forhandlere er slått sammen"
+      target_not_found: Fant ikke målforhandleren

@@ -8,12 +8,13 @@ nb:
     plaid_item:
       add_new: Legg til ny tilkobling
       confirm_accept: Slett institusjon
-      confirm_body: Dette vil permanent slette alle kontoene i denne gruppen og
-        alle tilknyttede data.
+      confirm_body: Dette vil permanent slette alle kontoene i denne gruppen og alle
+        tilknyttede data.
       confirm_title: Slett institusjon?
       connection_lost: Tilkobling mistet
       connection_lost_description: Denne tilkoblingen er ikke lenger gyldig. Du må
-        slette denne tilkoblingen og legge den til igjen for å fortsette synkronisering av data.
+        slette denne tilkoblingen og legge den til igjen for å fortsette synkronisering
+        av data.
       delete: Slett
       error: Feil oppsto under synkronisering av data
       no_accounts_description: Vi kunne ikke laste inn noen kontoer fra denne finansinstitusjonen.
@@ -23,3 +24,22 @@ nb:
       status_never: Krever datasynkronisering
       syncing: Synkroniserer...
       update: Oppdater tilkobling
+      add_accounts: Legg til kontoer
+      deletion_in_progress: "(sletting pågår...)"
+      provider_name: Plaid
+    select_existing_account:
+      cancel: Avbryt
+      link_account: Koble til konto
+      description: Velg en Plaid-konto som skal kobles til den eksisterende kontoen
+        din
+      no_available_accounts: Ingen Plaid-kontoer er tilgjengelige for tilkobling.
+        Koble til en ny Plaid-konto først.
+      title: Koble %{account_name} til Plaid
+    errors:
+      link_token_generic: Vi kunne ikke åpne Plaid akkurat nå. Prøv igjen. Hvis problemet
+        fortsetter, kan du se etter detaljer i serverloggene.
+      link_token_with_message: 'Plaid kunne ikke åpne tilkoblingen: %{message}'
+    link_existing_account:
+      already_linked: Denne Plaid-kontoen er allerede tilkoblet
+      invalid_account: Ugyldig Plaid-konto valgt
+      success: Kontoen er koblet til Plaid

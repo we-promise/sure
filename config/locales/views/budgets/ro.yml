@@ -1,0 +1,149 @@
+---
+ro:
+  budget_categories:
+    confirm_button:
+      confirm: Confirmă
+    move:
+      amount_label: Sumă
+      cancel: Anulează
+      from_label: De la
+      errors:
+        non_positive_amount: Introdu o sumă mai mare decât zero.
+        different_budgets: Ambele categorii trebuie să aparțină aceluiași buget.
+        insufficient_funds: Suma depășește alocarea acestei categorii.
+        parent_child: Banii nu pot fi mutați între o categorie și propria subcategorie
+          — ajustează direct subcategoria.
+        same_category: Alege altă categorie în care să muți banii.
+        uncategorized: Fără categorie nu este un plic bugetar propriu-zis, așa că
+          nu poți muta bani în el sau din el.
+      available: "%{amount} disponibili"
+      button_title: Mută bani din această categorie
+      dialog_title: Mută bani
+      no_destination: Acesta este singurul plic disponibil acum pentru mutarea banilor
+        — o categorie nu poate trimite bani propriului părinte sau unei subcategorii
+        proprii.
+      submit: Mută
+      success: Banii au fost mutați.
+      to_label: Către
+    no_categories:
+      new_category: Categorie nouă
+      use_defaults: Folosește valorile implicite (recomandat)
+      no_categories_message: Nu ai creat sau atribuit încă nicio categorie de cheltuieli
+        tranzacțiilor tale.
+      oops: Ups!
+    show:
+      budgeted: Bugetat
+      category: Categorie
+      overview: Prezentare generală
+      status: Stare
+      left: rămas
+      monthly_average_spending: Cheltuială lunară medie
+      monthly_median_spending: Cheltuială lunară mediană
+      no_transactions: Nu s-au găsit tranzacții pentru această perioadă bugetară.
+      overspent: depășit
+      recent_transactions: Tranzacții recente
+      rolled_over: Reportat
+      spending: Cheltuieli pentru %{date}
+      view_all_transactions: Vezi toate tranzacțiile categoriei
+    allocation_progress:
+      budget_exceeded_html: Buget depășit cu <span class="text-destructive privacy-sensitive">%{amount}</span>
+      left_to_allocate: rămas de alocat
+      over_set: "> 100% alocat"
+      percent_set: "%{percent} alocat"
+    bills_reserved: "%{amount} rezervați pentru facturi"
+    bills_reserved_unconvertible:
+      one: Nu s-au rezervat fonduri pentru 1 factură, deoarece nu există un curs de
+        schimb
+      other: Nu s-au rezervat fonduri pentru %{count} de facturi, deoarece nu există
+        un curs de schimb
+      few: Nu s-au rezervat fonduri pentru %{count} facturi, deoarece nu există un
+        curs de schimb
+    budget_category:
+      rolled_over: "+%{amount} reportați"
+    budget_category_form:
+      monthly_average: 'Media: %{amount}/lună'
+      rollover_label: Reportare
+      rollover_title: Păstrează banii necheltuiți ai acestei categorii de la o lună
+        la alta
+      shared_placeholder: Partajat
+      shared_title: Lasă necompletat pentru a împărți bugetul categoriei părinte
+    index:
+      description: Ajustează bugetele categoriilor pentru a stabili limite de cheltuieli.
+        Fondurile nealocate vor fi atribuite automat categoriei Fără categorie.
+      title: Editează bugetele categoriilor
+  budgets:
+    actuals_summary:
+      expenses: Cheltuieli
+      income: Venit
+    budget_donut:
+      spent: Cheltuit
+      of_budget: din %{amount}
+      new_budget: Buget nou
+      unused: Nefolosit
+    budget_header:
+      today: Astăzi
+    budget_nav:
+      categories: Categorii
+      setup: Configurare
+    budgeted_summary:
+      budgeted: Bugetat
+      earned: "%{amount} câștigați"
+      expected_income: Venit estimat
+      left: "%{amount} rămași"
+      over: Depășire de %{amount}
+      spent: "%{amount} cheltuiți"
+    edit:
+      continue: Continuă
+      autosuggest_description: Se va folosi istoricul tranzacțiilor. AI poate greși;
+        verifică înainte de a continua.
+      autosuggest_title: Sugerează automat bugetul de venituri și cheltuieli
+      budgeted_spending: Cheltuieli bugetate
+      expected_income: Venit estimat
+      setup_description: Introdu veniturile lunare și cheltuielile planificate mai
+        jos pentru a configura bugetul.
+      setup_title: Configurează bugetul
+    show:
+      categories:
+        amount: Sumă
+        edit: Editează
+        title: Categorii
+      filter:
+        all: Toate
+        on_track: Pe drumul cel bun
+        over_budget: Peste buget
+        aria_label: Filtrează categoriile bugetare
+      on_track_categories:
+        short_title: Pe drumul cel bun
+        title: Pe drumul cel bun
+      over_budget_categories:
+        short_title: Peste buget
+        title: Peste buget
+      tabs:
+        budgeted: Bugetat
+        actual: Realizat
+    switcher:
+      household: Gospodărie
+      aria_label: Schimbă bugetul
+    available_cash:
+      available: Disponibil în numerar
+      earmarked: Deja rezervat pentru obiective
+      free: Disponibil efectiv
+      goals_link: Vezi obiectivele
+      heading: Numerar disponibil
+      subtitle: Alături de planul de mai sus, fără a face parte din el.
+    copy_previous:
+      already_initialized: Acest buget a fost deja configurat
+      no_source: Nu s-a găsit un buget anterior de copiat
+      success: Buget copiat din %{source_name}
+    copy_previous_prompt:
+      copy_button: Copiază din %{source_name}
+      description: Poți copia bugetul din %{source_name} sau poți începe de la zero.
+      fresh_button: Începe de la zero
+      title: Configurează bugetul
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    over_allocation_warning:
+      fix_allocations: Corectează alocările
+      over_allocated_message: Ai alocat mai mult decât bugetul disponibil. Corectează
+        alocările.

@@ -1,0 +1,23 @@
+---
+pt-BR:
+  activerecord:
+    attributes:
+      goal_pledge:
+        account: Conta
+        amount: Valor
+        currency: Moeda
+        expires_at: Expira em
+        kind: Tipo
+        status: Status
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Escolha uma das contas associadas ao objetivo.
+            currency:
+              must_match_goal: A moeda do compromisso tem de corresponder à moeda
+                do objetivo.
+          duplicate_open_pledge: >-
+            Você já tem um compromisso em aberto com este valor nesta conta. Cancele
+            ou prorrogue o existente antes de registrar outro.

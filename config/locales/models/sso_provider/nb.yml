@@ -1,0 +1,14 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        sso_provider:
+          attributes:
+            settings:
+              metadata_url_invalid: URL-en for IdP-metadata må være en gyldig URL
+              saml_cert_required: Enten IdP-sertifikat eller sertifikatfingeravtrykk
+                kreves når metadata-URL ikke brukes
+              saml_url_required: Enten URL for IdP-metadata eller URL for IdP-SSO
+                kreves for SAML-leverandører
+              sso_url_invalid: URL-en for IdP-SSO må være en gyldig URL

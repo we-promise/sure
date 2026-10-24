@@ -4,3 +4,91 @@ ro:
     exports: Exporturi
     home: Acasă
     imports: Importuri
+    accounts: Conturi
+    ai_prompts: Prompturi AI
+    api_key: Cheie API
+    api_keys: Chei API
+    budgets: Bugete
+    categories: Categorii
+    changelog: Noutăți
+    family_exports: Exporturi
+    family_merchants: Comercianți
+    guides: Ghiduri
+    holdings: Dețineri
+    hostings: Găzduire proprie
+    merchants: Comercianți
+    onboardings: Configurare inițială
+    payments: Plăți
+    preferences: Preferințe
+    profile: Informații profil
+    profiles: Informații profil
+    recurring_transactions: Recurent
+    reports: Rapoarte
+    rules: Reguli
+    self_hosting: Găzduire proprie
+    sessions: Conectează-te
+    tags: Etichete
+    transactions: Tranzacții
+    appearance: Aspect
+    appearances: Aspect
+    binance_items: Binance
+    cryptos: Criptomonede
+    debug: Depanare
+    debugs: Depanare
+    ibkr_items: Interactive Brokers
+    investments: Investiții
+    kraken_items: Kraken
+    llm_usage: Utilizare LLM
+    llm_usages: Utilizare LLM
+    splits: Împarte
+    trades: Tranzacții bursiere
+    brex_items: Brex
+    coinbase_items: Coinbase
+    dashboard: Panou de bord
+    feedback: Feedback
+    mcp: Server MCP
+    plan: Plan
+    providers: Furnizori
+    users: Utilizatori
+    subscriptions: Abonament
+    transfers: Transferuri
+    valuations: Evaluări
+    coinstats_items: CoinStats
+    enable_banking_items: Enable Banking
+    indexa_capital_items: Indexa Capital
+    mercury_items: Mercury
+    monobank_items: Monobank
+    plaid_items: Plaid
+    redbark_items: Redbark
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    loans: Împrumuturi
+    properties: Proprietăți
+    vehicles: Vehicule
+    account_sharings: Partajarea conturilor
+    account_statements: Arhiva extraselor
+    bank_sync: Sincronizare bancară
+    budget_categories: Categorii bugetare
+    categorize: Clasifică
+    chats: Conversații
+    credit_cards: Carduri de credit
+    depositories: Conturi de numerar
+    impersonation_sessions: Acces în numele utilizatorilor
+    intro: Introducere
+    invitations: Invitații
+    invite_codes: Coduri de invitație
+    lunchflow_items: Lunch Flow
+    messages: Mesaje
+    mfa: Autentificare cu doi factori
+    oidc_accounts: Conturi SSO
+    other_assets: Alte active
+    other_liabilities: Alte datorii
+    pending_duplicate_merges: Verificarea duplicatelor
+    registrations: Înregistrare
+    securities: Instrumente financiare
+    security: Securitate
+    sso_identities: Conexiuni SSO
+    sso_providers: Furnizori SSO
+    system_health: Starea sistemului
+    transfer_matches: Asocieri de transferuri

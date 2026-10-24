@@ -1,0 +1,126 @@
+---
+ro:
+  enable_banking_items:
+    authorize:
+      unexpected_error: A apărut o eroare neașteptată. Încearcă din nou.
+      authorization_failed: 'Pornirea autorizării a eșuat: %{message}'
+      bank_required: Selectează o bancă.
+      invalid_redirect: URL-ul de autorizare primit nu este valid. Încearcă din nou.
+      redirect_uri_not_allowed: Redirecționarea nu este permisă. Configurează `%{callback_url}`
+        în setările aplicației Enable Banking.
+    callback:
+      unexpected_error: A apărut o eroare neașteptată. Încearcă din nou.
+      authorization_error: Autorizarea a eșuat
+      invalid_callback: Parametri de callback nevalizi.
+      item_not_found: Conexiunea nu a fost găsită.
+      session_failed: Autorizarea nu a putut fi finalizată
+      success: Conectarea la bancă a reușit. Conturile se sincronizează.
+    enable_banking_item:
+      delete: Șterge
+      never_synced: Nu a fost sincronizat niciodată
+      no_accounts_found: Nu s-au găsit conturi
+      reconnect: Reconectează
+      set_up_accounts: Configurează conturile
+      syncing: Se sincronizează...
+      update: Actualizează
+      deletion_in_progress: Ștergere în curs
+      last_synced: Ultima sincronizare acum %{time}
+      provider_name: Enable Banking
+      no_accounts_found_description: Nu s-au găsit conturi din Enable Banking. Încearcă
+        din nou sincronizarea.
+      setup_needed: Necesită configurare
+      setup_needed_description:
+        one: 1 cont importat din Enable Banking necesită configurare
+        other: "%{count} de conturi importate din Enable Banking necesită configurare"
+        few: "%{count} conturi importate din Enable Banking necesită configurare"
+    link_accounts:
+      link_failed: Conectarea conturilor a eșuat
+      success: S-au conectat cu succes %{count} de conturi.
+      already_linked: Conturile selectate sunt deja conectate.
+      no_accounts_selected: Nu a fost selectat niciun cont.
+      no_session: Nu există o conexiune Enable Banking activă. Conectează mai întâi
+        o bancă.
+    new:
+      reconnect: Reconectează
+      unknown: Necunoscut
+      configured: Configurat
+      go_to_provider_settings: Mergi la setările furnizorului
+      remove: Elimină
+      setup_step_4: Revino aici pentru a conecta conturile
+      setup_steps_title: 'Pașii configurării:'
+      sync: Sincronizează
+      add_connection: Adaugă o conexiune
+      connected_bank: Bancă conectată
+      connection: Conexiune
+      remove_confirm: Sigur vrei să elimini această conexiune?
+      setup_step_1_html: Mergi la <strong>Setări → Furnizori</strong>
+      setup_step_2_html: Găsește secțiunea <strong>Enable Banking</strong>
+      connect_bank: Conectează banca
+      link_enable_banking_title: Conectează Enable Banking
+      not_configured: Conexiunea Enable Banking nu este configurată
+      not_configured_description: Înainte de a conecta conturile Enable Banking, configurează
+        conexiunea Enable Banking.
+      ready_to_connect: Pregătit pentru conectarea unei bănci
+      session_expired: Sesiune expirată — este necesară reautorizarea
+      session_expires: Sesiunea expiră
+      setup_step_3: Introdu datele de autentificare Enable Banking
+    select_bank:
+      cancel: Anulează
+      beta_label: Beta
+      check_country: Verifică setările codului de țară.
+      credentials_required: Configurează mai întâi datele de autentificare Enable
+        Banking.
+      description: Selectează banca pe care vrei să o conectezi la conturile tale.
+      no_banks: Nu există bănci disponibile pentru această țară/regiune.
+      no_search_results: Nicio bancă nu corespunde căutării.
+      search_label: Caută banca ta
+      search_placeholder: Caută banca ta...
+      title: Selectează banca
+    select_existing_account:
+      balance: Sold
+      cancel: Anulează
+      link: Asociază
+      all_linked: Toate conturile Enable Banking par să fie deja conectate.
+      title: Conectează contul Enable Banking
+      try_after_sync: Dacă tocmai ai conectat sau sincronizat, încearcă din nou după
+        finalizarea sincronizării.
+      unlink_to_move: Pentru a conecta alt cont, dezasociază-l mai întâi din meniul
+        său de acțiuni.
+    setup_accounts:
+      balance: Sold
+      cancel: Anulează
+      account_type_label: 'Tipul contului:'
+      create_accounts: Creează conturi
+      creating_accounts: Se creează conturile...
+      header_subtitle: Alege tipurile corecte pentru conturile importate
+      historical_data_range: 'Intervalul datelor istorice:'
+      sync_start_date_label: 'Sincronizează tranzacțiile începând cu:'
+      choose_account_type: 'Alege tipul corect pentru fiecare cont Enable Banking:'
+      sync_start_date_help: Alege de când vrei să sincronizezi istoricul tranzacțiilor.
+        Sunt disponibili cel mult 2 ani de istoric.
+      title: Configurează conturile Enable Banking
+    complete_account_setup:
+      all_skipped: Toate conturile au fost omise. Le poți configura ulterior din pagina
+        conturilor.
+      no_accounts: Nu există conturi disponibile pentru configurare.
+      success: Au fost create cu succes %{count} de conturi!
+    create:
+      success: Configurarea Enable Banking a reușit.
+    destroy:
+      success: Conexiunea Enable Banking a fost adăugată în coada de ștergere.
+    errors:
+      api_error: A apărut o eroare de comunicare cu banca.
+      network_unreachable: Serviciul bancar este temporar inaccesibil. Încearcă din
+        nou mai târziu.
+      session_invalid: Sesiunea a expirat. Reconectează banca.
+      unexpected: A apărut o eroare neașteptată în timpul sincronizării.
+    link_existing_account:
+      errors:
+        invalid_enable_banking_account: Cont Enable Banking selectat nevalid
+        only_manual: Doar conturile manuale pot fi conectate
+      success: Contul a fost conectat cu succes la Enable Banking
+    reauthorize:
+      invalid_redirect: URL-ul de autorizare primit nu este valid. Încearcă din nou.
+      reauthorization_failed: Reautorizarea a eșuat
+    update:
+      success: Configurarea Enable Banking a fost actualizată.

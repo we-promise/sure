@@ -11,3 +11,7 @@ ro:
     update:
       invalid_token: Token invalid.
       success: Parola ta a fost resetată.
+    disabled: Resetarea parolei prin Sure este dezactivată. Resetează parola prin
+      furnizorul tău de identitate.
+    sso_only_user: Contul tău folosește SSO pentru autentificare. Contactează administratorul
+      pentru gestionarea datelor de autentificare.

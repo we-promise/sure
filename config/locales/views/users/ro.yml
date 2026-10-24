@@ -12,7 +12,21 @@ ro:
       success: Un nou email de confirmare este programat pentru a fi trimis.
       no_pending_change: Nu există nicio modificare de email în așteptare!
     reset:
-      success: Contul tău a fost resetat. Datele vor fi șterse în fundal în scurt timp.
+      success: Contul tău a fost resetat. Datele vor fi șterse în fundal în scurt
+        timp.
       unauthorized: Nu ești autorizat să efectuezi această acțiune
     reset_with_sample_data:
-      success: Contul tău a fost resetat și datele eșantion sunt în curs de pregătire. Vei vedea date demonstrative în curând.
+      success: Contul tău a fost resetat și datele eșantion sunt în curs de pregătire.
+        Vei vedea date demonstrative în curând.
+    roles:
+      member: Membru
+      admin: Administrator
+      super_admin: Superadministrator
+    user_menu:
+      settings: Setări
+      feedback: Feedback
+      aria_label: Deschide meniul contului
+      changelog: Jurnal de modificări
+      contact: Contact
+      log_out: Deconectare
+      version: Versiune

@@ -4,8 +4,10 @@ pt-BR:
     access_denied: Acesso negado
     create:
       success: Exportação iniciada. Você poderá baixá-la em breve.
-    delete_confirmation: Tem certeza de que deseja excluir esta exportação? Esta ação não pode ser desfeita.
-    delete_failed_confirmation: Tem certeza de que deseja excluir esta exportação falhada?
+    delete_confirmation: >-
+      Tem certeza de que deseja excluir esta exportação? Esta ação não pode ser desfeita.
+    delete_failed_confirmation: Tem certeza de que deseja excluir esta exportação
+      falhada?
     destroy:
       success: Exportação excluída com sucesso
     export_not_ready: Exportação não está pronta para download
@@ -28,4 +30,32 @@ pt-BR:
         actions:
           delete: Excluir
           download: Descarregar
+          confirm_mark_failed: >-
+            Esta exportação está inativa há algum tempo e a sua tarefa em segundo
+            plano foi provavelmente interrompida. Marcá-la como falhada? Pode criar
+            uma nova exportação de imediato.
+          mark_failed: Marcar como falha
       empty: Nenhuma exportação ainda.
+    cancel:
+      cancelled: Exportação marcada como falhada. Pode criar uma nova exportação de
+        imediato.
+      not_cancellable: >-
+        Esta exportação não pode ser marcada como falhada neste momento — a sua tarefa
+        pode ainda estar em execução. Tente novamente assim que estiver inativa há
+        uma hora.
+    new:
+      accounts_and_balances: Todas as contas e saldos
+      cancel: Cancelar
+      categories_tags_rules: Categorias, tags e regras
+      dialog_subtitle: Baixar todos os seus dados financeiros
+      dialog_title: Exportar os seus dados
+      export_data: Exportar dados
+      investment_trades: Negociações de investimentos
+      note_description: >-
+        Esta exportação inclui todos os seus dados, mas apenas parte deles pode ser
+        importada novamente pelo recurso de importação CSV. Há suporte para importar
+        contas, transações (com categoria e tags) e negociações. Os demais dados das
+        contas não podem ser importados e servem apenas como registro.
+      note_label: Nota
+      transaction_history: Histórico de transações
+      whats_included: 'O que está incluído:'

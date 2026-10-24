@@ -14,12 +14,39 @@ de:
         main_system_prompt:
           title: Hauptsystem-Prompt
           subtitle: Zentrale Anweisungen, die definieren, wie sich der KI-Assistent in allen Chat-Gesprächen verhält
+          label: Chat-System-Prompt
         transaction_categorizer:
           title: Transaktionskategorisierung
           subtitle: Die KI kategorisiert deine Transaktionen automatisch basierend auf deinen definierten Kategorien
         merchant_detector:
           title: Händlererkennung
           subtitle: Die KI identifiziert und ergänzt Transaktionsdaten mit Händlerinformationen
+        save: Prompts speichern
+        save_confirm:
+          body: Eigene Prompts ersetzen die integrierten Systemanweisungen und Schutzvorkehrungen
+            für deine Familie, etwa die Einschränkungen für Finanzberatung.
+          cancel: Abbrechen
+          confirm: Bestätigen
+          dont_show_again: Diese Warnung nicht mehr anzeigen
+          title: Eigene KI-Prompts speichern?
+      prompt_field:
+        format_risk: 'Dein %{provider}-Prompt enthält das Beispiel {"%{key}": ...} nicht
+          mehr. Jede Anfrage fordert weiterhin diese Struktur an, sodass das Parsen meist
+          funktioniert. Eine Anpassung, die ein anderes Ausgabeformat verlangt, führt jedoch
+          zu Fehlern.'
+        prompt_label: Prompt
+        provider_anthropic: Anthropic
+        provider_label: Anbieter
+        provider_openai: OpenAI
+        reset: Auf Standard zurücksetzen
+        reset_confirm_body: Dadurch wird dein eigener Prompt verworfen und die integrierten
+          Standardanweisungen werden wiederhergestellt.
+        reset_confirm_title: Auf den Standard-Prompt zurücksetzen?
+        status_custom: Dein eigener Prompt wird verwendet
+        status_default: Der integrierte Standard wird verwendet
+      update:
+        multiple_errors: Mehrere Prompts sind zu lang (höchstens %{count} Zeichen)
+        success: KI-Prompts aktualisiert
     payments:
       show:
         page_title: Zahlung
@@ -83,6 +110,23 @@ de:
         sharing_subtitle: Lege fest, wie Konten in deiner %{moniker} geteilt werden
         sharing_title: Freigaben der %{moniker}
         translations_notice: 'Bitte beachte: Wir arbeiten noch an den Übersetzungen für verschiedene Sprachen.'
+        budget_sharing_no_members: Keine weiteren Mitglieder in %{moniker}, mit denen du teilen
+          kannst
+        budget_sharing_permission_label: Zugriff für %{name}
+        budget_sharing_permissions:
+          none: Kein Zugriff
+          read_only: Nur ansehen
+          read_write: Darf bearbeiten
+        budget_sharing_subtitle: Erlaube anderen Mitgliedern, dein persönliches Budget anzusehen
+          oder zu bearbeiten
+        budget_sharing_title: Budgetfreigabe
+        budget_subtitle: Lege fest, wie sich deine Budgets verhalten
+        budget_title: Budget
+        household_budget_enabled: Haushaltsbudget
+        household_budget_enabled_hint: Führe neben persönlichen Budgets ein gemeinsames Haushaltsbudget.
+          Deaktiviere diese Option, um nur persönliche Budgets zu verwenden.
+        personal_budgets: Persönliche Budgets
+        personal_budgets_hint: Aktiviere individuelle Budgets für jedes Familienmitglied.
     appearances:
       show:
         modals_title: Modale Fenster
@@ -103,6 +147,9 @@ de:
         theme_title: Design
         transactions_subtitle: Lege fest, wie Transaktionen angezeigt werden
         transactions_title: Transaktionen
+        dashboard_account_groups_description: Diese Kontobereiche werden im Dashboard und
+          in der Kontoseitenleiste zunächst aufgeklappt. Du kannst sie jederzeit manuell einklappen.
+        dashboard_account_groups_title: Standardmäßig aufgeklappt starten
     profiles:
       destroy:
         cannot_remove_self: Du kannst dich nicht selbst aus dem Konto entfernen.
@@ -483,6 +530,13 @@ de:
         trading212: Synchronisiert dein Trading-212-Depot über einen API-Key mit Lesezugriff.
         trade_republic: Synchronisiert dein Trade-Republic-Konto über einen sicheren Web-Login mit Lesezugriff.
         wise: Synchronisiert deine Wise-Guthaben in mehreren Währungen und internationale Überweisungen automatisch.
+        coinspot: Synchronisiere CoinSpot-Salden, AUD-Werte, Transfers, Einzahlungen, Auszahlungen
+          und den Auftragsverlauf mit einem API-Schlüssel mit reinem Lesezugriff.
+        financekit: Synchronisiere unterstützte FinanceKit-Konten über die Sure-iOS-App.
+        fio: Synchronisiere ein Fio-banka-Konto mit einem API-Token mit reinem Lesezugriff.
+        monobank: Synchronisiere ukrainische Monobank-Karten und Spartöpfe mit einem persönlichen
+          API-Token.
+        up: Synchronisiere Konten der australischen Up Bank mit einem persönlichen Zugriffstoken.
       trading212_panel:
         accounts_tab: Konten
         api_key_label: API ID
@@ -575,6 +629,62 @@ de:
       update:
         no_changes: Es wurde nichts geändert
         updated_successfully: Anbietereinstellungen gespeichert
+      coinspot_panel:
+        add_connection: CoinSpot-Verbindung hinzufügen
+        api_key_label: API-Schlüssel
+        api_key_placeholder: CoinSpot-API-Schlüssel einfügen
+        api_secret_label: Geheimer API-Schlüssel (Secret)
+        api_secret_placeholder: Geheimen CoinSpot-API-Schlüssel einfügen
+        connection_name_label: Verbindungsname
+        connection_name_placeholder: Hauptkonto bei CoinSpot
+        default_connection_name: CoinSpot
+        disconnect: Trennen
+        disconnect_confirm: Möchtest du %{name} wirklich trennen?
+        keep_api_key_placeholder: Leer lassen, um den vorhandenen API-Schlüssel beizubehalten
+        keep_api_secret_placeholder: Leer lassen, um den vorhandenen geheimen API-Schlüssel
+          beizubehalten
+        read_only_body: Erteile keine Berechtigungen zum Senden, Auszahlen, Handeln oder
+          Übertragen. Sure importiert nur Salden, AUD-Werte, Transfers, Einzahlungen, Auszahlungen
+          und den Verlauf abgeschlossener Aufträge.
+        read_only_title: Börsensynchronisierung nur mit Lesezugriff
+        setup_accounts: Konto einrichten
+        step1_html: Öffne die <a href="https://www.coinspot.com.au/my/api" target="_blank"
+          rel="noopener noreferrer" class="underline">CoinSpot-API-Einstellungen</a>
+        step2: Erstelle einen API-Schlüssel mit reinem Lesezugriff auf Salden und Verlauf.
+        step3: Füge den API-Schlüssel und den geheimen Schlüssel unten ein.
+        sync: Synchronisieren
+        syncing: Wird synchronisiert …
+        update_connection: Verbindung aktualisieren
+      financekit:
+        accounts: Verknüpfte Konten
+        app_store: App Store
+        coming_soon: Demnächst verfügbar!
+        description: Verwalte Apple-Wallet-Verbindungen in der Sure-iOS-App. Wallet-Daten
+          werden synchronisiert, solange die App geöffnet ist. Eine unbeaufsichtigte Hintergrundsynchronisierung
+          ist noch nicht verfügbar.
+        last_accepted_at: Zuletzt von Sure angenommen
+        last_imported_at: Zuletzt in deine Familie importiert
+        linked_accounts:
+          one: 1 verknüpftes Konto
+          other: "%{count} verknüpfte Konten"
+        not_yet: Noch nicht
+        status:
+          active: Synchronisierung aktiv
+          repair_required: Reparatur erforderlich – öffne die Sure-iOS-App
+        summary: Wallet-Synchronisierung
+      fio_panel:
+        step_1_html: Melde dich im Onlinebanking von %{link} an und öffne Einstellungen
+          → API.
+        step_2: Erstelle ein Token mit reinem Lesezugriff („Sledování účtu“). Es erfordert
+          eine starke Authentifizierung und ist bis zu 180 Tage gültig.
+        step_3: Füge das Token unten ein und speichere es. Ein Token greift auf ein Konto
+          zu; füge daher für jedes Fio-Konto eine Verbindung hinzu.
+      monobank_panel:
+        step_1_html: Öffne %{link}, melde dich mit der Monobank-App an und erstelle ein
+          persönliches Token.
+        step_2: Kopiere das Token – es wird nur einmal angezeigt.
+        step_3: Füge das Token unten ein, speichere es und verknüpfe anschließend die gewünschten
+          Karten und Spartöpfe.
     background_jobs:
       cancel:
         cancelled: "%{type} als verloren markiert."
@@ -700,3 +810,6 @@ de:
         step_3: Klick auf Verbinden. Du wirst zu Sure weitergeleitet, um dich anzumelden und den Zugriff freizugeben.
         step_4: Nach der Freigabe kann Claude deine Konten, Transaktionen und Salden lesen.
         unknown_client: Unbekannter Client
+    budget_shares:
+      update:
+        success: Einstellungen zur Budgetfreigabe aktualisiert

@@ -20,6 +20,14 @@ ro:
       emoji_clear: Folosește pictograma
       emoji_pick: Folosește %{emoji}
       placeholder: Nume categorie
+      name_label: Nume
+      color: Culoare
+      auto_adjust: ajustare automată.
+      icon: Pictogramă
+      trigger_label: Alege culoarea și pictograma
+      parent_category_label: Categorie părinte (opțional)
+      poor_contrast: Contrast slab, alege o culoare mai închisă sau
+      unassigned: "(neatribuit)"
     index:
       bootstrap: Folosește valorile implicite (recomandat)
       categories: Categorii
@@ -27,17 +35,50 @@ ro:
       categories_incomes: Categorii de venituri
       empty: Nicio categorie găsită
       new: Categorie nouă
+      delete_all: Șterge tot
+      merge: Îmbină categoriile
     menu:
       loading: Se încarcă...
     new:
       new_category: Categorie nouă
     update:
       success: Categoria a fost actualizată cu succes
+    virtual:
+      payment: Plată
+      transfer: Transfer
+      trade: Tranzacție bursieră
+    destroy_all:
+      success: Toate categoriile au fost șterse
+    merge:
+      description: Selectează o categorie destinație și categoriile care vor fi îmbinate
+        cu aceasta. Tranzacțiile și liniile de buget corespunzătoare vor fi mutate
+        în categoria destinație.
+      select_target: Selectează categoria destinație...
+      sources_hint: Categoriile selectate vor fi șterse după mutarea tranzacțiilor
+        și liniilor de buget în categoria destinație. Nu selecta categoria destinație
+        și ca sursă.
+      sources_label: Categorii de îmbinat
+      submit: Îmbină selecția
+      target_label: Îmbină cu (destinație)
+      title: Îmbină categoriile
+    perform_merge:
+      invalid_categories: Au fost selectate categorii nevalide
+      no_categories_selected: Nu au fost selectate categorii de îmbinat
+      success:
+        one: A fost îmbinată cu succes %{count} categorie
+        other: Au fost îmbinate cu succes %{count} de categorii
+        few: Au fost îmbinate cu succes %{count} categorii
+      target_not_found: Categoria destinație nu a fost găsită
+      target_selected_as_source: Alege categorii diferite pentru destinație și surse.
   category:
     dropdowns:
       show:
         bootstrap: Generează categoriile implicite
         empty: Nicio categorie găsită
+        one_time: "%{type} unic(ă)"
+        expense: cheltuială
+        income: venit
+        match_transfer: Asociază transferul/plata
   helpers:
     submit:
       category:

@@ -3,28 +3,62 @@ nl:
   views:
     settings:
       payments:
-        renewal: "Uw bijdrage wordt voortgezet op %{date}."
+        renewal: Uw bijdrage wordt voortgezet op %{date}.
+        cancellation: Je bijdrage eindigt op %{date}.
   settings:
     ai_prompts:
       show:
-        page_title: AI Prompts
+        page_title: AI-prompts
         openai_label: OpenAI
         disable_ai: AI Assistent uitschakelen
         prompt_instructions: Prompt Instructies
         main_system_prompt:
           title: Hoofd Systeemprompt
           subtitle: Kerninstructies die bepalen hoe de AI-assistent zich gedraagt in alle chatgesprekken
+          label: Systeeminstructie voor de chat
         transaction_categorizer:
           title: Transactie Categoriseerder
           subtitle: AI categoriseert automatisch uw transacties op basis van uw gedefinieerde categorieën
         merchant_detector:
           title: Handelaar Detectie
           subtitle: AI identificeert en verrijkt transactiegegevens met handelaarsinformatie
+        save_confirm:
+          cancel: Annuleren
+          confirm: Bevestigen
+          body: Aangepaste prompts vervangen de ingebouwde systeeminstructies en veiligheidsbeperkingen (zoals beperkingen voor financieel advies) voor je gezin.
+          dont_show_again: Deze waarschuwing niet meer tonen
+          title: Aangepaste AI-prompts opslaan?
+        save: Prompts opslaan
+      prompt_field:
+        provider_anthropic: Anthropic
+        provider_openai: OpenAI
+        format_risk: 'Je prompt voor %{provider} bevat het voorbeeld {"%{key}": ...} niet meer. Elk verzoek vraagt nog steeds om die structuur, zodat de verwerking meestal blijft werken. Een aangepaste prompt die om een andere uitvoerstructuur vraagt, verstoort de verwerking echter.'
+        prompt_label: Prompt
+        provider_label: Aanbieder
+        reset: Standaard herstellen
+        reset_confirm_body: Hiermee verwijder je je aangepaste prompt en herstel je de ingebouwde standaardinstructies.
+        reset_confirm_title: Standaardprompt herstellen?
+        status_custom: Je aangepaste prompt wordt gebruikt
+        status_default: De ingebouwde standaard wordt gebruikt
+      update:
+        multiple_errors: Meerdere prompts zijn te lang (maximaal %{count} tekens)
+        success: AI-prompts bijgewerkt
     payments:
       show:
         page_title: Betaling
         subscription_subtitle: Werk uw abonnement en betalingsgegevens bij
         subscription_title: Abonnement beheren
+        manage: Beheren
+        choose_level: Kies een niveau
+        contributions_note: Bijdragen aan %{product_name} worden hier getoond.
+        currently_on_plan: Momenteel op het
+        not_contributing_emphasis: geen bijdrage
+        not_contributing_prefix: Je levert momenteel
+        payment_via_stripe: Betaling via Stripe
+        trial_days_left:
+          one: Gegevens worden over %{count} dag verwijderd
+          other: Gegevens worden over %{count} dagen verwijderd
+        trialing: Je gebruikt momenteel de openbare demo van %{product_name}
     preferences:
       show:
         country: Land
@@ -43,39 +77,97 @@ nl:
         theme_system: Systeem
         theme_title: Thema
         timezone: Tijdzone
+        select_all_currencies: Alles selecteren
+        currencies_more: "+%{count} meer"
+        budget_title: Budget
+        additional_currencies_label: Extra valuta's
+        base_currency_badge: Basisvaluta
+        budget_sharing_no_members: Er zijn geen andere leden in je %{moniker} om mee te delen
+        budget_sharing_permission_label: Toegang van %{name}
+        budget_sharing_permissions:
+          none: Geen toegang
+          read_only: Alleen bekijken
+          read_write: Mag bewerken
+        budget_sharing_subtitle: Laat andere leden je persoonlijke budget bekijken of bewerken
+        budget_sharing_title: Budget delen
+        budget_subtitle: Stel in hoe je budgetten werken
+        currencies_subtitle: Kies welke valuta's verschijnen in geldvelden voor je %{moniker}
+        currencies_title: Valuta's voor %{moniker}
+        currency_search_placeholder: Valuta's zoeken
+        household_budget_enabled: Huishoudbudget
+        household_budget_enabled_hint: Gebruik naast persoonlijke budgetten ook een gezamenlijk huishoudbudget. Schakel dit uit om alleen persoonlijke budgetten te gebruiken.
+        manage_currencies: Valuta's beheren
+        manage_currencies_subtitle: Deselecteer valuta's die je nooit gebruikt, of beperk de lijst tot slechts enkele.
+        month_start_day: Budgetmaand begint op
+        month_start_day_hint: Stel in wanneer je budgetmaand begint (bijvoorbeeld op je betaaldag)
+        month_start_day_warning: Je budgetten en berekeningen vanaf het begin van de maand gebruiken deze aangepaste begindag in plaats van de eerste dag van elke maand.
+        no_additional_currencies: Geen geselecteerd
+        no_matching_currencies: Geen valuta's gevonden
+        personal_budgets: Persoonlijke budgetten
+        personal_budgets_hint: Schakel individuele budgetten in voor elk gezinslid.
+        preview:
+          description: Schakel functies in ontwikkeling in die als preview of canary zijn gemarkeerd.
+          title: Previewfuncties inschakelen
+        save_currencies: Valuta's opslaan
+        select_base_only: Alleen basisvaluta
+        selected_currencies_count:
+          one: "%{count} geselecteerd"
+          other: "%{count} geselecteerd"
+        sharing_default_label: Standaard delen voor nieuwe rekeningen
+        sharing_private: Standaard privé houden
+        sharing_shared: Delen met alle leden
+        sharing_subtitle: Bepaal hoe rekeningen binnen je %{moniker} worden gedeeld
+        sharing_title: Delen binnen %{moniker}
+        translations_notice: We werken nog aan de vertalingen voor verschillende talen.
+        base_currency_label: Basisvaluta
     appearances:
       show:
         modals_title: Modals
         modals_subtitle: Gedrag van modals aanpassen
         disable_modal_click_outside_title: Modals open houden bij klikken buiten
         disable_modal_click_outside_description: Voorkomt dat modals sluiten bij klikken buiten. Handig om te voorkomen dat niet-opgeslagen wijzigingen per ongeluk verloren gaan.
+        dashboard_title: Dashboard
+        page_title: Weergave
+        transactions_title: Transacties
+        dashboard_account_groups_description: Deze rekeningsecties worden standaard uitgeklapt op het dashboard en in de zijbalk met rekeningen. Je kunt ze op elk moment handmatig inklappen.
+        dashboard_account_groups_title: Standaard uitgeklapt weergeven
+        dashboard_subtitle: Pas de weergave van het dashboard aan
+        dashboard_two_column_description: Toon dashboardwidgets op grote schermen in twee kolommen. In de kop van elke widget kun je de breedte en hoogte aanpassen. Als dit uitstaat, staan de widgets onder elkaar in één kolom.
+        dashboard_two_column_title: Indeling met twee kolommen
+        split_grouped_description: Toon gesplitste transacties in de transactielijst gegroepeerd onder de oorspronkelijke transactie. Als dit uitstaat, verschijnen de deeltransacties als afzonderlijke regels.
+        split_grouped_title: Gesplitste transacties groeperen
+        theme_dark: Donker
+        theme_light: Licht
+        theme_subtitle: Kies je voorkeursthema voor de app
+        theme_system: Systeem
+        theme_title: Thema
+        transactions_subtitle: Pas de weergave van transacties aan
     profiles:
       destroy:
         cannot_remove_self: U kunt uzelf niet van het account verwijderen.
         member_removal_failed: Er was een probleem bij het verwijderen van het lid.
         member_removed: Lid is succesvol verwijderd.
         not_authorized: U bent niet geautoriseerd om leden te verwijderen.
+        member_owns_other_family_data: Dit lid bezit nog rekeningen in een ander huishouden en kan niet worden verwijderd. Draag die rekeningen eerst over of verwijder ze.
       show:
         confirm_delete:
-          body: Weet u zeker dat u uw account permanent wilt verwijderen? Deze actie
-            is onomkeerbaar.
+          body: Weet u zeker dat u uw account permanent wilt verwijderen? Deze actie is onomkeerbaar.
           title: Account verwijderen?
         confirm_reset:
           body: Weet u zeker dat u uw account wilt resetten? Dit zal al uw accounts, categorieën, handelaren, tags en andere gegevens verwijderen. Deze actie kan niet ongedaan worden gemaakt.
           title: Account resetten?
         confirm_reset_with_sample_data:
-          body: Weet u zeker dat u uw account wilt resetten en voorbeeldgegevens wilt laden? Dit zal uw bestaande gegevens verwijderen en vervangen door demogegevens zodat u %{product_name} veilig kunt verkennen.
+          body: Weet u zeker dat u uw account wilt resetten en voorbeeldgegevens wilt laden? Dit zal uw bestaande gegevens verwijderen en vervangen door demogegevens zodat u Sure veilig kunt verkennen.
           title: Account resetten en voorbeeldgegevens laden?
         confirm_remove_invitation:
-          body: "Weet u zeker dat u de uitnodiging voor %{email} wilt verwijderen?"
+          body: Weet u zeker dat u de uitnodiging voor %{email} wilt verwijderen?
           title: Uitnodiging verwijderen
         confirm_remove_member:
-          body: "Weet u zeker dat u %{name} van uw account wilt verwijderen?"
+          body: Weet u zeker dat u %{name} van uw account wilt verwijderen?
           title: Lid verwijderen
         danger_zone_title: Gevarenzone
         delete_account: Account verwijderen
-        delete_account_warning: Het verwijderen van uw account zal permanent al
-          uw gegevens verwijderen en kan niet ongedaan worden gemaakt.
+        delete_account_warning: Het verwijderen van uw account zal permanent al uw gegevens verwijderen en kan niet ongedaan worden gemaakt.
         reset_account: Account resetten
         reset_account_warning: Het resetten van uw account zal al uw accounts, categorieën, handelaren, tags en andere gegevens verwijderen, maar uw gebruikersaccount intact houden.
         reset_account_with_sample_data: Resetten en vooraf laden
@@ -84,19 +176,23 @@ nl:
         first_name: Voornaam
         household_form_input_placeholder: Voer huishoudnaam in
         household_form_label: Huishoudnaam
-        household_subtitle: Nodig familieleden, partners en andere personen uit. Genodigden
-          kunnen inloggen op uw huishouden en toegang krijgen tot uw gedeelde accounts.
+        household_subtitle: Genodigden kunnen inloggen op uw %{moniker}-account en toegang krijgen tot gedeelde gegevens.
         household_title: Huishouden
         invitation_link: Uitnodigingslink
         invite_member: Lid toevoegen
         last_name: Achternaam
         page_title: Profielinformatie
         pending: In behandeling
-        profile_subtitle: "Personaliseer hoe u verschijnt op %{product_name}"
+        profile_subtitle: Personaliseer hoe u verschijnt op %{product_name}
         profile_title: Persoonlijk
         remove_invitation: Uitnodiging verwijderen
         remove_member: Lid verwijderen
         save: Opslaan
+        group_form_label: Groepsnaam
+        group_form_input_placeholder: Voer een groepsnaam in
+        group_title: Groepsleden
+        resend_confirmation_link: een nieuwe bevestigingsmail aanvragen
+        unconfirmed_email_notice_html: Je hebt gevraagd je e-mailadres te wijzigen naar %{email}. Open je e-mail en bevestig de wijziging om deze door te voeren. Heb je geen e-mail ontvangen? Controleer je spammap of %{resend_link}.
     securities:
       show:
         page_title: Beveiliging
@@ -114,13 +210,21 @@ nl:
         sso_no_identities: Geen SSO-accounts verbonden
         sso_connect_hint: Log uit en log in met een SSO-provider om een account te verbinden.
         sso_confirm_title: Account loskoppelen?
-        sso_confirm_body: "Weet u zeker dat u uw %{provider} account wilt loskoppelen? U kunt het later opnieuw verbinden door in te loggen met die provider."
+        sso_confirm_body: Weet u zeker dat u uw %{provider} account wilt loskoppelen? U kunt het later opnieuw verbinden door in te loggen met die provider.
         sso_confirm_button: Loskoppelen
         sso_warning_message: Dit is uw enige inlogmethode. U zou een wachtwoord moeten instellen in uw beveiligingsinstellingen voordat u loskoppelt, anders kunt u worden buitengesloten van uw account.
+        encryption_warning:
+          generate: 'Genereer een set met: bin/rails db:encryption:init'
+          intro: 'Gevoelige gegevens (API-sleutels, tokens van aanbieders, MFA-geheimen en persoonsgegevens) worden onversleuteld opgeslagen. Stel de volgende sleutels in via je omgevingsvariabelen of Rails-toegangsgegevens om versleuteling in te schakelen:'
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          title: Versleutelingssleutels ontbreken
     settings_nav:
       accounts_label: Accounts
       advanced_section_title: Geavanceerd
-      ai_prompts_label: AI Prompts
+      ai_prompts_label: AI-prompts
       api_key_label: API Key
       payment_label: Betaling
       categories_label: Categorieën
@@ -142,11 +246,563 @@ nl:
       whats_new_label: Wat is nieuw
       api_keys_label: API Key
       bank_sync_label: Bank Sync
+      appearance_label: Weergave
+      debug_label: Foutopsporing
+      exports_label: Exports
+      llm_usage_label: LLM-gebruik
+      providers_label: Aanbieders
+      users_label: Gebruikers
+      sso_providers_label: SSO-aanbieders
+      background_jobs_label: Achtergrondtaken
+      system_health_label: Systeemstatus
+      mcp_label: MCP
+      statement_vault_label: Afschriftenkluis
     settings_nav_link_large:
       next: Volgende
       previous: Terug
     user_avatar_field:
       accepted_formats: JPG of PNG. Max 5MB.
       choose: Foto uploaden
-      choose_label: (optioneel)
+      choose_label: "(optioneel)"
       change: Foto wijzigen
+    debugs:
+      show:
+        page_title: Foutopsporing
+        filters:
+          category: Categorie
+          end_date: Naar
+          start_date: Van
+          all: Alles
+          submit: Filteren
+          source: Bron
+          account_id: Rekening-ID
+          account_provider_id: ID van rekeningaanbieder
+          family_id: Gezins-ID
+          level: Niveau
+          reset: Opnieuw instellen
+          user_id: Gebruikers-ID
+          provider: Aanbieder
+        table:
+          category: Categorie
+          source: Bron
+          context: Context
+          message: Bericht
+          metadata: Metagegevens
+          time: Tijd
+          view_metadata: Bekijken
+          level: Niveau
+        missing_value: "-"
+        context:
+          account: rekening=%{value}
+          account_provider: rekeningaanbieder=%{value}
+          family: gezin=%{value}
+          provider: aanbieder=%{value}
+          user: gebruiker=%{value}
+        empty: Geen foutopsporingsgebeurtenissen gevonden.
+        subtitle: Relevante operationele gebeurtenissen voor hoofdbeheerders. Nieuwste eerst.
+        title: Logboek voor foutopsporing
+    mcp:
+      show:
+        page_title: MCP-server
+        copied: Gekopieerd!
+        copy_url: Kopiëren
+        revoke: Intrekken
+        connect_subtitle: Plak deze URL in Claude.ai (of een andere MCP-compatibele client) om verbinding te maken met je Sure-account.
+        connect_title: Een AI-assistent verbinden
+        connected_ago: "%{time} geleden verbonden"
+        connected_subtitle: Deze apps hebben momenteel toegang tot je Sure-gegevens. Trek de toegang in voor apps die je niet meer gebruikt.
+        connected_title: Verbonden clients
+        how_to_connect_title: Claude verbinden
+        revoke_confirm: Toegang voor deze client intrekken?
+        step_1: Open Claude.ai en ga naar Settings → Customize → Connectors.
+        step_2: Klik op 'Add connector' en plak de bovenstaande URL van de MCP-server.
+        step_3: Klik op Connect. Je wordt doorgestuurd naar Sure om in te loggen en toegang te verlenen.
+        step_4: Na toestemming kan Claude je rekeningen, transacties en saldogegevens lezen.
+        unknown_client: Onbekende client
+      revoke:
+        revoked: Toegang ingetrokken.
+    providers:
+      binance_panel:
+        api_key_label: API-sleutel
+        disconnect: Ontkoppelen
+        syncing: Synchroniseren…
+        sync: Synchroniseren
+        connect_button: Binance verbinden
+        api_key_placeholder: Plak je Binance API-sleutel
+        api_secret_label: API-geheim
+        api_secret_placeholder: Plak je Binance API-geheim
+        disconnect_confirm: Weet je zeker dat je Binance wilt ontkoppelen?
+        historical_import: Instellingen voor historische import
+        ip_hint_body: 'Voeg het uitgaande IP-adres van de app-server toe aan de lijst met toegestane IP-adressen voor je Binance API-sleutel:'
+        ip_hint_contact_admin: Vraag je beheerder om het uitgaande IP-adres van de app-server.
+        ip_hint_title: IP-adres moet worden toegestaan
+        no_withdraw_body: Schakel geen opnamerechten in bij het maken van je Binance API-sleutel. Sure heeft alleen leestoegang nodig.
+        no_withdraw_title: Alleen een sleutel met leestoegang
+        setup_instructions: 'Maak een API-sleutel met alleen leestoegang om Binance te verbinden:'
+        step1_html: Ga naar <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>
+        step2: Maak een nieuwe API-sleutel met uitsluitend het recht Enable Reading
+        step3: Plak hieronder je API-sleutel en geheim
+        sync_start_date_help: Kies hoe ver terug historische effectentransacties moeten worden opgehaald.
+        sync_start_date_label: Gegevens importeren vanaf
+      coinbase_panel:
+        api_key_label: API-sleutel
+        disconnect: Ontkoppelen
+        syncing: Synchroniseren…
+        sync: Synchroniseren
+        connect_button: Coinbase verbinden
+        api_key_placeholder: Voer je Coinbase-API-sleutel in
+        api_secret_placeholder: Voer je Coinbase API-geheim in
+        disconnect_confirm: Weet je zeker dat je deze Coinbase-verbinding wilt verbreken? Je gesynchroniseerde rekeningen worden handmatige rekeningen.
+        setup_instructions: 'Coinbase verbinden:'
+        step1_html: Ga naar <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>
+        step2: Maak een nieuwe API-sleutel met alleen leestoegang (rekeningen en transacties bekijken)
+        step3: Kopieer je API-sleutel en API-geheim en plak ze hieronder
+        api_secret_label: API-geheim
+      coinspot_panel:
+        api_key_label: API-sleutel
+        disconnect: Ontkoppelen
+        syncing: Synchroniseren…
+        connection_name_label: Naam van de koppeling
+        sync: Synchroniseren
+        update_connection: Koppeling bijwerken
+        add_connection: CoinSpot-koppeling toevoegen
+        default_connection_name: CoinSpot
+        disconnect_confirm: Weet je zeker dat je %{name} wilt ontkoppelen?
+        setup_accounts: Rekening instellen
+        connection_name_placeholder: Hoofdkoppeling CoinSpot
+        api_key_placeholder: Plak je CoinSpot API-sleutel
+        api_secret_placeholder: Plak je CoinSpot API-geheim
+        keep_api_key_placeholder: Laat leeg om de bestaande API-sleutel te behouden
+        keep_api_secret_placeholder: Laat leeg om het bestaande API-geheim te behouden
+        read_only_body: Verleen geen rechten voor verzenden, opnemen, handelen of overboeken. Sure importeert alleen saldi, waarden in AUD, overboekingen, stortingen, opnames en de geschiedenis van voltooide orders.
+        read_only_title: Alleen leestoegang voor beurssynchronisatie
+        step1_html: Ga naar <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API-instellingen</a>
+        step2: Maak een API-sleutel met alleen leestoegang tot saldi en geschiedenis.
+        step3: Plak hieronder de API-sleutel en het geheim.
+        api_secret_label: API-geheim
+      ibkr_panel:
+        accounts_tab: Rekeningen
+        save_configuration: Configuratie opslaan
+        update_configuration: Configuratie bijwerken
+        sync: Synchroniseren
+        token_label: Token
+        configuration:
+          all_other_options: 'Alle overige configuratieopties: ''No'''
+          date_format: 'Datumnotatie (Date Format): yyyy-MM-dd'
+          date_time_separator: 'Scheidingsteken voor datum/tijd (Date/Time Separator): ; (puntkomma)'
+          format: 'Bestandsindeling (Format): XML'
+          models: 'Modellen (Models): Optional'
+          period: 'Periode (Period): Last 365 Calendar Days'
+          profit_and_loss: 'Winst en verlies (Profit and Loss): Default'
+          time_format: 'Tijdnotatie (Time Format): HH:mm:ss'
+        disconnect_confirm: Interactive Brokers ontkoppelen?
+        flex_query_details:
+          configuration_heading: Stel deze queryopties in
+          eyebrow: Flex Query
+          sections_heading: Schakel deze secties en velden in
+          summary: Klap dit open om te zien welke secties, velden en instellingen je IBKR Activity Flex Query precies moet bevatten.
+          title: Secties, velden en configuratie
+        not_configured: Niet geconfigureerd.
+        query_id_label: Query-ID
+        query_id_placeholder_existing: Laat leeg om de huidige query-ID te behouden
+        query_id_placeholder_new: Voer je IBKR Flex Query-ID in
+        report_window_note: IBKR Flex-rapporten zijn beperkt tot de periode die je in IBKR voor de query hebt ingesteld. Sure importeert uit dit rapport alle huidige posities en maximaal de laatste 365 dagen aan activiteit.
+        sections:
+          account_information: 'Rekeninginformatie (Account Information): Account ID, Currency'
+          cash_report: 'Kasoverzicht (Cash Report):'
+          cash_report_fields: 'Velden: Currency, Ending Cash'
+          cash_report_options: 'Opties: None'
+          cash_transactions: 'Geldtransacties (Cash Transactions):'
+          cash_transactions_fields: 'Velden: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type'
+          cash_transactions_options: 'Opties: Dividends, Deposits & Withdrawals, Detail'
+          change_in_position_value_summary: 'Overzicht van positiewaardeveranderingen (Change In Position Value Summary): Currency, End Of Period Value'
+          net_asset_value: 'Nettovermogenswaarde in basisvaluta (Net Asset Value (NAV) in Base):'
+          net_asset_value_fields: 'Velden: Currency, Report Date, Total'
+          open_positions: 'Open posities (Open Positions):'
+          open_positions_fields: 'Velden: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol'
+          open_positions_options: 'Opties: Summary'
+          trades: 'Effectentransacties (Trades):'
+          trades_fields: 'Velden: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID'
+          trades_options: 'Opties: Execution'
+          net_asset_value_options: 'Opties: None'
+        status_configured_prefix: "%{summary}. Ga naar het tabblad"
+        status_configured_suffix: om gevonden rekeningen te beheren.
+        steps:
+          step_1: Ga in je IBKR Client Portal naar 'Performance & Reports' > 'Flex Queries'.
+          step_2: Klik op het plusteken (+) in de sectie 'Activity Flex Query' om een nieuwe query te maken.
+          step_3: Geef je query een naam (bijvoorbeeld 'Sure Sync'), bekijk hieronder de details voor de Flex Query en schakel de genoemde secties, velden en configuratieopties in.
+          step_4: Sla de query op en noteer je 'Query ID'. Gebruik vervolgens het tandwiel in de sectie 'Flex Web Service Configuration' om een toegangstoken te genereren.
+          step_5: Plak hieronder je query-ID en token, sla de configuratie op en ga vervolgens naar Rekeningen om de gevonden IBKR-rekeningen te koppelen.
+        token_placeholder_existing: Laat leeg om het huidige token te behouden
+        token_placeholder_new: Voer je IBKR Flex Web Service-token in
+      kraken_panel:
+        api_key_label: API-sleutel
+        default_connection_name: Kraken
+        disconnect: Ontkoppelen
+        syncing: Synchroniseren…
+        connection_name_label: Naam van de koppeling
+        sync: Synchroniseren
+        update_connection: Koppeling bijwerken
+        add_connection: Kraken-koppeling toevoegen
+        disconnect_confirm: Weet je zeker dat je %{name} wilt ontkoppelen?
+        setup_accounts: Rekening instellen
+        connection_name_placeholder: Hoofdkoppeling Kraken
+        api_key_placeholder: Plak je Kraken API-sleutel
+        api_secret_label: Privésleutel
+        api_secret_placeholder: Plak je Kraken-privésleutel
+        keep_api_secret_placeholder: Laat leeg om de bestaande privésleutel te behouden
+        read_only_body: Verleen geen rechten voor handelen, annuleren, opnemen, exporteren, het grootboek, Earn, staking of overboeken. Sure importeert alleen saldi, posities en uitgevoerde spothandelstransacties.
+        step1_html: Ga naar <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API-instellingen</a>
+        step2: Maak een API-sleutel met uitsluitend de rechten Query Funds en Query Closed Orders & Trades.
+        step3: Plak hieronder de API-sleutel en privésleutel.
+        keep_api_key_placeholder: Laat leeg om de bestaande API-sleutel te behouden
+        read_only_title: Alleen leestoegang voor beurssynchronisatie
+      lunchflow_panel:
+        api_key_label: API-sleutel
+        update_connection: Koppeling bijwerken
+        api_key_placeholder_update: Voer een nieuwe API-sleutel in om deze bij te werken
+        base_url_label: Basis-URL (optioneel)
+        api_key_placeholder_new: Plak hier de API-sleutel
+        base_url_placeholder: https://lunchflow.app/api/v1 (standaard)
+        step_1_html: Ga naar %{link} en maak een API-sleutel aan.
+        step_2: Plak je sleutel hieronder en maak verbinding.
+        step_3: Ga vervolgens naar Rekeningen om je gesynchroniseerde rekeningen te koppelen.
+        save_and_connect: Opslaan en verbinden
+      search_filters:
+        chips:
+          crypto: Crypto
+          investment: Beleggingen
+          all: Alles
+          bank: Banken
+        aria_label: Aanbieders zoeken
+        placeholder: Aanbieders zoeken
+      trade_republic_panel:
+        accounts_tab: Rekeningen
+        connection_success:
+          close: Gereed
+          description: Sure synchroniseert je Trade Republic-gegevens nu op de achtergrond.
+          message: Je Trade Republic-verbinding is klaar.
+          title: Trade Republic succesvol verbonden
+        syncing: Synchroniseren…
+        update_configuration: Configuratie bijwerken
+        setup_accounts: Rekeningen instellen
+        sync: Synchroniseren
+        complete_login: Doorgaan
+        identifier_account: Rekening
+        phone_number_label: Telefoonnummer
+        accounts_discovered:
+          one: 1 Trade Republic-rekening gevonden.
+          other: "%{count} Trade Republic-rekeningen gevonden."
+        add_account: Nog een verbinding toevoegen
+        approval_pending: Inloggen gestart. Keur dit goed in de Trade Republic-app; Sure controleert dit automatisch.
+        authenticator_code_label: Authenticatorcode (indien gevraagd)
+        authenticator_code_notice: Voer de code uit je authenticator-app in.
+        authenticator_code_placeholder: Code van 6 cijfers
+        awaiting_authenticator_code: Authenticatorcode vereist.
+        awaiting_confirmation: Goedkeuring in de Trade Republic-app wordt afgewacht.
+        check_login_status: Status nu controleren
+        confirm_login: Aanmelding controleren
+        connect: Inloggen
+        currency_label: Rekeningvaluta
+        disconnect: Trade Republic ontkoppelen
+        disconnect_confirm: Trade Republic ontkoppelen? Je gesynchroniseerde rekeningen worden handmatige rekeningen.
+        disconnect_confirm_with_identifier: De Trade Republic-verbinding die eindigt op %{last4} ontkoppelen? Je gesynchroniseerde rekeningen worden handmatige rekeningen.
+        encryption_warning:
+          message: Toegangsgegevens en sessiegegevens van Trade Republic kunnen pas veilig worden opgeslagen nadat Active Record Encryption is geconfigureerd.
+          title: Versleuteling is niet geconfigureerd
+        identifier_phone: Telefoon
+        login_expired: Het goedkeuringsverzoek is verlopen.
+        phone_number_placeholder_existing: Laat leeg om het huidige telefoonnummer te behouden
+        phone_number_placeholder_new: "+49 170 1234567"
+        pin_label: Pincode of wachtwoord
+        pin_placeholder_existing: Laat leeg om de huidige pincode of het huidige wachtwoord te behouden
+        pin_placeholder_new: Je pincode of wachtwoord voor Trade Republic
+        push_login_notice: Keur het inloggen nu goed in je Trade Republic-app. Sure controleert dit automatisch op de achtergrond. Je kunt de status ook zelf controleren.
+        qr_back_to_credentials: Terug naar telefoonnummer en pincode of wachtwoord
+        qr_cancel: Inloggen met QR-code annuleren
+        qr_error: Inloggen met QR-code kon niet worden gestart. Probeer het opnieuw.
+        qr_instruction: Scan de QR-code met je Trade Republic-app en keur het inloggen goed.
+        qr_loading: QR-code voorbereiden…
+        qr_login: Inloggen met QR-code
+        qr_success: Inloggen goedgekeurd. Sure vernieuwt de pagina van de aanbieder.
+        restart_login: Opnieuw beginnen met inloggen
+        save_configuration: Opslaan en inloggen starten
+        status_configured_prefix: Verbonden. Ga naar het tabblad
+        steps:
+          step_1: Voer het telefoonnummer en de pincode of het wachtwoord in waarmee je de Trade Republic-app gebruikt en sla vervolgens op.
+          step_2: Voer de code uit je authenticator-app in wanneer daarom wordt gevraagd.
+          step_3: Keur het inloggen goed in je Trade Republic-app wanneer daarom wordt gevraagd.
+        not_configured: Niet geconfigureerd.
+        status_configured_suffix: om gevonden rekeningen te beheren.
+      trading212_panel:
+        accounts_tab: Rekeningen
+        save_configuration: Configuratie opslaan
+        syncing: Synchroniseren…
+        update_configuration: Configuratie bijwerken
+        sync: Synchroniseren
+        environment_demo: Demorekening
+        environment_live: Echte rekening
+        add_account: Nog een rekening toevoegen
+        api_key_label: API-ID
+        api_key_placeholder_existing: Laat leeg om de huidige API-ID te behouden
+        api_key_placeholder_new: Plak je Trading 212 API-ID
+        api_secret_label: Geheime sleutel
+        api_secret_placeholder_existing: Laat leeg om de huidige geheime sleutel te behouden
+        api_secret_placeholder_new: Plak je geheime sleutel voor Trading 212
+        default_account_name: Trading 212-rekening
+        disconnect: Trading 212-rekening ontkoppelen
+        disconnect_confirm: Trading 212 ontkoppelen?
+        environment_label: Omgeving
+        status_configured_prefix: Geconfigureerd. Ga naar het tabblad
+        steps:
+          step_1: Ga naar Trading 212 → Settings → API (website of mobiele app).
+          step_2: Genereer een nieuwe API-sleutel. Trading 212 toont je een API-ID en een geheime sleutel.
+          step_3: Plak beide hieronder, kies je omgeving en rekeningvaluta en sla vervolgens op.
+        currency_label: Rekeningvaluta
+        not_configured: Niet geconfigureerd.
+        status_configured_suffix: om gevonden rekeningen te beheren.
+      status:
+        err: Fout
+        'off': Niet ingesteld
+        ok: Verbonden
+        warn: Actie nodig
+      enable_banking_panel:
+        sync: Synchroniseren
+        update_connection: Koppeling bijwerken
+        reconnect: Opnieuw verbinden
+        syncing: Synchroniseren
+        add_connection: Koppeling toevoegen
+        configured: Ingesteld
+        connected_bank: Gekoppelde bank
+        connection: Koppeling
+        remove: Verwijderen
+        remove_confirm: Weet je zeker dat je deze koppeling wilt verwijderen?
+        unknown: Onbekend
+        country_label: Land
+        application_id_label: Applicatie-ID
+        application_id_placeholder_new: Voer de applicatie-ID in
+        application_id_placeholder_update: Voer een nieuwe ID in om deze bij te werken
+        callback_url_instruction: Gebruik %{callback_url} als callback-URL.
+        client_certificate_label: Clientcertificaat (met privésleutel)
+        config_locked_message: Ontkoppel alle gekoppelde banken voordat je deze toegangsgegevens wijzigt.
+        config_locked_title: Configuratie vergrendeld
+        connect_bank: Bank verbinden
+        connection_error: Verbindingsfout
+        ready_to_link: Klaar om rekeningen te koppelen
+        save_and_connect: Opslaan en verbinden
+        select_country: Kies een land...
+        session_expired_reconnect: Sessie verlopen — opnieuw verbinden
+        session_expires: 'Sessie verloopt: %{date}'
+        step_1_html: Ga naar %{link} en haal je ontwikkelaarstoegangsgegevens op.
+        step_2: Kies je land en plak hieronder de applicatie-ID en het clientcertificaat.
+        step_3: Sla op en gebruik vervolgens Verbinding toevoegen om je bank te koppelen.
+      meta:
+        sync_error: Synchronisatiefout
+        last_synced: "%{time} geleden gesynchroniseerd"
+        no_recent_sync: Synchronisatie achterstallig
+        reconsent_needed:
+          one: Over 1 dag is opnieuw toestemming nodig
+          other: Over %{count} dagen is opnieuw toestemming nodig
+        reconsent_required: Opnieuw toestemming vereist
+      sync_provider: Nu synchroniseren
+      health_strip:
+        last_synced: 'Laatst gesynchroniseerd: %{time} geleden'
+        accounts_syncing: rekeningen worden gesynchroniseerd
+        connected: verbonden
+        needs_attention: aandacht nodig
+      maturity:
+        beta: Bèta
+        alpha: Alfa
+      financekit:
+        accounts: Gekoppelde rekeningen
+        app_store: App Store
+        coming_soon: Binnenkort beschikbaar!
+        description: Beheer Apple Wallet-verbindingen in de Sure iOS-app. Wallet-gegevens worden gesynchroniseerd terwijl de app geopend is; automatische synchronisatie op de achtergrond is nog niet beschikbaar.
+        last_accepted_at: Laatst geaccepteerd door Sure
+        last_imported_at: Laatst geïmporteerd in je gezin
+        linked_accounts:
+          one: 1 gekoppelde rekening
+          other: "%{count} gekoppelde rekeningen"
+        not_yet: Nog niet
+        status:
+          active: Synchronisatie actief
+          repair_required: Herstel nodig — open de Sure iOS-app
+        summary: Wallet-synchronisatie
+      onchain_wallet_panel:
+        save: Opslaan
+        add_wallet: Wallet toevoegen
+        advanced: Geavanceerd
+        disconnect_all: Alle wallets ontkoppelen
+        disconnect_all_confirm: Hiermee verwijder je alle gevolgde adressen en de bijbehorende rekeningen. Doorgaan?
+        etherscan_api_key_label: Etherscan API-sleutel (optioneel)
+        etherscan_api_key_placeholder: Plak een Etherscan API-sleutel
+        etherscan_hint: Ethereum-gegevens kunnen zonder sleutel worden gelezen. Met een Etherscan-sleutel kun je alleen meer Ethereum-verzoeken doen.
+        keep_etherscan_api_key: Laat leeg om de bestaande sleutel te behouden
+        keyless_body: Sure leest uitsluitend openbare blockchaingegevens. Er worden geen sleutels, herstelzinnen of handtekeningen gebruikt en er kan niets worden uitgegeven.
+        keyless_title: Alleen lezen, geen sleutels vereist
+        manage_wallets: Wallets beheren
+        sync_start_date_hint: Overboekingen vóór deze datum worden genegeerd. Laat leeg om alles te importeren wat de blockchainverkenner rapporteert.
+        sync_start_date_label: Overboekingen negeren vóór
+      setup_steps:
+        eyebrow: Instellen
+        need_help: Hulp nodig?
+      groups:
+        available: Beschikbaar
+        empty_available: Alle beschikbare aanbieders zijn verbonden.
+        your_connections: Je verbindingen
+      akahu_panel:
+        step_1_html: Ga naar %{link} en maak een persoonlijke app aan.
+        step_2: Kopieer je app-token en gebruikerstoken.
+        step_3: Plak de tokens hieronder, sla op en koppel vervolgens je gesynchroniseerde rekeningen.
+      bank_sync:
+        lede: Verbind externe rekeningen om transacties, saldi en posities automatisch in Sure te laden.
+        page_title: Banksynchronisatie
+      clear_filter: Filters wissen
+      connect: Verbinden
+      drawer_trust_statement: Alleen leestoegang. Sure kan nooit geld verplaatsen en je toegangsgegevens worden versleuteld opgeslagen.
+      drawer_trust_statement_encryption_unconfigured: Alleen leestoegang. Sure kan nooit geld verplaatsen. Configureer expliciete versleutelingssleutels voordat je toegangsgegevens van aanbieders in productie opslaat.
+      empty_filter: Geen aanbieders komen overeen met je filter.
+      encryption_error:
+        message: Voor banksynchronisatie moet Active Record-versleuteling zijn geconfigureerd. Stel primary_key, deterministic_key en key_derivation_salt in via je Rails-toegangsgegevens of omgevingsvariabelen.
+        title: Versleutelingssleutels ontbreken
+      fio_panel:
+        step_1_html: Log in op internetbankieren van %{link} en open Settings → API.
+        step_2: Maak een token met alleen leestoegang ('Sledování účtu'). Sterke autorisatie is vereist en het token is maximaal 180 dagen geldig.
+        step_3: Plak het token hieronder en sla op. Elk token geeft toegang tot één rekening; voeg daarom voor elke Fio-rekening een verbinding toe.
+      monobank_panel:
+        step_1_html: Ga naar %{link}, log in met de Monobank-app en genereer een persoonlijk token.
+        step_2: Kopieer het token — het wordt slechts eenmaal getoond.
+        step_3: Plak het token hieronder, sla op en koppel vervolgens de kaarten en spaarpotten die je wilt volgen.
+      not_authorized: Niet geautoriseerd
+      not_found: Aanbieder niet gevonden.
+      plaid_eu_panel:
+        step_1_html: Open het %{link} en kopieer je EU-client-ID en geheime sleutel.
+      plaid_panel:
+        step_1_html: Open het %{link} en kopieer je client-ID en geheime sleutel.
+        step_2: Kies een omgeving. Gebruik sandbox voor tests en productie voor echte rekeningen.
+        step_3: Plak hieronder je toegangsgegevens en maak verbinding.
+      provider_setup_encryption_warning:
+        message: Voor deze zelfgehoste installatie zijn geen expliciete Active Record-versleutelingssleutels geconfigureerd. Stel primary_key, deterministic_key en key_derivation_salt in voordat je toegangsgegevens van aanbieders in productie opslaat.
+        title: Versleutelingssleutels ontbreken
+      recently_synced: Onlangs gesynchroniseerd. Probeer het zo nogmaals.
+      simplefin_panel:
+        setup_token_label: Installatietoken
+        setup_token_placeholder: Plak het SimpleFIN-installatietoken
+        step_1_html: Ga naar %{link} voor een eenmalig installatietoken.
+        step_2: Plak het token hieronder en maak verbinding.
+        save_and_connect: Opslaan en verbinden
+        step_3: Ga vervolgens naar Rekeningen om je gesynchroniseerde rekeningen te koppelen.
+      sync_all: Alles synchroniseren
+      sync_all_in_progress: Alle verbonden aanbieders worden gesynchroniseerd…
+      sync_all_recently: De synchronisatie wordt al uitgevoerd. Probeer het zo nogmaals.
+      sync_provider_in_progress: Synchronisatie gestart.
+      sync_provider_no_items: Geen verbindingen beschikbaar om te synchroniseren.
+      taglines:
+        akahu: Synchroniseer Nieuw-Zeelandse financiële instellingen via Akahu.
+        binance: Synchroniseer je Binance-spotsaldi met een API-sleutel met alleen leestoegang.
+        brex: Synchroniseer geldtransacties en zakelijke kaartactiviteit van Brex met alleen leestoegang.
+        coinbase: Importeer je cryptoposities uit Coinbase en volg het rendement.
+        coinspot: Synchroniseer CoinSpot-saldi, waarden in AUD, overboekingen, stortingen, opnames en ordergeschiedenis met een API-sleutel met alleen leestoegang.
+        coinstats: Volg je volledige cryptoportefeuille over wallets en beurzen heen.
+        enable_banking: Synchroniseer Europese bankrekeningen via PSD2 open banking.
+        financekit: Synchroniseer (bepaalde) FinanceKit-rekeningen via de Sure iOS-app.
+        fio: Synchroniseer een Fio banka-rekening met een API-token met alleen leestoegang.
+        ibkr: Synchroniseer beleggingsrekeningen van Interactive Brokers via Flex Query-imports.
+        indexa_capital: Volg je automatisch beheerde beleggingsportefeuille bij Indexa Capital.
+        kraken: Synchroniseer Kraken-saldi en uitgevoerde spothandelstransacties met een API-sleutel met alleen leestoegang.
+        lunchflow: Verbind meer dan 20.000 banken uit ruim 40 landen (VK, EU, VS en meer!)
+        mercury: Synchroniseer je zakelijke Mercury-bankrekeningen automatisch.
+        monobank: Synchroniseer Oekraïense Monobank-kaarten en spaarpotten met een persoonlijk API-token.
+        onchain_wallet: Volg Bitcoin-, EVM- en Solana-wallets in eigen beheer aan de hand van hun openbare adressen.
+        plaid: Verbind duizenden Amerikaanse financiële instellingen via Plaid.
+        plaid_eu: Verbind Europese financiële instellingen via Plaid (PSD2 / Open Banking).
+        questrade: Synchroniseer je Questrade-beleggingsrekeningen rechtstreeks via de Questrade API.
+        redbark: Synchroniseer Australische bankrekeningen via Redbark open banking.
+        simplefin: Verbind Amerikaanse bankrekeningen via het open SimpleFIN-protocol.
+        snaptrade: Verbind effectenrekeningen via het aggregatienetwerk van SnapTrade.
+        sophtron: Verbind Amerikaanse en Canadese banken en nutsbedrijven.
+        trade_republic: Synchroniseer je Trade Republic-beleggingsrekening via een veilige webaanmelding met alleen leestoegang.
+        trading212: Synchroniseer je Trading 212-beleggingsportefeuille met een API-sleutel met alleen leestoegang.
+        up: Synchroniseer Australische Up-bankrekeningen met een persoonlijk toegangstoken.
+        wise: Synchroniseer automatisch je Wise-saldi in meerdere valuta's en internationale overboekingen.
+      up_panel:
+        step_1_html: Ga naar %{link} en genereer een persoonlijk toegangstoken.
+        step_2: Kopieer je persoonlijke toegangstoken.
+        step_3: Plak het token hieronder, sla op en koppel vervolgens je gesynchroniseerde rekeningen.
+      update:
+        no_changes: Er zijn geen wijzigingen aangebracht
+        updated_successfully: Instellingen van aanbieders succesvol bijgewerkt
+      provider_form:
+        save_and_connect: Opslaan en verbinden
+    llm_usages:
+      show:
+        failed: Mislukt
+        col_date: Datum
+        total_cost: Totale kosten
+        filter: Filteren
+        col_model: Model
+        avg_cost_per_request: Gem. kosten/verzoek
+        based_on_requests: Gebaseerd op %{with_cost} van %{total} verzoeken met kostengegevens
+        col_cost: Kosten
+        col_tokens: Tokens
+        completion: uitvoer
+        cost_by_model: Kosten per model
+        cost_by_operation: Kosten per bewerking
+        cost_estimates_description: Kosten worden geschat op basis van de gepubliceerde tarieven van aanbieders, voor het laatst gecontroleerd op %{date}. Werkelijke kosten kunnen afwijken. De tarieven gelden per 1 miljoen tokens en verschillen per model. Bij aangepaste of zelfgehoste modellen staat 'N.v.t.'; deze tellen niet mee in de totale kosten.
+        cost_estimates_title: Over kostenschattingen
+        end_date: Einddatum
+        no_usage_data: Geen gebruiksgegevens gevonden voor de geselecteerde periode
+        page_title: LLM-gebruik en kosten
+        prompt: prompt
+        recent_usage: Recent gebruik
+        start_date: Begindatum
+        subtitle: Volg je AI-gebruik en geschatte kosten
+        total_requests: Totaal aantal verzoeken
+        total_tokens: Totaal aantal tokens
+        col_operation: Bewerking
+    background_jobs:
+      operation:
+        unknown: Onbekend
+        missing_value: "-"
+        queued: In de wachtrij
+        actions:
+          mark_failed: Als mislukt markeren
+          mark_stale: Als vastgelopen markeren
+          release_claim: Claim vrijgeven
+        ago: "%{time} geleden"
+        confirm: Deze bewerking als verloren markeren? De registratie krijgt een eindstatus, zodat je de bewerking opnieuw kunt proberen. De onderliggende gegevens blijven ongewijzigd.
+        recent: Recent
+        running: Wordt uitgevoerd
+        stuck: Vastgelopen — vermoedelijk verloren
+        sync_label: Synchronisatie · %{type}
+      show:
+        table:
+          status: Status
+          family: Gezin
+          action: Actie
+          last_activity: Laatste activiteit
+          liveness: Activiteitsstatus
+          type: Bewerking
+        missing_value: "-"
+        page_title: Achtergrondtaken
+        stats:
+          enqueued: In de wachtrij geplaatst
+          retries: Nieuwe pogingen
+          busy: Bezig
+          dead: Definitief mislukt
+          queue_label: "%{name}: %{size} · %{latency}s vertraging"
+          scheduled: Gepland
+          workers: Werkprocessen
+        empty: Geen lopende bewerkingen.
+        operations_subtitle: Synchronisaties, imports en exports van alle gezinnen die nog geen eindstatus hebben bereikt. Bewerkingen zonder zichtbare taak en zonder activiteit gedurende meer dan 30 minuten worden vermoedelijk als verloren beschouwd en kunnen zo worden gemarkeerd.
+        operations_title: Lopende bewerkingen
+        redis_unreachable: De Sidekiq-status is niet beschikbaar (Redis onbereikbaar). Omdat niet bekend is of taken nog actief zijn, zijn acties uitgeschakeld.
+        subtitle: 'Actuele Sidekiq-status: werkprocessen, wachtrijlengtes en taken die opnieuw worden geprobeerd of definitief zijn mislukt.'
+        title: Status van werkprocessen
+      cancel:
+        cancelled: "%{type} gemarkeerd als verloren gegaan."
+        cancelled_error: Door een beheerder als mislukt gemarkeerd — de achtergrondtaak werd als verloren beschouwd.
+        not_cancellable: 'Deze bewerking kan nu niet worden gewijzigd: de taak staat mogelijk nog in de wachtrij of wordt uitgevoerd. Probeer het opnieuw wanneer er 30 minuten geen activiteit is geweest.'
+    budget_shares:
+      update:
+        success: Instellingen voor budget delen bijgewerkt

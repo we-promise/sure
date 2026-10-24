@@ -1,0 +1,5 @@
+---
+nl:
+  pdf_import_mailer:
+    next_steps:
+      subject: Je PDF-document is geanalyseerd — %{product_name}

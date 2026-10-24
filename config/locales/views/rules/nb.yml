@@ -5,7 +5,8 @@ nb:
     no_condition: Ingen betingelse
     recent_runs:
       title: Siste Kjøringer
-      description: Se kjøringsloggen for reglene dine inkludert suksess/feil-status og transaksjonsantall.
+      description: Se kjøringsloggen for reglene dine inkludert suksess/feil-status
+        og transaksjonsantall.
       unnamed_rule: Navnløs Regel
       columns:
         date_time: Dato/Tid
@@ -16,6 +17,7 @@ nb:
           queued: I Kø
           processed: Behandlet
           modified: Endret
+          blocked: Blokkert
       execution_types:
         manual: Manuell
         scheduled: Planlagt
@@ -23,3 +25,128 @@ nb:
         pending: Ventende
         success: Vellykket
         failed: Mislyktes
+    category_rule_cta:
+      close: Lukk
+      create_rule: Opprett regel
+      description: Du kan opprette en regel som automatisk kategoriserer transaksjoner
+        som denne
+      dont_show_again: Ikke vis dette igjen
+      hide_for_today: Skjul i dag
+      hide_for_today_hint: Skjul i dag setter disse forslagene på pause i 24 timer.
+      message: Oppdatert til %{category_name}
+    condition_filters:
+      operators:
+        equal_to: Lik
+        greater_than: Større enn
+        less_than: Mindre enn
+        contains: Inneholder
+        does_not_contain: Inneholder ikke
+        greater_or_equal_to: Større enn eller lik
+        is_empty: Er tom
+        is_equal_to: Er lik
+        is_not_empty: Er ikke tom
+        less_than_or_equal_to: Mindre enn eller lik
+        not_equal_to: Er ikke lik
+      transaction_type:
+        equal_to: Lik
+        expense: Utgift
+        income: Inntekt
+        transfer: Overføring
+    index:
+      page_title: Regler
+      rules_heading: Regler
+      sort_name: Navn
+      ai_cost_warning: Regelhandlinger som bruker KI, koster penger. Avgrens filtrene
+        så mye som mulig for å unngå unødvendige kostnader.
+      delete_all_rules: Slett alle regler
+      new_rule: Ny regel
+      no_rules_description: Sett opp regler som utfører handlinger på transaksjoner
+        og andre data ved hver kontosynkronisering.
+      no_rules_title: Ingen regler ennå
+      sort_by: 'Sorter etter:'
+      sort_updated_at: Oppdatert
+      toggle_sort_direction: Bytt sorteringsretning
+    rule:
+      delete: Slett
+      edit: Rediger
+      action_label_to: "%{label} til %{value}"
+      all_past_and_future: Alle tidligere og fremtidige %{resource}
+      and_more_actions:
+        one: og 1 handling til
+        other: og %{count} handlinger til
+      and_more_conditions:
+        one: og 1 vilkår til
+        other: og %{count} vilkår til
+      on_or_after: "%{resource} fra og med %{date}"
+      re_apply_rule: Bruk regelen på nytt
+      then: SÅ
+    actions:
+      to_label: til
+      value_placeholder: Skriv inn en verdi
+    apply_all:
+      ai_cost_message: Dette bruker KI til å kategorisere opptil %{transactions} transaksjoner.
+      ai_cost_title: Anslag for KI-kostnad
+      button: Bruk alle
+      confirm_button: Bekreft og bruk alle
+      confirm_message: Du er i ferd med å bruke %{count} regler som påvirker %{transactions}
+        unike transaksjoner. Bekreft at du vil fortsette.
+      confirm_title: Bruk alle regler
+      cost_unavailable_model: Kostnadsanslag er ikke tilgjengelig for modellen «%{model}».
+      cost_unavailable_no_provider: Kostnadsanslag er ikke tilgjengelig (ingen LLM-leverandør
+        er konfigurert).
+      cost_warning: Dette kan medføre kostnader. Kontroller de nyeste prisene hos
+        modellleverandøren.
+      estimated_cost: 'Anslått kostnad: ca. $%{cost}'
+      success: Alle regler er lagt i kø for kjøring
+      view_usage: Vis brukshistorikk
+    clear_ai_cache:
+      button: Nullstill KI-hurtigbuffer
+      confirm_body: Er du sikker på at du vil nullstille KI-hurtigbufferen? Da kan
+        KI-regler behandle alle transaksjoner på nytt. Dette kan medføre ekstra API-kostnader.
+      confirm_button: Nullstill hurtigbuffer
+      confirm_title: Nullstille KI-hurtigbufferen?
+      success: KI-hurtigbufferen tømmes. Dette kan ta litt tid.
+    confirm:
+      ai_cost_no_estimate_html: 'Dette bruker KI til å kategorisere transaksjoner.
+        Antall: %{count}.'
+      ai_cost_title: Anslag for KI-kostnad
+      ai_cost_with_estimate_html: 'Dette bruker KI til å kategorisere transaksjoner.
+        Antall: %{count}. Anslått kostnad: <span class="font-semibold">ca. $%{cost}</span>'
+      apply_notice_html: Du er i ferd med å bruke denne regelen på <span class="text-primary
+        font-medium">%{count} %{resource}</span> som oppfyller regelvilkårene. Bekreft
+        at du vil gjennomføre denne endringen.
+      confirm_changes: Bekreft endringer
+      cost_unavailable_model: Kostnadsanslag er ikke tilgjengelig for modellen «%{model}».
+      cost_unavailable_no_provider: Kostnadsanslag er ikke tilgjengelig (ingen LLM-leverandør
+        er konfigurert).
+      cost_warning: Dette kan medføre kostnader. Kontroller de nyeste prisene hos
+        modellleverandøren.
+      title: Bekreft endringer
+      title_with_name: Bekreft endringer i «%{name}»
+      view_usage_history: Vis brukshistorikk
+    destroy:
+      success: Regelen er slettet
+    destroy_all:
+      success: Alle regler er slettet
+    form:
+      add_action: Legg til handling
+      add_condition: Legg til vilkår
+      add_condition_group: Legg til vilkårsgruppe
+      all_past_and_future: Alle tidligere og fremtidige %{resource}
+      rule_name_label: Regelnavn (valgfritt)
+      rule_name_placeholder: Skriv inn et navn på denne regelen
+      starting_from: Fra og med
+      then: SÅ
+    update:
+      success: Regelen er oppdatert
+  rule:
+    conditions:
+      condition:
+        value_placeholder: Skriv inn en verdi
+      condition_group:
+        add_condition: Legg til vilkår
+        all: alle
+        and_prefix: og
+        any: hvilket som helst
+        match: oppfyll
+        of_the_following_conditions: av følgende vilkår

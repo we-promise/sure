@@ -5,3 +5,25 @@ nl:
       uncategorized: Ongecategoriseerd
       other_investments: Overige beleggingen
       investment_contributions: Investeringsbijdragen
+      defaults:
+        entertainment: Ontspanning
+        fees: Kosten
+        food_and_drink: Eten en drinken
+        gifts_and_donations: Cadeaus en donaties
+        groceries: Boodschappen
+        healthcare: Gezondheidszorg
+        home_improvement: Woningverbetering
+        income: Inkomsten
+        insurance: Verzekeringen
+        loan_payments: Leningbetalingen
+        mortgage_rent: Hypotheek / huur
+        personal_care: Persoonlijke verzorging
+        savings_and_investments: Sparen en beleggen
+        services: Diensten
+        shopping: Winkelen
+        sports_and_fitness: Sport en fitness
+        subscriptions: Abonnementen
+        taxes: Belastingen
+        transportation: Vervoer
+        travel: Reizen
+        utilities: Nutsvoorzieningen

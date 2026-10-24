@@ -1,0 +1,132 @@
+---
+pt-BR:
+  enable_banking_items:
+    authorize:
+      authorization_failed: 'Falha ao iniciar a autorização: %{message}'
+      bank_required: Selecione um banco.
+      invalid_redirect: O URL de autorização recebido é inválido. Tente novamente.
+      redirect_uri_not_allowed: >-
+        Redirecionamento não permitido. Configure `%{callback_url}` nas configurações
+        do aplicativo Enable Banking.
+      unexpected_error: Ocorreu um erro inesperado. Tente novamente.
+    callback:
+      authorization_error: Falha na autorização
+      invalid_callback: Parâmetros de callback inválidos.
+      item_not_found: Conexão não encontrada.
+      session_failed: Não foi possível concluir a autorização
+      success: Conectado ao seu banco com sucesso. As suas contas estão a sincronizar.
+      unexpected_error: Ocorreu um erro inesperado. Tente novamente.
+    complete_account_setup:
+      all_skipped: >-
+        Todas as contas foram ignoradas. Pode configurá-las mais tarde na página de
+        contas.
+      no_accounts: Não existem contas disponíveis para configurar.
+      success: "%{count} contas criadas com sucesso!"
+    create:
+      success: Configuração do Enable Banking concluída com sucesso.
+    destroy:
+      success: A conexão Enable Banking foi colocada na fila para exclusão.
+    enable_banking_item:
+      delete: Excluir
+      deletion_in_progress: Exclusão em andamento
+      last_synced: Última sincronização há %{time}
+      never_synced: Nunca sincronizada
+      no_accounts_found: Não foram encontradas contas
+      no_accounts_found_description: Não foram encontradas contas no Enable Banking.
+        Tente sincronizar novamente.
+      provider_name: Enable Banking
+      reconnect: Reconectar
+      set_up_accounts: Configurar contas
+      setup_needed: Necessita de configuração
+      setup_needed_description:
+        one: 1 conta importada do Enable Banking precisa ser configurada
+        other: "%{count} contas importadas do Enable Banking precisam ser configuradas"
+      syncing: Sincronizando...
+      update: Atualizar
+    errors:
+      api_error: Ocorreu um erro de comunicação com o banco.
+      network_unreachable: >-
+        O serviço bancário está temporariamente indisponível. Tente novamente mais
+        tarde.
+      session_invalid: Sessão expirada. Reconecte seu banco.
+      unexpected: Ocorreu um erro inesperado durante a sincronização.
+    link_accounts:
+      already_linked: As contas selecionadas já estão associadas.
+      link_failed: Falha ao associar contas
+      no_accounts_selected: Nenhuma conta selecionada.
+      no_session: Não existe uma conexão Enable Banking ativa. Conecte-se a um banco
+        primeiro.
+      success: "%{count} contas associadas com sucesso."
+    link_existing_account:
+      errors:
+        invalid_enable_banking_account: Conta Enable Banking inválida selecionada
+        only_manual: Apenas contas manuais podem ser associadas
+      success: Conta associada com sucesso ao Enable Banking
+    new:
+      add_connection: Adicionar conexão
+      configured: Configurado
+      connect_bank: Conectar banco
+      connected_bank: Banco associado
+      connection: Conexão
+      go_to_provider_settings: Ir para as configurações do provedor
+      link_enable_banking_title: Associar Enable Banking
+      not_configured: Conexão Enable Banking não configurada
+      not_configured_description: >-
+        Antes de poder associar contas Enable Banking, precisa de configurar a sua
+        conexão Enable Banking.
+      ready_to_connect: Pronto para conectar um banco
+      reconnect: Reconectar
+      remove: Remover
+      remove_confirm: Tem certeza de que deseja remover esta conexão?
+      session_expired: Sessão expirada - é necessária nova autorização
+      session_expires: A sessão expira
+      setup_step_1_html: Acesse a <strong>Configurações → Serviços</strong>
+      setup_step_2_html: Encontre a seção <strong>Enable Banking</strong>
+      setup_step_3: Digite as suas credenciais Enable Banking
+      setup_step_4: Volte aqui para associar as suas contas
+      setup_steps_title: 'Passos de configuração:'
+      sync: Sincronizar
+      unknown: Desconhecido
+    reauthorize:
+      invalid_redirect: O URL de autorização recebido é inválido. Tente novamente.
+      reauthorization_failed: Falha na reautorização
+    select_bank:
+      beta_label: Beta
+      cancel: Cancelar
+      check_country: Verifique as configurações do código do seu país.
+      credentials_required: Configure primeiro as suas credenciais Enable Banking.
+      description: Selecione o banco que deseja associar às suas contas.
+      no_banks: Não existem bancos disponíveis para este país/região.
+      no_search_results: Nenhum banco corresponde à sua pesquisa.
+      search_label: Pesquisar o seu banco
+      search_placeholder: Pesquisar o seu banco...
+      title: Selecione o seu banco
+    select_existing_account:
+      all_linked: Todas as contas Enable Banking parecem já estar associadas.
+      balance: Saldo
+      cancel: Cancelar
+      link: Associar
+      title: Associar conta Enable Banking
+      try_after_sync: >-
+        Se acabou de associar ou sincronizar, tente novamente após a sincronização
+        concluir.
+      unlink_to_move: >-
+        Para associar uma conta diferente, primeiro desassocie-a a partir do menu
+        de ações da conta.
+    setup_accounts:
+      account_type_label: 'Tipo de conta:'
+      balance: Saldo
+      cancel: Cancelar
+      choose_account_type: 'Escolha o tipo de conta correto para cada conta Enable
+        Banking:'
+      create_accounts: Criar contas
+      creating_accounts: Criando contas...
+      header_subtitle: Escolha os tipos de conta corretos para as suas contas importadas
+      historical_data_range: 'Intervalo de dados históricos:'
+      sync_start_date_help: >-
+        Selecione a partir de quando deseja sincronizar o histórico de transações.
+        Estão disponíveis no máximo 2 anos de histórico.
+      sync_start_date_label: 'Iniciar a sincronização de transações a partir de:'
+      title: Configurar as suas contas Enable Banking
+    update:
+      success: Configuração Enable Banking atualizada.

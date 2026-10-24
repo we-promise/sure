@@ -1,0 +1,318 @@
+---
+nl:
+  admin:
+    system_health:
+      show:
+        ai:
+          probe_statuses:
+            not_configured: Niet ingesteld
+            passing: Livecontrole geslaagd
+            failing: Livecontrole mislukt
+            not_checked: Niet gecontroleerd
+          values:
+            not_configured: Niet ingesteld
+            configured: Ingesteld
+            enabled: Ingeschakeld
+            available: Beschikbaar
+            available_not_enabled: Beschikbaar, niet ingeschakeld
+            fallback: "(terugvaloptie)"
+            'no': Nee
+            not_available: Niet beschikbaar
+            not_found: Niet gevonden
+            not_set: Niet ingesteld
+            'yes': Ja
+          vector_statuses:
+            missing: Niet ingesteld
+            not_configured: Niet ingesteld
+            passing: Livecontroles geslaagd
+            scaffolded: Alleen basisstructuur aanwezig
+            failing: Livecontrole mislukt
+            not_checked: Niet gecontroleerd
+          worker:
+            statuses:
+              stale: Verouderd
+              failing: Niet in orde
+              passing: In orde
+            configuration_statuses:
+              match: Komt overeen met webproces
+              mismatch: Verschilt van webproces
+            coverage_notice: 'Elke controle verifieert precies één workerproces: het proces dat de taak uit de wachtrij haalt. Bij meerdere workerreplica''s bevestigt een geslaagd resultaat niet dat alle workers goed werken. Plaats de controle opnieuw in de wachtrij om een ander proces te bemonsteren.'
+            description: De bovenstaande controles zijn vanuit dit webproces uitgevoerd. Het meeste AI-werk, zoals assistentantwoorden, PDF-verwerking, embeddings, automatische categorisatie en handelaarsherkenning, draait in een Sidekiq-workerproces. Dat kan afwijken in netwerktoegang, DNS, proxyregels of zelfs geladen toegangsgegevens. Plaats een controle in de wachtrij om de eigen configuratie en verbindingen van een worker te verifiëren.
+            empty:
+              description: Klik op ‘Workerconfiguratie verifiëren’ om een asynchrone controle in de wachtrij te plaatsen. Het resultaat verschijnt hier zodra een workerproces de taak oppakt.
+              title: Nog geen worker heeft zich gemeld
+            labels:
+              checked_at: Gecontroleerd
+              configuration: Configuratie
+              process: Workerproces
+            settings_origin:
+              database_backed: Aanbieder-, model- en API-sleutelinstellingen die via Instellingen → Zelf hosten worden gewijzigd, worden in de database opgeslagen. rails-settings-cached maakt de gedeelde cache ongeldig bij het schrijven. Daardoor gebruiken zowel web als worker de nieuwe waarde bij het volgende verzoek of de volgende taak; opnieuw starten is niet nodig.
+              env_backed: Embeddingconfiguratie en alle waarden die uitsluitend via omgevingsvariabelen zijn ingesteld, staan vast bij het starten van elke container. Rails kan de omgeving van een andere container niet wijzigen. Aanpassingen vereisen daarom het opnieuw starten of aanmaken van zowel web- als workerservices. Implementatietools die maar één ervan herstarten, zoals een gedeeltelijke uitrol of een bijgewerkt Secret zonder podherstart, nemen de wijziging niet over.
+              title: Welke instellingen vereisen een herstart?
+            title: Workercontrole
+            verify_button: Workerconfiguratie verifiëren
+          adapters:
+            openai: Door OpenAI gehoste vectoropslag
+            pgvector: pgvector
+            qdrant: Qdrant
+          alerts:
+            custom_openai:
+              message: Het ingestelde eindpunt is niet geslaagd voor de bereikbaarheidscontrole van /v1/vector_stores. De meeste lokale en OpenAI-compatibele eindpunten implementeren die API niet. Chat en PDF-verwerking kunnen nog wel werken; gebruik voor een gebruikelijke lokale opzet pgvector met een apart embedding-eindpunt. De fout is vastgelegd in Instellingen → Foutopsporingslogboeken en Rails.logger.
+              title: De controle van gehoste vectoropslag is mislukt bij dit aangepaste eindpunt
+            embedding_dimensions_mismatch:
+              message: Het embedding-eindpunt leverde een vector waarvan de lengte niet overeenkomt met EMBEDDING_DIMENSIONS. Stel EMBEDDING_MODEL en EMBEDDING_DIMENSIONS in volgens de gedocumenteerde vectorgrootte van het model en start Sure opnieuw zodat de omgeving wordt toegepast. Pas daarna de pgvector-embeddingkolom of -tabel aan of maak deze opnieuw aan, en genereer embeddings opnieuw als bestaande gegevens een andere grootte gebruiken.
+              title: De embeddingdimensies komen niet overeen
+            embedding_probe_failed:
+              message: Sure kon via het ingestelde eindpunt en model geen korte testembedding maken. Controleer EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN en de logboeken van de embedding-aanbieder. De fout is vastgelegd in Instellingen → Foutopsporingslogboeken en Rails.logger.
+              title: De livecontrole van embeddings is mislukt
+            embedding_probe_timeout:
+              message: Het embedding-eindpunt antwoordde niet binnen AI_HEALTH_PROBE_TIMEOUT. Verhoog deze controletime-out als de aanbieder traag is en start Sure opnieuw zodat de omgeving in elk proces wordt toegepast. Als gewone AI-chatverzoeken ook verlopen, verhoog dan OPENAI_REQUEST_TIMEOUT afzonderlijk.
+              title: De livecontrole van embeddings heeft de tijdslimiet overschreden
+            function_calling_not_used:
+              message: Het eindpunt accepteerde de parameter tools, maar het model antwoordde met tekst in plaats van de controletool aan te roepen. De AI-assistent kan zonder toolaanroepen geen financiële gegevens lezen, waardoor de chat mogelijk niets of verzonnen cijfers teruggeeft. Kies bij voorkeur een model waarvan de aanbieder ondersteuning voor functieaanroepen documenteert.
+              title: Het model antwoordde zonder de gevraagde tool aan te roepen
+            function_calling_unsupported:
+              message: Het eindpunt verwerkte een gewoon chatverzoek, maar weigerde hetzelfde verzoek met de parameter tools. De AI-assistent leest rekeningen, transacties en posities via functieaanroepen. De chat blijft daarom mislukken, vaak met een onduidelijke 404, totdat een model met toolondersteuning wordt gekozen. Kies een model waarvan de aanbieder functieaanroepen ondersteunt. De fout is vastgelegd in Instellingen → Foutopsporingslogboeken en Rails.logger.
+              title: Het model ondersteunt geen functieaanroepen
+            llm_model_not_available:
+              message: Het eindpunt antwoordde, maar bood het ingestelde model niet aan of kon het niet uitvoeren. Kies een actief model voor de geselecteerde aanbieder en voer de controles opnieuw uit. Gebruik voor Gemini via een OpenAI-compatibele vertaallaag een momenteel ondersteund model, zoals gemini-2.5-flash.
+              title: Het ingestelde AI-model is niet beschikbaar
+            llm_probe_failed:
+              message: Sure kon het ingestelde eindpunt en model niet beide verifiëren. De fout is vastgelegd in Instellingen → Foutopsporingslogboeken en Rails.logger.
+              title: De livecontrole van het LLM is mislukt
+            missing_vector_store:
+              message: Geüploade documenten kunnen pas worden geïndexeerd of doorzocht wanneer een vectoropslagadapter en de benodigde voorzieningen zijn ingesteld.
+              title: Geen vectoropslag ingesteld
+            pdf_text_extraction_failed:
+              message: Sure kon het traject niet voltooien dat ingebedde PDF-tekst lokaal extraheert en naar het ingestelde model stuurt. Er zijn geen klantgegevens verstuurd. De fout is vastgelegd in Instellingen → Foutopsporingslogboeken en Rails.logger.
+              title: De test van PDF-tekstextractie met kunstmatige gegevens is mislukt
+            pdf_vision_processing_failed:
+              message: Sure kon de PDF-verwerking via afbeeldingen of native documenten niet voltooien met het ingestelde model. Er zijn geen klantgegevens verstuurd. De fout is vastgelegd in Instellingen → Foutopsporingslogboeken en Rails.logger.
+              title: De PDF-test voor beeld/native verwerking met kunstmatige gegevens is mislukt
+            pgvector_extension_not_enabled:
+              message: De pgvector-adapter is geselecteerd, maar de vector-extensie is in PostgreSQL niet ingeschakeld voor deze database. Gebruik een PostgreSQL-image met pgvector, schakel de extensie in als database-eigenaar of supergebruiker en voer de migraties opnieuw uit met VECTOR_STORE_PROVIDER=pgvector.
+              title: De PostgreSQL-vector-extensie is niet ingeschakeld
+            pgvector_probe_failed:
+              message: Sure kon de pgvector-tabel met tekstfragmenten niet raadplegen. Controleer de PostgreSQL-rechten, de vector-extensie en de migratie vector_store_chunks. De fout is vastgelegd in Instellingen → Foutopsporingslogboeken en Rails.logger.
+              title: De pgvector-opslagcontrole is mislukt
+            pgvector_table_not_found:
+              message: De pgvector-extensie is ingeschakeld, maar de tabel met tekstfragmenten is niet gevonden. Controleer de migratiestatus en voer de vectoropslagmigratie opnieuw uit met VECTOR_STORE_PROVIDER=pgvector, zodat Sure vector_store_chunks kan aanmaken.
+              title: De tabel vector_store_chunks ontbreekt
+            qdrant:
+              message: De basis van de Qdrant-adapter is aanwezig, maar documenten uploaden en doorzoeken werkt nog niet. Kies OpenAI of pgvector voor documentzoekopdrachten.
+              title: Qdrant-ondersteuning is nog niet geïmplementeerd
+            unavailable_vector_store:
+              message: Controleer hieronder de adaptervereisten. Voor pgvector moet de database de vector-extensie of een bestaande tabel vector_store_chunks bieden.
+              title: De geselecteerde vectoropslag is niet beschikbaar
+            vector_probe_failed:
+              message: Sure kon de geselecteerde vectoropslag en alle benodigde embeddingdiensten niet verifiëren. De fout is vastgelegd in Instellingen → Foutopsporingslogboeken en Rails.logger.
+              title: De livecontrole van documentzoeken is mislukt
+          failure_codes:
+            dimensions_mismatch: De dimensies van de embeddingvector komen niet overeen met de ingestelde dimensies
+            invalid_response: De dienst gaf een onverwacht antwoord
+            model_not_available: De aanbieder heeft het ingestelde model niet teruggegeven
+            no_tool_call: Het model antwoordde zonder de controletool aan te roepen
+            render_missing_binary: De pdftoppm-renderer (poppler-utils) is niet beschikbaar in deze container
+            request_failed: Het verzoek aan de dienst is mislukt
+            table_not_found: De tabel vector_store_chunks is niet gevonden
+            timeout: De dienst antwoordde niet binnen de tijdslimiet van de controle
+            tools_refused: De dienst verwerkte hetzelfde verzoek zonder tools en weigerde het met tools
+            unsupported_provider: De aanbieder ondersteunt deze controle niet
+            extension_not_enabled: De PostgreSQL-vector-extensie is niet ingeschakeld
+          function_calling_statuses:
+            failing: Livecontrole mislukt
+            not_checked: Niet gecontroleerd
+            not_used: Tools geaccepteerd, maar het model heeft er geen aangeroepen
+            supported: Live toolaanroep geslaagd
+            unavailable: Niet beschikbaar totdat een LLM-aanbieder is ingesteld
+            unsupported: Niet ondersteund door de daadwerkelijk gebruikte aanbieder of het model
+          labels:
+            adapter: Adapter
+            adapter_available: Adapter beschikbaar
+            anthropic_credentials: Anthropic-toegangsgegevens
+            effective_provider: Daadwerkelijk gebruikte aanbieder
+            embedding_dimensions: Embeddingdimensies
+            embedding_endpoint: Embedding-eindpunt
+            embedding_model: Embeddingmodel
+            embedding_probe: Controle van embedding-eindpunt
+            endpoint: Eindpunt
+            failure_reason: Oorzaak van de fout
+            function_calling: Functieaanroepen (tools)
+            function_calling_failure_reason: Oorzaak van mislukte functieaanroep
+            llm_request_timeout: Time-out van LLM-verzoeken
+            model: Model
+            openai_compatible_credentials: OpenAI-compatibele API-toegangsgegevens
+            openai_credentials: OpenAI-toegangsgegevens
+            pdf_text_extraction: PDF-tekstextractietraject
+            pdf_text_extraction_failure_reason: Oorzaak van mislukte tekstextractie
+            pdf_vision_processing: PDF-traject voor beeld/native verwerking
+            pdf_vision_processing_failure_reason: Oorzaak van mislukte beeld/native verwerking
+            pgvector_extension: PostgreSQL-vector-extensie
+            pgvector_table: Tabel met vectorfragmenten
+            probe_request_timeout: Time-out voor statuscontrole
+            selected_provider: Geselecteerde aanbieder
+            storage_probe: pgvector-opslagcontrole
+          last_checked: Livecontroles %{time_ago} geleden voltooid. Resultaten worden kort gecachet.
+          llm:
+            description: De livecontroles verifiëren het ingestelde model, vragen het om één eenvoudige functieaanroep zoals de assistent die gebruikt, en testen daarna afzonderlijk tekstextractie en beeld/native verwerking met een kunstmatige PDF van één pagina zonder klantgegevens. Waarden van toegangsgegevens worden nooit getoond.
+            title: LLM- en PDF-verwerking
+          loading: Livecontroles uitvoeren…
+          local_setup:
+            description: Laat het LLM draaien via je lokale OpenAI-compatibele eindpunt, sla documentvectoren op in pgvector en verwijs de embeddinginstellingen naar een OpenAI-compatibel embedding-eindpunt. Het PostgreSQL-image moet de vector-extensie bevatten en de embeddingdimensies moeten overeenkomen met het gekozen model.
+            title: Aanbevolen lokale opzet
+          not_checked_help: Open de AI-status-URL rechtstreeks of voer de controles uit om te verifiëren of de diensten werken.
+          pdf_statuses:
+            failing: Kunstmatige PDF-test mislukt
+            supported: Kunstmatige PDF-test geslaagd
+            unsupported: Uitgeschakeld of niet ondersteund door de daadwerkelijk gebruikte aanbieder of het model
+            not_checked: Niet gecontroleerd
+            unavailable: Niet beschikbaar totdat een LLM-aanbieder is ingesteld
+          providers:
+            anthropic: Anthropic
+            cloudflare: Cloudflare
+            custom_openai_compatible: Aangepast eindpunt
+            kilo: Kilo
+            ollama: Ollama
+            openai: OpenAI
+            openai_compatible: OpenAI-compatibel
+            openrouter: OpenRouter
+            together: Together
+          run_checks: Controles opnieuw uitvoeren
+          vector_store:
+            description: De livecontrole raadpleegt de API van de gehoste vectoropslag, of test de pgvector-tabel en maakt één korte embedding zonder deze op te slaan.
+            title: Vectoropslag en documentzoeken
+        labels:
+          failed: Mislukt
+          status: Status
+          enqueued: In de wachtrij geplaatst
+          last_heartbeat: Laatste teken van leven
+          latency: Wachttijd
+          max_queue_latency: Leeftijd van oudste taak
+          processed_total: Totaal verwerkt
+          processes: Workerprocessen
+          queue: Wachtrij
+          retries: Nieuwe pogingen
+          size: Grootte
+        values:
+          never: Nooit
+          healthy: Gezond
+          no_queues: Er zijn geen wachtrijen geregistreerd. Mogelijk draait de worker niet.
+          seconds: "%{seconds}s"
+          time_ago: "%{time_ago} geleden"
+          unhealthy: Verminderde werking
+        alert:
+          title: Achtergrondtaken worden niet uitgevoerd
+        counters_section_description: Geaggregeerde Sidekiq-tellers voor alle wachtrijen.
+        counters_section_title: Taaktellers
+        queues_section_description: Aantal taken en leeftijd van de oudste taak per wachtrij. De wachttijd is het aantal seconden dat de oudste taak wacht.
+        queues_section_title: Wachtrijen
+        status_section_description: Huidige toestand van de achtergrondworker die synchronisaties, saldi en berekeningen van nettovermogen uitvoert.
+        status_section_title: Sidekiq-status
+        tabs:
+          ai: AI-status
+          background_jobs: Achtergrondtaken
+          hosted_usage: Gebruik van gehoste dienst
+        title: Systeemstatus
+      push_notifications:
+        pending: In behandeling
+        columns:
+          checked_at: Laatste update
+          device: Apparaat
+          environment: APNs-omgeving
+          status: Resultaat
+        device: Apparaat %{number}
+        environments:
+          production: Productie
+          sandbox: Sandbox
+        messages:
+          cooldown: Wacht 30 seconden voordat je nog een test verstuurt.
+          disabled: Het versturen van pushmeldingen is door de beheerder uitgeschakeld.
+          enqueue_failed: De test kon niet in de wachtrij worden geplaatst. Controleer Sidekiq en vernieuw de resultaten hieronder.
+          hosted_only: Pushmeldingen zijn alleen beschikbaar in de gehoste modus.
+          ineligible: Alleen een actieve superbeheerder kan een testmelding versturen.
+          no_devices: Schakel voor dit account pushmeldingen in de Sure-app voor iOS in om een test te versturen.
+          not_configured: APNs-toegangsgegevens zijn niet ingesteld.
+          queued: Testmelding in de wachtrij geplaatst. Vernieuw de resultaten hieronder om de status te controleren.
+          ready: Verstuur een testmelding naar de ingeschakelde iOS-apparaten die bij je account zijn geregistreerd.
+          storage_unavailable: Het testverzoek kon niet worden opgeslagen. Controleer de configuratie van de gedeelde cache.
+        queueing: In de wachtrij plaatsen…
+        refresh: Resultaten vernieuwen
+        requested_at: Laatste test aangevraagd op %{time}
+        result_help: Acceptatie door APNs bevestigt geen aflevering op je apparaat. Vernieuw om de workerresultaten te zien. Resultaten worden 24 uur bewaard.
+        results_label: Testresultaten
+        send_test: Testpushmelding versturen
+        statuses:
+          accepted: Geaccepteerd door APNs
+          enqueue_failed: Kon niet in de wachtrij worden geplaatst; controleer Sidekiq
+          expired: Verlopen zonder eindresultaat
+          failed: Mislukt; controleer de foutopsporingslogboeken voor pushmeldingen
+          queued: In de wachtrij
+          rejected: Geweigerd door APNs; controleer de foutopsporingslogboeken voor pushmeldingen
+          retrying: Tijdelijke fout opnieuw proberen
+          skipped: 'Overgeslagen: komt niet meer in aanmerking'
+          unregistered: Apparaatregistratie is niet meer geldig
+        title: Pushmeldingen
+      hosted_usage:
+        statuses:
+          unknown: Onbekend
+          active: Actief
+          paused: Gepauzeerd
+          no_subscription: Geen abonnement
+          past_due: Streefdatum verstreken
+          canceled: Opgezegd
+          incomplete: Onvolledig
+          incomplete_expired: Onvolledig, verlopen
+          trialing: In proefperiode
+          unpaid: Onbetaald
+        columns:
+          cleanup_reason: Reden
+          trial_ends_at: Proefperiode eindigt
+          cleanup_eligible: Komt in aanmerking voor opruiming
+          household: Huishouden-ID
+          latest_session: Meest recente bewaarde login
+          members: Ledenaccounts
+          recent_sessions: Bewaarde sessies aangemaakt in de afgelopen 30 dagen
+          recorded_at: Abonnement geregistreerd
+          retained_sessions: Bewaarde inlogsessies
+          status: Huidige status
+          subscription_rows: Abonnementsrecords
+        cleanup:
+          description: 'Komt overeen met de bestaande opruimcriteria: een gepauzeerd of proefabonnement is meer dan 14 dagen geleden geëindigd, of er is geen abonnement en het huishouden is ouder dan 45 + 14 dagen. Er worden maximaal %{limit} huishoudens getoond.'
+          disabled: Geplande opruiming van proefaccounts is buiten de beheerde modus uitgeschakeld. Hier worden alleen overeenkomsten met de criteria getoond.
+          eligibility_help: Recente logins voorkomen niet dat aan de criteria wordt voldaan. In aanmerking komen bevestigt geen verwijdering; 90 dagen is de bewaartermijn van het archief, niet de drempel voor het opruimen van proefaccounts.
+          empty: Geen huishoudens voldoen aan de opruimcriteria
+          reasons:
+            expired_trial_grace_elapsed: Proefperiode beëindigd; uitsteltermijn van 14 dagen verstreken
+            no_subscription_grace_elapsed: Geen abonnement; 45 + 14 dagen verstreken
+          title: In aanmerking voor opruiming
+        eligible: Komt in aanmerking
+        limitations: De huidige tabellen bewaren geen volledige geschiedenis van proefperioden, betalingen of sessieactiviteit. De aanmaakdatum van een abonnement kan een import weerspiegelen. Ledenaccounts zijn geen geverifieerde unieke personen. Deze weergave wijzigt geen huishoudens- of abonnementsgegevens. Het opnieuw instellen van de gedeelde demo verwijdert oude huishoudens en sessies, zodat de bezoekersgeschiedenis niet kan worden gereconstrueerd.
+        limitations_title: Wat deze cijfers vertellen
+        loading: Gebruik van de gehoste dienst laden…
+        not_eligible: Komt niet in aanmerking
+        not_recorded: Niet vastgelegd
+        snapshot: Alleen-lezen momentopname van de database op %{time}
+        summary:
+          active_supporter_households_count: Actieve ondersteunende huishoudens (lokaal)
+          cleanup_eligible_count: Huishoudens die voor opruiming in aanmerking komen
+          supporter_subscription_count: Aan Stripe gekoppelde abonnementsrecords
+          trial_households_count: Huishoudens met proefabonnement (afgelopen 30 dagen)
+          trial_members_count: Huidige ledenaccounts met proefabonnement
+          trials_expiring_soon_count: Proefperioden die binnen 7 dagen verlopen
+        summary_help: Proeftotalen omvatten abonnementen die in de afgelopen 30 dagen zijn geregistreerd. Totalen voor aflopende proefperioden, opruiming en ondersteuners omvatten alle passende huidige records, zonder de tabelbeperkingen.
+        supporters:
+          description: Huidige lokale abonnementsrecords met klant- en abonnements-ID's in Stripe-formaat; het kunstmatige demoabonnement is uitgesloten. Statussen bevestigen geen ontvangen betalingen of datums van eerste betalingen. Er wordt geen verzoek aan Stripe gedaan.
+          empty: Geen aan Stripe gekoppelde abonnementsrecords
+          title: Lokale status van ondersteuners
+        synthetic_demo: Kunstmatige demo
+        title: Gebruik van gehoste dienst
+        trials:
+          description: Abonnementen die sinds %{date} zijn geregistreerd en een einddatum van de proefperiode bewaren, inclusief omgezette proefabonnementen. Maximaal %{limit} huishoudens worden getoond.
+          empty: Geen huishoudens met proefabonnement geregistreerd in deze periode
+          sessions_help: Sessies zijn bewaarde inlogrecords van ingeschakelde gebruikers, geen momenteel online gebruikers of bezoeken. Uitloggen verwijdert een record. De meest recente aanmaaktijd is niet de tijd van de laatste activiteit.
+          title: Recente huishoudens met proefabonnement
+      push_notification:
+        body: Dit is een testpushmelding voor je Sure-account.
+        title: Sure-testmelding
+      verify_worker_ai:
+        queued: Workercontrole in de wachtrij geplaatst. Deze verschijnt hieronder zodra een workerproces haar oppakt, meestal binnen enkele seconden.

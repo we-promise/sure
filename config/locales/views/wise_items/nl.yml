@@ -1,5 +1,163 @@
+---
 nl:
   wise_items:
     provider_panel:
       instructions:
         open_tokens: Ga naar Settings → Connect and manage apps → Developer tools → API tokens
+        copy_token_html: Kopieer het token en plak het hieronder. Sure gebruikt het alleen om je saldi en transacties te synchroniseren.
+        create_token: Maak een nieuw persoonlijk API-token met alleen-lezen toegang
+        sign_in_html: Ga naar %{link} en log in op je account
+      disconnect: Ontkoppelen
+      connection_name_label: Naam van de koppeling
+      keep_token_placeholder: Laat leeg om het huidige token te behouden
+      setup_accounts: Rekeningen instellen
+      sync: Synchroniseren
+      update_connection: Koppeling bijwerken
+      add_connection: Wise-koppeling toevoegen
+      connect: Wise verbinden
+      connection_name_placeholder: Wise Persoonlijk
+      disconnect_confirm: Weet je zeker dat je %{name} wilt ontkoppelen? Hiermee worden alle gesynchroniseerde rekeninggegevens verwijderd.
+      disconnect_label: "%{name} ontkoppelen"
+      encryption_warning:
+        message: Stel Active Record-versleutelingssleutels in voordat je Wise-tokens toevoegt in productie. Zonder versleuteling worden tokens als leesbare tekst opgeslagen.
+        title: Databaseversleuteling is niet ingesteld
+      import_all_history_help: Haal alle historische Wise-afschriften op in plaats van alleen die van het afgelopen jaar.
+      import_all_history_label: Volledige transactiegeschiedenis importeren
+      sandbox_note_html: Gebruik voor tests de <strong>sandbox</strong>-basis-URL (<code>https://api.sandbox.transferwise.tech</code>). Stel <code>WISE_BASE_URL</code> in je omgeving in.
+      sca:
+        copied: Gekopieerd!
+        copy: Kopiëren
+        description: Wise vereist een ondertekende controle met een eenmalig token om volledige transactieafschriften te lezen, inclusief inkomende betalingen. Genereer hier een sleutelpaar en registreer de openbare sleutel bij Wise om dit mogelijk te maken.
+        generate: Sleutelpaar genereren
+        public_key_label: Openbare sleutel (PEM)
+        regenerate: Nieuw sleutelpaar genereren
+        regenerate_confirm: Hiermee genereer je een nieuw sleutelpaar. Wise blijft de vorige openbare sleutel accepteren totdat je die zelf uit je Wise-account verwijdert; Sure kan deze niet op afstand intrekken. Je moet de nieuwe openbare sleutel bij Wise registreren voordat afschriften weer kunnen synchroniseren. Doorgaan?
+        registered_help_html: 'Registreer deze sleutel bij Wise: Settings → Connect and manage apps → Developer tools → Public keys → Add public key.'
+        title: Sterke klantauthenticatie (SCA)
+      sync_start_date_help: Wise-afschriften worden vanaf deze datum geïmporteerd. Behoud de standaardwaarde voor maximaal een jaar aan geschiedenis.
+      sync_start_date_label: Transacties importeren vanaf
+      token_label: API-token
+      token_placeholder: Plak je persoonlijke Wise-API-token
+    select_accounts:
+      cancel: Annuleren
+      description: Selecteer het Wise-valutasaldo dat je aan je %{product_name}-account wilt koppelen.
+      link_account: Valutasaldo koppelen
+      no_accounts_found: Alle Wise-valutasaldi zijn al aan Sure-rekeningen gekoppeld.
+      no_connection: Geen Wise-koppeling gevonden. Koppel Wise eerst bij de aanbiederinstellingen.
+      title: Wise-valutasaldo selecteren
+    select_existing_account:
+      cancel: Annuleren
+      title: "%{account_name} koppelen aan Wise"
+      description: Selecteer het Wise-valutasaldo om aan deze rekening te koppelen. Transacties worden automatisch gesynchroniseerd.
+      no_accounts_found: Geen niet-gekoppelde Wise-valutasaldi gevonden.
+      link_account: Valutasaldo koppelen
+    select_profiles:
+      cancel: Annuleren
+      already_connected_label: Al gekoppeld
+      connect: Geselecteerde profielen koppelen
+      description: Je Wise-account heeft meerdere profielen. Selecteer de profielen die je met Sure wilt synchroniseren.
+      subtitle: Kies welke profielen je wilt koppelen
+      title: Wise-profielen selecteren
+      unnamed_profile: "(Naamloos profiel)"
+      session_expired: Sessie verlopen. Probeer opnieuw te verbinden.
+    setup_accounts:
+      done: Gereed
+      title: Wise-rekeningen instellen
+      all_accounts_linked: Al je Wise-valutasaldi zijn aan Sure-rekeningen gekoppeld.
+      create_account: Rekening aanmaken
+      description: Maak een Sure-rekening aan voor elk Wise-valutasaldo dat je wilt bijhouden. Elke valuta krijgt een eigen rekening.
+      no_accounts_to_setup: Alle rekeningen zijn ingesteld
+      subtitle: Je Wise-valutasaldi koppelen
+    sync:
+      success: Synchronisatie gestart
+    sync_status:
+      all_synced:
+        one: "%{count} rekening gesynchroniseerd"
+        other: "%{count} rekeningen gesynchroniseerd"
+      no_accounts: Geen rekeningen gevonden
+      partial_setup: "%{synced} gesynchroniseerd, %{pending} nog in te stellen"
+    syncer:
+      accounts_need_setup:
+        other: "%{count} rekeningen moeten worden ingesteld…"
+        one: "%{count} rekening moet worden ingesteld…"
+      calculating_balances: Saldi berekenen…
+      checking_account_configuration: Rekeningconfiguratie controleren…
+      importing_accounts: Rekeningen importeren uit Wise…
+      processing_transactions: Transacties verwerken…
+      account_processing_failed:
+        one: Het verwerken van %{count} Wise-rekening is mislukt.
+        other: Het verwerken van %{count} Wise-rekeningen is mislukt.
+      account_sync_failed:
+        one: Synchronisatie van %{count} Wise-rekening kon niet worden ingepland.
+        other: Synchronisatie van %{count} Wise-rekeningen kon niet worden ingepland.
+      accounts_failed:
+        one: "%{count} valutasaldo kon niet worden geïmporteerd."
+        other: "%{count} valutasaldi konden niet worden geïmporteerd."
+      credentials_invalid: Ongeldig Wise-API-token of onvoldoende rechten
+      failed: Synchronisatie mislukt. Probeer het opnieuw of neem contact op met de ondersteuning.
+      import_failed: Wise-import mislukt.
+      transactions_failed:
+        one: Bij %{count} valutasaldo zijn fouten opgetreden tijdens het importeren van transacties.
+        other: Bij %{count} valutasaldi zijn fouten opgetreden tijdens het importeren van transacties.
+    wise_item:
+      delete: Ontkoppelen
+      deletion_in_progress: verwijderen wordt uitgevoerd…
+      setup_needed: Nieuwe rekeningen klaar om in te stellen
+      status: "%{timestamp} geleden gesynchroniseerd"
+      status_never: Nooit gesynchroniseerd
+      syncing: Synchroniseren…
+      error: Synchronisatiefout
+      setup_action: Rekeningen instellen
+      no_accounts_description: Start een synchronisatie om je Wise-valutasaldi te vinden en koppel ze vervolgens aan Sure-rekeningen.
+      no_accounts_title: Nog geen rekeningen gekoppeld
+      setup_description: "%{linked} van %{total} rekeningen gekoppeld. Maak Sure-rekeningen aan voor je Wise-valutasaldi."
+      status_with_summary: 'Laatst gesynchroniseerd: %{timestamp} geleden — %{summary}'
+    provider_connection:
+      description: Verbinden via %{name}
+      default_name: Wise
+      default_description: Koppel je Wise-rekening met meerdere valuta's
+      name: Wise — %{name}
+    destroy:
+      success: Wise-koppeling verwijderd
+    link_existing_account:
+      success: "%{account_name} gekoppeld aan Wise"
+      failed: Rekening koppelen mislukt. Probeer het opnieuw.
+      not_found: Rekening of Wise-valutasaldo niet gevonden.
+    update:
+      success: Wise-koppeling bijgewerkt
+    activities:
+      asset_fee: Wise Assets-kosten
+      default_name: Wise-activiteit
+      interest: Wise-rente
+      jar_deposit: Overboeking naar potje
+      jar_withdrawal: Overboeking uit potje
+      transfer_from_jar: Overboeking uit %{jar}
+      transfer_to_jar: Overboeking naar %{jar}
+    complete_account_setup:
+      failed: Rekening aanmaken mislukt. Probeer het opnieuw.
+      not_found: Wise-valutasaldo niet gevonden.
+      success: Rekening aangemaakt en gekoppeld.
+    create:
+      connection_failed: Verbinden met Wise niet mogelijk. Probeer het later opnieuw.
+      invalid_token: Ongeldig API-token. Controleer het en probeer het opnieuw.
+      no_profiles_found: Geen Wise-profielen gevonden. Controleer je API-token.
+    entries:
+      default_name: Wise-transactie
+      fee_name: Wise-kosten
+    generate_sca_keypair:
+      failed: Nieuw SCA-sleutelpaar genereren mislukt. Probeer het opnieuw.
+      success: Nieuw SCA-sleutelpaar gegenereerd. Registreer de openbare sleutel bij Wise om dit te activeren.
+    link_accounts:
+      failed: Wise-valutasaldo koppelen mislukt. Probeer het opnieuw.
+      success: Wise-valutasaldo gekoppeld aan de rekening.
+      not_found: Wise-valutasaldo niet gevonden.
+    link_profiles:
+      already_connected: Alle geselecteerde profielen zijn al gekoppeld.
+      no_profiles_selected: Selecteer ten minste één profiel.
+      session_expired: Sessie verlopen. Probeer opnieuw te verbinden.
+      success:
+        one: "%{count} Wise-profiel gekoppeld"
+        other: "%{count} Wise-profielen gekoppeld"
+    profile_types:
+      business: Zakelijk
+      personal: Persoonlijk

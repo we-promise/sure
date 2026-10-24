@@ -3,6 +3,8 @@ nb:
   defaults:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
+    common:
+      close: Lukk
   activerecord:
     errors:
       messages:
@@ -45,6 +47,7 @@ nb:
       default: "%d.%m.%Y"
       long: "%e. %B %Y"
       short: "%e. %b"
+      month_year: "%B %Y"
     month_names:
     -
     - Januar
@@ -63,6 +66,7 @@ nb:
     - :day
     - :month
     - :year
+    day_of_month: "%{day}."
   datetime:
     distance_in_words:
       about_x_hours:
@@ -222,3 +226,13 @@ nb:
       long: "%A, %e. %B %Y, %H:%M"
       short: "%e. %B, %H:%M"
     pm: pm
+  global:
+    expand: Utvid
+  mcp:
+    errors:
+      invalid_session_id: Ugyldig MCP-sesjons-ID
+      unsupported_protocol_version: 'MCP-protokollversjonen støttes ikke: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris må bruke https, http på en loopback-adresse
+        eller en URI-protokoll for en lokal app

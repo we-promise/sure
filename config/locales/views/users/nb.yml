@@ -8,8 +8,24 @@ nb:
       email_change_initiated: Vennligst sjekk din nye e-postadresse for bekreftelsesinstruksjoner.
       success: Profilen din har blitt oppdatert.
     reset:
-      success: Kontoen din har blitt tilbakestilt. Data vil bli slettet i bakgrunnen om en stund.
+      success: Kontoen din har blitt tilbakestilt. Data vil bli slettet i bakgrunnen
+        om en stund.
       unauthorized: Du er ikke autorisert til å utføre denne handlingen.
     reset_with_sample_data:
-      success: Kontoen din har blitt tilbakestilt og demodata forberedes. Du vil snart se eksempeldata.
-
+      success: Kontoen din har blitt tilbakestilt og demodata forberedes. Du vil snart
+        se eksempeldata.
+    roles:
+      member: Medlem
+      admin: Administrator
+      super_admin: Superadministrator
+    user_menu:
+      feedback: Tilbakemelding
+      settings: Innstillinger
+      aria_label: Åpne kontomenyen
+      changelog: Endringslogg
+      contact: Kontakt
+      log_out: Logg ut
+      version: Versjon
+    resend_confirmation_email:
+      no_pending_change: Ingen e-postendring venter på bekreftelse.
+      success: En ny bekreftelsesmelding er lagt i kø for sending.

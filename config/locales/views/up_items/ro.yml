@@ -1,0 +1,121 @@
+---
+ro:
+  up_item:
+    sync_status:
+      no_accounts: Nu s-au găsit conturi
+      all_synced:
+        one: 1 cont sincronizat
+        other: "%{count} de conturi sincronizate"
+        few: "%{count} conturi sincronizate"
+      partial: 'Sincronizate: %{linked}; necesită configurare: %{unlinked}'
+    institution_summary:
+      count:
+        one: 1 instituție
+        other: "%{count} de instituții"
+        few: "%{count} instituții"
+      none: Nicio instituție conectată
+      one: 1 instituție
+    errors:
+      account_processing_failed: Contul Up nu a putut fi sincronizat
+      account_sync_schedule_failed: Sincronizarea contului Up nu a putut fi programată
+      sync_failed: Conexiunea Up nu a putut fi sincronizată
+      transactions_failed: Tranzacțiile Up nu au putut fi preluate
+  up_items:
+    provider_panel:
+      syncing: Se sincronizează...
+      connection_name_label: Numele conexiunii
+      disconnect: Deconectează
+      disconnect_confirm: Sigur vrei să deconectezi %{name}?
+      setup_accounts: Configurează conturile
+      sync: Sincronizează
+      update_connection: Actualizează conexiunea
+      keep_access_token_placeholder: Lasă necompletat pentru a păstra tokenul existent
+      add_connection: Adaugă o conexiune Up
+      connection_name_placeholder: Up principal
+      default_connection_name: Conexiune Up
+      access_token_label: Token de acces personal
+      access_token_placeholder: Lipește tokenul de acces personal Up
+    select_accounts:
+      cancel: Anulează
+      link_accounts: Conectează conturile
+      no_credentials_configured: Configurează mai întâi Up în setările furnizorului.
+      no_accounts_found: Nu s-au găsit conturi Up neconectate.
+      title: Conectează conturi Up
+      description: Alege conturile Up de adăugat.
+    select_existing_account:
+      cancel: Anulează
+      link_account: Conectează contul
+      account_already_linked: Acest cont este deja conectat la un furnizor.
+      no_credentials_configured: Configurează mai întâi Up în setările furnizorului.
+      description: Alege un cont Up neconectat pentru a-l asocia acestui cont.
+      no_accounts_found: Nu s-au găsit conturi Up neconectate.
+      title: Conectează contul Up la %{account_name}
+    setup_accounts:
+      account_types:
+        depository: Numerar
+        loan: Împrumut
+        skip: Omite
+      cancel: Anulează
+      account_type_label: Tipul contului
+      choose_account_type: Alege tipul contului
+      create_accounts: Creează conturi
+      choose_account_type_description: Omite conturile pe care nu vrei să le urmărești.
+      no_accounts_to_setup: Nu există conturi de configurat
+      all_accounts_linked: Toate conturile Up sunt deja conectate.
+      fetch_failed: Conturile nu au putut fi preluate
+      no_credentials: Configurează mai întâi datele de autentificare Up.
+      title: Conectează conturi Up
+      api_error: Conturile Up nu au putut fi preluate.
+      subtitle: Alege cum să apară fiecare cont Up în Sure.
+    up_item:
+      delete: Șterge
+      error: Eroare
+      status_never: Nu a fost sincronizat niciodată
+      syncing: Se sincronizează
+      deletion_in_progress: Ștergere în curs
+      setup_action: Configurează conturile
+      setup_needed: Contul necesită configurare
+      status_with_summary: Sincronizat acum %{timestamp} · %{summary}
+      no_accounts_title: Nu există încă conturi importate
+      setup_description: 'Conturi conectate: %{linked} din %{total}.'
+      no_accounts_description: Preia conturile Up și alege-le pe cele de conectat.
+    link_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor.
+      success: Contul Up a fost conectat la %{account_name}.
+      up_account_already_linked: Acest cont Up este deja conectat.
+      no_account_selected: Selectează un cont Up de conectat.
+    link_accounts:
+      link_failed: Nu a fost conectat niciun cont.
+      no_accounts_selected: Selectează cel puțin un cont.
+      no_credentials_configured: Configurează mai întâi Up în setările furnizorului.
+      success:
+        one: A fost conectat 1 cont Up.
+        other: Au fost conectate %{count} de conturi Up.
+        few: Au fost conectate %{count} conturi Up.
+      unsupported_account_type: Up nu acceptă acel tip de cont.
+    destroy:
+      success: Conexiunea Up a fost programată pentru ștergere.
+      unlink_failed: Conexiunea Up nu a putut fi deconectată
+    complete_account_setup:
+      all_skipped: Nu a fost creat niciun cont Up.
+      creation_failed: Conturile Up nu au putut fi create.
+      no_accounts: Nu a fost selectat niciun cont Up.
+      success:
+        one: A fost creat 1 cont Up.
+        other: Au fost create %{count} de conturi Up.
+        few: Au fost create %{count} conturi Up.
+    create:
+      success: Conexiunea Up a fost salvată.
+    update:
+      success: Conexiunea Up a fost actualizată.
+  family:
+    up:
+      create_up_item:
+        default_name: Conexiune Up
+  providers:
+    up:
+      name: Up
+      description: Conectează conturi bancare Up din Australia printr-un token de
+        acces personal
+  up_account:
+    fallback: Cont Up

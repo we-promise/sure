@@ -3,72 +3,166 @@ pt-BR:
   providers:
     trade_republic:
       name: Trade Republic
-      connection_description: "Conecte uma conta de investimentos da Trade Republic por meio de login web seguro"
+      connection_description: >-
+        Conecte uma conta de investimentos da Trade Republic por meio de login web
+        seguro
       institution_name: Trade Republic
   trade_republic_items:
-    duplicate_connection: "Esta conta da Trade Republic já está conectada. A nova conexão foi removida."
+    duplicate_connection: Esta conta da Trade Republic já está conectada. A nova conexão
+      foi removida.
     portfolio_categories:
-      brokerage: "Conta de corretora"
-      private_markets: "Mercados privados"
-      interest_products: "Produtos de juros"
-      crypto_wallet: "Carteira de criptomoedas"
+      brokerage: Conta de corretora
+      private_markets: Mercados privados
+      interest_products: Produtos de juros
+      crypto_wallet: Carteira de criptomoedas
     trade_republic_item:
-      syncing: "Sincronizando"
-      requires_update: "É necessário reautenticar"
-      error: "Erro"
-      synced: "Sincronizado há %{time}. %{summary}."
-      setup_accounts: "Configurar contas"
-      delete: "Excluir"
-      accounts_need_setup: "A conta precisa ser configurada"
-      accounts_need_setup_description: "Sua conta da Trade Republic precisa ser vinculada a uma conta Sure."
-      no_accounts_discovered: "Nenhuma conta da Trade Republic foi descoberta ainda."
-      no_accounts_discovered_description: "Conclua o login e execute uma sincronização para descobrir sua conta."
+      syncing: Sincronizando
+      requires_update: É necessário reautenticar
+      error: Erro
+      synced: Sincronizado há %{time}. %{summary}.
+      setup_accounts: Configurar contas
+      delete: Excluir
+      accounts_need_setup: A conta precisa ser configurada
+      accounts_need_setup_description: Sua conta da Trade Republic precisa ser vinculada
+        a uma conta Sure.
+      no_accounts_discovered: Nenhuma conta da Trade Republic foi descoberta ainda.
+      no_accounts_discovered_description: Conclua o login e execute uma sincronização
+        para descobrir sua conta.
       data_quality:
-        title: "Qualidade dos dados e detalhes da sincronização"
-        repair: "Reparar dados importados"
+        title: Qualidade dos dados e detalhes da sincronização
+        repair: Reparar dados importados
         pending_trade_details:
           one: "%{count} atividade de investimento aguardando detalhes"
           other: "%{count} atividades de investimento aguardando detalhes"
+        events:
+          one: "%{count} atividade"
+          other: "%{count} atividades"
+        expenses:
+          one: "%{count} despesa nos últimos 30 dias (%{amount})"
+          other: "%{count} despesas nos últimos 30 dias (%{amount})"
+        positions:
+          one: "%{count} posição"
+          other: "%{count} posições"
+        reconciliation: "%{matched}/%{total} saldos de contas conciliados"
+        sync_history: Sincronizações recentes
+        sync_status:
+          completed: Concluído
+          failed: Com falha
+          pending: Pendente
+          stale: Desatualizado
+          syncing: Sincronizando
+        unknown:
+          one: "%{count} atividade desconhecida"
+          other: "%{count} atividades desconhecidas"
+        unpriced:
+          one: "%{count} sem preço atual"
+          other: "%{count} sem preço atual"
+      deletion_in_progress: Exclusão em andamento
+      never_synced: Nunca sincronizado.
     setup_accounts:
-      page_title: "Configurar conta da Trade Republic"
-      subtitle: "Vincule sua conta de investimentos da Trade Republic."
+      page_title: Configurar conta da Trade Republic
+      subtitle: Vincule sua conta de investimentos da Trade Republic.
       buttons:
-        refresh: "Atualizar"
-        cancel: "Cancelar"
-        link: "Vincular"
-        done: "Concluído"
+        refresh: Atualizar
+        cancel: Cancelar
+        link: Vincular
+        done: Concluído
+        back_to_settings: Voltar às Configurações
+        create_selected_accounts: Criar contas selecionadas
+      available_accounts:
+        account_id: 'ID da conta: %{account_id}'
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_type_cash: Conta de dinheiro
+        account_type_crypto: Conta de criptomoedas
+        account_type_investment: Carteira de investimentos
+        title: Conta disponível
+      dialog_title: Configurar sua conta da Trade Republic
+      info_box:
+        items:
+          item_1: Posições atuais com preços e quantidades
+          item_2: Negociações executadas (compras e vendas)
+          item_3: Depósitos, saques e pagamentos de juros
+        title: Importação da Trade Republic
+      link_existing:
+        description: >-
+          Ou vincule a conta identificada da Trade Republic a uma conta de investimento
+          manual existente.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Selecione uma conta...
+      linked_accounts:
+        linked_to_html: 'Vinculada a: %{account}'
+        title: Já vinculadas
+      status:
+        fetching_accounts: Buscando conta na Trade Republic...
+        no_accounts_found_description: >-
+          O Sure não encontrou uma conta da Trade Republic. Verifique se sua sessão
+          ainda é válida.
+        no_accounts_found_title: Nenhuma conta encontrada.
     sync:
       errors:
-        phone_number_missing: "O número de telefone da Trade Republic está ausente."
-        reauthentication_required: "A sessão da Trade Republic está ausente ou expirou. Reconecte em Configurações > Provedores."
+        phone_number_missing: O número de telefone da Trade Republic está ausente.
+        reauthentication_required: >-
+          A sessão da Trade Republic está ausente ou expirou. Reconecte em Configurações
+          > Provedores.
       status:
-        checking_credentials: "Verificando as credenciais da Trade Republic..."
-        importing_account: "Importando a conta da Trade Republic..."
-        processing_activity: "Processando posições e atividades..."
-        calculating_balances: "Calculando saldos..."
+        checking_credentials: Verificando as credenciais da Trade Republic...
+        importing_account: Importando a conta da Trade Republic...
+        processing_activity: Processando posições e atividades...
+        calculating_balances: Calculando saldos...
+        accounts_need_setup:
+          one: 1 conta da Trade Republic precisa de configuração...
+          other: "%{count} contas da Trade Republic precisam de configuração..."
+        checking_configuration: Verificando a configuração da conta...
     repair:
-      scheduled: "Reparo dos dados da Trade Republic agendado."
+      scheduled: Reparo dos dados da Trade Republic agendado.
     select_existing_account:
-      title: "Vincular conta da Trade Republic"
-      link: "Vincular"
-      cancel: "Cancelar"
+      title: Vincular conta da Trade Republic
+      link: Vincular
+      cancel: Cancelar
+      balance: Saldo
+      no_accounts_available: Ainda não há contas da Trade Republic sem vínculo disponíveis.
+      run_sync_hint: Conclua o login e execute uma sincronização em Configurações
+        > Provedores.
+      wait_for_sync: Aguarde a conclusão da sincronização de descoberta de contas.
     initiate_login:
-      verification_required: "Login iniciado. Confirme por %{method} e pressione Confirmar login."
+      verification_required: Login iniciado. Confirme por %{method} e pressione Confirmar
+        login.
+      not_configured: A Trade Republic não está configurada.
+      pin_required: Digite seu PIN ou sua senha da Trade Republic para iniciar um
+        novo login.
     complete_login:
-      approval_pending: "Ainda não confirmado. Aprove o login no aplicativo da Trade Republic e tente novamente."
-      success: "Trade Republic conectada com sucesso."
-      login_expired: "A solicitação de login expirou. Inicie novamente."
+      approval_pending: >-
+        Ainda não confirmado. Aprove o login no aplicativo da Trade Republic e tente
+        novamente.
+      success: Trade Republic conectada com sucesso.
+      login_expired: A solicitação de login expirou. Inicie novamente.
+      no_pending_login: Nenhum login está pendente. Inicie um novo login primeiro.
+      still_pending: >-
+        Ainda não confirmado. Aprove o login no aplicativo da Trade Republic e tente
+        novamente.
     link_existing_account:
-      not_found: "Conta ou configuração da Trade Republic não encontrada."
-      success: "Conta vinculada com sucesso à Trade Republic."
+      not_found: Conta ou configuração da Trade Republic não encontrada.
+      success: Conta vinculada com sucesso à Trade Republic.
+      already_linked: Esta conta da Trade Republic já está vinculada.
+      failed: Não foi possível vincular a conta da Trade Republic.
+      only_manual_investment: Apenas contas de investimento manuais podem ser vinculadas
+        à Trade Republic.
+      processing_failed: >-
+        A conta foi vinculada, mas o processamento inicial dos dados falhou. Uma sincronização
+        foi agendada; consulte o log de depuração se o processo continuar incompleto.
     complete_account_setup:
       success:
-        one: "Foi criada com sucesso %{count} conta da Trade Republic."
-        other: "Foram criadas com sucesso %{count} contas da Trade Republic."
-      none_created: "Nenhuma conta foi criada."
+        one: Foi criada com sucesso %{count} conta da Trade Republic.
+        other: Foram criadas com sucesso %{count} contas da Trade Republic.
+      none_created: Nenhuma conta foi criada.
       partial_failure:
-        one: "Não foi possível concluir uma conta selecionada da Trade Republic. Verifique o log de depuração e tente novamente."
-        other: "Não foi possível concluir %{count} contas selecionadas da Trade Republic. Verifique o log de depuração e tente novamente."
+        one: >-
+          Não foi possível concluir uma conta selecionada da Trade Republic. Verifique
+          o log de depuração e tente novamente.
+        other: >-
+          Não foi possível concluir %{count} contas selecionadas da Trade Republic.
+          Verifique o log de depuração e tente novamente.
+      none_selected: Nenhuma conta foi selecionada.
     activities:
       labels:
         contribution: Aporte
@@ -80,4 +174,35 @@ pt-BR:
         card_fee: Tarifa do cartão
         card_refund: Reembolso no cartão
         tax_refund: Restituição de imposto
-        round_up: Round up
+        round_up: Arredondamento
+    create:
+      success: >-
+        Trade Republic salva. Confirme o login no aplicativo da Trade Republic para
+        concluir a conexão.
+    defaults:
+      name: Trade Republic
+    destroy:
+      success: Exclusão da conexão com a Trade Republic agendada.
+      unlink_failed: >-
+        Não foi possível desconectar completamente a Trade Republic. A conexão foi
+        mantida para permitir uma nova tentativa segura.
+    initiate_qr_login:
+      not_configured: A Trade Republic não está configurada.
+    poll_login:
+      login_expired: A solicitação de login expirou. Inicie novamente.
+      no_pending_login: Nenhum login está pendente. Inicie um novo login primeiro.
+    poll_qr_login:
+      no_pending_login: Nenhum login por QR está pendente.
+      success: Trade Republic conectada com sucesso.
+    select_accounts:
+      not_configured: A Trade Republic não está configurada.
+    sync_status:
+      all_linked:
+        one: 1 conta vinculada
+        other: "%{count} contas vinculadas"
+      no_accounts: Nenhuma conta da Trade Republic identificada ainda
+      partial: "%{linked} vinculadas, %{unlinked} precisam de configuração"
+    update:
+      pin_required: Digite seu PIN ou sua senha da Trade Republic para autenticar
+        novamente.
+      success: Configuração da Trade Republic atualizada com sucesso.

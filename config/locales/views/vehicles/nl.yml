@@ -13,6 +13,8 @@ nl:
       model_placeholder: Camry
       year: Jaar
       year_placeholder: '2023'
+      mileage_unit_kilometers: Kilometers
+      mileage_unit_miles: Mijlen
     new:
       title: Voer voertuiggegevens in
     overview:
@@ -23,3 +25,13 @@ nl:
       trend: Trend
       unknown: Onbekend
       year: Jaar
+    tabs:
+      overview:
+        unknown: Onbekend
+        current_price: Huidige waarde
+        edit_account_details: Rekeninggegevens bewerken
+        make_model: Merk en model
+        mileage: Kilometerstand
+        purchase_price: Aankoopprijs
+        trend: Trend
+        year: Jaar

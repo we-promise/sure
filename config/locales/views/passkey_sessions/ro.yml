@@ -1,0 +1,5 @@
+---
+ro:
+  passkey_sessions:
+    invalid_credential: Autentificarea cu acea cheie de acces a eșuat. Încearcă din
+      nou sau folosește parola.

@@ -1,0 +1,41 @@
+---
+pt-BR:
+  activerecord:
+    attributes:
+      recurring_transaction:
+        frequency_interval: Intervalo de repetição
+        payment_url: Link de pagamento
+    errors:
+      models:
+        recurring_transaction:
+          attributes:
+            account:
+              required_for_transfer: deve ser informada em uma transferência recorrente
+              wrong_family: deve pertencer a esta família
+            anchor_date:
+              required_for_intervals: é obrigatória quando uma regra se repete a cada
+                2 ou mais períodos
+            bill_type:
+              transfer_shape_mismatch: só pode ser transferência quando uma conta
+                de destino for definida
+            destination_account:
+              family_mismatch: deve pertencer à mesma família da conta de origem
+              same_as_source: não pode ser igual à conta de origem
+              wrong_family: deve pertencer a esta família
+            expected_amount_min:
+              greater_than_max: não pode ser maior do que o valor máximo esperado
+            payment_url:
+              invalid_scheme: deve ser um endereço http:// ou https:// válido
+          merchant_or_name_required: É necessário informar um estabelecimento ou um
+            nome
+  recurring_transactions:
+    allocator:
+      exceeds_remaining: "%{amount} excede os %{remaining} restantes neste ciclo"
+      missing_rate: não há taxa de câmbio de %{from} para %{to}; informe um valor
+        explicitamente
+      over_allocated: destinar %{amount} excede os %{capacity} %{currency} restantes
+        da transação
+      unmeasurable: >-
+        esta transação tem uma alocação que não pode ser convertida em %{currency},
+        então não é possível medir o valor restante. Adicione uma taxa de câmbio para
+        %{date} ou remova primeiro o pagamento existente

@@ -1,0 +1,8 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        simplefin_account:
+          no_balance: Contul SimpleFin trebuie să aibă fie un sold curent, fie unul
+            disponibil

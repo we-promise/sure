@@ -1,0 +1,9 @@
+---
+nl:
+  chat:
+    errors:
+      default: Antwoord genereren mislukt. Probeer het opnieuw.
+      misconfigured: De AI-aanbieder is niet correct ingesteld. Neem contact op met je beheerder.
+      no_response: De assistent heeft niet geantwoord. Mogelijk is de achtergrondworker gestopt of is AI niet volledig ingesteld. Probeer het opnieuw.
+      rate_limited: De AI-aanbieder heeft momenteel de verzoeklimiet bereikt. Probeer het over enkele minuten opnieuw.
+      temporarily_unavailable: De AI-aanbieder is tijdelijk niet beschikbaar. Probeer het over enkele minuten opnieuw.

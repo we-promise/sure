@@ -1,0 +1,12 @@
+---
+ro:
+  chat:
+    errors:
+      default: Generarea unui răspuns a eșuat. Încearcă din nou.
+      misconfigured: Furnizorul AI nu este configurat corect. Contactează administratorul.
+      no_response: Asistentul nu a răspuns. Procesul de fundal ar putea fi oprit sau
+        AI ar putea să nu fie complet configurat. Încearcă din nou.
+      rate_limited: Furnizorul AI a atins momentan limita de solicitări. Încearcă
+        din nou peste câteva minute.
+      temporarily_unavailable: Furnizorul AI este temporar indisponibil. Încearcă
+        din nou peste câteva minute.

@@ -1,0 +1,17 @@
+---
+pt-BR:
+  chat:
+    errors:
+      default: Falha ao gerar uma resposta. Tente novamente.
+      misconfigured: >-
+        O serviço de IA não está configurado corretamente. Entre em contato com o
+        seu administrador.
+      no_response: >-
+        O assistente não respondeu. O worker em segundo plano pode estar indisponível,
+        ou a configuração da IA pode estar incompleta. Tente novamente.
+      rate_limited: >-
+        O provedor de IA está limitando as solicitações neste momento. Tente novamente
+        em alguns minutos.
+      temporarily_unavailable: >-
+        O serviço de IA está temporariamente indisponível neste momento. Tente novamente
+        dentro de alguns minutos.

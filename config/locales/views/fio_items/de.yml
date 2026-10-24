@@ -1,0 +1,172 @@
+---
+de:
+  family:
+    fio:
+      create_fio_item:
+        default_name: Fio-banka-Verbindung
+  fio_item:
+    errors:
+      account_mismatch: Dieses Token gehört zu einem anderen Fio-Konto als dem, das
+        diese Verbindung bereits synchronisiert. Füge es als separate Verbindung hinzu.
+      account_processing_failed: Fio-Konto konnte nicht synchronisiert werden
+      account_sync_schedule_failed: Synchronisierung des Fio-Kontos konnte nicht geplant
+        werden
+      history_locked: Fio hat diesen Auszugszeitraum abgelehnt. Entsperre den vollständigen
+        Kontoverlauf im Onlinebanking unter Einstellungen → API und synchronisiere
+        dann innerhalb von 10 Minuten erneut.
+      statement_fetch_failed: Kontoauszug konnte nicht von Fio abgerufen werden
+      statement_too_large: Der Auszug enthält mehr Transaktionen, als Fio in einer
+        Anfrage bereitstellt. Verschiebe das Startdatum der Synchronisierung nach
+        vorn und synchronisiere erneut.
+      sync_failed: Fio-Verbindung konnte nicht synchronisiert werden
+    sync:
+      status:
+        calculating: Salden werden berechnet …
+        checking_setup: Kontokonfiguration wird geprüft …
+        importing: Kontoauszug von Fio wird importiert …
+        needs_setup:
+          one: 1 Konto muss eingerichtet werden …
+          other: "%{count} Konten müssen eingerichtet werden …"
+        processing: Transaktionen werden verarbeitet …
+    sync_status:
+      all_synced:
+        one: 1 Konto synchronisiert
+        other: "%{count} Konten synchronisiert"
+      no_accounts: Noch kein Konto gefunden
+      partial: "%{linked} synchronisiert, %{unlinked} müssen eingerichtet werden"
+  fio_items:
+    account_types:
+      depository: Giro- oder Sparkonto
+      loan: Kredit, Hypothek oder Überziehungskredit
+    complete_account_setup:
+      creation_failed: Sure-Konto konnte nicht erstellt werden.
+      no_account: Es musste kein Fio-Konto eingerichtet werden.
+      skipped: Das Fio-Konto wurde übersprungen.
+      success: "%{account_name} erstellt."
+      unsupported_account_type: Fio unterstützt diesen Kontotyp nicht.
+    create:
+      success: Fio-banka-Verbindung gespeichert.
+      token_required: Füge das API-Token aus dem Fio-Onlinebanking ein.
+    destroy:
+      success: Fio-banka-Verbindung zum Löschen vorgemerkt.
+      unlink_failed: Fio-banka-Verbindung konnte nicht getrennt werden
+    fio_item:
+      delete: Löschen
+      deletion_in_progress: Wird gelöscht
+      error: Fehler
+      no_accounts_description: Fio meldet das Konto nur in einem Kontoauszug. Es erscheint
+        deshalb nach der ersten erfolgreichen Synchronisierung.
+      no_accounts_title: Noch kein Konto importiert
+      requires_update: Neues Token erforderlich
+      requires_update_description: Fio hat das Token für diese Verbindung abgelehnt.
+        Erstelle im Onlinebanking unter Einstellungen → API ein neues Token mit reinem
+        Lesezugriff.
+      requires_update_title: Neues Token erforderlich
+      setup_action: Konto einrichten
+      setup_description: Das über dieses Token erreichbare Konto ist noch nicht mit
+        einem Sure-Konto verknüpft.
+      setup_needed: Kontoeinrichtung erforderlich
+      status_never: Noch nie synchronisiert
+      status_with_summary: Vor %{timestamp} synchronisiert · %{summary}
+      sync_now: Jetzt synchronisieren
+      syncing: Wird synchronisiert
+      update_token: Token aktualisieren
+    link_accounts:
+      link_failed: Konto konnte nicht verknüpft werden.
+      no_account_found: Für diese Verbindung wurde kein unverknüpftes Fio-Konto gefunden.
+      no_credentials_configured: Konfiguriere zuerst Fio banka in den Anbietereinstellungen.
+      success: Dein Fio-Konto wurde mit %{account_name} verknüpft.
+      unsupported_account_type: Fio unterstützt diesen Kontotyp nicht.
+    link_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft.
+      fio_account_already_linked: Dieses Fio-Konto ist bereits verknüpft.
+      no_account_selected: Es war kein Fio-Konto zum Verknüpfen verfügbar.
+      success: Dein Fio-Konto wurde mit %{account_name} verknüpft.
+      unsupported_account_type: Fio kann nur Geld- und Kreditkonten synchronisieren.
+    provider_panel:
+      account_needs_setup: Noch nicht mit einem Sure-Konto verknüpft.
+      add_connection: Fio-banka-Verbindung hinzufügen
+      connected_account: Verbundenes Konto
+      connection_name_label: Verbindungsname
+      connection_name_placeholder: Mein Fio-Konto
+      default_connection_name: Fio-banka-Verbindung
+      disconnect: Trennen
+      disconnect_confirm: Möchtest du %{name} wirklich trennen?
+      keep_token_placeholder: Leer lassen, um das vorhandene Token beizubehalten
+      last_synced: Vor %{timestamp} synchronisiert
+      never_synced: Noch nie synchronisiert
+      no_account_yet: Noch kein Konto – die erste Synchronisierung ermittelt das über
+        dieses Token erreichbare Konto.
+      one_account_notice: Ein Token greift auf genau ein Fio-Konto zu. Füge deshalb
+        für jedes gewünschte Konto eine Verbindung hinzu. Ein Token darf einmal alle
+        30 Sekunden verwendet werden. Eine zu früh angeforderte Synchronisierung wird
+        beim nächsten Lauf nachgeholt.
+      requires_update: Neues Token erforderlich
+      requires_update_notice: Fio hat dieses Token abgelehnt. Tokens gelten bis zu
+        180 Tage, sofern sie nicht bei jeder Banking-Anmeldung automatisch verlängert
+        werden. Erstelle unter Einstellungen → API ein neues Token mit reinem Lesezugriff
+        und füge es unten ein.
+      setup_accounts: Konto einrichten
+      sync: Synchronisieren
+      sync_start_date_hint: Fio stellt die letzten 90 Tage ohne zusätzliche Freigabe
+        bereit. Für ältere Daten entsperrst du den vollständigen Kontoverlauf im Onlinebanking
+        unter Einstellungen → API (Schlosssymbol). Dadurch öffnet sich ein Zeitfenster
+        von 10 Minuten, in dem du synchronisieren musst.
+      sync_start_date_label: Transaktionen importieren ab
+      syncing: Wird synchronisiert …
+      token_label: API-Token (nur Lesezugriff)
+      token_placeholder: 64-stelliges Token einfügen
+      update_connection: Verbindung aktualisieren
+    select_accounts:
+      account_type_label: Kontotyp
+      already_linked: Das Konto dieser Verbindung ist bereits mit einem Sure-Konto
+        verknüpft.
+      awaiting_first_sync: Fio hat für dieses Token noch kein Konto gemeldet. Führe
+        eine Synchronisierung aus und kehre dann zurück.
+      cancel: Abbrechen
+      description: Dieses Token greift auf ein Konto zu. Wähle, wie es in Sure geführt
+        werden soll.
+      link_account: Konto verknüpfen
+      no_credentials_configured: Konfiguriere zuerst Fio banka in den Anbietereinstellungen.
+      sync_now: Jetzt synchronisieren
+      title: Dein Fio-Konto verknüpfen
+    select_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft.
+      already_linked: Das Konto dieser Verbindung ist bereits mit einem Sure-Konto
+        verknüpft.
+      awaiting_first_sync: Fio hat für dieses Token noch kein Konto gemeldet. Führe
+        eine Synchronisierung aus und kehre dann zurück.
+      cancel: Abbrechen
+      description: Verbinde das über dieses Token erreichbare Konto mit dem ausgewählten
+        Konto.
+      link_account: Konto verknüpfen
+      no_credentials_configured: Konfiguriere zuerst Fio banka in den Anbietereinstellungen.
+      sync_now: Jetzt synchronisieren
+      title: Fio-Konto mit %{account_name} verknüpfen
+    setup_accounts:
+      account_already_handled: Das Konto dieser Verbindung ist bereits verknüpft oder
+        wurde übersprungen.
+      account_type_label: Kontotyp
+      account_types:
+        skip: Überspringen
+      awaiting_first_sync: Noch kein Konto gefunden
+      awaiting_first_sync_description: Fio meldet das Konto nur in einem Kontoauszug.
+        Es erscheint deshalb nach der ersten erfolgreichen Synchronisierung.
+      cancel: Abbrechen
+      choose_account_type: Kontotyp auswählen
+      choose_account_type_description: Überspringe dieses Konto, wenn du es nicht
+        führen möchtest.
+      close: Schließen
+      create_account: Konto erstellen
+      nothing_to_setup: Nichts einzurichten
+      subtitle: Wähle, wie das über dieses Token erreichbare Konto in Sure angezeigt
+        werden soll.
+      sync_now: Jetzt synchronisieren
+      title: Dein Fio-Konto verknüpfen
+    update:
+      success: Fio-banka-Verbindung aktualisiert.
+  providers:
+    fio:
+      description: Ein Fio-banka-Konto mit einem API-Token mit reinem Lesezugriff
+        synchronisieren
+      name: Fio banka

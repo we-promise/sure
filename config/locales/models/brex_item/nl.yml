@@ -1,0 +1,14 @@
+---
+nl:
+  activerecord:
+    attributes:
+      brex_item:
+        name: Naam van de koppeling
+        token: Token
+        base_url: Basis-URL
+    errors:
+      models:
+        brex_item:
+          attributes:
+            base_url:
+              official_hosts_only: moet leeg zijn, https://api.brex.com of https://api-staging.brex.com

@@ -10,10 +10,10 @@ nb:
     destroy:
       success: "%{type} konto planlagt for sletting"
     empty:
-      empty_message: Legg til en konto enten via tilkobling, importering eller manuell inntasting.
+      empty_message: Legg til en konto enten via tilkobling, importering eller manuell
+        inntasting.
       new_account: Ny konto
       no_accounts: Ingen kontoer enda
-
     form:
       balance: Nåværende balanse
       name_label: Kontonavn
@@ -49,7 +49,11 @@ nb:
         owed: Beløp skyldig
       menu:
         confirm_accept: Slett "%{name}"
-        confirm_body_html: "<p>Ved å slette denne kontoen, vil du slette dens verdihistorikk, som påvirker ulike aspekter av din samlede kontooversikt. Denne handlingen vil ha en direkte innvirkning på dine nettoverdi-beregninger og kontoens grafer.</p><br /> <p>Etter sletting er det ingen måte å gjenopprette kontoinformasjonen på, fordi du må legge den til som en ny konto.</p>"
+        confirm_body_html: "<p>Ved å slette denne kontoen, vil du slette dens verdihistorikk,
+          som påvirker ulike aspekter av din samlede kontooversikt. Denne handlingen
+          vil ha en direkte innvirkning på dine nettoverdi-beregninger og kontoens
+          grafer.</p><br /> <p>Etter sletting er det ingen måte å gjenopprette kontoinformasjonen
+          på, fordi du må legge den til som en ny konto.</p>"
         confirm_title: Slette konto?
         edit: Rediger
         import: Importer transaksjoner

@@ -3,12 +3,25 @@ nb:
   subscriptions:
     self_hosted_alert: "%{product_name} er ikke tilgjengelig i selvhostet modus."
     upgrade:
-      contribute_and_support_sure: "Bidra og støtt Sure"
-      cta: "Fortsett å støtte utviklingen av denne kodebasen!"
+      contribute_and_support_sure: Bidra og støtt Sure
+      cta: Fortsett å støtte utviklingen av denne kodebasen!
       header:
-        support: "Støtt"
-        sure: "Sure"
-        today: "i dag"
-      redirect_to_stripe: "I neste trinn vil du bli omdirigert til Stripe, som håndterer kredittkort for oss."
-      trialing: "Dataene dine vil bli slettet om %{days} dager"
-      trial_over: "Prøveperioden din er over"
+        support: Støtt
+        sure: Sure
+        today: i dag
+      redirect_to_stripe: I neste trinn vil du bli omdirigert til Stripe, som håndterer
+        kredittkort for oss.
+      trialing: Dataene dine vil bli slettet om %{days} dager
+      trial_over: Prøveperioden din er over
+      page_title: Oppgrader
+      sign_out: Logg ut
+      account_settings: Kontoinnstillinger
+      already_contributing: Du bidrar allerede. Tusen takk!
+    create:
+      trial_already_used: Du har allerede startet eller fullført en prøveperiode.
+        Oppgrader for å fortsette.
+      welcome: Velkommen til Sure!
+    success:
+      contribution_failed: Noe gikk galt under behandlingen av bidraget ditt. Prøv
+        igjen.
+      welcome_with_contribution: Velkommen til Sure! Vi setter pris på bidraget ditt.

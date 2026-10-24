@@ -1,0 +1,4 @@
+---
+nl:
+  passkey_sessions:
+    invalid_credential: Inloggen met die passkey is niet gelukt. Probeer het opnieuw of gebruik je wachtwoord.

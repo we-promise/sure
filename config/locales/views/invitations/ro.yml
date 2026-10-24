@@ -4,6 +4,10 @@ ro:
     create:
       failure: Invitația nu a putut fi trimisă
       success: Invitația a fost trimisă cu succes
+      existing_user_added: Utilizatorul a fost adăugat în gospodăria ta.
+      existing_user_has_family_data: Acest utilizator deține deja o gospodărie cu
+        conturi. Trebuie să elimine sau să transfere acele conturi înainte de a se
+        alătura gospodăriei tale.
     destroy:
       failure: A apărut o problemă la eliminarea invitației.
       not_authorized: Nu sunteți autorizat să gestionați invitațiile.
@@ -15,5 +19,12 @@ ro:
       role_label: Rol
       role_member: Membru
       submit: Trimite invitația
-      subtitle: Trimite o invitație pentru a te alătura contului tău de familie pe Maybe
+      subtitle: Trimite o invitație de alăturare la contul tău de %{moniker} pe %{product_name}
       title: Invită pe cineva
+      role_guest: Invitat
+    accept_choice:
+      create_account: Creează un cont nou
+      joined_household: Te-ai alăturat gospodăriei.
+      message: "%{inviter} te-a invitat să te alături ca %{role}."
+      sign_in_existing: Am deja un cont
+      title: Alătură-te %{family}

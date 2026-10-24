@@ -25,3 +25,45 @@ ro:
       overview: Prezentare generală
       settings: Setări
       opening_balance: Sold inițial
+      name_label: Nume
+      amount_label: Valoarea contului la data respectivă
+      name_placeholder: Introdu un nume pentru această înregistrare
+      update_value: Actualizează valoarea
+    confirm_create:
+      confirm: Confirmă
+      title: Confirmă noul sold
+    confirm_update:
+      update: Actualizează
+      title: Actualizează soldul
+    confirmation_contents:
+      brokerage_cash: Numerar de brokeraj
+      change: modificări
+      holdings_value: Valoarea deținerilor
+      total_account_value: Valoarea totală a contului
+      to: la
+      account_balance: soldul contului
+      action_set: stabili
+      action_update: actualiza
+      asset_value: valoarea activului
+      balance: sold
+      credit_card_balance: soldul cardului de credit
+      crypto_balance: soldul cripto
+      liability_balance: soldul datoriei
+      loan_balance: soldul creditului
+      'on': la
+      property_value: valoarea proprietății
+      recalculate_notice: Toate tranzacțiile și soldurile viitoare vor fi recalculate
+        pe baza acestei %{change_or_update}.
+      this_will: Aceasta va %{action_verb} valoarea contului la data de
+      to_colon: 'la:'
+      update: actualizări
+      vehicle_value: valoarea vehiculului
+    header:
+      balance: Sold
+    update:
+      entry_updated: Înregistrare actualizată
+      account_updated: Cont actualizat
+    create:
+      account_updated: Cont actualizat
+    errors:
+      amount_required: Suma este obligatorie

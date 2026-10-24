@@ -1,0 +1,131 @@
+---
+pt-BR:
+  akahu_account:
+    fallback: Conta Akahu
+  akahu_entry:
+    notes:
+      code: Código
+      other_account: Outra conta
+      particulars: Detalhes
+      reference: Referência
+  akahu_item:
+    errors:
+      account_processing_failed: Não foi possível sincronizar a conta Akahu
+      account_sync_schedule_failed: Não foi possível agendar a sincronização da conta
+        Akahu
+      pending_transactions_failed: Não foi possível obter as transações pendentes
+        Akahu
+      sync_failed: Não foi possível sincronizar a conexão Akahu
+      transactions_failed: Não foi possível obter as transações Akahu
+    institution_summary:
+      count:
+        one: 1 instituição
+        other: "%{count} instituições"
+      none: Não existem instituições conectadas
+      one: 1 instituição
+    sync_status:
+      all_synced:
+        one: 1 conta sincronizada
+        other: "%{count} contas sincronizadas"
+      no_accounts: Não foram encontradas contas
+      partial: "%{linked} sincronizadas, %{unlinked} precisam de configuração"
+  akahu_items:
+    akahu_item:
+      delete: Excluir
+      deletion_in_progress: Exclusão em andamento
+      error: Erro
+      no_accounts_description: Obtenha as contas Akahu e escolha quais deseja associar.
+      no_accounts_title: Nenhuma conta importada ainda
+      setup_action: Configurar contas
+      setup_description: "%{linked} de %{total} contas vinculadas."
+      setup_needed: Configuração da conta necessária
+      status_never: Nunca sincronizada
+      status_with_summary: Sincronizada há %{timestamp} · %{summary}
+      syncing: Sincronizando
+    complete_account_setup:
+      all_skipped: Não foi criada nenhuma conta Akahu.
+      creation_failed: Não foi possível criar as contas Akahu.
+      no_accounts: Nenhuma conta Akahu foi selecionada.
+      success:
+        one: Criada 1 conta Akahu.
+        other: Criadas %{count} contas Akahu.
+    create:
+      success: Conexão Akahu salva.
+    destroy:
+      success: Exclusão da conexão Akahu agendada.
+      unlink_failed: Não foi possível desconectar a conexão com a Akahu
+    link_accounts:
+      link_failed: Nenhuma conta foi vinculada.
+      no_accounts_selected: Selecione pelo menos uma conta.
+      no_credentials_configured: Configure a Akahu nas configurações do serviço primeiro.
+      success:
+        one: Associada 1 conta Akahu.
+        other: Associadas %{count} contas Akahu.
+      unsupported_account_type: A Akahu não suporta esse tipo de conta.
+    link_existing_account:
+      account_already_linked: Esta conta já está vinculada a um provedor.
+      akahu_account_already_linked: Esta conta Akahu já está associada.
+      success: Conta Akahu associada a %{account_name}.
+    provider_panel:
+      add_connection: Adicionar conexão Akahu
+      app_token_label: Token de aplicativo
+      app_token_placeholder: Cole o seu token de aplicativo Akahu
+      connection_name_label: Nome da conexão
+      connection_name_placeholder: Akahu principal
+      default_connection_name: Conexão Akahu
+      disconnect: Desconectar
+      disconnect_confirm: Tem certeza de que deseja desconectar %{name}?
+      keep_app_token_placeholder: Deixe em branco para manter o token de aplicativo
+        existente
+      keep_user_token_placeholder: Deixe em branco para manter o token de usuário
+        existente
+      setup_accounts: Configurar contas
+      sync: Sincronizar
+      syncing: Sincronizando...
+      update_connection: Atualizar conexão
+      user_token_label: Token de usuário
+      user_token_placeholder: Cole o seu token de usuário Akahu
+    select_accounts:
+      cancel: Cancelar
+      description: Escolha as contas Akahu a adicionar.
+      link_accounts: Vincular contas
+      no_accounts_found: Não foram encontradas contas Akahu por associar.
+      no_credentials_configured: Configure a Akahu nas configurações do serviço primeiro.
+      title: Associar contas Akahu
+    select_existing_account:
+      account_already_linked: Esta conta já está vinculada a um provedor.
+      cancel: Cancelar
+      description: Escolha uma conta Akahu por associar para conectar a esta conta.
+      link_account: Associar conta
+      no_accounts_found: Não foram encontradas contas Akahu por associar.
+      no_credentials_configured: Configure a Akahu nas configurações do serviço primeiro.
+      title: Associar conta Akahu a %{account_name}
+    setup_accounts:
+      account_type_label: Tipo de conta
+      account_types:
+        credit_card: Cartão de crédito
+        depository: Dinheiro
+        investment: Investimento
+        loan: Empréstimo
+        skip: Pular
+      all_accounts_linked: Todas as contas Akahu já estão associadas.
+      api_error: Não foi possível obter as contas Akahu.
+      cancel: Cancelar
+      choose_account_type: Escolha um tipo de conta
+      choose_account_type_description: Ignore as contas que não deseja acompanhar.
+      create_accounts: Criar contas
+      fetch_failed: Não foi possível obter as contas
+      no_accounts_to_setup: Nenhuma conta para configurar
+      no_credentials: Configure primeiro as credenciais Akahu.
+      subtitle: Escolha como cada conta da Akahu deve aparecer no Sure.
+      title: Configurar contas Akahu
+    update:
+      success: Conexão Akahu atualizada.
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Conexão Akahu
+  providers:
+    akahu:
+      description: Associe contas bancárias neozelandesas através da Akahu
+      name: Akahu

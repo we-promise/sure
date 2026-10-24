@@ -3,7 +3,7 @@ nl:
   simplefin_items:
     new:
       title: Verbind SimpleFIN
-      setup_token: Setup token
+      setup_token: Installatietoken
       setup_token_placeholder: plak uw SimpleFIN setup token
       connect: Verbinden
       cancel: Annuleren
@@ -13,7 +13,7 @@ nl:
         blank_token: Voer een SimpleFIN setup token in.
         invalid_token: Ongeldige setup token. Controleer of u de volledige token van SimpleFIN Bridge heeft gekopieerd.
         token_compromised: De setup token kan gecompromitteerd, verlopen of al gebruikt zijn. Maak een nieuwe aan.
-        create_failed: "Verbinden mislukt: %{message}"
+        create_failed: 'Verbinden mislukt: %{message}'
         unexpected: Er is een onverwachte fout opgetreden. Probeer het opnieuw.
     destroy:
       success: SimpleFIN verbinding wordt verwijderd
@@ -23,31 +23,72 @@ nl:
         blank_token: Voer een SimpleFIN setup token in.
         invalid_token: Ongeldige setup token. Controleer of u de volledige token van SimpleFIN Bridge heeft gekopieerd.
         token_compromised: De setup token kan gecompromitteerd, verlopen of al gebruikt zijn. Maak een nieuwe aan.
-        update_failed: "Bijwerken verbinding mislukt: %{message}"
+        update_failed: 'Bijwerken verbinding mislukt: %{message}'
         unexpected: Er is een onverwachte fout opgetreden. Probeer het opnieuw.
     edit:
       setup_token:
-        label: "SimpleFIN Setup Token:"
-        placeholder: "Plak uw SimpleFIN setup token hier..."
-        help_text: "De token moet een lange tekenreeks zijn die begint met letters en cijfers"
+        label: 'SimpleFIN-installatietoken:'
+        placeholder: Plak uw SimpleFIN setup token hier...
+        help_text: De token moet een lange tekenreeks zijn die begint met letters en cijfers
+      cancel: Annuleren
+      connection_needs_update: 'Je SimpleFIN-koppeling moet worden bijgewerkt:'
+      header_subtitle: Haal een nieuw insteltoken op om je SimpleFIN-account opnieuw te verbinden
+      step_1_html: Ga naar <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> om een nieuw insteltoken te maken
+      step_2: Kopieer het token en plak het hieronder
+      step_3: Klik op ‘Bijwerken’ om de toegang te herstellen
+      title: SimpleFIN-koppeling bijwerken
+      update: Bijwerken
     setup_accounts:
       stale_accounts:
-        title: "Accounts Niet Langer in SimpleFIN"
-        description: "Deze accounts bestaan in uw database maar worden niet langer aangeboden door SimpleFIN. Dit kan gebeuren wanneer accountconfiguraties upstream wijzigen."
-        action_prompt: "Wat wilt u doen?"
-        action_delete: "Verwijder account en alle transacties"
-        action_move: "Verplaats transacties naar:"
-        action_skip: "Overslaan voor nu"
+        title: Accounts Niet Langer in SimpleFIN
+        description: Deze accounts bestaan in uw database maar worden niet langer aangeboden door SimpleFIN. Dit kan gebeuren wanneer accountconfiguraties upstream wijzigen.
+        action_prompt: Wat wilt u doen?
+        action_delete: Verwijder account en alle transacties
+        action_move: 'Verplaats transacties naar:'
+        action_skip: Overslaan voor nu
         transaction_count:
           one: "%{count} transactie"
           other: "%{count} transacties"
+      account_card:
+        balance: Saldo
+      account_type_credit_card: Creditcard
+      account_type_investment: Belegging
+      account_type_label: 'Rekeningtype:'
+      account_type_loan: Lening of hypotheek
+      account_type_other_asset: Overig bezit
+      cancel: Annuleren
+      create_accounts: Rekeningen aanmaken
+      creating_accounts: Rekeningen aanmaken…
+      header_subtitle: Kies de juiste rekeningtypen voor je geïmporteerde rekeningen
+      choose_account_type: 'Kies het juiste rekeningtype voor elke SimpleFIN-rekening:'
+      title: Je SimpleFIN-rekeningen instellen
+      account_type_checking_savings: Betaal- of spaarrekening
+      account_type_checking_savings_desc: Gewone bankrekeningen
+      account_type_credit_card_desc: Creditcardrekeningen
+      account_type_investment_desc: Effecten-, 401(k)- en IRA-rekeningen
+      account_type_loan_desc: Schuldrekeningen
+      account_type_other_asset_desc: Al het overige
+      activity:
+        days_ago:
+          one: 1 dag geleden
+          other: "%{count} dagen geleden"
+        dormant: Geen activiteit in %{days} dagen
+        empty: Nog geen transacties geïmporteerd
+        likely_closed: Geen recente activiteit en een saldo van nul; mogelijk is deze kaart afgesloten of vervangen
+        recent:
+          one: 1 transactie • meest recent %{when}
+          other: "%{count} transacties • meest recent %{when}"
+        today: vandaag
+        yesterday: gisteren
+      transaction_history_description_html: SimpleFIN biedt doorgaans <strong>60-90 dagen</strong> aan transactiegeschiedenis, afhankelijk van je bank. Na het instellen worden nieuwe transacties automatisch gesynchroniseerd. De beschikbaarheid van historische gegevens verschilt per instelling en rekeningtype.
+      transaction_history_title: 'Transactiegeschiedenis:'
     complete_account_setup:
-      all_skipped: "Alle accounts zijn overgeslagen. Geen accounts zijn aangemaakt."
-      no_accounts: "Geen accounts om in te stellen."
+      all_skipped: Alle accounts zijn overgeslagen. Geen accounts zijn aangemaakt.
+      no_accounts: Geen accounts om in te stellen.
       success:
-        one: "Succesvol %{count} SimpleFIN account aangemaakt! Uw transacties en bezittingen worden op de achtergrond geïmporteerd."
-        other: "Succesvol %{count} SimpleFIN accounts aangemaakt! Uw transacties en bezittingen worden op de achtergrond geïmporteerd."
-      stale_accounts_processed: "Verouderde accounts: %{deleted} verwijderd, %{moved} verplaatst."
+        one: Succesvol %{count} SimpleFIN account aangemaakt! Uw transacties en bezittingen worden op de achtergrond geïmporteerd.
+        other: Succesvol %{count} SimpleFIN accounts aangemaakt! Uw transacties en bezittingen worden op de achtergrond geïmporteerd.
+      stale_accounts_processed: 'Verouderde accounts: %{deleted} verwijderd, %{moved} verplaatst.'
       stale_accounts_errors:
         one: "%{count} verouderde accountactie mislukt. Controleer logs voor details."
         other: "%{count} verouderde accountacties mislukt. Controleer logs voor details."
@@ -65,31 +106,40 @@ nl:
       setup_needed: Nieuwe accounts klaar om in te stellen
       setup_description: Kies accounttypes voor uw nieuw geïmporteerde SimpleFIN accounts.
       setup_action: Nieuwe Accounts Instellen
-      status: "Laatst gesynchroniseerd %{timestamp} geleden"
+      status: Laatst gesynchroniseerd %{timestamp} geleden
       status_never: Nooit gesynchroniseerd
-      status_with_summary: "Laatst gesynchroniseerd %{timestamp} geleden • %{summary}"
+      status_with_summary: Laatst gesynchroniseerd %{timestamp} geleden • %{summary}
       syncing: Synchroniseren...
       update: Bijwerken
       stale_pending_note: "(uitgesloten van budgetten)"
-      stale_pending_accounts: "in: %{accounts}"
+      stale_pending_accounts: 'in: %{accounts}'
       reconciled_details_note: "(zie synchronisatiesamenvatting voor details)"
-      duplicate_accounts_skipped: "Sommige accounts zijn overgeslagen als duplicaten — gebruik 'Koppel bestaande accounts' om samen te voegen."
+      duplicate_accounts_skipped: Sommige accounts zijn overgeslagen als duplicaten — gebruik 'Koppel bestaande accounts' om samen te voegen.
+      more_accounts_available:
+        one: Nog %{count} rekening beschikbaar om in te stellen
+        other: Nog %{count} rekeningen beschikbaar om in te stellen
+      setup_accounts_menu: Rekeningen instellen
+      accounts_skipped_label: 'Overgeslagen: %{count}'
+      accounts_skipped_tooltip: Sommige rekeningen zijn overgeslagen door fouten tijdens de synchronisatie
+      rate_limited_ago: Verzoeklimiet bereikt (%{time} geleden)
+      rate_limited_recently: Onlangs de verzoeklimiet bereikt
     select_existing_account:
-      title: "Koppel %{account_name} aan SimpleFIN"
+      title: Koppel %{account_name} aan SimpleFIN
       description: Selecteer een SimpleFIN account om te koppelen aan uw bestaande account
       cancel: Annuleren
       link_account: Account koppelen
-      no_accounts_found: Geen SimpleFIN accounts gevonden voor dit gezin.
+      no_accounts_found: Geen SimpleFIN-rekeningen gevonden voor deze %{moniker}.
       wait_for_sync: Als u zojuist verbonden of gesynchroniseerd heeft, probeer het opnieuw nadat de synchronisatie is voltooid.
       unlink_to_move: Om een koppeling te verplaatsen, koppel deze eerst los via het actiemenu van het account.
       all_accounts_already_linked: Alle SimpleFIN accounts lijken al gekoppeld te zijn.
-      currently_linked_to: "Momenteel gekoppeld aan: %{account_name}"
-
+      currently_linked_to: 'Momenteel gekoppeld aan: %{account_name}'
+      check_provider_health: Controleer bij Instellingen → Aanbieders of je SimpleFIN-koppeling goed werkt.
     link_existing_account:
       success: Account succesvol gekoppeld aan SimpleFIN
       errors:
         only_manual: Alleen handmatige accounts kunnen worden gekoppeld
         invalid_simplefin_account: Ongeldig SimpleFIN account geselecteerd
+        different_provider: Deze rekening is aan een andere aanbieder gekoppeld. Ontkoppel haar eerst daar en koppel haar vervolgens aan SimpleFIN.
     reconciled_status:
       message:
         one: "%{count} dubbele wachtende transactie gereconcilieerd"
@@ -98,3 +148,30 @@ nl:
       message:
         one: "%{count} wachtende transactie ouder dan %{days} dagen"
         other: "%{count} wachtende transacties ouder dan %{days} dagen"
+    institution_summary:
+      count:
+        one: "%{count} instelling"
+        other: "%{count} instellingen"
+      none: Geen instellingen gekoppeld
+    sync_status:
+      no_accounts: Geen rekeningen gevonden
+      partial_setup:
+        one: "%{linked} gesynchroniseerd, %{unlinked} nog in te stellen"
+        other: "%{linked} gesynchroniseerd, %{unlinked} nog in te stellen"
+      synced:
+        one: "%{count} rekening gesynchroniseerd"
+        other: "%{count} rekeningen gesynchroniseerd"
+    dismiss_replacement_suggestion:
+      dismissed: Vervangingssuggestie genegeerd
+    rate_limited:
+      daily_refresh: Je hebt de dagelijkse vernieuwingslimiet van SimpleFIN bereikt. Probeer het opnieuw nadat de bridge is vernieuwd (dit kan tot 24 uur duren).
+    replacement_prompt:
+      confirm_body: "‘%{account_name}’ wordt aan ‘%{new_name}’ gekoppeld. Je transactiegeschiedenis blijft behouden; toekomstige transacties komen van de nieuwe kaart."
+      confirm_title: Opnieuw koppelen aan de nieuwe kaart?
+      description: "‘%{account_name}’ is gekoppeld aan ‘%{old_name}’, zonder recente activiteit en met een saldo van nul. Bij dezelfde instelling is nu een nieuwe kaart, ‘%{new_name}’, actief. Koppel opnieuw om je geschiedenis intact te houden."
+      dismiss_aria: Vervangingssuggestie negeren
+      relink: Koppelen aan nieuwe kaart
+      title: Je kaart van %{institution} is mogelijk vervangen
+    stale_sync:
+      last_successful: De laatste geslaagde synchronisatie was %{count} dagen geleden. Je SimpleFIN-koppeling heeft mogelijk aandacht nodig.
+      no_transactions: Geen nieuwe transacties in %{count} dagen. Controleer in je SimpleFIN-dashboard of je bankkoppelingen actief zijn.

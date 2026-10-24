@@ -2,18 +2,21 @@
 pt-BR:
   plaid_items:
     create:
-      success: Conta vinculada com sucesso. Por favor, aguarde a sincronização das contas.
+      success: Conta vinculada com sucesso. Por favor, aguarde a sincronização das
+        contas.
     destroy:
       success: Contas agendadas para exclusão.
     plaid_item:
       add_new: Adicionar nova conexão
       confirm_accept: Excluir instituição
-      confirm_body: Isso excluirá permanentemente todas as contas deste grupo e
-        todos os dados associados.
+      confirm_body: >-
+        Isso excluirá permanentemente todas as contas deste grupo e todos os dados
+        associados.
       confirm_title: Excluir instituição?
       connection_lost: Conexão perdida
-      connection_lost_description: Esta conexão não é mais válida. Você precisará
-        excluir esta conexão e adicioná-la novamente para continuar sincronizando dados.
+      connection_lost_description: >-
+        Esta conexão não é mais válida. Você precisará excluir esta conexão e adicioná-la
+        novamente para continuar sincronizando dados.
       delete: Excluir
       error: Erro ocorrido durante a sincronização de dados
       no_accounts_description: Não conseguimos carregar nenhuma conta desta instituição
@@ -24,8 +27,23 @@ pt-BR:
       status_never: Requer sincronização de dados
       syncing: Sincronizando...
       update: Atualizar conexão
+      add_accounts: Adicionar contas
+      deletion_in_progress: "(exclusão em andamento...)"
+      provider_name: Plaid
     select_existing_account:
-      title: "Vincular %{account_name} ao Plaid"
+      title: Vincular %{account_name} ao Plaid
       description: Selecione uma conta do Plaid para vincular à sua conta existente
       cancel: Cancelar
       link_account: Vincular conta
+      no_available_accounts: >-
+        Não existem contas do Plaid por conectar disponíveis. Conecte primeiro uma
+        nova conta do Plaid.
+    errors:
+      link_token_generic: >-
+        Não conseguimos abrir o Plaid neste momento. Tente novamente, e se o problema
+        persistir verifique os registros do servidor para obter detalhes.
+      link_token_with_message: 'O Plaid não conseguiu abrir a conexão: %{message}'
+    link_existing_account:
+      already_linked: Esta conta do Plaid já está conectada
+      invalid_account: Conta do Plaid inválida selecionada
+      success: Conta conectada com sucesso ao Plaid

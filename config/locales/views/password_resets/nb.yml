@@ -4,10 +4,15 @@ nb:
     edit:
       title: Tilbakestill passord
     new:
-      requested: Vennligst sjekk e-posten din for en lenke til å tilbakestille passordet ditt.
+      requested: Vennligst sjekk e-posten din for en lenke til å tilbakestille passordet
+        ditt.
       submit: Tilbakestill passord
       title: Tilbakestill passord
       back: Tilbake
     update:
       invalid_token: Ugyldig token.
       success: Passordet ditt er tilbakestilt.
+    disabled: Tilbakestilling av passord via Sure er deaktivert. Tilbakestill passordet
+      hos identitetsleverandøren din.
+    sso_only_user: Kontoen din bruker SSO for innlogging. Kontakt administratoren
+      for å administrere påloggingsopplysningene dine.

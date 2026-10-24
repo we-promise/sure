@@ -1,0 +1,7 @@
+---
+nl:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: De omgevingsvariabele INDEXA_API_TOKEN of toegangsgegevens met gebruikersnaam, documentnummer en wachtwoord zijn verplicht

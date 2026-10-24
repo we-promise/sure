@@ -1,0 +1,7 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        simplefin_account:
+          no_balance: SimpleFin-kontoen må ha enten gjeldende eller tilgjengelig saldo

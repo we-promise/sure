@@ -3,49 +3,148 @@ pt-BR:
   admin:
     users:
       index:
-        title: "Gestão de Usuários"
-        description: "Gerencie as funções de usuário da sua instância. Os superadministradores podem acessar as configurações do provedor SSO e o gerenciamento de usuários."
-        section_title: "Famílias / Grupos"
+        title: Gestão de Usuários
+        description: >-
+          Gerencie as funções de usuário da sua instância. Os superadministradores
+          podem acessar as configurações do provedor SSO e o gerenciamento de usuários.
+        section_title: Famílias / Grupos
         you: "(Você)"
-        trial_ends_at: "Fim do teste"
-        not_available: "n/a"
-        no_users: "Nenhum usuário encontrado."
-        unnamed_family: "Família/Grupo sem nome"
-        no_subscription: "Sem assinatura"
-        family_summary: "%{members} membros · %{accounts} contas · %{transactions} transações"
+        trial_ends_at: Fim do teste
+        not_available: n/a
+        no_users: Nenhum usuário encontrado.
+        unnamed_family: Família/Grupo sem nome
+        no_subscription: Sem assinatura
+        family_summary: "%{members} membros · %{accounts} contas · %{transactions}
+          transações"
         filters:
-          role: "Cargo"
-          role_all: "Todas as funções"
-          trial_status: "Status do teste"
-          trial_all: "Todos"
-          trial_expiring_soon: "Expira em 7 dias"
-          trial_trialing: "Em teste"
-          submit: "Filtro"
+          role: Cargo
+          role_all: Todas as funções
+          trial_status: Status do teste
+          trial_all: Todos
+          trial_expiring_soon: Expira em 7 dias
+          trial_trialing: Em teste
+          submit: Filtro
         table:
-          user: "Usuário"
-          trial_ends_at: "Fim do teste"
-          family_accounts: "Contas familiares"
-          family_transactions: "Transações familiares"
-          last_login: "Último login"
-          session_count: "Contagem de sessões"
-          never: "Nunca"
-          role: "Cargo"
-        role_descriptions_title: "Descrições de Cargos"
+          user: Usuário
+          trial_ends_at: Fim do teste
+          family_accounts: Contas familiares
+          family_transactions: Transações familiares
+          last_login: Último login
+          session_count: Contagem de sessões
+          never: Nunca
+          role: Cargo
+          actions: Ações
+          create_new_family_option: "+ Criar nova família/grupo"
+          family: Família / Grupo
+          keep_current_family: Manter a família/grupo atual
+          new_family_moniker: Tipo de nova família/grupo
+          new_family_name: Nome da nova família/grupo
+          new_family_name_placeholder: Digite um nome para criar uma nova família/grupo
+          password_placeholder: Deixe em branco para manter a atual
+          set_password: Definir nova senha
+        role_descriptions_title: Descrições de Cargos
         roles:
-          guest: "Convidado"
-          member: "Membro"
-          admin: "Admin"
-          super_admin: "Super Admin"
+          guest: Convidado
+          member: Membro
+          admin: Admin
+          super_admin: Superadministrador
         role_descriptions:
-          guest: "Experiência com foco no assistente, com permissões intencionalmente restritas para fluxos de trabalho introdutórios."
-          member: "Acesso básico de usuário. Pode gerenciar suas próprias contas, transações e configurações."
-          admin: "Administrador familiar. Pode acessar configurações avançadas como chaves de API, importações e avisos de IA."
-          super_admin: "Administrador de instância. Pode gerenciar provedores de SSO, funções de usuário e representar usuários para suporte."
+          guest: >-
+            Experiência com foco no assistente, com permissões intencionalmente restritas
+            para fluxos de trabalho introdutórios.
+          member: >-
+            Acesso básico de usuário. Pode gerenciar suas próprias contas, transações
+            e configurações.
+          admin: >-
+            Administrador familiar. Pode acessar configurações avançadas como chaves
+            de API, importações e avisos de IA.
+          super_admin: >-
+            Administrador de instância. Pode gerenciar provedores de SSO, funções
+            de usuário e representar usuários para suporte.
         invitations:
-          pending_label: "Convidado (pendente)"
-          expires: "Expira em %{date}"
-          delete: "Excluir"
-          delete_all: "Excluir todos"
+          pending_label: Convidado (pendente)
+          expires: Expira em %{date}
+          delete: Excluir
+          delete_all: Excluir todos
+        actions:
+          delete_user: Excluir usuário
+          last_super_admin_role_locked: >-
+            A alteração da função está bloqueada porque é o último super administrador
+            do sistema.
+          manage_user: Gerenciar usuário
+          self_edit_warning: Alterar a sua própria função modificará os seus privilégios
+            administrativos.
+          self_update_confirm: Tem certeza de que deseja atualizar a função ou a família
+            da sua própria conta?
+          update: Atualizar usuário
+        auth_types:
+          local: Local
+          local_and_sso: Local + SSO
+          sso: SSO
+          sso_provider_tooltip: 'Serviço SSO: %{providers}'
+        delete_confirm: Tem certeza de que deseja excluir este usuário? Esta ação
+          é irreversível.
+        delete_confirm_last_user: >-
+          Tem certeza de que deseja excluir este usuário? É o último usuário da sua
+          família/grupo, pelo que a exclusão removerá também toda a família/grupo
+          e todos os dados associados. Esta ação é irreversível.
+        family_monikers:
+          family: Família
+          group: Grupo
+        remove: Excluir usuário
+        removed_sso_identities:
+          allow_again: Permitir novamente
+          confirm: Permitir que %{email} entre ou crie uma conta através do SSO novamente?
+          description: >-
+            Estas identidades não podem criar nem restabelecer uma conta. Permita
+            novamente uma identidade apenas quando a remoção tiver sido acidental.
+          title: Identidades SSO removidas
+        unused_families:
+          delete: Excluir família não utilizada
+          delete_confirm: >-
+            Tem certeza de que deseja excluir esta família ou este grupo que não está
+            sendo utilizado? Esta ação é irreversível.
+          empty: Não foram encontradas famílias/grupos não utilizados.
+          family_id: 'ID da família: %{id}'
+          title: Famílias/grupos não utilizados
       update:
-        success: "Função de usuário atualizada com sucesso."
-        failure: "Falha ao atualizar a função do usuário."
+        success: Função de usuário atualizada com sucesso.
+        failure: Falha ao atualizar a função do usuário.
+        family_required: Selecione uma família/grupo existente ou digite um nome para
+          uma nova.
+        last_super_admin_error: Não é possível rebaixar o último superadministrador
+          do sistema.
+        password_and_family_conflict: A senha e a associação à família/grupo não podem
+          ser atualizadas ao mesmo tempo.
+        password_missing_case: A senha tem de incluir letras maiúsculas e minúsculas.
+        password_missing_number: A senha tem de incluir pelo menos um número.
+        password_missing_special: A senha deve incluir pelo menos um caractere especial.
+        password_too_short: A senha tem de ter pelo menos 8 caracteres.
+        success_family: Associação do usuário à família/grupo atualizada com sucesso.
+        success_password: Senha do usuário atualizada com sucesso.
+        success_role: Função de usuário atualizada com sucesso.
+        success_role_and_password: Função e senha do usuário atualizadas com sucesso.
+      deletion:
+        cancel: Cancelar
+        email_label: E-mail do usuário
+        instruction: Escreva %{email} para confirmar.
+        submit: Excluir usuário permanentemente
+        title: Excluir usuário permanentemente
+        warning: >-
+          Isto revoga imediatamente o acesso e agenda a exclusão permanente do usuário
+          e dos seus dados. Esta ação é irreversível.
+      destroy:
+        cannot_remove_last_super_admin: Não pode remover o último super administrador
+          ativo.
+        cannot_remove_self: Não pode remover a sua própria conta a partir daqui.
+        confirmation_mismatch: O endereço de e-mail não correspondeu. O usuário não
+          foi removido.
+        failure: Falha ao remover o usuário.
+        success: Acesso de usuário revogado e exclusão permanente agendada.
+    families:
+      destroy:
+        family_has_active_subscription: >-
+          A família/grupo tem uma assinatura ativa e não pode ser excluída até a assinatura
+          ser cancelada.
+        family_has_users: A família/grupo ainda tem usuários e não pode ser excluída.
+        success: Família/grupo excluída com sucesso.

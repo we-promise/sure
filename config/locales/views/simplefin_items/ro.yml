@@ -8,34 +8,71 @@ ro:
       connect: Conectează
       cancel: Anulează
     create:
-      success: Conexiunea SimpleFin a fost adăugată cu succes! Conturile tale vor apărea în scurt timp pe măsură ce se sincronizează în fundal.
+      success: Conexiunea SimpleFin a fost adăugată cu succes! Conturile tale vor
+        apărea în scurt timp pe măsură ce se sincronizează în fundal.
       errors:
         blank_token: Te rugăm să introduci un token de configurare SimpleFin.
-        invalid_token: Token de configurare invalid. Te rugăm să verifici dacă ai copiat tokenul complet din SimpleFin Bridge.
-        token_compromised: Tokenul de configurare poate fi compromis, expirat sau deja utilizat. Te rugăm să creezi unul nou.
-        create_failed: "Eșec la conectare: %{message}"
-        unexpected: A apărut o eroare neașteptată. Te rugăm să încerci din nou sau să contactezi suportul.
+        invalid_token: Token de configurare invalid. Te rugăm să verifici dacă ai
+          copiat tokenul complet din SimpleFin Bridge.
+        token_compromised: Tokenul de configurare poate fi compromis, expirat sau
+          deja utilizat. Te rugăm să creezi unul nou.
+        create_failed: 'Eșec la conectare: %{message}'
+        unexpected: A apărut o eroare neașteptată. Te rugăm să încerci din nou sau
+          să contactezi suportul.
     destroy:
       success: Conexiunea SimpleFin va fi eliminată
     update:
-      success: Conexiunea SimpleFin a fost actualizată cu succes! Conturile tale sunt reconectate.
+      success: Conexiunea SimpleFin a fost actualizată cu succes! Conturile tale sunt
+        reconectate.
       errors:
         blank_token: Te rugăm să introduci un token de configurare SimpleFin.
-        invalid_token: Token de configurare invalid. Te rugăm să verifici dacă ai copiat tokenul complet din SimpleFin Bridge.
-        token_compromised: Tokenul de configurare poate fi compromis, expirat sau deja utilizat. Te rugăm să creezi unul nou.
-        update_failed: "Eșec la actualizarea conexiunii: %{message}"
-        unexpected: A apărut o eroare neașteptată. Te rugăm să încerci din nou sau să contactezi suportul.
+        invalid_token: Token de configurare invalid. Te rugăm să verifici dacă ai
+          copiat tokenul complet din SimpleFin Bridge.
+        token_compromised: Tokenul de configurare poate fi compromis, expirat sau
+          deja utilizat. Te rugăm să creezi unul nou.
+        update_failed: 'Eșec la actualizarea conexiunii: %{message}'
+        unexpected: A apărut o eroare neașteptată. Te rugăm să încerci din nou sau
+          să contactezi suportul.
     edit:
       setup_token:
-        label: "Token de configurare SimpleFin:"
-        placeholder: "Lipește aici tokenul tău de configurare SimpleFin..."
-        help_text: "Tokenul ar trebui să fie un șir lung de caractere, începând cu litere și cifre"
+        label: 'Token de configurare SimpleFin:'
+        placeholder: Lipește aici tokenul tău de configurare SimpleFin...
+        help_text: Tokenul ar trebui să fie un șir lung de caractere, începând cu
+          litere și cifre
+      cancel: Anulează
+      update: Actualizează
+      connection_needs_update: 'Conexiunea SimpleFIN necesită actualizare:'
+      header_subtitle: Obține un token de configurare nou pentru a reconecta contul
+        SimpleFIN
+      step_1_html: Accesează <a href="https://bridge.simplefin.org/simplefin/create"
+        target="_blank" rel="noopener noreferrer" class="text-link hover:text-link
+        underline">SimpleFIN Bridge</a> pentru a crea un token de configurare nou
+      step_2: Copiază tokenul și lipește-l mai jos
+      step_3: Apasă „Actualizează” pentru a restabili accesul
+      title: Actualizează conexiunea SimpleFIN
     complete_account_setup:
-      success: Conturile SimpleFin au fost configurate cu succes! Tranzacțiile și deținerile tale sunt importate în fundal.
+      success:
+        one: A fost creat cu succes %{count} cont SimpleFIN! Tranzacțiile și deținerile
+          tale sunt importate în fundal.
+        few: Au fost create cu succes %{count} conturi SimpleFIN! Tranzacțiile și
+          deținerile tale sunt importate în fundal.
+        other: Au fost create cu succes %{count} de conturi SimpleFIN! Tranzacțiile
+          și deținerile tale sunt importate în fundal.
+      all_skipped: Toate conturile au fost omise. Nu a fost creat niciun cont.
+      no_accounts: Nu există conturi de configurat.
+      stale_accounts_errors:
+        one: "%{count} acțiune pentru un cont învechit a eșuat. Consultă jurnalele
+          pentru detalii."
+        other: "%{count} de acțiuni pentru conturi învechite au eșuat. Consultă jurnalele
+          pentru detalii."
+        few: "%{count} acțiuni pentru conturi învechite au eșuat. Consultă jurnalele
+          pentru detalii."
+      stale_accounts_processed: 'Conturi învechite: %{deleted} șterse, %{moved} mutate.'
     simplefin_item:
       add_new: Adaugă conexiune nouă
       confirm_accept: Șterge conexiunea
-      confirm_body: Aceasta va șterge permanent toate conturile din acest grup și toate datele asociate.
+      confirm_body: Aceasta va șterge permanent toate conturile din acest grup și
+        toate datele asociate.
       confirm_title: Ștergi conexiunea SimpleFin?
       delete: Șterge
       deletion_in_in_progress: "(ștergere în curs...)"
@@ -44,10 +81,146 @@ ro:
       no_accounts_title: Nu s-au găsit conturi
       requires_update: Necesită reautentificare
       setup_needed: Conturi noi gata de configurare
-      setup_description: Alege tipurile de conturi pentru conturile tale SimpleFin nou importate.
+      setup_description: Alege tipurile de conturi pentru conturile tale SimpleFin
+        nou importate.
       setup_action: Configurează conturi noi
       status: Ultima sincronizare acum %{timestamp}
       status_never: Niciodată sincronizat
-      status_with_summary: "Ultima sincronizare acum %{timestamp} • %{summary}"
+      status_with_summary: Ultima sincronizare acum %{timestamp} • %{summary}
       syncing: Se sincronizează...
       update: Actualizează conexiunea
+      accounts_skipped_label: 'Omise: %{count}'
+      setup_accounts_menu: Configurează conturile
+      more_accounts_available:
+        one: Încă %{count} cont disponibil pentru configurare
+        other: Încă %{count} de conturi disponibile pentru configurare
+        few: Încă %{count} conturi disponibile pentru configurare
+      accounts_skipped_tooltip: Unele conturi au fost omise din cauza erorilor de
+        sincronizare
+      deletion_in_progress: "(ștergere în curs...)"
+      duplicate_accounts_skipped: Unele conturi au fost omise ca duplicate — folosește
+        „Conectează conturi existente” pentru îmbinare.
+      rate_limited_ago: Limită de cereri atinsă (acum %{time})
+      rate_limited_recently: Limită de cereri atinsă recent
+      reconciled_details_note: "(vezi rezumatul sincronizării pentru detalii)"
+      stale_pending_accounts: 'în: %{accounts}'
+      stale_pending_note: "(excluse din bugete)"
+    select_existing_account:
+      cancel: Anulează
+      link_account: Conectează contul
+      currently_linked_to: 'Conectat în prezent la: %{account_name}'
+      all_accounts_already_linked: Toate conturile SimpleFIN par să fie deja conectate.
+      check_provider_health: Verifică starea conexiunii SimpleFIN în Setări → Furnizori.
+      description: Selectează un cont SimpleFIN de asociat contului existent
+      no_accounts_found: Nu s-au găsit conturi SimpleFIN pentru %{moniker}.
+      title: Conectează %{account_name} la SimpleFIN
+      unlink_to_move: Pentru a muta o asociere, dezasociază mai întâi contul din meniul
+        său de acțiuni.
+      wait_for_sync: Dacă tocmai ai conectat sau sincronizat, încearcă din nou după
+        finalizarea sincronizării.
+    setup_accounts:
+      account_card:
+        balance: Sold
+      account_type_credit_card: Card de credit
+      account_type_investment: Investiții
+      account_type_other_asset: Alt activ
+      activity:
+        today: astăzi
+        days_ago:
+          one: acum 1 zi
+          other: acum %{count} de zile
+          few: acum %{count} zile
+        dormant: Fără activitate de %{days} zile
+        empty: Nu există încă tranzacții importate
+        likely_closed: Fără activitate recentă și cu sold zero — poate fi un card
+          închis sau înlocuit
+        recent:
+          one: 1 tranzacție • cea mai recentă %{when}
+          other: "%{count} de tranzacții • cea mai recentă %{when}"
+          few: "%{count} tranzacții • cea mai recentă %{when}"
+        yesterday: ieri
+      cancel: Anulează
+      account_type_label: 'Tipul contului:'
+      account_type_loan: Împrumut sau credit ipotecar
+      create_accounts: Creează conturi
+      creating_accounts: Se creează conturile...
+      header_subtitle: Alege tipurile corecte pentru conturile importate
+      stale_accounts:
+        transaction_count:
+          one: "%{count} tranzacție"
+          other: "%{count} de tranzacții"
+          few: "%{count} tranzacții"
+        action_delete: Șterge contul și toate tranzacțiile
+        action_move: 'Mută tranzacțiile în:'
+        action_prompt: Ce vrei să faci?
+        action_skip: Omite deocamdată
+        description: Aceste conturi există în baza de date, dar nu mai sunt furnizate
+          de SimpleFIN. Acest lucru se poate întâmpla când configurarea conturilor
+          se schimbă la sursă.
+        title: Conturi care nu mai sunt în SimpleFIN
+      choose_account_type: 'Alege tipul corect pentru fiecare cont SimpleFIN:'
+      account_type_checking_savings: Curent sau de economii
+      account_type_checking_savings_desc: Conturi bancare obișnuite
+      account_type_credit_card_desc: Conturi de card de credit
+      account_type_investment_desc: Conturi de brokeraj, 401(k), IRA
+      account_type_loan_desc: Conturi de datorii
+      account_type_other_asset_desc: Orice altceva
+      title: Configurează conturile SimpleFIN
+      transaction_history_description_html: SimpleFIN oferă de obicei <strong>60–90
+        de zile</strong> de istoric al tranzacțiilor, în funcție de bancă. După configurarea
+        inițială, tranzacțiile noi se sincronizează automat. Disponibilitatea datelor
+        istorice variază după instituție și tipul contului.
+      transaction_history_title: 'Istoricul tranzacțiilor:'
+    sync_status:
+      no_accounts: Nu s-au găsit conturi
+      partial_setup:
+        one: 'Sincronizate: %{linked}; necesită configurare: %{unlinked}'
+        other: 'Sincronizate: %{linked}; necesită configurare: %{unlinked}'
+        few: 'Sincronizate: %{linked}; necesită configurare: %{unlinked}'
+      synced:
+        one: "%{count} cont sincronizat"
+        other: "%{count} de conturi sincronizate"
+        few: "%{count} conturi sincronizate"
+    institution_summary:
+      count:
+        one: "%{count} instituție"
+        other: "%{count} de instituții"
+        few: "%{count} instituții"
+      none: Nicio instituție conectată
+    reconciled_status:
+      message:
+        one: "%{count} tranzacție duplicată în așteptare a fost reconciliată"
+        other: "%{count} de tranzacții duplicate în așteptare au fost reconciliate"
+        few: "%{count} tranzacții duplicate în așteptare au fost reconciliate"
+    dismiss_replacement_suggestion:
+      dismissed: Sugestia de înlocuire a fost respinsă
+    link_existing_account:
+      errors:
+        different_provider: Acest cont este conectat la alt furnizor. Dezasociază-l
+          mai întâi de acel furnizor, apoi conectează-l la SimpleFIN.
+        invalid_simplefin_account: Cont SimpleFIN selectat nevalid
+        only_manual: Doar conturile manuale pot fi conectate
+      success: Contul a fost conectat cu succes la SimpleFIN
+    rate_limited:
+      daily_refresh: Ai atins limita zilnică de reîmprospătare SimpleFIN. Încearcă
+        din nou după reîmprospătarea serviciului bridge (până la 24 de ore).
+    replacement_prompt:
+      confirm_body: "„%{account_name}” va fi conectat la „%{new_name}”. Istoricul
+        tranzacțiilor se păstrează; tranzacțiile viitoare vor proveni de pe noul card."
+      confirm_title: Reconectezi la noul card?
+      description: "„%{account_name}” este conectat la „%{old_name}”, care nu a avut
+        activitate recentă și are sold zero. Un card nou, „%{new_name}”, este acum
+        activ la aceeași instituție. Reconectează-l pentru a păstra istoricul intact."
+      dismiss_aria: Respinge sugestia de înlocuire
+      relink: Reconectează la noul card
+      title: Cardul %{institution} poate să fi fost înlocuit
+    stale_pending_status:
+      message:
+        one: "%{count} tranzacție în așteptare mai veche de %{days} zile"
+        other: "%{count} de tranzacții în așteptare mai vechi de %{days} zile"
+        few: "%{count} tranzacții în așteptare mai vechi de %{days} zile"
+    stale_sync:
+      last_successful: Ultima sincronizare reușită a fost acum %{count} de zile. Conexiunea
+        SimpleFIN poate necesita atenție.
+      no_transactions: Nicio tranzacție nouă de %{count} de zile. Verifică panoul
+        SimpleFIN pentru a confirma că legăturile cu băncile sunt active.

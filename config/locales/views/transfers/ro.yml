@@ -3,6 +3,11 @@ ro:
   transfers:
     create:
       success: Transfer creat
+      date_invalid: este invalid
+      exchange_rate_unavailable: Cursul de schimb nu este disponibil pentru monedele
+        și data selectate
+      stale_form: Acest formular a fost deja trimis cu alte detalii. Reîncarcă pagina
+        și încearcă din nou.
     destroy:
       success: Transfer eliminat
     form:
@@ -15,6 +20,13 @@ ro:
       submit: Creează transfer
       to: Către
       transfer: Transfer
+      destination_amount: Suma de destinație
+      bank_charges: Comisioane bancare
+      destination_amount_display: 'Suma la destinație: %{amount}'
+      exchange_rate_display: 'Curs de schimb: %{rate}'
+      incoming_fee: Comision pentru transferul primit
+      outgoing_fee: Comision pentru transferul trimis
+      source_amount: Suma sursă
     new:
       title: Transfer nou
     show:
@@ -26,5 +38,19 @@ ro:
       note_placeholder: Adaugă o notiță la acest transfer
       overview: Prezentare generală
       settings: Setări
+      category: Categorie
+      date: Dată
+      from: De la
+      uncategorized: Fără categorie
+      total: Total
+      bank_charges: Comisioane bancare
+      destination_fee: Comision la destinație
+      mark_recurring: Marchează ca recurent
+      mark_recurring_subtitle: Urmărește acest transfer ca tipar recurent în lista
+        operațiunilor viitoare și pe pagina tranzacțiilor recurente.
+      mark_recurring_title: Marchează transferul ca recurent
+      source_fee: Comision la sursă
+      to: Către
+      transfer_amount: Suma transferului
     update:
       success: Transfer actualizat

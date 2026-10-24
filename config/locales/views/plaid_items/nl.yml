@@ -21,8 +21,19 @@ nl:
       status_never: Vereist gegevenssynchronisatie
       syncing: Synchroniseren...
       update: Bijwerken
+      provider_name: Plaid
+      add_accounts: Rekeningen toevoegen
+      deletion_in_progress: "(verwijderen wordt uitgevoerd…)"
     select_existing_account:
       title: "%{account_name} koppelen aan Plaid"
       description: Selecteer een Plaid account om te koppelen aan uw bestaande account
       cancel: Annuleren
       link_account: Account koppelen
+      no_available_accounts: Geen Plaid-rekeningen beschikbaar om te koppelen. Verbind eerst een nieuwe Plaid-rekening.
+    link_existing_account:
+      already_linked: Deze Plaid-rekening is al gekoppeld
+      invalid_account: Ongeldige Plaid-rekening geselecteerd
+      success: Rekening gekoppeld aan Plaid
+    errors:
+      link_token_generic: Plaid kan momenteel niet worden geopend. Probeer het opnieuw en controleer bij aanhoudende problemen de serverlogboeken voor details.
+      link_token_with_message: 'Plaid kon de koppeling niet openen: %{message}'

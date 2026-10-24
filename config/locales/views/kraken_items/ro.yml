@@ -1,0 +1,94 @@
+---
+ro:
+  kraken_item:
+    syncer:
+      calculating_balances: Se calculează soldurile...
+      accounts_need_setup:
+        one: "%{count} cont necesită configurare"
+        other: "%{count} de conturi necesită configurare"
+        few: "%{count} conturi necesită configurare"
+      checking_configuration: Se verifică configurarea contului...
+      checking_credentials: Se verifică datele de autentificare...
+      processing_accounts: Se procesează datele contului...
+      importing_accounts: Se importă conturile din Kraken...
+      credentials_invalid: Date API Kraken nevalide. Verifică cheia API și secretul.
+  kraken_items:
+    kraken_item:
+      delete: Șterge
+      no_accounts_title: Nu s-au găsit conturi
+      status: Ultima sincronizare acum %{timestamp}
+      status_never: Nu a fost sincronizat niciodată
+      sync_status:
+        no_accounts: Nu s-au găsit conturi
+        all_synced:
+          one: "%{count} cont sincronizat"
+          other: "%{count} de conturi sincronizate"
+          few: "%{count} conturi sincronizate"
+        partial_sync: 'Sincronizate: %{linked_count}; necesită configurare: %{unlinked_count}'
+      syncing: Se sincronizează...
+      deletion_in_progress: Se șterge...
+      import_accounts_menu: Importă contul
+      provider_name: Kraken
+      reconnect: Datele de autentificare necesită actualizare
+      setup_action: Importă contul
+      status_with_summary: Ultima sincronizare acum %{timestamp} - %{summary}
+      setup_needed: Cont pregătit pentru import
+      no_accounts_message: Contul de bursă Kraken va apărea aici după sincronizare.
+      setup_description: Importă această conexiune Kraken ca un cont de bursă de criptomonede.
+      stale_rate_warning: Soldul este aproximativ deoarece cursul exact pentru %{date}
+        nu a fost disponibil. Se va actualiza la următoarea sincronizare.
+    select_existing_account:
+      cancel: Anulează
+      link: Asociază
+      check_provider_health: Verifică validitatea datelor API Kraken.
+      no_accounts_found: Nu s-au găsit conturi Kraken.
+      title: Conectează contul Kraken
+      wait_for_sync: Așteaptă finalizarea sincronizării Kraken.
+    setup_accounts:
+      cancel: Anulează
+      accounts_count:
+        one: "%{count} cont disponibil"
+        other: "%{count} de conturi disponibile"
+        few: "%{count} conturi disponibile"
+      creating: Se importă...
+      import_selected: Importă selecția
+      select_all: Selectează tot
+      instructions: Pentru această conexiune, Kraken importă un singur cont agregat
+        de platformă cripto, care include doar deținerile și execuțiile tranzacțiilor
+        spot.
+      no_accounts: Toate conturile Kraken au fost importate.
+      subtitle: Selectează contul de bursă de urmărit
+      title: Importă contul Kraken
+    create:
+      default_name: Kraken
+      success: Conectarea la Kraken a reușit. Contul de bursă se sincronizează.
+    provider_connection:
+      default_name: Kraken
+      name: Kraken - %{name}
+      default_description: Conectează la un cont de bursă Kraken
+      description: Conectează la %{name}
+    complete_account_setup:
+      no_accounts: Nu există conturi de importat
+      none_selected: Niciun cont selectat
+      success:
+        one: S-a importat %{count} cont
+        other: S-au importat %{count} de conturi
+        few: S-au importat %{count} conturi
+    select_accounts:
+      select_connection: Alege o conexiune Kraken în setările furnizorului.
+      no_credentials_configured: Adaugă datele API Kraken înainte de configurarea
+        conturilor.
+    destroy:
+      success: Conexiunea Kraken a fost programată pentru ștergere.
+    link_accounts:
+      select_connection: Alege o conexiune Kraken înainte de a conecta conturile.
+    link_existing_account:
+      select_connection: Alege o conexiune Kraken înainte de a conecta conturile.
+      errors:
+        invalid_kraken_account: Cont Kraken nevalid
+        kraken_account_already_linked: Acest cont Kraken este deja conectat
+        only_manual: Doar conturile manuale de bursă de criptomonede fără furnizor
+          asociat pot fi conectate la Kraken
+      success: Conectat cu succes la contul Kraken
+    update:
+      success: Conexiunea Kraken a fost actualizată cu succes.

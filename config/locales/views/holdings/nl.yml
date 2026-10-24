@@ -5,6 +5,7 @@ nl:
       brokerage_cash: Makelaar liquiditeiten
     destroy:
       success: Bezit verwijderd
+      cannot_delete: Je kunt deze positie niet verwijderen
     update:
       success: Kostprijs opgeslagen.
       error: Ongeldige kostprijs waarde.
@@ -16,14 +17,15 @@ nl:
       provider: Van provider
     cost_basis_cell:
       unknown: "--"
-      set_cost_basis_header: "Kostprijs instellen voor %{ticker} (%{qty} aandelen)"
+      set_cost_basis_header: Kostprijs instellen voor %{ticker} (%{qty} aandelen)
       total_cost_basis_label: Totale kostprijs
-      or_per_share_label: "Of voer per aandeel in:"
+      or_per_share_label: 'Of voer per aandeel in:'
       per_share: per aandeel
       cancel: Annuleren
       save: Opslaan
       overwrite_confirm_title: Kostprijs overschrijven?
-      overwrite_confirm_body: "Dit vervangt de huidige kostprijs van %{current}."
+      overwrite_confirm_body: Dit vervangt de huidige kostprijs van %{current}.
+      set: Instellen
     holding:
       per_share: per aandeel
       shares: "%{qty} aandelen"
@@ -62,3 +64,41 @@ nl:
       unlock_cost_basis: Ontgrendelen
       unlock_confirm_title: Kostprijs ontgrendelen?
       unlock_confirm_body: Dit maakt het mogelijk dat de kostprijs wordt bijgewerkt door provider syncs of transactieberekeningen.
+      security_label: Beveiliging
+      cancel: Annuleren
+      syncing: Synchroniseren…
+      market_data_sync_button: Vernieuwen
+      book_value_label: Boekwaarde
+      edit_security: Effect bewerken
+      last_price_update: Laatste koersupdate
+      market_data_label: Marktgegevens
+      market_value_label: Marktwaarde
+      never: Nooit
+      no_security_provider: Effectenaanbieder niet ingesteld. Zoeken naar effecten is niet mogelijk.
+      no_trade_history: Geen transactiegeschiedenis beschikbaar voor deze positie.
+      originally: was %{ticker}
+      provider_disabled_warning: 'Koersupdates gepauzeerd: aanbieder %{provider} is uitgeschakeld. Kies hieronder een andere aanbieder of schakel deze weer in bij Instellingen.'
+      provider_sent: 'Aanbieder leverde: %{ticker}'
+      remap_security: Opslaan
+      reset_confirm_body: Hiermee wordt het effect van %{current} teruggezet naar %{original} en worden alle bijbehorende effectentransacties verplaatst.
+      reset_confirm_title: Effect terugzetten naar de aanbieder?
+      reset_to_provider: Terugzetten naar aanbieder
+      search_security: Effect zoeken
+      search_security_placeholder: Zoeken op ticker of naam
+      security_remapped_label: Effect opnieuw gekoppeld
+      shares_label: Aandelen
+      switch_provider_button: Wisselen
+      switch_provider_description: "%{provider} is uitgeschakeld. Zoek dit effect bij een andere ingeschakelde aanbieder."
+      switch_provider_label: Aanbieder wijzigen
+      truncated_history_warning: Koersgeschiedenis is pas beschikbaar vanaf %{date}. Voor eerdere datums heeft de geselecteerde aanbieder geen gegevens. Dit kan gebeuren als het activum pas na je transactiedatum werd genoteerd of als het huidige abonnement van de aanbieder slechts een beperkt historisch bereik biedt.
+    errors:
+      security_collision: 'Opnieuw koppelen niet mogelijk: je hebt al een positie voor %{ticker} op %{date}.'
+    remap_security:
+      security_not_found: Het geselecteerde effect kon niet worden gevonden.
+      success: Effect bijgewerkt.
+    reset_security:
+      success: Effect teruggezet naar de waarde van de aanbieder.
+    sync_prices:
+      provider_error: Actuele koersen ophalen niet mogelijk. Probeer het over enkele minuten opnieuw.
+      success: Marktgegevens gesynchroniseerd.
+      unavailable: Synchronisatie van marktgegevens is niet beschikbaar voor offline effecten.

@@ -2,23 +2,24 @@
 nl:
   provider_sync_summary:
     title: Synchronisatie samenvatting
-    last_sync: "Laatste sync: %{time_ago} geleden"
+    last_sync: 'Laatste sync: %{time_ago} geleden'
     accounts:
       title: Accounts
-      total: "Totaal: %{count}"
-      linked: "Gekoppeld: %{count}"
-      unlinked: "Niet gekoppeld: %{count}"
-      institutions: "Instellingen: %{count}"
+      total: 'Totaal: %{count}'
+      linked: 'Gekoppeld: %{count}'
+      unlinked: 'Niet gekoppeld: %{count}'
+      institutions: 'Instellingen: %{count}'
     transactions:
       title: Transacties
-      seen: "Gezien: %{count}"
-      imported: "Geïmporteerd: %{count}"
-      updated: "Bijgewerkt: %{count}"
-      skipped: "Overgeslagen: %{count}"
+      seen: 'Gezien: %{count}'
+      imported: 'Geïmporteerd: %{count}'
+      updated: 'Bijgewerkt: %{count}'
+      skipped: 'Overgeslagen: %{count}'
       protected:
         one: "%{count} item beschermd (niet overschreven)"
         other: "%{count} items beschermd (niet overschreven)"
       view_protected: Beschermde items bekijken
+      fetching: Ophalen bij de broker…
     skip_reasons:
       excluded: Uitgesloten
       user_modified: Gebruiker aangepast
@@ -26,14 +27,14 @@ nl:
       protected: Beschermd
     holdings:
       title: Bezittingen
-      found: "Gevonden: %{count}"
-      processed: "Verwerkt: %{count}"
+      found: 'Gevonden: %{count}'
+      processed: 'Verwerkt: %{count}'
     health:
       title: Status
       view_error_details: Foutdetails bekijken
-      rate_limited: "Snelheidslimiet bereikt %{time_ago} geleden"
+      rate_limited: Snelheidslimiet bereikt %{time_ago} geleden
       recently: recent
-      errors: "Fouten: %{count}"
+      errors: 'Fouten: %{count}'
       pending_reconciled:
         one: "%{count} dubbele pending transactie afgestemd"
         other: "%{count} dubbele pending transacties afgestemd"
@@ -56,6 +57,133 @@ nl:
       stale_unmatched_count:
         one: "%{count} transactie"
         other: "%{count} transacties"
-      data_warnings: "Datawaarschuwingen: %{count}"
-      notices: "Mededelingen: %{count}"
+      data_warnings: 'Datawaarschuwingen: %{count}'
+      notices: 'Mededelingen: %{count}'
       view_data_quality: Datakwaliteit details bekijken
+    trades:
+      title: Effectentransacties
+      skipped: 'Overgeslagen: %{count}'
+      fetching: Activiteiten ophalen bij de broker…
+      imported: 'Geïmporteerd: %{count}'
+  UI:
+    account:
+      balance_reconciliation:
+        labels:
+          payments: Betalingen
+          adjustments: Correcties
+          buys: Aankopen
+          change_in_brokerage_cash: Wijziging in geld op effectenrekening
+          change_in_holdings_market: Wijziging in posities (koersbewegingen)
+          change_in_holdings_trades: Wijziging in posities (aankopen/verkopen)
+          charges: Bestedingen
+          end_balance: Eindsaldo
+          end_principal: Hoofdsom aan het einde
+          end_value: Eindwaarde
+          final_balance: Definitief saldo
+          final_principal: Definitieve hoofdsom
+          final_value: Definitieve waarde
+          market_changes: Marktveranderingen
+          net_cash_flow: Nettokasstroom
+          net_principal_change: Nettowijziging hoofdsom
+          net_value_change: Nettowaardeverandering
+          sells: Verkopen
+          start_balance: Beginsaldo
+          start_principal: Hoofdsom aan het begin
+          start_value: Beginwaarde
+        tooltips:
+          adjustments: Handmatige afstemmingen of andere correcties
+          adjustments_asset: Handmatige waardecorrecties of taxaties
+          buys: Crypto-aankopen gedurende de dag
+          change_in_brokerage_cash: Nettowijziging in geld door stortingen, opnames en effectentransacties
+          change_in_holdings_market: Waardeverandering van posities door koersbewegingen
+          change_in_holdings_trades: Invloed van aan- en verkopen van effecten op posities
+          charges: Nieuwe bestedingen gedurende de dag
+          end_balance: Het berekende saldo na alle transacties
+          end_balance_investment: Het berekende saldo na alle activiteiten
+          end_principal: De berekende hoofdsom na alle transacties
+          end_value: De berekende waarde na alle wijzigingen
+          final_balance: Het definitieve rekeningsaldo voor de dag
+          final_balance_credit: De definitieve schuld voor de dag
+          final_balance_crypto: De definitieve waarde van cryptoposities voor de dag
+          final_balance_investment: De definitieve portefeuillewaarde voor de dag
+          final_principal: De definitieve resterende hoofdsom voor de dag
+          final_value: De definitieve waarde van het bezit voor de dag
+          market_changes: Waardeveranderingen door koersbewegingen
+          net_cash_flow: Nettowijziging in saldo door alle transacties gedurende de dag
+          net_principal_change: Aflossingen op de hoofdsom en nieuwe leningen gedurende de dag
+          net_value_change: Alle waardeveranderingen, inclusief verbeteringen en afschrijving
+          payments: Betalingen op de creditcard gedurende de dag
+          sells: Cryptoverkopen gedurende de dag
+          start_balance: Het rekeningsaldo aan het begin van deze dag
+          start_balance_credit: De schuld aan het begin van deze dag
+          start_balance_crypto: De waarde van cryptoposities aan het begin van deze dag
+          start_balance_investment: De totale portefeuillewaarde aan het begin van deze dag
+          start_principal: De resterende hoofdsom aan het begin van deze dag
+          start_value: De waarde van het bezit aan het begin van deze dag
+      chart:
+        views:
+          holdings: Posities
+          cash: Geld
+          gains: Winst / ROI
+          total_value: Totale waarde
+        title:
+          balance: Saldo
+          holdings_value: Waarde van posities
+          total_account_value: Totale rekeningwaarde
+          cash_value: Geldwaarde
+          debt_balance: Schuldsaldo
+          estimated_property_value: Geschatte vastgoedwaarde
+          estimated_vehicle_value: Geschatte voertuigwaarde
+          loan_remaining_balance: Resterend saldo
+          remaining_principal_balance: Resterende hoofdsom
+          total_gains: Totale winsten
+        loan:
+          today: Vandaag
+          actual: Vastgelegd saldo
+          aria_actual_history_starts: De vastgelegde saldogeschiedenis begint op %{date}.
+          aria_description: 'Grafiek van het leningsaldo. Vastgelegd saldo: %{current_balance}. Oorspronkelijk geplande aflosdatum: %{scheduled_payoff_date}. Verwachte aflosdatum op basis van het huidige saldo: %{projected_payoff_date}.'
+          interactive_chart: interactieve grafiek
+          interest_saved: Bespaarde rente
+          legend: Gegevensreeksen
+          months_saved:
+            one: "%{count} maand eerder dan gepland"
+            other: "%{count} maanden eerder dan gepland"
+          no_payoff: niet met de huidige betaling
+          not_converged: Met de huidige betaling is dit saldo niet afgelost op de oorspronkelijke einddatum; er zou nog %{balloon} verschuldigd zijn.
+          on_schedule: Op schema
+          projected: Prognose vanaf vandaag
+          projected_payoff: Verwachte aflossing
+          projection_basis: Vergelijkt het vandaag vastgelegde saldo met het geplande saldo op dezelfde dag. Een betaling die vóór de geplande datum is geboekt, geldt tot die datum als voorsprong; een later geboekte betaling als achterstand.
+          scheduled: Oorspronkelijk schema
+          since_start: sinds de start van de lening
+        no_data_available: Geen gegevens beschikbaar
+        vs_available_history: t.o.v. beschikbare geschiedenis
+      activity_date:
+        balance_tooltip: Het saldo aan het einde van de dag, na alle transacties en correcties
+        no_balance_data: Geen saldogegevens beschikbaar voor deze datum
+      activity_feed:
+        toggle_selection_checkboxes: Selectie in- of uitschakelen
+    period_picker:
+      aria_label: 'Periode: %{period}'
+  ds:
+    alert:
+      variants:
+        destructive: Fout
+        error: Fout
+        success: Geslaagd
+        info: Informatie
+        warning: Waarschuwing
+    dialog:
+      close: Sluiten
+    pill:
+      default_label: Voorvertoning
+      aria_label: "%{label}"
+    icon_picker:
+      no_matching_icons: Geen passende pictogrammen
+      search_placeholder: Pictogrammen zoeken…
+    link:
+      opens_in_new_tab: "(opent in een nieuw tabblad)"
+    popover:
+      avatar_default_label: Menu openen
+    tooltip:
+      trigger_label: Meer informatie

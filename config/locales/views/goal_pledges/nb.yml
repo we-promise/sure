@@ -1,0 +1,22 @@
+---
+nb:
+  goal_pledges:
+    new:
+      amount_label: Beløp
+      account_label: Til konto
+      helper_manual: Sure registrerer dette ved neste manuelle saldoendring og bekrefter
+        innskuddet.
+      helper_transfer: Sure ser etter et tilsvarende innskudd på den tilknyttede kontoen.
+        Spareløftet venter i 7 dager og bekreftes automatisk når Sure finner innskuddet.
+      preview_nonzero: Når {percent} %, {newTotal} av {target}.
+      preview_reached: Når målet på {target}. Målet er oppnådd.
+      preview_zero: Foreløpig er {current} av {target} spart.
+      submit: Registrer spareløfte
+    create:
+      success: Spareløftet er registrert. Sure bekrefter det ved neste synkronisering.
+    destroy:
+      not_open: Bare åpne spareløfter kan avbrytes.
+      success: Spareløftet er avbrutt.
+    renew:
+      not_open: Bare åpne spareløfter kan forlenges.
+      success: Fristen for spareløftet er forlenget med 7 dager.

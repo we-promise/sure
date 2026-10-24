@@ -1,0 +1,97 @@
+---
+nb:
+  ibkr_items:
+    complete_account_setup:
+      none_created: Ingen kontoer ble opprettet.
+      none_selected: Ingen kontoer ble valgt.
+      success:
+        one: Opprettet %{count} Interactive Brokers-konto.
+        other: Opprettet %{count} Interactive Brokers-kontoer.
+    ibkr_item:
+      accounts_need_setup: Kontoer må konfigureres
+      delete: Slett
+      deletion_in_progress: Sletting pågår
+      error: Feil
+      setup_accounts: Konfigurer kontoer
+      synced: Synkronisert for %{time} siden. %{summary}.
+      syncing: Synkroniserer
+      never_synced: Aldri synkronisert.
+      accounts_need_setup_description: Noen IBKR-kontoer må knyttes til Sure-kontoer.
+      flex_web_service: Flex Web Service
+      no_accounts_discovered: Ingen IBKR-kontoer er funnet ennå.
+      no_accounts_discovered_description: Kjør en synkronisering etter at du har konfigurert
+        Flex-spørringen, for å finne kontoer.
+      requires_update: Påloggingsopplysningene krever oppfølging
+    select_existing_account:
+      balance: Saldo
+      cancel: Avbryt
+      link: Koble til
+      wait_for_sync: Vent til synkroniseringen som finner kontoer, er fullført.
+      no_accounts_available: Ingen Interactive Brokers-kontoer som ikke allerede er
+        koblet til, er tilgjengelige ennå.
+      run_sync_hint: Kjør en synkronisering fra Innstillinger > Leverandører etter
+        at du har oppdatert Flex-spørringen.
+      title: Koble til Interactive Brokers-konto
+    setup_accounts:
+      available_accounts:
+        account_type_investment: Investering
+        account_id: 'Konto-ID: %{account_id}'
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        title: Tilgjengelige kontoer
+      buttons:
+        cancel: Avbryt
+        done: Ferdig
+        link: Koble til
+        refresh: Oppdater
+        back_to_settings: Tilbake til innstillinger
+        create_selected_accounts: Opprett valgte kontoer
+      link_existing:
+        select_prompt: Velg en konto...
+        manual_account_option: "%{name} (%{balance})"
+        description: Eller knytt en IBKR-konto som ble funnet, til en eksisterende
+          manuell investeringskonto.
+      linked_accounts:
+        linked_to_html: 'Koblet til: %{account}'
+        title: Allerede tilkoblet
+      dialog_title: Sett opp Interactive Brokers-kontoene dine
+      info_box:
+        items:
+          item_1: Beholdninger med gjeldende priser og mengder
+          item_2: Inngangsverdi per posisjon
+          item_3: Handler, utbytte, kurtasje og kontantinnskudd eller -uttak
+        title: Import av IBKR Flex-spørring
+        warning: Historisk aktivitet er begrenset til rapportperioden for Flex-spørringen
+      page_title: Sett opp Interactive Brokers-kontoer
+      status:
+        fetching_accounts: Henter kontoer fra Interactive Brokers …
+        no_accounts_found_description: Sure fant ingen IBKR-kontoer i den nyeste Flex-rapporten.
+        no_accounts_found_title: Fant ingen kontoer.
+      subtitle: Velg hvilke IBKR-meglerkontoer du vil koble til.
+    defaults:
+      name: Interactive Brokers
+    sync_status:
+      all_linked:
+        one: 1 konto tilkoblet
+        other: "%{count} kontoer tilkoblet"
+      partial: "%{linked} tilkoblet, %{unlinked} må konfigureres"
+      no_accounts: Ingen IBKR-kontoer er funnet ennå
+    create:
+      success: Interactive Brokers er konfigurert.
+    destroy:
+      success: Interactive Brokers-tilkoblingen er planlagt slettet.
+    link_existing_account:
+      already_linked: Denne Interactive Brokers-kontoen er allerede koblet til.
+      failed: Kunne ikke koble til Interactive Brokers-kontoen.
+      not_found: Fant ikke kontoen eller Interactive Brokers-konfigurasjonen.
+      only_manual_investment: Bare manuelle investeringskontoer kan kobles til Interactive
+        Brokers.
+      success: Koblet til Interactive Brokers-kontoen.
+    select_accounts:
+      not_configured: Interactive Brokers er ikke konfigurert.
+    update:
+      success: Interactive Brokers-konfigurasjonen er oppdatert.
+  providers:
+    ibkr:
+      institution_name: Interactive Brokers
+      name: Interactive Brokers
+      connection_description: Koble til en Interactive Brokers Flex Web Service-rapport

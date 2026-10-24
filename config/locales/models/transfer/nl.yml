@@ -13,6 +13,10 @@ nl:
               must_have_opposite_amounts: Transfer-transacties moeten tegengestelde bedragen hebben
               must_have_single_currency: Transfer moet een enkele valuta hebben
               outflow_cannot_be_in_multiple_transfers: Outflow-transactie kan geen deel uitmaken van meerdere transfers
+          different_accounts: Moeten van verschillende rekeningen afkomstig zijn
+          opposite_amounts: Moeten tegengestelde bedragen hebben
+          same_family: Moeten van hetzelfde huishouden afkomstig zijn
+          within_days: Moeten binnen %{count} dagen vallen
   transfer:
     name: Transfer naar %{to_account}
     payment_name: Betaling naar %{to_account}

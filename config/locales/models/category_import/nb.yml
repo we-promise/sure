@@ -1,0 +1,8 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          missing_columns: 'Påkrevde kolonner mangler: %{columns}'
+          own_parent: Kategorien «%{name}» kan ikke være sin egen overordnede kategori

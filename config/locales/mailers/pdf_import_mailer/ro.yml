@@ -1,0 +1,5 @@
+---
+ro:
+  pdf_import_mailer:
+    next_steps:
+      subject: Documentul tău PDF a fost analizat - %{product_name}

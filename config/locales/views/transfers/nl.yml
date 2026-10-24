@@ -3,6 +3,9 @@ nl:
   transfers:
     create:
       success: Overboeking aangemaakt
+      date_invalid: is ongeldig
+      exchange_rate_unavailable: Geen wisselkoers beschikbaar voor de geselecteerde valuta's en datum
+      stale_form: Dit formulier is al met andere gegevens verstuurd. Vernieuw de pagina en probeer het opnieuw.
     destroy:
       success: Overboeking verwijderd
     form:
@@ -15,17 +18,36 @@ nl:
       submit: Maak overboeking aan
       to: Naar
       transfer: Overboeking
+      bank_charges: Bankkosten
+      destination_amount: Bedrag op doelrekening
+      destination_amount_display: 'Bedrag op doelrekening: %{amount}'
+      exchange_rate_display: 'Wisselkoers: %{rate}'
+      incoming_fee: Kosten voor inkomende overboeking
+      outgoing_fee: Kosten voor uitgaande overboeking
+      source_amount: Bedrag van bronrekening
     new:
       title: Nieuwe overboeking
     show:
       delete: Verwijder overboeking
-      delete_subtitle: Dit verwijdert de overboeking. Het verwijdert niet de onderliggende
-        transacties.
+      delete_subtitle: Dit verwijdert de overboeking. Het verwijdert niet de onderliggende transacties.
       delete_title: Overboeking verwijderen?
       details: Details
       note_label: Notities
       note_placeholder: Voeg een notitie toe aan deze overboeking
       overview: Overzicht
       settings: Instellingen
+      total: Totaal
+      date: Datum
+      category: Categorie
+      destination_fee: Kosten op doelrekening
+      from: Van
+      mark_recurring: Als terugkerend markeren
+      mark_recurring_subtitle: Houd deze overboeking als terugkerend patroon bij in het overzicht van komende transacties en op de pagina Terugkerend.
+      mark_recurring_title: Overboeking als terugkerend markeren
+      source_fee: Kosten op bronrekening
+      to: Naar
+      transfer_amount: Overboekingsbedrag
+      uncategorized: Zonder categorie
+      bank_charges: Bankkosten
     update:
       success: Overboeking bijgewerkt

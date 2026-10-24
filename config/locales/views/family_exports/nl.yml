@@ -16,4 +16,33 @@ nl:
         actions:
           delete: Verwijderen
           download: Downloaden
+          confirm_mark_failed: Deze export is al een tijd inactief en de achtergrondtaak is waarschijnlijk onderbroken. Als mislukt markeren? Je kunt direct een nieuwe export maken.
+          mark_failed: Als mislukt markeren
       empty: Nog geen export.
+    index:
+      title: Exports
+      new: Nieuwe export
+    new:
+      cancel: Annuleren
+      accounts_and_balances: Alle rekeningen en saldi
+      categories_tags_rules: Categorieën, tags en regels
+      dialog_subtitle: Download al je financiële gegevens
+      dialog_title: Je gegevens exporteren
+      export_data: Gegevens exporteren
+      investment_trades: Beleggingstransacties
+      note_description: Deze export bevat al je gegevens, maar slechts een deel kan opnieuw worden geïmporteerd via de CSV-importfunctie. We ondersteunen imports van rekeningen, transacties (met categorie en tags) en effectentransacties. Andere rekeninggegevens kunnen niet worden geïmporteerd en zijn alleen voor je eigen administratie.
+      note_label: Opmerking
+      transaction_history: Transactiegeschiedenis
+      whats_included: 'Inbegrepen:'
+    access_denied: Toegang geweigerd
+    cancel:
+      cancelled: Export gemarkeerd als mislukt. Je kunt direct een nieuwe export maken.
+      not_cancellable: Deze export kan nu niet als mislukt worden gemarkeerd; de taak wordt mogelijk nog uitgevoerd. Probeer het opnieuw als deze een uur inactief is geweest.
+    create:
+      success: Export gestart. Je kunt deze binnenkort downloaden.
+    delete_confirmation: Weet je zeker dat je deze export wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+    delete_failed_confirmation: Weet je zeker dat je deze mislukte export wilt verwijderen?
+    destroy:
+      success: Export verwijderd
+    export_not_ready: Export is nog niet klaar om te downloaden
+    exporting: Exporteren…

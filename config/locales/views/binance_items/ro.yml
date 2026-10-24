@@ -1,0 +1,85 @@
+---
+ro:
+  binance_item:
+    syncer:
+      calculating_balances: Se calculează soldurile...
+      accounts_need_setup:
+        one: "%{count} cont necesită configurare"
+        other: "%{count} de conturi necesită configurare"
+        few: "%{count} conturi necesită configurare"
+      checking_configuration: Se verifică configurarea contului...
+      checking_credentials: Se verifică datele de autentificare...
+      processing_accounts: Se procesează datele contului...
+      importing_accounts: Se importă conturile din Binance...
+      credentials_invalid: Date de autentificare API nevalide. Verifică cheia și secretul
+        API.
+  binance_items:
+    binance_item:
+      delete: Șterge
+      no_accounts_title: Nu s-au găsit conturi
+      status: Ultima sincronizare acum %{timestamp}
+      status_never: Nu a fost sincronizat niciodată
+      sync_status:
+        no_accounts: Nu s-au găsit conturi
+        all_synced:
+          one: "%{count} cont sincronizat"
+          other: "%{count} de conturi sincronizate"
+          few: "%{count} conturi sincronizate"
+        partial_sync: 'Sincronizate: %{linked_count}; necesită configurare: %{unlinked_count}'
+      syncing: Se sincronizează...
+      deletion_in_progress: Se șterge...
+      import_accounts_menu: Importă contul
+      provider_name: Binance
+      reconnect: Datele de autentificare necesită actualizare
+      setup_action: Importă contul
+      status_with_summary: Ultima sincronizare acum %{timestamp} - %{summary}
+      update_credentials: Actualizează datele de autentificare
+      setup_needed: Cont pregătit pentru import
+      no_accounts_message: Portofoliul tău Binance va apărea aici după sincronizare.
+      setup_description: Selectează portofoliile Binance pe care vrei să le urmărești.
+      stale_rate_warning: Soldul este aproximativ — cursul de schimb exact pentru
+        %{date} nu a fost disponibil. Se va actualiza la următoarea sincronizare.
+    select_existing_account:
+      cancel: Anulează
+      link: Asociază
+      currently_linked_to: 'Conectat în prezent la: %{account_name}'
+      check_provider_health: Verifică dacă datele tale de autentificare API Binance
+        sunt valide
+      no_accounts_found: Nu s-au găsit conturi Binance.
+      title: Conectează contul Binance
+      wait_for_sync: Așteaptă finalizarea sincronizării Binance
+    setup_accounts:
+      cancel: Anulează
+      accounts_count:
+        one: "%{count} cont disponibil"
+        other: "%{count} de conturi disponibile"
+        few: "%{count} conturi disponibile"
+      creating: Se importă...
+      import_selected: Importă selecția
+      select_all: Selectează tot
+      instructions: Selectează portofoliile Binance pe care vrei să le imporți. Sunt
+        afișate doar portofoliile cu sold.
+      no_accounts: Toate conturile au fost importate.
+      subtitle: Selectează portofoliile de urmărit
+      title: Importă contul Binance
+    create:
+      default_name: Binance
+      success: Conectare reușită la Binance! Contul tău este în curs de sincronizare.
+    complete_account_setup:
+      no_accounts: Nu există conturi de importat
+      none_selected: Niciun cont selectat
+      success:
+        one: S-a importat %{count} cont
+        other: S-au importat %{count} de conturi
+        few: S-au importat %{count} conturi
+      invalid_sync_start_date: Data de început a sincronizării trebuie să fie o dată
+        validă din trecut.
+    destroy:
+      success: Conexiunea Binance a fost programată pentru ștergere.
+    link_existing_account:
+      errors:
+        invalid_binance_account: Cont Binance nevalid
+        only_manual: Doar conturile manuale pot fi asociate cu Binance
+      success: Conectat cu succes la contul Binance
+    update:
+      success: Configurarea Binance a fost actualizată cu succes.

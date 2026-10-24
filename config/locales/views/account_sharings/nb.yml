@@ -1,0 +1,30 @@
+---
+nb:
+  account_sharings:
+    show:
+      member: Medlem
+      exclude_from_finances: Utelat fra mine budsjetter og rapporter
+      finance_toggle_description: Ta med kontoen i nettoformuen, budsjettene og rapportene
+        dine
+      include_in_finances: Ta med i mine budsjetter og rapporter
+      no_members: Ingen andre medlemmer i %{moniker} å dele med
+      owner_label: 'Eier: %{name}'
+      permission: Tillatelse
+      permissions:
+        full_control: Full kontroll
+        full_control_description: Kan se, redigere og administrere transaksjoner
+        read_only: Bare visning
+        read_only_description: Kan bare se kontodata
+        read_write: Kan legge til merknader
+        read_write_description: Kan kategorisere, tagge og legge til notater
+      save: Lagre delingsinnstillinger
+      shared: Delt
+      shared_with_count:
+        one: Delt med 1 medlem
+        other: Delt med %{count} medlemmer
+      subtitle: Bestem hvem som kan se og bruke denne kontoen
+      title: Kontodeling
+    update:
+      finance_toggle_success: Innstillingen for økonomisk inkludering er oppdatert
+      not_owner: Bare kontoeieren kan administrere deling
+      success: Delingsinnstillingene er oppdatert

@@ -1,0 +1,212 @@
+---
+ro:
+  UI:
+    account:
+      balance_reconciliation:
+        labels:
+          payments: Plăți
+          adjustments: Ajustări
+          buys: Cumpărări
+          change_in_brokerage_cash: Variația numerarului de brokeraj
+          change_in_holdings_market: Variația deținerilor (mișcarea prețurilor de
+            piață)
+          change_in_holdings_trades: Variația deținerilor (cumpărări/vânzări)
+          charges: Sume debitate
+          end_balance: Sold la încheiere
+          end_principal: Principal la încheiere
+          end_value: Valoare la încheiere
+          final_balance: Sold final
+          final_principal: Principal final
+          final_value: Valoare finală
+          market_changes: Variații de piață
+          net_cash_flow: Flux net de numerar
+          net_principal_change: Variația netă a principalului
+          net_value_change: Variația netă a valorii
+          sells: Vânzări
+          start_balance: Sold de început
+          start_principal: Principal de început
+          start_value: Valoare de început
+        tooltips:
+          adjustments: Reconcilieri manuale sau alte ajustări
+          adjustments_asset: Ajustări manuale ale valorii sau evaluări
+          buys: Cumpărări de criptomonede în timpul zilei
+          change_in_brokerage_cash: Variația netă a numerarului din depuneri, retrageri
+            și tranzacții bursiere
+          change_in_holdings_market: Variația valorii deținerilor datorată mișcării
+            prețurilor de piață
+          change_in_holdings_trades: Impactul cumpărărilor și vânzărilor de instrumente
+            financiare asupra deținerilor
+          charges: Sume noi debitate în timpul zilei
+          end_balance: Soldul calculat după toate tranzacțiile
+          end_balance_investment: Soldul calculat după toate activitățile
+          end_principal: Principalul calculat după toate tranzacțiile
+          end_value: Valoarea calculată după toate modificările
+          final_balance: Soldul final al contului pentru această zi
+          final_balance_credit: Soldul final datorat pentru această zi
+          final_balance_crypto: Valoarea finală a deținerilor de criptomonede pentru
+            această zi
+          final_balance_investment: Valoarea finală a portofoliului pentru această
+            zi
+          final_principal: Soldul final al principalului pentru această zi
+          final_value: Valoarea finală a activului pentru această zi
+          market_changes: Variații ale valorii datorate mișcării prețurilor de piață
+          net_cash_flow: Variația netă a soldului din toate tranzacțiile zilei
+          net_principal_change: Rambursări de principal și împrumuturi noi în timpul
+            zilei
+          net_value_change: Toate variațiile valorii, inclusiv îmbunătățirile și deprecierea
+          payments: Plăți efectuate către card în timpul zilei
+          sells: Vânzări de criptomonede în timpul zilei
+          start_balance: Soldul contului la începutul acestei zile
+          start_balance_credit: Soldul datorat la începutul acestei zile
+          start_balance_crypto: Valoarea deținerilor de criptomonede la începutul
+            acestei zile
+          start_balance_investment: Valoarea totală a portofoliului la începutul acestei
+            zile
+          start_principal: Soldul principalului la începutul acestei zile
+          start_value: Valoarea activului la începutul acestei zile
+      chart:
+        loan:
+          today: Astăzi
+          actual: Sold înregistrat
+          aria_actual_history_starts: Istoricul soldului înregistrat începe la %{date}.
+          aria_description: 'Graficul soldului împrumutului. Sold înregistrat %{current_balance}.
+            Rambursare programată inițial pentru %{scheduled_payoff_date}. Rambursare
+            estimată pe baza soldului de astăzi: %{projected_payoff_date}.'
+          interactive_chart: grafic interactiv
+          interest_saved: Dobândă economisită
+          legend: Serii ale graficului
+          months_saved:
+            one: Cu %{count} lună înainte de termen
+            other: Cu %{count} de luni înainte de termen
+            few: Cu %{count} luni înainte de termen
+          no_payoff: nu cu rambursarea actuală
+          not_converged: Cu rambursarea actuală, acest sold nu va fi achitat până
+            la scadența inițială; ar mai rămâne de plată %{balloon}.
+          on_schedule: Conform graficului
+          projected: Prognoză de astăzi
+          projected_payoff: Rambursare estimată
+          projection_basis: Compară soldul înregistrat astăzi cu soldul din grafic
+            pentru aceeași zi. O plată contabilizată înainte de data programată apare
+            în avans până la acea dată; una contabilizată după apare în urmă.
+          scheduled: Graficul inițial
+          since_start: de la începutul împrumutului
+        title:
+          balance: Sold
+          cash_value: Valoare în numerar
+          debt_balance: Soldul datoriei
+          estimated_property_value: Valoarea estimată a proprietății
+          estimated_vehicle_value: Valoarea estimată a vehiculului
+          holdings_value: Valoarea deținerilor
+          loan_remaining_balance: Sold rămas
+          remaining_principal_balance: Soldul principalului rămas
+          total_account_value: Valoarea totală a contului
+          total_gains: Câștiguri totale
+        views:
+          cash: Numerar
+          holdings: Dețineri
+          total_value: Valoare totală
+          gains: Câștiguri / ROI
+        no_data_available: Nu există date disponibile
+        vs_available_history: față de istoricul disponibil
+      activity_date:
+        balance_tooltip: Soldul de la sfârșitul zilei, după toate tranzacțiile și
+          ajustările
+        no_balance_data: Nu există date despre sold pentru această dată
+      activity_feed:
+        toggle_selection_checkboxes: Comută selecția
+    period_picker:
+      aria_label: 'Perioadă: %{period}'
+  ds:
+    alert:
+      variants:
+        destructive: Eroare
+        error: Eroare
+        success: Succes
+        info: Informații
+        warning: Avertisment
+    dialog:
+      close: Închide
+    pill:
+      default_label: Previzualizare
+      aria_label: "%{label}"
+    icon_picker:
+      no_matching_icons: Nicio pictogramă corespunzătoare
+      search_placeholder: Caută pictograme...
+    link:
+      opens_in_new_tab: "(se deschide într-o filă nouă)"
+    popover:
+      avatar_default_label: Deschide meniul
+    tooltip:
+      trigger_label: Mai multe informații
+  provider_sync_summary:
+    accounts:
+      title: Conturi
+      institutions: 'Instituții: %{count}'
+      linked: 'Conectate: %{count}'
+      total: 'Total: %{count}'
+      unlinked: 'Neconectate: %{count}'
+    holdings:
+      title: Dețineri
+      found: 'Găsite: %{count}'
+      processed: 'Procesate: %{count}'
+    transactions:
+      title: Tranzacții
+      skipped: 'Omise: %{count}'
+      fetching: Se preiau datele de la broker...
+      imported: 'Importate: %{count}'
+      protected:
+        one: "%{count} înregistrare protejată (nesuprascrisă)"
+        other: "%{count} de înregistrări protejate (nesuprascrise)"
+        few: "%{count} înregistrări protejate (nesuprascrise)"
+      seen: 'Observate: %{count}'
+      updated: 'Actualizate: %{count}'
+      view_protected: Vezi înregistrările protejate
+    health:
+      stale_pending_count:
+        one: "%{count} tranzacție"
+        other: "%{count} de tranzacții"
+        few: "%{count} tranzacții"
+      stale_unmatched_count:
+        one: "%{count} tranzacție"
+        other: "%{count} de tranzacții"
+        few: "%{count} tranzacții"
+      data_warnings: 'Avertismente privind datele: %{count}'
+      duplicate_suggestions:
+        one: "%{count} posibil duplicat necesită verificare"
+        other: "%{count} de posibile duplicate necesită verificare"
+        few: "%{count} posibile duplicate necesită verificare"
+      errors: 'Erori: %{count}'
+      notices: 'Notificări: %{count}'
+      pending_reconciled:
+        one: "%{count} tranzacție duplicată în așteptare a fost reconciliată"
+        other: "%{count} de tranzacții duplicate în așteptare au fost reconciliate"
+        few: "%{count} tranzacții duplicate în așteptare au fost reconciliate"
+      rate_limited: Limită de cereri atinsă %{time_ago}
+      recently: recent
+      stale_pending:
+        one: "%{count} tranzacție veche în așteptare (exclusă din bugete)"
+        other: "%{count} de tranzacții vechi în așteptare (excluse din bugete)"
+        few: "%{count} tranzacții vechi în așteptare (excluse din bugete)"
+      stale_unmatched:
+        one: "%{count} tranzacție în așteptare necesită verificare manuală"
+        other: "%{count} de tranzacții în așteptare necesită verificare manuală"
+        few: "%{count} tranzacții în așteptare necesită verificare manuală"
+      title: Stare de funcționare
+      view_data_quality: Vezi detaliile calității datelor
+      view_duplicate_suggestions: Vezi duplicatele sugerate
+      view_error_details: Vezi detaliile erorii
+      view_reconciled: Vezi tranzacțiile reconciliate
+      view_stale_pending: Vezi conturile afectate
+      view_stale_unmatched: Vezi tranzacțiile care necesită verificare
+    trades:
+      title: Tranzacții bursiere
+      skipped: 'Omise: %{count}'
+      fetching: Se preiau activitățile de la broker...
+      imported: 'Importate: %{count}'
+    last_sync: 'Ultima sincronizare: acum %{time_ago}'
+    skip_reasons:
+      excluded: Exclus
+      import_locked: Import CSV
+      protected: Protejat
+      user_modified: Modificat de utilizator
+    title: Rezumatul sincronizării

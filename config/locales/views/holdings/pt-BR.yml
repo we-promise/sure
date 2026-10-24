@@ -5,9 +5,12 @@ pt-BR:
       brokerage_cash: Dinheiro da corretora
     destroy:
       success: Posição excluída
+      cannot_delete: Não é possível excluir esta posição
     holding:
       per_share: por ação
       shares: "%{qty} ações"
+      no_cost_basis: Sem custo de aquisição
+      unknown: "--"
     index:
       positions:
         one: "%{count} posição"
@@ -20,15 +23,17 @@ pt-BR:
       return: Retorno total
       weight: Peso
     missing_price_tooltip:
-      description: Este investimento tem valores em falta e não conseguimos calcular
-        seus retornos ou valor.
+      description: >-
+        Este investimento tem valores em falta e não conseguimos calcular seus retornos
+        ou valor.
       missing_data: Dados em falta
     show:
       avg_cost_label: Custo Médio
       current_market_price_label: Preço de Mercado Atual
       delete: Excluir
-      delete_subtitle: Isso excluirá a posição e todas as suas negociações associadas
-        nesta conta. Esta ação não pode ser desfeita.
+      delete_subtitle: >-
+        Isso excluirá a posição e todas as suas negociações associadas nesta conta.
+        Esta ação não pode ser desfeita.
       delete_title: Excluir posição
       history: Histórico
       overview: Visão geral
@@ -38,3 +43,85 @@ pt-BR:
       trade_history_entry: "%{qty} ações de %{security} a %{price}"
       total_return_label: Retorno Total
       unknown: Desconhecido
+      book_value_label: Valor contábil
+      cancel: Cancelar
+      cost_basis_locked_description: >-
+        O custo de aquisição definido manualmente não será alterado pelas sincronizações.
+      cost_basis_locked_label: O custo de aquisição está bloqueado
+      edit_security: Editar título
+      last_price_update: Última atualização de preço
+      market_data_label: Dados de mercado
+      market_data_sync_button: Atualizar
+      market_value_label: Valor de Mercado
+      never: Nunca
+      no_security_provider: Serviço de títulos não configurado. Não é possível pesquisar
+        títulos.
+      no_trade_history: Nenhum histórico de negociações disponível para esta posição.
+      originally: era %{ticker}
+      provider_disabled_warning: >-
+        Atualizações de preço suspensas — o serviço %{provider} está desativado. Mude
+        para outro serviço abaixo ou reative-o nas Configurações.
+      provider_sent: 'Serviço enviou: %{ticker}'
+      remap_security: Salvar
+      reset_confirm_body: >-
+        Isto irá alterar o título de %{current} novamente para %{original} e mover
+        todas as negociações associadas.
+      reset_confirm_title: Restaurar título para o valor do provedor?
+      reset_to_provider: Restaurar valor do provedor
+      search_security: Pesquisar título
+      search_security_placeholder: Pesquisar por ticker ou designação
+      security_label: Título
+      security_remapped_label: Título remapeado
+      shares_label: Ações
+      switch_provider_button: Mudar
+      switch_provider_description: >-
+        O serviço %{provider} está desativado. Pesquise este título em outro serviço
+        ativado.
+      switch_provider_label: Mudar de serviço
+      syncing: Sincronizando...
+      truncated_history_warning: >-
+        O histórico de preços só está disponível a partir de %{date}. As datas anteriores
+        não têm dados do serviço selecionado — tal pode acontecer quando o ativo foi
+        listado após a sua data de negociação, ou quando o serviço apenas oferece
+        uma janela histórica limitada no seu plano atual.
+      unlock_confirm_body: >-
+        Isso permitirá atualizar o custo de aquisição por sincronizações do provedor
+        ou cálculos de negociações.
+      unlock_confirm_title: Desbloquear custo de aquisição?
+      unlock_cost_basis: Desbloquear
+    cost_basis_cell:
+      cancel: Cancelar
+      or_per_share_label: 'Ou inserir por ação:'
+      overwrite_confirm_body: Isso substituirá o custo de aquisição atual de %{current}.
+      overwrite_confirm_title: Substituir custo de aquisição?
+      per_share: por ação
+      save: Salvar
+      set: Definir
+      set_cost_basis_header: Definir custo de aquisição de %{ticker} (%{qty} ações)
+      total_cost_basis_label: Custo de aquisição total
+      unknown: "--"
+    cost_basis_sources:
+      calculated: A partir das negociações
+      manual: Definido pelo usuário
+      provider: A partir do serviço
+    errors:
+      security_collision: 'Não é possível remapear: já tem uma posição para %{ticker}
+        em %{date}.'
+    remap_security:
+      security_not_found: Não foi possível encontrar o título selecionado.
+      success: Título atualizado com sucesso.
+    reset_security:
+      success: Título restaurado para o valor do provedor.
+    sync_prices:
+      provider_error: >-
+        Não foi possível obter os preços mais recentes. Tente novamente dentro de
+        alguns minutos.
+      success: Dados de mercado sincronizados com sucesso.
+      unavailable: A sincronização de dados de mercado não está disponível para títulos
+        offline.
+    unlock_cost_basis:
+      success: >-
+        Custo de aquisição desbloqueado. Ele poderá ser atualizado na próxima sincronização.
+    update:
+      error: Valor do custo de aquisição inválido.
+      success: Custo de aquisição salvo.

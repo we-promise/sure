@@ -4,3 +4,12 @@ de:
     preflight:
       missing_reference: 'Zeile %{line}: %{type} verweist über %{field}=%{value} auf einen nicht vorhandenen Datensatz.'
       skipped_missing_reference: 'Zeile %{line}: %{type} verweist über %{field}=%{value} auf einen nicht vorhandenen Datensatz. Der Datensatz in dieser Zeile wird beim Import übersprungen.'
+      provider_merchant_diff: 'Zeile %{line}: ProviderMerchant %{name} ist bereits mit abweichenden
+        Angaben für %{fields} vorhanden. Der bestehende Händler wird beibehalten.'
+      skipped_missing_merchant_reference: 'Zeile %{line}: %{type} verweist auf einen Händler
+        (%{value}), der in diesem Export fehlt. Dies kann bei Exporten auftreten, die erstellt
+        wurden, bevor vom Anbieter zugewiesene Händler in Sure-Exporte aufgenommen wurden.
+        Der Eintrag wird ohne diesen Händler importiert.'
+      skipped_unnamed_recurring: 'Zeile %{line}: %{type} hat keinen Namen und verweist auf
+        einen Händler (%{value}), der in diesem Export fehlt. Der Eintrag wird beim Import
+        übersprungen.'

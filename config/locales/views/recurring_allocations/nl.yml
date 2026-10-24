@@ -1,0 +1,15 @@
+---
+nl:
+  recurring_allocations:
+    already_allocated: Die transactie is al aan deze factuur toegewezen
+    confirm:
+      success: Betaling aan de factuur toegewezen
+    create:
+      success: Betaling toegewezen
+    destroy:
+      success: Betaling ontkoppeld
+    invalid: De betaling kon niet worden vastgelegd
+    missing_rate: Geen wisselkoers beschikbaar; voer het bedrag expliciet in
+    over_allocation: Daarmee zou je meer toewijzen dan het transactiebedrag
+    reject:
+      success: Genegeerd. Die transactie wordt niet meer voor deze factuur voorgesteld.

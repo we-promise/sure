@@ -5,7 +5,8 @@ ro:
     no_condition: Nicio condiție
     recent_runs:
       title: Rulări Recente
-      description: Vezi istoricul de execuție al regulilor tale incluzând statusul de succes/eșec și numărul de tranzacții.
+      description: Vezi istoricul de execuție al regulilor tale incluzând statusul
+        de succes/eșec și numărul de tranzacții.
       unnamed_rule: Regulă Fără Nume
       columns:
         date_time: Dată/Ora
@@ -16,6 +17,7 @@ ro:
           queued: În Așteptare
           processed: Procesate
           modified: Modificate
+          blocked: Blocat
       execution_types:
         manual: Manual
         scheduled: Programată
@@ -23,3 +25,133 @@ ro:
         pending: În Așteptare
         success: Succes
         failed: Eșuat
+    condition_filters:
+      operators:
+        equal_to: Egal cu
+        greater_than: Mai mare decât
+        less_than: Mai mic decât
+        contains: Conține
+        does_not_contain: Nu conține
+        greater_or_equal_to: Mai mare sau egal cu
+        is_empty: Este gol
+        is_equal_to: Este egal cu
+        is_not_empty: Nu este gol
+        less_than_or_equal_to: Mai mic sau egal cu
+        not_equal_to: Diferit de
+      transaction_type:
+        equal_to: Egal cu
+        expense: Cheltuială
+        income: Venit
+        transfer: Transfer
+    index:
+      page_title: Reguli
+      rules_heading: Reguli
+      sort_name: Nume
+      new_rule: Regulă nouă
+      ai_cost_warning: Acțiunile regulilor care folosesc AI implică costuri. Restrânge
+        filtrele cât mai mult pentru a evita costurile inutile.
+      delete_all_rules: Șterge toate regulile
+      no_rules_description: Configurează reguli pentru a efectua acțiuni asupra tranzacțiilor
+        și altor date la fiecare sincronizare a conturilor.
+      no_rules_title: Nu există încă reguli
+      sort_by: 'Sortează după:'
+      sort_updated_at: Data actualizării
+      toggle_sort_direction: Schimbă sensul sortării
+    rule:
+      delete: Șterge
+      edit: Editează
+      action_label_to: "%{label} la %{value}"
+      all_past_and_future: Toate %{resource} trecute și viitoare
+      and_more_actions:
+        one: și încă 1 acțiune
+        other: și încă %{count} de acțiuni
+        few: și încă %{count} acțiuni
+      and_more_conditions:
+        one: și încă 1 condiție
+        other: și încă %{count} de condiții
+        few: și încă %{count} condiții
+      on_or_after: "%{resource} la sau după %{date}"
+      re_apply_rule: Aplică din nou regula
+      then: ATUNCI
+    category_rule_cta:
+      close: Închide
+      create_rule: Creează regulă
+      description: Poți crea o regulă pentru a clasifica automat tranzacțiile de acest
+        fel
+      dont_show_again: Nu mai afișa
+      hide_for_today: Ascunde astăzi
+      hide_for_today_hint: Ascunderea pentru astăzi oprește aceste sugestii timp de
+        24 de ore.
+      message: Actualizat la %{category_name}
+    actions:
+      to_label: la
+      value_placeholder: Introdu o valoare
+    apply_all:
+      ai_cost_message: AI va fi folosit pentru a clasifica până la %{transactions}
+        de tranzacții.
+      ai_cost_title: Estimarea costului AI
+      button: Aplică tot
+      confirm_button: Confirmă și aplică tot
+      confirm_message: Urmează să aplici %{count} de reguli care afectează %{transactions}
+        de tranzacții distincte. Confirmă dacă vrei să continui.
+      confirm_title: Aplică toate regulile
+      cost_unavailable_model: Estimarea costului nu este disponibilă pentru modelul
+        „%{model}”.
+      cost_unavailable_no_provider: Estimarea costului nu este disponibilă (niciun
+        furnizor LLM configurat).
+      cost_warning: Pot apărea costuri; consultă furnizorul modelului pentru cele
+        mai recente tarife.
+      estimated_cost: 'Cost estimat: ~$%{cost}'
+      success: Toate regulile au fost adăugate în coada de execuție
+      view_usage: Vezi istoricul utilizării
+    clear_ai_cache:
+      button: Resetează cache-ul AI
+      confirm_body: Sigur vrei să resetezi cache-ul AI? Regulile AI vor putea procesa
+        din nou toate tranzacțiile. Pot apărea costuri API suplimentare.
+      confirm_button: Resetează cache-ul
+      confirm_title: Resetezi cache-ul AI?
+      success: Cache-ul AI se golește. Poate dura câteva momente.
+    confirm:
+      ai_cost_title: Estimarea costului AI
+      cost_unavailable_model: Estimarea costului nu este disponibilă pentru modelul
+        „%{model}”.
+      cost_unavailable_no_provider: Estimarea costului nu este disponibilă (niciun
+        furnizor LLM configurat).
+      cost_warning: Pot apărea costuri; consultă furnizorul modelului pentru cele
+        mai recente tarife.
+      view_usage_history: Vezi istoricul utilizării
+      ai_cost_no_estimate_html: AI va fi folosit pentru a clasifica %{count} de tranzacții.
+      ai_cost_with_estimate_html: 'AI va fi folosit pentru a clasifica %{count} de
+        tranzacții. Cost estimat: <span class="font-semibold">~$%{cost}</span>'
+      apply_notice_html: Urmează să aplici această regulă pentru <span class="text-primary
+        font-medium">%{count} %{resource}</span> care îndeplinesc criteriile specificate.
+        Confirmă dacă vrei să continui.
+      confirm_changes: Confirmă modificările
+      title: Confirmă modificările
+      title_with_name: Confirmă modificările pentru „%{name}”
+    form:
+      add_condition: Adaugă condiție
+      add_action: Adaugă acțiune
+      add_condition_group: Adaugă grup de condiții
+      all_past_and_future: Toate %{resource} trecute și viitoare
+      rule_name_label: Numele regulii (opțional)
+      rule_name_placeholder: Introdu un nume pentru această regulă
+      starting_from: Începând cu
+      then: ATUNCI
+    destroy:
+      success: Regulă ștearsă
+    destroy_all:
+      success: Toate regulile au fost șterse
+    update:
+      success: Regulă actualizată
+  rule:
+    conditions:
+      condition:
+        value_placeholder: Introdu o valoare
+      condition_group:
+        add_condition: Adaugă condiție
+        all: toate
+        and_prefix: și
+        any: oricare
+        match: corespunde
+        of_the_following_conditions: dintre condițiile următoare

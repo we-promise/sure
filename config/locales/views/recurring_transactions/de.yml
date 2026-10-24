@@ -27,8 +27,8 @@ de:
     cleaned_up: "%{count} alte wiederkehrende Transaktionen bereinigt"
     marked_inactive: Wiederkehrende Transaktion als inaktiv markiert
     marked_active: Wiederkehrende Transaktion als aktiv markiert
-    deleted: Wiederkehrende Transaktion gelöscht
-    confirm_delete: Bist du sicher, dass du diese wiederkehrende Transaktion löschen möchtest?
+    deleted: "Rechnung entfernt. Deine Transaktionen bleiben unverändert."
+    confirm_delete: "%{name} aus den Rechnungen entfernen? Deine Transaktionen bleiben unverändert. Es werden nur die Rechnung und ihr Zeitplan entfernt."
     marked_as_recurring: Transaktion als wiederkehrend markiert
     already_exists: Für dieses Muster existiert bereits eine manuelle wiederkehrende Transaktion
     creation_failed: Wiederkehrende Transaktion konnte nicht erstellt werden. Bitte überprüfe die Transaktionsdetails und versuche es erneut.
@@ -45,12 +45,183 @@ de:
       last_occurrence: Letztes Auftreten
       status: Status
       actions: Aktionen
+      frequency: Häufigkeit
     status:
       active: Aktiv
       inactive: Inaktiv
+      ended: Verworfen
+      paused: Pausiert
+      suggested: Mögliche Rechnung
     badges:
       manual: Manuell
     transfer_already_exists: Für dieses Kontenpaar gibt es bereits eine wiederkehrende Überweisung
     transfer_creation_failed: Die wiederkehrende Überweisung ließ sich nicht anlegen. Prüf die Angaben und versuch es noch einmal.
     transfer_feature_disabled: Wiederkehrende Transaktionen sind für diese Familie deaktiviert
     transfer_marked_as_recurring: Überweisung als wiederkehrend markiert
+    actions:
+      delete: Entfernen
+      edit_payment_link: Zahlungslink bearbeiten
+      pause: Pausieren
+      resume: Fortsetzen
+    confirm_delete_income: "%{name} als Einkommen entfernen? Deine Transaktionen bleiben
+      unverändert. Es werden nur das Einkommen und sein Zeitplan entfernt."
+    confirmed: Rechnung zu deinen wiederkehrenden Transaktionen hinzugefügt
+    create:
+      account_invalid: Wähle ein Konto, dem du Rechnungen hinzufügen kannst, oder lasse
+        das Feld leer
+      already_exists: Diese Rechnung ist bereits vorhanden
+      amount_invalid: Gib den Betrag als einfache Zahl ein
+      due_date_required: Gib die nächste Fälligkeit der Rechnung ein
+      success: Rechnung hinzugefügt
+      success_income: Einkommen hinzugefügt
+    deleted_income: Einkommen entfernt. Deine Transaktionen bleiben unverändert.
+    dismissed: Verworfen. Dieses Muster wird nicht erneut vorgeschlagen.
+    edit:
+      income_title: Einkommen bearbeiten · %{name}
+      title: "%{name} bearbeiten"
+      trigger_label: Rechnung bearbeiten
+    form:
+      account_blank: Beliebiges Konto
+      account_label: Bezahlt von
+      amount_edit_hint: Gilt für künftig fällige Rechnungen. Bereits fällige Rechnungen
+        behalten ihren bisherigen Betrag.
+      amount_label: Betrag
+      apply_to_siblings:
+        one: Diesen Link auch für die andere Rechnung von %{name} verwenden
+        other: Diesen Link auch für die anderen %{count} Rechnungen von %{name} verwenden
+      autopay_hint: Die Rechnung bleibt in deiner Liste, wird aber nicht mehr als offene
+        Aufgabe behandelt.
+      autopay_label: Wird automatisch bezahlt
+      bill_type_label: Art
+      cancelled_on_hint: Das Datum dient nur deiner Information. Pausiere die Rechnung,
+        damit keine weiteren Fälligkeiten erscheinen.
+      cancelled_on_label: Gekündigt
+      category_blank: Keine Kategorie
+      category_label: Kategorie
+      first_due_on_label: Nächste Fälligkeit
+      frequency_day_label: Am Tag
+      frequency_hint: Wie oft diese Rechnung fällig wird. Wähle die Tage passend zu deinem
+        Kontoauszug.
+      frequency_interval_label: Wiederholung alle
+      frequency_interval_unit_label: Einheit
+      frequency_label: Häufigkeit
+      frequency_month_label: Im
+      frequency_new_hint: Die Tage werden aus dem Fälligkeitsdatum oben übernommen. Nach
+        dem Speichern kannst du den Zeitplan anpassen.
+      frequency_second_day_label: Und am Tag
+      frequency_weekday_label: Am
+      income_account_label: Eingang auf
+      income_amount_edit_hint: Gilt für künftige Zahltage. Bereits fällige Eingänge behalten
+        ihren bisherigen Betrag.
+      income_amount_label: Betrag je Zahlungseingang
+      income_due_on_label: Nächster Zahltag
+      income_frequency_hint: Wie oft du bezahlt wirst. Wähle die Tage passend zu deinem
+        Zahltag.
+      income_frequency_label: Wie oft du bezahlt wirst
+      income_frequency_new_hint: Die Angaben zum Zahltag werden aus dem Datum oben übernommen.
+        Nach dem Speichern kannst du den Zeitplan anpassen.
+      income_name_label: Quelle
+      income_name_placeholder: Arbeitgeber, Kunde, Nebenjob
+      income_notes_hint: Alles, was du dir zu diesem Einkommen merken möchtest.
+      income_notes_placeholder: Direktüberweisung, auf zwei Konten aufgeteilt
+      installment_count_hint: Der Plan endet nach dieser Anzahl von Zahlungen und zeigt
+        bis dahin seinen Fortschritt.
+      installment_count_label: Anzahl der Zahlungen
+      more_options: Weitere Optionen
+      name_label: Name
+      name_placeholder: Miete, PG&E, Netflix
+      notes_hint: Alles, was du beim Bezahlen sehen möchtest. Wird auf der Rechnung angezeigt.
+      notes_label: Notizen
+      notes_placeholder: Konto 4821, über Amex abgebucht
+      payment_url_hint: Die Seite, auf der du diese Rechnung bezahlst. Wird aus den Listen
+        wiederkehrender und anstehender Zahlungen in einem neuen Tab geöffnet.
+      payment_url_label: Zahlungslink
+      payment_url_placeholder: bank.example.com/pay
+      renews_on_label: Verlängerung
+      submit: Rechnung speichern
+      submit_income: Einkommen speichern
+      trial_ends_on_label: Testzeitraum endet
+    frequency:
+      annual: Jährlich am %{day}. %{month}
+      biweekly: Alle 2 Wochen am %{weekday}
+      custom: Eigener Zeitplan
+      every_n_months: Alle %{interval} Monate am %{day}
+      every_n_weeks: Alle %{interval} Wochen am %{weekday}
+      every_n_years: Alle %{interval} Jahre am %{day}. %{month}
+      last_day: letzter Tag
+      monthly: Monatlich am %{day}
+      quarterly: Vierteljährlich am %{day}
+      semiannual: Alle 6 Monate am %{day}
+      semimonthly: Zweimal im Monat, am %{first} und %{second}
+      weekly: Wöchentlich am %{weekday}
+    frequency_interval_units:
+      monthly: Monate
+      weekly: Wochen
+      yearly: Jahre
+    frequency_presets:
+      annual: Jährlich
+      biweekly: Alle 2 Wochen
+      custom: Eigener Zeitplan
+      interval: Eigenes Intervall
+      monthly: Monatlich
+      quarterly: Vierteljährlich
+      semiannual: Alle 6 Monate
+      semimonthly: Zweimal im Monat
+      weekly: Wöchentlich
+    identify_already_running: Die Erkennung läuft bereits. Schau gleich noch einmal nach.
+    manage:
+      cta: Alle Rechnungen öffnen
+      description: Dort kannst du alles anlegen, bearbeiten, pausieren und bezahlen. Diese
+        Seite steuert die Erkennung.
+      title: Deine Rechnungen findest du auf der Seite „Rechnungen“
+    new:
+      candidate_meta: "%{count}× · zuletzt %{date}"
+      income_title: Einkommen hinzufügen
+      pick_different: Mit einer anderen Transaktion beginnen
+      search_all_cta: Alle deine Transaktionen durchsuchen
+      search_all_prompt: Nicht gefunden, wonach du suchst?
+      smart_fill: Mit KI ausfüllen
+      smart_fill_applied: Die KI hat diese Werte aus dem Zahlungsverlauf vorgeschlagen.
+        Prüfe sie vor dem Speichern.
+      start_from_hint: Optional. Die Auswahl füllt nur das Formular aus; du kannst weiterhin
+        alles ändern.
+      start_from_income_title: Mit einem erkannten wiederkehrenden Eingang beginnen
+      start_from_title: Mit einer erkannten wiederkehrenden Abbuchung beginnen
+      title: Rechnung hinzufügen
+    pay_action:
+      add_link: Link hinzufügen
+      add_link_aria: Zahlungslink für %{name} hinzufügen
+      autopay: Automatische Zahlung
+      autopay_aria: "%{name} wird automatisch bezahlt; Portal in einem neuen Tab öffnen"
+      open_site: Rechnungsseite öffnen
+      pay: Bezahlen
+      pay_aria: "%{name} bezahlen (öffnet einen neuen Tab)"
+    pick_entry:
+      back: Zurück zum Formular
+      hint: Die Auswahl füllt nur das Formular aus; du kannst weiterhin alles ändern.
+      income_title: Einen Eingang als Ausgangspunkt suchen
+      no_results: Keine Treffer für „%{query}“. Versuche es mit weniger Wörtern oder gehe
+        zurück und fülle das Formular selbst aus.
+      search_placeholder: Nach Name, Notizen oder Händler suchen
+      showing_recent: Deine %{count} neuesten Transaktionen werden angezeigt. Grenze die
+        Auswahl mit der Suche ein.
+      title: Eine Transaktion als Ausgangspunkt suchen
+    picker_row:
+      claimed: Teil von %{name}
+    smart_fills:
+      create:
+        failed: Der Zahlungsverlauf konnte gerade nicht analysiert werden. Das Formular
+          behält die ursprünglichen Werte der Transaktion.
+    suggested:
+      collapsed_hint: Zum Prüfen antippen
+      confirm: Rechnung hinzufügen
+      dismiss: Keine Rechnung
+      seen_count:
+        one: einmal erkannt
+        other: "%{count}-mal erkannt"
+      title: Mögliche neue Rechnungen
+    update:
+      success: Rechnung aktualisiert
+      success_with_siblings:
+        one: Rechnung aktualisiert und Zahlungslink in 1 weitere Rechnung kopiert
+        other: Rechnung aktualisiert und Zahlungslink in %{count} weitere Rechnungen kopiert

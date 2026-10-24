@@ -1,0 +1,92 @@
+---
+nl:
+  coinspot_item:
+    syncer:
+      calculating_balances: Saldi berekenen…
+      checking_configuration: Rekeningconfiguratie controleren…
+      accounts_need_setup:
+        one: "%{count} rekening moet worden ingesteld"
+        other: "%{count} rekeningen moeten worden ingesteld"
+      importing_accounts: Rekeningen importeren uit CoinSpot…
+      checking_credentials: Toegangsgegevens controleren…
+      credentials_invalid: Ongeldige CoinSpot-API-toegangsgegevens. Controleer je API-sleutel en geheime sleutel.
+      processing_accounts: Rekeninggegevens verwerken…
+      processing_failed:
+        one: Verwerken van %{count} CoinSpot-rekening mislukt
+        other: Verwerken van %{count} CoinSpot-rekeningen mislukt
+  coinspot_items:
+    coinspot_item:
+      no_accounts_title: Geen rekeningen gevonden
+      status_never: Nooit gesynchroniseerd
+      status_with_summary: 'Laatst gesynchroniseerd: %{timestamp} geleden — %{summary}'
+      sync_status:
+        all_synced:
+          one: "%{count} rekening gesynchroniseerd"
+          other: "%{count} rekeningen gesynchroniseerd"
+        no_accounts: Geen rekeningen gevonden
+        partial_sync: "%{linked_count} gesynchroniseerd, %{unlinked_count} nog in te stellen"
+      syncing: Synchroniseren…
+      delete: Verwijderen
+      provider_name: CoinSpot
+      deletion_in_progress: Verwijderen…
+      import_accounts_menu: Rekening importeren
+      no_accounts_message: Je CoinSpot-cryptobeursrekening verschijnt hier na de synchronisatie.
+      reconnect: Toegangsgegevens moeten worden bijgewerkt
+      setup_description: Importeer deze CoinSpot-koppeling als cryptobeursrekening.
+      setup_needed: Rekening klaar om te importeren
+      stale_rate_warning: Het saldo is een benadering omdat de exacte wisselkoers voor %{date} niet beschikbaar was. Het wordt bij de volgende synchronisatie bijgewerkt.
+      status: 'Laatst gesynchroniseerd: %{timestamp} geleden'
+      setup_action: Rekening importeren
+    select_existing_account:
+      cancel: Annuleren
+      link: Koppelen
+      check_provider_health: Controleer of je CoinSpot-API-toegangsgegevens geldig zijn.
+      no_accounts_found: Geen CoinSpot-rekeningen gevonden.
+      title: CoinSpot-rekening koppelen
+      wait_for_sync: Wacht tot CoinSpot klaar is met synchroniseren.
+    setup_accounts:
+      accounts_count:
+        one: "%{count} rekening beschikbaar"
+        other: "%{count} rekeningen beschikbaar"
+      cancel: Annuleren
+      select_all: Alles selecteren
+      creating: Importeren…
+      import_selected: Selectie importeren
+      instructions: CoinSpot importeert voor deze koppeling één gecombineerde cryptobeursrekening met saldi, waarden in AUD, overboekingen, stortingen, opnames en ordergeschiedenis.
+      no_accounts: Alle CoinSpot-rekeningen zijn geïmporteerd.
+      subtitle: Selecteer de cryptobeursrekening die je wilt bijhouden
+      title: CoinSpot-rekening importeren
+    create:
+      default_name: CoinSpot
+      success: Verbonden met CoinSpot. Je cryptobeursrekening wordt gesynchroniseerd.
+    destroy:
+      success: Verwijdering van de CoinSpot-koppeling ingepland.
+      unlink_failed: CoinSpot-koppeling ontkoppelen niet mogelijk
+    link_accounts:
+      select_connection: Kies een CoinSpot-koppeling voordat je rekeningen koppelt.
+    link_existing_account:
+      select_connection: Kies een CoinSpot-koppeling voordat je rekeningen koppelt.
+      errors:
+        coinspot_account_already_linked: Deze CoinSpot-rekening is al gekoppeld
+        invalid_coinspot_account: Ongeldige CoinSpot-rekening
+        only_manual: Alleen handmatig beheerde cryptobeursrekeningen zonder bestaande aanbiederkoppeling kunnen aan CoinSpot worden gekoppeld
+      success: Gekoppeld aan de CoinSpot-rekening
+    provider_connection:
+      default_name: CoinSpot
+      name: CoinSpot — %{name}
+      default_description: Koppelen aan een CoinSpot-cryptobeursrekening
+      description: Koppelen aan %{name}
+    select_accounts:
+      select_connection: Kies een CoinSpot-koppeling bij de aanbiederinstellingen.
+      no_credentials_configured: Voeg CoinSpot-API-toegangsgegevens toe voordat je rekeningen instelt.
+    complete_account_setup:
+      no_accounts: Geen rekeningen om te importeren
+      none_selected: Geen rekeningen geselecteerd
+      setup_failed:
+        one: Importeren van %{count} rekening mislukt
+        other: Importeren van %{count} rekeningen mislukt
+      success:
+        one: "%{count} rekening geïmporteerd"
+        other: "%{count} rekeningen geïmporteerd"
+    update:
+      success: CoinSpot-koppeling bijgewerkt.

@@ -7,6 +7,36 @@ nb:
         disable_mfa_confirm: Er du sikker på at du vil deaktivere to-faktor autentisering?
           Dette vil gjøre kontoen din mindre sikker.
         enable_mfa: Aktiver 2FA
-        mfa_description: Legg til et ekstra lag med sikkerhet til kontoen din ved å kreve
-          en kode fra autentiseringsappen din når du logger inn
+        mfa_description: Legg til et ekstra lag med sikkerhet til kontoen din ved
+          å kreve en kode fra autentiseringsappen din når du logger inn
         mfa_title: To-faktor autentisering
+        webauthn_remove: Fjern
+        mfa_disabled_description: Aktiver tofaktorautentisering for å gi kontoen et
+          ekstra sikkerhetslag.
+        mfa_disabled_status_html: Tofaktorautentisering er <span class="font-medium
+          text-red-600">deaktivert</span>
+        mfa_enabled_description: Kontoen din er beskyttet med et ekstra sikkerhetslag.
+        mfa_enabled_status_html: Tofaktorautentisering er <span class="font-medium
+          text-green-600">aktivert</span>
+        webauthn_add: Legg til tilgangsnøkkel eller sikkerhetsnøkkel
+        webauthn_added: Lagt til %{date}
+        webauthn_description: Bruk en tilgangsnøkkel, Touch ID, Windows Hello eller
+          en fysisk sikkerhetsnøkkel som andre faktor ved innlogging.
+        webauthn_empty: Ingen tilgangsnøkler eller sikkerhetsnøkler er registrert
+          ennå.
+        webauthn_last_used: Sist brukt for %{time_ago} siden
+        webauthn_name_label: Nøkkelnavn
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey osv.
+        webauthn_remove_confirm: Er du sikker på at du vil fjerne denne tilgangsnøkkelen
+          eller sikkerhetsnøkkelen?
+        webauthn_remove_confirm_body: Du må registrere tilgangsnøkkelen eller sikkerhetsnøkkelen
+          på nytt før den kan brukes til å bekrefte innlogging.
+        webauthn_title: Tilgangsnøkler og sikkerhetsnøkler
+        webauthn_unsupported: Denne nettleseren støtter ikke tilgangsnøkler eller
+          sikkerhetsnøkler.
+  webauthn_credentials:
+    default_name: Sikkerhetsnøkkel
+    failure: Kunne ikke lagre tilgangsnøkkelen eller sikkerhetsnøkkelen. Prøv igjen.
+    mfa_required: Aktiver tofaktorautentisering før du legger til en tilgangsnøkkel
+      eller sikkerhetsnøkkel.
+    success: Tilgangsnøkkelen eller sikkerhetsnøkkelen er fjernet.

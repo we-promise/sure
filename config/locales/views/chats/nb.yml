@@ -1,0 +1,57 @@
+---
+nb:
+  chats:
+    demo_banner_title: Demomodus er aktiv
+    ai_consent:
+      available_description: KI-chat kan svare på økonomiske spørsmål og gi innsikt
+        basert på dataene dine. Du må aktivere funksjonen uttrykkelig for å bruke
+        den.
+      disable_note: Kan deaktiveres når som helst. Alle data som sendes til LLM-leverandørene
+        våre, anonymiseres.
+      enable_button: Aktiver KI-chat
+      title: Aktiver KI-chat
+      unavailable_description_html: For å bruke KI-assistenten må du angi miljøvariabelen
+        <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code>
+        eller konfigurere den i innstillingene for selvhosting.
+    ai_greeting:
+      commands_hint_html: Du kan bruke <span class="bg-container border border-secondary
+        px-1.5 py-0.5 rounded font-mono text-xs">/</span> for å åpne kommandoer
+      evaluate_portfolio: Vurder investeringsporteføljen
+      greeting: Hei %{name}! Jeg er en KI/stor språkmodell som kan hjelpe med økonomien
+        din. Jeg har tilgang til nettet og kontodataene dine.
+      questions_intro: 'Her er noen spørsmål du kan stille:'
+      spending_insights: Vis innsikt i forbruket
+      there: på deg
+      unusual_patterns: Finn uvanlige mønstre
+    chat:
+      delete_chat: Slett chat
+      edit_chat_title: Rediger chattittel
+    chat_nav:
+      all_chats: Alle chatter
+      delete_chat: Slett chat
+      edit_chat_title: Rediger chattittel
+      start_new_chat: Start ny chat
+    demo_banner_message: "Du bruker språkmodeller med kreditter fra Cloudflare Workers
+      AI. Resultatene kan variere fordi kodebasen ble testet med `gpt-4.1`, men tokenene
+      dine sendes ikke andre steder for trening! \U0001F916"
+    destroy:
+      notice: Chatten er slettet
+    error:
+      retry: Prøv på nytt
+    index:
+      chats: Chatter
+      new_chat: Ny chat
+    new:
+      default_title: Ny chat %{timestamp}
+    thinking: Tenker ...
+    update:
+      success: Chatten er oppdatert
+    worker_unhealthy_warning: KI-svar kan utebli akkurat nå. Bakgrunnsprosessen ser
+      ut til å være stoppet eller ha etterslep. Kontroller at Sidekiq-prosessen kjører.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Assistentens resonnement
+    tool_calls:
+      arguments: 'Argumenter:'
+      function: 'Funksjon:'
+      tool_calls: Verktøykall

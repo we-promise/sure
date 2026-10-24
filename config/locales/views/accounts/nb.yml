@@ -3,35 +3,80 @@ nb:
   accounts:
     account:
       troubleshoot: Feilsøk
+      default_label: Standard
+      delete: Slett konto
+      edit: Rediger
+      exclude_from_reports: Utelat fra alle rapporter
+      change_simplefin_account: Bytt SimpleFIN-konto
+      complete_setup: Fullfør oppsett
+      disable: Deaktiver konto
+      enable: Aktiver konto
+      excluded_from_reports_indicator: Utelatt fra rapporter
+      include_in_reports: Ta med i rapporter
+      link_lunchflow: Koble til Lunch Flow
+      link_provider: Koble til leverandør
+      remove_default: Fjern som standard
+      set_default: Angi som standard
+      sharing: Deling
+      unlink_provider: Koble fra leverandør
     chart:
       data_not_available: Data ikke tilgjengelig for den valgte perioden
     create:
       success: "%{type} konto opprettet"
     destroy:
       success: "%{type} konto planlagt for sletting"
+      cannot_delete_linked: Kan ikke slette en tilkoblet konto. Koble den fra først.
+      failed: Sletting av ressursen mislyktes. Prøv igjen senere.
     empty:
-      empty_message: Legg til en konto enten via tilkobling, importering eller manuell inntasting.
+      empty_message: Legg til en konto enten via tilkobling, importering eller manuell
+        inntasting.
       new_account: Ny konto
       no_accounts: Ingen kontoer enda
     form:
       balance: Nåværende balanse
       name_label: Kontonavn
       name_placeholder: Eksempel på kontonavn
+      notes_label: Notater
+      exclude_from_reports: Utelat fra alle rapporter
+      additional_details: Ytterligere detaljer
+      enable_category_matcher_hint: Når dette er aktivert, brukes leverandørens foreslåtte
+        kategori på importerte transaksjoner. Deaktiver for å la nye transaksjoner
+        stå ukategorisert.
+      enable_category_matcher_label: Aktiver kategoritilordning
+      institution_domain_label: Institusjonens domene
+      institution_domain_placeholder: f.eks. chase.com
+      institution_name_label: Institusjonens navn
+      institution_name_placeholder: f.eks. Chase Bank
+      notes_placeholder: Lagre tilleggsopplysninger som kontonumre, bankkoder, IBAN,
+        routingnumre osv.
+      opening_balance_date_label: Dato for inngående saldo
     index:
       accounts: Kontoer
       manual_accounts:
         other_accounts: Andre kontoer
       new_account: Ny konto
       sync: Synkroniser alle
+      financekit_accounts:
+        title: Apple Wallet
+        description: Administrer Apple Wallet-tilkoblinger og synkronisering i Sure-appen
+          for iOS.
+      cancel_sync: Avbryt synkronisering
     new:
       import_accounts: Importer kontoer
       method_selector:
         connected_entry: Koble til konto
         connected_entry_eu: Koble til EU-konto
-        link_with_provider: "Koble til %{provider}"
+        link_with_provider: Koble til %{provider}
         manual_entry: Angi kontobalanse
         title: Hvordan vil du legge den til?
+        lunchflow_entry: Koble til Lunch Flow-konto
       title: Hva vil du legge til?
+      container:
+        close: Lukk
+        next: Neste
+        navigate: Naviger
+        previous: Forrige
+        select: Velg
     show:
       activity:
         amount: Beløp
@@ -44,19 +89,139 @@ nb:
         new_transaction: Ny transaksjon
         no_entries: Ingen oppføringer funnet
         title: Aktivitet
+        category: Kategori
+        filter: Filter
+        new_activity: Ny transaksjon
+        new_transfer: Ny overføring
+        pending: Venter
+        status: Status
+        confirmed: Bekreftet
+        new_trade: Ny handel
+        search:
+          placeholder: Søk etter poster etter navn
+        search_placeholder: Søk etter poster etter navn
+        uncategorized_only: Bare ukategoriserte
       chart:
         balance: Balanse
         owed: Beløp skyldig
       menu:
         confirm_accept: Slett "%{name}"
-        confirm_body_html: "<p>Ved å slette denne kontoen, vil du slette dens verdihistorikk, som påvirker ulike aspekter av din samlede konto. Denne handlingen vil ha en direkte innvirkning på dine nettoverdi-beregninger og kontoens grafer.</p><br /> <p>Etter sletting er det ingen måte å gjenopprette kontoinformasjonen på, fordi du må legge den til som en ny konto.</p>"
+        confirm_body_html: "<p>Ved å slette denne kontoen, vil du slette dens verdihistorikk,
+          som påvirker ulike aspekter av din samlede konto. Denne handlingen vil ha
+          en direkte innvirkning på dine nettoverdi-beregninger og kontoens grafer.</p><br
+          /> <p>Etter sletting er det ingen måte å gjenopprette kontoinformasjonen
+          på, fordi du må legge den til som en ny konto.</p>"
         confirm_title: Slette konto?
         edit: Rediger
         import: Importer transaksjoner
         manage: Administrer kontoer
+        delete_account: Slett konto
+        import_transactions: Importer transaksjoner
+        exclude_from_reports: Utelat fra alle rapporter
+        statements: Kontoutskrifter
+        import_trades: Importer handler
+        include_in_reports: Ta med i rapporter
+        sharing: Deling
+      tabs:
+        activity: Aktivitet
+        holdings: Beholdninger
+        overview: Oversikt
+        statements: Kontoutskrifter
+        schedule: Plan
+      header:
+        complete_setup: Fullfør oppsett
+      limited_fx_history_warning: Valutakurshistorikk er bare tilgjengelig fra %{date}.
+        Transaksjoner før denne datoen bruker omtrentlige valutaomregninger. Dette
+        kan skje når valutakursleverandøren bare tilbyr en begrenset historikk.
     update:
       success: "%{type} konto oppdatert"
+    sidebar:
+      new_account: Ny konto
+      tabs:
+        all: Alle
+        assets: Eiendeler
+        debts: Gjeld
+      collapse_all: Skjul alle
+      configure_providers: Konfigurer leverandørene dine her.
+      expand_all: Utvid alle
+      missing_data: Manglende historiske data
+      missing_data_description: "%{product} bruker tredjepartsleverandører til å hente
+        historiske valutakurser, verdipapirpriser og mer. Disse dataene er nødvendige
+        for å beregne nøyaktige historiske kontosaldoer."
+      new_account_group: Ny %{account_group}
+      new_asset: Ny eiendel
+      new_debt: Ny gjeld
+    subtype_regions:
+      generic: Generelt
+      au: Australia
+      ca: Canada
+      eu: Europa
+      in: India
+      uk: Storbritannia
+      us: USA
+    types:
+      credit_card: Kredittkort
+      crypto: Krypto
+      depository: Kontanter
+      investment: Investering
+      loan: Lån
+      other_asset: Annet aktivum
+      other_liability: Annen gjeld
+      vehicle: Kjøretøy
+      property: Eiendom
+    types_plural:
+      crypto: Krypto
+      depository: Kontanter
+      investment: Investeringer
+      loan: Lån
+      property: Eiendommer
+      vehicle: Kjøretøy
+      credit_card: Kredittkort
+      other_asset: Andre eiendeler
+      other_liability: Annen gjeld
+    unlink:
+      generic_error: Det oppstod en uventet feil. Prøv igjen.
+      error: 'Kunne ikke koble fra kontoen: %{error}'
+      not_linked: Kontoen er ikke koblet til en leverandør
+      success: Kontoen er koblet fra. Den er nå en manuell konto.
+    confirm_unlink:
+      confirm_button: Bekreft og koble fra
+      description_html: Du er i ferd med å koble <strong>%{account_name}</strong>
+        fra <strong>%{provider_name}</strong>. Dette gjør den om til en manuell konto.
+      title: Koble kontoen fra leverandøren?
+      warning_can_delete: Etter frakobling kan du slette kontoen om nødvendig
+      warning_manual_updates: Du må legge til transaksjoner og oppdatere saldoer manuelt
+      warning_no_sync: Kontoen synkroniseres ikke lenger automatisk med leverandøren
+      warning_title: Hva dette betyr
+      warning_transactions_kept: Alle eksisterende transaksjoner og saldoer beholdes
+      warning_wallet_connection: Alle kontoer i denne Apple Wallet-tilkoblingen kobles
+        fra. Transaksjoner og saldoer beholdes. Du kan koble til på nytt med et nytt
+        Wallet-oppsett i Sure-appen for iOS.
+    not_authorized: Du har ikke tillatelse til å administrere denne kontoen
+    select_provider:
+      already_linked: Kontoen er allerede koblet til en leverandør
+      description: Velg leverandøren du vil bruke for å koble til %{account_name}
+      no_providers: Ingen leverandører er konfigurert
+      title: Velg en leverandør å koble til
+    set_default:
+      depository_only: Bare kontant- og kredittkortkontoer kan angis som standard.
+    sync_all:
+      syncing: Synkroniserer kontoer …
+    tax_treatment_descriptions:
+      tax_advantaged: Særlige skattefordeler med vilkår
+      tax_deferred: Fradrag for innskudd, skatt ved uttak
+      tax_exempt: Innskudd etter skatt, skattefrie gevinster
+      taxable: Gevinster beskattes ved realisering
+    tax_treatments:
+      tax_advantaged: Skattefordeler
+      tax_deferred: Utsatt skatt
+      tax_exempt: Skattefri
+      taxable: Skattepliktig
   email_confirmations:
     new:
       invalid_token: Ugyldig eller utløpt bekreftelseslenke.
       success_login: E-posten din er bekreftet. Vennligst logg inn med din nye e-postadresse.
+  account:
+    entries:
+      destroy:
+        success: Posten er slettet.

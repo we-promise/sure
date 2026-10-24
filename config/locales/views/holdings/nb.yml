@@ -5,9 +5,12 @@ nb:
       brokerage_cash: Meglerkontanter
     destroy:
       success: Beholdning slettet
+      cannot_delete: Du kan ikke slette denne beholdningen
     holding:
       per_share: per aksje
       shares: "%{qty} aksjer"
+      no_cost_basis: Ingen inngangsverdi
+      unknown: "--"
     index:
       positions:
         one: "%{count} posisjon"
@@ -38,3 +41,78 @@ nb:
       trade_history_entry: "%{qty} aksjer av %{security} til %{price}"
       total_return_label: Total avkastning
       unknown: Ukjent
+      cancel: Avbryt
+      market_data_sync_button: Oppdater
+      market_value_label: Markedsverdi
+      never: Aldri
+      remap_security: Lagre
+      security_label: Verdipapir
+      syncing: Synkroniserer...
+      book_value_label: Bokført verdi
+      cost_basis_locked_description: Den manuelt angitte inngangsverdien endres ikke
+        ved synkronisering.
+      cost_basis_locked_label: Inngangsverdien er låst
+      edit_security: Rediger verdipapir
+      last_price_update: Siste kursoppdatering
+      market_data_label: Markedsdata
+      no_security_provider: Ingen verdipapirleverandør er konfigurert. Kan ikke søke
+        etter verdipapirer.
+      no_trade_history: Ingen handelshistorikk er tilgjengelig for denne beholdningen.
+      originally: var %{ticker}
+      provider_disabled_warning: Kursoppdateringer er satt på pause fordi %{provider}
+        er deaktivert. Bytt til en annen leverandør nedenfor eller aktiver den igjen
+        i Innstillinger.
+      provider_sent: 'Leverandøren sendte: %{ticker}'
+      reset_confirm_body: Dette endrer verdipapiret fra %{current} tilbake til %{original}
+        og flytter alle tilknyttede handler.
+      reset_confirm_title: Tilbakestille verdipapiret til leverandørens verdi?
+      reset_to_provider: Tilbakestill til leverandør
+      search_security: Søk etter verdipapir
+      search_security_placeholder: Søk etter ticker eller navn
+      security_remapped_label: Verdipapirtilordningen er endret
+      shares_label: Aksjer
+      switch_provider_button: Bytt
+      switch_provider_description: "%{provider} er deaktivert. Søk etter verdipapiret
+        hos en annen aktivert leverandør."
+      switch_provider_label: Bytt leverandør
+      truncated_history_warning: Kurshistorikk er bare tilgjengelig fra %{date}. Den
+        valgte leverandøren har ingen data for tidligere datoer. Dette kan skyldes
+        at eiendelen ble notert etter handelsdatoen din, eller at leverandørens gjeldende
+        abonnement bare gir en begrenset historikk.
+      unlock_confirm_body: Dette lar leverandørsynkronisering og beregninger fra handler
+        oppdatere inngangsverdien.
+      unlock_confirm_title: Låse opp inngangsverdien?
+      unlock_cost_basis: Lås opp
+    cost_basis_cell:
+      cancel: Avbryt
+      per_share: per aksje
+      save: Lagre
+      or_per_share_label: 'Eller angi per aksje:'
+      overwrite_confirm_body: Dette erstatter den nåværende inngangsverdien på %{current}.
+      overwrite_confirm_title: Overskrive inngangsverdi?
+      set: Angi
+      set_cost_basis_header: Angi inngangsverdi for %{ticker} (%{qty} aksjer)
+      total_cost_basis_label: Samlet inngangsverdi
+      unknown: "--"
+    cost_basis_sources:
+      calculated: Fra handler
+      manual: Angitt av bruker
+      provider: Fra leverandør
+    errors:
+      security_collision: 'Kan ikke endre tilordningen: Du har allerede en beholdning
+        for %{ticker} på %{date}.'
+    remap_security:
+      security_not_found: Fant ikke det valgte verdipapiret.
+      success: Verdipapiret er oppdatert.
+    reset_security:
+      success: Verdipapiret er tilbakestilt til leverandørens verdi.
+    sync_prices:
+      provider_error: Kunne ikke hente de siste kursene. Prøv igjen om noen minutter.
+      success: Markedsdata er synkronisert.
+      unavailable: Synkronisering av markedsdata er ikke tilgjengelig for verdipapirer
+        uten nettkurser.
+    unlock_cost_basis:
+      success: Inngangsverdien er låst opp. Den kan oppdateres ved neste synkronisering.
+    update:
+      error: Ugyldig inngangsverdi.
+      success: Inngangsverdien er lagret.

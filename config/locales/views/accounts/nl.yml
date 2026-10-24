@@ -6,13 +6,27 @@ nl:
       link_provider: Koppel met provider
       unlink_provider: Verbreek verbinding met provider
       troubleshoot: Problemen oplossen
+      edit: Bewerken
+      change_simplefin_account: SimpleFIN-rekening wijzigen
+      complete_setup: Instellen voltooien
+      default_label: Standaard
+      delete: Rekening verwijderen
+      disable: Rekening uitschakelen
+      enable: Rekening inschakelen
+      exclude_from_reports: Uitsluiten van alle rapporten
+      excluded_from_reports_indicator: Uitgesloten van rapporten
+      include_in_reports: Opnemen in rapporten
+      remove_default: Niet meer als standaard gebruiken
+      set_default: Als standaard instellen
+      sharing: Delen
     chart:
       data_not_available: Gegevens niet beschikbaar voor de geselecteerde periode
     create:
       success: "%{type} account aangemaakt"
     destroy:
       success: "%{type} account gepland voor verwijdering"
-      cannot_delete_linked: "Kan een gekoppeld account niet verwijderen. Koppel het eerst los."
+      cannot_delete_linked: Kan een gekoppeld account niet verwijderen. Koppel het eerst los.
+      failed: Verwijderen mislukt. Probeer het later opnieuw.
     empty:
       empty_message: Voeg een account toe via verbinding, importeren of handmatig invoeren.
       new_account: Nieuw account
@@ -28,24 +42,38 @@ nl:
       institution_domain_placeholder: bijv. chase.com
       notes_label: Notities
       notes_placeholder: Sla aanvullende informatie op zoals rekeningnummers, sorteer codes, IBAN, routenummers, enz.
+      enable_category_matcher_hint: Als dit is ingeschakeld, wordt de voorgestelde categorie van de aanbieder toegepast op geïmporteerde transacties. Schakel dit uit om nieuwe transacties zonder categorie te laten.
+      enable_category_matcher_label: Categorieherkenning inschakelen
+      opening_balance_date_label: Datum van het beginsaldo
+      exclude_from_reports: Uitsluiten van alle rapporten
     index:
       accounts: Accounts
       manual_accounts:
         other_accounts: Andere accounts
       new_account: Nieuw account
       sync: Synchroniseer alles
+      cancel_sync: Synchronisatie annuleren
+      financekit_accounts:
+        description: Beheer Apple Wallet-koppelingen en synchronisatie in de Sure-app voor iOS.
+        title: Apple Wallet
     sync_all:
-      syncing: "Accounts synchroniseren..."
+      syncing: Accounts synchroniseren...
     new:
       import_accounts: Accounts importeren
       method_selector:
         connected_entry: Account koppelen
         connected_entry_eu: EU-account koppelen
-        link_with_provider: "Koppel met %{provider}"
+        link_with_provider: Koppel met %{provider}
         lunchflow_entry: Koppel Lunch Flow account
         manual_entry: Voer accountsaldo in
         title: Hoe wilt u het toevoegen?
       title: Wat wilt u toevoegen?
+      container:
+        close: Sluiten
+        navigate: Navigeren
+        previous: Vorige
+        select: Selecteren
+        next: Volgende
     show:
       activity:
         amount: Bedrag
@@ -65,6 +93,11 @@ nl:
           placeholder: Zoek vermeldingen op naam
         status: Status
         title: Activiteit
+        category: Categorie
+        new_trade: Nieuwe effectentransactie
+        new_transfer: Nieuwe overboeking
+        search_placeholder: Boekingen op naam zoeken
+        uncategorized_only: Alleen zonder categorie
       chart:
         balance: Saldo
         owed: Bedrag verschuldigd
@@ -75,6 +108,22 @@ nl:
         edit: Bewerken
         import: Transacties importeren
         manage: Beheer accounts
+        import_trades: Effectentransacties importeren
+        import_transactions: Transacties importeren
+        statements: Afschriften
+        delete_account: Rekening verwijderen
+        exclude_from_reports: Uitsluiten van alle rapporten
+        include_in_reports: Opnemen in rapporten
+        sharing: Delen
+      tabs:
+        holdings: Posities
+        activity: Activiteit
+        schedule: Schema
+        overview: Overzicht
+        statements: Afschriften
+      limited_fx_history_warning: Wisselkoersgeschiedenis is pas beschikbaar vanaf %{date}. Voor oudere transacties worden benaderde valutaconversies gebruikt. Dit kan gebeuren wanneer de wisselkoersaanbieder slechts een beperkt historisch bereik biedt.
+      header:
+        complete_setup: Instellen voltooien
     update:
       success: "%{type} account bijgewerkt"
     sidebar:
@@ -88,7 +137,9 @@ nl:
       new_asset: Nieuwe activa
       new_debt: Nieuwe schuld
       new_account: Nieuw account
-      new_account_group: "Nieuwe %{account_group}"
+      new_account_group: Nieuwe %{account_group}
+      collapse_all: Alles inklappen
+      expand_all: Alles uitklappen
     types:
       depository: Cash
       investment: Investering
@@ -116,27 +167,45 @@ nl:
       au: Australië
       eu: Europa
       generic: Algemeen
+      in: India
     confirm_unlink:
       title: Account ontkoppelen van provider?
-      description_html: "U staat op het punt om <strong>%{account_name}</strong> te ontkoppelen van <strong>%{provider_name}</strong>. Dit zal het omzetten naar een handmatig account."
+      description_html: U staat op het punt om <strong>%{account_name}</strong> te ontkoppelen van <strong>%{provider_name}</strong>. Dit zal het omzetten naar een handmatig account.
       warning_title: Wat dit betekent
       warning_no_sync: Het account zal niet langer automatisch synchroniseren met uw provider
       warning_manual_updates: U moet handmatig transacties toevoegen en saldi bijwerken
       warning_transactions_kept: Alle bestaande transacties en saldi blijven behouden
       warning_can_delete: Na het ontkoppelen kunt u het account indien nodig verwijderen
       confirm_button: Bevestigen en ontkoppelen
+      warning_wallet_connection: Alle rekeningen in deze Apple Wallet-koppeling worden ontkoppeld. Hun transacties en saldi blijven behouden. Je kunt opnieuw verbinden door Wallet opnieuw in te stellen via de Sure-app voor iOS.
     unlink:
-      success: "Account succesvol ontkoppeld. Het is nu een handmatig account."
-      not_linked: "Account is niet gekoppeld aan een provider"
-      error: "Het ontkoppelen is mislukt: %{error}"
-      generic_error: "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
+      success: Account succesvol ontkoppeld. Het is nu een handmatig account.
+      not_linked: Account is niet gekoppeld aan een provider
+      error: 'Het ontkoppelen is mislukt: %{error}'
+      generic_error: Er is een onverwachte fout opgetreden. Probeer het opnieuw.
     select_provider:
       title: Selecteer een provider om te verbinden
-      description: "Kies welke provider u wilt gebruiken om %{account_name} te koppelen"
-      already_linked: "Account is al gekoppeld aan een provider"
-      no_providers: "Er zijn momenteel geen providers geconfigureerd"
-
+      description: Kies welke provider u wilt gebruiken om %{account_name} te koppelen
+      already_linked: Account is al gekoppeld aan een provider
+      no_providers: Er zijn momenteel geen providers geconfigureerd
+    types_plural:
+      crypto: Crypto
+      investment: Beleggingen
+      loan: Leningen
+      property: Onroerend goed
+      vehicle: Voertuigen
+      depository: Geld
+      credit_card: Creditcards
+      other_asset: Overige bezittingen
+      other_liability: Overige schulden
+    not_authorized: Je hebt geen toestemming om deze rekening te beheren
+    set_default:
+      depository_only: Alleen geld- en creditcardrekeningen kunnen als standaard worden ingesteld.
   email_confirmations:
     new:
       invalid_token: Ongeldige of verlopen bevestigingslink.
       success_login: Uw e-mail is bevestigd. Log in met uw nieuwe e-mailadres.
+  account:
+    entries:
+      destroy:
+        success: Boeking verwijderd.

@@ -1,0 +1,109 @@
+---
+nb:
+  providers:
+    trading212:
+      institution_name: Trading 212
+      name: Trading 212
+      connection_description: Koble til en Trading 212-investeringskonto med en API-nøkkel
+  trading212_items:
+    complete_account_setup:
+      none_created: Ingen kontoer ble opprettet.
+      none_selected: Ingen kontoer ble valgt.
+      success:
+        one: Opprettet %{count} Trading 212-konto.
+        other: Opprettet %{count} Trading 212-kontoer.
+    defaults:
+      name: Trading 212
+    select_existing_account:
+      balance: Saldo
+      cancel: Avbryt
+      link: Koble til
+      wait_for_sync: Vent til synkroniseringen som finner kontoer, er fullført.
+      no_accounts_available: Ingen Trading 212-kontoer som ikke allerede er koblet
+        til, er tilgjengelige ennå.
+      run_sync_hint: Kjør en synkronisering fra Innstillinger > Leverandører etter
+        at du har lagret API-nøkkelen.
+      title: Koble til Trading 212-konto
+    setup_accounts:
+      available_accounts:
+        account_type_investment: Investering
+        account_id: 'Konto-ID: %{account_id}'
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        title: Tilgjengelig konto
+      buttons:
+        cancel: Avbryt
+        done: Ferdig
+        link: Koble til
+        refresh: Oppdater
+        back_to_settings: Tilbake til innstillinger
+        create_selected_accounts: Opprett valgte kontoer
+      link_existing:
+        select_prompt: Velg en konto...
+        manual_account_option: "%{name} (%{balance})"
+        description: Eller knytt Trading 212-kontoen som ble funnet, til en eksisterende
+          manuell investeringskonto.
+      linked_accounts:
+        linked_to_html: 'Koblet til: %{account}'
+        title: Allerede tilkoblet
+      dialog_title: Sett opp Trading 212-kontoen din
+      info_box:
+        items:
+          item_1: Nåværende posisjoner med priser og mengder
+          item_2: Full ordrehistorikk (kjøp og salg)
+          item_3: Utbytte og kontanttransaksjoner
+        title: Import via Trading 212-API
+      page_title: Sett opp Trading 212-konto
+      status:
+        fetching_accounts: Henter konto fra Trading 212 …
+        no_accounts_found_description: Sure fant ingen Trading 212-konto. Kontroller
+          at API-nøkkelen er gyldig.
+        no_accounts_found_title: Fant ingen konto.
+      subtitle: Koble til Trading 212-investeringskontoen din.
+    sync:
+      status:
+        calculating_balances: Beregner saldoer...
+        checking_configuration: Kontrollerer kontooppsettet...
+        processing_activity: Behandler posisjoner og aktivitet...
+        accounts_need_setup:
+          one: 1 Trading 212-konto må settes opp …
+          other: "%{count} Trading 212-kontoer må settes opp …"
+        checking_credentials: Kontrollerer påloggingsopplysninger for Trading 212
+          …
+        importing_account: Importerer Trading 212-konto …
+    trading212_item:
+      accounts_need_setup: Konto må konfigureres
+      delete: Slett
+      deletion_in_progress: Sletting pågår
+      error: Feil
+      setup_accounts: Konfigurer kontoer
+      synced: Synkronisert for %{time} siden. %{summary}.
+      syncing: Synkroniserer
+      environment_label_demo: Demokonto
+      environment_label_live: Livekonto
+      never_synced: Aldri synkronisert.
+      accounts_need_setup_description: Trading 212-kontoen din må knyttes til en Sure-konto.
+      no_accounts_discovered: Ingen Trading 212-konto er funnet ennå.
+      no_accounts_discovered_description: Kjør en synkronisering etter at du har lagret
+        API-nøkkelen, for å finne kontoen din.
+      requires_update: API-nøkkelen krever oppfølging
+    sync_status:
+      all_linked:
+        one: 1 konto tilkoblet
+        other: "%{count} kontoer tilkoblet"
+      partial: "%{linked} tilkoblet, %{unlinked} må konfigureres"
+      no_accounts: Ingen Trading 212-konto er funnet ennå
+    create:
+      success: Trading 212 er konfigurert.
+    destroy:
+      success: Trading 212-tilkoblingen er planlagt slettet.
+    link_existing_account:
+      already_linked: Denne Trading 212-kontoen er allerede koblet til.
+      failed: Kunne ikke koble til Trading 212-kontoen.
+      not_found: Fant ikke kontoen eller Trading 212-konfigurasjonen.
+      only_manual_investment: Bare manuelle investeringskontoer kan kobles til Trading
+        212.
+      success: Koblet til Trading 212-kontoen.
+    select_accounts:
+      not_configured: Trading 212 er ikke konfigurert.
+    update:
+      success: Trading 212-konfigurasjonen er oppdatert.

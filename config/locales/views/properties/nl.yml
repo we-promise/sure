@@ -3,6 +3,7 @@ nl:
   properties:
     edit:
       edit: "%{account} bewerken"
+      title: Vastgoed handmatig invoeren
     form:
       address_line1: Straatnaam
       address_line1_placeholder: Hoofdstraat 123
@@ -15,7 +16,7 @@ nl:
       locality_placeholder: Amsterdam
       none: Geen
       postal_code: Postcode
-      postal_code_placeholder: '1234AB'
+      postal_code_placeholder: 1234AB
       region: Provincie
       region_placeholder: Noord-Holland
       subtype_prompt: Selecteer vastgoedtype
@@ -23,6 +24,17 @@ nl:
       year_built_placeholder: '2000'
     new:
       title: Vastgoedgegevens invoeren
+      avm_description: Voer een naam en het adres van het object in. %{provider} zoekt de objectgegevens en geschatte marktwaarde voor je op.
+      avm_option: Toevoegen via %{provider}
+      avm_preview_back: Terug
+      avm_preview_confirm: Vastgoed toevoegen
+      avm_preview_description: Dit heeft %{provider} gevonden. Controleer de gegevens voordat je het object toevoegt; er is nog niets aangemaakt.
+      avm_preview_no_record: "%{provider} kon geen objectregistratie op dit adres vinden. De getoonde waarde is daarom een schatting op basis van de omgeving. Controleer het adres voordat je doorgaat."
+      avm_preview_title: Vastgoedgegevens bevestigen
+      avm_submit: Vastgoed opzoeken
+      avm_title: Vastgoed toevoegen via %{provider}
+      avm_us_only: "%{provider} ondersteunt alleen vastgoed in de Verenigde Staten."
+      next: Volgende
     overview:
       living_area: Woonoppervlakte
       market_value: Marktwaarde
@@ -30,3 +42,66 @@ nl:
       trend: Trend
       unknown: Onbekend
       year_built: Bouwjaar
+    tabs:
+      overview:
+        unknown: Onbekend
+        edit_account_details: Rekeninggegevens bewerken
+        purchase_price: Aankoopprijs
+        trend: Trend
+        market_value: Marktwaarde
+        living_area: Woonoppervlakte
+        year_built: Bouwjaar
+    overview_fields:
+      subtype_prompt: Selecteer een type
+      name_label: Naam
+      area_label: Oppervlakte (optioneel)
+      area_placeholder: '1200'
+      area_unit_label: Oppervlakte-eenheid
+      name_placeholder: Vakantiewoning
+      property_type_label: Vastgoedtype
+      square_feet: Vierkante voet
+      square_meters: Vierkante meter
+      year_built_label: Bouwjaar (optioneel)
+      year_built_placeholder: '1990'
+    address:
+      save: Opslaan
+      address_line1_label: Adresregel 1
+      address_line1_placeholder: 123 Main Street
+      city_label: Plaats
+      city_placeholder: San Francisco
+      country_label: Land
+      country_placeholder: Verenigde Staten
+      postal_code_label: Postcode
+      postal_code_placeholder: '12345'
+      state_region_label: Staat/regio
+      state_region_placeholder: CA
+      title: Vastgoed handmatig invoeren
+    balances:
+      save: Opslaan
+      market_value_label: Geschatte marktwaarde
+      market_value_tooltip: De geschatte marktwaarde van je vastgoed. Je kunt dit bedrag vaak vinden op sites zoals Zillow of Redfin; het is nooit een exact bedrag.
+      next: Volgende
+      title: Vastgoed handmatig invoeren
+    avm_providers:
+      realie: Realie
+      rentcast: RentCast
+    form_tabs:
+      address: Adres
+      overview: Overzicht
+      value: Waarde
+    subtypes:
+      agri_land:
+        long: Landbouwgrond
+        short: Landbouwgrond
+      apartment:
+        long: Appartement
+        short: Appartement
+      commercial:
+        long: Commercieel vastgoed
+        short: Commercieel
+      plot:
+        long: Perceel / grond
+        short: Perceel
+      rented:
+        long: Verhuurd vastgoed
+        short: Verhuurd

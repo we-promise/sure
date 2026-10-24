@@ -3,72 +3,160 @@ nb:
   providers:
     trade_republic:
       name: Trade Republic
-      connection_description: "Koble til en Trade Republic-investeringskonto via sikker nettpålogging"
+      connection_description: Koble til en Trade Republic-investeringskonto via sikker
+        nettpålogging
       institution_name: Trade Republic
   trade_republic_items:
-    duplicate_connection: "Denne Trade Republic-kontoen er allerede koblet til. Den nye tilkoblingen ble fjernet."
+    duplicate_connection: Denne Trade Republic-kontoen er allerede koblet til. Den
+      nye tilkoblingen ble fjernet.
     portfolio_categories:
-      brokerage: "Meglerkonto"
-      private_markets: "Private markeder"
-      interest_products: "Renteprodukter"
-      crypto_wallet: "Kryptolommebok"
+      brokerage: Meglerkonto
+      private_markets: Private markeder
+      interest_products: Renteprodukter
+      crypto_wallet: Kryptolommebok
     trade_republic_item:
-      syncing: "Synkroniserer"
-      requires_update: "Ny autentisering kreves"
-      error: "Feil"
-      synced: "Synkronisert for %{time} siden. %{summary}."
-      setup_accounts: "Konfigurer kontoer"
-      delete: "Slett"
-      accounts_need_setup: "Konto må konfigureres"
-      accounts_need_setup_description: "Trade Republic-kontoen din må kobles til en Sure-konto."
-      no_accounts_discovered: "Ingen Trade Republic-konto er oppdaget ennå."
-      no_accounts_discovered_description: "Fullfør påloggingen og kjør en synkronisering for å finne kontoen."
+      syncing: Synkroniserer
+      requires_update: Ny autentisering kreves
+      error: Feil
+      synced: Synkronisert for %{time} siden. %{summary}.
+      setup_accounts: Konfigurer kontoer
+      delete: Slett
+      accounts_need_setup: Konto må konfigureres
+      accounts_need_setup_description: Trade Republic-kontoen din må kobles til en
+        Sure-konto.
+      no_accounts_discovered: Ingen Trade Republic-konto er oppdaget ennå.
+      no_accounts_discovered_description: Fullfør påloggingen og kjør en synkronisering
+        for å finne kontoen.
       data_quality:
-        title: "Datakvalitet og synkroniseringsdetaljer"
-        repair: "Reparer importerte data"
+        title: Datakvalitet og synkroniseringsdetaljer
+        repair: Reparer importerte data
         pending_trade_details:
           one: "%{count} investeringsaktivitet venter på detaljer"
           other: "%{count} investeringsaktiviteter venter på detaljer"
+        positions:
+          one: "%{count} posisjon"
+          other: "%{count} posisjoner"
+        sync_status:
+          completed: Fullført
+          failed: Mislyktes
+          pending: Venter
+          syncing: Synkroniserer
+          stale: Utdatert
+        events:
+          one: "%{count} aktivitet"
+          other: "%{count} aktiviteter"
+        expenses:
+          one: "%{count} utgift de siste 30 dagene (%{amount})"
+          other: "%{count} utgifter de siste 30 dagene (%{amount})"
+        reconciliation: "%{matched}/%{total} kontosaldoer er avstemt"
+        sync_history: Nylige synkroniseringer
+        unknown:
+          one: "%{count} ukjent aktivitet"
+          other: "%{count} ukjente aktiviteter"
+        unpriced:
+          one: "%{count} uten gjeldende pris"
+          other: "%{count} uten gjeldende pris"
+      deletion_in_progress: Sletting pågår
+      never_synced: Aldri synkronisert.
     setup_accounts:
-      page_title: "Konfigurer Trade Republic-konto"
-      subtitle: "Koble til Trade Republic-investeringskontoen din."
+      page_title: Konfigurer Trade Republic-konto
+      subtitle: Koble til Trade Republic-investeringskontoen din.
       buttons:
-        refresh: "Oppdater"
-        cancel: "Avbryt"
-        link: "Koble til"
-        done: "Ferdig"
+        refresh: Oppdater
+        cancel: Avbryt
+        link: Koble til
+        done: Ferdig
+        back_to_settings: Tilbake til innstillinger
+        create_selected_accounts: Opprett valgte kontoer
+      link_existing:
+        select_prompt: Velg en konto...
+        manual_account_option: "%{name} (%{balance})"
+        description: Eller knytt Trade Republic-kontoen som ble funnet, til en eksisterende
+          manuell investeringskonto.
+      available_accounts:
+        account_id: 'Konto-ID: %{account_id}'
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_type_cash: Kontantkonto
+        account_type_crypto: Kryptokonto
+        account_type_investment: Investeringsportefølje
+        title: Tilgjengelig konto
+      linked_accounts:
+        linked_to_html: 'Koblet til: %{account}'
+        title: Allerede tilkoblet
+      dialog_title: Sett opp Trade Republic-kontoen din
+      info_box:
+        items:
+          item_1: Nåværende posisjoner med priser og mengder
+          item_2: Utførte handler (kjøp og salg)
+          item_3: Innskudd, uttak og renteutbetalinger
+        title: Trade Republic-import
+      status:
+        fetching_accounts: Henter konto fra Trade Republic …
+        no_accounts_found_description: Sure fant ingen Trade Republic-konto. Kontroller
+          at økten fortsatt er gyldig.
+        no_accounts_found_title: Fant ingen konto.
     sync:
       errors:
-        phone_number_missing: "Trade Republic-telefonnummer mangler."
-        reauthentication_required: "Trade Republic-økten mangler eller har utløpt. Koble til på nytt fra Innstillinger > Tilbydere."
+        phone_number_missing: Trade Republic-telefonnummer mangler.
+        reauthentication_required: Trade Republic-økten mangler eller har utløpt.
+          Koble til på nytt fra Innstillinger > Tilbydere.
       status:
-        checking_credentials: "Sjekker Trade Republic-legitimasjon..."
-        importing_account: "Importerer Trade Republic-konto..."
-        processing_activity: "Behandler posisjoner og aktivitet..."
-        calculating_balances: "Beregner saldoer..."
+        checking_credentials: Sjekker Trade Republic-legitimasjon...
+        importing_account: Importerer Trade Republic-konto...
+        processing_activity: Behandler posisjoner og aktivitet...
+        calculating_balances: Beregner saldoer...
+        checking_configuration: Kontrollerer kontooppsettet...
+        accounts_need_setup:
+          one: 1 Trade Republic-konto må settes opp …
+          other: "%{count} Trade Republic-kontoer må settes opp …"
     repair:
-      scheduled: "Reparasjon av Trade Republic-data er planlagt."
+      scheduled: Reparasjon av Trade Republic-data er planlagt.
     select_existing_account:
-      title: "Koble til Trade Republic-konto"
-      link: "Koble til"
-      cancel: "Avbryt"
+      title: Koble til Trade Republic-konto
+      link: Koble til
+      cancel: Avbryt
+      balance: Saldo
+      wait_for_sync: Vent til synkroniseringen som finner kontoer, er fullført.
+      no_accounts_available: Ingen Trade Republic-kontoer som ikke allerede er koblet
+        til, er tilgjengelige ennå.
+      run_sync_hint: Fullfør innloggingen og kjør en synkronisering fra Innstillinger
+        > Leverandører.
     initiate_login:
-      verification_required: "Pålogging startet. Bekreft via %{method}, og trykk deretter på Bekreft pålogging."
+      verification_required: Pålogging startet. Bekreft via %{method}, og trykk deretter
+        på Bekreft pålogging.
+      not_configured: Trade Republic er ikke konfigurert.
+      pin_required: Skriv inn PIN-koden eller passordet for Trade Republic for å starte
+        en ny innlogging.
     complete_login:
-      approval_pending: "Ikke bekreftet ennå. Godkjenn påloggingen i Trade Republic-appen og prøv igjen."
-      success: "Trade Republic ble koblet til."
-      login_expired: "Påloggingsforespørselen utløp. Start på nytt."
+      approval_pending: Ikke bekreftet ennå. Godkjenn påloggingen i Trade Republic-appen
+        og prøv igjen.
+      success: Trade Republic ble koblet til.
+      login_expired: Påloggingsforespørselen utløp. Start på nytt.
+      still_pending: Ikke bekreftet ennå. Godkjenn påloggingen i Trade Republic-appen
+        og prøv igjen.
+      no_pending_login: Ingen innlogging venter for øyeblikket. Start først en ny
+        innlogging.
     link_existing_account:
-      not_found: "Fant ikke konto eller Trade Republic-konfigurasjon."
-      success: "Kontoen ble koblet til Trade Republic."
+      not_found: Fant ikke konto eller Trade Republic-konfigurasjon.
+      success: Kontoen ble koblet til Trade Republic.
+      already_linked: Denne Trade Republic-kontoen er allerede koblet til.
+      failed: Kunne ikke koble til Trade Republic-kontoen.
+      only_manual_investment: Bare manuelle investeringskontoer kan kobles til Trade
+        Republic.
+      processing_failed: Kontoen ble koblet til, men den første databehandlingen mislyktes.
+        En synkronisering er planlagt. Se feilsøkingsloggen hvis behandlingen fortsatt
+        ikke blir fullført.
     complete_account_setup:
       success:
         one: "%{count} Trade Republic-konto ble opprettet."
         other: "%{count} Trade Republic-kontoer ble opprettet."
-      none_created: "Ingen kontoer ble opprettet."
+      none_created: Ingen kontoer ble opprettet.
       partial_failure:
-        one: "Én valgt Trade Republic-konto kunne ikke fullføres. Sjekk feilsøkingsloggen og prøv igjen."
-        other: "%{count} valgte Trade Republic-kontoer kunne ikke fullføres. Sjekk feilsøkingsloggen og prøv igjen."
+        one: Én valgt Trade Republic-konto kunne ikke fullføres. Sjekk feilsøkingsloggen
+          og prøv igjen.
+        other: "%{count} valgte Trade Republic-kontoer kunne ikke fullføres. Sjekk
+          feilsøkingsloggen og prøv igjen."
+      none_selected: Ingen kontoer ble valgt.
     activities:
       labels:
         contribution: Innskudd
@@ -80,4 +168,34 @@ nb:
         card_fee: Kortgebyr
         card_refund: Kortrefusjon
         tax_refund: Skatterefusjon
-        round_up: Round up
+        round_up: Avrunding
+    defaults:
+      name: Trade Republic
+    poll_login:
+      login_expired: Påloggingsforespørselen utløp. Start på nytt.
+      no_pending_login: Ingen innlogging venter for øyeblikket. Start først en ny
+        innlogging.
+    poll_qr_login:
+      success: Trade Republic ble koblet til.
+      no_pending_login: Ingen QR-innlogging venter.
+    initiate_qr_login:
+      not_configured: Trade Republic er ikke konfigurert.
+    select_accounts:
+      not_configured: Trade Republic er ikke konfigurert.
+    sync_status:
+      all_linked:
+        one: 1 konto tilkoblet
+        other: "%{count} kontoer tilkoblet"
+      partial: "%{linked} tilkoblet, %{unlinked} må konfigureres"
+      no_accounts: Ingen Trade Republic-konto er funnet ennå
+    create:
+      success: Trade Republic er lagret. Bekreft innloggingen i Trade Republic-appen
+        for å fullføre tilkoblingen.
+    destroy:
+      success: Trade Republic-tilkoblingen er planlagt slettet.
+      unlink_failed: Trade Republic kunne ikke kobles helt fra. Tilkoblingen ble beholdt
+        slik at forsøket trygt kan gjentas.
+    update:
+      pin_required: Skriv inn PIN-koden eller passordet for Trade Republic for å autentisere
+        på nytt.
+      success: Trade Republic-konfigurasjonen er oppdatert.

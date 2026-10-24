@@ -8,3 +8,24 @@ nl:
         enable_mfa: 2FA inschakelen
         mfa_description: Voeg een extra beveiligingslaag toe aan uw account door een code van uw authenticatie-app te vereisen bij het inloggen
         mfa_title: Twee-factor authenticatie
+        webauthn_remove: Verwijderen
+        webauthn_unsupported: Deze browser ondersteunt geen passkeys of beveiligingssleutels.
+        mfa_disabled_description: Schakel tweestapsverificatie in om je account extra te beveiligen.
+        mfa_disabled_status_html: Tweestapsverificatie is <span class="font-medium text-red-600">uitgeschakeld</span>
+        mfa_enabled_description: Je account is beschermd met een extra beveiligingslaag.
+        mfa_enabled_status_html: Tweestapsverificatie is <span class="font-medium text-green-600">ingeschakeld</span>
+        webauthn_add: Passkey of beveiligingssleutel toevoegen
+        webauthn_added: Toegevoegd op %{date}
+        webauthn_description: Gebruik een passkey, Touch ID, Windows Hello of een fysieke beveiligingssleutel als tweede factor bij het inloggen.
+        webauthn_empty: Er zijn nog geen passkeys of beveiligingssleutels geregistreerd.
+        webauthn_last_used: 'Laatst gebruikt: %{time_ago} geleden'
+        webauthn_name_label: Naam van de sleutel
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey enz.
+        webauthn_remove_confirm: Weet je zeker dat je deze passkey of beveiligingssleutel wilt verwijderen?
+        webauthn_remove_confirm_body: Je moet deze passkey of beveiligingssleutel opnieuw registreren voordat je haar voor inlogverificatie kunt gebruiken.
+        webauthn_title: Passkeys en beveiligingssleutels
+  webauthn_credentials:
+    default_name: Beveiligingssleutel
+    failure: Die passkey of beveiligingssleutel kon niet worden opgeslagen. Probeer het opnieuw.
+    mfa_required: Schakel tweestapsverificatie in voordat je een passkey of beveiligingssleutel toevoegt.
+    success: Passkey of beveiligingssleutel verwijderd.

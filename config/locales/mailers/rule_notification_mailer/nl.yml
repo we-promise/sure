@@ -1,0 +1,16 @@
+---
+nl:
+  rule_notification_mailer:
+    digest:
+      account: Rekening
+      amount: Bedrag
+      cta: Transacties bekijken
+      date: Datum
+      heading:
+        one: 1 nieuwe transactie voldeed aan je regel
+        other: "%{count} nieuwe transacties voldeden aan je regel"
+      intro: 'Deze transacties voldeden aan de regel ‘%{rule}’:'
+      name: Naam
+      subject:
+        one: 1 nieuwe transactie voldeed aan je regel in %{product_name}
+        other: "%{count} nieuwe transacties voldeden aan je regel in %{product_name}"

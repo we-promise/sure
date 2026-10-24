@@ -38,6 +38,8 @@ de:
       snooze_week: Um eine Woche verschieben
       reopen: Wieder öffnen
       view_bill: Vollständige Rechnung anzeigen
+      due_on: Fällig am %{date}
+      settled: Vollständig bezahlt
     mark_paid:
       success: Rechnung als bezahlt markiert
     skip:

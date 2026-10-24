@@ -11,6 +11,16 @@ nb:
       submit: Legg til transaksjon
       ticker_placeholder: AAPL
       type: Type
+      type_buy: Kjøp
+      type_dividend: Utbytte
+      type_interest: Rente
+      type_sell: Selg
+      type_withdrawal: Uttak
+      dividend_requires_security: Verdipapir må angis for utbytte
+      fee: Transaksjonsgebyr
+      holding_optional: Tickersymbol (valgfritt)
+      trade_requires_security: Et verdipapir (ticker) kreves for kjøps- og salgshandler
+      type_deposit: Innskudd
     header:
       buy: Kjøp
       current_market_price_label: Gjeldende markedspris
@@ -20,6 +30,17 @@ nb:
       sell: Selg
       symbol_label: Symbol
       total_return_label: Urealisert gevinst/tap
+      contribution: Innskudd
+      dividend: Utbytte
+      interest: Rente
+      other: Annet
+      transfer: Overføring
+      withdrawal: Uttak
+      exchange: Børs
+      fee: Gebyr
+      reinvestment: Reinvestering
+      sweep_in: Automatisk innflytting
+      sweep_out: Automatisk utflytting
     new:
       title: Ny transaksjon
     show:
@@ -36,3 +57,19 @@ nb:
       note_placeholder: Legg til eventuelle tilleggsnotater her...
       quantity_label: Antall
       settings: Innstillinger
+      amount_label: Beløp
+      buy: Kjøp
+      category_label: Kategori
+      sell: Selg
+      type_label: Type
+      fee_label: Transaksjonsgebyr
+      no_category: Ingen kategori
+      provider_disabled_warning: Prisoppdateringer er satt på pause fordi %{provider}
+        er deaktivert. Aktiver leverandøren igjen i Innstillinger, eller knytt beholdningen
+        til en annen leverandør.
+    api_errors:
+      activity_label_must_match_type: investment_activity_label må være %{label} når
+        type er %{type}
+      invalid_activity_label: Ugyldig etikett for investeringsaktivitet
+      invalid_type: Ugyldig type
+      supported_types: 'type må være én av: %{types}'

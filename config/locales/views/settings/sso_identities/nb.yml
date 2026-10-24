@@ -1,0 +1,7 @@
+---
+nb:
+  settings:
+    sso_identities:
+      destroy:
+        success: Vellykket
+        cannot_unlink_last: Kan ikke koble fra den siste identiteten

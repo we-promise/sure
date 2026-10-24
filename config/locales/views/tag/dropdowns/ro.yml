@@ -1,0 +1,9 @@
+---
+ro:
+  tag:
+    dropdowns:
+      show:
+        empty: Nu există etichete încă
+        search_placeholder: Caută
+        manage: Gestionează etichetele
+        no_tags: Nu s-au găsit etichete

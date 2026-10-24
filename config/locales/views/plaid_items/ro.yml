@@ -2,7 +2,8 @@
 ro:
   plaid_items:
     create:
-      success: Contul a fost conectat cu succes. Te rugăm să aștepți sincronizarea conturilor.
+      success: Contul a fost conectat cu succes. Te rugăm să aștepți sincronizarea
+        conturilor.
     destroy:
       success: Conturile sunt programate pentru ștergere.
     plaid_item:
@@ -13,7 +14,8 @@ ro:
       confirm_title: Ștergi instituția?
       connection_lost: Conexiune pierdută
       connection_lost_description: Această conexiune nu mai este validă. Va trebui
-        să ștergi această conexiune și să o adaugi din nou pentru a continua sincronizarea datelor.
+        să ștergi această conexiune și să o adaugi din nou pentru a continua sincronizarea
+        datelor.
       delete: Șterge
       error: A apărut o eroare la sincronizarea datelor
       no_accounts_description: Nu am putut încărca niciun cont de la această instituție
@@ -24,3 +26,21 @@ ro:
       status_never: Necesită sincronizarea datelor
       syncing: Se sincronizează...
       update: Actualizează conexiunea
+      provider_name: Plaid
+      deletion_in_progress: "(ștergere în curs...)"
+      add_accounts: Adaugă conturi
+    select_existing_account:
+      cancel: Anulează
+      link_account: Conectează contul
+      description: Selectează un cont Plaid de asociat contului existent
+      title: Conectează %{account_name} la Plaid
+      no_available_accounts: Nu există conturi Plaid disponibile pentru asociere.
+        Conectează mai întâi un cont Plaid nou.
+    link_existing_account:
+      invalid_account: Cont Plaid selectat nevalid
+      success: Contul a fost conectat cu succes la Plaid
+      already_linked: Acest cont Plaid este deja conectat
+    errors:
+      link_token_generic: Nu am putut deschide Plaid acum. Încearcă din nou, iar dacă
+        problema persistă, verifică jurnalele serverului pentru detalii.
+      link_token_with_message: 'Plaid nu a putut deschide conexiunea: %{message}'

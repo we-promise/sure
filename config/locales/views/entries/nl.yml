@@ -12,3 +12,12 @@ nl:
       loading: Items laden...
     update:
       success: Item bijgewerkt
+    protection:
+      description: Je wijzigingen aan deze boeking worden niet overschreven door synchronisatie met de aanbieder.
+      locked_fields_label: 'Vergrendelde velden:'
+      title: Beschermd tegen synchronisatie
+      unlock_button: Bijwerken via synchronisatie toestaan
+      unlock_confirm: Deze boeking laten bijwerken via synchronisatie? Je wijzigingen kunnen bij de volgende synchronisatie worden overschreven.
+      tooltip: Beschermd tegen synchronisatie
+    unlock:
+      success: Boeking ontgrendeld. Deze kan bij de volgende synchronisatie worden bijgewerkt.

@@ -8,3 +8,22 @@ nb:
       subtype_prompt: Velg kontotype
     new:
       title: Angi kontobalanse
+    subtypes:
+      cash:
+        long: Kontanter
+        short: Kontanter
+      cd:
+        long: Tidsinnskudd (CD)
+        short: CD
+      checking:
+        long: Brukskonto
+        short: Brukskonto
+      hsa:
+        long: Helsesparekonto (HSA)
+        short: HSA
+      money_market:
+        long: Pengemarked
+        short: MM
+      savings:
+        long: Sparekonto
+        short: Sparekonto

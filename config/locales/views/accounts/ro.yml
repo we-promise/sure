@@ -4,12 +4,30 @@ ro:
     account:
       link_lunchflow: Conectare cu Lunch Flow
       troubleshoot: Depanare
+      delete: Șterge contul
+      edit: Editează
+      default_label: Implicit
+      exclude_from_reports: Exclude din toate rapoartele
+      change_simplefin_account: Schimbă contul SimpleFIN
+      complete_setup: Finalizează configurarea
+      disable: Dezactivează contul
+      enable: Activează contul
+      excluded_from_reports_indicator: Exclus din rapoarte
+      include_in_reports: Include în rapoarte
+      link_provider: Conectează cu un furnizor
+      remove_default: Elimină statutul implicit
+      set_default: Setează ca implicit
+      sharing: Partajare
+      unlink_provider: Dezasociază de furnizor
     chart:
       data_not_available: Date indisponibile pentru perioada selectată
     create:
-      success: "Cont %{type} creat"
+      success: Cont %{type} creat
     destroy:
-      success: "Cont %{type} programat pentru ștergere"
+      success: Cont %{type} programat pentru ștergere
+      cannot_delete_linked: Un cont conectat nu poate fi șters. Dezasociază-l mai
+        întâi.
+      failed: Ștergerea resursei a eșuat. Încearcă din nou mai târziu.
     empty:
       empty_message: Adaugă un cont fie prin conexiune, import sau introducere manuală.
       new_account: Cont nou
@@ -18,22 +36,47 @@ ro:
       balance: Sold curent
       name_label: Nume cont
       name_placeholder: Exemplu nume cont
+      notes_label: Notițe
+      exclude_from_reports: Exclude din toate rapoartele
+      additional_details: Detalii suplimentare
+      enable_category_matcher_hint: Când este activată, categoria sugerată de furnizor
+        este aplicată tranzacțiilor importate. Dezactivează pentru a lăsa tranzacțiile
+        noi fără categorie.
+      enable_category_matcher_label: Activează asocierea categoriilor
+      institution_domain_label: Domeniul instituției
+      institution_domain_placeholder: de ex., chase.com
+      institution_name_label: Numele instituției
+      institution_name_placeholder: de ex., Chase Bank
+      notes_placeholder: Păstrează informații suplimentare precum numere de cont,
+        coduri de sucursală, IBAN, coduri de rutare etc.
+      opening_balance_date_label: Data soldului inițial
     index:
       accounts: Conturi
       manual_accounts:
         other_accounts: Alte conturi
       new_account: Cont nou
       sync: Sincronizează tot
+      cancel_sync: Anulează sincronizarea
+      financekit_accounts:
+        description: Gestionează conexiunile Apple Wallet și sincronizarea în aplicația
+          Sure pentru iOS.
+        title: Apple Wallet
     new:
       import_accounts: Importă conturi
       method_selector:
         connected_entry: Conectează cont
         connected_entry_eu: Conectează cont UE
-        link_with_provider: "Conectează cu %{provider}"
+        link_with_provider: Conectează cu %{provider}
         lunchflow_entry: Conectează cont Lunch Flow
         manual_entry: Introdu soldul contului
         title: Cum dorești să adaugi?
       title: Ce dorești să adaugi?
+      container:
+        next: Înainte
+        previous: Înapoi
+        close: Închide
+        select: Selectează
+        navigate: Navighează
     show:
       activity:
         amount: Sumă
@@ -48,21 +91,57 @@ ro:
         search:
           placeholder: Caută înregistrări după nume
         title: Activitate
+        category: Categorie
+        new_activity: Activitate nouă
+        new_transfer: Transfer nou
+        pending: În așteptare
+        search_placeholder: Caută înregistrări după nume
+        status: Stare
+        filter: Filtrează
+        confirmed: Confirmat
+        new_trade: Tranzacție bursieră nouă
+        uncategorized_only: Doar fără categorie
       chart:
         balance: Sold
         owed: Sumă datorată
       menu:
         confirm_accept: Șterge "%{name}"
-        confirm_body_html: "<p>Prin ștergerea acestui cont, vei șterge istoricul valorii sale, afectând diverse aspecte ale contului tău general. Această acțiune va avea un impact direct asupra calculelor averii nete și a graficelor contului.</p><br /> <p>După ștergere, nu vei mai putea restaura informațiile contului, deoarece va trebui să îl adaugi ca un cont nou.</p>"
+        confirm_body_html: "<p>Prin ștergerea acestui cont, vei șterge istoricul valorii
+          sale, afectând diverse aspecte ale contului tău general. Această acțiune
+          va avea un impact direct asupra calculelor averii nete și a graficelor contului.</p><br
+          /> <p>După ștergere, nu vei mai putea restaura informațiile contului, deoarece
+          va trebui să îl adaugi ca un cont nou.</p>"
         confirm_title: Ștergi contul?
         edit: Editează
         import: Importă tranzacții
         manage: Gestionează conturi
+        delete_account: Șterge contul
+        import_transactions: Importă tranzacții
+        exclude_from_reports: Exclude din toate rapoartele
+        statements: Extrase
+        import_trades: Importă tranzacții bursiere
+        include_in_reports: Include în rapoarte
+        sharing: Partajare
+      tabs:
+        activity: Activitate
+        holdings: Dețineri
+        overview: Prezentare generală
+        statements: Extrase
+        schedule: Program
+      header:
+        complete_setup: Finalizează configurarea
+      limited_fx_history_warning: Istoricul cursurilor valutare este disponibil doar
+        începând cu %{date}. Tranzacțiile anterioare folosesc conversii valutare aproximative
+        — acest lucru se poate întâmpla când furnizorul valutar oferă un interval
+        istoric limitat.
     update:
-      success: "Cont %{type} actualizat"
+      success: Cont %{type} actualizat
     sidebar:
       missing_data: Lipsesc date istorice
-      missing_data_description: "%{product} folosește furnizori terți pentru a prelua cursurile de schimb istorice, prețurile titlurilor de valoare și multe altele. Aceste date sunt necesare pentru a calcula soldurile istorice corecte ale conturilor."
+      missing_data_description: "%{product} folosește furnizori terți pentru a prelua
+        cursurile de schimb istorice, prețurile titlurilor de valoare și multe altele.
+        Aceste date sunt necesare pentru a calcula soldurile istorice corecte ale
+        conturilor."
       configure_providers: Configurează furnizorii aici.
       tabs:
         all: Toate
@@ -72,18 +151,83 @@ ro:
       new_debt: Datorie nouă
       new_account: Cont nou
       new_account_group: "%{account_group} nou"
+      collapse_all: Restrânge tot
+      expand_all: Extinde tot
     types:
       depository: Numerar
       investment: Investiții
-      crypto: Crypto
+      crypto: Cripto
       property: Proprietate
       vehicle: Vehicul
       other_asset: Alt activ
       credit_card: Card de credit
       loan: Împrumut
       other_liability: Altă datorie
-
+    types_plural:
+      depository: Numerar
+      crypto: Criptomonede
+      investment: Investiții
+      credit_card: Carduri de credit
+      loan: Împrumuturi
+      other_asset: Alte active
+      other_liability: Alte datorii
+      property: Proprietăți
+      vehicle: Vehicule
+    unlink:
+      generic_error: A apărut o eroare neașteptată. Încearcă din nou.
+      error: 'Dezasocierea contului a eșuat: %{error}'
+      not_linked: Contul nu este conectat la un furnizor
+      success: Contul a fost dezasociat cu succes. Acum este un cont manual.
+    confirm_unlink:
+      confirm_button: Confirmă și dezasociază
+      description_html: Urmează să dezasociezi <strong>%{account_name}</strong> de
+        <strong>%{provider_name}</strong>. Acesta va deveni un cont manual.
+      title: Dezasociezi contul de furnizor?
+      warning_can_delete: După dezasociere, vei putea șterge contul dacă este necesar
+      warning_manual_updates: Va trebui să adaugi tranzacții și să actualizezi soldurile
+        manual
+      warning_no_sync: Contul nu se va mai sincroniza automat cu furnizorul
+      warning_title: Ce înseamnă acest lucru
+      warning_transactions_kept: Toate tranzacțiile și soldurile existente vor fi
+        păstrate
+      warning_wallet_connection: Toate conturile din această conexiune Apple Wallet
+        vor fi dezasociate. Tranzacțiile și soldurile lor vor fi păstrate. Te poți
+        reconecta prin aplicația Sure pentru iOS, cu o configurare Wallet nouă.
+    not_authorized: Nu ai permisiunea de a gestiona acest cont
+    select_provider:
+      already_linked: Contul este deja conectat la un furnizor
+      description: Alege furnizorul folosit pentru a conecta %{account_name}
+      no_providers: Nu există furnizori configurați momentan
+      title: Selectează un furnizor de conectat
+    set_default:
+      depository_only: Doar conturile de numerar și de card de credit pot fi setate
+        ca implicite.
+    subtype_regions:
+      au: Australia
+      ca: Canada
+      eu: Europa
+      generic: General
+      in: India
+      uk: Regatul Unit
+      us: Statele Unite
+    sync_all:
+      syncing: Se sincronizează conturile...
+    tax_treatment_descriptions:
+      tax_advantaged: Avantaje fiscale speciale, cu condiții
+      tax_deferred: Contribuții deductibile, impozitare la retragere
+      tax_exempt: Contribuții după impozitare, câștiguri neimpozabile
+      taxable: Câștigurile sunt impozitate la realizare
+    tax_treatments:
+      tax_advantaged: Cu avantaje fiscale
+      tax_deferred: Cu impozitare amânată
+      tax_exempt: Scutit de impozit
+      taxable: Impozabil
   email_confirmations:
     new:
       invalid_token: Link de confirmare invalid sau expirat.
-      success_login: Adresa ta de e-mail a fost confirmată. Te rugăm să te autentifici cu noua ta adresă de e-mail.
+      success_login: Adresa ta de e-mail a fost confirmată. Te rugăm să te autentifici
+        cu noua ta adresă de e-mail.
+  account:
+    entries:
+      destroy:
+        success: Înregistrarea a fost ștearsă cu succes.

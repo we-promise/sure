@@ -14,5 +14,181 @@ ro:
       cash: Numerar
       holdings: Dețineri
       total: Soldul portofoliului
-      total_value_tooltip: Soldul total al portofoliului este suma numerarului de brokeraj
-        (disponibil pentru tranzacționare) și a valorii de piață curente a deținerilor tale.
+      total_value_tooltip: Soldul total al portofoliului este suma numerarului de
+        brokeraj (disponibil pentru tranzacționare) și a valorii de piață curente
+        a deținerilor tale.
+    subtypes:
+      brokerage:
+        long: Cont de brokeraj
+        short: Cont de brokeraj
+      401k:
+        long: 401(k)
+        short: 401(k)
+      403b:
+        long: 403(b)
+        short: 403(b)
+      529_plan:
+        short: Plan 529
+        long: Plan de economii pentru educație 529
+      angel:
+        short: Investiție de tip angel
+        long: Investiție de tip angel
+      hsa:
+        long: Cont de economii pentru sănătate
+        short: HSA
+      ira:
+        long: IRA tradițional
+        short: IRA
+      mutual_fund:
+        long: Fond mutual
+        short: Fond mutual
+      other:
+        short: Altele
+        long: Altă investiție
+      pension:
+        long: Pensie
+        short: Pensie
+      retirement:
+        short: Pensie
+        long: Cont de pensie
+      roth_401k:
+        long: Roth 401(k)
+        short: Roth 401(k)
+      roth_ira:
+        long: Roth IRA
+        short: Roth IRA
+      tsp:
+        long: Thrift Savings Plan
+        short: TSP
+      workplace_pension_uk:
+        short: Pensie
+        long: Pensie ocupațională
+      457b:
+        long: 457(b)
+        short: 457(b)
+      apy:
+        long: Atal Pension Yojana
+        short: APY
+      cash_management:
+        long: Cont de gestionare a numerarului
+        short: CMA
+      corporate_bond:
+        long: Obligațiune corporativă
+        short: Obligațiune corporativă
+      fd:
+        long: Depozit la termen
+        short: FD
+      g_sec:
+        long: Titluri de stat (G-Secs)
+        short: G-Sec
+      gold:
+        long: Aur (fizic sau digital)
+        short: Aur
+      gold_etf:
+        long: ETF pe aur
+        short: ETF pe aur
+      gold_mf:
+        long: Fond mutual pe aur
+        short: Fond mutual pe aur
+      indian_equity:
+        long: Acțiuni indiene
+        short: Acțiuni indiene
+      indian_etf:
+        long: ETF indian
+        short: ETF indian
+      indian_stocks:
+        long: Acțiuni indiene (Demat)
+        short: Acțiuni indiene
+      infrastructure_bond:
+        long: Obligațiune pentru infrastructură
+        short: Obligațiune infrastructură
+      isa:
+        long: Cont individual de economii
+        short: ISA
+      kvp:
+        long: Kisan Vikas Patra
+        short: KVP
+      life_insurance:
+        long: Asigurare de viață
+        short: Asigurare de viață
+      lira:
+        long: Cont de pensie blocat
+        short: LIRA
+      lisa:
+        long: Lifetime ISA
+        short: LISA
+      nps:
+        long: Sistemul național de pensii
+        short: NPS
+      nsc:
+        long: Certificat național de economii
+        short: NSC
+      pea:
+        long: Plan d'Épargne en Actions
+        short: PEA
+      pillar_3a:
+        long: Pensie privată (Pilonul 3a)
+        short: Pilonul 3a
+      pomis:
+        long: Program poștal de venit lunar
+        short: POMIS
+      ppf:
+        long: Fond public de economii pentru pensie
+        short: PPF
+      rd:
+        long: Depozit recurent
+        short: RD
+      resp:
+        long: Plan înregistrat de economii pentru educație
+        short: RESP
+      riester:
+        long: Riester-Rente
+        short: Riester
+      rrif:
+        long: Fond înregistrat de venit pentru pensie
+        short: RRIF
+      rrsp:
+        long: Plan înregistrat de economii pentru pensie
+        short: RRSP
+      scss:
+        long: Program de economii pentru vârstnici
+        short: SCSS
+      sdl:
+        long: Împrumuturi pentru dezvoltarea statelor (SDL)
+        short: SDL
+      sep_ira:
+        long: SEP IRA
+        short: SEP IRA
+      sgb:
+        long: Obligațiune suverană pe aur
+        short: SGB
+      simple_ira:
+        long: SIMPLE IRA
+        short: SIMPLE IRA
+      sipp:
+        long: Pensie personală cu investiții autogestionate
+        short: SIPP
+      smsf:
+        long: Fond de pensii autogestionat
+        short: SMSF
+      ssy:
+        long: Sukanya Samriddhi Yojana
+        short: SSY
+      super:
+        long: Pensie ocupațională australiană
+        short: Super
+      tax_free_bond:
+        long: Obligațiune scutită de impozit
+        short: Obligațiune scutită de impozit
+      tfsa:
+        long: Cont de economii scutit de impozit
+        short: TFSA
+      trust:
+        long: Fiducie
+        short: Fiducie
+      ugma:
+        long: Cont de custodie UGMA
+        short: UGMA
+      utma:
+        long: Cont de custodie UTMA
+        short: UTMA

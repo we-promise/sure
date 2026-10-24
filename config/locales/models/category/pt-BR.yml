@@ -1,0 +1,29 @@
+---
+pt-BR:
+  models:
+    category:
+      defaults:
+        entertainment: Entretenimento
+        fees: Taxas
+        food_and_drink: Comida e Bebida
+        gifts_and_donations: Presentes e doações
+        groceries: Supermercado
+        healthcare: Saúde
+        home_improvement: Melhorias em Casa
+        income: Receita
+        insurance: Seguro
+        loan_payments: Pagamentos de Empréstimos
+        mortgage_rent: Financiamento imobiliário / aluguel
+        personal_care: Cuidados Pessoais
+        savings_and_investments: Poupanças e Investimentos
+        services: Serviços
+        shopping: Compras
+        sports_and_fitness: Esportes e atividade física
+        subscriptions: Assinaturas
+        taxes: Impostos
+        transportation: Transportes
+        travel: Viagens
+        utilities: Despesas domésticas
+      investment_contributions: Contribuições para Investimentos
+      other_investments: Outros Investimentos
+      uncategorized: Sem categoria

@@ -11,6 +11,17 @@ pt-BR:
       submit: Adicionar transação
       ticker_placeholder: AAPL
       type: Tipo
+      dividend_requires_security: O título é obrigatório para dividendos
+      fee: Taxa da transação
+      holding_optional: Símbolo do ticker (opcional)
+      trade_requires_security: É necessário um título (ticker) para negociações de
+        compra e venda
+      type_buy: Compra
+      type_deposit: Depósito
+      type_dividend: Dividendo
+      type_interest: Juros
+      type_sell: Venda
+      type_withdrawal: Saque
     header:
       buy: Comprar
       current_market_price_label: Preço de Mercado Atual
@@ -20,6 +31,17 @@ pt-BR:
       sell: Vender
       symbol_label: Símbolo
       total_return_label: Ganho/perda não realizado
+      contribution: Contribuição
+      dividend: Dividendo
+      exchange: Troca
+      fee: Taxa
+      interest: Juros
+      other: Outro
+      reinvestment: Reinvestimento
+      sweep_in: Transferência interna (entrada)
+      sweep_out: Transferência interna (saída)
+      transfer: Transferência
+      withdrawal: Saque
     new:
       title: Nova transação
     show:
@@ -36,3 +58,19 @@ pt-BR:
       note_placeholder: Adicione notas adicionais aqui...
       quantity_label: Quantidade
       settings: Configurações
+      amount_label: Valor
+      buy: Compra
+      category_label: Categoria
+      fee_label: Taxa da transação
+      no_category: Sem categoria
+      provider_disabled_warning: >-
+        Atualizações de preço suspensas — o serviço %{provider} está desativado. Reative-o
+        nas Configurações ou remapeie a posição para outro serviço.
+      sell: Venda
+      type_label: Tipo
+    api_errors:
+      activity_label_must_match_type: investment_activity_label deve ser %{label}
+        quando type for %{type}
+      invalid_activity_label: Rótulo de atividade de investimento inválido
+      invalid_type: Tipo inválido
+      supported_types: 'type deve ser um de: %{types}'

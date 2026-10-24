@@ -1,0 +1,127 @@
+---
+nl:
+  akahu_item:
+    institution_summary:
+      count:
+        other: "%{count} instellingen"
+        one: 1 instelling
+      none: Geen instellingen gekoppeld
+      one: 1 instelling
+    sync_status:
+      all_synced:
+        other: "%{count} rekeningen gesynchroniseerd"
+        one: 1 rekening gesynchroniseerd
+      no_accounts: Geen rekeningen gevonden
+      partial: "%{linked} gesynchroniseerd, %{unlinked} nog in te stellen"
+    errors:
+      account_processing_failed: Akahu-rekening synchroniseren niet mogelijk
+      account_sync_schedule_failed: Synchronisatie van de Akahu-rekening inplannen niet mogelijk
+      sync_failed: Akahu-koppeling synchroniseren niet mogelijk
+      pending_transactions_failed: Lopende Akahu-transacties ophalen niet mogelijk
+      transactions_failed: Akahu-transacties ophalen niet mogelijk
+  akahu_items:
+    akahu_item:
+      error: Fout
+      status_never: Nooit gesynchroniseerd
+      delete: Verwijderen
+      deletion_in_progress: Verwijderen wordt uitgevoerd
+      setup_needed: Rekening moet worden ingesteld
+      status_with_summary: "%{timestamp} geleden gesynchroniseerd · %{summary}"
+      syncing: Synchroniseren
+      no_accounts_description: Haal Akahu-rekeningen op en kies welke je wilt koppelen.
+      no_accounts_title: Nog geen rekeningen geïmporteerd
+      setup_action: Rekeningen instellen
+      setup_description: "%{linked} van %{total} rekeningen gekoppeld."
+    provider_panel:
+      disconnect: Ontkoppelen
+      syncing: Synchroniseren…
+      connection_name_label: Naam van de koppeling
+      sync: Synchroniseren
+      update_connection: Koppeling bijwerken
+      add_connection: Akahu-koppeling toevoegen
+      default_connection_name: Akahu-koppeling
+      disconnect_confirm: Weet je zeker dat je %{name} wilt ontkoppelen?
+      setup_accounts: Rekeningen instellen
+      app_token_label: App-token
+      app_token_placeholder: Plak je Akahu-app-token
+      connection_name_placeholder: Hoofdkoppeling Akahu
+      keep_app_token_placeholder: Laat leeg om het bestaande app-token te behouden
+      keep_user_token_placeholder: Laat leeg om het bestaande gebruikerstoken te behouden
+      user_token_label: Gebruikerstoken
+      user_token_placeholder: Plak je Akahu-gebruikerstoken
+    select_accounts:
+      cancel: Annuleren
+      link_accounts: Rekeningen koppelen
+      no_accounts_found: Er zijn geen niet-gekoppelde Akahu-rekeningen gevonden.
+      no_credentials_configured: Stel Akahu eerst in bij de aanbiederinstellingen.
+      title: Akahu-rekeningen koppelen
+      description: Kies de Akahu-rekeningen die je wilt toevoegen.
+    select_existing_account:
+      cancel: Annuleren
+      link_account: Rekening koppelen
+      account_already_linked: Deze rekening is al aan een aanbieder gekoppeld.
+      title: Akahu-rekening koppelen aan %{account_name}
+      description: Kies een niet-gekoppelde Akahu-rekening om aan deze rekening te koppelen.
+      no_accounts_found: Er zijn geen niet-gekoppelde Akahu-rekeningen gevonden.
+      no_credentials_configured: Stel Akahu eerst in bij de aanbiederinstellingen.
+    setup_accounts:
+      account_types:
+        credit_card: Creditcard
+        investment: Belegging
+        skip: Overslaan
+        depository: Geld
+        loan: Lening
+      cancel: Annuleren
+      create_accounts: Rekeningen aanmaken
+      account_type_label: Rekeningtype
+      all_accounts_linked: Alle Akahu-rekeningen zijn al gekoppeld.
+      title: Akahu-rekeningen instellen
+      choose_account_type: Kies een rekeningtype
+      choose_account_type_description: Sla rekeningen over die je niet wilt bijhouden.
+      no_accounts_to_setup: Geen rekeningen om in te stellen
+      no_credentials: Stel eerst de Akahu-toegangsgegevens in.
+      api_error: Akahu-rekeningen ophalen niet mogelijk.
+      fetch_failed: Rekeningen ophalen niet mogelijk
+      subtitle: Kies hoe elke Akahu-rekening in Sure moet verschijnen.
+    destroy:
+      success: Verwijdering van de Akahu-koppeling ingepland.
+      unlink_failed: Akahu-koppeling ontkoppelen niet mogelijk
+    link_accounts:
+      unsupported_account_type: Akahu ondersteunt dat rekeningtype niet.
+      link_failed: Er zijn geen rekeningen gekoppeld.
+      no_accounts_selected: Selecteer ten minste één rekening.
+      no_credentials_configured: Stel Akahu eerst in bij de aanbiederinstellingen.
+      success:
+        one: 1 Akahu-rekening gekoppeld.
+        other: "%{count} Akahu-rekeningen gekoppeld."
+    link_existing_account:
+      account_already_linked: Deze rekening is al aan een aanbieder gekoppeld.
+      akahu_account_already_linked: Deze Akahu-rekening is al gekoppeld.
+      success: Akahu-rekening gekoppeld aan %{account_name}.
+    complete_account_setup:
+      all_skipped: Er zijn geen Akahu-rekeningen aangemaakt.
+      creation_failed: Akahu-rekeningen konden niet worden aangemaakt.
+      no_accounts: Er zijn geen Akahu-rekeningen geselecteerd.
+      success:
+        one: 1 Akahu-rekening aangemaakt.
+        other: "%{count} Akahu-rekeningen aangemaakt."
+    create:
+      success: Akahu-koppeling opgeslagen.
+    update:
+      success: Akahu-koppeling bijgewerkt.
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Akahu-koppeling
+  providers:
+    akahu:
+      name: Akahu
+      description: Koppel Nieuw-Zeelandse bankrekeningen via Akahu
+  akahu_account:
+    fallback: Akahu-rekening
+  akahu_entry:
+    notes:
+      code: Code
+      other_account: Andere rekening
+      particulars: Bijzonderheden
+      reference: Referentie

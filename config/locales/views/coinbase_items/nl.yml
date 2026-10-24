@@ -1,0 +1,78 @@
+---
+nl:
+  coinbase_items:
+    coinbase_item:
+      provider_name: Coinbase
+      no_accounts_title: Geen rekeningen gevonden
+      status_never: Nooit gesynchroniseerd
+      status_with_summary: 'Laatst gesynchroniseerd: %{timestamp} geleden — %{summary}'
+      sync_status:
+        all_synced:
+          one: "%{count} rekening gesynchroniseerd"
+          other: "%{count} rekeningen gesynchroniseerd"
+        no_accounts: Geen rekeningen gevonden
+        partial_sync: "%{linked_count} gesynchroniseerd, %{unlinked_count} nog in te stellen"
+      syncing: Synchroniseren…
+      update_credentials: Toegangsgegevens bijwerken
+      delete: Verwijderen
+      deletion_in_progress: Verwijderen…
+      reconnect: Toegangsgegevens moeten worden bijgewerkt
+      status: 'Laatst gesynchroniseerd: %{timestamp} geleden'
+      import_wallets_menu: Wallets importeren
+      more_wallets_available:
+        one: Nog %{count} wallet beschikbaar om te importeren
+        other: Nog %{count} wallets beschikbaar om te importeren
+      no_accounts_message: Je Coinbase-wallets verschijnen hier na de synchronisatie.
+      setup_description: Selecteer welke Coinbase-wallets je wilt bijhouden.
+      setup_needed: Wallets klaar om te importeren
+      setup_action: Wallets importeren
+    create:
+      default_name: Coinbase
+      success: Verbonden met Coinbase! Je rekeningen worden gesynchroniseerd.
+    select_existing_account:
+      balance: Saldo
+      cancel: Annuleren
+      link: Koppelen
+      no_accounts_found: Geen Coinbase-rekeningen gevonden.
+      title: Coinbase-rekening koppelen
+      check_provider_health: Controleer of je Coinbase-API-toegangsgegevens geldig zijn
+      currently_linked_to: 'Momenteel gekoppeld aan: %{account_name}'
+      wait_for_sync: Wacht tot Coinbase klaar is met synchroniseren
+    setup_accounts:
+      cancel: Annuleren
+      select_all: Alles selecteren
+      creating: Importeren…
+      import_selected: Selectie importeren
+      accounts_count:
+        one: "%{count} wallet beschikbaar"
+        other: "%{count} wallets beschikbaar"
+      instructions: Selecteer de wallets die je wilt importeren. Niet-geselecteerde wallets blijven beschikbaar om later toe te voegen.
+      no_accounts: Alle wallets zijn geïmporteerd.
+      subtitle: Selecteer welke wallets je wilt bijhouden
+      title: Coinbase-wallets importeren
+    destroy:
+      success: Verwijdering van de Coinbase-koppeling ingepland.
+    update:
+      success: Coinbase-configuratie bijgewerkt.
+    link_existing_account:
+      errors:
+        invalid_coinbase_account: Ongeldige Coinbase-rekening
+        only_manual: Alleen handmatig beheerde rekeningen kunnen aan Coinbase worden gekoppeld
+      success: Gekoppeld aan de Coinbase-rekening
+    complete_account_setup:
+      no_accounts: Geen wallets om te importeren
+      none_selected: Geen wallets geselecteerd
+      success:
+        one: "%{count} wallet geïmporteerd"
+        other: "%{count} wallets geïmporteerd"
+  coinbase_item:
+    syncer:
+      calculating_balances: Saldi berekenen…
+      checking_configuration: Rekeningconfiguratie controleren…
+      accounts_need_setup:
+        one: "%{count} rekening moet worden ingesteld"
+        other: "%{count} rekeningen moeten worden ingesteld"
+      importing_accounts: Rekeningen importeren uit Coinbase…
+      checking_credentials: Toegangsgegevens controleren…
+      processing_accounts: Rekeninggegevens verwerken…
+      credentials_invalid: Ongeldige API-toegangsgegevens. Controleer je API-sleutel en geheime sleutel.

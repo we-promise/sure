@@ -1,0 +1,20 @@
+---
+nl:
+  activerecord:
+    attributes:
+      goal_pledge:
+        currency: Valuta
+        expires_at: Verloopt op
+        kind: Soort
+        status: Status
+        account: Rekening
+        amount: Bedrag
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Kies een van de rekeningen die aan het doel zijn gekoppeld.
+            currency:
+              must_match_goal: De valuta van de toezegging moet overeenkomen met die van het doel.
+          duplicate_open_pledge: Je hebt al een openstaande toezegging voor dit bedrag op deze rekening. Annuleer of verleng de bestaande voordat je een nieuwe vastlegt.

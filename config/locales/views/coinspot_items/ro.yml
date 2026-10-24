@@ -1,0 +1,104 @@
+---
+ro:
+  coinspot_item:
+    syncer:
+      calculating_balances: Se calculează soldurile...
+      accounts_need_setup:
+        one: "%{count} cont necesită configurare"
+        other: "%{count} de conturi necesită configurare"
+        few: "%{count} conturi necesită configurare"
+      checking_configuration: Se verifică configurarea contului...
+      checking_credentials: Se verifică datele de autentificare...
+      processing_accounts: Se procesează datele contului...
+      importing_accounts: Se importă conturile din CoinSpot...
+      credentials_invalid: Date API CoinSpot nevalide. Verifică cheia API și secretul.
+      processing_failed:
+        one: Procesarea a eșuat pentru %{count} cont CoinSpot
+        other: Procesarea a eșuat pentru %{count} de conturi CoinSpot
+        few: Procesarea a eșuat pentru %{count} conturi CoinSpot
+  coinspot_items:
+    coinspot_item:
+      delete: Șterge
+      no_accounts_title: Nu s-au găsit conturi
+      status: Ultima sincronizare acum %{timestamp}
+      status_never: Nu a fost sincronizat niciodată
+      sync_status:
+        no_accounts: Nu s-au găsit conturi
+        all_synced:
+          one: "%{count} cont sincronizat"
+          other: "%{count} de conturi sincronizate"
+          few: "%{count} conturi sincronizate"
+        partial_sync: 'Sincronizate: %{linked_count}; necesită configurare: %{unlinked_count}'
+      syncing: Se sincronizează...
+      deletion_in_progress: Se șterge...
+      import_accounts_menu: Importă contul
+      provider_name: CoinSpot
+      reconnect: Datele de autentificare necesită actualizare
+      setup_action: Importă contul
+      status_with_summary: Ultima sincronizare acum %{timestamp} - %{summary}
+      setup_needed: Cont pregătit pentru import
+      no_accounts_message: Contul de bursă CoinSpot va apărea aici după sincronizare.
+      setup_description: Importă această conexiune CoinSpot ca un cont de bursă de
+        criptomonede.
+      stale_rate_warning: Soldul este aproximativ deoarece cursul exact pentru %{date}
+        nu a fost disponibil. Se va actualiza la următoarea sincronizare.
+    select_existing_account:
+      cancel: Anulează
+      link: Asociază
+      check_provider_health: Verifică validitatea datelor API CoinSpot.
+      no_accounts_found: Nu s-au găsit conturi CoinSpot.
+      title: Conectează contul CoinSpot
+      wait_for_sync: Așteaptă finalizarea sincronizării CoinSpot.
+    setup_accounts:
+      cancel: Anulează
+      accounts_count:
+        one: "%{count} cont disponibil"
+        other: "%{count} de conturi disponibile"
+        few: "%{count} conturi disponibile"
+      creating: Se importă...
+      import_selected: Importă selecția
+      select_all: Selectează tot
+      instructions: CoinSpot importă un singur cont combinat de bursă de criptomonede
+        pentru această conexiune, cu solduri, valori în AUD, transferuri, depuneri,
+        retrageri și istoricul ordinelor.
+      no_accounts: Toate conturile CoinSpot au fost importate.
+      subtitle: Selectează contul de bursă de urmărit
+      title: Importă contul CoinSpot
+    create:
+      default_name: CoinSpot
+      success: Conectarea la CoinSpot a reușit. Contul de bursă se sincronizează.
+    provider_connection:
+      default_name: CoinSpot
+      name: CoinSpot - %{name}
+      default_description: Conectează la un cont de bursă CoinSpot
+      description: Conectează la %{name}
+    complete_account_setup:
+      no_accounts: Nu există conturi de importat
+      none_selected: Niciun cont selectat
+      success:
+        one: S-a importat %{count} cont
+        other: S-au importat %{count} de conturi
+        few: S-au importat %{count} conturi
+      setup_failed:
+        one: Importul a eșuat pentru %{count} cont
+        other: Importul a eșuat pentru %{count} de conturi
+        few: Importul a eșuat pentru %{count} conturi
+    select_accounts:
+      select_connection: Alege o conexiune CoinSpot în setările furnizorului.
+      no_credentials_configured: Adaugă datele API CoinSpot înainte de configurarea
+        conturilor.
+    destroy:
+      success: Conexiunea CoinSpot a fost programată pentru ștergere.
+      unlink_failed: Conexiunea CoinSpot nu a putut fi deconectată
+    link_accounts:
+      select_connection: Alege o conexiune CoinSpot înainte de a conecta conturile.
+    link_existing_account:
+      select_connection: Alege o conexiune CoinSpot înainte de a conecta conturile.
+      errors:
+        coinspot_account_already_linked: Acest cont CoinSpot este deja conectat
+        invalid_coinspot_account: Cont CoinSpot nevalid
+        only_manual: Doar conturile manuale de bursă de criptomonede fără furnizor
+          asociat pot fi conectate la CoinSpot
+      success: Conectat cu succes la contul CoinSpot
+    update:
+      success: Conexiunea CoinSpot a fost actualizată cu succes.

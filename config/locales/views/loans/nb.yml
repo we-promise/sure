@@ -10,6 +10,34 @@ nb:
       rate_type: Rentetype
       term_months: Løpetid (måneder)
       term_months_placeholder: '360'
+      none: Ingen
+      rate_change_remove: Fjern
+      subtype_none: Ingen
+      down_payment: Egenkapital
+      insurance_rate: Forsikringssats
+      insurance_rate_hint: En årlig sats som belastes månedlig sammen med terminbeløpet.
+        Fast forsikringssum beregnes av opprinnelig saldo, mens avtakende forsikringssum
+        beregnes av gjenværende gjeld.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Forsikringstype
+      insurance_rate_type_decreasing_life: Avtakende forsikringssum
+      insurance_rate_type_level_term: Fast forsikringssum
+      rate_change_add: Legg til renteendring
+      rate_change_effective_date: Ikrafttredelsesdato
+      rate_change_rate: Sats
+      rate_changes: Renteendringer
+      rate_changes_empty: Ingen renteendringer er registrert. Lånet bruker rentesatsen
+        ovenfor.
+      rate_changes_hint: Hver rad angir satsen som gjelder fra ikrafttredelsesdatoen
+        til neste endring. Hvis du oppgir samme dato igjen, erstattes raden i stedet
+        for at det legges til en ny.
+      rate_type_adjustable: Justerbar
+      rate_type_fixed: Fast
+      rate_type_variable: Flytende
+      start_date: Utbetalingsdato
+      start_date_hint: Datoen lånet ble utbetalt. La stå tomt for å bruke kontoens
+        åpningsdato.
+      subtype_prompt: Velg lånetype
     new:
       title: Angi lånedetaljer
     overview:
@@ -21,3 +49,53 @@ nb:
       term: Løpetid
       type: Type
       unknown: Ukjent
+      original_payoff_date: Opprinnelig nedbetalingsdato
+    tabs:
+      overview:
+        interest_rate: Rente
+        monthly_payment: Månedlig betaling
+        not_applicable: Ikke aktuelt
+        original_principal: Opprinnelig hovedstol
+        remaining_principal: Gjenværende hovedstol
+        term: Løpetid
+        type: Type
+        unknown: Ukjent
+        total_cost: Samlet kostnad
+        total_insurance: Forsikring
+        edit_loan_details: Rediger lånedetaljer
+        insurance_rate_only: "%{rate} per år"
+        leverage: Gjeldsgrad
+        leverage_band_conservative: Konservativ
+        leverage_band_high: Høy
+        leverage_band_moderate: Moderat
+        leverage_multiple: "%{ratio}x"
+        original_payoff_date: Opprinnelig nedbetalingsdato
+        total_cost_with_insurance: Samlet kostnad med forsikring
+      repayment_progress:
+        interest: Rente
+        total: Totalt
+        insurance: Forsikring
+        of_original: av %{amount}
+        instalment: Termin %{number} · %{date}
+        principal: Hovedstol
+        repaid: Nedbetalt
+      schedule:
+        date: Dato
+        interest: Rente
+        monthly_payment: Månedlig betaling
+        not_applicable: Ikke aktuelt
+        payment: Betaling
+        total_cost: Samlet kostnad
+        description: Beregnet ut fra opprinnelig saldo, rente og løpetid fra %{start_date}.
+          Ekstra innbetalinger er ikke tatt med.
+        forecasted_payoff_date: Forventet nedbetalingsdato
+        forecasted_payoff_not_converged: Blir ikke nedbetalt med dagens terminbeløp
+        number: Nr.
+        opening_payment: Første terminbeløp
+        principal: Hovedstol
+        remaining_balance: Gjenværende saldo
+        total_interest: Samlede renter
+        variable_rate_notice: Renten på dette lånet endres over tid. Nedbetalingsplanen
+          beregnes på nytt ved hver registrerte endring, med opprinnelig nedbetalingsdato
+          og justert terminbeløp. En endring som ennå ikke er registrert, vil endre
+          disse tallene.

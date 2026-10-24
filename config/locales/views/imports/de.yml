@@ -221,6 +221,7 @@ de:
         upload_csv_tab: CSV hochladen
       handle_qif_upload:
         qif_uploaded: QIF-Datei hochgeladen.
+        qif_account_required: Wähle ein Konto für den QIF-Import aus
       sure_import:
         browse: Durchsuchen
         browse_hint: um deine Datei all.ndjson hinzuzufügen
@@ -365,7 +366,7 @@ de:
       publish_transactions:
         one: "%{count} Transaktion übernehmen"
         other: "%{count} Transaktionen übernehmen"
-      ready_for_review_description: Wir haben %{count} Transaktionen aus deinem Auszug gelesen. Prüf sie und übernimm sie in dein Konto.
+      ready_for_review_description: {"one":"%{count} Transaktion aus deinem Auszug fehlt noch in diesem Konto. Prüfe und bestätige den Import, um sie hinzuzufügen.","other":"%{count} Transaktionen aus deinem Auszug fehlen noch in diesem Konto. Prüfe und bestätige den Import, um sie hinzuzufügen."}
       ready_for_review_title: Bereit zur Prüfung
       review_transactions: Transaktionen prüfen
       save_account: Speichern
@@ -379,6 +380,20 @@ de:
         one: "%{count} Transaktion"
         other: "%{count} Transaktionen"
       unknown_document_type: Unbekannt
+      already_recorded_note:
+        one: "%{count} war bereits in diesem Konto vorhanden und wurde dem Auszug zugeordnet."
+        other: "%{count} waren bereits in diesem Konto vorhanden und wurden dem Auszug zugeordnet."
+      complete_fully_reconciled:
+        one: Alle Transaktionen dieses Auszugs waren bereits in deinem Konto vorhanden.
+          %{count} wurde zugeordnet und als abgeglichen markiert. Es musste nichts importiert
+          werden.
+        other: Alle Transaktionen dieses Auszugs waren bereits in deinem Konto vorhanden.
+          Alle %{count} wurden zugeordnet und als abgeglichen markiert. Es musste nichts
+          importiert werden.
+      errors:
+        provider_no_pdf_support: Der KI-Anbieter unterstützt keine PDF-Verarbeitung
+        provider_not_configured: KI-Anbieter nicht konfiguriert
+      view_summary: Importübersicht anzeigen
     ready:
       description: Hier ist eine Zusammenfassung der neuen Elemente, die deinem Konto hinzugefügt werden, sobald du diesen Import veröffentlichst.
       title: Importdaten bestätigen
@@ -387,6 +402,49 @@ de:
       empty_summary: In dieser Datei wurden keine importierbaren Datensätze gefunden. Sie ist möglicherweise leer, oder die Zeilen entsprechen nicht dem erwarteten Exportformat (jede Zeile sollte ein JSON-Objekt mit den Schlüsseln „type“ und „data“ und unterstützten Typen sein).
       publish_import: Import veröffentlichen
       back_to_imports: Zurück zu Importen
+      missing_merchant_warning_description:
+        one: 1 Händlerverweis in dieser Datei verweist auf einen nicht enthaltenen Händler.
+          Dies kann bei Exporten auftreten, die erstellt wurden, bevor vom Anbieter zugewiesene
+          Händler in Sure-Exporte aufgenommen wurden. Du kannst den Import dennoch bestätigen.
+          Der betroffene Datensatz wird ohne Händler importiert und kann nachträglich zugeordnet
+          werden.
+        other: "%{count} Händlerverweise in dieser Datei verweisen auf nicht enthaltene
+          Händler. Dies kann bei Exporten auftreten, die erstellt wurden, bevor vom Anbieter
+          zugewiesene Händler in Sure-Exporte aufgenommen wurden. Du kannst den Import dennoch
+          bestätigen. Die betroffenen Datensätze werden ohne Händler importiert und können
+          nachträglich zugeordnet werden."
+      missing_merchant_warning_title: Einige Händler fehlen in diesem Export
+      provider_merchant_diff_description:
+        one: 1 Händler in dieser Datei ist bereits mit abweichenden Angaben vorhanden. Der
+          bestehende Händler wird beibehalten; die Werte aus dieser Datei werden nicht übernommen.
+        other: "%{count} Händler in dieser Datei sind bereits mit abweichenden Angaben vorhanden.
+          Die bestehenden Händler werden beibehalten; die Werte aus dieser Datei werden
+          nicht übernommen."
+      provider_merchant_diff_fields:
+        name: Name
+        provider_merchant_id: Anbieter-ID
+        website_url: Website
+      provider_merchant_diff_none: keine
+      provider_merchant_diff_row: "%{field}: %{kept} bleibt erhalten, Datei enthält %{imported}"
+      provider_merchant_diff_summary: Unterschiede anzeigen
+      provider_merchant_diff_title: Einige Händler sind bereits mit abweichenden Angaben
+        vorhanden
+      reused_taxonomy_notice_description:
+        one: 1 Kategorie, Tag oder Händler aus dieser Datei ist bereits in deinem Konto
+          vorhanden, etwa aus den Standardkategorien der Einrichtung. Der Eintrag wird wiederverwendet
+          und mit den Dateidaten aktualisiert, statt ein Duplikat zu erstellen.
+        other: "%{count} Kategorien, Tags oder Händler aus dieser Datei sind bereits in
+          deinem Konto vorhanden, etwa aus den Standardkategorien der Einrichtung. Die Einträge
+          werden wiederverwendet und mit den Dateidaten aktualisiert, statt Duplikate zu
+          erstellen."
+      reused_taxonomy_notice_title: Einige Kategorien, Tags oder Händler sind bereits vorhanden
+      skipped_recurring_description:
+        one: 1 wiederkehrende Transaktion hat keinen Namen, und ihr Händler fehlt. Sie wird
+          deshalb übersprungen. Automatisch erkannte wiederkehrende Transaktionen werden
+          nach dem Import neu ermittelt.
+        other: "%{count} wiederkehrende Transaktionen haben keinen Namen, und ihre Händler
+          fehlen. Sie werden deshalb übersprungen. Automatisch erkannte wiederkehrende Transaktionen
+          werden nach dem Import neu ermittelt."
     apply_template:
       no_template_found: Keine Vorlage gefunden, richte deinen Import selbst ein.
       template_applied: Vorlage übernommen.
@@ -486,3 +544,23 @@ de:
     update:
       account_saved: Konto gespeichert.
       invalid_account: Konto nicht gefunden.
+      account_locked: Dieser Import wurde bereits bestätigt. Sein Konto kann daher nicht
+        mehr geändert werden. Mache den Import zuerst rückgängig, wenn du ihn einem anderen
+        Konto zuordnen möchtest.
+    summary:
+      already_recorded: Bereits erfasst
+      already_recorded_hint: Einer bereits vorhandenen Transaktion dieses Kontos zugeordnet
+        und als abgeglichen markiert.
+      awaiting_review: Wartet auf den Import
+      close: Schließen
+      extracted: Auf dem Auszug gefunden
+      fully_reconciled:
+        one: Es musste nichts importiert werden. Die einzige Transaktion des Auszugs war
+          bereits erfasst.
+        other: Es musste nichts importiert werden. Alle %{count} Transaktionen waren bereits
+          erfasst.
+      imported: Neu importiert
+      statement_evidence_html: Mit %{statement} abgeglichen.
+      subtitle: Was mit jeder Transaktion dieses Auszugs in %{account} geschehen ist.
+      subtitle_no_account: Was mit jeder Transaktion dieses Auszugs geschehen ist.
+      title: Importübersicht

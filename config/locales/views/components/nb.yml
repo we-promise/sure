@@ -1,0 +1,197 @@
+---
+nb:
+  UI:
+    account:
+      balance_reconciliation:
+        labels:
+          payments: Betalinger
+          adjustments: Justeringer
+          buys: Kjøp
+          change_in_brokerage_cash: Endring i kontanter på meglerkonto
+          change_in_holdings_market: Endring i beholdninger (markedsprisendringer)
+          change_in_holdings_trades: Endring i beholdninger (kjøp/salg)
+          charges: Belastninger
+          end_balance: Utgående saldo
+          end_principal: Utgående hovedstol
+          end_value: Utgående verdi
+          final_balance: Sluttsaldo
+          final_principal: Endelig hovedstol
+          final_value: Sluttverdi
+          market_changes: Markedsendringer
+          net_cash_flow: Netto kontantstrøm
+          net_principal_change: Netto endring i hovedstol
+          net_value_change: Netto verdiendring
+          sells: Salg
+          start_balance: Inngående saldo
+          start_principal: Inngående hovedstol
+          start_value: Inngående verdi
+        tooltips:
+          adjustments: Manuelle avstemminger eller andre justeringer
+          adjustments_asset: Manuelle verdijusteringer eller takster
+          buys: Kryptokjøp i løpet av dagen
+          change_in_brokerage_cash: Netto endring i kontanter fra innskudd, uttak
+            og handler
+          change_in_holdings_market: Endring i beholdningsverdi som følge av markedsprisbevegelser
+          change_in_holdings_trades: Virkning på beholdninger fra kjøp og salg av
+            verdipapirer
+          charges: Nye belastninger i løpet av dagen
+          end_balance: Beregnet saldo etter alle transaksjoner
+          end_balance_investment: Beregnet saldo etter all aktivitet
+          end_principal: Beregnet hovedstol etter alle transaksjoner
+          end_value: Beregnet verdi etter alle endringer
+          final_balance: Endelig kontosaldo for dagen
+          final_balance_credit: Endelig skyldig saldo for dagen
+          final_balance_crypto: Endelig verdi av kryptobeholdningen for dagen
+          final_balance_investment: Endelig porteføljeverdi for dagen
+          final_principal: Endelig hovedstolssaldo for dagen
+          final_value: Endelig eiendelsverdi for dagen
+          market_changes: Verdiendringer fra markedsprisbevegelser
+          net_cash_flow: Netto saldoendring fra alle transaksjoner i løpet av dagen
+          net_principal_change: Avdrag på hovedstolen og nye låneopptak i løpet av
+            dagen
+          net_value_change: Alle verdiendringer, inkludert forbedringer og verdifall
+          payments: Innbetalinger til kortet i løpet av dagen
+          sells: Kryptosalg i løpet av dagen
+          start_balance: Kontosaldo ved starten av dagen
+          start_balance_credit: Skyldig saldo ved starten av dagen
+          start_balance_crypto: Kryptobeholdningens verdi ved starten av dagen
+          start_balance_investment: Samlet porteføljeverdi ved starten av dagen
+          start_principal: Hovedstolssaldo ved starten av dagen
+          start_value: Eiendelsverdi ved starten av dagen
+      chart:
+        loan:
+          today: I dag
+          actual: Registrert saldo
+          aria_actual_history_starts: Registrert saldohistorikk begynner %{date}.
+          aria_description: Diagram over lånesaldo. Registrert saldo %{current_balance}.
+            Opprinnelig planlagt innfrielse %{scheduled_payoff_date}. Anslått innfrielse
+            ut fra dagens saldo %{projected_payoff_date}.
+          interactive_chart: interaktivt diagram
+          interest_saved: Sparte renter
+          legend: Diagramserier
+          months_saved:
+            one: "%{count} måned tidligere enn planlagt"
+            other: "%{count} måneder tidligere enn planlagt"
+          no_payoff: ikke med nåværende nedbetaling
+          not_converged: Med nåværende nedbetaling blir denne saldoen ikke nedbetalt
+            innen opprinnelig forfall. Det vil fortsatt gjenstå %{balloon}.
+          on_schedule: I rute
+          projected: Prognose fra i dag
+          projected_payoff: Anslått innfrielse
+          projection_basis: Sammenligner dagens registrerte saldo med planlagt saldo
+            på samme dag. En betaling bokført før planlagt dato vises som foran planen
+            frem til denne datoen. En betaling bokført etterpå vises som etter planen.
+          scheduled: Opprinnelig plan
+          since_start: siden lånet startet
+        title:
+          balance: Saldo
+          holdings_value: Verdi av beholdninger
+          total_account_value: Samlet kontoverdi
+          cash_value: Kontantverdi
+          debt_balance: Gjeldssaldo
+          estimated_property_value: Anslått eiendomsverdi
+          estimated_vehicle_value: Anslått kjøretøyverdi
+          loan_remaining_balance: Gjenstående saldo
+          remaining_principal_balance: Gjenstående hovedstol
+          total_gains: Samlet gevinst
+        views:
+          cash: Kontanter
+          holdings: Beholdninger
+          total_value: Total verdi
+          gains: Gevinst / avkastning
+        no_data_available: Ingen data tilgjengelig
+        vs_available_history: mot tilgjengelig historikk
+      activity_date:
+        balance_tooltip: Saldo ved dagens slutt, etter alle transaksjoner og justeringer
+        no_balance_data: Ingen saldodata er tilgjengelige for denne datoen
+      activity_feed:
+        toggle_selection_checkboxes: Slå valg på eller av
+    period_picker:
+      aria_label: 'Tidsperiode: %{period}'
+  ds:
+    alert:
+      variants:
+        destructive: Feil
+        error: Feil
+        success: Vellykket
+        info: Informasjon
+        warning: Advarsel
+    dialog:
+      close: Lukk
+    pill:
+      default_label: Forhåndsvisning
+      aria_label: "%{label}"
+    icon_picker:
+      no_matching_icons: Ingen samsvarende ikoner
+      search_placeholder: Søk etter ikoner …
+    link:
+      opens_in_new_tab: "(åpnes i ny fane)"
+    popover:
+      avatar_default_label: Åpne meny
+    tooltip:
+      trigger_label: Mer informasjon
+  provider_sync_summary:
+    accounts:
+      title: Kontoer
+      institutions: 'Institusjoner: %{count}'
+      linked: 'Tilknyttet: %{count}'
+      total: 'Totalt: %{count}'
+      unlinked: 'Uten tilknytning: %{count}'
+    health:
+      stale_pending_count:
+        one: "%{count} transaksjon"
+        other: "%{count} transaksjoner"
+      stale_unmatched_count:
+        one: "%{count} transaksjon"
+        other: "%{count} transaksjoner"
+      pending_reconciled:
+        one: "%{count} duplikat av en ventende transaksjon er avstemt"
+        other: "%{count} duplikater av ventende transaksjoner er avstemt"
+      data_warnings: 'Dataadvarsler: %{count}'
+      duplicate_suggestions:
+        one: "%{count} mulig duplikat må gjennomgås"
+        other: "%{count} mulige duplikater må gjennomgås"
+      errors: 'Feil: %{count}'
+      notices: 'Meldinger: %{count}'
+      rate_limited: Forespørselsgrense nådd %{time_ago}
+      recently: nylig
+      stale_pending:
+        one: "%{count} utdatert ventende transaksjon (utelatt fra budsjetter)"
+        other: "%{count} utdaterte ventende transaksjoner (utelatt fra budsjetter)"
+      stale_unmatched:
+        one: "%{count} ventende transaksjon krever manuell gjennomgang"
+        other: "%{count} ventende transaksjoner krever manuell gjennomgang"
+      title: Tilstand
+      view_data_quality: Vis detaljer om datakvalitet
+      view_duplicate_suggestions: Vis foreslåtte duplikater
+      view_error_details: Vis feildetaljer
+      view_reconciled: Vis avstemte transaksjoner
+      view_stale_pending: Vis berørte kontoer
+      view_stale_unmatched: Vis transaksjoner som må gjennomgås
+    holdings:
+      title: Beholdninger
+      found: 'Funnet: %{count}'
+      processed: 'Behandlet: %{count}'
+    trades:
+      title: Handler
+      skipped: 'Hoppet over: %{count}'
+      fetching: Henter aktiviteter fra meglerforetaket …
+      imported: 'Importert: %{count}'
+    transactions:
+      title: Transaksjoner
+      skipped: 'Hoppet over: %{count}'
+      fetching: Henter fra meglerforetaket …
+      imported: 'Importert: %{count}'
+      protected:
+        one: "%{count} post er beskyttet (ikke overskrevet)"
+        other: "%{count} poster er beskyttet (ikke overskrevet)"
+      seen: 'Sett: %{count}'
+      updated: 'Oppdatert: %{count}'
+      view_protected: Vis beskyttede poster
+    last_sync: 'Siste synkronisering: for %{time_ago} siden'
+    skip_reasons:
+      excluded: Utelatt
+      import_locked: CSV-import
+      protected: Beskyttet
+      user_modified: Endret av bruker
+    title: Synkroniseringssammendrag

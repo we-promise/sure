@@ -5,13 +5,17 @@ ro:
       brokerage_cash: Numerar de brokeraj
     destroy:
       success: Deținerea a fost ștearsă
+      cannot_delete: Nu poți șterge această deținere
     holding:
       per_share: per acțiune
       shares: "%{qty} acțiuni"
+      no_cost_basis: Fără cost de achiziție
+      unknown: "--"
     index:
       positions:
         one: "%{count} poziție"
-        other: "%{count} poziții"
+        other: "%{count} de poziții"
+        few: "%{count} poziții"
       average_cost: Cost mediu
       holdings: Dețineri
       name: Nume
@@ -20,8 +24,8 @@ ro:
       return: Randament total
       weight: Pondere
     missing_price_tooltip:
-      description: Această investiție are valori lipsă și nu am putut calcula
-        randamentele sau valoarea sa.
+      description: Această investiție are valori lipsă și nu am putut calcula randamentele
+        sau valoarea sa.
       missing_data: Date lipsă
     show:
       avg_cost_label: Cost mediu
@@ -38,3 +42,82 @@ ro:
       trade_history_entry: "%{qty} acțiuni din %{security} la %{price}"
       total_return_label: Randament total
       unknown: Necunoscut
+      cancel: Anulează
+      market_data_sync_button: Reîmprospătează
+      market_value_label: Valoare de piață
+      remap_security: Salvează
+      syncing: Se sincronizează...
+      never: Niciodată
+      book_value_label: Valoare contabilă
+      cost_basis_locked_description: Costul de achiziție stabilit manual nu va fi
+        modificat de sincronizări.
+      cost_basis_locked_label: Costul de achiziție este blocat
+      edit_security: Editează instrumentul financiar
+      last_price_update: Ultima actualizare a prețului
+      market_data_label: Date de piață
+      no_security_provider: Furnizorul de instrumente financiare nu este configurat.
+        Căutarea instrumentelor financiare nu este disponibilă.
+      no_trade_history: Nu există istoric al tranzacțiilor bursiere pentru această
+        deținere.
+      originally: era %{ticker}
+      provider_disabled_warning: Actualizările prețului sunt suspendate — furnizorul
+        %{provider} este dezactivat. Alege mai jos un alt furnizor sau reactivează-l
+        din Setări.
+      provider_sent: 'Furnizorul a trimis: %{ticker}'
+      reset_confirm_body: Aceasta va schimba instrumentul financiar din %{current}
+        înapoi în %{original} și va muta toate tranzacțiile bursiere asociate.
+      reset_confirm_title: Restabilești instrumentul financiar de la furnizor?
+      reset_to_provider: Restabilește valoarea furnizorului
+      search_security: Caută un instrument financiar
+      search_security_placeholder: Caută după simbol bursier sau nume
+      security_remapped_label: Instrument financiar reasociat
+      shares_label: Acțiuni
+      switch_provider_button: Schimbă
+      switch_provider_description: "%{provider} este dezactivat. Caută acest instrument
+        financiar la un alt furnizor activat."
+      switch_provider_label: Schimbă furnizorul
+      truncated_history_warning: Istoricul prețurilor este disponibil doar începând
+        cu %{date}. Furnizorul selectat nu are date anterioare — acest lucru se poate
+        întâmpla dacă activul a fost listat după data tranzacției tale sau dacă furnizorul
+        oferă doar o perioadă istorică limitată în planul curent.
+      unlock_confirm_body: Aceasta va permite actualizarea costului de achiziție prin
+        sincronizările furnizorului sau calculele tranzacțiilor bursiere.
+      unlock_confirm_title: Deblochezi costul de achiziție?
+      unlock_cost_basis: Deblochează
+      security_label: Instrument financiar
+    cost_basis_cell:
+      cancel: Anulează
+      per_share: per acțiune
+      save: Salvează
+      set: Setează
+      or_per_share_label: 'Sau introdu valoarea pe acțiune:'
+      overwrite_confirm_body: Aceasta va înlocui costul de achiziție curent de %{current}.
+      overwrite_confirm_title: Suprascrii costul de achiziție?
+      set_cost_basis_header: Stabilește costul de achiziție pentru %{ticker} (%{qty}
+        acțiuni)
+      total_cost_basis_label: Cost total de achiziție
+      unknown: "--"
+    cost_basis_sources:
+      calculated: Din tranzacții bursiere
+      manual: Stabilit de utilizator
+      provider: De la furnizor
+    errors:
+      security_collision: 'Reasocierea nu este posibilă: ai deja o deținere pentru
+        %{ticker} la %{date}.'
+    remap_security:
+      security_not_found: Instrumentul financiar selectat nu a fost găsit.
+      success: Instrumentul financiar a fost actualizat cu succes.
+    reset_security:
+      success: Instrumentul financiar a fost restabilit la valoarea furnizorului.
+    sync_prices:
+      provider_error: Nu s-au putut prelua cele mai recente prețuri. Încearcă din
+        nou peste câteva minute.
+      success: Datele de piață au fost sincronizate cu succes.
+      unavailable: Sincronizarea datelor de piață nu este disponibilă pentru instrumentele
+        financiare offline.
+    unlock_cost_basis:
+      success: Costul de achiziție a fost deblocat. Poate fi actualizat la următoarea
+        sincronizare.
+    update:
+      error: Valoare nevalidă a costului de achiziție.
+      success: Costul de achiziție a fost salvat.

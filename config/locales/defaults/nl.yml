@@ -42,6 +42,7 @@ nl:
       default: "%d-%m-%Y"
       long: "%e %B %Y"
       short: "%e %b"
+      month_year: "%B %Y"
     month_names:
     -
     - Januari
@@ -211,3 +212,17 @@ nl:
       long: "%d %B %Y %H:%M"
       short: "%d %b %H:%M"
     pm: "'s middags"
+  defaults:
+    common:
+      close: Sluiten
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
+  global:
+    expand: Uitklappen
+  mcp:
+    errors:
+      invalid_session_id: Ongeldige MCP-sessie-ID
+      unsupported_protocol_version: 'Niet-ondersteunde MCP-protocolversie: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris moeten https, loopback-http of een URI-schema van een native app gebruiken

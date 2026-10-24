@@ -1,0 +1,209 @@
+---
+nl:
+  mercury_items:
+    provider_connection:
+      default_name: Mercury
+      default_description: Verbind met je bank via Mercury
+      description: Verbinden via %{name}
+      name: Mercury — %{name}
+    complete_account_setup:
+      all_skipped: Alle rekeningen zijn overgeslagen. Er zijn geen rekeningen aangemaakt.
+      creation_failed: 'Rekeningen aanmaken mislukt: %{error}'
+      no_accounts: Geen rekeningen om in te stellen.
+      success: "%{count} rekening(en) aangemaakt."
+    link_accounts:
+      all_already_linked:
+        one: De geselecteerde rekening (%{names}) is al gekoppeld
+        other: 'Alle %{count} geselecteerde rekeningen zijn al gekoppeld: %{names}'
+      api_error: 'API-fout: %{message}'
+      invalid_account_names:
+        one: Een rekening zonder naam kan niet worden gekoppeld
+        other: "%{count} rekeningen zonder naam kunnen niet worden gekoppeld"
+      link_failed: Rekeningen koppelen mislukt
+      no_accounts_selected: Selecteer ten minste één rekening
+      partial_invalid: "%{created_count} rekening(en) gekoppeld; %{already_linked_count} waren al gekoppeld en %{invalid_count} rekening(en) hadden ongeldige namen"
+      partial_success: "%{created_count} rekening(en) gekoppeld. %{already_linked_count} rekening(en) waren al gekoppeld: %{already_linked_names}"
+      success:
+        one: "%{count} rekening gekoppeld"
+        other: "%{count} rekeningen gekoppeld"
+      no_api_token: Mercury-API-token niet gevonden. Stel dit in bij de aanbiederinstellingen.
+      select_connection: Kies een Mercury-koppeling voordat je rekeningen koppelt.
+    link_existing_account:
+      account_already_linked: Deze rekening is al aan een aanbieder gekoppeld
+      api_error: 'API-fout: %{message}'
+      invalid_account_name: Een rekening zonder naam kan niet worden gekoppeld
+      missing_parameters: Verplichte parameters ontbreken
+      mercury_account_already_linked: Deze Mercury-rekening is al aan een andere rekening gekoppeld
+      mercury_account_not_found: Mercury-rekening niet gevonden
+      success: "%{account_name} gekoppeld aan Mercury"
+      no_api_token: Mercury-API-token niet gevonden. Stel dit in bij de aanbiederinstellingen.
+      select_connection: Kies een Mercury-koppeling voordat je rekeningen koppelt.
+    loading:
+      loading_title: Laden
+      loading_message: Mercury-rekeningen laden…
+    mercury_item:
+      accounts_need_setup: Rekeningen moeten worden ingesteld
+      delete: Koppeling verwijderen
+      deletion_in_progress: verwijderen wordt uitgevoerd…
+      error: Fout
+      no_accounts_description: Deze koppeling heeft nog geen gekoppelde rekeningen.
+      no_accounts_title: Geen rekeningen
+      setup_action: Nieuwe rekeningen instellen
+      setup_needed: Nieuwe rekeningen klaar om in te stellen
+      status: "%{timestamp} geleden gesynchroniseerd"
+      status_never: Nooit gesynchroniseerd
+      status_with_summary: 'Laatst gesynchroniseerd: %{timestamp} geleden — %{summary}'
+      syncing: Synchroniseren…
+      total: Totaal
+      unlinked: Niet gekoppeld
+      setup_description: "%{linked} van %{total} rekeningen gekoppeld. Kies rekeningtypen voor je nieuw geïmporteerde Mercury-rekeningen."
+    provider_panel:
+      disconnect: Ontkoppelen
+      setup_title: 'Installatie-instructies:'
+      add_connection: Mercury-koppeling toevoegen
+      base_url_label: Basis-URL (optioneel)
+      base_url_placeholder: https://api.mercury.com/api/v1 (standaard)
+      connection_name_label: Naam van de koppeling
+      connection_name_placeholder: Zakelijke betaalrekening
+      default_connection_name: Mercury-koppeling
+      disconnect_confirm: "%{name} ontkoppelen?"
+      instructions:
+        copy_token_html: Kopieer het <strong>volledige token</strong> (inclusief het voorvoegsel <code>secret-token:</code>) en voeg het hieronder toe als koppeling met een naam
+        create_token: Maak een nieuw API-token met alleen-lezen toegang ("Read Only")
+        open_tokens: Ga naar Settings > Developer > API Tokens
+        sign_in_html: Ga naar %{link} en log in op het account dat je wilt koppelen
+        whitelist_ip_html: "<strong>Belangrijk:</strong> Voeg het IP-adres van je server toe aan de lijst met toegestane adressen van het token"
+      keep_token_placeholder: Laat leeg om het huidige token te behouden
+      sandbox_note_html: Gebruik voor elke Mercury-login of elk API-token dat je wilt synchroniseren een aparte koppeling met een naam. Gebruik voor sandboxtests <code>https://api-sandbox.mercury.com/api/v1</code> als basis-URL. Mercury vereist toegestane IP-adressen; voeg je IP-adres toe in het Mercury-dashboard.
+      setup_accounts: Rekeningen instellen
+      sync: Synchroniseren
+      token_label: Token
+      token_placeholder: Plak hier het token
+      update_connection: Koppeling bijwerken
+    select_accounts:
+      accounts_selected: rekeningen geselecteerd
+      api_error: 'API-fout: %{message}'
+      cancel: Annuleren
+      description: Selecteer de rekeningen die je aan je %{product_name}-account wilt koppelen.
+      link_accounts: Geselecteerde rekeningen koppelen
+      no_name_placeholder: "(Geen naam)"
+      configure_name_in_mercury: Importeren niet mogelijk — stel eerst een rekeningnaam in bij Mercury
+      no_accounts_found: Geen rekeningen gevonden. Controleer de configuratie van je API-token.
+      no_api_token: Mercury-API-token niet ingesteld. Stel dit in bij Instellingen.
+      title: Mercury-rekeningen selecteren
+      no_credentials_configured: Stel eerst je Mercury-API-token in bij de aanbiederinstellingen.
+      select_connection: Kies een Mercury-koppeling bij de aanbiederinstellingen.
+    select_existing_account:
+      account_already_linked: Deze rekening is al aan een aanbieder gekoppeld
+      api_error: 'API-fout: %{message}'
+      cancel: Annuleren
+      link_account: Rekening koppelen
+      no_account_specified: Geen rekening opgegeven
+      no_name_placeholder: "(Geen naam)"
+      all_accounts_already_linked: Alle Mercury-rekeningen zijn al gekoppeld
+      description: Selecteer een Mercury-rekening om aan deze rekening te koppelen. Transacties worden automatisch gesynchroniseerd en ontdubbeld.
+      no_accounts_found: Geen Mercury-rekeningen gevonden. Controleer de configuratie van je API-token.
+      title: "%{account_name} koppelen aan Mercury"
+      configure_name_in_mercury: Importeren niet mogelijk — stel eerst een rekeningnaam in bij Mercury
+      no_api_token: Mercury-API-token niet ingesteld. Stel dit in bij Instellingen.
+      no_credentials_configured: Stel eerst je Mercury-API-token in bij de aanbiederinstellingen.
+      select_connection: Kies een Mercury-koppeling bij de aanbiederinstellingen.
+    setup_accounts:
+      account_type_label: 'Rekeningtype:'
+      account_types:
+        credit_card: Creditcard
+        depository: Betaal- of spaarrekening
+        investment: Beleggingsrekening
+        loan: Lening of hypotheek
+        other_asset: Overig bezit
+        skip: Deze rekening overslaan
+      api_error: 'API-fout: %{message}'
+      balance: Saldo
+      cancel: Annuleren
+      create_accounts: Rekeningen aanmaken
+      creating_accounts: Rekeningen aanmaken…
+      fetch_failed: Rekeningen ophalen mislukt
+      historical_data_range: 'Bereik historische gegevens:'
+      no_accounts_to_setup: Geen rekeningen om in te stellen
+      subtype_labels:
+        credit_card: ''
+        depository: 'Rekeningsubtype:'
+        investment: 'Beleggingstype:'
+        loan: 'Leningtype:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Creditcards worden automatisch als creditcardrekeningen ingesteld.
+        other_asset: Voor overige bezittingen zijn geen aanvullende opties nodig.
+      subtypes:
+        depository:
+          cd: Termijndeposito
+          checking: Betaalrekening
+          hsa: Zorgspaarrekening (HSA)
+          money_market: Geldmarkt
+          savings: Spaarrekening
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: 529-spaarplan
+          angel: Angel-investering
+          brokerage: Effectenrekening
+          hsa: Zorgspaarrekening (HSA)
+          ira: Traditionele IRA
+          mutual_fund: Beleggingsfonds
+          pension: Pensioen
+          retirement: Pensioensparen
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Thrift Savings Plan
+        loan:
+          auto: Autolening
+          mortgage: Hypotheek
+          other: Overige lening
+          student: Studielening
+      sync_start_date_label: 'Transacties synchroniseren vanaf:'
+      subtitle: Kies de juiste rekeningtypen voor je geïmporteerde rekeningen
+      all_accounts_linked: Al je Mercury-rekeningen zijn al ingesteld.
+      choose_account_type: 'Kies het juiste rekeningtype voor elke Mercury-rekening:'
+      no_api_token: Mercury-API-token niet ingesteld. Controleer je verbindingsinstellingen.
+      sync_start_date_help: Kies vanaf welke datum je de transactiegeschiedenis wilt synchroniseren. Er is maximaal 3 jaar aan geschiedenis beschikbaar.
+      title: Je Mercury-rekeningen instellen
+    setup_required:
+      go_to_provider_settings: Naar aanbiederinstellingen
+      api_token_description: Voordat je Mercury-rekeningen kunt koppelen, moet je je Mercury-API-token instellen.
+      api_token_not_configured: API-token niet ingesteld
+      setup_step_1_html: Ga naar <strong>Instellingen > Aanbieders</strong>
+      setup_step_2_html: Zoek het onderdeel <strong>Mercury</strong>
+      setup_step_3: Voer je Mercury-API-token in
+      setup_step_4: Keer hier terug om je rekeningen te koppelen
+      setup_steps_title: 'Stappen voor het instellen:'
+      title: Mercury moet worden ingesteld
+    sync:
+      success: Synchronisatie gestart
+    api_error:
+      check_provider_settings: Aanbiederinstellingen controleren
+      common_issues: 'Veelvoorkomende problemen:'
+      expired_credentials_desc: Genereer een nieuw API-token bij Mercury
+      expired_credentials_label: Verlopen toegangsgegevens
+      insufficient_permissions_desc: Zorg dat je token alleen-lezen toegang heeft
+      insufficient_permissions_label: Onvoldoende rechten
+      invalid_api_token_desc: Controleer je API-token bij de aanbiederinstellingen
+      invalid_api_token_label: Ongeldig API-token
+      network_issue_desc: Controleer je internetverbinding
+      network_issue_label: Netwerkprobleem
+      service_down_desc: De Mercury-API is mogelijk tijdelijk niet beschikbaar
+      service_down_label: Dienst niet beschikbaar
+      title: Mercury-verbindingsfout
+      unable_to_connect: Verbinden met Mercury niet mogelijk
+    create:
+      success: Mercury-koppeling aangemaakt
+    destroy:
+      success: Mercury-koppeling verwijderd
+    index:
+      title: Mercury-koppelingen
+    mercury_item_selection_error_payload:
+      select_connection: Kies een Mercury-koppeling voordat je rekeningen laadt.
+    render_mercury_item_selection_failure:
+      no_credentials_configured: Stel eerst je Mercury-API-token in bij de aanbiederinstellingen.
+      select_connection: Kies een Mercury-koppeling bij de aanbiederinstellingen.
+    update:
+      success: Mercury-koppeling bijgewerkt

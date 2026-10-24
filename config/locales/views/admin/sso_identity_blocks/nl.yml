@@ -1,0 +1,6 @@
+---
+nl:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: De SSO-identiteit kan weer inloggen of een account aanmaken.

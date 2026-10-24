@@ -6,9 +6,25 @@ nb:
     dashboard:
       cashflow_preview:
         node_labels:
-          cash_flow: "Kontantstrøm"
-          surplus: "Overskudd"
-          deficit: "Underskudd"
+          cash_flow: Kontantstrøm
+          surplus: Overskudd
+          deficit: Underskudd
+        preview: Forhåndsvisning
+        feedback_loading: Laster tilbakemeldingsskjema …
+        feedback_privacy: Svaret ditt sendes til PostHog. Beskriv problemet uten kontonumre,
+          saldoer eller andre private økonomiske opplysninger.
+        feedback_prompt: Sammenlign dette diagrammet med originalen ovenfor, og si
+          fra hvis noe annet enn sorteringen ser annerledes ut.
+        feedback_submit: Send tilbakemelding
+        feedback_thanks: Takk for at du hjelper oss å forbedre diagrammet!
+        feedback_title: Tilbakemelding om kontantstrømdiagram
+        feedback_unavailable: Tilbakemelding er ikke tilgjengelig akkurat nå. Prøv
+          igjen senere.
+        negative: Noe ser feil ut
+        positive: Ser riktig ut
+        preview_tooltip: Dette vil erstatte visualiseringen ovenfor, siden det bruker
+          et nytt API som deles med Swift-mobilklienten.
+        title: Nytt Sankey-diagram
       net_worth_chart:
         data_not_available: Data ikke tilgjengelig for den valgte perioden
         title: Nettoformue
@@ -17,3 +33,138 @@ nb:
         no_account_subtitle: Siden ingen kontoer er lagt til, er det ingen data å
           vise. Legg til dine første kontoer for å begynne å vise dashboard-data.
         no_account_title: Ingen kontoer enda
+      balance_sheet:
+        name: Navn
+        value: Verdi
+        weight: Vekt
+        classifications:
+          asset: Eiendeler
+          liability: Gjeld
+        add_accounts: Legg til kontoene dine for %{name} for å se en fullstendig fordeling
+        add_asset_accounts: Legg til eiendelskontoene dine for å se en fullstendig
+          fordeling
+        add_liability_accounts: Legg til gjeldskontoene dine for å se en fullstendig
+          fordeling
+        collapse_all: Skjul alle
+        expand_all: Utvid alle
+        no_asset: Ingen eiendeler ennå
+        no_items: Ingen %{name} ennå
+        no_liability: Ingen gjeld ennå
+        title: Balanseoversikt
+      cashflow_sankey:
+        add_transaction: Legg til transaksjon
+        retry: Prøv igjen
+        load_error: Kunne ikke laste kontantstrømmen. Prøv igjen.
+        loading: Laster kontantstrøm …
+        no_data_description: Legg til transaksjoner for å vise kontantstrømdata, eller
+          utvid tidsperioden
+        no_data_title: Ingen kontantstrømdata for denne tidsperioden
+        title: Kontantstrøm
+        zoom_out: Tilbake til full kontantstrøm
+      investment_summary:
+        title: Investeringer
+        total_return: Total avkastning
+        trades: Handler
+        value: Verdi
+        weight: Vekt
+        contributions: Innskudd
+        holding: Beholdning
+        return: Avkastning
+        withdrawals: Uttak
+        add_investment: Legg til en investeringskonto for å følge porteføljen din
+        no_investments: Ingen investeringskontoer
+        period_activity: Aktivitet %{period}
+      money_flow:
+        apply: Bruk
+        expenses: Utgifter
+        income: Inntekt
+        date_range: "%{start_date} til %{end_date}"
+        balance: Transaksjonssaldo
+        chart_span: Siste %{count} måneder
+        filter_accounts: Filtrer kontoer (%{count})
+        filter_accounts_all: Alle kontoer
+        month_picker_aria_label: Velg måned
+        period_scope_hint: Viser månedene du velger her, uavhengig av tidsperioden
+          øverst på oversikten.
+        search_accounts: Søk etter kontoer
+        title: Penger inn / ut
+      new: Ny
+      no_accounts:
+        title: Ingen kontoer enda
+        add_account: Legg til konto
+        description: Legg til kontoer for å vise nettoformuedata
+      outflows_donut:
+        categories: Kategorier
+        value: Verdi
+        weight: Vekt
+        title: Utbetalinger
+        total_outflows: Samlede utbetalinger
+      insights_feed:
+        title: Innsikt
+      spending_trend:
+        date_range: "%{start_date} til %{end_date}"
+        title: Forbruk
+        date_range_short: "%{start_date} – %{end_day}, %{year}"
+        date_range_short_single: "%{date}, %{year}"
+        month_picker_aria_label: Velg måned
+        no_data: Ingen forbruksdata for denne måneden
+        period_scope_hint: Viser måneden du velger her, uavhengig av tidsperioden
+          øverst på oversikten.
+        previous_comparison_days: "(1–%{end_day})"
+      drag_to_reorder: Dra for å endre rekkefølgen på delen
+      sections_aria_label: Deler i oversikten
+      subtitle: Her ser du hva som skjer med økonomien din
+      toggle_section: Vis eller skjul del
+      welcome: Velkommen tilbake, %{name}
+      widget_size:
+        auto: Automatisk
+        compact: Kompakt
+        full: Full
+        half: Halv
+        height_label: Høyde
+        label: Juster størrelse
+        tall: Høy
+        width_label: Bredde
+    feedback:
+      title: Tilbakemelding
+      bug_report: Send en feilrapport
+      description: Gi oss gjerne konkrete tilbakemeldinger. Ta gjerne med lenker til
+        videoer eller skjermbilder.
+      discuss: Diskuter %{product} med andre
+      feature_request: Send et funksjonsønske
+      heading: Gi tilbakemelding
+    privacy:
+      heading: Personvernerklæring
+      title: Personvernerklæring
+      placeholder: Personvernerklæringen vil vises her.
+    terms:
+      heading: Vilkår for bruk
+      title: Vilkår for bruk
+      placeholder: Tjenestevilkårene vil vises her.
+    intro:
+      coming_soon: Introduksjonen kommer snart
+      description: Vi lager en mer utførlig introduksjon for å bli kjent med målene,
+        milepælene og hverdagsbehovene dine. Foreløpig kan du åpne chattesidepanelet
+        og starte en samtale med Sure for å fortelle hvor du er på din økonomiske
+        reise.
+      not_authorized: Introduksjonen er bare tilgjengelig for gjestebrukere.
+      start_chatting: Start samtale
+      welcome: Velkommen!
+    redis_configuration_error:
+      heading: Redis må konfigureres
+      page_title: Redis må konfigureres – Sure
+      refresh_hint: Når du har konfigurert Redis, oppdater siden for å fortsette.
+      refresh_page: Oppdater siden
+      setup_guide_hint: Følg den fullstendige Docker-oppsettsveiledningen for å konfigurere
+        Redis
+      subheading: Din selvdriftede Sure-installasjon trenger riktig konfigurert Redis.
+      view_setup_guide: Vis oppsettsveiledning
+      why_required_body: Sure bruker Redis til å kjøre Sidekiq-bakgrunnsjobber som
+        synkroniserer kontodata, behandler importer og utfører andre bakgrunnsoperasjoner
+        som holder økonomidataene dine oppdatert.
+      why_required_title: Hvorfor kreves Redis?
+    release_notes_unavailable:
+      body_html: "<p>Kan ikke hente de nyeste versjonsmerknadene akkurat nå. Prøv
+        igjen senere, eller gå direkte til <a href='https://github.com/we-promise/sure/releases'
+        target='_blank' rel='noopener noreferrer'>utgivelsessiden på GitHub</a>.</p>"
+      name: Versjonsmerknader er utilgjengelige

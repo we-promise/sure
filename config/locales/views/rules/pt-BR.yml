@@ -1,0 +1,161 @@
+---
+pt-BR:
+  rule:
+    conditions:
+      condition:
+        value_placeholder: Digite um valor
+      condition_group:
+        add_condition: Adicionar condição
+        all: todas
+        and_prefix: e
+        any: qualquer
+        match: corresponder
+        of_the_following_conditions: às seguintes condições
+  rules:
+    actions:
+      to_label: para
+      value_placeholder: Digite um valor
+    apply_all:
+      ai_cost_message: Isto utilizará IA para categorizar até %{transactions} transações.
+      ai_cost_title: Estimativa de custo de IA
+      button: Aplicar todas
+      confirm_button: Confirmar e aplicar todas
+      confirm_message: >-
+        Está prestes a aplicar %{count} regras que afetam %{transactions} transações
+        únicas. Confirme se deseja prosseguir.
+      confirm_title: Aplicar todas as regras
+      cost_unavailable_model: Estimativa de custo indisponível para o modelo "%{model}".
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum provedor
+        de LLM configurado).
+      cost_warning: >-
+        Poderão ocorrer custos; verifique junto do serviço do modelo os preços mais
+        atualizados.
+      estimated_cost: 'Custo estimado: ~$%{cost}'
+      success: Todas as regras foram colocadas na fila para execução
+      view_usage: Ver histórico de uso
+    category_rule_cta:
+      close: Fechar
+      create_rule: Criar regra
+      description: Você pode criar uma regra para categorizar automaticamente transações
+        como esta
+      dont_show_again: Não mostrar novamente
+      hide_for_today: Ocultar por hoje
+      hide_for_today_hint: Ocultar por hoje pausa estas sugestões por 24 horas.
+      message: Atualizada para %{category_name}
+    clear_ai_cache:
+      button: Redefinir cache de IA
+      confirm_body: >-
+        Tem certeza de que deseja redefinir o cache de IA? Isso permitirá que as regras
+        de IA processem novamente todas as transações. Poderá haver custos adicionais
+        de API.
+      confirm_button: Redefinir cache
+      confirm_title: Redefinir cache de IA?
+      success: O cache de IA está sendo limpo. Isso pode levar alguns instantes.
+    condition_filters:
+      operators:
+        contains: Contém
+        does_not_contain: Não contém
+        equal_to: Igual a
+        greater_or_equal_to: Maior ou igual a
+        greater_than: Maior que
+        is_empty: Está vazio
+        is_equal_to: É igual a
+        is_not_empty: Não está vazio
+        less_than: Menor que
+        less_than_or_equal_to: Menor ou igual a
+        not_equal_to: Diferente de
+      transaction_type:
+        equal_to: Igual a
+        expense: Despesa
+        income: Receita
+        transfer: Transferência
+    confirm:
+      ai_cost_no_estimate_html: Isto utilizará IA para categorizar %{count} transação(ões).
+      ai_cost_title: Estimativa de custo de IA
+      ai_cost_with_estimate_html: >-
+        Isto utilizará IA para categorizar %{count} transação(ões). Custo estimado:
+        <span class="font-semibold">~$%{cost}</span>
+      apply_notice_html: >-
+        Está prestes a aplicar esta regra a <span class="text-primary font-medium">%{count}
+        %{resource}</span> que cumprem os critérios da regra especificada. Confirme
+        se deseja prosseguir com esta alteração.
+      confirm_changes: Confirmar alterações
+      cost_unavailable_model: Estimativa de custo indisponível para o modelo "%{model}".
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum provedor
+        de LLM configurado).
+      cost_warning: >-
+        Poderão ocorrer custos; verifique junto do serviço do modelo os preços mais
+        atualizados.
+      title: Confirmar alterações
+      title_with_name: Confirmar alterações a "%{name}"
+      view_usage_history: Ver histórico de uso
+    destroy:
+      success: Regra excluída
+    destroy_all:
+      success: Todas as regras excluídas
+    form:
+      add_action: Adicionar ação
+      add_condition: Adicionar condição
+      add_condition_group: Adicionar grupo de condições
+      all_past_and_future: Todos os %{resource} passados e futuros
+      rule_name_label: Nome da regra (opcional)
+      rule_name_placeholder: Digite um nome para esta regra
+      starting_from: A partir de
+      then: ENTÃO
+    index:
+      ai_cost_warning: >-
+        As ações de regras ativadas por IA implicam custos. Filtre o mais restritivamente
+        possível para evitar custos desnecessários.
+      delete_all_rules: Excluir todas as regras
+      new_rule: Nova regra
+      no_rules_description: >-
+        Defina regras para executar ações nas suas transações e em outros dados em
+        cada sincronização de conta.
+      no_rules_title: Ainda não existem regras
+      page_title: Regras
+      rules_heading: Regras
+      sort_by: 'Ordenar por:'
+      sort_name: Nome
+      sort_updated_at: Atualizado em
+      toggle_sort_direction: Alternar direção da ordenação
+    no_action: Sem ação
+    no_condition: Sem condição
+    recent_runs:
+      columns:
+        date_time: Data/Hora
+        execution_type: Tipo
+        rule_name: Nome da regra
+        status: Status
+        transactions_counts:
+          blocked: Bloqueadas
+          modified: Modificadas
+          processed: Processadas
+          queued: Na fila
+      description: >-
+        Veja o histórico de execução das suas regras, incluindo o estado de sucesso/falha
+        e as contagens de transações.
+      execution_types:
+        manual: Manual
+        scheduled: Agendado
+      statuses:
+        failed: Com falha
+        pending: Pendente
+        success: Sucesso
+      title: Execuções recentes
+      unnamed_rule: Regra sem nome
+    rule:
+      action_label_to: "%{label} para %{value}"
+      all_past_and_future: Todos os %{resource} passados e futuros
+      and_more_actions:
+        one: e mais 1 ação
+        other: e mais %{count} ações
+      and_more_conditions:
+        one: e mais 1 condição
+        other: e mais %{count} condições
+      delete: Excluir
+      edit: Editar
+      on_or_after: "%{resource} em ou após %{date}"
+      re_apply_rule: Reaplicar regra
+      then: ENTÃO
+    update:
+      success: Regra atualizada

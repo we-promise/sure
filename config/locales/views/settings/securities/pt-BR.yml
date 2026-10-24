@@ -4,9 +4,46 @@ pt-BR:
     securities:
       show:
         disable_mfa: Desabilitar 2FA
-        disable_mfa_confirm: Tem certeza de que deseja desabilitar a autenticação de dois fatores?
-          Isso tornará sua conta menos segura.
+        disable_mfa_confirm: >-
+          Tem certeza de que deseja desabilitar a autenticação de dois fatores? Isso
+          tornará sua conta menos segura.
         enable_mfa: Habilitar 2FA
-        mfa_description: Adicione uma camada extra de segurança à sua conta exigindo
-          um código do seu aplicativo autenticador ao fazer login
+        mfa_description: >-
+          Adicione uma camada extra de segurança à sua conta exigindo um código do
+          seu aplicativo autenticador ao fazer login
         mfa_title: Autenticação de Dois Fatores
+        mfa_disabled_description: Ative a 2FA para adicionar uma camada extra de segurança
+          à sua conta.
+        mfa_disabled_status_html: >-
+          A autenticação de dois fatores está <span class="font-medium text-red-600">desativada</span>
+        mfa_enabled_description: A sua conta está protegida com uma camada adicional
+          de segurança.
+        mfa_enabled_status_html: >-
+          A autenticação de dois fatores está <span class="font-medium text-green-600">ativada</span>
+        webauthn_add: Adicionar chave de acesso ou chave de segurança
+        webauthn_added: Adicionada em %{date}
+        webauthn_description: >-
+          Utilize uma chave de acesso, Touch ID, Windows Hello ou uma chave de segurança
+          de hardware como segundo fator ao entrar.
+        webauthn_empty: Ainda não existem chaves de acesso ou chaves de segurança
+          registradas.
+        webauthn_last_used: Utilizada pela última vez há %{time_ago}
+        webauthn_name_label: Nome da chave
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey, etc.
+        webauthn_remove: Excluir
+        webauthn_remove_confirm: Tem certeza de que deseja excluir esta chave de acesso
+          ou chave de segurança?
+        webauthn_remove_confirm_body: >-
+          Terá de registrar novamente esta chave de acesso ou chave de segurança antes
+          de poder ser utilizada para verificação no início de sessão.
+        webauthn_title: Chaves de acesso e chaves de segurança
+        webauthn_unsupported: Este navegador não suporta chaves de acesso ou chaves
+          de segurança.
+  webauthn_credentials:
+    default_name: Chave de segurança
+    failure: >-
+      Não foi possível salvar essa chave de acesso ou chave de segurança. Tente novamente.
+    mfa_required: >-
+      Ative a autenticação de dois fatores antes de adicionar uma chave de acesso
+      ou chave de segurança.
+    success: Chave de acesso ou chave de segurança removida.

@@ -1,0 +1,201 @@
+---
+ro:
+  redbark_items:
+    link_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor
+      api_error: 'Eroare API: %{message}'
+      missing_parameters: Lipsesc parametrii obligatorii
+      invalid_account_name: Nu se poate conecta un cont fără nume
+      provider_account_already_linked: Acest cont Redbark este deja conectat la alt
+        cont
+      provider_account_not_found: Contul Redbark nu a fost găsit
+      success: "%{account_name} a fost conectat cu succes la Redbark"
+      no_api_key: Cheia API Redbark nu a fost găsită. Configureaz-o în setările furnizorului.
+    loading:
+      loading_title: Se încarcă
+      loading_message: Se încarcă conturile Redbark...
+    panel:
+      fields:
+        api_key:
+          label: Cheie API
+          placeholder_update: Introdu o cheie API nouă pentru actualizare
+          placeholder_new: rbk_live_...
+      save_button: Salvează configurarea
+      update_button: Actualizează configurarea
+      optional: "(Opțional)"
+      optional_with_default: "(opțional, implicit %{default_value})"
+      step_3: După conectare, mergi la fila Conturi pentru a configura conturile noi
+      step_1: Creează o cheie API la app.redbark.com, în Settings
+      step_2: Introdu cheia API mai jos și apasă Salvează
+    redbark_item:
+      delete: Șterge conexiunea
+      deletion_in_progress: ștergere în curs...
+      error: Eroare
+      no_accounts_description: Această conexiune nu are încă conturi legate.
+      no_accounts_title: Niciun cont
+      setup_action: Configurează conturi noi
+      setup_needed: Conturi noi gata de configurare
+      status: Sincronizat acum %{timestamp}
+      status_never: Nu a fost sincronizat niciodată
+      syncing: Se sincronizează...
+      accounts_need_setup: Conturile necesită configurare
+      requires_update: Conexiunea necesită actualizare
+      status_with_summary: Ultima sincronizare acum %{timestamp} - %{summary}
+      total: Total
+      unlinked: Neconectat
+      update_credentials: Actualizează datele de autentificare
+      more_accounts_available:
+        one: Încă %{count} cont disponibil
+        other: Încă %{count} de conturi disponibile
+        few: Încă %{count} conturi disponibile
+      provider_name: Redbark
+      setup_description: 'Conturi conectate: %{linked} din %{total}. Alege tipurile
+        conturilor Redbark nou importate.'
+    select_accounts:
+      accounts_selected: conturi selectate
+      api_error: 'Eroare API: %{message}'
+      cancel: Anulează
+      link_accounts: Conectează conturile selectate
+      no_accounts_found: Nu s-au găsit conturi. Verifică configurarea cheii API.
+      description: Selectează conturile pe care vrei să le conectezi la contul tău
+        %{product_name}.
+      no_name_placeholder: "(Fără nume)"
+      configure_name_in_provider: Importul nu este posibil — configurează numele contului
+        în Redbark
+      no_credentials_configured: Configurează mai întâi datele de autentificare Redbark
+        în setările furnizorului.
+      title: Selectează conturile Redbark
+      no_api_key: Cheia API Redbark nu este configurată. Configureaz-o în Setări.
+    select_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor
+      api_error: 'Eroare API: %{message}'
+      cancel: Anulează
+      cancel_button: Anulează
+      link_account: Conectează contul
+      no_account_specified: Niciun cont specificat
+      balance_label: 'Sold:'
+      no_name_placeholder: "(Fără nume)"
+      settings_link: Mergi la setările furnizorului
+      link_button: Conectează acest cont
+      linking_to: 'Se conectează la:'
+      all_accounts_already_linked: Toate conturile Redbark sunt deja conectate
+      configure_name_in_provider: Importul nu este posibil — configurează numele contului
+        în Redbark
+      description: Selectează un cont Redbark pentru a-l conecta cu acest cont. Tranzacțiile
+        vor fi sincronizate și deduplicate automat.
+      no_accounts_found: Nu s-au găsit conturi Redbark. Verifică configurarea cheii
+        API.
+      no_credentials_configured: Configurează mai întâi datele de autentificare Redbark
+        în setările furnizorului.
+      title: Conectează %{account_name} cu Redbark
+      connect_hint: Conectează un cont Redbark pentru a activa sincronizarea automată.
+      header: Conectează cu Redbark
+      no_accounts: Nu s-au găsit conturi Redbark neconectate.
+      no_api_key: Cheia API Redbark nu este configurată. Configureaz-o în Setări.
+      subtitle: Alege un cont Redbark
+    setup_accounts:
+      account_types:
+        credit_card: Card de credit
+        other_asset: Alt activ
+        depository: Cont curent sau de economii
+        loan: Împrumut sau credit ipotecar
+        skip: Omite acest cont
+      api_error: 'Eroare API: %{message}'
+      balance: Sold
+      cancel: Anulează
+      done: Gata
+      subtype_labels:
+        credit_card: ''
+        other_asset: ''
+        depository: 'Subtipul contului:'
+        loan: 'Tipul împrumutului:'
+      account_type_label: 'Tipul contului:'
+      accounts_count:
+        one: "%{count} cont disponibil"
+        other: "%{count} de conturi disponibile"
+        few: "%{count} conturi disponibile"
+      create_accounts: Creează conturi
+      creating_accounts: Se creează conturile...
+      fetch_failed: Preluarea conturilor a eșuat
+      historical_data_range: 'Intervalul datelor istorice:'
+      no_accounts_to_setup: Nu există conturi de configurat
+      select_all: Selectează tot
+      subtitle: Alege tipurile corecte pentru conturile importate
+      subtype_messages:
+        credit_card: Cardurile de credit vor fi configurate automat ca conturi de
+          card de credit.
+        other_asset: Nu sunt necesare opțiuni suplimentare pentru alte active.
+      subtypes:
+        depository:
+          cd: Certificat de depozit
+          checking: Cont curent
+          hsa: Cont de economii pentru sănătate
+          money_market: Piață monetară
+          savings: Economii
+        loan:
+          auto: Credit auto
+          mortgage: Credit ipotecar
+          other: Alt împrumut
+          student: Credit pentru studii
+      sync_start_date_label: 'Sincronizează tranzacțiile începând cu:'
+      creating: Se creează conturile...
+      import_selected: Importă conturile selectate
+      sync_start_date_help: Alege de când vrei să sincronizezi istoricul tranzacțiilor.
+      all_accounts_linked: Toate conturile Redbark au fost deja configurate.
+      choose_account_type: 'Alege tipul corect pentru fiecare cont Redbark:'
+      instructions: Selectează conturile pe care vrei să le imporți din Redbark. Poți
+        alege mai multe conturi.
+      no_accounts: Nu s-au găsit conturi neconectate în această conexiune Redbark.
+      no_api_key: Cheia API Redbark nu este configurată. Verifică setările conexiunii.
+      title: Configurează conturile Redbark
+    sync:
+      status:
+        calculating: Se calculează soldurile...
+        checking_setup: Se verifică configurarea contului...
+        needs_setup: "%{count} de conturi necesită configurare..."
+        processing: Se procesează tranzacțiile...
+        importing_data: Se importă datele contului...
+        importing: Se importă conturile din Redbark...
+      success: Sincronizarea a început
+    sync_status:
+      no_accounts: Nu s-au găsit conturi
+      synced:
+        one: "%{count} cont sincronizat"
+        other: "%{count} de conturi sincronizate"
+        few: "%{count} conturi sincronizate"
+      synced_with_setup: 'Sincronizate: %{linked}; necesită configurare: %{unlinked}'
+    complete_account_setup:
+      all_skipped: Toate conturile au fost omise. Nu a fost creat niciun cont.
+      creation_failed: 'Crearea conturilor a eșuat: %{error}'
+      no_accounts: Nu există conturi de configurat.
+      success: 'Conturi create cu succes: %{count}.'
+      creation_failed_generic: Crearea conturilor a eșuat.
+      setup_failed: 'Conturi care nu au putut fi create: %{count}. Nimic altceva nu
+        a fost modificat — remediază problema și încearcă din nou.'
+    institution_summary:
+      count:
+        one: "%{count} instituție"
+        other: "%{count} de instituții"
+        few: "%{count} instituții"
+      none: Nicio instituție conectată
+    create:
+      success: Conexiunea Redbark a fost creată cu succes
+    default_name: Conexiune Redbark
+    destroy:
+      success: Conexiunea Redbark a fost eliminată
+      unlink_failed:
+        one: Nu a putut fi dezasociat %{count} cont. Încearcă din nou.
+        other: Nu au putut fi dezasociate %{count} de conturi. Încearcă din nou.
+        few: Nu au putut fi dezasociate %{count} conturi. Încearcă din nou.
+    index:
+      title: Conexiuni Redbark
+    errors:
+      provider_not_configured: Furnizorul Redbark nu este configurat
+    setup_required:
+      go_to_provider_settings: Mergi la setările furnizorului
+      not_configured_title: Redbark nu este încă conectat
+      title: Conectează mai întâi Redbark
+      not_configured_description: Adaugă cheia API Redbark în setările furnizorului,
+        apoi revino aici pentru a conecta conturile.
+    update:
+      success: Conexiunea Redbark a fost actualizată

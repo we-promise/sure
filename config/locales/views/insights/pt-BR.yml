@@ -1,0 +1,129 @@
+---
+pt-BR:
+  insights:
+    actions:
+      budget: Ver orçamento
+      cash_flow_warning: Revisar transações recorrentes
+      idle_cash: Ir para a conta
+      maintained_goal_depleted: Ver reserva
+      net_worth_milestone: Ver relatório de patrimônio líquido
+      savings_rate_change: Ver as transações desse mês
+      spending_anomaly: Ver transações de %{category}
+      subscription_audit: Revisar transações recorrentes
+    card:
+      acknowledge: Entendi
+      acknowledge_title: Ocultar isto até os números mudarem
+      acknowledged: Indicador dispensado
+      new: Novo
+    feed:
+      acknowledge_aria: 'Entendi: %{title}'
+      header: Mais recentes
+      header_new: Novos
+      view_all: Ver todos os indicadores
+    figures:
+      days_overdue:
+        one: "%{count} dia em atraso"
+        other: "%{count} dias de atraso"
+      idle_days:
+        one: parado há %{count} dia
+        other: parado há %{count} dias
+      need_attention: precisa de atenção
+      of_budget: do orçamento
+      on_pace: dentro do ritmo
+      today: hoje
+      vs_previous: vs. mês anterior
+    index:
+      empty:
+        description: >-
+          Os indicadores aparecem aqui assim que houver atividade suficiente nas suas
+          contas. São atualizados automaticamente todas as noites.
+        title: Ainda não existem indicadores
+      refresh: Verificar novos indicadores
+      subtitle: O que está acontecendo com suas finanças, atualizado todas as noites.
+      title: Indicadores
+    meta:
+      date_range: "%{from} a %{to}"
+      last_n_days:
+        one: Último dia
+        other: Últimos %{count} dias
+      next_n_days:
+        one: Próximo dia
+        other: Próximos %{count} dias
+    notification:
+      body: Abra o Sure para revisar sua análise de IA mais recente.
+      title: Novo indicador financeiro
+    refresh:
+      checking: Verificando…
+      queued: Estamos gerando novas análises. Volte em um minuto.
+    templates:
+      budget_at_risk:
+        near: >-
+          %{categories} estão perto dos seus limites este mês. Utilizou %{budget_spent_pct}%
+          do orçamento total até agora.
+        over: >-
+          %{categories} excederam o orçamento este mês. Utilizou %{budget_spent_pct}%
+          do orçamento total até agora.
+      budget_on_track: >-
+        Gastou %{spent} do seu orçamento de %{budgeted} (%{budget_spent_pct}%) e tudo
+        está dentro do limite.
+      cash_flow_warning:
+        low: >-
+          Com base nas suas transações recorrentes futuras e nos gastos habituais,
+          o seu saldo de caixa pode cair para %{projected_low} por volta de %{projected_low_date}.
+        negative: >-
+          Com base nas suas transações recorrentes futuras e nos gastos habituais,
+          o seu saldo de caixa pode cair para %{projected_low} por volta de %{projected_low_date}.
+      idle_cash: "%{account} detém %{balance} sem atividade nos últimos %{idle_days}
+        dias."
+      maintained_goal_depleted: >-
+        %{goal} detém %{saved} do objetivo de %{target} que deve manter. Faltam %{missing}.
+      net_worth_milestone: O seu patrimônio líquido ultrapassou %{milestone} e está
+        agora em %{net_worth}.
+      savings_rate_change:
+        down: >-
+          Você poupou %{current_rate}% da sua receita em %{month}, %{change_pp} pontos
+          percentuais abaixo dos %{previous_rate}% do mês anterior.
+        down_negative: >-
+          Gastou mais do que ganhou em %{month}: a sua taxa de poupança caiu para
+          %{current_rate}%, face aos %{previous_rate}% do mês anterior.
+        up: >-
+          Você poupou %{current_rate}% da sua receita em %{month}, %{change_pp} pontos
+          percentuais acima dos %{previous_rate}% do mês anterior.
+      spending_anomaly:
+        above: >-
+          Está no caminho de gastar %{projected_spend} em %{category} este mês, cerca
+          de %{deviation_pct}% mais do que a sua média mensal recente de %{baseline_spend}.
+        below: >-
+          Está no caminho de gastar %{projected_spend} em %{category} este mês, cerca
+          de %{deviation_pct}% menos do que a sua média mensal recente de %{baseline_spend}.
+      subscription_audit: >-
+        %{name} (%{amount}) não apareceu desde a data prevista, %{expected_on}. A
+        assinatura pode ter sido cancelada, ou a cobrança pode ter mudado.
+    titles:
+      budget_at_risk:
+        one: Uma categoria precisa de atenção no seu orçamento
+        other: "%{count} categorias precisam de atenção no seu orçamento"
+      budget_on_track: Seu orçamento está dentro do previsto
+      cash_flow_warning:
+        low: O seu saldo de caixa pode ficar baixo
+        negative: O seu saldo de caixa pode ficar negativo
+      idle_cash: Dinheiro parado em %{account}
+      maintained_goal_depleted: "%{goal} caiu abaixo do seu nível"
+      net_worth_milestone: 'Marco de patrimônio líquido: %{milestone}'
+      savings_rate_change:
+        down: A sua taxa de poupança caiu em %{month}
+        up: A sua taxa de poupança melhorou em %{month}
+      spending_anomaly:
+        above: As despesas com %{category} estão aumentando
+        below: As despesas com %{category} estão diminuindo
+      subscription_audit: "%{name} ainda está ativa?"
+    types:
+      budget_at_risk: Orçamento
+      budget_on_track: Orçamento
+      cash_flow_warning: Fluxo de caixa
+      idle_cash: Dinheiro parado
+      maintained_goal_depleted: Reserva
+      net_worth_milestone: Patrimônio líquido
+      savings_rate_change: Taxa de poupança
+      spending_anomaly: Despesas
+      subscription_audit: Assinaturas

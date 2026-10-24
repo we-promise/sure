@@ -1,0 +1,160 @@
+---
+nb:
+  admin:
+    sso_providers:
+      form:
+        cancel: Avbryt
+        name_label: Navn
+        redirect_uri_label: Tilbakekallings-URL
+        role_member: Medlem
+        strategy_openid_connect: OpenID Connect
+        strategy_saml: SAML 2.0
+        role_admin: Administrator
+        role_guest: Gjest
+        role_super_admin: Superadministrator
+        client_secret_placeholder_existing: "••••••••"
+        copy_button: Kopier
+        admin_groups: Administratorgrupper
+        advanced_title: Avanserte OIDC-innstillinger
+        basic_information: Grunnleggende opplysninger
+        client_id_help: OAuth-klient-ID fra identitetsleverandøren din
+        client_id_label: Klient-ID
+        client_id_placeholder: din-klient-id
+        client_secret_help: OAuth-klienthemmelighet (kryptert i databasen)
+        client_secret_help_existing: La stå tomt for å beholde eksisterende hemmelighet
+        client_secret_label: Klienthemmelighet
+        client_secret_placeholder_new: din-klienthemmelighet
+        create_provider: Opprett leverandør
+        default_role_help: Rolle som tildeles brukere opprettet ved behov gjennom
+          SSO (JIT). Standardverdien er Medlem.
+        default_role_label: Standardrolle for nye brukere
+        enabled_help: Brukere kan logge inn med denne leverandøren når den er aktivert
+        enabled_label: Aktiver denne leverandøren
+        errors_title:
+          one: 'Én feil hindret lagring av denne leverandøren:'
+          other: "%{count} feil hindret lagring av denne leverandøren:"
+        groups_help: Kommaseparert liste over IdP-gruppenavn. Bruk * for å samsvare
+          med alle grupper.
+        guest_groups: Gjestegrupper
+        icon_help: Navn på Lucide-ikon for innloggingsknappen
+        icon_label: Ikon (valgfritt)
+        icon_placeholder: f.eks. key, shield
+        idp_cert_fingerprint: Sertifikatfingeravtrykk (alternativ)
+        idp_certificate: IdP-sertifikat
+        idp_certificate_help: X.509-sertifikat i PEM-format. Kreves hvis metadataadresse
+          ikke brukes.
+        idp_metadata_url: URL for IdP-metadata
+        idp_metadata_url_help: URL til IdP-ens SAML-metadata. Hvis den angis, konfigureres
+          andre SAML-innstillinger automatisk.
+        idp_slo_url: URL for IdP SLO (valgfritt)
+        idp_sso_url: URL for IdP SSO
+        issuer_help: OIDC-utstederens URL (validerer .well-known/openid-configuration)
+        issuer_label: Utstederens URL
+        issuer_placeholder: https://your-idp.example.com/realms/your-realm
+        label_help: Knappetekst som vises til brukerne
+        label_label: Knappetekst
+        label_placeholder: f.eks. Logg inn med Keycloak
+        manual_saml_config: Manuell konfigurasjon (hvis metadataadresse ikke brukes)
+        manual_saml_help: Bruk bare disse innstillingene hvis IdP-en ikke tilbyr en
+          metadataadresse.
+        member_groups: Medlemsgrupper
+        name_help: Unik identifikator (bare små bokstaver, tall og understreker)
+        name_id_email: E-postadresse (standard)
+        name_id_format: NameID-format
+        name_id_persistent: Vedvarende
+        name_id_transient: Midlertidig
+        name_id_unspecified: Uspesifisert
+        name_placeholder: f.eks. keycloak, authentik
+        oauth_configuration: OAuth/OIDC-konfigurasjon
+        prompt_consent: Krev samtykke (godkjenn på nytt)
+        prompt_default: Standard (IdP bestemmer)
+        prompt_help: Styrer hvilke spørsmål IdP-en viser brukeren under autentisering.
+        prompt_label: Autentiseringsdialog
+        prompt_login: Krev innlogging (autentiser på nytt)
+        prompt_none: Ingen dialog (stille autentisering)
+        prompt_select_account: Kontovalg (velg konto)
+        provisioning_title: Brukeroppretting
+        redirect_uri_help: Konfigurer denne adressen hos identitetsleverandøren din
+        redirect_uri_placeholder: https://yourdomain.com/auth/openid_connect/callback
+        role_mapping_help: Knytt IdP-grupper/-attributter til programroller. Brukere
+          tildeles den høyeste rollen som samsvarer. La stå tomt for å bruke standardrollen
+          ovenfor.
+        role_mapping_title: Kobling fra gruppe til rolle (valgfritt)
+        saml_configuration: SAML-konfigurasjon
+        saml_sp_callback_url_help: Konfigurer denne adressen som Assertion Consumer
+          Service-URL hos IdP-en
+        saml_sp_callback_url_label: SP-returadresse (ACS-URL)
+        scopes_help: Mellomromseparert liste over OIDC-tilgangsområder. La stå tomt
+          for standardverdiene (openid email profile). Legg til «groups» for å hente
+          gruppeattributter.
+        scopes_label: Egendefinerte tilgangsområder
+        strategy_github: GitHub
+        strategy_google_oauth2: Google OAuth2
+        strategy_help: Autentiseringsstrategien som skal brukes
+        strategy_label: Strategi
+        submit: Lagre leverandør
+        super_admin_groups: Superadministratorgrupper
+        test_connection: Test tilkobling
+        update_provider: Oppdater leverandør
+      index:
+        delete: Slett
+        edit: Rediger
+        table:
+          actions: Handlinger
+          name: Navn
+          status: Status
+          enabled: Aktivert
+          disabled: Deaktivert
+          issuer: Utsteder
+          strategy: Strategi
+        enabled: Aktivert
+        page_title: SSO-leverandører
+        title: SSO-leverandører
+        add_provider: Legg til leverandør
+        configuration_mode: Konfigurasjonsmodus
+        configured_providers: Konfigurerte leverandører
+        db_backed_providers: Databasebaserte leverandører
+        db_backed_providers_description: Last leverandører fra databasen i stedet
+          for YAML-konfigurasjon
+        db_backed_providers_help_html: Angi <code class="bg-surface px-1 py-0.5 rounded
+          text-xs">AUTH_PROVIDERS_SOURCE=db</code> for å aktivere databasebaserte
+          leverandører. Dette tillater endringer uten omstart av serveren.
+        description: Administrer leverandører for enkel pålogging (SSO) for instansen
+          din.
+        disable: Deaktiver
+        disabled: Deaktivert
+        enable: Aktiver
+        env_configured: Miljø/YAML
+        legacy_providers_notice: Disse leverandørene er konfigurert via miljøvariabler
+          eller YAML og kan ikke administreres i dette grensesnittet. For å administrere
+          dem her må du flytte dem til databasen ved å aktivere AUTH_PROVIDERS_SOURCE=db
+          og opprette dem på nytt i grensesnittet.
+        legacy_providers_title: Leverandører konfigurert via miljøet
+        no_providers_message: Ingen SSO-leverandører er konfigurert ennå.
+        no_providers_title: Ingen SSO-leverandører
+        note: Endringer i SSO-leverandører krever omstart av serveren for å tre i
+          kraft. Du kan alternativt aktivere funksjonsflagget AUTH_PROVIDERS_SOURCE=db
+          for å laste leverandører dynamisk fra databasen.
+        restart_required: Endringer krever omstart av serveren for å tre i kraft.
+      create:
+        success: SSO-leverandøren er opprettet.
+      destroy:
+        confirm: Er du sikker på at du vil slette denne leverandøren? Dette kan ikke
+          angres.
+        success: SSO-leverandøren er slettet.
+      edit:
+        description: Oppdater konfigurasjonen for %{label}
+        provider_configuration: Leverandørkonfigurasjon
+        title: Rediger SSO-leverandør
+      new:
+        description: Konfigurer en ny autentiseringsleverandør for enkel pålogging
+        provider_configuration: Leverandørkonfigurasjon
+        title: Legg til SSO-leverandør
+      toggle:
+        confirm_disable: Er du sikker på at du vil deaktivere denne leverandøren?
+        confirm_enable: Er du sikker på at du vil aktivere denne leverandøren?
+        success_disabled: SSO-leverandøren er deaktivert.
+        success_enabled: SSO-leverandøren er aktivert.
+      update:
+        success: SSO-leverandøren er oppdatert.
+    unauthorized: Du har ikke tilgang til dette området.

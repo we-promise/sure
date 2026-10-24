@@ -8,12 +8,147 @@ pt-BR:
       tabs:
         actual: Atual
         budgeted: Orçamento
+      categories:
+        amount: Valor
+        edit: Editar
+        title: Categorias
+      filter:
+        all: Tudo
+        aria_label: Filtrar categorias de orçamento
+        on_track: Dentro do Previsto
+        over_budget: Excedido
+      on_track_categories:
+        short_title: Dentro do Previsto
+        title: Dentro do previsto
+      over_budget_categories:
+        short_title: Excedido
+        title: Acima do orçamento
     copy_previous_prompt:
-      title: "Defina seu orçamento"
-      description: "Você pode copiar seu orçamento de %{source_name} ou começar do zero."
-      copy_button: "Copiar de %{source_name}"
-      fresh_button: "Comece do zero"
+      title: Defina seu orçamento
+      description: Você pode copiar seu orçamento de %{source_name} ou começar do
+        zero.
+      copy_button: Copiar de %{source_name}
+      fresh_button: Comece do zero
     copy_previous:
-      success: "Orçamento copiado de %{source_name}"
-      no_source: "Não foi encontrado nenhum orçamento anterior para servir de base."
-      already_initialized: "Este orçamento já foi definido."
+      success: Orçamento copiado de %{source_name}
+      no_source: Não foi encontrado nenhum orçamento anterior para servir de base.
+      already_initialized: Este orçamento já foi definido.
+    actuals_summary:
+      expenses: Despesas
+      income: Receita
+    available_cash:
+      available: Disponível em dinheiro
+      earmarked: Já reservado para objetivos
+      free: Realmente livre
+      goals_link: Ver objetivos
+      heading: Dinheiro disponível
+      subtitle: Apresentado ao lado do plano acima, sem fazer parte dele.
+    budget_donut:
+      new_budget: Novo orçamento
+      of_budget: de %{amount}
+      spent: Gasto
+      unused: Não utilizado
+    budget_header:
+      today: Hoje
+    budget_nav:
+      categories: Categorias
+      setup: Configurar
+    budgeted_summary:
+      budgeted: Orçado
+      earned: "%{amount} ganho"
+      expected_income: Receita esperada
+      left: "%{amount} restante"
+      over: "%{amount} excedido"
+      spent: "%{amount} gasto"
+    edit:
+      autosuggest_description: >-
+        Isto será baseado no histórico de transações. A IA pode cometer erros, verifique
+        antes de continuar.
+      autosuggest_title: Sugerir automaticamente orçamento de receitas e despesas
+      budgeted_spending: Despesas orçadas
+      continue: Continuar
+      expected_income: Receita esperada
+      setup_description: >-
+        Informe abaixo suas receitas mensais e despesas planejadas para configurar
+        seu orçamento.
+      setup_title: Configure o seu orçamento
+    over_allocation_warning:
+      fix_allocations: Corrigir distribuição
+      over_allocated_message: >-
+        Você distribuiu mais do que o total do orçamento. Corrija os valores destinados
+        às categorias.
+    switcher:
+      aria_label: Alterar orçamento
+      household: Família
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: >-
+        Orçamento excedido em <span class="text-red-500 privacy-sensitive">%{amount}</span>
+      left_to_allocate: restante para distribuir
+      over_set: "> 100% definido"
+      percent_set: "%{percent} definido"
+    bills_reserved: "%{amount} reservados para contas a pagar"
+    bills_reserved_unconvertible:
+      one: 1 conta a pagar sem valor reservado por falta de taxa de câmbio
+      other: "%{count} contas a pagar sem valor reservado por falta de taxa de câmbio"
+    budget_category:
+      rolled_over: "+%{amount} transferidos do mês anterior"
+    budget_category_form:
+      monthly_average: "%{amount}/m média"
+      rollover_label: Acumular saldo
+      rollover_title: Manter o dinheiro não gasto desta categoria de um mês para o
+        seguinte
+      shared_placeholder: Compartilhado
+      shared_title: Deixe em branco para compartilhar o orçamento da categoria principal
+    confirm_button:
+      confirm: Confirmar
+    index:
+      description: >-
+        Ajuste os orçamentos das categorias para definir limites de gastos. Os valores
+        não distribuídos serão atribuídos automaticamente a Sem categoria.
+      title: Edite os orçamentos das suas categorias
+    move:
+      amount_label: Valor
+      available: "%{amount} disponível"
+      button_title: Mover dinheiro desta categoria
+      cancel: Cancelar
+      dialog_title: Mover dinheiro
+      errors:
+        different_budgets: Ambas as categorias devem pertencer ao mesmo orçamento.
+        insufficient_funds: Esse valor é maior do que o valor destinado a esta categoria.
+        non_positive_amount: Digite um valor superior a zero.
+        parent_child: >-
+          O dinheiro não pode mover-se entre uma categoria e a sua própria subcategoria
+          — ajuste a subcategoria diretamente.
+        same_category: Escolha uma categoria diferente para mover o dinheiro.
+        uncategorized: >-
+          Sem categoria não é um envelope de orçamento real, portanto não é possível
+          mover dinheiro para dentro ou para fora dele.
+      from_label: De
+      no_destination: >-
+        Este é o único envelope de orçamento disponível para movimentação no momento.
+        Uma categoria não pode enviar dinheiro para sua própria categoria principal
+        ou subcategoria.
+      submit: Mover
+      success: Dinheiro movido.
+      to_label: Para
+    no_categories:
+      new_category: Nova categoria
+      no_categories_message: Ainda não criou nem atribuiu nenhuma categoria de despesa
+        às suas transações.
+      oops: Ops!
+      use_defaults: Utilizar padrões (recomendado)
+    show:
+      budgeted: Orçado
+      category: Categoria
+      left: restante
+      monthly_average_spending: Média mensal de gastos
+      monthly_median_spending: Mediana mensal de gastos
+      no_transactions: Não foram encontradas transações para este período de orçamento.
+      overspent: excedido
+      overview: Visão geral
+      recent_transactions: Transações recentes
+      rolled_over: Transferido do mês anterior
+      spending: Gastos de %{date}
+      status: Status
+      view_all_transactions: Ver todas as transações da categoria

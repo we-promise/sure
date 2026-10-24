@@ -1,0 +1,9 @@
+---
+nb:
+  messages:
+    chat_form:
+      coming_soon: Kommer snart
+      disclaimer: KI-svar er kun til informasjon, ikke finansiell rådgivning!
+      placeholder: Spør om hva som helst ...
+    create:
+      chat_not_found: Denne chatten er ikke lenger tilgjengelig.

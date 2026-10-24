@@ -1,0 +1,345 @@
+---
+nl:
+  goals:
+    consume:
+      cancel: Annuleren
+      errors:
+        non_positive: Voer een bedrag groter dan nul in.
+        account_not_linked: Die rekening financiert dit doel niet.
+        account_required: Dit doel wordt uit meerdere rekeningen gefinancierd. Geef aan van welke rekening het geld kwam.
+        exceeds_earmark: Dat is meer dan voor dit doel op deze rekening is bestemd.
+        exceeds_target: Dat is meer dan het oorspronkelijke spaardoel.
+        maintained: Een reserve wordt aangesproken en aangevuld, niet als besteed afgesloten. Het tekort is al zichtbaar bij het doel.
+        no_linked_account: Dit doel heeft geen financieringsrekening meer.
+        not_active: Dit doel is niet meer actief. Er kan niets meer voor worden vastgelegd.
+        transaction_already_claimed: Die uitgaande transactie is al toegewezen.
+        transaction_not_found: Die uitgaande transactie is niet meer beschikbaar om toe te wijzen.
+      account_label: Van welke rekening?
+      amount_hint: Momenteel ondersteunt %{saved} dit doel.
+      amount_label: Hoeveel heb je gebruikt?
+      earmark_note: Het vastgelegde bedrag is niet langer voor dit doel gereserveerd. Je andere doelen op die rekening krijgen daardoor hun aandeel terug.
+      submit: Vastleggen
+      subtitle: "%{goal}"
+      success: "%{amount} als gebruikt vastgelegd."
+      title: Een besteding vastleggen
+    form:
+      subtypes:
+        checking: Betaalrekening
+        savings: Spaarrekening
+        cd: CD
+        hsa: HSA
+        other: Overig
+        money_market: Geldmarkt
+      fields:
+        name: Naam
+        color: Kleur
+        target_amount: Doelbedrag
+        target_date: Streefdatum
+        earmark_for: Bestemd bedrag voor %{account}
+        earmark_hint: Laat een bedrag leeg om het volledige saldo van die rekening te bestemmen.
+        funding_accounts: Financieringsrekeningen
+        funding_accounts_hint: Het saldo van dit doel is het saldo of het bestemde deel van deze rekeningen.
+        name_placeholder: Noodbuffer, aanbetaling woning…
+        notes: Notities (optioneel)
+        notes_placeholder: Een herinnering voor later…
+        target_balance: Doelsaldo
+        target_balance_hint: Gebaseerd op je mediane maandelijkse uitgaven over de bovenstaande maanden. Wordt elke maand vernieuwd.
+        target_balance_pending: Wordt berekend bij het opslaan
+        target_mode: Hoe het doelsaldo wordt bepaald
+        target_months: Maanden aan uitgaven
+        target_months_hint: Wordt op de eerste dag van elke maand opnieuw berekend op basis van je mediane maandelijkse uitgaven.
+        whole_balance: 'Leeg: volledig saldo'
+      create: Doel aanmaken
+      earmark:
+        headroom: Nog {left} beschikbaar om op deze rekening te bestemmen.
+        prorata: Je doelen op deze rekening bedragen samen {total} bij een saldo van {balance}. Ze groeien naar rato.
+        whole_balance: Deze rekening financiert wat na de andere bestemmingen overblijft.
+        whole_balance_alone: Dit doel gebruikt het volledige saldo van deze rekening.
+      errors:
+        accounts_required: Kies ten minste één financieringsrekening.
+        amount_required: Stel een doelbedrag groter dan nul in.
+        name_required: Geef je doel een naam.
+      kinds:
+        maintained:
+          hint: Een saldo om op peil te houden, zoals een noodbuffer. Wordt nooit afgesloten.
+          label: Reserve om op peil te houden
+        one_off:
+          hint: Spaar voor iets en sluit het doel af wanneer je het geld besteedt.
+          label: Eenmalig doel
+      suggested_no_date: Stel een streefdatum in om een verwachte einddatum te berekenen.
+      suggested_with_date: Spaar {monthly}/mnd verdeeld over {accounts} om het op tijd te bereiken.
+      target_modes:
+        fixed: Een vast bedrag
+        months_of_expenses: Een aantal maanden aan uitgaven
+      save: Wijzigingen opslaan
+    show:
+      pending_pledge:
+        cancel: Annuleren
+        body_manual: Wordt bevestigd bij je volgende handmatige saldowijziging.
+        body_transfer: Wordt automatisch bevestigd wanneer Sure bij de volgende synchronisatie een passende storting vindt.
+        confirm_cancel_body: De toezegging van %{amount} wordt verwijderd. Je kunt altijd een nieuwe vastleggen.
+        confirm_cancel_cta: Toezegging annuleren
+        confirm_cancel_title: Deze toezegging annuleren?
+        extend: Met 7 dagen verlengen
+        pledged_at: "%{time_ago} geleden toegezegd"
+        title:
+          one: 'In afwachting: %{amount} naar %{account} · nog 1 dag'
+          other: 'In afwachting: %{amount} naar %{account} · nog %{count} dagen'
+          zero: 'In afwachting: %{amount} naar %{account} · verloopt vandaag'
+      delete: Verwijderen
+      edit: Bewerken
+      notes: Notities
+      record_pledge_cta: Toezegging vastleggen
+      projection:
+        today_marker: Vandaag
+        aria_label: Prognosegrafiek voor %{name}
+        behind: Met het huidige tempo wordt het doel niet gehaald.
+        heading: Prognose
+        legend_required: Nodig
+        legend_saved: Gespaard
+        no_pace: Nog geen stortingen. Voeg geld toe aan een gekoppelde rekening om een prognose te starten.
+        no_target_date: Geen streefdatum ingesteld. Stel er een in om een verwachte einddatum te berekenen.
+        on_track_html: Met je huidige tempo bereik je dit doel rond <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        reached: Je hebt het doel bereikt. Een prognose is niet nodig.
+        reserve: Een reserve houdt een doelsaldo aan. Er is daarom geen einddatum om te voorspellen.
+        tooltip_projected: 'Verwacht: %{amount}'
+        tooltip_saved: 'Gespaard: %{amount}'
+        tooltip_target_relation: "%{percent}% van doel %{target}"
+        legend_projection: Prognose
+      pause: Pauzeren
+      resume: Hervatten
+      archive: Archiveren
+      archived_banner:
+        body: Herstel het om verder bij te dragen, of bewaar het als historisch overzicht.
+        restore_cta: Doel herstellen
+        title: Dit doel is gearchiveerd
+      catch_up:
+        adjust_target_cta: In plaats daarvan het doel aanpassen
+        body: Huidig tempo %{avg}/mnd · nodig %{required}/mnd om je doel te bereiken.
+        title: Spaar %{amount}/mnd extra om de achterstand in te halen
+      celebration:
+        archive_cta: Doel archiveren
+        body: Doel afgesloten op %{saved} van %{target}. Bewaar het als overzicht of archiveer het nu.
+        body_reached: Je hebt je doel bereikt met %{saved} van %{target}. Het is nog niet afgesloten; het geld blijft ervoor bestemd.
+        body_reserve: 'Je reserve heeft het doelsaldo bereikt: %{saved} van %{target}. Je hoeft niets te doen; het geld blijft bestemd.'
+        close_cta: Dit doel afsluiten
+        close_hint: Afsluiten geeft het bestemde geld vrij voor je andere doelen op dezelfde rekening. Doe dit zodra je het daadwerkelijk hebt besteed.
+        frozen: Bereikt op %{date} · %{amount}
+        heading: Doel bereikt. Goed gedaan.
+        heading_reserve: Reserve op peil
+      complete: Als voltooid markeren
+      confirm_archive_body: Gearchiveerde doelen verdwijnen uit de hoofdlijst. Je kunt ze later herstellen. Archiveren legt niet vast wat je hebt bereikt; markeer het doel eerst als voltooid als je dat wilt bewaren.
+      confirm_archive_title: Dit doel archiveren?
+      confirm_complete_body: Het bestemde geld wordt vrijgegeven voor je andere doelen op dezelfde rekening. Het verdwijnt uit de lijst Lopend en je kunt het later nog archiveren of herstellen.
+      confirm_complete_body_short: Je staat op %{progress}%, %{saved} van %{target}. Voltooien legt dit vast als je resultaat in plaats van het oorspronkelijke doelbedrag. Doorgaan, of dit sluiten en het doel aanpassen?
+      confirm_complete_title: Dit doel als voltooid markeren?
+      confirm_delete_body: "%{name} en de toezeggingsgeschiedenis worden definitief verwijderd. Je gekoppelde rekeningen, saldi en transacties blijven ongewijzigd. Archiveer het doel als je het als overzicht wilt bewaren."
+      confirm_delete_cta: Doel verwijderen
+      confirm_delete_title: Dit doel verwijderen?
+      consume: Ik heb een deel van dit geld gebruikt
+      empty:
+        body: Maak geld over naar je gekoppelde rekening. Sure herkent dit bij de volgende synchronisatie. Of werk het saldo van je handmatige rekening bij.
+        heading: Nog geen stortingen
+      funding_accounts:
+        earmarked_of: "%{earmarked} bestemd van %{balance}"
+        empty:
+          body: Bewerk het doel om de geldrekeningen te koppelen waarop je spaart.
+          heading: Nog geen financieringsrekeningen gekoppeld
+      funding_last_30d: afgelopen 30 dagen
+      funding_last_90d: afgelopen 90 dagen
+      header:
+        target: Doel %{amount}
+        target_by: Doel %{amount} vóór %{date}
+        target_by_past: Doel %{amount} · streefdatum was %{date}
+      inactive:
+        body: Tot nu toe %{saved} van %{target} gespaard.
+        heading_paused: Dit doel is gepauzeerd
+        heading_archived: Dit doel is gearchiveerd
+      no_target_date:
+        body: Stel een deadline in om een verwachte einddatum te berekenen en het benodigde spaartempo te volgen.
+        cta: Streefdatum instellen
+        heading: Een streefdatum toevoegen
+      paused_banner:
+        body: Hervat het doel om je voortgang te blijven volgen.
+        resume_cta: Doel hervatten
+        title: Dit doel is gepauzeerd
+      pledge_just_saved: Opzijgezet geld vastleggen
+      pledge_just_transferred: Een uitgevoerde overboeking vastleggen
+      reopen: Doel heropenen
+      reserve_shortfall:
+        body: Je houdt %{saved} van %{target} aan. Voeg %{missing} toe om het doelsaldo te herstellen.
+        heading: Reserve onder het doelsaldo
+      ring:
+        aria_label: Doel voor %{percent}% voltooid. %{amount} van %{target} gespaard.
+        aria_label_with_used: Doel voor %{percent}% voltooid. %{amount} van %{target}, inclusief %{used} al gebruikt.
+        market_value: Marktwaarde %{amount}
+        of: van %{target}
+        of_target: van doelbedrag
+        to_go: Nog %{amount} te gaan
+        including_used: Inclusief %{amount} al gebruikt
+        saved: Gespaard
+      status_callout:
+        behind: spaar %{amount}/mnd extra om de achterstand in te halen
+        behind_covered: openstaande toezeggingen dichten het tekort
+        depleted: "%{amount} onder het doelsaldo — vul aan om de reserve te herstellen"
+        no_target_date: stel een streefdatum in om een verwachte einddatum te berekenen
+        on_track: bereikt het doel rond %{date}
+      unarchive: Herstellen
+      confirm_archive_cta: Archiveren
+      confirm_complete_cta: Als voltooid markeren
+      funding_accounts_heading: Financieringsrekeningen
+    goal_card:
+      accounts:
+        other: "%{count} rekeningen"
+        one: 1 rekening
+      completed: Voltooid
+      days_left:
+        one: Nog 1 dag
+        other: Nog %{count} dagen
+      footer_no_deadline: Openstaand
+      no_target_date: Openstaand
+      footer_paused: Gepauzeerd
+      left: over
+      aria_progress: "%{percent}% van %{target}"
+      footer_archived: Gearchiveerd
+      footer_catch_up: Spaar %{amount}/mnd om de achterstand in te halen
+      footer_last_days:
+        one: Laatste toezegging 1 dag geleden gekoppeld
+        other: Laatste toezegging %{count} dagen geleden gekoppeld
+      footer_last_today: Laatste toezegging vandaag gekoppeld
+      footer_no_pledges: Nog geen gekoppelde toezeggingen
+      footer_reached: Doel bereikt
+      footer_reserve_intact: Reserve op peil
+      footer_reserve_short: Nog %{amount} aan te vullen
+      including_used: Inclusief %{amount} al gebruikt
+      n_accounts: "%{first} +%{count}"
+      no_accounts: Geen gekoppelde rekeningen
+      pace_no_target: gem. %{avg}/mnd
+      pace_with_target: "%{avg}/mnd · doel %{target}/mnd"
+      past_due: Streefdatum verstreken
+      pending_count:
+        one: 1 in afwachting
+        other: "%{count} in afwachting"
+      pending_pledge: Openstaande toezegging
+    index:
+      chips:
+        completed: Voltooid
+        all: Alles
+        no_target_date: Openstaand
+        paused: Gepauzeerd
+        behind: Achter op schema
+        on_track: Op schema
+      goals_section:
+        heading: Doelen
+        subtitle: Spaar voor wat belangrijk is.
+      ongoing_section:
+        heading: Doelen
+      title: Doelen
+      new_goal: Nieuw doel
+      chips_aria: Doelen filteren op status
+      empty_filtered: Geen passende doelen.
+      kpi:
+        contributed_label: Bijgedragen · afgelopen 30 dagen
+        needs_this_month_label: Deze maand nodig
+        needs_this_month_sub:
+          one: 1 doel achter op schema
+          other: "%{count} doelen achter op schema"
+        needs_this_month_zero_sub: Geen doelen achter op schema
+        on_track_all_caught_up: Alle achterstanden ingehaald
+        on_track_label: Doelen op schema
+        on_track_sub_all_good: Alle actieve doelen op schema
+        on_track_sub_parts:
+          behind:
+            one: 1 achter
+            other: "%{count} achter"
+          no_date:
+            one: 1 zonder deadline
+            other: "%{count} zonder deadline"
+          paused:
+            one: 1 gepauzeerd
+            other: "%{count} gepauzeerd"
+          reached:
+            one: 1 bereikt
+            other: "%{count} bereikt"
+        on_track_value: "%{on_track} van %{total}"
+        velocity_delta_down: "↓ %{percent}%% t.o.v. voorgaande 30 dagen"
+        velocity_delta_flat: t.o.v. voorgaande 30 dagen
+        velocity_delta_up: "↑ %{percent}%% t.o.v. voorgaande 30 dagen"
+        velocity_delta_zero_base: Eerste 30 dagen activiteit
+      pending_pledges_callout: Je hebt openstaande toezeggingen. Sure bevestigt ze bij de volgende synchronisatie.
+      search:
+        aria_label: Doelen zoeken
+        clear_search: Zoekopdracht wissen
+        empty_with_both: Geen doelen voor ‘%{query}’ met dit filter.
+        empty_with_filter: Geen doelen passen bij dit filter.
+        empty_with_query: Geen doelen voor ‘%{query}’.
+        placeholder: Doelen zoeken…
+        show_all: Alles tonen
+        empty: Geen passende doelen.
+      archived_section:
+        heading: Gearchiveerd
+      subtitle: Spaar voor wat belangrijk is.
+    states:
+      completed: Voltooid
+      active: Actief
+      paused: Gepauzeerd
+      archived: Gearchiveerd
+    status:
+      completed: Voltooid
+      no_target_date: Openstaand
+      paused: Gepauzeerd
+      depleted: Moet worden aangevuld
+      reached: Bereikt
+      archived: Gearchiveerd
+      behind: Achter op schema
+      funded: Reserve op peil
+      on_track: Op schema
+    color_picker:
+      color_heading: Kleur
+      auto_adjust: automatisch aanpassen.
+      icon_heading: Pictogram
+      trigger_label: Kleur en pictogram kiezen
+      poor_contrast: Weinig contrast, kies een donkerdere kleur of
+    new:
+      heading: Nieuw doel
+      subtitle: Spaar voor iets specifieks.
+    archive:
+      invalid_transition: Het doel kan vanuit de huidige toestand niet worden gearchiveerd.
+      success: Doel gearchiveerd.
+    complete:
+      invalid_transition: Het doel kan vanuit de huidige toestand niet worden voltooid.
+      success: Doel als voltooid gemarkeerd.
+    create:
+      success: Doel aangemaakt.
+    destroy:
+      success: Doel verwijderd.
+    edit:
+      heading: Doel bewerken
+      save: Wijzigingen opslaan
+    empty_state:
+      add_account: Een rekening toevoegen
+      body: Stel een doelbedrag in, koppel de rekeningen waarop je spaart en zie je voortgang groeien.
+      heading: Nog geen doelen
+      new_goal: Je eerste doel aanmaken
+      no_depository_accounts: Je hebt ten minste één geldrekening (betaal-, spaar-, HSA-, deposito- of geldmarktrekening) nodig voordat je een doel kunt aanmaken.
+      subtitle: Stel een doel in en begin ervoor te sparen.
+    errors:
+      not_found: Dit doel kon niet worden gevonden. Mogelijk is het verwijderd.
+    pause:
+      invalid_transition: Het doel kan vanuit de huidige toestand niet worden gepauzeerd.
+      success: Doel gepauzeerd.
+    reopen:
+      invalid_transition: Het doel kan vanuit de huidige toestand niet worden heropend.
+      success: Doel heropend.
+    resume:
+      invalid_transition: Het doel kan vanuit de huidige toestand niet worden hervat.
+      success: Doel hervat.
+    unarchive:
+      invalid_transition: Het doel kan vanuit de huidige toestand niet worden hersteld.
+      success: Doel hersteld.
+    unattributed_outflows:
+      attribute: Dit was het
+      body: Als een deel hiervan is besteed aan %{goal}, geef dat dan aan. Het telt dan niet meer mee voor het doelbedrag.
+      heading: Geld heeft deze rekeningen verlaten
+    update:
+      success: Doel bijgewerkt.

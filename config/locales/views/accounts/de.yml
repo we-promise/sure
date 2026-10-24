@@ -55,6 +55,10 @@ de:
       new_account: Neues Konto
       sync: Alle synchronisieren
       cancel_sync: Sync abbrechen
+      financekit_accounts:
+        description: Verwalte Apple-Wallet-Verbindungen und die Synchronisierung in der
+          Sure-iOS-App.
+        title: Apple Wallet
     sync_all:
       syncing: "Konten werden synchronisiert..."
     new:
@@ -95,6 +99,8 @@ de:
         status: Status
         title: Aktivität
         search_placeholder: Einträge nach Name suchen
+        category: Kategorie
+        uncategorized_only: Nur ohne Kategorie
       chart:
         balance: Kontostand
         owed: Geschuldeter Betrag
@@ -135,6 +141,8 @@ de:
       new_debt: Neue Verbindlichkeit
       new_account: Neues Konto
       new_account_group: "Neue %{account_group}"
+      collapse_all: Alle einklappen
+      expand_all: Alle aufklappen
     types:
       depository: Bankkonto
       investment: Investment
@@ -172,6 +180,9 @@ de:
       warning_transactions_kept: Bestehende Buchungen und Salden bleiben erhalten
       warning_can_delete: Nach dem Trennen kannst du das Konto bei Bedarf löschen
       confirm_button: Bestätigen und trennen
+      warning_wallet_connection: Die Verknüpfung aller Konten dieser Apple-Wallet-Verbindung
+        wird aufgehoben. Ihre Transaktionen und Salden bleiben erhalten. Du kannst sie mit
+        einer neuen Wallet-Einrichtung in der Sure-iOS-App erneut verbinden.
     unlink:
       success: "Konto erfolgreich getrennt. Es ist jetzt ein manuelles Konto."
       not_linked: "Konto ist mit keinem Provider verknüpft"

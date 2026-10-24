@@ -1,0 +1,11 @@
+---
+nl:
+  activerecord:
+    errors:
+      models:
+        transaction:
+          attributes:
+            attachments:
+              invalid_format: bestand %{index} heeft een niet-ondersteund formaat (%{file_format})
+              too_large: bestand %{index} is te groot (maximaal %{max_mb} MB)
+              too_many: mag niet meer dan %{max} bestanden per transactie bevatten

@@ -1,0 +1,10 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Hver renteendring må ha både en ikrafttredelsesdato
+            og en rentesats.
+          rate_change_before_origination: En renteendring kan ikke tre i kraft før
+            lånet ble opprettet.

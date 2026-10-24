@@ -3,12 +3,22 @@ pt-BR:
   sessions:
     create:
       invalid_credentials: E-mail ou senha inválidos.
+      account_deactivated: Esta conta foi desativada. Entre em contato com um administrador.
+      local_login_disabled: O login local com senha está desativado. Use o login único
+        (SSO).
     destroy:
       logout_successful: Você saiu com sucesso.
     openid_connect:
       failed: Não foi possível autenticar via OpenID Connect.
+      account_linked: Conta conectada com sucesso a %{provider}
     failure:
       failed: Não foi possível autenticar.
+      sso_failed: A autenticação por login único falhou. Tente novamente.
+      sso_invalid_response: Foi recebida uma resposta inválida do serviço SSO. Tente
+        novamente.
+      sso_provider_unavailable: >-
+        O serviço SSO está atualmente indisponível. Tente novamente mais tarde ou
+        entre em contato com um administrador.
     new:
       email: Endereço de e-mail
       email_placeholder: voce@exemplo.com
@@ -20,5 +30,19 @@ pt-BR:
       openid_connect: Entrar com OpenID Connect
       oidc: Entrar com OpenID Connect
       google_auth_connect: Entrar com Google
-      demo_banner_title: "Modo de Demonstração Ativo"
-      demo_banner_message: "Este é um ambiente de demonstração. As credenciais de login foram preenchidas para sua conveniência. Por favor, não insira informações reais ou sensíveis."
+      demo_banner_title: Modo de Demonstração Ativo
+      demo_banner_message: >-
+        Este é um ambiente de demonstração. As credenciais de login foram preenchidas
+        para sua conveniência. Por favor, não insira informações reais ou sensíveis.
+      local_login_admin_only: O início de sessão local está restrito aos administradores.
+      no_auth_methods_enabled: >-
+        Não existem métodos de autenticação ativados no momento. Entre em contato
+        com um administrador.
+      passkey_button: Entrar com uma chave de acesso
+      passkey_unsupported: Este navegador não suporta chaves de acesso.
+    mobile_sso_start:
+      redirecting_html: >-
+        Redirecionando para o login... <a href="%{url}">Clique aqui</a> se o redirecionamento
+        não ocorrer.
+    post_logout:
+      logout_successful: Você saiu da conta com sucesso.

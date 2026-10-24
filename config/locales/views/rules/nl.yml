@@ -5,6 +5,7 @@ nl:
     no_condition: Geen voorwaarde
     actions:
       value_placeholder: Voer een waarde in
+      to_label: naar
     apply_all:
       button: Alles toepassen
       confirm_title: Alle regels toepassen
@@ -13,7 +14,7 @@ nl:
       success: Alle regels zijn in de wachtrij geplaatst voor uitvoering
       ai_cost_title: AI kostenraming
       ai_cost_message: Dit zal AI gebruiken om tot %{transactions} transacties te categoriseren.
-      estimated_cost: "Geschatte kosten: ~$%{cost}"
+      estimated_cost: 'Geschatte kosten: ~$%{cost}'
       cost_unavailable_model: Kostenraming niet beschikbaar voor model "%{model}".
       cost_unavailable_no_provider: Kostenraming niet beschikbaar (geen LLM provider geconfigureerd).
       cost_warning: U kunt kosten maken, controleer bij de modelprovider voor de meest actuele prijzen.
@@ -31,6 +32,7 @@ nl:
           queued: In wachtrij
           processed: Verwerkt
           modified: Gewijzigd
+          blocked: Geblokkeerd
       execution_types:
         manual: Handmatig
         scheduled: Gepland
@@ -38,3 +40,99 @@ nl:
         pending: In behandeling
         success: Succesvol
         failed: Mislukt
+    index:
+      page_title: Regels
+      rules_heading: Regels
+      sort_name: Naam
+      new_rule: Nieuwe regel
+      ai_cost_warning: Regelacties die AI gebruiken kosten geld. Filter zo nauwkeurig mogelijk om onnodige kosten te voorkomen.
+      delete_all_rules: Alle regels verwijderen
+      no_rules_description: Stel regels in om bij elke rekeningsynchronisatie acties op je transacties en andere gegevens uit te voeren.
+      no_rules_title: Nog geen regels
+      sort_by: 'Sorteren op:'
+      sort_updated_at: Bijgewerkt op
+      toggle_sort_direction: Sorteerrichting wisselen
+    rule:
+      delete: Verwijderen
+      edit: Bewerken
+      action_label_to: "%{label} naar %{value}"
+      and_more_actions:
+        one: en nog 1 actie
+        other: en nog %{count} acties
+      and_more_conditions:
+        one: en nog 1 voorwaarde
+        other: en nog %{count} voorwaarden
+      on_or_after: "%{resource} op of na %{date}"
+      re_apply_rule: Regel opnieuw toepassen
+      all_past_and_future: Alle eerdere en toekomstige %{resource}
+      then: DAN
+    category_rule_cta:
+      close: Sluiten
+      create_rule: Regel aanmaken
+      description: Je kunt een regel maken om vergelijkbare transacties automatisch te categoriseren
+      dont_show_again: Dit niet meer tonen
+      hide_for_today: Vandaag verbergen
+      hide_for_today_hint: Vandaag verbergen pauzeert deze suggesties gedurende 24 uur.
+      message: Gewijzigd naar %{category_name}
+    condition_filters:
+      transaction_type:
+        income: Inkomsten
+        expense: Uitgave
+        transfer: Overboeking
+        equal_to: Gelijk aan
+      operators:
+        contains: Bevat
+        does_not_contain: Bevat niet
+        equal_to: Gelijk aan
+        greater_or_equal_to: Groter dan of gelijk aan
+        greater_than: Groter dan
+        is_empty: Is leeg
+        is_equal_to: Is gelijk aan
+        is_not_empty: Is niet leeg
+        less_than: Kleiner dan
+        less_than_or_equal_to: Kleiner dan of gelijk aan
+        not_equal_to: Niet gelijk aan
+    clear_ai_cache:
+      button: AI-cache wissen
+      confirm_body: Weet je zeker dat je de AI-cache wilt wissen? Hierdoor kunnen AI-regels alle transacties opnieuw verwerken. Dit kan extra API-kosten veroorzaken.
+      confirm_button: Cache wissen
+      confirm_title: AI-cache wissen?
+      success: De AI-cache wordt gewist. Dit kan even duren.
+    confirm:
+      ai_cost_no_estimate_html: Hiermee wordt AI gebruikt om %{count} transactie(s) te categoriseren.
+      ai_cost_title: Schatting van AI-kosten
+      ai_cost_with_estimate_html: 'Hiermee wordt AI gebruikt om %{count} transactie(s) te categoriseren. Geschatte kosten: <span class="font-semibold">~$%{cost}</span>'
+      apply_notice_html: Je staat op het punt deze regel toe te passen op <span class="text-primary font-medium">%{count} %{resource}</span> die aan de opgegeven voorwaarden voldoen. Bevestig of je deze wijziging wilt uitvoeren.
+      confirm_changes: Wijzigingen bevestigen
+      cost_unavailable_model: Geen kostenschatting beschikbaar voor model ‘%{model}’.
+      cost_unavailable_no_provider: Geen kostenschatting beschikbaar (geen LLM-aanbieder ingesteld).
+      cost_warning: Er kunnen kosten ontstaan. Raadpleeg de modelaanbieder voor de actuele tarieven.
+      title_with_name: Wijzigingen aan ‘%{name}’ bevestigen
+      view_usage_history: Gebruiksgeschiedenis bekijken
+      title: Wijzigingen bevestigen
+    destroy:
+      success: Regel verwijderd
+    destroy_all:
+      success: Alle regels verwijderd
+    form:
+      add_action: Actie toevoegen
+      add_condition_group: Groep voorwaarden toevoegen
+      all_past_and_future: Alle eerdere en toekomstige %{resource}
+      rule_name_label: Regelnaam (optioneel)
+      rule_name_placeholder: Voer een naam voor deze regel in
+      starting_from: Vanaf
+      then: DAN
+      add_condition: Voorwaarde toevoegen
+    update:
+      success: Regel bijgewerkt
+  rule:
+    conditions:
+      condition:
+        value_placeholder: Voer een waarde in
+      condition_group:
+        add_condition: Voorwaarde toevoegen
+        all: alle
+        and_prefix: en
+        any: een van
+        match: voldoen aan
+        of_the_following_conditions: van de volgende voorwaarden

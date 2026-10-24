@@ -50,10 +50,10 @@ de:
       loading_title: Wird geladen
     panel:
       disconnect: Trennen
-      disconnect_confirm: Diese Questrade-Verbindung wirklich trennen? Dadurch werden alle synchronisierten Kontodaten entfernt.
-      eyebrow: Questrade
+      disconnect_confirm: "Questrade trennen? Dadurch wird die Verbindung entfernt und die Verknüpfung ihrer synchronisierten Konten aufgehoben."
+      eyebrow: "Einrichtung · nur am Desktop"
       field_descriptions: 'Erläuterung der Felder:'
-      help_text: Sure nutzt diese Zugangsdaten nur, um deine Questrade-Konten, Bestände und Aktivitäten zu synchronisieren.
+      help_text: "Questrade-API-Dokumentation"
       fields:
         api_server:
           description: Dein Questrade-API-Server
@@ -73,12 +73,12 @@ de:
       status_configured_html: Eingerichtet und einsatzbereit. Im Reiter <a href="%{accounts_path}" class="link">Konten</a> verwaltest und richtest du Konten ein.
       status_not_configured: Nicht eingerichtet
       steps:
-        s1_html: Öffne dein <strong>Questrade-Dashboard</strong>.
-        s2: Erstelle oder kopiere deine API-Zugangsdaten.
-        s3_html: Füge den <strong>Refresh Token</strong> und den API-Server unten ein.
-        s4: Speichere die Verbindung.
-        s5: Starte einen Sync, um Konten zu finden.
-        s6: Richte die gefundenen Konten im Konten-Reiter ein.
+        s1_html: "Melde dich im <a href=\"https://my.questrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary font-medium underline\">Questrade-Portal</a> in einem Desktop-Browser an. Die API-Einstellungen sind in der mobilen App nicht verfügbar."
+        s2: "Öffne die Einstellungen und bearbeite unter den allgemeinen Einstellungen die IQ-API-Einstellungen."
+        s3_html: "Klicke im Dialog für den API-Zugriff unter <strong>Meine Anwendungen</strong> auf <strong>Verwalten</strong>."
+        s4: "Registriere eine persönliche Anwendung mit Namen und Beschreibung und speichere sie."
+        s5: "Füge ein neues Gerät hinzu und erstelle ein Token."
+        s6: "Füge das erstellte Token unten ein und speichere es."
       step_1: Öffne dein Questrade-Dashboard und hol dir deine Zugangsdaten
       step_2: Trag die Zugangsdaten unten ein und klick auf Speichern
       step_3: Nach erfolgreicher Verbindung richtest du im Reiter „Konten“ die neuen Konten ein

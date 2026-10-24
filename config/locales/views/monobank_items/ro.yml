@@ -1,0 +1,144 @@
+---
+ro:
+  monobank_item:
+    sync:
+      status:
+        calculating: Se calculează soldurile...
+        checking_setup: Se verifică configurarea contului...
+        needs_setup:
+          other: "%{count} de conturi necesită configurare..."
+          one: 1 cont necesită configurare...
+          few: "%{count} conturi necesită configurare..."
+        processing: Se procesează tranzacțiile...
+        importing: Se importă conturile din Monobank...
+    sync_status:
+      no_accounts: Nu s-au găsit conturi
+      all_synced:
+        one: 1 cont sincronizat
+        other: "%{count} de conturi sincronizate"
+        few: "%{count} conturi sincronizate"
+      partial: 'Sincronizate: %{linked}; necesită configurare: %{unlinked}'
+    institution_summary:
+      count:
+        one: 1 instituție
+        other: "%{count} de instituții"
+        few: "%{count} instituții"
+      none: Nicio instituție conectată
+      one: 1 instituție
+    errors:
+      account_processing_failed: Contul Monobank nu a putut fi sincronizat
+      account_sync_schedule_failed: Sincronizarea contului Monobank nu a putut fi
+        programată
+      sync_failed: Conexiunea Monobank nu a putut fi sincronizată
+      transactions_failed: Extrasul Monobank nu a putut fi preluat
+  monobank_items:
+    monobank_item:
+      delete: Șterge
+      error: Eroare
+      status_never: Nu a fost sincronizat niciodată
+      syncing: Se sincronizează
+      deletion_in_progress: Ștergere în curs
+      setup_action: Configurează conturile
+      setup_needed: Contul necesită configurare
+      status_with_summary: Sincronizat acum %{timestamp} · %{summary}
+      no_accounts_title: Nu există încă conturi importate
+      setup_description: 'Conturi conectate: %{linked} din %{total}.'
+      no_accounts_description: Preia conturile Monobank și alege-le pe cele de conectat.
+    provider_panel:
+      syncing: Se sincronizează...
+      connection_name_label: Numele conexiunii
+      disconnect: Deconectează
+      disconnect_confirm: Sigur vrei să deconectezi %{name}?
+      setup_accounts: Configurează conturile
+      sync: Sincronizează
+      update_connection: Actualizează conexiunea
+      keep_access_token_placeholder: Lasă necompletat pentru a păstra tokenul existent
+      add_connection: Adaugă o conexiune Monobank
+      default_connection_name: Conexiune Monobank
+      access_token_label: Token API personal
+      access_token_placeholder: Lipește tokenul personal Monobank
+      connection_name_placeholder: Monobank personal
+      rate_limit_notice: Monobank permite o cerere pe minut, așa că o sincronizare
+        preia câteva conturi odată, iar istoricul mai vechi sosește pe parcursul mai
+        multor sincronizări.
+    select_accounts:
+      cancel: Anulează
+      link_accounts: Conectează conturile
+      no_credentials_configured: Configurează mai întâi Monobank în setările furnizorului.
+      description: Alege cardurile sau pușculițele Monobank de adăugat.
+      no_accounts_found: Nu s-au găsit conturi Monobank neconectate.
+      title: Conectează conturi Monobank
+    select_existing_account:
+      cancel: Anulează
+      link_account: Conectează contul
+      account_already_linked: Acest cont este deja conectat la un furnizor.
+      no_credentials_configured: Configurează mai întâi Monobank în setările furnizorului.
+      description: Alege un cont Monobank neconectat pentru a-l asocia acestui cont.
+      no_accounts_found: Nu s-au găsit conturi Monobank neconectate.
+      title: Conectează contul Monobank la %{account_name}
+    setup_accounts:
+      account_types:
+        depository: Numerar
+        skip: Omite
+      cancel: Anulează
+      account_type_label: Tipul contului
+      choose_account_type: Alege tipul contului
+      create_accounts: Creează conturi
+      choose_account_type_description: Omite conturile pe care nu vrei să le urmărești.
+      no_accounts_to_setup: Nu există conturi de configurat
+      all_accounts_linked: Toate conturile Monobank sunt deja conectate.
+      api_error: Conturile nu au putut fi reîmprospătate din Monobank; sunt afișate
+        cele salvate la ultima sincronizare.
+      no_credentials: Configurează mai întâi datele de autentificare Monobank.
+      subtitle: Alege cum să apară fiecare card sau pușculiță Monobank în Sure.
+      title: Conectează conturi Monobank
+    link_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor.
+      monobank_account_already_linked: Acest cont Monobank este deja conectat.
+      no_account_selected: Selectează un cont Monobank de conectat.
+      success: Contul Monobank a fost conectat la %{account_name}.
+    link_accounts:
+      link_failed: Nu a fost conectat niciun cont.
+      no_accounts_selected: Selectează cel puțin un cont.
+      no_credentials_configured: Configurează mai întâi Monobank în setările furnizorului.
+      success:
+        one: A fost conectat 1 cont Monobank.
+        other: Au fost conectate %{count} de conturi Monobank.
+        few: Au fost conectate %{count} conturi Monobank.
+      unsupported_account_type: Monobank nu acceptă acel tip de cont.
+    destroy:
+      success: Conexiunea Monobank a fost programată pentru ștergere.
+      unlink_failed: Conexiunea Monobank nu a putut fi deconectată
+    complete_account_setup:
+      all_skipped: Nu a fost creat niciun cont Monobank.
+      creation_failed: Conturile Monobank nu au putut fi create.
+      no_accounts: Nu a fost selectat niciun cont Monobank.
+      success:
+        one: A fost creat 1 cont Monobank.
+        other: Au fost create %{count} de conturi Monobank.
+        few: Au fost create %{count} conturi Monobank.
+    create:
+      success: Conexiunea Monobank a fost salvată.
+    update:
+      success: Conexiunea Monobank a fost actualizată.
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Conexiune Monobank
+  providers:
+    monobank:
+      name: Monobank
+      description: Conectează carduri și pușculițe Monobank din Ucraina cu un token
+        API personal
+  monobank_account:
+    card_types:
+      black: Card Black
+      eaid: Card eAid
+      fop: Cont de afaceri
+      iron: Card Iron
+      jar: Pușculiță
+      platinum: Card Platinum
+      unknown: Card Monobank
+      white: Card White
+      yellow: Card Yellow
+    jar_fallback: Pușculiță Monobank

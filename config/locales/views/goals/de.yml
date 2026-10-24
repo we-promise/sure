@@ -48,6 +48,14 @@ de:
         target_amount: Zielbetrag
         target_date: Zieldatum
         whole_balance: "Leer: ganzer Saldo"
+        target_balance: Zielsaldo
+        target_balance_hint: Aus deinen mittleren monatlichen Ausgaben (Median) in den oben
+          angegebenen Monaten. Wird monatlich aktualisiert.
+        target_balance_pending: Wird beim Speichern berechnet
+        target_mode: So wird der Zielsaldo festgelegt
+        target_months: Monate an Ausgaben
+        target_months_hint: Wird am 1. jedes Monats anhand deiner mittleren monatlichen Ausgaben
+          (Median) neu berechnet.
       save: Änderungen speichern
       subtypes:
         cd: Festgeld
@@ -58,6 +66,23 @@ de:
         savings: Sparkonto
       suggested_no_date: Setz eine Frist, um ein Zieldatum hochzurechnen.
       suggested_with_date: Spar {monthly}/Monat über {accounts}, um es rechtzeitig zu schaffen.
+      earmark:
+        headroom: Auf diesem Konto können noch {left} reserviert werden.
+        prorata: Deine Ziele auf diesem Konto ergeben {total} bei einem Saldo von {balance}.
+          Ihr Fortschritt wird anteilig berechnet.
+        whole_balance: Dieses Konto finanziert den Betrag, der nach den anderen Reservierungen
+          übrig bleibt.
+        whole_balance_alone: Dieses Ziel verwendet den gesamten Saldo dieses Kontos.
+      kinds:
+        maintained:
+          hint: Ein zu erhaltender Saldo, etwa ein Notgroschen. Wird nie abgeschlossen.
+          label: Dauerhafte Rücklage
+        one_off:
+          hint: Auf etwas sparen und das Ziel nach der Verwendung abschließen.
+          label: Einmaliges Ziel
+      target_modes:
+        fixed: Ein fester Betrag
+        months_of_expenses: Eine bestimmte Anzahl von Monatsausgaben
     goal_card:
       accounts:
         one: 1 Konto
@@ -88,6 +113,9 @@ de:
         one: 1 offen
         other: "%{count} offen"
       pending_pledge: Offene Zusage
+      footer_reserve_intact: Rücklage vollständig
+      footer_reserve_short: "%{amount} aufzufüllen"
+      including_used: Einschließlich %{amount}, die bereits verwendet wurden
     index:
       archived_section:
         heading: Archiviert
@@ -176,6 +204,16 @@ de:
         archive_cta: Ziel archivieren
         body: Ziel abgeschlossen bei %{saved} von %{target}. Lass es als Beleg stehen oder archivier es gleich.
         heading: Ziel erreicht. Gut gemacht.
+        body_reached: Du hast dein Ziel mit %{saved} von %{target} erreicht. Es ist noch nicht
+          abgeschlossen; das Geld bleibt dafür reserviert.
+        body_reserve: 'Deine Rücklage hat ihren Zielsaldo erreicht: %{saved} von %{target}.
+          Es ist nichts zu tun; das Geld bleibt reserviert.'
+        close_cta: Dieses Ziel abschließen
+        close_hint: Beim Abschließen wird das reservierte Geld für andere Ziele auf demselben
+          Konto freigegeben. Schließe das Ziel erst ab, wenn du das Geld tatsächlich ausgegeben
+          hast.
+        frozen: Erreicht am %{date} · %{amount}
+        heading_reserve: Rücklage vollständig
       complete: Als erreicht markieren
       confirm_archive_body: Archivierte Ziele verschwinden aus der Hauptliste. Du kannst sie später wiederherstellen.
       confirm_archive_cta: Archivieren
@@ -248,6 +286,8 @@ de:
         tooltip_projected: 'Hochgerechnet: %{amount}'
         tooltip_saved: 'Gespart: %{amount}'
         tooltip_target_relation: "%{percent} % von %{target} Ziel"
+        reserve: Eine Rücklage hält einen Zielsaldo. Daher gibt es kein Abschlussdatum zu
+          prognostizieren.
       record_pledge_cta: Zusage erfassen
       reopen: Ziel wieder öffnen
       resume: Fortsetzen
@@ -258,12 +298,21 @@ de:
         of_target: vom Ziel
         saved: Gespart
         to_go: "%{amount} fehlen"
+        aria_label_with_used: Ziel zu %{percent}% erreicht. %{amount} von %{target}, einschließlich
+          bereits verwendeter %{used}.
+        including_used: Einschließlich %{amount}, die bereits verwendet wurden
       status_callout:
         behind: spar %{amount}/Monat mehr, um aufzuholen
         behind_covered: offene Zusagen schließen die Lücke
         no_target_date: setz eine Frist, um ein Zieldatum hochzurechnen
         on_track: erreicht das Ziel um den %{date}
+        depleted: "%{amount} unter dem Zielsaldo – fülle die Rücklage wieder auf"
       unarchive: Wiederherstellen
+      consume: Ich habe einen Teil dieses Geldes verwendet
+      reserve_shortfall:
+        body: Du hältst %{saved} von %{target}. Füge %{missing} hinzu, um den Zielsaldo
+          wieder zu erreichen.
+        heading: Rücklage unter dem Zielsaldo
     states:
       active: Aktiv
       archived: Archiviert
@@ -277,8 +326,40 @@ de:
       on_track: Im Plan
       paused: Pausiert
       reached: Erreicht
+      depleted: Auffüllen erforderlich
+      funded: Rücklage vollständig
     unarchive:
       invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht wiederherstellen.
       success: Ziel wiederhergestellt.
     update:
       success: Ziel aktualisiert.
+    consume:
+      account_label: Von welchem Konto?
+      amount_hint: Derzeit sind %{saved} für dieses Ziel hinterlegt.
+      amount_label: Wie viel hast du verwendet?
+      cancel: Abbrechen
+      earmark_note: Der erfasste Betrag ist nicht länger für dieses Ziel reserviert. Deine
+        anderen Ziele auf diesem Konto erhalten ihren Anteil dadurch zurück.
+      errors:
+        account_not_linked: Dieses Konto finanziert dieses Ziel nicht.
+        account_required: Dieses Ziel wird von mehreren Konten finanziert. Gib an, von
+          welchem Konto das Geld abging.
+        exceeds_earmark: Das ist mehr, als für dieses Ziel auf diesem Konto reserviert
+          ist.
+        exceeds_target: Das ist mehr, als für dieses Ziel insgesamt angespart werden sollte.
+        maintained: Eine Rücklage wird entnommen und wieder aufgefüllt, nicht verbraucht.
+          Ihr Fehlbetrag wird bereits beim Ziel angezeigt.
+        no_linked_account: Für dieses Ziel ist kein Finanzierungskonto mehr vorhanden.
+        non_positive: Gib einen Betrag größer als null ein.
+        not_active: Dieses Ziel ist nicht mehr aktiv. Dafür kann nichts mehr erfasst werden.
+        transaction_already_claimed: Dieser Abgang wurde bereits zugeordnet.
+        transaction_not_found: Dieser Abgang steht nicht mehr für eine Zuordnung zur Verfügung.
+      submit: Erfassen
+      subtitle: "%{goal}"
+      success: "%{amount} als verwendet erfasst."
+      title: Verwendung erfassen
+    unattributed_outflows:
+      attribute: Das war diese Ausgabe
+      body: Wenn ein Teil davon für %{goal} ausgegeben wurde, gib es an. Dieser Betrag
+        wird dann nicht mehr auf das noch zu erreichende Ziel angerechnet.
+      heading: Von diesen Konten ist Geld abgegangen

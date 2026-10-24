@@ -65,3 +65,9 @@ de:
       type_label: Typ
       fee_label: Transaktionsgebühr
       provider_disabled_warning: Kursaktualisierung pausiert – der Anbieter %{provider} ist deaktiviert. Aktivier ihn in den Einstellungen wieder oder ordne die Position einem anderen Anbieter zu.
+    api_errors:
+      activity_label_must_match_type: investment_activity_label muss %{label} sein, wenn
+        type %{type} ist
+      invalid_activity_label: Ungültige Bezeichnung der Anlageaktivität
+      invalid_type: Ungültiger Typ
+      supported_types: 'type muss einer dieser Werte sein: %{types}'

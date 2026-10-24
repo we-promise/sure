@@ -1,0 +1,38 @@
+---
+pt-BR:
+  plans:
+    budget_card:
+      days_left:
+        one: falta 1 dia
+        other: faltam %{count} dias
+      edit_budget: Editar orçamento
+      empty_body: >-
+        Defina uma meta mensal de despesas e limites por categoria para acompanhar
+        o andamento deste mês.
+      of_total: de %{total}
+      percent_used: "%{percent}% utilizado"
+      set_up: Configurar o orçamento deste mês
+      title: Este mês
+      top_categories: Principais categorias
+      view_budget: Ver orçamento completo
+    goals_card:
+      active_count:
+        one: 1 ativo
+        other: "%{count} ativos"
+      active_goals: Objetivos ativos
+      all_goals: Todos os objetivos
+      all_on_pace: Tudo dentro do ritmo
+      behind_count:
+        one: 1 em atraso em relação ao ritmo
+        other: "%{count} em atraso em relação ao ritmo"
+      new_goal: Novo objetivo
+      of_targets: de %{total} em todos os objetivos
+      pending_count:
+        one: 1 compromisso por confirmar
+        other: "%{count} compromissos por confirmar"
+      pending_marker: por confirmar
+      runway: "%{months} meses de reserva · %{pace}/mês"
+      title: Os seus objetivos
+    show:
+      subtitle: Decida para onde vai o seu dinheiro — o que gasta e o que poupa.
+      title: Plano

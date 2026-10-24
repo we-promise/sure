@@ -1,0 +1,55 @@
+---
+nb:
+  recurring_occurrences:
+    history_status:
+      scheduled: Åpen
+      paid: Betalt
+      missed: Ikke betalt
+      skipped: Hoppet over
+    show:
+      manual_amount_label: Beløp
+      manual_date_label: Dato
+      payments: Betalinger
+      skip: Hopp over
+      unlink: Koble fra
+      add_heading: Legg til en ny betaling
+      cant_find: Finner du ikke transaksjonen?
+      due_on: Forfaller %{date}
+      find_heading: Finn en betaling
+      link_payment: Koble til betaling
+      manual_explainer: Registrer en betaling du vet har skjedd, når ingen transaksjon
+        her samsvarer med den.
+      manual_payment: Manuell betaling
+      mark_paid: Merk som betalt
+      mark_paid_hint: Gjør opp resten uten å registrere en transaksjon.
+      missed: Merket som ikke betalt
+      no_candidates: Ingen transaksjoner i nærheten av datoen å koble til.
+      no_ranked_candidates: Ingen transaksjoner her ser ut som en betaling for denne
+        regningen ennå.
+      no_search_results: Ingen treff for %{query}.
+      not_this_one: Ikke denne
+      other_matches: Andre sannsynlige treff
+      overpaid: mer enn forventet
+      paid_headline: "%{amount} betalt"
+      paid_of: "%{paid} av %{expected} betalt"
+      record_payment: Registrer betaling
+      remaining: "%{amount} gjenstår"
+      reopen: Åpne igjen
+      review_heading: Gjennomgå betaling
+      search_all: Søk i alle transaksjoner
+      search_placeholder: Søk etter transaksjoner
+      settled: Betalt i sin helhet
+      skipped: Hoppet over
+      snooze_week: Utsett én uke
+      view_bill: Vis hele regningen
+    mark_paid:
+      success: Regningen er merket som betalt
+    override_amount:
+      success: Forventet beløp er oppdatert
+    reopen:
+      success: Regningen er åpnet igjen
+    skip:
+      success: Regningen er hoppet over
+    snooze:
+      invalid_date: Datoen kunne ikke tolkes
+      success: Utsatt til %{date}

@@ -11,7 +11,6 @@ nl:
     show:
       chart_title: Totale waarde
     subtypes:
-      # United States
       brokerage:
         short: Beleggingsrekening
         long: Beleggingsrekening
@@ -54,7 +53,6 @@ nl:
       utma:
         short: UTMA
         long: UTMA Bewaarrekening
-      # United Kingdom
       isa:
         short: ISA
         long: Individuele Spaarrekening
@@ -67,7 +65,6 @@ nl:
       workplace_pension_uk:
         short: Pensioen
         long: Werknemerspensioen
-      # Canada
       rrsp:
         short: RRSP
         long: Geregistreerd Pensioenspaarplan
@@ -83,14 +80,12 @@ nl:
       rrif:
         short: RRIF
         long: Geregistreerd Pensioeninkomen Fonds
-      # Australia
       super:
         short: Super
         long: Superannuation
       smsf:
         short: SMSF
         long: Zelfbeheerd Super Fonds
-      # Europe
       pea:
         short: PEA
         long: Plan d'Épargne en Actions
@@ -100,7 +95,6 @@ nl:
       riester:
         short: Riester
         long: Riester-Rente
-      # Generic
       pension:
         short: Pensioen
         long: Pensioen
@@ -119,6 +113,78 @@ nl:
       other:
         short: Overig
         long: Overige investering
+      apy:
+        long: Atal Pension Yojana
+        short: APY
+      cash_management:
+        long: Kasbeheerrekening
+        short: CMA
+      corporate_bond:
+        long: Bedrijfsobligatie
+        short: Bedrijfsobligatie
+      fd:
+        long: Vast deposito
+        short: FD
+      g_sec:
+        long: Staatsobligaties (G-Secs)
+        short: G-Sec
+      gold:
+        long: Goud (fysiek of digitaal)
+        short: Goud
+      gold_etf:
+        long: Goud-ETF
+        short: Goud-ETF
+      gold_mf:
+        long: Goudbeleggingsfonds
+        short: Goudfonds
+      indian_equity:
+        long: Indiase aandelenbelegging
+        short: Indiase aandelenbelegging
+      indian_etf:
+        long: Indiase ETF
+        short: Indiase ETF
+      indian_stocks:
+        long: Indiase aandelen (Demat)
+        short: Indiase aandelen
+      infrastructure_bond:
+        long: Infrastructuurobligatie
+        short: Infra-obligatie
+      kvp:
+        long: Kisan Vikas Patra
+        short: KVP
+      life_insurance:
+        long: Levensverzekering
+        short: Levensverzekering
+      nps:
+        long: National Pension System
+        short: NPS
+      nsc:
+        long: National Savings Certificate
+        short: NSC
+      pomis:
+        long: Post Office Monthly Income Scheme
+        short: POMIS
+      ppf:
+        long: Public Provident Fund
+        short: PPF
+      rd:
+        long: Periodiek deposito
+        short: RD
+      scss:
+        long: Senior Citizens' Savings Scheme
+        short: SCSS
+      sdl:
+        long: State Development Loans (SDL's)
+        short: SDL
+      sgb:
+        long: Sovereign Gold Bond
+        short: SGB
+      ssy:
+        long: Sukanya Samriddhi Yojana
+        short: SSY
+      tax_free_bond:
+        long: Belastingvrije obligatie
+        short: Belastingvrije obligatie
     value_tooltip:
       cash: Liquiditeiten
       holdings: Bezittingen

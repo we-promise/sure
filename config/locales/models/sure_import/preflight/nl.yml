@@ -1,0 +1,9 @@
+---
+nl:
+  sure_import:
+    preflight:
+      missing_reference: 'Regel %{line}: %{type} verwijst naar ontbrekende %{field} %{value}.'
+      provider_merchant_diff: 'Regel %{line}: ProviderMerchant %{name} bestaat al met andere waarden voor %{fields}. De bestaande handelaar blijft behouden.'
+      skipped_missing_merchant_reference: 'Regel %{line}: %{type} verwijst naar een handelaar (%{value}) die niet in deze export staat. Dit kan gebeuren bij een export die is gemaakt voordat door aanbieders toegewezen handelaren aan Sure-exports werden toegevoegd. De boeking wordt zonder die handelaar geïmporteerd.'
+      skipped_missing_reference: 'Regel %{line}: %{type} verwijst naar ontbrekende %{field} %{value}. De boeking wordt bij het importeren overgeslagen.'
+      skipped_unnamed_recurring: 'Regel %{line}: %{type} heeft geen naam en verwijst naar een handelaar (%{value}) die niet in deze export staat. De boeking wordt bij het importeren overgeslagen.'

@@ -1,0 +1,9 @@
+---
+nl:
+  tag:
+    dropdowns:
+      show:
+        empty: Nog geen tags
+        manage: Tags beheren
+        no_tags: Geen tags gevonden
+        search_placeholder: Zoeken

@@ -63,6 +63,16 @@ de:
     over_allocation_warning:
       fix_allocations: Zuweisungen korrigieren
       over_allocated_message: Du hast mehr verplant, als dein Budget hergibt. Bitte korrigiere die Zuweisungen.
+    available_cash:
+      available: Verfügbare liquide Mittel
+      earmarked: Bereits für Ziele reserviert
+      free: Tatsächlich frei verfügbar
+      goals_link: Ziele anzeigen
+      heading: Liquide Mittel
+      subtitle: Ergänzt den Plan oben, ist aber kein Bestandteil davon.
+    switcher:
+      aria_label: Budget wechseln
+      household: Haushalt
   budget_categories:
     allocation_progress:
       budget_exceeded_html: Budget überschritten um <span class="text-red-500 privacy-sensitive">%{amount}</span>
@@ -101,3 +111,30 @@ de:
       spending: Ausgaben %{date}
       status: Status
       view_all_transactions: Alle Transaktionen der Kategorie
+    bills_reserved: "%{amount} durch Rechnungen reserviert"
+    bills_reserved_unconvertible:
+      one: Für 1 Rechnung ist nichts reserviert, da kein Wechselkurs verfügbar ist
+      other: Für %{count} Rechnungen ist nichts reserviert, da kein Wechselkurs verfügbar
+        ist
+    move:
+      amount_label: Betrag
+      available: "%{amount} verfügbar"
+      button_title: Geld aus dieser Kategorie verschieben
+      cancel: Abbrechen
+      dialog_title: Geld verschieben
+      errors:
+        different_budgets: Beide Kategorien müssen zum selben Budget gehören.
+        insufficient_funds: Das ist mehr, als dieser Kategorie zugewiesen wurde.
+        non_positive_amount: Gib einen Betrag größer als null ein.
+        parent_child: Geld kann nicht zwischen einer Kategorie und ihrer eigenen Unterkategorie
+          verschoben werden. Passe die Unterkategorie direkt an.
+        same_category: Wähle eine andere Zielkategorie für das Geld aus.
+        uncategorized: "„Ohne Kategorie“ ist kein echter Budgettopf. Daher kann kein Geld
+          hinein- oder herausverschoben werden."
+      from_label: Von
+      no_destination: Derzeit steht kein weiterer zulässiger Budgettopf zur Verfügung.
+        Eine Kategorie kann kein Geld an ihre eigene über- oder untergeordnete Kategorie
+        senden.
+      submit: Verschieben
+      success: Geld verschoben.
+      to_label: Nach

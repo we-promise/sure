@@ -1,0 +1,29 @@
+---
+nb:
+  models:
+    category:
+      defaults:
+        income: Inntekt
+        entertainment: Underholdning
+        fees: Gebyrer
+        food_and_drink: Mat og drikke
+        gifts_and_donations: Gaver og donasjoner
+        groceries: Dagligvarer
+        healthcare: Helse
+        home_improvement: Oppussing
+        insurance: Forsikring
+        loan_payments: Lånebetalinger
+        mortgage_rent: Boliglån / husleie
+        personal_care: Personlig pleie
+        savings_and_investments: Sparing og investeringer
+        services: Tjenester
+        shopping: Innkjøp
+        sports_and_fitness: Sport og trening
+        subscriptions: Abonnementer
+        taxes: Skatter
+        transportation: Transport
+        travel: Reiser
+        utilities: Strøm og kommunale tjenester
+      uncategorized: Ukategorisert
+      investment_contributions: Innskudd til investeringer
+      other_investments: Andre investeringer

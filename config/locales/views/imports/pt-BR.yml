@@ -6,61 +6,288 @@ pt-BR:
         description: Edite seus dados na tabela abaixo. Células vermelhas são inválidas.
         errors_notice: Há erros em seus dados. Passe o mouse sobre o erro para ver
           detalhes.
-        errors_notice_mobile: Há erros em seus dados. Toque na dica de ferramenta do erro para ver
-          detalhes.
+        errors_notice_mobile: Há erros em seus dados. Toque na dica de ferramenta
+          do erro para ver detalhes.
         title: Limpar seus dados
+        all_rows: Todas as linhas
+        data_cleaned: Os seus dados foram limpos
+        error_rows: Linhas com erros
+        next_step: Próximo passo
+        not_configured: Configure a sua importação antes de continuar.
     configurations:
       category_import:
         button_label: Continuar
-        description: Faça o upload de um arquivo CSV simples (como o que geramos quando você
+        description: >-
+          Faça o upload de um arquivo CSV simples (como o que geramos quando você
           exporta seus dados). Mapearemos as colunas automaticamente para você.
-        instructions: Selecione continuar para processar seu CSV e avançar para a etapa de limpeza.
+        instructions: Selecione continuar para processar seu CSV e avançar para a
+          etapa de limpeza.
       mint_import:
         date_format_label: Formato da data
+        account_optional: Conta (opcional)
+        amount: Valor
+        apply_configuration: Aplicar configuração
+        category_optional: Categoria (opcional)
+        currency: Moeda
+        date: Data
+        format: Formato
+        incomes_negative: Receitas são negativas
+        incomes_positive: Receitas são positivas
+        intro: Pré-configuramos sua importação do Mint. Continue para a próxima etapa.
+        leave_empty: Deixar vazio
+        name_optional: Nome (opcional)
+        select_format: Selecione o formato
+        tags_optional: Etiquetas (opcional)
       show:
         description: Selecione as colunas que correspondem a cada campo no seu CSV.
         title: Configurar sua importação
+        apply_template: Aplicar modelo
+        manually_configure: Configurar manualmente
+        sample_caption: Amostra de dados do CSV enviado
+        template_description: >-
+          Encontramos uma configuração de uma importação anterior para esta conta.
+          Deseja aplicá-la a esta importação?
+        template_found: Modelo de configuração encontrado
       trade_import:
         date_format_label: Formato da data
+        account_label: Conta
+        apply_configuration: Aplicar configuração
+        buys_are_negative: Compras têm quantidade negativa
+        buys_are_positive: Compras têm quantidade positiva
+        currency_label: Moeda
+        date_label: Data
+        default: Padrão
+        format_label: Formato
+        leave_empty: Deixar vazio
+        name_label: Nome
+        no_security_provider_warning: >-
+          O provedor de preços de ativos não está configurado. Suas negociações serão
+          importadas, mas o Sure não preencherá o histórico de preços. Acesse as configurações
+          para definir um provedor.
+        note_label: Nota
+        price_label: Preço
+        quantity_label: Quantidade
+        select_column: Selecione a coluna
+        select_format: Selecione o formato
+        stock_exchange_code_label: Código de bolsa de valores
+        ticker_label: Ticker
       transaction_import:
         date_format_label: Formato da data
+        account_label: Conta
+        amount_label: Valor
+        amount_type_label: Tipo de valor
+        amount_type_strategy_label: Estratégia de tipo de valor
+        apply_configuration: Aplicar configuração
+        as_amount_type_column: como coluna de tipo de valor
+        as_identifier_value: como valor de identificador
+        category_label: Categoria
+        currency_label: Moeda
+        date_label: Data
+        default: Padrão
+        expense_outflow: Despesa (saída)
+        format_label: Formato
+        income_inflow: Receita (entrada)
+        incomes_are_negative: Receitas são negativas
+        incomes_are_positive: Receitas são positivas
+        leave_empty: Deixar vazio
+        name_label: Nome
+        notes_label: Notas
+        rows_to_skip_label: Pular as primeiras n linhas
+        select_column: Selecione a coluna
+        select_convention: Selecione a convenção
+        select_format: Selecione o formato
+        select_strategy: Selecione a estratégia
+        select_type: Selecione o tipo
+        select_value: Selecione o valor
+        set: Definir
+        tags_label: Tags
+        treat_as_html: Tratar "<span class="font-medium">%{value}</span>" como
+      account_import:
+        apply_configuration: Aplicar configuração
+        balance: Saldo
+        balance_date: Data do Saldo
+        currency: Moeda
+        date_format: Formato de Data
+        default: Padrão
+        entity_type: Tipo de Entidade
+        leave_empty: Deixar vazio
+        name: Nome
+        select_format: Selecione o formato
+      actual_import:
+        account_label: Conta (opcional)
+        amount_label: Valor
+        apply_configuration: Aplicar configuração
+        category_label: Categoria (opcional)
+        date_format_label: Formato de data
+        date_label: Data
+        incomes_are_negative: Receitas são negativas
+        incomes_are_positive: Receitas são positivas
+        leave_empty: Deixar vazio
+        name_label: Beneficiário (opcional)
+        notes_label: Notas (opcional)
+        preconfigured_notice: Pré-configuramos sua importação do Actual Budget. Continue
+          para a próxima etapa.
+        signage_convention_label: Convenção de sinal
+      merchant_import:
+        button_label: Continuar
+        description: >-
+          Envie um arquivo CSV com seus estabelecimentos. As colunas serão mapeadas
+          automaticamente.
+        instructions: Selecione continuar para analisar o seu CSV e avançar para o
+          passo de limpeza.
+      rule_import:
+        description: >-
+          Configure a sua importação de regras. As regras serão criadas ou atualizadas
+          com base nos dados do CSV.
+        process_button: Processar Regras
+        process_help: Clique no botão abaixo para processar o seu CSV e gerar linhas
+          de regras.
+      update:
+        success: Importação configurada com sucesso.
+      ynab_import:
+        account_label: Conta (opcional)
+        amount_notice: Os valores são detectados automaticamente a partir das colunas
+          Outflow e Inflow.
+        apply_configuration: Aplicar configuração
+        category_label: Categoria (opcional)
+        date_format_label: Formato de data
+        date_label: Data
+        leave_empty: Deixar vazio
+        name_label: Beneficiário (opcional)
+        notes_label: Observação (opcional)
+        preconfigured_notice: Pré-configuramos sua importação do YNAB. Continue para
+          a próxima etapa.
     confirms:
       mappings:
         create_account: Criar conta
         csv_mapping_label: "%{mapping} no CSV"
         sure_mapping_label: "%{mapping} no %{product_name}"
-        no_accounts: Você ainda não tem contas. Crie uma conta que possamos usar para 
-          linhas (não atribuídas) no seu CSV ou volte para a etapa de Limpeza e forneça
-          um nome de conta que possamos usar.
+        no_accounts: >-
+          Você ainda não tem contas. Crie uma conta que possamos usar para linhas
+          (não atribuídas) no seu CSV ou volte para a etapa de Limpeza e forneça um
+          nome de conta que possamos usar.
         rows_label: Linhas
         unassigned_account: Precisa criar uma nova conta para linhas não atribuídas?
+        next: Seguinte
       show:
-        account_mapping_description: Atribua todas as contas do seu arquivo importado às
-          contas existentes no %{product_name}. Você também pode adicionar novas contas ou deixá-las
-          sem categoria.
+        account_mapping_description: >-
+          Atribua todas as contas do seu arquivo importado às contas existentes no
+          %{product_name}. Você também pode adicionar novas contas ou deixá-las sem
+          categoria.
         account_mapping_title: Atribuir suas contas
-        account_type_mapping_description: Atribuir todos os tipos de conta do seu arquivo importado aos
-          do %{product_name}
+        account_type_mapping_description: Atribuir todos os tipos de conta do seu
+          arquivo importado aos do %{product_name}
         account_type_mapping_title: Atribuir seus tipos de conta
-        category_mapping_description: Atribua todas as categorias do seu arquivo importado às
-          categorias existentes no %{product_name}. Você também pode adicionar novas categorias ou deixá-las
+        category_mapping_description: >-
+          Atribua todas as categorias do seu arquivo importado às categorias existentes
+          no %{product_name}. Você também pode adicionar novas categorias ou deixá-las
           sem categoria.
         category_mapping_title: Atribuir suas categorias
-        tag_mapping_description: Atribua todas as tags do seu arquivo importado às 
-          tags existentes no %{product_name}. Você também pode adicionar novas tags ou deixá-las
-          sem categoria.
+        tag_mapping_description: >-
+          Atribua todas as tags do seu arquivo importado às tags existentes no %{product_name}.
+          Você também pode adicionar novas tags ou deixá-las sem categoria.
         tag_mapping_title: Atribuir suas tags
+        invalid_data: Há dados inválidos. Edite-os até corrigir todos os erros.
+      sure_import:
+        cancel: Cancelar
+        description: Revise os dados que serão importados do seu arquivo de exportação.
+        empty_summary: >-
+          Não conseguimos encontrar registros importáveis neste arquivo. Pode estar
+          vazio, ou as linhas podem não corresponder ao formato de exportação esperado
+          (cada linha deve ser um objeto JSON com as chaves "type" e "data", utilizando
+          os tipos que esta importação suporta).
+        publish_button: Iniciar importação
+        summary: Resumo da importação
+        title: Confirme a sua importação
     uploads:
       show:
-        description: Cole ou faça upload do seu arquivo CSV abaixo. Por favor, revise as instruções
+        description: >-
+          Cole ou faça upload do seu arquivo CSV abaixo. Por favor, revise as instruções
           na tabela abaixo antes de começar.
-        instructions_1: Abaixo está um exemplo de CSV com as colunas disponíveis para importação.
+        instructions_1: Abaixo está um exemplo de CSV com as colunas disponíveis para
+          importação.
         instructions_2: Seu CSV deve ter uma linha de cabeçalho
-        instructions_3: Você pode nomear suas colunas como quiser. Você as mapeará
-          em uma etapa posterior.
+        instructions_3: >-
+          Você pode nomear suas colunas como quiser. Você as mapeará em uma etapa
+          posterior.
         instructions_4: Colunas marcadas com um asterisco (*) são dados obrigatórios.
-        instructions_5: Sem vírgulas (para separar milhares), sem símbolos de moeda e sem parênteses em números.
+        instructions_5: >-
+          Sem vírgulas (para separar milhares), sem símbolos de moeda e sem parênteses
+          em números.
         title: Importar seus dados
+        account_optional_label: Conta (opcional)
+        browse: Procurar arquivo
+        copy_paste_tab: Copiar e Colar
+        csv_file_prompt: para adicionar seu arquivo CSV aqui
+        csv_invalid: O CSV deve ser válido, com cabeçalhos e pelo menos uma linha
+          de dados
+        download_sample_csv: Baixar um CSV de exemplo
+        drop_csv_subtitle: Seu arquivo será enviado automaticamente
+        drop_csv_title: Solte o CSV para enviar
+        multi_account_import: Importação de várias contas
+        paste_csv_placeholder: Cole aqui o conteúdo do seu arquivo CSV
+        qif_account_label: Conta
+        qif_account_placeholder: Selecione uma conta…
+        qif_description: >-
+          Selecione uma conta para arquivos de uma única conta ou deixe em branco
+          se a exportação QIF incluir os nomes das contas.
+        qif_file_hint: apenas arquivos .qif
+        qif_file_prompt: para adicionar o seu arquivo QIF
+        qif_submit: Enviar QIF
+        qif_title: Enviar arquivo QIF
+        to_see_format: para consultar o formato de CSV exigido
+        upload_csv_button: Enviar CSV
+        upload_csv_tab: Enviar CSV
+      handle_qif_upload:
+        qif_account_required: Selecione uma conta para a importação do QIF
+        qif_uploaded: Arquivo QIF enviado com sucesso.
+      sure_import:
+        browse: Procurar arquivo
+        browse_hint: para adicionar o seu arquivo all.ndjson aqui
+        description: >-
+          Envie o arquivo all.ndjson da sua exportação de dados para restaurar contas,
+          transações, categorias e outros dados.
+        drop_subtitle: Seu arquivo será enviado automaticamente
+        drop_title: Solte o NDJSON para enviar
+        hint_html: Envie o arquivo <strong>all.ndjson</strong> do ZIP da sua exportação
+          de dados
+        ndjson_invalid: O NDJSON deve ser válido e conter pelo menos um registro
+        title: Importar de exportação
+        upload_button: Enviar NDJSON
+      update:
+        qif_uploaded: Arquivo QIF enviado com sucesso.
+    qif_category_selections:
+      show:
+        categories_found:
+          one: 1 categoria encontrada
+          other: "%{count} categorias encontradas"
+        categories_heading: Categorias
+        category_name_col: Designação da categoria
+        description: >-
+          Revise o formato de data detectado e escolha quais categorias e tags do
+          arquivo QIF deseja importar para %{product_name}.
+        empty_state_primary: Não foram encontradas categorias ou etiquetas neste arquivo
+          QIF.
+        empty_state_secondary: Todas as transações serão importadas sem categorias
+          ou etiquetas.
+        split_badge: dividida
+        split_warning_description: >-
+          Este arquivo QIF contém transações divididas. Revise as categorias e tags
+          das divisões abaixo antes de importar.
+        split_warning_title: Transações divididas detectadas
+        submit: Continuar para a revisão
+        tag_name_col: Designação da etiqueta
+        tags_found:
+          one: 1 etiqueta encontrada
+          other: "%{count} etiquetas encontradas"
+        tags_heading: Tags
+        title: Configurar e selecionar
+        transactions_col: Transações
+        txn_count:
+          one: 1 trans.
+          other: "%{count} trans."
+      update:
+        success: Categorias e etiquetas salvas.
   imports:
     index:
       title: Importações
@@ -82,13 +309,35 @@ pt-BR:
           failed: Falhou
         actions:
           revert: Reverter
-          confirm_revert: Isso excluirá as transações importadas, mas você ainda poderá revisar e importar seus dados novamente a qualquer momento.
+          confirm_revert: >-
+            Isso excluirá as transações importadas, mas você ainda poderá revisar
+            e importar seus dados novamente a qualquer momento.
           delete: Excluir
           view: Visualizar
+          confirm_mark_failed: >-
+            Esta importação está inativa há algum tempo e a tarefa em segundo plano
+            provavelmente foi interrompida. Deseja marcá-la como falha para tentar
+            novamente? Nenhum dado importado será mantido.
+          mark_failed: Marcar como falha
+        type_labels:
+          account_import: Conta
+          actual_import: Actual
+          category_import: Categoria
+          document_import: Documento
+          merchant_import: Estabelecimento
+          mint_import: Mint
+          pdf_import: PDF
+          qif_import: QIF
+          rule_import: Regra
+          sure_import: Sure
+          trade_import: Negociação
+          transaction_import: Transação
+          ynab_import: YNAB
       empty: Nenhuma importação ainda.
     new:
-      description: Você pode importar manualmente vários tipos de dados via CSV ou usar um
-        de nossos modelos de importação, como o do Mint.
+      description: >-
+        Você pode importar manualmente vários tipos de dados via CSV ou usar um de
+        nossos modelos de importação, como o do Mint.
       import_accounts: Importar contas
       import_categories: Importar categorias
       import_mint: Importar do Mint
@@ -97,12 +346,340 @@ pt-BR:
       resume: Retomar %{type}
       sources: Fontes
       title: Nova Importação CSV
+      import_actual: Importar do Actual Budget
+      import_file: Importar documento
+      import_file_description: Análise com IA para PDFs e envio de arquivos pesquisáveis
+      import_merchants: Importar estabelecimentos
+      import_qif: Importar do Quicken (QIF)
+      import_rules: Importar regras
+      import_sure: Importar do Sure
+      import_sure_description: Arquivo .ndjson de exportação completa
+      import_ynab: Importar do YNAB
+      requires_account: Importe as contas primeiro para desbloquear esta opção.
+      tab_financial_tools: Ferramentas e Arquivos Financeiros
+      tab_raw_data: Dados brutos
     ready:
-      description: Aqui está um resumo dos novos itens que serão adicionados à sua conta
-        assim que você publicar esta importação.
+      description: >-
+        Aqui está um resumo dos novos itens que serão adicionados à sua conta assim
+        que você publicar esta importação.
       title: Confirmar seus dados de importação
       summary_item_label: Item
       summary_count_label: Quantidade
-      empty_summary: Não foi possível encontrar registros importáveis neste arquivo. Ele pode estar vazio, ou as linhas não correspondem ao formato de exportação esperado (cada linha deve ser um objeto JSON com as chaves «type» e «data», usando tipos suportados por esta importação).
+      empty_summary: >-
+        Não foi possível encontrar registros importáveis neste arquivo. Ele pode estar
+        vazio, ou as linhas não correspondem ao formato de exportação esperado (cada
+        linha deve ser um objeto JSON com as chaves «type» e «data», usando tipos
+        suportados por esta importação).
       publish_import: Publicar importação
       back_to_imports: Voltar às importações
+      missing_merchant_warning_description:
+        one: >-
+          1 referência neste arquivo aponta para um estabelecimento que não foi incluído.
+          Isso pode acontecer com exportações feitas antes de o Sure passar a incluir
+          estabelecimentos atribuídos por provedores. Você ainda pode publicar a importação.
+          O registro afetado será importado sem o estabelecimento, que poderá ser
+          atribuído depois.
+        other: >-
+          %{count} referências neste arquivo apontam para estabelecimentos que não
+          foram incluídos. Isso pode acontecer com exportações feitas antes de o Sure
+          passar a incluir estabelecimentos atribuídos por provedores. Você ainda
+          pode publicar a importação. Os registros afetados serão importados sem os
+          estabelecimentos, que poderão ser atribuídos depois.
+      missing_merchant_warning_title: Alguns estabelecimentos não estão nesta exportação
+      provider_merchant_diff_description:
+        one: >-
+          1 estabelecimento deste arquivo já existe com dados diferentes. O estabelecimento
+          existente será mantido, e os valores do arquivo não serão aplicados.
+        other: >-
+          %{count} estabelecimentos deste arquivo já existem com dados diferentes.
+          Os estabelecimentos existentes serão mantidos, e os valores do arquivo não
+          serão aplicados.
+      provider_merchant_diff_fields:
+        name: Nome
+        provider_merchant_id: ID do provedor
+        website_url: Site
+      provider_merchant_diff_none: nenhum
+      provider_merchant_diff_row: "%{field}: mantendo %{kept}; no arquivo, %{imported}"
+      provider_merchant_diff_summary: Ver diferenças
+      provider_merchant_diff_title: Alguns estabelecimentos já existem com dados diferentes
+      reused_taxonomy_notice_description:
+        one: >-
+          1 categoria, tag ou estabelecimento deste arquivo já existe na sua conta,
+          por exemplo, entre as categorias padrão da configuração inicial. O item
+          existente será reutilizado e atualizado com os dados do arquivo, sem criar
+          uma cópia.
+        other: >-
+          %{count} categorias, tags ou estabelecimentos deste arquivo já existem na
+          sua conta, por exemplo, entre as categorias padrão da configuração inicial.
+          Os itens existentes serão reutilizados e atualizados com os dados do arquivo,
+          sem criar cópias.
+      reused_taxonomy_notice_title: Algumas categorias, tags ou estabelecimentos já
+        existem
+      skipped_recurring_description:
+        one: >-
+          1 transação recorrente não tem nome e seu estabelecimento está ausente,
+          então ela será ignorada. As transações recorrentes detectadas automaticamente
+          serão recriadas após a importação.
+        other: >-
+          %{count} transações recorrentes não têm nome e seus estabelecimentos estão
+          ausentes, então elas serão ignoradas. As transações recorrentes detectadas
+          automaticamente serão recriadas após a importação.
+    apply_template:
+      no_template_found: Não foi encontrado nenhum modelo, configure manualmente a
+        sua importação.
+      template_applied: Modelo aplicado.
+    cancel:
+      cancelled: >-
+        Importação marcada como falha. Você pode tentar novamente na página da importação.
+      not_cancellable: >-
+        Não é possível marcar esta importação como falha agora, pois a tarefa ainda
+        pode estar em execução. Tente novamente quando ela estiver inativa por uma
+        hora.
+    column_labels:
+      account: Conta
+      amount: Valor
+      category: Categoria
+      category_color: Cor
+      category_icon: Ícone Lucide
+      category_parent: Categoria principal
+      currency: Moeda
+      date: Data
+      entity_type: Tipo
+      exchange: Bolsa
+      merchant_color: Cor
+      merchant_website: URL do site
+      name: Nome
+      notes: Notas
+      price: Preço
+      qty: Quantidade
+      tags: Tags
+      ticker: Ticker
+    create:
+      csv_uploaded: CSV enviado com sucesso.
+      document_provider_not_configured: Nenhum armazenamento vetorial está configurado
+        para o envio de documentos.
+      document_too_large: O documento é muito grande. O tamanho máximo é de %{max_size}
+        MB.
+      document_upload_failed: Não foi possível enviar o documento ao armazenamento
+        vetorial. Tente novamente.
+      document_uploaded: Documento enviado com sucesso.
+      duplicate_pdf_unavailable: Este PDF já está salvo como um extrato ao qual você
+        não tem acesso.
+      file_too_large: O arquivo é muito grande. O tamanho máximo é de %{max_size}
+        MB.
+      invalid_document_file_type: Tipo de documento inválido para o armazenamento
+        vetorial ativo.
+      invalid_file_type: Tipo de arquivo inválido. Envie um arquivo CSV.
+      invalid_ndjson_file_type: >-
+        Tipo de arquivo ou formato inválido. Envie um arquivo de exportação .ndjson
+        ou .json válido.
+      invalid_pdf: O arquivo enviado não é um PDF válido.
+      ndjson_uploaded: Arquivo NDJSON enviado com sucesso.
+      pdf_processing: >-
+        Seu PDF está sendo processado. Você receberá um e-mail quando a análise terminar.
+      pdf_too_large: O PDF é muito grande. O tamanho máximo é de %{max_size} MB.
+    date_format:
+      description: >-
+        O formato de data foi detectado automaticamente a partir do seu arquivo. Altere-o
+        se as datas parecerem incorretas.
+      error_description: >-
+        Nenhum dos formatos de data compatíveis conseguiu interpretar as datas deste
+        arquivo. Verifique se o arquivo contém datas válidas.
+      error_title: Não foi possível detectar o formato de data
+      heading: Formato de data
+      preview: Primeira data analisada
+    destroy:
+      deleted: A sua importação foi excluída.
+    document_types:
+      bank_statement: Extrato Bancário
+      contract: Contrato
+      credit_card_statement: Extrato de Cartão de Crédito
+      financial_document: Documento Financeiro
+      investment_statement: Extrato de Investimento
+      other: Outro Documento
+      unknown: Documento Desconhecido
+    dry_run_resources:
+      accounts: Contas
+      balances: Saldos
+      budget_categories: Categorias de Orçamento
+      budgets: Orçamentos
+      categories: Categorias
+      holdings: Posições
+      merchants: Estabelecimentos
+      recurring_transactions: Transações Recorrentes
+      rejected_transfers: Transferências Rejeitadas
+      rules: Regras
+      tags: Tags
+      trades: Negociações
+      transactions: Transações
+      transfers: Transferências
+      valuations: Avaliações
+    empty:
+      message: Não foram encontradas importações.
+    errors:
+      custom_column_requires_inflow: >-
+        As importações de colunas personalizadas exigem que seja selecionada uma coluna
+        de entrada
+      interrupted: >-
+        O processo em segundo plano foi interrompido antes da conclusão. Os dados
+        importados foram revertidos. Você pode tentar novamente com segurança.
+      presumed_lost: >-
+        Importação marcada como falha porque a tarefa em segundo plano foi considerada
+        perdida. Os dados importados foram revertidos. Você pode tentar novamente
+        com segurança.
+    failure:
+      description: >-
+        Verifique se o formato do seu arquivo não tem erros e se todos os campos obrigatórios
+        estão preenchidos, e depois volte e tente novamente.
+      title: A importação falhou
+      try_again: Tentar novamente
+    importing:
+      back_to_dashboard: Voltar ao painel
+      check_status: Verificar status
+      description: >-
+        Sua importação está em andamento. Consulte o status no menu de importações
+        ou clique em "Verificar status" para atualizar a página. Você pode continuar
+        usando o aplicativo.
+      title: Importação em andamento
+    mapping_labels:
+      account: Conta
+      account_type: Tipo de Conta
+      category: Categoria
+      tag: Tag
+    pdf_import:
+      already_recorded_note:
+        one: "%{count} transação já estava nesta conta e foi associada ao extrato."
+        other: "%{count} transações já estavam nesta conta e foram associadas ao extrato."
+      back_to_dashboard: Voltar ao painel
+      back_to_imports: Voltar às importações
+      check_status: Verificar status
+      complete_description: Analisamos o seu PDF e aqui está o que encontramos.
+      complete_fully_reconciled:
+        one: >-
+          Todas as transações deste extrato já estavam na sua conta. %{count} transação
+          foi associada e marcada como conciliada. Não foi necessário importar nada.
+        other: >-
+          Todas as transações deste extrato já estavam na sua conta. As %{count} transações
+          foram associadas e marcadas como conciliadas. Não foi necessário importar
+          nada.
+      complete_title: Documento analisado
+      create_account: Criar Conta
+      delete_import: Excluir importação
+      document_type_label: Tipo de Documento
+      email_sent_notice: Foi enviado um e-mail com os próximos passos.
+      errors:
+        provider_no_pdf_support: O provedor de IA não oferece processamento de PDF
+        provider_not_configured: Provedor de IA não configurado
+      failed_description: >-
+        Não conseguimos processar o seu documento PDF. Tente novamente ou entre em
+        contato com o suporte.
+      failed_title: O processamento falhou
+      no_accounts: Não há contas disponíveis. Crie uma conta primeiro.
+      processing_description: >-
+        Estamos analisando seu documento com IA. Isso pode levar alguns instantes.
+        Você receberá um e-mail quando a análise terminar.
+      processing_failed_generic: 'O processamento falhou: %{error}'
+      processing_failed_with_message: "%{message}"
+      processing_title: Processando o seu PDF
+      publish_transactions:
+        one: Publicar %{count} Transação
+        other: Publicar %{count} Transações
+      ready_for_review_description:
+        one: >-
+          %{count} transação do extrato ainda não está nesta conta. Revise e publique
+          para adicioná-la.
+        other: >-
+          %{count} transações do extrato ainda não estão nesta conta. Revise e publique
+          para adicioná-las.
+      ready_for_review_title: Pronto para Revisão
+      review_transactions: Revisar transações
+      save_account: Salvar
+      select_account: Importar para Conta
+      select_account_hint: Escolha a conta na qual deseja importar estas transações.
+      select_account_placeholder: Selecione uma conta...
+      select_account_to_continue: Selecione uma conta acima para continuar.
+      source_statement: Extrato de origem
+      summary_label: Resumo
+      transactions_extracted: Transações Extraídas
+      transactions_extracted_count:
+        one: "%{count} transação"
+        other: "%{count} transações"
+      try_again: Tentar novamente
+      unknown_document_type: Desconhecido
+      unknown_state_description: Esta importação está num estado inesperado. Volte
+        às importações.
+      unknown_state_title: Estado desconhecido
+      view_summary: Ver resumo da importação
+    publish:
+      max_rows_exceeded: A sua importação excede o número máximo de linhas de %{max}.
+      started: A sua importação começou em segundo plano.
+    revert:
+      started: A importação está sendo revertida em segundo plano.
+    revert_failure:
+      description: Tente novamente
+      title: A reversão da importação falhou
+      try_again: Tentar novamente
+    show:
+      finalize_mappings: Conclua os seus mapeamentos antes de continuar.
+      finalize_upload: Conclua o envio do arquivo.
+    steps:
+      clean: Limpar
+      configure: Configurar
+      confirm: Confirmar
+      label: Etapa %{step}
+      map: Mapear
+      progress: Passo %{step} de %{total}
+      select: Selecionar
+      upload: Enviar
+    success:
+      back_to_dashboard: Voltar ao painel
+      description: Seus dados foram importados com sucesso e estão prontos para uso.
+      title: Importação bem-sucedida
+      verification:
+        checked: Verificado
+        mismatches: Discrepâncias
+        status:
+          failed: Falhou
+          matched: Correspondente
+          mismatch: Discrepância
+          not_verified: Não verificado
+          reverted: Revertido
+        title: Verificação por leitura dos dados gravados
+    summary:
+      already_recorded: Já registrado
+      already_recorded_hint: Associada a uma transação já existente nesta conta e
+        marcada como conciliada.
+      awaiting_review: Aguardando importação
+      close: Fechar
+      extracted: Encontrado no extrato
+      fully_reconciled:
+        one: >-
+          Não foi necessário importar nada. A única transação do extrato já estava
+          registrada.
+        other: Não foi necessário importar nada. As %{count} transações já estavam
+          registradas.
+      imported: Importado como novo
+      statement_evidence_html: Conciliado com %{statement}.
+      subtitle: O que aconteceu a cada transação neste extrato em %{account}.
+      subtitle_no_account: O que aconteceu a cada transação neste extrato.
+      title: Resumo da importação
+    type_labels:
+      account_import: Importação de contas
+      actual_import: Importação do Actual
+      category_import: Importação de categorias
+      document_import: Importação de documentos
+      merchant_import: Importação de estabelecimentos
+      mint_import: Importação do Mint
+      pdf_import: Importação de PDF
+      qif_import: Importação QIF
+      rule_import: Importação de regras
+      sure_import: Importação do Sure
+      trade_import: Importação de negociações
+      transaction_import: Importação de transações
+      ynab_import: Importação do YNAB
+    update:
+      account_locked: >-
+        Esta importação já foi publicada e sua conta não pode ser alterada. Reverta
+        a importação primeiro se precisar importar os dados para outra conta.
+      account_saved: Conta salva.
+      invalid_account: Conta não encontrada.

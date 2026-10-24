@@ -1,0 +1,141 @@
+---
+nl:
+  fio_item:
+    sync:
+      status:
+        calculating: Saldi berekenen…
+        checking_setup: Rekeningconfiguratie controleren…
+        needs_setup:
+          other: "%{count} rekeningen moeten worden ingesteld…"
+          one: 1 rekening moet worden ingesteld…
+        processing: Transacties verwerken…
+        importing: Afschrift importeren uit Fio…
+    sync_status:
+      all_synced:
+        other: "%{count} rekeningen gesynchroniseerd"
+        one: 1 rekening gesynchroniseerd
+      partial: "%{linked} gesynchroniseerd, %{unlinked} nog in te stellen"
+      no_accounts: Nog geen rekening gevonden
+    errors:
+      account_mismatch: Dit token hoort bij een andere Fio-rekening dan de rekening die deze koppeling al synchroniseert. Voeg het toe als aparte koppeling.
+      account_processing_failed: Fio-rekening synchroniseren niet mogelijk
+      account_sync_schedule_failed: Synchronisatie van de Fio-rekening inplannen niet mogelijk
+      history_locked: Fio heeft deze afschriftperiode geweigerd. Ontgrendel de volledige rekeninggeschiedenis in internetbankieren onder Settings → API en synchroniseer binnen 10 minuten opnieuw.
+      statement_fetch_failed: Afschrift ophalen bij Fio niet mogelijk
+      statement_too_large: Het afschrift bevat meer transacties dan Fio in één verzoek aanbiedt. Kies een latere startdatum voor synchronisatie en synchroniseer opnieuw.
+      sync_failed: Fio-koppeling synchroniseren niet mogelijk
+  fio_items:
+    fio_item:
+      error: Fout
+      status_never: Nooit gesynchroniseerd
+      delete: Verwijderen
+      deletion_in_progress: Verwijderen wordt uitgevoerd
+      no_accounts_description: Fio vermeldt de rekening alleen in een afschrift. Deze verschijnt daarom na de eerste geslaagde synchronisatie.
+      no_accounts_title: Nog geen rekening geïmporteerd
+      requires_update: Nieuw token nodig
+      requires_update_description: Fio heeft het token voor deze koppeling geweigerd. Maak in internetbankieren onder Settings → API een nieuw alleen-lezen token aan.
+      setup_action: Rekening instellen
+      setup_description: De rekening waartoe dit token toegang geeft, is nog niet aan een Sure-rekening gekoppeld.
+      setup_needed: Rekening moet worden ingesteld
+      status_with_summary: "%{timestamp} geleden gesynchroniseerd · %{summary}"
+      sync_now: Nu synchroniseren
+      syncing: Synchroniseren
+      update_token: Token bijwerken
+      requires_update_title: Nieuw token nodig
+    provider_panel:
+      disconnect: Ontkoppelen
+      last_synced: "%{timestamp} geleden gesynchroniseerd"
+      never_synced: Nooit gesynchroniseerd
+      syncing: Synchroniseren…
+      connection_name_label: Naam van de koppeling
+      sync: Synchroniseren
+      update_connection: Koppeling bijwerken
+      sync_start_date_label: Transacties importeren vanaf
+      account_needs_setup: Nog niet aan een Sure-rekening gekoppeld.
+      add_connection: Fio banka-koppeling toevoegen
+      connected_account: Gekoppelde rekening
+      connection_name_placeholder: Mijn Fio-rekening
+      disconnect_confirm: Weet je zeker dat je %{name} wilt ontkoppelen?
+      keep_token_placeholder: Laat leeg om het bestaande token te behouden
+      no_account_yet: Nog geen rekening — de eerste synchronisatie zoekt de rekening waartoe dit token toegang geeft.
+      one_account_notice: Elk token geeft toegang tot één Fio-rekening. Voeg daarom een koppeling toe voor elke rekening die je wilt bijhouden. Een token mag eenmaal per 30 seconden worden gebruikt; een synchronisatie die eerder binnenkomt, wordt bij de volgende meegenomen.
+      requires_update_notice: Fio heeft dit token geweigerd. Tokens zijn maximaal 180 dagen geldig, tenzij ze bij elke banklogin automatisch worden verlengd. Maak onder Settings → API een nieuw alleen-lezen token aan en plak het hieronder.
+      sync_start_date_hint: Fio levert zonder extra autorisatie de laatste 90 dagen. Voor oudere gegevens ontgrendel je de volledige rekeninggeschiedenis in internetbankieren onder Settings → API (hangslotpictogram). Dit geeft je 10 minuten de tijd om te synchroniseren.
+      token_label: API-token (alleen-lezen)
+      token_placeholder: Plak het token van 64 tekens
+      default_connection_name: Fio banka-koppeling
+      requires_update: Nieuw token nodig
+      setup_accounts: Rekening instellen
+    select_accounts:
+      cancel: Annuleren
+      link_account: Rekening koppelen
+      account_type_label: Rekeningtype
+      already_linked: De rekening van deze koppeling is al aan een Sure-rekening gekoppeld.
+      awaiting_first_sync: Fio heeft nog geen rekening voor dit token gemeld. Synchroniseer en keer daarna terug.
+      description: Dit token geeft toegang tot één rekening. Kies hoe je die in Sure wilt bijhouden.
+      title: Je Fio-rekening koppelen
+      no_credentials_configured: Stel Fio banka eerst in bij de aanbiederinstellingen.
+      sync_now: Nu synchroniseren
+    select_existing_account:
+      cancel: Annuleren
+      link_account: Rekening koppelen
+      description: Koppel de rekening waartoe dit token toegang geeft aan de rekening die je hebt gekozen.
+      title: Fio-rekening koppelen aan %{account_name}
+      account_already_linked: Deze rekening is al aan een aanbieder gekoppeld.
+      already_linked: De rekening van deze koppeling is al aan een Sure-rekening gekoppeld.
+      awaiting_first_sync: Fio heeft nog geen rekening voor dit token gemeld. Synchroniseer en keer daarna terug.
+      no_credentials_configured: Stel Fio banka eerst in bij de aanbiederinstellingen.
+      sync_now: Nu synchroniseren
+    setup_accounts:
+      cancel: Annuleren
+      account_type_label: Rekeningtype
+      account_already_handled: De rekening van deze koppeling is al gekoppeld of overgeslagen.
+      account_types:
+        skip: Overslaan
+      choose_account_type: Kies een rekeningtype
+      choose_account_type_description: Sla deze rekening over als je haar niet wilt bijhouden.
+      close: Sluiten
+      create_account: Rekening aanmaken
+      nothing_to_setup: Niets om in te stellen
+      subtitle: Kies hoe de rekening waartoe dit token toegang geeft in Sure moet verschijnen.
+      awaiting_first_sync: Nog geen rekening gevonden
+      awaiting_first_sync_description: Fio vermeldt de rekening alleen in een afschrift. Deze verschijnt daarom na de eerste geslaagde synchronisatie.
+      sync_now: Nu synchroniseren
+      title: Je Fio-rekening koppelen
+    account_types:
+      depository: Betaal- of spaarrekening
+      loan: Lening, hypotheek of roodstand
+    complete_account_setup:
+      creation_failed: De Sure-rekening kon niet worden aangemaakt.
+      no_account: Er hoefde geen Fio-rekening te worden ingesteld.
+      skipped: De Fio-rekening is overgeslagen.
+      success: "%{account_name} aangemaakt."
+      unsupported_account_type: Fio ondersteunt dat rekeningtype niet.
+    create:
+      success: Fio banka-koppeling opgeslagen.
+      token_required: Plak het API-token uit Fio-internetbankieren.
+    destroy:
+      success: Verwijdering van de Fio banka-koppeling ingepland.
+      unlink_failed: Fio banka-koppeling ontkoppelen niet mogelijk
+    link_accounts:
+      link_failed: De rekening kon niet worden gekoppeld.
+      no_account_found: Voor deze koppeling is geen niet-gekoppelde Fio-rekening gevonden.
+      no_credentials_configured: Stel Fio banka eerst in bij de aanbiederinstellingen.
+      success: Je Fio-rekening gekoppeld aan %{account_name}.
+      unsupported_account_type: Fio ondersteunt dat rekeningtype niet.
+    link_existing_account:
+      account_already_linked: Deze rekening is al aan een aanbieder gekoppeld.
+      fio_account_already_linked: Deze Fio-rekening is al gekoppeld.
+      no_account_selected: Er was geen Fio-rekening beschikbaar om te koppelen.
+      unsupported_account_type: Fio kan alleen geldrekeningen en leningen synchroniseren.
+      success: Je Fio-rekening gekoppeld aan %{account_name}.
+    update:
+      success: Fio banka-koppeling bijgewerkt.
+  family:
+    fio:
+      create_fio_item:
+        default_name: Fio banka-koppeling
+  providers:
+    fio:
+      description: Synchroniseer een Fio banka-rekening met een alleen-lezen API-token
+      name: Fio banka

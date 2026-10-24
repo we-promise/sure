@@ -1,0 +1,36 @@
+---
+ro:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        month_of_year: Lună
+        frequency: Frecvență
+        day_of_month: Ziua lunii
+        interval: Interval
+        weekday: Ziua săptămânii
+        weekday_ordinal: Săptămâna din lună
+      recurring_transaction/recurrence_rules:
+        month_of_year: Lună
+        frequency: Frecvență
+        base: 'Regulă de recurență:'
+        day_of_month: Ziua lunii
+        interval: Interval
+        weekday: Ziua săptămânii
+        weekday_ordinal: Săptămâna din lună
+    errors:
+      models:
+        recurrence_rule:
+          attributes:
+            day_of_month:
+              not_allowed_for_weekly: nu se aplică unei reguli săptămânale
+            month_of_year:
+              not_allowed: se aplică doar unei reguli anuale
+              required_for_yearly: este obligatorie pentru o regulă anuală
+            weekday:
+              required_for_weekly: este obligatorie pentru o regulă săptămânală
+            weekday_ordinal:
+              not_allowed_for_weekly: nu se aplică unei reguli săptămânale
+              not_allowed_without_weekday: se aplică doar când este stabilită o zi
+                a săptămânii
+              required_with_weekday: este obligatorie când este stabilită o zi a săptămânii
+          day_spec_required: Alege exact una dintre o zi a lunii sau o zi a săptămânii

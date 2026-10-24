@@ -1,0 +1,8 @@
+---
+ro:
+  admin:
+    invitations:
+      destroy:
+        success: Invitația a fost ștearsă.
+      destroy_all:
+        success: Toate invitațiile pentru această familie au fost șterse.

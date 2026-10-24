@@ -1,0 +1,36 @@
+---
+nl:
+  plans:
+    show:
+      title: Financieel plan
+      subtitle: 'Bepaal waar je geld naartoe gaat: wat je uitgeeft en wat je spaart.'
+    budget_card:
+      days_left:
+        one: Nog 1 dag
+        other: Nog %{count} dagen
+      edit_budget: Budget bewerken
+      empty_body: Stel een maandelijks uitgavendoel en limieten per categorie in om te zien hoe deze maand verloopt.
+      of_total: van %{total}
+      percent_used: "%{percent}% gebruikt"
+      set_up: Budget voor deze maand instellen
+      title: Deze maand
+      top_categories: Grootste categorieën
+      view_budget: Volledig budget bekijken
+    goals_card:
+      active_count:
+        one: 1 actief
+        other: "%{count} actief"
+      active_goals: Actieve doelen
+      all_goals: Alle doelen
+      all_on_pace: Alles op schema
+      behind_count:
+        one: 1 achter op schema
+        other: "%{count} achter op schema"
+      new_goal: Nieuw doel
+      of_targets: van %{total} verdeeld over doelen
+      pending_count:
+        one: 1 openstaande toezegging
+        other: "%{count} openstaande toezeggingen"
+      pending_marker: in afwachting
+      runway: buffer voor %{months} mnd · %{pace}/mnd
+      title: Je doelen

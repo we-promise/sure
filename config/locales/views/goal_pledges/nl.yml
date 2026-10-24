@@ -1,0 +1,20 @@
+---
+nl:
+  goal_pledges:
+    new:
+      amount_label: Bedrag
+      account_label: Naar rekening
+      helper_manual: Sure legt dit vast bij je volgende handmatige saldowijziging en bevestigt de bijdrage.
+      helper_transfer: Sure zoekt naar een bijpassende storting op je gekoppelde rekening. De toezegging blijft 7 dagen openstaan en wordt automatisch bevestigd zodra Sure de storting vindt.
+      preview_nonzero: Komt op {percent}%, {newTotal} van {target}.
+      preview_reached: Je doel van {target} is bereikt.
+      preview_zero: Momenteel {current} van {target} gespaard.
+      submit: Toezegging vastleggen
+    create:
+      success: Toezegging vastgelegd. Sure bevestigt deze bij de volgende synchronisatie.
+    destroy:
+      not_open: Alleen openstaande toezeggingen kunnen worden geannuleerd.
+      success: Toezegging geannuleerd.
+    renew:
+      not_open: Alleen openstaande toezeggingen kunnen worden verlengd.
+      success: De termijn van de toezegging is met 7 dagen verlengd.

@@ -1,0 +1,310 @@
+---
+ro:
+  brex_items:
+    brex_item:
+      delete: Șterge conexiunea
+      deletion_in_progress: ștergere în curs...
+      error: Eroare
+      no_accounts_description: Această conexiune nu are încă conturi legate.
+      no_accounts_title: Niciun cont
+      setup_action: Configurează conturi noi
+      setup_needed: Conturi noi gata de configurare
+      status: Sincronizat acum %{timestamp}
+      status_never: Nu a fost sincronizat niciodată
+      syncing: Se sincronizează...
+      accounts_need_setup: Conturile necesită configurare
+      status_with_summary: Ultima sincronizare acum %{timestamp} - %{summary}
+      total: Total
+      unlinked: Neconectat
+      setup_description: 'Conturi conectate: %{linked} din %{total}. Alege tipurile
+        conturilor Brex nou importate.'
+    kinds:
+      cash: Numerar
+      card: Card
+    link_accounts:
+      all_already_linked:
+        one: Contul selectat (%{names}) este deja conectat
+        other: 'Toate cele %{count} conturi selectate sunt deja conectate: %{names}'
+        few: 'Toate cele %{count} conturi selectate sunt deja conectate: %{names}'
+      api_error: 'Eroare API: %{message}'
+      link_failed: Conectarea conturilor a eșuat
+      no_accounts_selected: Selectează cel puțin un cont
+      partial_success: 'S-au conectat cu succes %{created_count} cont(uri). %{already_linked_count}
+        cont(uri) erau deja conectate: %{already_linked_names}'
+      success:
+        one: S-a conectat cu succes %{count} cont
+        other: S-au conectat cu succes %{count} de conturi
+        few: S-au conectat cu succes %{count} conturi
+      invalid_account_names:
+        one: Nu se poate conecta un cont fără nume
+        other: Nu se pot conecta %{count} de conturi fără nume
+        few: Nu se pot conecta %{count} conturi fără nume
+      no_api_token: Tokenul API Brex nu a fost găsit. Configurează-l în setările furnizorului.
+      invalid_account_type: Tip de cont Brex neacceptat
+      partial_invalid: 'Conturi conectate cu succes: %{created_count}; conturi deja
+        conectate: %{already_linked_count}; conturi cu nume nevalide: %{invalid_count}'
+      select_connection: Alege o conexiune Brex înainte de a conecta conturile.
+    link_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor
+      api_error: 'Eroare API: %{message}'
+      missing_parameters: Lipsesc parametrii obligatorii
+      no_account_specified: Niciun cont specificat
+      invalid_account_name: Nu se poate conecta un cont fără nume
+      no_api_token: Tokenul API Brex nu a fost găsit. Configurează-l în setările furnizorului.
+      provider_account_already_linked: Acest cont Brex este deja conectat la alt cont
+      provider_account_not_found: Contul Brex nu a fost găsit
+      success: "%{account_name} a fost conectat cu succes la Brex"
+      select_connection: Alege o conexiune Brex înainte de a conecta conturile.
+    loading:
+      loading_title: Se încarcă
+      loading_message: Se încarcă conturile Brex...
+    provider_panel:
+      setup_accounts: Configurează conturile
+      connection_name_label: Numele conexiunii
+      disconnect: Deconectează
+      sync: Sincronizează
+      token_label: Token
+      update_connection: Actualizează conexiunea
+      keep_token_placeholder: Lasă necompletat pentru a păstra tokenul actual
+      add_connection: Adaugă o conexiune Brex
+      default_connection_name: Conexiune Brex
+      base_url_label: URL de bază (opțional)
+      base_url_placeholder: https://api.brex.com
+      connection_name_placeholder: Cont curent de afaceri
+      disconnect_confirm: Deconectezi %{name}?
+      disconnect_label: Deconectează %{name}
+      encryption_warning:
+        message: Configurează cheile de criptare Active Record înainte de a adăuga
+          tokenuri Brex în producție. Fără chei de criptare, Sure stochează datele
+          de autentificare și instantaneele Brex în text clar, la fel ca înregistrările
+          altor furnizori.
+        title: Criptarea bazei de date nu este configurată
+      instructions:
+        copy_token_html: Copiază tokenul și adaugă-l mai jos ca o conexiune denumită.
+          Sure stochează tokenul doar pentru sincronizarea acestei familii.
+        create_token: 'Creează un token API cu aceste domenii de acces doar pentru
+          citire: accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly,
+          transactions.card.readonly'
+        open_tokens: Mergi la setările de dezvoltator/tokenuri API Brex pentru compania
+          pe care vrei să o conectezi
+        sign_in_html: Accesează %{link} și autentifică-te în contul pe care vrei să-l
+          conectezi
+      sandbox_note_html: Folosește o conexiune denumită separată pentru fiecare companie/token
+        API Brex de sincronizat. Lasă URL-ul de bază necompletat pentru producție.
+        Mediul de test preliminar este limitat la testele aprobate de Brex și nu funcționează
+        cu tokenurile clienților.
+      token_placeholder: Lipește tokenul aici
+    select_accounts:
+      accounts_selected: conturi selectate
+      api_error: 'Eroare API: %{message}'
+      cancel: Anulează
+      link_accounts: Conectează conturile selectate
+      description: Selectează conturile pe care vrei să le conectezi la contul tău
+        %{product_name}.
+      no_api_token: Tokenul API Brex nu a fost găsit. Configurează-l în setările furnizorului.
+      no_name_placeholder: "(Fără nume)"
+      unexpected_error: A apărut o eroare neașteptată. Încearcă din nou mai târziu.
+      configure_name_in_brex: Importul nu este posibil — configurează numele contului
+        în Brex
+      no_credentials_configured: Configurează mai întâi tokenul API Brex în setările
+        furnizorului.
+      select_connection: Alege o conexiune Brex în setările furnizorului.
+      title: Selectează conturile Brex
+      no_accounts_found: Nu s-au găsit conturi. Verifică configurarea tokenului API.
+    select_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor
+      api_error: 'Eroare API: %{message}'
+      cancel: Anulează
+      link_account: Conectează contul
+      no_account_specified: Niciun cont specificat
+      no_api_token: Tokenul API Brex nu a fost găsit. Configurează-l în setările furnizorului.
+      no_name_placeholder: "(Fără nume)"
+      unexpected_error: A apărut o eroare neașteptată. Încearcă din nou mai târziu.
+      all_accounts_already_linked: Toate conturile Brex sunt deja conectate
+      configure_name_in_brex: Importul nu este posibil — configurează numele contului
+        în Brex
+      description: Selectează un cont Brex pentru a-l conecta cu acest cont. Tranzacțiile
+        vor fi sincronizate și deduplicate automat.
+      no_credentials_configured: Configurează mai întâi tokenul API Brex în setările
+        furnizorului.
+      select_connection: Alege o conexiune Brex în setările furnizorului.
+      title: Conectează %{account_name} cu Brex
+      no_accounts_found: Nu s-au găsit conturi Brex. Verifică configurarea tokenului
+        API.
+    setup_accounts:
+      account_types:
+        credit_card: Card de credit
+        other_asset: Alt activ
+        depository: Cont curent sau de economii
+        investment: Cont de investiții
+        loan: Împrumut sau credit ipotecar
+        skip: Omite acest cont
+      api_error: 'Eroare API: %{message}'
+      balance: Sold
+      cancel: Anulează
+      subtype_labels:
+        credit_card: ''
+        other_asset: ''
+        depository: 'Subtipul contului:'
+        investment: 'Tipul investiției:'
+        loan: 'Tipul împrumutului:'
+      subtypes:
+        investment:
+          brokerage: Cont de brokeraj
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: Plan 529
+          angel: Investiție de tip angel
+          hsa: Cont de economii pentru sănătate
+          ira: IRA tradițional
+          mutual_fund: Fond mutual
+          pension: Pensie
+          retirement: Pensie
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Thrift Savings Plan
+        depository:
+          cd: Certificat de depozit
+          checking: Cont curent
+          hsa: Cont de economii pentru sănătate
+          money_market: Piață monetară
+          savings: Economii
+        loan:
+          auto: Credit auto
+          mortgage: Credit ipotecar
+          other: Alt împrumut
+          student: Credit pentru studii
+      account_type_label: 'Tipul contului:'
+      create_accounts: Creează conturi
+      creating_accounts: Se creează conturile...
+      fetch_failed: Preluarea conturilor a eșuat
+      historical_data_range: 'Intervalul datelor istorice:'
+      no_accounts_to_setup: Nu există conturi de configurat
+      no_api_token: Tokenul API Brex nu a fost găsit. Configurează-l în setările furnizorului.
+      subtitle: Alege tipurile corecte pentru conturile importate
+      subtype_messages:
+        credit_card: Cardurile de credit vor fi configurate automat ca conturi de
+          card de credit.
+        other_asset: Nu sunt necesare opțiuni suplimentare pentru alte active.
+      sync_start_date_help: Alege de când vrei să sincronizezi istoricul tranzacțiilor.
+        Sunt disponibili cel mult 3 ani de istoric.
+      sync_start_date_label: 'Sincronizează tranzacțiile începând cu:'
+      all_accounts_linked: Toate conturile Brex au fost deja configurate.
+      choose_account_type: 'Alege tipul corect pentru fiecare cont Brex:'
+      title: Configurează conturile Brex
+    statuses:
+      ACTIVE: Activ
+      CLOSED: Închis
+      active: Activ
+      closed: Închis
+      FROZEN: Înghețat
+      frozen: Înghețat
+    sync:
+      success: Sincronizarea a început
+    sync_status:
+      no_accounts: Nu s-au găsit conturi
+      all_synced:
+        one: "%{count} cont sincronizat"
+        other: "%{count} de conturi sincronizate"
+        few: "%{count} conturi sincronizate"
+      partial_setup: 'Sincronizate: %{synced}; necesită configurare: %{pending}'
+    syncer:
+      calculating_balances: Se calculează soldurile...
+      accounts_need_setup:
+        other: "%{count} de conturi necesită configurare..."
+        one: "%{count} cont necesită configurare..."
+        few: "%{count} conturi necesită configurare..."
+      checking_account_configuration: Se verifică configurarea contului...
+      processing_transactions: Se procesează tranzacțiile...
+      importing_accounts: Se importă conturile din Brex...
+      account_processing_failed:
+        one: Procesarea a eșuat pentru %{count} cont Brex.
+        other: Procesarea a eșuat pentru %{count} de conturi Brex.
+        few: Procesarea a eșuat pentru %{count} conturi Brex.
+      account_sync_failed:
+        one: Sincronizarea pentru %{count} cont Brex nu a putut fi programată.
+        other: Sincronizarea pentru %{count} de conturi Brex nu a putut fi programată.
+        few: Sincronizarea pentru %{count} conturi Brex nu a putut fi programată.
+      accounts_failed:
+        one: Importul a eșuat pentru %{count} cont Brex.
+        other: Importul a eșuat pentru %{count} de conturi Brex.
+        few: Importul a eșuat pentru %{count} conturi Brex.
+      credentials_invalid: Token API Brex sau permisiuni de cont nevalide
+      failed: Sincronizarea a eșuat. Încearcă din nou sau contactează asistența.
+      import_failed: Importul Brex a eșuat.
+      transactions_failed:
+        one: Importul tranzacțiilor a avut erori pentru %{count} cont Brex.
+        other: Importul tranzacțiilor a avut erori pentru %{count} de conturi Brex.
+        few: Importul tranzacțiilor a avut erori pentru %{count} conturi Brex.
+    api_error:
+      settings_link: Verifică setările furnizorului
+      heading: Conectarea la Brex nu a fost posibilă
+      title: Eroare de conectare Brex
+      common_issues: 'Probleme frecvente:'
+      expired_credentials: Generează un token API nou în Brex.
+      expired_credentials_label: 'Date de autentificare expirate:'
+      invalid_token: Verifică tokenul API în setările furnizorului.
+      invalid_token_label: 'Token API nevalid:'
+      network: Verifică conexiunea la internet.
+      network_label: 'Problemă de rețea:'
+      permissions: Asigură-te că tokenul are domeniile de acces necesare pentru citirea
+        conturilor și tranzacțiilor.
+      permissions_label: 'Permisiuni insuficiente:'
+      service: API-ul Brex poate fi temporar indisponibil.
+      service_label: 'Serviciu indisponibil:'
+    complete_account_setup:
+      all_skipped: Toate conturile au fost omise. Nu a fost creat niciun cont.
+      creation_failed: 'Crearea conturilor a eșuat: %{error}'
+      no_accounts: Nu există conturi de configurat.
+      success: 'Conturi create cu succes: %{count}.'
+      creation_failed_count: 'Conturi care nu au putut fi create: %{count}.'
+      partial_skipped: 'Conturi create cu succes: %{created_count}; conturi omise:
+        %{skipped_count}.'
+      partial_success: 'Conturi create cu succes: %{created_count}; conturi pentru
+        care crearea a eșuat: %{failed_count}.'
+      unexpected_error: A apărut o eroare neașteptată.
+    errors:
+      unexpected_error: A apărut o eroare neașteptată. Încearcă din nou mai târziu.
+    institution_summary:
+      count:
+        one: "%{count} instituție"
+        other: "%{count} de instituții"
+        few: "%{count} instituții"
+      none: Nicio instituție conectată
+      one: "%{name}"
+    setup_required:
+      settings_link: Mergi la setările furnizorului
+      steps:
+        return_to_link: Revino aici pentru a conecta conturile
+        find_section_html: Găsește secțiunea <strong>Brex</strong>
+        enter_token: Introdu tokenul API Brex
+        open_settings_html: Mergi la <strong>Setări > Furnizori</strong>
+      title: Este necesară configurarea Brex
+      description: Înainte de a conecta conturile Brex, configurează tokenul API Brex.
+      heading: Tokenul API nu este configurat
+      setup_steps: 'Pașii configurării:'
+    subtype_select:
+      placeholder:
+        type: Selectează tipul
+        subtype: Selectează subtipul
+    account_metadata:
+      provider: Brex
+      separator: " • "
+    provider_connection:
+      default_name: Brex
+      description: Conectează folosind %{name}
+      default_description: Conectează-te la contul Brex
+      name: Brex - %{name}
+    create:
+      success: Conexiunea Brex a fost creată cu succes
+    default_connection_name: Conexiune Brex
+    destroy:
+      success: Conexiunea Brex a fost eliminată
+    index:
+      title: Conexiuni Brex
+    default_card_name: Card Brex
+    default_cash_name: Numerar Brex %{id}
+    entries:
+      default_name: Tranzacție Brex
+    update:
+      success: Conexiunea Brex a fost actualizată

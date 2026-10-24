@@ -1,0 +1,56 @@
+---
+ro:
+  period:
+    all_time:
+      label_short: Toate
+      comparison_label: față de început
+      label: Întreaga perioadă
+    custom:
+      comparison_label: "%{start_date} – %{end_date}"
+      label: Perioadă personalizată
+      label_short: Personalizată
+    current_month:
+      comparison_label: față de începutul lunii
+      label: Luna curentă
+      label_short: Luna până azi
+    current_week:
+      comparison_label: față de începutul săptămânii
+      label: Săptămâna curentă
+      label_short: Săpt. până azi
+    current_year:
+      comparison_label: față de începutul anului
+      label: Anul curent
+      label_short: Anul până azi
+    last_10_years:
+      comparison_label: față de acum 10 ani
+      label: Ultimii 10 ani
+      label_short: 10 ani
+    last_30_days:
+      comparison_label: față de ultimele 30 de zile
+      label: Ultimele 30 de zile
+      label_short: 30 z
+    last_365_days:
+      comparison_label: față de acum un an
+      label: Ultimele 365 de zile
+      label_short: 365 z
+    last_5_years:
+      comparison_label: față de acum 5 ani
+      label: Ultimii 5 ani
+      label_short: 5 ani
+    last_7_days:
+      comparison_label: față de săptămâna trecută
+      label: Ultimele 7 zile
+      label_short: 7 z
+    last_90_days:
+      comparison_label: față de trimestrul trecut
+      label: Ultimele 90 de zile
+      label_short: 90 z
+    last_day:
+      comparison_label: față de ieri
+      label: Ultima zi
+      label_short: 1 z
+    last_month:
+      comparison_label: față de luna trecută
+      label: Luna trecută
+      label_short: Luna tr.
+    range: "%{start_date} – %{end_date}"

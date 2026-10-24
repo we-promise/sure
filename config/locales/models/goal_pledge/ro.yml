@@ -1,0 +1,22 @@
+---
+ro:
+  activerecord:
+    attributes:
+      goal_pledge:
+        account: Cont
+        amount: Sumă
+        currency: Monedă
+        status: Stare
+        kind: Tip
+        expires_at: Expiră la
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Alege unul dintre conturile asociate obiectivului.
+            currency:
+              must_match_goal: Moneda angajamentului trebuie să fie aceeași cu moneda
+                obiectivului.
+          duplicate_open_pledge: Ai deja un angajament deschis pentru această sumă
+            în acest cont. Anulează-l sau prelungește-l înainte de a înregistra altul.

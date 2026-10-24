@@ -1,0 +1,33 @@
+---
+nl:
+  activerecord:
+    attributes:
+      recurring_transaction:
+        frequency_interval: Herhalingsinterval
+        payment_url: Betaallink
+    errors:
+      models:
+        recurring_transaction:
+          attributes:
+            account:
+              required_for_transfer: moet aanwezig zijn bij een terugkerende overboeking
+              wrong_family: moet tot dit huishouden behoren
+            anchor_date:
+              required_for_intervals: is verplicht wanneer een regel elke 2 of meer perioden wordt herhaald
+            bill_type:
+              transfer_shape_mismatch: kan alleen een overboeking zijn als een doelrekening is ingesteld
+            destination_account:
+              family_mismatch: moet tot hetzelfde huishouden behoren als de bronrekening
+              same_as_source: mag niet dezelfde zijn als de bronrekening
+              wrong_family: moet tot dit huishouden behoren
+            expected_amount_min:
+              greater_than_max: mag niet hoger zijn dan het verwachte maximumbedrag
+            payment_url:
+              invalid_scheme: moet een geldig http://- of https://-adres zijn
+          merchant_or_name_required: Een handelaar of naam is verplicht
+  recurring_transactions:
+    allocator:
+      exceeds_remaining: "%{amount} overschrijdt het resterende bedrag van %{remaining} voor deze cyclus"
+      missing_rate: geen wisselkoers van %{from} naar %{to}; voer een bedrag expliciet in
+      over_allocated: toewijzing van %{amount} overschrijdt de resterende %{capacity} %{currency} van de transactie
+      unmeasurable: deze transactie bevat een toewijzing die niet naar %{currency} kan worden omgerekend. Het resterende bedrag kan daarom niet worden bepaald. Voeg een wisselkoers voor %{date} toe of verwijder eerst de bestaande betaling

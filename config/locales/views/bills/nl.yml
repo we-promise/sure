@@ -1,0 +1,313 @@
+---
+nl:
+  bills:
+    all:
+      types:
+        subscription: Abonnement
+        income: Inkomsten
+        other: Overig
+        transfer: Overboeking
+        bill: Factuur
+        installment: Betalingsregeling
+      col_amount: Bedrag
+      col_name: Naam
+      col_status: Status
+      col_frequency: Frequentie
+      col_type: Type
+      status_filters:
+        paid: Betaald
+        ended: Genegeerd
+        paused: Gepauzeerd
+        due: Binnenkort verschuldigd
+        overdue: Achterstallig
+        partial: Gedeeltelijk betaald
+      subscription_active: Actief
+      col_next: Volgende vervaldatum
+      col_actions: Acties
+      any_status: Elke status
+      any_type: Elk type
+      monthly_equivalent: "%{amount}/mnd"
+      next_short: volgende %{date}
+      no_matches_description: Probeer een filter of de zoekopdracht te wissen.
+      no_matches_title: Geen overeenkomsten
+      search_placeholder: Facturen zoeken
+      sort_amount: Op bedrag
+      sort_due: Op volgende vervaldatum
+      sort_name: Op naam
+      subscription_annual: Per jaar
+      subscription_monthly: Per maand
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
+      subscription_price_changes: Prijswijzigingen dit jaar
+    index:
+      needs_attention: Aandacht vereist
+      title: Facturen
+      this_month: Deze maand
+      needs_review: Controle vereist
+      add_bill: Factuur toevoegen
+      add_income: Inkomstenbron toevoegen
+      accept: Toepassen
+      kpi_past_due: Streefdatum verstreken
+      all_automatic: allemaal automatisch betaald
+      attention_overdue_total: "%{amount} achterstallig"
+      confidence: "%{percent}% overeenkomst"
+      detected_review:
+        one: We hebben 1 terugkerende betaling in je transacties gevonden. Controleer deze zodat de totalen overeenkomen met wat je werkelijk betaalt.
+        other: We hebben %{count} terugkerende betalingen in je transacties gevonden. Controleer ze zodat de totalen overeenkomen met wat je werkelijk betaalt.
+      detected_review_action: Controleren
+      dormant: Inactief
+      empty:
+        action: Terugkerende transacties zoeken
+        description: Facturen zijn je terugkerende uitgaven. Sure vindt ze automatisch in je transactiegeschiedenis. Je kunt aan elke factuur een betaallink toevoegen om direct vanaf hier te betalen.
+        no_history_description: Nog geen transacties. Koppel een rekening of importeer de geschiedenis om Sure je facturen automatisch te laten vinden, of voeg er handmatig een toe.
+        title: Nog geen facturen
+      hero_next_seven: "%{amount} verschuldigd in de komende 7 dagen"
+      hero_past_due: "%{amount} achterstallig"
+      kpi_next_seven: Verschuldigd komende 7 dagen
+      kpi_paid: Deze maand betaald
+      kpi_remaining: Deze maand resterend
+      later: Na deze maand
+      left_to_pay: nog te betalen
+      needs_action_count:
+        one: 1 vereist je actie
+        other: "%{count} vereisen je actie"
+      notice_price: 'Prijs van %{name} gewijzigd: %{from} → %{to} (%{percent})'
+      notice_renewal: "%{name} wordt verlengd op %{date}"
+      notice_trial: De proefperiode van %{name} eindigt op %{date}
+      notices_routine:
+        one: 1 kleinere wijziging
+        other: "%{count} kleinere wijzigingen"
+      paid_count:
+        one: 1 factuur voldaan
+        other: "%{count} facturen voldaan"
+      paid_so_far: Tot nu toe betaald
+      recurring_annual: "%{amount} per jaar"
+      recurring_label: Terugkerende verplichting
+      recurring_monthly: "%{amount} per maand"
+      reject: Niet deze factuur
+      review_with_ai: Controleren met AI
+      suggestion_line: "%{entry} lijkt een betaling van %{bill}"
+      suggestion_unknown_entry: Een transactie
+      summary_count:
+        one: 1 factuur verschuldigd
+        other: "%{count} facturen verschuldigd"
+      summary_label: Deze maand verschuldigd
+      unconvertible:
+        one: 1 factuur is niet meegenomen; geen wisselkoers beschikbaar
+        other: "%{count} facturen zijn niet meegenomen; geen wisselkoers beschikbaar"
+      overdue: Achterstallig
+      paid_this_month: Deze maand betaald
+      summary_needs_action:
+        one: 1 vereist je actie
+        other: "%{count} vereisen je actie"
+    detail:
+      year: Jaar
+      notes: Notities
+      manual_payment: Handmatige betaling
+      spent_per_year: Uitgegeven
+      around: rond %{date}
+      average: Gemiddeld betaald
+      avg_payment: Gem. betaling
+      cancelled_chip: Opgezegd op %{date}
+      current: Huidig
+      history: Geschiedenis
+      history_aria: Betalingen in de afgelopen twaalf maanden
+      history_title: Afgelopen 12 maanden
+      key_metrics: Per jaar
+      last_account: Laatst gebruikte rekening
+      next_payment: Volgende betaling
+      payment_count:
+        one: 1 betaling
+        other: "%{count} betalingen"
+      price_change_line: "%{from} → %{to}"
+      price_changes: Prijswijzigingen
+      range: "%{min} tot %{max}"
+      recent_payments: Recente betalingen
+      renews_chip: Wordt verlengd op %{date}
+      rule_aliases: Komt ook overeen met %{names}
+      rule_amount_range: van %{min} tot %{max}
+      rule_learned_tolerance: Bedragen binnen %{percent} van het gebruikelijke bedrag passen bij deze factuur
+      rule_named: "%{name}"
+      rules: Hoe deze factuur wordt gekoppeld
+      trial_chip: Proefperiode eindigt op %{date}
+      upcoming: Binnenkort
+      ytd: Dit jaar betaald
+      annualized: Per jaar
+    smart_configurations:
+      show:
+        field_amount: Bedrag
+        field_kind: Soort
+        field_name: Naam
+        field_category: Categorie
+        uncategorized: Zonder categorie
+        field_schedule: Schema
+        autopay_on: Op
+        field_autopay: Automatische betaling
+        apply: Selectie toepassen
+        autopay_off: Uit
+        failed: Deze factuur kon momenteel niet worden geanalyseerd. De configuratie is niet gewijzigd.
+        intro: Vink de wijzigingen aan die je wilt toepassen. Niet-aangevinkte waarden blijven precies zoals ze zijn.
+        no_changes: Deze factuur komt al overeen met de betalingsgeschiedenis. Er hoeft niets te worden gewijzigd.
+        title: AI-suggesties voor %{name}
+        trigger: Door AI laten instellen
+    calendar:
+      today: Vandaag
+      empty_month: Deze maand vervallen geen facturen.
+      month_totals: "%{expected} verwacht · %{paid} betaald"
+      next_month: Volgende maand
+      previous_month: Vorige maand
+      reset_feed: Link opnieuw instellen
+      subscribe_ical: Abonneren (iCal)
+    due_label:
+      due_since: Vervalt op %{date}
+      snoozed: Uitgesteld tot %{date}
+      overdue:
+        one: 1 dag te laat, verviel op %{date}
+        other: "%{count} dagen te laat, verviel op %{date}"
+      settled: Verviel op %{date}
+      today: Vandaag verschuldigd
+      upcoming:
+        one: Morgen verschuldigd, %{date}
+        other: Over %{count} dagen verschuldigd, %{date}
+    month_pulse:
+      date_today: Vandaag
+      bill_count:
+        one: 1 factuur
+        other: "%{count} facturen"
+      date_tomorrow: Morgen
+      next_up: Als volgende
+      pulse_bar_aria: "%{percent}% van de facturen van deze maand betaald"
+      pulse_next_seven: komende 7 dagen
+      pulse_overdue: achterstallig
+      pulse_paid: betaald
+      view_calendar: Kalender bekijken
+      left_to_pay: nog te betalen
+      unconvertible:
+        one: 1 factuur is niet meegenomen; geen wisselkoers beschikbaar
+        other: "%{count} facturen zijn niet meegenomen; geen wisselkoers beschikbaar"
+    paid_label: Betaald
+    partial_progress: "%{paid} van %{expected} betaald"
+    row_today: Vandaag
+    summary:
+      paid_headline: "%{amount} betaald"
+      remaining: "%{amount} resterend"
+      cost_line: Gemiddeld %{average} per betaling, ongeveer %{annualized} per jaar
+    view_full_bill: Volledige factuur bekijken
+    paycheck:
+      of_total: van %{amount}
+      add_income: Inkomstenbron toevoegen
+      empty:
+        action: Inkomstenbron toevoegen
+        description: Voeg je inkomsten toe om te zien wat elke betaaldag moet dekken. Gedetecteerde ontvangsten bepalen nooit zelfstandig je betaaldagen; dat doe jij.
+        title: Leg je inkomstenschema vast
+      all_clear:
+        description: Tussen nu en %{date} vervallen geen facturen. In die periode is dus niets daarvoor gereserveerd.
+        title: Niets te dekken
+      allocation_aria: Van %{income} aan inkomsten is %{due} nu verschuldigd, %{reserved} gereserveerd voor later en %{safe} veilig te besteden.
+      allocation_aria_short: "%{income} aan inkomsten gaat naar de hier vastgelegde verplichtingen en er is nog %{short} nodig."
+      before_next_paycheck: Vóór %{date}
+      bills_before_payday:
+        one: Facturen vóór je volgende betaaldag · 1
+        other: Facturen vóór je volgende betaaldag · %{count}
+      bills_this_period:
+        one: Facturen deze periode · 1
+        other: Facturen deze periode · %{count}
+      bridge_amount: "· %{amount} verschuldigd"
+      bridge_split: Verschuldigd vóór %{date}, gedekt door de %{cash} op je rekeningen.
+      due_this_period: Deze periode verschuldigd
+      income_amount: "%{amount} inkomsten"
+      income_detected: Automatisch herkend; bepaalt geen betaaldagen
+      income_paused: Gepauzeerd, niet ingepland
+      income_section_title: Inkomstenschema
+      income_source_count:
+        one: "%{count} inkomstenbron"
+        other: "%{count} inkomstenbronnen"
+      next_on: Volgende %{date}
+      no_income_arriving: Er komen geen inkomsten binnen
+      no_upcoming_income: Vanaf nu zijn geen inkomsten ingepland.
+      period_source: " · %{source}"
+      period_source_multiple: " · %{count} inkomstenbronnen"
+      reserved_ahead: Vooruit gereserveerd
+      reserved_footer:
+        one: Vooruit gereserveerd voor 1 latere factuur
+        other: Vooruit gereserveerd voor %{count} latere facturen
+      review_plan: Plan controleren
+      safe_after_bills: Veilig te besteden na facturen
+      safe_short: Veilig
+      short_after_bills: Tekort na facturen
+      short_short: Tekort
+      shortfall_amount: "· %{amount}"
+      shortfall_label: Tekort vóór je volgende betaaldag
+      shortfall_largest: 'Grootste komende verplichting:'
+      shortfall_split: "%{obligations} is verschuldigd vóór %{date} en op je rekeningen staat %{cash}."
+      unconvertible:
+        one: 1 verplichting is niet meegenomen; geen wisselkoers beschikbaar
+        other: "%{count} verplichtingen zijn niet meegenomen; geen wisselkoers beschikbaar"
+      bridge_label: Vóór je volgende salaris
+      income_next_payday: volgende %{date}
+      manage: Beheren
+    views:
+      overview: Overzicht
+      all: Alle facturen
+      aria_label: Factuurweergaven
+      calendar: Kalender
+      paycheck: Inkomstenplan
+    add_bill: Factuur toevoegen
+    detect:
+      already_running: Detectie is al bezig. Kom zo terug.
+      found:
+        one: 1 mogelijke factuur gevonden. Controleer deze hieronder.
+        other: "%{count} mogelijke facturen gevonden. Controleer ze hieronder."
+      none_found: Geen nieuwe terugkerende patronen gevonden. Je kunt facturen handmatig toevoegen.
+    show:
+      edit: Factuur bewerken
+    attention:
+      overdue:
+        other: "%{count} dagen te laat"
+        one: 1 dag te laat
+      amount_changed: Bedrag gewijzigd
+      needs_review: Koppeling moet worden gecontroleerd
+      partial: Gedeeltelijk · nog %{amount}
+    add_payment: Betaling toevoegen
+    ai_prompts:
+      due_before_paycheck: Wat moet ik vóór mijn volgende salaris betalen?
+      monthly_subscriptions: Hoeveel betaal ik maandelijks aan abonnementen?
+      safe_to_spend: Hoeveel kan ik deze periode veilig uitgeven?
+      subscriptions_up: Welke abonnementen zijn dit jaar duurder geworden?
+    amount_range: varieert van %{min} tot %{max}
+    cancelled_still_scheduled: Je hebt dit als opgezegd gemarkeerd op %{date}, maar het staat nog ingepland. Toekomstige facturen blijven daarom verschijnen.
+    debt_payment: "· schuldbetaling"
+    feed:
+      calendar_name: Sure Facturen
+    find_payment: Betaling zoeken
+    installment_progress: Betaling %{done_plus_one} van %{total}
+    manage: Beheren
+    manage_payments: Betalingen beheren
+    match:
+      amount_off: "%{amount} verschil"
+      days_after:
+        one: 1 dag na vervaldatum
+        other: "%{count} dagen na vervaldatum"
+      days_before:
+        one: 1 dag vóór vervaldatum
+        other: "%{count} dagen vóór vervaldatum"
+      due_date: Vervaldatum komt overeen
+      exact_amount: Exact bedrag
+      name_matches: Naam komt overeen
+      same_merchant: Dezelfde handelaar
+    paid_from: vanaf %{account}
+    paid_over: "%{paid} betaald, meer dan verwacht"
+    paid_over_short: Betaald, te veel
+    pane:
+      close: Details inklappen
+    pay_period:
+      before_next_paycheck: Vóór je volgende salaris
+      due_before_date: "%{amount} verschuldigd vóór %{date}"
+      paycheck_on: Salaris op %{date}
+    possible_duplicate: Mogelijk duplicaat
+    remaining_label: resterend
+    reset_feed_token:
+      confirm: De kalenderfeedlink opnieuw instellen? Alle eerder gedeelde links werken dan niet meer.
+      done: Feedlink opnieuw ingesteld. Kalenderapps met de oude link worden niet meer bijgewerkt; abonneer je opnieuw met de nieuwe link.
+    resolve: Oplossen
+    review_match: Koppeling controleren
+    row_overdue: Achterstallig

@@ -4,8 +4,10 @@ nb:
     access_denied: Tilgang nektet
     create:
       success: Eksport startet. Du vil kunne laste den ned snart.
-    delete_confirmation: Er du sikker på at du vil slette denne eksporten? Denne handlingen kan ikke angres.
-    delete_failed_confirmation: Er du sikker på at du vil slette denne mislykkede eksporten?
+    delete_confirmation: Er du sikker på at du vil slette denne eksporten? Denne handlingen
+      kan ikke angres.
+    delete_failed_confirmation: Er du sikker på at du vil slette denne mislykkede
+      eksporten?
     destroy:
       success: Eksport slettet
     export_not_ready: Eksport ikke klar for nedlasting
@@ -28,4 +30,28 @@ nb:
         actions:
           delete: Slett
           download: Laste ned
+          confirm_mark_failed: Denne eksporten har vært inaktiv en stund, og bakgrunnsjobben
+            ble sannsynligvis avbrutt. Vil du merke den som mislykket? Du kan opprette
+            en ny eksport med en gang.
+          mark_failed: Merk som mislykket
       empty: Ingen eksporter ennå.
+    new:
+      cancel: Avbryt
+      note_label: Notat
+      accounts_and_balances: Alle kontoer og saldoer
+      categories_tags_rules: Kategorier, tagger og regler
+      dialog_subtitle: Last ned alle de økonomiske dataene dine
+      dialog_title: Eksporter dataene dine
+      export_data: Eksporter data
+      investment_trades: Investeringshandler
+      note_description: Denne eksporten inneholder alle dataene dine, men bare noen
+        av dem kan importeres tilbake via CSV-import. Vi støtter import av kontoer,
+        transaksjoner (med kategorier og tagger) og handler. Andre kontodata kan ikke
+        importeres og er bare til eget arkiv.
+      transaction_history: Transaksjonshistorikk
+      whats_included: 'Dette er inkludert:'
+    cancel:
+      cancelled: Eksporten er merket som mislykket. Du kan opprette en ny eksport
+        med en gang.
+      not_cancellable: Denne eksporten kan ikke merkes som mislykket nå. Bakgrunnsjobben
+        kan fortsatt kjøre. Prøv igjen når den har vært inaktiv i én time.

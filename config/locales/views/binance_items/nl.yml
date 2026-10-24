@@ -26,6 +26,7 @@ nl:
         other: "%{count} accounts geïmporteerd"
       none_selected: Geen accounts geselecteerd
       no_accounts: Geen accounts om te importeren
+      invalid_sync_start_date: De startdatum voor synchronisatie moet een geldige datum in het verleden zijn.
     binance_item:
       provider_name: Binance
       syncing: Synchroniseren...
@@ -37,8 +38,8 @@ nl:
           one: "%{count} account gesynchroniseerd"
           other: "%{count} accounts gesynchroniseerd"
         partial_sync: "%{linked_count} gesynchroniseerd, %{unlinked_count} moeten worden ingesteld"
-      status: "Laatst gesynchroniseerd %{timestamp} geleden"
-      status_with_summary: "Laatst gesynchroniseerd %{timestamp} geleden - %{summary}"
+      status: Laatst gesynchroniseerd %{timestamp} geleden
+      status_with_summary: Laatst gesynchroniseerd %{timestamp} geleden - %{summary}
       status_never: Nooit gesynchroniseerd
       update_credentials: Inloggegevens bijwerken
       delete: Verwijderen
@@ -48,13 +49,13 @@ nl:
       setup_description: Selecteer welke Binance-portefeuilles u wilt volgen.
       setup_action: Account importeren
       import_accounts_menu: Account importeren
-      stale_rate_warning: "Het saldo is bij benadering — de exacte wisselkoers voor %{date} was niet beschikbaar. Wordt bijgewerkt bij de volgende synchronisatie."
+      stale_rate_warning: Het saldo is bij benadering — de exacte wisselkoers voor %{date} was niet beschikbaar. Wordt bijgewerkt bij de volgende synchronisatie.
     select_existing_account:
       title: Binance-account koppelen
       no_accounts_found: Geen Binance-accounts gevonden.
       wait_for_sync: Wacht tot Binance klaar is met synchroniseren
       check_provider_health: Controleer of uw Binance-API-inloggegevens geldig zijn
-      currently_linked_to: "Momenteel gekoppeld aan: %{account_name}"
+      currently_linked_to: 'Momenteel gekoppeld aan: %{account_name}'
       link: Koppelen
       cancel: Annuleren
     link_existing_account:

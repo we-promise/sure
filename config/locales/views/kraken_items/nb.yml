@@ -1,0 +1,90 @@
+---
+nb:
+  kraken_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} konto må konfigureres"
+        other: "%{count} kontoer må konfigureres"
+      calculating_balances: Beregner saldoer...
+      checking_configuration: Kontrollerer kontooppsettet...
+      checking_credentials: Kontrollerer påloggingsopplysninger...
+      processing_accounts: Behandler kontodata...
+      credentials_invalid: Ugyldige API-opplysninger for Kraken. Kontroller API-nøkkelen
+        og hemmeligheten.
+      importing_accounts: Importerer kontoer fra Kraken...
+  kraken_items:
+    create:
+      default_name: Kraken
+      success: Tilkoblet Kraken. Børskontoen din synkroniseres.
+    kraken_item:
+      delete: Slett
+      import_accounts_menu: Importer konto
+      no_accounts_title: Ingen kontoer funnet
+      provider_name: Kraken
+      setup_action: Importer konto
+      status: Sist synkronisert for %{timestamp} siden
+      status_never: Aldri synkronisert
+      status_with_summary: Sist synkronisert for %{timestamp} siden – %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} konto synkronisert"
+          other: "%{count} kontoer synkronisert"
+        no_accounts: Ingen kontoer funnet
+        partial_sync: "%{linked_count} synkronisert, %{unlinked_count} må konfigureres"
+      syncing: Synkroniserer...
+      deletion_in_progress: Sletter...
+      reconnect: Påloggingsopplysningene må oppdateres
+      setup_needed: Kontoen er klar til import
+      no_accounts_message: Kraken-børskontoen vises her etter synkronisering.
+      setup_description: Importer denne Kraken-tilkoblingen som en kryptobørskonto.
+      stale_rate_warning: Saldoen er omtrentlig fordi nøyaktig valutakurs for %{date}
+        ikke var tilgjengelig. Den oppdateres ved neste synkronisering.
+    provider_connection:
+      default_name: Kraken
+      default_description: Koble til en Kraken-børskonto
+      description: Koble til %{name}
+      name: Kraken – %{name}
+    select_existing_account:
+      cancel: Avbryt
+      link: Koble til
+      check_provider_health: Kontroller at API-opplysningene for Kraken er gyldige.
+      no_accounts_found: Ingen Kraken-kontoer funnet.
+      title: Koble til Kraken-konto
+      wait_for_sync: Vent til Kraken er ferdig med å synkronisere.
+    setup_accounts:
+      accounts_count:
+        one: "%{count} konto tilgjengelig"
+        other: "%{count} kontoer tilgjengelige"
+      cancel: Avbryt
+      select_all: Velg alle
+      creating: Importerer...
+      import_selected: Importer valgte
+      instructions: Kraken importerer én samlet kryptobørskonto for denne tilkoblingen,
+        med bare beholdninger og utførte spothandler.
+      no_accounts: Alle Kraken-kontoer er importert.
+      subtitle: Velg børskontoen du vil følge
+      title: Importer Kraken-konto
+    complete_account_setup:
+      no_accounts: Ingen kontoer å importere
+      none_selected: Ingen kontoer valgt
+      success:
+        one: Importerte %{count} konto
+        other: Importerte %{count} kontoer
+    destroy:
+      success: Kraken-tilkoblingen er planlagt slettet.
+    link_accounts:
+      select_connection: Velg en Kraken-tilkobling før du kobler til kontoer.
+    link_existing_account:
+      errors:
+        invalid_kraken_account: Ugyldig Kraken-konto
+        kraken_account_already_linked: Denne Kraken-kontoen er allerede tilkoblet
+        only_manual: Bare manuelle kryptobørskontoer uten leverandørtilkobling kan
+          kobles til Kraken
+      select_connection: Velg en Kraken-tilkobling før du kobler til kontoer.
+      success: Koblet til Kraken-kontoen
+    select_accounts:
+      no_credentials_configured: Legg til API-opplysninger for Kraken før du konfigurerer
+        kontoer.
+      select_connection: Velg en Kraken-tilkobling i leverandørinnstillingene.
+    update:
+      success: Kraken-tilkoblingen er oppdatert.

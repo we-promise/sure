@@ -1,0 +1,12 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        rule:
+          duplicate_actions: Regula nu poate avea acțiuni duplicate %{types}
+          min_actions: trebuie să aibă cel puțin o acțiune
+          nested_conditions: Condițiile compuse nu pot fi imbricate
+  rule:
+    conditions:
+      unsupported_label: Neacceptat (%{type})

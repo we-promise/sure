@@ -1,4 +1,11 @@
 ---
 nl:
   provider_warnings:
-    limited_investment_data: "Investeringsgegevens van deze provider zijn beperkt. Activiteitslabels (Koop, Verkoop, Dividend) zijn niet beschikbaar, wat de nauwkeurigheid van het budget kan beïnvloeden. Overweeg regels te maken om investeringstransacties uit te sluiten of te categoriseren."
+    limited_investment_data: Investeringsgegevens van deze provider zijn beperkt. Activiteitslabels (Koop, Verkoop, Dividend) zijn niet beschikbaar, wat de nauwkeurigheid van het budget kan beïnvloeden. Overweeg regels te maken om investeringstransacties uit te sluiten of te categoriseren.
+    lunchflow_accounts_failed:
+      one: 'Lunchflow-import: bijwerken van %{count} rekening mislukt'
+      other: 'Lunchflow-import: bijwerken van %{count} rekeningen mislukt'
+    lunchflow_import_error: 'Lunchflow-import: %{error}'
+    lunchflow_transactions_failed:
+      one: 'Lunchflow-import: transacties ophalen mislukt voor %{count} rekening'
+      other: 'Lunchflow-import: transacties ophalen mislukt voor %{count} rekeningen'

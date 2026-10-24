@@ -29,3 +29,41 @@ pt-BR:
       overview: Visão geral
       settings: Configurações
       opening_balance: Saldo inicial
+      amount_label: Valor da conta à data
+      update_value: Atualizar valor
+    confirm_create:
+      confirm: Confirmar
+      title: Confirmar novo saldo
+    confirm_update:
+      title: Atualizar saldo
+      update: Atualizar
+    confirmation_contents:
+      account_balance: saldo da conta
+      action_set: definir
+      action_update: atualizar
+      asset_value: valor do ativo
+      balance: saldo
+      brokerage_cash: Dinheiro da corretora
+      change: alteração
+      credit_card_balance: saldo do cartão de crédito
+      crypto_balance: saldo de cripto
+      holdings_value: Valor das posições
+      liability_balance: saldo do passivo
+      loan_balance: saldo do empréstimo
+      'on': em
+      property_value: valor do imóvel
+      recalculate_notice: >-
+        Todas as transações e saldos futuros serão recalculados com base nesta %{change_or_update}.
+      this_will: Isto irá %{action_verb} o valor da conta em
+      to: para
+      to_colon: 'para:'
+      total_account_value: Valor total da conta
+      update: atualização
+      vehicle_value: valor do veículo
+    create:
+      account_updated: Conta atualizada
+    errors:
+      amount_required: O valor é obrigatório
+    update:
+      account_updated: Conta atualizada
+      entry_updated: Registro atualizado

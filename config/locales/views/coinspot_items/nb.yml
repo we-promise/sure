@@ -1,0 +1,98 @@
+---
+nb:
+  coinspot_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} konto må konfigureres"
+        other: "%{count} kontoer må konfigureres"
+      calculating_balances: Beregner saldoer...
+      checking_configuration: Kontrollerer kontooppsettet...
+      checking_credentials: Kontrollerer påloggingsopplysninger...
+      processing_accounts: Behandler kontodata...
+      credentials_invalid: Ugyldige API-opplysninger for CoinSpot. Kontroller API-nøkkelen
+        og API-hemmeligheten.
+      importing_accounts: Importerer kontoer fra CoinSpot …
+      processing_failed:
+        one: Kunne ikke behandle %{count} CoinSpot-konto
+        other: Kunne ikke behandle %{count} CoinSpot-kontoer
+  coinspot_items:
+    coinspot_item:
+      delete: Slett
+      import_accounts_menu: Importer konto
+      no_accounts_title: Ingen kontoer funnet
+      provider_name: CoinSpot
+      setup_action: Importer konto
+      status: Sist synkronisert for %{timestamp} siden
+      status_never: Aldri synkronisert
+      status_with_summary: Sist synkronisert for %{timestamp} siden – %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} konto synkronisert"
+          other: "%{count} kontoer synkronisert"
+        no_accounts: Ingen kontoer funnet
+        partial_sync: "%{linked_count} synkronisert, %{unlinked_count} må konfigureres"
+      syncing: Synkroniserer...
+      deletion_in_progress: Sletter...
+      reconnect: Påloggingsopplysningene må oppdateres
+      setup_needed: Kontoen er klar til import
+      no_accounts_message: CoinSpot-børskontoen din vises her etter synkronisering.
+      setup_description: Importer denne CoinSpot-tilkoblingen som en kryptobørskonto.
+      stale_rate_warning: Saldoen er omtrentlig fordi nøyaktig valutakurs for %{date}
+        ikke var tilgjengelig. Den oppdateres ved neste synkronisering.
+    create:
+      default_name: CoinSpot
+      success: Koblet til CoinSpot. Børskontoen din synkroniseres.
+    provider_connection:
+      default_name: CoinSpot
+      default_description: Koble til en CoinSpot-børskonto
+      description: Koble til %{name}
+      name: CoinSpot – %{name}
+    select_existing_account:
+      cancel: Avbryt
+      link: Koble til
+      check_provider_health: Kontroller at API-opplysningene for CoinSpot er gyldige.
+      no_accounts_found: Fant ingen CoinSpot-kontoer.
+      title: Koble til CoinSpot-konto
+      wait_for_sync: Vent til CoinSpot har fullført synkroniseringen.
+    setup_accounts:
+      accounts_count:
+        one: "%{count} konto tilgjengelig"
+        other: "%{count} kontoer tilgjengelige"
+      cancel: Avbryt
+      select_all: Velg alle
+      creating: Importerer...
+      import_selected: Importer valgte
+      instructions: CoinSpot importerer én samlet kryptobørskonto for denne tilkoblingen,
+        med saldoer, verdier i AUD, overføringer, innskudd, uttak og ordrehistorikk.
+      no_accounts: Alle CoinSpot-kontoer er importert.
+      subtitle: Velg børskontoen du vil følge
+      title: Importer CoinSpot-konto
+    complete_account_setup:
+      no_accounts: Ingen kontoer å importere
+      none_selected: Ingen kontoer valgt
+      success:
+        one: Importerte %{count} konto
+        other: Importerte %{count} kontoer
+      setup_failed:
+        one: Kunne ikke importere %{count} konto
+        other: Kunne ikke importere %{count} kontoer
+    destroy:
+      success: CoinSpot-tilkoblingen er planlagt slettet.
+      unlink_failed: Kunne ikke koble fra CoinSpot-tilkoblingen
+    link_accounts:
+      select_connection: Velg en CoinSpot-tilkobling før du knytter til kontoer.
+    link_existing_account:
+      errors:
+        coinspot_account_already_linked: Denne CoinSpot-kontoen er allerede koblet
+          til
+        invalid_coinspot_account: Ugyldig CoinSpot-konto
+        only_manual: Bare manuelle kryptobørskontoer uten eksisterende leverandørkobling
+          kan kobles til CoinSpot
+      select_connection: Velg en CoinSpot-tilkobling før du knytter til kontoer.
+      success: Koblet til CoinSpot-kontoen
+    select_accounts:
+      no_credentials_configured: Legg til API-opplysninger for CoinSpot før du setter
+        opp kontoer.
+      select_connection: Velg en CoinSpot-tilkobling i leverandørinnstillingene.
+    update:
+      success: CoinSpot-tilkoblingen er oppdatert.

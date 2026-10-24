@@ -1,0 +1,290 @@
+---
+ro:
+  questrade_items:
+    link_accounts:
+      all_already_linked:
+        one: Contul selectat (%{names}) este deja conectat
+        other: 'Toate cele %{count} conturi selectate sunt deja conectate: %{names}'
+        few: 'Toate cele %{count} conturi selectate sunt deja conectate: %{names}'
+      api_error: 'Eroare API: %{message}'
+      link_failed: Conectarea conturilor a eșuat
+      no_accounts_selected: Selectează cel puțin un cont
+      partial_success: 'S-au conectat cu succes %{created_count} cont(uri). %{already_linked_count}
+        cont(uri) erau deja conectate: %{already_linked_names}'
+      success:
+        one: S-a conectat cu succes %{count} cont
+        other: S-au conectat cu succes %{count} de conturi
+        few: S-au conectat cu succes %{count} conturi
+      invalid_account_names:
+        one: Nu se poate conecta un cont fără nume
+        other: Nu se pot conecta %{count} de conturi fără nume
+        few: Nu se pot conecta %{count} conturi fără nume
+      partial_invalid: 'Conturi conectate cu succes: %{created_count}; deja conectate:
+        %{already_linked_count}; cu nume nevalide: %{invalid_count}'
+      no_api_key: Cheia API Questrade nu a fost găsită. Configureaz-o în setările
+        furnizorului.
+    link_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor
+      api_error: 'Eroare API: %{message}'
+      missing_parameters: Lipsesc parametrii obligatorii
+      invalid_account_name: Nu se poate conecta un cont fără nume
+      provider_account_already_linked: Acest cont Questrade este deja conectat la
+        alt cont
+      provider_account_not_found: Contul Questrade nu a fost găsit
+      success: "%{account_name} a fost conectat cu succes la Questrade"
+      no_api_key: Cheia API Questrade nu a fost găsită. Configureaz-o în setările
+        furnizorului.
+    loading:
+      loading_title: Se încarcă
+      loading_message: Se încarcă conturile Questrade...
+    questrade_item:
+      delete: Șterge conexiunea
+      deletion_in_progress: ștergere în curs...
+      error: Eroare
+      kind: Cont de brokeraj
+      no_accounts_description: Această conexiune nu are încă conturi legate.
+      no_accounts_title: Niciun cont
+      setup_action: Configurează conturi noi
+      setup_needed: Conturi noi gata de configurare
+      status: Sincronizat acum %{timestamp}
+      status_never: Nu a fost sincronizat niciodată
+      syncing: Se sincronizează...
+      accounts_need_setup: Conturile necesită configurare
+      requires_update: Conexiunea necesită actualizare
+      status_with_summary: Ultima sincronizare acum %{timestamp} - %{summary}
+      total: Total
+      unlinked: Neconectat
+      update_credentials: Actualizează datele de autentificare
+      more_accounts_available:
+        one: Încă %{count} cont disponibil
+        other: Încă %{count} de conturi disponibile
+        few: Încă %{count} conturi disponibile
+      provider_name: Questrade
+      setup_description: 'Conturi conectate: %{linked} din %{total}. Alege tipurile
+        conturilor Questrade nou importate.'
+    select_accounts:
+      accounts_selected: conturi selectate
+      api_error: 'Eroare API: %{message}'
+      cancel: Anulează
+      link_accounts: Conectează conturile selectate
+      no_accounts_found: Nu s-au găsit conturi. Verifică configurarea cheii API.
+      description: Selectează conturile pe care vrei să le conectezi la contul tău
+        %{product_name}.
+      no_name_placeholder: "(Fără nume)"
+      no_credentials_configured: Configurează mai întâi datele de autentificare Questrade
+        în setările furnizorului.
+      configure_name_in_provider: Importul nu este posibil — configurează numele contului
+        în Questrade
+      title: Selectează conturile Questrade
+      no_api_key: Cheia API Questrade nu este configurată. Configureaz-o în Setări.
+    select_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor
+      api_error: 'Eroare API: %{message}'
+      buttons:
+        cancel: Anulează
+        link: Asociază
+      cancel: Anulează
+      cancel_button: Anulează
+      link_account: Conectează contul
+      no_account_specified: Niciun cont specificat
+      balance_label: 'Sold:'
+      no_name_placeholder: "(Fără nume)"
+      settings_link: Mergi la setările furnizorului
+      link_button: Conectează acest cont
+      linking_to: 'Se conectează la:'
+      no_credentials_configured: Configurează mai întâi datele de autentificare Questrade
+        în setările furnizorului.
+      all_accounts_already_linked: Toate conturile Questrade sunt deja conectate
+      configure_name_in_provider: Importul nu este posibil — configurează numele contului
+        în Questrade
+      description: Selectează un cont Questrade pentru a-l conecta cu acest cont.
+        Tranzacțiile vor fi sincronizate și deduplicate automat.
+      no_accounts_found: Nu s-au găsit conturi Questrade. Verifică configurarea cheii
+        API.
+      title: Conectează %{account_name} cu Questrade
+      connect_hint: Conectează un cont Questrade pentru a activa sincronizarea automată.
+      dialog_title: Conectează la un cont Questrade
+      header: Conectează cu Questrade
+      linking_label: Se conectează
+      no_accounts: Nu s-au găsit conturi Questrade neconectate.
+      no_api_key: Cheia API Questrade nu este configurată. Configureaz-o în Setări.
+      none_available: Nu există conturi Questrade neconectate disponibile.
+      page_title: Conectează un cont Questrade
+      subtitle: Conectează acest cont la unul dintre conturile tale Questrade
+    setup_accounts:
+      account_types:
+        credit_card: Card de credit
+        other_asset: Alt activ
+        depository: Cont curent sau de economii
+        investment: Cont de investiții
+        loan: Împrumut sau credit ipotecar
+        skip: Omite acest cont
+        crypto: Cont de criptomonede
+      api_error: 'Eroare API: %{message}'
+      balance: Sold
+      buttons:
+        cancel: Anulează
+        done: Gata
+        create: Creează conturi
+      cancel: Anulează
+      subtype_labels:
+        credit_card: ''
+        crypto: ''
+        other_asset: ''
+        depository: 'Subtipul contului:'
+        investment: 'Tipul investiției:'
+        loan: 'Tipul împrumutului:'
+      subtypes:
+        investment:
+          brokerage: Cont de brokeraj
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: Plan 529
+          angel: Investiție de tip angel
+          hsa: Cont de economii pentru sănătate
+          ira: IRA tradițional
+          mutual_fund: Fond mutual
+          pension: Pensie
+          retirement: Pensie
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Thrift Savings Plan
+        depository:
+          cd: Certificat de depozit
+          checking: Cont curent
+          hsa: Cont de economii pentru sănătate
+          money_market: Piață monetară
+          savings: Economii
+        loan:
+          auto: Credit auto
+          mortgage: Credit ipotecar
+          other: Alt împrumut
+          student: Credit pentru studii
+      types:
+        investment: Investiții
+        skip: Omite acest cont
+        depository: Numerar / depozit
+      account_type_label: 'Tipul contului:'
+      accounts_count:
+        one: "%{count} cont disponibil"
+        other: "%{count} de conturi disponibile"
+        few: "%{count} conturi disponibile"
+      create_accounts: Creează conturi
+      creating_accounts: Se creează conturile...
+      fetch_failed: Preluarea conturilor a eșuat
+      historical_data_range: 'Intervalul datelor istorice:'
+      no_accounts_to_setup: Nu există conturi de configurat
+      select_all: Selectează tot
+      subtype_messages:
+        credit_card: Cardurile de credit vor fi configurate automat ca conturi de
+          card de credit.
+        other_asset: Nu sunt necesare opțiuni suplimentare pentru alte active.
+        crypto: Conturile de criptomonede vor fi configurate pentru urmărirea deținerilor
+          și tranzacțiilor.
+      sync_start_date_label: 'Sincronizează tranzacțiile începând cu:'
+      creating: Se creează conturile...
+      import_selected: Importă conturile selectate
+      sync_start_date_help: Alege de când vrei să sincronizezi istoricul tranzacțiilor.
+      all_accounts_linked: Toate conturile Questrade au fost deja configurate.
+      choose_account_type: 'Alege tipul corect pentru fiecare cont Questrade:'
+      all_linked: Toate conturile Questrade sunt deja conectate.
+      dialog_title: Configurează conturile Questrade
+      import_as: Importă ca
+      instructions: Selectează conturile pe care vrei să le imporți din Questrade.
+        Poți alege mai multe conturi.
+      no_accounts: Nu s-au găsit conturi neconectate în această conexiune Questrade.
+      no_api_key: Cheia API Questrade nu este configurată. Verifică setările conexiunii.
+      page_title: Configurează conturi Questrade
+      subtitle: Alege cum să imporți fiecare cont
+      title: Configurează conturile Questrade
+    sync:
+      status:
+        calculating: Se calculează soldurile...
+        checking_setup: Se verifică configurarea contului...
+        needs_setup: "%{count} de conturi necesită configurare..."
+        importing_data: Se importă datele contului...
+        processing: Se procesează deținerile și activitățile...
+        importing: Se importă conturile din Questrade...
+      success: Sincronizarea a început
+    sync_status:
+      no_accounts: Nu s-au găsit conturi
+      synced:
+        one: "%{count} cont sincronizat"
+        other: "%{count} de conturi sincronizate"
+        few: "%{count} conturi sincronizate"
+      synced_with_setup: 'Sincronizate: %{linked}; necesită configurare: %{unlinked}'
+    complete_account_setup:
+      all_skipped: Toate conturile au fost omise. Nu a fost creat niciun cont.
+      creation_failed: 'Crearea conturilor a eșuat: %{error}'
+      no_accounts: Nu există conturi de configurat.
+      success: 'Conturi create cu succes: %{count}.'
+    institution_summary:
+      count:
+        one: "%{count} instituție"
+        other: "%{count} de instituții"
+        few: "%{count} instituții"
+      none: Nicio instituție conectată
+    panel:
+      disconnect: Deconectează
+      save_button: Salvează configurarea
+      setup_instructions: 'Instrucțiuni de configurare:'
+      status_not_configured: Neconfigurat
+      update_button: Actualizează configurarea
+      field_descriptions: 'Descrierea câmpurilor:'
+      optional: "(Opțional)"
+      optional_with_default: "(opțional, implicit %{default_value})"
+      step_3: După conectare, mergi la fila Conturi pentru a configura conturile noi
+      disconnect_confirm: Deconectezi Questrade? Conexiunea va fi eliminată, iar conturile
+        sincronizate vor fi dezasociate.
+      eyebrow: Configurare · doar pe calculator
+      fields:
+        api_server:
+          description: Serverul API Questrade
+          label: Server API
+          placeholder_new: Lipește serverul API aici
+          placeholder_update: Introdu un server API nou pentru actualizare
+        refresh_token:
+          description: Tokenul de reîmprospătare Questrade
+          label: Token de reîmprospătare
+          placeholder_new: Lipește tokenul de reîmprospătare aici
+          placeholder_update: Introdu un token de reîmprospătare nou pentru actualizare
+      help_text: Documentația API Questrade
+      required: "(obligatoriu)"
+      status_configured_html: Configurat și gata de utilizare. Mergi la fila <a href="%{accounts_path}"
+        class="link">Conturi</a> pentru a gestiona și configura conturile.
+      step_1: Accesează panoul Questrade pentru a obține datele de autentificare
+      step_2: Introdu datele de autentificare mai jos și apasă Salvează
+      steps:
+        s1_html: Autentifică-te în <a href="https://my.questrade.com" target="_blank"
+          rel="noopener noreferrer" class="text-primary font-medium underline">portalul
+          Questrade</a> dintr-un browser pe calculator. Setările API nu sunt disponibile
+          în aplicația mobilă.
+        s2: Deschide Settings, apoi editează setările IQ API din General settings.
+        s3_html: În fereastra API access, apasă <strong>Manage</strong> din <strong>My
+          applications</strong>.
+        s4: Înregistrează o aplicație personală cu nume și descriere, apoi salvează.
+        s5: Adaugă un dispozitiv nou și generează un token.
+        s6: Lipește tokenul generat mai jos și salvează.
+      token_refresh_hint: Tokenurile Questrade se reînnoiesc automat la fiecare sincronizare
+        a conturilor. Dacă o conexiune rămâne nefolosită peste 7 zile și expiră, lipește
+        aici un token nou pentru a o reactiva fără deconectare.
+    preload_accounts:
+      no_credentials_configured: Configurează mai întâi datele de autentificare Questrade
+        în setările furnizorului.
+    create:
+      success: Conexiunea Questrade a fost creată cu succes
+    default_name: Conexiune Questrade
+    destroy:
+      success: Conexiunea Questrade a fost eliminată
+    index:
+      title: Conexiuni Questrade
+    errors:
+      provider_not_configured: Furnizorul Questrade nu este configurat
+    setup_required:
+      go_to_provider_settings: Mergi la setările furnizorului
+      not_configured_description: Adaugă conexiunea Questrade în setările furnizorului,
+        apoi revino aici pentru a conecta conturile.
+      not_configured_title: Questrade nu este încă conectat
+      title: Conectează mai întâi Questrade
+    update:
+      success: Conexiunea Questrade a fost actualizată

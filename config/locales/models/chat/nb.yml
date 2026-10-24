@@ -1,0 +1,12 @@
+---
+nb:
+  chat:
+    errors:
+      default: Kunne ikke generere et svar. Prøv igjen.
+      misconfigured: KI-leverandøren er ikke riktig konfigurert. Kontakt administratoren.
+      no_response: Assistenten svarte ikke. Bakgrunnsprosessen kan være stoppet, eller
+        KI-oppsettet er ikke fullført. Prøv igjen.
+      rate_limited: KI-leverandøren har nådd grensen for antall forespørsler akkurat
+        nå. Prøv igjen om noen minutter.
+      temporarily_unavailable: KI-leverandøren er midlertidig utilgjengelig. Prøv
+        igjen om noen minutter.

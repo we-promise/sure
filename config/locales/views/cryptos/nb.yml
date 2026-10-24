@@ -5,3 +5,17 @@ nb:
       edit: Rediger %{account}
     new:
       title: Angi kontobalanse
+    form:
+      subtype_label: Kontotype
+      subtype_none: Ingen
+      subtype_prompt: Velg kontotype
+      tax_treatment_hint: De fleste kryptovalutaer holdes på skattepliktige kontoer.
+        Velg et annet alternativ hvis de holdes på en konto med skattefordeler.
+      tax_treatment_label: Skattebehandling
+    subtypes:
+      wallet:
+        long: Kryptolommebok
+        short: Lommebok
+      exchange:
+        long: Kryptobørs
+        short: Børs

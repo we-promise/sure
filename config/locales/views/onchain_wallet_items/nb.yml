@@ -1,0 +1,138 @@
+---
+nb:
+  onchain_wallet_items:
+    new_wallet:
+      continue: Fortsett
+      address_label: Lommebokadresse
+      address_placeholder: bc1..., 0x... eller en Solana-adresse
+      bitcoin_single_address_note: Bitcoin følges én adresse om gangen. Utvidede nøkler
+        (xpub/ypub/zpub) støttes ikke, så for en lommebok som fordeler midler over
+        avledede adresser, vises bare saldoen til adressen du skriver inn.
+      chain_auto_detect: Oppdag automatisk
+      chain_label: Nettverk
+      read_only_note: Bare offentlige blokkjededata leses. Oppgi aldri en gjenopprettingsfrase
+        eller privat nøkkel.
+      subtitle: Følg en lommebok du selv har nøklene til, via den offentlige adressen.
+      title: Legg til en lommebok med egen nøkkelforvaltning
+    onchain_wallet_item:
+      sync: Synkroniser nå
+      syncing: Synkroniserer...
+      assets_tracked:
+        one: Følger 1 eiendel
+        other: Følger %{count} eiendeler
+    token_review_form:
+      cancel: Avbryt
+      assets_truncated: Denne adressen har flere tokener enn én innlesing kan hente,
+        så bare de %{count} mest troverdige vises.
+      explanation: Eiendeler med kjent pris er merket av. Andre er ikke merket av,
+        fordi lommebøker kan motta uønskede tokener, og slike tokener ikke får noen
+        verdi når de følges.
+      native: Nettverkets egen valuta
+      no_price: Ingen pris tilgjengelig; bare mengden følges
+      nothing_found: Denne adressen har ingen beholdning vi kan se på dette nettverket.
+    wallet_card:
+      status: Synkronisert for %{timestamp} siden
+      sync: Synkroniser nå
+      syncing: Synkroniserer...
+      addresses_tracked:
+        one: Følger 1 adresse
+        other: Følger %{count} adresser
+      delete: Fjern tilkobling
+      deletion_in_progress: Fjerner …
+      needs_attention: Krever oppfølging
+      no_wallets_message: Koble til en adresse i leverandørinnstillingene for å vise
+        den her.
+      no_wallets_title: Ingen lommebøker er koblet til ennå
+      status_never: Ikke synkronisert ennå
+    choose_chain:
+      activity_found: Aktivitet funnet
+      explanation: Dette adresseformatet brukes av flere nettverk, og saldoene er
+        forskjellige på hvert av dem. Velg nettverket du vil følge.
+      no_activity_found: Ingenting funnet
+      subtitle: "%{address}"
+      title: Hvilket nettverk?
+    destroy:
+      success: Tilkoblingen for egen nøkkelforvaltning er planlagt slettet.
+    disconnect_asset:
+      success: Sluttet å følge %{symbol}. Kontoen og historikken er beholdt.
+    disconnect_wallet:
+      success:
+        one: Sluttet å følge 1 eiendel på denne adressen.
+        other: Sluttet å følge %{count} eiendeler på denne adressen.
+    enable_crypto_prices:
+      not_self_hosted: Leverandører av markedsdata konfigureres av instansoperatøren
+        i denne installasjonen.
+      success: Kryptopriser er aktivert. Lommebokverdiene vises etter neste synkronisering.
+    errors:
+      address_required: Skriv inn en lommebokadresse.
+      already_linked: Denne adressen følges allerede på dette nettverket. Bruk Gjennomgå
+        tokener for å endre hvilke eiendeler som følges.
+      chain_unreachable: Kunne ikke nå den offentlige blokkjedeutforskeren for dette
+        nettverket. Prøv igjen om litt.
+      rate_limited: Den offentlige blokkjedeutforskeren begrenser antall forespørsler
+        akkurat nå. Prøv igjen om noen minutter.
+      unexpected: Noe gikk galt under lesing av denne lommeboken. Detaljene ble registrert
+        for brukerstøtte.
+      unrecognized_address: Dette ser ikke ut som en adresse på et støttet nettverk.
+      wallet_not_found: Denne lommeboken følges ikke av denne tilkoblingen.
+    link_wallet:
+      errors:
+        none_tracked: 'Ingen eiendeler ble lagt til for oppfølging: %{assets} kunne
+          ikke legges til. Prøv igjen om litt.'
+        nothing_selected: Velg minst én eiendel å følge.
+        some_failed: "%{assets} kunne ikke følges og ble utelatt."
+      success:
+        one: Følger 1 eiendel fra denne lommeboken.
+        other: Følger %{count} eiendeler fra denne lommeboken.
+    manage:
+      assets_truncated: Denne adressen har flere tokener enn én innlesing kan hente,
+        så bare de %{count} mest troverdige vises. Eiendeler som allerede følges,
+        fortsetter å synkroniseres.
+      disconnect_asset: Slutt å følge
+      disconnect_asset_confirm: Slutte å følge %{symbol}? Kontoen og historikken beholdes,
+        men oppdateres ikke lenger.
+      disconnect_wallet: Koble fra lommebok
+      disconnect_wallet_confirm: Slutte å følge alle eiendeler på denne adressen?
+      history_note: Ved frakobling beholdes kontoene og historikken; de slutter bare
+        å oppdateres.
+      history_truncated: Ikke alle overføringer for denne adressen kunne leses. Historikken
+        er lengre enn én synkronisering dekker, eller blokkjedeutforskeren avviste
+        forespørselen. Saldoene er fullstendige, men noen overføringer mangler.
+      native: Nettverkets egen valuta
+      no_wallets: Ingen lommebøker følges ennå.
+      review_tokens: Gjennomgå tokener
+      subtitle: Alle adresser denne tilkoblingen leser, og hvilke eiendeler den følger
+        på hver av dem.
+      title: Administrer lommebøker med egen nøkkelforvaltning
+    price_provider_warning:
+      body: Ingen aktivert leverandør av markedsdata kan hente kryptopriser, så disse
+        lommebøkene følger beholdningsmengder, men viser verdien null.
+      enable: Aktiver kryptopriser
+      exchange_rate_body: Krypto prises i USD, og ingen valutakursleverandør er konfigurert
+        for å konvertere til %{currency}. Disse lommebøkene følger derfor beholdningsmengder,
+        men viser verdien null. Angi EXCHANGE_RATE_PROVIDER. Frankfurter krever ingen
+        API-nøkkel.
+      exchange_rate_title: Ingen valutakursleverandør er konfigurert
+      link: Åpne innstillinger for markedsdata
+      title: Kryptopriser er ikke konfigurert
+    provider_connection:
+      description: Følg en lommebok du selv har nøklene til, via den offentlige adressen.
+      name: Lommebok med egen nøkkelforvaltning
+    review_tokens:
+      save: Lagre eiendeler som følges
+      subtitle: "%{chain} · %{address}"
+      title: Gjennomgå eiendeler som følges
+    token_review:
+      import_selected: Følg valgte eiendeler
+      subtitle: "%{chain} · %{address}"
+      title: Velg hva du vil følge
+    update:
+      success: Tilkoblingen for egen nøkkelforvaltning er oppdatert.
+    update_tokens:
+      errors:
+        no_changes: Ingenting er endret; de samme eiendelene er fortsatt merket av.
+        none_tracked: 'Ingenting er endret: %{assets} kunne ikke legges til. Prøv
+          igjen om litt.'
+        some_failed: "%{assets} kunne ikke følges og ble utelatt."
+      success: Eiendeler som følges, er oppdatert (%{created} lagt til, %{removed}
+        fjernet).

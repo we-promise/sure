@@ -1,0 +1,9 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        rule_import:
+          invalid_json: 'JSON nevalid în condiții sau acțiuni: %{message}'
+          min_actions: Regula trebuie să aibă cel puțin o acțiune
+          unsupported_resource_type: 'Tip de resursă neacceptat: %{resource_type}'

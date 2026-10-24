@@ -25,3 +25,40 @@ ro:
     trend_change:
       no_change: fără schimbare
     submitting: Se trimite…
+    cancel: Anulează
+    custom_confirm:
+      default_btn_text: Confirmă
+      default_title: Ești sigur?
+      default_body: Această acțiune este ireversibilă.
+      resource_deletion_body: Sigur vrei să ștergi %{resource}? Această acțiune este
+        ireversibilă.
+      resource_deletion_btn_text: Șterge %{resource}
+      resource_deletion_title: Ștergi %{resource}?
+    sync_toast:
+      refresh: Reîmprospătează
+      message: Sunt disponibile date noi
+    transaction_tabs:
+      expense: Cheltuială
+      income: Venit
+      transfer: Transfer
+    preview: Previzualizare
+    require_admin: Doar administratorii pot efectua această acțiune
+    require_connector_owner: Poți gestiona doar conexiunile adăugate de tine
+    sidekiq_health_banner:
+      body: Sarcinile de fundal nu sunt procesate, așa că soldurile, averea netă și
+        sincronizările conturilor pot fi învechite sau pot lipsi.
+      cta: Vezi starea sistemului
+      reasons:
+        no_worker_processes: Niciun proces Sidekiq nu este conectat. Pornește containerul
+          procesului de fundal sau unitatea systemd.
+        queue_backed_up: Cea mai veche sarcină din coadă a depășit timpul de așteptare
+          permis. Procesul de fundal rulează, dar rămâne în urmă.
+        redis_unreachable: Aplicația nu poate accesa Redis. Verifică REDIS_URL și
+          asigură-te că Redis rulează.
+        stale_heartbeat: Procesul Sidekiq nu a trimis recent un semnal de funcționare.
+          Este posibil să fie blocat sau să se fi oprit neașteptat.
+      title: Unele date pot fi învechite
+  concerns:
+    self_hostable:
+      redis_configured: Redis este acum configurat corect! Poți configura aplicația
+        Sure.

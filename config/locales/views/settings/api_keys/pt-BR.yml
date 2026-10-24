@@ -2,75 +2,151 @@
 pt-BR:
   settings:
     api_keys_controller:
-      success: "Sua chave de API foi criada com sucesso"
-      revoked_successfully: "Chave de API foi revogada com sucesso"
-      revoke_failed: "Falha ao revogar chave de API"
+      success: Sua chave de API foi criada com sucesso
+      revoked_successfully: Chave de API foi revogada com sucesso
+      revoke_failed: Falha ao revogar chave de API
       scope_descriptions:
-        read_accounts: "Ver Contas"
-        read_transactions: "Ver Transações"
-        read_balances: "Ver Saldos"
-        write_transactions: "Criar Transações"
+        read_accounts: Ver Contas
+        read_transactions: Ver Transações
+        read_balances: Ver Saldos
+        write_transactions: Criar Transações
     api_keys:
       show:
-        title: "Gerenciamento de Chave de API"
+        title: Gerenciamento de Chave de API
         no_api_key:
-          title: "Criar Sua Chave de API"
-          heading: "Acesse os dados da sua conta programaticamente"
-          description: "Obtenha acesso programático aos seus dados do %{product_name} com uma chave de API segura."
-          what_you_can_do: "O que você pode fazer com a API:"
-          feature_1: "Acessar dados da sua conta programaticamente"
-          feature_2: "Construir integrações e aplicações personalizadas"
-          feature_3: "Automatizar recuperação e análise de dados"
-          security_note_title: "Segurança em Primeiro Lugar"
-          security_note: "Sua chave de API terá permissões restritas baseadas nos escopos que você selecionar. Você pode ter apenas uma chave de API ativa por vez."
-          create_api_key: "Criar Chave de API"
+          title: Criar Sua Chave de API
+          heading: Acesse os dados da sua conta programaticamente
+          description: >-
+            Obtenha acesso programático aos seus dados do %{product_name} com uma
+            chave de API segura.
+          what_you_can_do: 'O que você pode fazer com a API:'
+          feature_1: Acessar dados da sua conta programaticamente
+          feature_2: Construir integrações e aplicações personalizadas
+          feature_3: Automatizar recuperação e análise de dados
+          security_note_title: Segurança em Primeiro Lugar
+          security_note: >-
+            Sua chave de API terá permissões restritas baseadas nos escopos que você
+            selecionar. Você pode ter apenas uma chave de API ativa por vez.
+          create_api_key: Criar Chave de API
         current_api_key:
-          title: "Sua Chave de API"
-          description: "Sua chave de API ativa está pronta para uso. Mantenha-a segura e nunca a compartilhe publicamente."
-          active: "Ativa"
-          key_name: "Nome"
-          created_at: "Criada"
-          last_used: "Último Uso"
-          expires: "Expira"
-          ago: "atrás"
-          never_used: "Nunca usada"
-          never_expires: "Nunca expira"
-          permissions: "Permissões"
-          usage_instructions_title: "Como usar sua chave de API"
-          usage_instructions: "Inclua sua chave de API no cabeçalho X-Api-Key ao fazer requisições para a API do %{product_name}:"
-          regenerate_key: "Criar Nova Chave"
-          revoke_key: "Revogar Chave"
-          revoke_confirmation: "Tem certeza de que deseja revogar esta chave de API? Esta ação não pode ser desfeita e desabilitará imediatamente todas as aplicações que usam esta chave."
+          title: Sua Chave de API
+          description: >-
+            Sua chave de API ativa está pronta para uso. Mantenha-a segura e nunca
+            a compartilhe publicamente.
+          active: Ativa
+          key_name: Nome
+          created_at: Criada
+          last_used: Último Uso
+          expires: Expira
+          ago: atrás
+          never_used: Nunca usada
+          never_expires: Nunca expira
+          permissions: Permissões
+          usage_instructions_title: Como usar sua chave de API
+          usage_instructions: >-
+            Inclua sua chave de API no cabeçalho X-Api-Key ao fazer requisições para
+            a API do %{product_name}:
+          regenerate_key: Criar Nova Chave
+          revoke_key: Revogar Chave
+          revoke_confirmation: >-
+            Tem certeza de que deseja revogar esta chave de API? Esta ação não pode
+            ser desfeita e desabilitará imediatamente todas as aplicações que usam
+            esta chave.
+          back_to_keys: Voltar às Chaves de API
+          copy_api_key: Copiar Chave de API
+          copy_store_securely: >-
+            Copie e salve esta chave em segurança. Vai precisar dela para autenticar
+            os seus pedidos de API.
+        newly_created:
+          continue: Continuar para as Configurações de Chave de API
+          copy_api_key: Copiar Chave de API
+          copy_store_securely: >-
+            Copie e salve esta chave em segurança. Vai precisar dela para autenticar
+            os seus pedidos de API.
+          heading: Chave de API Criada com Sucesso!
+          how_to_use: Como utilizar a sua chave de API
+          key_ready: A sua nova chave de API "%{name}" foi criada e está pronta a
+            utilizar.
+          page_title: Chave de API Criada com Sucesso
+          your_api_key: A Sua Chave de API
       new:
-        title: "Criar Chave de API"
-        create_new_key: "Criar Nova Chave de API"
-        description: "Configure sua nova chave de API com um nome descritivo e permissões apropriadas."
-        name_label: "Nome da Chave de API"
-        name_placeholder: "ex: App de Produção, Dashboard de Analytics"
-        name_help: "Escolha um nome descritivo para ajudar a identificar o propósito desta chave."
-        permissions_label: "Permissões"
-        permissions_help: "Selecione as permissões que sua chave de API precisa. Você sempre pode criar uma nova chave com permissões diferentes."
+        title: Criar Chave de API
+        create_new_key: Criar Nova Chave de API
+        description: Configure sua nova chave de API com um nome descritivo e permissões
+          apropriadas.
+        name_label: Nome da Chave de API
+        name_placeholder: 'ex: App de Produção, Dashboard de Analytics'
+        name_help: Escolha um nome descritivo para ajudar a identificar o propósito
+          desta chave.
+        permissions_label: Permissões
+        permissions_help: >-
+          Selecione as permissões que sua chave de API precisa. Você sempre pode criar
+          uma nova chave com permissões diferentes.
         scope_details:
-          read_accounts: "Ver informações da conta, saldos e dados a nível de conta"
-          read_transactions: "Ver dados de transação, categorias e detalhes de transação"
-          read_balances: "Ver dados históricos de saldo e tendências de valor da conta"
-          write_transactions: "Criar e atualizar registros de transação (em breve)"
-        security_warning_title: "Aviso de Segurança Importante"
-        security_warning: "Sua chave de API será mostrada apenas uma vez após a criação. Armazene-a com segurança e nunca a compartilhe publicamente. Se você perdê-la, precisará criar uma nova."
-        create_key: "Criar Chave de API"
-        cancel: "Cancelar"
+          read_accounts: Ver informações da conta, saldos e dados a nível de conta
+          read_transactions: Ver dados de transação, categorias e detalhes de transação
+          read_balances: Ver dados históricos de saldo e tendências de valor da conta
+          write_transactions: Criar e atualizar registros de transação (em breve)
+        security_warning_title: Aviso de Segurança Importante
+        security_warning: >-
+          Sua chave de API será mostrada apenas uma vez após a criação. Armazene-a
+          com segurança e nunca a compartilhe publicamente. Se você perdê-la, precisará
+          criar uma nova.
+        create_key: Criar Chave de API
+        cancel: Cancelar
+        create_new_api_key: Criar Nova Chave de API
+        name_help_text: Escolha um nome descritivo para identificar esta chave depois.
+        save_api_key: Salvar Chave de API
+        scope_read_only: Apenas Leitura
+        scope_read_only_description: Ver as suas contas, transações e saldos
+        scope_read_write: Leitura/Escrita
+        scope_read_write_description: Ver os seus dados e criar novas transações
+        security_warning_body: >-
+          A sua chave de API será apresentada apenas uma vez após a criação. Certifique-se
+          de a copiar e salvar em segurança. Qualquer pessoa com acesso a esta chave
+          pode acessar aos seus dados de acordo com as permissões selecionadas.
+        subtitle: >-
+          Gere uma nova chave de API para acessar aos seus dados do Sure programaticamente.
       created:
-        title: "Chave de API Criada"
-        success_title: "Chave de API Criada com Sucesso"
-        success_description: "Sua nova chave de API está pronta para uso. Certifique-se de copiá-la agora, pois você não poderá vê-la novamente."
-        your_api_key: "Sua Chave de API"
-        key_name: "Nome"
-        permissions: "Permissões"
+        title: Chave de API Criada
+        success_title: Chave de API Criada com Sucesso
+        success_description: >-
+          Sua nova chave de API está pronta para uso. Certifique-se de copiá-la agora,
+          pois você não poderá vê-la novamente.
+        your_api_key: Sua Chave de API
+        key_name: Nome
+        permissions: Permissões
         critical_warning_title: "⚠️ Crítico: Salve Sua Chave de API Agora"
-        critical_warning_1: "Esta é a única vez que você verá sua chave de API em texto simples."
-        critical_warning_2: "Copie e armazene-a com segurança em seu gerenciador de senhas ou aplicação."
-        critical_warning_3: "Se você perder esta chave, precisará criar uma nova."
-        usage_instructions_title: "Início Rápido"
-        usage_instructions: "Use sua chave de API incluindo-a no cabeçalho X-Api-Key:"
-        copy_key: "Copiar Chave de API"
-        continue: "Continuar para Configurações da Chave de API"
+        critical_warning_1: Esta é a única vez que você verá sua chave de API em texto
+          simples.
+        critical_warning_2: Copie e armazene-a com segurança em seu gerenciador de
+          senhas ou aplicação.
+        critical_warning_3: Se você perder esta chave, precisará criar uma nova.
+        usage_instructions_title: Início Rápido
+        usage_instructions: 'Use sua chave de API incluindo-a no cabeçalho X-Api-Key:'
+        copy_key: Copiar Chave de API
+        continue: Continuar para Configurações da Chave de API
+      create:
+        success: A sua chave de API foi criada com sucesso
+      destroy:
+        revoke_failed: Falha ao revogar a chave de API
+        revoked_successfully: A chave de API foi revogada com sucesso
+      index:
+        empty_description: Crie uma chave de API para acessar aos seus dados programaticamente.
+        empty_heading: Ainda sem chaves de API
+        new_key: Nova Chave de API
+        revoke_confirmation: >-
+          Tem certeza de que deseja revogar "%{name}"? Isto desativará imediatamente
+          qualquer aplicativo que utilize esta chave.
+        revoke_key: Revogar
+        subtitle: Gerencie as chaves de API para acessar seus dados por programação.
+        title: Chaves de API
+      key_reveal:
+        copied: Copiado!
+      shared:
+        active: Ativo
+        created_ago: Criada há %{time}
+        last_used_ago: Utilizada pela última vez há %{time}
+        never_used: Nunca utilizada
+        scope_read_only: Apenas Leitura
+        scope_read_write: Leitura/Escrita

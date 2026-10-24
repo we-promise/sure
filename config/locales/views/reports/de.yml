@@ -34,6 +34,7 @@ de:
       previous_period: Vorheriger Zeitraum
       previous_year: Vorheriges Jahr
       today: Heute
+      shortcut_hint: "%{action} (%{key})"
     invalid_date_range: "Das Enddatum kann nicht vor dem Startdatum liegen. Die Daten wurden vertauscht."
     summary:
       total_income: Gesamteinnahmen

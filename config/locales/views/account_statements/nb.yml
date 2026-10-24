@@ -1,0 +1,122 @@
+---
+nb:
+  account_statements:
+    balance:
+      unknown: Ukjent
+    index:
+      account_label: Konto
+      title: Kontoutskriftsarkiv
+      confidence: "%{confidence} samsvar"
+      empty_linked: Ingen kontoutskrifter er knyttet til kontoer ennå.
+      empty_unmatched: Kontoutskriftsinnboksen er tom.
+      leave_unmatched: La stå uten kobling
+      linked_title: Tilknyttede kontoutskrifter
+      no_suggestion: Ingen forslag
+      storage_used: Brukt lagringsplass
+      unmatched_title: Innboks uten kontokobling
+      upload_description: Last opp kontoutskrifter til innboksen, eller velg en konto
+        for å knytte dem til umiddelbart.
+      upload_title: Last opp kontoutskrifter
+    reconciliation:
+      checks:
+        opening_balance: Startsaldo
+        closing_balance: Sluttsaldo
+        period_movement: Bevegelse i perioden
+        unknown_check: Ukjent kontroll
+      unavailable: Ikke kontrollert
+      matched: Samsvar
+      mismatched: Avvik
+    show:
+      account_label: Konto
+      currency: Valuta
+      delete: Slett
+      download: Last ned
+      opening_balance: Startsaldo
+      unknown_value: Ukjent
+      account_last4_hint: De fire siste sifrene i kontonummeret
+      account_name_hint: Hint om kontonavn
+      closing_balance: Sluttsaldo
+      institution_name_hint: Hint om finansinstitusjon
+      period_end_on: Periodens slutt
+      period_start_on: Periodens start
+      unlink: Koble fra
+      difference: Differanse
+      ledger_amount: Sure-regnskap
+      link_suggestion: Forslag til kontokobling
+      linked_to: Knyttet til %{account}.
+      linking_title: Kontokobling
+      metadata_title: Metadata for kontoutskrift
+      no_suggestion: Ingen kontoforslag ennå.
+      reconciliation_title: Avstemming
+      reconciliation_unavailable: Legg til en kontoutskriftsperiode og inngående eller
+        utgående saldo, og sørg deretter for at Sure har saldohistorikk for disse
+        datoene.
+      reject: Avvis
+      save: Lagre kontoutskrift
+      statement_amount: Kontoutskrift
+      suggested_account: Foreslått konto er %{account} (%{confidence} sikkerhet).
+      title: Kontoutskrift
+      unmatched_account: Innboks uten kontokobling
+    table:
+      account: Konto
+      actions: Handlinger
+      download: Last ned
+      edit: Rediger
+      file: Fil
+      view: Vis
+      unlink: Koble fra
+      link_suggestion: Forslag til kontokobling
+      period: Periode
+      reconciliation: Avstemming
+      reject: Avvis forslag
+      suggestion: Forslag
+    account_tab:
+      statements_title: Kontoutskrifter
+      coverage_description: Historiske måneder dokumentert med opplastede kontoutskrifter
+        og saldokontroller.
+      coverage_range: "%{start} – %{end}"
+      coverage_title: Dekning med kontoutskrifter
+      empty: Ingen kontoutskrifter er knyttet til denne kontoen ennå.
+      open_inbox: Innboks
+      year_label: År for dekning
+    form:
+      inbox_upload: Last opp
+      account_upload: Last opp kontoutskrift
+      files_hint: PDF, CSV eller XLSX. Maks. %{max_size} MB per fil.
+      files_label: Kontoutskriftsfiler
+    coverage:
+      status:
+        ambiguous: Tvetydig
+        covered: Dekket
+        duplicate: Duplikat
+        mismatched: Avvik
+        missing: Mangler
+        not_expected: Ikke forventet
+    create:
+      duplicates:
+        one: 1 duplikat av en kontoutskrift ble hoppet over.
+        other: "%{count} duplikater av kontoutskrifter ble hoppet over."
+      invalid_file_type: Last opp en kontoutskrift i PDF-, CSV- eller XLSX-format
+        som er under størrelsesgrensen.
+      no_files: Velg minst én kontoutskriftsfil.
+      success:
+        one: 1 kontoutskrift er lastet opp.
+        other: "%{count} kontoutskrifter er lastet opp."
+    destroy:
+      failure: Kontoutskriften kunne ikke slettes.
+      success: Kontoutskriften er slettet.
+    link:
+      no_account: Velg en konto før du knytter til denne kontoutskriften.
+      success: Knyttet kontoutskriften til %{account}.
+    period:
+      unknown: Ukjent periode
+    reject:
+      success: Forslaget til kontokobling er avvist.
+    status:
+      linked: Tilknyttet
+      rejected: Avvist
+      unmatched: Uten kobling
+    unlink:
+      success: Kontoutskriften er flyttet tilbake til innboksen uten kontokobling.
+    update:
+      success: Kontoutskriften er oppdatert.

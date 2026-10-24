@@ -14,6 +14,7 @@ nb:
       empty: Ingen tagger ennå
       new: Ny tag
       tags: Tagger
+      delete_all: Slett alle
     new:
       new: Ny tag
     tag:
@@ -21,3 +22,11 @@ nb:
       edit: Rediger
     update:
       updated: Tag oppdatert
+    menu:
+      label: Rediger tagger
+      loading: Laster inn tagger...
+    destroy_all:
+      all_deleted: Alle tagger er slettet
+    summary:
+      add: Legg til tagger
+      title: 'Tagger: %{names}'

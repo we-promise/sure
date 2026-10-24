@@ -30,6 +30,7 @@ de:
           body: Bist du sicher, dass du den Daten-Cache leeren möchtest? Dadurch werden alle Wechselkurse, Wertpapierpreise, Kontostände und andere Daten entfernt. Diese Aktion kann nicht rückgängig gemacht werden.
         ai_assistant: KI-Assistent
         property_valuation_providers: Anbieter für Immobilienbewertung
+        demo_refresh: Demo-Daten aktualisieren
       provider_selection:
         title: Anbieterauswahl
         description: Wähle, welcher Dienst für Wechselkurse und Wertpapierpreise verwendet werden soll. Yahoo Finance ist kostenlos und benötigt keinen API-Schlüssel. Twelve Data erfordert einen kostenlosen API-Schlüssel, bietet aber möglicherweise eine bessere Datenabdeckung.
@@ -47,6 +48,7 @@ de:
           moex_public: MOEX
           tiingo: Tiingo
           tinkoff_invest: T-Invest (T-Bank)
+          mansa: Mansa
         binance_public_hint: kostenlos, ohne API-Key – nur Krypto (BTC, ETH usw.)
         exchange_rate_description: Wähl einen Anbieter, über den Wechselkurse geholt werden.
         exchange_rate_title: Anbieter für Wechselkurse
@@ -60,6 +62,8 @@ de:
         tinkoff_invest_hint: braucht Token mit Lesezugriff – Kurse russischer Aktien, Fonds und Anleihen samt Logos
         twelve_data_hint: braucht API-Key, 800 Credits/Tag
         yahoo_finance_hint: kostenlos, ohne API-Key
+        requires_api_key_mansa: API-Schlüssel erforderlich, kostenlos 100 Aufrufe/Tag – nur
+          NGX (Nigerian Exchange)
       brand_fetch_settings:
         description: Gib die von Brandfetch bereitgestellte Client-ID ein.
         label: Client-ID
@@ -144,6 +148,12 @@ de:
         anthropic_model_required_for_base_url: Wenn du eine eigene Basis-URL setzt, musst du auch ein Anthropic-Modell angeben.
         invalid_anthropic_base_url: Die Anthropic-Basis-URL muss eine http(s)-Adresse sein.
         invalid_llm_budget: "%{field} muss eine ganze Zahl ≥ %{minimum} sein."
+        invalid_categorization_rate: "%{field} muss eine Zahl zwischen 0 und 1 sein."
+        invalid_demo_family: Die ausgewählte Familie muss die konfigurierte Demo-E-Mail-Adresse
+          besitzen.
+        invalid_jev_endpoint: Der Jev-Endpunkt muss eine HTTPS-URL sein. Einfaches HTTP ist
+          nur für localhost zulässig.
+        select_demo_family: Wähle zuerst eine entbehrliche Demo-Familie aus.
       clear_cache:
         cache_cleared: Daten-Cache wurde geleert. Dies kann einige Augenblicke dauern.
       not_authorized: Du bist nicht berechtigt, diese Aktion auszuführen.
@@ -203,6 +213,24 @@ de:
         url_help: Die vollständige URL zum API-Endpunkt deines Agenten. Die bekommst du von deinem Anbieter.
         url_label: Endpunkt-URL
         url_placeholder: https://dein-agent-host/v1/chat
+        agent_discovery_configure_first: Speichere eine gültige Endpunkt-URL und ein API-Token,
+          um verfügbare Agenten zu laden.
+        agent_discovery_error: 'Agenten konnten nicht geladen werden: %{error}'
+        external_agent_invalid: Wähle einen Agenten aus, den der konfigurierte Endpunkt zurückgibt.
+        external_agent_required: Wähle vor dem Speichern einen externen Agenten aus.
+        external_agent_reselect: Der Endpunkt wurde geändert und der zuvor ausgewählte Agent
+          ist dort nicht verfügbar. Wähle einen Agenten des neuen Endpunkts aus.
+        external_info:
+          items:
+          - Gib die vollständige OpenAI-kompatible Endpunkt-URL mit der Endung /v1/chat/completions
+            ein.
+          - Nach dem Speichern von Endpunkt und Token ermittelt Sure verfügbare Agenten über
+            /v1/models.
+          - Der externe Dienst bestimmt das Modell hinter jedem Agenten; Sure wählt nur die
+            Agentenroute aus.
+          - Fehler bei Authentifizierung, Endpunkt oder Agent werden vom externen Dienst zurückgegeben.
+            Prüfe dessen Protokolle, wenn eine Anfrage fehlschlägt.
+          title: Externe KI-Konfiguration
       disconnect_external_assistant:
         external_assistant_disconnected: Externer Assistent getrennt
       ensure_admin:
@@ -268,3 +296,91 @@ de:
         step_2: Leg einen Token mit reinem Lesezugriff an.
         step_3: Kopier den Token und füg ihn unten ein.
         title: T-Invest (T-Bank)
+      categorization_provider_selector:
+        confidence_threshold_env_notice: Durch die Umgebungsvariable CATEGORIZATION_CONFIDENCE_THRESHOLD
+          festgelegt.
+        confidence_threshold_help: Unterhalb dieses Konfidenzwerts wird keine Kategorie
+          angewendet. Die Transaktion bleibt ohne Kategorie, damit ein späterer Lauf es
+          erneut versuchen kann. Es wird nichts verworfen. Setze den Wert auf 0, um jede
+          Antwort anzuwenden.
+        confidence_threshold_label: Mindestkonfidenz (0–1)
+        data_retention_direct: Transaktionsbeschreibungen, Beträge und deine Kategorienamen
+          werden zur Kategorisierung an TypeSafe gesendet. Prüfe deren Aufbewahrungsrichtlinie,
+          bevor du dies für echte Daten aktivierst.
+        data_retention_heading: Datenweitergabe
+        data_retention_proxied: Transaktionsbeschreibungen, Beträge und deine Kategorienamen
+          werden an %{host} gesendet und von dort an TypeSafe weitergeleitet. Prüfe die
+          Aufbewahrungsrichtlinien beider Anbieter, bevor du dies für echte Daten aktivierst.
+        description: Wähle den Anbieter für die Kategorisierung von Transaktionen. Diese
+          Auswahl ist unabhängig vom KI-Anbieter oben, der Chat und PDF-Verarbeitung übernimmt.
+        env_notice: Über Umgebungsvariablen auf %{type} festgelegt.
+        jev_configured: Jev-API-Schlüssel konfiguriert.
+        jev_not_configured: Jev ist ausgewählt, aber es ist kein API-Schlüssel konfiguriert.
+          Bis du unten einen hinzufügst, wird weiterhin der KI-Anbieter für die Kategorisierung
+          verwendet.
+        preview_pill: Vorschau
+        provider_help: Der KI-Anbieter liest Transaktionen stapelweise und gibt Kategorienamen
+          zurück. Jev wählt aus deiner Kategorienliste und liefert für jede Transaktion
+          einen kalibrierten Konfidenzwert.
+        provider_jev: Jev (TypeSafe)
+        provider_label: Kategorisierungsanbieter
+        provider_llm: KI-Anbieter (OpenAI oder Anthropic)
+        shadow_rate_env_notice: Durch die Umgebungsvariable CATEGORIZATION_SHADOW_RATE festgelegt.
+        shadow_rate_help: Führt den nicht ausgewählten Anbieter parallel zum ausgewählten
+          aus und protokolliert Unterschiede, ohne Kategorien zu ändern. Bei jedem ausgewählten
+          Kategorisierungslauf verdoppeln sich dadurch die API-Kosten. Setze den Wert auf
+          0, um den Vergleich zu deaktivieren.
+        shadow_rate_label: Stichprobenanteil für Parallelvergleich (0–1)
+        title: Transaktionskategorisierung
+      categorization_shadow_results:
+        shadow_disagreement_confidence: "(Konfidenz %{confidence})"
+        shadow_disagreement_row: "%{applied_provider} wählte %{applied_category}; %{shadow_provider}
+          wählte %{shadow_category}."
+        shadow_disagreements_heading: Neueste Abweichungen
+        shadow_no_category: keine Kategorie
+        shadow_no_disagreements: Beide Anbieter stimmten bei allen Transaktionen der Stichprobe
+          überein.
+        shadow_results_empty: Noch keine Vergleiche aufgezeichnet. Setze den Stichprobenanteil
+          für den Parallelvergleich auf einen Wert über 0 und führe eine Kategorisierung
+          aus.
+        shadow_results_heading: Parallelvergleich
+        shadow_results_summary: "%{agreement}%% Übereinstimmung bei %{count} Transaktionen
+          der Stichprobe."
+      demo_refresh_settings:
+        description: Aktualisiert ausschließlich die ausgewählte Demo-Familie automatisch.
+          Alle ihre Daten und Anmeldungen werden entfernt. Andere Familien bleiben unverändert.
+          Erfordert einen laufenden Worker mit mindestens 2 GiB RAM. Erstelle zuerst mit
+          dem Demo-Generator eine entbehrliche Demo-Familie und wähle sie hier aus. Wähle
+          keine Familie eines echten Benutzers.
+        enabled_label: Tägliche Aktualisierung der Demo-Familie aktivieren
+        family_label: Entbehrliche Demo-Familie
+        none: Keine Demo-Familie ausgewählt
+        save_family: Demo-Familie speichern
+      jev_settings:
+        api_key_label: API-Schlüssel
+        api_key_placeholder: TypeSafe-API-Schlüssel eingeben
+        endpoint_label: Endpunkt (optional)
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone (Standard)
+        env_configured_message: Erfolgreich über Umgebungsvariablen konfiguriert.
+        model_help: Standardmäßig wird TypeSafe direkt verwendet. Um Jev stattdessen über
+          OpenRouter zu erreichen, setze den Endpunkt auf https://openrouter.ai/api/alpha/decisions
+          und das Modell auf ~typesafe/jev-latest.
+        model_label: Modell (optional)
+        model_placeholder: jev-latest (Standard)
+      mansa_settings:
+        description: Gib den API-Schlüssel von Mansa API ein. Unterstützt die NGX (Nigerian
+          Exchange), die hier kein anderer Anbieter abdeckt. Mansa deckt weitere afrikanische
+          Börsen ab, für diese Integration wurde aber nur die NGX überprüft.
+        env_configured_message: Erfolgreich über die Umgebungsvariable MANSA_API_KEY konfiguriert.
+        label: API-Schlüssel
+        placeholder: Mansa-API-Schlüssel hier eingeben
+        rate_limit_warning: Der kostenlose Mansa-Tarif ist auf 100 API-Aufrufe pro Tag begrenzt
+          und stellt nur aktuelle Kurse bereit. Historische Kurse erfordern einen kostenpflichtigen
+          Tarif. Nur die NGX (Nigerian Exchange) wurde für diese Integration überprüft;
+          andere von Mansa abgedeckte afrikanische Börsen werden hier noch nicht unterstützt.
+        show_details: "(Details anzeigen)"
+        step_1_html: Besuche <a href="https://mansaapi.com" target="_blank" rel="noopener
+          noreferrer" class="underline">mansaapi.com</a> und hole dir deinen kostenlosen
+          API-Schlüssel – ohne Kreditkarte.
+        step_2: Kopiere deinen API-Schlüssel und füge ihn unten ein.
+        title: Mansa

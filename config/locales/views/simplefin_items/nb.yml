@@ -1,0 +1,208 @@
+---
+nb:
+  simplefin_items:
+    complete_account_setup:
+      all_skipped: Alle kontoene ble hoppet over. Ingen kontoer ble opprettet.
+      no_accounts: Ingen kontoer å konfigurere.
+      stale_accounts_errors:
+        one: "%{count} handling for en utdatert konto mislyktes. Se loggene for detaljer."
+        other: "%{count} handlinger for utdaterte kontoer mislyktes. Se loggene for
+          detaljer."
+      stale_accounts_processed: 'Utdaterte kontoer: %{deleted} slettet, %{moved} flyttet.'
+      success:
+        one: Opprettet %{count} SimpleFIN-konto! Transaksjonene og beholdningene dine
+          importeres i bakgrunnen.
+        other: Opprettet %{count} SimpleFIN-kontoer! Transaksjonene og beholdningene
+          dine importeres i bakgrunnen.
+    create:
+      errors:
+        unexpected: Det oppstod en uventet feil. Prøv igjen.
+        blank_token: Skriv inn et oppsettstoken for SimpleFIN.
+        create_failed: 'Kunne ikke koble til: %{message}'
+        invalid_token: Ugyldig oppsettstoken. Kontroller at du har kopiert hele tokenet
+          fra SimpleFIN Bridge.
+        token_compromised: Oppsettstokenet kan være kompromittert, utløpt eller allerede
+          brukt. Opprett et nytt.
+      success: SimpleFIN-tilkoblingen er lagt til! Kontoene dine vises snart mens
+        de synkroniseres i bakgrunnen.
+    edit:
+      cancel: Avbryt
+      update: Oppdater
+      connection_needs_update: 'SimpleFIN-tilkoblingen din må oppdateres:'
+      header_subtitle: Hent et nytt oppsettstoken for å koble til SimpleFIN-kontoen
+        din på nytt
+      setup_token:
+        help_text: Tokenet skal være en lang streng som begynner med bokstaver og
+          tall
+        label: 'Oppsettstoken for SimpleFIN:'
+        placeholder: Lim inn oppsettstokenet for SimpleFIN her …
+      step_1_html: Besøk <a href="https://bridge.simplefin.org/simplefin/create" target="_blank"
+        rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN
+        Bridge</a> for å opprette et nytt oppsettstoken
+      step_2: Kopier tokenet og lim det inn nedenfor
+      step_3: Klikk på «Oppdater» for å gjenopprette tilgangen
+      title: Oppdater SimpleFIN-tilkobling
+    institution_summary:
+      count:
+        one: "%{count} finansinstitusjon"
+        other: "%{count} finansinstitusjoner"
+      none: Ingen finansinstitusjoner tilkoblet
+    new:
+      cancel: Avbryt
+      connect: Koble til
+      setup_token: Oppsettstoken
+      setup_token_placeholder: Lim inn oppsettstokenet for SimpleFIN
+      title: Koble til SimpleFIN
+    select_existing_account:
+      cancel: Avbryt
+      link_account: Koble til konto
+      currently_linked_to: 'For øyeblikket koblet til: %{account_name}'
+      wait_for_sync: Hvis du nettopp koblet til eller synkroniserte, prøv igjen når
+        synkroniseringen er fullført.
+      all_accounts_already_linked: Alle SimpleFIN-kontoer ser ut til å være koblet
+        til allerede.
+      check_provider_health: Kontroller at SimpleFIN-tilkoblingen fungerer under Innstillinger
+        → Leverandører.
+      description: Velg en SimpleFIN-konto som skal knyttes til den eksisterende kontoen
+        din
+      no_accounts_found: Fant ingen SimpleFIN-kontoer for denne %{moniker}.
+      title: Koble %{account_name} til SimpleFIN
+      unlink_to_move: For å flytte en kobling må du først fjerne den via kontoens
+        handlingsmeny.
+    setup_accounts:
+      account_card:
+        balance: Saldo
+      account_type_credit_card: Kredittkort
+      account_type_investment: Investering
+      account_type_label: 'Kontotype:'
+      account_type_loan: Lån eller boliglån
+      account_type_other_asset: Annet aktivum
+      activity:
+        today: i dag
+        days_ago:
+          one: For 1 dag siden
+          other: For %{count} dager siden
+        dormant: Ingen aktivitet på %{days} dager
+        empty: Ingen transaksjoner er importert ennå
+        likely_closed: Ingen nylig aktivitet og null saldo. Kortet kan være avsluttet
+          eller erstattet.
+        recent:
+          one: 1 transaksjon • siste %{when}
+          other: "%{count} transaksjoner • siste %{when}"
+        yesterday: i går
+      cancel: Avbryt
+      create_accounts: Opprett kontoer
+      creating_accounts: Oppretter kontoer...
+      header_subtitle: Velg riktige kontotyper for de importerte kontoene
+      stale_accounts:
+        transaction_count:
+          one: "%{count} transaksjon"
+          other: "%{count} transaksjoner"
+        action_delete: Slett kontoen og alle transaksjoner
+        action_move: 'Flytt transaksjoner til:'
+        action_prompt: Hva vil du gjøre?
+        action_skip: Hopp over foreløpig
+        description: Disse kontoene finnes i databasen din, men leveres ikke lenger
+          av SimpleFIN. Dette kan skje når kontokonfigurasjoner endres hos leverandøren.
+        title: Kontoer som ikke lenger finnes i SimpleFIN
+      account_type_checking_savings: Bruks- eller sparekonto
+      account_type_checking_savings_desc: Vanlige bankkontoer
+      account_type_credit_card_desc: Kredittkortkontoer
+      account_type_investment_desc: Megler-, 401(k)- og IRA-kontoer
+      account_type_loan_desc: Gjeldskontoer
+      account_type_other_asset_desc: Alt annet
+      choose_account_type: 'Velg riktig kontotype for hver SimpleFIN-konto:'
+      title: Sett opp SimpleFIN-kontoene dine
+      transaction_history_description_html: SimpleFIN leverer vanligvis <strong>60–90
+        dager</strong> med transaksjonshistorikk, avhengig av banken din. Etter det
+        første oppsettet synkroniseres nye transaksjoner automatisk fremover. Tilgjengelig
+        historikk varierer etter institusjon og kontotype.
+      transaction_history_title: 'Transaksjonshistorikk:'
+    simplefin_item:
+      add_new: Legg til ny tilkobling
+      confirm_accept: Slett tilkobling
+      confirm_body: Dette vil permanent slette alle kontoene i denne gruppen og alle
+        tilknyttede data.
+      delete: Slett
+      error: Feil oppsto under synkronisering av data
+      no_accounts_title: Ingen kontoer funnet
+      requires_update: Koble til på nytt
+      setup_action: Konfigurer nye kontoer
+      setup_needed: Nye kontoer er klare til å konfigureres
+      status: Sist synkronisert for %{timestamp} siden
+      status_never: Aldri synkronisert
+      status_with_summary: Sist synkronisert for %{timestamp} siden • %{summary}
+      syncing: Synkroniserer...
+      update: Oppdater
+      deletion_in_progress: "(sletting pågår...)"
+      accounts_skipped_label: 'Hoppet over: %{count}'
+      setup_accounts_menu: Konfigurer kontoer
+      accounts_skipped_tooltip: Noen kontoer ble hoppet over på grunn av feil under
+        synkronisering
+      confirm_title: Slette SimpleFIN-tilkoblingen?
+      duplicate_accounts_skipped: Noen kontoer ble hoppet over som duplikater. Bruk
+        «Koble til eksisterende kontoer» for å slå dem sammen.
+      more_accounts_available:
+        one: "%{count} konto til er tilgjengelig for oppsett"
+        other: "%{count} kontoer til er tilgjengelige for oppsett"
+      no_accounts_description: Denne tilkoblingen har ingen synkroniserte kontoer
+        ennå.
+      rate_limited_ago: Forespørselsgrense nådd (for %{time} siden)
+      rate_limited_recently: Forespørselsgrense nådd nylig
+      reconciled_details_note: "(se synkroniseringssammendraget for detaljer)"
+      setup_description: Velg kontotyper for de nylig importerte SimpleFIN-kontoene
+        dine.
+      stale_pending_accounts: 'på: %{accounts}'
+      stale_pending_note: "(utelatt fra budsjetter)"
+    sync_status:
+      no_accounts: Ingen kontoer funnet
+      partial_setup:
+        one: "%{linked} synkronisert, %{unlinked} må konfigureres"
+        other: "%{linked} synkronisert, %{unlinked} må konfigureres"
+      synced:
+        one: "%{count} konto synkronisert"
+        other: "%{count} kontoer synkronisert"
+    update:
+      errors:
+        unexpected: Det oppstod en uventet feil. Prøv igjen.
+        invalid_token: Ugyldig oppsettstoken. Kontroller at du har kopiert hele tokenet
+          fra SimpleFIN Bridge.
+        token_compromised: Oppsettstokenet kan være kompromittert, utløpt eller allerede
+          brukt. Opprett et nytt.
+    link_existing_account:
+      errors:
+        only_manual: Bare manuelle kontoer kan kobles til
+        different_provider: Denne kontoen er koblet til en annen leverandør. Koble
+          den først fra denne leverandøren, og koble den deretter til SimpleFIN.
+        invalid_simplefin_account: Ugyldig SimpleFIN-konto valgt
+      success: Kontoen er koblet til SimpleFIN
+    destroy:
+      success: SimpleFIN-tilkoblingen vil bli fjernet
+    dismiss_replacement_suggestion:
+      dismissed: Forslaget om erstatningskort er avvist
+    rate_limited:
+      daily_refresh: Du har nådd SimpleFINs daglige oppdateringsgrense. Prøv igjen
+        etter at broen er oppdatert (opptil 24 timer).
+    reconciled_status:
+      message:
+        one: "%{count} duplikat av en ventende transaksjon er avstemt"
+        other: "%{count} duplikater av ventende transaksjoner er avstemt"
+    replacement_prompt:
+      confirm_body: "«%{account_name}» vil bli knyttet til «%{new_name}». Transaksjonshistorikken
+        beholdes, og fremtidige transaksjoner kommer fra det nye kortet."
+      confirm_title: Knytte til det nye kortet?
+      description: "«%{account_name}» er knyttet til «%{old_name}», som ikke har hatt
+        nylig aktivitet og har null saldo. Et nytt kort, «%{new_name}», er nå aktivt
+        hos samme institusjon. Bytt kobling for å bevare historikken."
+      dismiss_aria: Avvis forslag om erstatningskort
+      relink: Knytt til nytt kort
+      title: Kortet ditt fra %{institution} kan ha blitt erstattet
+    stale_pending_status:
+      message:
+        one: "%{count} ventende transaksjon eldre enn %{days} dager"
+        other: "%{count} ventende transaksjoner eldre enn %{days} dager"
+    stale_sync:
+      last_successful: Siste vellykkede synkronisering var for %{count} dager siden.
+        SimpleFIN-tilkoblingen kan trenge oppfølging.
+      no_transactions: Ingen nye transaksjoner på %{count} dager. Kontroller i SimpleFIN-oversikten
+        at banktilkoblingene dine er aktive.

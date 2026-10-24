@@ -1,0 +1,16 @@
+---
+nb:
+  recurring_allocations:
+    already_allocated: Denne transaksjonen er allerede knyttet til regningen
+    confirm:
+      success: Betalingen er knyttet til regningen
+    create:
+      success: Betalingen er registrert
+    destroy:
+      success: Betalingen er frakoblet
+    invalid: Betalingen kunne ikke registreres
+    missing_rate: Ingen valutakurs er tilgjengelig. Angi beløpet selv.
+    over_allocation: Dette vil fordele mer enn transaksjonens beløp
+    reject:
+      success: Avvist. Denne transaksjonen vil ikke bli foreslått for denne regningen
+        igjen.

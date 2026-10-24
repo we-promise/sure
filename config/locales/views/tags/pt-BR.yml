@@ -14,6 +14,7 @@ pt-BR:
       empty: Nenhuma tag ainda
       new: Nova tag
       tags: Tags
+      delete_all: Excluir todas
     new:
       new: Nova tag
     tag:
@@ -21,3 +22,11 @@ pt-BR:
       edit: Editar
     update:
       updated: Tag atualizada
+    destroy_all:
+      all_deleted: Todas as tags excluídas
+    menu:
+      label: Editar tags
+      loading: Carregando tags...
+    summary:
+      add: Adicionar tags
+      title: 'Tags: %{names}'

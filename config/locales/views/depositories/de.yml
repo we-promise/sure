@@ -24,3 +24,6 @@ de:
       savings:
         long: Sparkonto
         short: Spar
+      cash:
+        long: Bargeld
+        short: Bargeld

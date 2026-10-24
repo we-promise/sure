@@ -20,6 +20,12 @@ ro:
       household_name_placeholder: Numele gospodăriei
       country: Țară
       submit: Continuă
+      group_name: Numele grupului
+      group_name_placeholder: Numele grupului
+      moniker_family: Membrii familiei (doar tu sau împreună cu partenerul, adolescenții
+        etc.)
+      moniker_group: Grup de persoane (firmă, club, asociație sau orice alt tip)
+      moniker_prompt: Voi folosi %{product_name} împreună cu ...
     preferences:
       title: Configurează preferințele
       subtitle: Să-ți configurăm preferințele.
@@ -35,7 +41,8 @@ ro:
       submit: Finalizare
     goals:
       title: Ce te aduce aici?
-      subtitle: Selectează unul sau mai multe obiective pe care le ai cu %{product_name} ca instrument de finanțe personale.
+      subtitle: Selectează unul sau mai multe obiective pe care le ai cu %{product_name}
+        ca instrument de finanțe personale.
       unified_accounts: Să-mi văd toate conturile într-un singur loc
       cashflow: Să înțeleg fluxul de numerar și cheltuielile
       budgeting: Să gestionez planuri financiare și bugete
@@ -48,14 +55,18 @@ ro:
     trial:
       title: Încearcă Sure timp de 45 de zile
       data_deletion: Datele vor fi șterse după aceea
-      description_html: Începând de azi poți testa produsul în profunzime.<br/>Dacă îți place, găzduiește-l singur sau contribuie pentru a continua să-l folosești aici.
+      description_html: Începând de azi poți testa produsul în profunzime.<br/>Dacă
+        îți place, găzduiește-l singur sau contribuie pentru a continua să-l folosești
+        aici.
       try_button: Încearcă Sure timp de 45 de zile
       continue_trial: Continuă perioada de probă
       upgrade: Actualizează
       how_it_works: Cum funcționează
       today: Astăzi
-      today_description: Vei avea acces gratuit la Sure timp de 45 de zile pe AWS-ul nostru.
+      today_description: Vei avea acces gratuit la Sure timp de 45 de zile pe AWS-ul
+        nostru.
       in_40_days: În 40 de zile (%{date})
       in_40_days_description: Te vom notifica să-ți amintim să-ți exporți datele.
       in_45_days: În 45 de zile (%{date})
-      in_45_days_description: Îți ștergem datele — contribuie pentru a continua să folosești Sure aici!
+      in_45_days_description: Îți ștergem datele — contribuie pentru a continua să
+        folosești Sure aici!

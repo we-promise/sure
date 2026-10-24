@@ -1,0 +1,18 @@
+---
+ro:
+  rule_notification_mailer:
+    digest:
+      account: Cont
+      amount: Sumă
+      date: Dată
+      name: Nume
+      cta: Vezi tranzacțiile
+      heading:
+        one: 1 tranzacție nouă corespunde regulii tale
+        other: "%{count} de tranzacții noi corespund regulii tale"
+        few: "%{count} tranzacții noi corespund regulii tale"
+      intro: 'Aceste tranzacții corespund regulii „%{rule}”:'
+      subject:
+        one: 1 tranzacție nouă corespunde regulii tale în %{product_name}
+        other: "%{count} de tranzacții noi corespund regulii tale în %{product_name}"
+        few: "%{count} tranzacții noi corespund regulii tale în %{product_name}"

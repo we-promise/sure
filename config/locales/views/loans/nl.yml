@@ -10,6 +10,28 @@ nl:
       rate_type: Rentetype
       term_months: Looptijd (maanden)
       term_months_placeholder: '360'
+      rate_change_remove: Verwijderen
+      none: Geen
+      subtype_none: Geen
+      down_payment: Aanbetaling
+      insurance_rate: Verzekeringspercentage
+      insurance_rate_hint: Een jaarlijks percentage dat maandelijks samen met de aflossing wordt betaald. Bij een vast verzekerd bedrag geldt het oorspronkelijke saldo; bij een dalend verzekerd bedrag de resterende schuld.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Verzekeringstype
+      insurance_rate_type_decreasing_life: Dalend verzekerd bedrag
+      insurance_rate_type_level_term: Vast verzekerd bedrag
+      rate_change_add: Rentewijziging toevoegen
+      rate_change_effective_date: Ingangsdatum
+      rate_change_rate: Rentepercentage
+      rate_changes: Rentewijzigingen
+      rate_changes_empty: Geen rentewijzigingen vastgelegd. De lening gebruikt het bovenstaande rentepercentage.
+      rate_changes_hint: Elke rij bepaalt de rente vanaf de ingangsdatum tot de volgende wijziging. Als je een datum opnieuw invoert, vervangt dit die rij in plaats van een tweede toe te voegen.
+      rate_type_adjustable: Periodiek herzienbaar
+      rate_type_fixed: Vast
+      rate_type_variable: Variabel
+      start_date: Ingangsdatum lening
+      start_date_hint: De datum waarop de lening is opgenomen. Laat leeg om de openingsdatum van de rekening te gebruiken.
+      subtype_prompt: Selecteer een leningtype
     new:
       title: Voer leninggegevens in
     overview:
@@ -21,3 +43,49 @@ nl:
       term: Looptijd
       type: Type
       unknown: Onbekend
+      original_payoff_date: Oorspronkelijke aflosdatum
+    tabs:
+      repayment_progress:
+        total: Totaal
+        insurance: Verzekeringen
+        interest: Rente
+        instalment: Betaling %{number} · %{date}
+        of_original: van %{amount}
+        principal: Hoofdsom
+        repaid: Afgelost
+      overview:
+        unknown: Onbekend
+        total_insurance: Verzekeringen
+        type: Type
+        edit_loan_details: Leninggegevens bewerken
+        insurance_rate_only: "%{rate} per jaar"
+        interest_rate: Rentepercentage
+        leverage: Hefboom
+        leverage_band_conservative: Conservatief
+        leverage_band_high: Hoog
+        leverage_band_moderate: Gematigd
+        leverage_multiple: "%{ratio}x"
+        monthly_payment: Maandelijkse betaling
+        not_applicable: N.v.t.
+        original_principal: Oorspronkelijk leenbedrag
+        remaining_principal: Resterend leenbedrag
+        term: Looptijd
+        total_cost: Totale kosten
+        total_cost_with_insurance: Totale kosten inclusief verzekering
+        original_payoff_date: Oorspronkelijke aflosdatum
+      schedule:
+        date: Datum
+        interest: Rente
+        payment: Betaling
+        description: Prognose op basis van het oorspronkelijke saldo, rentepercentage en de looptijd, vanaf %{start_date}. Extra aflossingen zijn niet meegenomen.
+        forecasted_payoff_date: Verwachte aflosdatum
+        forecasted_payoff_not_converged: Wordt niet afgelost met de huidige betaling
+        number: "#"
+        opening_payment: Eerste betaling
+        remaining_balance: Resterend saldo
+        total_interest: Totale rente
+        variable_rate_notice: 'De rente van deze lening verandert in de tijd. Het aflossingsschema wordt bij elke vastgelegde wijziging opnieuw berekend: de oorspronkelijke aflosdatum blijft gelijk en het termijnbedrag wordt aangepast. Een nog niet vastgelegde wijziging verandert deze cijfers.'
+        monthly_payment: Maandelijkse betaling
+        not_applicable: N.v.t.
+        principal: Hoofdsom
+        total_cost: Totale kosten

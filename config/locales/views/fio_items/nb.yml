@@ -1,0 +1,164 @@
+---
+nb:
+  fio_item:
+    sync:
+      status:
+        calculating: Beregner saldoer...
+        checking_setup: Kontrollerer kontooppsettet...
+        needs_setup:
+          other: "%{count} kontoer må konfigureres..."
+          one: 1 konto må settes opp …
+        processing: Behandler transaksjoner...
+        importing: Importerer kontoutskriften fra Fio …
+    sync_status:
+      all_synced:
+        other: "%{count} kontoer synkronisert"
+        one: 1 konto synkronisert
+      partial: "%{linked} synkronisert, %{unlinked} må konfigureres"
+      no_accounts: Ingen konto er funnet ennå
+    errors:
+      account_mismatch: Dette tokenet tilhører en annen Fio-konto enn den denne tilkoblingen
+        allerede synkroniserer. Legg det til som en egen tilkobling i stedet.
+      account_processing_failed: Kunne ikke synkronisere Fio-kontoen
+      account_sync_schedule_failed: Kunne ikke planlegge synkronisering av Fio-kontoen
+      history_locked: Fio avviste denne kontoutskriftsperioden. Lås opp kontoens fullstendige
+        historikk i nettbanken under Innstillinger → API, og synkroniser på nytt innen
+        10 minutter.
+      statement_fetch_failed: Kunne ikke hente kontoutskriften fra Fio
+      statement_too_large: Kontoutskriften har flere transaksjoner enn Fio leverer
+        i én forespørsel. Flytt startdatoen for synkronisering fremover og synkroniser
+        på nytt.
+      sync_failed: Kunne ikke synkronisere Fio-tilkoblingen
+  fio_items:
+    fio_item:
+      delete: Slett
+      deletion_in_progress: Sletting pågår
+      error: Feil
+      setup_action: Konfigurer konto
+      status_never: Aldri synkronisert
+      sync_now: Synkroniser nå
+      syncing: Synkroniserer
+      requires_update: Nytt token kreves
+      requires_update_title: Nytt token kreves
+      setup_needed: Kontooppsett kreves
+      status_with_summary: Synkronisert for %{timestamp} siden · %{summary}
+      no_accounts_description: Fio rapporterer kontoen bare i en kontoutskrift, så
+        den vises etter den første vellykkede synkroniseringen.
+      no_accounts_title: Ingen konto er importert ennå
+      requires_update_description: Fio avviste tokenet for denne tilkoblingen. Opprett
+        et nytt token med bare lesetilgang under Innstillinger → API i nettbanken.
+      setup_description: Kontoen dette tokenet gir tilgang til, er ennå ikke knyttet
+        til en Sure-konto.
+      update_token: Oppdater token
+    link_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør.
+      fio_account_already_linked: Denne Fio-kontoen er allerede koblet til.
+      no_account_selected: Ingen Fio-konto var tilgjengelig for tilkobling.
+      success: Knyttet Fio-kontoen din til %{account_name}.
+      unsupported_account_type: Fio kan bare synkronisere kontant- og lånekontoer.
+    provider_panel:
+      connection_name_label: Tilkoblingsnavn
+      disconnect: Koble fra
+      disconnect_confirm: Er du sikker på at du vil koble fra %{name}?
+      last_synced: Synkronisert for %{timestamp} siden
+      never_synced: Aldri synkronisert
+      setup_accounts: Konfigurer konto
+      sync: Synkroniser
+      syncing: Synkroniserer...
+      update_connection: Oppdater tilkobling
+      keep_token_placeholder: La stå tomt for å beholde det eksisterende tokenet
+      requires_update: Nytt token kreves
+      account_needs_setup: Ikke knyttet til en Sure-konto ennå.
+      add_connection: Legg til Fio banka-tilkobling
+      connected_account: Tilkoblet konto
+      connection_name_placeholder: Min Fio-konto
+      default_connection_name: Fio banka-tilkobling
+      no_account_yet: Ingen konto ennå. Den første synkroniseringen finner kontoen
+        dette tokenet gir tilgang til.
+      one_account_notice: Ett token gir tilgang til én Fio-konto, så legg til en tilkobling
+        for hver konto du vil følge. Et token kan brukes én gang hvert 30. sekund.
+        En synkronisering som kommer tidligere, håndteres ved neste forsøk.
+      requires_update_notice: Fio avviste dette tokenet. Tokener er gyldige i opptil
+        180 dager med mindre de forlenges automatisk ved hver innlogging i nettbanken.
+        Opprett derfor et nytt token med bare lesetilgang under Innstillinger → API
+        og lim det inn nedenfor.
+      sync_start_date_hint: Fio leverer de siste 90 dagene uten ekstra godkjenning.
+        For eldre historikk må du låse opp kontoens fullstendige historikk i nettbanken
+        under Innstillinger → API (hengelåsikonet). Dette åpner et vindu på 10 minutter,
+        og du må synkronisere innenfor dette vinduet.
+      sync_start_date_label: Importer transaksjoner fra
+      token_label: API-token (bare lesetilgang)
+      token_placeholder: Lim inn tokenet på 64 tegn
+    select_accounts:
+      account_type_label: Kontotype
+      cancel: Avbryt
+      link_account: Koble til konto
+      sync_now: Synkroniser nå
+      no_credentials_configured: Konfigurer Fio banka i leverandørinnstillingene først.
+      already_linked: Kontoen til denne tilkoblingen er allerede knyttet til en Sure-konto.
+      awaiting_first_sync: Fio har ennå ikke rapportert kontoen for dette tokenet.
+        Kjør en synkronisering og kom tilbake.
+      description: Dette tokenet gir tilgang til én konto. Velg hvordan den skal følges
+        i Sure.
+      title: Koble til Fio-kontoen din
+    select_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør.
+      cancel: Avbryt
+      link_account: Koble til konto
+      sync_now: Synkroniser nå
+      no_credentials_configured: Konfigurer Fio banka i leverandørinnstillingene først.
+      already_linked: Kontoen til denne tilkoblingen er allerede knyttet til en Sure-konto.
+      awaiting_first_sync: Fio har ennå ikke rapportert kontoen for dette tokenet.
+        Kjør en synkronisering og kom tilbake.
+      description: Knytt kontoen dette tokenet gir tilgang til, til kontoen du valgte.
+      title: Koble Fio-konto til %{account_name}
+    setup_accounts:
+      account_type_label: Kontotype
+      account_types:
+        skip: Hopp over
+      cancel: Avbryt
+      close: Lukk
+      create_account: Opprett konto
+      sync_now: Synkroniser nå
+      choose_account_type: Velg en kontotype
+      account_already_handled: Kontoen til denne tilkoblingen er allerede koblet til
+        eller hoppet over.
+      awaiting_first_sync: Ingen konto er funnet ennå
+      awaiting_first_sync_description: Fio rapporterer kontoen bare i en kontoutskrift,
+        så den vises etter den første vellykkede synkroniseringen.
+      choose_account_type_description: Hopp over kontoen hvis du ikke vil følge den.
+      nothing_to_setup: Ingenting å sette opp
+      subtitle: Velg hvordan kontoen dette tokenet gir tilgang til, skal vises i Sure.
+      title: Koble til Fio-kontoen din
+    link_accounts:
+      no_credentials_configured: Konfigurer Fio banka i leverandørinnstillingene først.
+      link_failed: Kontoen kunne ikke kobles til.
+      no_account_found: Fant ingen Fio-konto som ikke allerede er koblet til, for
+        denne tilkoblingen.
+      success: Knyttet Fio-kontoen din til %{account_name}.
+      unsupported_account_type: Fio støtter ikke denne kontotypen.
+    account_types:
+      depository: Bruks- eller sparekonto
+      loan: Lån, boliglån eller kassakreditt
+    complete_account_setup:
+      creation_failed: Kunne ikke opprette Sure-kontoen.
+      no_account: Ingen Fio-konto trengte oppsett.
+      skipped: Fio-kontoen ble hoppet over.
+      success: Opprettet %{account_name}.
+      unsupported_account_type: Fio støtter ikke denne kontotypen.
+    create:
+      success: Fio banka-tilkoblingen er lagret.
+      token_required: Lim inn API-tokenet fra Fio-nettbanken.
+    destroy:
+      success: Fio banka-tilkoblingen er planlagt slettet.
+      unlink_failed: Kunne ikke koble fra Fio banka-tilkoblingen
+    update:
+      success: Fio banka-tilkoblingen er oppdatert.
+  family:
+    fio:
+      create_fio_item:
+        default_name: Fio banka-tilkobling
+  providers:
+    fio:
+      description: Synkroniser en Fio banka-konto med et API-token som bare gir lesetilgang
+      name: Fio banka

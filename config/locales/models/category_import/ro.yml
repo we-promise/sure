@@ -1,0 +1,8 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          missing_columns: 'Lipsesc coloanele obligatorii: %{columns}'
+          own_parent: Categoria „%{name}” nu poate fi propria categorie părinte

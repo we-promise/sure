@@ -6,27 +6,57 @@ ro:
       success: Comerciant nou creat cu succes
     destroy:
       success: Comerciant șters cu succes
+      unlinked_success: Comerciantul a fost eliminat din tranzacțiile tale
     edit:
       title: Editează comerciantul
     form:
       name_placeholder: Nume comerciant
+      website_hint: Introdu site-ul comerciantului pentru a-i afișa automat sigla
+      website_placeholder: Site web (de ex., starbucks.com)
     index:
       empty: Niciun comerciant încă
       new: Comerciant nou
       title: Comercianți
-      family_title: Comercianți ai familiei
-      family_empty: Încă nu există comercianți ai familiei
+      family_title: Comercianți pentru %{moniker}
+      family_empty: Nu există încă comercianți pentru %{moniker}
       provider_title: Comercianți furnizor
-      provider_empty: Niciun comerciant furnizor asociat încă acestei familii
-      provider_read_only: Comercianții furnizor sunt sincronizați din instituțiile tale conectate. Nu pot fi editați aici.
+      provider_empty: Nu există încă comercianți de la furnizori asociați cu %{moniker}
+      provider_read_only: Comercianții furnizor sunt sincronizați din instituțiile
+        tale conectate. Nu pot fi editați aici.
       table:
         merchant: Comerciant
         actions: Acțiuni
         source: Sursă
+      import: Importă comercianți
+      enhance_button: Îmbunătățește cu AI
+      enhance_info:
+        one: Lipsesc informațiile despre site pentru %{count} comerciant de la furnizori.
+          Folosește AI pentru a identifica site-uri, afișa sigle și îmbina comercianții
+          duplicați.
+        other: Lipsesc informațiile despre site pentru %{count} de comercianți de
+          la furnizori. Folosește AI pentru a identifica site-uri, afișa sigle și
+          îmbina comercianții duplicați.
+        few: Lipsesc informațiile despre site pentru %{count} comercianți de la furnizori.
+          Folosește AI pentru a identifica site-uri, afișa sigle și îmbina comercianții
+          duplicați.
+      merge: Îmbină comercianții
+      no_family_merchants_found: Nu s-au găsit comercianți ai familiei care să corespundă
+      no_provider_merchants_found: Nu s-au găsit comercianți de la furnizori care
+        să corespundă
+      per_page: pe pagină
+      provider_info: Acești comercianți au fost identificați automat prin conexiunile
+        tale bancare sau de AI. Îi poți edita pentru a crea o copie proprie sau îi
+        poți elimina pentru a-i dezasocia de tranzacțiile tale.
+      search_family_merchants: Caută comercianți ai familiei...
+      search_provider_merchants: Caută comercianți de la furnizori...
+      unlinked_info: Acești comercianți au fost eliminați recent din tranzacțiile
+        tale. Vor dispărea din această listă după 30 de zile dacă nu sunt reasociați
+        cu o tranzacție.
+      unlinked_title: Dezasociați recent
     merchant:
       confirm_accept: Șterge comerciantul
-      confirm_body: Ești sigur că vrei să ștergi acest comerciant? Eliminarea acestui comerciant
-        va deconecta toate tranzacțiile asociate și poate afecta raportarea.
+      confirm_body: Ești sigur că vrei să ștergi acest comerciant? Eliminarea acestui
+        comerciant va deconecta toate tranzacțiile asociate și poate afecta raportarea.
       confirm_title: Ștergi comerciantul?
       delete: Șterge comerciantul
       edit: Editează comerciantul
@@ -34,3 +64,39 @@ ro:
       title: Comerciant nou
     update:
       success: Comerciant actualizat cu succes
+      converted_success: Comerciantul a fost convertit și actualizat cu succes
+    family_merchant:
+      delete: Șterge
+      edit: Editează
+    provider_merchant:
+      edit: Editează
+      remove: Elimină
+      remove_confirm_body: Sigur vrei să elimini %{name}? Toate tranzacțiile asociate
+        vor fi dezasociate de acest comerciant, dar comerciantul în sine nu va fi
+        șters.
+      remove_confirm_title: Elimini comerciantul?
+    enhance:
+      already_running: Îmbunătățirea este deja în curs. Așteaptă finalizarea ei.
+      success: Îmbunătățirea comercianților de la furnizori a început. Datele comercianților
+        vor fi îmbunătățite, iar duplicatele vor fi îmbinate în curând.
+    merge:
+      description: Selectează un comerciant destinație și comercianții care vor fi
+        îmbinați cu acesta. Toate tranzacțiile comercianților îmbinați vor fi reasociate
+        comerciantului destinație.
+      no_merchants_found: Nu s-au găsit comercianți care să corespundă
+      title: Îmbină comercianții
+      select_target: Selectează comerciantul destinație...
+      sources_hint: Comercianții selectați vor fi îmbinați cu cel destinație. Comercianții
+        familiei vor fi șterși, iar cei de la furnizori vor fi dezasociați.
+      sources_label: Comercianți de îmbinat
+      sources_search_placeholder: Caută comercianți...
+      submit: Îmbină selecția
+      target_label: Îmbină cu (destinație)
+    perform_merge:
+      invalid_merchants: Au fost selectați comercianți nevalizi
+      no_merchants_selected: Nu au fost selectați comercianți de îmbinat
+      success:
+        one: A fost îmbinat cu succes %{count} comerciant
+        other: Au fost îmbinați cu succes %{count} de comercianți
+        few: Au fost îmbinați cu succes %{count} comercianți
+      target_not_found: Comerciantul destinație nu a fost găsit

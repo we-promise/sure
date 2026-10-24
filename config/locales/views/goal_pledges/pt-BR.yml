@@ -1,0 +1,24 @@
+---
+pt-BR:
+  goal_pledges:
+    create:
+      success: Compromisso registrado. O Sure o confirmará na próxima sincronização.
+    destroy:
+      not_open: Apenas compromissos por confirmar podem ser cancelados.
+      success: Compromisso cancelado.
+    new:
+      account_label: Para a conta
+      amount_label: Valor
+      helper_manual: >-
+        O Sure registrará isso na próxima edição manual do saldo e confirmará a contribuição.
+      helper_transfer: >-
+        O Sure procurará um depósito correspondente na sua conta associada. O compromisso
+        permanece por confirmar durante 7 dias e é confirmado automaticamente quando
+        o Sure o detectar.
+      preview_nonzero: Atinge {percent}%, {newTotal} de {target}.
+      preview_reached: Atinge o seu objetivo de {target}. Objetivo alcançado.
+      preview_zero: Atualmente tem {current} de {target} reservados.
+      submit: Registrar contribuição
+    renew:
+      not_open: Somente compromissos em aberto podem ser prorrogados.
+      success: Prazo do compromisso prorrogado por 7 dias.

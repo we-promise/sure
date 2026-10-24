@@ -20,6 +20,11 @@ nl:
       household_name_placeholder: Huishoudnaam
       country: Land
       submit: Doorgaan
+      group_name: Groepsnaam
+      moniker_family: Gezinsleden (alleen jezelf of met partner, tieners enz.)
+      moniker_group: Een groep mensen (bedrijf, club, vereniging of een ander type groep)
+      moniker_prompt: Ik ga %{product_name} gebruiken met…
+      group_name_placeholder: Groepsnaam
     preferences:
       title: Configureer je voorkeuren
       subtitle: Laten we je voorkeuren configureren.

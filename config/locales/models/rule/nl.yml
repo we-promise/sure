@@ -1,0 +1,12 @@
+---
+nl:
+  activerecord:
+    errors:
+      models:
+        rule:
+          duplicate_actions: 'Een regel mag geen dubbele acties bevatten: %{types}'
+          min_actions: moet ten minste één actie hebben
+          nested_conditions: Samengestelde voorwaarden kunnen niet worden genest
+  rule:
+    conditions:
+      unsupported_label: Niet ondersteund (%{type})

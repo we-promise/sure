@@ -29,3 +29,41 @@ nb:
       overview: Oversikt
       settings: Innstillinger
       opening_balance: Startsaldo
+      amount_label: Kontoverdi på datoen
+      update_value: Oppdater verdi
+    confirm_create:
+      confirm: Bekreft
+      title: Bekreft ny saldo
+    confirm_update:
+      update: Oppdater
+      title: Oppdater saldo
+    confirmation_contents:
+      brokerage_cash: Meglerkontanter
+      change: endringen
+      account_balance: kontosaldo
+      action_set: angi
+      action_update: oppdatere
+      asset_value: eiendelsverdi
+      balance: saldo
+      credit_card_balance: kredittkortsaldo
+      crypto_balance: kryptosaldo
+      holdings_value: Verdi av beholdninger
+      liability_balance: gjeldssaldo
+      loan_balance: lånesaldo
+      'on': den
+      property_value: eiendomsverdi
+      recalculate_notice: Alle fremtidige transaksjoner og saldoer beregnes på nytt
+        basert på denne %{change_or_update}.
+      this_will: Dette vil %{action_verb} kontoverdien den
+      to: til
+      to_colon: 'til:'
+      total_account_value: Samlet kontoverdi
+      update: oppdateringen
+      vehicle_value: kjøretøyverdi
+    update:
+      entry_updated: Oppføring oppdatert
+      account_updated: Kontoen er oppdatert
+    create:
+      account_updated: Kontoen er oppdatert
+    errors:
+      amount_required: Beløp må angis

@@ -4,7 +4,8 @@ ro:
     access_denied: Acces interzis
     create:
       success: Export început. Veți putea să-l descărcați în curând.
-    delete_confirmation: Sigur doriți să ștergeți acest export? Această acțiune nu poate fi anulată.
+    delete_confirmation: Sigur doriți să ștergeți acest export? Această acțiune nu
+      poate fi anulată.
     delete_failed_confirmation: Sigur doriți să ștergeți acest export eșuat?
     destroy:
       success: Export șters cu succes
@@ -28,4 +29,28 @@ ro:
         actions:
           delete: Șterge
           download: Descărcare
+          mark_failed: Marchează ca eșuat
+          confirm_mark_failed: Acest export este inactiv de ceva timp și sarcina sa
+            de fundal a fost probabil întreruptă. Îl marchezi ca eșuat? Poți crea
+            imediat un export nou.
       empty: Nu există încă exporturi.
+    new:
+      cancel: Anulează
+      note_label: Notă
+      accounts_and_balances: Toate conturile și soldurile
+      categories_tags_rules: Categorii, etichete și reguli
+      dialog_subtitle: Descarcă toate datele tale financiare
+      dialog_title: Exportă-ți datele
+      export_data: Exportă date
+      investment_trades: Tranzacții de investiții
+      note_description: Acest export include toate datele tale, dar numai o parte
+        pot fi reimportate prin funcția de import CSV. Sunt acceptate importurile
+        de conturi, tranzacții (cu categorii și etichete) și tranzacții bursiere.
+        Celelalte date ale conturilor nu pot fi importate și sunt doar pentru arhiva
+        ta.
+      transaction_history: Istoricul tranzacțiilor
+      whats_included: 'Ce este inclus:'
+    cancel:
+      cancelled: Exportul a fost marcat ca eșuat. Poți crea imediat un export nou.
+      not_cancellable: Acest export nu poate fi marcat acum ca eșuat — sarcina sa
+        ar putea rula încă. Încearcă din nou după ce a fost inactiv timp de o oră.

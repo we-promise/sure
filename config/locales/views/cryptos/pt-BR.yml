@@ -5,3 +5,18 @@ pt-BR:
       edit: Editar %{account}
     new:
       title: Inserir saldo da conta
+    form:
+      subtype_label: Tipo de conta
+      subtype_none: Nenhum
+      subtype_prompt: Selecione o tipo de conta
+      tax_treatment_hint: >-
+        A maioria das criptomoedas é mantida em contas tributáveis. Selecione uma
+        opção diferente se estiver mantida numa conta com benefícios fiscais.
+      tax_treatment_label: Tratamento Fiscal
+    subtypes:
+      exchange:
+        long: Corretora de criptomoedas
+        short: Corretora
+      wallet:
+        long: Carteira de Criptomoedas
+        short: Carteira
