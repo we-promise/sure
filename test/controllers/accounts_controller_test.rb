@@ -29,6 +29,26 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match categorized.name, response.body
   end
 
+  test "show breaks down native balances for a mixed-currency account" do
+    card = accounts(:credit_card)
+    create_transaction(account: card, amount: 50, currency: "EUR")
+
+    get account_url(card)
+
+    assert_response :success
+    assert_select "[data-testid=currency-breakdown]" do
+      assert_select "dt", text: "USD"
+      assert_select "dt", text: "EUR"
+    end
+  end
+
+  test "show hides the currency breakdown for a single-currency account" do
+    get account_url(accounts(:credit_card))
+
+    assert_response :success
+    assert_select "[data-testid=currency-breakdown]", count: 0
+  end
+
   test "index delegates whole-row account clicks to the account link" do
     get accounts_url
 
