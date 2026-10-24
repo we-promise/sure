@@ -1,0 +1,61 @@
+<%# locals: (form:, sharesight_account:, account:) %>
+
+<% other_accounts = Current.family.accounts.writable_by(Current.user).visible.where.not(id: account.id).alphabetically %>
+<% account_options = other_accounts.map { |other| [ other.name, other.id ] } %>
+
+<div class="space-y-4 pt-4 border-t border-primary" data-controller="sharesight-settings">
+  <div class="space-y-1">
+    <h3 class="text-sm font-medium text-primary"><%= t(".title") %></h3>
+    <p class="text-xs text-secondary"><%= t(".description") %></p>
+  </div>
+
+  <%= form.fields_for :sharesight, sharesight_account do |sharesight_form| %>
+    <div class="space-y-1">
+      <%= sharesight_form.select :cash_mode,
+                                 SharesightAccount::CASH_MODES.map { |mode| [ t(".cash_modes.#{mode}"), mode ] },
+                                 { label: t(".cash_mode") },
+                                 data: { sharesight_settings_target: "cashMode", action: "sharesight-settings#update" } %>
+      <p class="text-xs text-secondary"><%= t(".cash_mode_help") %></p>
+    </div>
+
+    <div class="space-y-3" data-sharesight-settings-target="section" data-cash-modes="settlement">
+      <%= sharesight_form.select :settlement_account_id, account_options,
+                                 { label: t(".settlement_account"), include_blank: t(".choose_account") } %>
+      <%= sharesight_form.date_field :settlement_starts_on, label: t(".settlement_starts_on") %>
+      <%= sharesight_form.number_field :settlement_window_days, label: t(".settlement_window_days"),
+                                       min: 0, max: SharesightAccount::MAX_SETTLEMENT_WINDOW_DAYS %>
+      <p class="text-xs text-secondary"><%= t(".settlement_help") %></p>
+    </div>
+
+    <div class="space-y-3" data-sharesight-settings-target="section" data-cash-modes="broker settlement">
+      <%= sharesight_form.select :funding_account_id, account_options,
+                                 { label: t(".funding_account"), include_blank: t(".no_account") } %>
+      <%= sharesight_form.text_field :funding_match_terms, label: t(".funding_match_terms"),
+                                     value: sharesight_account.funding_terms.join(", "),
+                                     placeholder: t(".funding_match_terms_placeholder") %>
+      <p class="text-xs text-secondary"><%= t(".funding_help") %></p>
+
+      <%= sharesight_form.number_field :cash_anchor_amount, label: t(".cash_anchor_amount"), step: "any" %>
+      <%= sharesight_form.date_field :cash_anchor_on, label: t(".cash_anchor_on") %>
+      <p class="text-xs text-secondary"><%= t(".cash_anchor_help") %></p>
+    </div>
+
+    <div class="space-y-1">
+      <%= sharesight_form.select :dividend_mode,
+                                 SharesightAccount::DIVIDEND_MODES.map { |mode| [ t(".dividend_modes.#{mode}"), mode ] },
+                                 { label: t(".dividend_mode") },
+                                 data: { sharesight_settings_target: "dividendMode", action: "sharesight-settings#update" } %>
+      <p class="text-xs text-secondary"><%= t(".dividend_mode_help") %></p>
+    </div>
+
+    <div data-sharesight-settings-target="section" data-dividend-modes="other_account">
+      <%= sharesight_form.select :dividend_account_id, account_options,
+                                 { label: t(".dividend_account"), include_blank: t(".choose_account") } %>
+    </div>
+
+    <div class="space-y-1">
+      <%= sharesight_form.date_field :sync_start_date, label: t(".sync_start_date") %>
+      <p class="text-xs text-secondary"><%= t(".sync_start_date_help") %></p>
+    </div>
+  <% end %>
+</div>

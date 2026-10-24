@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_072123) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2386,19 +2386,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_072123) do
   end
 
   create_table "sharesight_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "cash_anchor_amount", precision: 19, scale: 4
+    t.date "cash_anchor_on"
     t.decimal "cash_balance", precision: 19, scale: 4
+    t.string "cash_mode", default: "broker", null: false
     t.datetime "created_at", null: false
     t.string "currency"
     t.decimal "current_balance", precision: 19, scale: 4
+    t.uuid "dividend_account_id"
+    t.string "dividend_mode", default: "with_cash", null: false
+    t.uuid "funding_account_id"
+    t.jsonb "funding_match_terms", default: [], null: false
     t.string "name"
     t.jsonb "raw_cash_transactions_payload", default: [], null: false
     t.jsonb "raw_holdings_payload", default: [], null: false
     t.jsonb "raw_payload"
     t.jsonb "raw_payouts_payload", default: [], null: false
     t.jsonb "raw_trades_payload", default: [], null: false
+    t.uuid "settlement_account_id"
+    t.date "settlement_starts_on"
+    t.integer "settlement_window_days", default: 7, null: false
     t.string "sharesight_account_id"
     t.uuid "sharesight_item_id", null: false
+    t.date "sync_start_date"
     t.datetime "updated_at", null: false
+    t.index ["dividend_account_id"], name: "index_sharesight_accounts_on_dividend_account_id"
+    t.index ["funding_account_id"], name: "index_sharesight_accounts_on_funding_account_id"
+    t.index ["settlement_account_id"], name: "index_sharesight_accounts_on_settlement_account_id"
     t.index ["sharesight_item_id", "sharesight_account_id"], name: "index_sharesight_accounts_on_item_and_account_id", unique: true, where: "(sharesight_account_id IS NOT NULL)"
     t.index ["sharesight_item_id"], name: "index_sharesight_accounts_on_sharesight_item_id"
   end
@@ -3145,6 +3159,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_072123) do
   add_foreign_key "security_splits", "securities", on_delete: :cascade
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify
   add_foreign_key "sessions", "users"
+  add_foreign_key "sharesight_accounts", "accounts", column: "dividend_account_id", on_delete: :nullify
+  add_foreign_key "sharesight_accounts", "accounts", column: "funding_account_id", on_delete: :nullify
+  add_foreign_key "sharesight_accounts", "accounts", column: "settlement_account_id", on_delete: :nullify
   add_foreign_key "sharesight_accounts", "sharesight_items"
   add_foreign_key "sharesight_items", "families"
   add_foreign_key "simplefin_accounts", "simplefin_items"

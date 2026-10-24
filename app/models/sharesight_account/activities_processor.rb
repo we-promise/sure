@@ -12,6 +12,7 @@ class SharesightAccount::ActivitiesProcessor
   }.freeze
 
   CAPITAL_RETURN = "CAPITAL_RETURN".freeze
+  OPENING_BALANCE = "OPENING_BALANCE".freeze
 
   # Sharesight creates some records itself (dividends, DRP allotments,
   # maturities) and leaves them unconfirmed, with no id, until you confirm them.
@@ -21,14 +22,24 @@ class SharesightAccount::ActivitiesProcessor
 
   BOOKED_STATES = %w[confirmed unconfirmed].freeze
 
+  # How much cash a record moved in the investment account, so CashRouter can
+  # settle it somewhere else. kind is :trade or :dividend. matchable is false
+  # when no bank would ever see it (opening balances, reinvested dividends).
+  Movement = Data.define(:key, :kind, :date, :currency, :amount, :matchable, :description)
+
+  attr_reader :movements
+
   def initialize(sharesight_account)
     @sharesight_account = sharesight_account
     @provisional_ids = []
     @provisional_counts = Hash.new(0)
+    @movements = []
   end
 
   def process
     return { trades: 0, dividends: 0, transactions: 0 } unless account.present?
+
+    remove_entries_settings_exclude
 
     capital_returns, trades = booked_trades.partition { |trade| trade["transaction_type"].to_s.upcase == CAPITAL_RETURN }
 
@@ -62,12 +73,14 @@ class SharesightAccount::ActivitiesProcessor
       @booked_trades ||= booked(@sharesight_account.raw_trades_payload, "transaction_date")
     end
 
-    # Confirmed and unconfirmed records up to today. Future unconfirmed ones are
-    # just announcements, like a dividend that hasn't been paid yet.
+    # Confirmed and unconfirmed records from the sync start date up to today.
+    # Future unconfirmed ones are just announcements, like a dividend that
+    # hasn't been paid yet.
     def booked(records, date_key)
       Array(records).select do |record|
         date = parse_date(record[date_key])
-        BOOKED_STATES.include?(record.fetch("state", "confirmed").to_s) && date.present? && date <= Date.current
+        BOOKED_STATES.include?(record.fetch("state", "confirmed").to_s) && date.present? && date <= Date.current &&
+          !@sharesight_account.before_sync_start?(date)
       end
     end
 
@@ -87,6 +100,46 @@ class SharesightAccount::ActivitiesProcessor
         .where("external_id LIKE ?", "#{Entry.sanitize_sql_like(PROVISIONAL_PREFIX)}%")
         .where.not(external_id: @provisional_ids)
         .destroy_all
+    end
+
+    # Clean up entries from earlier syncs that the current settings leave out.
+    def remove_entries_settings_exclude
+      entries = account.entries.where(source: "sharesight").where.not(entryable_type: "Valuation")
+
+      if @sharesight_account.sync_start_date
+        entries.where(entries: { date: ...@sharesight_account.sync_start_date }).destroy_all
+      end
+
+      if @sharesight_account.dividends_skipped?
+        entries.where(entryable_type: "Transaction").where(external_id_like_any(%w[payout capital_return])).destroy_all
+      end
+
+      # Cash account movements only belong here while the broker holds the cash.
+      entries.where(external_id_like_any(%w[cash])).find_each do |entry|
+        entry.destroy! unless @sharesight_account.holds_cash_at_broker_on?(entry.date)
+      end
+    end
+
+    def external_id_like_any(kinds)
+      patterns = kinds.flat_map { |kind| [ "sharesight_#{kind}_", "#{PROVISIONAL_PREFIX}#{kind}_" ] }
+      clause = patterns.map { "entries.external_id LIKE ?" }.join(" OR ")
+      [ clause, *patterns.map { |prefix| "#{Entry.sanitize_sql_like(prefix)}%" } ]
+    end
+
+    def record_movement(entries, kind:, matchable:)
+      entries = Array(entries).compact
+      return if entries.empty?
+
+      first = entries.first
+      @movements << Movement.new(
+        key: first.external_id.delete_prefix("sharesight_"),
+        kind: kind,
+        date: first.date,
+        currency: first.currency,
+        amount: entries.sum(&:amount),
+        matchable: matchable,
+        description: first.name
+      )
     end
 
     def process_trade(trade)
@@ -116,7 +169,7 @@ class SharesightAccount::ActivitiesProcessor
       gross = quantity * price
       signed_quantity = label == "Sell" ? -quantity : quantity
 
-      import_adapter.import_trade(
+      entry = import_adapter.import_trade(
         external_id: external_id,
         security: security,
         quantity: signed_quantity,
@@ -129,6 +182,7 @@ class SharesightAccount::ActivitiesProcessor
         exchange_rate: currency != portfolio_currency && sharesight_rate ? (1 / sharesight_rate).to_f : nil,
         fee: fee
       )
+      record_movement(entry, kind: :trade, matchable: type != OPENING_BALANCE)
 
       true
     rescue => e
@@ -149,7 +203,7 @@ class SharesightAccount::ActivitiesProcessor
       price = nil if price&.zero?
 
       # An opening balance might only have a cost base, in the portfolio's currency.
-      if price.nil? && type == "OPENING_BALANCE"
+      if price.nil? && type == OPENING_BALANCE
         cost_base = parse_decimal(trade["cost_base"])
         price = cost_base * (sharesight_rate || 1) / quantity if cost_base
       end
@@ -180,6 +234,8 @@ class SharesightAccount::ActivitiesProcessor
     # lower the cost base, so we only book the cash. The trade's value is in the
     # portfolio's currency; capital_return_value is the fallback.
     def process_capital_return(trade)
+      return false if @sharesight_account.dividends_skipped?
+
       amount = parse_decimal(trade["value"])&.abs
       currency = portfolio_currency
       unless amount&.positive?
@@ -192,7 +248,7 @@ class SharesightAccount::ActivitiesProcessor
       external_id = external_id_for("capital_return", trade, trade["holding_id"], trade["transaction_date"])
       security = resolve_security(trade["symbol"], trade["market"])
 
-      import_adapter.import_transaction(
+      entry = import_adapter.import_transaction(
         external_id: external_id,
         amount: -amount,
         currency: currency,
@@ -205,6 +261,7 @@ class SharesightAccount::ActivitiesProcessor
           sharesight: { trade_id: trade["id"], symbol: trade["symbol"], market: trade["market"] }.compact
         }
       )
+      record_movement(entry, kind: :dividend, matchable: true)
 
       true
     rescue => e
@@ -212,6 +269,8 @@ class SharesightAccount::ActivitiesProcessor
       false
     end
 
+    # If dividends aren't imported, a reinvested one still buys units. Those go
+    # in with no cash, since the dividend that paid for them isn't here.
     def process_payout(payout)
       date = parse_date(payout["paid_on"])
       return false unless date
@@ -221,9 +280,10 @@ class SharesightAccount::ActivitiesProcessor
       currency = parse_currency(payout["currency"]) || @sharesight_account.holding_currencies[payout["holding_id"].to_s] || portfolio_currency
       amount = parse_decimal(payout["amount"])
 
-      imported = false
-      if amount&.positive?
-        import_adapter.import_transaction(
+      skipped = @sharesight_account.dividends_skipped?
+      dividend = nil
+      if amount&.positive? && !skipped
+        dividend = import_adapter.import_transaction(
           external_id: external_id,
           amount: -amount,
           currency: currency,
@@ -236,11 +296,11 @@ class SharesightAccount::ActivitiesProcessor
             sharesight: { payout_id: payout["id"], symbol: payout["symbol"], market: payout["market"] }.compact
           }
         )
-        imported = true
       end
 
-      import_reinvestment(payout, security, currency, date)
-      imported
+      reinvestment = import_reinvestment(payout, security, currency, date, paid_for: !skipped)
+      record_movement([ dividend, reinvestment ], kind: :dividend, matchable: reinvestment.nil?) unless skipped
+      dividend.present?
     rescue => e
       log_failure("payout", payout["id"], e)
       false
@@ -248,7 +308,7 @@ class SharesightAccount::ActivitiesProcessor
 
     # A reinvested dividend buys units. Some portfolios record the allotment as
     # a trade too, so don't book it twice.
-    def import_reinvestment(payout, security, currency, date)
+    def import_reinvestment(payout, security, currency, date, paid_for:)
       drp = payout["drp_trade_attributes"] || {}
       return unless security && drp["dividend_reinvested"]
 
@@ -262,7 +322,7 @@ class SharesightAccount::ActivitiesProcessor
         security: security,
         quantity: quantity,
         price: price,
-        amount: quantity * price,
+        amount: paid_for ? quantity * price : 0,
         currency: currency,
         date: date,
         source: "sharesight",
@@ -278,8 +338,9 @@ class SharesightAccount::ActivitiesProcessor
       end
     end
 
-    # Deposits, withdrawals, interest and fees from a Sharesight cash account.
-    # Skips the cash side of trades and payouts, since those already book it.
+    # Deposits, withdrawals, interest and fees from a Sharesight cash account,
+    # while the broker holds the cash. Skips the cash side of trades and
+    # payouts, since those already book it.
     def process_cash_transaction(transaction)
       return false if transaction["id"].blank?
       return false if transaction["trade_id"].present? || transaction["payout_id"].present?
@@ -287,6 +348,7 @@ class SharesightAccount::ActivitiesProcessor
       amount = parse_decimal(transaction["amount"])
       date = parse_date(transaction["date_time"].to_s.first(10))
       return false if amount.nil? || amount.zero? || date.nil?
+      return false if @sharesight_account.before_sync_start?(date) || !@sharesight_account.holds_cash_at_broker_on?(date)
 
       label = cash_transaction_label(transaction, amount)
 

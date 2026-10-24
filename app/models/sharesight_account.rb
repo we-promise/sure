@@ -1,6 +1,6 @@
 class SharesightAccount < ApplicationRecord
   include Encryptable
-  include SharesightAccount::DataHelpers
+  include SharesightAccount::DataHelpers, SharesightAccount::CashSettings
 
   if encryption_ready?
     encrypts :raw_payload

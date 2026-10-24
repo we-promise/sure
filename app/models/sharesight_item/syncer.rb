@@ -32,7 +32,8 @@ class SharesightItem::Syncer
 
     if linked_accounts.any?
       sync.update!(status_text: I18n.t("sharesight_items.sync.status.processing_activity")) if sync.respond_to?(:status_text)
-      sharesight_item.process_accounts
+      results = sharesight_item.process_accounts
+      collect_notices(sync, results)
 
       sync.update!(status_text: I18n.t("sharesight_items.sync.status.calculating_balances")) if sync.respond_to?(:status_text)
       sharesight_item.schedule_account_syncs(
@@ -64,5 +65,18 @@ class SharesightItem::Syncer
 
     def count_holdings
       sharesight_item.linked_sharesight_accounts.sum { |sa| Array(sa.raw_holdings_payload).size }
+    end
+
+    # Shows settlements still missing from the bank feed, and units the trades
+    # don't add up to, in the connection's sync summary.
+    def collect_notices(sync, results)
+      notices = Array(results).flat_map { |result| Array(result.dig(:result, :notices)) if result[:success] }.compact
+      return if notices.empty?
+
+      collect_data_quality_stats(
+        sync,
+        warnings: notices.count { |notice| notice[:severity] == "warning" },
+        details: notices
+      )
     end
 end
