@@ -118,7 +118,6 @@ class Holding < ApplicationRecord
     new_priority >= cost_basis_source_priority
   end
 
-  # Set cost_basis from user input (locks the value)
   # The position's open lots, the opening lot first and then by acquisition.
   # None where the stored lots do not add up to the position, since they are
   # then not the position's to show (HoldingLot.in_partition).
@@ -129,6 +128,7 @@ class Holding < ApplicationRecord
       .order(Arel.sql("acquired_on ASC NULLS FIRST"), :created_at)
   end
 
+  # Set cost_basis from user input (locks the value)
   def set_manual_cost_basis!(value)
     update!(
       cost_basis: value,
