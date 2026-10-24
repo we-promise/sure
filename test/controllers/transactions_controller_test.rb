@@ -538,7 +538,10 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     parent.child_entries.each do |child|
-      assert_select "turbo-stream[action=replace][target=?]", dom_id(child)
+      assert_select "turbo-stream[action=replace][target=?]", dom_id(child) do
+        # Rows stay in the split group, whose drawer links carry grouped=true.
+        assert_select "a[href=?]", entry_path(child, grouped: true)
+      end
     end
   end
 

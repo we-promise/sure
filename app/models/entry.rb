@@ -536,7 +536,7 @@ class Entry < ApplicationRecord
         if lock_attributes
           locked_at = Time.current
           child_transaction.locked_attributes = child_transaction.locked_attributes.merge(
-            split_attrs.slice(:category_id, :merchant_id).compact_blank.keys.index_with { locked_at }
+            split_attrs.slice(:category_id, :merchant_id).compact_blank.keys.map(&:to_s).index_with { locked_at }
           )
         end
 

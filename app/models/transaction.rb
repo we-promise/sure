@@ -655,10 +655,10 @@ class Transaction < ApplicationRecord
     # Keep them in step when it changes later. Children with a merchant of
     # their own (different from the parent's, or locked by the user) keep it.
     def pass_merchant_to_split_children
-      parent_entry_ids = Entry.where(entryable_type: self.class.name, entryable_id: id).select(:id)
+      return unless entry
 
       Transaction.joins(:entry)
-                 .where(entries: { parent_entry_id: parent_entry_ids })
+                 .where(entries: { parent_entry_id: entry.id })
                  .where(merchant_id: merchant_id_before_last_save)
                  .enrichable(:merchant_id)
                  .find_each { |child| child.update!(merchant_id: merchant_id) }

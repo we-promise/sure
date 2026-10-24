@@ -242,11 +242,12 @@ class TransactionsController < ApplicationController
               partial: "entries/entry",
               locals: { entry: @entry, in_split_group: in_split_group }
             ),
-            *(split_rows_changed ? @entry.child_entries : []).map { |child|
+            *(split_rows_changed ? @entry.child_entries.includes(:account, entryable: [ :category, :merchant, :tags ]) : []).map { |child|
+              # The parent's drawer has no grouped param; its rows are grouped whenever the user groups splits.
               turbo_stream.replace(
                 dom_id(child),
                 partial: "entries/entry",
-                locals: { entry: child, in_split_group: helpers.in_split_group?(child, params[:grouped]) }
+                locals: { entry: child, in_split_group: Current.user.show_split_grouped? }
               )
             },
             *flash_notification_stream_items
