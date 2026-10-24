@@ -8,8 +8,14 @@ class HoldingLot < ApplicationRecord
   belongs_to :source_entry, class_name: "Entry", optional: true
   belongs_to :origin_security, class_name: "Security", optional: true
 
+  # A cost per unit is stored as a trade's price is, so it stays below 10^9.
+  MAX_UNIT_COST = BigDecimal("1e9")
+
   scope :derived, -> { where.not(source_entry_id: nil) }
   scope :opening, -> { where(source_entry_id: nil) }
+
+  validates :manual_total_cost, numericality: { greater_than_or_equal_to: 0, less_than: BigDecimal("1e15") }, allow_nil: true
+  validate :manual_unit_cost_fits, if: :manual_total_cost
 
   def opening?
     source_entry_id.nil?
@@ -91,4 +97,13 @@ class HoldingLot < ApplicationRecord
       end
     end
   end
+
+  private
+    # The calculators divide the total by the acquiring trade's quantity.
+    def manual_unit_cost_fits
+      qty = source_entry&.trade&.qty
+      return unless qty&.positive?
+
+      errors.add(:manual_total_cost, :less_than, count: MAX_UNIT_COST * qty) if manual_total_cost / qty >= MAX_UNIT_COST
+    end
 end
