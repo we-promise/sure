@@ -71,7 +71,9 @@ RSpec.describe 'API V1 Transaction Auto-Categorization', type: :request do
                   'categorization provider and confidence threshold, as the "Auto-categorize ' \
                   'transactions with AI" rule action does. Only uncategorized transactions ' \
                   'without a locked (user-set) category are queued; transfers between the ' \
-                  'family\'s own accounts and split parents are skipped. A 202 means the jobs ' \
+                  'family\'s own accounts and split parents are skipped. Without transaction_ids ' \
+                  'at most 1,000 eligible transactions are queued per request; page on with ' \
+                  'after_transaction_id. A 202 means the jobs ' \
                   'were queued, not that categories were assigned. A job can fail or the ' \
                   'provider can return no confident match, leaving a transaction ' \
                   'uncategorized. Read transactions back to see the result.'
@@ -87,8 +89,29 @@ RSpec.describe 'API V1 Transaction Auto-Categorization', type: :request do
         run_test!
       end
 
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { 'invalid-key' }
+        run_test!
+      end
+
+      response '403', 'forbidden - requires read_write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:api_key) do
+          key = ApiKey.generate_secure_key
+          ApiKey.create!(
+            user: user,
+            name: 'Read Only Key',
+            key: key,
+            scopes: %w[read],
+            source: 'web'
+          )
+        end
+        run_test!
+      end
+
       response '422', 'no categorization provider is configured, the family has no categories, ' \
-                      'or transaction_ids is invalid' do
+                      'or transaction_ids / after_transaction_id is invalid' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:body) { { transaction_ids: [ 'not-a-uuid' ] } }
         run_test!

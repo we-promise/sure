@@ -9,8 +9,8 @@
 # so the family's categorization provider, confidence threshold and locked
 # (user-set) categories are honored exactly as they are there.
 class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseController
-  # Bounds one request's id list; omit transaction_ids to cover every
-  # eligible transaction instead.
+  # Bounds one request: the transaction_ids list, or how many eligible
+  # transactions one request without a list queues.
   MAX_TRANSACTION_IDS = 1_000
 
   before_action :ensure_write_scope
@@ -22,6 +22,9 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
     requested_ids = requested_transaction_ids
     return if performed?
 
+    after_id = after_transaction_id(requested_ids)
+    return if performed?
+
     family = current_resource_owner.family
     scope = family.auto_categorizable_transactions_for(current_resource_owner)
     scope = scope.where(id: requested_ids) if requested_ids
@@ -29,12 +32,18 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
     # Without a list the request would cover every eligible transaction (all
     # of them, right after a bulk import), plucking every id and enqueueing a
     # job per batch inside this request. Cap it like the explicit list and
-    # say so; the rest can be queued once these jobs have run.
+    # say so. A transaction the provider finds no confident match for stays
+    # eligible, so instead of re-sending the same first page, the client
+    # pages on with after_transaction_id set to next_after_transaction_id.
     truncated = false
+    next_after_id = nil
     unless requested_ids
+      scope = scope.where(Transaction.arel_table[:id].gt(after_id)) if after_id
       ids = scope.order(:id).limit(MAX_TRANSACTION_IDS + 1).pluck(:id)
       truncated = ids.size > MAX_TRANSACTION_IDS
-      scope = scope.where(id: ids.first(MAX_TRANSACTION_IDS))
+      ids = ids.first(MAX_TRANSACTION_IDS)
+      next_after_id = ids.last if truncated
+      scope = scope.where(id: ids)
     end
 
     queued_ids, unqueued_ids = family.queue_auto_categorization(scope)
@@ -43,12 +52,13 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
       return render json: {
         error: "service_unavailable",
         message: "Could not queue #{unqueued_ids.size} of #{queued_ids.size + unqueued_ids.size} transactions; " \
-                 "#{queued_ids.size} were queued. Retry to queue the rest.",
+                 "#{queued_ids.size} were queued. Retry with unqueued_transaction_ids as transaction_ids to queue the rest.",
         queued_count: queued_ids.size,
         transaction_ids: queued_ids,
         unqueued_transaction_ids: unqueued_ids,
         skipped_transaction_ids: skipped_ids(requested_ids, queued_ids + unqueued_ids),
-        truncated: truncated
+        truncated: truncated,
+        next_after_transaction_id: next_after_id
       }, status: :service_unavailable
     end
 
@@ -62,7 +72,10 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
       skipped_transaction_ids: skipped_ids(requested_ids, queued_ids),
       # True when more than MAX_TRANSACTION_IDS transactions were eligible and
       # no list was sent: only the first MAX_TRANSACTION_IDS were queued.
-      truncated: truncated
+      truncated: truncated,
+      # Send as after_transaction_id to queue the next page; nil when
+      # nothing is left.
+      next_after_transaction_id: next_after_id
     }, status: :accepted
   end
 
@@ -118,5 +131,24 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
       end
 
       raw.map(&:downcase).uniq
+    end
+
+    # Cursor for requests without a list: only transactions with a greater id
+    # are considered. nil when not sent.
+    def after_transaction_id(requested_ids)
+      return nil unless params.key?(:after_transaction_id)
+
+      raw = params[:after_transaction_id]
+      if requested_ids
+        render_validation_error("after_transaction_id cannot be combined with transaction_ids")
+        return nil
+      end
+
+      unless raw.is_a?(String) && valid_uuid?(raw)
+        render_validation_error("after_transaction_id must be a transaction ID")
+        return nil
+      end
+
+      raw.downcase
     end
 end

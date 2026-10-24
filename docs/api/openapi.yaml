@@ -85,7 +85,13 @@ components:
           items:
             type: string
             format: uuid
-          description: Transactions to categorize. Omit to queue every eligible transaction.
+          description: Transactions to categorize. Omit to queue eligible transactions
+            in pages of at most 1,000; see truncated and next_after_transaction_id.
+        after_transaction_id:
+          type: string
+          format: uuid
+          description: 'Only without transaction_ids: queue the page of eligible transactions
+            after this ID. Send the previous response''s next_after_transaction_id.'
     TransactionAutoCategorization:
       type: object
       required:
@@ -93,6 +99,7 @@ components:
       - transaction_ids
       - skipped_transaction_ids
       - truncated
+      - next_after_transaction_id
       properties:
         queued_count:
           type: integer
@@ -111,8 +118,14 @@ components:
             category locked, a transfer or split parent, or not one this key may annotate'
         truncated:
           type: boolean
-          description: True when transaction_ids was omitted and more than 1000 transactions
-            were eligible, so only the first 1000 were queued
+          description: True when transaction_ids was omitted and more than 1,000 transactions
+            were eligible
+        next_after_transaction_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: When truncated, send as after_transaction_id to queue the next
+            page; otherwise null
     TransactionAutoCategorizationPartial:
       type: object
       required:
@@ -121,6 +134,9 @@ components:
       - queued_count
       - transaction_ids
       - unqueued_transaction_ids
+      - skipped_transaction_ids
+      - truncated
+      - next_after_transaction_id
       properties:
         error:
           type: string
@@ -134,25 +150,30 @@ components:
           items:
             type: string
             format: uuid
-          description: Transactions that were queued before the queue refused the rest
+          description: Transactions that were queued before the queue refused the
+            rest
         unqueued_transaction_ids:
           type: array
           items:
             type: string
             format: uuid
-          description: Transactions the queue refused; retry to queue them
+          description: Transactions the queue refused; retry with these as transaction_ids
         skipped_transaction_ids:
           type: array
           items:
             type: string
             format: uuid
-          description: 'Requested transactions that were never eligible (already categorized,
-            category locked, a transfer or split parent, or not one this key may annotate).
-            Do not retry these'
+          description: Requested transactions that were not eligible, as in the 202
+            response
         truncated:
           type: boolean
-          description: True when transaction_ids was omitted and more than 1000 transactions
-            were eligible, so only the first 1000 were considered
+          description: True when transaction_ids was omitted and more than 1,000 transactions
+            were eligible
+        next_after_transaction_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: When truncated, the cursor for the next page; otherwise null
     Split:
       type: object
       required:
@@ -10104,10 +10125,11 @@ paths:
         categorization provider and confidence threshold, as the "Auto-categorize
         transactions with AI" rule action does. Only uncategorized transactions without
         a locked (user-set) category are queued; transfers between the family's own
-        accounts and split parents are skipped. A 202 means the jobs were queued,
-        not that categories were assigned. A job can fail or the provider can return
-        no confident match, leaving a transaction uncategorized. Read transactions
-        back to see the result.
+        accounts and split parents are skipped. Without transaction_ids at most 1,000
+        eligible transactions are queued per request; page on with after_transaction_id.
+        A 202 means the jobs were queued, not that categories were assigned. A job
+        can fail or the provider can return no confident match, leaving a transaction
+        uncategorized. Read transactions back to see the result.
       parameters: []
       responses:
         '202':
@@ -10116,9 +10138,21 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TransactionAutoCategorization"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - requires read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: no categorization provider is configured, the family has no
-            categories, or transaction_ids is invalid
+            categories, or transaction_ids / after_transaction_id is invalid
           content:
             application/json:
               schema:
