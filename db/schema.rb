@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_090100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1206,6 +1206,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_090100) do
     t.boolean "clamped", default: false, null: false
     t.datetime "created_at", null: false
     t.string "currency", null: false
+    t.decimal "manual_total_cost", precision: 19, scale: 4
     t.uuid "origin_security_id"
     t.decimal "qty", precision: 34, scale: 18, null: false
     t.uuid "security_id", null: false
@@ -1217,6 +1218,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_090100) do
     t.index ["origin_security_id"], name: "index_holding_lots_on_origin_security_id"
     t.index ["security_id"], name: "index_holding_lots_on_security_id"
     t.index ["source_entry_id"], name: "index_holding_lots_on_source_entry_id"
+    t.check_constraint "manual_total_cost >= 0::numeric", name: "holding_lots_manual_total_cost_non_negative"
     t.check_constraint "qty >= 0::numeric", name: "holding_lots_qty_non_negative"
   end
 

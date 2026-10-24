@@ -337,7 +337,7 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
-  test "remap onto a position with its own opening lot leaves one opening lot there" do
+  test "remap onto a position with its own opening lot merges the two" do
     setup_account
     old_security = priced_security("LOTQ", 30)
     new_security = priced_security("LOTW", 30)
@@ -347,8 +347,118 @@ class HoldingLotTest < ActiveSupport::TestCase
 
     holding.remap_security!(new_security)
 
-    assert_equal [ kept.id ], HoldingLot.opening.where(security: new_security).pluck(:id)
-    assert_not HoldingLot.exists?(moved.id), "restated into the target's opening lot by the next materialization"
+    assert_equal [ kept.id ], HoldingLot.opening.where(security: new_security).pluck(:id), "the target keeps its row"
+    assert_equal 10, kept.reload.qty, "4 moved onto the target's 6"
+    assert_not HoldingLot.exists?(moved.id)
+  end
+
+  test "merged opening lot keeps its cost only when both sides agree" do
+    [ [ 25, 25, 25 ], [ 25, 30, nil ], [ nil, 30, nil ], [ 25, nil, nil ] ].each do |moved_cost, kept_cost, merged_cost|
+      setup_account
+      old_security = priced_security("LOTM#{moved_cost}#{kept_cost}", 30)
+      new_security = priced_security("LOTK#{moved_cost}#{kept_cost}", 30)
+      holding = @account.holdings.create!(security: old_security, date: d(10), qty: 4, price: 30, amount: 120, currency: "USD")
+      opening_lot(old_security, 4).update!(unit_cost: moved_cost)
+      kept = opening_lot(new_security, 6)
+      kept.update!(unit_cost: kept_cost)
+
+      holding.remap_security!(new_security)
+
+      assert_equal merged_cost, kept.reload.unit_cost, "moved #{moved_cost.inspect} onto #{kept_cost.inspect}"
+    end
+  end
+
+  # --- User-set lot cost --------------------------------------------------------
+
+  test "a user-set cost on a transfer-in lot resolves the position, forward" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTU", 30)
+      transfer = trade(security, 60, 30, 2, label: Trade::TRANSFER_LABEL)
+      trade(security, 40, 20, 3)
+      materialize(:forward)
+      assert_nil @account.holdings.find_by!(security: security, date: d(10)).cost_basis, "unknown before"
+
+      HoldingLot.find_by!(source_entry: transfer).set_manual_total_cost!(720)
+      materialize(:forward)
+
+      assert_equal BigDecimal("15.2"), @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+      assert_equal 12, HoldingLot.find_by!(source_entry: transfer).unit_cost
+    end
+  end
+
+  test "a user-set cost on a transfer-in lot resolves the position, reverse" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("LOTV", 30)
+      transfer = trade(security, 60, 30, 2, label: Trade::TRANSFER_LABEL)
+      trade(security, 40, 20, 3)
+      provider_holding(security, 100, nil)
+      materialize(:reverse)
+      # d(10) is the provider's own row, which the materializer leaves alone.
+      assert_nil @account.holdings.find_by!(security: security, date: d(9)).cost_basis, "unknown before"
+
+      HoldingLot.find_by!(source_entry: transfer).set_manual_total_cost!(720)
+      materialize(:reverse)
+
+      assert_equal BigDecimal("15.2"), @account.holdings.find_by!(security: security, date: d(9)).cost_basis
+    end
+  end
+
+  test "a user-set cost replaces a buy's price, and unlocking returns it to the trade" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTP", 30)
+      trade(security, 60, 12, 2)
+      buy = trade(security, 40, 20, 3)
+      materialize(:forward)
+      assert_equal BigDecimal("15.2"), @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+
+      lot = HoldingLot.find_by!(source_entry: buy)
+      lot.set_manual_total_cost!(600)
+      materialize(:forward)
+      assert_equal BigDecimal("13.2"), @account.holdings.find_by!(security: security, date: d(10)).cost_basis, "(720 + 600) / 100"
+
+      lot.reload.unlock_cost!
+      materialize(:forward)
+      assert_equal BigDecimal("15.2"), @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+      assert_nil lot.reload.manual_total_cost
+    end
+  end
+
+  test "a user-set lot cost survives a split and a partial sale" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTS", 30)
+      buy = trade(security, 10, 100, 2)
+      Security::Split.create!(security: security, ex_date: d(4), numerator: 2, denominator: 1, source: "manual")
+      trade(security, -5, 90, 6)
+      materialize(:forward)
+      lot = HoldingLot.find_by!(source_entry: buy)
+      assert_equal [ 15, 50 ], [ lot.qty, lot.unit_cost ], "20 after the split, 5 sold"
+
+      lot.set_manual_total_cost!(1500)
+      materialize(:forward)
+
+      assert_equal 75, lot.reload.unit_cost, "1500 over the 10 bought, halved by the split"
+      assert_equal 75, @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+    end
+  end
+
+  test "a whole-position lock outranks a user-set lot cost" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTL", 30)
+      buy = trade(security, 10, 20, 2)
+      materialize(:forward)
+      @account.holdings.find_by!(security: security, date: d(10)).set_manual_cost_basis!(99)
+
+      HoldingLot.find_by!(source_entry: buy).set_manual_total_cost!(150)
+      materialize(:forward)
+
+      assert_equal 99, @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+    end
   end
 
   private

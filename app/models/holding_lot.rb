@@ -15,6 +15,21 @@ class HoldingLot < ApplicationRecord
     source_entry_id.nil?
   end
 
+  # What the user says the parcel cost when it was acquired, in the account's
+  # currency. The calculators spread it over the acquiring trade's quantity,
+  # so it holds through later splits and sales.
+  def set_manual_total_cost!(total)
+    update!(manual_total_cost: total)
+  end
+
+  def unlock_cost!
+    update!(manual_total_cost: nil)
+  end
+
+  def manual_cost?
+    !manual_total_cost.nil?
+  end
+
   class << self
     # Replaces an account's lots with `rows`, within `security_ids` when given,
     # keeping each lot's row (and id) by its key: the source entry for a derived
@@ -56,14 +71,19 @@ class HoldingLot < ApplicationRecord
       lots.filter_map { |key, qty| key if held[key] == qty }.to_set
     end
 
-    # Moves lots to another security with their trades. Lots are never merged:
-    # derived lots keep their own rows, and an opening lot moves only where the
-    # target has none, since the target's own is restated over the moved units
-    # at the next materialization.
+    # Moves lots to another security with their trades. Derived lots keep
+    # their own rows. An opening lot moved onto a position with its own is
+    # merged into it: the quantities add, and the cost stays only where both
+    # sides know it and agree, since one figure cannot stand for two
+    # different ones. The merged lot keeps the target's origin, so a reset
+    # does not split it apart again.
     def move!(derived:, opening:, to:)
       derived.update_all(security_id: to.id, updated_at: Time.current)
       opening.find_each do |lot|
-        if where(account_id: lot.account_id, security_id: to.id).opening.exists?
+        target = where(account_id: lot.account_id, security_id: to.id).opening.first
+        if target
+          unit_cost = target.unit_cost if lot.unit_cost && lot.unit_cost == target.unit_cost
+          target.update_columns(qty: target.qty + lot.qty, unit_cost: unit_cost, updated_at: Time.current)
           lot.delete
         else
           lot.update_columns(security_id: to.id, updated_at: Time.current)
