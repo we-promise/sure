@@ -31,19 +31,19 @@
 
 The root change: **AI and ML stop writing to transactions directly. Every classifier produces suggestions, and one resolver decides what is applied.** Most problems in 02 (A4, A5, A7, A10, D4 #2, #4, #8, #10) come from five writers, Bayes, the matcher, LLM categorization, LLM merchant detection and Jev, each handling locks, provenance, failure and ordering its own way.
 
-| ID | Change | Boundary interfaces broken | Replaces (from 02) | Maintainer decision |
-|---|---|---|---|---|
-| BC1 | Suggestions + resolver instead of direct writes. Locks mean user intent only. | I9, I27 | S7, A7, O-A3 | **Yes** |
-| BC2 | Classifiers leave Rules. An enrichment pipeline runs first, then deterministic rules. | I10, I11, I27 | S4, S9, A4 | **Yes**, reverses #4310's design |
-| BC3 | One `Ai::Gateway`: tasks, router, transports. | none (internal I1–I5) | S1, S2, S3, A1, A2, A3 | No |
-| BC4 | Chat history always rebuilt from the database. | I27 (`chats.latest_assistant_response_id`) | B2 native/generic split | **Yes** |
-| BC5 | ENV for secrets and endpoints only. Tuning lives in the database, per task. | I26 | S6, A6, A12 | **Yes**, operator-facing |
-| BC6 | No model calls on web threads. | I25 (MCP `import_bank_statement` result) | S8, A9 | **Yes** for MCP |
-| BC7 | One AI lane with chat reservation and a per-family limit. | I23 (queue names) | A8 | No |
-| BC8 | MCP as a public API: scopes, annotations, structured results, audit. | I16, I25 | A13, O-B1 parity | **Yes** |
-| BC9 | One `ai_calls` table with correlation IDs. Langfuse becomes an exporter. | I27 (`llm_usages`) | A10, O-A4 | No |
-| BC10 | Consent as an explicit policy, including per account. | I19 | A11, D4 #8 | **Yes**, policy |
-| BC11 | `app/models/ai/` and `app/models/enrichment/` namespaces. `Family` loses its AI concerns. | none | S10, P4 | No |
+| ID | Change | Boundary interfaces broken | Replaces (from 02) | Maintainer decision | Who notices |
+|---|---|---|---|---|---|
+| BC1 | Suggestions + resolver instead of direct writes. Locks mean user intent only. | I9, I27 | S7, A7, O-A3 | **Yes** | P2 (mistakes no longer sticky), upgraders (AI categories unlocked) |
+| BC2 | Classifiers leave Rules. An enrichment pipeline runs first, then deterministic rules. | I10, I11, I27 | S4, S9, A4 | **Yes**, reverses #4310's design | P1, P2 (system steps, not rules), users who ordered classifiers |
+| BC3 | One `Ai::Gateway`: tasks, router, transports. | none (internal I1–I5) | S1, S2, S3, A1, A2, A3 | No | P3 (per-task models) |
+| BC4 | Chat history always rebuilt from the database. | I27 (`chats.latest_assistant_response_id`) | B2 native/generic split | **Yes** | P2 local (streaming) |
+| BC5 | ENV for secrets and endpoints only. Tuning lives in the database, per task. | I26 | S6, A6, A12 | **Yes**, operator-facing | operators (env moves to the UI) |
+| BC6 | No model calls on web threads. | I25 (MCP `import_bank_statement` result) | S8, A9 | **Yes** for MCP | MCP clients (poll the import) |
+| BC7 | One AI lane with chat reservation and a per-family limit. | I23 (queue names) | A8 | No | P2 (chat stops waiting) |
+| BC8 | MCP as a public API: scopes, annotations, structured results, audit. | I16, I25 | A13, O-B1 parity | **Yes** | P3 (read-only grants), MCP client authors |
+| BC9 | One `ai_calls` table with correlation IDs. Langfuse becomes an exporter. | I27 (`llm_usages`) | A10, O-A4 | No | operators reading `llm_usages` |
+| BC10 | Consent as an explicit policy, including per account. | I19 | A11, D4 #8 | **Yes**, policy | members who opted out, mixed-consent families |
+| BC11 | `app/models/ai/` and `app/models/enrichment/` namespaces. `Family` loses its AI concerns. | none | S10, P4 | No | nobody |
 
 ---
 
@@ -100,7 +100,7 @@ New interfaces, all internal unless marked:
 
 ## 2. The breaking changes
 
-Each change lists: **what**, **breaks** (boundary interfaces), **merges or removes** (simplification), **new**, **pull apart** (the PR slices) and **decision**.
+Each change lists: **what**, **breaks** (boundary interfaces), **merges or removes** (simplification), **new**, **pull apart** (the PR slices), **user impact** (who notices, by [03](03-ai-user-perspective-review.md) persona P1–P3 and Maybe upgraders, with U-numbers) and **decision**.
 
 ### BC1. Suggestions and a resolver replace direct writes
 
@@ -125,6 +125,10 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
   4. Switch application to the resolver. One PR, behaviour change, ADR attached.
   5. Lock migration: keep user locks, drop AI and Bayes locks. Data migration on its own.
   6. Delete the clear-cache and clear-locks jobs, the shadow code and the lock settings.
+- **User impact** ([03](03-ai-user-perspective-review.md) personas):
+  - **P2:** AI mistakes stop being sticky (03 §3 P2). A wrong AI category no longer blocks later stages, and the user can undo it without hunting for the cache reset. This is the backbone of U4 ("Why this category?", "This is wrong") and U10 (suggestions instead of hard locks).
+  - **All:** the "AI cache reset" button on the Rules page goes (03 §5 rates it ❌). Changing the model no longer silently re-opens every past AI category.
+  - **Upgraders:** 03 §7.0 lists "AI categorization results: locked once set, still locked, same ✅". BC1 changes that row. After the lock migration, values set by AI or Bayes are no longer locked, so a later run can change them. *Inferred:* some users will see categories they thought were settled change once. The release note and the U22 "Welcome" screen must say so.
 - **Decision:** yes. It changes what a lock means to users who have relied on "AI set it, so it stays".
 
 ### BC2. Classifiers leave Rules; rules run after the pipeline
@@ -151,6 +155,12 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
   3. The UI for stage configuration.
   4. Data migration: each classifier rule becomes a stage (keeping its conditions and active flag). AI rule actions inside user rules become stages too, with a release note.
   5. Remove the four executors, the async rule-run path and `BayesCategorizeJob`.
+- **User impact:**
+  - **P1, P2:** the two rules users "didn't create" (03 §3 P1) leave the Rules page and become system steps on one pipeline page. That is U3 as 03 asks for it. People can no longer delete them by mistake.
+  - **P2:** "Turn on AI categorization" becomes a pipeline stage, not a rule the user has to write. That removes one of the three acts needed to turn on AI (03 §3 P2, U2).
+  - **Users who placed a classifier between their own rules** lose that ordering (I11). Their rules now always see the AI result.
+  - **Order differs from 03's picture:** 03 §5 draws "your rules" before the classifiers. BC2 runs rules after them, so U3's diagram needs redrawing. "You always wins" still holds through user locks (BC1).
+  - **Upgraders:** a second ordering change after #4013 and #4310. *Inferred:* families that tuned rule positions around the classifier rules will see different results once. It needs a release note.
 - **Decision:** yes.
 
 ### BC3. One `Ai::Gateway`: tasks, router and transports
@@ -170,6 +180,7 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
   2. `Ai::Router` delegating to the three existing paths. Then move callers over one PR at a time: chat, categorization, batch operations, PDF, bills, probes. Then delete the old paths.
   3. One task per PR, covering both providers. Go smallest first: `bill_setup` (169-line OpenAI suggester, synchronous, no batching) → `enhance_merchants` → `detect_merchants` → `categorize` (Jev and shadow) → `extract_pdf` (vision, chunking, vector store) → `chat` last.
   4. Delete each worker class in the PR that replaces it.
+- **User impact:** none visible by itself. It is what makes per-task models ([#4245](https://github.com/we-promise/sure/issues/4245)) possible. **P3** can then route chat to a cloud model and background work to a local one, which 03 §3 P3 says is only partly possible today. Fewer resolution paths also means less of the "silent mis-routing" 03 §1 lists as P3's biggest risk.
 - **Decision:** no. It is internal and can start before the others.
 
 ### BC4. Chat history always rebuilt from the database
@@ -185,6 +196,10 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
   2. Make the generic path stream.
   3. Switch native to rebuilt history behind a setting.
   4. Remove `previous_response_id` and the column.
+- **User impact:**
+  - **P2 on local models:** step 2 gives the generic path streaming, which fixes "nothing appears for minutes" (03 §3 P2, U11).
+  - **Native OpenAI users:** old chats carry on with no visible change. Per-turn token cost on the LLM usage page rises somewhat (see Costs).
+  - **Mobile:** one history path everywhere matches what [#4421](https://github.com/we-promise/sure/issues/4421) needs.
 - **Decision:** yes. It trades token cost for one code path.
 
 ### BC5. ENV for secrets and endpoints only; tuning per task in the database
@@ -204,6 +219,11 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
   4. Import and deprecation.
   5. Removal of ENV reads after one release.
   6. Split `hostings_controller.rb` per settings section.
+- **User impact:**
+  - **Operators (P3, often an agent editing `.env`):** tuning variables move to the database. The first boot imports them, and the deprecation release warns. Compose files, Helm values and quadlets need a one-time edit. This is the most visible break in the set.
+  - **P3:** it ends "ENV silently wins" and the web/worker mismatch (03 §4.2 #6, §3 P3). `AiConfig` makes the U12 effective-config page cheap, since each key has one source.
+  - **P2:** model-aware defaults (context window from the model, U11) need one place to live. This provides it.
+  - **Multi-family instances:** BC5 moves settings into the UI. Pair it with U6 (instance AI settings super-admin only). Otherwise moving more keys into the UI widens what any family admin can change for every family, including cost and where data goes (03 §4.2 #1).
 - **Decision:** yes. It is operator-facing.
 
 ### BC6. No model calls on web threads
@@ -214,6 +234,9 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
 - **Breaks:** I25: MCP `import_bank_statement` returns a pending import id instead of the extracted result. I24 gains new targets for the bill dialog.
 - **Merges or removes:** the four web-thread paths in D3.
 - **Pull apart:** one PR per path: bills, document upload, MCP import.
+- **User impact:**
+  - **Bill dialog and document upload users:** smart-fill shows progress through a Turbo stream instead of a request that hangs. The dialogs otherwise look the same.
+  - **P3 MCP clients and agent scripts** that call `import_bank_statement` must poll a pending import. This is the user-visible break, and it needs a changelog entry for client authors.
 - **Decision:** yes for the MCP contract change. No for the bills and upload paths, which stay UI-compatible.
 
 ### BC7. One AI lane, with chat reservation and a per-family limit
@@ -232,6 +255,11 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
   2. Reservation (#4444).
   3. Per-family limit.
   4. Optional chat capsule.
+- **User impact:**
+  - **P2 on one local model:** chat stops waiting behind background AI jobs. On the author's instance the wait was 56–104 s without the hold and 0 s with it (03 §3 P2; one instance, other hardware will differ).
+  - **Multi-family instances:** one family's large import can no longer fill the lane for everyone.
+  - **P3:** an optional chat capsule for cloud setups is the configurable answer to "more models do not mean more lanes" (03 §3 P3).
+  - **No configuration change is required for anyone.** Queued jobs keep running through the forwarding shims.
 - **Decision:** no, apart from accepting #4444's approach.
 
 ### BC8. MCP as a public API
@@ -254,6 +282,10 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
   3. Structured results.
   4. Audit rows.
   5. Surfaces.
+- **User impact:**
+  - **P3:** "let my agent read, but not change, my data" becomes possible (`mcp:read`). Clients can warn before a delete (`destructiveHint`). The audit rows feed U13 ("changes made by my agent"). Together this covers the MCP part of U18.
+  - **Existing tokens keep working:** they map to `mcp:read_write`.
+  - **Who changes code:** MCP client authors who parse tool results need the changelog. Users of stock clients only see the new consent choices.
 - **Decision:** yes, client authors need a changelog entry.
 
 ### BC9. One `ai_calls` table with correlation
@@ -266,6 +298,9 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
   2. Readers switch.
   3. Remove `llm_usages` writes.
   4. Langfuse exporter.
+- **User impact:**
+  - **The LLM usage page** shows the same data from a new table. Correlation makes the per-feature, per-month summary 03 §5 asks for straightforward. It also gives U13 an agent and API-key activity view that includes MCP calls (today they only go to the log).
+  - **Operators with external readers of `llm_usages`** (dashboards, scripts) get one release of the compatibility view before they must switch.
 - **Decision:** no.
 
 ### BC10. Consent as an explicit policy
@@ -279,6 +314,10 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
   1. Policy object and tests.
   2. Gateway check.
   3. Account exclusion UI.
+- **User impact:**
+  - **Members who declined AI:** their accounts stop being sent to a provider by family AI rules (03 §4.2 #4, U7). Private accounts can be excluded explicitly.
+  - **Families with mixed consent** will see less AI categorization. The UI must say why, for example a note on the pipeline page that some accounts are excluded, or it will be reported as a bug.
+  - **Upgraders:** it pairs with U24 (re-ask consent when the assistant gains write tools), since both read the same policy.
 - **Decision:** yes. It is a privacy policy.
 
 ### BC11. Namespaces and the `Family` split
@@ -287,6 +326,7 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
 - **Breaks:** nothing at a boundary.
 - **Merges or removes:** I13 (`family.rb:174–592`).
 - **Pull apart:** pure-move PRs only, each touching one concern, landed early to reduce merge conflicts. Optionally enforce the boundary with `packwerk`. That is a new dependency and 02 lists new dependencies as a non-goal, so it needs its own case.
+- **User impact:** none. Internal code moves only.
 - **Decision:** no.
 
 ---
