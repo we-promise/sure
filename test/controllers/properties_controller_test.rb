@@ -309,6 +309,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
   test "new skips method selector when no AVM provider is configured" do
     Provider::Registry.stubs(:rentcast).returns(nil)
     Provider::Registry.stubs(:realie).returns(nil)
+    Provider::Registry.stubs(:terrascoutx).returns(nil)
 
     get new_property_path(step: "method_select")
 
