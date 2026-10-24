@@ -95,11 +95,23 @@ class TransactionsService {
     String? accountId,
     int? page,
     int? perPage,
+    List<String>? categoryIds,
+    String? startDate,
+    String? endDate,
   }) async {
-    final Map<String, String> queryParams = {};
+    final Map<String, dynamic> queryParams = {};
 
     if (accountId != null) {
       queryParams['account_id'] = accountId;
+    }
+    if (categoryIds != null && categoryIds.isNotEmpty) {
+      queryParams['category_ids[]'] = categoryIds;
+    }
+    if (startDate != null) {
+      queryParams['start_date'] = startDate;
+    }
+    if (endDate != null) {
+      queryParams['end_date'] = endDate;
     }
     if (page != null) {
       queryParams['page'] = page.toString();
