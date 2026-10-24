@@ -209,20 +209,34 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     return true;
   }
 
+  /// Rows whose split lookup is in flight; a repeat tap on one is ignored so a
+  /// double tap can't select and then deselect it.
+  final Set<String> _selectionLookups = {};
+
   Future<void> _toggleTransactionSelection(String transactionId) async {
-    // Selecting is for deleting, so check against the server now; the delete
-    // re-checks only rows still unconfirmed (selected offline, say), which
-    // keeps a bulk delete from issuing one lookup per row twice.
-    if (!_selectedTransactions.contains(transactionId) &&
-        await _blockSplitDelete(transactionId, fresh: true)) {
-      return;
+    if (_selectionLookups.contains(transactionId)) return;
+    // Decide select or deselect before the lookup, so the outcome doesn't
+    // depend on the state after the await.
+    final selecting = !_selectedTransactions.contains(transactionId);
+    if (selecting) {
+      // Selecting is for deleting, so check against the server now; the delete
+      // re-checks only rows still unconfirmed (selected offline, say), which
+      // keeps a bulk delete from issuing one lookup per row twice.
+      _selectionLookups.add(transactionId);
+      final bool blocked;
+      try {
+        blocked = await _blockSplitDelete(transactionId, fresh: true);
+      } finally {
+        _selectionLookups.remove(transactionId);
+      }
+      if (blocked) return;
     }
     if (!mounted) return;
     setState(() {
-      if (_selectedTransactions.contains(transactionId)) {
-        _selectedTransactions.remove(transactionId);
-      } else {
+      if (selecting) {
         _selectedTransactions.add(transactionId);
+      } else {
+        _selectedTransactions.remove(transactionId);
       }
     });
   }
