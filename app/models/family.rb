@@ -524,13 +524,13 @@ class Family < ApplicationRecord
   # the adapter refuses a job, so a batch only counts as queued when it was
   # actually enqueued (an adapter error counts as refused); after the first
   # refused batch the rest are left unqueued.
-  def queue_auto_categorization(transactions)
+  def queue_auto_categorization(transactions, user: nil)
     batch_size = Provider::LlmConcept.max_items_per_call
     ids = transactions.order(:id).pluck(:id)
     queued = []
 
     ids.each_slice(batch_size) do |batch_ids|
-      break unless enqueue_auto_categorization_batch(batch_ids)
+      break unless enqueue_auto_categorization_batch(batch_ids, user)
 
       queued.concat(batch_ids)
     end
@@ -541,8 +541,8 @@ class Family < ApplicationRecord
   # True when the batch was enqueued. A refused job (false) and an adapter
   # error (e.g. Redis down) both count as not queued, so the endpoint can
   # report exactly which ids still need a retry instead of failing with a 500.
-  def enqueue_auto_categorization_batch(batch_ids)
-    AutoCategorizeJob.perform_later(self, transaction_ids: batch_ids, recheck_eligibility: true).present?
+  def enqueue_auto_categorization_batch(batch_ids, user = nil)
+    AutoCategorizeJob.perform_later(self, transaction_ids: batch_ids, recheck_eligibility: true, user_id: user&.id).present?
   rescue => error
     Rails.logger.error("Auto-categorization enqueue failed for family #{id}: #{error.class}: #{error.message}")
     DebugLogEntry.capture(
