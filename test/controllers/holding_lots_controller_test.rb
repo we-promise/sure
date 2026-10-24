@@ -67,8 +67,8 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
     assert_nil opening.reload.manual_total_cost
   end
 
-  test "a negative or blank total is rejected and the lot is unchanged" do
-    [ "-1", "" ].each do |total|
+  test "a negative, blank or non-numeric total is rejected and the lot is unchanged" do
+    [ "-1", "", "abc", "12abc" ].each do |total|
       patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: total } }
 
       assert_redirected_to account_path(@account, tab: "holdings")
