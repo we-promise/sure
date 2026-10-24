@@ -53,12 +53,6 @@ class Loan
     #                instead of being re-sized back onto the original maturity
     PAYMENT_STRATEGIES = %i[reamortize hold scheduled].freeze
 
-    # Built once: `monthly_rate` runs twice per period, up to MAX_PERIODS times
-    # per simulation. The two-step division is kept as it was so results stay
-    # bit-identical to the schedules already asserted in the tests.
-    PERCENT = BigDecimal("100")
-    MONTHS_PER_YEAR = BigDecimal("12")
-
     # How a period's interest is measured against a year.
     #
     # `thirty_360` is the default because it IS the flat 1/12 this engine has
@@ -69,8 +63,6 @@ class Loan
     # calendar year is summed.
     DAY_COUNT_CONVENTIONS = %i[thirty_360 actual_365 actual_actual].freeze
     DEFAULT_DAY_COUNT_CONVENTION = :thirty_360
-    DAYS_PER_YEAR = BigDecimal("365")
-    DAYS_PER_LEAP_YEAR = BigDecimal("366")
 
     def initialize(
       starting_balance:,
@@ -254,52 +246,19 @@ class Loan
           .sort_by(&:first)
       end
 
-      # `annual_percentage` is whatever the caller's rate callable returned --
-      # an Integer in the tests, a BigDecimal from RateResolver -- so the
-      # coercion at this boundary stays.
-      # 30/360 keeps the original two-step division untouched, so a default
-      # loan's figures are bit-identical rather than merely close.
+      # The day-count definition lives in AmortizationMath so the schedule and
+      # the ledger replay cannot charge a period differently.
       def accrual_factor(period_start, period_end, annual_percentage)
-        return monthly_rate(annual_percentage) if @day_count_convention == :thirty_360
-
-        # After the 30/360 return, so the default path stays bit-identical.
-        if period_end < period_start
-          raise ArgumentError, "period ends (#{period_end}) before it starts (#{period_start})"
-        end
-
-        rate = BigDecimal(annual_percentage.to_s) / PERCENT
-
-        if @day_count_convention == :actual_365
-          return (rate * BigDecimal((period_end - period_start).to_i.to_s)) / DAYS_PER_YEAR
-        end
-
-        rate * actual_actual_year_fraction(period_start, period_end)
-      end
-
-      # actual/actual measures each calendar year's days against THAT year's
-      # own length, so a period crossing New Year is two fractions rather than
-      # one. Taking the opening year's denominator for the whole period would
-      # charge the days after 1 January at the wrong rate -- 15 December 2027
-      # to 15 January 2028 would put the 2028 days over 365 instead of 366.
-      def actual_actual_year_fraction(period_start, period_end)
-        fraction = BigDecimal("0")
-        cursor = period_start
-
-        while cursor < period_end
-          next_year_start = Date.new(cursor.year + 1, 1, 1)
-          segment_end = [ next_year_start, period_end ].min
-          days = BigDecimal((segment_end - cursor).to_i.to_s)
-          denominator = Date.leap?(cursor.year) ? DAYS_PER_LEAP_YEAR : DAYS_PER_YEAR
-
-          fraction += days / denominator
-          cursor = segment_end
-        end
-
-        fraction
+        AmortizationMath.accrual_factor(
+          annual_percentage: annual_percentage,
+          period_start: period_start,
+          period_end: period_end,
+          day_count_convention: @day_count_convention
+        )
       end
 
       def monthly_rate(annual_percentage)
-        (BigDecimal(annual_percentage.to_s) / PERCENT) / MONTHS_PER_YEAR
+        AmortizationMath.monthly_rate(annual_percentage)
       end
 
       def callable!(value, name)
