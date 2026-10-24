@@ -10,6 +10,7 @@ export default class extends Controller {
     "selectionContainer",
     "createForm",
     "createError",
+    "saveError",
   ];
 
   static values = {
@@ -272,7 +273,14 @@ export default class extends Controller {
         }),
         credentials: "same-origin",
       });
-      saved = response.ok;
+      // Only the endpoint's own JSON answer means the tags were saved, never a
+      // page some redirect (e.g. to a login page) led to.
+      saved =
+        response.ok &&
+        !response.redirected &&
+        (response.headers.get("Content-Type") || "").includes(
+          "application/json",
+        );
     } finally {
       if (saved) {
         this.savedIds = selected;
@@ -280,6 +288,15 @@ export default class extends Controller {
       } else {
         changedIds.forEach((id) => this.unconfirmedIds.add(id));
       }
+      this.toggleSaveError(!saved);
+    }
+  }
+
+  // The selection stays as picked: a failed request may still have been
+  // applied, so its tags are sent again with the next change.
+  toggleSaveError(show) {
+    if (this.hasSaveErrorTarget) {
+      this.saveErrorTarget.classList.toggle("hidden", !show);
     }
   }
 

@@ -88,15 +88,60 @@ class TransactionDrawerRuleChangesTest < ApplicationSystemTestCase
       option.click
       wait_for_tag_saves
       assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
+      assert_text I18n.t("transactions.form.tags_save_error")
 
       option.click
+      wait_for_tag_saves
+      assert_no_text I18n.t("transactions.form.tags_save_error")
     end
-    wait_for_tag_saves
 
     assert_equal [ tags(:one).id ], transaction.reload.tag_ids
   ensure
     # The failure is the point of this test, not an error of the app.
     page.server.reset_error!
+  end
+
+  test "a tag save after the session expired shows an error" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+    entry = transaction.entry
+
+    open_drawer(entry)
+
+    # The session expires while the drawer is open, so the save is redirected
+    # to the login page.
+    @user.sessions.destroy_all
+
+    within "turbo-frame#drawer", visible: :all do
+      find("summary", text: /details/i).click
+      find("[data-controller='tag-select'] [data-tag-select-target='button']").click
+      find("[data-tag-select-target='option'][data-tag-id='#{tags(:two).id}']").click
+      wait_for_tag_saves
+      assert_text I18n.t("transactions.form.tags_save_error")
+    end
+
+    assert_equal [ tags(:one).id ], transaction.reload.tag_ids
+  end
+
+  test "a tag save answered with an HTML page counts as failed" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+    entry = transaction.entry
+
+    open_drawer(entry)
+
+    # What a followed redirect to a login page looks like to fetch.
+    page.execute_script <<~JS
+      window.fetch = () => Promise.resolve(new Response("<html></html>", { status: 200, headers: { "Content-Type": "text/html" } }))
+    JS
+
+    within "turbo-frame#drawer", visible: :all do
+      find("summary", text: /details/i).click
+      find("[data-controller='tag-select'] [data-tag-select-target='button']").click
+      find("[data-tag-select-target='option'][data-tag-id='#{tags(:two).id}']").click
+      wait_for_tag_saves
+      assert_text I18n.t("transactions.form.tags_save_error")
+    end
   end
 
   private
@@ -121,11 +166,5 @@ class TransactionDrawerRuleChangesTest < ApplicationSystemTestCase
         const controller = window.Stimulus.getControllerForElementAndIdentifier(element, "tag-select")
         Promise.resolve(controller.saveQueue).then(() => done(), () => done())
       JS
-    end
-
-    # The tag picker saves with fetch, so there's no page change to wait on.
-    def wait_until(timeout: Capybara.default_max_wait_time)
-      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
-      sleep 0.05 until yield || Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
     end
 end
