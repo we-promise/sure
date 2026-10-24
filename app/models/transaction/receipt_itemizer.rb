@@ -18,6 +18,10 @@
 class Transaction::ReceiptItemizer
   Error = Class.new(StandardError)
 
+  # entries.amount is decimal(19,4): crypto currencies with a finer default
+  # precision (BTC, ETH: 8) are capped here so no row rounds away on save.
+  STORED_AMOUNT_SCALE = 4
+
   # `amount` uses the parent entry's sign convention.
   Row = Data.define(:name, :amount)
   Proposal = Data.define(:attachment_id, :merchant_name, :rows, :receipt_total, :unmatched_amount)
@@ -34,6 +38,12 @@ class Transaction::ReceiptItemizer
     ai_ready?(user, provider: provider) &&
       transaction.splittable? &&
       readable_receipts(transaction, provider).any?
+  end
+
+  # Decimals a split row can carry: the currency's precision, capped at what
+  # entries.amount stores. The web editor uses it for its inputs too.
+  def self.amount_precision(currency)
+    [ Money::Currency.new(currency).default_precision, STORED_AMOUNT_SCALE ].min
   end
 
   def self.receipt_attachments(transaction)
@@ -123,7 +133,7 @@ class Transaction::ReceiptItemizer
       items = extraction.line_items.reject { |item| item.amount.zero? }
       raise Error, "No line items found on the receipt" if items.empty?
 
-      precision = Money::Currency.new(entry.currency).default_precision
+      precision = self.class.amount_precision(entry.currency)
       sign = entry.amount.negative? ? -1 : 1
       parent_total = entry.amount.abs
 

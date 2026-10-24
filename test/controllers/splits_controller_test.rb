@@ -414,6 +414,19 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_includes template.inner_html, 'step="0.01"'
   end
 
+  test "itemize caps the editor step at the four decimals entries store" do
+    @entry.update!(currency: "BTC", amount: BigDecimal("0.5"))
+    attach_receipt
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(receipt(
+      [ "Hosting", "0.12345678" ], [ "Bandwidth", "0.2" ], currency: nil
+    )))
+
+    post itemize_transaction_split_path(@entry), headers: { "Turbo-Frame" => "modal" }
+
+    assert_select "form[data-split-transaction-step-value=?]", "0.0001"
+    assert_select "input[name=?][value=?][step=?]", "split[splits][0][amount]", "-0.1235", "0.0001"
+  end
+
   test "itemize shows proposed amounts at the currency's precision" do
     attach_receipt
     Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(receipt(
