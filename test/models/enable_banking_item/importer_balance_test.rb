@@ -1292,6 +1292,25 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     end
   end
 
+  test "displayed booked balance follows the canonical resolution of duplicate candidates" do
+    link_account(Depository.create!)
+    @enable_banking_account.update!(credit_limit: 4600)
+
+    [ [ clbd("5834.56"), clbd("1234.56") ], [ clbd("1234.56"), clbd("5834.56") ] ].each do |booked|
+      available = { balance_type: "ITAV", balance_amount: { amount: "1250.00", currency: "EUR" } }
+      stub_balances(*booked, available)
+
+      assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+      saved = @enable_banking_account.reload
+      snapshot = Provider::BankBalanceSnapshot.new(saved.balance_snapshot)
+      assert_equal 1234.56.to_d, saved.current_balance
+      assert_equal saved.current_balance, snapshot.booked.money.amount
+      assert_equal 1250.to_d, snapshot.available.money.amount
+      assert saved.balance_evidence_verified?
+    end
+  end
+
   test "saves both provider observations independently of the canonical balance" do
     fetched_at = Time.utc(2026, 10, 20, 16, 37)
     @mock_provider.stubs(:get_account_balances).returns(balances: [

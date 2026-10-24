@@ -269,17 +269,17 @@ class EnableBankingItem::Importer
 
       balances = balance_data[:balances].map(&:with_indifferent_access)
       currency, kept, skipped = split_balances_by_currency(balances, enable_banking_account)
-      display_snapshot = build_display_balance_snapshot(enable_banking_account, balances, fetched_at: fetched_at, currency: currency)
+      balance, tiebreak_stage = select_current_balance(
+        kept, enable_banking_account, prefer_available: prefer_available_balance?(enable_banking_account)
+      )
+      display_balances = balance ? [ balance ] + balances.reject { |candidate| candidate.equal?(balance) } : balances
+      display_snapshot = build_display_balance_snapshot(enable_banking_account, display_balances, fetched_at: fetched_at, currency: currency)
 
       if balances.empty?
         enable_banking_account.update!(balance_snapshot: display_snapshot)
         mark_balance_unavailable(enable_banking_account)
         return false
       end
-
-      balance, tiebreak_stage = select_current_balance(
-        kept, enable_banking_account, prefer_available: prefer_available_balance?(enable_banking_account)
-      )
 
       unless balance.present?
         mark_display_balance_fetch_failed(enable_banking_account)
