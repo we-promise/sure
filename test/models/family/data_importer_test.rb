@@ -1354,16 +1354,36 @@ class Family::DataImporterTest < ActiveSupport::TestCase
   end
 
   test "an unusable lot cost or lot name is dropped and counted, and the trade still imports" do
-    [ [ "lot_total_cost", "abc" ], [ "lot_total_cost", "-5" ], [ "lot_source_trade_id", SecureRandom.uuid ] ].each do |field, value|
-      family = Family.create!(name: "Target #{field}", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+    # Each edit names the check that tells its drop from a clean import, where
+    # the first buy's lot carries the user's 600 and the sale names the $20 lot.
+    cases = {
+      "a non-numeric cost" => [ ->(data) { data["lot_total_cost"] = "abc" if data["lot_total_cost"] }, :no_lot_cost ],
+      "a negative cost" => [ ->(data) { data["lot_total_cost"] = "-5" if data["lot_total_cost"] }, :no_lot_cost ],
+      "a cost on a sale" => [ ->(data) { data["lot_total_cost"] = "50" if data["qty"].to_d.negative? }, :only_the_buys_lot ],
+      "an unknown named lot" => [ ->(data) { data["lot_source_trade_id"] = SecureRandom.uuid if data["lot_source_trade_id"] }, :no_choice ],
+      "a sale naming itself" => [ ->(data) { data["lot_source_trade_id"] = data["id"] if data["lot_source_trade_id"] }, :no_choice ],
+      "a sale dated before its lot" => [ ->(data) { data["date"] = 5.days.ago.to_date.iso8601 if data["lot_source_trade_id"] }, :no_choice ],
+      "a sale of another security" => [ ->(data) { data.merge!("security_id" => SecureRandom.uuid, "ticker" => "OTHER#{SecureRandom.hex(2).upcase}") if data["lot_source_trade_id"] }, :no_choice ]
+    }
 
-      result = Family::DataImporter.new(family, edit_trades(lot_export) { |data| data[field] = value if data[field] }).import!
+    cases.each do |label, (edit, check)|
+      family = Family.create!(name: "Target #{label}", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
 
-      trades = lot_trades(family.accounts.find_by!(name: "Lot Round Trip"))
-      assert_equal 3, trades.size, "#{field}=#{value}: a trade was lost"
-      assert_equal 1, result[:summary].dig("trades", "skipped"), "#{field}=#{value}"
-      assert_nil HoldingLot.find_by(source_entry: trades.fetch(60))&.manual_total_cost if field == "lot_total_cost"
-      assert_nil trades.fetch(-10).trade.reload.lot_source_entry_id if field == "lot_source_trade_id"
+      result = Family::DataImporter.new(family, edit_trades(lot_export) { |data| edit.call(data) }).import!
+
+      account = family.accounts.find_by!(name: "Lot Round Trip")
+      trades = lot_trades(account)
+      assert_equal 3, trades.size, "#{label}: a trade was lost"
+      assert_equal 1, result[:summary].dig("trades", "skipped"), label
+      case check
+      when :no_lot_cost
+        assert_equal 0, HoldingLot.where(account: account).count, "#{label}: the cost was seeded"
+      when :only_the_buys_lot
+        assert_equal [ trades.fetch(60).id ], HoldingLot.where(account: account).pluck(:source_entry_id), "#{label}: a sale got a lot"
+      when :no_choice
+        assert_nil trades.fetch(-10).trade.reload.lot_source_entry_id, "#{label}: the choice was stored"
+        assert_equal 600, HoldingLot.find_by!(source_entry: trades.fetch(60)).manual_total_cost, "#{label}: the lot's cost went with it"
+      end
     end
   end
 
@@ -3068,8 +3088,14 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       Security::Price.insert_all((3.days.ago.to_date..Date.current).map { |date| { security_id: security.id, date: date, price: 30, currency: "USD" } })
       first_buy = create_trade(security, account: account, qty: 60, price: 12, date: 3.days.ago.to_date)
       second_buy = create_trade(security, account: account, qty: 40, price: 20, date: 2.days.ago.to_date)
-      sale = create_trade(security, account: account, qty: -10, price: 25, date: 1.day.ago.to_date)
+      # Sold on the day the named lot was bought, which a sale may do.
+      sale = create_trade(security, account: account, qty: -10, price: 25, date: 2.days.ago.to_date)
       sale.trade.update!(lot_source_entry: second_buy)
+      # The sale gets the lowest trade id, so an export ordered by date and id
+      # alone would write it ahead of the lot it names, bought the same day.
+      low_id = "00000000-0000-4000-8000-#{SecureRandom.hex(6)}"
+      Trade.where(id: sale.entryable_id).update_all(id: low_id)
+      sale.update_columns(entryable_id: low_id)
       Holding::Materializer.new(account.reload, strategy: :forward).materialize_holdings
       HoldingLot.find_by!(source_entry: first_buy).set_manual_total_cost!(600)
       account.update!(cost_basis_method: switch_to) if switch_to
