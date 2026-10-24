@@ -6,6 +6,7 @@ class AccountProvider < ApplicationRecord
 
   validates :account_id, uniqueness: { scope: :provider_type }
   validates :provider_id, uniqueness: { scope: :provider_type }
+  validate :account_accepts_provider_link, on: :create
 
   validate :financekit_has_exclusive_writer, if: -> { new_record? || will_save_change_to_account_id? || will_save_change_to_provider_id? || will_save_change_to_provider_type? }
 
@@ -34,6 +35,13 @@ class AccountProvider < ApplicationRecord
   end
 
   private
+    def account_accepts_provider_link
+      return if account.nil?
+
+      account.with_lock do
+        errors.add(:account, :pending_deletion) if account.pending_deletion?
+      end
+    end
 
     def financekit_has_exclusive_writer
       # belongs_to :account already reports a missing account; bail out rather

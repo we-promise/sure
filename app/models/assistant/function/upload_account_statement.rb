@@ -99,7 +99,10 @@ class Assistant::Function::UploadAccountStatement < Assistant::Function
     end
 
     prepared = AccountStatement.prepare_upload!(upload_for(content, filename))
-    statement = AccountStatement.create_from_prepared_upload!(family: family, account: account, prepared_upload: prepared)
+    statement = AccountStatement.transaction do
+      account = Account::MutationAccess.lock!(accounts: [ account ], user:, level: Account::MutationAccess::WRITE).fetch(account.id.to_s) if account
+      AccountStatement.create_from_prepared_upload!(family: family, account: account, prepared_upload: prepared)
+    end
 
     {
       success: true,
@@ -107,6 +110,8 @@ class Assistant::Function::UploadAccountStatement < Assistant::Function
       statement: statement_payload(statement),
       message: "Stored #{statement.filename} in the Statement Vault."
     }
+  rescue Account::MutationAccess::Denied
+    error("account_not_found", "The selected account is no longer writable. Upload the statement without account_id or choose another account.")
   rescue AccountStatement::DuplicateUploadError => e
     duplicate_response(e.statement)
   rescue AccountStatement::InvalidUploadError

@@ -92,12 +92,8 @@ class Assistant::Function::RecordValuation < Assistant::Function
     account_id = params["account_id"].to_s
     return error("invalid_account_id", "account_id must be a UUID.") unless valid_uuid?(account_id)
 
-    # Unlike the Statement Vault tools, this one deliberately does NOT check
-    # AccountStatement.statement_manager?. That role governs the document archive;
-    # writing a value to an account is governed by the account ACL, and
-    # writable_by is the same scope the human-facing api/v1/valuations endpoint
-    # uses. Do not "tighten" this by adding the vault role — the two permissions
-    # answer different questions.
+    # Writing a value is governed by the account ACL, not the Statement Vault role.
+    # Fail fast through the writable scope; final access is reacquired under locks below.
     account = family.accounts.writable_by(user).find_by(id: account_id)
     return error("account_not_found", "No account found with that ID that this user can write to.") unless account
 
@@ -106,7 +102,7 @@ class Assistant::Function::RecordValuation < Assistant::Function
     failure_message = nil
 
     ActiveRecord::Base.transaction do
-      account.lock!
+      account = Account::MutationAccess.lock!(accounts: [ account ], user:, level: Account::MutationAccess::WRITE).fetch(account.id.to_s)
       replaced_existing = account.entries.valuations.exists?(date: date)
 
       result = account.create_reconciliation(balance: amount, date: date)
@@ -135,6 +131,8 @@ class Assistant::Function::RecordValuation < Assistant::Function
       provenance: citation.to_h,
       message: "Recorded #{entry.amount_money.format} for #{account.name} on #{date.iso8601}, cited as: #{citation}."
     }
+  rescue Account::MutationAccess::Denied
+    error("account_not_found", "No account found with that ID that this user can write to.")
   rescue Provenance::Citation::InvalidError => e
     error(
       "invalid_source_citation",
