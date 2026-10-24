@@ -662,6 +662,49 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal BigDecimal("4.5"), target.price
   end
 
+  # A negative row is units gone, not units bought, so it carries no cost into
+  # the merge: averaging it in would give (5 x 100 - 2 x 3000) / 3 = -1833.33.
+  # The units still held keep their per-share basis, as a sale leaves it.
+  test "remap_security! keeps the held side's cost basis when merging a negative holding into a positive one" do
+    new_security = create_security("GOOGCBN", prices: [ { date: Date.current, price: 100.0 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 5, price: 100.0, amount: 500.0, cost_basis: 100.0, currency: "USD")
+    @amzn.update_columns(qty: -2, amount: -432.0, cost_basis: 3000.0)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    assert_equal BigDecimal("3"), target.qty
+    assert_equal BigDecimal("100"), target.cost_basis
+  end
+
+  test "remap_security! takes the moved row's cost basis when merging a positive holding into a negative one" do
+    new_security = create_security("GOOGCBP", prices: [ { date: Date.current, price: 216.0 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 0, price: 216.0, amount: 0.0, currency: "USD")
+    target.update_columns(qty: -2, amount: -432.0, cost_basis: 3000.0)
+    @amzn.update_columns(cost_basis: 216.0)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    # -2 + the moved row's 15.
+    assert_equal BigDecimal("13"), target.qty
+    assert_equal BigDecimal("216"), target.cost_basis
+  end
+
+  test "remap_security! keeps the target's cost basis when a merge leaves no units held" do
+    new_security = create_security("GOOGCBZ", prices: [ { date: Date.current, price: 216.0 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 0, price: 216.0, amount: 0.0, currency: "USD")
+    target.update_columns(qty: -22, amount: -4752.0, cost_basis: 3000.0)
+    @amzn.update_columns(cost_basis: 216.0)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    # -22 + the moved row's 15.
+    assert_equal BigDecimal("-7"), target.qty
+    assert_equal BigDecimal("3000"), target.cost_basis
+  end
+
   test "reset_security_to_provider! moves a negative-qty holding back without raising" do
     old_security = @amzn.security
     new_security = create_security("GOOGRST", prices: [ { date: Date.current, price: 100.0 } ])

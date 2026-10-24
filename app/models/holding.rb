@@ -176,11 +176,20 @@ class Holding < ApplicationRecord
           merged_qty = existing.qty + holding.qty
           merged_amount = existing.amount + holding.amount
 
-          # Calculate weighted average cost basis if both holdings have cost_basis
-          merged_cost_basis = if existing.cost_basis.present? && holding.cost_basis.present? && merged_qty.positive?
-            ((existing.cost_basis * existing.qty) + (holding.cost_basis * holding.qty)) / merged_qty
+          # Weighted average cost basis when both rows hold units. A negative
+          # row is units gone, not units bought, so it adds no cost: when only
+          # one side holds units, the merged row keeps that side's basis, as a
+          # sale leaves the per-share basis unchanged.
+          merged_cost_basis = if !merged_qty.positive?
+            existing.cost_basis
+          elsif existing.qty.positive? && holding.qty.positive?
+            if existing.cost_basis.present? && holding.cost_basis.present?
+              ((existing.cost_basis * existing.qty) + (holding.cost_basis * holding.qty)) / merged_qty
+            else
+              existing.cost_basis # Keep existing if we can't calculate weighted average
+            end
           else
-            existing.cost_basis # Keep existing if we can't calculate weighted average
+            (existing.qty.positive? ? existing : holding).cost_basis
           end
 
           # amount / qty, as the calculators write amount = qty x price with
