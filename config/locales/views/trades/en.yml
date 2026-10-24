@@ -57,6 +57,9 @@ en:
       date_label: Date
       delete: Delete
       fee_label: Transaction fee
+      lot_label: Sold from lot
+      lot_oldest_first: Oldest first
+      lot_option: "%{date} · %{qty} at %{price}"
       delete_subtitle: This action cannot be undone
       delete_title: Delete Trade
       details: Details
