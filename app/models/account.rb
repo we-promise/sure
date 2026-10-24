@@ -42,7 +42,7 @@ class Account < ApplicationRecord
   monetize :balance, :cash_balance
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
-  # Which lots a sale consumes: pro rata (today's figures) or oldest first.
+  # Which lots a sale consumes: pro rata (the default) or oldest first.
   enum :cost_basis_method, { average: "average", fifo: "fifo" }, prefix: :cost_basis, validate: true
 
   VISIBLE_STATUSES = %w[draft active].freeze
