@@ -381,6 +381,17 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "report filters accept the shared boolean spellings, case and spaces aside" do
+    split_transaction_for_report_filters
+
+    [ " TRUE ", "1" ].each do |value|
+      get api_v1_transactions_url, params: report_filter_params(excluded: value), headers: api_headers(@api_key)
+      assert_response :success, "expected #{value.inspect} to be accepted"
+      names = JSON.parse(response.body)["transactions"].map { |row| row["name"] }
+      assert_equal [ "Excluded child", "Excluded plain", "Report split parent" ].sort, names.sort
+    end
+  end
+
   test "report filters reject a present but empty value" do
     %i[exclude_split_parents excluded].each do |key|
       get "#{api_v1_transactions_url}?#{key}=", headers: api_headers(@api_key)
