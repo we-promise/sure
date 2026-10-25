@@ -19,8 +19,7 @@ json.signed_amount_cents(transaction.entry.classification == "income" ? amount_c
 # unrounded, as a locale-independent string in the entry's own sign
 # convention (positive = outflow, negative = inflow), the same field split
 # show returns, so a client can build a split that sums exactly. "F" keeps
-# it fixed-point (12.3456, never 0.123456e2) without relying on
-# ActiveSupport's BigDecimal#to_s default.
+# it fixed-point (12.3456, never 0.123456e2).
 json.amount_decimal transaction.entry.amount.to_s("F")
 
 json.currency transaction.entry.currency

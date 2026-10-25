@@ -42,8 +42,6 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # Make per_page available to the template
     @per_page = safe_per_page_param
 
-    # Which rows on this page are split parents, in one query, without loading
-    # their children (a split has no size cap). Mirrors the web index.
     @split_parent_entry_ids = split_parent_entry_ids_for(@transactions)
 
     # Rails will automatically use app/views/api/v1/transactions/index.json.jbuilder

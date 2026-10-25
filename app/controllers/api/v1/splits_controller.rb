@@ -141,9 +141,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
           transfer_as_inflow: { outflow_transaction: { entry: :account } }
         )
         .order("entries.created_at")
-        .to_a
-      # Children can never be split parents themselves (splittable? refuses
-      # split children), so skip the lookup query.
+      # A split child is never splittable, so none of them can be a split parent.
       @split_parent_entry_ids = Set.new
 
       render :show, status: status
