@@ -10,7 +10,8 @@ class OauthMetadataController < ApplicationController
   def protected_resource
     render json: {
       resource: configured_base_url,
-      authorization_servers: [ configured_base_url ]
+      authorization_servers: [ configured_base_url ],
+      scopes_supported: [ "read_write" ]
     }
   end
 
