@@ -721,6 +721,17 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal 2, sql.scan(":require_common_writer = FALSE").size
   end
 
+  test "does not auto-match transfers when the family has disabled auto match" do
+    @family.update!(auto_match_transfers_disabled: true)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
   # Regression tests for loan transfer kind assignment bug
   # The kind should be determined by the DESTINATION account (inflow), not the source (outflow)
   test "loan payment (cash to loan) assigns loan_payment kind to outflow" do
