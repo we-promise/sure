@@ -8,10 +8,19 @@ class Loan
   # engine the schedule uses, so a borrower who pays the schedule matches it
   # row for row.
   #
+  # A linked transfer is a full payment unless the loan opts in to
+  # principal-only transfers. The opt-in covers the workflow from #1804: the
+  # borrower transfers only principal and records the interest separately.
+  #
   # Only a manual loan whose opening anchor is its real origination is
   # replayed. A provider-owned loan's anchor is a current balance dated into
   # the past, so charging interest on it would invent a history.
   class PrincipalPayments
+    # A payment made a few days after the due date still belongs to that
+    # period. Without this window, a weekend slip would charge the next period
+    # on a principal the borrower had already repaid.
+    PAYMENT_GRACE_DAYS = 5
+
     Change = Data.define(:principal_paid, :principal_added, :interest_paid) do
       def net
         principal_added - principal_paid
@@ -54,6 +63,7 @@ class Loan
       @loan = loan
       @account = loan.account
       @entries = entries
+      @premium_remaining = {}
       @changes = build_changes
     end
 
@@ -109,9 +119,10 @@ class Loan
 
       # Close every scheduled period that ended before this date. A period
       # with no payment still accrues its charge; it is carried, not lost.
+      # A period already charged by an early payment is not charged again.
       def advance_closed_periods(state, date)
         while (payment = schedule.payments[state.payment_index]) && payment.date < date
-          charge_period(state)
+          charge_period(state) if state.period_interest.nil?
           close_period(state, payment.date)
         end
       end
@@ -130,11 +141,17 @@ class Loan
         payment = schedule.payments[state.payment_index]
         return if payment.nil? || payment.date <= state.period_start
 
+        if state.period_principal <= 0
+          state.period_interest = BigDecimal("0")
+          return
+        end
+
         factor = AmortizationMath.accrual_factor(
           annual_percentage: rate_resolver.accrual_rate_for(state.period_start),
           period_start: state.period_start,
           period_end: payment.date,
-          day_count_convention: day_count_convention
+          day_count_convention: day_count_convention,
+          full_period: scheduled_period_start?(state.period_start)
         )
 
         state.period_interest = (state.period_principal * factor).round(precision)
@@ -153,50 +170,51 @@ class Loan
 
       def process_transactions(state, date, transactions)
         linked, unlinked = transactions.partition { |entry| linked?(entry) }
-        linked_positive, linked_negative = linked.partition { |entry| entry.amount.positive? }
-        unlinked_positive, unlinked_negative = unlinked.partition { |entry| entry.amount.positive? }
 
-        added = linked_positive.sum(BigDecimal("0"), &:amount).round(precision)
+        added = transactions.sum(BigDecimal("0")) do |entry|
+          entry.amount.positive? ? entry.amount : BigDecimal("0")
+        end.round(precision)
         state.principal += added
 
-        apply_ledger_charge(state, date, unlinked_positive.sum(BigDecimal("0"), &:amount).round(precision))
-
         payment = instalment_for(state, date)
-        principal_only, full_linked = linked_negative.partition { |entry| principal_only?(entry, payment) }
-
         principal_paid = BigDecimal("0")
         interest_paid = BigDecimal("0")
 
+        linked_negative = linked.select { |entry| entry.amount.negative? }
+        unlinked_negative = unlinked.select { |entry| entry.amount.negative? }
+
+        principal_only, full_linked = if loan.principal_only_transfers?
+          [ linked_negative, [] ]
+        else
+          [ [], linked_negative ]
+        end
+
         principal_only.each do |entry|
-          applied = [ (-entry.amount).round(precision), state.principal ].min
+          # No cap: an overpayment beyond the remaining principal leaves a
+          # credit instead of being dropped.
+          applied = (-entry.amount).round(precision)
           state.principal -= applied
           principal_paid += applied
+          apply_grace_principal(state, date, applied)
 
-          # A principal-only transfer pays the instalment's interest as a
-          # separate expense. Count it once; it never reduces principal again.
-          separately_paid = principal_only_interest(state, date)
-          next unless separately_paid.positive?
-
-          if state.carried_interest.positive? && !due_date?(state, date)
-            state.carried_interest -= separately_paid
-          else
-            state.period_interest = BigDecimal("0")
-          end
-          interest_paid += separately_paid
+          # The borrower records the instalment's interest separately. Count
+          # it once; it never reduces principal again.
+          interest_paid += principal_only_interest(state)
         end
 
         full_amount = (full_linked + unlinked_negative).sum(BigDecimal("0")) { |entry| -entry.amount }.round(precision)
 
         if full_amount.positive?
-          paid_interest = [ full_amount, state.carried_interest + period_interest(state) ].min
-          state.carried_interest, state.period_interest =
-            allocate_interest(state.carried_interest, period_interest(state), paid_interest)
+          paid_interest = apply_interest(state, full_amount)
 
           remaining = full_amount - paid_interest
-          remaining = remaining_after_premium(remaining, payment, full_amount, paid_interest)
-          applied = [ remaining, state.principal ].min
+          remaining = apply_premium(remaining, payment)
+          # No cap: an overpayment beyond the remaining principal leaves a
+          # credit instead of being dropped.
+          applied = remaining
           state.principal -= applied
           principal_paid += applied
+          apply_grace_principal(state, date, applied)
           interest_paid += paid_interest
         end
 
@@ -207,47 +225,52 @@ class Loan
         )
       end
 
-      # An unlinked positive line on a manual loan is the statement's charge
-      # for the period. It replaces the engine's accrual, so the same interest
-      # is not counted twice and a statement that charges a different figure
-      # stays authoritative. A line that arrives after its due date belongs to
-      # the charge already carried.
-      def apply_ledger_charge(state, date, amount)
-        return unless amount.positive?
+      # A payment a few days after the due date still reduces the principal
+      # the new period charges interest on. Beyond the window, the period keeps
+      # the principal it opened with.
+      def apply_grace_principal(state, date, applied)
+        return unless applied.positive?
+        return unless scheduled_period_start?(state.period_start)
 
-        if state.carried_interest.positive? && !due_date?(state, date)
-          state.carried_interest = amount
-        else
-          state.period_interest = amount
+        days = (date - state.period_start).to_i
+        return unless days.positive? && days <= PAYMENT_GRACE_DAYS
+
+        state.period_principal -= applied
+      end
+
+      # Apply a payment to carried interest first, then to the open period's
+      # charge. A deferred period stays nil: deferred is not the same as a
+      # genuine zero-rate charge.
+      def apply_interest(state, amount)
+        from_carried = [ amount, state.carried_interest ].min
+        state.carried_interest -= from_carried
+
+        from_period = BigDecimal("0")
+        unless state.period_interest.nil?
+          from_period = [ amount - from_carried, state.period_interest ].min
+          state.period_interest -= from_period
         end
+
+        from_carried + from_period
       end
 
-      def allocate_interest(carried, period, paid)
-        from_carried = [ paid, carried ].min
-        from_period = [ paid - from_carried, period ].min
-
-        [ carried - from_carried, period - from_period ]
-      end
-
-      # The premium is charged alongside the instalment. When the payment
-      # covers the instalment's principal, the interest actually paid and the
-      # premium, the premium is not principal.
-      def remaining_after_premium(remaining, payment, full_amount, paid_interest)
+      # The premium is charged alongside the instalment and is senior to
+      # principal. Track its remaining amount per instalment so a payment in
+      # two halves does not charge it twice and an underpayment cannot turn it
+      # into principal.
+      def apply_premium(remaining, payment)
         return remaining if payment.nil?
 
-        premium = premium_for(payment)
-        return remaining unless premium.positive?
+        due = premium_remaining(payment)
+        return remaining unless due.positive?
 
-        covered = payment.principal.amount + paid_interest + premium
-        return remaining if full_amount < covered
-
-        [ remaining - premium, BigDecimal("0") ].max
+        paid = [ remaining, due ].min
+        @premium_remaining[payment.number] = due - paid
+        remaining - paid
       end
 
-      def principal_only?(entry, payment)
-        return false if payment.nil?
-
-        same_amount?(-entry.amount, payment.principal.amount)
+      def premium_remaining(payment)
+        @premium_remaining[payment.number] ||= premium_for(payment)
       end
 
       # A late principal-only transfer belongs to the period it missed; an
@@ -261,10 +284,16 @@ class Loan
         schedule.payments[state.payment_index] || schedule.payments.last
       end
 
-      def principal_only_interest(state, date)
-        return state.carried_interest if state.carried_interest.positive? && !due_date?(state, date)
+      def principal_only_interest(state)
+        paid = state.carried_interest
+        state.carried_interest = BigDecimal("0")
 
-        period_interest(state)
+        if state.period_interest&.positive?
+          paid += state.period_interest
+          state.period_interest = BigDecimal("0")
+        end
+
+        paid
       end
 
       def apply_valuation(state, valuation)
@@ -309,6 +338,16 @@ class Loan
         schedule.payments[state.payment_index]&.date == date
       end
 
+      # A period opened on a scheduled date is a full period for the day-count
+      # convention. A period opened by a mid-period valuation is a stub.
+      def scheduled_period_start?(date)
+        scheduled_dates.include?(date)
+      end
+
+      def scheduled_dates
+        @scheduled_dates ||= (schedule.payments.map(&:date) << anchor_date).to_set
+      end
+
       def linked?(entry)
         linked_transaction_ids.include?(entry.entryable_id)
       end
@@ -336,6 +375,8 @@ class Loan
       end
 
       def premium_for(payment)
+        return BigDecimal("0") if payment.nil?
+
         premium = loan.insurance&.premium_for(payment.number)
         premium ? premium.amount.amount : BigDecimal("0")
       end
@@ -354,10 +395,6 @@ class Loan
 
       def day_count_convention
         @day_count_convention ||= (loan.day_count_convention.presence || Loan::DEFAULT_DAY_COUNT_CONVENTION).to_sym
-      end
-
-      def same_amount?(left, right)
-        (BigDecimal(left.to_s) - BigDecimal(right.to_s)).abs <= BigDecimal("1") / (10 ** precision)
       end
 
       def precision

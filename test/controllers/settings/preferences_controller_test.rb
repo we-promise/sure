@@ -56,6 +56,15 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert user.reload.preview_features_enabled?
   end
 
+  test "changing preview features syncs the manual loans" do
+    loan_account = accounts(:loan)
+    assert loan_account.manual?
+
+    assert_difference -> { loan_account.syncs.count }, 1 do
+      patch settings_preferences_url, params: { user: { preview_features_enabled: "1" } }
+    end
+  end
+
   test "update toggles preview_features_enabled off" do
     user = users(:family_admin)
     user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))

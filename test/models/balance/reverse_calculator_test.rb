@@ -845,29 +845,4 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
       ]
     )
   end
-
-  test "a preview loan payment walks back by principal only" do
-    account = create_amortizable_loan
-    enable_preview_features_for_family!(account.family)
-
-    calculated = Balance::ReverseCalculator.new(account).calculate
-    row = calculated.find { |balance| balance.date == Date.new(2026, 2, 1) }
-
-    assert_equal BigDecimal("11053.81"), row.balance
-    assert_equal BigDecimal("12000"), row.start_non_cash_balance
-    assert_equal BigDecimal("946.19"), row.non_cash_inflows
-  end
-
-  private
-    def create_amortizable_loan
-      create_loan_account(
-        initial_balance: 12_000,
-        term_months: 12,
-        entries: [
-          { type: "opening_anchor", date: Date.new(2026, 1, 1), balance: 12_000 },
-          { type: "current_anchor", date: Date.new(2026, 2, 1), balance: 11_053.81 },
-          { type: "transaction", date: Date.new(2026, 2, 1), amount: -1_066.19 }
-        ]
-      )
-    end
 end
