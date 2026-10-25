@@ -110,6 +110,14 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
 
   test "show budgets nothing to the uncategorized line of an uninitialized budget" do
     @budget.update!(budgeted_spending: nil)
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: nil),
+      date: @budget.start_date + 10.days,
+      name: "Uncategorized API spending",
+      amount: 40,
+      currency: "USD"
+    )
 
     get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
 
@@ -117,7 +125,8 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     uncategorized = JSON.parse(response.body)["uncategorized"]
     assert_equal false, JSON.parse(response.body)["initialized"]
     assert_equal 0, uncategorized["budgeted_spending_cents"]
-    assert_equal uncategorized["available_to_spend_cents"], -uncategorized["actual_spending_cents"]
+    assert_equal 4_000, uncategorized["actual_spending_cents"]
+    assert_equal(-4_000, uncategorized["available_to_spend_cents"])
   end
 
   test "returns not found for another family's budget" do

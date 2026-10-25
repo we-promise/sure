@@ -150,6 +150,25 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_includes JSON.parse(response.body)["budget_categories"].map { |line| line["id"] }, @budget_category.id
   end
 
+  test "index still lists when a concurrent request inserted the same line first" do
+    Budget.any_instance.stubs(:sync_budget_categories).raises(ActiveRecord::RecordNotUnique, "duplicate key value")
+
+    get api_v1_budget_categories_url, params: { budget_id: @budget.id }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_includes JSON.parse(response.body)["budget_categories"].map { |line| line["id"] }, @budget_category.id
+  end
+
+  test "index does not swallow a sync failure other than a duplicate line" do
+    invalid = @budget.budget_categories.build(category: @category)
+    invalid.errors.add(:category, :blank)
+    Budget.any_instance.stubs(:sync_budget_categories).raises(ActiveRecord::RecordInvalid.new(invalid))
+
+    get api_v1_budget_categories_url, params: { budget_id: @budget.id }, headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+  end
+
   test "index without budget_id neither syncs lines nor computes actuals" do
     new_category = @family.categories.create!(name: "Not synced unfiltered", color: "#654321")
 
