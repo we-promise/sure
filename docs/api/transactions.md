@@ -73,7 +73,7 @@ Filters combine, so `budget_id` can be narrowed further with `category_id`, `acc
 
 The budget must be one `GET /api/v1/budgets/{id}` would return to the caller (the household budget, the caller's own, or one shared with them); any other id returns `404`. Unlike the unfiltered list, rows on disabled accounts are left out, as they are on the web.
 
-Budget totals also skip excluded transactions, so add `excluded=false` to leave out excluded rows and split parents. Totals additionally ignore pending transactions, tax-advantaged accounts and some investment activity labels, which this list does not filter, so the rows are not guaranteed to add up to the budget's actual spending.
+Budget totals also skip excluded transactions, so add `excluded=false` to leave them out. Splitting a transaction flags the parent excluded, so this also leaves out split parents (`exclude_split_parents=true` drops only those). Totals additionally ignore pending transactions, tax-advantaged accounts and some investment activity labels, which this list does not filter, so the rows are not guaranteed to add up to the budget's actual spending.
 
 ## Transaction object
 
