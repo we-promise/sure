@@ -11,7 +11,7 @@ class OauthMetadataController < ApplicationController
     render json: {
       resource: configured_base_url,
       authorization_servers: [ configured_base_url ],
-      scopes_supported: [ MCP_SCOPE ],
+      scopes_supported: [ "read_write" ],
       bearer_methods_supported: [ "header" ]
     }
   end
@@ -25,7 +25,7 @@ class OauthMetadataController < ApplicationController
       response_types_supported: [ "code" ],
       grant_types_supported: [ "authorization_code" ],
       code_challenge_methods_supported: [ "S256" ],
-      scopes_supported: [ MCP_SCOPE ]
+      scopes_supported: [ "read_write" ]
     }
   end
 end
