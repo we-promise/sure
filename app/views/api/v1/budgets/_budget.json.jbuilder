@@ -30,6 +30,25 @@ if include_derived_amounts
   json.available_to_spend_cents money_to_minor_units.call(budget.available_to_spend_money)
   json.available_to_allocate budget.available_to_allocate_money.format
   json.available_to_allocate_cents money_to_minor_units.call(budget.available_to_allocate_money)
+
+  # The web page's synthesized "Uncategorized" line: spending with no category,
+  # budgeted with whatever has not been allocated to a category.
+  uncategorized = budget.uncategorized_budget_category
+  json.uncategorized do
+    json.id uncategorized.id
+    json.currency uncategorized.currency
+    json.budgeted_spending uncategorized.budgeted_spending_money.format
+    json.budgeted_spending_cents money_to_minor_units.call(uncategorized.budgeted_spending_money)
+    json.actual_spending uncategorized.actual_spending_money.format
+    json.actual_spending_cents money_to_minor_units.call(uncategorized.actual_spending_money)
+    json.available_to_spend uncategorized.available_to_spend_money.format
+    json.available_to_spend_cents money_to_minor_units.call(uncategorized.available_to_spend_money)
+    json.category do
+      json.name uncategorized.category.name
+      json.color uncategorized.category.color
+      json.lucide_icon uncategorized.category.lucide_icon
+    end
+  end
 end
 
 json.created_at budget.created_at.iso8601

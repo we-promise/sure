@@ -61,6 +61,7 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
       available_to_spend_cents
       available_to_allocate
       available_to_allocate_cents
+      uncategorized
     ].each do |derived_field|
       assert_not budget_response.key?(derived_field), "Expected budget index to omit #{derived_field}"
     end
@@ -80,6 +81,43 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_kind_of Integer, response_data["actual_income_cents"]
     assert_kind_of Integer, response_data["available_to_spend_cents"]
     assert_kind_of Integer, response_data["available_to_allocate_cents"]
+  end
+
+  test "show includes the uncategorized line the web budget page synthesizes" do
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: nil),
+      date: @budget.start_date + 10.days,
+      name: "Uncategorized API spending",
+      amount: 75,
+      currency: "USD"
+    )
+
+    get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
+
+    assert_response :success
+    uncategorized = JSON.parse(response.body)["uncategorized"]
+    assert_equal BudgetCategory.uncategorized.id, uncategorized["id"]
+    assert_equal "USD", uncategorized["currency"]
+    # Budgeted with what is left after allocating to categories: 3,000 - 500.
+    assert_equal 250_000, uncategorized["budgeted_spending_cents"]
+    assert_equal 7_500, uncategorized["actual_spending_cents"]
+    assert_equal 242_500, uncategorized["available_to_spend_cents"]
+    assert_equal I18n.t(Category::UNCATEGORIZED_NAME_KEY), uncategorized.dig("category", "name")
+    assert_equal Category::UNCATEGORIZED_COLOR, uncategorized.dig("category", "color")
+    assert_equal "circle-dashed", uncategorized.dig("category", "lucide_icon")
+  end
+
+  test "show budgets nothing to the uncategorized line of an uninitialized budget" do
+    @budget.update!(budgeted_spending: nil)
+
+    get api_v1_budget_url(@budget.id), headers: api_headers(@api_key)
+
+    assert_response :success
+    uncategorized = JSON.parse(response.body)["uncategorized"]
+    assert_equal false, JSON.parse(response.body)["initialized"]
+    assert_equal 0, uncategorized["budgeted_spending_cents"]
+    assert_equal uncategorized["available_to_spend_cents"], -uncategorized["actual_spending_cents"]
   end
 
   test "returns not found for another family's budget" do
