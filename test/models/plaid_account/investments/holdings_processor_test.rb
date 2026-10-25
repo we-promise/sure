@@ -567,6 +567,30 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
                  [ existing.security_id, existing.qty.to_i, existing.amount.to_i, existing.provider_security_id, existing.security_locked ]
   end
 
+  # Another provider's row is that provider's position; a carried remap must
+  # not fold Plaid's units into it.
+  test "a remap carried onto a date where another provider holds the chosen security leaves that row alone" do
+    snapshot_date = Date.current - 1
+    msft = securities(:msft)
+    chosen = Security.create!(ticker: "MSFT2", name: "Chosen", exchange_operating_mic: "XNAS", country_code: "US")
+    plaid = link_account_provider!
+    item = SimplefinItem.create!(family: account.family, name: "SF", access_url: "https://example.com/access")
+    simplefin_account = SimplefinAccount.create!(simplefin_item: item, name: "Broker", account_id: "sf_1",
+                                                 currency: "USD", account_type: "investment", current_balance: 0)
+    other_provider = AccountProvider.create!(account: account, provider: simplefin_account)
+    process_holdings("b" => [ msft, { "quantity" => 5 } ])
+    account.holdings.find_by!(security: msft, date: Date.current).remap_security!(chosen)
+    other = account.holdings.create!(security: chosen, date: snapshot_date, qty: 3, price: 50, amount: 150,
+                                     currency: "USD", account_provider_id: other_provider.id)
+
+    process_holdings("b" => [ msft, { "quantity" => 7, "institution_price_as_of" => snapshot_date.to_s } ])
+
+    other.reload
+    assert_equal [ 3, 150, false, other_provider.id ], [ other.qty.to_i, other.amount.to_i, other.security_locked, other.account_provider_id ]
+    plaid_row = account.holdings.find_by!(date: snapshot_date, account_provider_id: plaid.id)
+    assert_equal [ msft.id, 7 ], [ plaid_row.security_id, plaid_row.qty.to_i ]
+  end
+
   test "of several retired rows, the latest correction wins" do
     snapshot_date = Date.current - 2
     a = securities(:aapl)

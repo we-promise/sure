@@ -1078,11 +1078,20 @@ class Account::ProviderImportAdapter
 
     # A remap onto a security the target's date already holds would break the
     # unique (account, security, date, currency) index. The target folds into
-    # that row instead, as Holding#remap_security! merges a collision.
+    # that row instead, as Holding#remap_security! merges a collision. Another
+    # provider's row is that provider's position and is never folded into: the
+    # target keeps its own security and the remap is dropped, which is logged.
     collision = corrections.key?(:security) &&
       account.holdings.where.not(id: target.id)
         .find_by(security: corrections[:security], date: target.date, currency: target.currency)
     return target.tap { |row| row.update!(corrections) } unless collision
+
+    if collision.account_provider_id.present? && collision.account_provider_id != target.account_provider_id
+      Rails.logger.warn(
+        "ProviderImportAdapter: cross-provider remap collision for account=#{account.id} security=#{corrections[:security].id} date=#{target.date} currency=#{target.currency}; keeping existing id=#{collision.id}"
+      )
+      return target.tap { |row| row.update!(corrections.except(:security, :provider_security_id, :security_locked)) }
+    end
 
     target.assign_attributes(corrections.except(:security, :provider_security_id, :security_locked))
     merge_holding_into!(target, collision)
