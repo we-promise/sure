@@ -456,8 +456,36 @@ RSpec.configure do |config|
               available_to_spend_cents: { type: :integer },
               available_to_allocate: { type: :string },
               available_to_allocate_cents: { type: :integer },
+              uncategorized: { '$ref' => '#/components/schemas/UncategorizedBudgetCategory' },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          UncategorizedBudgetCategory: {
+            type: :object,
+            description: 'The budget line for spending without a category, as shown on the web budget page. ' \
+                         'It has no stored budget category: its id is fixed, and its budgeted amount is the ' \
+                         'part of the budget not allocated to any category (never below zero).',
+            required: %w[id currency budgeted_spending budgeted_spending_cents actual_spending actual_spending_cents
+                         available_to_spend available_to_spend_cents category],
+            properties: {
+              id: { type: :string, format: :uuid },
+              currency: { type: :string },
+              budgeted_spending: { type: :string },
+              budgeted_spending_cents: { type: :integer },
+              actual_spending: { type: :string },
+              actual_spending_cents: { type: :integer },
+              available_to_spend: { type: :string },
+              available_to_spend_cents: { type: :integer },
+              category: {
+                type: :object,
+                required: %w[name color lucide_icon],
+                properties: {
+                  name: { type: :string },
+                  color: { type: :string },
+                  lucide_icon: { type: :string }
+                }
+              }
             }
           },
           BudgetCollection: {
@@ -485,6 +513,12 @@ RSpec.configure do |config|
               budgeted_spending_cents: { type: :integer },
               display_budgeted_spending: { type: :string },
               display_budgeted_spending_cents: { type: :integer },
+              actual_spending: { type: :string, description: 'Only when the list is filtered by budget_id' },
+              actual_spending_cents: { type: :integer, description: 'Only when the list is filtered by budget_id' },
+              rolled_over_amount: { type: :string, description: 'Only when the list is filtered by budget_id' },
+              rolled_over_amount_cents: { type: :integer, description: 'Only when the list is filtered by budget_id' },
+              available_to_spend: { type: :string, description: 'Only when the list is filtered by budget_id' },
+              available_to_spend_cents: { type: :integer, description: 'Only when the list is filtered by budget_id' },
               category: {
                 type: :object,
                 required: %w[id name color lucide_icon],
