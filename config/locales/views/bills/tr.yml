@@ -190,6 +190,12 @@ tr:
       bridge_label: Bir sonraki maaşınızdan önce
       bridge_amount: · %{amount} ödenecek
       bridge_split: '%{date} tarihinden önce ödenecek; hesaplarınızdaki %{cash} ile karşılanıyor.'
+      bridge_left: "Faturalardan sonra %{amount} kalıyor"
+      bridge_show_more:
+        one: 1 tane daha göster
+        other: "%{count} tane daha göster"
+      bridge_allocation_aria: "Hesaplarınızdaki %{cash} tutarın %{due} kadarı bir sonraki maaşınızdan önce ödenecek ve %{left} kalıyor."
+      item_overdue: Gecikmiş
       shortfall_label: Bir sonraki maaş gününüzden önce eksik
       shortfall_amount: · %{amount}
       shortfall_split: '%{date} tarihinden önce %{obligations} ödenecek ve hesaplarınızda %{cash} var.'
@@ -230,12 +236,8 @@ tr:
       no_matches_title: Sonuç yok
       no_matches_description: Bir filtreyi veya aramayı temizlemeyi deneyin.
       col_name: Ad
-      col_type: Tür
-      col_frequency: Sıklık
       col_amount: Tutar
       col_next: Sonraki son ödeme
-      next_short: sonraki %{date}
-      col_status: Durum
       col_actions: Eylemler
       monthly_equivalent: '%{amount}/ay'
       types:
