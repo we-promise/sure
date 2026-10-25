@@ -85,7 +85,7 @@ export default class extends Controller {
         .querySelector("[data-icost-pin]")
         .cloneNode(true);
       if (records.length > 1) {
-        pin.querySelector("[data-pin-icon]").classList.add("hidden");
+        pin.querySelector("[data-pin-icon]").remove();
         const count = pin.querySelector("[data-pin-count]");
         count.textContent = records.length;
         count.classList.remove("hidden");
