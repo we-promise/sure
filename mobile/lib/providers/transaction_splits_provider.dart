@@ -56,7 +56,10 @@ class TransactionSplitsProvider with ChangeNotifier {
   /// been confirmed by the server in this session.
   final Set<String> _known = {};
   final Set<String> _failedLookups = {};
-  final Set<String> _loading = {};
+
+  /// In-flight lookups per transaction; a count, so one of two overlapping
+  /// lookups finishing does not hide the other's loading state.
+  final Map<String, int> _loading = {};
   ConnectivityService? _connectivityService;
   bool _isDisposed = false;
 
@@ -79,7 +82,7 @@ class TransactionSplitsProvider with ChangeNotifier {
 
   bool get isOnline => _connectivityService?.isOnline ?? true;
 
-  bool isLoading(String transactionId) => _loading.contains(transactionId);
+  bool isLoading(String transactionId) => _loading.containsKey(transactionId);
 
   /// The split [transactionId] belongs to, as parent or child, if known.
   TransactionSplit? splitFor(String transactionId) {
@@ -108,15 +111,6 @@ class TransactionSplitsProvider with ChangeNotifier {
 
   String? parentIdFor(String childId) => _parentByChild[childId];
 
-  String? _lastError;
-
-  /// Why the last [loadSplit] could not reach the server, or null. Equals
-  /// [offlineError] when the device is offline.
-  String? get lastError => _lastError;
-
-  /// Fetches the split for [transactionId]. Returns null when it is not split.
-  /// When the request fails, the cached split (if any) is returned and
-  /// [lastError] says why.
   /// A failed lookup must not lock editing of an ordinary transaction: let
   /// the user proceed, since the server still rejects direct edits of split
   /// children. Only transactions with no cached split are unlocked, and the
@@ -125,6 +119,9 @@ class TransactionSplitsProvider with ChangeNotifier {
     if (splitFor(transactionId) == null) _failedLookups.add(transactionId);
   }
 
+  /// Fetches the split for [transactionId]. Returns null when it is not split.
+  /// When the request fails (or the device is offline), the cached split, if
+  /// any, is returned and [isSplitStatusKnown] stays false.
   Future<TransactionSplit?> loadSplit({
     required String accessToken,
     required String transactionId,
@@ -139,14 +136,10 @@ class TransactionSplitsProvider with ChangeNotifier {
     required String accessToken,
     required String transactionId,
   }) async {
-    if (!isOnline) {
-      _lastError = offlineError;
-      return false;
-    }
+    if (!isOnline) return false;
 
     final generation = _generation;
-    _loading.add(transactionId);
-    _lastError = null;
+    _loading.update(transactionId, (n) => n + 1, ifAbsent: () => 1);
     _notify();
 
     try {
@@ -166,7 +159,10 @@ class TransactionSplitsProvider with ChangeNotifier {
         _failedLookups.remove(transactionId);
         return true;
       }
-      _lastError = result['error'] as String?;
+      _log.error(
+        'TransactionSplitsProvider',
+        'loadSplit failed: ${result['error'] ?? 'no error message'}',
+      );
       _allowEditingAfterFailedLookup(transactionId);
       return false;
     } catch (e) {
@@ -175,11 +171,17 @@ class TransactionSplitsProvider with ChangeNotifier {
         'loadSplit failed with ${e.runtimeType}',
       );
       if (generation != _generation) return false;
-      _lastError = 'Something went wrong. Please try again.';
       _allowEditingAfterFailedLookup(transactionId);
       return false;
     } finally {
-      _loading.remove(transactionId);
+      if (generation == _generation) {
+        final remaining = (_loading[transactionId] ?? 1) - 1;
+        if (remaining > 0) {
+          _loading[transactionId] = remaining;
+        } else {
+          _loading.remove(transactionId);
+        }
+      }
       _notify();
     }
   }

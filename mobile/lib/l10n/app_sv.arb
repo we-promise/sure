@@ -345,8 +345,6 @@
   "splitEditorUpdated": "Uppdelningen har uppdaterats",
   "splitEditorSaveFailed": "Det gick inte att spara uppdelningen",
   "splitEditorOffline": "Du är offline. Uppdelningar kan bara sparas när du är ansluten.",
-
   "transactionsListSplitDeleteBlocked": "Ta bort uppdelningen innan du tar bort transaktionen.",
-
   "transactionsListSplitStatusUnknown": "Det gick inte att kontrollera om transaktionen är uppdelad. Försök igen."
 }

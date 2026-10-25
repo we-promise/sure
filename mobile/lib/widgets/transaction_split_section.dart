@@ -49,6 +49,8 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
   bool _loaded = false;
   bool _working = false;
 
+  TransactionSplitsProvider? _splits;
+
   /// Set while offline, so the lookup is retried once the device reconnects.
   bool _wasOffline = false;
 
@@ -63,6 +65,40 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final splits = Provider.of<TransactionSplitsProvider>(
+      context,
+      listen: false,
+    );
+    if (!identical(splits, _splits)) {
+      _splits?.removeListener(_onSplitsChanged);
+      _splits = splits..addListener(_onSplitsChanged);
+      _wasOffline = !splits.isOnline;
+    }
+  }
+
+  @override
+  void dispose() {
+    _splits?.removeListener(_onSplitsChanged);
+    super.dispose();
+  }
+
+  /// Retries the lookup once the device comes back online, if it never
+  /// completed while offline.
+  void _onSplitsChanged() {
+    final splits = _splits;
+    if (splits == null || !mounted) return;
+    if (!splits.isOnline) {
+      _wasOffline = true;
+    } else if (_wasOffline) {
+      _wasOffline = false;
+      final id = _id;
+      if (_loaded && id != null && !splits.isSplitStatusKnown(id)) _load();
+    }
+  }
+
   Future<void> _load() async {
     if (!_isSynced || !mounted) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -73,7 +109,7 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
     final accessToken = await authProvider.getValidAccessToken();
     if (!mounted) return;
     if (accessToken == null) {
-      // Surface the retry banner instead of an endless spinner.
+      // No session: show the retry banner rather than a spinner.
       setState(() => _loaded = true);
       return;
     }
@@ -279,25 +315,20 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
     final split = splitsProvider.splitFor(_id!);
     final loading = splitsProvider.isLoading(_id!) || (!_loaded && isOnline);
 
-    if (!isOnline) {
-      _wasOffline = true;
-    } else if (_wasOffline) {
-      _wasOffline = false;
-      if (_loaded && !splitsProvider.isSplitStatusKnown(_id!)) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-      }
-    }
-
     if (split == null) {
-      if (!isOnline) return SplitNoticeBanner(text: l.splitOfflineNotice);
+      if (!isOnline) {
+        return SplitNoticeBanner(
+          text: l.splitOfflineNotice,
+          icon: Icons.cloud_off,
+        );
+      }
       if (loading) {
         return const Padding(
           padding: EdgeInsets.all(SureSpacing.xl),
           child: Center(child: CircularProgressIndicator()),
         );
       }
-      if (!splitsProvider.isSplitStatusKnown(_id!) &&
-          (_loaded || splitsProvider.lastError != null)) {
+      if (!splitsProvider.isSplitStatusKnown(_id!) && _loaded) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -366,7 +397,10 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (!isOnline) ...[
-          SplitNoticeBanner(text: l.splitOfflineNotice),
+          SplitNoticeBanner(
+            text: l.splitOfflineNotice,
+            icon: Icons.cloud_off,
+          ),
           const SizedBox(height: SureSpacing.lg),
         ],
         _SectionCard(
@@ -519,11 +553,17 @@ class _ChildRow extends StatelessWidget {
   }
 }
 
-/// Small warning-toned banner used by the split UI (e.g. "you're offline").
+/// Small warning-toned banner used by the split UI. [icon] defaults to an
+/// info icon; offline notices pass [Icons.cloud_off].
 class SplitNoticeBanner extends StatelessWidget {
-  const SplitNoticeBanner({super.key, required this.text});
+  const SplitNoticeBanner({
+    super.key,
+    required this.text,
+    this.icon = Icons.info_outline,
+  });
 
   final String text;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -537,7 +577,7 @@ class SplitNoticeBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.cloud_off, size: 18, color: palette.warning),
+          Icon(icon, size: 18, color: palette.warning),
           const SizedBox(width: SureSpacing.md),
           Expanded(
             child: Text(

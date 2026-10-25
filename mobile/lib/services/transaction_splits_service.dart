@@ -148,14 +148,13 @@ class TransactionSplitsService {
   }
 
   /// Api::V1::SplitsController#show answers an unsplit transaction with
-  /// `{"error": "not_found", "message": "Transaction is not split"}`; a
-  /// missing record is `{"error": "record_not_found", ...}`.
+  /// `{"error": "not_found", "message": "Transaction is not split"}`. A
+  /// missing or inaccessible transaction is also a `not_found` 404 (message
+  /// "Transaction not found"), so only the message tells the two apart.
   static bool _isNotSplitResponse(String body) {
     try {
       final payload = jsonDecode(body);
-      return payload is Map &&
-          (payload['message'] == 'Transaction is not split' ||
-              payload['error'] == 'not_found');
+      return payload is Map && payload['message'] == 'Transaction is not split';
     } on FormatException {
       return false;
     }

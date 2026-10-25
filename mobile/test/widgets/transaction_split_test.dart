@@ -744,13 +744,14 @@ void main() {
     });
 
     group('checkBeforeDelete', () {
-      const notSplit = '{"error":"not_found","message":"Transaction is not split"}';
+      const notSplit =
+          '{"error":"not_found","message":"Transaction is not split"}';
 
       test('blocks split parents and children, allows unsplit rows', () async {
         final harness = _Harness();
         expect(
-          await harness.splits
-              .checkBeforeDelete(accessToken: 'token', transactionId: 'child_1'),
+          await harness.splits.checkBeforeDelete(
+              accessToken: 'token', transactionId: 'child_1'),
           SplitDeleteStatus.split,
         );
         expect(
@@ -838,6 +839,32 @@ void main() {
         );
         expect(harness.requests, isEmpty);
       });
+    });
+
+    test('stays loading until every overlapping lookup has finished', () async {
+      final responses = <Completer<http.Response>>[];
+      final harness = _Harness(
+        handler: (_) {
+          final response = Completer<http.Response>();
+          responses.add(response);
+          return response.future;
+        },
+      );
+
+      final first = harness.splits
+          .loadSplit(accessToken: 'token', transactionId: 'parent_1');
+      final second = harness.splits
+          .loadSplit(accessToken: 'token', transactionId: 'parent_1');
+      await Future<void>.delayed(Duration.zero);
+      expect(responses, hasLength(2));
+
+      responses[0].complete(http.Response(_splitJson(), 200));
+      await first;
+      expect(harness.splits.isLoading('parent_1'), isTrue);
+
+      responses[1].complete(http.Response(_splitJson(), 200));
+      await second;
+      expect(harness.splits.isLoading('parent_1'), isFalse);
     });
 
     test('clear() drops a lookup that was still in flight', () async {

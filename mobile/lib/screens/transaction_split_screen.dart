@@ -106,8 +106,8 @@ class _TransactionSplitScreenState extends State<TransactionSplitScreen> {
   int get _decimals => SplitMath.inputDecimals(
         _target.currency,
         _target.amountUnits,
-        childUnits: widget.existing?.children.map((c) => c.amountUnits) ??
-            const [],
+        childUnits:
+            widget.existing?.children.map((c) => c.amountUnits) ?? const [],
       );
 
   @override
@@ -171,11 +171,11 @@ class _TransactionSplitScreenState extends State<TransactionSplitScreen> {
   bool get _rowsValid => _rows.every(
         (row) =>
             SplitMath.validateAmount(
-                  row.amountController.text,
-                  decimals: _decimals,
-                  locale: _locale,
-                ) ==
-                null,
+              row.amountController.text,
+              decimals: _decimals,
+              locale: _locale,
+            ) ==
+            null,
       );
 
   void _addRow() {
@@ -369,7 +369,10 @@ class _TransactionSplitScreenState extends State<TransactionSplitScreen> {
           padding: const EdgeInsets.all(SureSpacing.xl),
           children: [
             if (!isOnline) ...[
-              SplitNoticeBanner(text: l.splitEditorOffline),
+              SplitNoticeBanner(
+                text: l.splitEditorOffline,
+                icon: Icons.cloud_off,
+              ),
               const SizedBox(height: SureSpacing.lg),
             ],
             SureCard(

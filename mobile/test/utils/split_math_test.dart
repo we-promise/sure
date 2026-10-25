@@ -164,7 +164,8 @@ void main() {
         SplitMath.formatMoney(u('-1234.5'), 'EUR', decimals: 2, locale: 'de'),
         startsWith('-1.234,50'),
       );
-      final sv = SplitMath.formatMoney(u('1234.5'), 'SEK', decimals: 2, locale: 'sv');
+      final sv =
+          SplitMath.formatMoney(u('1234.5'), 'SEK', decimals: 2, locale: 'sv');
       expect(sv, contains('234,50'));
       expect(sv, contains('kr'));
     });

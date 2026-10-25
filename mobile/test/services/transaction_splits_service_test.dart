@@ -77,8 +77,7 @@ void main() {
       expect(result['split'], isNull);
     });
 
-    test('GET reports a missing transaction instead of "not split"',
-        () async {
+    test('GET reports a missing transaction instead of "not split"', () async {
       final service = TransactionSplitsService(
         client: MockClient(
           (_) async => http.Response(
@@ -96,6 +95,28 @@ void main() {
 
       expect(result['success'], isFalse);
       expect(result['error'], 'The requested resource was not found');
+    });
+
+    test('GET reports a transaction the lookup cannot find as a failure',
+        () async {
+      // TransactionLookup answers a missing or inaccessible id with the same
+      // "not_found" error code as an unsplit transaction.
+      final service = TransactionSplitsService(
+        client: MockClient(
+          (_) async => http.Response(
+            '{"error":"not_found","message":"Transaction not found"}',
+            404,
+          ),
+        ),
+      );
+
+      final result = await service.getSplit(
+        accessToken: 'token',
+        transactionId: 'gone_1',
+      );
+
+      expect(result['success'], isFalse);
+      expect(result['error'], 'Transaction not found');
     });
 
     test('GET treats a non-JSON 404 as a failure', () async {
@@ -122,13 +143,11 @@ void main() {
         }),
       );
 
-      final result = await service
-          .createSplit(
-            accessToken: 'token',
-            transactionId: 'tx_1',
-            rows: const [SplitRowInput(name: 'A', amount: '1.0000')],
-          )
-          .timeout(const Duration(seconds: 5));
+      final result = await service.createSplit(
+        accessToken: 'token',
+        transactionId: 'tx_1',
+        rows: const [SplitRowInput(name: 'A', amount: '1.0000')],
+      ).timeout(const Duration(seconds: 5));
 
       expect(result['success'], isFalse);
       expect(result['error'], startsWith('Network error:'));

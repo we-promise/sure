@@ -98,7 +98,8 @@ void main() {
       ..setConnectivityService(_Online());
   });
 
-  test('a sync that started before the split change cannot resurrect '
+  test(
+      'a sync that started before the split change cannot resurrect '
       'destroyed children', () async {
     storage.ids.addAll({'parent', 'old_child_1', 'old_child_2'});
     sync.serverIds = {'parent', 'old_child_1', 'old_child_2'};
