@@ -75,17 +75,19 @@ class Trade < ApplicationRecord
   end
 
   # The acquisitions this sale can name as the lot it sold from: buys and
-  # transfers-in of its security, in its account, on or before its date. Only
-  # a sale in an account that sells by fifo has any, since under average a
-  # sale relieves every lot pro rata. A choice already stored is replayed only
-  # while it names a lot that is still open.
+  # transfers-in of its security, in its account, on or before its date,
+  # leaving out a lot sales dated before it had already emptied. Only a sale
+  # in an account that sells by fifo has any, since under average a sale
+  # relieves every lot pro rata. The choice the sale already holds is always
+  # among them, so an edit keeps it, and is replayed only while it names a
+  # lot that is still open; a new choice must be open on the sale's date.
   def lot_choices
     return Entry.none unless sell? && !internal_movement? && entry&.account&.cost_basis_fifo?
 
-    entry.account.entries
+    acquisitions = entry.account.entries
       .where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security_id).where("qty > 0").select(:id))
       .where("entries.date <= ?", entry.date)
-      .chronological
+    acquisitions.where.not(id: lots_emptied_before_sale).or(acquisitions.where(id: attribute_in_database(:lot_source_entry_id))).chronological
   end
 
   class << self
@@ -198,6 +200,17 @@ class Trade < ApplicationRecord
   end
 
   private
+
+    # Acquisitions whose lot is now empty and was emptied before this sale:
+    # no sale dated on or after it took anything from the lot.
+    def lots_emptied_before_sale
+      later_disposals = HoldingLotDisposal.joins(:sale_entry)
+        .where(account_id: entry.account_id).where.not(lot_source_entry_id: nil)
+        .where("entries.date >= ?", entry.date)
+      HoldingLot.derived.where(account_id: entry.account_id, qty: 0)
+        .where.not(source_entry_id: later_disposals.select(:lot_source_entry_id))
+        .select(:source_entry_id)
+    end
 
     def exchange_rate_must_be_valid
       if extra&.dig("exchange_rate_invalid")
