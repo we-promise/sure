@@ -22,6 +22,9 @@ class SharesightAccount::CashRouterTest < ActiveSupport::TestCase
 
   # A$120 dividend, A$98 of it reinvested, so A$22 left over.
   REINVESTED = PAYOUTS.first.merge("amount" => 120.0, "drp_trade_attributes" => { "dividend_reinvested" => true, "quantity" => 1, "price" => 98.0 })
+  # Some portfolios also record those reinvested units as a trade.
+  ALLOTMENT = { "id" => 4, "transaction_type" => "BUY", "transaction_date" => "2026-09-20", "symbol" => "VAS", "market" => "ASX",
+                "quantity" => 1, "price" => 98.0, "exchange_rate" => 1.0, "brokerage" => 0, "holding_id" => 1, "state" => "confirmed" }.freeze
 
   setup do
     @family = families(:dylan_family)
@@ -130,6 +133,32 @@ class SharesightAccount::CashRouterTest < ActiveSupport::TestCase
     leg = offset("payout_50")
     assert_equal [ BigDecimal("22"), "Transfer to Macquarie CMA" ], [ leg.amount, leg.name ]
     assert_linked leg, leftover
+  end
+
+  test "reinvested units recorded as a trade settle with their dividend" do
+    bank_fed!
+    @sharesight_account.update!(raw_trades_payload: TRADES + [ ALLOTMENT ], raw_payouts_payload: [ REINVESTED ])
+    leftover = bank_transaction(-22, "2026-09-21", "VAS dividend balance")
+
+    notices = process[:notices].map { |notice| notice[:message] }
+
+    assert_nil offset("trade_4", required: false)
+    leg = offset("payout_50")
+    assert_equal BigDecimal("22"), leg.amount
+    assert_linked leg, leftover
+    assert notices.none? { |message| message.include?("Buy 1.0 shares of VAS") || message.include?("Dividend from VAS") }
+  end
+
+  test "reinvested units recorded as a trade cost nothing when dividends aren't imported" do
+    @sharesight_account.update!(
+      cash_mode: "broker", settlement_account: nil, dividend_mode: "skip",
+      raw_trades_payload: TRADES + [ ALLOTMENT ], raw_payouts_payload: [ REINVESTED ]
+    )
+
+    process
+
+    assert_equal BigDecimal("0"), @account.entries.find_by!(external_id: "sharesight_trade_4").amount
+    assert_nil @account.entries.find_by(external_id: "sharesight_payout_50")
   end
 
   test "a leftover the bank never shows isn't flagged as overdue" do

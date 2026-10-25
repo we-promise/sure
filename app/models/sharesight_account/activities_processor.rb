@@ -37,6 +37,9 @@ class SharesightAccount::ActivitiesProcessor
     @provisional_counts = Hash.new(0)
     @movements = []
     @kept_provisional_bases = []
+    @allotments = {}.compare_by_identity
+    @payout_allotments = {}.compare_by_identity
+    @allotment_entries = {}.compare_by_identity
   end
 
   def process
@@ -45,9 +48,11 @@ class SharesightAccount::ActivitiesProcessor
     remove_entries_settings_exclude
 
     capital_returns, trades = booked_trades.partition { |trade| trade["transaction_type"].to_s.upcase == CAPITAL_RETURN }
+    payouts = booked(@sharesight_account.raw_payouts_payload, "paid_on")
+    match_reinvested_allotments(payouts)
 
     trade_count = trades.sum { |trade| process_trade(trade) ? 1 : 0 }
-    dividend_count = booked(@sharesight_account.raw_payouts_payload, "paid_on").sum { |payout| process_payout(payout) ? 1 : 0 }
+    dividend_count = payouts.sum { |payout| process_payout(payout) ? 1 : 0 }
     transaction_count = capital_returns.sum { |trade| process_capital_return(trade) ? 1 : 0 }
     transaction_count += Array(@sharesight_account.raw_cash_transactions_payload).sum do |transaction|
       process_cash_transaction(transaction) ? 1 : 0
@@ -190,13 +195,16 @@ class SharesightAccount::ActivitiesProcessor
       fee = trade_fee(trade, currency, sharesight_rate, date)
       gross = quantity * price
       signed_quantity = label == "Sell" ? -quantity : quantity
+      amount = (label == "Sell" ? -gross : gross) + fee
+      # A dividend's reinvested units cost nothing here if the dividend isn't imported.
+      amount = 0 if @allotments.key?(trade) && @sharesight_account.dividends_skipped?
 
       entry = import_adapter.import_trade(
         external_id: external_id,
         security: security,
         quantity: signed_quantity,
         price: price,
-        amount: (label == "Sell" ? -gross : gross) + fee,
+        amount: amount,
         currency: currency,
         date: date,
         source: "sharesight",
@@ -204,7 +212,12 @@ class SharesightAccount::ActivitiesProcessor
         exchange_rate: currency != portfolio_currency && sharesight_rate ? (1 / sharesight_rate).to_f : nil,
         fee: fee
       )
-      record_movement(entry, kind: :trade, matchable: type != OPENING_BALANCE)
+      if @allotments.key?(trade)
+        # Paired with its dividend in process_payout instead.
+        @allotment_entries[trade] = entry
+      else
+        record_movement(entry, kind: :trade, matchable: type != OPENING_BALANCE)
+      end
 
       true
     rescue => e
@@ -338,7 +351,7 @@ class SharesightAccount::ActivitiesProcessor
         )
       end
 
-      reinvestment = import_reinvestment(payout, security, currency, date, paid_for: !skipped)
+      reinvestment = import_reinvestment(payout, security, currency, date, paid_for: !skipped) || @allotment_entries[@payout_allotments[payout]]
       record_movement([ dividend, reinvestment ], kind: :dividend, matchable: true, leftover: reinvestment.present?) unless skipped
       dividend.present?
     rescue => e
@@ -357,7 +370,7 @@ class SharesightAccount::ActivitiesProcessor
       quantity = parse_decimal(drp["quantity"])&.abs
       price = parse_decimal(drp["price"])
       return unless quantity&.positive? && price&.positive?
-      return if allotment_already_traded?(payout, quantity)
+      return if allotment_trade_for(payout, quantity)
 
       import_adapter.import_trade(
         external_id: external_id_for("drp", payout, payout["holding_id"], payout["paid_on"]),
@@ -372,11 +385,28 @@ class SharesightAccount::ActivitiesProcessor
       )
     end
 
-    def allotment_already_traded?(payout, quantity)
-      booked_trades.any? do |trade|
+    def allotment_trade_for(payout, quantity)
+      booked_trades.find do |trade|
         trade["holding_id"].to_s == payout["holding_id"].to_s &&
           parse_date(trade["transaction_date"]) == parse_date(payout["paid_on"]) &&
           parse_decimal(trade["quantity"])&.abs == quantity
+      end
+    end
+
+    # Trades that are really a payout's reinvested units. Their cash goes with
+    # the dividend, so they're settled together as what's left over, not as a
+    # buy through the bank.
+    def match_reinvested_allotments(payouts)
+      payouts.each do |payout|
+        drp = payout["drp_trade_attributes"] || {}
+        quantity = parse_decimal(drp["quantity"])&.abs
+        next unless drp["dividend_reinvested"] && quantity&.positive?
+
+        trade = allotment_trade_for(payout, quantity)
+        next if trade.nil? || @allotments.key?(trade)
+
+        @allotments[trade] = payout
+        @payout_allotments[payout] = trade
       end
     end
 
