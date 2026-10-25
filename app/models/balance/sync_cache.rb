@@ -1,9 +1,6 @@
 class Balance::SyncCache
-  # `report_missing_rates: false` is for read paths. A page render must not
-  # write diagnostics for data the next sync will inspect anyway.
-  def initialize(account, report_missing_rates: true)
+  def initialize(account)
     @account = account
-    @report_missing_rates = report_missing_rates
     @unconvertible_entry_count = 0
     @unconvertible_holding_count = 0
   end
@@ -41,8 +38,8 @@ class Balance::SyncCache
     converted_entries
   end
 
-  # One replay per loan per cache. The balance calculator and a page render
-  # share the cache, so the ledger is not walked twice.
+  # One replay per loan per cache, so a calculator that asks twice does not
+  # walk the ledger twice.
   def loan_principal_payments(loan)
     @loan_principal_payments ||= {}
     @loan_principal_payments[loan.id] ||= Loan::PrincipalPayments.for(loan, entries: entries)
@@ -132,8 +129,6 @@ class Balance::SyncCache
     end
 
     def report_missing_rates(message:, counts:, missing_rate_pairs:)
-      return unless @report_missing_rates
-
       DebugLogEntry.capture(
         category: "sync",
         level: "warn",
