@@ -41,7 +41,8 @@ module Assistant
     Function::CreateTag,
     Function::UpdateTag,
     Function::CreateCategory,
-    Function::UpdateCategory
+    Function::UpdateCategory,
+    Function::DeleteCategory
   ].freeze
 
   class << self
@@ -83,6 +84,7 @@ module Assistant
         Function::GetCategories,
         Function::CreateCategory,
         Function::UpdateCategory,
+        Function::DeleteCategory,
         Function::GetMerchants,
         Function::GetRules,
         Function::GetRuleOptions,
