@@ -90,7 +90,7 @@ class SharesightAccount::CashRouter
         linked = linked_bank_entry(unit.key, unit.target)
         next unless linked
 
-        if linked.amount == unit.amount && claimed.add?(linked.id)
+        if linked.amount == in_cents(unit) && claimed.add?(linked.id)
           unit.bank_entry = linked
         else
           offset_entry(unit.key).entryable.transfer&.destroy!
@@ -126,7 +126,7 @@ class SharesightAccount::CashRouter
         next if day.amount.zero?
 
         linked = linked_bank_entry(day.key, target)
-        day.bank_entry = linked if linked && linked.amount == day.amount && claimed.add?(linked.id)
+        day.bank_entry = linked if linked && linked.amount == in_cents(day) && claimed.add?(linked.id)
         day.bank_entry ||= find_bank_entry(day, claimed)
         next unless day.bank_entry
 
@@ -142,7 +142,7 @@ class SharesightAccount::CashRouter
       rejected = rejected_partner_ids(unit.key)
 
       unit.target.entries
-        .where(entryable_type: "Transaction", excluded: false, currency: unit.currency, amount: unit.amount)
+        .where(entryable_type: "Transaction", excluded: false, currency: unit.currency, amount: in_cents(unit))
         .where(date: (unit.date - 1)..(unit.date + window))
         .where.not(id: claimed.to_a)
         .includes(:entryable)
@@ -175,7 +175,8 @@ class SharesightAccount::CashRouter
     def settle(unit)
       leg = import_adapter.import_transaction(
         external_id: "#{OFFSET_PREFIX}#{unit.key}",
-        amount: -unit.amount,
+        # Linked to an account, the two sides have to add up exactly, so use whole cents.
+        amount: unit.target ? -in_cents(unit) : -unit.amount,
         currency: unit.currency,
         date: unit.date,
         name: offset_name(unit),
@@ -214,7 +215,7 @@ class SharesightAccount::CashRouter
     def book_counterpart(unit)
       Account::ProviderImportAdapter.new(unit.target).import_transaction(
         external_id: counterpart_external_id(unit),
-        amount: unit.amount,
+        amount: in_cents(unit),
         currency: unit.currency,
         date: unit.date,
         name: unit.description,
@@ -222,6 +223,12 @@ class SharesightAccount::CashRouter
         allow_heuristic_matching: false,
         extra: { sharesight: { settles: unit.key } }
       )
+    end
+
+    # Banks deal in whole cents, but a trade's amount (quantity x price + fee)
+    # can come to a fraction of one.
+    def in_cents(unit)
+      unit.amount.round(Money::Currency.new(unit.currency).default_precision)
     end
 
     def counterpart_external_id(unit)

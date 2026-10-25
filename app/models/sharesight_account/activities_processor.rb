@@ -36,6 +36,7 @@ class SharesightAccount::ActivitiesProcessor
     @provisional_ids = []
     @provisional_counts = Hash.new(0)
     @movements = []
+    @kept_provisional_bases = []
   end
 
   def process
@@ -101,7 +102,18 @@ class SharesightAccount::ActivitiesProcessor
         .where(source: "sharesight")
         .where("external_id LIKE ?", "#{Entry.sanitize_sql_like(PROVISIONAL_PREFIX)}%")
         .where.not(external_id: @provisional_ids)
-        .destroy_all
+        .reject { |entry| kept_provisional?(entry.external_id) }
+        .each(&:destroy!)
+    end
+
+    # If a confirmed record fails to import, hang on to the provisional entry it
+    # was going to replace until a later sync gets the confirmed one in.
+    def keep_provisional_for(kind, *identity)
+      @kept_provisional_bases << "#{PROVISIONAL_PREFIX}#{kind}_#{identity.join('_')}"
+    end
+
+    def kept_provisional?(external_id)
+      @kept_provisional_bases.any? { |base| external_id == base || external_id.match?(/\A#{Regexp.escape(base)}_\d+\z/) }
     end
 
     # Clean up entries from earlier syncs that the current settings leave out.
@@ -157,16 +169,23 @@ class SharesightAccount::ActivitiesProcessor
       date = parse_date(trade["transaction_date"])
       return false if quantity.nil? || quantity.zero? || date.nil?
 
-      external_id = external_id_for("trade", trade, trade["holding_id"], trade["transaction_date"], type, quantity.to_s("F"))
+      identity = [ trade["holding_id"], trade["transaction_date"], type, quantity.to_s("F") ]
+      external_id = external_id_for("trade", trade, *identity)
       security = resolve_security(trade["symbol"], trade["market"])
-      return false unless security
+      unless security
+        keep_provisional_for("trade", *identity)
+        return false
+      end
 
       # Sharesight's exchange_rate is instrument currency per unit of portfolio
       # currency. Sure's trade rate is the other way round.
       sharesight_rate = parse_decimal(trade["exchange_rate"])
       sharesight_rate = nil unless sharesight_rate&.positive?
       currency, price = trade_price(trade, type, quantity, sharesight_rate)
-      return false if price.nil?
+      if price.nil?
+        keep_provisional_for("trade", *identity)
+        return false
+      end
 
       fee = trade_fee(trade, currency, sharesight_rate, date)
       gross = quantity * price
@@ -189,6 +208,7 @@ class SharesightAccount::ActivitiesProcessor
 
       true
     rescue => e
+      keep_provisional_for("trade", *identity) if identity
       log_failure("trade", trade["id"], e)
       false
     end
@@ -284,6 +304,7 @@ class SharesightAccount::ActivitiesProcessor
 
       true
     rescue => e
+      keep_provisional_for("capital_return", trade["holding_id"], trade["transaction_date"])
       log_failure("capital return", trade["id"], e)
       false
     end
@@ -321,6 +342,8 @@ class SharesightAccount::ActivitiesProcessor
       record_movement([ dividend, reinvestment ], kind: :dividend, matchable: true, leftover: reinvestment.present?) unless skipped
       dividend.present?
     rescue => e
+      keep_provisional_for("payout", payout["holding_id"], payout["paid_on"])
+      keep_provisional_for("drp", payout["holding_id"], payout["paid_on"])
       log_failure("payout", payout["id"], e)
       false
     end

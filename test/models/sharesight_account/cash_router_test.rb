@@ -65,6 +65,19 @@ class SharesightAccount::CashRouterTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal("2100"), BigDecimal("0") ], [ @account.balance, @account.cash_balance ]
   end
 
+  test "a trade worth a fraction of a cent still matches the bank in whole cents" do
+    bank_fed!
+    fractional = TRADES.map { |t| t["id"] == 1 ? t.merge("price" => 100.0004) : t }
+    @sharesight_account.update!(raw_trades_payload: fractional)
+    buy = bank_transaction(1000, "2026-09-03", "CMC Markets buy")
+
+    process
+
+    leg = offset("trade_1")
+    assert_equal BigDecimal("-1000"), leg.amount
+    assert_linked leg, buy
+  end
+
   test "a day's trades settled as one amount are matched together" do
     bank_fed!
     settlement = bank_transaction(1100, "2026-09-12", "CMC Markets net settlement")

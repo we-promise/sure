@@ -94,8 +94,11 @@ class SharesightItem < ApplicationRecord
     end
   end
 
+  # Uses the portfolios if they're already loaded, so pages listing several
+  # connections (like the accounts page) don't query each one again.
   def accounts
-    sharesight_accounts.includes(account_provider: :account).filter_map(&:current_account).uniq
+    portfolios = sharesight_accounts.loaded? ? sharesight_accounts : sharesight_accounts.includes(:account, :linked_account)
+    portfolios.filter_map(&:current_account).uniq
   end
 
   def linked_sharesight_accounts

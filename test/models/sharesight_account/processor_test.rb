@@ -212,6 +212,19 @@ class SharesightAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-95"), @account.entries.find_by!(external_id: "sharesight_payout_501").amount
   end
 
+  test "a provisional entry stays if its confirmed version can't be booked yet" do
+    process
+    assert trade("sharesight_unconfirmed_trade_1_2026-01-15_BUY_2.0")
+
+    # Confirmed now, but with no price this time, so it can't be booked.
+    confirmed = TRADES.map { |t| t["id"].nil? ? t.merge("id" => 104, "state" => "confirmed", "price" => 0) : t }
+    @sharesight_account.update!(raw_trades_payload: confirmed)
+    process
+
+    assert trade("sharesight_unconfirmed_trade_1_2026-01-15_BUY_2.0")
+    assert_nil @account.entries.find_by(external_id: "sharesight_trade_104")
+  end
+
   test "unconfirmed records dated after today wait until they happen" do
     announced = { "id" => nil, "symbol" => "VAS", "market" => "ASX", "paid_on" => (Date.current + 10).iso8601, "amount" => 80.0,
                   "currency" => "AUD", "holding_id" => 1, "state" => "unconfirmed" }

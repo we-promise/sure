@@ -74,6 +74,18 @@ class SharesightAccount::ProcessorCashTest < ActiveSupport::TestCase
                  notices.map { |notice| notice[:message] }
   end
 
+  test "limited holdings aren't compared" do
+    hidden = { "id" => 9, "quantity" => 5.0, "limited" => true, "instrument" => { "code" => "HIDDEN", "market_code" => "ASX" } }
+    hidden_buy = { "id" => 9, "transaction_type" => "BUY", "transaction_date" => "2026-09-12", "symbol" => "HIDDEN", "market" => "ASX",
+                   "quantity" => 3, "price" => 10.0, "exchange_rate" => 1.0, "holding_id" => 9, "state" => "confirmed" }
+    Security.find_or_create_by!(ticker: "HIDDEN", exchange_operating_mic: "XASX")
+    @sharesight_account.update!(raw_holdings_payload: HOLDINGS + [ hidden ], raw_trades_payload: TRADES + [ hidden_buy ])
+
+    notices = process[:notices].map { |notice| notice[:message] }
+
+    assert notices.none? { |message| message.include?("HIDDEN") }
+  end
+
   test "units that match to 8 decimal places aren't reported" do
     noisy = HOLDINGS.map { |holding| holding.dig("instrument", "code") == "VAS" ? holding.merge("quantity" => 20.000000000000004) : holding }
     @sharesight_account.update!(raw_holdings_payload: noisy)

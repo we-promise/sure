@@ -87,12 +87,15 @@ class SharesightAccount::Processor
     def drift_notices
       return [] if sharesight_account.sync_start_date.present?
 
-      held = Array(sharesight_account.raw_holdings_payload).each_with_object(Hash.new(BigDecimal("0"))) do |holding, units|
+      holdings = Array(sharesight_account.raw_holdings_payload)
+      # Limited holdings (hidden on cheaper plans) aren't imported, so there's nothing to compare.
+      limited = holdings.select { |holding| holding["limited"] }.map { |holding| holding.dig("instrument", "code").to_s.upcase }
+      held = holdings.reject { |holding| holding["limited"] }.each_with_object(Hash.new(BigDecimal("0"))) do |holding, units|
         units[holding.dig("instrument", "code").to_s.upcase] += BigDecimal(holding["quantity"].to_s.presence || "0")
       end
       traded = Trade.joins(:entry, :security).where(entries: { account_id: account.id }).group("securities.ticker").sum(:qty)
 
-      (held.keys | traded.keys).sort.filter_map do |ticker|
+      ((held.keys | traded.keys) - limited).sort.filter_map do |ticker|
         held_units = held[ticker].round(UNITS_PRECISION)
         traded_units = (traded[ticker] || BigDecimal("0")).to_d.round(UNITS_PRECISION)
         next if held_units == traded_units
