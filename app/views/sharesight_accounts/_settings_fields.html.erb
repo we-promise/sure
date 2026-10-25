@@ -1,6 +1,9 @@
 <%# locals: (form:, sharesight_account:, account:) %>
 
-<% other_accounts = Current.family.accounts.writable_by(Current.user).visible.where.not(id: account.id).alphabetically %>
+<% other_accounts = Current.family.accounts.writable_by(Current.user).visible.where.not(id: account.id).alphabetically.to_a %>
+<%# Keep saved choices listed even if you can't edit them, so saving other settings doesn't clear them. %>
+<% saved_ids = [ sharesight_account.settlement_account_id, sharesight_account.dividend_account_id, sharesight_account.funding_account_id ].compact %>
+<% other_accounts |= Current.family.accounts.where(id: saved_ids).where.not(id: account.id).to_a %>
 <% account_options = other_accounts.map { |other| [ other.name, other.id ] } %>
 
 <div class="space-y-4 pt-4 border-t border-primary" data-controller="sharesight-settings">

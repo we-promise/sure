@@ -23,6 +23,7 @@ class DataEnrichment < ApplicationRecord
     trade_republic: "trade_republic",
     bayes: "bayes",
     similar: "similar",
-    fio: "fio"
+    fio: "fio",
+    sharesight: "sharesight"
   }
 end

@@ -15,10 +15,10 @@ class SharesightAccount::FundingMirror
   def mirror
     return unless account
 
-    mirrored = funding_entries.filter_map do |bank_entry|
+    entries = funding_entries
+    entries.each do |bank_entry|
       leg = book_mirror(bank_entry)
       link_transfer!(leg, bank_entry)
-      leg.external_id
     rescue => e
       DebugLogEntry.capture(
         category: "sync",
@@ -28,10 +28,11 @@ class SharesightAccount::FundingMirror
         family: @sharesight_account.sharesight_item.family,
         provider_key: "sharesight"
       )
-      nil
     end
 
-    remove_stale_mirrors(mirrored)
+    # Based on what matched rather than what worked this time, so one failure
+    # doesn't delete a mirror (and its transfer) that's still right.
+    remove_stale_mirrors(entries.map { |bank_entry| "#{PREFIX}#{bank_entry.id}" })
   end
 
   private

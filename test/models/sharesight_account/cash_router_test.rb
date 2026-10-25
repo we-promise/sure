@@ -149,6 +149,17 @@ class SharesightAccount::CashRouterTest < ActiveSupport::TestCase
     assert notices.none? { |message| message.include?("Buy 1.0 shares of VAS") || message.include?("Dividend from VAS") }
   end
 
+  test "a dividend and its allotment in different currencies stay apart" do
+    bank_fed!
+    usd_dividend = REINVESTED.merge("currency" => "USD")
+    @sharesight_account.update!(raw_trades_payload: TRADES + [ ALLOTMENT ], raw_payouts_payload: [ usd_dividend ])
+
+    process
+
+    assert_equal [ BigDecimal("120"), "USD" ], offset("payout_50").then { |leg| [ leg.amount, leg.currency ] }
+    assert_equal [ BigDecimal("-98"), "AUD" ], offset("trade_4").then { |leg| [ leg.amount, leg.currency ] }
+  end
+
   test "reinvested units recorded as a trade cost nothing when dividends aren't imported" do
     @sharesight_account.update!(
       cash_mode: "broker", settlement_account: nil, dividend_mode: "skip",
@@ -178,6 +189,18 @@ class SharesightAccount::CashRouterTest < ActiveSupport::TestCase
 
     assert_nil @bank.entries.find_by(external_id: "sharesight_counterpart_#{@sharesight_account.id}_payout_50")
     assert_equal "Settled outside Sure", offset("payout_50").name
+  end
+
+  test "switching manual settlement accounts moves the counterparts" do
+    process
+    ing = @family.accounts.create!(name: "ING Savings", balance: 0, currency: "AUD", accountable: Depository.new)
+    @sharesight_account.update!(settlement_account: ing)
+
+    process
+    process
+
+    assert_empty @bank.entries.where("external_id LIKE 'sharesight_counterpart_%'")
+    assert_linked offset("trade_1"), ing.entries.find_by!(external_id: "sharesight_counterpart_#{@sharesight_account.id}_trade_1")
   end
 
   test "untracked cash is offset without a counterpart anywhere" do

@@ -170,8 +170,8 @@ class SharesightAccount::CashRouter
         RejectedTransfer.where(outflow_transaction_id: leg_transaction_id).pluck(:inflow_transaction_id)
     end
 
-    # Books the offset entry and links it. Returns the counterpart's external id
-    # if we booked one in a manual account.
+    # Books the offset entry and links it. Returns the counterpart's entry id if
+    # we booked one in a manual account.
     def settle(unit)
       leg = import_adapter.import_transaction(
         external_id: "#{OFFSET_PREFIX}#{unit.key}",
@@ -192,7 +192,7 @@ class SharesightAccount::CashRouter
       elsif unit.target && !bank_fed?(unit.target)
         counterpart = book_counterpart(unit)
         link_transfer!(leg, counterpart)
-        counterpart.external_id
+        counterpart.id
       end
     rescue => e
       DebugLogEntry.capture(
@@ -245,11 +245,13 @@ class SharesightAccount::CashRouter
         .destroy_all
     end
 
+    # By entry id, since a counterpart keeps its external id when the settlement
+    # account changes, and the old account's copy has to go.
     def remove_stale_counterparts(current)
       Entry.joins(:account)
         .where(accounts: { family_id: account.family_id }, source: "sharesight")
         .where("entries.external_id LIKE ?", "#{Entry.sanitize_sql_like("#{COUNTERPART_PREFIX}#{@sharesight_account.id}_")}%")
-        .where.not(external_id: current)
+        .where.not(id: current)
         .destroy_all
     end
 

@@ -35,6 +35,23 @@ class SharesightAccountSettingsTest < ActionDispatch::IntegrationTest
                    @sharesight_account.settlement_window_days, @sharesight_account.funding_match_terms ]
   end
 
+  test "a saved account you can't edit stays when you change other settings" do
+    ensure_tailwind_build
+    partners = @family.accounts.create!(name: "Partner's CMA", balance: 0, currency: "AUD", owner: users(:family_member), accountable: Depository.new)
+    @sharesight_account.update!(cash_mode: "settlement", settlement_account: partners)
+
+    get edit_investment_url(@account)
+    assert_select "select[name=?] option[value=?]", "account[sharesight][settlement_account_id]", partners.id
+
+    patch investment_url(@account), params: { account: { name: "CMC Invest", sharesight: {
+      cash_mode: "settlement", settlement_account_id: partners.id, settlement_window_days: "5"
+    } } }
+
+    assert_nil flash[:alert]
+    @sharesight_account.reload
+    assert_equal [ partners, 5 ], [ @sharesight_account.settlement_account, @sharesight_account.settlement_window_days ]
+  end
+
   test "an account the user can't write to is refused" do
     private_account = @family.accounts.create!(name: "Not mine", balance: 0, currency: "AUD", owner: users(:family_member), accountable: Depository.new)
 

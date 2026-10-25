@@ -149,17 +149,21 @@ class SharesightAccount::ActivitiesProcessor
       entries = Array(entries).compact
       return if entries.empty?
 
-      first = entries.first
-      @movements << Movement.new(
-        key: first.external_id.delete_prefix("sharesight_"),
-        kind: kind,
-        date: first.date,
-        currency: first.currency,
-        amount: entries.sum(&:amount),
-        matchable: matchable,
-        leftover: leftover,
-        description: first.name
-      )
+      # A dividend and its traded allotment can be in different currencies, so
+      # keep one movement per currency rather than adding them together.
+      entries.group_by(&:currency).each do |currency, same_currency|
+        first = same_currency.first
+        @movements << Movement.new(
+          key: first.external_id.delete_prefix("sharesight_"),
+          kind: kind,
+          date: first.date,
+          currency: currency,
+          amount: same_currency.sum(&:amount),
+          matchable: matchable,
+          leftover: leftover,
+          description: first.name
+        )
+      end
     end
 
     def process_trade(trade)

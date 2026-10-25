@@ -29,6 +29,16 @@ class SharesightAccount::FundingMirrorTest < ActiveSupport::TestCase
     assert_nil mirror_of(@coffee, required: false)
   end
 
+  test "a failed run keeps the mirrors it couldn't refresh" do
+    mirror
+    SharesightAccount::FundingMirror.any_instance.stubs(:link_transfer!).raises(StandardError, "database blip")
+
+    mirror
+
+    assert mirror_of(@top_up)
+    assert @top_up.entryable.reload.transfer&.confirmed?
+  end
+
   test "bank transactions already paired with another account are left alone" do
     savings = @family.accounts.create!(name: "Savings", balance: 0, currency: "AUD", accountable: Depository.new)
     other_side = savings.entries.create!(name: "From CommBank", date: Date.new(2026, 9, 1), amount: -815, currency: "AUD", entryable: Transaction.new)

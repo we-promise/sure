@@ -20,7 +20,7 @@ class InvestmentsController < ApplicationController
       return if settings.blank?
 
       sharesight_account.assign_cash_settings(settings)
-      if other_accounts_writable?(sharesight_account) && sharesight_account.save
+      if new_accounts_writable?(sharesight_account) && sharesight_account.save
         sharesight_account.sharesight_item.sync_later if sharesight_account.cash_settings_changed?
       else
         flash.delete(:notice)
@@ -28,9 +28,12 @@ class InvestmentsController < ApplicationController
       end
     end
 
-    # You have to be able to edit the settlement, dividend and funding accounts.
-    def other_accounts_writable?(sharesight_account)
-      ids = [ sharesight_account.settlement_account_id, sharesight_account.dividend_account_id, sharesight_account.funding_account_id ].compact.uniq
+    # You have to be able to edit any settlement, dividend or funding account you
+    # newly choose. One that's already saved can stay even if you can't edit it.
+    def new_accounts_writable?(sharesight_account)
+      ids = %w[settlement_account_id dividend_account_id funding_account_id].filter_map do |attribute|
+        sharesight_account.public_send(attribute) if sharesight_account.attribute_changed?(attribute)
+      end.uniq
       ids.empty? || Current.family.accounts.writable_by(Current.user).where(id: ids).count == ids.size
     end
 end
