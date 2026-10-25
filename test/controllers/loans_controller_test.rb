@@ -222,6 +222,26 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
                  "the controller filtered out the convention the user chose"
   end
 
+  test "saving principal_only_transfers queues a balance sync" do
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          principal_only_transfers: "1"
+        }
+      }
+    }
+
+    assert @account.loan.reload.principal_only_transfers?
+    assert_enqueued_jobs 1, only: SyncJob
+  end
+
+  test "saving an unrelated loan field does not queue a balance sync" do
+    assert_no_enqueued_jobs(only: SyncJob) do
+      patch loan_path(@account), params: { account: { name: "Renamed Loan" } }
+    end
+  end
+
   # #3383: the opening anchor holds the original principal, so
   # it belongs on the day the loan was drawn down, not on the form's separate
   # opening balance date (which defaults to today minus two years).

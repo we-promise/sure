@@ -313,6 +313,36 @@ class Loan < ApplicationRecord
     end
   end
 
+  # The balance replay reads these columns. A save without a sync leaves the
+  # stored rows on the old calculation until the next scheduled sync.
+  BALANCE_INPUTS = (SCHEDULE_INPUTS + INSURANCE_INPUTS + %i[initial_balance principal_only_transfers]).freeze
+
+  # `lock_saved_attributes!` saves the loan a second time in the same
+  # transaction. A commit condition that reads saved changes would see only
+  # that second save, so remember the input change until the commit runs.
+  after_update :remember_balance_input_change
+  after_update_commit :sync_balance_after_change, if: :balance_inputs_changed?
+  after_rollback :forget_balance_input_change
+
+  private def remember_balance_input_change
+    return unless BALANCE_INPUTS.any? { |input| saved_change_to_attribute?(input) }
+
+    @balance_inputs_changed = true
+  end
+
+  private def balance_inputs_changed?
+    @balance_inputs_changed == true
+  end
+
+  private def sync_balance_after_change
+    @balance_inputs_changed = false
+    account&.sync_later
+  end
+
+  private def forget_balance_input_change
+    @balance_inputs_changed = false
+  end
+
   def reload(*)
     @amortization_schedule = nil
     @insurance = nil
