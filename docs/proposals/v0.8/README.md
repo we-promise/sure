@@ -13,13 +13,11 @@ Working documents for discussing how Sure's AI and ML features should evolve tow
 | [`04-rubyllm-thought-experiment.md`](04-rubyllm-thought-experiment.md) | **Thought experiment.** What if every model call went through [RubyLLM](https://github.com/crmne/ruby_llm)? Code that would go, past PRs that would not have been needed, fit with S1 and S2, the three setups and the transitions between them (T1–T6), regressions, and open questions (Q1–Q18). Not a proposal. | are weighing a client library against the S1/S2 refactor |
 | [`05-ai-breaking-change-option.md`](05-ai-breaking-change-option.md) | **Option.** What the refactor would look like if breaking changes were allowed (BC1–BC11): suggestions plus a resolver, classifiers out of Rules, one AI gateway, config, MCP and consent changes. For each change, the D5 interfaces it breaks, merges or removes, how to split it into reviewable PRs, and who notices it (03 personas and U-numbers). Not a decision. | decide the scope of the AI/ML refactor |
 | [`06-ai-file-split-review.md`](06-ai-file-split-review.md) | **Review.** Files to split: merge hotspots by six-month churn and overlap across all 330 open PRs, MVC-boundary crossings, and files spanning several resources (F-H, F-M, F-R). A table says whether each split belongs before the refactor, with it, or at any time. | plan the refactor's first PRs, or keep hitting merge conflicts |
-| [`experiments/`](experiments/README.md) | **Evidence.** Four checks on `main` @ `445b668d2` behind the RFC: a recount of the numbers in 01–06 (E1), an integration test of where the "is AI available?" checks disagree (E2), the provider-interface drift (E3), and a router spike run against the full test suite (E4). The patch is included. | want to check a claim or reproduce it |
-| [`2026-10-24-consistency-check.md`](2026-10-24-consistency-check.md) | **Check.** Every claim that appeared in more than one document, re-checked against the code: what the documents said, what the code says, and where it was fixed. | want to know whether a number was verified |
 | [`chatwoot-rubyllm-lessons-learned.md`](chatwoot-rubyllm-lessons-learned.md) | **Background.** How Chatwoot moved its AI features to RubyLLM, from its public PRs and issues: what went well, what didn't, and the lessons. The RFC and ADR-0001 cite it. | are weighing a client library (04) |
 
 ## Status
 
-- **RFC, ADR-0001 and experiments** were checked against `main` @ `445b668d2` (2026-10-25). The 5 commits after `2250ba801` change no AI/ML code.
+- **RFC and ADR-0001** were checked against `main` @ `445b668d2` (2026-10-25). The 5 commits after `2250ba801` change no AI/ML code.
 - **Interface register and breaking-change option** (01 D5, 05, and 00) were checked against `main` @ `2250ba801` (2026-10-23).
 - **Everything else was verified against** `main` @ `56105a3b5` (2026-10-22), which includes [#4310](https://github.com/we-promise/sure/issues/4310). Ten commits followed up to `2250ba801`, and six of them change code that 01 cites. [#3696](https://github.com/we-promise/sure/issues/3696) keeps auto-sync at its local time across daylight-saving changes (W1, whose text still holds). [#4176](https://github.com/we-promise/sure/issues/4176) records an email action's baseline when it is created (W4). [#4371](https://github.com/we-promise/sure/issues/4371), [#4374](https://github.com/we-promise/sure/issues/4374), [#4375](https://github.com/we-promise/sure/issues/4375) and [#4380](https://github.com/we-promise/sure/issues/4380) change bills and recurring transactions in W19–W20 without touching the AI call; 01 doesn't yet show that #4371 now runs the history backfill as a job whenever a detection is activated. The other four change the bills page layout, menus and docs.
 - `file:line` references were exact at that commit and will drift. Please update them when you touch the code they point to.
@@ -29,13 +27,13 @@ Working documents for discussing how Sure's AI and ML features should evolve tow
 ## Conventions for editing
 
 - Keep the IDs stable (W*, S*, P*, O-*, U*, I*, BC*, F-*). Other documents and issues refer to them.
-- When you fix a fact in one file, search the other documents for the same claim. 01–06 were checked against each other and against the code on 2026-10-24 (see the [consistency check](2026-10-24-consistency-check.md)).
+- When you fix a fact in one file, search the other documents for the same claim. 01–06 were checked against each other and against the code on 2026-10-24.
 - **Traceability:** link PRs and issues as `[#1234](https://github.com/we-promise/sure/issues/1234)`. GitHub only auto-links bare `#1234` in issues and PRs, not in repository files, and `/issues/` redirects to PRs as well. Put a section's related PRs in a `> **Related PRs:**` line under its heading, and mark unmerged ones *(open, vX.Y.Z)*. When a tagged open PR merges, drop its *open* marker and update the section text.
 - Mermaid diagrams should parse on GitHub. Avoid `;`, `#` and unquoted parentheses in node labels.
 
 ## PR traceability index
 
-Every PR or issue referenced in the documents, grouped by milestone. "Referenced in" gives the document (01–06, RFC, ADR or experiments) and the section ID. State was taken on 2026-10-23, and on 2026-10-24 for the 05, 01 D5, RFC, ADR and experiments references and for [#4176](https://github.com/we-promise/sure/issues/4176) and [#3858](https://github.com/we-promise/sure/issues/3858). Every *open* marker was re-checked on 2026-10-25.
+Every PR or issue referenced in the documents, grouped by milestone. "Referenced in" gives the document (01–06, RFC or ADR) and the section ID. State was taken on 2026-10-23, and on 2026-10-24 for the 05, 01 D5, RFC and ADR references and for [#4176](https://github.com/we-promise/sure/issues/4176) and [#3858](https://github.com/we-promise/sure/issues/3858). Every *open* marker was re-checked on 2026-10-25.
 
 ### v0.7.6: [milestone 22](https://github.com/we-promise/sure/milestone/22), due 2026-10-31
 
@@ -137,7 +135,7 @@ Every PR or issue referenced in the documents, grouped by milestone. "Referenced
 | [#3373](https://github.com/we-promise/sure/issues/3373) | feat(prompts): Editable Built-In Prompt Overrides Per-Family | merged (v0.7.5) | 04: §4 |
 | [#3362](https://github.com/we-promise/sure/issues/3362) | feat(ai): support OPENAI_EXTRA_HEADERS on the OpenAI-compatible provider | merged (v0.7.5) | 04: §4 |
 | [#3304](https://github.com/we-promise/sure/issues/3304) | Add configurable OpenAI request timeout | merged (v0.7.5) | 04: §4 |
-| [#3202](https://github.com/we-promise/sure/issues/3202) | feat(bills): the bills pages, calendar feed and in-page AI helpers | merged (v0.7.5) | 01: W24; RFC: §9; experiments: E4 |
+| [#3202](https://github.com/we-promise/sure/issues/3202) | feat(bills): the bills pages, calendar feed and in-page AI helpers | merged (v0.7.5) | 01: W24; RFC: §9 |
 | [#2937](https://github.com/we-promise/sure/issues/2937) | fix(providers): capture API error response body in PDF processor span output | merged (v0.7.4) | 04: §4 |
 | [#2767](https://github.com/we-promise/sure/issues/2767) | Fix chained assistant tool calls | merged (v0.7.4) | 04: §4 |
 | [#2755](https://github.com/we-promise/sure/issues/2755) | fix(ai): prevent Anthropic chat crash on no-argument tool calls | merged (v0.7.3) | 04: §4 |

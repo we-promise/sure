@@ -1228,7 +1228,7 @@ flowchart LR
 - **Exit:** hands off to W13 at once. Unlike W18, the message is sent for the user.
 - **Settings:** the user's AI consent, the provider and model envs (as W13), preview features. The prompt is not one of the six `ai_prompt_overrides` keys, so it can't be overridden.
 - **Sync and async:** the web request only creates the chat. The reply runs in `AssistantResponseJob` (`ai_high`).
-- **Quirk:** the gate asks whether a batch provider exists (`preferred_llm_provider`), but the work is a chat, which needs a provider that accepts `Chat.default_model`. With `OPENAI_MODEL=o4-mini` the gate says yes while no chat provider accepts the model ([RFC E2](rfc-ai-ml-v0.8.md#9-evidence-from-experiments), setup C8), so the item opens a chat that fails. The view's own comment says the gate is there to avoid "a dead chat".
+- **Quirk:** the gate asks whether a batch provider exists (`preferred_llm_provider`), but the work is a chat, which needs a provider that accepts `Chat.default_model`. With `OPENAI_MODEL=o4-mini` the gate says yes while no chat provider accepts the model ([RFC E2](rfc-ai-ml-v0.8.md#9-evidence-from-experiments)), so the item opens a chat that fails. The view's own comment says the gate is there to avoid "a dead chat".
 
 ---
 

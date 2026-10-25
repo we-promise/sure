@@ -7,7 +7,7 @@
 | **Discussion** | Discord, and PRs against [#4440](https://github.com/we-promise/sure/issues/4440) |
 | **Decision record** | [ADR-0001: one router for every AI call](adr-0001-one-ai-router.md) |
 | **Checked against** | `main` @ `445b668d2` (2026-10-25). No AI/ML code changed after the documents' reference commit `2250ba801`. |
-| **Built from** | [00](00-ai-ml-block-diagram.md)–[06](06-ai-file-split-review.md), the [Chatwoot lessons](chatwoot-rubyllm-lessons-learned.md), the [consistency check](2026-10-24-consistency-check.md), the [sure.am roadmap](https://sure.am/roadmap) and four [experiments](experiments/README.md) |
+| **Built from** | [00](00-ai-ml-block-diagram.md)–[06](06-ai-file-split-review.md), the [Chatwoot lessons](chatwoot-rubyllm-lessons-learned.md), the [sure.am roadmap](https://sure.am/roadmap) and [four experiments](#9-evidence-from-experiments) |
 
 IDs such as W, S, P, O-, U, I, BC and F- refer to the source documents and stay stable. This RFC adds G1–G7 (goals), D1–D8 (decisions) and E1–E4 (experiments).
 
@@ -201,7 +201,7 @@ Maintainers set the milestones.
 
 ## 9. Evidence from experiments
 
-All four ran on `main` @ `445b668d2` with the project's test setup. The patch and full tables are in [experiments/](experiments/README.md).
+All four ran on `main` @ `445b668d2` with the project's test setup.
 
 **E1. Recount.** The documents' numbers hold: helpers copied 5 / 4 / 4 times, the [#2113](https://github.com/we-promise/sure/issues/2113) comment copied 6 times, `LLMInterfaceTest` empty, `vector_store_chunks` missing from `db/schema.rb`, 5 AI jobs listed by hand in the lane test, and 41 ENV reads in the AI settings views.
 
@@ -267,5 +267,3 @@ Each "yes" to a breaking option gets its own ADR, release note and migration. Ag
 | [05](05-ai-breaking-change-option.md) breaking-change option | BC1–BC11 and how to split each into PRs |
 | [06](06-ai-file-split-review.md) file splits | F-H, F-M, F-R and when to split |
 | [Chatwoot lessons](chatwoot-rubyllm-lessons-learned.md) | what a library migration cost another Rails app |
-| [Consistency check](2026-10-24-consistency-check.md) | which numbers were re-verified |
-| [experiments/](experiments/README.md) | E1–E4: method, patch, full results |
