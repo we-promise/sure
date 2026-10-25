@@ -78,8 +78,7 @@ void main() {
     expect(provider.month, DateTime(2028, 9));
   });
 
-  test("opens on the server's current period, not the device date",
-      () async {
+  test("opens on the server's current period, not the device date", () async {
     // Device is already on April 1 (Tokyo); the family is still on March 31.
     final provider = buildProvider(
       now: () => DateTime(2027, 4, 1),
@@ -106,8 +105,7 @@ void main() {
     expect(provider.budget?.id, 'budget_mar');
   });
 
-  test('changing month drops the previous load\'s spinner and error',
-      () async {
+  test('changing month drops the previous load\'s spinner and error', () async {
     final inner = budgetsMockHandler();
     final gate = Completer<void>();
     var gated = false;
@@ -123,7 +121,8 @@ void main() {
     await provider.loadMonth(accessToken: 'token');
 
     gated = true;
-    final refresh = provider.loadMonth(accessToken: 'token', forceRefresh: true);
+    final refresh =
+        provider.loadMonth(accessToken: 'token', forceRefresh: true);
     await Future<void>.delayed(Duration.zero);
     expect(provider.isLoading, isTrue);
 

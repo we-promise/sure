@@ -90,7 +90,11 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
 
   Future<void> _selectBudget(String budgetId) async {
     final token = await _accessToken();
-    if (!mounted || token == null) return;
+    if (!mounted) return;
+    if (token == null) {
+      _provider.markUnauthorized();
+      return;
+    }
     setState(() => _filter = _CategoryFilter.all);
     await _provider.selectBudget(accessToken: token, budgetId: budgetId);
   }

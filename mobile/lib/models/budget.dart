@@ -246,10 +246,10 @@ class BudgetCategory {
     return spentFractionFor(actual: _actual, total: _actual + _available);
   }
 
-  /// Within 10% of the limit but not over it (web: `near_limit?`).
   /// Spent share at which a line counts as near its limit (web: 90%).
   static const double nearLimitFraction = 0.9;
 
+  /// Within 10% of the limit but not over it (web: `near_limit?`).
   bool get isNearLimit => !isOverBudget && spentFraction >= nearLimitFraction;
 
   /// Whether the web budget page would show this line at all: budgeted lines

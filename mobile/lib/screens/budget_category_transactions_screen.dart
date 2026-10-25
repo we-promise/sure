@@ -266,7 +266,7 @@ class _TransactionTile extends StatelessWidget {
     final palette = SureColors.of(context).palette;
     final textTheme = Theme.of(context).textTheme;
     final locale = Localizations.localeOf(context).toString();
-    final isIncome = transaction.nature == 'income';
+    final isIncome = transaction.isIncome;
     final trend = isIncome ? MoneyTrend.inflow : MoneyTrend.outflow;
     final magnitude =
         transaction.amount.replaceFirst(RegExp('^[-\u2212+]'), '');

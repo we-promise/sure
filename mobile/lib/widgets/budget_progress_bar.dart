@@ -37,8 +37,7 @@ class BudgetProgressBar extends StatelessWidget {
         : nearLimit
             ? palette.warning
             : (color ?? palette.success);
-    final clamped =
-        hidden || fraction.isNaN ? 0.0 : fraction.clamp(0.0, 1.0);
+    final clamped = hidden || fraction.isNaN ? 0.0 : fraction.clamp(0.0, 1.0);
 
     return Semantics(
       value: hidden ? null : '${(clamped * 100).round()}%',

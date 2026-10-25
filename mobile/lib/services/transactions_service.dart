@@ -95,17 +95,21 @@ class TransactionsService {
     String? accountId,
     int? page,
     int? perPage,
-    List<String>? categoryIds,
     String? startDate,
     String? endDate,
+    List<String>? categoryIds,
   }) async {
+    // Values are a String or, for repeated Rails array params, a List<String>.
     final Map<String, dynamic> queryParams = {};
 
     if (accountId != null) {
       queryParams['account_id'] = accountId;
     }
-    if (categoryIds != null && categoryIds.isNotEmpty) {
-      queryParams['category_ids[]'] = categoryIds;
+    if (page != null) {
+      queryParams['page'] = page.toString();
+    }
+    if (perPage != null) {
+      queryParams['per_page'] = perPage.toString();
     }
     if (startDate != null) {
       queryParams['start_date'] = startDate;
@@ -113,11 +117,8 @@ class TransactionsService {
     if (endDate != null) {
       queryParams['end_date'] = endDate;
     }
-    if (page != null) {
-      queryParams['page'] = page.toString();
-    }
-    if (perPage != null) {
-      queryParams['per_page'] = perPage.toString();
+    if (categoryIds != null && categoryIds.isNotEmpty) {
+      queryParams['category_ids[]'] = categoryIds;
     }
 
     final baseUri = Uri.parse('${ApiConfig.baseUrl}/api/v1/transactions');

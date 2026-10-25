@@ -82,9 +82,25 @@ class BudgetsProvider with ChangeNotifier {
   /// shows every category rather than only the budgeted ones.
   bool get showsAllCategories => budget != null && !budget!.initialized;
 
+  List<BudgetCategory>? _visibleGroupsSource;
+  bool? _visibleGroupsShowAll;
+  List<BudgetCategoryGroup> _visibleGroups = const [];
+
   /// Parent categories with their subcategories, limited to the lines the web
-  /// budget page shows (budgeted, or with spending).
+  /// budget page shows (budgeted, or with spending). Rebuilt only when the
+  /// month's categories change.
   List<BudgetCategoryGroup> get visibleGroups {
+    final source = categories;
+    if (identical(source, _visibleGroupsSource) &&
+        _visibleGroupsShowAll == showsAllCategories) {
+      return _visibleGroups;
+    }
+    _visibleGroupsSource = source;
+    _visibleGroupsShowAll = showsAllCategories;
+    return _visibleGroups = _buildVisibleGroups();
+  }
+
+  List<BudgetCategoryGroup> _buildVisibleGroups() {
     final groups = BudgetCategoryGroup.build(categories);
     // Web: `budget.initialized? ? visible_on_track? : true`. A budget that
     // hasn't been set up yet lists every category so it can be configured.
@@ -254,7 +270,7 @@ class BudgetsProvider with ChangeNotifier {
 
   /// Finds the budget whose period contains today and, if the user hasn't
   /// navigated yet, opens on it. Without one (no budget yet, or a failed
-  /// request) the calendar month stays, as before.
+  /// request) the screen stays on the calendar month.
   Future<void> _resolveCurrentPeriod(String accessToken) async {
     final today = _clock();
     final day = DateTime(today.year, today.month, today.day);

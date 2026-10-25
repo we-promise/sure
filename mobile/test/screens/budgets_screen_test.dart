@@ -222,4 +222,28 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('switching budgets after the session expired says so',
+      (tester) async {
+    String? token = 'token';
+    await pumpScreen(
+      tester,
+      buildProvider(
+        budgets: [
+          budgetJson(id: 'budget_oct'),
+          budgetJson(id: 'budget_oct_personal', actualCents: 1000),
+        ],
+      ),
+      loader: () async => token,
+    );
+
+    token = null;
+    await tester.tap(find.text('Budget 2'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Your session has expired. Please sign in again.'),
+      findsOneWidget,
+    );
+  });
 }
