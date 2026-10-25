@@ -67,4 +67,13 @@ class SharesightAccountSettingsTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("sharesight_accounts.errors.settlement_account_missing"), flash[:alert]
     assert_equal "broker", @sharesight_account.reload.cash_mode
   end
+
+  test "a date that can't be read is explained and the saved one kept" do
+    @sharesight_account.update!(sync_start_date: Date.new(2025, 7, 1))
+
+    patch investment_url(@account), params: { account: { name: "CMC Invest", sharesight: { sync_start_date: "not a date" } } }
+
+    assert_equal I18n.t("sharesight_accounts.errors.invalid_date.sync_start_date"), flash[:alert]
+    assert_equal Date.new(2025, 7, 1), @sharesight_account.reload.sync_start_date
+  end
 end

@@ -51,6 +51,10 @@ en:
       settlement_account_missing: Choose the account the portfolio settles through.
       dividend_account_missing: Choose the account dividends are paid to.
       cash_anchor_incomplete: Give both the cash at the broker and the date you saw it.
+      invalid_date:
+        settlement_starts_on: The date it settles there from isn't a valid date.
+        cash_anchor_on: The date you saw the cash at the broker isn't a valid date.
+        sync_start_date: The date to import activity from isn't a valid date.
       account_not_in_family: "%{name} isn't one of your accounts."
       account_is_portfolio: "%{name} is this portfolio's own account."
     notices:

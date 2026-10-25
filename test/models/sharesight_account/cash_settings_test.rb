@@ -60,6 +60,25 @@ class SharesightAccount::CashSettingsTest < ActiveSupport::TestCase
     assert_includes @sharesight_account.errors.full_messages, I18n.t("sharesight_accounts.errors.cash_anchor_incomplete")
   end
 
+  test "a date that can't be read is refused instead of clearing the setting" do
+    @sharesight_account.update!(sync_start_date: Date.new(2025, 7, 1), settlement_starts_on: Date.new(2026, 11, 3))
+
+    @sharesight_account.assign_cash_settings("sync_start_date" => "2025-02-30", "settlement_starts_on" => "soon", "cash_anchor_on" => "")
+
+    assert_not @sharesight_account.valid?
+    assert_equal [ I18n.t("sharesight_accounts.errors.invalid_date.settlement_starts_on"), I18n.t("sharesight_accounts.errors.invalid_date.sync_start_date") ],
+                 @sharesight_account.errors.full_messages
+  end
+
+  test "blank dates still clear their settings" do
+    @sharesight_account.update!(sync_start_date: Date.new(2025, 7, 1))
+
+    @sharesight_account.assign_cash_settings("sync_start_date" => "")
+
+    assert @sharesight_account.save
+    assert_nil @sharesight_account.reload.sync_start_date
+  end
+
   test "where cash and dividends go on a given date" do
     @sharesight_account.assign_attributes(cash_mode: "settlement", settlement_account: @bank, settlement_starts_on: Date.new(2026, 11, 3))
 

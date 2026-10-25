@@ -43,6 +43,7 @@ module SharesightAccount::CashSettings
     validate :settlement_account_present, if: -> { will_save_change_to_cash_mode? || will_save_change_to_settlement_account_id? }
     validate :dividend_account_present, if: -> { will_save_change_to_dividend_mode? || will_save_change_to_dividend_account_id? }
     validate :cash_anchor_complete
+    validate :dates_readable
     validate :other_accounts_belong_to_family
   end
 
@@ -125,6 +126,16 @@ module SharesightAccount::CashSettings
       return if cash_anchor_amount.present? == cash_anchor_on.present?
 
       errors.add(:base, I18n.t("sharesight_accounts.errors.cash_anchor_incomplete"))
+    end
+
+    # Rails reads a date it can't parse as nil, which would quietly clear the
+    # setting. Blank is still fine, that's how you clear one on purpose.
+    def dates_readable
+      %i[settlement_starts_on cash_anchor_on sync_start_date].each do |attribute|
+        next if read_attribute_before_type_cast(attribute).blank? || public_send(attribute).present?
+
+        errors.add(:base, I18n.t("sharesight_accounts.errors.invalid_date.#{attribute}"))
+      end
     end
 
     def other_accounts_belong_to_family
