@@ -46,7 +46,7 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
-  test "lists budget categories scoped to the current family" do
+  test "lists budget categories scoped to the current family without derived amounts" do
     get api_v1_budget_categories_url, headers: api_headers(@api_key)
 
     assert_response :success
@@ -68,6 +68,135 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal false, budget_category["rollover_enabled"]
     assert_not budget_category.key?("rolled_over_amount")
     assert_not budget_category.key?("rolled_over_amount_cents")
+  end
+
+  test "index filtered by budget_id carries the derived amounts show returns" do
+    create_spending(category: @category, amount: 120)
+
+    get api_v1_budget_categories_url,
+        params: { budget_id: @budget.id, per_page: 100 },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    listed = JSON.parse(response.body)["budget_categories"].find { |line| line["id"] == @budget_category.id }
+
+    get api_v1_budget_category_url(@budget_category), headers: api_headers(@api_key)
+    assert_response :success
+    shown = JSON.parse(response.body)
+
+    assert_equal 12_000, listed["actual_spending_cents"]
+    %w[
+      actual_spending actual_spending_cents
+      rolled_over_amount rolled_over_amount_cents
+      available_to_spend available_to_spend_cents
+    ].each do |field|
+      assert_equal shown[field], listed[field], "index and show disagree on #{field}"
+    end
+  end
+
+  test "index filtered by budget_id computes the budget's totals once for all its lines" do
+    # Counts query-cache hits too, so a totals query repeated per line is
+    # caught even when the cache answers it.
+    list = lambda do
+      queries = []
+      callback = lambda do |*, payload|
+        queries << payload[:sql] unless %w[SCHEMA TRANSACTION].include?(payload[:name])
+      end
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        get api_v1_budget_categories_url,
+            params: { budget_id: @budget.id, per_page: 100 },
+            headers: api_headers(@api_key)
+      end
+      assert_response :success
+      queries
+    end
+
+    list.call
+    few_lines = list.call.size
+
+    4.times { |i| @family.categories.create!(name: "Extra API line #{i}", color: "#123456") }
+    list.call
+    many_lines_queries = list.call
+    many_lines = JSON.parse(response.body)["budget_categories"]
+
+    assert_operator many_lines.size, :>=, 5
+    assert many_lines.all? { |line| line.key?("actual_spending_cents") }
+    assert_equal few_lines, many_lines_queries.size
+  end
+
+  test "index filtered by budget_id adds lines for categories created after the budget" do
+    new_category = @family.categories.create!(name: "Added after the budget", color: "#654321")
+
+    get api_v1_budget_categories_url,
+        params: { budget_id: @budget.id, per_page: 100 },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    line = JSON.parse(response.body)["budget_categories"].find { |bc| bc.dig("category", "id") == new_category.id }
+    assert line, "Expected a line for the new category"
+    assert_equal 0, line["budgeted_spending_cents"]
+    assert_equal 0, line["actual_spending_cents"]
+    assert @budget.budget_categories.exists?(category: new_category)
+  end
+
+  test "index still lists when a concurrent request synced the same line first" do
+    duplicate = @budget.budget_categories.build(category: @category)
+    duplicate.errors.add(:budget_id, :taken)
+    Budget.any_instance.stubs(:sync_budget_categories).raises(ActiveRecord::RecordInvalid.new(duplicate))
+
+    get api_v1_budget_categories_url, params: { budget_id: @budget.id }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_includes JSON.parse(response.body)["budget_categories"].map { |line| line["id"] }, @budget_category.id
+  end
+
+  test "index without budget_id neither syncs lines nor computes actuals" do
+    new_category = @family.categories.create!(name: "Not synced unfiltered", color: "#654321")
+
+    get api_v1_budget_categories_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_not @budget.budget_categories.exists?(category: new_category)
+    assert JSON.parse(response.body)["budget_categories"].none? { |line| line.key?("actual_spending_cents") }
+  end
+
+  test "index does not add lines to another member's shared budget" do
+    @family.update!(personal_budgets: true)
+    owner = users(:family_member)
+    shared_budget = @family.budgets.create!(
+      user: owner,
+      start_date: 7.months.ago.beginning_of_month.to_date,
+      end_date: 7.months.ago.end_of_month.to_date,
+      budgeted_spending: 800,
+      currency: "USD"
+    )
+    shared_budget.budget_categories.create!(category: @category, budgeted_spending: 200, currency: "USD")
+    BudgetShare.create!(owner: owner, viewer: @user, permission: "read_only")
+    new_category = @family.categories.create!(name: "Owner has not opened it", color: "#654321")
+
+    get api_v1_budget_categories_url,
+        params: { budget_id: shared_budget.id, per_page: 100 },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    lines = JSON.parse(response.body)["budget_categories"]
+    assert_equal [ @category.id ], lines.map { |line| line.dig("category", "id") }
+    assert lines.first.key?("actual_spending_cents")
+    assert_not shared_budget.budget_categories.exists?(category: new_category)
+  end
+
+  test "index with another family's budget_id returns nothing and writes nothing" do
+    other_budget = @other_budget_category.budget
+    other_budget.family.categories.create!(name: "Other family new", color: "#654321")
+
+    assert_no_difference "BudgetCategory.count" do
+      get api_v1_budget_categories_url,
+          params: { budget_id: other_budget.id },
+          headers: api_headers(@api_key)
+    end
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["budget_categories"]
   end
 
   test "shows a budget category" do
@@ -270,4 +399,17 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal 500, later.budget_categories.find_by!(category: @category).reload[:rolled_over_amount]
   end
+
+  private
+
+    def create_spending(category:, amount:)
+      Entry.create!(
+        account: accounts(:depository),
+        entryable: Transaction.create!(category: category),
+        date: @budget.start_date + 10.days,
+        name: "API budget spending",
+        amount: amount,
+        currency: "USD"
+      )
+    end
 end

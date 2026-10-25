@@ -4,6 +4,7 @@ class Api::V1::BudgetCategoriesController < Api::V1::BaseController
   include Pagy::Backend
 
   before_action :ensure_read_scope
+  before_action :sync_requested_budget, only: :index
   before_action :refresh_rollover_chains
   before_action :set_budget_category, only: :show
 
@@ -17,6 +18,7 @@ class Api::V1::BudgetCategoriesController < Api::V1::BaseController
       page: safe_page_param,
       limit: @per_page
     )
+    @include_derived_amounts = requested_budget.present?
 
     render :index
   end
@@ -56,6 +58,39 @@ class Api::V1::BudgetCategoriesController < Api::V1::BaseController
           user: owner_id && User.find_by(id: owner_id)
         ).recompute!
       end
+    end
+
+    # The budget a `budget_id` filter names, when the caller can see it. Listing
+    # one budget is what the web budget page does, so only then does the index
+    # sync its lines and carry the derived amounts: every line shares one
+    # budget, whose totals are computed once, so the cost stays flat however
+    # many lines there are.
+    def requested_budget
+      return @requested_budget if defined?(@requested_budget)
+
+      @requested_budget = if params[:budget_id].present? && valid_uuid?(params[:budget_id])
+        current_resource_owner.family.budgets
+          .where(user_id: visible_owner_ids)
+          .find_by(id: params[:budget_id])
+      end
+    end
+
+    # Adds lines for categories created after the budget and drops lines for
+    # deleted ones, as Budget.find_or_bootstrap does each time the web page
+    # opens a budget. It runs before refresh_rollover_chains so a new line's
+    # inherited carry is computed in the same request. Another member's shared
+    # budget is left untouched, as on the web, where viewing it never writes to
+    # the owner's budget.
+    def sync_requested_budget
+      budget = requested_budget
+      return unless budget
+      return unless budget.user_id.nil? || budget.user_id == current_resource_owner.id
+
+      budget.sync_budget_categories
+    rescue ActiveRecord::RecordNotUnique
+      # A concurrent request created the same line first; the listing reads it.
+    rescue ActiveRecord::RecordInvalid => e
+      raise unless e.record.errors.of_kind?(:budget_id, :taken)
     end
 
     def budget_categories_scope
