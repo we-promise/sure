@@ -211,7 +211,9 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       other = trade(other_security, 40, 20, 4)
       another_sale = trade(security, -1, 25, 5)
       same_day = trade(security, 5, 20, 6)
-      sale = Trade.find(trade(security, -10, 25, 6).entryable_id)
+      sale_entry = trade(security, -10, 25, 6)
+      entered_in_order(same_day, sale_entry)
+      sale = Trade.find(sale_entry.entryable_id)
 
       [ later, other, another_sale ].each do |entry|
         assert_not sale.update(lot_source_entry: entry), entry.name
@@ -227,6 +229,53 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       sale.update_columns(lot_source_entry_id: nil)
       @account.update!(cost_basis_method: "average")
       assert_not sale.reload.update(lot_source_entry: earlier), "an average account names no lot"
+    end
+  end
+
+  # The book replays a day's trades in the order they were entered, so a buy
+  # entered after the sale on its day is not yet a lot when the sale runs.
+  test "a same-day buy is offered only when it was entered before the sale" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMS", 30)
+      trade(security, 10, 20, 2)
+      before, sale, after = [ [ 5, 22 ], [ -3, 25 ], [ 4, 24 ] ].map { |qty, price| trade(security, qty, price, 6) }
+      entered_in_order(before, sale, after)
+
+      choices = Trade.find(sale.entryable_id).lot_choices.to_a
+      assert_includes choices, before
+      assert_not_includes choices, after
+      assert_not Trade.find(sale.entryable_id).update(lot_source_entry: after), "a buy the sale replays before"
+    end
+  end
+
+  test "a sale's held choice stays offered even once the replay no longer reaches it first" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMU", 30)
+      trade(security, 10, 20, 2)
+      sale = trade(security, -3, 25, 6)
+      after = trade(security, 4, 24, 6)
+      entered_in_order(sale, after)
+      Trade.where(id: sale.entryable_id).update_all(lot_source_entry_id: after.id)
+
+      assert_includes Trade.find(sale.entryable_id).lot_choices.to_a, after
+    end
+  end
+
+  test "a named same-day lot entered before the sale is the one it sells from" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMT", 30)
+      trade(security, 10, 20, 2)
+      same_day = trade(security, 5, 22, 6)
+      sale = trade(security, -3, 25, 6)
+      entered_in_order(same_day, sale)
+      name_lot(sale, same_day)
+
+      materialize(:forward)
+
+      assert_equal [ [ same_day.id, 3 ] ], HoldingLotDisposal.where(sale_entry_id: sale.id).pluck(:lot_source_entry_id, :qty).map { |id, qty| [ id, qty.to_i ] }
     end
   end
 
@@ -527,6 +576,12 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
 
     def gain(entry)
       Trade.find(entry.entryable_id).realized_gain_loss&.value&.amount
+    end
+
+    # The clock is frozen, so entries made one after another share a created_at
+    # and the replay would order them by id; set the order they were entered.
+    def entered_in_order(*entries)
+      entries.each_with_index { |entry, index| entry.update_columns(created_at: TODAY + index.seconds) }
     end
 
     def name_lot(sale, lot)

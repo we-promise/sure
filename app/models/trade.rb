@@ -75,19 +75,23 @@ class Trade < ApplicationRecord
   end
 
   # The acquisitions this sale can name as the lot it sold from: buys and
-  # transfers-in of its security, in its account, on or before its date,
-  # leaving out a lot sales dated before it had already emptied. Only a sale
-  # in an account that sells by fifo has any, since under average a sale
-  # relieves every lot pro rata. The choice the sale already holds is always
-  # among them, so an edit keeps it, and is replayed only while it names a
-  # lot that is still open; a new choice must be open on the sale's date.
+  # transfers-in of its security, in its account, that the replay applies
+  # before it (Entry.chronological: an earlier date, or the same date and
+  # entered first), leaving out a lot sales dated before it had already
+  # emptied. Only a sale in an account that sells by fifo has any, since under
+  # average a sale relieves every lot pro rata. The choice the sale already
+  # holds is always among them, so an edit keeps it, and is replayed only
+  # while it names a lot that is still open; a new choice must be open by then.
   def lot_choices
     return Entry.none unless sell? && !internal_movement? && entry&.account&.cost_basis_fifo?
 
     acquisitions = entry.account.entries
       .where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security_id).where("qty > 0").select(:id))
-      .where("entries.date <= ?", entry.date)
-    acquisitions.where.not(id: lots_emptied_before_sale).or(acquisitions.where(id: attribute_in_database(:lot_source_entry_id))).chronological
+    before_sale = acquisitions
+      .where("entries.date < :date OR (entries.date = :date AND (entries.created_at, entries.id) < (:created_at, :id))",
+             date: entry.date, created_at: entry.created_at || Time.current, id: entry.id || "ffffffff-ffff-ffff-ffff-ffffffffffff")
+      .where.not(id: lots_emptied_before_sale)
+    before_sale.or(acquisitions.where(id: attribute_in_database(:lot_source_entry_id))).chronological
   end
 
   class << self
