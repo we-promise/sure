@@ -7,12 +7,15 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:sure_mobile/l10n/app_localizations.dart';
 import 'package:sure_mobile/models/cash_flow.dart';
+import 'package:sure_mobile/models/category.dart';
 import 'package:sure_mobile/providers/privacy_provider.dart';
 import 'package:sure_mobile/screens/cash_flow_category_transactions_screen.dart';
 import 'package:sure_mobile/screens/cash_flow_screen.dart'
     show AccessTokenLoader;
 import 'package:sure_mobile/services/transactions_service.dart';
 import 'package:sure_mobile/theme/sure_theme.dart';
+
+import '../support/fake_categories_service.dart';
 
 String _page(List<String> names, {required int page, required int pages}) {
   final rows = [
@@ -40,6 +43,7 @@ void main() {
 
   Widget harness(
     TransactionsService service, {
+    FakeCategoriesService? categories,
     AccessTokenLoader? loader,
     Future<void> Function(BuildContext context)? onUnauthorized,
   }) {
@@ -53,6 +57,7 @@ void main() {
           category: category,
           range: range,
           service: service,
+          categoriesService: categories ?? FakeCategoriesService(),
           accessTokenLoader: loader ?? (_) async => 'token',
           onUnauthorized: onUnauthorized,
         ),
@@ -137,5 +142,60 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(logouts, 1);
+  });
+
+  group('subcategories', () {
+    List<List<String>> requested = [];
+    TransactionsService recording() => TransactionsService(
+          client: MockClient((request) async {
+            requested.add(request.url.queryParametersAll['category_ids[]']!);
+            return http.Response(_page(['Row'], page: 1, pages: 1), 200);
+          }),
+        );
+    setUp(() => requested = []);
+
+    testWidgets('includes subcategories the report leaves out', (tester) async {
+      final categories = FakeCategoriesService(subcategories: [
+        Category(id: 'cat_snacks', name: 'Snacks'),
+      ]);
+      await tester.pumpWidget(harness(recording(), categories: categories));
+      await tester.pumpAndSettle();
+
+      expect(categories.parentIds, ['cat_groceries']);
+      expect(requested, [
+        ['cat_groceries', 'cat_snacks'],
+      ]);
+      expect(find.text('Row'), findsOneWidget);
+    });
+
+    testWidgets('falls back to the report categories when the lookup fails',
+        (tester) async {
+      final categories = FakeCategoriesService(
+        response: {'success': false, 'error': 'Failed to fetch categories'},
+      );
+      await tester.pumpWidget(harness(recording(), categories: categories));
+      await tester.pumpAndSettle();
+
+      expect(requested, [
+        ['cat_groceries'],
+      ]);
+      expect(find.text('Row'), findsOneWidget);
+    });
+
+    testWidgets('a 401 from the lookup logs the session out', (tester) async {
+      var logouts = 0;
+      final categories = FakeCategoriesService(
+        response: {'success': false, 'error': 'unauthorized'},
+      );
+      await tester.pumpWidget(harness(
+        recording(),
+        categories: categories,
+        onUnauthorized: (_) async => logouts++,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(logouts, 1);
+      expect(requested, isEmpty);
+    });
   });
 }

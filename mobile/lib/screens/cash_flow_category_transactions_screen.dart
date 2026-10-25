@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/cash_flow.dart';
+import '../models/category.dart';
 import '../models/transaction.dart';
 import '../providers/auth_provider.dart';
 import '../providers/privacy_provider.dart';
+import '../services/categories_service.dart';
 import '../services/transactions_service.dart';
 import '../theme/sure_colors.dart';
 import '../theme/sure_spacing.dart';
@@ -23,12 +25,18 @@ import 'cash_flow_screen.dart' show AccessTokenLoader;
 /// report period, fetched page by page from `GET /api/v1/transactions` with
 /// `start_date`, `end_date` and `category_ids[]`. Refunds are included, since
 /// the cash flow report nets them within the category.
+///
+/// Like the web's category filter, every subcategory is included, also one
+/// the report leaves out because its refunds net it to zero. Its ids come
+/// from `GET /api/v1/categories?parent_id=…`; if that lookup fails, the
+/// subcategories named in the report are used.
 class CashFlowCategoryTransactionsScreen extends StatefulWidget {
   const CashFlowCategoryTransactionsScreen({
     super.key,
     required this.category,
     required this.range,
     this.service,
+    this.categoriesService,
     this.accessTokenLoader,
     this.onUnauthorized,
   });
@@ -39,6 +47,7 @@ class CashFlowCategoryTransactionsScreen extends StatefulWidget {
   final Future<void> Function(BuildContext context)? onUnauthorized;
   final CashFlowDateRange range;
   final TransactionsService? service;
+  final CategoriesService? categoriesService;
   final AccessTokenLoader? accessTokenLoader;
 
   @override
@@ -52,8 +61,13 @@ class _CashFlowCategoryTransactionsScreenState
 
   late final TransactionsService _service =
       widget.service ?? TransactionsService();
+  late final CategoriesService _categoriesService =
+      widget.categoriesService ?? CategoriesService();
   final ScrollController _scroll = ScrollController();
   final List<Transaction> _transactions = [];
+
+  /// The category plus all of its subcategories, once the lookup succeeded.
+  List<String>? _categoryIds;
   int _page = 0;
   int? _totalPages;
   bool _loading = false;
@@ -111,24 +125,30 @@ class _CashFlowCategoryTransactionsScreenState
     setState(() => _loading = true);
 
     Map<String, dynamic>? result;
+    var unauthorized = false;
     try {
       final token = await _accessToken();
       if (token != null) {
-        result = await _service.getTransactions(
-          accessToken: token,
-          page: nextPage,
-          perPage: _perPage,
-          startDate: widget.range.startIso,
-          endDate: widget.range.endIso,
-          categoryIds: widget.category.transactionCategoryIds,
-        );
+        final categoryIds = _categoryIds ?? await _lookUpCategoryIds(token);
+        if (categoryIds == null) {
+          unauthorized = true;
+        } else {
+          result = await _service.getTransactions(
+            accessToken: token,
+            page: nextPage,
+            perPage: _perPage,
+            startDate: widget.range.startIso,
+            endDate: widget.range.endIso,
+            categoryIds: categoryIds,
+          );
+          unauthorized = result['error'] == 'unauthorized';
+        }
       }
     } catch (_) {
       // A failed token refresh (or storage error) is a failed page.
       result = null;
     }
     if (!mounted || generation != _generation) return;
-    final unauthorized = result?['error'] == 'unauthorized';
 
     setState(() {
       _loading = false;
@@ -146,6 +166,33 @@ class _CashFlowCategoryTransactionsScreenState
       }
     });
     if (unauthorized) await _handleUnauthorized();
+  }
+
+  /// The category's id plus all of its subcategory ids. Falls back to the
+  /// ids the report knows when the lookup fails, and returns `null` on 401.
+  Future<List<String>?> _lookUpCategoryIds(String token) async {
+    final known = widget.category.transactionCategoryIds;
+    final rootId = widget.category.categoryId;
+    if (rootId == null) return known;
+    Map<String, dynamic> lookup;
+    try {
+      lookup = await _categoriesService.getCategories(
+        accessToken: token,
+        parentId: rootId,
+        perPage: 100,
+      );
+    } catch (_) {
+      return known;
+    }
+    if (lookup['error'] == 'unauthorized') return null;
+    if (lookup['success'] != true) return known;
+    final ids = {
+      ...known,
+      for (final category in (lookup['categories'] as List).cast<Category>())
+        if (category.id.isNotEmpty) category.id,
+    }.toList(growable: false);
+    if (mounted) _categoryIds = ids;
+    return ids;
   }
 
   Future<void> _handleUnauthorized() async {

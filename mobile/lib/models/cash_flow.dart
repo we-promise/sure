@@ -114,6 +114,7 @@ class CashFlowCategory {
     this.categoryId,
     this.color,
     this.children = const [],
+    this.relatedSubcategoryIds = const [],
   });
 
   /// Stable node id from the API (e.g. `expense_<key>`).
@@ -138,13 +139,35 @@ class CashFlowCategory {
   /// Subcategories with a nonzero amount on this side.
   final List<CashFlowCategory> children;
 
+  /// Ids of this category's subcategories that the report lists on the other
+  /// side only. The server partitions each category's net amount by
+  /// direction, so a subcategory whose refunds outweigh its spending appears
+  /// under the income counterpart of an expense category (and vice versa).
+  final List<String> relatedSubcategoryIds;
+
   /// Category ids to request when drilling into this category's
-  /// transactions: the category itself plus its subcategories.
-  List<String> get transactionCategoryIds => [
+  /// transactions: the category itself plus every subcategory the report
+  /// knows on either side, like the web's category filter, which includes
+  /// all subcategories of a parent.
+  List<String> get transactionCategoryIds => {
         if (categoryId != null) categoryId!,
         for (final child in children)
           if (child.categoryId != null) child.categoryId!,
-      ];
+        ...relatedSubcategoryIds,
+      }.toList(growable: false);
+
+  CashFlowCategory _withRelatedSubcategoryIds(List<String> ids) =>
+      CashFlowCategory(
+        id: id,
+        name: name,
+        side: side,
+        amount: amount,
+        percentage: percentage,
+        categoryId: categoryId,
+        color: color,
+        children: children,
+        relatedSubcategoryIds: ids,
+      );
 
   bool get canDrillDown => categoryId != null;
 }
@@ -233,8 +256,8 @@ class CashFlowReport {
       final node = nodes[index];
       final children = (childrenOf[index] ?? const <int>[])
           .map((c) => build(c, side))
-          // A category whose refunds exceed its activity nets out negative;
-          // like the chart, leave it out rather than show a negative row.
+          // The server only sends positive side amounts; anything else
+          // could not be drawn in the chart, so it is not listed either.
           .where((c) => c.amount > 0)
           .toList()
         ..sort((a, b) => b.amount.compareTo(a.amount));
@@ -254,6 +277,31 @@ class CashFlowReport {
         roots.map((i) => build(i, s)).where((c) => c.amount > 0).toList()
           ..sort((a, b) => b.amount.compareTo(a.amount));
 
+    final incomeCategories = side(incomeRoots, CashFlowSide.income);
+    final expenseCategories = side(expenseRoots, CashFlowSide.expense);
+
+    // Subcategory ids per root category id, across both sides.
+    final subcategoryIds = <String, Set<String>>{};
+    for (final root in [...incomeCategories, ...expenseCategories]) {
+      final rootId = root.categoryId;
+      if (rootId == null) continue;
+      final ids = subcategoryIds.putIfAbsent(rootId, () => <String>{});
+      for (final child in root.children) {
+        if (child.categoryId != null) ids.add(child.categoryId!);
+      }
+    }
+    List<CashFlowCategory> withRelated(List<CashFlowCategory> roots) => [
+          for (final root in roots)
+            if (root.categoryId == null)
+              root
+            else
+              root._withRelatedSubcategoryIds(
+                subcategoryIds[root.categoryId]!.difference({
+                  for (final child in root.children) child.categoryId,
+                }).toList(growable: false),
+              ),
+        ];
+
     return CashFlowReport(
       currency: json['currency']?.toString() ?? '',
       startDate: _date(period['start_date']),
@@ -261,8 +309,8 @@ class CashFlowReport {
       income: _double(sankey['income']),
       spending: _double(sankey['spending']),
       netSavings: _double(sankey['net_savings']),
-      incomeCategories: side(incomeRoots, CashFlowSide.income),
-      expenseCategories: side(expenseRoots, CashFlowSide.expense),
+      incomeCategories: withRelated(incomeCategories),
+      expenseCategories: withRelated(expenseCategories),
     );
   }
 

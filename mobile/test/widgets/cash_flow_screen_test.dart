@@ -20,6 +20,7 @@ import 'package:sure_mobile/widgets/cash_flow_donut_chart.dart';
 import 'package:sure_mobile/widgets/sure_segmented_control.dart';
 
 import '../support/cash_flow_fixture.dart';
+import '../support/fake_categories_service.dart';
 
 void main() {
   setUp(() {
@@ -94,6 +95,7 @@ void main() {
               );
             }),
           ),
+          categoriesService: FakeCategoriesService(),
           accessTokenLoader: accessTokenLoader ?? (_) async => 'token',
           clock: clock ?? () => DateTime(2026, 10, 19),
           onUnauthorized: onUnauthorized,

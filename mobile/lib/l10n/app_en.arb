@@ -986,10 +986,10 @@
   "@cashFlowTitle": { "description": "App bar title of the Cash Flow report screen." },
 
   "cashFlowPeriodCurrentMonth": "This month",
-  "@cashFlowPeriodCurrentMonth": { "description": "Period chip: current month to date (web MTD)." },
+  "@cashFlowPeriodCurrentMonth": { "description": "Period chip: the current month (web MTD), or the whole current custom month when the family has a custom month start day." },
 
   "cashFlowPeriodLastMonth": "Last month",
-  "@cashFlowPeriodLastMonth": { "description": "Period chip: the previous calendar month (web LM)." },
+  "@cashFlowPeriodLastMonth": { "description": "Period chip: the previous month (web LM), following the family's custom month start day when set." },
 
   "cashFlowPeriodLast30Days": "Last 30 days",
   "@cashFlowPeriodLast30Days": { "description": "Period chip: last 30 days (web 30D)." },

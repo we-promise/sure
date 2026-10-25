@@ -142,7 +142,48 @@ void main() {
       expect(uncategorized.canDrillDown, isFalse);
     });
 
-    test('categories netted negative by refunds are left out', () {
+    test('drill-down includes subcategories listed on the other side', () {
+      // Groceries refunds outweigh its spending, so the server lists it under
+      // the income counterpart of Food & Drink instead of under its expenses.
+      final json = jsonDecode(cashFlowSankeyFixture) as Map<String, dynamic>;
+      final sankey = json['sankey'] as Map<String, dynamic>;
+      final nodes = sankey['nodes'] as List;
+      final links = sankey['links'] as List;
+      nodes[4] = {
+        'id': 'income_sub_cat_groceries',
+        'name': 'Groceries',
+        'kind': 'income',
+        'value': '20.0',
+        'percentage': '100.0',
+        'category_id': 'cat_groceries',
+        'color': '#e99537',
+      };
+      nodes.add({
+        'id': 'income_cat_food',
+        'name': 'Food & Drink',
+        'kind': 'income',
+        'value': '20.0',
+        'percentage': '0.4',
+        'category_id': 'cat_food',
+        'color': '#e99537',
+      });
+      links[3] = {'source': 4, 'target': 8, 'value': '20.0'};
+      links.add({'source': 8, 'target': 0, 'value': '20.0'});
+
+      final r = CashFlowReport.fromJson(json);
+      final expenseFood =
+          r.expenseCategories.firstWhere((c) => c.name == 'Food & Drink');
+      expect(expenseFood.children, isEmpty);
+      expect(expenseFood.transactionCategoryIds, ['cat_food', 'cat_groceries']);
+      final incomeFood =
+          r.incomeCategories.firstWhere((c) => c.name == 'Food & Drink');
+      expect(incomeFood.children.map((c) => c.name), ['Groceries']);
+      expect(incomeFood.transactionCategoryIds, ['cat_food', 'cat_groceries']);
+      final salary = r.incomeCategories.firstWhere((c) => c.name == 'Salary');
+      expect(salary.transactionCategoryIds, ['cat_salary']);
+    });
+
+    test('nonpositive amounts are not listed', () {
       final json = jsonDecode(cashFlowSankeyFixture) as Map<String, dynamic>;
       final nodes = (json['sankey'] as Map)['nodes'] as List;
       for (final n in nodes) {

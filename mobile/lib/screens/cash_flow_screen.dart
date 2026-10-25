@@ -7,6 +7,7 @@ import '../models/cash_flow.dart';
 import '../providers/auth_provider.dart';
 import '../providers/privacy_provider.dart';
 import '../services/cash_flow_service.dart';
+import '../services/categories_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/transactions_service.dart';
 import '../theme/sure_colors.dart';
@@ -41,6 +42,7 @@ class CashFlowScreen extends StatefulWidget {
     super.key,
     this.service,
     this.transactionsService,
+    this.categoriesService,
     this.accessTokenLoader,
     this.clock,
     this.initialPeriod = CashFlowPeriod.currentMonth,
@@ -56,6 +58,7 @@ class CashFlowScreen extends StatefulWidget {
 
   /// Passed to the category drill-down screen.
   final TransactionsService? transactionsService;
+  final CategoriesService? categoriesService;
   final AccessTokenLoader? accessTokenLoader;
 
   /// Source of "today" for period ranges; injectable for tests.
@@ -332,6 +335,7 @@ class _CashFlowScreenState extends State<CashFlowScreen> {
           category: category,
           range: CashFlowDateRange(report.startDate, report.endDate),
           service: widget.transactionsService,
+          categoriesService: widget.categoriesService,
           accessTokenLoader: widget.accessTokenLoader,
           onUnauthorized: widget.onUnauthorized,
         ),

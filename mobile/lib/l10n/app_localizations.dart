@@ -1934,13 +1934,13 @@ abstract class AppLocalizations {
   /// **'Cash Flow'**
   String get cashFlowTitle;
 
-  /// Period chip: current month to date (web MTD).
+  /// Period chip: the current month (web MTD), or the whole current custom month when the family has a custom month start day.
   ///
   /// In en, this message translates to:
   /// **'This month'**
   String get cashFlowPeriodCurrentMonth;
 
-  /// Period chip: the previous calendar month (web LM).
+  /// Period chip: the previous month (web LM), following the family's custom month start day when set.
   ///
   /// In en, this message translates to:
   /// **'Last month'**
