@@ -24,20 +24,6 @@ class MoreScreen extends StatelessWidget {
             SureListGroup(
               children: [
                 SureListRow(
-                  leading: _iconBadge(context, Icons.insights),
-                  title: l.moreCashFlow,
-                  subtitle: l.moreCashFlowSubtitle,
-                  showChevron: true,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CashFlowScreen(),
-                      ),
-                    );
-                  },
-                ),
-                SureListRow(
                   leading: _iconBadge(context, Icons.calendar_month),
                   title: l.moreCalendar,
                   subtitle: l.moreCalendarSubtitle,
@@ -47,6 +33,20 @@ class MoreScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const CalendarScreen(),
+                      ),
+                    );
+                  },
+                ),
+                SureListRow(
+                  leading: _iconBadge(context, Icons.insights),
+                  title: l.moreCashFlow,
+                  subtitle: l.moreCashFlowSubtitle,
+                  showChevron: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CashFlowScreen(),
                       ),
                     );
                   },
