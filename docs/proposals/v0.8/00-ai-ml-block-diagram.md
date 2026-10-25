@@ -40,6 +40,7 @@ flowchart LR
     PG[("PostgreSQL<br/>(+ pgvector table if enabled)")]
     REDIS[("Redis<br/>Sidekiq, Rails.cache, ActionCable")]
     STORE[("Active Storage<br/>Disk / S3 / GCS")]
+    PL["Pipelock, optional<br/>forward proxy :8888, MCP proxy :8889"]
   end
 
   subgraph Ext["External services"]
@@ -74,10 +75,16 @@ flowchart LR
   VS --> PG
   CHATJOB -->|"external assistant SSE"| AGENT
   AGENT -->|"calls back via MCP"| API
+  REG -->|"HTTPS_PROXY, if set"| PL
+  PL --> LLM
+  AGENT -->|"MCP on :8889, if used"| PL
+  PL --> API
   RML --> PG
   AIJOBS --> PG
   AIJOBS --> STORE
   CHATJOB -.->|"Turbo Streams"| REDIS
+  classDef optional stroke-dasharray: 5 5
+  class PL optional
 ```
 
 ## 2. Models (erDiagram)
@@ -177,6 +184,7 @@ erDiagram
 | Cylinder | Datastore or external service |
 | Solid arrow | Direct call or job enqueue (the label says which) |
 | Dotted arrow | Async broadcast (Turbo Streams over ActionCable) |
+| Dashed border | Optional service that an operator may run (Pipelock) |
 | `ai_high` / `ai_low` | Queues on the one-thread `ai` Sidekiq capsule. `ai_high` always runs first, but can't interrupt a running job. |
 | `W#` | Workflow section in [`01-ai-ml-workflow-map.md`](01-ai-ml-workflow-map.md) |
 | `\|\|--o{` (ER) | one-to-many. `}o--o\|` is an optional belongs_to. |
@@ -186,12 +194,13 @@ erDiagram
 - **Chat request:** `POST /chats` → `ChatsController` (`RequiresAiConsent`) → `Chat.start!` saves a `UserMessage`, whose `after_create_commit` enqueues `AssistantResponseJob` on `ai_high_priority`. The request returns right away. The job resolves a provider through `Provider::Registry`, runs `Assistant::Responder` (up to 8 tool rounds through `Assistant::Function::*`), and streams text back with `Message` `broadcast_append_to` / `broadcast_update_to`.
 - **Background enrichment:** a sync's post-sync step enqueues `ApplyRulesJob` (default capsule). `Rule::Runner` takes a pg advisory lock and runs rules in order. The Merchant matcher (TF-IDF) and Category classifier (Bayes) run inline in Ruby with no network calls. AI rule actions enqueue `AutoCategorizeJob` / `AutoDetectMerchantsJob` in batches on `ai_low_priority`, and each finished job decrements `RuleRun.pending_jobs_count`. Every write goes through `Enrichable#enrich_attribute`, which skips locked attributes and records a `DataEnrichment` row.
 - **External AI:** an MCP client calls `POST /mcp` (Doorkeeper token or `MCP_API_TOKEN`). `McpController` runs the same `Assistant::Function` classes **synchronously inside the web request**, with no LLM on Sure's side, except `import_bank_statement`, which calls the LLM from inside that request.
+- **Pipelock (optional):** when an operator runs it (`compose.example.ai.yml`, or `pipelock.enabled` in Helm), outbound calls from clients that honour the proxy variables go through its forward proxy, and MCP clients should connect to its MCP proxy on port 8889 rather than to `/mcp` directly. Sure has no code that depends on it or checks for it ([01 W15](01-ai-ml-workflow-map.md#the-interface-sure-exposes), [D4 #14](01-ai-ml-workflow-map.md#d4-observations-quirks-and-possible-bugs)).
 - **Documents:** a PDF upload creates a `PdfImport` and enqueues `ProcessPdfJob` (`ai_low`). The job has the LLM summarize the PDF, extract its transactions and classify it. It also puts the text into the vector store and emails the admin through `PdfImportMailer`. A non-PDF document is embedded synchronously inside the upload request.
 - **LLM calls on a web thread:** bill smart-fill/configure, non-PDF document embedding, MCP `import_bank_statement` and the admin AI health probes call the model from a Puma thread instead of the job queue. A slow local model can tie up web threads.
 
 ## 4. Evidence and what's inferred
 
-Read directly from `origin/main`: `Gemfile` (`ruby-openai`, `anthropic ~> 1.0`, `sidekiq`, `sidekiq-cron`, `doorkeeper`, `pundit`, `faraday-retry`, `pdf-reader`, `aws-sdk-s3`, `turbo-rails`, `redis`), the model associations above, the schema columns shown, `config/sidekiq.yml` capsules, `config/storage.yml`, `production.rb` (`redis_cache_store`, `ACTIVE_STORAGE_SERVICE`), `config/initializers/langfuse.rb` and the mailer call sites.
+Read directly from `origin/main`: `Gemfile` (`ruby-openai`, `anthropic ~> 1.0`, `sidekiq`, `sidekiq-cron`, `doorkeeper`, `pundit`, `faraday-retry`, `pdf-reader`, `aws-sdk-s3`, `turbo-rails`, `redis`), the model associations above, the schema columns shown, `config/sidekiq.yml` capsules, `config/storage.yml`, `production.rb` (`redis_cache_store`, `ACTIVE_STORAGE_SERVICE`), `config/initializers/langfuse.rb` and the mailer call sites. For Pipelock, `compose.example.ai.yml`, `charts/sure/templates/_env.tpl` and `docs/hosting/pipelock.md` were read at `39e18c751`.
 
 **Inferred or simplified (flagged):**
 

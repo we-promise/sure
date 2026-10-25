@@ -60,7 +60,7 @@ There are two finish lines.
 | 2 | Setups in which entry points disagree about whether AI is available | 4 of 9 (E2) | 0, for every entry point, including ones added later | The E2 agreement test | G1 |
 | 3 | Consent and availability as separate checks | `User#ai_enabled?` includes "chat works" | Two checks. Today's consent policy stays until D4. | A test for each | G5 |
 | 4 | Provider worker classes and copied helpers | 12 classes. Three helpers copied 5, 4 and 4 times. | One task file per operation, over one structured call per transport. Each helper once. | `LLMInterfaceTest` runs every task on every transport, with bad model output among the fixtures. It has 0 tests today. | G2 |
-| 5 | Model calls that record usage, a trace and a correlation id | Each worker opts in by hand. No correlation id. | Every call, recorded by the transport | The same contract test | G4 |
+| 5 | Model calls that record usage, a trace and a correlation id, and honour the proxy variables | Each worker opts in by hand. No correlation id. The anthropic SDK reads only `HTTP_PROXY` (01 D4 #14). | Every call, through the transport | The same contract test | G4 |
 | 6 | AI jobs with a declared lane and failure policy | 2 copy one rescue block, 1 has its own, 2 declare nothing | Every AI job, through `AiJob` | A lane test that finds AI jobs in the code instead of a hand-written list | G4 |
 | 7 | Model calls on web threads | 4 paths | Only the health probes, plus MCP `import_bank_statement` unless D6 moves it | A test that fails when a provider is called outside a job | G4 |
 | 8 | AI settings read outside one registry | 68 methods and 41 view reads | 0. Every AI setting is an `AiConfig` key that names its source and the process that reads it. | A cop on AI `ENV` reads, and a generated docs table that CI checks | G4 |
@@ -137,7 +137,7 @@ flowchart LR
 |---|---|---|---|
 | `Ai::Router.for(task, family:)`, `.available?(task, family:)` | `Route(provider, model)` or `Unavailable(reason)`. It answers availability, not consent. | 3 resolution paths, `Chat.default_model`, about 8 availability checks, the Enhance button's OpenAI-only check | S1, BC3 |
 | `Ai::Task` | `prompt_key`, `schema`, `build_input`, `map_output`, `unit`, `budget`. One file per operation. | 12 provider worker classes | S2, BC3 |
-| `Ai::StructuredCall` | One per transport. It owns JSON mode and fallback, think-tag stripping, forced tool use, retries, slicing, usage and tracing. | the copies in each worker, `BatchSlicer`, 3 batching layers | S2, S3 |
+| `Ai::StructuredCall` | One per transport. It owns JSON mode and fallback, think-tag stripping, forced tool use, retries, slicing, usage and tracing, and it reads the proxy variables the same way on every transport, so an operator's Pipelock sees every model call (01 D4 #14). | the copies in each worker, `BatchSlicer`, 3 batching layers | S2, S3 |
 | `AiJob` | Declares its lane, a failure policy (`retry`, `discard` or `record`) and a per-family concurrency key. | copied `RuleRun` rescue blocks (01 D5.6 drift 5) | S5, BC7 |
 | `AiConfig.key` | `env:`, `setting:`, `default:`, `clamp:`, scope, and which process reads it. It generates the permit list, the docs table and an effective-configuration view. ENV names stay. | 68 methods and 41 view reads | S6 |
 | `Ai::Consent.allowed?(task, family:, user:, account:)` | One policy check before data leaves Sure. The policy is a maintainer decision (D4). | the per-feature gates | BC10 |
@@ -252,6 +252,7 @@ Each "yes" to a breaking option gets its own ADR, release note and migration. Ag
 | Reviewer capacity, with 342 open PRs | Small PRs, one interface each. CODEOWNERS on the seams (O-B8). Mechanical steps filed as `good-agent-task` issues (O-B9). |
 | Behaviour changes hidden inside a refactor | Moves stay separate from fixes. E2 lists exactly which screens change: the Enhance button on Anthropic-only installs, and chat hidden when no provider accepts the model. Each goes into the release notes. |
 | Tests pinned to the old methods (87 stubs) | Delegate first. Move each stub to the router when its call site moves. |
+| Moving code that handles keys can fail the Pipelock CI scan, which checks each PR's diff | Move the `# pipelock:ignore` tags with the lines: 34 in `app/`, 9 of them in `provider/registry.rb`. |
 | A client library brings its own churn later | Contract tests decide (04 Q18). Pin it and give it one owner (Chatwoot lessons 2, 3 and 6). |
 | The next minor release is far off, or its date keeps moving | Nothing before Phase 3 needs it. Accepted ADRs ship their groundwork and deprecation warnings in patch releases; only the switch waits. |
 
@@ -267,3 +268,4 @@ Each "yes" to a breaking option gets its own ADR, release note and migration. Ag
 | [05](05-ai-breaking-change-option.md) breaking-change option | BC1–BC11 and how to split each into PRs |
 | [06](06-ai-file-split-review.md) file splits | F-H, F-M, F-R and when to split |
 | [Chatwoot lessons](chatwoot-rubyllm-lessons-learned.md) | what a library migration cost another Rails app |
+| [Pipelock guide](https://github.com/we-promise/sure/blob/main/docs/hosting/pipelock.md) (Sure docs) | the forward proxy, the MCP proxy and signed receipts |

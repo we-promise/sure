@@ -39,6 +39,7 @@ The five changes with the most leverage:
 | `extract_http_status_code` definitions | **4** | Same. |
 | Comment "Honors Setting.llm_provider (issue [#2113](https://github.com/we-promise/sure/issues/2113))" | **6** copies | Agent fingerprint: a fix pattern repeated per call site instead of centralized. |
 | Agent instruction surfaces | `AGENTS.md`, `CLAUDE.md`, 7 × `.cursor/rules`, `.junie`, `.gemini`, `copilot-instructions`, 16 `docs/llm-guides/*` guides (plus their `README.md`) | Good investment. There is already a drift problem (hence `instruction-preservation-map.md`). |
+| Security scan on every PR | Pipelock (`.github/workflows/pipelock.yml`) scans each PR's diff and fails it on findings. 34 lines in `app/` carry `# pipelock:ignore`, 9 of them in `provider/registry.rb`. | CI already enforces one rule on agent-written diffs. Code that moves those lines has to move the tags with them. |
 
 The map itself is evidence. Producing it took dozens of file reads across about 60 files. **Every agent working on an AI feature pays that cost again, partially and inconsistently.**
 
@@ -199,7 +200,7 @@ A prompt edit can shift categorization accuracy for every self-hoster, but CI ch
 
 ### 3.2 Opportunities
 
-- **O-B1. Executable architecture (highest leverage).** Encode invariants as tests and cops that fail with a *prescriptive message* (agents act on these reliably). Write the cops as custom RuboCop cops in `lib/rubocop/cop/`. RuboCop already runs in CI through `rubocop-rails-omakase`, so no new tool is needed.
+- **O-B1. Executable architecture (highest leverage).** Encode invariants as tests and cops that fail with a *prescriptive message* (agents act on these reliably). Write the cops as custom RuboCop cops in `lib/rubocop/cop/`. RuboCop already runs in CI through `rubocop-rails-omakase`, so no new tool is needed. The Pipelock scan already works this way: it fails the PR, and the exception is recorded next to the code as a `# pipelock:ignore` tag, sometimes with a reason.
   - Every class including `LlmConcept` implements every operation or declares `unsupported :op` (a parity matrix test, which fixes B3).
   - Every job that calls `Provider::Registry`/`Ai::Router` is on an `ai_*` queue, and nothing else is (a lane test, for A8).
   - No controller action reaches an LLM or embedding call, except an explicit allow-list (the health probes). A test that stubs the provider to raise when called outside a job would catch it (for A9).

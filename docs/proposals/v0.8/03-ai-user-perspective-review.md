@@ -421,12 +421,12 @@ The assistant and insights can then refer to the chosen plan ("You're 4% over yo
 | U10 | AI results as suggestions (confirm, like transfers) instead of hard locks, or with auto-accept after N days | P2 | M | Medium |
 | U11 | Local-model defaults: context window from the model, streaming or progress text, recommended models | P2 | S | Medium |
 | U12 | Effective-config page and an optional `ai.yml` for agent-managed setups | P3 | M | Medium |
-| U13 | Agent / API-key activity view, including MCP tool calls (today they go only to the log) | P3 | M | Medium |
+| U13 | Agent / API-key activity view, including MCP tool calls (today they go only to the log). Pipelock's MCP proxy can keep signed receipts, but only for operators who run it, only outside Sure, and only for clients that connect through it | P3 | M | Medium |
 | U14 | "Coming from…" onboarding with an importer and glossary | migrants | S | Medium |
 | U15 | Plan templates (Barefoot, CSP, 50/30/20, zero-based, pay-yourself-first, debt snowball) | all | L | High (differentiator) |
 | U16 | Make onboarding goals do something (e.g. "AI insights" → the Turn on AI flow) | all | S | Low-medium |
 | U17 | Un-preview Insights when stable, and add a "Finances overview" landing view (spending, subscriptions, upcoming bills, investments) | all | S | Medium |
-| U18 | Confirm before the assistant writes data, or a household "AI may change data" switch. Extend the preview-token pattern of [#3990](https://github.com/we-promise/sure/issues/3990) from rules to all writes, with a human confirming. For MCP: add a read-only MCP scope beside `mcp` and mark write tools with `destructiveHint` | P2, P3 | S | High (trust) |
+| U18 | Confirm before the assistant writes data, or a household "AI may change data" switch. Extend the preview-token pattern of [#3990](https://github.com/we-promise/sure/issues/3990) from rules to all writes, with a human confirming. For MCP: add a read-only MCP scope beside `mcp` and mark write tools with `destructiveHint`. Pipelock's MCP proxy scans tool calls but asks no one, so it doesn't replace this | P2, P3 | S | High (trust) |
 | U19 | A "What AI uses" page: session context, prompts and documents, each viewable and deletable | P2, P3 | M | Medium |
 | U20 | OFX / CAMT import (Securo, Firefly III data-importer users, European bank exports) | migrants | M | Medium |
 | U22 | "Upgrading from Maybe v0.6.0" hosting guide and a one-time in-app "Welcome from Maybe" screen with an action per behaviour change (reuse the What's new dialog, [#3505](https://github.com/we-promise/sure/issues/3505), [#4021](https://github.com/we-promise/sure/issues/4021)) | Maybe upgraders | S–M | **Highest** (largest existing user base) |

@@ -286,6 +286,7 @@ Each change lists: **what**, **breaks** (boundary interfaces), **merges or remov
   - **P3:** "let my agent read, but not change, my data" becomes possible (`mcp:read`). Clients can warn before a delete (`destructiveHint`). The audit rows feed U13 ("changes made by my agent"). Together this covers the MCP part of U18.
   - **Existing tokens keep working:** they map to `mcp:read_write`.
   - **Who changes code:** MCP client authors who parse tool results need the changelog. Users of stock clients only see the new consent choices.
+  - **Operators who run Pipelock:** its MCP proxy (port 8889) sits between clients and `/mcp` and scans tool lists and responses, which these changes reshape, so each change should also be tried through it. Its signed receipts cover only clients that use the proxy, so they don't replace the audit rows.
 - **Decision:** yes, client authors need a changelog entry.
 
 ### BC9. One `ai_calls` table with correlation
