@@ -246,6 +246,55 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  # A lot earlier sales emptied cannot be sold from, so it is not offered; a
+  # lot the sale itself (or a later one) emptied was still open on its date.
+  test "a sale is offered only the lots still open on its date" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMO", 30)
+      first = trade(security, 10, 20, 2)
+      first_sale = trade(security, -10, 25, 3)
+      second = trade(security, 10, 22, 4)
+      later_sale = trade(security, -5, 25, 6)
+      materialize(:forward)
+
+      assert_equal [ first ], Trade.find(first_sale.entryable_id).lot_choices.to_a, "the lot this sale emptied"
+      assert_equal [ second ], Trade.find(later_sale.entryable_id).lot_choices.to_a, "the lot an earlier sale emptied was offered"
+      assert_not Trade.find(later_sale.entryable_id).update(lot_source_entry: first), "a sold-out lot can be named by a crafted submit"
+    end
+  end
+
+  # An opening lot has no acquisition, and an empty one (a clamp records
+  # one) must not empty the list with it.
+  test "an empty opening lot leaves the sale's choices alone" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMZ", 30)
+      buy = trade(security, 10, 20, 2)
+      materialize(:forward)
+      HoldingLot.create!(account: @account, security: security, origin_security: security, qty: 0, currency: "USD", clamped: true)
+      # Entered since the last sync, so no disposal is dated on or after it.
+      sale = trade(security, -5, 25, 6)
+
+      assert_equal [ buy ], Trade.find(sale.entryable_id).lot_choices.to_a
+    end
+  end
+
+  test "a sale's held choice stays offered once its lot is sold out" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMH", 30)
+      first = trade(security, 10, 20, 2)
+      trade(security, -10, 25, 3)
+      second = trade(security, 10, 22, 4)
+      later_sale = Trade.find(trade(security, -5, 25, 6).entryable_id)
+      later_sale.update_columns(lot_source_entry_id: first.id)
+      materialize(:forward)
+
+      assert_equal [ first, second ], later_sale.reload.lot_choices.to_a
+    end
+  end
+
   test "deleting the named acquisition clears the choice" do
     travel_to TODAY do
       setup_account(method: "fifo")
