@@ -35,6 +35,7 @@ zh-CN:
       date: 日期
       description: 描述
       description_placeholder: 描述交易
+      description_placeholder_optional: "留空以使用分类/商户名称，或先选择其中一项"
       expense: 支出
       income: 收入
       merchant_label: 商户
