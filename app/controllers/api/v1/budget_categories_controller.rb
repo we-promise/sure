@@ -101,8 +101,10 @@ class Api::V1::BudgetCategoriesController < Api::V1::BaseController
     end
 
     def visible_owner_ids
-      shared_with_me = BudgetShare.where(viewer_id: current_resource_owner.id).pluck(:owner_id)
-      [ nil, current_resource_owner.id, *shared_with_me ]
+      @visible_owner_ids ||= begin
+        shared_with_me = BudgetShare.where(viewer_id: current_resource_owner.id).pluck(:owner_id)
+        [ nil, current_resource_owner.id, *shared_with_me ]
+      end
     end
 
     def apply_filters(query)
