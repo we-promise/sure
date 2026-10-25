@@ -104,6 +104,14 @@ class Entry < ApplicationRecord
     pending.where("entries.date < ?", days.days.ago.to_date)
   }
 
+  # Ids among `entry_ids` that have split children, as a Set, in one query that
+  # loads no child rows. Shared by the web and API list views to avoid N+1.
+  def self.split_parent_ids_among(entry_ids)
+    return Set.new if entry_ids.blank?
+
+    where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
+  end
+
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
     joins(:account).where(accounts: { family_id: family.id })
@@ -565,8 +573,11 @@ class Entry < ApplicationRecord
   end
 
   class << self
-    def search(params)
-      EntrySearch.new(params).build_query(all)
+    # `family` is positional (not a keyword) on purpose: several callers pass
+    # the filters as a bare keyword-style hash (`search(status: [...])`), and
+    # a keyword parameter here would capture those as kwargs instead.
+    def search(params, family = nil)
+      EntrySearch.new(params, family: family).build_query(all)
     end
 
     # arbitrary cutoff date to avoid expensive sync operations

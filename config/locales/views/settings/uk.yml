@@ -350,6 +350,7 @@ uk:
       accounts_label: Рахунки
       advanced_section_title: Розширені
       ai_prompts_label: Промпти ШІ
+      auto_matches_label: Автоматичне зіставлення
       background_jobs_label: Фонові завдання
       api_key_label: Ключі API
       payment_label: Оплата
