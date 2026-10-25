@@ -22,7 +22,8 @@ class Loan::PaidBreakdownTest < ActiveSupport::TestCase
   end
 
   test "a linked principal-only transfer counts the interest paid separately" do
-    account = create_loan_account(initial_balance: 12_000, term_months: 12, entries: [
+    account = create_loan_account(initial_balance: 12_000, term_months: 12,
+                                  principal_only_transfers: true, entries: [
       { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }
     ])
     enable_preview_features_for_family!(account.family)
@@ -99,5 +100,19 @@ class Loan::PaidBreakdownTest < ActiveSupport::TestCase
     enable_preview_features_for_family!(account.family)
 
     assert_nil account.loan.paid_breakdown(as_of: PAYMENT_DATE)
+  end
+
+  test "the paid breakdown does not write missing-rate diagnostics" do
+    account = create_loan_account(initial_balance: 12_000, term_months: 12, entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }
+    ])
+    enable_preview_features_for_family!(account.family)
+    account.entries.create!(name: "EUR transaction", date: PAYMENT_DATE, amount: 100,
+                            currency: "EUR", entryable: Transaction.new)
+    account.reload
+
+    assert_no_difference "DebugLogEntry.count" do
+      account.loan.paid_breakdown(as_of: PAYMENT_DATE)
+    end
   end
 end

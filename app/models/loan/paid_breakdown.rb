@@ -62,6 +62,8 @@ class Loan
         return @principal_payments if defined?(@principal_payments)
         return @principal_payments = nil unless loan.account
 
+        # This replay runs while the page renders. Suppress missing-rate
+        # diagnostics here; the next sync will inspect the same data.
         @principal_payments = Loan::PrincipalPayments.for(
           loan,
           entries: Balance::SyncCache.new(loan.account, report_missing_rates: false).entries
