@@ -218,6 +218,14 @@ ru:
       bridge_label: До следующей зарплаты
       bridge_amount: · к оплате %{amount}
       bridge_split: К оплате до %{date}; покрывается суммой %{cash} на ваших счетах.
+      bridge_left: "%{amount} останется после платежей"
+      bridge_show_more:
+        one: "Показать ещё %{count}"
+        few: "Показать ещё %{count}"
+        many: "Показать ещё %{count}"
+        other: "Показать ещё %{count}"
+      bridge_allocation_aria: "Из %{cash} на ваших счетах %{due} нужно оплатить до следующей зарплаты, остаётся %{left}."
+      item_overdue: Просрочено
       shortfall_label: Не хватает до следующей зарплаты
       shortfall_amount: · %{amount}
       shortfall_split: До %{date} нужно оплатить %{obligations}, а на ваших счетах %{cash}.
@@ -258,12 +266,8 @@ ru:
       no_matches_title: Ничего не найдено
       no_matches_description: Попробуйте сбросить фильтр или поиск.
       col_name: Название
-      col_type: Тип
-      col_frequency: Периодичность
       col_amount: Сумма
       col_next: Следующая оплата
-      next_short: след. %{date}
-      col_status: Статус
       col_actions: Действия
       monthly_equivalent: '%{amount}/мес'
       types:

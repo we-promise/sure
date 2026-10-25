@@ -189,6 +189,14 @@ class Setting < RailsSettings::Base
   field :auto_sync_time, type: :string, default: ENV.fetch("AUTO_SYNC_TIME", "02:22")
   field :auto_sync_timezone, type: :string, default: ENV.fetch("AUTO_SYNC_TIMEZONE", "UTC")
 
+  # Daily market data (security price) import — mirrors auto_sync_* above.
+  # Default time intentionally unchanged from the previous hardcoded
+  # config/schedule.yml entry (22:00 UTC, ~1h after NYSE close) so existing
+  # installations see no behavior change unless they actively reconfigure it.
+  field :market_data_sync_enabled, type: :boolean, default: ENV.fetch("MARKET_DATA_SYNC_ENABLED", "1") == "1"
+  field :market_data_sync_time, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIME", "22:00")
+  field :market_data_sync_timezone, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIMEZONE", "UTC")
+
   AUTO_SYNC_TIME_FORMAT = /\A([01]?\d|2[0-3]):([0-5]\d)\z/
 
   def self.valid_auto_sync_time?(time_str)
@@ -230,6 +238,12 @@ class Setting < RailsSettings::Base
     alias_method :raw_onboarding_state=, :onboarding_state=
     alias_method :raw_openai_model, :openai_model
     alias_method :raw_openai_model=, :openai_model=
+    alias_method :raw_llm_provider, :llm_provider
+
+    # The env var wins over a stored choice, like the other AI settings.
+    def llm_provider
+      ENV["LLM_PROVIDER"].presence || raw_llm_provider
+    end
 
     def onboarding_state
       value = raw_onboarding_state

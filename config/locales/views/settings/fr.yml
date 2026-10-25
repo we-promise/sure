@@ -25,6 +25,8 @@ fr:
         page_title: Apparence
         split_grouped_description: Affiche les transactions fractionnées groupées sous leur parent dans la liste des transactions. Lorsque cette option est désactivée, les enfants fractionnés apparaissent comme des lignes individuelles.
         split_grouped_title: Grouper les transactions fractionnées
+        auto_generate_transaction_names_title: "Générer automatiquement les noms des transactions"
+        auto_generate_transaction_names_description: "Si le nom d'une transaction saisie manuellement est laissé vide, il est rempli à partir de la catégorie et du marchand sélectionnés (p. ex. « Divertissement - Netflix »). Un nom reste obligatoire si aucun des deux n'est sélectionné. S'applique à tout le foyer et uniquement aux nouvelles transactions."
         theme_dark: Sombre
         theme_light: Clair
         theme_subtitle: Choisissez un thème préféré pour l'application
@@ -478,6 +480,8 @@ fr:
           one: Consentement requis dans 1 jour
           other: Consentement requis dans %{count} jours
         reconsent_required: Consentement requis
+        login_required: "Connexion requise"
+        login_expires_soon: "La connexion expire dans %{time} (%{at})"
         sync_error: Erreur de synchro
       not_authorized: Non autorisé
       not_found: Fournisseur non trouvé.
@@ -604,7 +608,9 @@ fr:
         qr_back_to_credentials: Revenir au numéro de téléphone et au code PIN ou mot de passe
         qr_cancel: Annuler la connexion par QR code
         qr_error: La connexion par QR code n'a pas pu être lancée. Veuillez réessayer.
-        qr_instruction: Scannez le QR code avec votre application Trade Republic et approuvez la connexion.
+        requires_update: "Reconnectez-vous pour reprendre la synchronisation."
+        session_expires_in: "La connexion expire dans %{time} (%{at})."
+        qr_instruction: Scannez le QR code avec l'appareil photo de votre téléphone, puis approuvez la connexion dans l'application Trade Republic.
         qr_loading: Préparation du QR code …
         qr_login: Se connecter avec un QR code
         qr_success: Connexion approuvée. Sure actualise la page du fournisseur.
@@ -683,6 +689,7 @@ fr:
       accounts_label: Comptes
       advanced_section_title: Avancé
       ai_prompts_label: Prompts IA
+      auto_matches_label: Rapprochements automatiques
       api_key_label: Clé API
       api_keys_label: Clés API
       appearance_label: Apparence
