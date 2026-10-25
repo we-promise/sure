@@ -180,6 +180,16 @@ class HoldingLotTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal("10.000000000001"), BigDecimal("2") ], book.lots.map(&:qty), "at the bound"
   end
 
+  # buy, sell and add_unknown all read their quantity through to_d.
+  test "the residual target is read as a decimal, as the other book entries are" do
+    book = Holding::LotBook.new
+    book.add_unknown(BigDecimal("12"))
+
+    book.settle_opening("12.000000000001", bound: Holding::LotBook::OPENING_RESIDUAL_BOUND)
+
+    assert_equal [ BigDecimal("12.000000000001") ], book.lots.map(&:qty)
+  end
+
   test "the residual never takes a lot to nothing" do
     book = Holding::LotBook.new
     book.add_unknown(BigDecimal("1e-13"))
