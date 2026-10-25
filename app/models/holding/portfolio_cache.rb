@@ -144,8 +144,16 @@ class Holding::PortfolioCache
     # 1 - DB or provider prices
     # 2 - Trade prices
     # 3 - Holding prices
+    #
+    # An internal movement booked at no price (a share journal, a stock-plan
+    # deposit) moves units, and its zero says nothing about what they were
+    # worth. Taken as that day's price, it would value the whole position at
+    # zero until the next priced day, which without market data can be months.
+    # Such a day takes the nearest real price instead (see
+    # #price_unpriced_movement_days).
     def load_prices
       @security_cache = {}
+      unpriced_movements_by_security_id = {}
       securities = collect_unique_securities
 
       Rails.logger.info "Preloading #{securities.size} securities for account #{account.id}"
@@ -176,8 +184,12 @@ class Holding::PortfolioCache
         # zero-amount holding.  Use qty (the same heuristic as
         # Balance::BaseCalculator) rather than price to avoid blocking
         # non-income zero-price trades such as Questrade journal transfers.
-        trade_prices = (trades_by_security_id[security.id] || [])
+        unpriced_movements, priced_trades = (trades_by_security_id[security.id] || [])
           .reject { |t| t.entryable.qty == 0 }
+          .partition { |t| unpriced_movement?(t.entryable) }
+        unpriced_movements_by_security_id[security.id] = unpriced_movements if unpriced_movements.any?
+
+        trade_prices = priced_trades
           .map do |trade|
             PriceWithPriority.new(
               price: Security::Price.new(
@@ -191,9 +203,13 @@ class Holding::PortfolioCache
             )
           end
 
-        # Low priority prices from holdings (if applicable)
+        # Low priority prices from holdings (if applicable). A calculated row at
+        # no price is skipped: its zero came from such a movement on an earlier
+        # sync, and reading it back would keep the position at zero for good.
         holding_prices = if use_holdings
-          (holdings_by_security_id[security.id] || []).map do |holding|
+          (holdings_by_security_id[security.id] || []).filter_map do |holding|
+            next if holding.account_provider_id.nil? && !holding.price.positive?
+
             PriceWithPriority.new(
               price: Security::Price.new(
                 security: security,
@@ -223,5 +239,88 @@ class Holding::PortfolioCache
           prices_by_date_and_source: prices_by_date_and_source
         }
       end
+
+      # After the loop: the split lookup reads every security in the cache.
+      earlier = latest_db_prices_before(account.start_date, unpriced_movements_by_security_id.keys)
+      unpriced_movements_by_security_id.each do |security_id, movements|
+        price_unpriced_movement_days(security_id, movements, earlier: earlier[security_id])
+      end
+    end
+
+    def unpriced_movement?(trade)
+      trade.internal_movement? && !trade.price&.positive?
+    end
+
+    # A day whose only price would have been an unpriced movement's takes the
+    # nearest price the security has: the latest before it, else the earliest
+    # after it, carried across any recorded split in between. A zero found
+    # there is taken rather than passed over: a position the provider prices
+    # at nothing is worthless, and a split booked as a trade at no price
+    # leaves the prices beyond it in other shares, by a ratio nothing here
+    # knows. The day keeps a price, so the calculators still give it a holding
+    # with the moved quantity. A security with no price at all keeps the
+    # movement's zero.
+    def price_unpriced_movement_days(security_id, movements, earlier: nil)
+      cached = @security_cache[security_id]
+      prices_by_date = cached[:prices_by_date]
+      unpriced_days = movements.group_by(&:date).reject { |date, _| prices_by_date.key?(date) }
+      return if unpriced_days.empty?
+
+      # Zeros included: the movements' own and calculated rows' were never
+      # loaded, so any zero here was observed. The latest stored price
+      # before the account's history is the nearest earlier one for a
+      # movement on its first days.
+      # A provider snapshot can be dated before that stored price, so the
+      # list is sorted again; on the same date the stored price ranks first.
+      candidates = prices_by_date.dup
+      if earlier
+        stored = PriceWithPriority.new(price: earlier, priority: 1, source: "db")
+        candidates[earlier.date] = stored if candidates[earlier.date].nil? || candidates[earlier.date].priority > stored.priority
+      end
+      known = candidates.sort_by(&:first)
+
+      unpriced_days.each do |date, day_movements|
+        filled = nearest_known_price(cached[:security], known, date) ||
+          PriceWithPriority.new(
+            price: Security::Price.new(security: cached[:security], price: 0, currency: day_movements.first.entryable.currency, date: date),
+            priority: 2,
+            source: "trade"
+          )
+        prices_by_date[date] = filled
+        # Indexed by its source too, as a lookup for one source reads it there
+        cached[:prices_by_date_and_source][[ date, filled.source ]] ||= filled
+      end
+    end
+
+    # The latest stored price of each security before `date`.
+    def latest_db_prices_before(date, security_ids)
+      return {} if security_ids.empty?
+
+      Security::Price.where(security_id: security_ids).where(date: ...date)
+        .select("DISTINCT ON (security_id) security_prices.*")
+        .order(:security_id, date: :desc)
+        .index_by(&:security_id)
+    end
+
+    def nearest_known_price(security, known, date)
+      later_index = known.bsearch_index { |known_date, _| known_date > date } || known.size
+
+      if later_index.positive?
+        known_date, nearest = known[later_index - 1]
+        factor = split_factor_between(security.id, known_date, date)
+        amount = factor == 1 ? nearest.price.price : Security::Split.unscale(nearest.price.price, factor)
+      elsif known.any?
+        known_date, nearest = known.first
+        factor = split_factor_between(security.id, date, known_date)
+        amount = factor == 1 ? nearest.price.price : Security::Split.scale(nearest.price.price, factor)
+      else
+        return nil
+      end
+
+      PriceWithPriority.new(
+        price: Security::Price.new(security: security, price: amount, currency: nearest.price.currency, date: date),
+        priority: nearest.priority,
+        source: nearest.source
+      )
     end
 end
