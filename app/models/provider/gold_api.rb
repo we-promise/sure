@@ -38,6 +38,7 @@ class Provider::GoldApi < Provider
       @client ||= Faraday.new(url: "https://www.goldapi.io") do |faraday|
         faraday.options.open_timeout = 5
         faraday.options.timeout = 20
+        faraday.response :raise_error
       end
     end
 end

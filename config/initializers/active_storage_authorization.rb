@@ -8,7 +8,16 @@ Rails.application.config.to_prepare do
     included do
       include Authentication
       before_action :authorize_protected_attachment
-      around_action :prevent_protected_redirect_caching
+      around_action :prevent_protected_attachment_caching
+    end
+
+    # Proxy controllers stream the file and set public cache headers during the
+    # action. For a protected attachment, skip that cache and use no_store.
+    def http_cache_forever(public: false, &block)
+      return super unless @protected_attachment_requested
+
+      no_store
+      yield
     end
 
     private
@@ -29,23 +38,40 @@ Rails.application.config.to_prepare do
         return if protected_attachments.empty?
         @protected_attachment_requested = true
         raise ActiveRecord::RecordNotFound unless protected_attachments.all? { |attachment| protected_attachment_authorized?(attachment) }
+
+        # Range requests skip http_cache_forever, so set no_store before the
+        # proxy streams the file.
+        no_store if proxy_controller?
       end
 
-      def prevent_protected_redirect_caching!
+      def prevent_protected_attachment_caching!
         return unless @protected_attachment_requested
-        return unless redirect_controller?
+        return unless serving_controller?
+        return if response.committed?
 
         no_store
       end
 
-      def prevent_protected_redirect_caching
+      def prevent_protected_attachment_caching
         yield
       ensure
-        prevent_protected_redirect_caching!
+        prevent_protected_attachment_caching!
+      end
+
+      # Redirect and proxy controllers serve the file itself. The proxy
+      # controllers set public cache headers, so both kinds need no_store.
+      def serving_controller?
+        redirect_controller? || proxy_controller?
+      end
+
+      def proxy_controller?
+        is_a?(ActiveStorage::Blobs::ProxyController) ||
+          is_a?(ActiveStorage::Representations::ProxyController)
       end
 
       def redirect_controller?
-        is_a?(ActiveStorage::Blobs::RedirectController) || is_a?(ActiveStorage::Representations::RedirectController)
+        is_a?(ActiveStorage::Blobs::RedirectController) ||
+          is_a?(ActiveStorage::Representations::RedirectController)
       end
 
       def protected_attachment_authorized?(attachment)

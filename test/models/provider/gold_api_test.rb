@@ -30,6 +30,24 @@ class Provider::GoldApiTest < ActiveSupport::TestCase
     assert_instance_of Provider::GoldApi::Error, result.error
   end
 
+  test "client raises on HTTP error responses" do
+    handlers = Provider::GoldApi.new("test-key").send(:client).builder.handlers
+
+    assert_includes handlers, Faraday::Response::RaiseError
+  end
+
+  test "reports an HTTP error instead of a missing price" do
+    provider = Provider::GoldApi.new("test-key")
+    client = mock
+    client.expects(:get).with("/api/price/XAU/USD").raises(Faraday::UnauthorizedError.new("Unauthorized"))
+    provider.stubs(:client).returns(client)
+
+    result = provider.fetch_gold_price(currency: "USD")
+
+    assert_not result.success?
+    assert_equal "Unauthorized", result.error.message
+  end
+
   test "rejects an undated price response" do
     provider = Provider::GoldApi.new("test-key")
     response = Struct.new(:body).new({ "price" => 3_110.34768 }.to_json)
