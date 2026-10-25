@@ -147,6 +147,48 @@ class HoldingLotTest < ActiveSupport::TestCase
     assert_equal 83, holding_qty(@split, d(10)), "the split and a sale are crossed"
   end
 
+  # 10 / 1.5 rounds to 18 places and back to 10.000000000000000001; the
+  # opening lot takes that rounding, so the lots add up to the holding.
+  test "a split that does not divide evenly leaves the lots adding up to the provider's quantity" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("SPL3", 30)
+      trade(security, 2, 10, 2)
+      Security::Split.create!(security: security, ex_date: d(4), numerator: 3, denominator: 2, source: "manual")
+      @account.holdings.create!(security: security, date: d(10), qty: 10, price: 30, amount: 300, currency: "USD", account_provider: @account_provider)
+
+      materialize(:reverse)
+
+      lots = HoldingLot.where(account: @account, security: security)
+      assert_equal BigDecimal("10"), lots.sum(:qty)
+      assert_equal [ BigDecimal("7"), BigDecimal("3") ], [ lots.opening.sole.qty, lots.derived.sole.qty ], "only the opening lot moved"
+    end
+  end
+
+  # Fixtures only ever leave 10^-18; a real gap is far wider and is not
+  # rounding, so it stays a difference the lots show.
+  test "the opening lot does not absorb a residual above the bound" do
+    book = Holding::LotBook.new
+    book.add_unknown(BigDecimal("10"))
+    book.apply(BigDecimal("10"), 2, source_id: "buy")
+
+    book.settle_opening(BigDecimal("12.000001"), bound: Holding::LotBook::OPENING_RESIDUAL_BOUND)
+    assert_equal [ BigDecimal("10"), BigDecimal("2") ], book.lots.map(&:qty), "above the bound"
+
+    book.settle_opening(BigDecimal("12.000000000001"), bound: Holding::LotBook::OPENING_RESIDUAL_BOUND)
+    assert_equal [ BigDecimal("10.000000000001"), BigDecimal("2") ], book.lots.map(&:qty), "at the bound"
+  end
+
+  test "the residual never takes a lot to nothing" do
+    book = Holding::LotBook.new
+    book.add_unknown(BigDecimal("1e-13"))
+
+    book.settle_opening(BigDecimal("0"), bound: Holding::LotBook::OPENING_RESIDUAL_BOUND)
+
+    assert_equal [ BigDecimal("1e-13") ], book.lots.map(&:qty)
+  end
+
   test "sum of open lot qty equals the provider snapshot, opening lot included" do
     travel_to TODAY do
       build_reverse_fixture
