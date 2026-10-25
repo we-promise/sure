@@ -42,7 +42,7 @@ module AccountableResource
     end || (Time.zone.today - 2.years)
     Account.transaction do
       @account = Current.family.accounts.create_and_sync(
-        account_params.except(:return_to, :opening_balance_date).merge(owner: Current.user),
+        account_params.except(:return_to, :opening_balance_date, :use_provider_currency, :pin_currency).merge(owner: Current.user),
         opening_balance_date: opening_balance_date
       )
       @account.lock_saved_attributes!
@@ -83,7 +83,26 @@ module AccountableResource
     # Assigning a balance can fail before the normal update path assigns the
     # other submitted fields. Keep them available for the 422 form without
     # persisting them.
-    update_params = account_params.except(:return_to, :balance, :opening_balance_date)
+    update_params = account_params.except(:return_to, :balance, :opening_balance_date, :use_provider_currency, :pin_currency)
+    simplefin_account = @account.simplefin_linked_account
+    reset_currency_to_provider = account_params[:use_provider_currency] == "1" && simplefin_account.present?
+    requested_currency = account_params[:currency].to_s.upcase
+    currency_changed = account_params.key?(:currency) && requested_currency != @account.currency
+    pin_currency = simplefin_account.present? && (account_params[:pin_currency] == "1" || currency_changed)
+    clear_currency_pin = simplefin_account.present? && @account.locked?(:currency) &&
+      (reset_currency_to_provider || account_params[:pin_currency] == "0")
+    update_params = update_params.except(:currency) if reset_currency_to_provider
+
+    if simplefin_account.present? && account_params[:currency].present? && !reset_currency_to_provider
+      allowed_currencies = Current.family.enabled_currency_codes(extra: [ @account.currency, simplefin_account.currency ])
+      unless allowed_currencies.include?(account_params[:currency].to_s.upcase)
+        @account.errors.add(:currency, :inclusion)
+        @error_message = @account.errors.full_messages.join(", ")
+        render :edit, status: :unprocessable_entity
+        return
+      end
+    end
+    update_params[:currency] = requested_currency if simplefin_account.present? && account_params.key?(:currency) && !reset_currency_to_provider
 
     # The balance change and the attribute update are one form, so they commit
     # or roll back as one. `set_current_balance` writes a valuation and the
@@ -113,6 +132,12 @@ module AccountableResource
       # `update!`, and a raise there after the commit left the balance and the
       # attributes above in place behind a failed request.
       @account.lock_saved_attributes!
+      if pin_currency && !reset_currency_to_provider
+        # A same-value selection is still an explicit pin against future provider changes.
+        @account.lock_attr!(:currency)
+      elsif clear_currency_pin
+        @account.unlock_attr!(:currency)
+      end
 
       true
     rescue ActiveRecord::RecordInvalid => e
@@ -124,6 +149,8 @@ module AccountableResource
       render :edit, status: :unprocessable_entity
       return
     end
+
+    simplefin_account.simplefin_item.sync_later if clear_currency_pin
 
     redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: accountable_type.name.underscore.humanize)
   end
@@ -172,7 +199,7 @@ module AccountableResource
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
         :institution_name, :institution_domain, :notes, :exclude_from_reports,
-        :enable_category_matcher,
+        :enable_category_matcher, :pin_currency, :use_provider_currency,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end
