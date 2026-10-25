@@ -1,13 +1,9 @@
 # frozen_string_literal: true
 
-# Queues AI auto-categorization for transactions.
-#
-# The web app only reaches the categorizer through a rule with the
-# "Auto-categorize transactions with AI" action, so an API client that imports
-# or syncs transactions had no way to ask for categories without creating and
-# running a rule. This queues the same AutoCategorizeJob the rule action does,
-# so the family's categorization provider, confidence threshold and locked
-# (user-set) categories are honored exactly as they are there.
+# Queues AI auto-categorization for transactions through the same
+# AutoCategorizeJob the "Auto-categorize transactions with AI" rule action
+# uses, so the family's categorization provider, confidence threshold and
+# locked (user-set) categories apply exactly as they do there.
 class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseController
   # Bounds one request: the transaction_ids list, or how many eligible
   # transactions one request without a list queues.
@@ -29,12 +25,10 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
     scope = family.auto_categorizable_transactions_for(current_resource_owner)
     scope = scope.where(id: requested_ids) if requested_ids
 
-    # Without a list the request would cover every eligible transaction (all
-    # of them, right after a bulk import), plucking every id and enqueueing a
-    # job per batch inside this request. Cap it like the explicit list and
-    # say so. A transaction the provider finds no confident match for stays
-    # eligible, so instead of re-sending the same first page, the client
-    # pages on with after_transaction_id set to next_after_transaction_id.
+    # Without a list, queue at most MAX_TRANSACTION_IDS eligible transactions
+    # per request, in id order. A transaction the provider finds no confident
+    # match for stays eligible, so the client pages on with
+    # after_transaction_id rather than re-sending the same first page.
     truncated = false
     next_after_id = nil
     unless requested_ids
@@ -90,7 +84,6 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
     end
 
     def ensure_categorization_provider
-      return if performed?
       return if current_resource_owner.family.resolved_categorization_provider.present?
 
       render_validation_error("No categorization provider is configured")
@@ -100,7 +93,6 @@ class Api::V1::TransactionAutoCategorizationsController < Api::V1::BaseControlle
     # job when there are none. These API jobs have no rule run to record that
     # failure, so reject up front instead of queuing work that can't succeed.
     def ensure_family_has_categories
-      return if performed?
       return if current_resource_owner.family.categories.exists?
 
       render_validation_error("The family has no categories to assign; create categories first")

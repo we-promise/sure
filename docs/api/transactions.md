@@ -146,7 +146,7 @@ Omit `transaction_ids` to queue eligible transactions in pages of at most 1,000,
 }
 ```
 
-Only uncategorized transactions on accounts the key's user may annotate are queued. Transactions whose category is locked (set or cleared by hand), transfers between the family's own accounts, and split parents are skipped; the job checks this again when it runs, so a transaction that became a transfer or split parent in the meantime is not categorized. The response is `202 Accepted`:
+Only uncategorized transactions on accounts the key's user may annotate are queued. Transactions whose category is locked (set or cleared by hand), transfers between the family's own accounts, and split parents are skipped; the job checks this again when it runs, so a transaction that has since become a transfer or split parent, been categorized, or moved out of the user's reach (an account share revoked) is not categorized. The response is `202 Accepted`:
 
 ```json
 {
