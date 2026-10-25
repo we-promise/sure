@@ -62,6 +62,16 @@ components:
                   category_id:
                     type: string
                     nullable: true
+                  merchant_id:
+                    type: string
+                    nullable: true
+                    description: Omitted or null, the child takes the parent's merchant
+                  tag_ids:
+                    type: array
+                    items:
+                      type: string
+                    nullable: true
+                    description: No tags when omitted
                   excluded:
                     type: boolean
                     nullable: true
@@ -3454,6 +3464,109 @@ components:
           "$ref": "#/components/schemas/FinancialPeriod"
         sankey:
           "$ref": "#/components/schemas/CashFlowSankey"
+    SpendingVsNormalCategory:
+      type: object
+      required:
+      - id
+      - name
+      - color
+      - filter_value
+      - total
+      - normal
+      - change
+      - ratio
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Null for the synthetic Uncategorized category. A parent's own
+            spending is listed among its subcategories with the parent's id
+        name:
+          type: string
+        color:
+          type: string
+          nullable: true
+        filter_value:
+          type: string
+          description: Value for the transactions category filter
+        total:
+          type: string
+          description: Net spending in the period (expense minus refunds), at least
+            zero
+        normal:
+          type: string
+          nullable: true
+          description: 'Finished period: net spending over the baseline period, scaled
+            to the period length. Unfinished period (in_progress): average net spending
+            over the same number of days from earlier month starts. Null without enough
+            history'
+        change:
+          type: string
+          nullable: true
+          description: total minus normal
+        ratio:
+          type: string
+          nullable: true
+          description: Fractional change against normal (0.5 = 50% more). Null without
+            a positive normal
+        direct:
+          type: boolean
+          description: 'Present on subcategories only: true for the parent''s own
+            spending, booked on the parent rather than a subcategory'
+        subcategories:
+          type: array
+          items:
+            "$ref": "#/components/schemas/SpendingVsNormalCategory"
+          description: Present on parent categories only; adds up to the parent total
+    SpendingVsNormal:
+      type: object
+      required:
+      - currency
+      - period
+      - in_progress
+      - baseline_period
+      - comparable
+      - total
+      - normal_total
+      - categories
+      properties:
+        currency:
+          type: string
+        period:
+          "$ref": "#/components/schemas/FinancialPeriod"
+        in_progress:
+          type: boolean
+          description: 'The period has not ended: it is cut to today, and normal is
+            the average of the same number of days from each of up to 12 earlier month
+            starts'
+        baseline_period:
+          type: object
+          nullable: true
+          required:
+          - start_date
+          - end_date
+          properties:
+            start_date:
+              type: string
+              format: date
+            end_date:
+              type: string
+              format: date
+          description: Up to a year before the period, from the first counted transaction.
+            Null with under 28 days of history
+        comparable:
+          type: boolean
+        total:
+          type: string
+        normal_total:
+          type: string
+          nullable: true
+        categories:
+          type: array
+          items:
+            "$ref": "#/components/schemas/SpendingVsNormalCategory"
+          description: Parent categories, largest total first
     CashFlow:
       type: object
       required:
@@ -9206,6 +9319,56 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/spending_vs_normal":
+    get:
+      summary: Show spending per category against normal
+      tags:
+      - Reports
+      description: 'Net spending per category in a period, compared with each category''s
+        normal. For a finished period, normal is its net spending over the year before
+        the period, scaled to the period length. An unfinished period (in_progress)
+        is cut to today and compared with the average of the same number of days from
+        each of up to 12 earlier month starts, counting only windows that end before
+        the period. The data behind the Reports section "Spending vs normal". Uses
+        the authenticated user''s finance accounts and Sure reporting rules. Experimental:
+        the section is a preview feature, and how normal is defined may still change.'
+      parameters:
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Inclusive ISO date. Requires end_date; both omitted means the
+          current month to date.
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Inclusive ISO date at or after start_date.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: comparison returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SpendingVsNormal"
+        '422':
+          description: invalid period
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/transactions/{transaction_id}/split":
     parameters:
     - name: transaction_id
@@ -9262,7 +9425,9 @@ paths:
       security:
       - apiKeyAuth: []
       description: Replaces the children of an existing split. The previous children
-        are destroyed, so anything set on them afterwards is not carried over.
+        are destroyed, so anything set on them afterwards is not carried over. Send
+        each child in full, including its merchant_id and tag_ids. A child without
+        a merchant_id takes the parent's merchant.
       parameters: []
       responses:
         '200':

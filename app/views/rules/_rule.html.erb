@@ -1,17 +1,17 @@
 <%# locals: (rule:) %>
-<div id="<%= dom_id(rule) %>" class="flex justify-between items-center p-4 <%= rule.active? ? "text-primary" : "text-secondary" %>">
-
-  <div class="text-sm space-y-1.5">
-    <% if rule.name.present? || rule.stop_processing? %>
-      <div class="flex items-center gap-2">
-        <% if rule.name.present? %>
-          <h3 class="font-medium text-md"><%= rule.name %></h3>
-        <% end %>
-        <% if rule.stop_processing? %>
-          <%= render DS::Pill.new(label: t(".stop_processing"), tone: :neutral, marker: false, title: t(".stop_processing_hint")) %>
-        <% end %>
-      </div>
-    <% end %>
+<% has_title = rule.name.present? || rule.stop_processing? %>
+<div id="<%= dom_id(rule) %>" class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-0.5 p-3 text-sm sm:items-center sm:p-4 <%= rule.active? ? "text-primary" : "text-secondary" %>">
+  <% if has_title %>
+    <div class="col-start-1 row-start-1 flex min-w-0 flex-wrap items-center gap-2 self-center">
+      <% if rule.name.present? %>
+        <h3 class="min-w-0 break-words font-medium text-md"><%= rule.name %></h3>
+      <% end %>
+      <% if rule.stop_processing? %>
+        <%= render DS::Pill.new(label: t(".stop_processing"), tone: :neutral, marker: false, title: t(".stop_processing_hint")) %>
+      <% end %>
+    </div>
+  <% end %>
+  <div class="col-span-2 row-start-2 min-w-0 space-y-1.5 sm:col-span-1 sm:col-start-1 <%= "sm:row-start-1" unless has_title %>">
     <% if rule.conditions.any? %>
       <% displayed_condition = rule.displayed_condition %>
       <% additional_condition_count = rule.additional_displayable_conditions_count %>
@@ -19,8 +19,8 @@
         <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
           <span class="font-mono text-xs">IF</span>
         </div>
-        <p class="flex items-center flex-wrap gap-1.5 m-0">
-          <span class="px-2 py-1 border border-secondary rounded-full">
+        <p class="flex min-w-0 items-center flex-wrap gap-x-1.5 gap-y-1 m-0">
+          <span class="max-w-full truncate px-2 py-1 border border-secondary rounded-full">
             <% if displayed_condition.present? %>
               <%= displayed_condition.filter.label %> <%= displayed_condition.operator %> <%= displayed_condition.value_display %>
             <% else %>
@@ -37,8 +37,8 @@
       <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
         <span class="font-mono text-xs"><%= t(".then") %></span>
       </div>
-      <p class="flex items-center flex-wrap gap-1.5 m-0">
-        <span class="px-2 py-1 border border-secondary rounded-full">
+      <p class="flex min-w-0 items-center flex-wrap gap-x-1.5 gap-y-1 m-0">
+        <span class="max-w-full truncate px-2 py-1 border border-secondary rounded-full">
           <% if rule.actions.first.nil? %>
             <%= t("rules.no_action") %>
           <% else %>
@@ -58,8 +58,8 @@
       <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
         <span class="font-mono text-xs">FOR</span>
       </div>
-      <p class="flex items-center flex-wrap gap-1.5 m-0">
-        <span class="px-2 py-1 border border-secondary rounded-full">
+      <p class="flex min-w-0 items-center flex-wrap gap-x-1.5 gap-y-1 m-0">
+        <span class="max-w-full truncate px-2 py-1 border border-secondary rounded-full">
           <% if rule.effective_date.nil? %>
             <%= t(".all_past_and_future", resource: rule.resource_type.pluralize) %>
           <% else %>
@@ -69,7 +69,7 @@
       </p>
     </div>
   </div>
-  <div class="flex items-center gap-4">
+  <div class="col-start-2 row-start-1 flex items-center gap-4 self-start sm:self-center <%= "sm:row-span-2" if has_title %>">
     <%= styled_form_with model: rule, namespace: "rule_#{rule.id}", data: { controller: "auto-submit-form" } do |f| %>
       <%= f.toggle :active, { disabled: Current.user&.guest?, data: { auto_submit_form_target: "auto" } } %>
     <% end %>
