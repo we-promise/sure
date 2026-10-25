@@ -30,16 +30,6 @@ class PlaidAccount::Liabilities::CreditProcessor
       plaid_account.raw_liabilities_payload["credit"]
     end
 
-    # When the card's statements close and fall due, which is the pair of days
-    # of the month that lets us work out which charge sits on which statement.
-    # Plaid reports them as the dates of the last statement issued and the next
-    # payment due; only the day of the month survives that, and only the day is
-    # what the cycle is.
-    #
-    # Filled in only where the card has not already been told. These are the two
-    # numbers on a card a user is most likely to correct by hand after reading
-    # the issuer's own letter, and a sync that quietly reasserts Plaid's value
-    # over that correction would lose it on the next run.
     def statement_cycle_attributes
       {
         statement_close_day: day_of_month(credit_data["last_statement_issue_date"]),
