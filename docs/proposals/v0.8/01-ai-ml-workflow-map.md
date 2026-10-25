@@ -51,6 +51,7 @@ How every workflow in Sure that calls an LLM, an embedding or classification ser
 - [W21. AI cache reset](#w21-ai-cache-reset)
 - [W22. AI health probes (web + worker)](#w22-ai-health-probes)
 - [W23. Evals and Langfuse experiments (rake)](#w23-evals-and-langfuse-experiments)
+- [W24. Bills AI review (a chat started from the bills page)](#w24-bills-ai-review)
 
 **Part D: Reference**
 - [D1. Environment variables and settings (master table)](#d1-environment-variables-and-settings)
@@ -185,6 +186,7 @@ Cron (`config/schedule.yml` + `AutoSyncScheduler`):
 | W21 | AI cache reset | data reset | debug page, model change | async | none |
 | W22 | AI health | **LLM probes** | admin page, worker check | sync HTTP / async | yes |
 | W23 | Evals | **LLM / Jev / Bayes** | rake | sync CLI | yes |
+| W24 | Bills AI review | → W13 | bills page menu | async | yes |
 
 \* Except `import_bank_statement` and `search_family_files` (W16).
 
@@ -458,7 +460,7 @@ flowchart LR
 
 ## W4. Rules sequencing
 
-> **Related PRs:** [#4013](https://github.com/we-promise/sure/issues/4013) fixed order + stop processing · [#4089](https://github.com/we-promise/sure/issues/4089) starts with / ends with / regex · [#4246](https://github.com/we-promise/sure/issues/4246) tag not-equal / not-empty · [#4175](https://github.com/we-promise/sure/issues/4175) validate action and resource types · [#4109](https://github.com/we-promise/sure/issues/4109) reject null bytes · [#4211](https://github.com/we-promise/sure/issues/4211) skip email notifications for inactive rules · [#4176](https://github.com/we-promise/sure/issues/4176) *(open, v0.7.6)* email action baseline
+> **Related PRs:** [#4013](https://github.com/we-promise/sure/issues/4013) fixed order + stop processing · [#4089](https://github.com/we-promise/sure/issues/4089) starts with / ends with / regex · [#4246](https://github.com/we-promise/sure/issues/4246) tag not-equal / not-empty · [#4175](https://github.com/we-promise/sure/issues/4175) validate action and resource types · [#4109](https://github.com/we-promise/sure/issues/4109) reject null bytes · [#4211](https://github.com/we-promise/sure/issues/4211) skip email notifications for inactive rules · [#4176](https://github.com/we-promise/sure/issues/4176) email action baseline
 
 The orchestrator that runs Bayes (W6), the matcher (W5) and the AI jobs (W8, W9) in user-defined order.
 
@@ -1045,7 +1047,7 @@ Tools in `app/models/assistant/function/` that start other AI/ML workflows:
 
 ## W17. Insights generation
 
-> **Related PRs:** [#4239](https://github.com/we-promise/sure/issues/4239) deterministic insight text + Dig in · [#4061](https://github.com/we-promise/sure/issues/4061) keep private accounts out of shared feed · [#4083](https://github.com/we-promise/sure/issues/4083) net worth velocity model · [#4002](https://github.com/we-promise/sure/issues/4002) *(open, v0.7.6)* spending vs normal (preview) · [#3442](https://github.com/we-promise/sure/issues/3442) *(open, v0.7.7)* weekly cleanup proactive chat
+> **Related PRs:** [#4239](https://github.com/we-promise/sure/issues/4239) deterministic insight text + Dig in · [#4061](https://github.com/we-promise/sure/issues/4061) keep private accounts out of shared feed · [#4083](https://github.com/we-promise/sure/issues/4083) net worth velocity model · [#4002](https://github.com/we-promise/sure/issues/4002) spending vs normal (preview) · [#3442](https://github.com/we-promise/sure/issues/3442) *(open, v0.7.7)* weekly cleanup proactive chat
 
 Deterministic Ruby. **No LLM** since [#4239](https://github.com/we-promise/sure/issues/4239) (`Insight::BodyWriter` is an i18n template).
 
@@ -1107,7 +1109,7 @@ flowchart LR
 
 ## W19. Recurring / bills detection pipeline
 
-> **Related PRs:** [#4024](https://github.com/we-promise/sure/issues/4024) N+1 in occurrences job · [#4286](https://github.com/we-promise/sure/issues/4286) eager-load recurrence rules · [#4136](https://github.com/we-promise/sure/issues/4136) preload when claiming patterns · [#4349](https://github.com/we-promise/sure/issues/4349) *(open, v0.7.6)* N+1 in price change detection · [#4222](https://github.com/we-promise/sure/issues/4222) duplicate suggestions after rename · [#4106](https://github.com/we-promise/sure/issues/4106) snoozed bills dating · [#4430](https://github.com/we-promise/sure/issues/4430) detected bill name · [#3858](https://github.com/we-promise/sure/issues/3858) *(open, v0.7.7)* Bills into Plan hub
+> **Related PRs:** [#4024](https://github.com/we-promise/sure/issues/4024) N+1 in occurrences job · [#4286](https://github.com/we-promise/sure/issues/4286) eager-load recurrence rules · [#4136](https://github.com/we-promise/sure/issues/4136) preload when claiming patterns · [#4349](https://github.com/we-promise/sure/issues/4349) *(open, v0.7.6)* N+1 in price change detection · [#4222](https://github.com/we-promise/sure/issues/4222) duplicate suggestions after rename · [#4106](https://github.com/we-promise/sure/issues/4106) snoozed bills dating · [#4430](https://github.com/we-promise/sure/issues/4430) detected bill name · [#3858](https://github.com/we-promise/sure/issues/3858) *(open, v0.7.6)* Bills into Plan hub
 
 Ruby heuristics and scoring. No LLM.
 
@@ -1203,6 +1205,30 @@ flowchart LR
 - **Exit:** `Eval::Run` / `Eval::Result` rows and console reports.
 - **Fan-outs:** per-sample provider calls, batched with `LLM_MAX_ITEMS_PER_CALL`. `BayesRunner` builds and destroys a throwaway fixture family.
 - **Sync and async:** synchronous CLI.
+
+---
+
+## W24. Bills AI review
+
+> **Related PRs:** [#3202](https://github.com/we-promise/sure/issues/3202) bills pages and in-page AI helpers
+
+Missing from this map until 2026-10-24.
+
+`app/views/bills/_view_switcher.html.erb` ("Review with AI" menu item) → `POST /bills/ai_review` → `app/controllers/bills/ai_reviews_controller.rb#create`. The controller starts a chat whose first message is a fixed, server-owned prompt (`REVIEW_PROMPT`): look for duplicates, price increases, overdue or abandoned bills, trials about to convert and undeclared recurring charges, and "ask me before changing anything". The chat opens in the sidebar. The assistant grounds the review in the preview `get_bill_audit` tool and can act through the bills write tools (W16).
+
+```mermaid
+flowchart LR
+    B["Bills page: Review with AI"] --> G{"bills_one_shot_ai_available?<br/>user AI consent + preferred_llm_provider"}
+    G -->|no| X["menu item hidden, feature guard"]
+    G -->|yes| C["Chat.start! with REVIEW_PROMPT<br/>model Chat.default_model"]
+    C --> W13["W13 chat in the sidebar<br/>get_bill_audit, bills write tools"]
+```
+
+- **Entry:** the bills page menu. The controller also needs preview features and the family's recurring feature (`ensure_recurring_enabled`).
+- **Exit:** hands off to W13 at once. Unlike W18, the message is sent for the user.
+- **Settings:** the user's AI consent, the provider and model envs (as W13), preview features. The prompt is not one of the six `ai_prompt_overrides` keys, so it can't be overridden.
+- **Sync and async:** the web request only creates the chat. The reply runs in `AssistantResponseJob` (`ai_high`).
+- **Quirk:** the gate asks whether a batch provider exists (`preferred_llm_provider`), but the work is a chat, which needs a provider that accepts `Chat.default_model`. With `OPENAI_MODEL=o4-mini` the gate says yes while no chat provider accepts the model ([RFC E2](rfc-ai-ml-v0.8.md#9-evidence-from-experiments), setup C8), so the item opens a chat that fails. The view's own comment says the gate is there to avoid "a dead chat".
 
 ---
 
@@ -1324,6 +1350,7 @@ A deployment runs the same image as two processes: **web** (Puma, `bin/rails ser
 | W21 | AI cache reset | model change enqueues | `ClearAiCacheJob` (low), one per family | — | no |
 | W22 | AI health probes | **settings and admin probes in the request** (cached) | `WorkerAiHealthCheckJob` (high) | — | **yes** (probe) |
 | W23 | Evals | — | — | — | CLI (rake), in whichever container it is run |
+| W24 | Bills AI review | creates the chat and its first message | — | → W13 | via W13 |
 
 ### LLM calls on web threads
 

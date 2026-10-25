@@ -171,7 +171,7 @@ Users think in **jobs**. Here is how each job maps to Sure's workflows (W-number
 
 ## 5. Understandability, workflow by workflow
 
-> **Related PRs:** [#4013](https://github.com/we-promise/sure/issues/4013) rule order · [#4310](https://github.com/we-promise/sure/issues/4310) classifier rules · [#4305](https://github.com/we-promise/sure/issues/4305) *(open, v0.7.6)* logo initials fallback · [#4303](https://github.com/we-promise/sure/issues/4303) transfer matching controls · [#3858](https://github.com/we-promise/sure/issues/3858) *(open, v0.7.7)* Bills into Plan hub
+> **Related PRs:** [#4013](https://github.com/we-promise/sure/issues/4013) rule order · [#4310](https://github.com/we-promise/sure/issues/4310) classifier rules · [#4305](https://github.com/we-promise/sure/issues/4305) *(open, v0.7.6)* logo initials fallback · [#4303](https://github.com/we-promise/sure/issues/4303) transfer matching controls · [#3858](https://github.com/we-promise/sure/issues/3858) *(open, v0.7.6)* Bills into Plan hub
 
 | Workflow (user-visible name) | What the user sees | Understood? | Suggestion |
 |---|---|---|---|
@@ -210,7 +210,7 @@ The app *already* runs roughly this pipeline (as rules ordered by position). It 
 
 ## 6. Transparency: enough to report a bug, not so much it overwhelms
 
-> **Related PRs:** [#3442](https://github.com/we-promise/sure/issues/3442) *(open, v0.7.7)* weekly cleanup chat surfaces data problems · [#4002](https://github.com/we-promise/sure/issues/4002) *(open, v0.7.6)* spending vs normal
+> **Related PRs:** [#3442](https://github.com/we-promise/sure/issues/3442) *(open, v0.7.7)* weekly cleanup chat surfaces data problems · [#4002](https://github.com/we-promise/sure/issues/4002) spending vs normal
 
 ### What a user can see today
 - The result (category, merchant). **Not** the source, confidence or time.
@@ -232,7 +232,7 @@ The app *already* runs roughly this pipeline (as rules ordered by position). It 
 | **2. Explain panel** | curious users | "Why this category?": the stages in order, which one answered, confidence, when, and a "This is wrong" button (which feeds Bayes and unlocks). |
 | **3. Report a problem** | anyone filing an issue | One button that assembles a redacted bundle (version, tier, provider and model names without keys, the last runs of the relevant workflow and their errors, the explain-panel data with transaction text masked) and copies it, or opens a pre-filled GitHub issue. |
 
-This turns Sure's existing internals (`DataEnrichment` source and metadata, `RuleRun`, `DebugLogEntry`, AI health) into user value **without** exposing the machinery by default. It also cuts maintainer triage time directly. With about 450 contributors and about 330 open PRs, issue quality is a real bottleneck.
+This turns Sure's existing internals (`DataEnrichment` source and metadata, `RuleRun`, `DebugLogEntry`, AI health) into user value **without** exposing the machinery by default. It also cuts maintainer triage time directly. With about 450 contributors and about 340 open PRs, issue quality is a real bottleneck.
 
 The "This is wrong" button closes the loop that users expect from AI ("it learns from my corrections"). Bayes already learns from corrections, but users don't know that.
 
@@ -362,7 +362,7 @@ Sources: [Firefly III on GitHub](https://github.com/firefly-iii/firefly-iii) · 
 
 ## 8. Do the workflows resemble popular personal-finance concepts?
 
-> **Related PRs:** [#4083](https://github.com/we-promise/sure/issues/4083) net worth velocity and momentum · [#3952](https://github.com/we-promise/sure/issues/3952) investing counted as saving · [#3974](https://github.com/we-promise/sure/issues/3974) multi-currency goal funding · [#4432](https://github.com/we-promise/sure/issues/4432) *(open, v0.7.7)* crypto accounts fund goals · [#3428](https://github.com/we-promise/sure/issues/3428) *(open, v0.7.7)* refunds reduce spending · [#3498](https://github.com/we-promise/sure/issues/3498) *(open, v0.7.7)* physical cash account · [#4343](https://github.com/we-promise/sure/issues/4343) *(open, v0.7.7)* loan principal split · [#3054](https://github.com/we-promise/sure/issues/3054) *(closed, v0.7.7)* EMI installment plans · [#3858](https://github.com/we-promise/sure/issues/3858) *(open, v0.7.7)* Plan hub
+> **Related PRs:** [#4083](https://github.com/we-promise/sure/issues/4083) net worth velocity and momentum · [#3952](https://github.com/we-promise/sure/issues/3952) investing counted as saving · [#3974](https://github.com/we-promise/sure/issues/3974) multi-currency goal funding · [#4432](https://github.com/we-promise/sure/issues/4432) *(open, v0.7.7)* crypto accounts fund goals · [#3428](https://github.com/we-promise/sure/issues/3428) *(open, v0.7.7)* refunds reduce spending · [#3498](https://github.com/we-promise/sure/issues/3498) *(open, v0.7.7)* physical cash account · [#4343](https://github.com/we-promise/sure/issues/4343) *(open, v0.7.7)* loan principal split · [#3054](https://github.com/we-promise/sure/issues/3054) *(closed, v0.7.7)* EMI installment plans · [#3858](https://github.com/we-promise/sure/issues/3858) *(open, v0.7.6)* Plan hub
 
 | Book | Core idea people quote | Sure today | Gap / opportunity |
 |---|---|---|---|
@@ -405,7 +405,7 @@ The assistant and insights can then refer to the chosen plan ("You're 4% over yo
 
 ## 10. Summary of recommendations (user-facing)
 
-> **Related PRs:** [#3694](https://github.com/we-promise/sure/issues/3694) *(open, v0.7.7)* supports U2/U11 · [#3990](https://github.com/we-promise/sure/issues/3990) partial U18 · [#4021](https://github.com/we-promise/sure/issues/4021) reuse for U22 · [#4328](https://github.com/we-promise/sure/issues/4328) context for U23 · [#3858](https://github.com/we-promise/sure/issues/3858) *(open, v0.7.7)* supports U15/U17 · [#3442](https://github.com/we-promise/sure/issues/3442) *(open, v0.7.7)* supports U5/U9 · [#4283](https://github.com/we-promise/sure/issues/4283) *(open, v0.7.6)* MCP-only scope, groundwork for U18
+> **Related PRs:** [#3694](https://github.com/we-promise/sure/issues/3694) *(open, v0.7.7)* supports U2/U11 · [#3990](https://github.com/we-promise/sure/issues/3990) partial U18 · [#4021](https://github.com/we-promise/sure/issues/4021) reuse for U22 · [#4328](https://github.com/we-promise/sure/issues/4328) context for U23 · [#3858](https://github.com/we-promise/sure/issues/3858) *(open, v0.7.6)* supports U15/U17 · [#3442](https://github.com/we-promise/sure/issues/3442) *(open, v0.7.7)* supports U5/U9 · [#4283](https://github.com/we-promise/sure/issues/4283) *(open, v0.7.6)* MCP-only scope, groundwork for U18
 
 | # | Recommendation | Persona | Effort | Value |
 |---|---|---|---|---|

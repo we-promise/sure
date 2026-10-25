@@ -30,7 +30,7 @@ The five changes with the most leverage:
 | Commits on `main`, last 30 days | **376** | Very high change rate. Architecture decisions are made inside PRs. |
 | Distinct authors, last 30 days | **69** | Few contributors hold the whole picture. |
 | `Co-Authored-By: Claude` trailers, last 30 days | **529** (several per commit) | The agent is the main author. Its habits shape the codebase. |
-| Open PRs | **329** (2026-10-24) | Review capacity is the bottleneck, not authoring capacity. |
+| Open PRs | **342** (2026-10-24) | Review capacity is the bottleneck, not authoring capacity. |
 | Commits touching core AI files, last 30 days | **41** | The AI layer is a hot spot. |
 | Guides mentioning `json_mode` / `BatchSlicer` / `Enrichable` | **0 / 0 / 0** | The key contracts are documented only in code comments. |
 | Guides mentioning `capsule`, `LlmConcept`, `preferred_llm_provider` | **1 each** (hosting or classification-provider docs) | No architecture-level AI guide exists. |
@@ -183,7 +183,7 @@ Features land for one provider and are back-filled later ([#1984](https://github
 The code is heavily commented with narrative and issue history ("the symptom we chased in the [#1984](https://github.com/we-promise/sure/issues/1984) review"). Agents add these generously, and they go stale as fast as the code changes (the BayesRunner comment still describes the pre-[#4310](https://github.com/we-promise/sure/issues/4310) cascade). Stale comments are worse for agents than none: agents trust them.
 
 **B6. Review capacity is the scarce resource.**
-With about 330 open PRs and 69 active authors, maintainers cannot enforce unwritten invariants by review. The invariants that matter here (lane choice, lock policy, provider parity, usage attribution, consent) are exactly the ones that don't show up in a diff.
+With about 340 open PRs and 69 active authors, maintainers cannot enforce unwritten invariants by review. The invariants that matter here (lane choice, lock policy, provider parity, usage attribution, consent) are exactly the ones that don't show up in a diff.
 
 **B7. Prompt and schema changes are behaviour changes with no behavioural gate.**
 A prompt edit can shift categorization accuracy for every self-hoster, but CI checks only that the code runs. `/settings/ai_prompts` overrides add another variable: the tests cover the default prompts, not the variants users actually run.
