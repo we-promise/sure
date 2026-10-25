@@ -147,10 +147,19 @@ At the time of writing, `tools/list` includes:
 | `get_categories` | Categories with hierarchy and pagination |
 | `create_goal` | Create a savings goal linked to depository accounts |
 | `set_opening_balance` | Set a manual account's opening balance and the date it applies from, reporting whether the current balance changes. Supports `dry_run` |
+| `unmatch_transfer` | Unlink a confirmed or pending transfer (by either transaction's id) so a wrong match can be redone; rejects the pairing for auto-match by default. Supports `dry_run` |
+| `update_transfer` | Switch a confirmed transfer into an investment or crypto account between an investment contribution (counted as spending) and a plain transfer, e.g. when a brokerage or crypto account only converts currency. Supports `dry_run` |
 | `create_tag` / `update_tag` | Manage tags |
-| `create_category` / `update_category` | Manage categories |
+| `create_category` / `update_category` / `delete_category` | Manage categories: create, rename, recolor, move between parents, and delete (optionally moving transactions to a replacement) |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
+| `get_transfer_match_candidates` | A transaction's current transfer (including a pending auto-match) or the transactions it could be matched with, as in the "Match transfer" dialog |
+| `match_transfer` | Match a transaction as a transfer with an existing counterpart, or create the counterpart in a target account (e.g. a manual loan). Supports `dry_run` |
+| `review_transfer` | Confirm or reject a pending auto-matched transfer |
 | `update_budget` | Update budget allocations for a month |
+| `get_rules` / `get_rule_options` | Transaction rules in readable form (ids resolved to names, latest run; paginated, with a text search), and the condition and action types a rule can use |
+| `preview_rule` | Match count and a sample of matching transactions for a saved rule or an unsaved definition, without changing anything |
+| `create_rule` / `update_rule` | Save a rule definition. Rules are always saved inactive, and changing an active rule's conditions or actions deactivates it. AI-backed actions are not available |
+| `apply_rule` | Activate a rule and apply it. Requires the `preview_token` from `preview_rule`, `create_rule` or `update_rule` (never `get_rules`; it expires after 30 minutes) and refuses if the rule or its matches have changed; keeps hand-set values unless `override_locked: true` |
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
 
@@ -415,6 +424,10 @@ Any AI agent that supports JSON-RPC 2.0 can connect to the MCP endpoint. The age
 2. Include the `Authorization: Bearer <token>` header
 3. Use the JSON-RPC 2.0 format for requests
 4. Handle the protocol methods: `initialize`, `tools/list`, `tools/call`
+
+### Using MCP without the in-app chat
+
+MCP does not depend on the in-app assistant. To use only your own agent, set the assistant type to **None in app (connect your own agent via MCP)** in **Settings -> Self-Hosting**, or set `ASSISTANT_TYPE=mcp_only` for the whole instance. The chat sidebar and its entry points disappear; `/mcp`, OAuth, and **Settings -> MCP** keep working.
 
 ## Troubleshooting
 

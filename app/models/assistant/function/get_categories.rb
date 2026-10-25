@@ -14,7 +14,7 @@ class Assistant::Function::GetCategories < Assistant::Function
 
         Each entry includes id, name, color, icon, parent_id (null for top-level), and
         name_with_parent (e.g. "Food & Drink > Restaurants"). Use this before creating
-        subcategories or referencing a category by id in update_category.
+        subcategories or referencing a category by id in update_category or delete_category.
 
         Note on pagination:
 

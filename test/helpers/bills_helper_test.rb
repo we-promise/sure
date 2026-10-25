@@ -15,6 +15,20 @@ class BillsHelperTest < ActionView::TestCase
     end
   end
 
+  test "an All bills row names its kind unless it is a plain bill, and recedes unless it is live" do
+    bill = RecurringTransaction.new(bill_type: "bill", status: "active", name: "Rent", amount: 10, currency: "USD", expected_day_of_month: 1)
+    income = RecurringTransaction.new(bill_type: "income", status: "active", name: "Salary", amount: -10, currency: "USD", expected_day_of_month: 1)
+    ended = RecurringTransaction.new(bill_type: "income", status: "ended", name: "Old job", amount: -10, currency: "USD", expected_day_of_month: 1)
+
+    assert_equal frequency_label(bill), bills_series_subline(bill)
+    assert_equal "#{I18n.t("bills.all.types.income")} · #{frequency_label(income)}", bills_series_subline(income)
+
+    assert_equal "text-primary", bills_series_tone(bill)
+    assert_equal "text-success", bills_series_amount_tone(income)
+    assert_equal "text-secondary", bills_series_tone(ended)
+    assert_equal "text-secondary", bills_series_amount_tone(ended)
+  end
+
   # The matcher has always stored WHY it matched something, in match_signals.
   # Nothing rendered it, so the app showed a bare percentage instead of the
   # facts the percentage is made of.
@@ -33,6 +47,12 @@ class BillsHelperTest < ActionView::TestCase
       I18n.t("bills.match.exact_amount"),
       I18n.t("bills.match.due_date")
     ], reasons
+  end
+
+  test "a recurring transfer's match reads as a transfer to the same account" do
+    reasons = bills_match_reasons({ transfer: 0.40, account: 0.10 }, currency: "USD")
+
+    assert_equal [ I18n.t("bills.match.same_transfer") ], reasons
   end
 
   # signals[:account] is a constant 0.10 on every candidate, because
@@ -137,6 +157,20 @@ class BillsHelperTest < ActionView::TestCase
 
   test "a window with no income has no bar at all" do
     assert_empty paycheck_allocation_segments(build_period(income: 0, due: 28.71, reserved: 695.62))
+  end
+
+  # The covered bridge earns nothing, so its bar measures the window's bills
+  # against the cash on hand instead of a paycheck.
+  test "a covered bridge divides its cash into due and left" do
+    period = build_period(income: 0, due: 150, reserved: 0, leading: true, cash_on_hand: BigDecimal("5000"))
+
+    assert_equal [ [ :due, 3.0 ], [ :left, 97.0 ] ], paycheck_bridge_segments(period)
+  end
+
+  # Unknown is not zero: with no balance there is nothing to divide, and the
+  # bar must not draw one.
+  test "a bridge with an unknown balance has no bar" do
+    assert_empty paycheck_bridge_segments(build_period(income: 0, due: 150, reserved: 0, leading: true))
   end
 
   test "a zero part is dropped rather than drawn as a hairline" do
@@ -444,6 +478,24 @@ class BillsHelperTest < ActionView::TestCase
 
     assert_equal [ "PEPSICO" ], hints[:aliases]
     assert_equal 7.5, hints[:learned_pct]
+  end
+
+  test "matcher hints expose the detected name when one was stored" do
+    series = OpenStruct.new(matcher_hints: { "detected_name" => "NETFLIX.COM" })
+
+    assert_equal "NETFLIX.COM", bills_matcher_hints(series)[:detected_name]
+  end
+
+  test "matcher hints leave the detected name nil when none was stored" do
+    series = OpenStruct.new(matcher_hints: {})
+
+    assert_nil bills_matcher_hints(series)[:detected_name]
+  end
+
+  test "matcher hints hide the detected name for merchant-backed bills" do
+    series = OpenStruct.new(merchant_id: 1, matcher_hints: { "detected_name" => "NETFLIX.COM" })
+
+    assert_nil bills_matcher_hints(series)[:detected_name]
   end
 
   test "plan sections split the bridge from the timeline and pick the warning state" do

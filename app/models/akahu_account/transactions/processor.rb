@@ -78,7 +78,7 @@ class AkahuAccount::Transactions::Processor
       stale_pending_entries = account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(source: "akahu")
-        .where("(transactions.extra -> 'akahu' ->> 'pending')::boolean = true")
+        .where(Transaction.pending_sql("transactions", providers: [ "akahu" ]))
         # Never prune split parents or children: a split parent keeps its own pending
         # flag and is excluded, so without this guard destroy! would cascade
         # (dependent: :destroy) to the user's split children and silently wipe their

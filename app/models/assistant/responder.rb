@@ -7,6 +7,15 @@ class Assistant::Responder
   # ASSISTANT_MAX_TOOL_CALL_ITERATIONS (low-resource hosts may want 2).
   DEFAULT_MAX_TOOL_CALL_ITERATIONS = 8
 
+  # Splits in-flight function results into tool rounds, in order. #respond
+  # tags each result with the :round that produced it; providers that rebuild
+  # the in-flight history replay one tool-call message plus its results per
+  # round, so every follow-up request extends the previous one instead of
+  # rewriting it. Results without a :round tag form a single round.
+  def self.group_by_round(function_results)
+    function_results.chunk_while { |a, b| a[:round] == b[:round] }.to_a
+  end
+
   def initialize(message:, instructions:, function_tool_caller:, llm:)
     @message = message
     @instructions = instructions
@@ -33,7 +42,8 @@ class Assistant::Responder
 
       function_tool_calls = function_tool_caller.fulfill_requests(response.function_requests)
       function_results = function_tool_calls.map(&:to_result)
-      in_flight_function_results.concat(function_results)
+      # Tag each result with its round; see .group_by_round.
+      in_flight_function_results.concat(function_results.map { |result| result.merge(round: iteration) })
 
       emit(:response, {
         id: response.id,
