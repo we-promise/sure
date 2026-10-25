@@ -45,8 +45,10 @@ class Balance::BaseCalculator
     end
 
     # The balance change a loan's payment actually makes when interest is
-    # taken out first. The preview toggle is checked here because a sync is a
-    # background job with no `Current.user`.
+    # taken out first. A sync is background work with no `Current.user`, so the
+    # family rollup is the right preview check: one opted-in member enables the
+    # recalculated balance for the shared account. The guide reserves the
+    # per-user check for UI.
     def loan_principal_payments
       return @loan_principal_payments if defined?(@loan_principal_payments)
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1592,6 +1592,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.string "insurance_rate_type"
     t.decimal "interest_rate", precision: 10, scale: 3
     t.jsonb "locked_attributes", default: {}
+    t.boolean "principal_only_transfers", default: false, null: false
     t.string "rate_type"
     t.date "start_date"
     t.string "subtype"
