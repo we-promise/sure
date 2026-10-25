@@ -2,6 +2,65 @@
 pt-PT:
   admin:
     system_health:
+      hosted_usage:
+        loading: "A carregar a utilização alojada…"
+        title: "Utilização alojada"
+        snapshot: "Estado da base de dados só de leitura em %{time}"
+        summary:
+          trial_households_count: "Agregados em teste (últimos 30 dias)"
+          trial_members_count: "Contas de membros atuais dos testes"
+          trials_expiring_soon_count: "Testes a terminar nos próximos 7 dias"
+          cleanup_eligible_count: "Agregados elegíveis para limpeza"
+          active_supporter_households_count: "Agregados apoiantes ativos (local)"
+          supporter_subscription_count: "Registos de subscrição ligados ao Stripe"
+        summary_help: "Os totais de testes abrangem subscrições registadas nos últimos 30 dias. Os totais de expiração, limpeza e apoio abrangem todos os registos atuais correspondentes, sem os limites das tabelas."
+        limitations_title: "O que estes números permitem saber"
+        limitations: "As tabelas atuais não guardam o histórico completo de testes, pagamentos ou atividade das sessões. A criação de subscrições pode resultar de importações. As contas de membros não são pessoas únicas verificadas. Esta vista não altera dados de agregados ou subscrições. As reposições da demo partilhada removem agregados e sessões antigos, pelo que não é possível reconstruir o histórico de visitantes."
+        trials:
+          title: "Agregados de teste recentes"
+          description: "Subscrições registadas desde %{date} que conservam uma data de fim de teste, incluindo testes convertidos. São apresentados até %{limit} agregados."
+          sessions_help: "As sessões são registos de início de sessão conservados para utilizadores ativados, não utilizadores atualmente online nem visitas. Terminar a sessão elimina o registo. A última criação não indica a última atividade."
+          empty: "Nenhum agregado de teste registado neste período"
+        cleanup:
+          title: "Elegibilidade para limpeza"
+          description: "Corresponde ao âmbito de limpeza existente: subscrição em pausa ou em teste terminada há mais de 14 dias, ou sem subscrição e agregado com mais de 45 + 14 dias. São apresentados até %{limit} agregados."
+          eligibility_help: "Inícios de sessão recentes não impedem a elegibilidade. Esta não confirma a eliminação; os 90 dias são o prazo de retenção de arquivos, não o limiar de limpeza de testes."
+          disabled: "A limpeza agendada de testes está desativada fora do modo gerido. Estes são apenas registos correspondentes ao âmbito."
+          empty: "Nenhum agregado corresponde ao âmbito de limpeza"
+          reasons:
+            expired_trial_grace_elapsed: "Teste terminado; prazo de 14 dias decorrido"
+            no_subscription_grace_elapsed: "Sem subscrição; 45 + 14 dias decorridos"
+        supporters:
+          title: "Estado local dos apoiantes"
+          description: "Registos locais atuais de subscrição com IDs de cliente e subscrição no formato Stripe; a subscrição de demonstração sintética é excluída. Os estados não confirmam pagamentos recebidos nem datas do primeiro pagamento. Não é efetuado qualquer pedido ao Stripe."
+          empty: "Nenhum registo de subscrição ligado ao Stripe"
+        columns:
+          household: "ID do agregado"
+          recorded_at: "Subscrição registada"
+          trial_ends_at: "Fim do teste"
+          status: "Estado atual"
+          members: "Contas de membros"
+          retained_sessions: "Sessões de acesso conservadas"
+          recent_sessions: "Sessões conservadas criadas em 30 dias"
+          latest_session: "Último acesso conservado"
+          cleanup_eligible: "Elegível para limpeza"
+          cleanup_reason: "Motivo"
+          subscription_rows: "Registos de subscrição"
+        statuses:
+          unknown: "Desconhecido"
+          incomplete: "Incompleta"
+          incomplete_expired: "Incompleta, expirada"
+          trialing: "Em teste"
+          active: "Ativa"
+          past_due: "Em atraso"
+          canceled: "Cancelada"
+          unpaid: "Não paga"
+          paused: "Em pausa"
+          no_subscription: "Sem subscrição"
+        not_recorded: "Não registado"
+        eligible: "Elegível"
+        not_eligible: "Não elegível"
+        synthetic_demo: "Demo sintética"
       push_notifications:
         send_test: "Enviar notificação de teste"
         queueing: "A colocar em fila…"
@@ -47,6 +106,7 @@ pt-PT:
       show:
         title: Estado do sistema
         tabs:
+          hosted_usage: "Utilização alojada"
           background_jobs: Tarefas em segundo plano
           ai: Estado da IA
         alert:

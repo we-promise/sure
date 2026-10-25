@@ -30,6 +30,26 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(10), sell.realized_gain_loss.value.amount
   end
 
+  # A disposal's fee is what selling cost, so it comes off the proceeds before
+  # they are converted. 2 sold at 150 EUR less a 10 EUR fee is 290 EUR, 435 USD
+  # at 1.5, less 200 USD of basis: a 235 USD gain, where ignoring the fee
+  # reported 250.
+  test "a disposal's fee comes off its proceeds" do
+    sell = cross_currency_disposal(rate: 1.5, fee: 10)
+
+    assert_equal BigDecimal(235), sell.realized_gain_loss.value.amount
+  end
+
+  # A lot cost what was paid for it, fee included: 10 bought at 100 with a 20
+  # fee cost 1,020, so at 120 the lot is up 180, not 200.
+  test "a purchase's unrealized gain is measured against its price plus its fee" do
+    account, security = cross_currency_account
+    buy = create_trade(security, account: account, qty: 10, date: Date.current, price: 100, fee: 20, currency: "USD").entryable
+    buy.security.stubs(:current_price).returns(Money.new(120, "USD"))
+
+    assert_equal BigDecimal(180), buy.unrealized_gain_loss.value.amount
+  end
+
   # No rate for that date means the gain is unknown, not zero and not the
   # figure a rate of 1.0 would produce.
   test "a cross-currency disposal with no rate for its date has no figure" do
@@ -38,23 +58,23 @@ class TradeTest < ActiveSupport::TestCase
     assert_nil sell.realized_gain_loss, "a neighbouring day's rate is not this day's"
   end
 
-  # `ExchangeRate` validates presence only -- no positivity at the model, and
-  # `rate` is a plain `decimal, null: false` at the column -- so a provider or
-  # an import can leave a 0 or a negative behind. Multiplying by one is not a
+  # `exchange_rates` no longer stores a 0 or a negative, but the conversion
+  # still guards against being handed one. Multiplying by one is not a
   # conversion: at 0 the 300 EUR of proceeds become nothing and the disposal
   # reports a 200 USD total loss the user never took, and at -1.5 the proceeds
   # go negative and the loss is 650. Neither is distinguishable on the page
   # from a real one, and both are tax-relevant.
   #
-  # A rate that cannot convert is the missing-rate case, whatever is stored in
-  # the row, so it takes the same exit as an absent one.
-  test "a disposal whose stored rate cannot convert has no figure" do
-    [ 0, -1.5 ].each do |stored|
+  # A rate that cannot convert is the missing-rate case, whatever supplied it,
+  # so it takes the same exit as an absent one.
+  test "a disposal whose rate cannot convert has no figure" do
+    [ 0, -1.5 ].each do |rate|
       # Each case needs the same EUR->USD date, which is unique per pair.
       ExchangeRate.where(from_currency: "EUR", to_currency: "USD").delete_all
-      sell = cross_currency_disposal(rate: stored)
+      sell = cross_currency_disposal(rate: 1.5)
+      sell.preloaded_exchange_rates = { [ "EUR", "USD", sell.entry.date ] => rate }
 
-      assert_nil sell.realized_gain_loss, "a rate of #{stored} converts nothing"
+      assert_nil sell.realized_gain_loss, "a rate of #{rate} converts nothing"
     end
   end
 
@@ -289,7 +309,7 @@ class TradeTest < ActiveSupport::TestCase
 
   private
     # A USD account holding a EUR-listed security, with one disposal in it.
-    def cross_currency_disposal(rate:, rate_date: Date.new(2026, 3, 10))
+    def cross_currency_disposal(rate:, rate_date: Date.new(2026, 3, 10), fee: 0)
       account, security = cross_currency_account
       date = Date.new(2026, 3, 10)
 
@@ -297,7 +317,7 @@ class TradeTest < ActiveSupport::TestCase
       account.holdings.create!(security: security, date: date, qty: 5, price: 150,
                                amount: BigDecimal(750), currency: "USD", cost_basis: 100)
 
-      create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR").entryable
+      create_trade(security, account: account, qty: -2, date: date, price: 150, fee: fee, currency: "EUR").entryable
     end
 
     def cross_currency_account
