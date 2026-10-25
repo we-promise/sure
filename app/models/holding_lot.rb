@@ -91,13 +91,16 @@ class HoldingLot < ApplicationRecord
     # their own rows. An opening lot moved onto a position with its own is
     # merged into it: the quantities add, and the cost stays only where both
     # sides know it and agree, since one figure cannot stand for two
-    # different ones. The merged lot keeps the target's origin, so a reset
-    # does not split it apart again.
+    # different ones. An opening lot with no units (a clamp records one) has
+    # no cost to weigh, so it is dropped rather than merged. The merged lot
+    # keeps the target's origin, so a reset does not split it apart again.
     def move!(derived:, opening:, to:)
       derived.update_all(security_id: to.id, updated_at: Time.current)
       opening.find_each do |lot|
         target = where(account_id: lot.account_id, security_id: to.id).opening.first
-        if target
+        if target && lot.qty.zero?
+          lot.delete
+        elsif target
           unit_cost = target.unit_cost if lot.unit_cost && lot.unit_cost == target.unit_cost
           target.update_columns(qty: target.qty + lot.qty, unit_cost: unit_cost, updated_at: Time.current)
           lot.delete
