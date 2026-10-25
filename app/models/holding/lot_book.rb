@@ -133,7 +133,7 @@ class Holding::LotBook
   # taken the opening one. The lot's quantity is restated, as #rescale_lots
   # does, so no sale is recorded and no other lot moves.
   def settle_opening(target, bound:)
-    drift = target - open_qty
+    drift = target.to_d - open_qty
     return if drift.zero? || drift.abs > bound
 
     index = @lots.index { |lot| lot.source_id.nil? } || (@lots.size - 1)
