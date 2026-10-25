@@ -151,11 +151,7 @@ class AccountsController < ApplicationController
     end
 
     entry_ids = @entries.map(&:id)
-    @split_parent_entry_ids = if entry_ids.any?
-      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
-    else
-      Set.new
-    end
+    @split_parent_entry_ids = Entry.split_parent_ids_among(entry_ids)
 
     # Load split parent entries for grouped display (only when grouping is enabled)
     @split_parents = if Current.user.show_split_grouped?
