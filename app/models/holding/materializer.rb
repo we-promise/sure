@@ -211,10 +211,12 @@ class Holding::Materializer
         .order(:date).group_by { |row| [ row.security_id, row.currency ] }
     end
 
-    # Each security's trade dates, sorted.
+    # Each security's trade dates, sorted. A qty 0 trade (a dividend or fee)
+    # moves no units, as the calculators treat it, so it does not end a carry.
     def trade_dates_by_security
       @trade_dates_by_security ||= account.entries.where(entryable_type: "Trade")
         .joins("INNER JOIN trades ON trades.id = entries.entryable_id")
+        .where.not(trades: { qty: 0 })
         .order("entries.date").pluck("trades.security_id", "entries.date")
         .each_with_object(Hash.new { |h, k| h[k] = [] }) { |(security_id, date), dates| dates[security_id] << date }
     end

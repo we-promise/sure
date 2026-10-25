@@ -723,6 +723,21 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_not latest_holding.cost_basis_carried?
   end
 
+  # A dividend is a qty 0 trade (Trade::CreateForm#create_income_trade): it
+  # moves no units and no cost, so the user's figure still describes them.
+  test "a dividend inside a carried span keeps the carry" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 4.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 4.days.ago.to_date).set_manual_cost_basis!(150)
+    materialize
+
+    dividend = create_trade(@aapl, account: @account, qty: 0, price: 0, date: 2.days.ago.to_date)
+    dividend.entryable.update!(investment_activity_label: "Dividend")
+    materialize
+
+    assert_equal [ 150, true, true ], [ latest_holding.cost_basis&.to_d, latest_holding.cost_basis_locked?, latest_holding.cost_basis_carried? ]
+  end
+
   test "only the row the user locked is their lock; the rows it is carried onto are marked carried" do
     create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
     materialize
