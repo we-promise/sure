@@ -1,5 +1,6 @@
 zh-CN:
   icost_maps:
+    nav_label: "地图"
     title: "iCost 账单地图"
     help: "按分类图标展示来源账单，包含待审阅记录。定位不会改变记账结果。点击图标查看明细，重叠位置显示记录数量。"
     summary: "当前范围共 %{total} 条记录，其中 %{mapped} 条已定位。"
@@ -24,3 +25,5 @@ zh-CN:
     search_failed: "地点搜索暂不可用，请稍后重试，或直接在地图上选点。"
     unmapped: "尚未定位的地点"
     ledger: "来源账单列表"
+    approximate_help: "%{count} 条记录使用道路或园区的近似位置，尚未核对门牌或具体点位。"
+    approximate_location: "道路／园区近似位置，具体点位待核对"

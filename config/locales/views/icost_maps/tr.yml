@@ -1,5 +1,6 @@
 tr:
   icost_maps:
+    nav_label: "Harita"
     title: "iCost haritası"
     help: "Simgeler inceleme satırlarını da gösterir. Konum muhasebeyi değiştirmez. Ayrıntılar için tıklayın; yakın noktalar sayı gösterir."
     summary: "%{mapped} konumlu; %{total} seçili kayıt."
@@ -24,3 +25,5 @@ tr:
     search_failed: "Arama kullanılamıyor. Sonra deneyin veya haritayı kullanın."
     unmapped: "Koordinatsız yerler"
     ledger: "Kaynak kayıtlar"
+    approximate_help: "%{count} kayıt yaklaşık sokak veya alan konumları kullanıyor. Kesin nokta doğrulanmadı."
+    approximate_location: "Yaklaşık sokak veya alan konumu; kesin nokta doğrulanmadı"

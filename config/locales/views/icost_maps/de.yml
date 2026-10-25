@@ -1,5 +1,6 @@
 de:
   icost_maps:
+    nav_label: "Karte"
     title: "iCost-Karte"
     help: "Kategoriesymbole zeigen auch Prüfzeilen. Ortsangaben ändern keine Buchung. Klicken Sie auf ein Symbol für Details; nahe Einträge zeigen eine Anzahl."
     summary: "%{mapped} verortet; %{total} Datensätze ausgewählt."
@@ -24,3 +25,5 @@ de:
     search_failed: "Suche nicht verfügbar. Später versuchen oder Karte nutzen."
     unmapped: "Orte ohne Koordinaten"
     ledger: "Quelldatensätze"
+    approximate_help: "%{count} Einträge verwenden ungefähre Straßen- oder Geländestandorte. Der genaue Ort wurde nicht geprüft."
+    approximate_location: "Ungefährer Straßen- oder Geländestandort; genauer Ort ungeprüft"

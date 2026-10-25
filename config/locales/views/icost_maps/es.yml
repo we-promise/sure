@@ -1,5 +1,6 @@
 es:
   icost_maps:
+    nav_label: "Mapa"
     title: "Mapa iCost"
     help: "Los iconos incluyen filas por revisar. Ubicar no cambia la contabilidad. Pulse para ver detalles; los puntos cercanos muestran un recuento."
     summary: "%{mapped} ubicados; %{total} registros seleccionados."
@@ -24,3 +25,5 @@ es:
     search_failed: "Búsqueda no disponible. Reintente o use el mapa."
     unmapped: "Lugares sin coordenadas"
     ledger: "Registros de origen"
+    approximate_help: "%{count} registros usan ubicaciones aproximadas de calle o recinto. El punto exacto no está verificado."
+    approximate_location: "Ubicación aproximada de calle o recinto; punto exacto sin verificar"

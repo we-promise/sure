@@ -1,5 +1,6 @@
 pl:
   icost_maps:
+    nav_label: "Mapa"
     title: "Mapa iCost"
     help: "Ikony obejmują wiersze do sprawdzenia. Lokalizacja nie zmienia księgowania. Kliknij, aby zobaczyć szczegóły; pobliskie punkty pokazują liczbę."
     summary: "%{mapped} zlokalizowanych; %{total} wybranych rekordów."
@@ -24,3 +25,5 @@ pl:
     search_failed: "Wyszukiwanie niedostępne. Spróbuj później lub użyj mapy."
     unmapped: "Miejsca bez współrzędnych"
     ledger: "Rekordy źródłowe"
+    approximate_help: "%{count} wpisów używa przybliżonych lokalizacji ulic lub obiektów. Dokładne punkty nie zostały sprawdzone."
+    approximate_location: "Przybliżona lokalizacja ulicy lub obiektu; dokładny punkt niesprawdzony"

@@ -1,4 +1,9 @@
-<% content_for :page_title, t("icost_maps.title") %>
+<% content_for :page_header do %>
+  <header class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <h1 class="text-xl lg:text-3xl font-medium text-primary"><%= t("icost_maps.title") %></h1>
+    <%= render DS::Link.new(text: t("icost_imports.title"), href: icost_imports_path, icon: "file-spreadsheet", variant: :outline) %>
+  </header>
+<% end %>
 <% content_for :head do %>
   <%= stylesheet_link_tag "leaflet", "icost-map", "data-turbo-track": "reload" %>
 <% end %>
@@ -6,9 +11,11 @@
      data-icost-map-tiles-value="<%= ENV.fetch("ICOST_MAP_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png") %>"
      data-icost-map-error-value="<%= t("icost_maps.map_failed") %>"
      data-icost-map-pick-value="<%= t("icost_maps.pick_hint") %>">
-  <%= render DS::Link.new(text: t("icost_imports.title"), href: icost_imports_path, variant: :default) %>
   <%= render DS::Alert.new(message: t("icost_maps.help")) %>
   <p class="text-sm text-secondary"><%= t("icost_maps.summary", mapped: @located.size, total: @total) %></p>
+  <% if @approximate_count.positive? %>
+    <%= render DS::Alert.new(message: t("icost_maps.approximate_help", count: @approximate_count), variant: :warning) %>
+  <% end %>
   <% if @total > 1000 %>
     <%= render DS::Alert.new(message: t("icost_maps.limit"), variant: :warning) %>
   <% end %>
@@ -33,6 +40,9 @@
         <p class="font-medium"><%= record.category_path.reject(&:blank?).join(" / ") %></p>
         <p><%= icost_value(record.amount) %> <%= record.currency %> · <%= record.recorded_at_text %></p>
         <p><%= record.location_text %></p>
+        <% if record.approximate_map_location? %>
+          <p class="text-sm text-secondary" data-icost-location-accuracy><%= t("icost_maps.approximate_location") %></p>
+        <% end %>
         <p><%= icost_status(record) %></p>
         <%= render DS::Link.new(text: t("icost_imports.record_title", row: record.source_row), href: icost_import_record_path(record.icost_import_id, record), variant: :default) %>
       </div>

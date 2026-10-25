@@ -1,5 +1,6 @@
 nb:
   icost_maps:
+    nav_label: "Kart"
     title: "iCost-kart"
     help: "Kategoriikoner viser også kontrollrader. Plassering endrer ikke regnskapet. Trykk for detaljer; nærliggende punkter viser antall."
     summary: "%{mapped} plassert; %{total} valgte poster."
@@ -24,3 +25,5 @@ nb:
     search_failed: "Søk utilgjengelig. Prøv senere eller bruk kartet."
     unmapped: "Steder uten koordinater"
     ledger: "Kildeposter"
+    approximate_help: "%{count} poster bruker omtrentlige gate- eller områdeposisjoner. Nøyaktig sted er ikke bekreftet."
+    approximate_location: "Omtrentlig gate- eller områdeposisjon; nøyaktig sted ikke bekreftet"

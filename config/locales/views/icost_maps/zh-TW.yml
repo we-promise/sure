@@ -1,5 +1,6 @@
 zh-TW:
   icost_maps:
+    nav_label: "地圖"
     title: "iCost 帳單地圖"
     help: "按分類圖示顯示來源帳單，包含待審閱記錄。定位不會改變記帳結果。點選圖示查看明細，重疊位置顯示記錄數量。"
     summary: "目前範圍共 %{total} 筆記錄，其中 %{mapped} 筆已定位。"
@@ -24,3 +25,5 @@ zh-TW:
     search_failed: "地點搜尋暫不可用，請稍後重試，或直接在地圖上選點。"
     unmapped: "尚未定位的地點"
     ledger: "來源帳單清單"
+    approximate_help: "%{count} 筆記錄使用道路或園區的近似位置，尚未核對門牌或具體點位。"
+    approximate_location: "道路／園區近似位置，具體點位待核對"

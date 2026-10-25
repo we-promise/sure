@@ -21,6 +21,18 @@ class IcostMapsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-action='icost-map#load']", count: 1
   end
 
+  test "map uses main application navigation beside transactions on desktop and mobile" do
+    get icost_map_path
+    assert_response :success
+    assert_select "[data-controller~='app-layout']", count: 1
+    assert_select "nav a[href=?][aria-current='page']", icost_map_path, count: 2, text: I18n.t("icost_maps.nav_label")
+    assert_select "nav a[href=?]", transactions_path, count: 2
+    assert_select "h1", text: I18n.t("icost_maps.title")
+    assert_select "#settings-nav-container", count: 0
+    get transactions_path
+    assert_select "nav a[href=?]", icost_map_path, count: 2
+  end
+
   test "confirming a location maps all same-name rows without changing source fields or money" do
     before = @batch.records.map { |record| record.attributes.slice("raw_fields", "latitude", "longitude", "status") }
     assert_no_difference "Entry.count" do
@@ -40,6 +52,19 @@ class IcostMapsControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "Synthetic museum"
     patch icost_map_path, params: { icost_location: { place: "Synthetic museum", latitude: "51.5", longitude: "-0.1" } }
     assert @batch.records.all? { |record| record.resolution.empty? }
+  end
+
+  test "street and site matches are visibly approximate until a precise place is confirmed" do
+    record = @batch.records.first
+    record.update!(resolution: { "location" => { "latitude" => 51.5, "longitude" => -0.1, "accuracy" => "street", "source" => "nominatim_name_match" } })
+    @batch.records.last.update!(resolution: { "location" => { "latitude" => 51.51, "longitude" => -0.1, "accuracy" => "area", "source" => "nominatim_name_match" } })
+    get icost_map_path
+    assert_response :success
+    assert_includes response.body, I18n.t("icost_maps.approximate_help", count: 2)
+    assert_select "[data-icost-location-accuracy]", text: I18n.t("icost_maps.approximate_location")
+    patch icost_map_path, params: { icost_location: { place: "Synthetic museum", latitude: "51.5001", longitude: "-0.1001" } }
+    refute record.reload.approximate_map_location?
+    assert_equal "user_confirmed_place", record.resolution.dig("location", "source")
   end
 
   test "invalid coordinates are rejected" do

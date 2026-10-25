@@ -1,5 +1,6 @@
 hu:
   icost_maps:
+    nav_label: "Térkép"
     title: "iCost-térkép"
     help: "Az ikonok az ellenőrzendő sorokat is mutatják. A hely nem módosítja a könyvelést. Kattintson a részletekért; a közeli pontok számlálót mutatnak."
     summary: "%{mapped} elhelyezve; %{total} kiválasztott rekord."
@@ -24,3 +25,5 @@ hu:
     search_failed: "A keresés nem elérhető. Próbálja később vagy használja a térképet."
     unmapped: "Koordináta nélküli helyek"
     ledger: "Forrásrekordok"
+    approximate_help: "%{count} tétel hozzávetőleges utcai vagy területi helyet használ. A pontos hely nincs ellenőrizve."
+    approximate_location: "Hozzávetőleges utcai vagy területi hely; pontos hely nem ellenőrzött"

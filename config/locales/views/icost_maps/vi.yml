@@ -1,5 +1,6 @@
 vi:
   icost_maps:
+    nav_label: "Bản đồ"
     title: "Bản đồ iCost"
     help: "Biểu tượng gồm cả dòng cần kiểm tra. Định vị không thay đổi kế toán. Nhấn để xem chi tiết; các điểm gần nhau hiển thị số lượng."
     summary: "%{mapped} đã định vị; %{total} bản ghi được chọn."
@@ -24,3 +25,5 @@ vi:
     search_failed: "Tìm kiếm tạm ngừng. Thử lại sau hoặc dùng bản đồ."
     unmapped: "Địa điểm chưa có tọa độ"
     ledger: "Bản ghi gốc"
+    approximate_help: "%{count} bản ghi dùng vị trí đường phố hoặc khu vực gần đúng. Điểm chính xác chưa được xác minh."
+    approximate_location: "Vị trí đường phố hoặc khu vực gần đúng; điểm chính xác chưa xác minh"

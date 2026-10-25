@@ -1,5 +1,6 @@
 fr:
   icost_maps:
+    nav_label: "Carte"
     title: "Carte iCost"
     help: "Les icônes incluent les lignes à vérifier. Localiser ne change pas les comptes. Cliquez pour les détails ; les points proches affichent un nombre."
     summary: "%{mapped} localisés ; %{total} enregistrements sélectionnés."
@@ -24,3 +25,5 @@ fr:
     search_failed: "Recherche indisponible. Réessayez ou utilisez la carte."
     unmapped: "Lieux sans coordonnées"
     ledger: "Enregistrements sources"
+    approximate_help: "%{count} écritures utilisent des positions approximatives de rue ou de site. Le point précis n’est pas vérifié."
+    approximate_location: "Position approximative de rue ou de site ; point précis non vérifié"

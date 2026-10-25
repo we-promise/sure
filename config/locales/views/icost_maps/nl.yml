@@ -1,5 +1,6 @@
 nl:
   icost_maps:
+    nav_label: "Kaart"
     title: "iCost-kaart"
     help: "Categoriepictogrammen tonen ook controleregels. Locaties veranderen geen boekingen. Klik voor details; nabije punten tonen een aantal."
     summary: "%{mapped} geplaatst; %{total} geselecteerde regels."
@@ -24,3 +25,5 @@ nl:
     search_failed: "Zoeken niet beschikbaar. Probeer later of gebruik de kaart."
     unmapped: "Plaatsen zonder coördinaten"
     ledger: "Bronregels"
+    approximate_help: "%{count} boekingen gebruiken geschatte straat- of terreinlocaties. De exacte plek is niet gecontroleerd."
+    approximate_location: "Geschatte straat- of terreinlocatie; exacte plek niet gecontroleerd"

@@ -1,5 +1,5 @@
 class IcostMapsController < ApplicationController
-  layout "settings"
+  layout "application"
   skip_before_action :sync_family
 
   def show
@@ -37,6 +37,7 @@ class IcostMapsController < ApplicationController
       @total = scope.count
       @records = scope.order(:recorded_at_text, :id).limit(1000).to_a
       @located = @records.select { |record| record.map_coordinates }
+      @approximate_count = @located.count(&:approximate_map_location?)
       @places = @records.reject { |record| record.map_coordinates || record.location_text.blank? }.group_by(&:location_text)
       @place_names = @records.map(&:location_text).compact_blank.uniq.sort
       @category_icons = Current.family.categories.index_by(&:name)
@@ -45,6 +46,6 @@ class IcostMapsController < ApplicationController
     end
 
     def default_breadcrumbs
-      [ [ t("breadcrumbs.home"), root_path ], [ t("icost_imports.title"), icost_imports_path ], [ t("icost_maps.title"), nil ] ]
+      [ [ t("breadcrumbs.home"), root_path ], [ t("icost_maps.title"), nil ] ]
     end
 end

@@ -135,6 +135,11 @@ class IcostRecord < ApplicationRecord
     self.class.valid_coordinates(latitude, longitude)
   end
 
+  def approximate_map_location?
+    location = resolution["location"]
+    location.is_a?(Hash) && %w[street area].include?(location["accuracy"])
+  end
+
   def self.locate_place!(user:, place:, latitude:, longitude:)
     IcostImport.authorize!(user.family, user)
     coordinates = valid_coordinates(latitude, longitude)

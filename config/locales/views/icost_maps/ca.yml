@@ -1,5 +1,6 @@
 ca:
   icost_maps:
+    nav_label: "Mapa"
     title: "Mapa iCost"
     help: "Les icones inclouen files per revisar. Situar no canvia la comptabilitat. Premeu per als detalls; els punts propers mostren el recompte."
     summary: "%{mapped} situats; %{total} registres seleccionats."
@@ -24,3 +25,5 @@ ca:
     search_failed: "Cerca no disponible. Torneu-ho a provar o utilitzeu el mapa."
     unmapped: "Llocs sense coordenades"
     ledger: "Registres originals"
+    approximate_help: "%{count} registres fan servir ubicacions aproximades de carrer o recinte. El punt exacte no està verificat."
+    approximate_location: "Ubicació aproximada de carrer o recinte; punt exacte no verificat"

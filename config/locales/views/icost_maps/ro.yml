@@ -1,5 +1,6 @@
 ro:
   icost_maps:
+    nav_label: "Hartă"
     title: "Hartă iCost"
     help: "Pictogramele includ rânduri de verificat. Localizarea nu schimbă contabilitatea. Apăsați pentru detalii; punctele apropiate arată un număr."
     summary: "%{mapped} localizate; %{total} înregistrări selectate."
@@ -24,3 +25,5 @@ ro:
     search_failed: "Căutare indisponibilă. Încercați mai târziu sau folosiți harta."
     unmapped: "Locuri fără coordonate"
     ledger: "Înregistrări sursă"
+    approximate_help: "%{count} înregistrări folosesc poziții aproximative de străzi sau zone. Punctul exact nu este verificat."
+    approximate_location: "Poziție aproximativă de stradă sau zonă; punct exact neverificat"

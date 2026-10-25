@@ -42,7 +42,8 @@ batch can be retried from its preview without duplicating posted entries.
 
 ## Category map and place matching
 
-Open `/icost_map` from the import history or preview. Leaflet 1.9.4 and its
+Open **Map** alongside Transactions in the main desktop or mobile navigation.
+`/icost_map` is also linked from the import history or preview. Leaflet 1.9.4 and its
 BSD-2-Clause licence are vendored locally. Category icons/emoji and colours come
 from the family's categories. Nearby markers show a count and open a list of
 their individual source records. The accessible ledger list remains usable
@@ -65,6 +66,15 @@ the current user's imports, including already recorded rows, without modifying
 source fields or accounting. Later exports reuse that confirmed place unless
 they already supply explicit WGS84 coordinates. Unknown coordinate systems are
 not silently interpreted or converted.
+
+Explicitly authorized, small one-time sample matching may send deduplicated
+public place names to Nominatim serially, with the same shared rate limit and
+cache. Preserve the matched query and result separately from source fields.
+Street-only results use `accuracy: street`, and site-level results for a
+sub-location use `accuracy: area`; both are visibly approximate.
+Never substitute an unrelated same-name business or claim a house-number match.
+Unmatched places stay available for manual correction. Ordinary imports do not
+start geocoding.
 
 Place searches use Nominatim only on an explicit search submission; no imported
 location, note or amount is automatically transmitted. Do not submit private

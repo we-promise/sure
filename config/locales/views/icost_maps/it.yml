@@ -1,5 +1,6 @@
 it:
   icost_maps:
+    nav_label: "Mappa"
     title: "Mappa iCost"
     help: "Le icone includono righe da verificare. La posizione non cambia la contabilità. Tocca per i dettagli; i punti vicini mostrano un conteggio."
     summary: "%{mapped} localizzati; %{total} record selezionati."
@@ -24,3 +25,5 @@ it:
     search_failed: "Ricerca non disponibile. Riprova o usa la mappa."
     unmapped: "Luoghi senza coordinate"
     ledger: "Record originali"
+    approximate_help: "%{count} voci usano posizioni approssimative di vie o aree. Il punto preciso non è verificato."
+    approximate_location: "Posizione approssimativa di via o area; punto preciso non verificato"

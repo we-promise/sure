@@ -1,5 +1,6 @@
 en:
   icost_maps:
+    nav_label: "Map"
     title: "iCost map"
     help: "Category pins show source records, including rows still under review. Map placement does not change accounting. Click a pin for its records; nearby pins show a count."
     summary: "%{mapped} mapped records; %{total} records in this selection."
@@ -24,3 +25,5 @@ en:
     search_failed: "Place search is temporarily unavailable. Retry later or select coordinates on the map."
     unmapped: "Places awaiting coordinates"
     ledger: "Source records"
+    approximate_help: "%{count} records use approximate street or site locations. The precise address or spot has not been verified."
+    approximate_location: "Approximate street or site location; precise spot unverified"
