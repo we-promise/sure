@@ -75,6 +75,33 @@ class PlaidItem::SyncerTest < ActiveSupport::TestCase
     assert_equal 4.5, loan.interest_rate.to_f
   end
 
+  # Plaid can stop returning an account, closed at the bank say. Its stored
+  # payload is then an earlier sync's, and must not be dated as a change.
+  test "an account Plaid leaves out of the sync dates no rate change" do
+    plaid_account = plaid_accounts(:one)
+    plaid_account.update!(plaid_type: "loan", plaid_subtype: "mortgage",
+                          raw_liabilities_payload: { mortgage: { interest_rate: { type: "variable", percentage: 5.2 } } })
+    plaid_account.current_account.update!(accountable: Loan.new(interest_rate: 4.5, rate_type: "variable", start_date: Date.new(2020, 1, 1)))
+    loan = plaid_account.current_account.loan
+
+    provider = mock("Provider::Plaid")
+    provider.stubs(:get_item).returns(OpenStruct.new(item: OpenStruct.new(institution_id: "ins_1")))
+    provider.stubs(:get_institution).returns(OpenStruct.new(institution: OpenStruct.new))
+    @plaid_item.stubs(:plaid_provider).returns(provider)
+    @plaid_item.stubs(:upsert_plaid_snapshot!)
+    @plaid_item.stubs(:upsert_plaid_institution_snapshot!)
+    @plaid_item.stubs(:schedule_account_syncs)
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:accounts).returns([])
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:transactions_cursor).returns(nil)
+
+    PlaidItem::Syncer.new(@plaid_item).perform_sync(stub_sync)
+
+    loan.reload
+    assert_empty loan.variable_rate_schedule || {}, "a payload Plaid did not send this sync was dated as a change"
+    assert_equal 4.5, loan.interest_rate.to_f
+    assert_equal({}, plaid_account.reload.raw_liabilities_payload)
+  end
+
   private
     def stub_sync
       sync = mock("sync")
