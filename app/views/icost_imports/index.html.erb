@@ -1,17 +1,27 @@
-<div class="ph-no-capture privacy-sensitive space-y-4" data-icost-page>
-  <% content_for :page_title, t("icost_imports.title") %>
-  <% content_for :page_actions do %>
-    <%= render DS::Link.new(text: t("icost_imports.new_import"), href: new_icost_import_path, icon: "upload", variant: :primary) unless Current.user.guest? %>
-  <% end %>
-  <%= render DS::Alert.new(message: t("icost_imports.local_notice")) %>
-  <% if @imports.empty? %>
-    <p class="text-secondary"><%= t("icost_imports.no_imports") %></p>
-  <% else %>
-    <%= render DS::Table.new(rows: @imports, label: t("icost_imports.title")) do |table| %>
-      <% table.with_column(t("icost_imports.fields.filename")) { |batch| link_to(batch.filename, icost_import_path(batch), class: "text-link underline") } %>
-      <% table.with_column(t("icost_imports.fields.created_at")) { |batch| l(batch.created_at, format: :long) } %>
-      <% table.with_column(t("icost_imports.fields.file_sha256")) { |batch| batch.file_sha256.first(12) } %>
+<%= turbo_frame_tag "icost-import-history", target: "_top", data: (@publishing ? { controller: "polling", polling_url_value: request.path } : {}) do %>
+  <div class="ph-no-capture privacy-sensitive space-y-4" data-icost-page>
+    <% content_for :page_title, t("icost_imports.title") %>
+    <% content_for :page_actions do %>
+      <%= render DS::Link.new(text: t("icost_maps.title"), href: icost_map_path, icon: "map", variant: :outline) %>
+      <%= render DS::Link.new(text: t("icost_imports.new_import"), href: new_icost_import_path, icon: "upload", variant: :primary) unless Current.user.guest? %>
     <% end %>
-  <% end %>
-  <%= render DS::Link.new(text: t("icost_imports.all_imports"), href: imports_path, variant: :default) %>
-</div>
+    <%= render DS::Alert.new(message: t("icost_imports.local_notice")) %>
+    <% if @publishing %>
+      <%= render DS::Alert.new(message: t("icost_imports.queued"), live: :status) %>
+    <% end %>
+    <%= render "icost_imports/upload_errors" %>
+    <% if @imports.empty? %>
+      <p class="text-secondary"><%= t("icost_imports.no_imports") %></p>
+    <% else %>
+      <%= render DS::Table.new(rows: @imports, label: t("icost_imports.title")) do |table| %>
+        <% table.with_column(t("icost_imports.fields.filename")) { |batch| link_to(batch.filename, icost_import_path(batch), class: "text-link underline") } %>
+        <% table.with_column(t("icost_imports.fields.created_at")) { |batch| l(batch.created_at, format: :long) } %>
+        <% %w[ready published needs_review].each do |status| %>
+          <% table.with_column(t("icost_imports.statuses.#{status}"), numeric: true) { |batch| @counts.fetch([batch.id, status], 0).to_s } %>
+        <% end %>
+        <% table.with_column(t("icost_imports.fields.file_sha256")) { |batch| batch.file_sha256.first(12) } %>
+      <% end %>
+    <% end %>
+    <%= render DS::Link.new(text: t("icost_imports.all_imports"), href: imports_path, variant: :default) %>
+  </div>
+<% end %>

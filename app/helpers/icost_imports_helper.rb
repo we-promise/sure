@@ -1,4 +1,9 @@
 module IcostImportsHelper
+  def icost_upload_error(error)
+    reason = t("icost_imports.parse_errors.#{error.fetch('code')}", default: t("icost_imports.messages.invalid_upload"))
+    "#{error.fetch('filename')}: #{reason}"
+  end
+
   def icost_record_visible?(record)
     return false unless record && Current.user && record.family_id == Current.family.id
     return true if record.icost_import.user_id == Current.user.id

@@ -11,6 +11,8 @@ class IcostRecord < ApplicationRecord
   validates :source_id, uniqueness: { scope: :family_id }
   validate :same_family
 
+  scope :owned_by, ->(user) { joins(:icost_import).where(family_id: user.family_id, icost_imports: { user_id: user.id }) }
+
   attr_readonly :icost_import_id, :family_id, :source_row, :source_id, :row_sha256,
     :source_values, :raw_fields, :unknown_fields, :recorded_at_text, :transaction_type,
     :amount, :currency, :category_path, :account_name, :counterparty_name, :book_name,
@@ -80,6 +82,52 @@ class IcostRecord < ApplicationRecord
     Date.strptime(recorded_at_text.to_s.strip[0, 10].tr("/", "-"), "%Y-%m-%d")
   end
 
+  def self.valid_coordinates(latitude, longitude)
+    values = [ latitude, longitude ].map { |value| BigDecimal(value.to_s, exception: false) }
+    return unless values.all? { |value| value&.finite? }
+    return unless values.first.abs <= 90 && values.last.abs <= 180
+    values.map(&:to_f)
+  end
+
+  def map_coordinates
+    location = resolution["location"]
+    return self.class.valid_coordinates(location["latitude"], location["longitude"]) if location.is_a?(Hash)
+    return unless %w[wgs84 wgs-84 epsg:4326].include?(coordinate_system.to_s.downcase)
+    self.class.valid_coordinates(latitude, longitude)
+  end
+
+  def self.locate_place!(user:, place:, latitude:, longitude:)
+    IcostImport.authorize!(user.family, user)
+    coordinates = valid_coordinates(latitude, longitude)
+    raise ResolutionError, "invalid_coordinates" unless coordinates && place.present?
+    user.family.with_lock do
+      owned_by(user).where(location_text: place).find_each do |record|
+        record.with_lock do
+          record.update!(resolution: record.resolution.merge("location" => {
+            "latitude" => coordinates.first, "longitude" => coordinates.last,
+            "coordinate_system" => "WGS84", "source" => "user_confirmed_place"
+          }))
+        end
+      end
+    end
+  end
+
+  def self.confirmed_locations(user)
+    owned_by(user).where("resolution ? 'location'").pluck(:location_text, :resolution)
+      .group_by(&:first).filter_map do |place, rows|
+        locations = rows.map { |_name, resolution| resolution["location"] }.uniq
+        [ place, locations.sole ] if place.present? && locations.one?
+      end.to_h
+  end
+
+  def self.confirmed_account_mappings(user)
+    owned_by(user).where("resolution ? 'account_id'").pluck(:account_name, :currency, :resolution)
+      .group_by { |name, currency, _resolution| [ name, currency ] }.filter_map do |key, rows|
+        ids = rows.map { |_name, _currency, resolution| resolution["account_id"] }.uniq
+        [ key, ids.sole ] if key.first.present? && ids.one?
+      end.to_h
+  end
+
   private
     def perform_publish!(user)
       with_lock(requires_new: true) do
@@ -127,6 +175,9 @@ class IcostRecord < ApplicationRecord
     end
 
     def matching_account(user)
+      if resolution["account_id"].present?
+        return family.accounts.writable_by(user).visible.manual.find_by(id: resolution["account_id"], currency: currency)
+      end
       names = [ account_name, "iCost预览｜#{account_name}｜#{currency}｜期初未知" ]
       accounts = family.accounts.writable_by(user).visible.manual.where(name: names, currency: currency).to_a
       accounts.one? ? accounts.first : nil

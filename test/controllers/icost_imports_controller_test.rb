@@ -86,6 +86,49 @@ class IcostImportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "multiple uploads keep valid files when another file cannot be parsed" do
+    assert_difference "IcostImport.count", 1 do
+      post icost_imports_path, params: { icost_import: { files: [ sample_file,
+        uploaded_file(filename: "bad.xlsx", content_type: "application/octet-stream", content: "not a workbook") ] } }
+    end
+    assert_redirected_to icost_imports_path
+    assert flash[:alert].present?
+    assert flash[:notice].present?
+  end
+
+  test "XLSX uploads can queue automatic posting and replay the same archive" do
+    assert_enqueued_jobs 1, only: IcostPublishJob do
+      assert_difference "IcostImport.count", 1 do
+        post icost_imports_path, params: { icost_import: { files: [ file_fixture_upload("imports/icost.xlsx") ], auto_post: "1" } }
+      end
+    end
+    batch = @user.family.icost_imports.last
+    assert_redirected_to icost_import_path(batch)
+    assert_equal "Synthetic museum", batch.records.sole.location_text
+    assert_no_difference [ "IcostImport.count", "Entry.count" ] do
+      post icost_imports_path, params: { icost_import: { files: [ file_fixture_upload("imports/icost.xlsx") ] } }
+    end
+    assert_redirected_to icost_import_path(batch)
+  end
+
+  test "batch account form submits indexed mappings through the owner scope" do
+    batch = prepare_sample
+    patch resolve_accounts_icost_import_path(batch), params: { account_mappings: { mappings: {
+      "0" => { source_account: "", currency: "USD", account_id: accounts(:depository).id }
+    } } }
+    assert_redirected_to icost_import_path(batch)
+    assert_equal accounts(:depository).id, batch.records.sole.resolution["account_id"]
+  end
+
+  test "parser failures show a useful reason on the upload page" do
+    post icost_imports_path, params: { icost_import: { file: uploaded_file(filename: "bad.xls", content_type: "application/octet-stream", content: "synthetic") } }
+    assert_redirected_to new_icost_import_path
+    assert_includes flash[:alert], I18n.t("icost_imports.parse_errors.unsupported_file_type")
+    follow_redirect!
+    assert_response :success
+    assert_select "[data-icost-upload-errors]", count: 1
+  end
+
   test "batch access is isolated from another user in the same family and other families" do
     batch = prepare_sample
     [ users(:family_member), users(:empty) ].each do |other_user|

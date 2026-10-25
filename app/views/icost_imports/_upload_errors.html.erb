@@ -1,0 +1,11 @@
+<% if flash[:icost_upload_errors].present? %>
+  <div data-icost-upload-errors>
+    <%= render DS::Alert.new(variant: :error, live: :alert) do %>
+      <ul class="list-disc pl-5">
+        <% Array(flash[:icost_upload_errors]).each do |message| %>
+          <li><%= icost_upload_error(message) %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </div>
+<% end %>

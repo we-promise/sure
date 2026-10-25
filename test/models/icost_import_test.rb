@@ -222,6 +222,52 @@ class IcostImportTest < ActiveSupport::TestCase
     assert Entry.exists?(entry.id)
   end
 
+  test "one account mapping resolves every matching source account and currency" do
+    batch = prepare(csv_for(source_row("账户1" => "Unmapped wallet"), source_row("账户1" => "Unmapped wallet", "金额" => "-8")))
+    assert_equal [ "needs_review" ], batch.records.distinct.pluck(:status)
+
+    assert_no_difference "Entry.count" do
+      batch.resolve_accounts!(user: @user, mappings: [ { source_account: "Unmapped wallet", currency: "USD", account_id: @account.id } ])
+    end
+    assert_equal [ "ready" ], batch.records.distinct.pluck(:status)
+    assert_equal [ @account.id ], batch.records.map { |record| record.resolution["account_id"] }.uniq
+    assert_difference("Entry.count", 2) { batch.publish!(user: @user) }
+  end
+
+  test "bulk mapping keeps accounting warnings and rolls back inaccessible account selections" do
+    batch = prepare(csv_for(source_row("账户1" => "Wallet A"), source_row("账户1" => "Wallet B", "手续费" => "1")))
+    assert_raises(IcostRecord::ResolutionError) do
+      batch.resolve_accounts!(user: @user, mappings: [
+        { source_account: "Wallet A", currency: "USD", account_id: @account.id },
+        { source_account: "Wallet B", currency: "USD", account_id: SecureRandom.uuid }
+      ])
+    end
+    assert batch.records.all? { |record| record.resolution.empty? }
+    batch.resolve_accounts!(user: @user, mappings: [ { source_account: "Wallet B", currency: "USD", account_id: @account.id } ])
+    record = batch.records.find_by!(source_row: 3)
+    assert_equal "needs_review", record.status
+    assert_includes record.issues, "fee_semantics_required"
+  end
+
+  test "another user cannot bulk resolve a source archive" do
+    batch = prepare(csv_for(source_row("账户1" => "Unmapped wallet")))
+    assert_raises(IcostImport::Error) do
+      batch.resolve_accounts!(user: users(:family_member), mappings: [])
+    end
+  end
+
+  test "confirmed account mappings and places are reused for a later export" do
+    batch = prepare(csv_for(source_row("账户1" => "Wallet", "位置" => "Synthetic museum")))
+    batch.resolve_accounts!(user: @user, mappings: [ { source_account: "Wallet", currency: "USD", account_id: @account.id } ])
+    IcostRecord.locate_place!(user: @user, place: "Synthetic museum", latitude: "51.5", longitude: "-0.1")
+
+    later = prepare(csv_for(source_row("账户1" => "Wallet", "位置" => "Synthetic museum", "金额" => "-99")))
+    record = later.records.sole
+    assert_equal "ready", record.status
+    assert_equal @account.id, record.resolution["account_id"]
+    assert_equal [ 51.5, -0.1 ], record.map_coordinates
+  end
+
   private
     def source_row(overrides = {})
       Icost::Normalizer::HEADERS.index_with { "" }.merge(

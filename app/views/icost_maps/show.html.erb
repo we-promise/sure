@@ -1,0 +1,80 @@
+<% content_for :page_title, t("icost_maps.title") %>
+<% content_for :head do %>
+  <%= stylesheet_link_tag "leaflet", "icost-map", "data-turbo-track": "reload" %>
+<% end %>
+<div class="icost-map space-y-4 ph-no-capture privacy-sensitive" data-icost-page data-controller="icost-map"
+     data-icost-map-tiles-value="<%= ENV.fetch("ICOST_MAP_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png") %>"
+     data-icost-map-error-value="<%= t("icost_maps.map_failed") %>"
+     data-icost-map-pick-value="<%= t("icost_maps.pick_hint") %>">
+  <%= render DS::Link.new(text: t("icost_imports.title"), href: icost_imports_path, variant: :default) %>
+  <%= render DS::Alert.new(message: t("icost_maps.help")) %>
+  <p class="text-sm text-secondary"><%= t("icost_maps.summary", mapped: @located.size, total: @total) %></p>
+  <% if @total > 1000 %>
+    <%= render DS::Alert.new(message: t("icost_maps.limit"), variant: :warning) %>
+  <% end %>
+  <%= styled_form_with url: icost_map_path, method: :get, class: "flex flex-wrap items-end gap-3" do |form| %>
+    <%= form.select :category, @categories, { include_blank: t("icost_maps.all_categories"), selected: params[:category], label: t("icost_imports.fields.category_path") } %>
+    <%= render DS::Button.new(text: t("icost_maps.filter"), type: :submit, variant: :secondary) %>
+  <% end %>
+  <%= render DS::Card.new(class: "space-y-3") do %>
+    <p class="text-sm text-secondary"><%= t("icost_maps.privacy") %></p>
+    <div>
+      <%= render DS::Button.new(text: t("icost_maps.load"), data: { action: "icost-map#load" }) %>
+    </div>
+    <p role="status" class="text-sm text-secondary" data-icost-map-target="status"></p>
+    <div class="h-[60dvh] min-h-80 w-full rounded-lg bg-container-inset relative z-0" role="region" aria-label="<%= t("icost_maps.title") %>" data-icost-map-target="canvas"></div>
+  <% end %>
+  <% @located.each do |record| %>
+    <% coordinates = record.map_coordinates %>
+    <% category = @category_icons[record.category_path.reject(&:blank?).last] %>
+    <template data-icost-map-target="record" data-latitude="<%= coordinates.first %>" data-longitude="<%= coordinates.last %>" data-label="<%= record.category_path.reject(&:blank?).join(" / ") %>">
+      <%= render DS::MapPin.new(category: category) %>
+      <div data-icost-popup class="space-y-1 text-primary">
+        <p class="font-medium"><%= record.category_path.reject(&:blank?).join(" / ") %></p>
+        <p><%= icost_value(record.amount) %> <%= record.currency %> · <%= record.recorded_at_text %></p>
+        <p><%= record.location_text %></p>
+        <p><%= icost_status(record) %></p>
+        <%= render DS::Link.new(text: t("icost_imports.record_title", row: record.source_row), href: icost_import_record_path(record.icost_import_id, record), variant: :default) %>
+      </div>
+    </template>
+  <% end %>
+  <% unless Current.user.guest? %>
+    <%= render DS::Card.new(class: "space-y-4") do %>
+      <h2 class="text-lg font-medium text-primary"><%= t("icost_maps.match_title") %></h2>
+      <p class="text-sm text-secondary"><%= t("icost_maps.search_privacy") %></p>
+      <%= styled_form_with url: search_icost_map_path, method: :post, scope: :icost_location, class: "space-y-3" do |form| %>
+        <%= form.text_field :query, label: t("icost_maps.query"), value: params.dig(:icost_location, :query), required: true, maxlength: 160, minlength: 3 %>
+        <%= render DS::Button.new(text: t("icost_maps.search"), type: :submit, variant: :secondary) %>
+      <% end %>
+      <% if @searched && @results.empty? %>
+        <p role="status" class="text-secondary"><%= t("icost_maps.no_results") %></p>
+      <% end %>
+      <% @results.each do |result| %>
+        <p class="text-sm text-primary"><%= result.fetch("name") %></p>
+        <%= render DS::Button.new(text: t("icost_maps.use_result"), variant: :outline, data: { action: "icost-map#choose", latitude: result.fetch("latitude"), longitude: result.fetch("longitude") }) %>
+      <% end %>
+      <%= styled_form_with url: icost_map_path, method: :patch, scope: :icost_location, class: "space-y-3" do |form| %>
+        <%= form.select :place, @place_names, { label: t("icost_imports.fields.location_text"), include_blank: t("icost_maps.choose_place"), selected: @selected_place }, { required: true } %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <%= form.number_field :latitude, label: t("icost_imports.fields.latitude"), required: true, step: :any, min: -90, max: 90, data: { icost_map_target: "latitude" } %>
+          <%= form.number_field :longitude, label: t("icost_imports.fields.longitude"), required: true, step: :any, min: -180, max: 180, data: { icost_map_target: "longitude" } %>
+        </div>
+        <%= render DS::Button.new(text: t("icost_maps.save"), type: :submit) %>
+      <% end %>
+    <% end %>
+  <% end %>
+  <%= render DS::Disclosure.new(title: t("icost_maps.unmapped"), open: @located.empty?) do %>
+    <% @places.each do |place, records| %>
+      <p class="text-sm text-primary" data-icost-place><%= place %> · <%= records.size %></p>
+    <% end %>
+  <% end %>
+  <%= render DS::Disclosure.new(title: t("icost_maps.ledger")) do %>
+    <%= render DS::Table.new(rows: @records, label: t("icost_maps.ledger")) do |table| %>
+      <% table.with_column(t("icost_imports.fields.source_row")) { |record| link_to(record.source_row.to_s, icost_import_record_path(record.icost_import_id, record), class: "text-link underline") } %>
+      <% table.with_column(t("icost_imports.fields.category_path")) { |record| record.category_path.join(" / ") } %>
+      <% table.with_column(t("icost_imports.fields.amount"), numeric: true) { |record| "#{icost_value(record.amount)} #{record.currency}" } %>
+      <% table.with_column(t("icost_imports.fields.location_text")) { |record| record.location_text.to_s } %>
+      <% table.with_column(t("icost_imports.fields.status")) { |record| icost_status(record) } %>
+    <% end %>
+  <% end %>
+</div>

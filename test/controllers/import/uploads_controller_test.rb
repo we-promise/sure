@@ -35,6 +35,16 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "CSV uploaded successfully.", flash[:notice]
   end
 
+  test "manual XLSX uploads open the iCost preview without a CSV decoding error" do
+    assert_difference "IcostImport.count", 1 do
+      patch import_upload_url(@import), params: { import: { import_file: file_fixture_upload("imports/icost.xlsx") } }
+    end
+    batch = @user.family.icost_imports.last
+    assert_redirected_to icost_import_path(batch)
+    assert_equal "Synthetic museum", batch.records.sole.location_text
+    assert_nil @import.reload.raw_file_str
+  end
+
   test "account select does not leak unshared family accounts (#1803)" do
     sign_in users(:family_member)
 

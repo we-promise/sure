@@ -20,7 +20,8 @@ class UploadInterfaceLocalizationTest < ActionDispatch::IntegrationTest
         end
         unless import.is_a?(QifImport)
           assert_select "[data-controller~='drag-and-drop-import']" do |nodes|
-            nodes.each { |node| assert_equal translation("imports.create.invalid_file_type", locale), node["data-drag-and-drop-import-invalid-file-type-value"] }
+            key = import.is_a?(TransactionImport) ? "icost_imports.parse_errors.unsupported_file_type" : "imports.create.invalid_file_type"
+            nodes.each { |node| assert_equal translation(key, locale), node["data-drag-and-drop-import-invalid-file-type-value"] }
           end
         end
         assert_select ".translation_missing", count: 0

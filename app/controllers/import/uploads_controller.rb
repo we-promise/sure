@@ -18,6 +18,11 @@ class Import::UploadsController < ApplicationController
       handle_qif_upload
     elsif @import.is_a?(SureImport)
       update_sure_import_upload
+    elsif @import.is_a?(TransactionImport) && File.extname(upload_params[:import_file]&.original_filename.to_s).downcase == ".xlsx"
+      file = upload_params[:import_file]
+      raise Icost::FileParser::Error, "file_too_large" if file.size > Icost::FileParser::MAX_FILE_BYTES
+      batch = IcostImport.prepare!(family: Current.family, user: Current.user, bytes: file.read, filename: file.original_filename)
+      redirect_to icost_import_path(batch), notice: t("icost_imports.messages.prepared"), status: :see_other
     elsif csv_valid?(csv_str)
       @import.account = import_account_id.present? ? accessible_accounts.find(import_account_id) : nil
       @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])
@@ -29,6 +34,8 @@ class Import::UploadsController < ApplicationController
 
       render :show, status: :unprocessable_entity
     end
+  rescue Icost::FileParser::Error, IcostImport::Error
+    redirect_to new_icost_import_path, alert: t("icost_imports.messages.invalid_upload"), status: :see_other
   end
 
   private

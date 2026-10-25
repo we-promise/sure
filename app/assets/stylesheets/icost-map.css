@@ -1,0 +1,13 @@
+/* Keep the vendored map controls and popups on Sure's functional tokens. */
+.icost-map .leaflet-popup-content-wrapper,
+.icost-map .leaflet-popup-tip,
+.icost-map .leaflet-bar a,
+.icost-map .leaflet-control-attribution {
+  background-color: var(--color-container);
+  color: var(--utility-text-primary);
+}
+
+.icost-map .leaflet-popup-content a,
+.icost-map .leaflet-control-attribution a {
+  color: var(--color-link);
+}

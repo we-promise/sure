@@ -1,8 +1,68 @@
 # Local iCost import
 
-The iCost workflow is available at `/icost_imports`. Upload a UTF-8 CSV or a
-single-sheet XLSX, inspect the preview and resolve warnings before publishing.
-It uses no AI, bank connector, geocoding, map tiles or remote image requests.
+The iCost workflow is available at `/icost_imports`. Upload UTF-8 CSV or
+single-sheet XLSX files, inspect the preview and resolve warnings before publishing.
+Parsing and accounting use no AI, bank connector, geocoding, map tiles or remote
+image requests. The separate, opt-in map workflow is described below.
+
+## Batch imports
+
+Select up to ten files per upload, each up to 10 MB. Each file is staged
+independently; a failed file does not discard successful files, and the page
+shows the reason for each failure. The standard transaction import upload also
+routes XLSX files to the iCost preview instead of trying to decode them as CSV.
+
+The preview groups ordinary income/expense rows by original account and currency.
+Choose an accessible, writable manual account for each group and apply the
+mapping once. Other accounting warnings remain under review. Later exports reuse
+unambiguous confirmed mappings owned by the same user; inaccessible or
+wrong-currency accounts still require review.
+
+Posting runs in `IcostPublishJob` on the existing `high_priority` queue. A running
+Sidekiq worker is required. The upload form optionally queues posting immediately
+for ready rows. Review rows are never automatically posted. Import and history
+pages refresh progress while the batch is queued; reopening a page also shows
+current counts. Duplicate job delivery remains safe through the existing
+family/record locks and source identities. A short-lived cache entry drives the
+progress indicator; ledger rows remain the durable source of truth. A failed
+batch can be retried from its preview without duplicating posted entries.
+
+## Category map and place matching
+
+Open `/icost_map` from the import history or preview. Leaflet 1.9.4 and its
+BSD-2-Clause licence are vendored locally. Category icons/emoji and colours come
+from the family's categories. Nearby markers show a count and open a list of
+their individual source records. The accessible ledger list remains usable
+without JavaScript or map tiles. Map amounts retain the original currency and
+sign; pending source rows are labelled and are not financial totals. The page
+shows up to 1,000 records, with a category filter and an explicit limit notice.
+
+The basemap loads only after clicking the OpenStreetMap button. The tile service
+receives the browser IP and viewed areas; ledger details are never sent. Visible
+OSM attribution and ordinary browser caching are retained, and there is no tile
+prefetch or offline download. Operators can change `ICOST_MAP_TILE_URL` without
+changing application code. Public OSM tiles are best-effort and subject to the
+[tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
+
+Only explicit WGS84 coordinates are mapped automatically. Text-only locations
+can be matched by entering a public place name plus city/country, selecting a
+search result, then confirming its source place. Alternatively click the map or
+enter coordinates. Confirmation applies to the same original place name across
+the current user's imports, including already recorded rows, without modifying
+source fields or accounting. Later exports reuse that confirmed place unless
+they already supply explicit WGS84 coordinates. Unknown coordinate systems are
+not silently interpreted or converted.
+
+Place searches use Nominatim only on an explicit search submission; no imported
+location, note or amount is automatically transmitted. Do not submit private
+addresses or confidential material. Responses are cached for 30 days, including
+empty results. A shared Redis cache enforces at least 1.1 seconds between network
+requests across users/workers, and failures show an actionable message. This is
+interactive place matching, not scheduled bulk geocoding or autocomplete. See
+the [Nominatim policy](https://operations.osmfoundation.org/policies/nominatim/).
+The cache must be available for uncached searches. Operators can change
+`ICOST_GEOCODING_URL` to a compatible self-hosted search endpoint; a future paid
+preprocessing provider should preserve the same confirmation/provenance boundary.
 
 ## Field fidelity and accounting
 

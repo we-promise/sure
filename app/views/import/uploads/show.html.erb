@@ -91,7 +91,8 @@
 
 <% else %>
   <%# ── Standard CSV upload ── %>
-  <div class="space-y-4" data-controller="drag-and-drop-import" data-drag-and-drop-import-invalid-file-type-value="<%= t("imports.create.invalid_file_type") %>">
+  <div class="space-y-4" data-controller="drag-and-drop-import" data-drag-and-drop-import-extensions-value="<%= (@import.is_a?(TransactionImport) ? %w[csv xlsx] : %w[csv]).to_json %>" data-drag-and-drop-import-invalid-file-type-value="<%= t(@import.is_a?(TransactionImport) ? "icost_imports.parse_errors.unsupported_file_type" : "imports.create.invalid_file_type") %>">
+    <%= render DS::Link.new(text: t("icost_imports.new_import"), href: new_icost_import_path, frame: "_top", variant: :outline) %>
     <!-- Overlay -->
     <%= render "imports/drag_drop_overlay", title: t(".drop_csv_title"), subtitle: t(".drop_csv_subtitle") %>
 
@@ -131,7 +132,7 @@
                   <p class="text-md font-medium text-primary"></p>
                 </div>
 
-                <%= form.file_field :import_file, id: "import_import_file_csv", class: "hidden", "data-auto-submit-form-target": "auto", "data-file-upload-target": "input", "data-drag-and-drop-import-target": "input" %>
+                <%= form.file_field :import_file, id: "import_import_file_csv", accept: (@import.is_a?(TransactionImport) ? ".csv,.xlsx" : ".csv"), class: "hidden", "data-auto-submit-form-target": "auto", "data-file-upload-target": "input", "data-drag-and-drop-import-target": "input" %>
               </div>
             </label>
 

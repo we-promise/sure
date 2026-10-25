@@ -2,8 +2,12 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resource :icost_map, only: %i[show update], controller: "icost_maps" do
+    post :search
+  end
   resources :icost_imports, only: %i[index new create show] do
     post :publish, on: :member
+    patch :resolve_accounts, on: :member
     resources :records, controller: "icost_records", only: %i[show update]
   end
 
