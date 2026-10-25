@@ -1387,6 +1387,24 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     end
   end
 
+  # A sale the user has since marked a transfer out names no lot, as the
+  # drawer would not let it.
+  # Labels are not in the export, so only a sale the user marked a transfer
+  # out after a session's first import can meet this; the session refuses it.
+  test "a session re-import refuses a named lot on a sale marked a transfer out" do
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    export = lot_export
+    Family::DataImporter.new(@family, export, import_session: session).import!
+    trades = lot_trades(@family.accounts.find_by!(name: "Lot Round Trip"))
+    sale = trades.fetch(-10).trade
+    assert_equal trades.fetch(40).id, sale.lot_source_entry_id, "precondition: the first import named the lot"
+    sale.update_columns(investment_activity_label: Trade::TRANSFER_LABEL)
+
+    assert_raises(Family::DataImporter::InvalidRecordError) do
+      Family::DataImporter.new(@family, export, import_session: session).import!
+    end
+  end
+
   test "a session import raises on an unusable lot cost" do
     session = @family.import_sessions.create!(expected_chunks: 1)
 

@@ -1193,29 +1193,39 @@ class Family::DataImporter
     # ahead of it: in this file, or in an earlier chunk of the same session.
     # The choice is restored as stored, whatever the account's method, since
     # an average account keeps but ignores it (Trade#lot_choices); it must
-    # still name an acquisition of the sale's security, in its account, on or
-    # before its date. A file without one clears an earlier import's choice.
+    # still be a sale, not a transfer out, naming an acquisition of its
+    # security, in its account, on or before its date. A file without one
+    # clears an earlier import's choice.
     def import_lot_sources(records, imported)
+      unnamed = []
+
       records.each do |record|
         data = record["data"]
         sale = imported[data["id"]]
         next unless sale
 
         source_id = data["lot_source_trade_id"]
-        source = imported[source_id] || session_imported_entry(sale.account, "Trade", source_id) if source_id.present?
-
-        if source_id.present? && !(source && lot_source_for?(sale, source))
-          invalid_record!("Trade", "lot_source_trade_id", source_id)
+        if source_id.blank?
+          unnamed << sale.entryable_id
           next
         end
 
-        Trade.where(id: sale.entryable_id).update_all(lot_source_entry_id: source&.id)
+        source = imported[source_id] || session_imported_entry(sale.account, "Trade", source_id)
+        if source && lot_source_for?(sale, source)
+          Trade.where(id: sale.entryable_id).update_all(lot_source_entry_id: source.id)
+        else
+          invalid_record!("Trade", "lot_source_trade_id", source_id)
+        end
       end
+
+      Trade.where(id: unnamed).where.not(lot_source_entry_id: nil).update_all(lot_source_entry_id: nil) if unnamed.any?
     end
 
+    # The rule Trade#lot_choices applies to a sale and its lot, short of the
+    # account's method and of whether the lot is still open.
     def lot_source_for?(sale, source)
-      sale.trade.qty.negative? && source.trade.qty.positive? && source.account_id == sale.account_id &&
-        source.trade.security_id == sale.trade.security_id && source.date <= sale.date
+      sale.trade.qty.negative? && !sale.trade.internal_movement? && source.trade.qty.positive? &&
+        source.account_id == sale.account_id && source.trade.security_id == sale.trade.security_id && source.date <= sale.date
     end
 
     def import_holdings(records)
