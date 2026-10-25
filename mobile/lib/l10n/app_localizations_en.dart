@@ -1032,6 +1032,134 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to start conversation. Please try again.';
 
   @override
+  String get moreBudgets => 'Budgets';
+
+  @override
+  String get moreBudgetsSubtitle => 'Budgeted vs. actual spending by category';
+
+  @override
+  String get budgetsTitle => 'Budgets';
+
+  @override
+  String get budgetsPreviousMonth => 'Previous month';
+
+  @override
+  String get budgetsNextMonth => 'Next month';
+
+  @override
+  String get budgetsBudgeted => 'Budgeted';
+
+  @override
+  String get budgetsActual => 'Actual';
+
+  @override
+  String get budgetsRemaining => 'Remaining';
+
+  @override
+  String get budgetsIncome => 'Income';
+
+  @override
+  String budgetsExpectedIncome(String amount) {
+    return 'Expected $amount';
+  }
+
+  @override
+  String budgetsOfAmount(String amount) {
+    return 'of $amount';
+  }
+
+  @override
+  String budgetsAmountLeft(String amount) {
+    return '$amount left';
+  }
+
+  @override
+  String budgetsOverBy(String amount) {
+    return '$amount over';
+  }
+
+  @override
+  String budgetsRolledOver(String amount) {
+    return '+$amount rolled over';
+  }
+
+  @override
+  String get budgetsSharedBudget => 'Shared budget';
+
+  @override
+  String get budgetsNoLimit => 'No budget';
+
+  @override
+  String get budgetsCategoriesTitle => 'Categories';
+
+  @override
+  String budgetsFilterOverBudget(int count) {
+    return 'Over budget ($count)';
+  }
+
+  @override
+  String get budgetsOverBudget => 'Over budget';
+
+  @override
+  String get budgetsNearLimit => 'Near limit';
+
+  @override
+  String budgetsBudgetNumber(int number) {
+    return 'Budget $number';
+  }
+
+  @override
+  String budgetsNoBudgetTitle(String month) {
+    return 'No budget for $month';
+  }
+
+  @override
+  String get budgetsNoBudgetMessage =>
+      'Budgets are created in Sure on the web. Open Budgets there to set one up for this month.';
+
+  @override
+  String get budgetsNotSetUpMessage =>
+      'No spending limits are set for this month yet. Set them up in Sure on the web.';
+
+  @override
+  String get budgetsNoCategories =>
+      'No budgeted categories or spending this month.';
+
+  @override
+  String get budgetsOfflineTitle => 'You\'re offline';
+
+  @override
+  String get budgetsOfflineMessage =>
+      'Connect to the internet to load this month\'s budget.';
+
+  @override
+  String get budgetsOfflineCached =>
+      'Offline. Showing the figures loaded earlier.';
+
+  @override
+  String get budgetsRefreshFailed =>
+      'Couldn\'t refresh. Showing the figures loaded earlier.';
+
+  @override
+  String get budgetsLoadFailed => 'Couldn\'t load budgets';
+
+  @override
+  String get budgetsSessionExpired =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String budgetCategoryTransactionsEmpty(String month) {
+    return 'No transactions in this category for $month.';
+  }
+
+  @override
+  String get budgetCategoryTransactionsLoadMore => 'Load more';
+
+  @override
+  String get budgetCategoryTransactionsLoadFailed =>
+      'Couldn\'t load transactions';
+
+  @override
   String get moreCashFlow => 'Cash Flow';
 
   @override

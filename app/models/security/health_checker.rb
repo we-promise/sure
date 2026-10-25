@@ -5,7 +5,9 @@
 # Each security goes through some basic health checks.  If failed, this class is responsible for:
 # - Marking failed attempts and incrementing the failed attempts counter
 # - Marking the security offline if enough consecutive failed checks occur
-# - When we move a security "offline", delete all prices for that security as we assume they are bad data
+# - When we move a security "offline", delete its prices ONLY if it never had a
+#   successfully-fetched price — an established history isn't suddenly "bad data"
+#   just because the provider can't currently be reached
 #
 # The health checker is run daily through SecurityHealthCheckJob (see config/schedule.yml), but not all
 # securities will be checked every day (we run in batches)
@@ -48,6 +50,15 @@ class Security::HealthChecker
 
   def run_check
     Rails.logger.info("Running health check for #{security.ticker}")
+
+    # Nothing to check — either no provider is assigned, or the assigned
+    # provider is currently disabled/unavailable (Setting.enabled_securities_providers).
+    # This is NOT a fetch failure: counting it as one would eventually overwrite
+    # a more specific offline_reason (e.g. "provider_disabled", set explicitly
+    # when an admin disables a provider) with the generic "health_check_failed",
+    # which then makes the bulk reactivation-on-re-enable in
+    # Settings::HostingsController#update stop finding this security.
+    return if provider.blank?
 
     if latest_provider_price
       handle_success
@@ -113,11 +124,27 @@ class Security::HealthChecker
           failed_fetch_count: new_failure_count,
           failed_fetch_at: new_failure_at
         )
+
+        DebugLogEntry.capture(
+          category: "security_health_check",
+          level: "warn",
+          message: "Security health check failed (#{new_failure_count}/#{MAX_CONSECUTIVE_FAILURES})",
+          source: self.class.name,
+          provider: provider,
+          metadata: {
+            security_id: security.id,
+            ticker: security.ticker,
+            exchange_operating_mic: security.exchange_operating_mic,
+            failed_fetch_count: new_failure_count
+          }
+        )
       end
     end
 
     # The "offline" state tells our MarketDataImporter (daily cron) to skip this security when fetching prices
     def convert_to_offline_security!
+      had_price_history = security.prices.exists?
+
       Security.transaction do
         security.update!(
           offline: true,
@@ -125,7 +152,27 @@ class Security::HealthChecker
           failed_fetch_count: MAX_CONSECUTIVE_FAILURES + 1,
           failed_fetch_at: Time.current
         )
-        security.prices.delete_all
+        # Only delete prices when the security never had a successfully-fetched
+        # one — five failed *new* fetches say nothing about the correctness of
+        # *existing* history. Deleting a track record just because the provider
+        # is temporarily unreachable would be a silent, hard-to-notice data loss.
+        security.prices.delete_all unless had_price_history
       end
+
+      DebugLogEntry.capture(
+        category: "security_health_check",
+        level: "error",
+        message: had_price_history ?
+          "Security marked offline after #{MAX_CONSECUTIVE_FAILURES} consecutive health check failures; existing price history preserved" :
+          "Security marked offline after #{MAX_CONSECUTIVE_FAILURES} consecutive health check failures; no prior price history to preserve",
+        source: self.class.name,
+        provider: provider,
+        metadata: {
+          security_id: security.id,
+          ticker: security.ticker,
+          exchange_operating_mic: security.exchange_operating_mic,
+          had_price_history: had_price_history
+        }
+      )
     end
 end

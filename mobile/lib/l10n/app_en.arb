@@ -976,90 +976,219 @@
   "chatConversationStartFailed": "Failed to start conversation. Please try again.",
   "@chatConversationStartFailed": { "description": "Fallback snackbar shown when creating a new conversation from the first message fails." },
 
-  "moreCashFlow": "Cash Flow",
+  "moreBudgets": "Budgets",
+  "@moreBudgets": { "description": "Menu item title for Budgets in the More screen." },
+
+  "moreBudgetsSubtitle": "Budgeted vs. actual spending by category",
+  "@moreBudgetsSubtitle": { "description": "Subtitle for the Budgets menu item in the More screen." },
+
+  "budgetsTitle": "Budgets",
+  "@budgetsTitle": { "description": "App bar title of the Budgets screen." },
+
+  "budgetsPreviousMonth": "Previous month",
+  "@budgetsPreviousMonth": { "description": "Tooltip for the button that shows the previous month's budget." },
+
+  "budgetsNextMonth": "Next month",
+  "@budgetsNextMonth": { "description": "Tooltip for the button that shows the next month's budget." },
+
+  "budgetsBudgeted": "Budgeted",
+  "@budgetsBudgeted": { "description": "Label for the total amount budgeted for spending this month." },
+
+  "budgetsActual": "Actual",
+  "@budgetsActual": { "description": "Label for the amount actually spent this month." },
+
+  "budgetsRemaining": "Remaining",
+  "@budgetsRemaining": { "description": "Label for the amount left to spend this month." },
+
+  "budgetsIncome": "Income",
+  "@budgetsIncome": { "description": "Label for the month's actual income in the budget summary." },
+
+  "budgetsExpectedIncome": "Expected {amount}",
+  "@budgetsExpectedIncome": {
+    "description": "Expected income for the month, shown next to actual income.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "budgetsOfAmount": "of {amount}",
+  "@budgetsOfAmount": {
+    "description": "Budget limit shown after the amount spent in a category, e.g. '$120 of $300'.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "budgetsAmountLeft": "{amount} left",
+  "@budgetsAmountLeft": {
+    "description": "Amount still available to spend in a category.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "budgetsOverBy": "{amount} over",
+  "@budgetsOverBy": {
+    "description": "Amount by which a category's spending exceeds its budget.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "budgetsRolledOver": "+{amount} rolled over",
+  "@budgetsRolledOver": {
+    "description": "Unspent amount carried over from the previous month into this category.",
+    "placeholders": { "amount": { "type": "String" } }
+  },
+
+  "budgetsSharedBudget": "Shared budget",
+  "@budgetsSharedBudget": { "description": "Shown for a subcategory without its own limit that draws from its parent category's budget." },
+
+  "budgetsNoLimit": "No budget",
+  "@budgetsNoLimit": { "description": "Shown for a category with spending but no budgeted amount." },
+
+  "budgetsCategoriesTitle": "Categories",
+  "@budgetsCategoriesTitle": { "description": "Heading of the per-category budget list." },
+
+  "budgetsFilterOverBudget": "Over budget ({count})",
+  "@budgetsFilterOverBudget": {
+    "description": "Filter showing only categories that are over budget, with how many there are.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "budgetsOverBudget": "Over budget",
+  "@budgetsOverBudget": { "description": "Badge on a category that has spent more than its budget." },
+
+  "budgetsNearLimit": "Near limit",
+  "@budgetsNearLimit": { "description": "Badge on a category that has spent at least 90% of its budget." },
+
+  "budgetsBudgetNumber": "Budget {number}",
+  "@budgetsBudgetNumber": {
+    "description": "Label for one of several budgets that exist for the same month (household, personal or shared).",
+    "placeholders": { "number": { "type": "int" } }
+  },
+
+  "budgetsNoBudgetTitle": "No budget for {month}",
+  "@budgetsNoBudgetTitle": {
+    "description": "Title shown when the server has no budget for the selected month.",
+    "placeholders": { "month": { "type": "String" } }
+  },
+
+  "budgetsNoBudgetMessage": "Budgets are created in Sure on the web. Open Budgets there to set one up for this month.",
+  "@budgetsNoBudgetMessage": { "description": "Explains how to create a budget when none exists for the selected month." },
+
+  "budgetsNotSetUpMessage": "No spending limits are set for this month yet. Set them up in Sure on the web.",
+  "@budgetsNotSetUpMessage": { "description": "Shown when a budget exists for the month but has no amounts set." },
+
+  "budgetsNoCategories": "No budgeted categories or spending this month.",
+  "@budgetsNoCategories": { "description": "Shown when no category line has a budget or spending." },
+
+  "budgetsOfflineTitle": "You're offline",
+  "@budgetsOfflineTitle": { "description": "Title shown when the budget cannot be loaded without a connection." },
+
+  "budgetsOfflineMessage": "Connect to the internet to load this month's budget.",
+  "@budgetsOfflineMessage": { "description": "Shown when offline and the selected month has not been loaded yet." },
+
+  "budgetsOfflineCached": "Offline. Showing the figures loaded earlier.",
+  "@budgetsOfflineCached": { "description": "Banner shown when offline and the budget shown was loaded earlier in the session." },
+
+  "budgetsRefreshFailed": "Couldn't refresh. Showing the figures loaded earlier.",
+  "@budgetsRefreshFailed": { "description": "Banner shown when refreshing a budget fails but the month loaded earlier is still on screen." },
+
+  "budgetsLoadFailed": "Couldn't load budgets",
+  "@budgetsLoadFailed": { "description": "Title shown when loading budgets fails." },
+
+  "budgetsSessionExpired": "Your session has expired. Please sign in again.",
+  "@budgetsSessionExpired": { "description": "Shown when the budgets request is rejected as unauthorized." },
+
+  "budgetCategoryTransactionsEmpty": "No transactions in this category for {month}.",
+  "@budgetCategoryTransactionsEmpty": {
+    "description": "Empty state of a budget category's transaction list.",
+    "placeholders": { "month": { "type": "String" } }
+  },
+
+  "budgetCategoryTransactionsLoadMore": "Load more",
+  "@budgetCategoryTransactionsLoadMore": { "description": "Button that loads the next page of a budget category's transactions." },
+
+  "budgetCategoryTransactionsLoadFailed": "Couldn't load transactions",
+  "@budgetCategoryTransactionsLoadFailed": { "description": "Shown when a budget category's transactions fail to load." },
+
+"moreCashFlow": "Cash Flow",
   "@moreCashFlow": { "description": "Menu item title for the Cash Flow report in the More screen." },
 
-  "moreCashFlowSubtitle": "Income, spending and savings by category",
+"moreCashFlowSubtitle": "Income, spending and savings by category",
   "@moreCashFlowSubtitle": { "description": "Subtitle for the Cash Flow menu item in the More screen." },
 
-  "cashFlowTitle": "Cash Flow",
+"cashFlowTitle": "Cash Flow",
   "@cashFlowTitle": { "description": "App bar title of the Cash Flow report screen." },
 
-  "cashFlowPeriodCurrentMonth": "This month",
+"cashFlowPeriodCurrentMonth": "This month",
   "@cashFlowPeriodCurrentMonth": { "description": "Period chip: the current month (web MTD), or the whole current custom month when the family has a custom month start day." },
 
-  "cashFlowPeriodLastMonth": "Last month",
+"cashFlowPeriodLastMonth": "Last month",
   "@cashFlowPeriodLastMonth": { "description": "Period chip: the previous month (web LM), following the family's custom month start day when set." },
 
-  "cashFlowPeriodLast30Days": "Last 30 days",
+"cashFlowPeriodLast30Days": "Last 30 days",
   "@cashFlowPeriodLast30Days": { "description": "Period chip: last 30 days (web 30D)." },
 
-  "cashFlowPeriodLast90Days": "Last 90 days",
+"cashFlowPeriodLast90Days": "Last 90 days",
   "@cashFlowPeriodLast90Days": { "description": "Period chip: last 90 days (web 90D)." },
 
-  "cashFlowPeriodCurrentYear": "Year to date",
+"cashFlowPeriodCurrentYear": "Year to date",
   "@cashFlowPeriodCurrentYear": { "description": "Period chip: current year to date (web YTD)." },
 
-  "cashFlowPeriodLast365Days": "Last 365 days",
+"cashFlowPeriodLast365Days": "Last 365 days",
   "@cashFlowPeriodLast365Days": { "description": "Period chip: last 365 days (web 365D)." },
 
-  "cashFlowIncome": "Income",
+"cashFlowIncome": "Income",
   "@cashFlowIncome": { "description": "Summary label and segment label for income." },
 
-  "cashFlowExpenses": "Expenses",
+"cashFlowExpenses": "Expenses",
   "@cashFlowExpenses": { "description": "Summary label and segment label for expenses." },
 
-  "cashFlowNetSavings": "Net savings",
+"cashFlowNetSavings": "Net savings",
   "@cashFlowNetSavings": { "description": "Summary label for income minus expenses." },
 
-  "cashFlowSavingsRate": "{rate} savings rate",
+"cashFlowSavingsRate": "{rate} savings rate",
   "@cashFlowSavingsRate": {
     "description": "Savings rate shown under net savings, e.g. '18.2% savings rate'.",
     "placeholders": { "rate": { "type": "String", "example": "18.2%" } }
   },
 
-  "cashFlowExpensesByCategory": "Expenses by category",
+"cashFlowExpensesByCategory": "Expenses by category",
   "@cashFlowExpensesByCategory": { "description": "Section header for the expense category chart and list." },
 
-  "cashFlowIncomeByCategory": "Income by category",
+"cashFlowIncomeByCategory": "Income by category",
   "@cashFlowIncomeByCategory": { "description": "Section header for the income category chart and list." },
 
-  "cashFlowShareOfExpenses": "{percent} of expenses",
+"cashFlowShareOfExpenses": "{percent} of expenses",
   "@cashFlowShareOfExpenses": {
     "description": "Category row subtitle with its share of total expenses.",
     "placeholders": { "percent": { "type": "String", "example": "24.5%" } }
   },
 
-  "cashFlowShareOfIncome": "{percent} of income",
+"cashFlowShareOfIncome": "{percent} of income",
   "@cashFlowShareOfIncome": {
     "description": "Category row subtitle with its share of total income.",
     "placeholders": { "percent": { "type": "String", "example": "80%" } }
   },
 
-  "cashFlowEmpty": "No income or expenses in this period",
+"cashFlowEmpty": "No income or expenses in this period",
   "@cashFlowEmpty": { "description": "Empty state title when the period has no categorized cash flow." },
 
-  "cashFlowEmptySubtitle": "Try another period or pull to refresh.",
+"cashFlowEmptySubtitle": "Try another period or pull to refresh.",
   "@cashFlowEmptySubtitle": { "description": "Empty state subtitle on the Cash Flow screen." },
 
-  "cashFlowNoExpenses": "No expenses in this period",
+"cashFlowNoExpenses": "No expenses in this period",
   "@cashFlowNoExpenses": { "description": "Shown in the category section when the expense side is empty." },
 
-  "cashFlowNoIncome": "No income in this period",
+"cashFlowNoIncome": "No income in this period",
   "@cashFlowNoIncome": { "description": "Shown in the category section when the income side is empty." },
 
-  "cashFlowLoadFailed": "Couldn't load cash flow",
+"cashFlowLoadFailed": "Couldn't load cash flow",
   "@cashFlowLoadFailed": { "description": "Error state title when the cash flow request fails." },
 
-  "cashFlowOffline": "You're offline. Cash flow is calculated by your Sure server, so it needs a connection.",
+"cashFlowOffline": "You're offline. Cash flow is calculated by your Sure server, so it needs a connection.",
   "@cashFlowOffline": { "description": "Error state message when the device is offline and no report is loaded." },
 
-  "cashFlowOutdated": "Outdated",
+"cashFlowOutdated": "Outdated",
   "@cashFlowOutdated": { "description": "Badge shown when the displayed report could not be refreshed." },
 
-  "cashFlowTransactionsEmpty": "No transactions in this period",
+"cashFlowTransactionsEmpty": "No transactions in this period",
   "@cashFlowTransactionsEmpty": { "description": "Empty state of the category transactions screen." },
 
-  "cashFlowTransactionsLoadFailed": "Couldn't load transactions",
+"cashFlowTransactionsLoadFailed": "Couldn't load transactions",
   "@cashFlowTransactionsLoadFailed": { "description": "Error state of the category transactions screen." }
 }

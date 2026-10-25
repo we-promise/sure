@@ -118,6 +118,8 @@ vi:
         dashboard_two_column_title: Bố cục hai cột
         dashboard_two_column_description: Hiển thị các widget bảng điều khiển thành hai cột trên màn hình lớn. Khi tắt, các widget xếp chồng thành một cột.
         split_grouped_title: Nhóm giao dịch phân chia
+        auto_generate_transaction_names_title: "Tự động tạo tên giao dịch"
+        auto_generate_transaction_names_description: "Khi tên của giao dịch nhập thủ công để trống, tên sẽ được điền từ danh mục và nhà cung cấp đã chọn (ví dụ: \"Giải trí - Netflix\"). Nếu không chọn cái nào, tên vẫn là bắt buộc. Áp dụng cho cả hộ gia đình và chỉ cho giao dịch mới."
         split_grouped_description: Hiển thị giao dịch phân chia được nhóm dưới giao dịch cha trong danh sách. Khi tắt, các mục con phân chia xuất hiện như các hàng riêng biệt.
     preferences:
       show:
