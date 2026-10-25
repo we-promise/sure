@@ -5,13 +5,14 @@
   <%= render DS::Card.new(class: "space-y-4") do %>
     <p class="text-secondary"><%= t("icost_imports.upload_help") %></p>
     <p class="text-sm text-secondary"><%= t("icost_imports.batch_help", count: IcostImport::MAX_FILES) %></p>
+    <p class="text-sm text-secondary"><%= t("icost_imports.automatic_help") %></p>
     <%= styled_form_with url: icost_imports_path, scope: :icost_import, multipart: true, class: "space-y-4", data: { turbo: false } do |form| %>
       <div class="space-y-2">
         <%= form.label :files, t("icost_imports.file_label"), class: "block text-sm text-primary" %>
         <%= form.file_field :files, accept: ".csv,.xlsx", multiple: true, required: true, class: "block w-full text-primary" %>
       </div>
       <label class="flex items-center gap-2 text-sm text-primary">
-        <%= form.check_box :auto_post %>
+        <%= form.check_box :auto_post, checked: true %>
         <span><%= t("icost_imports.auto_post") %></span>
       </label>
       <%= render DS::Button.new(text: t("icost_imports.prepare"), type: :submit) %>

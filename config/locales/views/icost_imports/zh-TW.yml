@@ -60,6 +60,8 @@ zh-TW:
       row_sha256: "來源列 SHA-256"
       resolution: "已確認的修正"
     statuses:
+      duplicate: "重複來源（未新增交易）"
+      entry_missing: "關聯交易已不存在"
       ready: "待記帳"
       published: "已記帳／已連結"
       needs_review: "待審閱"
@@ -71,6 +73,8 @@ zh-TW:
       review_saved: "審閱已儲存。請確認資料列狀態後，再從匯入預覽記帳。"
       review_invalid: "此修正不適用於該資料列。請選擇有權限存取且與原始幣別相同的帳戶；轉出與轉入帳戶不能相同。"
     issues:
+      transfer_link_incomplete: "轉帳僅剩一側交易，需先核對既有轉帳，避免再次建立整筆轉帳。"
+      existing_duplicate_entries: "已有多筆交易對應同一來源，需個別核對；未刪除或覆寫任何既有交易。"
       account_required: "缺少帳戶 1，請確認正確的帳戶。"
       account_mapping_required: "無法確定唯一且幣別相同的帳戶對應，請確認帳戶。"
       account_ambiguous: "有多個帳戶可能符合此來源，請確認帳戶。"
@@ -112,3 +116,8 @@ zh-TW:
       file_too_large: "檔案超過 10 MB 限制。"
     auto_post: "在背景自動提交已配對且無警告的記錄"
     queued: "已加入背景匯入佇列，進度將自動更新。可關閉頁面稍後查看，待審閱記錄不會自動提交。"
+    auto_account_note: "由 iCost 自動建立的暫用現金流水帳戶。實際帳戶類型和期初餘額未知；目前餘額僅為已匯入流水淨額，請按真實帳戶核對。"
+    automatic_help: "自動按原始名稱和幣別建立或配對帳戶，正常記錄直接入帳；異常個別待審閱，重複來源不新增交易。"
+    process: "自動處理此批匯入"
+    view_transactions: "查看已入帳交易"
+    missing_entries_help: "部分來源曾標記為已入帳，但對應交易已不存在。自動處理此批匯入可復原符合條件的記錄，並檢查重複。"

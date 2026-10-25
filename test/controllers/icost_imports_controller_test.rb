@@ -47,7 +47,7 @@ class IcostImportsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to icost_import_path(batch)
     get icost_import_path(batch)
     assert_response :success
-    assert_select "[data-icost-count]", count: 3
+    assert_select "[data-icost-count]", count: 5
   end
 
   test "index and upload form provide a discoverable local import flow" do
@@ -109,6 +109,43 @@ class IcostImportsControllerTest < ActionDispatch::IntegrationTest
       post icost_imports_path, params: { icost_import: { files: [ file_fixture_upload("imports/icost.xlsx") ] } }
     end
     assert_redirected_to icost_import_path(batch)
+  end
+
+  test "upload posts normal records by default and makes them visible in transactions" do
+    Balance::Materializer.any_instance.stubs(:materialize_balances)
+    session = @user.sessions.order(:created_at).last
+    session.update!(prev_transaction_page_params: { q: { account_ids: [ SecureRandom.uuid ], end_date: "1901-01-02" }, page: 4 })
+    assert_difference "Entry.count", 1 do
+      perform_enqueued_jobs(only: IcostPublishJob) do
+        post icost_imports_path, params: { icost_import: { files: [ file_fixture_upload("imports/icost.xlsx") ] } }
+      end
+    end
+    batch = @user.family.icost_imports.last
+    assert_equal "published", batch.records.sole.status
+    assert_empty session.reload.prev_transaction_page_params.fetch("q")
+    get transactions_path
+    follow_redirect! if response.redirect?
+    assert_response :success
+    assert_includes response.body, "iCost R0002"
+  end
+
+  test "preview reports missing ledger links instead of a successful recorded count" do
+    batch = prepare_sample
+    batch.records.sole.update!(status: "published")
+    get icost_import_path(batch)
+    assert_response :success
+    assert_select "[data-icost-count='entry_missing']", text: /1/
+    assert_select "[data-icost-count='published']", text: /0/
+    assert_includes response.body, I18n.t("icost_imports.statuses.entry_missing")
+  end
+
+  test "explicit preview-only uploads do not queue posting or reset transaction filters" do
+    session = @user.sessions.order(:created_at).last
+    session.update!(prev_transaction_page_params: { q: { search: "Keep this filter" } })
+    assert_no_enqueued_jobs only: IcostPublishJob do
+      post icost_imports_path, params: { icost_import: { files: [ file_fixture_upload("imports/icost.xlsx") ], auto_post: "0" } }
+    end
+    assert_equal "Keep this filter", session.reload.prev_transaction_page_params.dig("q", "search")
   end
 
   test "batch account form submits indexed mappings through the owner scope" do

@@ -60,6 +60,8 @@ it:
       row_sha256: "SHA-256 della riga originale"
       resolution: "Correzioni confermate"
     statuses:
+      duplicate: "Fonte duplicata (nessuna nuova operazione)"
+      entry_missing: "Operazione collegata mancante"
       ready: "Pronta da registrare"
       published: "Registrata / collegata"
       needs_review: "Da esaminare"
@@ -71,6 +73,8 @@ it:
       review_saved: "Revisione salvata. Controlla lo stato della riga prima di registrarla dall'anteprima dell'importazione."
       review_invalid: "Questa correzione non è valida per la riga. Scegli conti accessibili nella valuta originale; i conti del trasferimento devono essere diversi."
     issues:
+      transfer_link_incomplete: "Resta un solo lato del trasferimento. Verificalo prima di crearne un altro."
+      existing_duplicate_entries: "Più operazioni rappresentano questa fonte. Verificale; nessuna è stata eliminata o sovrascritta."
       account_required: "Manca il conto 1. Conferma il conto corretto."
       account_mapping_required: "Non esiste un'associazione univoca a un conto nella stessa valuta. Conferma un conto."
       account_ambiguous: "Più conti potrebbero corrispondere a questa origine. Conferma un conto."
@@ -112,3 +116,8 @@ it:
       file_too_large: "Il file supera 10 MB."
     auto_post: "Registra automaticamente in background le righe associate senza avvisi"
     queued: "Importazione in coda. Avanzamento aggiornato automaticamente. Puoi chiudere la pagina; le righe da verificare restano in sospeso."
+    auto_account_note: "Creato da iCost come conto di cassa provvisorio. Tipo reale e saldo iniziale sconosciuti. Il saldo riflette solo i movimenti netti importati; verifica il conto reale."
+    automatic_help: "I conti vengono creati o associati per nome e valuta. Le righe valide vengono registrate; quelle errate restano da verificare e i duplicati non creano operazioni."
+    process: "Elabora automaticamente questa importazione"
+    view_transactions: "Mostra operazioni registrate"
+    missing_entries_help: "Alcune righe registrate non hanno più un’operazione. Elabora l’importazione per ripristinare le righe valide controllando i duplicati."

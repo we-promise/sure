@@ -61,6 +61,13 @@ class IcostImport < ApplicationRecord
     self
   end
 
+  def process!(user:, recover_all: false)
+    self.class.authorize!(family, user)
+    raise Error, "not_owner" unless user_id == user.id
+    Icost::Reconciler.new(user, import_id: id, recover_all: recover_all).call
+    self
+  end
+
   def publish_later(user:)
     self.class.authorize!(family, user)
     raise Error, "not_owner" unless user_id == user.id
@@ -81,6 +88,7 @@ class IcostImport < ApplicationRecord
 
   def account_groups
     records.where.not(status: "published").where(transaction_type: %w[支出 收入])
+      .where("NOT (resolution ? 'duplicate_of_id')")
       .group(:account_name, :currency).count.map do |(name, currency), count|
         { source_account: name, currency: currency, count: count }
       end

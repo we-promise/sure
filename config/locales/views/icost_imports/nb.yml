@@ -60,6 +60,8 @@ nb:
       row_sha256: "Kilderadens SHA-256"
       resolution: "Bekreftede rettelser"
     statuses:
+      duplicate: "Duplisert kilde (ingen ny transaksjon)"
+      entry_missing: "Tilknyttet transaksjon mangler"
       ready: "Klar til bokføring"
       published: "Bokført / koblet"
       needs_review: "Må gjennomgås"
@@ -71,6 +73,8 @@ nb:
       review_saved: "Gjennomgangen er lagret. Kontroller radens status før du bokfører fra importforhåndsvisningen."
       review_invalid: "Denne rettelsen er ikke gyldig for raden. Velg tilgjengelige kontoer i den opprinnelige valutaen; overføringen må bruke to forskjellige kontoer."
     issues:
+      transfer_link_incomplete: "Bare én side av overføringen gjenstår. Kontroller den før du oppretter en ny."
+      existing_duplicate_entries: "Flere transaksjoner representerer denne kilden. Kontroller dem; ingen er slettet eller overskrevet."
       account_required: "Konto 1 mangler. Bekreft riktig konto."
       account_mapping_required: "Det finnes ingen entydig kontotilknytning i samme valuta. Bekreft en konto."
       account_ambiguous: "Flere kontoer kan passe til denne kilden. Bekreft en konto."
@@ -112,3 +116,8 @@ nb:
       file_too_large: "Filen overstiger 10 MB."
     auto_post: "Bokfør samsvarende rader uten advarsler automatisk i bakgrunnen"
     queued: "Bakgrunnsimport er satt i kø. Fremdriften oppdateres automatisk. Du kan lukke siden; kontrollrader forblir ubehandlet."
+    auto_account_note: "Opprettet fra iCost som en foreløpig kontantkonto. Faktisk kontotype og startsaldo er ukjent. Saldoen viser bare netto importerte bevegelser; kontroller den virkelige kontoen."
+    automatic_help: "Kontoer opprettes eller kobles etter navn og valuta. Gyldige rader bokføres; feil blir til kontroll og duplikater legger ikke til transaksjoner."
+    process: "Behandle importen automatisk"
+    view_transactions: "Vis bokførte transaksjoner"
+    missing_entries_help: "Noen bokførte rader har ikke lenger en transaksjon. Behandle importen for å gjenopprette gyldige rader med duplikatkontroll."

@@ -60,6 +60,8 @@ fr:
       row_sha256: "SHA-256 de la ligne source"
       resolution: "Corrections confirmées"
     statuses:
+      duplicate: "Source en double (aucune nouvelle opération)"
+      entry_missing: "Opération associée manquante"
       ready: "Prête à comptabiliser"
       published: "Enregistrée / liée"
       needs_review: "À vérifier"
@@ -71,6 +73,8 @@ fr:
       review_saved: "Vérification enregistrée. Consultez l’état de la ligne avant de la comptabiliser depuis l’aperçu de l’importation."
       review_invalid: "Cette correction n’est pas valable pour la ligne. Choisissez des comptes accessibles dans la devise d’origine ; les comptes du transfert doivent être différents."
     issues:
+      transfer_link_incomplete: "Il reste une seule partie du transfert. Vérifiez le transfert avant d’en créer un autre."
+      existing_duplicate_entries: "Plusieurs opérations correspondent à cette source. Vérifiez-les ; aucune n’a été supprimée ou écrasée."
       account_required: "Le compte 1 est manquant. Confirmez le compte approprié."
       account_mapping_required: "Aucune correspondance univoque avec un compte dans la même devise n’existe. Confirmez un compte."
       account_ambiguous: "Plusieurs comptes pourraient correspondre à cette source. Confirmez un compte."
@@ -112,3 +116,8 @@ fr:
       file_too_large: "Le fichier dépasse 10 Mo."
     auto_post: "Comptabiliser automatiquement en arrière-plan les lignes associées sans avertissement"
     queued: "Import en arrière-plan en attente. La progression est actualisée automatiquement. Vous pouvez fermer la page ; les lignes à vérifier restent en attente."
+    auto_account_note: "Créé depuis iCost comme compte de trésorerie provisoire. Le type réel et le solde initial sont inconnus. Le solde reflète seulement les mouvements nets importés ; vérifiez le compte réel."
+    automatic_help: "Les comptes sont créés ou associés par nom et devise. Les lignes valides sont comptabilisées ; les autres restent à vérifier et les doublons ne créent pas d’opération."
+    process: "Traiter cet import automatiquement"
+    view_transactions: "Voir les opérations comptabilisées"
+    missing_entries_help: "Certaines lignes comptabilisées n’ont plus d’opération. Traitez cet import pour restaurer les lignes admissibles avec contrôle des doublons."

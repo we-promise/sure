@@ -48,4 +48,14 @@ class IcostMapsControllerTest < ActionDispatch::IntegrationTest
     assert flash[:alert].present?
     assert @batch.records.all? { |record| record.resolution.empty? }
   end
+
+  test "overlapping source archives do not duplicate map markers" do
+    Balance::Materializer.any_instance.stubs(:materialize_balances)
+    later = IcostImport.prepare!(family: @user.family, user: @user, filename: "map-again.csv", bytes: @batch.source_bytes.gsub("\n", "\r\n"))
+    later.process!(user: @user)
+    IcostRecord.locate_place!(user: @user, place: "Synthetic museum", latitude: "51.5", longitude: "-0.1")
+    get icost_map_path
+    assert_response :success
+    assert_select "[data-icost-map-target='record']", count: 2
+  end
 end

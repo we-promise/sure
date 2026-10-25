@@ -60,6 +60,8 @@ zh-CN:
       row_sha256: "原始行 SHA-256"
       resolution: "已确认修正"
     statuses:
+      duplicate: "重复来源（未新增交易）"
+      entry_missing: "关联交易已不存在"
       ready: "待导入"
       published: "已记账 / 已关联"
       needs_review: "待审阅"
@@ -71,6 +73,8 @@ zh-CN:
       review_saved: "审阅已保存，请确认行状态后在导入预览中提交。"
       review_invalid: "此修正不适用于该行。请选用有权限且币种相同的账户，转账双方不能是同一账户。"
     issues:
+      transfer_link_incomplete: "转账仅剩一侧交易，需先核对既有转账，避免再次创建整笔转账。"
+      existing_duplicate_entries: "已有多笔交易对应同一来源，需单独核对；未删除或覆盖任何既有交易。"
       account_required: "账户 1 缺失，请确认所属账户。"
       account_mapping_required: "无法确定唯一同币种账户，请确认映射。"
       account_ambiguous: "多个账户可能匹配此来源，请确认账户。"
@@ -112,3 +116,8 @@ zh-CN:
       file_too_large: "文件超过 10 MB 限制。"
     auto_post: "在后台自动提交已匹配且无警告的记录"
     queued: "已加入后台导入队列，进度将自动更新。可关闭页面稍后查看，待审阅记录不会自动提交。"
+    auto_account_note: "由 iCost 自动创建的临时现金流水账户。实际账户类型和期初余额未知；当前余额仅为已导入流水净额，请按真实账户核对。"
+    automatic_help: "自动按原始名称和币种创建或匹配账户，正常记录直接入账；异常单独待审阅，重复来源不新增交易。"
+    process: "自动处理本批导入"
+    view_transactions: "查看已入账交易"
+    missing_entries_help: "部分来源曾标记为已入账，但对应交易已不存在。自动处理本批导入可恢复符合条件的记录，并进行去重检查。"

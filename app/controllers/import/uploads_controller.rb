@@ -22,7 +22,11 @@ class Import::UploadsController < ApplicationController
       file = upload_params[:import_file]
       raise Icost::FileParser::Error, "file_too_large" if file.size > Icost::FileParser::MAX_FILE_BYTES
       batch = IcostImport.prepare!(family: Current.family, user: Current.user, bytes: file.read, filename: file.original_filename)
-      redirect_to icost_import_path(batch), notice: t("icost_imports.messages.prepared"), status: :see_other
+      batch.publish_later(user: Current.user)
+      Current.session.update!(prev_transaction_page_params: {
+        q: {}, page: 1, per_page: Current.session.prev_transaction_page_params["per_page"].presence || 50
+      })
+      redirect_to icost_import_path(batch), notice: t("icost_imports.queued"), status: :see_other
     elsif csv_valid?(csv_str)
       @import.account = import_account_id.present? ? accessible_accounts.find(import_account_id) : nil
       @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])

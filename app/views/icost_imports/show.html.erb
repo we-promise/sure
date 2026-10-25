@@ -3,20 +3,26 @@
     <% content_for :page_title, t("icost_imports.preview") %>
     <% content_for :page_actions do %>
       <%= render DS::Link.new(text: t("icost_maps.title"), href: icost_map_path, icon: "map", variant: :outline) %>
-      <% if @counts.fetch("ready", 0).positive? && !Current.user.guest? %>
-        <%= render DS::Button.new(text: t("icost_imports.publish", count: @counts.fetch("ready", 0)), href: publish_icost_import_path(@import), method: :post) %>
+      <% if @posted_account_ids.any? %>
+        <%= render DS::Link.new(text: t("icost_imports.view_transactions"), href: transactions_path(q: {account_ids: @posted_account_ids}, page: 1), variant: :primary) %>
+      <% end %>
+      <% if @records.any? && !Current.user.guest? && !@publishing %>
+        <%= render DS::Button.new(text: t("icost_imports.process"), href: publish_icost_import_path(@import), method: :post) %>
       <% end %>
     <% end %>
     <%= render DS::Alert.new(message: t("icost_imports.preview_help")) %>
     <% if @publishing %>
       <%= render DS::Alert.new(message: t("icost_imports.queued"), live: :status) %>
     <% end %>
+    <% if @counts.fetch("entry_missing", 0).positive? %>
+      <%= render DS::Alert.new(message: t("icost_imports.missing_entries_help"), variant: :warning) %>
+    <% end %>
     <%= render DS::Card.new(class: "space-y-3") do %>
       <dl class="space-y-2">
         <%= render DS::DetailRow.new(label: t("icost_imports.fields.filename"), value: @import.filename) %>
         <%= render DS::DetailRow.new(label: t("icost_imports.fields.sheet_name"), value: @import.sheet_name) %>
         <%= render DS::DetailRow.new(label: t("icost_imports.fields.file_sha256"), value: @import.file_sha256) %>
-        <% %w[ready published needs_review].each do |status| %>
+        <% IcostRecord::DISPLAY_STATUSES.each do |status| %>
           <%= render DS::DetailRow.new(label: t("icost_imports.statuses.#{status}"), value: @counts.fetch(status, 0).to_s, data: { icost_count: status }) %>
         <% end %>
       </dl>
@@ -37,15 +43,15 @@
         <% end %>
       <% end %>
     <% end %>
-    <%= render DS::Table.new(rows: @records, sticky_header: true, label: t("icost_imports.preview")) do |table| %>
-      <% table.with_column(t("icost_imports.fields.source_row")) { |record| link_to(record.source_row.to_s, icost_import_record_path(@import, record), class: "text-link underline") } %>
-      <% table.with_column(t("icost_imports.fields.recorded_at_text")) { |record| record.recorded_at_text.to_s } %>
-      <% table.with_column(t("icost_imports.fields.transaction_type")) { |record| record.transaction_type.to_s } %>
-      <% table.with_column(t("icost_imports.fields.amount"), numeric: true, class: "privacy-sensitive") { |record| "#{icost_value(record.amount)} #{record.currency}" } %>
-      <% table.with_column(t("icost_imports.fields.category_path")) { |record| record.category_path.join(" / ") } %>
-      <% table.with_column(t("icost_imports.fields.book_name")) { |record| record.book_name.to_s } %>
-      <% table.with_column(t("icost_imports.fields.status")) { |record| icost_status(record) } %>
-      <% table.with_column(t("icost_imports.fields.issues")) { |record| record.issues.map { |issue| icost_issue(issue) }.join("; ") } %>
+    <% if @review_records.any? %>
+      <%= render DS::Disclosure.new(title: t("icost_imports.review_required"), open: true) do %>
+        <div data-icost-review-rows>
+          <%= render "icost_imports/records", records: @review_records %>
+        </div>
+      <% end %>
+    <% end %>
+    <%= render DS::Disclosure.new(title: t("icost_maps.ledger"), open: @review_records.empty? && @counts.fetch("published", 0).zero?) do %>
+      <%= render "icost_imports/records", records: @records %>
     <% end %>
     <%= render DS::Link.new(text: t("icost_imports.title"), href: icost_imports_path, variant: :default) %>
   </div>

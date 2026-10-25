@@ -60,6 +60,8 @@ ro:
       row_sha256: "SHA-256 al rândului sursă"
       resolution: "Corecții confirmate"
     statuses:
+      duplicate: "Sursă duplicată (fără tranzacție nouă)"
+      entry_missing: "Tranzacția asociată lipsește"
       ready: "Pregătit pentru înregistrare"
       published: "Înregistrat / asociat"
       needs_review: "Necesită revizuire"
@@ -71,6 +73,8 @@ ro:
       review_saved: "Revizuirea a fost salvată. Verifică starea rândului înainte de a-l înregistra din previzualizarea importului."
       review_invalid: "Această corecție nu este validă pentru rând. Alege conturi accesibile în moneda originală; conturile transferului trebuie să fie diferite."
     issues:
+      transfer_link_incomplete: "A rămas o singură parte a transferului. Verificați înainte de a crea altul."
+      existing_duplicate_entries: "Mai multe tranzacții reprezintă această sursă. Verificați-le; niciuna nu a fost ștearsă sau suprascrisă."
       account_required: "Contul 1 lipsește. Confirmă contul corect."
       account_mapping_required: "Nu există o asociere neechivocă la un cont în aceeași monedă. Confirmă un cont."
       account_ambiguous: "Mai multe conturi ar putea corespunde acestei surse. Confirmă un cont."
@@ -112,3 +116,8 @@ ro:
       file_too_large: "Fișierul depășește 10 MB."
     auto_post: "Înregistrează automat în fundal rândurile asociate fără avertizări"
     queued: "Import în fundal pus în coadă. Progresul se actualizează automat. Puteți închide pagina; rândurile de verificat rămân în așteptare."
+    auto_account_note: "Creat din iCost ca un cont de numerar provizoriu. Tipul real și soldul inițial sunt necunoscute. Soldul reflectă doar mișcările nete importate; verificați contul real."
+    automatic_help: "Conturile sunt create sau asociate după nume și monedă. Rândurile valide sunt înregistrate; erorile rămân de verificat, iar duplicatele nu adaugă tranzacții."
+    process: "Procesează automat acest import"
+    view_transactions: "Vezi tranzacțiile înregistrate"
+    missing_entries_help: "Unele rânduri înregistrate nu mai au tranzacții. Procesați importul pentru a recupera rândurile valide cu verificarea duplicatelor."

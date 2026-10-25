@@ -60,6 +60,8 @@ tr:
       row_sha256: "Kaynak satırın SHA-256 özeti"
       resolution: "Onaylanan düzeltmeler"
     statuses:
+      duplicate: "Yinelenen kaynak (yeni işlem yok)"
+      entry_missing: "Bağlı işlem eksik"
       ready: "Kaydedilmeye hazır"
       published: "Kaydedildi / eşleştirildi"
       needs_review: "İnceleme gerekiyor"
@@ -71,6 +73,8 @@ tr:
       review_saved: "İnceleme kaydedildi. İçe aktarma önizlemesinden işlemi kaydetmeden önce satırın durumunu kontrol edin."
       review_invalid: "Bu düzeltme satır için geçerli değil. Orijinal para biriminde erişilebilir hesaplar seçin; transfer hesapları birbirinden farklı olmalıdır."
     issues:
+      transfer_link_incomplete: "Transferin yalnızca bir tarafı kaldı. Yeni transfer oluşturmadan önce doğrulayın."
+      existing_duplicate_entries: "Birden fazla işlem bu kaynağı temsil ediyor. Kontrol edin; hiçbiri silinmedi veya üzerine yazılmadı."
       account_required: "Hesap 1 eksik. Doğru hesabı onaylayın."
       account_mapping_required: "Aynı para biriminde tek ve kesin bir hesap eşlemesi bulunamadı. Bir hesabı onaylayın."
       account_ambiguous: "Bu kaynakla birden fazla hesap eşleşebilir. Bir hesabı onaylayın."
@@ -112,3 +116,8 @@ tr:
       file_too_large: "Dosya 10 MB sınırını aşıyor."
     auto_post: "Uyarısız eşleşen satırları arka planda otomatik kaydet"
     queued: "Arka plan içe aktarma sırada. İlerleme otomatik güncellenir. Sayfayı kapatabilirsiniz; inceleme satırları beklemede kalır."
+    auto_account_note: "iCost verisinden geçici nakit hesabı olarak oluşturuldu. Gerçek tür ve açılış bakiyesi bilinmiyor. Bakiye yalnızca net içe aktarılan hareketleri içerir; gerçek hesapla karşılaştırın."
+    automatic_help: "Hesaplar ad ve para birimine göre oluşturulur veya eşleştirilir. Geçerli satırlar kaydedilir; hatalar incelemede kalır, yinelenen kaynaklar işlem eklemez."
+    process: "Bu içe aktarmayı otomatik işle"
+    view_transactions: "Kaydedilen işlemleri göster"
+    missing_entries_help: "Kaydedilmiş bazı satırların işlemleri artık yok. Geçerli satırları yinelenme denetimiyle kurtarmak için içe aktarmayı işleyin."

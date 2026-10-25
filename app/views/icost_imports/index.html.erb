@@ -16,7 +16,7 @@
       <%= render DS::Table.new(rows: @imports, label: t("icost_imports.title")) do |table| %>
         <% table.with_column(t("icost_imports.fields.filename")) { |batch| link_to(batch.filename, icost_import_path(batch), class: "text-link underline") } %>
         <% table.with_column(t("icost_imports.fields.created_at")) { |batch| l(batch.created_at, format: :long) } %>
-        <% %w[ready published needs_review].each do |status| %>
+        <% IcostRecord::DISPLAY_STATUSES.each do |status| %>
           <% table.with_column(t("icost_imports.statuses.#{status}"), numeric: true) { |batch| @counts.fetch([batch.id, status], 0).to_s } %>
         <% end %>
         <% table.with_column(t("icost_imports.fields.file_sha256")) { |batch| batch.file_sha256.first(12) } %>

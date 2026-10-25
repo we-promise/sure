@@ -1,7 +1,8 @@
 # Local iCost import
 
 The iCost workflow is available at `/icost_imports`. Upload UTF-8 CSV or
-single-sheet XLSX files, inspect the preview and resolve warnings before publishing.
+single-sheet XLSX files; normal rows post automatically and exceptions remain
+in the preview for review.
 Parsing and accounting use no AI, bank connector, geocoding, map tiles or remote
 image requests. The separate, opt-in map workflow is described below.
 
@@ -12,15 +13,27 @@ independently; a failed file does not discard successful files, and the page
 shows the reason for each failure. The standard transaction import upload also
 routes XLSX files to the iCost preview instead of trying to decode them as CSV.
 
-The preview groups ordinary income/expense rows by original account and currency.
-Choose an accessible, writable manual account for each group and apply the
-mapping once. Other accounting warnings remain under review. Later exports reuse
-unambiguous confirmed mappings owned by the same user; inaccessible or
-wrong-currency accounts still require review.
+Uploads default to automatic processing, including the standard manual XLSX
+entry point. Unchecking automatic posting retains a preview-only workflow. The
+worker matches visible writable manual accounts by source name and currency;
+otherwise it creates an owner-private `Depository` as a provisional cash ledger
+with the original name/currency. It does not infer a bank subtype, credit limit,
+opening valuation or actual current balance. Localized account notes explain
+that account type and opening balance need verification and that the displayed
+balance is only net imported activity. Existing provider-linked, inaccessible or
+other-currency accounts are never repurposed. Ambiguous names stay in review.
+
+The preview groups unresolved ordinary rows by original account and currency,
+so a deliberate mapping can still be applied to the whole group. Normal rows
+post independently of invalid amounts, refunds, unsupported fees or unclear
+transfer directions. Exceptions are shown in their own expanded section;
+recorded transactions have a direct link that resets stale transaction filters.
 
 Posting runs in `IcostPublishJob` on the existing `high_priority` queue. A running
-Sidekiq worker is required. The upload form optionally queues posting immediately
-for ready rows. Review rows are never automatically posted. Import and history
+Sidekiq worker is required. By default the upload queues processing immediately;
+only unresolved or invalid rows remain under review. Automatic imports clear
+the initiating session's old transaction filters so deleted-account selections
+and obsolete date windows cannot hide the new rows. Import and history
 pages refresh progress while the batch is queued; reopening a page also shows
 current counts. Duplicate job delivery remains safe through the existing
 family/record locks and source identities. A short-lived cache entry drives the
@@ -78,9 +91,9 @@ category, account 1/2, note, currency, tags, book, location, refund, discount, f
 three image links and three image attachment references. Ordinary income and
 expenses use native entries, categories and tags. Book names remain structured
 and also have a native book tag for filtering. Category hierarchy conflicts are
-rejected rather than flattened. No opening balance or account type is guessed;
-new ledger entries require an existing visible writable manual account with the
-same currency.
+rejected rather than flattened. Automatic accounts use the provisional cash-ledger
+type described above; no opening valuation is invented. Every new entry uses a visible writable manual
+account with the same currency.
 
 A transfer requires explicit source and destination accounts. Native transfer
 rules determine the destination account's treatment; a deposit-to-deposit
@@ -100,16 +113,32 @@ bytes preserve any embedded content but this importer does not extract media.
 
 ## Replay and existing entries
 
-Same-file uploads return the existing batch. Publishing is serialized by family
-and record locks; published row hashes in another batch require duplicate review.
-Identical rows within one file remain distinct source rows. Missing source IDs
-prevent a guarantee of semantic deduplication across independently edited exports.
+Same-file uploads return the existing batch and queue safe reprocessing by
+default. Automatic processing is serialized by family and record locks. Its
+fingerprint covers all source facts, normalizes decimal formatting and date
+separators, sorts object keys and tags, and retains unknown fields. Per-file
+occurrence numbers preserve legitimate identical rows within one export. Across
+overlapping exports, the same fingerprint and occurrence are represented by one
+ledger entry; other source rows are marked as duplicates and link to their
+canonical source. Duplicate sources do not create map markers or inflate the
+recorded count. The native transaction retains its fingerprint and occurrence,
+so a later upload can also find it after the original archive was deleted.
+Different ledgers, currencies, times, amounts or other source facts stay distinct.
+Missing source IDs still prevent a guarantee of semantic deduplication across
+independently edited or unrelated exports.
 
 Legacy local CSV imports are adopted only when the exact file/sheet/row identity,
 row hash, date, currency, signed amount, account, categories and tags match. This
 adds a provenance association without rewriting native entries or their import
-ownership. Published rows whose native entries are later deleted are not silently
-recreated. Deleting an archive does not delete ledger entries.
+ownership. Rows marked published whose entry or transfer counterpart is missing
+display an explicit missing-entry status. Reprocessing that source import can recover
+eligible missing entries; unrelated uploads do not resurrect deleted history.
+An explicit owner-authorized `process!(user:, recover_all: true)` reconciles all
+of that owner's archives for a requested repair. Existing source entries are
+relinked rather than duplicated, and changed native amounts are not overwritten.
+A surviving transfer leg or multiple existing ledger entries requires review;
+neither is deleted or blindly recreated. Deleting an archive does not delete
+ledger entries.
 
 The importer does not call account sync or AutoSync. Mixed-currency existing
 entries, trades or holdings require review before local balance materialization,

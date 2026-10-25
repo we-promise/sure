@@ -60,6 +60,8 @@ pl:
       row_sha256: "SHA-256 wiersza źródłowego"
       resolution: "Potwierdzone korekty"
     statuses:
+      duplicate: "Zduplikowane źródło (bez nowej transakcji)"
+      entry_missing: "Brak powiązanej transakcji"
       ready: "Gotowe do zaksięgowania"
       published: "Zapisane / powiązane"
       needs_review: "Wymaga weryfikacji"
@@ -71,6 +73,8 @@ pl:
       review_saved: "Weryfikacja zapisana. Sprawdź status wiersza przed zaksięgowaniem go z podglądu importu."
       review_invalid: "Ta korekta nie jest prawidłowa dla tego wiersza. Wybierz dostępne konta w oryginalnej walucie; konta przelewu muszą być różne."
     issues:
+      transfer_link_incomplete: "Pozostała jedna strona przelewu. Sprawdź ją przed utworzeniem kolejnego przelewu."
+      existing_duplicate_entries: "Kilka transakcji odpowiada temu źródłu. Sprawdź je; żadnej nie usunięto ani nie nadpisano."
       account_required: "Brakuje konta 1. Potwierdź właściwe konto."
       account_mapping_required: "Brak jednoznacznego przypisania do konta w tej samej walucie. Potwierdź konto."
       account_ambiguous: "Do tego źródła może pasować więcej niż jedno konto. Potwierdź konto."
@@ -112,3 +116,8 @@ pl:
       file_too_large: "Plik przekracza 10 MB."
     auto_post: "Automatycznie księguj w tle przypisane wiersze bez ostrzeżeń"
     queued: "Import w tle w kolejce. Postęp aktualizuje się automatycznie. Można zamknąć stronę; wiersze do sprawdzenia pozostają oczekujące."
+    auto_account_note: "Utworzone z iCost jako tymczasowe konto gotówkowe. Rzeczywisty typ konta i saldo początkowe są nieznane. Saldo obejmuje tylko importowane ruchy netto; sprawdź rzeczywiste konto."
+    automatic_help: "Konta są tworzone lub przypisywane według nazwy i waluty. Poprawne wiersze są księgowane; błędne czekają na sprawdzenie, a duplikaty nie tworzą transakcji."
+    process: "Przetwórz import automatycznie"
+    view_transactions: "Pokaż zaksięgowane transakcje"
+    missing_entries_help: "Niektóre zaksięgowane wiersze utraciły transakcje. Przetwórz import, aby odzyskać poprawne wiersze z kontrolą duplikatów."

@@ -60,6 +60,8 @@ vi:
       row_sha256: "SHA-256 của dòng nguồn"
       resolution: "Các chỉnh sửa đã xác nhận"
     statuses:
+      duplicate: "Nguồn trùng (không thêm giao dịch)"
+      entry_missing: "Thiếu giao dịch liên kết"
       ready: "Sẵn sàng ghi sổ"
       published: "Đã ghi sổ / liên kết"
       needs_review: "Cần rà soát"
@@ -71,6 +73,8 @@ vi:
       review_saved: "Đã lưu kết quả rà soát. Kiểm tra trạng thái dòng trước khi ghi sổ từ màn hình xem trước."
       review_invalid: "Chỉnh sửa này không hợp lệ với dòng dữ liệu. Hãy chọn tài khoản có quyền truy cập và cùng loại tiền gốc; tài khoản chuyển đi và nhận phải khác nhau."
     issues:
+      transfer_link_incomplete: "Chỉ còn một phía chuyển khoản. Hãy kiểm tra trước khi tạo chuyển khoản khác."
+      existing_duplicate_entries: "Nhiều giao dịch ứng với nguồn này. Hãy kiểm tra; không giao dịch nào bị xóa hoặc ghi đè."
       account_required: "Thiếu tài khoản 1. Hãy xác nhận tài khoản đúng."
       account_mapping_required: "Không có ánh xạ rõ ràng đến một tài khoản cùng loại tiền. Hãy xác nhận tài khoản."
       account_ambiguous: "Có nhiều tài khoản có thể khớp với nguồn này. Hãy xác nhận tài khoản."
@@ -112,3 +116,8 @@ vi:
       file_too_large: "Tệp vượt quá 10 MB."
     auto_post: "Tự động ghi các dòng khớp không có cảnh báo trong nền"
     queued: "Đã xếp hàng nhập nền. Tiến độ tự động cập nhật. Bạn có thể đóng trang; các dòng cần kiểm tra vẫn chờ xử lý."
+    auto_account_note: "Được tạo từ iCost dưới dạng sổ tiền mặt tạm thời. Chưa rõ loại tài khoản thực và số dư đầu kỳ. Số dư chỉ phản ánh dòng tiền ròng đã nhập; hãy đối chiếu tài khoản thực."
+    automatic_help: "Tài khoản được tạo hoặc ghép theo tên và tiền tệ. Dòng hợp lệ được ghi sổ; dòng lỗi chờ kiểm tra, nguồn trùng không thêm giao dịch."
+    process: "Tự động xử lý lần nhập này"
+    view_transactions: "Xem giao dịch đã ghi sổ"
+    missing_entries_help: "Một số dòng đã ghi sổ không còn giao dịch. Xử lý lần nhập để khôi phục dòng hợp lệ có kiểm tra trùng lặp."

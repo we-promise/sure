@@ -60,6 +60,8 @@ nl:
       row_sha256: "SHA-256 van bronrij"
       resolution: "Bevestigde correcties"
     statuses:
+      duplicate: "Dubbele bron (geen nieuwe transactie)"
+      entry_missing: "Gekoppelde transactie ontbreekt"
       ready: "Gereed om te boeken"
       published: "Geboekt / gekoppeld"
       needs_review: "Controle nodig"
@@ -71,6 +73,8 @@ nl:
       review_saved: "Controle opgeslagen. Controleer de rijstatus voordat je vanuit het importvoorbeeld boekt."
       review_invalid: "Deze correctie is niet geldig voor de rij. Kies toegankelijke rekeningen in de oorspronkelijke valuta; voor een overboeking zijn verschillende rekeningen nodig."
     issues:
+      transfer_link_incomplete: "Er resteert één kant van de overboeking. Controleer deze voordat u een nieuwe maakt."
+      existing_duplicate_entries: "Meerdere transacties vertegenwoordigen deze bron. Controleer ze; niets is verwijderd of overschreven."
       account_required: "Rekening 1 ontbreekt. Bevestig de juiste rekening."
       account_mapping_required: "Er is geen eenduidige rekeningkoppeling met dezelfde valuta. Bevestig een rekening."
       account_ambiguous: "Meer dan één rekening kan bij deze bron passen. Bevestig een rekening."
@@ -112,3 +116,8 @@ nl:
       file_too_large: "Het bestand is groter dan 10 MB."
     auto_post: "Gekoppelde regels zonder waarschuwingen automatisch op de achtergrond boeken"
     queued: "Achtergrondimport staat in de wachtrij. Voortgang wordt automatisch bijgewerkt. U kunt de pagina sluiten; controleregels blijven openstaan."
+    auto_account_note: "Uit iCost aangemaakt als voorlopige kasrekening. Werkelijk rekeningtype en beginsaldo zijn onbekend. Het saldo bevat alleen geïmporteerde nettomutaties; controleer de echte rekening."
+    automatic_help: "Rekeningen worden op naam en valuta aangemaakt of gekoppeld. Geldige regels worden geboekt; fouten blijven ter controle en duplicaten voegen geen transacties toe."
+    process: "Deze import automatisch verwerken"
+    view_transactions: "Geboekte transacties bekijken"
+    missing_entries_help: "Sommige geboekte regels hebben geen transactie meer. Verwerk de import om geldige regels met duplicaatcontrole te herstellen."

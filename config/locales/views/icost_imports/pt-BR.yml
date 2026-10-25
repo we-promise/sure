@@ -60,6 +60,8 @@ pt-BR:
       row_sha256: "SHA-256 da linha de origem"
       resolution: "Correções confirmadas"
     statuses:
+      duplicate: "Origem duplicada (sem nova transação)"
+      entry_missing: "Transação vinculada ausente"
       ready: "Pronto para lançar"
       published: "Registrado / vinculado"
       needs_review: "Precisa de revisão"
@@ -71,6 +73,8 @@ pt-BR:
       review_saved: "Revisão salva. Verifique o status da linha antes de lançá-la pela prévia da importação."
       review_invalid: "Esta correção não é válida para a linha. Escolha contas acessíveis na moeda original; a transferência exige contas diferentes."
     issues:
+      transfer_link_incomplete: "Resta apenas um lado da transferência. Confira antes de criar outra."
+      existing_duplicate_entries: "Várias transações representam esta origem. Confira; nenhuma foi excluída ou sobrescrita."
       account_required: "A conta 1 está ausente. Confirme a conta correta."
       account_mapping_required: "Não há um mapeamento inequívoco para uma conta na mesma moeda. Confirme uma conta."
       account_ambiguous: "Mais de uma conta pode corresponder a esta origem. Confirme uma conta."
@@ -112,3 +116,8 @@ pt-BR:
       file_too_large: "O arquivo excede 10 MB."
     auto_post: "Registrar em segundo plano as linhas mapeadas sem avisos"
     queued: "Importação na fila. O progresso é atualizado automaticamente. Você pode fechar a página; as linhas para revisão continuam pendentes."
+    auto_account_note: "Criada do iCost como conta provisória de caixa. O tipo real e o saldo inicial são desconhecidos. O saldo reflete apenas movimentos líquidos importados; confira a conta real."
+    automatic_help: "As contas são criadas ou mapeadas por nome e moeda. Linhas válidas são registradas; erros ficam para revisão e duplicatas não adicionam transações."
+    process: "Processar esta importação automaticamente"
+    view_transactions: "Ver transações registradas"
+    missing_entries_help: "Algumas linhas registradas não têm mais transação. Processe a importação para recuperar linhas válidas com verificação de duplicatas."

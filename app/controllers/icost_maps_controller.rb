@@ -31,7 +31,7 @@ class IcostMapsController < ApplicationController
 
   private
     def load_map
-      scope = IcostRecord.owned_by(Current.user)
+      scope = IcostRecord.owned_by(Current.user).where("NOT (resolution ? 'duplicate_of_id')")
       @categories = scope.distinct.pluck(:category_path).map { |path| path.reject(&:blank?).last }.compact.sort.uniq
       scope = scope.where("category_path ->> 1 = :category OR (category_path ->> 1 = '' AND category_path ->> 0 = :category)", category: params[:category]) if params[:category].present?
       @total = scope.count

@@ -3,7 +3,7 @@ class IcostPublishJob < ApplicationJob
   discard_on ActiveJob::DeserializationError
 
   def perform(import, user)
-    import.publish!(user: user)
+    import.process!(user: user)
   rescue StandardError => error
     DebugLogEntry.capture(category: "import", level: "error", source: self.class.name,
       provider_key: "icost", family: import.family, message: "iCost background publication failed",

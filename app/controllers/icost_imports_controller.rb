@@ -8,7 +8,11 @@ class IcostImportsController < ApplicationController
 
   def index
     @imports = own_imports.select(:id, :filename, :file_sha256, :created_at, :updated_at).order(created_at: :desc)
-    @counts = IcostRecord.where(icost_import_id: @imports.reselect(:id)).group(:icost_import_id, :status).count
+    @counts = Hash.new(0)
+    IcostRecord.where(icost_import_id: @imports.reselect(:id))
+      .select(:icost_import_id, :status, :entry_id, :counterpart_entry_id, :transaction_type, :resolution).each do |record|
+        @counts[[ record.icost_import_id, record.display_status ]] += 1
+      end
     @publishing = @imports.any?(&:publishing?)
   end
 
@@ -24,12 +28,14 @@ class IcostImportsController < ApplicationController
 
     batches = []
     errors = []
+    auto_post = params.dig(:icost_import, :auto_post)
+    auto_post = auto_post.nil? || ActiveModel::Type::Boolean.new.cast(auto_post)
     files.each do |file|
       begin
         raise Icost::FileParser::Error, "file_too_large" unless file.respond_to?(:read) && file.size <= Icost::FileParser::MAX_FILE_BYTES
         batches << IcostImport.prepare!(family: Current.family, user: Current.user,
           bytes: file.read, filename: file.original_filename)
-        batches.last.publish_later(user: Current.user) if params.dig(:icost_import, :auto_post) == "1"
+        batches.last.publish_later(user: Current.user) if auto_post
       rescue Icost::FileParser::Error => error
         errors << { "filename" => File.basename(file.original_filename).truncate_bytes(60), "code" => error.code }
         DebugLogEntry.capture(category: "import", level: "warn", message: "iCost upload rejected",
@@ -44,7 +50,8 @@ class IcostImportsController < ApplicationController
     end
     flash[:icost_upload_errors] = errors if errors.any?
     flash[:alert] = helpers.icost_upload_error(errors.first) if errors.any?
-    flash[:notice] = t("icost_imports.messages.prepared") if batches.any?
+    flash[:notice] = t(auto_post ? "icost_imports.queued" : "icost_imports.messages.prepared") if batches.any?
+    reset_transaction_filters! if auto_post && batches.any?
     destination = if batches.empty?
       new_icost_import_path
     elsif files.one?
@@ -57,7 +64,11 @@ class IcostImportsController < ApplicationController
 
   def show
     @records = @import.records.order(:source_row)
-    @counts = @import.records.group(:status).count
+    @counts = @records.map(&:display_status).tally
+    @review_records = @records.select { |record| %w[needs_review entry_missing].include?(record.display_status) }
+    entry_ids = @records.flat_map { |record| [ record.entry_id, record.counterpart_entry_id, record.resolution["duplicate_entry_id"] ] }.compact
+    @posted_account_ids = Current.family.entries.where(id: entry_ids,
+      account_id: Current.user.accessible_accounts.visible.select(:id)).distinct.pluck(:account_id)
     @account_groups = @import.account_groups
     @accounts = Current.family.accounts.writable_by(Current.user).visible.manual.order(:name)
     @publishing = @import.publishing?
@@ -73,12 +84,19 @@ class IcostImportsController < ApplicationController
 
   def publish
     @import.publish_later(user: Current.user)
+    reset_transaction_filters!
     redirect_to icost_import_path(@import), notice: t("icost_imports.queued"), status: :see_other
   rescue IcostImport::Error, IcostRecord::ResolutionError, ActiveRecord::RecordInvalid
     redirect_to icost_import_path(@import), alert: t("icost_imports.messages.publish_failed")
   end
 
   private
+    def reset_transaction_filters!
+      Current.session.update!(prev_transaction_page_params: {
+        q: {}, page: 1, per_page: Current.session.prev_transaction_page_params["per_page"].presence || 50
+      })
+    end
+
     def default_breadcrumbs
       [ [ I18n.t("breadcrumbs.home"), root_path ], [ I18n.t("icost_imports.title"), nil ] ]
     end

@@ -60,6 +60,8 @@ pt-PT:
       row_sha256: "SHA-256 da linha de origem"
       resolution: "Correções confirmadas"
     statuses:
+      duplicate: "Origem duplicada (sem nova transação)"
+      entry_missing: "Transação associada em falta"
       ready: "Pronta a registar"
       published: "Registada / associada"
       needs_review: "Precisa de revisão"
@@ -71,6 +73,8 @@ pt-PT:
       review_saved: "Revisão guardada. Verifique o estado da linha antes de a registar a partir da pré-visualização da importação."
       review_invalid: "Esta correção não é válida para a linha. Escolha contas acessíveis na moeda original; as contas da transferência têm de ser diferentes."
     issues:
+      transfer_link_incomplete: "Resta apenas um lado da transferência. Confira antes de criar outra."
+      existing_duplicate_entries: "Várias transações representam esta origem. Confira; nenhuma foi eliminada ou substituída."
       account_required: "Falta a conta 1. Confirme a conta correta."
       account_mapping_required: "Não existe uma correspondência inequívoca com uma conta na mesma moeda. Confirme uma conta."
       account_ambiguous: "Mais do que uma conta poderá corresponder a esta origem. Confirme uma conta."
@@ -112,3 +116,8 @@ pt-PT:
       file_too_large: "O ficheiro excede 10 MB."
     auto_post: "Registar em segundo plano as linhas mapeadas sem avisos"
     queued: "Importação em fila. O progresso é atualizado automaticamente. Pode fechar a página; as linhas para revisão continuam pendentes."
+    auto_account_note: "Criada do iCost como conta provisória de caixa. O tipo real e o saldo inicial são desconhecidos. O saldo reflete apenas movimentos líquidos importados; confira a conta real."
+    automatic_help: "As contas são criadas ou mapeadas por nome e moeda. Linhas válidas são registadas; erros ficam para revisão e duplicados não adicionam transações."
+    process: "Processar esta importação automaticamente"
+    view_transactions: "Ver transações registadas"
+    missing_entries_help: "Algumas linhas registadas já não têm transação. Processe a importação para recuperar linhas válidas com verificação de duplicados."

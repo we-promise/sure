@@ -60,6 +60,8 @@ de:
       row_sha256: "SHA-256 der Quellzeile"
       resolution: "Bestätigte Korrekturen"
     statuses:
+      duplicate: "Doppelte Quelle (keine neue Buchung)"
+      entry_missing: "Verknüpfte Buchung fehlt"
       ready: "Bereit zum Buchen"
       published: "Erfasst / verknüpft"
       needs_review: "Prüfung erforderlich"
@@ -71,6 +73,8 @@ de:
       review_saved: "Prüfung gespeichert. Kontrolliere den Zeilenstatus, bevor du aus der Importvorschau buchst."
       review_invalid: "Diese Korrektur ist für die Zeile ungültig. Wähle zugängliche Konten in der ursprünglichen Währung; für eine Überweisung sind unterschiedliche Konten erforderlich."
     issues:
+      transfer_link_incomplete: "Nur eine Transferseite ist vorhanden. Vor einer neuen Überweisung den bestehenden Transfer prüfen."
+      existing_duplicate_entries: "Mehrere Buchungen entsprechen dieser Quelle. Prüfen; keine wurde gelöscht oder überschrieben."
       account_required: "Konto 1 fehlt. Bestätige das richtige Konto."
       account_mapping_required: "Es gibt keine eindeutige Kontenzuordnung in derselben Währung. Bestätige ein Konto."
       account_ambiguous: "Mehrere Konten könnten zu dieser Quelle passen. Bestätige ein Konto."
@@ -112,3 +116,8 @@ de:
       file_too_large: "Die Datei überschreitet 10 MB."
     auto_post: "Passende Zeilen ohne Warnungen automatisch im Hintergrund buchen"
     queued: "Hintergrundimport eingereiht. Der Fortschritt wird automatisch aktualisiert. Die Seite kann geschlossen werden; Prüfzeilen bleiben ausstehend."
+    auto_account_note: "Aus iCost als vorläufiges Bargeldkonto erstellt. Tatsächlicher Kontotyp und Anfangssaldo sind unbekannt. Der Saldo enthält nur importierte Nettobewegungen; mit dem echten Konto abgleichen."
+    automatic_help: "Quellkonten werden nach Name und Währung erstellt oder zugeordnet. Gültige Zeilen werden gebucht; fehlerhafte bleiben zur Prüfung, doppelte Quellen erzeugen keine Buchung."
+    process: "Import automatisch verarbeiten"
+    view_transactions: "Gebuchte Transaktionen anzeigen"
+    missing_entries_help: "Als gebucht markierte Zeilen haben keine Buchung mehr. Import verarbeiten, um geeignete Zeilen mit Duplikatprüfung wiederherzustellen."

@@ -14,7 +14,7 @@ module IcostImportsHelper
 
   def icost_account_resolution?(record)
     %w[支出 收入].include?(record.transaction_type) &&
-      ((record.issues & %w[account_required account_mapping_required account_valuation_requires_review]).any? ||
+      ((record.issues & %w[account_required account_mapping_required account_ambiguous account_valuation_requires_review]).any? ||
         record.resolution["account_id"].present?)
   end
 
@@ -33,7 +33,7 @@ module IcostImportsHelper
   end
 
   def icost_status(record)
-    t("icost_imports.statuses.#{record.status}", default: record.status)
+    t("icost_imports.statuses.#{record.display_status}", default: record.display_status)
   end
 
   def icost_issue(issue)

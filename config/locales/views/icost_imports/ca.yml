@@ -60,6 +60,8 @@ ca:
       row_sha256: "SHA-256 de la fila original"
       resolution: "Correccions confirmades"
     statuses:
+      duplicate: "Font duplicada (sense nova transacció)"
+      entry_missing: "Falta la transacció vinculada"
       ready: "Preparada per registrar"
       published: "Registrada / vinculada"
       needs_review: "Pendent de revisió"
@@ -71,6 +73,8 @@ ca:
       review_saved: "Revisió desada. Comprova l'estat de la fila abans de registrar-la des de la previsualització de la importació."
       review_invalid: "Aquesta correcció no és vàlida per a la fila. Tria comptes accessibles amb la divisa original; els comptes de la transferència han de ser diferents."
     issues:
+      transfer_link_incomplete: "Només queda una part de la transferència. Reviseu-la abans de crear-ne una altra."
+      existing_duplicate_entries: "Diverses transaccions representen aquesta font. Reviseu-les; no se n’ha eliminat ni sobreescrit cap."
       account_required: "Falta el compte 1. Confirma el compte correcte."
       account_mapping_required: "No hi ha cap assignació inequívoca a un compte amb la mateixa divisa. Confirma un compte."
       account_ambiguous: "Més d'un compte podria correspondre a aquest origen. Confirma un compte."
@@ -112,3 +116,8 @@ ca:
       file_too_large: "El fitxer supera 10 MB."
     auto_post: "Registra en segon pla les files assignades sense avisos"
     queued: "Importació en cua. El progrés s’actualitza automàticament. Podeu tancar la pàgina; les files per revisar continuen pendents."
+    auto_account_note: "Creat des d’iCost com a compte provisional d’efectiu. El tipus real i el saldo inicial són desconeguts. El saldo només reflecteix moviments nets importats; verifiqueu el compte real."
+    automatic_help: "Els comptes es creen o s’assignen per nom i moneda. Les files vàlides es registren; els errors queden per revisar i els duplicats no afegeixen transaccions."
+    process: "Processa aquesta importació automàticament"
+    view_transactions: "Mostra les transaccions registrades"
+    missing_entries_help: "Algunes files registrades ja no tenen transacció. Processeu la importació per recuperar files vàlides amb control de duplicats."

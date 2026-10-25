@@ -1,5 +1,8 @@
+require "digest"
+
 class IcostRecord < ApplicationRecord
   ResolutionError = Class.new(StandardError)
+  DISPLAY_STATUSES = %w[ready published duplicate needs_review entry_missing].freeze
 
   belongs_to :icost_import
   belongs_to :family
@@ -82,6 +85,42 @@ class IcostRecord < ApplicationRecord
     Date.strptime(recorded_at_text.to_s.strip[0, 10].tr("/", "-"), "%Y-%m-%d")
   end
 
+  def linked_entries_present?
+    entry_id.present? && (transaction_type != "转账" || counterpart_entry_id.present?)
+  end
+
+  def display_status
+    return "duplicate" if resolution["duplicate_of_id"].present?
+    return "entry_missing" if status == "published" && !linked_entries_present?
+    status
+  end
+
+  # Compare all source facts, independently of CSV/XLSX number formatting and
+  # column order. Occurrence numbers, assigned per file, preserve repeated rows.
+  def deduplication_key
+    fields = attributes.slice("transaction_type", "currency", "book_name", "note", "location_text", "coordinate_system")
+    fields["recorded_at_text"] = recorded_at_text.to_s.strip.tr("/", "-")
+    fields["account_name"] = account_name.to_s.strip
+    fields["counterparty_name"] = counterparty_name.to_s.strip
+    fields["category_path"] = category_path
+    fields["tags"] = tags.sort
+    fields["image_references"] = image_references.transform_values(&:presence)
+    fields["unknown_fields"] = unknown_fields
+    { "amount" => "金额", "refund_amount" => "退款", "discount_amount" => "优惠", "fee_amount" => "手续费" }.each do |field, header|
+      fields[field] = public_send(field)&.to_s("F") || raw_fields[header].presence
+    end
+    fields["latitude"] = latitude&.to_s("F")
+    fields["longitude"] = longitude&.to_s("F")
+    canonical = lambda do |value|
+      case value
+      when Hash then value.sort.to_h.transform_values { |item| canonical.call(item) }
+      when Array then value.map { |item| canonical.call(item) }
+      else value
+      end
+    end
+    Digest::SHA256.hexdigest(JSON.generate(canonical.call(fields)))
+  end
+
   def self.valid_coordinates(latitude, longitude)
     values = [ latitude, longitude ].map { |value| BigDecimal(value.to_s, exception: false) }
     return unless values.all? { |value| value&.finite? }
@@ -133,8 +172,13 @@ class IcostRecord < ApplicationRecord
       with_lock(requires_new: true) do
         return self if status == "published"
         raise ResolutionError, "review_required" unless status == "ready" && issues.empty?
-        if IcostRecord.where(family_id: family_id, row_sha256: row_sha256, status: "published")
-            .where.not(icost_import_id: icost_import_id).exists?
+        duplicates = IcostRecord.where(family_id: family_id, row_sha256: row_sha256, status: "published")
+          .where.not(icost_import_id: icost_import_id).where.not(entry_id: nil)
+        if resolution["deduplication_key"].present?
+          duplicates = duplicates.where("resolution ->> 'deduplication_key' IS NULL OR resolution ->> 'deduplication_occurrence' = ?",
+            resolution.fetch("deduplication_occurrence").to_s)
+        end
+        if duplicates.exists?
           update!(status: "needs_review", issues: (issues + [ "possible_duplicate_source" ]).uniq)
           return self
         end
@@ -220,7 +264,9 @@ class IcostRecord < ApplicationRecord
         name: "iCost R#{source_row.to_s.rjust(4, '0')} · #{category_path.reject(&:blank?).last}",
         notes: note, idempotency_key: source_id, import_locked: true, user_modified: true,
         entryable: Transaction.new(kind: "standard", category: resolve_category!, tags: resolve_tags!,
-          extra: { "icost" => { "source_id" => source_id, "explicit_type" => transaction_type } }))
+          extra: { "icost" => { "source_id" => source_id, "explicit_type" => transaction_type,
+            "deduplication_key" => resolution["deduplication_key"],
+            "deduplication_occurrence" => resolution["deduplication_occurrence"] }.compact }))
       # Only local ledger materialization. Importing a local file must not trigger
       # enrichment, provider requests, inferred transfer matching or FX lookups.
       Balance::Materializer.new(account, strategy: :forward).materialize_balances

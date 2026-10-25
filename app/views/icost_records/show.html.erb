@@ -3,6 +3,10 @@
   <% content_for :page_actions do %>
     <%= render DS::Link.new(text: t("icost_imports.preview"), href: icost_import_path(@import), variant: :outline) %>
   <% end %>
+  <% if @duplicate_record %>
+    <%= render DS::Alert.new(message: t("icost_imports.statuses.duplicate")) %>
+    <%= render DS::Link.new(text: t("icost_imports.record_title", row: @duplicate_record.source_row), href: icost_import_record_path(@duplicate_record.icost_import_id, @duplicate_record), variant: :outline) %>
+  <% end %>
   <% if @record.issues.any? %>
     <%= render DS::Alert.new(title: t("icost_imports.review_required"), variant: :warning) do %>
       <ul class="list-disc pl-5 space-y-1">
@@ -15,7 +19,7 @@
   <%= render DS::Card.new do %>
     <%= render "icost_records/details", record: @record %>
   <% end %>
-  <% unless @record.status == "published" || Current.user.guest? %>
+  <% unless %w[published duplicate].include?(@record.display_status) || Current.user.guest? %>
     <%= render DS::Card.new(class: "space-y-4") do %>
       <h2 class="text-lg font-medium text-primary"><%= t("icost_imports.review") %></h2>
       <p class="text-sm text-secondary"><%= t("icost_imports.review_help") %></p>

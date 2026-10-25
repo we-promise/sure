@@ -60,6 +60,8 @@ hu:
       row_sha256: "A forrássor SHA-256 értéke"
       resolution: "Megerősített javítások"
     statuses:
+      duplicate: "Ismételt forrás (nincs új tranzakció)"
+      entry_missing: "Hiányzó kapcsolt tranzakció"
       ready: "Rögzítésre kész"
       published: "Rögzítve / hozzárendelve"
       needs_review: "Ellenőrzést igényel"
@@ -71,6 +73,8 @@ hu:
       review_saved: "Az ellenőrzés mentve. Mielőtt az import előnézetéből rögzíted a sort, ellenőrizd az állapotát."
       review_invalid: "Ez a javítás nem érvényes a sorhoz. Válassz hozzáférhető számlákat az eredeti pénznemben; az átutalás két számlájának különböznie kell."
     issues:
+      transfer_link_incomplete: "Az átvezetésnek csak egy oldala maradt meg. Új létrehozása előtt ellenőrizze."
+      existing_duplicate_entries: "Több tranzakció tartozik ehhez a forráshoz. Ellenőrizze őket; semmi sem lett törölve vagy felülírva."
       account_required: "Hiányzik az 1. számla. Erősítsd meg a megfelelő számlát."
       account_mapping_required: "Nincs egyértelmű hozzárendelés azonos pénznemű számlához. Erősíts meg egy számlát."
       account_ambiguous: "Több számla is megfelelhet ennek a forrásnak. Erősíts meg egy számlát."
@@ -112,3 +116,8 @@ hu:
       file_too_large: "A fájl meghaladja a 10 MB-ot."
     auto_post: "Az egyező, figyelmeztetés nélküli sorok automatikus könyvelése a háttérben"
     queued: "Háttérimport sorba állítva. Az állapot automatikusan frissül. Az oldal bezárható; az ellenőrzendő sorok függőben maradnak."
+    auto_account_note: "iCost-adatokból ideiglenes pénzszámlaként létrehozva. A tényleges típus és nyitóegyenleg ismeretlen. Az egyenleg csak az importált nettó mozgásokat mutatja; ellenőrizze a valódi számlával."
+    automatic_help: "A számlák név és pénznem szerint létrejönnek vagy párosulnak. A helyes sorok könyvelődnek; a hibásak ellenőrzésre várnak, az ismétlések nem hoznak létre tranzakciót."
+    process: "Import automatikus feldolgozása"
+    view_transactions: "Könyvelt tranzakciók megtekintése"
+    missing_entries_help: "Néhány könyvelt sor tranzakciója hiányzik. Feldolgozással a megfelelő sorok duplikációellenőrzés mellett visszaállíthatók."

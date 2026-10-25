@@ -7,6 +7,7 @@ class IcostRecordsController < ApplicationController
 
   def show
     @accounts = Current.family.accounts.writable_by(Current.user).manual.visible.where(currency: @record.currency).order(:name)
+    @duplicate_record = IcostRecord.owned_by(Current.user).find_by(id: @record.resolution["duplicate_of_id"]) if @record.resolution["duplicate_of_id"].present?
   end
 
   def update

@@ -60,6 +60,8 @@ es:
       row_sha256: "SHA-256 de la fila de origen"
       resolution: "Correcciones confirmadas"
     statuses:
+      duplicate: "Fuente duplicada (sin nueva transacción)"
+      entry_missing: "Falta la transacción vinculada"
       ready: "Lista para contabilizar"
       published: "Registrada / vinculada"
       needs_review: "Requiere revisión"
@@ -71,6 +73,8 @@ es:
       review_saved: "Revisión guardada. Comprueba el estado de la fila antes de contabilizarla desde la vista previa de la importación."
       review_invalid: "Esta corrección no es válida para la fila. Elige cuentas accesibles en la moneda original; las cuentas de la transferencia deben ser distintas."
     issues:
+      transfer_link_incomplete: "Solo queda una parte de la transferencia. Revísela antes de crear otra."
+      existing_duplicate_entries: "Varias transacciones representan esta fuente. Revíselas; ninguna se eliminó ni sobrescribió."
       account_required: "Falta la cuenta 1. Confirma la cuenta correcta."
       account_mapping_required: "No existe una asignación inequívoca a una cuenta en la misma moneda. Confirma una cuenta."
       account_ambiguous: "Más de una cuenta podría corresponder a este origen. Confirma una cuenta."
@@ -112,3 +116,8 @@ es:
       file_too_large: "El archivo supera 10 MB."
     auto_post: "Registrar en segundo plano las filas asignadas sin advertencias"
     queued: "Importación en cola. El progreso se actualiza automáticamente. Puede cerrar la página; las filas por revisar permanecen pendientes."
+    auto_account_note: "Creada desde iCost como cuenta provisional de efectivo. El tipo real y el saldo inicial son desconocidos. El saldo solo refleja movimientos netos importados; verifique la cuenta real."
+    automatic_help: "Las cuentas se crean o asignan por nombre y moneda. Las filas válidas se registran; los errores quedan para revisión y los duplicados no añaden transacciones."
+    process: "Procesar esta importación automáticamente"
+    view_transactions: "Ver transacciones registradas"
+    missing_entries_help: "Algunas filas registradas ya no tienen transacción. Procese la importación para recuperar filas válidas con control de duplicados."

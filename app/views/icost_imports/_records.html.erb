@@ -1,0 +1,10 @@
+<%= render DS::Table.new(rows: records, sticky_header: true, label: t("icost_imports.preview")) do |table| %>
+  <% table.with_column(t("icost_imports.fields.source_row")) { |record| link_to(record.source_row.to_s, icost_import_record_path(@import, record), class: "text-link hover:underline focus-ring rounded-sm") } %>
+  <% table.with_column(t("icost_imports.fields.recorded_at_text")) { |record| record.recorded_at_text.to_s } %>
+  <% table.with_column(t("icost_imports.fields.transaction_type")) { |record| record.transaction_type.to_s } %>
+  <% table.with_column(t("icost_imports.fields.amount"), numeric: true, class: "privacy-sensitive") { |record| "#{icost_value(record.amount)} #{record.currency}" } %>
+  <% table.with_column(t("icost_imports.fields.category_path")) { |record| record.category_path.join(" / ") } %>
+  <% table.with_column(t("icost_imports.fields.book_name")) { |record| record.book_name.to_s } %>
+  <% table.with_column(t("icost_imports.fields.status")) { |record| icost_status(record) } %>
+  <% table.with_column(t("icost_imports.fields.issues")) { |record| record.issues.map { |issue| icost_issue(issue) }.join("; ") } %>
+<% end %>

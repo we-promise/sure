@@ -60,6 +60,8 @@ en:
       row_sha256: "Source row SHA-256"
       resolution: "Confirmed corrections"
     statuses:
+      duplicate: "Duplicate source (no new transaction)"
+      entry_missing: "Ledger entry missing"
       ready: "Ready to post"
       published: "Recorded / linked"
       needs_review: "Needs review"
@@ -71,6 +73,8 @@ en:
       review_saved: "Review saved. Check the row status before posting from the import preview."
       review_invalid: "This correction is not valid for the row. Choose accessible accounts in the original currency; different transfer accounts are required."
     issues:
+      transfer_link_incomplete: "Only one transfer leg remains. Confirm the existing transfer before creating another."
+      existing_duplicate_entries: "Multiple ledger entries already represent this source. Review them; none were deleted or overwritten."
       account_required: "Account 1 is missing. Confirm the correct account."
       account_mapping_required: "No unambiguous same-currency account mapping exists. Confirm an account."
       account_ambiguous: "More than one account could match this source. Confirm an account."
@@ -112,3 +116,8 @@ en:
       file_too_large: "The file exceeds the 10 MB limit."
     auto_post: "Automatically post matched rows without warnings in the background"
     queued: "Background import queued. Progress updates automatically. You can close this page and return later; review rows remain pending."
+    auto_account_note: "Created from iCost as a provisional cash ledger. The actual account type and opening balance are unknown. The displayed balance is only net imported activity; verify it against the real account."
+    automatic_help: "Original accounts are created or matched automatically, then normal rows are posted. Invalid rows stay in review; repeated sources do not add transactions."
+    process: "Process this import automatically"
+    view_transactions: "View recorded transactions"
+    missing_entries_help: "Some rows were marked as recorded, but their ledger entries no longer exist. Process this import to recover eligible rows with duplicate checks."
