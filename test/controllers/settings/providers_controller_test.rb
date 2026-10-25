@@ -6,6 +6,8 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   include FinancekitTestHelper
 
   setup do
+    # Exercise controller jobs independently of the daily login sync.
+    families(:dylan_family).update!(auto_sync_on_login: false)
     ensure_tailwind_build
     sign_in users(:family_admin)
 
@@ -779,6 +781,8 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "POST sync for ibkr without an active Ibkr sync enqueues SyncJob" do
+    # Keep the fixture sync on yesterday to cover runs that cross midnight.
+    families(:dylan_family).syncs.update_all(created_at: 1.day.ago)
     item = ibkr_items(:configured_item)
     Sync.where(syncable_type: "IbkrItem", syncable_id: item.id).delete_all
 
