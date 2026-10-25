@@ -11,7 +11,7 @@ export default class extends Controller {
     // scales, and added to its tooltip with its difference from the
     // trendline: { label, difference_label, values: [{ date, value,
     // difference }] }, where `difference` is a serialized Trend. Only the
-    // account chart's Total value view passes it (#4008); every other caller
+    // account chart's Total value view passes it; every other caller
     // takes the single-line path unchanged.
     comparison: Object,
     strokeWidth: { type: Number, default: 2 },

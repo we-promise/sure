@@ -308,7 +308,7 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_equal family_oldest, component.period.start_date
   end
 
-  # #4008. The Total value view of an account that holds trades carries the
+  # The Total value view of an account that holds trades carries the
   # net contributions line for the chart controller, with each point's
   # difference from total value, and a legend naming both lines.
   test "the total value view of an investment account carries net contributions and a legend" do
@@ -407,7 +407,7 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     @account.stubs(:net_contributions_incomplete?).returns(true)
     render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
     assert_selector "[data-net-contributions-incomplete]", text: I18n.t("UI.account.chart.net_contributions.incomplete")
-    # #383: an unvalued withdrawal leaves the line too high, so the note
+    # An unvalued withdrawal leaves the line too high, so the note
     # names no direction.
     note = page.find("[data-net-contributions-incomplete]").text
     assert_includes note, "incomplete"

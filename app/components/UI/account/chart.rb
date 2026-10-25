@@ -170,7 +170,7 @@ class UI::Account::Chart < ApplicationComponent
   end
 
   # The Total value view of an account that holds trades draws a second line:
-  # what has been put in, net of what was taken out (#4008).
+  # what has been put in, net of what was taken out.
   def show_net_contributions?
     view == "balance" && account.supports_trades?
   end
