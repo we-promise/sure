@@ -1,13 +1,14 @@
 <%# One bill as a ledger line: due date in a fixed column, name, amount. A
     reserved line also names the obligation it is a slice of, since the amount
-    on the right is a share rather than the whole bill. %>
+    on the right is a share rather than the whole bill. An occurrence past its
+    grace says so, on the occurrence's own overdue? rather than a raw past
+    date, so a bill due yesterday reads the same here as everywhere in Bills. %>
 
 <% series = item.occurrence.recurring_transaction %>
+<% overdue = item.occurrence.overdue? %>
 
-<div class="flex items-baseline gap-3 py-1">
-  <span class="w-14 shrink-0 text-xs text-secondary tabular-nums">
-    <%= l(item.occurrence.due_on, format: :short) %>
-  </span>
+<div class="flex items-baseline gap-3 py-1" data-paycheck-item>
+  <span class="w-14 shrink-0 text-xs tabular-nums <%= overdue ? "text-destructive" : "text-secondary" %>" data-paycheck-item-date><%= l(item.occurrence.effective_due_on, format: :short) %></span>
 
   <span class="min-w-0 flex-1 truncate">
     <%= link_to series.display_name, recurring_occurrence_path(item.occurrence),
@@ -18,6 +19,10 @@
       </span>
     <% end %>
   </span>
+
+  <% if overdue %>
+    <span class="shrink-0 text-xs text-destructive" data-paycheck-overdue><%= t("bills.paycheck.item_overdue") %></span>
+  <% end %>
 
   <span class="text-sm text-primary privacy-sensitive shrink-0 tabular-nums">
     <%= format_money(Money.new(item.share, currency)) %>

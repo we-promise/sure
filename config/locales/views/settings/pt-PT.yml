@@ -161,6 +161,8 @@ pt-PT:
         dashboard_two_column_title: Disposição de duas colunas
         dashboard_two_column_description: Apresenta os widgets da visão geral em duas colunas em ecrãs grandes, com controlos de largura e altura por widget no cabeçalho de cada widget. Quando desativado, os widgets são empilhados numa única coluna.
         split_grouped_title: Agrupar transações divididas
+        auto_generate_transaction_names_title: "Gerar nomes de transações automaticamente"
+        auto_generate_transaction_names_description: "Quando o nome de uma transação introduzida manualmente fica em branco, é preenchido a partir da categoria e do comerciante selecionados (ex.: \"Entretenimento - Netflix\"). O nome continua obrigatório se nenhum dos dois for selecionado. Aplica-se a todo o agregado familiar e apenas a novas transações."
         split_grouped_description: Apresenta as transações divididas agrupadas pela transação principal. Quando desativado, cada transação dividida é apresentada individualmente.
     preferences:
       show:
@@ -326,6 +328,7 @@ pt-PT:
       accounts_label: Contas
       advanced_section_title: Avançado
       ai_prompts_label: Prompts de IA
+      auto_matches_label: Correspondências automáticas
       background_jobs_label: Tarefas em segundo plano
       api_key_label: Chaves de API
       payment_label: Pagamento
@@ -404,6 +407,8 @@ pt-PT:
         sync_error: Erro de sincronização
         no_recent_sync: Sincronização em atraso
         reconsent_required: Necessário novo consentimento
+        login_required: "Início de sessão necessário"
+        login_expires_soon: "A sessão expira dentro de %{time} (%{at})"
         reconsent_needed:
           one: Necessário novo consentimento em 1 dia
           other: Necessário novo consentimento em %{count} dias
@@ -427,7 +432,7 @@ pt-PT:
         coinbase: Importe as suas posições cripto Coinbase e acompanhe o desempenho.
         binance: Sincronize os seus saldos à vista Binance utilizando uma chave de API apenas de leitura.
         kraken: Sincronize os saldos Kraken e as execuções de negociação à vista utilizando uma chave de API apenas de leitura.
-        onchain_wallet: Acompanhe carteiras Bitcoin, EVM e Solana de autocustódia a partir dos seus endereços públicos.
+        onchain_wallet: Acompanhe carteiras Bitcoin, EVM, Solana, Cosmos e Polkadot de autocustódia a partir dos seus endereços públicos.
         snaptrade: Ligue contas de corretagem através da rede de agregação SnapTrade.
         trading212: Sincronize a sua carteira de investimento Trading 212 utilizando uma chave de API apenas de leitura.
         ibkr: Sincronize contas de investimento Interactive Brokers através de importações de Flex Query.
@@ -536,6 +541,7 @@ pt-PT:
         application_id_placeholder_new: "Introduza o application ID"
         application_id_placeholder_update: "Introduza o novo ID para atualizar"
         client_certificate_label: "Client Certificate (com Chave Privada)"
+        keep_client_certificate_hint: "Deixe em branco para manter o certificado atual"
         save_and_connect: "Guardar e ligar"
         update_connection: "Atualizar ligação"
         connected_bank: "Banco Ligado"

@@ -166,6 +166,7 @@ ru:
       date: Дата
       description: Описание
       description_placeholder: Опишите операцию
+      description_placeholder_optional: "Оставьте пустым, чтобы использовать название категории/продавца, или сначала выберите одно из них"
       details: Детали
       expense: Расход
       income: Доход
@@ -180,6 +181,9 @@ ru:
       category_search_placeholder: Поиск категорий
       create_category: Создать «%{name}»
       create_category_error: Не удалось создать категорию
+      create_as_subcategory: Добавить как подкатегорию…
+      choose_parent: 'Создать «%{name}» в:'
+      back_to_categories: Назад
       create_merchant: Создать
       create_merchant_error: Не удалось создать продавца
       merchant_search_placeholder: Найдите или создайте продавца

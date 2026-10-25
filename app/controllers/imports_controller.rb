@@ -3,6 +3,10 @@ class ImportsController < ApplicationController
 
   before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
+  before_action :require_writable_import_accounts!, only: %i[publish revert destroy]
+  before_action :reject_guest_family_config_import!, except: %i[index new show summary]
+  before_action :require_guest_writable_created_accounts!, only: %i[revert destroy]
+  before_action :reject_guest_new_categories_or_tags!, only: :publish
 
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
@@ -85,6 +89,12 @@ class ImportsController < ApplicationController
       return
     end
 
+    # These types require a file; without one (e.g. a dropped multipart part) don't fall through to a bogus TransactionImport.
+    if file.blank? && (document_upload_request? || sure_import_request?)
+      redirect_to new_import_path, alert: t("imports.create.missing_upload")
+      return
+    end
+
     # Handle PDF file uploads - process with AI
     if file.present? && Import::ALLOWED_PDF_MIME_TYPES.include?(file.content_type)
       unless valid_pdf_file?(file)
@@ -126,6 +136,8 @@ class ImportsController < ApplicationController
     else
       redirect_to import_upload_path(import)
     end
+  rescue ActionController::ParameterMissing
+    redirect_to new_import_path, alert: t("imports.create.missing_upload")
   end
 
   def show
@@ -172,11 +184,56 @@ class ImportsController < ApplicationController
       params.require(:import).permit(:import_file)
     end
 
+    def reject_guest_family_config_import!
+      type = @import ? @import.type : params.dig(:import, :type).to_s
+      require_non_guest! if Import::FAMILY_CONFIG_TYPES.include?(type)
+    end
+
+    # Reverting or deleting an import also destroys the accounts it created,
+    # which require_writable_import_accounts! leaves out. Guests are read-only
+    # by design, so they may only do that to accounts they can write.
+    def require_guest_writable_created_accounts!
+      return unless Current.user.guest?
+
+      created_ids = @import.accounts.pluck(:id)
+      writable_ids = Current.family.accounts.writable_by(Current.user).where(id: created_ids).pluck(:id)
+      return if (created_ids - writable_ids).empty?
+
+      deny_import_change(t("accounts.not_authorized"), fallback: imports_path)
+    end
+
+    # Categories and tags are family-wide configuration, so a guest's import
+    # must map every category and tag to an existing one (or leave it empty).
+    def reject_guest_new_categories_or_tags!
+      return unless Current.user.guest? && @import.creates_categories_or_tags?
+
+      deny_import_change(t("imports.publish.guest_new_categories_or_tags"), fallback: import_confirm_path(@import))
+    end
+
+    def deny_import_change(alert, fallback:)
+      respond_to do |format|
+        format.html { redirect_back_or_to fallback, alert: alert }
+        format.turbo_stream { head :forbidden }
+        format.json { head :forbidden }
+        format.any { head :forbidden }
+      end
+    end
+
     def require_statement_import_permission!
       return if @import.account_statement.blank? || @import.account_statement.manageable_by?(Current.user)
 
       redirect_target = @import.account || @import.account_statement
       redirect_back_or_to redirect_target, alert: t("accounts.not_authorized")
+    end
+
+    # Imports are family-scoped, so a member can reach an import configured by
+    # someone else, or one whose target account was unshared since. Publishing,
+    # reverting or deleting writes into its accounts, so require write access
+    # to all.
+    def require_writable_import_accounts!
+      return if @import.accounts_writable_by?(Current.user)
+
+      redirect_back_or_to import_path(@import), alert: t("accounts.not_authorized")
     end
 
     def create_pdf_import(file)
