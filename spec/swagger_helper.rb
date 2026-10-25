@@ -72,6 +72,8 @@ RSpec.configure do |config|
                         name: { type: :string, nullable: true, description: 'Defaults to the parent name when omitted' },
                         amount: { type: :string, description: 'Same sign convention as the transaction amount' },
                         category_id: { type: :string, nullable: true },
+                        merchant_id: { type: :string, nullable: true, description: "Omitted or null, the child takes the parent's merchant" },
+                        tag_ids: { type: :array, items: { type: :string }, nullable: true, description: 'No tags when omitted' },
                         excluded: { type: :boolean, nullable: true }
                       }
                     }
@@ -1845,6 +1847,36 @@ RSpec.configure do |config|
               as_of: { type: :string, format: :date }, time_zone: { type: :string }, currency: { type: :string },
               period: { '$ref' => '#/components/schemas/FinancialPeriod' },
               sankey: { '$ref' => '#/components/schemas/CashFlowSankey' }
+            }
+          },
+          SpendingVsNormalCategory: {
+            type: :object, required: %w[id name color filter_value total normal change ratio],
+            properties: {
+              id: { type: :string, format: :uuid, nullable: true, description: 'Null for the synthetic Uncategorized category. A parent\'s own spending is listed among its subcategories with the parent\'s id' },
+              name: { type: :string }, color: { type: :string, nullable: true },
+              filter_value: { type: :string, description: 'Value for the transactions category filter' },
+              total: { type: :string, description: 'Net spending in the period (expense minus refunds), at least zero' },
+              normal: { type: :string, nullable: true, description: 'Finished period: net spending over the baseline period, scaled to the period length. Unfinished period (in_progress): average net spending over the same number of days from earlier month starts. Null without enough history' },
+              change: { type: :string, nullable: true, description: 'total minus normal' },
+              ratio: { type: :string, nullable: true, description: 'Fractional change against normal (0.5 = 50% more). Null without a positive normal' },
+              direct: { type: :boolean, description: 'Present on subcategories only: true for the parent\'s own spending, booked on the parent rather than a subcategory' },
+              subcategories: { type: :array, items: { '$ref' => '#/components/schemas/SpendingVsNormalCategory' }, description: 'Present on parent categories only; adds up to the parent total' }
+            }
+          },
+          SpendingVsNormal: {
+            type: :object, required: %w[currency period in_progress baseline_period comparable total normal_total categories],
+            properties: {
+              currency: { type: :string },
+              period: { '$ref' => '#/components/schemas/FinancialPeriod' },
+              in_progress: { type: :boolean, description: 'The period has not ended: it is cut to today, and normal is the average of the same number of days from each of up to 12 earlier month starts' },
+              baseline_period: {
+                type: :object, nullable: true, required: %w[start_date end_date],
+                properties: { start_date: { type: :string, format: :date }, end_date: { type: :string, format: :date } },
+                description: 'Up to a year before the period, from the first counted transaction. Null with under 28 days of history'
+              },
+              comparable: { type: :boolean },
+              total: { type: :string }, normal_total: { type: :string, nullable: true },
+              categories: { type: :array, items: { '$ref' => '#/components/schemas/SpendingVsNormalCategory' }, description: 'Parent categories, largest total first' }
             }
           },
           CashFlow: {

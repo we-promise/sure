@@ -21,10 +21,9 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     uncategorized = create_transaction(account: @account, name: "Uncategorized Filter Target", category: nil)
     categorized = create_transaction(account: @account, name: "Categorized Filter Decoy", category: categories(:food_and_drink))
 
-    get account_url(@account, q: { uncategorized: "1" })
+    get account_url(@account, q: { categories: [ Category::UNCATEGORIZED_FILTER_VALUE ] })
 
     assert_response :success
-    assert_select "input#q_uncategorized[checked]"
     assert_match uncategorized.name, response.body
     assert_no_match categorized.name, response.body
   end
@@ -471,6 +470,78 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # checked option instead of the custom row.
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
+  end
+
+  test "show filter menu offers the same filters as transactions except the account tab" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "account_filter", count: 0
+    assert_select "#transaction-filters-menu button[data-id=?]", "category_filter", count: 1
+    assert_select "#transaction-filters-menu button[data-id=?]", "tag_filter", count: 1
+    assert_select "#transaction-filters-menu button[data-id=?]", "merchant_filter", count: 1
+    assert_select "#transaction-filters-menu button[data-id=?]", "type_filter", count: 1
+  end
+
+  test "show filters activity by category and excludes non-Transaction entries" do
+    categorized = create_transaction(name: "Categorized", amount: 50, account: @account, category: categories(:food_and_drink))
+    uncategorized = create_transaction(name: "Uncategorized", amount: 60, account: @account)
+    valuation = @account.entries.create!(
+      name: "Balance update", date: 1.day.ago.to_date, amount: 1000, currency: "USD", entryable: Valuation.new
+    )
+
+    get account_url(@account), params: { q: { categories: [ "Food & Drink" ] } }
+
+    assert_response :success
+    assert_select "##{dom_id(categorized)}"
+    assert_select "##{dom_id(uncategorized)}", count: 0
+    assert_select "##{dom_id(valuation)}", count: 0
+  end
+
+  test "show renders a badge for each active filter" do
+    get account_url(@account), params: { q: { categories: [ "Food & Drink" ], search: "grocery" } }
+
+    assert_response :success
+    assert_select "#account-activity-filters li", count: 2
+  end
+
+  test "show renders badge delete links that preserve the other active filters" do
+    get account_url(@account), params: { q: { categories: [ "Food & Drink" ], search: "grocery" } }
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    badge = doc.css("#account-activity-filters li").find { |li| li.text.include?("Food & Drink") }
+    form = badge&.at_css("form")
+
+    assert_not_nil form, "expected the category badge to render a delete form"
+    action_uri = URI.parse(form["action"])
+    action_params = Rack::Utils.parse_nested_query(action_uri.query)
+
+    # Regression: the badge's delete link must carry the *other* active
+    # filters along (like clear_filter_transactions_path does via
+    # request.query_parameters), or clearing one filter wipes them all.
+    assert_equal "grocery", action_params.dig("q", "search"),
+      "clearing the category badge must not drop the search filter from the delete link"
+  end
+
+  test "clear_filter removes only the targeted filter value and preserves the rest" do
+    delete clear_filter_account_url(@account), params: {
+      q: { categories: [ "Food & Drink" ], search: "grocery" },
+      param_key: "categories",
+      param_value: "Food & Drink"
+    }
+
+    assert_redirected_to account_url(@account, q: { search: "grocery" }, tab: "activity", page: nil, per_page: nil)
+  end
+
+  test "clear_filter drops the amount_operator once amount is cleared" do
+    delete clear_filter_account_url(@account), params: {
+      q: { amount: "50", amount_operator: "equal" },
+      param_key: "amount",
+      param_value: "50"
+    }
+
+    assert_redirected_to account_url(@account, q: nil, tab: "activity", page: nil, per_page: nil)
   end
 
   test "show renders without missing translations" do
@@ -1242,6 +1313,40 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
+  end
+
+  test "reorder saves the manual order of one account group" do
+    # Same shape as the sidebar's sortable-list: group in the URL, ids in the body.
+    patch reorder_accounts_url(group: "depository"), params: { account_ids: [ accounts(:connected).id, @account.id ] }, as: :json
+
+    assert_response :success
+    assert_equal [ accounts(:connected).id, @account.id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "reorder drops accounts from another family" do
+    foreign = families(:empty).accounts.create!(name: "Foreign", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:empty))
+
+    patch reorder_accounts_url, params: { group: "depository", account_ids: [ foreign.id, @account.id ] }, as: :json
+
+    assert_response :success
+    assert_equal [ @account.id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "reorder rejects an unknown group" do
+    patch reorder_accounts_url, params: { group: "not_a_type", account_ids: [ @account.id ] }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_nil @user.reload.manual_account_order["not_a_type"]
+  end
+
+  test "sidebar shows drag handles only with the manual account order" do
+    get account_url(@account)
+    assert_select "[data-controller~='sortable-list']", count: 0
+
+    @user.update!(default_account_order: "manual")
+    get account_url(@account)
+    assert_select "[data-controller~='sortable-list'][data-sortable-list-url-value=?]", reorder_accounts_path(group: "depository")
+    assert_select "[data-sortable-list-target='item'][data-sortable-list-id=?]", @account.id
   end
 
   private
