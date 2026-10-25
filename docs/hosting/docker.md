@@ -440,6 +440,18 @@ docker compose pull web worker # Pull the newest image for your tag
 docker compose up -d # Restart on the new version; database migrations run automatically
 ```
 
+### Upgrade note: instance-wide settings need a super admin
+
+Provider credentials (such as Plaid), the shared AI connection settings (LLM provider, endpoints, API keys and models), sync settings, and the external assistant connection are stored once for the whole instance and apply to every family. On an instance with more than one family, only a `super_admin` can change them. When there is a single family, its admins keep access. Family-scoped choices, such as which assistant a family uses, stay with that family's admins.
+
+Installs created before the first user was automatically made `super_admin` may have no super admin at all. If your instance has more than one family (for example, because someone else signed up), these instance-wide settings are hidden after the update and saving them returns "not authorized". Promote your own user once:
+
+```bash
+docker compose exec web bin/rails runner 'User.find_by!(email: "you@example.com").update!(role: :super_admin)'
+```
+
+After that, you can promote other users at `/admin/users`. See section 3.5 of the [OIDC guide](oidc.md) for the console variant.
+
 ## How to change which updates your app receives
 
 Set `SURE_IMAGE_TAG` in your `.env` file to a channel (`stable`, `latest`) or a specific version (for example `0.7.4`):
