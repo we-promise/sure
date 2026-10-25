@@ -133,7 +133,7 @@ class McpController < ApplicationController
     def authenticate_via_doorkeeper(token)
       access_token = Doorkeeper::AccessToken.by_token(token)
       return false unless access_token&.accessible?
-      return false unless access_token.scopes.include?("read_write")
+      return false unless access_token.scopes.include?(MCP_SCOPE)
 
       user = User.find_by(id: access_token.resource_owner_id)
       return false unless user&.active?
@@ -221,7 +221,7 @@ class McpController < ApplicationController
     def render_mcp_unauthorized
       response.set_header(
         "WWW-Authenticate",
-        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource\", scope=\"read_write\""
+        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource\", scope=\"#{MCP_SCOPE}\""
       )
       render json: { error: "unauthorized" }, status: :unauthorized
     end
