@@ -98,6 +98,7 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
   test "a legacy invalid early row does not advance the first provider price date" do
     start_date = 2.days.ago.to_date
     valid_date = 1.day.ago.to_date
+    @security.update!(first_provider_price_on: valid_date)
     bad_price = Security::Price.create!(security: @security, date: start_date, price: 100, currency: "USD")
     bad_price.update_column(:currency, "")
     @provider.stubs(:fetch_security_prices).returns(provider_success_response([
@@ -106,11 +107,103 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
 
     Security::Price::Importer.new(
       security: @security, security_provider: @provider,
-      start_date: start_date, end_date: valid_date
+      start_date: start_date, end_date: valid_date, clear_cache: true
     ).import_provider_prices
 
     assert_nil @security.reload.first_provider_price_on
     assert Security::Price.exists?(security: @security, date: valid_date, currency: "USD")
+  end
+
+  test "an invalid early quote invalidates an existing listing boundary so the missing date is retried" do
+    start_date = 30.days.ago.to_date
+    valid_date = start_date + 1.day
+    @security.update!(first_provider_price_on: valid_date)
+    @security.prices.create!(date: valid_date, price: 100, currency: "USD")
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: start_date, price: 200, currency: ""),
+      OpenStruct.new(date: valid_date, price: 105, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(
+      security: @security, security_provider: @provider,
+      start_date: start_date, end_date: valid_date, clear_cache: true
+    ).import_provider_prices
+
+    assert_nil @security.reload.first_provider_price_on
+    assert_not @security.prices.exists?(date: start_date)
+
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: start_date, price: 200, currency: "USD"),
+      OpenStruct.new(date: valid_date, price: 105, currency: "USD")
+    ]))
+    Security::Price::Importer.new(
+      security: @security, security_provider: @provider,
+      start_date: start_date, end_date: valid_date
+    ).import_provider_prices
+
+    assert_equal 200, @security.prices.find_by!(date: start_date, currency: "USD").price
+  end
+
+  test "retries an authoritative quote before the listing boundary and then stops fetching" do
+    start_date = 30.days.ago.to_date
+    listed_date = start_date + 10.days
+    @security.update!(first_provider_price_on: listed_date)
+    authoritative = @security.prices.create!(date: start_date, price: 100, currency: "USD")
+    @security.prices.create!(date: listed_date, price: 110, currency: "USD")
+    @provider.expects(:fetch_security_prices).returns(provider_success_response([
+      OpenStruct.new(date: start_date, price: 200, currency: ""),
+      OpenStruct.new(date: listed_date, price: 115, currency: "USD")
+    ]))
+
+    Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: start_date, end_date: listed_date, clear_cache: true).import_provider_prices
+
+    assert_equal listed_date, @security.reload.first_provider_price_on
+    assert_equal 100, authoritative.reload.price
+    assert authoritative.currency_retry_required?
+    assert_not authoritative.currency_retry_generated?
+
+    @provider.expects(:fetch_security_prices)
+      .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+        start_date: get_provider_fetch_start_date(start_date), end_date: listed_date)
+      .returns(provider_success_response([
+        OpenStruct.new(date: start_date, price: 200, currency: "USD"),
+        OpenStruct.new(date: listed_date, price: 115, currency: "USD")
+      ]))
+    Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: start_date, end_date: listed_date).import_provider_prices
+
+    assert_equal 100, authoritative.reload.price
+    assert_not authoritative.currency_retry_required?
+    assert_equal listed_date, @security.reload.first_provider_price_on
+
+    @provider.expects(:fetch_security_prices).never
+    assert_equal 0, Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: start_date, end_date: listed_date).import_provider_prices
+  end
+
+  test "a currency retry before the listing boundary still respects provider history limits" do
+    start_date = 30.days.ago.to_date
+    end_date = 1.day.ago.to_date
+    earliest_fetch_date = end_date - 5.days
+    @security.update!(first_provider_price_on: end_date)
+    authoritative = @security.prices.create!(date: start_date, price: 100, currency: "USD", currency_retry_required: true)
+    @security.prices.create!(date: end_date, price: 110, currency: "USD")
+    @provider.stubs(:max_history_days).returns(5)
+    @provider.expects(:fetch_security_prices)
+      .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+        start_date: earliest_fetch_date, end_date: end_date)
+      .returns(provider_success_response([
+        OpenStruct.new(date: earliest_fetch_date, price: 105, currency: "USD"),
+        OpenStruct.new(date: end_date, price: 115, currency: "USD")
+      ]))
+
+    Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: start_date, end_date: end_date).import_provider_prices
+
+    assert_equal 100, authoritative.reload.price
+    assert authoritative.currency_retry_required?
+    assert_equal [ start_date ], @security.prices.where("date < ?", earliest_fetch_date).pluck(:date)
   end
 
   test "a legacy blank-currency row does not prevent fetching a valid price" do
@@ -730,38 +823,44 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
   test "retries fetch when refetchable provisional prices exist" do
     Security::Price.delete_all
 
-    # Skip if today is a weekend
-    return if Date.current.saturday? || Date.current.sunday?
+    # A provisional price for "today" is only refetchable on a weekday, where the
+    # provider would have a real quote for it. Pin to the next weekday rather
+    # than bailing out at the top of the test, so the case is covered every day
+    # it is run instead of silently vanishing on weekends.
+    test_date = Date.current
+    test_date += 1.day while test_date.saturday? || test_date.sunday?
 
-    # Pre-populate with provisional price for today
-    Security::Price.create!(
-      security: @security,
-      date: Date.current,
-      price: 100,
-      currency: "USD",
-      provisional: true
-    )
+    travel_to test_date do
+      # Pre-populate with provisional price for today
+      Security::Price.create!(
+        security: @security,
+        date: Date.current,
+        price: 100,
+        currency: "USD",
+        provisional: true
+      )
 
-    # Provider now returns today's actual price
-    provider_response = provider_success_response([
-      OpenStruct.new(security: @security, date: Date.current, price: 165, currency: "USD")
-    ])
+      # Provider now returns today's actual price
+      provider_response = provider_success_response([
+        OpenStruct.new(security: @security, date: Date.current, price: 165, currency: "USD")
+      ])
 
-    @provider.expects(:fetch_security_prices)
-             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
-                   start_date: get_provider_fetch_start_date(Date.current), end_date: Date.current)
-             .returns(provider_response)
+      @provider.expects(:fetch_security_prices)
+               .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                     start_date: get_provider_fetch_start_date(Date.current), end_date: Date.current)
+               .returns(provider_response)
 
-    Security::Price::Importer.new(
-      security: @security,
-      security_provider: @provider,
-      start_date: Date.current,
-      end_date: Date.current
-    ).import_provider_prices
+      Security::Price::Importer.new(
+        security: @security,
+        security_provider: @provider,
+        start_date: Date.current,
+        end_date: Date.current
+      ).import_provider_prices
 
-    db_price = Security::Price.find_by(security: @security, date: Date.current)
-    assert_equal 165, db_price.price, "Price should be updated from provider"
-    assert_not db_price.provisional, "Price should no longer be provisional after provider returns real price"
+      db_price = Security::Price.find_by(security: @security, date: Date.current)
+      assert_equal 165, db_price.price, "Price should be updated from provider"
+      assert_not db_price.provisional, "Price should no longer be provisional after provider returns real price"
+    end
   end
 
   test "skips fetch when all prices are non-provisional" do

@@ -32,6 +32,7 @@ class Security::Price::Importer
     Security.transaction(requires_new: true) do
       security.lock!
       @db_prices = nil
+      @currency_retry_dates = nil
       @legacy_invalid_currency_dates = nil
       @clamped_start_date = nil
       @fill_start_date = nil
@@ -166,8 +167,14 @@ class Security::Price::Importer
       # want subsequent syncs to reflect the new earlier clamp. We never
       # move the column forward from a previously-discovered earlier value,
       # since that would silently hide older rows already in the DB.
+      # A rejected earlier quote also invalidates an old listing boundary.
+      # No fallback row exists before the anchor to carry its retry marker.
+      if advanced_first_price_on.present? && invalid_currency_price_on_or_before?(advanced_first_price_on)
+        security.update_column(:first_provider_price_on, nil) if security.first_provider_price_on.present?
+        return result
+      end
+
       if advanced_first_price_on.present? &&
-         !invalid_currency_price_on_or_before?(advanced_first_price_on) &&
          (security.first_provider_price_on.blank? ||
           advanced_first_price_on < security.first_provider_price_on)
         security.update_column(:first_provider_price_on, advanced_first_price_on)
@@ -294,7 +301,7 @@ class Security::Price::Importer
 
     # Require usable prices and no unresolved currency retries across the requested range.
     def all_prices_exist?
-      return false if Security::Price.requiring_currency_retry.where(security: security, date: start_date..end_date).exists?
+      return false if currency_retry_dates.any?
       return false if has_refetchable_provisional_prices?
 
       # Count only prices in the clamped range so pre-listing / pre-IPO gaps
@@ -306,6 +313,12 @@ class Security::Price::Importer
         .distinct.count(:date)
 
       persisted_count == expected_count
+    end
+
+    # Retry markers can predate the listing boundary; reuse the same dates for cache and fetch decisions.
+    def currency_retry_dates
+      @currency_retry_dates ||= Security::Price.requiring_currency_retry
+        .where(security: security, date: start_date..end_date).distinct.pluck(:date).to_set
     end
 
     # Check only recognized-currency provisional quotes within the retry window.
@@ -338,7 +351,8 @@ class Security::Price::Importer
     # pre-IPO gaps don't perpetually trip "first missing date = start_date"
     # and cause every incremental sync to re-fetch + re-upsert the full
     # post-listing range. clear_cache bypasses the clamp so a user-triggered
-    # refresh can rediscover earlier provider history.
+    # refresh can rediscover earlier provider history. Explicit currency retries
+    # are eligible even before the listing boundary; ordinary gaps are not.
     def effective_start_date
       return start_date if clear_cache
 
@@ -347,9 +361,11 @@ class Security::Price::Importer
                                          .pluck(:date)
                                          .to_set
 
-      (clamped_start_date..end_date).detect do |d|
-        !db_prices.key?(d) || refetchable_dates.include?(d) || db_prices[d].currency_retry_required
+      missing_date = (clamped_start_date..end_date).detect do |d|
+        !db_prices.key?(d) || refetchable_dates.include?(d)
       end || end_date
+
+      [ missing_date, currency_retry_dates.min ].compact.min
     end
 
     # The date the gap-fill loop starts from. When the provider's history was
