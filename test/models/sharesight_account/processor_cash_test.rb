@@ -74,6 +74,15 @@ class SharesightAccount::ProcessorCashTest < ActiveSupport::TestCase
                  notices.map { |notice| notice[:message] }
   end
 
+  test "units that match to 8 decimal places aren't reported" do
+    noisy = HOLDINGS.map { |holding| holding.dig("instrument", "code") == "VAS" ? holding.merge("quantity" => 20.000000000000004) : holding }
+    @sharesight_account.update!(raw_holdings_payload: noisy)
+
+    notices = process[:notices].map { |notice| notice[:message] }
+
+    assert notices.none? { |message| message.include?("VAS") }
+  end
+
   test "a sync start date leaves older activity out and removes what was imported" do
     process
     assert @account.entries.find_by(external_id: "sharesight_trade_1")

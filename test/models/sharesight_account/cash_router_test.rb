@@ -20,6 +20,9 @@ class SharesightAccount::CashRouterTest < ActiveSupport::TestCase
       "holding_id" => 1, "state" => "confirmed" }
   ].freeze
 
+  # A$120 dividend, A$98 of it reinvested, so A$22 left over.
+  REINVESTED = PAYOUTS.first.merge("amount" => 120.0, "drp_trade_attributes" => { "dividend_reinvested" => true, "quantity" => 1, "price" => 98.0 })
+
   setup do
     @family = families(:dylan_family)
     item = @family.sharesight_items.create!(name: "Sharesight", client_id: "client-id", client_secret: "client-secret")
@@ -102,6 +105,37 @@ class SharesightAccount::CashRouterTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal("1000"), Date.new(2026, 9, 1) ], [ counterpart.amount, counterpart.date ]
     assert_linked offset("trade_1"), counterpart
     assert_equal BigDecimal("-30"), @bank.entries.find_by!(external_id: "sharesight_counterpart_#{@sharesight_account.id}_payout_50").amount
+  end
+
+  test "a reinvested dividend's leftover is linked when the bank feed shows it" do
+    bank_fed!
+    @sharesight_account.update!(raw_payouts_payload: [ REINVESTED ])
+    leftover = bank_transaction(-22, "2026-09-21", "VAS dividend balance")
+
+    process
+
+    leg = offset("payout_50")
+    assert_equal [ BigDecimal("22"), "Transfer to Macquarie CMA" ], [ leg.amount, leg.name ]
+    assert_linked leg, leftover
+  end
+
+  test "a leftover the bank never shows isn't flagged as overdue" do
+    bank_fed!
+    @sharesight_account.update!(raw_payouts_payload: [ REINVESTED ])
+
+    notices = process[:notices].map { |notice| notice[:message] }
+
+    assert_equal "Settled outside Sure", offset("payout_50").name
+    assert notices.none? { |message| message.include?("Dividend from VAS") }
+  end
+
+  test "a leftover isn't booked into a manual account" do
+    @sharesight_account.update!(raw_payouts_payload: [ REINVESTED ])
+
+    process
+
+    assert_nil @bank.entries.find_by(external_id: "sharesight_counterpart_#{@sharesight_account.id}_payout_50")
+    assert_equal "Settled outside Sure", offset("payout_50").name
   end
 
   test "untracked cash is offset without a counterpart anywhere" do

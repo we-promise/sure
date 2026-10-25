@@ -17,7 +17,7 @@ class SharesightAccount::CashRouter
   COUNTERPART_PREFIX = "sharesight_counterpart_".freeze
 
   # One offset entry, for one record or a day's trades settled together.
-  Unit = Struct.new(:key, :kind, :date, :currency, :amount, :target, :description, :bank_entry, keyword_init: true)
+  Unit = Struct.new(:key, :kind, :date, :currency, :amount, :target, :leftover, :description, :bank_entry, keyword_init: true)
 
   attr_reader :notices
 
@@ -57,9 +57,12 @@ class SharesightAccount::CashRouter
         end
         next if destination.nil? || destination == :skip || movement.amount.zero?
 
-        # Opening balances and reinvested dividends never go near a bank, and a
-        # settlement account can only settle in its own currency.
+        # Opening balances never go near a bank, and a settlement account can
+        # only settle in its own currency.
         target = destination if destination.is_a?(Account) && movement.matchable && destination.currency == movement.currency
+        # A reinvested dividend's leftover is only linked if a bank feed shows
+        # it arriving. We don't book it into a manual account on a guess.
+        target = nil if movement.leftover && !bank_fed?(target)
 
         Unit.new(
           key: movement.key,
@@ -68,6 +71,7 @@ class SharesightAccount::CashRouter
           currency: movement.currency,
           amount: movement.amount,
           target: target,
+          leftover: movement.leftover,
           description: movement.description
         )
       end
@@ -202,7 +206,7 @@ class SharesightAccount::CashRouter
     end
 
     def offset_name(unit)
-      return "Settled outside Sure" unless unit.target
+      return "Settled outside Sure" unless unit.target && (unit.bank_entry || !unit.leftover)
 
       unit.amount.positive? ? "Transfer from #{unit.target.name}" : "Transfer to #{unit.target.name}"
     end
@@ -246,7 +250,7 @@ class SharesightAccount::CashRouter
       window = @sharesight_account.settlement_window_days
 
       units.each do |unit|
-        next unless bank_fed?(unit.target) && unit.bank_entry.nil? && unit.date + window < Date.current
+        next unless bank_fed?(unit.target) && unit.bank_entry.nil? && !unit.leftover && unit.date + window < Date.current
 
         @notices << {
           message: I18n.t(

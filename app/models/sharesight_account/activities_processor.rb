@@ -24,8 +24,10 @@ class SharesightAccount::ActivitiesProcessor
 
   # How much cash a record moved in the investment account, so CashRouter can
   # settle it somewhere else. kind is :trade or :dividend. matchable is false
-  # when no bank would ever see it (opening balances, reinvested dividends).
-  Movement = Data.define(:key, :kind, :date, :currency, :amount, :matchable, :description)
+  # when no bank would ever see it (opening balances). leftover is true for
+  # what's left of a reinvested dividend, which the registry often keeps for
+  # the next reinvestment, so it might never reach a bank either.
+  Movement = Data.define(:key, :kind, :date, :currency, :amount, :matchable, :leftover, :description)
 
   attr_reader :movements
 
@@ -126,7 +128,7 @@ class SharesightAccount::ActivitiesProcessor
       [ clause, *patterns.map { |prefix| "#{Entry.sanitize_sql_like(prefix)}%" } ]
     end
 
-    def record_movement(entries, kind:, matchable:)
+    def record_movement(entries, kind:, matchable:, leftover: false)
       entries = Array(entries).compact
       return if entries.empty?
 
@@ -138,6 +140,7 @@ class SharesightAccount::ActivitiesProcessor
         currency: first.currency,
         amount: entries.sum(&:amount),
         matchable: matchable,
+        leftover: leftover,
         description: first.name
       )
     end
@@ -165,7 +168,7 @@ class SharesightAccount::ActivitiesProcessor
       currency, price = trade_price(trade, type, quantity, sharesight_rate)
       return false if price.nil?
 
-      fee = trade_fee(trade, currency, sharesight_rate)
+      fee = trade_fee(trade, currency, sharesight_rate, date)
       gross = quantity * price
       signed_quantity = label == "Sell" ? -quantity : quantity
 
@@ -202,10 +205,15 @@ class SharesightAccount::ActivitiesProcessor
       price = parse_decimal(trade["price"])
       price = nil if price&.zero?
 
-      # An opening balance might only have a cost base, in the portfolio's currency.
+      # An opening balance might only have a cost base, in the portfolio's
+      # currency. Without the trade's rate we can't convert it, so keep it in the
+      # portfolio's currency.
       if price.nil? && type == OPENING_BALANCE
         cost_base = parse_decimal(trade["cost_base"])
-        price = cost_base * (sharesight_rate || 1) / quantity if cost_base
+        return [ nil, nil ] unless cost_base
+        return [ portfolio_currency, cost_base / quantity ] unless sharesight_rate
+
+        price = cost_base * sharesight_rate / quantity
       end
       return [ nil, nil ] if price.nil?
 
@@ -215,19 +223,30 @@ class SharesightAccount::ActivitiesProcessor
       [ portfolio_currency, sharesight_rate ? price / sharesight_rate : price ]
     end
 
-    # Brokerage is usually charged in the portfolio's currency.
-    def trade_fee(trade, currency, sharesight_rate)
+    # Brokerage is usually charged in the portfolio's currency. Convert it with
+    # the trade's rate when we can, otherwise Sure's rate for that day.
+    def trade_fee(trade, currency, sharesight_rate, date)
       fee = parse_decimal(trade["brokerage"]) || BigDecimal("0")
       fee_currency = parse_currency(trade["brokerage_currency_code"]) || currency
-      return fee if fee.zero? || fee_currency == currency || sharesight_rate.nil?
+      return fee if fee.zero? || fee_currency == currency
 
-      if fee_currency == portfolio_currency
+      if sharesight_rate && fee_currency == portfolio_currency
         fee * sharesight_rate
-      elsif currency == portfolio_currency
+      elsif sharesight_rate && currency == portfolio_currency
         fee / sharesight_rate
       else
-        fee
+        Money.new(fee, fee_currency).exchange_to(currency, date: date).amount
       end
+    rescue Money::ConversionError
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "warn",
+        message: "Left the #{fee_currency} brokerage on Sharesight trade #{trade['id']} out: no rate to #{currency} for #{date}",
+        source: "sharesight",
+        family: @sharesight_account.sharesight_item.family,
+        provider_key: "sharesight"
+      )
+      BigDecimal("0")
     end
 
     # A capital return pays cash back without changing the units. Sure can't
@@ -299,7 +318,7 @@ class SharesightAccount::ActivitiesProcessor
       end
 
       reinvestment = import_reinvestment(payout, security, currency, date, paid_for: !skipped)
-      record_movement([ dividend, reinvestment ], kind: :dividend, matchable: reinvestment.nil?) unless skipped
+      record_movement([ dividend, reinvestment ], kind: :dividend, matchable: true, leftover: reinvestment.present?) unless skipped
       dividend.present?
     rescue => e
       log_failure("payout", payout["id"], e)

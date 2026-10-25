@@ -1,4 +1,8 @@
 class SharesightAccount::Processor
+  # Sharesight's quantities arrive as JSON floats, so units are compared to this
+  # many decimal places rather than exactly.
+  UNITS_PRECISION = 8
+
   attr_reader :sharesight_account
 
   def initialize(sharesight_account)
@@ -89,14 +93,14 @@ class SharesightAccount::Processor
       traded = Trade.joins(:entry, :security).where(entries: { account_id: account.id }).group("securities.ticker").sum(:qty)
 
       (held.keys | traded.keys).sort.filter_map do |ticker|
-        held_units = held[ticker]
-        traded_units = traded[ticker] || BigDecimal("0")
+        held_units = held[ticker].round(UNITS_PRECISION)
+        traded_units = (traded[ticker] || BigDecimal("0")).to_d.round(UNITS_PRECISION)
         next if held_units == traded_units
 
         {
           message: I18n.t("sharesight_accounts.notices.units_drift",
                           account: account.name, ticker: ticker,
-                          held: held_units.to_s("F"), traded: traded_units.to_d.to_s("F")),
+                          held: held_units.to_s("F"), traded: traded_units.to_s("F")),
           severity: "warning"
         }
       end

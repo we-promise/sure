@@ -135,6 +135,42 @@ class SharesightAccount::ProcessorTest < ActiveSupport::TestCase
     assert_nil bitcoin.entryable.exchange_rate
   end
 
+  test "a foreign opening balance with no rate stays in the portfolio's currency" do
+    opening = { "id" => 110, "transaction_type" => "OPENING_BALANCE", "transaction_date" => "2021-02-03", "symbol" => "AAPL", "market" => "NASDAQ",
+                "quantity" => 5, "price" => nil, "cost_base" => 1500.0, "exchange_rate" => nil, "holding_id" => 2, "state" => "confirmed" }
+    @sharesight_account.update!(raw_trades_payload: TRADES + [ opening ])
+
+    process
+
+    entry = trade("sharesight_trade_110")
+    assert_equal [ "AUD", BigDecimal("300") ], [ entry.currency, entry.entryable.price ]
+  end
+
+  test "brokerage in a third currency is converted at Sure's rate for the day" do
+    ExchangeRate.where(from_currency: "GBP", to_currency: "USD").delete_all
+    ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: Date.new(2025, 6, 2), rate: 1.25)
+    gbp_fee = TRADES[1].merge("id" => 111, "brokerage" => 10.0, "brokerage_currency_code" => "GBP")
+    @sharesight_account.update!(raw_trades_payload: TRADES + [ gbp_fee ])
+
+    process
+
+    # 200 x 10 USD, plus GBP 10 at 1.25 USD per GBP.
+    buy = trade("sharesight_trade_111")
+    assert_equal [ BigDecimal("12.5"), BigDecimal("2012.5") ], [ buy.entryable.fee, buy.amount ]
+  end
+
+  test "brokerage with no way to convert it is left out and logged" do
+    ExchangeRate.where(from_currency: "GBP", to_currency: "USD").delete_all
+    ExchangeRate.stubs(:provider).returns(nil)
+    gbp_fee = TRADES[1].merge("id" => 112, "brokerage" => 10.0, "brokerage_currency_code" => "GBP")
+    @sharesight_account.update!(raw_trades_payload: TRADES + [ gbp_fee ])
+
+    process
+
+    assert_equal BigDecimal("0"), trade("sharesight_trade_112").entryable.fee
+    assert DebugLogEntry.where(source: "sharesight").where("message LIKE ?", "%GBP brokerage on Sharesight trade 112%").exists?
+  end
+
   test "a reinvested dividend is income and a reinvestment trade" do
     result = process
 
