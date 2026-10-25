@@ -427,6 +427,20 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name=?][value=?][step=?]", "split[splits][0][amount]", "-0.1235", "0.0001"
   end
 
+  test "itemize states the receipt total in currency units when it covers part of the charge" do
+    attach_receipt
+    Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(receipt(
+      [ "Bananas", 30 ], [ "Detergent", 60 ]
+    )))
+
+    post itemize_transaction_split_path(@entry), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "[role=status]", text: /\$90\.00/
+    assert_select "input[name=?][value=?]", "split[splits][2][name]", @entry.name
+    assert_select "input[name=?][value=?]", "split[splits][2][amount]", "-10.00"
+  end
+
   test "itemize shows proposed amounts at the currency's precision" do
     attach_receipt
     Provider::Registry.stubs(:preferred_llm_provider).returns(receipt_provider(receipt(

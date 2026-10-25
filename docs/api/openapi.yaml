@@ -9518,6 +9518,25 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/SplitReceiptProposal"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: AI is not enabled for the user, or the key lacks the read_write
+            scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: no readable receipt, or the transaction cannot be split
           content:

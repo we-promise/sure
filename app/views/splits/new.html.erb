@@ -60,26 +60,15 @@
             controller: "split-transaction",
             split_transaction_total_value: (-@entry.amount).to_f,
             split_transaction_currency_value: @entry.currency,
-            split_transaction_step_value: (BigDecimal(10)**-Transaction::ReceiptItemizer.amount_precision(@entry.currency)).to_s("F"),
+            split_transaction_step_value: split_amount_step(@entry.currency),
             turbo_frame: :_top
           }
         ) do %>
 
       <%# Split rows: one blank row, or the rows proposed from a receipt %>
-      <%
-        # Number inputs take only dot-decimal values, whatever the user's language.
-        # The currency's precision, capped at the four decimals entries store.
-        precision = Transaction::ReceiptItemizer.amount_precision(@entry.currency)
-        input_number = ->(value) { number_with_precision(value, precision: precision, separator: ".", delimiter: "") }
-        amount_step = input_number.call(BigDecimal(10)**-precision)
-        rows = if @receipt_proposal
-          @receipt_proposal.rows.map { |row| { name: row.name, amount: input_number.call(-row.amount) } }
-        else
-          [ { name: @entry.name, amount: nil } ]
-        end
-      %>
+      <% amount_step = split_amount_step(@entry.currency) %>
       <div data-split-transaction-target="rowsContainer" class="space-y-3">
-        <% rows.each_with_index do |row, index| %>
+        <% split_editor_rows(@entry, @receipt_proposal).each_with_index do |row, index| %>
           <%= render "splits/row",
                      index: index,
                      name: row[:name],

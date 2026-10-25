@@ -197,6 +197,28 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
         run_test!
       end
 
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:attachment_id) { nil }
+        let(:'X-Api-Key') { 'invalid-key' }
+        run_test!
+      end
+
+      response '403', 'AI is not enabled for the user, or the key lacks the read_write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:attachment_id) { nil }
+        before { user.update!(ai_enabled: false) }
+        run_test!
+      end
+
+      response '404', 'transaction not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:attachment_id) { nil }
+        let(:transaction_id) { SecureRandom.uuid }
+        before { user.update!(ai_enabled: true) }
+        run_test!
+      end
+
       response '422', 'no readable receipt, or the transaction cannot be split' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:attachment_id) { nil }
