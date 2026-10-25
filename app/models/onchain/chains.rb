@@ -96,6 +96,9 @@ module Onchain
 
     POLKADOT = "polkadot"
 
+    # Shared by every Bitcoin-family adapter, so the alphabets have one source.
+    # Base58Check has no 0, O, I or l; bech32 has no 1, b, i or o after the
+    # separator.
     BASE58_CHAR = "[1-9A-HJ-NP-Za-km-z]"
     BECH32_CHAR = "[ac-hj-np-z02-9]"
 
@@ -116,6 +119,8 @@ module Onchain
         address_patterns: [ /\At[13]#{BASE58_CHAR}{33}\z/ ]
       }
     ].freeze
+
+    SINGLE_ADDRESS_ADAPTERS = %w[Onchain::BitcoinAdapter Onchain::UtxoAdapter].freeze
 
     BUILTIN = [
       Definition.new(
@@ -194,6 +199,13 @@ module Onchain
 
       def exists?(key)
         find(key).present?
+      end
+
+      # Chains read one address at a time. Their wallets are normally HD
+      # wallets that spread funds across many addresses, so the linking screen
+      # names them in its warning.
+      def single_address_chains
+        all.select { |definition| SINGLE_ADDRESS_ADAPTERS.include?(definition.adapter_class_name) }
       end
 
       def adapter_for(key, credentials: {})

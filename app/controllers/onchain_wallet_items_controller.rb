@@ -10,6 +10,8 @@ class OnchainWalletItemsController < ApplicationController
                          disconnect_wallet disconnect_asset]
   before_action :set_wallet, only: %i[review_tokens update_tokens disconnect_wallet]
 
+  helper_method :first_sochain_api_key
+
   def update
     if @onchain_wallet_item.update(onchain_wallet_item_params)
       render_provider_panel("onchain_wallet", notice: t(".success"))
@@ -99,8 +101,12 @@ class OnchainWalletItemsController < ApplicationController
     # The connection is created only now. Reading the address needs none, so a
     # failed read must not leave an empty one behind — the same reason previewing
     # uses an unsaved one.
+    first_key = first_sochain_api_key
+    connection = Current.family.onchain_wallet_item!
+    connection.update!(sochain_api_key: first_key) if first_key.present?
+
     result = OnchainWalletItem::WalletLinker
-      .new(Current.family.onchain_wallet_item!, chain: @chain, address: @address)
+      .new(connection, chain: @chain, address: @address)
       .link(snapshot: snapshot, selected_keys: params[:assets])
 
     unless result.success?
@@ -213,7 +219,15 @@ class OnchainWalletItemsController < ApplicationController
     # leaves an empty item behind for an abandoned flow.
     def preview_item
       @preview_item ||= Current.family.onchain_wallet_item ||
-        Current.family.onchain_wallet_items.new(name: I18n.t("onchain.institution_name"))
+        Current.family.onchain_wallet_items.new(name: I18n.t("onchain.institution_name"), sochain_api_key: first_sochain_api_key)
+    end
+
+    # The settings panel holds the SoChain key once a connection exists. Before
+    # the first link there is no connection to hold it, yet the keyless daily
+    # limit may already be spent, so the linking form takes one and carries it
+    # through to the link, where the new connection keeps it.
+    def first_sochain_api_key
+      params[:sochain_api_key].to_s.strip.presence unless Current.family.onchain_wallet_item.present?
     end
 
     def normalized_address

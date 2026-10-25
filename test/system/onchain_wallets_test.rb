@@ -115,7 +115,8 @@ class OnchainWalletsTest < ApplicationSystemTestCase
 
       # The linking modal opens on top of the drawer.
       assert_text I18n.t("onchain_wallet_items.new_wallet.title")
-      assert_text I18n.t("onchain_wallet_items.new_wallet.bitcoin_single_address_note")
+      assert_text I18n.t("onchain_wallet_items.new_wallet.single_address_note",
+                         chains: Onchain::Chains.single_address_chains.map(&:label).to_sentence)
 
       fill_in I18n.t("onchain_wallet_items.new_wallet.address_label"), with: OnchainTestHelper::FAKE_ADDRESS
       click_on I18n.t("onchain_wallet_items.new_wallet.continue")

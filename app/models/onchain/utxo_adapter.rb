@@ -27,12 +27,12 @@ class Onchain::UtxoAdapter
 
   def valid_address?(address)
     candidate = address.to_s.strip
-    (address_patterns + case_insensitive_patterns).any? { |pattern| pattern.match?(candidate) }
+    address_patterns.any? { |pattern| pattern.match?(candidate) } || bech32?(candidate)
   end
 
   def canonical_address(address)
     candidate = address.to_s.strip
-    case_insensitive_patterns.any? { |pattern| pattern.match?(candidate) } ? candidate.downcase : candidate
+    bech32?(candidate) ? candidate.downcase : candidate
   end
 
   # One request. Litecoin's legacy "3…" script addresses share Bitcoin's shape
@@ -70,6 +70,10 @@ class Onchain::UtxoAdapter
 
   private
     attr_reader :credentials
+
+    def bech32?(candidate)
+      single_case?(candidate) && case_insensitive_patterns.any? { |pattern| pattern.match?(candidate) }
+    end
 
     def definition
       Onchain::Chains.find!(chain)

@@ -108,7 +108,9 @@ requests up to a daily limit per IP address. A key raises that limit; get one at
 [sochain.com/dashboard](https://sochain.com/dashboard). Add it under
 **Settings → Providers → On-chain wallets → Advanced**, where it is stored
 encrypted, per family, or set `SOCHAIN_API_KEY` to use one key for every family
-on the instance. A family's own key takes precedence.
+on the instance. A family's own key takes precedence. Before the first wallet is
+linked there is no Advanced panel yet, so the linking form takes the key instead
+and the new connection keeps it.
 
 ## Rate limits and request cost
 

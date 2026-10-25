@@ -9,7 +9,7 @@
         <% @detection.candidates.each do |candidate| %>
           <%= button_to preview_wallet_onchain_wallet_items_path,
                         method: :post,
-                        params: { address: @address, chain: candidate.key },
+                        params: { address: @address, chain: candidate.key, sochain_api_key: first_sochain_api_key }.compact,
                         class: "w-full flex items-center justify-between gap-3 p-3 border border-primary rounded-lg hover:bg-surface text-left",
                         form: { data: { turbo_frame: "modal" } } do %>
             <span class="font-medium text-primary"><%= candidate.label %></span>

@@ -62,6 +62,17 @@ class Onchain::UtxoAdapterTest < ActiveSupport::TestCase
     assert_equal LTC_P2PKH, @litecoin.canonical_address(LTC_P2PKH)
   end
 
+  test "mixed-case bech32 is not an address" do
+    # BIP-173: all lowercase or all uppercase. Folding a mixed-case string would
+    # link an address the user did not type.
+    mixed = "Ltc1qr07zu594qf63xm7l7x6pu3a2v39m2z6hh5pp4t"
+
+    assert_not @litecoin.valid_address?(mixed)
+    assert_equal mixed, @litecoin.canonical_address(mixed)
+    assert_not_includes Onchain::Chains.matching(mixed).map(&:key), "litecoin"
+    assert_raises(Onchain::Chains::Error) { @litecoin.fetch_snapshot(mixed) }
+  end
+
   test "balance is confirmed plus the pending change, in exact decimals" do
     stub_balance("DOGE", DOGE, confirmed: "1000.12345678", unconfirmed: "-0.00000001")
     stub_transactions("DOGE", DOGE, 1, [])

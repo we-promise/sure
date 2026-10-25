@@ -12,6 +12,9 @@
                        class: "space-y-4" do |form| %>
     <%= hidden_field_tag :chain, chain %>
     <%= hidden_field_tag :address, address %>
+    <% if local_assigns[:sochain_api_key].present? %>
+      <%= hidden_field_tag :sochain_api_key, local_assigns[:sochain_api_key] %>
+    <% end %>
 
     <%= render DS::Alert.new(variant: :info, message: t("onchain_wallet_items.token_review_form.explanation")) %>
 
