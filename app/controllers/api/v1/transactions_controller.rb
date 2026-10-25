@@ -223,18 +223,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     # The rows the web budget category drill-down lists for this budget
-    # (BudgetCategoriesController#show): Budget#transactions limits them to
-    # the budget's period and to the accounts its spending is computed from
-    # (the owner's report accounts for a personal budget, the caller's for
-    # the household one), minus the kinds budgets leave out (plus investment
-    # contributions when the family does not count investing as spending,
-    # Family#analytics_excluded_kinds, as the drill-down does).
-    #
-    # A budget share does not grant access to the owner's accounts, so the
-    # rows are also limited to accounts the caller can access, the same scope
-    # as the unfiltered index and GET /api/v1/transactions/:id. Without that,
-    # a viewer of a shared personal budget would get full transaction details
-    # (notes, external ids, account) for accounts nobody shared with them.
+    # (Budget#reportable_transactions), limited to accounts the caller can
+    # access. A budget share does not share the owner's accounts, so without
+    # that limit a viewer of a shared personal budget would get full details
+    # of transactions on accounts nobody shared with them.
     def budget_transactions
       @budget.current_user = current_resource_owner
       @budget.reportable_transactions
@@ -257,8 +249,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       @end_date = date_filter_param(:end_date)
     end
 
-    # Parsed here, outside index's catch-all rescue, so a malformed date is a
-    # 422 rather than a 500. Date.parse keeps the formats the filter accepted.
+    # Parsed before index runs so a malformed date is a 422, not a 500. This
+    # filter has always accepted any format Date.parse reads, so it does not
+    # use the strict ISO 8601 parse_date_param.
     def date_filter_param(key)
       return nil if params[key].blank?
 

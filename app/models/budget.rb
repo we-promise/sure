@@ -180,9 +180,8 @@ class Budget < ApplicationRecord
 
   # The rows a category drill-down lists (web BudgetCategoriesController#show
   # and the API budget_id filter): #transactions minus the kinds the budget's
-  # aggregates leave out, so the list matches the totals (issue #1059). A family
-  # that does not count investing as spending also leaves out investment
-  # contributions (Family#analytics_excluded_kinds).
+  # aggregates leave out (Family#analytics_excluded_kinds), so the list
+  # matches what the totals count.
   def reportable_transactions
     transactions.where.not(transactions: { kind: family.analytics_excluded_kinds })
   end

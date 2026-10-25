@@ -10151,9 +10151,9 @@ paths:
       - name: excluded
         in: query
         required: false
-        description: Filters on the entry excluded flag only. false lists entries not
-          flagged excluded; true lists only flagged ones, split parents included. It
-          does not apply all budget or report eligibility rules, even with budget_id,
+        description: Filters on the entry excluded flag only. false lists entries
+          not flagged excluded; true lists only flagged ones, split parents included.
+          It does not apply all budget or report eligibility rules, even with budget_id,
           so the results are not guaranteed to match totals. Omit to list both.
         schema:
           type: boolean
