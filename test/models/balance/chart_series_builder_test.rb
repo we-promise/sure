@@ -644,10 +644,10 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal 1_500, amounts[1]
   end
 
-  # #382, reading (b): a linked account's line starts from the balance held
+  # A linked account's line starts from the balance held
   # before the anchor day's activity (its value_open, 10,000) and counts that
   # day's 5,000 deposit, so the anchor day's 400 market gain is not money put
-  # in. Before #382 it opened at the day's 15,400 close.
+  # in. Opened at the day's 15,400 close, it would count that gain.
   test "an anchor date opens at that day's opening value and counts its flows" do
     account = lay_contributions_example
 
@@ -660,8 +660,8 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
   end
 
   # When the value line's point on the anchor date is the balance before
-  # that day's activity (a coarse interval's prepended opening, or upstream
-  # #4009's reset), the line's point there is measured at the same moment:
+  # that day's activity (a coarse interval's prepended opening, or the
+  # normalizer's reset), the line's point there is measured at the same moment:
   # the day's opening value. The day's flows arrive on the next point.
   test "an anchor point before the day's activity opens at that day's opening value" do
     account = lay_contributions_example
@@ -718,7 +718,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal 1_500, unconverted.net_contributions_series.values.last.value.amount, "and it counts as nothing"
   end
 
-  # #382: the anchor day's flows are counted, so one that could not be
+  # The anchor day's flows are counted, so one that could not be
   # valued on that day makes the line incomplete. One before the anchor
   # is outside the line and does not.
   test "an unvalued flow on the anchor day makes net contributions incomplete" do
@@ -738,7 +738,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert contributions_builder(account).net_contributions_incomplete?
   end
 
-  # #383: an unvalued withdrawal is left out like an unvalued deposit, but it
+  # An unvalued withdrawal is left out like an unvalued deposit, but it
   # leaves the line too high, not too low. The check reports both, so it is
   # named for what it knows (a flow is missing), not for a direction.
   test "an unvalued withdrawal makes net contributions incomplete and leaves the line higher" do
@@ -935,7 +935,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
   end
 
   # An explicit anchor opens before the day's activity and counts the day's
-  # flows (#382), so one of them going unvalued is part of the line and makes
+  # flows, so one of them going unvalued is part of the line and makes
   # it incomplete, with the anchor as without it.
   test "an unvalued flow on an explicit anchor day makes the line incomplete" do
     account = create_portfolio_account(family: families(:empty))

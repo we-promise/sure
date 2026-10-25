@@ -465,8 +465,8 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { account.balance_series(view: :contributions) }
   end
 
-  # #382, owner decision 2026-10-08 (reading b). A linked account's value
-  # line is trimmed to its first broker activity, and #4009 resets its point
+  # A linked account's value line is trimmed to its first broker activity,
+  # and the normalizer resets its point
   # there to the balance before that day's activity (0, as no opening anchor
   # sits on that date). The contributions line starts from the balance
   # actually held before that activity (DailyReturns' value_open, 1,000
@@ -519,7 +519,7 @@ class Account::ChartableTest < ActiveSupport::TestCase
   end
 
   # An opening anchor on the first activity date sets the balance held
-  # before it, and #4009 opens the value line there. The contributions line
+  # before it, and the normalizer opens the value line there. The contributions line
   # starts from that balance too and adds the day's deposit from the next
   # point.
   test "a linked account opened with an anchor on its first activity date counts the anchor as held" do
@@ -542,7 +542,7 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_equal [ 0, 100 ], gaps(value, contributions)
   end
 
-  # #4009's reset point can equal the day's close: here a 500 deposit is
+  # The normalizer's reset point can equal the day's close: here a 500 deposit is
   # offset by a 500 market loss, so the balance before the day's activity
   # and the close are both 1,000. The point is still the balance before the
   # activity, so the contributions line opens at 1,000 and counts the
@@ -619,14 +619,13 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_equal [ 1_000, 1_000, 1_500 ], contributions.values.map { |v| v.value.amount }
   end
 
-  # cubic on #337, re-expressed for #382. On a coarse interval the trim date
+  # On a coarse interval the trim date
   # is not sampled, so the normalizer prepends a synthetic opening point
   # (here 0) to the value line: a point before the day's activity. The
   # contributions line opens there at the balance actually held before that
-  # activity, 1,000 -- the cost the owner accepted on 2026-10-08 where there
-  # is history before the trim -- and from the next point the gap is the
-  # anchor day's 100 market gain. Before #382 it jumped to the day's 1,600
-  # close, counting the gain as money put in.
+  # activity, 1,000, even where there is history before the trim, and from
+  # the next point the gap is the anchor day's 100 market gain. Opened at the
+  # day's 1,600 close, it would count the gain as money put in.
   test "on a coarse interval a linked account's net contributions open before the anchor day's activity" do
     day_one = Date.new(2026, 3, 2)
     account = create_portfolio_account(family: families(:empty))
@@ -685,7 +684,7 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_equal [ 0, 100, 100 ], gaps(value, contributions)
   end
 
-  # #382: the incomplete note reads the same rows as the line, so a flow on
+  # The incomplete note reads the same rows as the line, so a flow on
   # the anchor day that could not be valued is reported now that the line
   # counts that day's flows.
   test "a linked account's unvalued flow on its anchor day makes net contributions incomplete" do
@@ -704,7 +703,7 @@ class Account::ChartableTest < ActiveSupport::TestCase
   # anchor date. It follows the normalizer's own rule rather than comparing
   # values: the point was supplied before the day's activity when the
   # balance query never sampled that date (a prepended opening), or when the
-  # date is the first provider activity date (#4009's reset). Any other
+  # date is the first provider activity date (the normalizer's reset). Any other
   # sampled point is the day's close, whatever its value.
   test "the value line's anchor point is read as before activity only when the normalizer supplied it" do
     day_one = Date.new(2026, 3, 2)

@@ -59,7 +59,7 @@ module Account::Chartable
     # value line's dates, after that line's trim. For a linked investment
     # account whose value line is trimmed to supported history, the line
     # starts from the balance held before the trim day's activity and counts
-    # that day's flows (#382), so the gap between the lines is the market's
+    # that day's flows, so the gap between the lines is the market's
     # from the trim date on. The anchor comes from the account's history,
     # not the period, so it is the same whichever period is shown.
     #
@@ -67,7 +67,7 @@ module Account::Chartable
     # value line's own point there. That point is the day's close when the
     # balance query sampled it unchanged, and the balance before the day's
     # activity when the normalizer supplied it instead (a coarse interval's
-    # prepended opening, or upstream #4009's reset of the first point).
+    # prepended opening, or its reset of the first point).
     def net_contributions_series(period:, interval:)
       builder = chart_series_builder(period: period, interval: interval)
       value_series = balance_series(period: period, view: :balance, interval: interval)
@@ -91,7 +91,7 @@ module Account::Chartable
     # True when the value line's point on `date` was supplied by the
     # normalizer as the balance before the day's activity: prepended on a
     # date the balance query never sampled (a coarse interval), or a sampled
-    # point reset on the first provider activity date (upstream #4009). The
+    # point reset on the first provider activity date. The
     # normalizer's rule decides, not the point's value, since a reset point
     # can equal the day's close (a flow offset by the market). False when
     # there is no such point.

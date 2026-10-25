@@ -81,12 +81,12 @@ class Balance::ChartSeriesBuilder
   # first balance row (a linked investment account trimmed to supported
   # history). The line then starts from the balance held before that day's
   # activity (DailyReturns' `value_open`) and counts that day's flows as well
-  # as later ones (#382), so the anchor day's market gain stays out of what
+  # as later ones, so the anchor day's market gain stays out of what
   # was put in. History before the anchor is not read.
   #
   # `anchor_before_activity` says the value line's own point on the anchor
   # date is the balance before that day's activity, not its close (a coarse
-  # interval's prepended opening, or upstream #4009's reset). The line's
+  # interval's prepended opening, or the normalizer's reset). The line's
   # point there is then measured at the same moment, the day's opening
   # value, and the day's flows arrive on the next point. It does nothing
   # without an `anchor_date`.
@@ -142,7 +142,7 @@ class Balance::ChartSeriesBuilder
   # unpriced journal.
   def net_contributions_incomplete?(anchor_date: nil, dates: nil)
     dates = (dates || query_data.map(&:date))
-    # Every row the line adds is read, the anchor day's included (#382).
+    # Every row the line adds is read, the anchor day's included.
     net_contribution_rows(anchor_date: anchor_date, through: dates.max).any? do |row|
       row.rate_missing || (row.suppressed && row.denominator.positive?)
     end
