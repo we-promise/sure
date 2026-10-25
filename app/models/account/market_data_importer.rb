@@ -62,59 +62,30 @@ class Account::MarketDataImporter
   def import_security_prices
     return unless Security.provider
 
-    current_security_ids = account.current_holdings.pluck(:security_id).to_set
-    traded_security_ids  = account.trades.pluck(:security_id).uniq
+    return if price_windows.empty?
 
-    all_security_ids = (current_security_ids | traded_security_ids)
-    return if all_security_ids.empty?
+    securities = Security.online.where(id: price_windows.keys).index_by(&:id)
 
-    securities = Security.online.where(id: all_security_ids).index_by(&:id)
-
-    start_dates    = first_required_price_dates
-    historical_ids = traded_security_ids - current_security_ids.to_a
-
-    # For securities no longer held, cap end_date at the last holding date so
-    # all_prices_exist? stays stable and we don't call the provider every sync.
-    last_holding_date = account.holdings
-                               .where(security_id: historical_ids)
-                               .group(:security_id)
-                               .maximum(:date)
-
-    # import_market_data runs before materialize_balances in Account::Syncer, so
-    # current_holdings can reflect a stale pre-trade snapshot. If a historical
-    # security has a trade newer than its last holding date the position was
-    # reopened this sync; fetch prices through today so the forthcoming
-    # materialization has a price available.
-    latest_trade_date = account.trades
-                               .where(security_id: historical_ids)
-                               .group(:security_id)
-                               .maximum("entries.date")
-
-    all_security_ids.each do |security_id|
+    price_windows.each do |security_id, window|
       security = securities[security_id]
       next unless security
 
-      end_date = if current_security_ids.include?(security_id)
-        Date.current
-      else
-        holding_date = last_holding_date[security_id]
-        trade_date   = latest_trade_date[security_id]
-        reopened     = trade_date && holding_date && trade_date > holding_date
-        reopened ? Date.current : (holding_date || Date.current)
-      end
-
-      security.import_provider_prices(start_date: start_dates[security_id], end_date: end_date)
+      security.import_provider_prices(start_date: window.start_date, end_date: window.end_date)
       security.import_provider_details
     end
   end
 
   private
+    def price_windows
+      @price_windows ||= Security::Price::ImportWindows.new(account).to_h
+    end
+
     def security_ids
-      @security_ids ||= (account.current_holdings.pluck(:security_id) | account.trades.pluck(:security_id))
+      price_windows.keys
     end
 
     def first_required_price_dates
-      @first_required_price_dates ||= batch_first_required_price_dates(security_ids)
+      price_windows.transform_values(&:start_date)
     end
 
     # Earliest required date per price currency that differs from the account currency.
@@ -133,26 +104,6 @@ class Account::MarketDataImporter
 
           dates[currency] = [ dates[currency], start_date ].compact.min
         end
-      end
-    end
-
-    # Replaces 2-queries-per-security with 3 queries total.
-    def batch_first_required_price_dates(security_ids)
-      # account.trades is a has_many :through :entries, so entries is already joined
-      trade_start_dates = account.trades.group(:security_id).minimum("entries.date")
-
-      provider_holding_security_ids = account.holdings
-                                             .where(security_id: security_ids)
-                                             .where.not(account_provider_id: nil)
-                                             .pluck(:security_id)
-                                             .to_set
-
-      account_start_date = account.start_date
-
-      security_ids.each_with_object({}) do |security_id, hash|
-        trade_date   = trade_start_dates[security_id]
-        holding_date = provider_holding_security_ids.include?(security_id) ? account_start_date : nil
-        hash[security_id] = [ trade_date, holding_date ].compact.min || account_start_date
       end
     end
 

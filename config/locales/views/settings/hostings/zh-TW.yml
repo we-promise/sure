@@ -109,6 +109,8 @@ zh-TW:
         not_configured_hint: 請在下方加入 %{provider} API 金鑰以啟用。
         data_retention_heading: 資料處理方式
         data_retention: API 輸入預設不會用於訓練模型；各供應商託管的 API 會為了信任與安全用途保留資料約 30 天。自訂或自行代管的端點則依照您自己的政策。
+        max_items_per_call_label: 每批項目數上限（選填）
+        max_items_per_call_help: "自動分類／商家辨識每批次的上限。預設值：25。使用 OpenAI 相容服務時，過大的批次會自動切分以符合上下文視窗。"
       anthropic_settings:
         title: Anthropic (Claude)
         description: 輸入您的 Anthropic API 金鑰。您也可以把 Base URL 指向 AWS Bedrock 或 GCP Vertex。
@@ -141,8 +143,6 @@ zh-TW:
         context_window_help: 模型可接受的 Token 總數。預設值：2048 - 使用雲端 OpenAI 或大上下文的本機模型時請提高到 8192 以上。
         max_response_tokens_label: 回應 Token 數上限（選填）
         max_response_tokens_help: 保留給模型回覆的 Token 數。預設值：512。調低可以空出更多空間給較長的對話紀錄。
-        max_items_per_call_label: 每批項目數上限（選填）
-        max_items_per_call_help: 自動分類／商家辨識每批次的上限。預設值：25。過大的批次會自動切分以符合上下文視窗。
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

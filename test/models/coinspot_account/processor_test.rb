@@ -233,9 +233,9 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
     assert_not_includes record.to_json, "bc1qsecretdestinationaddress"
   end
 
-  # ExchangeRate validates presence but not numericality, so a zero or negative
-  # rate is storable -- multiplying by one writes a zeroed valuation instead of
-  # failing.
+  # ExchangeRate no longer stores a zero or negative rate, but the converter
+  # still guards against one: multiplying by it would write a zeroed valuation
+  # instead of failing.
   test "refuses to convert with a non-positive exchange rate" do
     @family.update!(currency: "USD")
     ExchangeRate.stubs(:find_or_fetch_rate).returns(
@@ -344,6 +344,21 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal false, result[:success]
     assert_equal "CoinspotAccount::Processor::UnknownOrderTypeError", result[:failures].first[:error_class]
+  end
+
+  # CoinSpot opens at zero through the same shared path as Kraken, so it needs
+  # the same repair: history older than the anchor leaves the account starting
+  # after entries it is supposed to precede.
+  test "moves the opening anchor before the first imported entry" do
+    Account::OpeningBalanceManager.new(@account).set_opening_balance(balance: 0, date: Date.new(2026, 6, 1))
+
+    CoinspotAccount::Processor.new(@coinspot_account).process
+
+    # A fresh instance: the manager memoises the anchor it last read.
+    account = Account.find(@account.id)
+    oldest = account.entries.where.not(entryable_type: "Valuation").minimum(:date)
+    assert_equal oldest.prev_day, account.opening_anchor_date
+    assert_equal 0, account.opening_anchor_balance
   end
 
   private

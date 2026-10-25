@@ -29,7 +29,6 @@ pl:
               locked_while_released: Otwórz ponownie ten cel, zanim zmienisz go w
                 rezerwę.
             linked_accounts:
-              currency_mismatch: Wszystkie połączone konta muszą mieć tę samą walutę.
               must_be_fundable: Wszystkie połączone konta muszą być kontami gotówkowymi
                 lub inwestycyjnymi.
               must_belong_to_family: Połączone konta muszą należeć do tej samej rodziny

@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="plaid"
 export default class extends Controller {
+  static targets = ["createFailed"];
   static values = {
     linkToken: String,
     region: { type: String, default: "us" },
@@ -106,10 +107,13 @@ export default class extends Controller {
       return;
     }
 
-    // For new connections, create a new Plaid item
+    // For new connections, create a new Plaid item. The server answers with a
+    // Turbo Stream: a redirect once the item exists, or -- when the institution is
+    // already connected -- a warning for the modal frame, with the exchange held.
     fetch("/plaid_items", {
       method: "POST",
       headers: {
+        Accept: "text/vnd.turbo-stream.html, text/html",
         "Content-Type": "application/json",
         "X-CSRF-Token": document.querySelector('[name="csrf-token"]').content,
       },
@@ -120,12 +124,38 @@ export default class extends Controller {
           region: this.regionValue,
         },
       }),
-    }).then((response) => {
-      if (response.redirected) {
-        window.location.href = response.url;
-      }
-    });
+    })
+      .then(async (response) => {
+        if (response.redirected) {
+          window.location.href = response.url;
+          return;
+        }
+
+        // Checked first, because renderStreamMessage appends whatever it is given to
+        // the page.
+        const contentType = response.headers.get("Content-Type") || "";
+        if (response.ok && contentType.includes("text/vnd.turbo-stream.html")) {
+          Turbo.renderStreamMessage(await response.text());
+          return;
+        }
+
+        this.showCreateFailed(`Unexpected response: ${response.status}`);
+      })
+      .catch((error) => this.showCreateFailed(error));
   };
+
+  // Link has closed by now, so when the request fails outright -- the network, or a
+  // server error the controller doesn't answer with a stream -- nothing else on the
+  // page says so. Whether the connection was added is unknown, so the alert, rendered
+  // by the server into a template, asks the user to check.
+  showCreateFailed(error) {
+    console.error("Failed to add the Plaid connection", error);
+
+    const tray = document.getElementById("notification-tray");
+    if (!tray || !this.hasCreateFailedTarget) return;
+
+    tray.append(this.createFailedTarget.content.cloneNode(true));
+  }
 
   handleExit = (err, metadata) => {
     // If there was an error during update mode, refresh the page to show
