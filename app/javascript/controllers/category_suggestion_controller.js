@@ -1,11 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Applies the category most commonly used on a past transaction when the user picks
-// that transaction's name from the "Libellé" autocomplete, and clears it again if a
+// that transaction's name from the description autocomplete, and clears it again if a
 // later-picked name has no usual category of its own. A manual category pick always
 // wins over the suggestion, even if the name field changes afterward.
 export default class extends Controller {
-  static targets = ["categoryField"]
+  static targets = ["categoryField", "name"]
 
   connect() {
     // A category already present when the controller connects (e.g. prefilled from
@@ -15,12 +15,15 @@ export default class extends Controller {
     this.applyingSuggestion = false
   }
 
+  syncName(event) {
+    // Async combobox options can arrive after submission. The visible free-text
+    // value, including an intentional blank, is authoritative for the name.
+    event.formData.set("entry[name]", this.nameTarget.value)
+  }
+
   onCategorySelected(event) {
     if (this.applyingSuggestion) return
-    // The category select has no selection event of its own, so we watch clicks on the
-    // whole field and keep only the ones that landed on an option — opening the menu or
-    // typing in its search box is not a pick.
-    if (!event.target.closest('[data-category-select-target="option"]')) return
+    if (!event.target.matches('[data-category-select-target="hiddenInput"]')) return
 
     this.userPickedCategory = true
   }

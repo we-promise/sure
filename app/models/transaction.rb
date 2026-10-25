@@ -317,6 +317,10 @@ class Transaction < ApplicationRecord
       .limit(limit)
       .pluck(Arel.sql("entries.name"))
 
+    name_suggestions_for_names(matching_names)
+  end
+
+  def self.name_suggestions_for_names(matching_names)
     return [] if matching_names.empty?
 
     # Winning (most-used) category_id per name, in one grouped query. Rows are ordered so
