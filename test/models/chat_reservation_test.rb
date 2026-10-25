@@ -44,22 +44,23 @@ class ChatReservationTest < ActiveSupport::TestCase
   end
 
   test "the bubble says busy while a background AI job runs, ready while some wait, else nothing" do
+    BackgroundJobHealth.expects(:one_ai_thread?).never
     ChatReservation.stubs(:chat_active?).returns(false)
-    BackgroundJobHealth.stubs(:ai_busy?).with(queues: [ "ai_low_priority" ]).returns(false)
+    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: [ "ai_low_priority" ]).returns(false)
     Sidekiq::Queue.stubs(:new).with("ai_low_priority").returns(stub(size: 0))
     assert_nil ChatReservation.bubble(60)
 
     Sidekiq::Queue.stubs(:new).with("ai_low_priority").returns(stub(size: 2))
     assert_equal({ seconds: 60, busy: false }, ChatReservation.bubble(60))
 
-    BackgroundJobHealth.stubs(:ai_busy?).with(queues: [ "ai_low_priority" ]).returns(true)
+    BackgroundJobHealth.stubs(:ai_job_running?).with(queues: [ "ai_low_priority" ]).returns(true)
     assert_equal({ seconds: 60, busy: true }, ChatReservation.bubble(60))
     assert_nil ChatReservation.bubble(nil)
   end
 
   test "no bubble while a chat is queued or running" do
     ChatReservation.stubs(:chat_active?).returns(true)
-    BackgroundJobHealth.stubs(:ai_busy?).returns(true)
+    BackgroundJobHealth.stubs(:ai_job_running?).returns(true)
 
     assert_nil ChatReservation.bubble(60)
   end

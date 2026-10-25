@@ -58,10 +58,11 @@ module ChatReservation
 
   # Nothing while a chat is queued or running: its own bubble covers that.
   # Otherwise busy while a background AI job runs, ready while some wait.
+  # seconds comes from hold!, which has already checked for one AI thread.
   def self.bubble(seconds)
     return if seconds.nil? || chat_active?
 
-    busy = BackgroundJobHealth.ai_busy?(queues: [ "ai_low_priority" ])
+    busy = BackgroundJobHealth.ai_job_running?(queues: [ "ai_low_priority" ])
     { seconds: seconds, busy: busy } if busy || Sidekiq::Queue.new("ai_low_priority").size.positive?
   end
 end

@@ -53,10 +53,11 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
     assert_not BackgroundJobHealth.ai_busy?
   end
 
-  test "busy can be limited to some AI queues" do
+  test "the running-job check can be limited to some AI queues" do
     stub_running("ai_high_priority")
 
-    assert_not BackgroundJobHealth.ai_busy?(queues: [ "ai_low_priority" ])
+    assert BackgroundJobHealth.ai_job_running?
+    assert_not BackgroundJobHealth.ai_job_running?(queues: [ "ai_low_priority" ])
   end
 
   test "with several AI threads, a running ai_low_priority job isn't busy" do
@@ -104,9 +105,12 @@ class BackgroundJobHealthTest < ActiveSupport::TestCase
 
   test "fails open when Sidekiq/Redis is unreachable" do
     Sidekiq::ProcessSet.stubs(:new).raises(StandardError.new("no redis"))
+    Sidekiq::WorkSet.stubs(:new).raises(StandardError.new("no redis"))
 
     assert BackgroundJobHealth.healthy?
     assert BackgroundJobHealth.snapshot[:error]
+    assert_not BackgroundJobHealth.one_ai_thread?
+    assert_not BackgroundJobHealth.ai_job_running?
   end
 
   private
