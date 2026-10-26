@@ -3,6 +3,7 @@ zh-CN:
   loans:
     edit:
       edit: 编辑%{account}
+      stale_rate_schedule: 此表单已过期。请重新加载贷款页面后再次编辑，本次修改未保存。
     form:
       initial_balance: 原始贷款余额
       interest_rate: 利率

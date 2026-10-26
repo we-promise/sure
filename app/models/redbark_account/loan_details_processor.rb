@@ -28,8 +28,10 @@ class RedbarkAccount::LoanDetailsProcessor
     return if details.blank?
     return unless details_fetched_this_sync?
 
-    apply_loan_terms
-    apply_rate
+    loan.with_schedule_lock do
+      apply_loan_terms
+      apply_rate
+    end
   end
 
   private
@@ -269,7 +271,7 @@ class RedbarkAccount::LoanDetailsProcessor
       # Enrichable logs the DataEnrichment before it saves, and a refused save
       # does not roll that row back. The outer transaction does, so provenance
       # never says Redbark supplied a value the loan rejected.
-      ActiveRecord::Base.transaction do
+      ActiveRecord::Base.transaction(requires_new: true) do
         loan.enrich_attributes(attrs, source: SOURCE)
         raise ActiveRecord::Rollback if loan.errors.any?
       end

@@ -6,10 +6,13 @@ class PlaidAccount::Liabilities::MortgageProcessor
   def process
     return unless mortgage_data.present?
 
-    account.loan.update!(
-      rate_type: mortgage_data.dig("interest_rate", "type"),
-      interest_rate: mortgage_data.dig("interest_rate", "percentage")
-    )
+    loan = account.loan
+    loan.with_schedule_lock do
+      loan.update!(
+        rate_type: mortgage_data.dig("interest_rate", "type"),
+        interest_rate: mortgage_data.dig("interest_rate", "percentage")
+      )
+    end
   end
 
   private
