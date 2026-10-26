@@ -27,10 +27,8 @@ class Account::MarketDataImporter
   end
 
   # The currency pairs this account converts through, each with the earliest
-  # date a rate is needed.
+  # date a rate is needed. Empty when the account needs no rates.
   def exchange_rate_pair_dates
-    return {} unless needs_exchange_rates?
-
     pair_dates = {}
     family_currency = account.family.primary_currency_code
 

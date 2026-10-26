@@ -14,8 +14,11 @@ class DataCacheClearJob < ApplicationJob
 
     Family::MarketDataRefresher.new(family).refresh
 
-    # The family lock keeps sync_later from starting a family sync between the check and the delete
+    # The family and account locks keep sync_later from starting a sync
+    # between the check and the delete
     family.with_lock do
+      family.accounts.order(:id).lock.pluck(:id)
+
       if sync_running?(family)
         retry_later(family)
       else

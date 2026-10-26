@@ -72,7 +72,7 @@ class DataCacheClearJobTest < ActiveJob::TestCase
     assert_empty @account.holdings.reload
   end
 
-  test "keeps the cached balances when the sync cannot be enqueued" do
+  test "rolls the delete back when the sync cannot be scheduled" do
     Family::MarketDataRefresher.any_instance.stubs(:refresh)
     balance = @account.balances.create!(date: 1.day.ago.to_date, balance: 1000, currency: "CAD")
     @family.stubs(:sync_later).raises(ActiveRecord::StatementInvalid, "connection lost")
@@ -104,5 +104,20 @@ class DataCacheClearJobTest < ActiveJob::TestCase
     end
 
     assert Balance.exists?(balance.id)
+  end
+
+  test "locks the family's accounts before it checks for running syncs" do
+    Family::MarketDataRefresher.any_instance.stubs(:refresh)
+    queries = []
+    callback = ->(*, payload) { queries << payload[:sql] }
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      DataCacheClearJob.perform_now(@family)
+    end
+
+    lock_index = queries.index { |sql| sql.match?(/FROM "accounts".*FOR UPDATE/m) }
+    sync_check_index = queries.rindex { |sql| sql.match?(/FROM "syncs"/) && sql.include?("EXISTS") || sql.match?(/SELECT 1 AS one FROM "syncs"/) }
+    assert lock_index, "accounts are not locked"
+    assert lock_index < sync_check_index, "accounts are locked only after the running-sync check"
   end
 end
