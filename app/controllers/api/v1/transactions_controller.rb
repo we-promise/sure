@@ -212,11 +212,11 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       load_accessible_transaction(params[:id])
     end
 
-    # Reading needs access to the account. Deleting or changing amount, date,
-    # name or currency needs the write tier (AccountPolicy#update?); a member
-    # in the annotate tier may only change the AccountShare annotate fields
-    # (notes, category, merchant, tags), the same split the web UI applies in
-    # TransactionsController#permitted_entry_params. A refused request is a 403,
+    # Reading needs access to the account. Deleting, or changing anything
+    # outside the annotate fields, needs the write tier (AccountPolicy#update?);
+    # a member in the annotate tier may only change the AccountShare annotate
+    # fields (notes, category, merchant, tags), the same split the web UI
+    # applies in TransactionsController#permitted_entry_params. A refused request is a 403,
     # not a silently trimmed update, so the client learns nothing was applied.
     def ensure_write_permission
       level = action_name == "update" && annotate_only_update? ? :annotate : :write

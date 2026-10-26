@@ -240,7 +240,8 @@ class Api::V1::BaseController < ApplicationController
     #
     # `resource:` names the record being changed ("transaction", "trade") and
     # yields "You do not have permission to delete|change this <resource>",
-    # choosing the verb from the action. Without it the message is the
+    # choosing the verb from the action, so pass it only from update and
+    # destroy on an existing record. Without it the message is the
     # account-level "You do not have write access to this account".
     def require_api_account_permission!(account, level = :write, resource: nil)
       return true if AccountPolicy.new(current_resource_owner, account).permits?(level)
