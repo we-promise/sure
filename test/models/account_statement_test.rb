@@ -114,6 +114,49 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal @account, result.reload.account
   end
 
+  test "re-upload does not steal a statement linked concurrently to another account" do
+    file_content = "date,description,amount\n2024-01-01,Coffee,-5.00\n"
+    existing = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: file_content)
+    )
+    stale = AccountStatement.find(existing.id)
+    other_account = accounts(:investment)
+    existing.link_to_account!(other_account)
+    prepared_upload = AccountStatement.prepare_upload!(
+      uploaded_file(filename: "statement-copy.csv", content_type: "text/csv", content: file_content)
+    )
+
+    AccountStatement.stubs(:duplicate_for).returns(stale)
+
+    assert_raises(AccountStatement::DuplicateUploadError) do
+      AccountStatement.create_from_prepared_upload!(family: @family, account: @account, prepared_upload: prepared_upload)
+    end
+
+    assert_equal other_account, existing.reload.account
+  end
+
+  test "links an unlinked statement that wins the database uniqueness race" do
+    file_content = "date,description,amount\n2024-01-01,Coffee,-5.00\n"
+    existing = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: file_content)
+    )
+    prepared_upload = AccountStatement.prepare_upload!(
+      uploaded_file(filename: "statement-copy.csv", content_type: "text/csv", content: file_content)
+    )
+
+    AccountStatement.stubs(:duplicate_for).returns(nil, existing)
+    AccountStatement::MetadataDetector.any_instance.stubs(:apply).raises(ActiveRecord::RecordNotUnique.new("duplicate"))
+
+    result = AccountStatement.create_from_prepared_upload!(family: @family, account: @account, prepared_upload: prepared_upload)
+
+    assert_equal existing, result
+    assert_equal @account, existing.reload.account
+  end
+
   test "allows distinct files with same md5 checksum and different sha256" do
     Digest::MD5.stubs(:base64digest).returns("same-md5-checksum")
 
