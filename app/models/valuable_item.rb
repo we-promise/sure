@@ -12,9 +12,13 @@ class ValuableItem < ApplicationRecord
   delegate :id, to: :account, prefix: true
   delegate :family_id, to: :account
   belongs_to :merchant, optional: true
+  belongs_to :location, class_name: "ValuableLocation", optional: true, inverse_of: :items
+  has_many :moves, -> { order(:moved_on, :created_at) }, class_name: "ValuableItemMove", dependent: :delete_all
   has_one_attached :invoice
 
   attr_accessor :skip_queued_valuation_refresh
+  # The day a location change took effect; defaults to today.
+  attribute :moved_on, :date
 
   before_validation -> { self.currency ||= account&.currency }
   before_validation :set_material_defaults
@@ -34,10 +38,13 @@ class ValuableItem < ApplicationRecord
   validate :gemstone_requires_manual_value
   validate :currency_matches_account
   validate :merchant_belongs_to_account_family
+  validate :location_belongs_to_account_family
+  validate :moved_on_within_ownership, if: -> { moved_on.present? && location_id_changed? && persisted? }
   validate :validate_invoice, if: -> { invoice.attached? }
 
   around_save :serialize_with_valuation
   around_destroy :serialize_with_valuation
+  after_update :record_move, if: :saved_change_to_location_id?
   after_save :mark_valuation_pending
   after_destroy :mark_valuation_pending
   after_commit :refresh_valuation_later
@@ -142,6 +149,20 @@ class ValuableItem < ApplicationRecord
       return if skip_queued_valuation_refresh || destroyed_by_association || !Valuable.exists?(valuable_id)
 
       RefreshValuableValuationJob.perform_later(account_id)
+    end
+
+    def location_belongs_to_account_family
+      return if location.blank? || location.family_id == account&.family_id
+      errors.add(:location, :must_belong_to_account_family)
+    end
+
+    def moved_on_within_ownership
+      errors.add(:moved_on, :outside_ownership) if moved_on > Date.current || (acquired_on && moved_on < acquired_on)
+    end
+
+    def record_move
+      from_id, to_id = saved_change_to_location_id
+      moves.create!(from_location_id: from_id, to_location_id: to_id, moved_on: moved_on || Date.current)
     end
 
     def merchant_belongs_to_account_family

@@ -7,6 +7,10 @@ en:
           attributes:
             merchant:
               must_belong_to_account_family: must belong to the account family
+            location:
+              must_belong_to_account_family: must belong to the account family
+            moved_on:
+              outside_ownership: must be between the acquisition date and today
             invoice:
               too_large: must be smaller than %{max_mb} MB
               invalid_format: must be a PDF or image

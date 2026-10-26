@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_26_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2894,6 +2894,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120000) do
     t.index ["webauthn_id"], name: "index_users_on_webauthn_id", unique: true, where: "(webauthn_id IS NOT NULL)"
   end
 
+  create_table "valuable_item_moves", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "from_location_id"
+    t.date "moved_on", null: false
+    t.uuid "to_location_id"
+    t.datetime "updated_at", null: false
+    t.uuid "valuable_item_id", null: false
+    t.index ["from_location_id"], name: "index_valuable_item_moves_on_from_location_id"
+    t.index ["to_location_id"], name: "index_valuable_item_moves_on_to_location_id"
+    t.index ["valuable_item_id"], name: "index_valuable_item_moves_on_valuable_item_id"
+  end
+
   create_table "valuable_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.date "acquired_on", null: false
     t.decimal "cost_amount", precision: 19, scale: 4, null: false
@@ -2901,6 +2913,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120000) do
     t.string "currency", null: false
     t.string "description", null: false
     t.string "item_type", default: "bullion", null: false
+    t.uuid "location_id"
     t.decimal "making_charge", precision: 19, scale: 4
     t.decimal "manual_value", precision: 19, scale: 4
     t.string "material", default: "gold", null: false
@@ -2912,6 +2925,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120000) do
     t.uuid "valuable_id", null: false
     t.decimal "weight", precision: 19, scale: 6, null: false
     t.string "weight_unit", null: false
+    t.index ["location_id"], name: "index_valuable_items_on_location_id"
     t.index ["merchant_id"], name: "index_valuable_items_on_merchant_id"
     t.index ["valuable_id"], name: "index_valuable_items_on_valuable_id"
     t.check_constraint "btrim(description::text) <> ''::text", name: "precious_metal_lots_description_present"
@@ -2929,6 +2943,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120000) do
   add_check_constraint "valuable_items", "item_type::text = 'bullion'::text AND (weight_unit::text = ANY (ARRAY['gram'::character varying, 'troy_ounce'::character varying, 'kilogram'::character varying]::text[])) OR item_type::text = 'gemstone'::text AND weight_unit::text = 'carat'::text", name: "valuable_items_weight_unit_matches_item_type"
   add_check_constraint "valuable_items", "item_type::text = 'bullion'::text OR purity IS NULL", name: "valuable_items_gemstone_purity_absent"
   add_check_constraint "valuable_items", "quantity > 0", name: "valuable_items_quantity_positive"
+
+  create_table "valuable_locations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index "family_id, lower((name)::text)", name: "index_valuable_locations_on_family_and_lower_name", unique: true
+    t.index ["family_id"], name: "index_valuable_locations_on_family_id"
+    t.check_constraint "btrim(name::text) <> ''::text", name: "valuable_locations_name_present"
+  end
 
   create_table "valuables", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -3192,8 +3216,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_120000) do
   add_foreign_key "users", "accounts", column: "default_account_id", on_delete: :nullify
   add_foreign_key "users", "chats", column: "last_viewed_chat_id"
   add_foreign_key "users", "families"
+  add_foreign_key "valuable_item_moves", "valuable_items", on_delete: :cascade
+  add_foreign_key "valuable_item_moves", "valuable_locations", column: "from_location_id", on_delete: :nullify
+  add_foreign_key "valuable_item_moves", "valuable_locations", column: "to_location_id", on_delete: :nullify
   add_foreign_key "valuable_items", "merchants", on_delete: :nullify
+  add_foreign_key "valuable_items", "valuable_locations", column: "location_id", on_delete: :nullify
   add_foreign_key "valuable_items", "valuables"
+  add_foreign_key "valuable_locations", "families"
   add_foreign_key "webauthn_credentials", "users"
   add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
   add_foreign_key "wise_items", "families"
