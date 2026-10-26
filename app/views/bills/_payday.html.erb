@@ -14,7 +14,7 @@
     <%= bills_rail_date(occurrence) %>
   </div>
 
-  <%= render "bills/series_avatar", series: series %>
+  <div class="size-8 shrink-0 rounded-full bg-success/10 flex items-center justify-center"><%= icon "arrow-down-circle", size: "sm", color: "success" %></div>
 
   <div class="min-w-0 flex-1">
     <p class="text-primary text-sm font-medium truncate">
@@ -29,7 +29,7 @@
   <%# The same amount column as a bill row: the figure, then its status under
       it. Received uses the success tone the Paid label uses on bills. %>
   <div class="shrink-0 text-right min-w-0">
-    <p class="text-sm font-medium text-success privacy-sensitive whitespace-nowrap">
+    <p class="text-sm font-medium text-primary privacy-sensitive whitespace-nowrap">
       <%= format_money(received && occurrence.confirmed_allocated.positive? ? occurrence.confirmed_allocated_money : amount) %>
     </p>
     <p class="text-xs <%= received ? "text-success" : "text-secondary" %>">
