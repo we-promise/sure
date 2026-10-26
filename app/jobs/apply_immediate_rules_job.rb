@@ -11,20 +11,17 @@ class ApplyImmediateRulesJob < ApplicationJob
     rules = family.rules.applied_immediately
     return if rules.none?
 
-    rule_runs = Rule::Runner.new(
+    runner = Rule::Runner.new(
       family,
       rules: rules,
       execution_type: "immediate",
       transaction_ids: transaction_ids
-    ).run
+    )
+    runner.run
 
-    # A run with AI actions is still pending here and counts what its other
-    # actions changed as processed (Rule::Runner#run_counts); its AI jobs offer
-    # their own changes once they are done (RuleRun#complete_job!).
-    changed = rule_runs.any? do |rule_run|
-      (rule_run.pending? ? rule_run.transactions_processed : rule_run.transactions_modified).to_i.positive?
-    end
-    return unless changed
+    # The AI jobs of a rule offer their own changes once they are done
+    # (RuleRun#complete_job!), so only what the run changed itself counts here.
+    return unless runner.changed_now_count.positive?
 
     RuleRun.offer_immediate_result(family)
   end

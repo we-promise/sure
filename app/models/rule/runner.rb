@@ -25,7 +25,9 @@
 class Rule::Runner
   LockBusy = Class.new(StandardError)
 
-  attr_reader :errors
+  # changed_now_count: transactions the run changed itself, without the ones
+  # handed to AI jobs, which report their own changes (RuleRun#complete_job!).
+  attr_reader :errors, :changed_now_count
 
   def self.advisory_lock_key(family_id)
     Digest::MD5.hexdigest("rule_runner:#{family_id}").to_i(16) % (2**62)
@@ -40,6 +42,7 @@ class Rule::Runner
     @claimed_ids = Hash.new { |hash, attribute| hash[attribute] = Set.new }
     @stopped_ids = Set.new
     @errors = []
+    @changed_now_count = 0
   end
 
   # Returns the RuleRun records created, one per executed rule.
@@ -137,6 +140,7 @@ class Rule::Runner
         )
 
         rule_run.update!(**run_counts(result, queued: matched_ids.size, rule: rule))
+        @changed_now_count += changed_now(result)
       rescue => e
         rule_run = record_failure(rule, rule_run, e, executed_at: executed_at, queued: matched_ids.size)
       ensure
@@ -157,6 +161,16 @@ class Rule::Runner
       else
         Rails.logger.warn("Rule::Runner: Unexpected result type from rule.apply: #{result.class} for rule #{rule.id}")
         { status: "success" }
+      end
+    end
+
+    def changed_now(result)
+      if result.is_a?(Hash) && result[:async]
+        result[:changed_now_count] || 0
+      elsif result.is_a?(Integer)
+        result
+      else
+        0
       end
     end
 
