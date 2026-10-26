@@ -487,7 +487,11 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     post poll_login_trade_republic_item_url(item, login_token: Provider::TradeRepublicClient.login_token(login_state("process_id" => "earlier-process"))),
       headers: login_poller_headers
 
-    assert_response :no_content
+    # The page shows the newer login, so it stops polling the earlier one.
+    assert_response :success
+    assert_includes response.body, %(target="#{TradeRepublic::ConnectionCardComponent.dom_id_for(item)}")
+    assert_includes response.body, %(data-trade-republic-qr-login-token-value="#{item.reload.login_token}")
+    assert_not_includes response.body, "data-trade-republic-login-url-value"
     assert_equal login_state("challenge_id" => "newer-challenge"), item.reload.pending_login_state
   end
 
@@ -750,6 +754,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     item = trade_republic_items(:requires_update_item)
     item.update!(pending_login_state: "old-login")
     provider = mock
+    provider.stubs(:login_stage).returns("waiting_for_approval")
     # A new login replaces the state while the old poll waits on the provider.
     provider.expects(:complete_login).with do |pending_login_b64:|
       TradeRepublicItem.where(id: item.id).update_all(pending_login_state: "new-login")
@@ -759,7 +764,9 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
 
     post poll_login_trade_republic_item_url(item), headers: login_poller_headers
 
-    assert_response :no_content
+    assert_response :success
+    assert_includes response.body, %(target="#{TradeRepublic::ConnectionCardComponent.dom_id_for(item)}")
+    assert_includes response.body, %(data-trade-republic-login-url-value="#{poll_login_trade_republic_item_path(item)}")
     assert_equal "new-login", item.reload.pending_login_state
   end
 
@@ -767,6 +774,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     item = trade_republic_items(:requires_update_item)
     item.update!(pending_login_state: "old-login")
     provider = mock
+    provider.stubs(:login_stage).returns("waiting_for_approval")
     provider.expects(:complete_login).with do |pending_login_b64:|
       TradeRepublicItem.where(id: item.id).update_all(pending_login_state: "new-login")
       pending_login_b64 == "old-login"
@@ -779,7 +787,9 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
 
     post poll_login_trade_republic_item_url(item), headers: login_poller_headers
 
-    assert_response :no_content
+    assert_response :success
+    assert_includes response.body, %(target="#{TradeRepublic::ConnectionCardComponent.dom_id_for(item)}")
+    assert_includes response.body, %(data-trade-republic-login-url-value="#{poll_login_trade_republic_item_path(item)}")
     item.reload
     assert_equal "new-login", item.pending_login_state
     assert_not_equal "old-session", item.session_blob
@@ -790,6 +800,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
       name: "Trade Republic", currency: "EUR", status: :requires_update, pending_login_state: "old-login"
     )
     provider = mock
+    provider.stubs(:login_stage).returns("waiting_for_approval")
     provider.expects(:complete_login).with do |pending_login_b64:|
       TradeRepublicItem.where(id: item.id).update_all(pending_login_state: "new-login")
       pending_login_b64 == "old-login"
@@ -802,7 +813,9 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
 
     post poll_login_trade_republic_item_url(item), headers: login_poller_headers
 
-    assert_response :no_content
+    assert_response :success
+    assert_includes response.body, %(target="#{TradeRepublic::ConnectionCardComponent.dom_id_for(item)}")
+    assert_includes response.body, %(data-trade-republic-login-url-value="#{poll_login_trade_republic_item_path(item)}")
     item.reload
     assert_equal "new-login", item.pending_login_state
     assert_not_predicate item, :scheduled_for_deletion?

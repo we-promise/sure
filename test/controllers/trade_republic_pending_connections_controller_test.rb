@@ -192,6 +192,35 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
     assert_response :no_content
   end
 
+  test "a failed push poll whose pending connection was removed meanwhile is superseded" do
+    pending_connection = @family.trade_republic_pending_connections.create!(phone_number: "+491701234567", pending_login_state: "push-pending")
+    provider = stub_provider
+    provider.expects(:complete_login).with { |**| TradeRepublicPendingConnection.where(id: pending_connection.id).delete_all }
+      .raises(Provider::TradeRepublicClient::InvalidChallenge, "Login state is invalid")
+
+    post poll_login_trade_republic_pending_connection_url(pending_connection),
+      headers: TURBO_STREAM.merge("X-Requested-With" => "XMLHttpRequest")
+
+    assert_response :no_content
+  end
+
+  test "a push poll from a page showing an earlier login shows the login that replaced it" do
+    newer = Base64.strict_encode64(JSON.generate("process_id" => "newer-process"))
+    earlier = Base64.strict_encode64(JSON.generate("process_id" => "earlier-process"))
+    pending_connection = @family.trade_republic_pending_connections.create!(phone_number: "+491701234567", pending_login_state: newer)
+    provider = stub_provider(login_stage: "waiting_for_approval")
+    provider.expects(:complete_login).never
+
+    post poll_login_trade_republic_pending_connection_url(pending_connection),
+      params: { login_token: Provider::TradeRepublicClient.login_token(earlier) },
+      headers: TURBO_STREAM.merge("X-Requested-With" => "XMLHttpRequest")
+
+    # The page now polls the newer login instead of keeping the earlier card.
+    assert_turbo_stream action: "replace", target: "trade-republic-providers-panel"
+    assert_includes response.body, poll_login_trade_republic_pending_connection_path(pending_connection, login_token: pending_connection.login_token)
+    assert_equal newer, pending_connection.reload.pending_login_state
+  end
+
   test "an authenticator code for a login replaced meanwhile redirects a plain form submit" do
     pending_connection = @family.trade_republic_pending_connections.create!(phone_number: "+491701234567", pending_login_state: "code-pending")
     provider = stub_provider

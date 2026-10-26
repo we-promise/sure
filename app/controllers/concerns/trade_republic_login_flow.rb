@@ -342,8 +342,13 @@ module TradeRepublicLoginFlow
       connected
     end
 
-    # A newer login owns the card now; leave its state and poller alone.
+    # A newer login owns the card now; leave its state alone but show it, so
+    # this page polls that login instead of keeping the old card. A pending
+    # connection that is gone leaves nothing to show.
     def render_superseded_push_login
+      login_record.reload
+      render_login_panel
+    rescue ActiveRecord::RecordNotFound
       login_poll_response(:no_content) { render_login_panel }
     end
 
