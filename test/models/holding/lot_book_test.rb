@@ -388,6 +388,23 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     end
   end
 
+  test "an uncovered sale leaves a shortfall that the next acquisition fills before any lot opens" do
+    book = Holding::LotBook.new
+    book.apply(BigDecimal("10"), 5, source_id: "a", acquired_on: Date.new(2024, 1, 1))
+
+    book.apply(nil, -100)
+    assert_empty book.lots, "the ledger closes what it can"
+
+    book.apply(BigDecimal("12"), 3, source_id: "tiny", acquired_on: Date.new(2024, 2, 1))
+    assert_empty book.lots, "3 of the 95 missing units are absorbed, not opened"
+
+    book.apply(BigDecimal("12"), 100, source_id: "fill", acquired_on: Date.new(2024, 3, 1))
+    assert_equal [ BigDecimal("8") ], book.lots.map(&:qty), "only the remainder opens a lot: 100 minus the 92 still missing"
+    assert_equal BigDecimal("8"), book.open_qty
+    assert_equal %w[fill], book.lots.map(&:source_id)
+    assert_equal BigDecimal("12"), book.average_cost, "the filled units carry the filling trade's cost"
+  end
+
   class PartitionProbe < Holding::ForwardCalculator
     def checks
       @checks ||= []

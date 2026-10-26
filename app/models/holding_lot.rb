@@ -31,11 +31,11 @@ class HoldingLot < ApplicationRecord
         scope.opening.where.not(security_id: opening_rows.pluck(:security_id)).delete_all if openings
         if derived_rows.any?
           upsert_all(derived_rows, unique_by: %i[account_id source_entry_id],
-            update_only: %i[security_id acquired_on qty unit_cost currency])
+            update_only: %i[security_id acquired_on qty unit_cost currency], touch: true)
         end
         if opening_rows.any?
           upsert_all(opening_rows, unique_by: :index_holding_lots_one_opening_lot_per_position,
-            update_only: %i[qty unit_cost currency clamped])
+            update_only: %i[qty unit_cost currency clamped], touch: true)
         end
       end
     end
