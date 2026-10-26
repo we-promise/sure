@@ -658,7 +658,7 @@ class Transaction < ApplicationRecord
     # (e.g. set by a rule) is locked, so it is not mistaken for an inherited
     # one on the next change.
     def pass_merchant_to_split_children
-      return unless entry
+      return unless entry&.may_have_split_rows?
 
       previous_merchant_id = merchant_id_before_last_save
 

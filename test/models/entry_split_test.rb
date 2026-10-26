@@ -316,7 +316,7 @@ class EntrySplitTest < ActiveSupport::TestCase
     changed.entryable.update!(merchant: merchants(:one))
     changed.entryable.lock_attr!(:merchant_id)
 
-    @entry.entryable.update!(merchant: merchants(:netflix))
+    @entry.reload.entryable.update!(merchant: merchants(:netflix))
 
     assert_equal merchants(:netflix), inherited.reload.entryable.merchant
     assert_equal merchants(:one), changed.reload.entryable.merchant
@@ -332,7 +332,7 @@ class EntrySplitTest < ActiveSupport::TestCase
     own = @entry.child_entries.find_by(name: "Part 1")
     own.entryable.update!(merchant: merchants(:one))
 
-    @entry.entryable.update!(merchant: merchants(:netflix))
+    @entry.reload.entryable.update!(merchant: merchants(:netflix))
 
     assert_equal merchants(:one), own.reload.entryable.merchant
     assert_equal merchants(:netflix), @entry.child_entries.find_by(name: "Part 2").entryable.merchant
@@ -348,7 +348,7 @@ class EntrySplitTest < ActiveSupport::TestCase
     own = @entry.child_entries.find_by(name: "Part 1")
     own.entryable.update!(merchant: merchants(:one))
 
-    @entry.entryable.update!(merchant: merchants(:one))
+    @entry.reload.entryable.update!(merchant: merchants(:one))
     @entry.entryable.update!(merchant: merchants(:netflix))
 
     assert_equal merchants(:one), own.reload.entryable.merchant
@@ -365,10 +365,18 @@ class EntrySplitTest < ActiveSupport::TestCase
     Transaction.where(id: edited.id).update_all(merchant_id: merchants(:one).id, locked_attributes: { "merchant_id" => Time.current })
     ActiveRecord::Relation.any_instance.stubs(:find_each).multiple_yields(*stale_children.map { |child| [ child ] })
 
-    @entry.entryable.update!(merchant: merchants(:netflix))
+    @entry.reload.entryable.update!(merchant: merchants(:netflix))
 
     assert_equal merchants(:one), edited.reload.merchant
     assert_equal merchants(:netflix), inherited.reload.merchant
+  end
+
+  test "changing the merchant of a transaction that is not split does not look for split rows" do
+    @entry.entryable.update!(merchant: merchants(:amazon))
+
+    assert_no_queries_match(/SELECT "(entries|transactions)"\.\*.*parent_entry_id/) do
+      @entry.reload.entryable.update!(merchant: merchants(:netflix))
+    end
   end
 
   test "clearing the parent's merchant clears it on children the user has not changed" do
@@ -378,7 +386,7 @@ class EntrySplitTest < ActiveSupport::TestCase
       { name: "Part 2", amount: 40, category_id: nil }
     ])
 
-    @entry.entryable.update!(merchant: nil)
+    @entry.reload.entryable.update!(merchant: nil)
 
     assert @entry.child_entries.reload.all? { |child| child.entryable.merchant_id.nil? }
   end

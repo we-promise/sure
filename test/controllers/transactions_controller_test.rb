@@ -545,6 +545,19 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a merchant change on a transaction that is not split does not look for split rows" do
+    entry = create_transaction(account: accounts(:depository), amount: 100, merchant: merchants(:amazon))
+
+    assert_no_queries_match(/SELECT "(entries|transactions)"\.\*.*parent_entry_id/) do
+      patch transaction_url(entry, format: :turbo_stream), params: {
+        entry: { entryable_attributes: { id: entry.entryable_id, merchant_id: merchants(:one).id } }
+      }
+    end
+
+    assert_response :success
+    assert_equal merchants(:one), entry.reload.entryable.merchant
+  end
+
   test "can update tags through tag-only endpoint" do
     patch tags_transaction_url(@entry, format: :json), params: {
       tag_ids: [ tags(:one).id, tags(:two).id ]

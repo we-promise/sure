@@ -464,6 +464,12 @@ class Entry < ApplicationRecord
     child_entries.exists?
   end
 
+  # Split parents are always excluded (split! sets it), so entries that are not
+  # can skip looking for split rows without a query.
+  def may_have_split_rows?
+    excluded? && !split_child?
+  end
+
   # Splits this entry unless it stopped being splittable. Two callers (the split dialog, two
   # split rules, a rule and an API request) can both pass a splittable? check before either
   # inserts children, and split! only validates its own amounts, so without the lock both sets
