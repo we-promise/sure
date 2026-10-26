@@ -36,6 +36,7 @@ RSpec.describe 'API V1 Trades', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Investment Account',
       balance: 50_000,
       currency: 'USD',
@@ -67,6 +68,30 @@ RSpec.describe 'API V1 Trades', type: :request do
       entryable: trade_record
     )
     entry.entryable
+  end
+
+  let(:read_only_trade) do
+    owner = family.users.create!(
+      email: 'api-owner@example.com',
+      password: 'password123',
+      password_confirmation: 'password123'
+    )
+    shared_account = Account.create!(
+      family: family,
+      owner: owner,
+      name: 'Shared Brokerage',
+      balance: 50_000,
+      currency: 'USD',
+      accountable: Investment.create!
+    )
+    shared_account.account_shares.create!(user: user, permission: 'read_only', include_in_finances: true)
+    shared_account.entries.create!(
+      name: 'Buy shared shares',
+      date: Date.current,
+      amount: 1_000,
+      currency: 'USD',
+      entryable: Trade.new(security: security, qty: 10, price: 100, currency: 'USD', investment_activity_label: 'Buy')
+    ).entryable
   end
 
   path '/api/v1/trades' do
@@ -555,7 +580,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - api key missing read_write scope' do
+      response '403', 'forbidden - api key missing read_write scope, or the account is shared with you without write access' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:read_only_api_key) do
@@ -569,6 +594,14 @@ RSpec.describe 'API V1 Trades', type: :request do
           )
         end
         let(:'X-Api-Key') { read_only_api_key.plain_key }
+
+        run_test!
+      end
+
+      response '403', 'forbidden - api key missing read_write scope, or the account is shared with you without write access' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_trade.id }
 
         run_test!
       end
@@ -604,7 +637,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - api key missing read_write scope' do
+      response '403', 'forbidden - api key missing read_write scope, or the account is shared with you without write access' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:read_only_api_key) do
@@ -618,6 +651,14 @@ RSpec.describe 'API V1 Trades', type: :request do
           )
         end
         let(:'X-Api-Key') { read_only_api_key.plain_key }
+
+        run_test!
+      end
+
+      response '403', 'forbidden - api key missing read_write scope, or the account is shared with you without write access' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_trade.id }
 
         run_test!
       end
