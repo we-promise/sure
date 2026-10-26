@@ -142,6 +142,9 @@ class Holding::ReverseCalculator
       # Re-sorting by date alone is unstable and could reorder same-day trades,
       # which matters because the lot book is order-sensitive once sells relieve.
       trades = portfolio_cache.get_trades
+      # A scoped run (a remap, a price sync) replays only its own securities;
+      # the cache holds every trade in the account.
+      trades = trades.select { |te| @security_ids.include?(te.entryable.security_id) } if @security_ids
       events = replay_events(trades)
 
       # A reverse-synced account can hold shares before its first imported trade,
@@ -164,7 +167,10 @@ class Holding::ReverseCalculator
           positions[event.entryable.security_id] -= event.entryable.qty
         end
       end
-      open_lots(snapshot.merge(positions), traded: positions.keys)
+      # The snapshot covers the whole account; a scoped run books only its own.
+      baselines = snapshot.merge(positions)
+      baselines = baselines.slice(*@security_ids) if @security_ids
+      open_lots(baselines, traded: positions.keys)
 
       events.each do |event|
         if event.is_a?(Security::Split)
