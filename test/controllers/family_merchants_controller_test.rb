@@ -131,6 +131,21 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to family_merchants_path(per_page: 100)
   end
 
+  test "index remembers page values with leading zeros as pagination reads them" do
+    get family_merchants_path(per_page: 100, family_page: "02")
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100, family_page: 2)
+  end
+
+  test "index does not store the list state again when a JSON number matches it" do
+    get family_merchants_path(per_page: 100)
+
+    Session.any_instance.expects(:set_merchant_page_params).never
+    get family_merchants_path, params: { per_page: 100 }, headers: { "Accept" => "text/html" }, as: :json
+    assert_response :success
+  end
+
   test "index remembers list params sent as JSON numbers" do
     get family_merchants_path, params: { per_page: 100 }, headers: { "Accept" => "text/html" }, as: :json
     assert_response :success

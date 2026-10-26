@@ -169,10 +169,18 @@ class FamilyMerchantsController < ApplicationController
         redirect_to family_merchants_path(stored_params) if request.query_parameters.blank? && stored_params.present?
       else
         list_params = params.slice(*LIST_PARAMS).permit(*LIST_PARAMS).to_h.compact_blank
-        # A page Pagy rejects (0, "abc") must not be replayed on every later visit.
-        list_params.reject! { |key, value| NUMERIC_LIST_PARAMS.include?(key) && !value.to_s.match?(/\A[1-9]\d*\z/) }
+          .to_h { |key, value| [ key, normalize_list_param(key, value.to_s) ] }.compact
         Current.session.set_merchant_page_params(list_params) unless list_params == stored_params
       end
+    end
+
+    # Values are stored as strings, so a JSON number and the same query value
+    # compare equal. A page Pagy rejects (0, "abc") is dropped so it is not
+    # replayed on every later visit; "05" is kept as "5", as Pagy reads it.
+    def normalize_list_param(key, value)
+      return value unless NUMERIC_LIST_PARAMS.include?(key)
+
+      value.to_i.to_s if value.match?(/\A\d+\z/) && value.to_i.positive?
     end
 
     def stored_params
