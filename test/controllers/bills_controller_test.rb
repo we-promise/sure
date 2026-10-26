@@ -2554,7 +2554,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match I18n.t("bills.payday.title", source: "Payday"), response.body,
-      "a weekly paycheck should appear as a payday row in the overview")
+      "a weekly paycheck should appear as a payday row in the overview"
   end
 
   test "monthly income leaves the month undivided" do
