@@ -26,6 +26,7 @@ class DataEnrichment < ApplicationRecord
     redbark: "redbark",
     trade_republic: "trade_republic",
     bayes: "bayes",
+    similar: "similar",
     fio: "fio"
   }
 end
