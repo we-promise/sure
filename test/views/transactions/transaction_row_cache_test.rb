@@ -97,17 +97,25 @@ class Transactions::TransactionRowCacheTest < ActionView::TestCase
   end
 
   # The confirm and reject forms of a pending transfer match embed the
-  # session's CSRF token, so such a row must not be served to another
-  # browser session. Rows without those forms are shared across sessions.
-  test "only rows with a pending transfer match depend on the browser session" do
-    pending_entry = transfers(:one).tap { |t| t.update!(status: "pending") }.inflow_transaction.entry
-    pending_key = row_key(entry: pending_entry)
-    plain_key = row_key
+  # session's CSRF token, which a cached row would hand to other sessions.
+  test "a row with a pending transfer match is never served from the cache" do
+    @entry = transfers(:one).tap { |t| t.update!(status: "pending") }.inflow_transaction.entry
+    render_row
 
-    controller.request.session = ActionController::TestSession.new
+    Entry.where(id: @entry.id).update_all(name: "Renamed behind the cache")
 
-    assert_not_equal pending_key, row_key(entry: pending_entry)
-    assert_equal plain_key, row_key
+    assert_includes render_row, "Renamed behind the cache"
+  end
+
+  # A crypto account's subtype decides whether its rows show the activity
+  # label or the category menu, and changing it leaves the account's
+  # displayed attributes as they were.
+  test "the key changes when the account starts supporting trades" do
+    base = row_key
+
+    Account.any_instance.stubs(:supports_trades?).returns(true)
+
+    assert_not_equal base, row_key
   end
 
   test "the key changes with the BUILD_COMMIT_SHA of the deployed image" do

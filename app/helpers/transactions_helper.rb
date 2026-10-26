@@ -61,17 +61,15 @@ module TransactionsHelper
     entry.split_child? && Current.user.show_split_grouped? && params_grouped == "true"
   end
 
-  # Fragment cache key for one row of the transactions list. Rendering a row
-  # costs about 14 ms on a small self-hosted CPU (some 30 partials and
-  # components), and a page of 100 rows re-rendered on every visit, filter
-  # change or return from the drawer although rows rarely change. Everything
-  # the row shows or branches on is part of the key, so any change renders
-  # the row fresh:
+  # Fragment cache key for one row of the transactions list. Everything the
+  # row shows or branches on is part of the key, so any change renders the
+  # row fresh:
   #
   # - the records it reads (entry, transaction, tags, merchant, transfer and
   #   its other leg, whose kind and category an inflow row depends on, the
   #   security a brokerage activity shows a logo for)
-  # - the displayed attributes of the accounts and categories it shows; their
+  # - the displayed attributes of the accounts and categories it shows, and
+  #   whether an account supports trades (a crypto account's subtype); their
   #   record versions would change on every balance sync or category pick
   # - per-user or per-request state (locale, user, family display settings,
   #   whether the user may annotate the account or see the counterpart,
@@ -80,9 +78,6 @@ module TransactionsHelper
   #   deploy with new markup never serves old rows; skip_digest is on because
   #   the row renders DS::* components, which the ERB dependency tracker
   #   cannot digest (see account_sidebar_tabs)
-  # - for a pending transfer match, the browser session: its confirm and
-  #   reject forms embed the session's CSRF token, and the reject form
-  #   submits without Turbo, so it can't fall back to the X-CSRF-Token header
   # - the Brandfetch settings that shape logo URLs
   #
   # Bump the version suffix when changing the row template or its partials.
@@ -93,13 +88,12 @@ module TransactionsHelper
     counterpart = transfer && (outflow_leg ? transfer.to_account : transfer.from_account)
     other_leg = transfer && (outflow_leg ? transfer.inflow_transaction : transfer.outflow_transaction)
     split_parent = @split_parent_entry_ids ? @split_parent_entry_ids.include?(entry.id) : entry.split_parent?
-    account_key = ->(account) { account && [ account.id, account.name, account.accountable_type ] }
+    account_key = ->(account) { account && [ account.id, account.name, account.accountable_type, account.supports_trades? ] }
     category_key = ->(category) { category && [ category.id, category.name, category.color, category.lucide_icon ] }
 
     [
-      "transaction_row_v1",
+      "transaction_row_v2",
       ENV["BUILD_COMMIT_SHA"].presence || (@app_version ||= Sure.version.to_s),
-      (Digest::SHA256.hexdigest(session.id.to_s) if transfer&.pending? && session.id),
       I18n.locale,
       Current.user&.id,
       Current.family&.currency,

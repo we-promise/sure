@@ -38,10 +38,8 @@ class DS::Popover < DesignSystemComponent
 
   # `frame_id:` / `frame_src:` make the panel a lazily loaded Turbo Frame: the
   # `<turbo-frame>` is only created (and its `src` fetched) the first time the
-  # popover opens. Use it for panels repeated per list row — a transactions
-  # page renders hundreds of them, and eager frame markup for each was a
-  # measurable share of the page's HTML and render time even though almost
-  # none is ever opened.
+  # popover opens. Use it for panels repeated per list row, which are rarely
+  # opened.
   def initialize(variant: "icon", avatar_url: nil, initials: nil, placement: "bottom-end", offset: 12, icon: "more-horizontal", no_padding: false, testid: nil, mobile_fullwidth: true, max_width: nil, aria_label: nil, frame_id: nil, frame_src: nil)
     @variant = variant.to_sym
     @avatar_url = avatar_url
