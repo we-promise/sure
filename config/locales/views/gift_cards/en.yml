@@ -18,6 +18,8 @@ en:
       redeem_url: Redeem link
       redeem_url_hint: Where a digital card is redeemed or its balance is checked.
       redeem_url_placeholder: https://
+      unencrypted_credentials: Encryption is not set up on this server, so the card
+        number, PIN and redeem link are stored unencrypted.
     new:
       title: Enter gift card details
     tabs:

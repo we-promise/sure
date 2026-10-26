@@ -237,12 +237,32 @@ class GiftCardsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the appearance settings offer gift cards only with preview features" do
+    @account.destroy!
     get settings_appearance_path
     assert_select "#user_account_groups_gift_card"
 
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => false))
     get settings_appearance_path
     assert_select "#user_account_groups_gift_card", count: 0
+  end
+
+  test "the appearance settings keep the gift card group of an existing card" do
+    @user.update!(preferences: @user.preferences.merge(
+      "preview_features_enabled" => false, "always_expanded_account_groups" => [ "gift_card" ]
+    ))
+
+    get settings_appearance_path
+    assert_select "#user_account_groups_gift_card[checked]"
+  end
+
+  test "the form warns when credentials will be stored unencrypted" do
+    GiftCard.stubs(:encryption_ready?).returns(false)
+    get edit_gift_card_path(@account)
+    assert_includes response.body, I18n.t("gift_cards.form.unencrypted_credentials")
+
+    GiftCard.stubs(:encryption_ready?).returns(true)
+    get edit_gift_card_path(@account)
+    assert_not_includes response.body, I18n.t("gift_cards.form.unencrypted_credentials")
   end
 
   test "creating a gift card requires preview features" do

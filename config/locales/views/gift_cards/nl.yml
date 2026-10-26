@@ -18,6 +18,8 @@ nl:
       redeem_url: Inwissellink
       redeem_url_hint: Waar je een digitale kaart inwisselt of het saldo bekijkt.
       redeem_url_placeholder: https://
+      unencrypted_credentials: Versleuteling is niet ingesteld op deze server. Kaartnummer,
+        pincode en inwissellink worden daarom onversleuteld opgeslagen.
     new:
       title: Gegevens cadeaukaart invoeren
     tabs:

@@ -23,6 +23,10 @@
         <%= gift_card_form.date_field :expires_on, label: t("gift_cards.form.expires_on") %>
       </div>
 
+      <% unless GiftCard.encryption_ready? %>
+        <%= render DS::Alert.new(variant: :warning, message: t("gift_cards.form.unencrypted_credentials")) %>
+      <% end %>
+
       <div class="flex items-center gap-2">
         <%= gift_card_form.text_field :card_number,
                                       label: t("gift_cards.form.card_number"),

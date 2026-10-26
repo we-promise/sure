@@ -19,6 +19,14 @@ module Accountable
     user&.preview_features_enabled? ? TYPES : TYPES - PREVIEW_TYPES
   end
 
+  # The account groups a user can set preferences for: the types they can
+  # create, plus any type their family already holds, so turning preview
+  # features off never hides the group of an existing account.
+  def self.group_types_for(user)
+    held_types = user&.family&.accounts&.distinct&.pluck(:accountable_type) || []
+    TYPES & (types_for(user) | held_types)
+  end
+
   included do
     include Enrichable
 
