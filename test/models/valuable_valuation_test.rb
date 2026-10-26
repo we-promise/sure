@@ -22,25 +22,15 @@ class ValuableValuationTest < ActiveSupport::TestCase
     assert_equal 10_000, ValuableValuation.new(account: @account).refresh!
   end
 
-  test "keeps daily history and does not rewrite the opening balance" do
-    @account.set_opening_anchor_balance(balance: 0, date: Date.current - 10.days)
+  test "updates the balance and schedules a sync without writing valuation entries" do
     @account.valuable.lots.first.update!(manual_value: 100)
-    ValuableValuation.new(account: @account).refresh!
-    today_entry = @account.entries.valuations.find_by!(date: Date.current)
-    assert_equal 0, @account.opening_anchor_balance
-    assert_equal "reconciliation", today_entry.valuation.kind
+    @account.expects(:sync_later)
 
-    travel_to 1.day.from_now do
-      @account.valuable.lots.first.update!(manual_value: 120)
-      ValuableValuation.new(account: @account).refresh!
-      assert_equal 100, today_entry.reload.amount
-      assert_equal 120, @account.entries.valuations.find_by!(date: Date.current).amount
-      assert_equal 0, @account.opening_anchor_balance
-      Balance::Materializer.new(@account, strategy: :forward).materialize_balances
-      assert_equal 120, @account.reload.balance
-      assert_equal 0, @account.cash_balance
-      assert_equal 100, @account.balances.find_by!(date: Date.yesterday, currency: "USD").end_balance
+    assert_no_difference -> { @account.entries.valuations.count } do
+      assert_equal 100, ValuableValuation.new(account: @account).refresh!
     end
+    assert_equal 100, @account.reload.balance
+    assert_not @account.valuable.valuation_pending?
   end
 
   test "refuses historical refresh even when a historical quote is cached" do

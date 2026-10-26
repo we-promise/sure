@@ -10,18 +10,19 @@ class ValuableValuation
   }.freeze
   PROVISIONAL_REFETCH_AFTER = 1.hour
 
-  def initialize(account:, date: Date.current, reconciliation_name: nil)
+  def initialize(account:, date: Date.current)
     @account = account
     @date = date
-    @reconciliation_name = reconciliation_name
   end
 
+  # Stores today's quotes and updates the current balance. Daily balances,
+  # history included, are rebuilt by Balance::ValuableCalculator on sync.
   def refresh!
     validate_account!
     valuation_currency = account.currency
     rates = spot_symbols.index_with { |symbol| rate_for(symbol) }
 
-    account.with_lock do
+    value = account.with_lock do
       account.reload
       validate_account!
       raise Error, "Account currency changed during valuation; refresh again" if account.currency != valuation_currency
@@ -31,12 +32,12 @@ class ValuableValuation
       raise Error, "Purchases changed during valuation; refresh again" if missing.any?
 
       value = items.sum { |item| item.value_for(rates[item.quote_symbol]&.price_per_troy_ounce) }
-      result = account.set_current_balance(value, reconciliation_name: @reconciliation_name)
-      raise Error, result.error unless result.success?
-
+      account.update!(balance: value)
       account.valuable.update!(valuation_pending: false, valued_at: Time.current)
       value
     end
+    account.sync_later
+    value
   rescue Error, ActiveRecord::RecordInvalid
     account.valuable&.update_columns(valuation_pending: true) if account.valuable?
     raise

@@ -109,7 +109,9 @@ class Balance::Materializer
     end
 
     def calculator
-      @calculator ||= if strategy == :reverse
+      @calculator ||= if account.accountable_type == "Valuable"
+        Balance::ValuableCalculator.new(account)
+      elsif strategy == :reverse
         Balance::ReverseCalculator.new(account)
       else
         Balance::ForwardCalculator.new(account, window_start_date: @window_start_date)
