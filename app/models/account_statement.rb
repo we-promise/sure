@@ -86,7 +86,14 @@ class AccountStatement < ApplicationRecord
     def create_from_prepared_upload!(family:, account:, prepared_upload:)
       statement = nil
       duplicate = duplicate_for(family, prepared_upload)
-      raise DuplicateUploadError, duplicate if duplicate
+      if duplicate
+        # An unlinked statement is still stored in the family, so re-uploading the
+        # same file to an account links it rather than reporting a duplicate.
+        raise DuplicateUploadError, duplicate unless account.present? && duplicate.account_id.nil?
+
+        duplicate.link_to_account!(account)
+        return duplicate
+      end
 
       statement = family.account_statements.build(
         account: account,

@@ -94,6 +94,26 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_equal "statement.csv", error.statement.filename
   end
 
+  test "re-uploading an unlinked statement to an account does not raise duplicate" do
+    file_content = "date,description,amount\n2024-01-01,Coffee,-5.00\n"
+    statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: file_content)
+    )
+    statement.unlink!
+    assert_nil statement.reload.account
+
+    result = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "statement.csv", content_type: "text/csv", content: file_content)
+    )
+
+    assert_equal statement, result
+    assert_equal @account, result.reload.account
+  end
+
   test "allows distinct files with same md5 checksum and different sha256" do
     Digest::MD5.stubs(:base64digest).returns("same-md5-checksum")
 
