@@ -33,7 +33,7 @@ class SimplefinItem::Importer
       #
       # Check for linked accounts via BOTH legacy FK (accounts.simplefin_account_id) AND
       # the new AccountProvider system. An account is "linked" if either association exists.
-      linked_accounts = simplefin_item.simplefin_accounts.select { |sfa| sfa.current_account.present? }
+      linked_accounts = simplefin_item.linked_simplefin_accounts
       no_txns_yet = linked_accounts.any? && linked_accounts.all? { |sfa| sfa.raw_transactions_payload.blank? }
 
       if simplefin_item.last_synced_at.nil? || no_txns_yet
@@ -410,6 +410,9 @@ class SimplefinItem::Importer
       # chunked window would otherwise filter out newly added, inactive accounts.
       perform_account_discovery
 
+      # Accounts found during the walk are created unlinked, so the set is fixed here.
+      linked_account_ids = simplefin_item.linked_simplefin_accounts.map(&:account_id).to_set
+
       total_accounts_imported = 0
       chunk_count = 0
       consecutive_empty_chunks = 0
@@ -483,14 +486,15 @@ class SimplefinItem::Importer
         total_new_transactions += new_txns_in_chunk
 
         # Adaptive stopping is driven by what SimpleFIN returned for this window,
-        # not by growth of the stored payloads: nothing is linked yet during the
-        # claim-time sync, and the setup-time sync re-fetches transactions the
-        # claim-time sync already stored, so growth would read zero while the
-        # window still has history. Only settled transactions dated inside the
-        # window count, so pending rows or out-of-window rows that come back with
-        # every request cannot keep the walk going.
+        # not by growth of the stored payloads: rows already stored (for example
+        # by account discovery) come back again and would read as no growth.
+        # Only settled rows dated inside the window count, and only for linked
+        # accounts, so pending rows, out-of-window rows and accounts the user
+        # skipped cannot keep the walk going.
         window = chunk_start_date.to_i..chunk_end_date.to_i
         returned_txns_in_chunk = accounts_data[:accounts].to_a.sum do |a|
+          next 0 unless linked_account_ids.include?(a[:id].to_s)
+
           a[:transactions].to_a.count { |t| settled_in_window?(t, window) }
         end
 
@@ -533,9 +537,7 @@ class SimplefinItem::Importer
 
     # Count total transactions in linked SimpleFIN accounts (for chunked sync stats)
     def count_linked_transactions
-      simplefin_item.simplefin_accounts
-        .select { |sfa| sfa.current_account.present? }
-        .sum { |sfa| sfa.raw_transactions_payload.to_a.size }
+      simplefin_item.linked_simplefin_accounts.sum { |sfa| sfa.raw_transactions_payload.to_a.size }
     end
 
     # Whether a returned transaction is settled history dated inside the window.
