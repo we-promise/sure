@@ -350,6 +350,12 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     end
   end
 
+  test "apply_category_filter requires family when categories are present" do
+    assert_raises(ArgumentError) do
+      Transaction::Search.apply_category_filter(Transaction.all, [ "Food & Drink" ], nil)
+    end
+  end
+
   # Totals method tests (lifted from Transaction::TotalsTest)
 
   test "totals computes basic expense and income totals" do

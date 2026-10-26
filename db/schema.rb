@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -574,11 +574,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090000) do
     t.decimal "apr", precision: 10, scale: 2
     t.decimal "available_credit", precision: 10, scale: 2
     t.datetime "created_at", null: false
+    t.integer "due_day"
     t.date "expiration_date"
     t.jsonb "locked_attributes", default: {}
     t.decimal "minimum_payment", precision: 10, scale: 2
+    t.integer "statement_close_day"
     t.string "subtype"
     t.datetime "updated_at", null: false
+    t.check_constraint "due_day >= 1 AND due_day <= 31", name: "chk_credit_cards_due_day"
+    t.check_constraint "statement_close_day >= 1 AND statement_close_day <= 31", name: "chk_credit_cards_statement_close_day"
   end
 
   create_table "cryptos", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -851,7 +855,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090000) do
   create_table "families", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.jsonb "ai_prompt_overrides", default: {}, null: false
     t.string "assistant_type", default: "builtin", null: false
+    t.boolean "auto_generate_transaction_names", default: false, null: false
+    t.boolean "auto_match_transfers_disabled", default: false, null: false
     t.boolean "auto_sync_on_login", default: true, null: false
+    t.jsonb "bayes_settings", default: {}, null: false
     t.string "bills_feed_token"
     t.boolean "categories_locked", default: false, null: false
     t.decimal "categorization_confidence_threshold", precision: 3, scale: 2, default: "0.7", null: false
@@ -2382,6 +2389,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090000) do
     t.uuid "user_id", null: false
     t.index ["active_impersonator_session_id"], name: "index_sessions_on_active_impersonator_session_id"
     t.index ["ip_address_digest"], name: "index_sessions_on_ip_address_digest"
+    t.index ["updated_at"], name: "index_sessions_on_updated_at"
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
