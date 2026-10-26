@@ -3,6 +3,8 @@
 require "test_helper"
 
 class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
     @user.api_keys.active.destroy_all
@@ -998,6 +1000,71 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert trade_data["account"].key?("name")
     assert trade_data["account"].key?("account_type")
     assert trade_data.key?("notes")
+  end
+
+  test "a member cannot list, read, change or add trades on accounts they cannot reach" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    key = ApiKey.create!(user: member, name: "Member RW", key: ApiKey.generate_secure_key, scopes: %w[read_write], source: "web")
+    Redis.new.del("api_rate_limit:#{key.id}")
+
+    private_account = member.family.accounts.create!(name: "Admin Private Brokerage", owner: @user, balance: 1_000,
+                                                     currency: "USD", accountable: Investment.new)
+    read_only = member.family.accounts.create!(name: "Admin Read-only Brokerage", owner: @user, balance: 1_000,
+                                               currency: "USD", accountable: Investment.new)
+    read_only.account_shares.create!(user: member, permission: "read_only", include_in_finances: true)
+    hidden = create_trade(securities(:aapl), account: private_account, qty: 1, date: Date.current, price: 100).trade
+    visible = create_trade(securities(:aapl), account: read_only, qty: 1, date: Date.current, price: 100).trade
+
+    get "/api/v1/trades", params: { per_page: 100 }, headers: api_headers(key)
+    ids = JSON.parse(response.body)["trades"].map { |t| t["id"] }
+    assert_includes ids, visible.id, "the read-only share must still be listed, or this proves nothing"
+    assert_not_includes ids, hidden.id
+
+    get "/api/v1/trades/#{hidden.id}", headers: api_headers(key)
+    assert_response :not_found
+
+    get "/api/v1/trades/#{visible.id}", headers: api_headers(key)
+    assert_response :success
+
+    # Visible but not writable: 403, the caller can already read it.
+    patch "/api/v1/trades/#{visible.id}", params: { trade: { qty: 2 } }, headers: api_headers(key)
+    assert_response :forbidden
+    assert_equal "You do not have permission to change this trade", JSON.parse(response.body)["message"]
+    delete "/api/v1/trades/#{visible.id}", headers: api_headers(key)
+    assert_response :forbidden
+    assert_equal "You do not have permission to delete this trade", JSON.parse(response.body)["message"]
+    assert Trade.exists?(visible.id)
+
+    # Not visible at all: 404, existence is not revealed.
+    patch "/api/v1/trades/#{hidden.id}", params: { trade: { qty: 2 } }, headers: api_headers(key)
+    assert_response :not_found
+    delete "/api/v1/trades/#{hidden.id}", headers: api_headers(key)
+    assert_response :not_found
+    assert Trade.exists?(hidden.id)
+
+    post "/api/v1/trades", params: { trade: { account_id: read_only.id, type: "buy", date: Date.current,
+                                              qty: 1, price: 100, ticker: "AAPL|XNAS" } }, headers: api_headers(key)
+    assert_response :not_found
+  end
+
+  test "a full_control member can change and delete trades on a shared account" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    key = ApiKey.create!(user: member, name: "Member RW", key: ApiKey.generate_secure_key, scopes: %w[read_write], source: "web")
+    Redis.new.del("api_rate_limit:#{key.id}")
+
+    shared = member.family.accounts.create!(name: "Admin Shared Brokerage", owner: @user, balance: 1_000,
+                                            currency: "USD", accountable: Investment.new)
+    shared.account_shares.create!(user: member, permission: "full_control", include_in_finances: true)
+    trade = create_trade(securities(:aapl), account: shared, qty: 1, date: Date.current, price: 100).trade
+
+    patch "/api/v1/trades/#{trade.id}", params: { trade: { qty: 2 } }, headers: api_headers(key)
+    assert_response :success
+
+    delete "/api/v1/trades/#{trade.id}", headers: api_headers(key)
+    assert_response :success
+    assert_not Trade.exists?(trade.id)
   end
 
   private

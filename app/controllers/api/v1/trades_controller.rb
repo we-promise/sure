@@ -6,12 +6,10 @@ class Api::V1::TradesController < Api::V1::BaseController
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_trade, only: [ :show, :update, :destroy ]
+  before_action :ensure_write_permission, only: [ :update, :destroy ]
 
   def index
-    family = current_resource_owner.family
-    trades_query = family.trades.visible
-
-    trades_query = apply_filters(trades_query)
+    trades_query = apply_filters(accessible_trades)
     trades_query = trades_query.includes({ entry: :account }, :security, :category).reverse_chronological
 
     @pagy, @trades = pagy(
@@ -39,7 +37,7 @@ class Api::V1::TradesController < Api::V1::BaseController
       return render_validation_error("Account ID is required", [ "Account ID is required" ])
     end
 
-    account = current_resource_owner.family.accounts.visible.find(trade_params[:account_id])
+    account = current_resource_owner.family.accounts.writable_by(current_resource_owner).visible.find(trade_params[:account_id])
 
     unless account.supports_trades?
       return render_validation_error(
@@ -124,12 +122,25 @@ class Api::V1::TradesController < Api::V1::BaseController
 
   private
 
-    def set_trade
+    # Trades on accounts the caller can at least read.
+    def accessible_trades
       family = current_resource_owner.family
-      @trade = family.trades.visible.find(params[:id])
+      family.trades.visible
+        .where(entries: { account_id: family.accounts.accessible_by(current_resource_owner).select(:id) })
+    end
+
+    def set_trade
+      # Load through accessible accounts only: a trade on an account the caller
+      # cannot see is a 404. Write access is checked next (ensure_write_permission).
+      @trade = accessible_trades.find(params[:id])
       @entry = @trade.entry
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Trade not found" }, status: :not_found
+    end
+
+    # A trade the caller can see but not change is a 403, not a 404.
+    def ensure_write_permission
+      require_api_account_permission!(@entry.account, resource: "trade")
     end
 
     def ensure_read_scope
