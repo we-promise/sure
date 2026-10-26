@@ -1107,11 +1107,6 @@ class Family::DataImporter
 
     def import_trades(records)
       imported = {}
-      # One query for the family's stored lots instead of a find_by per trade
-      # row. A row's id is unique in a valid file, and the lots this import
-      # creates are keyed to entries that had no lot before it, so a snapshot
-      # taken up front stays correct for the whole pass.
-      lot_index = HoldingLot.where(account_id: @family.account_ids).index_by(&:source_entry_id)
 
       records.each do |record|
         data = record["data"]
@@ -1164,7 +1159,7 @@ class Family::DataImporter
 
         entry.save!
         imported[old_id] = entry
-        import_lot_total_cost(entry, data["lot_total_cost"], lot_index)
+        import_lot_total_cost(entry, data["lot_total_cost"])
         @created_entries << entry if created
         increment_summary("Trade", created ? :created : :updated)
       end
@@ -1176,9 +1171,12 @@ class Family::DataImporter
     # already on the row, so the user's cost is seeded on the row now. A file
     # without one clears a cost an earlier import of this trade set. A value
     # the lot cannot hold drops the cost, not the trade.
-    def import_lot_total_cost(entry, raw, lot_index)
+    def import_lot_total_cost(entry, raw)
       trade = entry.trade
-      lot = lot_index[entry.id]
+      # Only a buy's entry keys a lot (source_entry_id is the acquiring
+      # trade's entry), so a sell never queries. This is the early skip the
+      # review asked for, per row and indexed, with no chunk-wide load.
+      lot = trade.qty.positive? ? HoldingLot.find_by(account_id: entry.account_id, source_entry_id: entry.id) : nil
 
       if raw.blank?
         lot.unlock_cost! if lot&.manual_cost?
