@@ -236,11 +236,6 @@ class Rule::NotificationBaselineOnEditTest < ActiveSupport::TestCase
         actions_attributes: [ { action_type: "send_email_notification" } ]
       )
 
-      # Take the baseline the action's create-time seed describes. That seed does
-      # not run today: Rule::Action's after_update_commit names the same method,
-      # which replaces its after_create_commit. Seeding is idempotent, so this
-      # stays correct once that is fixed.
-      rule.actions.first.send(:seed_notification_baseline)
       Rule.find(rule.id)
     end
 

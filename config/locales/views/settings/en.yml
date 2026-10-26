@@ -197,6 +197,8 @@ en:
         account_lists_hint: Assets and debts always stay apart. Within them, accounts are grouped by the first field and, optionally, split again by the second; totals add up across account types. Accounts without a value are listed under "Not set". The custom group is a free-text field in the account details.
         split_grouped_title: Group split transactions
         split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
+        auto_generate_transaction_names_title: Auto-generate transaction names
+        auto_generate_transaction_names_description: When a manually entered transaction's name is left blank, fill it in from the selected category and merchant (e.g. "Entertainment - Netflix"). A name is still required if neither is selected. Applies to the whole family, and only affects new transactions.
     preferences:
       show:
         country: Country
@@ -368,6 +370,8 @@ en:
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
+      auto_matches_label: Auto Matches
+      classifier_label: Classifier
       background_jobs_label: Background jobs
       api_key_label: API Keys
       payment_label: Payment
