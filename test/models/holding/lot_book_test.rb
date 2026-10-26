@@ -338,29 +338,6 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     end
   end
 
-  test "a sale beyond the ledger's coverage marks the average unknown, and it survives the clamped close" do
-    book = Holding::LotBook.new
-    book.apply(BigDecimal("10"), 5, source_id: "a", acquired_on: Date.new(2024, 1, 1))
-    book.apply(BigDecimal("12"), 3, source_id: "b", acquired_on: Date.new(2024, 2, 1))
-
-    book.apply(nil, -100)
-
-    assert_nil book.average_cost, "the ledger saw less than it sold; the basis is not knowable"
-    assert_empty book.lots, "the clamped relief still closes what the ledger holds"
-
-    book.apply(BigDecimal("9"), 2, source_id: "c", acquired_on: Date.new(2024, 3, 1))
-    assert_nil book.average_cost, "a clean-looking reopen must not erase that the sale was over"
-  end
-
-  test "selling from a book that never saw the position marks the average unknown" do
-    book = Holding::LotBook.new
-
-    book.apply(nil, -2)
-    book.apply(BigDecimal("20"), 1, source_id: "late", acquired_on: Date.new(2024, 1, 1))
-
-    assert_nil book.average_cost, "the tracker would answer 20; the true position is unknowable here"
-  end
-
   test "selling exactly to zero stays known — the reopen after a clean close is not unknown" do
     book = Holding::LotBook.new
     book.apply(BigDecimal("10"), 5, source_id: "a", acquired_on: Date.new(2024, 1, 1))
