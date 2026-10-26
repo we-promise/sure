@@ -27,7 +27,10 @@ class Settings::AppearancesController < ApplicationController
         # arbitrary strings can't be injected into the JSONB column.
         valid_keys = Accountable::TYPES.map(&:underscore)
         selected = (account_groups.is_a?(Array) ? account_groups : [ account_groups ])
-        updated_prefs["always_expanded_account_groups"] = selected.select { |k| valid_keys.include?(k) }
+        # Groups the form didn't render keep their saved selection.
+        shown_keys = Accountable.group_types_for(@user).map(&:underscore)
+        kept = @user.always_expanded_account_groups - shown_keys
+        updated_prefs["always_expanded_account_groups"] = (kept + selected.select { |k| valid_keys.include?(k) }).uniq
       end
       # Account order is a column, not a preference; unknown keys are ignored.
       account_order = params.dig(:user, :default_account_order)

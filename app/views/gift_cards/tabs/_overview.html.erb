@@ -1,4 +1,4 @@
-<%# locals: (account:) %>
+<%# locals: (account:, as_of: Date.current) %>
 
 <% gift_card = account.gift_card %>
 
@@ -19,10 +19,10 @@
     <span class="flex items-center gap-2 flex-wrap">
       <%= gift_card.expires_on ? l(gift_card.expires_on, format: :long) : t(".no_expiry") %>
 
-      <% if gift_card.expired? %>
+      <% if gift_card.expired?(as_of: as_of) %>
         <%= render DS::Pill.new(label: t(".expired"), tone: :error, marker: false) %>
-      <% elsif gift_card.expiring_soon? %>
-        <%= render DS::Pill.new(label: t(".expires_in", count: gift_card.days_until_expiry), tone: :warning, marker: false) %>
+      <% elsif gift_card.expiring_soon?(as_of: as_of) %>
+        <%= render DS::Pill.new(label: t(".expires_in", count: gift_card.days_until_expiry(as_of: as_of)), tone: :warning, marker: false) %>
       <% end %>
     </span>
   <% end %>

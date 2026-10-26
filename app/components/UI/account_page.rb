@@ -100,7 +100,7 @@ class UI::AccountPage < ApplicationComponent
       # folder. These tabs show date-sensitive figures and take the page's one
       # reference date, like the Schedule tab does.
       locals = { account: account }
-      locals[:as_of] = as_of if %w[Loan CreditCard].include?(account.accountable_type)
+      locals[:as_of] = as_of if %w[Loan CreditCard GiftCard].include?(account.accountable_type)
       render "#{accountable_view_folder}/tabs/#{tab}", **locals
     when :holdings
       # Accountable is responsible for implementing the partial in the correct folder

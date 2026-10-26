@@ -255,6 +255,31 @@ class GiftCardsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#user_account_groups_gift_card[checked]"
   end
 
+  test "the appearance settings show a held gift card group only to users who can access the card" do
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => false))
+    @account.account_shares.where(user: member).destroy_all
+    sign_in member
+
+    get settings_appearance_path
+    assert_select "#user_account_groups_gift_card", count: 0
+
+    @account.account_shares.create!(user: member, permission: "read_only")
+    get settings_appearance_path
+    assert_select "#user_account_groups_gift_card"
+  end
+
+  test "saving the appearance settings keeps the selection of a group the form did not show" do
+    @account.destroy!
+    @user.update!(preferences: @user.preferences.merge(
+      "preview_features_enabled" => false, "always_expanded_account_groups" => [ "gift_card" ]
+    ))
+
+    patch settings_appearance_path, params: { user: { account_groups: [ "", "depository" ] } }
+
+    assert_equal %w[depository gift_card], @user.reload.always_expanded_account_groups.sort
+  end
+
   test "the initial amount is not rounded to the rendered currency's precision" do
     get new_gift_card_path
     assert_select "input[name='account[accountable_attributes][face_value]'][step='any']"
