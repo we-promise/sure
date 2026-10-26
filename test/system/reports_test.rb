@@ -71,6 +71,21 @@ class ReportsTest < ApplicationSystemTestCase
     assert_equal "false", section["aria-grabbed"]
   end
 
+  test "following a link while a section is held saves its new place first" do
+    keys = all("section[data-section-key]").map { |section| section["data-section-key"] }
+    moved = "transactions_breakdown"
+    above = keys[keys.index(moved) - 1]
+
+    section = find("section[data-section-key='#{moved}']")
+    section.send_keys(:enter)
+    page.send_keys(:arrow_up)
+    section.find_link(I18n.t("reports.transactions_breakdown.table.amount"), match: :first).send_keys(:enter)
+
+    assert_current_path(/sort_by=amount/)
+    saved_order = users(:family_admin).reload.reports_section_order
+    assert_operator saved_order.index(moved), :<, saved_order.index(above)
+  end
+
   private
     def clicked_hotkeys
       page.evaluate_script("window.clickedHotkeys")
