@@ -383,7 +383,7 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.5"), book.open_qty, "the last-lot drift correction keeps the open sum exact"
     book.lots.each do |lot|
       decimals = lot.qty.to_s("F").split(".").last.to_s.length
-      assert_operator decimals, :<=, Holding::LotBook::LOT_QTY_SCALE,
+      assert_operator decimals, :<=, Security::Split::QTY_SCALE,
         "lot #{lot.source_id} has #{decimals} decimal places after five partial sells"
     end
   end
