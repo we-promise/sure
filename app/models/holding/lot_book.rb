@@ -8,10 +8,14 @@
 # shrinks.
 #
 # The figure the calculators report, #average_cost, comes from a running pool
-# of priced acquisitions rather than from the lots. The two agree, but pro-rata
-# lot quantities carry BigDecimal rounding the pool does not, and the pool is
-# what every stored figure is computed from. A transfer-in stays outside the
-# pool; the calculators report a position holding one as unknown.
+# of priced acquisitions rather than from the lots. The two agree while the
+# ledger covers the position, to the last digit — lot relief rounds at the
+# trade quantity scale and #rescale_lots puts the difference back, so the open
+# sum stays exact. Where they deliberately part: a sale the ledger cannot
+# cover (a transfer-in whose acquisition has not arrived) clamps the pool but
+# marks the average unknown until the position fully closes and a rebuild
+# replays the events in date order. A transfer-in stays outside the pool; the
+# calculators report a position holding one as unknown.
 #
 # Buys add to the running cost and quantity. Sells relieve quantity at the
 # current average cost (leaving the per-share average unchanged), and once the
@@ -22,6 +26,10 @@
 # Prices are expected in the account's currency (callers convert before
 # applying), so the book itself is currency-agnostic.
 class Holding::LotBook
+  # Lot quantities are kept at the same decimal scale trades store quantities
+  # at: decimal(34,18).
+  LOT_QTY_SCALE = 18
+
   Lot = Data.define(:source_id, :acquired_on, :qty, :unit_cost)
 
   attr_reader :lots
@@ -63,8 +71,15 @@ class Holding::LotBook
     qty = qty&.to_d
     return if qty.nil? || qty.zero?
 
+    # Before anything relieves: a sale beyond what the ledger holds means the
+    # ledger is missing acquisitions (the sale arrived before its transfer-in,
+    # say). The old pool clamped and carried on as if nothing were unknown.
+    oversold = qty.abs > open_qty
     relieve_lots(qty.abs)
-    return if @total_qty.zero?
+    if @total_qty.zero?
+      @unknown = true if oversold
+      return
+    end
 
     # Relieve at the current average cost so the per-share average is unchanged.
     # Guard against over-selling more than is currently held.
@@ -75,6 +90,7 @@ class Holding::LotBook
     # Coercing to BigDecimal keeps arithmetic exact, so a full liquidation lands
     # on exactly zero and the reset fires (Float math could leave a tiny remainder).
     reset if @total_qty <= 0
+    @unknown = true if oversold
   end
 
   # A split changes the share count and not the money invested, so total cost
@@ -114,12 +130,17 @@ class Holding::LotBook
     end
 
     # Pro-rata relief across every open lot; an oversell closes them all.
+    # Each rounded lot quantity is kept at the stored decimal scale (#sell's
+    # oversell note covers what a rounded ledger cannot show); #rescale_lots
+    # puts any rounding difference back on the last lot, so the open sum stays
+    # exact. Without the round, repeated partial relief at non-terminating
+    # ratios grows each quantity's digits by one step at a time.
     def relieve_lots(qty)
       open = open_qty
       return if open.zero?
 
       remaining = open - [ qty, open ].min
-      rescale_lots(remaining) { |lot| lot.with(qty: lot.qty * remaining / open) }
+      rescale_lots(remaining) { |lot| lot.with(qty: (lot.qty * remaining / open).round(LOT_QTY_SCALE)) }
     end
 
     # Restates each lot, then gives the last open lot whatever rounding is left,
