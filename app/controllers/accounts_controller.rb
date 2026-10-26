@@ -143,7 +143,7 @@ class AccountsController < ApplicationController
     if transactions.any?
       ActiveRecord::Associations::Preloader.new(
         records: transactions,
-        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, :merchant, :tags ]
+        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, { merchant: { logo_attachment: :blob } }, :tags ]
       ).call
     end
 
@@ -163,7 +163,7 @@ class AccountsController < ApplicationController
       split_parent_ids = @entries.filter_map(&:parent_entry_id).uniq
       if split_parent_ids.any?
         Entry.where(id: split_parent_ids)
-             .includes(:account, entryable: [ :category, :merchant ])
+             .includes(:account, entryable: [ :category, { merchant: { logo_attachment: :blob } } ])
              .index_by(&:id)
       else
         {}

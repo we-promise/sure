@@ -7,6 +7,31 @@ class FamilyMerchantTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
   end
 
+  test "uploaded logo takes precedence over the website logo" do
+    merchant = FamilyMerchant.create!(family: @family, name: "Logo Merchant", logo_url: "https://cdn.example/logo.png")
+    merchant.logo.attach(io: file_fixture("profile_image.png").open, filename: "logo.png", content_type: "image/png")
+
+    assert_match %r{\A/rails/active_storage/representations/}, merchant.logo_url
+  end
+
+  test "rejects a logo that is not an image" do
+    merchant = FamilyMerchant.new(family: @family, name: "Text Logo Merchant")
+    merchant.logo.attach(io: file_fixture("test.txt").open, filename: "logo.txt", content_type: "text/plain")
+
+    assert_not merchant.valid?
+    assert merchant.errors.of_kind?(:logo, :invalid_content_type)
+  end
+
+  test "remove_logo purges the uploaded logo and falls back to the website logo" do
+    merchant = FamilyMerchant.create!(family: @family, name: "Removed Logo Merchant", logo_url: "https://cdn.example/logo.png")
+    merchant.logo.attach(io: file_fixture("profile_image.png").open, filename: "logo.png", content_type: "image/png")
+
+    merchant.update!(remove_logo: true)
+
+    assert_not merchant.reload.logo.attached?
+    assert_equal "https://cdn.example/logo.png", merchant.logo_url
+  end
+
   test "preserves user-selected color on creation" do
     merchant = FamilyMerchant.create!(
       family: @family,

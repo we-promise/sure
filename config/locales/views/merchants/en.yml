@@ -13,6 +13,9 @@ en:
       name_placeholder: Merchant name
       website_placeholder: Website (e.g., starbucks.com)
       website_hint: Enter the merchant's website to automatically display their logo
+      logo_label: Logo
+      logo_hint: Overrides the website logo. JPEG, PNG or WebP, up to %{max_megabytes}MB.
+      remove_logo_label: Remove uploaded logo
     index:
       empty: No merchants yet
       new: New merchant
