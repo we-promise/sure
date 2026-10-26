@@ -3,8 +3,8 @@
 <% transaction = entry.entryable %>
 
 <%# Cached per row; see TransactionsHelper#transaction_row_cache_key for what
-    busts it and bump its version when editing this template or its partials. %>
-<% cache transaction_row_cache_key(entry, view_ctx: view_ctx, in_split_group: in_split_group), expires_in: 3.days, skip_digest: true do %>
+    busts it; list any new partial or component in TRANSACTION_ROW_SOURCES. %>
+<% cache transaction_row_cache_key(entry, view_ctx: view_ctx, in_split_group: in_split_group), expires_in: 12.hours, skip_digest: true do %>
 <% transaction_security_logo_url = transaction.activity_security&.display_logo_url %>
 <% open_path = if transaction.transfer?
      transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry)

@@ -61,6 +61,24 @@ module TransactionsHelper
     entry.split_child? && Current.user.show_split_grouped? && params_grouped == "true"
   end
 
+  # Files whose content shapes a cached transaction row; see
+  # transaction_row_cache_key.
+  TRANSACTION_ROW_SOURCES = %w[
+    app/views/transactions/_transaction.html.erb
+    app/views/transactions/_transaction_category.html.erb
+    app/views/transactions/_transfer_match.html.erb
+    app/views/categories/_*.html.erb
+    app/views/tags/_*.html.erb
+    app/views/investment_activity/_*.html.erb
+    app/helpers/transactions_helper.rb
+    app/helpers/categories_helper.rb
+    app/components/DS/*.{rb,html.erb}
+  ].freeze
+
+  TRANSACTION_ROW_SOURCES_DIGEST = Digest::SHA256.hexdigest(
+    TRANSACTION_ROW_SOURCES.flat_map { |pattern| Dir[Rails.root.join(pattern).to_s] }.sort.map { |file| File.read(file) }.join
+  ).first(16)
+
   # Fragment cache key for one row of the transactions list. Rendering a row
   # costs about 14 ms on a small self-hosted CPU (some 30 partials and
   # components), and a page of 100 rows re-rendered on every visit, filter
@@ -76,16 +94,18 @@ module TransactionsHelper
   # - per-user or per-request state (locale, user, family display settings,
   #   whether the user may annotate the account or see the counterpart,
   #   whether the entry is a split parent, grouped rendering, view context)
-  # - the image build (or the app version when no build SHA is set), so a
-  #   deploy with new markup never serves old rows; skip_digest is on because
-  #   the row renders DS::* components, which the ERB dependency tracker
-  #   cannot digest (see account_sidebar_tabs)
+  # - a digest of the row's templates and the helpers and DS components it
+  #   renders (TRANSACTION_ROW_SOURCES), plus the image build or app version,
+  #   so a deploy with new markup never serves old rows, also for source
+  #   builds without BUILD_COMMIT_SHA; skip_digest is on because the ERB
+  #   dependency tracker cannot digest DS::* components (see
+  #   account_sidebar_tabs)
   # - for a pending transfer match, the browser session: its confirm and
   #   reject forms embed the session's CSRF token, and the reject form
   #   submits without Turbo, so it can't fall back to the X-CSRF-Token header
   # - the Brandfetch settings that shape logo URLs
   #
-  # Bump the version suffix when changing the row template or its partials.
+  # Add a file to TRANSACTION_ROW_SOURCES when the row starts rendering it.
   def transaction_row_cache_key(entry, view_ctx:, in_split_group:)
     transaction = entry.entryable
     transfer = transaction.transfer
@@ -97,7 +117,8 @@ module TransactionsHelper
     category_key = ->(category) { category && [ category.id, category.name, category.color, category.lucide_icon ] }
 
     [
-      "transaction_row_v1",
+      "transaction_row",
+      TRANSACTION_ROW_SOURCES_DIGEST,
       ENV["BUILD_COMMIT_SHA"].presence || (@app_version ||= Sure.version.to_s),
       (Digest::SHA256.hexdigest(session.id.to_s) if transfer&.pending? && session.id),
       I18n.locale,

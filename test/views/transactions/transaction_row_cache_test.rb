@@ -110,6 +110,14 @@ class Transactions::TransactionRowCacheTest < ActionView::TestCase
     assert_equal plain_key, row_key
   end
 
+  test "the key carries a digest of the row's templates and components" do
+    TransactionsHelper::TRANSACTION_ROW_SOURCES.each do |pattern|
+      assert Dir[Rails.root.join(pattern).to_s].any?, "#{pattern} matches no file"
+    end
+
+    assert_includes row_key, TransactionsHelper::TRANSACTION_ROW_SOURCES_DIGEST
+  end
+
   test "the key changes with the BUILD_COMMIT_SHA of the deployed image" do
     base = row_key
 
