@@ -133,6 +133,15 @@ class RuleRunTest < ActiveSupport::TestCase
     3.times { rule_run.fail_job!(error: StandardError.new("provider down"), source: "test") }
   end
 
+  test "a retry that succeeds after the run's only job failed offers what it changed" do
+    rule_run = create_rule_run
+    rule_run.update!(execution_type: "immediate")
+
+    RuleRun.expects(:offer_immediate_result).with(@rule.family).once
+    rule_run.fail_job!(error: StandardError.new("provider down"), source: "test")
+    rule_run.complete_job!(modified_count: 2)
+  end
+
   test "an immediate run that fails without changes offers no result" do
     rule_run = create_rule_run
     rule_run.update!(execution_type: "immediate")

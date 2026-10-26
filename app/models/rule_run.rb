@@ -53,10 +53,9 @@ class RuleRun < ApplicationRecord
     drained = false
 
     with_lock do
-      drained = pending_jobs_count.positive?
+      drained = pending_jobs_count == 1
       self.transactions_modified += modified_count
       self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
-      drained &&= pending_jobs_count.zero?
 
       # Preserve a previously recorded failure while still draining pending jobs.
       self.status = "success" if pending_jobs_count <= 0 && !failed?
@@ -64,7 +63,9 @@ class RuleRun < ApplicationRecord
       save!
     end
 
-    offer_job_results if drained
+    # A Sidekiq retry of a job that failed before finds nothing left to
+    # drain, so its changes are offered on their own.
+    offer_job_results if pending_jobs_count.zero? && (drained || modified_count.positive?)
   end
 
   def fail_job!(error:, source:, transaction_ids: [])
@@ -74,10 +75,8 @@ class RuleRun < ApplicationRecord
 
     with_lock do
       should_log = !failed?
-      drained = pending_jobs_count.positive?
-
+      drained = pending_jobs_count == 1
       self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
-      drained &&= pending_jobs_count.zero?
       self.status = "failed"
       existing_error_messages = error_message.to_s.split("\n").reject(&:blank?)
       self.error_message = (existing_error_messages + [ current_error_message ]).uniq.join("\n")
