@@ -1,5 +1,6 @@
 class Provider::Anthropic::BillSetupSuggester
   include Provider::Anthropic::Concerns::UsageRecorder
+  include Provider::Anthropic::Concerns::StructuredOutput
 
   TOOL_NAME = "report_bill_setup".freeze
 
@@ -22,7 +23,9 @@ class Provider::Anthropic::BillSetupSuggester
       configure_mode: current_config.present?
     })
 
-    response = client.messages.create(
+    response = create_structured_message(
+      tool_name: TOOL_NAME,
+      operation: "suggest_bill_setup",
       model: model,
       max_tokens: max_tokens,
       system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),

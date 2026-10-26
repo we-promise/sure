@@ -1,5 +1,6 @@
 class Provider::Anthropic::AutoCategorizer
   include Provider::Anthropic::Concerns::UsageRecorder
+  include Provider::Anthropic::Concerns::StructuredOutput
 
   TOOL_NAME = "report_categorizations".freeze
 
@@ -21,7 +22,9 @@ class Provider::Anthropic::AutoCategorizer
       user_categories: user_categories
     })
 
-    response = client.messages.create(
+    response = create_structured_message(
+      tool_name: TOOL_NAME,
+      operation: "auto_categorize",
       model: model,
       max_tokens: max_tokens,
       system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),

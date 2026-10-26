@@ -1,5 +1,6 @@
 class Provider::Anthropic::BankStatementExtractor
   include Provider::Anthropic::Concerns::UsageRecorder
+  include Provider::Anthropic::Concerns::StructuredOutput
 
   TOOL_NAME = "report_bank_statement".freeze
 
@@ -28,7 +29,9 @@ class Provider::Anthropic::BankStatementExtractor
       pdf_size: pdf_content.bytesize
     })
 
-    response = client.messages.create(
+    response = create_structured_message(
+      tool_name: TOOL_NAME,
+      operation: "extract_bank_statement",
       model: model,
       max_tokens: max_tokens,
       system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),

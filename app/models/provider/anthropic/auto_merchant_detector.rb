@@ -1,5 +1,6 @@
 class Provider::Anthropic::AutoMerchantDetector
   include Provider::Anthropic::Concerns::UsageRecorder
+  include Provider::Anthropic::Concerns::StructuredOutput
 
   TOOL_NAME = "report_merchants".freeze
 
@@ -21,7 +22,9 @@ class Provider::Anthropic::AutoMerchantDetector
       user_merchants: user_merchants
     })
 
-    response = client.messages.create(
+    response = create_structured_message(
+      tool_name: TOOL_NAME,
+      operation: "auto_detect_merchants",
       model: model,
       max_tokens: max_tokens,
       system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),
