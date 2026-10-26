@@ -150,8 +150,10 @@ en:
       all: All bills
     payday:
       title: "Income · %{source}"
-      matched: Matched to a transaction
-      received: Marked as received
+      # Both states read as "Received" under the amount, the way a bill reads
+      # "Paid". Which one it was stays in the detail, not the row.
+      matched: Received
+      received: Received
       unmatched: Not matched yet
       expected: Expected
       skipped: Skipped
