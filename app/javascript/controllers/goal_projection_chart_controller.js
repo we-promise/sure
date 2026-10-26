@@ -32,6 +32,8 @@ export default class extends Controller {
     data: Object,
     ariaLabel: String,
     ariaDescription: String,
+    targetTemplate: String,
+    shortfallTemplate: String,
     todayLabel: { type: String, default: "Today" },
     projectedTemplate: { type: String, default: "Projected: {amount}" },
     savedTemplate: { type: String, default: "Saved: {amount}" },
@@ -288,7 +290,7 @@ export default class extends Controller {
           .attr("text-anchor", "end")
           .attr("font-size", 12)
           .attr("fill", textPrimary)
-          .text(`Target · ${data.target_amount_short_label}`);
+          .text(this.targetTemplateValue.replace("%{amount}", () => data.target_amount_short_label));
       } else {
         // Plenty of room: keep the right-side full-format label.
         svg
@@ -298,7 +300,7 @@ export default class extends Controller {
           .attr("text-anchor", "end")
           .attr("font-size", 12)
           .attr("fill", textPrimary)
-          .text(`Target · ${data.target_amount_label}`);
+          .text(this.targetTemplateValue.replace("%{amount}", () => data.target_amount_label));
       }
     }
 
@@ -385,7 +387,7 @@ export default class extends Controller {
         // is the "$X short" string when we fall short.
         const labelText = willHit
           ? data.projection_end_label
-          : (data.projection_shortfall_label ? `${data.projection_shortfall_label} short` : "");
+          : (data.projection_shortfall_label ? this.shortfallTemplateValue.replace("%{amount}", () => data.projection_shortfall_label) : "");
         if (labelText) {
           svg
             .append("text")

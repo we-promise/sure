@@ -24,14 +24,14 @@ class SsoProviderTester
     when "saml"
       test_saml_metadata
     else
-      Result.new(success?: false, message: "Unknown strategy: #{provider.strategy}", details: {})
+      Result.new(success?: false, message: I18n.t("sso_provider_tester.unknown_strategy", strategy: provider.strategy), details: {})
     end
   end
 
   private
 
     def test_oidc_discovery
-      return Result.new(success?: false, message: "Issuer URL is required", details: {}) if provider.issuer.blank?
+      return Result.new(success?: false, message: I18n.t("sso_provider_tester.issuer_required"), details: {}) if provider.issuer.blank?
 
       discovery_url = build_discovery_url(provider.issuer)
 
@@ -44,7 +44,7 @@ class SsoProviderTester
         unless response.success?
           return Result.new(
             success?: false,
-            message: "Discovery endpoint returned HTTP #{response.status}",
+            message: I18n.t("sso_provider_tester.discovery_http_error", status: response.status),
             details: { url: discovery_url, status: response.status }
           )
         end
@@ -58,7 +58,7 @@ class SsoProviderTester
         if missing.any?
           return Result.new(
             success?: false,
-            message: "Discovery document missing required fields: #{missing.join(", ")}",
+            message: I18n.t("sso_provider_tester.missing_fields", fields: missing.join(", ")),
             details: { url: discovery_url, missing_fields: missing }
           )
         end
@@ -70,14 +70,14 @@ class SsoProviderTester
 
           return Result.new(
             success?: false,
-            message: [ "Issuer mismatch: expected #{provider.issuer}, got #{discovery["issuer"]}", hint ].compact.join(". "),
+            message: [ I18n.t("sso_provider_tester.issuer_mismatch", expected: provider.issuer, actual: discovery["issuer"]), hint ].compact.join(". "),
             details: { expected: provider.issuer, actual: discovery["issuer"] }
           )
         end
 
         Result.new(
           success?: true,
-          message: "OIDC discovery validated successfully",
+          message: I18n.t("sso_provider_tester.oidc_success"),
           details: {
             issuer: discovery["issuer"],
             authorization_endpoint: discovery["authorization_endpoint"],
@@ -88,29 +88,29 @@ class SsoProviderTester
         )
 
       rescue Faraday::TimeoutError
-        Result.new(success?: false, message: "Connection timed out", details: { url: discovery_url })
+        Result.new(success?: false, message: I18n.t("sso_provider_tester.timeout"), details: { url: discovery_url })
       rescue Faraday::ConnectionFailed => e
-        Result.new(success?: false, message: "Connection failed: #{e.message}", details: { url: discovery_url })
+        Result.new(success?: false, message: I18n.t("sso_provider_tester.connection_failed", error: e.message), details: { url: discovery_url })
       rescue JSON::ParserError
-        Result.new(success?: false, message: "Invalid JSON response from discovery endpoint", details: { url: discovery_url })
+        Result.new(success?: false, message: I18n.t("sso_provider_tester.invalid_json"), details: { url: discovery_url })
       rescue StandardError => e
-        Result.new(success?: false, message: "Error: #{e.message}", details: { url: discovery_url })
+        Result.new(success?: false, message: I18n.t("sso_provider_tester.error", error: e.message), details: { url: discovery_url })
       end
     end
 
     def test_google_oauth
       # Google OAuth doesn't require discovery validation - just check credentials present
       if provider.client_id.blank?
-        return Result.new(success?: false, message: "Client ID is required", details: {})
+        return Result.new(success?: false, message: I18n.t("sso_provider_tester.client_id_required"), details: {})
       end
 
       if provider.client_secret.blank?
-        return Result.new(success?: false, message: "Client Secret is required", details: {})
+        return Result.new(success?: false, message: I18n.t("sso_provider_tester.client_secret_required"), details: {})
       end
 
       Result.new(
         success?: true,
-        message: "Google OAuth2 configuration looks valid",
+        message: I18n.t("sso_provider_tester.google_success"),
         details: {
           note: "Full validation occurs during actual authentication"
         }
@@ -120,16 +120,16 @@ class SsoProviderTester
     def test_github_oauth
       # GitHub OAuth doesn't require discovery validation - just check credentials present
       if provider.client_id.blank?
-        return Result.new(success?: false, message: "Client ID is required", details: {})
+        return Result.new(success?: false, message: I18n.t("sso_provider_tester.client_id_required"), details: {})
       end
 
       if provider.client_secret.blank?
-        return Result.new(success?: false, message: "Client Secret is required", details: {})
+        return Result.new(success?: false, message: I18n.t("sso_provider_tester.client_secret_required"), details: {})
       end
 
       Result.new(
         success?: true,
-        message: "GitHub OAuth configuration looks valid",
+        message: I18n.t("sso_provider_tester.github_success"),
         details: {
           note: "Full validation occurs during actual authentication"
         }
@@ -142,7 +142,7 @@ class SsoProviderTester
          provider.settings&.dig("idp_sso_url").blank?
         return Result.new(
           success?: false,
-          message: "Either IdP Metadata URL or IdP SSO URL is required",
+          message: I18n.t("sso_provider_tester.saml_endpoint_required"),
           details: {}
         )
       end
@@ -159,7 +159,7 @@ class SsoProviderTester
           unless response.success?
             return Result.new(
               success?: false,
-              message: "Metadata endpoint returned HTTP #{response.status}",
+              message: I18n.t("sso_provider_tester.metadata_http_error", status: response.status),
               details: { url: metadata_url, status: response.status }
             )
           end
@@ -168,28 +168,28 @@ class SsoProviderTester
           unless response.body.include?("<") && response.body.include?("EntityDescriptor")
             return Result.new(
               success?: false,
-              message: "Response does not appear to be valid SAML metadata",
+              message: I18n.t("sso_provider_tester.invalid_saml_metadata"),
               details: { url: metadata_url }
             )
           end
 
           return Result.new(
             success?: true,
-            message: "SAML metadata fetched successfully",
+            message: I18n.t("sso_provider_tester.saml_metadata_success"),
             details: { url: metadata_url }
           )
         rescue Faraday::TimeoutError
-          return Result.new(success?: false, message: "Connection timed out", details: { url: metadata_url })
+          return Result.new(success?: false, message: I18n.t("sso_provider_tester.timeout"), details: { url: metadata_url })
         rescue Faraday::ConnectionFailed => e
-          return Result.new(success?: false, message: "Connection failed: #{e.message}", details: { url: metadata_url })
+          return Result.new(success?: false, message: I18n.t("sso_provider_tester.connection_failed", error: e.message), details: { url: metadata_url })
         rescue StandardError => e
-          return Result.new(success?: false, message: "Error: #{e.message}", details: { url: metadata_url })
+          return Result.new(success?: false, message: I18n.t("sso_provider_tester.error", error: e.message), details: { url: metadata_url })
         end
       end
 
       Result.new(
         success?: true,
-        message: "SAML configuration looks valid",
+        message: I18n.t("sso_provider_tester.saml_success"),
         details: {
           note: "Full validation occurs during actual authentication"
         }
@@ -211,6 +211,6 @@ class SsoProviderTester
     def trailing_slash_hint(expected, actual)
       return unless expected.to_s.chomp("/") == actual.to_s.chomp("/")
 
-      "trailing slash mismatch. This usually means the issuer URL differs only by a trailing slash. Update the configured issuer to exactly match the discovery document"
+      I18n.t("sso_provider_tester.trailing_slash_hint")
     end
 end

@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="rule--conditions"
 export default class extends Controller {
-  static values = { conditionFilters: Array, valuelessOperators: Array };
+  static values = { conditionFilters: Array, valuelessOperators: Array, valuePlaceholder: String };
   static targets = [
     "destroyField",
     "filterValue",
@@ -100,7 +100,7 @@ export default class extends Controller {
 
   #buildTextInputFor(conditionFilter) {
     const textInput = this.#convertFormFieldTo("input", this.valueInputEl);
-    textInput.placeholder = "Enter a value";
+    textInput.placeholder = this.valuePlaceholderValue;
     textInput.type = conditionFilter.type; // "text" || "number"
     if (conditionFilter.type === "number") {
       textInput.step = conditionFilter.number_step;

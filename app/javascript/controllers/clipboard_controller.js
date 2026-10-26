@@ -6,7 +6,7 @@ const RESET_DELAY_MS = 2000;
 
 export default class extends Controller {
   static targets = ["source", "iconDefault", "iconSuccess"];
-  static values = { copiedText: String };
+  static values = { copiedText: String, errorText: String };
 
   copy(event) {
     event.preventDefault();
@@ -23,6 +23,7 @@ export default class extends Controller {
       })
       .catch((error) => {
         console.error("Failed to copy text: ", error);
+        if (this.hasErrorTextValue) alert(this.errorTextValue);
       });
   }
 

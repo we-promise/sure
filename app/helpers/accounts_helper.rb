@@ -20,12 +20,13 @@ module AccountsHelper
   # into view, which can be long after they render, or never, so the countdown
   # has to time the request rather than the element. The frames declare when it
   # starts and when it stops.
-  def sparkline_frame_data
+  def sparkline_frame_data(timeout_message:)
     {
       controller: "turbo-frame-timeout",
       action: "turbo:before-fetch-request->turbo-frame-timeout#startTimeout " \
               "turbo:frame-load->turbo-frame-timeout#clearTimeout",
-      turbo_frame_timeout_timeout_value: SPARKLINE_FRAME_TIMEOUT_MS
+      turbo_frame_timeout_timeout_value: SPARKLINE_FRAME_TIMEOUT_MS,
+      turbo_frame_timeout_message_value: timeout_message
     }
   end
 

@@ -376,6 +376,10 @@ module LanguagesHelper
     ZW: "🇿🇼 Zimbabwe"
   }.freeze
 
+  def translation_locale(key)
+    I18n.fallbacks[I18n.locale].find { |locale| I18n.exists?(key, locale, fallback: false) }
+  end
+
   def country_options
     COUNTRY_MAPPING.map do |code, default_label|
       country = ISO3166::Country.new(code)

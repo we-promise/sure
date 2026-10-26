@@ -155,6 +155,8 @@
          data-goal-projection-chart-data-value="<%= goal.projection_payload.to_json %>"
          data-goal-projection-chart-aria-label-value="<%= t("goals.show.projection.aria_label", name: goal.name) %>"
          data-goal-projection-chart-aria-description-value="<%= helpers.strip_tags(goal.projection_summary) %>"
+         data-goal-projection-chart-target-template-value="<%= t("javascript.goal_projection_chart.target", amount: "%{amount}") %>"
+         data-goal-projection-chart-shortfall-template-value="<%= t("javascript.goal_projection_chart.shortfall", amount: "%{amount}") %>"
          data-goal-projection-chart-today-label-value="<%= t("goals.show.projection.today_marker") %>"
          data-goal-projection-chart-projected-template-value="<%= t("goals.show.projection.tooltip_projected", amount: "{amount}") %>"
          data-goal-projection-chart-saved-template-value="<%= t("goals.show.projection.tooltip_saved", amount: "{amount}") %>"

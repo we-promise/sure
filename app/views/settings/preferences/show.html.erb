@@ -118,7 +118,7 @@
     <div class="space-y-4"
          data-controller="currency-preferences"
          data-currency-preferences-base-currency-value="<%= @user.family.primary_currency_code %>"
-         data-currency-preferences-locale-value="<%= I18n.locale %>"
+         data-currency-preferences-locale-value="<%= translation_locale("settings.preferences.show.selected_currencies_count") %>"
          data-currency-preferences-selected-count-translations-value="<%= selected_count_translations.to_json %>">
       <% additional_preview_currencies = @user.family.secondary_enabled_currency_objects.first(6) %>
       <% additional_currency_count = @user.family.secondary_enabled_currency_objects.count %>

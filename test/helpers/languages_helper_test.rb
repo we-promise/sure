@@ -3,6 +3,16 @@ require "test_helper"
 class LanguagesHelperTest < ActionView::TestCase
   include LanguagesHelper
 
+  test "JavaScript plural locale follows the actual translated dictionary" do
+    I18n.with_locale(:ru) do
+      assert_equal :ru, translation_locale("javascript.attachment_upload.upload_files")
+    end
+    I18n.with_locale(:de) do
+      assert_equal :en, translation_locale("javascript.attachment_upload.upload_files")
+      assert_equal :de, translation_locale("settings.preferences.show.selected_currencies_count")
+    end
+  end
+
   test "Russian preference labels preserve canonical option values" do
     I18n.with_locale(:ru) do
       assert_includes language_options, [ "Русский (ru)", :ru ]

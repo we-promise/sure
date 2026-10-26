@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["input", "fileName", "uploadArea", "uploadText"]
+  static values = { uploadingMessage: String }
 
   connect() {
     if (this.hasInputTarget) {
@@ -57,7 +58,9 @@ export default class extends Controller {
     if (this.hasFileNameTarget && this.hasInputTarget && this.inputTarget.files.length > 0) {
       const fileNameText = this.fileNameTarget.querySelector('p')
       if (fileNameText) {
-        fileNameText.textContent = `Uploading ${this.inputTarget.files[0].name}...`
+        fileNameText.textContent = this.uploadingMessageValue.replace(
+          "%{filename}", () => this.inputTarget.files[0].name
+        )
       }
       
       // Change the icon to a loader

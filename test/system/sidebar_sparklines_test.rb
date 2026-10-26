@@ -117,6 +117,18 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
     end
   end
 
+  test "a stalled request displays the Russian timeout message" do
+    @user.update!(locale: "ru")
+    with_short_sparkline_timeout do
+      visit root_path
+      with_stalled_sparkline_responses do
+        expand_first_group
+        assert_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: "Нет ответа", minimum: 1
+        assert_no_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: "Timeout"
+      end
+    end
+  end
+
   private
 
     def with_short_sparkline_timeout(&block)
