@@ -29,7 +29,6 @@ fr:
         no_data_title: Aucune donnée de flux de trésorerie pour cette période
         title: Flux de trésorerie
         zoom_out: Retour à la trésorerie totale
-      drag_to_reorder: Glisser pour réorganiser la section
       insights_feed:
         title: Analyses
       investment_summary:
