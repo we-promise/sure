@@ -81,4 +81,28 @@ class DataCacheClearJobTest < ActiveJob::TestCase
 
     assert Balance.exists?(balance.id)
   end
+
+  test "waits for a running sync instead of deleting the balances it writes" do
+    Family::MarketDataRefresher.any_instance.expects(:refresh).never
+    balance = @account.balances.create!(date: 1.day.ago.to_date, balance: 1000, currency: "CAD")
+    @account.syncs.create!(status: "syncing")
+
+    assert_enqueued_with(job: DataCacheClearJob, args: [ @family ]) do
+      DataCacheClearJob.perform_now(@family)
+    end
+
+    assert Balance.exists?(balance.id)
+    assert_no_enqueued_jobs only: SyncJob
+  end
+
+  test "waits when a sync starts while the market data is refreshed" do
+    Family::MarketDataRefresher.any_instance.stubs(:refresh).with { @family.syncs.create!(status: "pending") }
+    balance = @account.balances.create!(date: 1.day.ago.to_date, balance: 1000, currency: "CAD")
+
+    assert_enqueued_with(job: DataCacheClearJob, args: [ @family ]) do
+      DataCacheClearJob.perform_now(@family)
+    end
+
+    assert Balance.exists?(balance.id)
+  end
 end
