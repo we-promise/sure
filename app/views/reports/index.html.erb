@@ -31,10 +31,10 @@
     <%# Period Navigation Tabs %>
     <div class="flex items-center justify-between gap-4">
       <%= render DS::SegmentedControl.new(aria_label: t("reports.index.period_aria", default: "Report period"), class: "overflow-x-auto no-scrollbar") do |sc| %>
-        <% %i[monthly quarterly ytd last_6_months custom].each do |ptype| %>
+        <% %i[monthly quarterly ytd last_6_months last_12_months custom].each do |ptype| %>
           <% sc.with_segment(t("reports.index.periods.#{ptype}"),
                active: @period_type == ptype,
-               href: reports_path(period_type: ptype),
+               href: report_view_path(period_type: ptype, start_date: nil, end_date: nil),
                class: "whitespace-nowrap") %>
         <% end %>
       <% end %>
@@ -44,6 +44,14 @@
     <% if @period_type == :custom %>
       <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form" }, class: "flex items-center gap-3 bg-surface-inset p-3 rounded-lg" do |f| %>
         <%= f.hidden_field :period_type, value: :custom %>
+        <% @category_selection.selected_values.each do |value| %>
+          <%= hidden_field_tag "trend_category_ids[]", value, id: nil %>
+        <% end %>
+        <%# Only an explicit choice is forwarded. An automatic default must not
+            become sticky when the next submit shrinks the range. %>
+        <% if trend_granularity_param.present? %>
+          <%= hidden_field_tag :trend_granularity, trend_granularity_param %>
+        <% end %>
 
         <div class="flex items-center gap-2">
           <label class="text-sm font-medium text-secondary"><%= t("reports.index.date_range.from") %></label>
@@ -74,7 +82,7 @@
               <%= render DS::Link.new(
                 variant: "icon",
                 icon: "chevron-left",
-                href: reports_path(period_type: @period_type, start_date: @nav[:prev_start], end_date: @nav[:prev_end]),
+                href: report_view_path(period_type: @period_type, start_date: @nav[:prev_start], end_date: @nav[:prev_end]),
                 aria: { label: t("reports.index.previous_period"), keyshortcuts: "ArrowLeft" },
                 data: { controller: "hotkey", hotkey: "ArrowLeft" },
               ) %>
@@ -91,7 +99,7 @@
                 <%= render DS::Link.new(
                   variant: "icon",
                   icon: "chevron-right",
-                  href: reports_path(period_type: @period_type, start_date: @nav[:next_start], end_date: @nav[:next_end]),
+                  href: report_view_path(period_type: @period_type, start_date: @nav[:next_start], end_date: @nav[:next_end]),
                   aria: { label: t("reports.index.next_period"), keyshortcuts: "ArrowRight" },
                   data: { controller: "hotkey", hotkey: "ArrowRight" },
                 ) %>
@@ -119,7 +127,7 @@
           <%= render DS::Link.new(
             text: t("reports.index.today"),
             variant: "outline",
-            href: reports_path(period_type: @period_type),
+            href: report_view_path(period_type: @period_type, start_date: nil, end_date: nil),
           ) %>
         </div>
       </div>
