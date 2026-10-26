@@ -82,8 +82,8 @@ class Holding::LotBookTest < ActiveSupport::TestCase
       [ :buy, 10, 10 ], [ :buy, BigDecimal("13.37"), 20 ], [ :sell, THIRD ], [ :split, Rational(3, 1) ],
       [ :sell, THIRD ], [ :buy, BigDecimal("7.77"), 1 ], [ :split, Rational(1, 7) ], [ :sell, BigDecimal("0.123") ]
     ],
-    "an unknown price, an oversell and a transfer lot" => [
-      [ :buy, 10, 5 ], [ :unknown, 4 ], [ :buy, nil, 2 ], [ :sell, 3 ], [ :sell, 100 ], [ :buy, 9, 3 ],
+    "an unknown price and a transfer lot" => [
+      [ :buy, 10, 5 ], [ :unknown, 4 ], [ :buy, nil, 2 ], [ :sell, 3 ], [ :buy, 9, 3 ],
       [ :unknown, 2 ], [ :sell, 1 ]
     ]
   }.freeze
@@ -335,6 +335,56 @@ class Holding::LotBookTest < ActiveSupport::TestCase
       # Every movement kind is crossed: buy, sell, transfer, split.
       assert(probe.checks.any? { |_, id, position, _| id == @split.id && position == 81 }, "after the 3-for-1 split and the sales")
       assert(probe.checks.any? { |_, id, position, _| id == @transferred.id && position == 15 }, "the transfer lot is counted")
+    end
+  end
+
+  test "a sale beyond the ledger's coverage marks the average unknown, and it survives the clamped close" do
+    book = Holding::LotBook.new
+    book.apply(BigDecimal("10"), 5, source_id: "a", acquired_on: Date.new(2024, 1, 1))
+    book.apply(BigDecimal("12"), 3, source_id: "b", acquired_on: Date.new(2024, 2, 1))
+
+    book.apply(nil, -100)
+
+    assert_nil book.average_cost, "the ledger saw less than it sold; the basis is not knowable"
+    assert_empty book.lots, "the clamped relief still closes what the ledger holds"
+
+    book.apply(BigDecimal("9"), 2, source_id: "c", acquired_on: Date.new(2024, 3, 1))
+    assert_nil book.average_cost, "a clean-looking reopen must not erase that the sale was over"
+  end
+
+  test "selling from a book that never saw the position marks the average unknown" do
+    book = Holding::LotBook.new
+
+    book.apply(nil, -2)
+    book.apply(BigDecimal("20"), 1, source_id: "late", acquired_on: Date.new(2024, 1, 1))
+
+    assert_nil book.average_cost, "the tracker would answer 20; the true position is unknowable here"
+  end
+
+  test "selling exactly to zero stays known — the reopen after a clean close is not unknown" do
+    book = Holding::LotBook.new
+    book.apply(BigDecimal("10"), 5, source_id: "a", acquired_on: Date.new(2024, 1, 1))
+
+    book.apply(nil, -5)
+    book.apply(BigDecimal("20"), 1, source_id: "b", acquired_on: Date.new(2024, 2, 1))
+
+    assert_equal BigDecimal("20"), book.average_cost
+  end
+
+  test "repeated partial relief keeps lot quantities at the trade scale and the open sum exact" do
+    book = Holding::LotBook.new
+    book.apply(BigDecimal("1"), 1, source_id: "a", acquired_on: Date.new(2024, 1, 1))
+    book.apply(BigDecimal("1"), 2, source_id: "b", acquired_on: Date.new(2024, 1, 2))
+
+    # Five halves of the open position: the first relief divides by three, so
+    # every lot quantity is a non-terminating decimal from there on.
+    5.times { book.apply(nil, -BigDecimal("0.5")) }
+
+    assert_equal BigDecimal("0.5"), book.open_qty, "the last-lot drift correction keeps the open sum exact"
+    book.lots.each do |lot|
+      decimals = lot.qty.to_s("F").split(".").last.to_s.length
+      assert_operator decimals, :<=, Holding::LotBook::LOT_QTY_SCALE,
+        "lot #{lot.source_id} has #{decimals} decimal places after five partial sells"
     end
   end
 
