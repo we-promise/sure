@@ -89,7 +89,7 @@ class RecurringOccurrence < ApplicationRecord
     return :matched if allocations.confirmed.where.not(entry_id: nil).exists?
     return :received if paid?
 
-    due_on < Date.current ? :unmatched : :expected
+    effective_due_on < Date.current ? :unmatched : :expected
   end
 
   def remaining_amount
