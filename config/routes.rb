@@ -404,6 +404,16 @@ Rails.application.routes.draw do
       delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
     end
     resource :ai_prompts, only: %i[show update]
+    resource :classifier, only: %i[show update] do
+      patch :rule
+      post :add_rule
+      post :run
+      post :clear_locks
+      post :evaluate
+      post :find_best
+      post :remember_weight
+      patch :apply_best
+    end
     resource :llm_usage, only: :show
     resource :guides, only: :show
     get "bank_sync", to: redirect("/settings/providers", status: 301)
@@ -561,6 +571,7 @@ Rails.application.routes.draw do
 
     collection do
       delete :clear_filter
+      get :name_suggestions
     end
 
     member do
@@ -626,6 +637,13 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :auto_matches, only: %i[index] do
+    collection do
+      patch :update_settings
+      patch :bulk_update
+    end
+  end
+
   resources :insights, only: %i[index] do
     collection do
       post :refresh
@@ -673,6 +691,7 @@ Rails.application.routes.draw do
       get :select_provider
       get :confirm_unlink
       delete :unlink
+      delete :clear_filter
     end
 
     collection do
@@ -786,6 +805,7 @@ Rails.application.routes.draw do
       end
       resource :usage, only: [ :show ], controller: :usage
       resource :cash_flow, only: [ :show ], controller: :cash_flows
+      resource :spending_vs_normal, only: [ :show ], controller: :spending_vs_normal
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       resources :insights, only: [ :index ]
       resources :push_subscriptions, only: [ :create, :destroy ]
