@@ -105,7 +105,7 @@ ru:
         strategy_openid_connect: OpenID Connect
         strategy_saml: SAML 2.0
         submit: Сохранить поставщика
-        super_admin_groups: Группы супер администраторов
+        super_admin_groups: Группы суперадминистраторов
         test_connection: Проверить соединение
         update_provider: Обновить поставщика
       index:

@@ -1,0 +1,15 @@
+---
+ru:
+  demo_family_refresh_mailer:
+    completed:
+      subject: Обновление демонстрационной семьи завершено
+      activity_heading: Активность за период
+      sessions_label: Уникальные сеансы входа в предыдущую демонстрационную семью
+      families_label: Создано новых семейных аккаунтов
+      period_heading: Отчётный период (UTC)
+      from_label: 'С:'
+      to_label: 'По:'
+      time_format: '%d.%m.%Y, %H:%M:%S UTC'
+      family_heading: Предыдущая демонстрационная семья
+      family_not_found: Не найдена
+      id_label: 'ID:'

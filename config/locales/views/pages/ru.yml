@@ -9,6 +9,7 @@ ru:
           cash_flow: "Денежный поток"
           surplus: "Профицит"
           deficit: "Дефицит"
+          invested: Инвестиции
         title: Новая диаграмма Sankey
         preview: 'Предварительный просмотр'
         preview_tooltip: Эта диаграмма заменит визуализацию выше, так как использует новый общий API с мобильным клиентом на Swift.
@@ -21,6 +22,13 @@ ru:
         feedback_thanks: Спасибо, что помогаете улучшить диаграмму!
         feedback_privacy: Ваш ответ отправляется в PostHog. Опишите проблему, не указывая номера счетов, балансы и другие личные финансовые данные.
         feedback_submit: Отправить отзыв
+        group_by_label: Группировать потоки по
+        group_by_category: Категориям
+        group_by_account: Счетам
+        sort_label: Сортировка потоков
+        sort_auto: Автоматически
+        sort_ascending: Сначала меньшие
+        sort_descending: Сначала большие
       balance_sheet:
         add_accounts: Добавьте счета %{name}, чтобы увидеть разбивку
         add_asset_accounts: Добавьте счета активов
@@ -119,6 +127,19 @@ ru:
         period_scope_hint: Показывает месяц, выбранный здесь, — независимо от периода панели вверху.
         no_data: Нет данных о расходах за этот месяц
         previous_comparison_days: (1–%{end_day})
+        filter_categories: Категории (%{count})
+        filter_categories_all: Все категории
+        search_categories: Поиск категорий
+        apply: Применить
+      customize:
+        start: Настроить
+        done: Готово
+        hide: Скрыть «%{title}»
+        hidden_title: Скрытые виджеты
+        hidden_description: Верните виджет на главную страницу.
+        none_hidden: Все виджеты показаны. Чтобы скрыть виджет, нажмите на значок глаза.
+        all_hidden_title: Все виджеты скрыты
+        all_hidden_description: Откройте настройки главной страницы, чтобы вернуть виджеты.
     feedback:
       bug_report: Сообщить об ошибке
       description: Сообщите нам, если у вас есть замечания. Можно приложить ссылки

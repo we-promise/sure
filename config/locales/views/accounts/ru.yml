@@ -74,6 +74,7 @@ ru:
       cancel_sync: Отменить синхронизацию
       financekit_accounts:
         description: 'Управляйте подключениями Apple Wallet и синхронизацией в приложении Sure для iOS.'
+        title: Apple Wallet
     new:
       container:
         close: Закрыть

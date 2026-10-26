@@ -398,6 +398,7 @@ ru:
         website: 'Веб-сайт'
         by_order_of: 'По поручению'
         reference_number: 'Номер операции'
+        ppd_id: ID PPD
     split_parent_row:
       split_label: Разделена
     summary:

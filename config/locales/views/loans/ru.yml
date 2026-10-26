@@ -25,6 +25,18 @@ ru:
       rate_change_remove: Удалить
       start_date: Дата выдачи
       start_date_hint: 'Дата выдачи кредита. Для нового кредита история баланса начинается с этой даты, а не с даты начального остатка. Оставьте поле пустым, чтобы использовать дату начального остатка.'
+      day_count_convention: База начисления процентов
+      day_count_convention_actual_365: Actual/365
+      day_count_convention_actual_actual: Actual/actual
+      day_count_convention_hint: Определяет, как кредитор соотносит период начисления с годом. Actual/365 учитывает фактическое число дней в месяце и обычно используется для ипотеки в Великобритании и Австралии. 30/360 начисляет за месяц ровно одну двенадцатую годовых процентов — этот способ Sure использовал ранее.
+      day_count_convention_thirty_360: 30/360 (одна двенадцатая за месяц)
+      down_payment: Первоначальный взнос
+      insurance_rate: Ставка страхования
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_hint: Годовая ставка, по которой страховка начисляется ежемесячно вместе с платежом. При постоянной базе расчёт идёт от первоначальной суммы кредита, при убывающей — от остатка долга.
+      insurance_rate_type: База расчёта страховки
+      insurance_rate_type_decreasing_life: Остаток долга
+      insurance_rate_type_level_term: Первоначальная сумма
     new:
       title: Введите детали кредита
     overview:
@@ -49,6 +61,15 @@ ru:
         type: Тип
         unknown: Неизвестно
         original_payoff_date: Первоначальная дата погашения
+        insurance_rate_only: '%{rate} в год'
+        leverage: Кредитное плечо
+        leverage_band_conservative: Низкое
+        leverage_band_high: Высокое
+        leverage_band_moderate: Умеренное
+        leverage_multiple: '%{ratio}×'
+        total_cost: Общая сумма выплат
+        total_cost_with_insurance: Общая сумма выплат со страховкой
+        total_insurance: Страховка
       schedule:
         date: Дата
         description: Рассчитано по первоначальной сумме, ставке и сроку, начиная с %{start_date}. Досрочные платежи не учитываются.
@@ -62,3 +83,14 @@ ru:
         remaining_balance: Остаток долга
         total_cost: Общая сумма выплат
         total_interest: Всего процентов
+        forecasted_payoff_date: Прогнозируемая дата погашения
+        forecasted_payoff_not_converged: При текущем платеже кредит не будет погашен
+        not_applicable: Н/Д
+      repayment_progress:
+        instalment: Платёж %{number} · %{date}
+        insurance: Страховка
+        interest: Проценты
+        of_original: из %{amount}
+        principal: Основной долг
+        repaid: Погашено
+        total: Всего

@@ -194,7 +194,7 @@ ru:
         base_currency_label: Базовая валюта
         country: Страна
         currencies_more: "+%{count} ещё"
-        currencies_subtitle: Выберите валюты для денежных полей в %{moniker}
+        currencies_subtitle: Выберите валюты для денежных полей (%{moniker}).
         currencies_title: '%{moniker}: валюты'
         currency: Валюта
         currency_search_placeholder: Поиск валют
@@ -248,7 +248,7 @@ ru:
         sharing_default_label: Доступ к новым счетам по умолчанию
         sharing_private: Оставлять личными
         sharing_shared: Открывать доступ всем участникам
-        sharing_subtitle: Выберите, какой доступ к новым счетам получать участникам
+        sharing_subtitle: Настройте доступ участников к новым счетам (%{moniker}).
         sharing_title: '%{moniker}: общий доступ'
         timezone: Часовой пояс
         timezones:
@@ -320,6 +320,7 @@ ru:
           Europe/Helsinki: Хельсинки
           Asia/Jerusalem: Иерусалим
           Europe/Kaliningrad: Калининград
+          Europe/Kiev: Киев
           Africa/Johannesburg: Йоханнесбург
           Europe/Riga: Рига
           Europe/Sofia: София
@@ -349,6 +350,7 @@ ru:
           Asia/Kathmandu: Катманду
           Asia/Dhaka: Дакка
           Asia/Urumqi: Урумчи
+          Asia/Rangoon: Янгон
           Asia/Bangkok: Бангкок
           Asia/Jakarta: Джакарта
           Asia/Krasnoyarsk: Красноярск
@@ -398,7 +400,7 @@ ru:
         household_budget_enabled_hint: Ведите общий бюджет вместе с личными. Отключите, чтобы оставить только личные бюджеты.
         budget_sharing_title: Доступ к личным бюджетам
         budget_sharing_subtitle: Разрешите другим участникам просматривать или редактировать ваш личный бюджет.
-        budget_sharing_no_members: Нет других участников, которым можно открыть доступ.
+        budget_sharing_no_members: '%{moniker}: нет других участников, которым можно открыть доступ.'
         budget_sharing_permission_label: Доступ для %{name}
         budget_sharing_permissions:
           none: Нет доступа
@@ -438,7 +440,7 @@ ru:
         group_title: Группа
         household_form_input_placeholder: Введите название семьи
         household_form_label: Название семьи
-        household_subtitle: Добавленные участники смогут войти в общий аккаунт и пользоваться общими счетами и другими данными.
+        household_subtitle: Приглашённые участники смогут войти в общий аккаунт и пользоваться общими данными (%{moniker}).
         household_title: Семья
         invitation_link: Ссылка на приглашение
         invite_member: Добавить участника
@@ -603,7 +605,7 @@ ru:
             должен включать ваш запрос активности IBKR Flex.
           title: Разделы, поля и конфигурация
         not_configured: Не настроено.
-        query_id_label: Query ID
+        query_id_label: ID запроса
         query_id_placeholder_existing: Оставьте пустым, чтобы сохранить текущий ID
           запроса
         query_id_placeholder_new: Введите ваш ID запроса IBKR Flex
@@ -744,20 +746,20 @@ ru:
         fields:
           plaid:
             client_id:
-              label: Client ID
+              label: ID клиента
               description: Ваш Client ID из панели Plaid.
             secret:
-              label: Secret Key
+              label: Секретный ключ
               description: Ваш Secret Key из панели Plaid.
             environment:
               label: Среда
               description: "Среда Plaid: sandbox, development или production."
           plaid_eu:
             client_id:
-              label: Client ID
+              label: ID клиента
               description: Ваш Client ID из панели Plaid для региона ЕС.
             secret:
-              label: Secret Key
+              label: Секретный ключ
               description: Ваш Secret Key из панели Plaid для региона ЕС.
             environment:
               label: Среда
@@ -951,10 +953,10 @@ ru:
           step_1: Откройте Trading 212 → Settings → API (в веб-версии или мобильном приложении).
           step_2: Сгенерируйте новый API-ключ — Trading 212 покажет API ID и Secret Key.
           step_3: Вставьте оба значения ниже, выберите среду и валюту счёта, затем сохраните.
-        api_key_label: API ID
+        api_key_label: ID API
         api_key_placeholder_new: Вставьте ваш API ID Trading 212
         api_key_placeholder_existing: Оставьте пустым, чтобы сохранить текущий API ID
-        api_secret_label: Secret Key
+        api_secret_label: Секретный ключ
         api_secret_placeholder_new: Вставьте ваш Secret Key Trading 212
         api_secret_placeholder_existing: Оставьте пустым, чтобы сохранить текущий Secret Key
         environment_label: Среда
@@ -1035,6 +1037,7 @@ ru:
       whats_new_label: Что нового
       background_jobs_label: Фоновые задачи
       system_health_label: Состояние системы
+      classifier_label: Классификатор
     settings_nav_link_large:
       next: Далее
       previous: Назад

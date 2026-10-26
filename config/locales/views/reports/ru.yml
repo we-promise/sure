@@ -12,7 +12,7 @@ ru:
         good: В норме
         over: Превышение бюджета
         warning: Близко к лимиту
-      suggested_daily: 'Рекомендуемый расход в день: %{amount} в течение оставшихся %{days} дней'
+      suggested_daily: 'Рекомендуемый расход в день: %{amount}. Осталось дней: %{days}.'
       title: Выполнение бюджета
     empty_state:
       add_account: Добавить счёт
@@ -72,6 +72,8 @@ ru:
       title: Отчёты
       today: Сегодня
       toggle_section: Переключить видимость раздела
+      sections_aria: Разделы отчётов
+      shortcut_hint: '%{action} (%{key})'
     invalid_date_range: Дата окончания не может быть раньше даты начала. Даты были
       поменяны местами.
     investment_flows:
@@ -258,3 +260,31 @@ ru:
       transactions: Операции
       weekday_spending: Расходы в будни
       weekend_spending: Расходы в выходные
+    spending_vs_normal:
+      title: Расходы по сравнению с обычными
+      summary_html: За этот период потрачено %{total}. Обычные расходы за период такой продолжительности — %{normal}, по данным с %{baseline_start} по %{baseline_end}.
+      summary_so_far_html: На данный момент потрачено %{total}. Обычные расходы за такое число дней — %{normal}, по данным с %{baseline_start} по %{baseline_end}.
+      no_history_html: За этот период потрачено %{total}. Пока недостаточно предыдущих данных, чтобы определить обычный уровень расходов.
+      no_history_short: Пока недостаточно предыдущих данных для сравнения.
+      no_spending: За этот период расходов нет.
+      no_changes: Расходы во всех категориях соответствуют обычному уровню.
+      treemap_title: На что ушли деньги
+      changes_title: Что изменилось
+      direct: '%{category} (без подкатегории)'
+      tooltip:
+        path: '%{parent} › %{category}'
+        total: '%{category}: %{amount}'
+        normal: 'Обычно: %{amount}'
+        more: На %{amount} больше обычного (%{percent})
+        less: На %{amount} меньше обычного (%{percent})
+        more_no_percent: На %{amount} больше обычного
+        less_no_percent: На %{amount} меньше обычного
+        no_normal: Нет предыдущих данных для сравнения
+        open: Нажмите, чтобы посмотреть операции
+      legend:
+        less: На 50–100% меньше
+        slightly_less: На 15–50% меньше
+        normal: Примерно как обычно
+        slightly_more: На 15–50% больше
+        more: На 50–100% больше
+        much_more: Более чем на 100% больше

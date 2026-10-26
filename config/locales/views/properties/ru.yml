@@ -3,16 +3,16 @@ ru:
   properties:
     address:
       address_line1_label: Адрес, строка 1
-      address_line1_placeholder: '123 Main Street'
+      address_line1_placeholder: Улица, дом, квартира
       city_label: Город
-      city_placeholder: 'San Francisco'
+      city_placeholder: Город или населённый пункт
       country_label: Страна
-      country_placeholder: 'USA'
+      country_placeholder: Название страны
       postal_code_label: Почтовый индекс
       postal_code_placeholder: '12345'
       save: Сохранить
       state_region_label: Область/Регион
-      state_region_placeholder: 'CA'
+      state_region_placeholder: Область или регион
       title: Ввести данные вручную
     balances:
       market_value_label: Оценочная рыночная стоимость
@@ -27,19 +27,19 @@ ru:
       title: Ввести данные вручную
     form:
       address_line1: Улица
-      address_line1_placeholder: '123 Main St'
+      address_line1_placeholder: Улица и номер дома
       area: Жилая площадь
       area_placeholder: '2000'
       area_unit: Единица измерения
       country: Страна
       country_placeholder: 'US'
       locality: Город
-      locality_placeholder: 'San Francisco'
+      locality_placeholder: Город или населённый пункт
       none: Нет
       postal_code: Почтовый индекс
       postal_code_placeholder: '94105'
       region: Область/Регион
-      region_placeholder: 'CA'
+      region_placeholder: Область или регион
       subtype_prompt: Выберите тип недвижимости
       year_built: Год постройки
       year_built_placeholder: '2000'
@@ -70,6 +70,7 @@ ru:
         high: 'Высокая'
         medium: 'Средняя'
         low: 'Низкая'
+      avm_attribution_chimnie: Данные об оценке предоставлены Chimnie. Содержат данные OS © Crown copyright and database right, данные Royal Mail © Royal Mail copyright and database right и данные HM Land Registry © Crown copyright and database right, используемые по лицензии Open Government Licence v3.0.
     overview:
       living_area: Жилая площадь
       market_value: Рыночная стоимость

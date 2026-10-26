@@ -42,6 +42,41 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
+  def test_russian_catalog_covers_english_keys_and_preserves_interpolations
+    english = flatten_leaves(project_locale_tree("en"))
+    russian = flatten_leaves(project_locale_tree("ru"))
+    plural_suffix = /\.(one|few|many|other|zero|two)\z/
+    russian_keys = russian.keys.map { |key| key.sub(plural_suffix, "") }.to_set
+    missing = english.keys.reject { |key| russian_keys.include?(key.sub(plural_suffix, "")) }
+    assert_empty missing, "Russian translations missing: #{missing.join(', ')}"
+
+    plural_groups = english.keys.filter_map do |key|
+      key.delete_suffix(".one") if key.end_with?(".one") && english.key?(key.delete_suffix(".one") + ".other")
+    end
+    missing_plurals = plural_groups.flat_map do |group|
+      %w[one few many other].filter_map { |form| "#{group}.#{form}" unless russian.key?("#{group}.#{form}") }
+    end
+    assert_empty missing_plurals, "Russian plural forms missing: #{missing_plurals.join(', ')}"
+
+    mismatches = russian.filter_map do |key, value|
+      source = english[key] || english[key.sub(/\.(few|many)\z/, ".other")]
+      next unless source.is_a?(String) && value.is_a?(String)
+
+      required = source.scan(/%\{(\w+)\}/).flatten.uniq
+      actual = value.scan(/%\{(\w+)\}/).flatten.uniq
+      key if (required - actual).any? || (actual - required - [ "count" ]).any?
+    end
+    assert_empty mismatches, "Russian interpolation mismatch: #{mismatches.join(', ')}"
+  end
+
+  def test_russian_timezone_names_cover_runtime_identifiers
+    missing = ActiveSupport::TimeZone.all.map { |zone| zone.tzinfo.identifier }.uniq.reject do |identifier|
+      I18n.exists?("settings.preferences.show.timezones.#{identifier}", :ru, fallback: false)
+    end
+
+    assert_empty missing, "Russian timezone labels missing: #{missing.join(', ')}"
+  end
+
   def test_no_missing_keys
     skip "Skipping missing keys test"
     missing_keys = @i18n.missing_keys(locales: [ :en ])
@@ -173,6 +208,13 @@ class I18nTest < ActiveSupport::TestCase
   end
 
   private
+    def project_locale_tree(locale)
+      Rails.root.glob("config/locales/**/*.yml").sort.each_with_object({}) do |path, tree|
+        data = YAML.load_file(path, aliases: true).fetch(locale, {})
+        tree.deep_merge!(data)
+      end
+    end
+
     # { "months_saved.one" => "...", ... } for UI.account.chart.loan in one locale.
     def loan_chart_leaves(locale)
       tree = YAML.load_file(Pathname.pwd.join("config/locales/views/components/#{locale}.yml"), aliases: true)

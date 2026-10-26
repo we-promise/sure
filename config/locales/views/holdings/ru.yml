@@ -26,7 +26,7 @@ ru:
     holding:
       no_cost_basis: Нет стоимости приобретения
       per_share: за акцию
-      shares: 'Акции: %{qty}'
+      shares: '%{qty} ед.'
       unknown: "--"
     index:
       positions:
