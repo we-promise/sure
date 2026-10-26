@@ -228,6 +228,20 @@ class DestroyJobTest < ActiveJob::TestCase
     assert_equal "disabled", account.reload.status
   end
 
+  test "an account whose owner left the family is still left disabled after a failed destroy" do
+    account = accounts(:depository)
+    account.mark_for_deletion!
+    account.owner.update_column(:family_id, families(:empty).id)
+    account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+
+    assert_difference "DebugLogEntry.count", 1 do
+      DestroyJob.perform_now(account)
+    end
+
+    assert_equal "disabled", account.reload.status
+    assert_equal "StandardError", DebugLogEntry.order(:created_at).last.metadata["error_class"]
+  end
+
   test "an error after the account delete committed is recorded as itself" do
     account = accounts(:depository)
     account.mark_for_deletion!

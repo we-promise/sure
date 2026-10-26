@@ -730,12 +730,16 @@ class Account < ApplicationRecord
   # Leaves the account disabled so it stays visible and can be deleted again.
   # DestroyJob's scheduled_for_deletion reset is for provider items; accounts
   # track deletion in `status`.
+  #
+  # Mirrors the restore_after_failed_deletion and disable events, but written
+  # directly: an unrelated validation (an owner who has since left the family,
+  # say) must not leave the account hidden in pending_deletion or replace the
+  # destroy error with its own.
   def restore_after_failed_destroy
-    if may_restore_after_failed_deletion?
-      restore_after_failed_deletion!
-    elsif may_disable?
-      disable!
-    end
+    return unless may_restore_after_failed_deletion? || may_disable?
+
+    restored_disabled_at = (disabled_at_in_database if pending_deletion?) || Time.current
+    update_columns(status: "disabled", disabled_at: restored_disabled_at, updated_at: Time.current)
   end
 
   def current_holdings
