@@ -732,7 +732,7 @@ class TransactionsController < ApplicationController
     # category/merchant and resubmits, that stale generated name (no longer
     # blank) skips the callback entirely and gets saved as-is.
     def clear_stale_auto_generated_name!(entry)
-      entry.name = "" if entry_params[:name].blank?
+      entry.name = "" if params.dig(:entry, :name).blank?
     end
 
     def set_new_transaction_form_options
