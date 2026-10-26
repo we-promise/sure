@@ -1,4 +1,4 @@
-<%# locals: (holding:, lots:) %>
+<%# locals: (holding:, lots:, can_edit:) %>
 
 <div class="space-y-2 pt-1">
   <p class="text-xs text-secondary"><%= t("holdings.lots.title") %></p>
@@ -19,7 +19,7 @@
               <% if lot.manual_cost? %>
                 <%= icon "lock", size: "xs", class: "text-secondary" %>
               <% end %>
-              <% unless lot.opening? %>
+              <% if can_edit && !lot.opening? %>
                 <%# Unnamed group-open: matches ANY open ancestor disclosure (the
                     Overview panel itself); follow the component's own chevron
                     idiom so the pencil lights with THIS row's details only. %>
@@ -28,7 +28,7 @@
             </span>
           <% end %>
 
-          <% unless lot.opening? %>
+          <% if can_edit && !lot.opening? %>
             <div class="mt-3 space-y-3">
               <%= styled_form_with url: holding_lot_path(holding, lot),
                     method: :patch,
