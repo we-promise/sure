@@ -255,6 +255,11 @@ class GiftCardsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#user_account_groups_gift_card[checked]"
   end
 
+  test "the initial amount is not rounded to the rendered currency's precision" do
+    get new_gift_card_path
+    assert_select "input[name='account[accountable_attributes][face_value]'][step='any']"
+  end
+
   test "the form warns when credentials will be stored unencrypted" do
     GiftCard.stubs(:encryption_ready?).returns(false)
     get edit_gift_card_path(@account)

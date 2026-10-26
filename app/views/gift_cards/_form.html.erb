@@ -9,11 +9,15 @@
 
   <div class="space-y-2">
     <%= form.fields_for :accountable do |gift_card_form| %>
+      <%# step "any": on a new card this field keeps the currency it was
+          rendered with when the balance currency changes, so it must not
+          round the amount to that currency's precision. %>
       <%= gift_card_form.money_field :face_value,
                                      label: t("gift_cards.form.face_value"),
                                      label_tooltip: t("gift_cards.form.face_value_hint"),
                                      currency_value_override: account.gift_card.face_value_currency || account.currency || Current.family.currency,
                                      hide_currency: true,
+                                     step: "any",
                                      min: 0 %>
 
       <div class="flex items-center gap-2">
