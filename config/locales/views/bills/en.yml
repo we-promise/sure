@@ -42,6 +42,7 @@ en:
       rule_named: "%{name}"
       rule_amount_range: "from %{min} to %{max}"
       rule_aliases: "Also matches %{names}"
+      rule_detected: "Matches transactions named %{name}"
       rule_learned_tolerance: "Amounts within %{percent} of the usual amount match this bill"
       history_title: Last 12 months
       history_aria: Payments over the last twelve months
@@ -88,7 +89,7 @@ en:
       remaining: "%{amount} remaining"
       paid_headline: "%{amount} paid"
     add_bill: Add bill
-    manage: Manage
+    manage: View
     find_payment: Find payment
     add_payment: Add payment
     review_match: Review match
@@ -205,6 +206,12 @@ en:
       bridge_label: Before your next paycheck
       bridge_amount: "· %{amount} due"
       bridge_split: "Due before %{date}, covered by the %{cash} in your accounts."
+      bridge_left: "%{amount} left after bills"
+      bridge_show_more:
+        one: Show 1 more
+        other: "Show %{count} more"
+      bridge_allocation_aria: "Of %{cash} in your accounts, %{due} is due before your next paycheck and %{left} is left."
+      item_overdue: Overdue
       shortfall_label: Short before your next payday
       shortfall_amount: "· %{amount}"
       shortfall_split: "%{obligations} is due before %{date} and your accounts hold %{cash}."
@@ -245,12 +252,8 @@ en:
       no_matches_title: Nothing matches
       no_matches_description: Try clearing a filter or the search.
       col_name: Name
-      col_type: Type
-      col_frequency: Frequency
       col_amount: Amount
       col_next: Next due
-      next_short: "next %{date}"
-      col_status: Status
       col_actions: Actions
       monthly_equivalent: "%{amount}/mo"
       types:
@@ -267,8 +270,8 @@ en:
       paid_so_far: Paid so far
       hero_past_due: "%{amount} past due"
       hero_next_seven: "%{amount} due in the next 7 days"
-      add_bill: Add bill
-      add_income: Add income
+      add_bill: New bill
+      add_income: New income
       review_with_ai: Review with AI
       detected_review:
         one: We found 1 recurring payment in your transactions. Check it over so the totals here match what you actually pay.
@@ -308,7 +311,7 @@ en:
       this_month: This month
       later: After this month
       paid_this_month: Paid this month
-      dormant: Dormant
+      dormant: Paused
       kpi_remaining: Remaining this month
       kpi_paid: Paid this month
       kpi_next_seven: Due next 7 days

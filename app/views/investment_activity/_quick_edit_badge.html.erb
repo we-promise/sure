@@ -61,7 +61,7 @@
         data: (income_trade ? {} : { action: "click->activity-label-quick-edit#toggle", activity_label_quick_edit_target: "badge" }),
         title: (has_label ? t("transactions.transaction.activity_type_tooltip") : t("transactions.show.activity_type"))) do %>
     <% if has_label %>
-      <%= label %>
+      <%= t("transactions.activity_labels.#{label.parameterize(separator: "_")}", default: label) %>
     <% else %>
       <%= icon "tag", size: "xs", color: "current" %>
       <span><%= t("transactions.show.activity_type") %></span>
@@ -89,7 +89,7 @@
                   class="w-full text-left px-3 py-1.5 text-sm text-primary hover:bg-surface-inset transition-colors <%= activity_label == label ? "font-semibold bg-surface-inset" : "" %>"
                   data-action="click->activity-label-quick-edit#select"
                   data-label="<%= activity_label %>">
-            <%= activity_label %>
+            <%= t("transactions.activity_labels.#{activity_label.parameterize(separator: "_")}", default: activity_label) %>
           </button>
         <% end %>
       </div>

@@ -91,6 +91,9 @@ vi:
         title: Cài đặt Brandfetch
         high_res_label: Bật logo độ phân giải cao
         high_res_description: Khi bật, logo sẽ được lấy ở độ phân giải 120x120 thay vì 40x40. Điều này cung cấp hình ảnh sắc nét hơn trên màn hình độ phân giải cao.
+      llm_provider_selector:
+        max_items_per_call_label: Số mục tối đa mỗi lô (Tùy chọn)
+        max_items_per_call_help: "Giới hạn trên cho lô phân loại tự động / phát hiện nhà cung cấp. Mặc định: 25. Với nhà cung cấp tương thích OpenAI, lô lớn hơn được tự động cắt để phù hợp với cửa sổ ngữ cảnh."
       openai_settings:
         description: Nhập token truy cập và tùy chọn cấu hình nhà cung cấp tương thích OpenAI tùy chỉnh
         env_configured_message: Đã cấu hình thành công qua biến môi trường.
@@ -112,8 +115,6 @@ vi:
         context_window_help: "Tổng số token mô hình sẽ chấp nhận. Mặc định: 2048 — tăng lên 8192+ cho OpenAI đám mây hoặc mô hình cục bộ ngữ cảnh lớn."
         max_response_tokens_label: Số token phản hồi tối đa (Tùy chọn)
         max_response_tokens_help: "Token dành cho phản hồi của mô hình. Mặc định: 512. Giảm để dành chỗ cho lịch sử dài hơn."
-        max_items_per_call_label: Số mục tối đa mỗi lô (Tùy chọn)
-        max_items_per_call_help: "Giới hạn trên cho lô phân loại tự động / phát hiện nhà cung cấp. Mặc định: 25. Lô lớn hơn được tự động cắt để phù hợp với cửa sổ ngữ cảnh."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
