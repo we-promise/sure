@@ -5,6 +5,7 @@ ro:
       payments:
         renewal: "Contribuția ta continuă pe %{date}."
   settings:
+    encryption_migration_guide: Ghid de configurare a criptării și de migrare
     ai_prompts:
       show:
         page_title: Prompturi AI

@@ -1,6 +1,7 @@
 ---
 fr:
   settings:
+    encryption_migration_guide: Guide de configuration du chiffrement et de migration
     ai_prompts:
       show:
         disable_ai: Désactiver l'assistant IA
