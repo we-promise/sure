@@ -23,8 +23,11 @@ module Holding::TradeCalculatorHelpers
     end
 
     def manual_lot_costs
-      @manual_lot_costs ||= HoldingLot.derived.where(account_id: account.id).where.not(manual_total_cost: nil)
-        .pluck(:source_entry_id, :manual_total_cost).to_h
+      @manual_lot_costs ||= begin
+        scope = HoldingLot.derived.where(account_id: account.id).where.not(manual_total_cost: nil)
+        scope = scope.where(security_id: @security_ids) if @security_ids
+        scope.pluck(:source_entry_id, :manual_total_cost).to_h
+      end
     end
 
     # Converts a trade's price into the account's currency at the rate of the

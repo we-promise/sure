@@ -20,7 +20,10 @@
                 <%= icon "lock", size: "xs", class: "text-secondary" %>
               <% end %>
               <% unless lot.opening? %>
-                <%= icon "pencil", size: "xs", class: "text-secondary group-open:text-primary" %>
+                <%# Unnamed group-open: matches ANY open ancestor disclosure (the
+                    Overview panel itself); follow the component's own chevron
+                    idiom so the pencil lights with THIS row's details only. %>
+                <%= icon "pencil", size: "xs", class: "text-secondary [details[open]>summary_&]:text-primary" %>
               <% end %>
             </span>
           <% end %>
