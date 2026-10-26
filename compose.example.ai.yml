@@ -70,8 +70,10 @@ x-db-env: &db_env
 
 x-rails-env: &rails_env
   <<: *db_env
-  # Required. Generate with `openssl rand -hex 64` and set it in .env; see docs/hosting/docker.md.
-  SECRET_KEY_BASE: "${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in .env, generate one with openssl rand -hex 64}"
+  # Required. New install: generate with `openssl rand -hex 64` and set it in .env.
+  # Existing install that ran without it: restore the old key first, see
+  # https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#upgrading-an-install-that-ran-without-secret_key_base
+  SECRET_KEY_BASE: "${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in .env. An existing install that ran without one must restore its old key first, see https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#upgrading-an-install-that-ran-without-secret_key_base}"
   SELF_HOSTED: "true"
   # Recommended: explicit Active Record encryption keys (bin/rails db:encryption:init).
   # When unset, self-hosted mode derives them from SECRET_KEY_BASE.

@@ -350,13 +350,9 @@ For a production-ready setup with security scanning:
    curl -o pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
    ```
 
-2. **Create `.env` with a secret key and your MCP credentials:**
+2. **Set a secret key and your MCP credentials in `.env`:**
 
-   ```bash
-   grep -qE "^[[:space:]]*(export[[:space:]]+)?SECRET_KEY_BASE[[:space:]]*=[[:space:]]*[\"']?[^\"'[:space:]]" .env 2>/dev/null || echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> .env
-   ```
-
-   The stack will not start without a `SECRET_KEY_BASE`, and the command only adds one when `.env` has no non-empty one (an empty line, as in `.env.example`, is overridden by the appended key). On an existing install, keep the one you already use; see [Configure your environment](docker.md#step-3-configure-your-environment). Then add:
+   The stack will not start without a `SECRET_KEY_BASE`. If this is an existing install that has been running without one, read [Upgrading an install that ran without `SECRET_KEY_BASE`](docker.md#upgrading-an-install-that-ran-without-secret_key_base) first. Then add a key with the command in [Add a secret key to an existing `.env`](docker.md#add-a-secret-key-to-an-existing-env), which leaves a key you already have alone. After that, add your MCP credentials:
 
    ```bash
    MCP_API_TOKEN=your-secret-token

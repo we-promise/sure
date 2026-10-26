@@ -36,11 +36,7 @@ The `compose.example.ai.yml` file includes Pipelock. To use it:
    curl -o pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
    ```
 
-2. Create a `.env` file with a secret key unique to your install. The stack will not start without one:
-   ```bash
-   grep -qE "^[[:space:]]*(export[[:space:]]+)?SECRET_KEY_BASE[[:space:]]*=[[:space:]]*[\"']?[^\"'[:space:]]" .env 2>/dev/null || echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> .env
-   ```
-   The command only adds a key when `.env` has no non-empty one; an empty `SECRET_KEY_BASE=` line, as in `.env.example`, is overridden because Compose uses the last assignment. If you are adding Pipelock to an existing install, keep the `SECRET_KEY_BASE` you already use; see [Configure your environment](docker.md#step-3-configure-your-environment) for why.
+2. Make sure `.env` has a secret key unique to your install; the stack will not start without one. If this is an existing install that has been running without `SECRET_KEY_BASE`, read [Upgrading an install that ran without `SECRET_KEY_BASE`](docker.md#upgrading-an-install-that-ran-without-secret_key_base) first. Then add a key with the command in [Add a secret key to an existing `.env`](docker.md#add-a-secret-key-to-an-existing-env), which leaves a key you already have alone.
 
 3. Start the stack:
    ```bash
