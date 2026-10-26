@@ -483,6 +483,19 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # A run scoped to one security (a remap, a price sync) books lots for that
+  # security only: neither the provider snapshot, which covers the whole
+  # account, nor the account's other trades open a book.
+  test "a reverse run scoped to one security books lots for that security only" do
+    travel_to TODAY do
+      build_reverse_fixture
+      calculator = Holding::ReverseCalculator.new(@account.reload, portfolio_snapshot: Holding::PortfolioSnapshot.new(@account), security_ids: [ @opening.id ])
+      calculator.calculate
+
+      assert_equal [ @opening.id ], calculator.lots_by_security.keys
+    end
+  end
+
   private
     def d(day)
       Date.new(2024, 6, day)
