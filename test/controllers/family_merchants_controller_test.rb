@@ -258,6 +258,24 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Name has already been taken", response.body
   end
 
+  test "a raw unique-index race is reported when PostgreSQL words its errors in another language" do
+    pg_error = begin
+      FamilyMerchant.transaction(requires_new: true) do
+        FamilyMerchant.insert_all!([ { family_id: @merchant.family_id, name: @merchant.name } ])
+      end
+    rescue ActiveRecord::RecordNotUnique => e
+      e.cause
+    end
+    localized = ActiveRecord::RecordNotUnique.new("FEHLER: doppelter Schlüsselwert verletzt Unique-Constraint »index_merchants_on_family_id_and_name«")
+    localized.define_singleton_method(:cause) { pg_error }
+    FamilyMerchant.any_instance.stubs(:update).raises(localized)
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { name: "Renamed" } }
+
+    assert_response :unprocessable_entity
+    assert_match "Name has already been taken", response.body
+  end
+
   test "a unique violation on another index is not turned into a form error" do
     FamilyMerchant.any_instance.stubs(:save).raises(
       ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "some_other_index"')

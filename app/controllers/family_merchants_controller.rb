@@ -251,8 +251,11 @@ class FamilyMerchantsController < ApplicationController
     # error line itself: the DETAIL line after it repeats the submitted
     # values. Any other index violation is not a form error, so it is
     # raised again.
+    # The constraint name comes from the PG error itself; the message is
+    # translated when the server's lc_messages is not English.
     def taken_attribute_for(error)
-      case error.message[/unique constraint "([^"]+)"/, 1]
+      constraint = error.cause.try(:result)&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME)
+      case constraint || error.message[/unique constraint "([^"]+)"/, 1]
       when "index_merchants_on_family_id_and_iban" then :iban
       when "index_merchants_on_family_id_and_name" then :name
       else raise error
