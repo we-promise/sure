@@ -29,6 +29,21 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
     assert_equal 2, realized.trade_count
   end
 
+  # The review on this PR caught that measure! assigned @measured_rows before
+  # the queries that can raise, so a failed pass left defined? true and every
+  # later read returned the empty pass as fact.
+  test "a measurement that raises is retried, not remembered as empty" do
+    holding_snapshot account: @account, date: @march, cost_basis: 100
+    sell_trade account: @account, date: @march, qty: 2, price: 150
+    gains = realized
+
+    gains.stub(:sell_trades, -> { raise ActiveRecord::StatementInvalid, "db down" }) do
+      assert_raises(ActiveRecord::StatementInvalid) { gains.net }
+    end
+
+    assert_equal BigDecimal(100), gains.net, "the retry measures the sale the failed pass never recorded"
+  end
+
   # A transfer out carries the same negative qty as a sale. Nothing was
   # disposed of, so there is no month and no figure, and nothing excluded.
   test "a transfer out is not a realised sale" do

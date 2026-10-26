@@ -142,23 +142,29 @@ class Portfolio::RealizedGains
     def measure!
       return if defined?(@measured_rows)
 
-      @measured_rows = []
-      @exclusions = []
+      # Built in locals and assigned last: if sell_trades or target_rates
+      # raises, defined?(@measured_rows) must stay false so the next read
+      # retries instead of trusting a half-memoized empty pass.
+      rows = []
+      exclusions = []
 
       gains = sell_trades.map { |trade| [ trade, trade.realized_gain_loss ] }
       rates = target_rates(gains)
 
       gains.each do |trade, gain|
         # Rule 4. Not a zero gain.
-        next @exclusions << :gain_unknown if gain.nil?
+        next exclusions << :gain_unknown if gain.nil?
 
         # The gain is Money in the basis currency (the holding's), which
         # Trade#realized_gain_loss has already converted the proceeds into.
         amount = converted(gain.value, trade.entry.date, rates)
-        next @exclusions << :missing_exchange_rate if amount.nil?
+        next exclusions << :missing_exchange_rate if amount.nil?
 
-        @measured_rows << { date: trade.entry.date, amount: amount }
+        rows << { date: trade.entry.date, amount: amount }
       end
+
+      @measured_rows = rows
+      @exclusions = exclusions
     end
 
     def sell_trades
