@@ -251,8 +251,12 @@ class Rule < ApplicationRecord
   # transactions a rule higher up stopped. claimed_ids maps an attribute to the
   # transaction ids a rule higher up already set it for; an action leaves those
   # transactions alone ("top rule wins").
+  #
+  # With async (AI) actions, modified_count also counts the transactions handed
+  # to the AI; changed_now_count only counts what the other actions changed.
   def apply(ignore_attribute_locks: false, rule_run: nil, scope: matching_scope, claimed_ids: {}, skip_action_types: [])
     total_modified = 0
+    changed_now = 0
     total_async_jobs = 0
     has_async = false
 
@@ -269,6 +273,7 @@ class Rule < ApplicationRecord
         total_modified += result[:modified_count] || 0
       elsif result.is_a?(Integer)
         total_modified += result
+        changed_now += result
       else
         # Log unexpected result type but don't fail
         Rails.logger.warn("Rule#apply: Unexpected result type from action #{action.id}: #{result.class} (value: #{result.inspect})")
@@ -276,7 +281,7 @@ class Rule < ApplicationRecord
     end
 
     if has_async
-      { modified_count: total_modified, async: true, jobs_count: total_async_jobs }
+      { modified_count: total_modified, changed_now_count: changed_now, async: true, jobs_count: total_async_jobs }
     else
       total_modified
     end

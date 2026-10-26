@@ -99,16 +99,32 @@ class ApplyImmediateRulesJobTest < ActiveJob::TestCase
     ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
   end
 
+  test "leaves the toast of a rule that only hands transactions to the AI to its AI jobs" do
+    create_rule("AI", apply_immediately: true, action: Rule::Action.new(action_type: "auto_categorize"))
+
+    # Its AI job offers the result once it has changed something (RuleRun#complete_job!).
+    Family.any_instance.expects(:broadcast_replace_to).never
+    assert_enqueued_jobs 1, only: AutoCategorizeJob do
+      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
+    end
+  end
+
   test "offers what a rule changed while its AI jobs are still pending" do
-    rule = create_rule("Mixed", category: @groceries, apply_immediately: true)
-    pending_run = rule.rule_runs.create!(
-      rule_name: rule.name, execution_type: "immediate", status: "pending", executed_at: Time.current,
-      transactions_queued: 1, transactions_processed: 1, transactions_modified: 0, pending_jobs_count: 1
+    tag = @family.tags.create!(name: "Food")
+    @family.rules.create!(
+      name: "Mixed", resource_type: "transaction", active: true, apply_immediately: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_tags", value: tag.id),
+        Rule::Action.new(action_type: "auto_categorize")
+      ]
     )
-    Rule::Runner.any_instance.stubs(:run).returns([ pending_run ])
 
     RuleRun.expects(:offer_immediate_result).with(@family).once
-    ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
+    assert_enqueued_jobs 1, only: AutoCategorizeJob do
+      ApplyImmediateRulesJob.perform_now(@family, transaction_ids: [ @changed.id ])
+    end
+    assert_equal [ tag ], @changed.reload.tags
   end
 
   test "leaves the emails of rules above to the nightly run" do
