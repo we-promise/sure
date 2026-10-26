@@ -4,8 +4,8 @@ require "minitest/mock"
 class Holding::LotBookTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
-  # Holding::CostBasisTracker exactly as it stood before the lot book, kept here
-  # as the oracle: under the average method the lot book must give the same
+  # The pre-lot tracker implementation, copied exactly and kept here as the
+  # oracle: under the average method the lot book must give the same
   # figure at every step, to the last digit.
   class ReferenceTracker
     def initialize
@@ -231,8 +231,10 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     assert_equal %w[buy transfer], book.lots.map(&:source_id)
   end
 
-  test "the tracker keeps its public interface" do
-    tracker = Holding::CostBasisTracker.new
+  # The name Holding::CostBasisTracker is gone with this PR: the alias existed
+  # only for the parity suite's oracle, which now lives on the copied class.
+  test "the lot book keeps the tracker's public interface" do
+    tracker = Holding::LotBook.new
     tracker.apply(BigDecimal("100"), BigDecimal("10"))
     tracker.buy(BigDecimal("200"), BigDecimal("10"))
     tracker.sell(BigDecimal("-5"))
