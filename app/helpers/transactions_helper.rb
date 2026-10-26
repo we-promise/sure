@@ -73,6 +73,7 @@ module TransactionsHelper
     app/helpers/transactions_helper.rb
     app/helpers/categories_helper.rb
     app/components/DS/*.{rb,html.erb}
+    config/locales/**/*.yml
   ].freeze
 
   TRANSACTION_ROW_SOURCES_DIGEST = Digest::SHA256.hexdigest(
@@ -92,10 +93,10 @@ module TransactionsHelper
   # - per-user or per-request state (locale, user, family display settings,
   #   whether the user may annotate the account or see the counterpart,
   #   whether the entry is a split parent, grouped rendering, view context)
-  # - a digest of the row's templates and the helpers and DS components it
-  #   renders (TRANSACTION_ROW_SOURCES), plus the image build or app version,
-  #   so a deploy with new markup never serves old rows, also for source
-  #   builds without BUILD_COMMIT_SHA; skip_digest is on because the ERB
+  # - a digest of the row's templates, the helpers and DS components it
+  #   renders and the locale files (TRANSACTION_ROW_SOURCES), plus the image
+  #   build or app version, so a deploy with new markup or translations never
+  #   serves old rows, also for source builds without BUILD_COMMIT_SHA; skip_digest is on because the ERB
   #   dependency tracker cannot digest DS::* components (see
   #   account_sidebar_tabs)
   # - the Brandfetch settings that shape logo URLs
