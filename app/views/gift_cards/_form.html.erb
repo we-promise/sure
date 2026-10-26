@@ -28,7 +28,10 @@
       </div>
 
       <% unless GiftCard.encryption_ready? %>
-        <%= render DS::Alert.new(variant: :warning, message: t("gift_cards.form.unencrypted_credentials")) %>
+        <%= render DS::Alert.new(variant: :warning) do %>
+          <p><%= t("gift_cards.form.unencrypted_credentials") %></p>
+          <%= render "settings/encryption_migration_guide" %>
+        <% end %>
       <% end %>
 
       <div class="flex items-center gap-2">

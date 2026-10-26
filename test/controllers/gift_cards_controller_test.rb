@@ -297,6 +297,7 @@ class GiftCardsControllerTest < ActionDispatch::IntegrationTest
     GiftCard.stubs(:encryption_ready?).returns(false)
     get edit_gift_card_path(@account)
     assert_includes response.body, I18n.t("gift_cards.form.unencrypted_credentials")
+    assert_select "a", text: I18n.t("settings.encryption_migration_guide")
 
     GiftCard.stubs(:encryption_ready?).returns(true)
     get edit_gift_card_path(@account)
