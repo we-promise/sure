@@ -30,4 +30,6 @@
       +<%= format_money(occurrence.resolved_expected_amount_money.abs) %>
     </p>
   </div>
+  <%# A payday has no verb, but keeps the verb slot empty so amounts share one right edge. %>
+  <div class="hidden @lg:flex shrink-0 min-w-36"></div>
 </div>
