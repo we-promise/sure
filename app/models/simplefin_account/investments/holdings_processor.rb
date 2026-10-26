@@ -102,7 +102,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
 
         position[:qty] += qty.to_d
         position[:amount] += computed_amount.to_d
-        position[:external_ids] << "simplefin_#{holding_id}"
+        position[:external_ids] << "simplefin_#{holding_id}_#{holding_date}"
         position[:fallback_price] ||= price if price.to_d.positive?
 
         if qty.to_d.positive?

@@ -34,6 +34,33 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=file][onchange]", count: 0
   end
 
+  # DS::Button with an href renders button_to, which POSTs unless given a
+  # method. revert only routes PUT, so Try again hit a routing error.
+  test "try again on a failed revert PUTs to revert" do
+    import = imports(:transaction)
+    import.update_columns(status: "revert_failed")
+    TransactionImport.any_instance.stubs(uploaded?: true, publishable?: true)
+
+    get import_url(import)
+
+    assert_response :success
+    assert_select "form[action=?]", revert_import_path(import) do
+      assert_select "input[name=_method][value=put]"
+    end
+  end
+
+  # POSTing to imports_path is create, which needs import params.
+  test "back to imports on an empty import is a link to the imports page" do
+    import = imports(:transaction)
+    TransactionImport.any_instance.stubs(uploaded?: true, publishable?: true)
+
+    get import_url(import)
+
+    assert_response :success
+    assert_select "a[href=?]", imports_path, text: I18n.t("imports.ready.back_to_imports")
+    assert_select "form[action=?]", imports_path, count: 0
+  end
+
   test "cancel marks a lost import as failed" do
     import = imports(:transaction)
     import.update_columns(status: "importing", updated_at: 2.hours.ago)
@@ -474,6 +501,20 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     sign_in users(:family_member)
     put revert_import_url(import)
+
+    assert_redirected_to import_path(import)
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "member cannot delete import whose entries are in a read only shared account" do
+    import = imports(:transaction)
+    import.update!(status: :failed)
+    entries(:transaction).update!(import: import, account: accounts(:credit_card))
+
+    sign_in users(:family_member)
+    assert_no_difference([ "Import.count", "Entry.count" ]) do
+      delete import_url(import)
+    end
 
     assert_redirected_to import_path(import)
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]

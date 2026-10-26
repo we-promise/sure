@@ -118,6 +118,8 @@ zh-CN:
         dashboard_two_column_title: 双栏布局
         dashboard_two_column_description: 在大屏幕上以两列显示仪表盘组件；关闭后，组件将以单列堆叠显示。
         split_grouped_title: 将拆分交易分组显示
+        auto_generate_transaction_names_title: "自动生成交易名称"
+        auto_generate_transaction_names_description: "手动输入的交易名称留空时，将根据所选分类和商户自动填写（例如“娱乐 - Netflix”）。如果两者都未选择，名称仍为必填。适用于整个家庭，且仅影响新交易。"
         split_grouped_description: 在交易列表中按父级分组显示拆分交易；关闭后，拆分子项将作为独立行显示。
     preferences:
       show:
@@ -234,6 +236,7 @@ zh-CN:
       accounts_label: 账户
       advanced_section_title: 高级
       ai_prompts_label: AI 提示词
+      auto_matches_label: 自动匹配
       api_key_label: API 密钥
       payment_label: 付款
       categories_label: 分类
@@ -305,6 +308,8 @@ zh-CN:
         sync_error: 同步错误
         no_recent_sync: 同步已逾期
         reconsent_required: 需要重新授权
+        login_required: "需要登录"
+        login_expires_soon: "登录将在 %{time}后过期（%{at}）"
         reconsent_needed:
           one: 1 天后需要重新授权
           other: "%{count} 天后需要重新授权"

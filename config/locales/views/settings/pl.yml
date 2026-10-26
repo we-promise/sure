@@ -65,6 +65,8 @@ pl:
           nadrzędną na liście transakcji. Gdy opcja jest wyłączona, pozycje podrzędne
           pojawiają się jako osobne wiersze.
         split_grouped_title: Grupuj podzielone transakcje
+        auto_generate_transaction_names_title: "Automatycznie generuj nazwy transakcji"
+        auto_generate_transaction_names_description: "Jeśli nazwa ręcznie wprowadzonej transakcji pozostanie pusta, zostanie uzupełniona na podstawie wybranej kategorii i kontrahenta (np. „Rozrywka - Netflix”). Nazwa jest nadal wymagana, jeśli nie wybrano żadnego z nich. Dotyczy całego gospodarstwa domowego i tylko nowych transakcji."
         theme_dark: Ciemny
         theme_light: Jasny
         theme_subtitle: Wybierz preferowany motyw aplikacji
@@ -596,6 +598,8 @@ pl:
           one: Wymagana ponowna zgoda za 1 dzień
           other: Wymagana ponowna zgoda za %{count} dni
         reconsent_required: Wymagana ponowna zgoda
+        login_required: "Wymagane logowanie"
+        login_expires_soon: "Logowanie wygasa za %{time} (%{at})"
         sync_error: Błąd synchronizacji
       monobank_panel:
         step_1_html: Przejdź do %{link}, zaloguj się aplikacją Monobank i wygeneruj
@@ -757,7 +761,9 @@ pl:
         qr_back_to_credentials: Wróć do numeru telefonu i PIN-u lub hasła
         qr_cancel: Anuluj logowanie kodem QR
         qr_error: Nie udało się rozpocząć logowania kodem QR. Spróbuj ponownie.
-        qr_instruction: Zeskanuj kod QR aplikacją Trade Republic i zatwierdź logowanie.
+        requires_update: "Zaloguj się ponownie, aby wznowić synchronizację."
+        session_expires_in: "Logowanie wygasa za %{time} (%{at})."
+        qr_instruction: Zeskanuj kod QR aparatem telefonu, a następnie zatwierdź logowanie w aplikacji Trade Republic.
         qr_loading: Przygotowywanie kodu QR…
         qr_login: Zaloguj się kodem QR
         qr_success: Logowanie zatwierdzone. Sure odświeża stronę dostawcy.
@@ -846,6 +852,7 @@ pl:
       accounts_label: Konta
       advanced_section_title: Zaawansowane
       ai_prompts_label: Prompty AI
+      auto_matches_label: Automatyczne dopasowywanie
       api_key_label: Klucz API
       api_keys_label: Klucz API
       appearance_label: Wygląd

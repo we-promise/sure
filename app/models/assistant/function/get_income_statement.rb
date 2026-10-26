@@ -124,7 +124,7 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
       income_data = income_statement.income_totals(period: period)
       expense_data = income_statement.expense_totals(period: period)
 
-      {
+      result = {
         currency: family.currency,
         period: {
           start_date: period.start_date,
@@ -140,6 +140,11 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         },
         insights: get_insights(income_data, expense_data)
       }
+      # Families that do not count investing as spending: say where that money went.
+      unless family.investment_contributions_as_spending?
+        result[:invested] = { total: format_money(income_statement.invested_total(period: period).amount) }
+      end
+      result
     end
 
     # Category rollups and family stats are family-wide by construction, so a
@@ -147,7 +152,7 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
     def scoped_result(period, account_ids)
       totals = income_statement.totals_for(period, account_ids: account_ids)
 
-      {
+      result = {
         currency: family.currency,
         period: {
           start_date: period.start_date,
@@ -159,6 +164,11 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         net: format_money(totals.income_money.amount - totals.expense_money.amount),
         breakdown_omitted_reason: "category breakdown is not available with an account filter"
       }
+      # Same as full_result, for the selected accounts only.
+      unless family.investment_contributions_as_spending?
+        result[:invested] = { total: format_money(totals.invested_money.amount) }
+      end
+      result
     end
 
     def month_buckets(period)

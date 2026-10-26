@@ -16,16 +16,16 @@ class TransfersController < ApplicationController
     @categories = Current.family.categories.alphabetically_by_hierarchy
     @tags = Current.family.tags.alphabetically
 
-    # Whether the current user can hit `mark_as_recurring`: feature flag on,
-    # AND they have write access to BOTH transfer endpoints. Gating the
-    # view button on this avoids showing a CTA that the controller would
-    # reject via `require_account_permission!` for read-only sharers.
+    # Whether the current user can hit `mark_as_recurring` (feature flag on)
+    # or switch the investment contribution: both need write access to BOTH
+    # transfer endpoints. Gating the view controls on this avoids showing a
+    # CTA that the controller would reject via `require_account_permission!`
+    # for read-only sharers.
     endpoint_ids = [ @transfer.from_account&.id, @transfer.to_account&.id ].compact
     writable_endpoint_count = Account.writable_by(Current.user).where(id: endpoint_ids).distinct.count
-    @can_mark_as_recurring_transfer =
-      !Current.family.recurring_transactions_disabled? &&
-      endpoint_ids.size == 2 &&
-      writable_endpoint_count == 2
+    both_endpoints_writable = endpoint_ids.size == 2 && writable_endpoint_count == 2
+    @can_mark_as_recurring_transfer = !Current.family.recurring_transactions_disabled? && both_endpoints_writable
+    @can_switch_investment_contribution = both_endpoints_writable && @transfer.investment_contribution_switchable?
   end
 
   def create
@@ -90,17 +90,27 @@ class TransfersController < ApplicationController
     return reject_transfer if rejecting?
 
     outflow_account = @transfer.outflow_transaction.entry.account
+    inflow_account = @transfer.inflow_transaction.entry.account
     return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
+    # Confirming or rejecting rewrites the kind of both legs
+    return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
     Transfer.transaction do
       update_transfer_status
       update_transfer_fees_and_amount
       update_transfer_details
+      update_investment_contribution
     end
 
     respond_to do |format|
       format.html { redirect_back_or_to transactions_url, notice: t(".success") }
-      format.turbo_stream
+      format.turbo_stream do
+        # The switch moves the amount in or out of the page's expense totals,
+        # which the row replacements in update.turbo_stream would leave stale.
+        if transfer_update_params.key?(:investment_contribution)
+          stream_redirect_to(request.referer.presence || transactions_url)
+        end
+      end
     end
   end
 
@@ -283,7 +293,7 @@ class TransfersController < ApplicationController
     end
 
     def transfer_update_params
-      params.require(:transfer).permit(:notes, :status, :category_id, :amount, :source_fee_amount, :destination_fee_amount)
+      params.require(:transfer).permit(:notes, :status, :category_id, :amount, :source_fee_amount, :destination_fee_amount, :investment_contribution)
     end
 
     def update_transfer_status
@@ -294,9 +304,21 @@ class TransfersController < ApplicationController
       end
     end
 
+    def update_investment_contribution
+      return unless transfer_update_params.key?(:investment_contribution)
+
+      @transfer.update_investment_contribution!(ActiveModel::Type::Boolean.new.cast(transfer_update_params[:investment_contribution]))
+    end
+
     def update_transfer_details
-      @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
-      @transfer.update!(notes: transfer_update_params[:notes])
+      # Confirming from the transaction list sends only the status; leave the
+      # category and notes alone unless the form actually submitted them.
+      if transfer_update_params.key?(:category_id)
+        @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+      end
+      if transfer_update_params.key?(:notes)
+        @transfer.update!(notes: transfer_update_params[:notes])
+      end
     end
 
     def update_transfer_fees_and_amount
