@@ -285,6 +285,14 @@ class GiftCardsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='account[accountable_attributes][face_value]'][step='any']"
   end
 
+  test "saving the edit form again keeps the initial amount" do
+    @account.gift_card.update!(face_value: 100.1234, face_value_currency: "USD")
+    assert_equal 100.12, @account.gift_card.reload.face_value
+
+    get edit_gift_card_path(@account)
+    assert_select "input[name='account[accountable_attributes][face_value]'][value='100.12']"
+  end
+
   test "the form warns when credentials will be stored unencrypted" do
     GiftCard.stubs(:encryption_ready?).returns(false)
     get edit_gift_card_path(@account)

@@ -109,15 +109,22 @@ class GiftCard < ApplicationRecord
   end
 
   private
-    # Once known, the initial amount is what "spent" is measured against;
-    # clearing it would silently report nothing spent.
     # A card created through its form gets the currency it was entered in. The
     # accountable is saved before its account, so this covers later edits: a
     # face value first entered then is in the account's current currency.
+    #
+    # The amount is kept at that currency's precision. The form doesn't round
+    # it (it may be rendered in another currency), but shows it at this
+    # precision, so saving the form again must not change it.
     def default_face_value_currency
       self.face_value_currency ||= account&.currency if face_value
+      self.face_value = face_value.round(Money::Currency.new(face_value_currency).default_precision) if face_value && face_value_currency
+    rescue Money::Currency::UnknownCurrencyError
+      # An unknown currency code leaves the amount as entered.
     end
 
+    # Once known, the initial amount is what "spent" is measured against;
+    # clearing it would silently report nothing spent.
     def face_value_not_cleared
       errors.add(:face_value, :blank) if face_value.nil? && face_value_in_database.present?
     end
