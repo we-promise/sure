@@ -6,7 +6,12 @@ class Account::Syncer
   end
 
   def perform_sync(sync)
-    sync.update!(data: (sync.data || {}).merge("cost_basis_method" => account.cost_basis_method))
+    # Only the types with lot books record a method; this syncer is shared by
+    # every account type, and stamping depositories with a key nothing reads
+    # put the cost-basis question where the review on this PR belonged.
+    if account.accountable_type.in?(%w[Investment Crypto])
+      sync.update!(data: (sync.data || {}).merge("cost_basis_method" => account.cost_basis_method))
+    end
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data
     materialize_balances(window_start_date: sync.window_start_date)
