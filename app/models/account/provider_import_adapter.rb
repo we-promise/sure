@@ -126,11 +126,12 @@ class Account::ProviderImportAdapter
       # Note: We don't pass name here to allow matching even when provider formats names differently
       if entry.new_record? && allow_heuristic_matching
         duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
-        # Same as above: claiming writes, so check protection again under a row lock.
-        unless duplicate.nil? || duplicate.protected_from_sync?
+        # Same as above: claiming writes, so check protection again under a row
+        # lock. Linking a protected duplicate writes its external_id too.
+        unless duplicate.nil?
           begin
             duplicate.lock_with_entryable!
-            # Another import may have claimed it while this one waited for the lock.
+            # Another import may have claimed it since it was found.
             duplicate = nil if duplicate.external_id.present?
           rescue ActiveRecord::RecordNotFound
             duplicate = nil

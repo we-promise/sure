@@ -115,6 +115,41 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "first_import", manual.reload.external_id
   end
 
+  test "does not relink a protected manual duplicate another import claimed meanwhile" do
+    manual = @account.entries.create!(
+      name: "Manual", date: Date.current, amount: 43, currency: "USD", entryable: Transaction.new, user_modified: true
+    )
+    stale = Entry.find(manual.id)
+    manual.update!(external_id: "first_import", source: "plaid")
+    @adapter.stubs(:find_duplicate_transaction).returns(stale)
+
+    imported = @adapter.import_transaction(
+      external_id: "second_import", amount: 43, currency: "USD",
+      date: Date.current, name: "Provider name", source: "plaid"
+    )
+
+    assert_not_equal manual.id, imported.id
+    assert_equal "first_import", manual.reload.external_id
+  end
+
+  test "imports a new entry when a protected manual duplicate was deleted meanwhile" do
+    manual = @account.entries.create!(
+      name: "Manual", date: Date.current, amount: 44, currency: "USD", entryable: Transaction.new, user_modified: true
+    )
+    stale = Entry.find(manual.id)
+    manual.destroy!
+    @adapter.stubs(:find_duplicate_transaction).returns(stale)
+
+    imported = @adapter.import_transaction(
+      external_id: "after_delete", amount: 44, currency: "USD",
+      date: Date.current, name: "Provider name", source: "plaid"
+    )
+
+    assert imported.persisted?
+    assert_not_equal manual.id, imported.id
+    assert_equal "after_delete", imported.reload.external_id
+  end
+
   test "imports transaction with minimal parameters" do
     assert_difference "@account.entries.count", 1 do
       entry = @adapter.import_transaction(
