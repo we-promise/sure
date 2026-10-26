@@ -3,6 +3,8 @@ require "test_helper"
 class RulesControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
   setup do
+    # Exercise controller jobs independently of the daily login sync.
+    families(:dylan_family).update!(auto_sync_on_login: false)
     sign_in @user = users(:family_admin)
   end
 
@@ -520,6 +522,8 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "guest cannot apply rule" do
+    # Keep the fixture sync on yesterday to cover runs that cross midnight.
+    families(:dylan_family).syncs.update_all(created_at: 1.day.ago)
     sign_in family_guest
     rule = rules(:one)
 
