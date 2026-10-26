@@ -1,0 +1,34 @@
+---
+nb:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Innholdssjekksum
+        document_date: Dokumentdato
+        file: Dokumentfil
+        filename: Filnavn
+        issuer_name: Utsteder
+        kind: Dokumenttype
+        kinds:
+          account_statement: Kontoutskrift
+          benefits_statement: Ytelsesoversikt
+          contract: Kontrakt
+          id_document: Identitetsdokument
+          insurance_claim: Forsikringskrav
+          insurance_policy: Forsikringspolise
+          investment_report: Investeringsrapport
+          invoice: Faktura
+          loan_document: Lånedokument
+          other: Annet
+          pay_stub: Lønnsslipp
+          receipt: Kvittering
+          tax_form: Skatteskjema
+          tax_return: Skattemelding
+        tax_year: Skatteår
+        title: Tittel
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: er allerede lastet opp for denne familien

@@ -1,0 +1,34 @@
+---
+en:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Content digest
+        document_date: Document date
+        file: Document file
+        filename: Filename
+        issuer_name: Issuer
+        kind: Document type
+        kinds:
+          account_statement: Account statement
+          benefits_statement: Benefits statement
+          contract: Contract
+          id_document: Identity document
+          insurance_claim: Insurance claim
+          insurance_policy: Insurance policy
+          investment_report: Investment report
+          invoice: Invoice
+          loan_document: Loan document
+          other: Other
+          pay_stub: Pay stub
+          receipt: Receipt
+          tax_form: Tax form
+          tax_return: Tax return
+        tax_year: Tax year
+        title: Title
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: has already been uploaded for this family

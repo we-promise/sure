@@ -218,8 +218,13 @@ class Family::DataExporter
           record_type: "FamilyDocument",
           record_id: document.id,
           extra: {
-            status: document.status
-          }
+            status: document.status,
+            kind: document.kind,
+            tax_year: document.tax_year,
+            issuer_name: document.issuer_name,
+            document_date: document.document_date&.iso8601,
+            title: document.title
+          }.compact
         )
       end
     end

@@ -1,0 +1,34 @@
+---
+hu:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Tartalom ellenőrzőösszege
+        document_date: Dokumentum dátuma
+        file: Dokumentumfájl
+        filename: Fájlnév
+        issuer_name: Kibocsátó
+        kind: Dokumentumtípus
+        kinds:
+          account_statement: Számlakivonat
+          benefits_statement: Juttatási kimutatás
+          contract: Szerződés
+          id_document: Személyazonosító okmány
+          insurance_claim: Biztosítási kárigény
+          insurance_policy: Biztosítási kötvény
+          investment_report: Befektetési jelentés
+          invoice: Számla
+          loan_document: Hiteldokumentum
+          other: Egyéb
+          pay_stub: Bérjegyzék
+          receipt: Nyugta
+          tax_form: Adónyomtatvány
+          tax_return: Adóbevallás
+        tax_year: Adóév
+        title: Cím
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: már fel lett töltve ehhez a családhoz

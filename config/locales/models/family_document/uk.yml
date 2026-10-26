@@ -1,0 +1,34 @@
+---
+uk:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Хеш вмісту
+        document_date: Дата документа
+        file: Файл документа
+        filename: Назва файлу
+        issuer_name: Видавець
+        kind: Тип документа
+        kinds:
+          account_statement: Виписка з рахунку
+          benefits_statement: Звіт про пільги
+          contract: Договір
+          id_document: Документ, що посвідчує особу
+          insurance_claim: Страховий випадок
+          insurance_policy: Страховий поліс
+          investment_report: Інвестиційний звіт
+          invoice: Рахунок-фактура
+          loan_document: Кредитний документ
+          other: Інше
+          pay_stub: Розрахунковий лист
+          receipt: Квитанція
+          tax_form: Податкова форма
+          tax_return: Податкова декларація
+        tax_year: Податковий рік
+        title: Назва
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: вже завантажено для цієї родини

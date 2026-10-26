@@ -80,7 +80,10 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
     family_document = @family.family_documents.create!(
       filename: "statement.pdf",
-      status: "ready"
+      status: "ready",
+      kind: "tax_form",
+      tax_year: 2025,
+      issuer_name: "Acme Payroll"
     )
     family_document.file.attach(
       io: StringIO.new("statement bytes"),
@@ -131,6 +134,10 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       document_item = attachments.find { |attachment| attachment["record_type"] == "FamilyDocument" }
       assert_equal family_document.id, document_item["record_id"]
       assert_equal "ready", document_item["status"]
+      assert_equal "tax_form", document_item["kind"]
+      assert_equal 2025, document_item["tax_year"]
+      assert_equal "Acme Payroll", document_item["issuer_name"]
+      refute document_item.key?("document_date")
       assert_equal "file", document_item["name"]
       assert_equal false, document_item["binary_included"]
     end

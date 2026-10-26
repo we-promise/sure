@@ -1,0 +1,34 @@
+---
+ro:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Amprenta conținutului
+        document_date: Data documentului
+        file: Fișierul documentului
+        filename: Nume fișier
+        issuer_name: Emitent
+        kind: Tip de document
+        kinds:
+          account_statement: Extras de cont
+          benefits_statement: Situație beneficii
+          contract: Contract
+          id_document: Act de identitate
+          insurance_claim: Daună de asigurare
+          insurance_policy: Poliță de asigurare
+          investment_report: Raport de investiții
+          invoice: Factură
+          loan_document: Document de împrumut
+          other: Altele
+          pay_stub: Fluturaș de salariu
+          receipt: Chitanță
+          tax_form: Formular fiscal
+          tax_return: Declarație fiscală
+        tax_year: An fiscal
+        title: Titlu
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: a fost deja încărcat pentru această familie

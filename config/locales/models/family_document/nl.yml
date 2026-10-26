@@ -1,0 +1,34 @@
+---
+nl:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Inhoudscontrolesom
+        document_date: Documentdatum
+        file: Documentbestand
+        filename: Bestandsnaam
+        issuer_name: Uitgever
+        kind: Documenttype
+        kinds:
+          account_statement: Rekeningafschrift
+          benefits_statement: Overzicht van uitkeringen
+          contract: Contract
+          id_document: Identiteitsbewijs
+          insurance_claim: Verzekeringsclaim
+          insurance_policy: Verzekeringspolis
+          investment_report: Beleggingsrapport
+          invoice: Factuur
+          loan_document: Leningsdocument
+          other: Overig
+          pay_stub: Loonstrook
+          receipt: Bon
+          tax_form: Belastingformulier
+          tax_return: Belastingaangifte
+        tax_year: Belastingjaar
+        title: Titel
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: is al geüpload voor dit gezin

@@ -1,0 +1,34 @@
+---
+zh-CN:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: 内容摘要
+        document_date: 文档日期
+        file: 文档文件
+        filename: 文件名
+        issuer_name: 签发方
+        kind: 文档类型
+        kinds:
+          account_statement: 账户对账单
+          benefits_statement: 福利说明
+          contract: 合同
+          id_document: 身份证件
+          insurance_claim: 保险理赔
+          insurance_policy: 保险单
+          investment_report: 投资报告
+          invoice: 发票
+          loan_document: 贷款文件
+          other: 其他
+          pay_stub: 工资单
+          receipt: 收据
+          tax_form: 税表
+          tax_return: 纳税申报表
+        tax_year: 纳税年度
+        title: 标题
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: 已为此家庭上传过

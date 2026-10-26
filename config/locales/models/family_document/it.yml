@@ -1,0 +1,34 @@
+---
+it:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Impronta del contenuto
+        document_date: Data del documento
+        file: File del documento
+        filename: Nome file
+        issuer_name: Emittente
+        kind: Tipo di documento
+        kinds:
+          account_statement: Estratto conto
+          benefits_statement: Prospetto dei benefit
+          contract: Contratto
+          id_document: Documento d'identità
+          insurance_claim: Sinistro assicurativo
+          insurance_policy: Polizza assicurativa
+          investment_report: Report sugli investimenti
+          invoice: Fattura
+          loan_document: Documento di prestito
+          other: Altro
+          pay_stub: Busta paga
+          receipt: Ricevuta
+          tax_form: Modulo fiscale
+          tax_return: Dichiarazione dei redditi
+        tax_year: Anno fiscale
+        title: Titolo
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: è già stato caricato per questa famiglia

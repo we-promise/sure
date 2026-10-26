@@ -1,0 +1,34 @@
+---
+tr:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: İçerik özeti
+        document_date: Belge tarihi
+        file: Belge dosyası
+        filename: Dosya adı
+        issuer_name: Düzenleyen
+        kind: Belge türü
+        kinds:
+          account_statement: Hesap ekstresi
+          benefits_statement: Yan haklar özeti
+          contract: Sözleşme
+          id_document: Kimlik belgesi
+          insurance_claim: Sigorta hasar talebi
+          insurance_policy: Sigorta poliçesi
+          investment_report: Yatırım raporu
+          invoice: Fatura
+          loan_document: Kredi belgesi
+          other: Diğer
+          pay_stub: Maaş bordrosu
+          receipt: Makbuz
+          tax_form: Vergi formu
+          tax_return: Vergi beyannamesi
+        tax_year: Vergi yılı
+        title: Başlık
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: bu aile için zaten yüklendi

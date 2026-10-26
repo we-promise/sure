@@ -1,0 +1,34 @@
+---
+vi:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Mã băm nội dung
+        document_date: Ngày tài liệu
+        file: Tệp tài liệu
+        filename: Tên tệp
+        issuer_name: Đơn vị phát hành
+        kind: Loại tài liệu
+        kinds:
+          account_statement: Sao kê tài khoản
+          benefits_statement: Bảng kê phúc lợi
+          contract: Hợp đồng
+          id_document: Giấy tờ tùy thân
+          insurance_claim: Yêu cầu bồi thường bảo hiểm
+          insurance_policy: Hợp đồng bảo hiểm
+          investment_report: Báo cáo đầu tư
+          invoice: Hóa đơn
+          loan_document: Tài liệu khoản vay
+          other: Khác
+          pay_stub: Phiếu lương
+          receipt: Biên nhận
+          tax_form: Biểu mẫu thuế
+          tax_return: Tờ khai thuế
+        tax_year: Năm tính thuế
+        title: Tiêu đề
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: đã được tải lên cho gia đình này

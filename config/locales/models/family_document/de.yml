@@ -1,0 +1,34 @@
+---
+de:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Prüfsumme des Inhalts
+        document_date: Dokumentdatum
+        file: Dokumentdatei
+        filename: Dateiname
+        issuer_name: Aussteller
+        kind: Dokumenttyp
+        kinds:
+          account_statement: Kontoauszug
+          benefits_statement: Leistungsübersicht
+          contract: Vertrag
+          id_document: Ausweisdokument
+          insurance_claim: Versicherungsfall
+          insurance_policy: Versicherungspolice
+          investment_report: Anlagebericht
+          invoice: Rechnung
+          loan_document: Kreditunterlage
+          other: Sonstiges
+          pay_stub: Gehaltsabrechnung
+          receipt: Beleg
+          tax_form: Steuerformular
+          tax_return: Steuererklärung
+        tax_year: Steuerjahr
+        title: Titel
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: wurde für diese Familie bereits hochgeladen

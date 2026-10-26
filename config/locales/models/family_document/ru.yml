@@ -1,0 +1,34 @@
+---
+ru:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Хеш содержимого
+        document_date: Дата документа
+        file: Файл документа
+        filename: Имя файла
+        issuer_name: Выдавшая сторона
+        kind: Тип документа
+        kinds:
+          account_statement: Выписка по счёту
+          benefits_statement: Отчёт о льготах
+          contract: Договор
+          id_document: Удостоверение личности
+          insurance_claim: Страховой случай
+          insurance_policy: Страховой полис
+          investment_report: Инвестиционный отчёт
+          invoice: Счёт
+          loan_document: Кредитный документ
+          other: Другое
+          pay_stub: Расчётный листок
+          receipt: Квитанция
+          tax_form: Налоговая форма
+          tax_return: Налоговая декларация
+        tax_year: Налоговый год
+        title: Название
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: уже загружен для этой семьи

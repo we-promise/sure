@@ -1,0 +1,34 @@
+---
+pt-BR:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Impressão digital do conteúdo
+        document_date: Data do documento
+        file: Arquivo do documento
+        filename: Nome do arquivo
+        issuer_name: Emissor
+        kind: Tipo de documento
+        kinds:
+          account_statement: Extrato de conta
+          benefits_statement: Extrato de benefícios
+          contract: Contrato
+          id_document: Documento de identidade
+          insurance_claim: Sinistro de seguro
+          insurance_policy: Apólice de seguro
+          investment_report: Relatório de investimentos
+          invoice: Fatura
+          loan_document: Documento de empréstimo
+          other: Outro
+          pay_stub: Holerite
+          receipt: Recibo
+          tax_form: Formulário fiscal
+          tax_return: Declaração de imposto de renda
+        tax_year: Ano fiscal
+        title: Título
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: já foi enviado para esta família

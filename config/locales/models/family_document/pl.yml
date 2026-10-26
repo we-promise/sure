@@ -1,0 +1,34 @@
+---
+pl:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Skrót zawartości
+        document_date: Data dokumentu
+        file: Plik dokumentu
+        filename: Nazwa pliku
+        issuer_name: Wystawca
+        kind: Typ dokumentu
+        kinds:
+          account_statement: Wyciąg z konta
+          benefits_statement: Zestawienie świadczeń
+          contract: Umowa
+          id_document: Dokument tożsamości
+          insurance_claim: Szkoda ubezpieczeniowa
+          insurance_policy: Polisa ubezpieczeniowa
+          investment_report: Raport inwestycyjny
+          invoice: Faktura
+          loan_document: Dokument kredytowy
+          other: Inne
+          pay_stub: Odcinek wypłaty
+          receipt: Paragon
+          tax_form: Formularz podatkowy
+          tax_return: Zeznanie podatkowe
+        tax_year: Rok podatkowy
+        title: Tytuł
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: został już przesłany dla tej rodziny

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_26_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -849,16 +849,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_200000) do
 
   create_table "family_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id"
+    t.string "content_sha256"
     t.string "content_type"
     t.datetime "created_at", null: false
+    t.date "document_date"
     t.uuid "family_id", null: false
     t.integer "file_size"
     t.string "filename", null: false
+    t.string "issuer_name", limit: 200
+    t.string "kind", default: "other", null: false
     t.jsonb "metadata", default: {}
     t.string "provider_file_id"
     t.string "status", default: "pending", null: false
+    t.integer "tax_year"
+    t.string "title", limit: 255
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_family_documents_on_account_id"
+    t.index ["family_id", "content_sha256"], name: "index_family_documents_on_family_id_and_content_sha256", unique: true, where: "(content_sha256 IS NOT NULL)"
+    t.index ["family_id", "kind", "tax_year"], name: "index_family_documents_on_family_id_and_kind_and_tax_year"
     t.index ["family_id"], name: "index_family_documents_on_family_id"
     t.index ["provider_file_id"], name: "index_family_documents_on_provider_file_id"
     t.index ["status"], name: "index_family_documents_on_status"

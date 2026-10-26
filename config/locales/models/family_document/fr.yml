@@ -1,0 +1,34 @@
+---
+fr:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: Empreinte du contenu
+        document_date: Date du document
+        file: Fichier du document
+        filename: Nom du fichier
+        issuer_name: Émetteur
+        kind: Type de document
+        kinds:
+          account_statement: Relevé de compte
+          benefits_statement: Relevé d'avantages sociaux
+          contract: Contrat
+          id_document: Pièce d'identité
+          insurance_claim: Sinistre d'assurance
+          insurance_policy: Police d'assurance
+          investment_report: Rapport d'investissement
+          invoice: Facture
+          loan_document: Document de prêt
+          other: Autre
+          pay_stub: Bulletin de paie
+          receipt: Reçu
+          tax_form: Formulaire fiscal
+          tax_return: Déclaration de revenus
+        tax_year: Année fiscale
+        title: Titre
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: a déjà été téléversé pour cette famille

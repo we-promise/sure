@@ -1,0 +1,34 @@
+---
+zh-TW:
+  activerecord:
+    attributes:
+      family_document:
+        content_sha256: 內容摘要
+        document_date: 文件日期
+        file: 文件檔案
+        filename: 檔案名稱
+        issuer_name: 簽發方
+        kind: 文件類型
+        kinds:
+          account_statement: 帳戶對帳單
+          benefits_statement: 福利說明
+          contract: 合約
+          id_document: 身分證件
+          insurance_claim: 保險理賠
+          insurance_policy: 保險單
+          investment_report: 投資報告
+          invoice: 發票
+          loan_document: 貸款文件
+          other: 其他
+          pay_stub: 薪資單
+          receipt: 收據
+          tax_form: 稅表
+          tax_return: 報稅表
+        tax_year: 課稅年度
+        title: 標題
+    errors:
+      models:
+        family_document:
+          attributes:
+            content_sha256:
+              taken: 已為此家庭上傳過

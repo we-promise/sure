@@ -79,7 +79,20 @@ module Family::VectorSearchable
     results.reject { |result| withheld.include?(result[:file_id]) }
   end
 
-  def upload_document(file_content:, filename:, metadata: {})
+  # Stores one document for the family: the bytes on the row itself, a copy in
+  # the vector store for search. The same bytes uploaded twice return the
+  # document already on file rather than a second row and a second provider
+  # file, the rule the Statement Vault applies to statements.
+  #
+  # kind defaults from the classifier type in metadata["type"]; the other
+  # document attributes are optional and only set when the caller knows them.
+  def upload_document(file_content:, filename:, metadata: {}, kind: nil, tax_year: nil, issuer_name: nil, document_date: nil, title: nil)
+    metadata = (metadata || {}).stringify_keys
+    content_sha256 = FamilyDocument.content_digest(file_content)
+
+    existing = family_documents.find_by(content_sha256: content_sha256)
+    return adopt_duplicate_document(existing, metadata) if existing
+
     adapter = vector_store_adapter
     return nil unless adapter
 
@@ -94,19 +107,41 @@ module Family::VectorSearchable
 
     return nil unless response.success?
 
-    metadata = metadata || {}
+    content_type = Marcel::MimeType.for(name: filename)
 
     family_documents.create!(
       filename: filename,
-      content_type: Marcel::MimeType.for(name: filename),
+      content_type: content_type,
       file_size: file_content.bytesize,
+      content_sha256: content_sha256,
       provider_file_id: response.data[:file_id],
       status: "ready",
+      kind: kind.presence || FamilyDocument.kind_for_import_type(metadata["type"]),
+      tax_year: tax_year,
+      issuer_name: issuer_name,
+      document_date: document_date,
+      title: title,
       # Promoted out of metadata into a real column: a jsonb key cannot be
       # joined or indexed, and this one decides who may read the document.
       account_id: accounts.where(id: metadata["account_id"]).pick(:id),
-      metadata: metadata
+      metadata: metadata,
+      # The bytes are the record. Without them a document cannot be downloaded,
+      # re-indexed on another provider, or included in a family data export.
+      file: { io: StringIO.new(file_content), filename: filename, content_type: content_type }
     )
+  rescue ActiveRecord::RecordNotUnique
+    # Two uploads of the same bytes raced past the lookup above; the unique
+    # index let exactly one row in, and that row is the answer for both.
+    existing = family_documents.find_by(content_sha256: content_sha256)
+    raise unless existing
+
+    # The losing upload already reached the provider and nothing will ever
+    # point at that copy, so it goes too.
+    if adapter && store_id && response&.success? && response.data[:file_id] != existing.provider_file_id
+      adapter.remove_file(store_id: store_id, file_id: response.data[:file_id]) rescue nil
+    end
+
+    adopt_duplicate_document(existing, metadata)
   end
 
   def remove_document(family_document)
@@ -125,6 +160,23 @@ module Family::VectorSearchable
   end
 
   private
+
+    # A duplicate upload still carries what its caller knows: the Statement
+    # Vault bridge, for one, sends the statement id it uses as an idempotency
+    # key, and an /imports upload of the same bytes would otherwise leave that
+    # statement looking unindexed forever. Keys already on the document win,
+    # and an account is only ever added, never replaced: replacing it could
+    # move the document out of reach of someone who can read it today.
+    def adopt_duplicate_document(document, metadata)
+      merged = (document.metadata || {}).reverse_merge(metadata.except("type"))
+      account_id = document.account_id || accounts.where(id: metadata["account_id"]).pick(:id)
+
+      if merged != document.metadata || account_id != document.account_id
+        document.update!(metadata: merged, account_id: account_id)
+      end
+
+      document
+    end
 
     def vector_store_adapter
       VectorStore.adapter
