@@ -80,9 +80,8 @@ class ReportsController < ApplicationController
       sort_direction: params[:sort_direction]
     }.compact
 
-    # Build the full URL with the API key, if present
+    # The CSV URL the instructions tell people to add their API key to
     @csv_url = export_transactions_reports_url(base_params.merge(format: :csv))
-    @api_key_present = @csv_url.include?("api_key=")
 
     # This action will render `app/views/reports/google_sheets_instructions.html.erb`
     # It will render *inside* the modal frame.
@@ -133,6 +132,9 @@ class ReportsController < ApplicationController
       # Investment metrics
       @investment_metrics = build_investment_metrics
 
+      # Spending vs normal (preview): this period against the year before it
+      @spending_comparison = build_spending_comparison
+
       # Investment flows (contributions/withdrawals)
       @investment_flows = InvestmentFlowStatement.new(Current.family, user: Current.user).period_totals(period: @period)
 
@@ -168,6 +170,15 @@ class ReportsController < ApplicationController
           locals: { trends_data: @trends_data },
           visible: @has_accounts,
           collapsible: true
+        },
+        {
+          key: "spending_vs_normal",
+          title: "reports.spending_vs_normal.title",
+          partial: "reports/spending_vs_normal",
+          locals: { comparison: @spending_comparison, start_date: @start_date, end_date: @end_date },
+          visible: @has_accounts && @spending_comparison.present?,
+          collapsible: true,
+          preview: true
         },
         {
           key: "investment_performance",
@@ -319,6 +330,16 @@ class ReportsController < ApplicationController
       (budget.actual_spending / budget.allocated_spending * 100).round(1)
     rescue StandardError
       nil
+    end
+
+    def build_spending_comparison
+      return nil unless preview_features_enabled?
+
+      IncomeStatement::SpendingComparison.new(
+        @income_statement,
+        period: @period,
+        history_start: IncomeStatement::SpendingComparison.history_start(@income_statement)
+      )
     end
 
     def build_trends_data(income_statement:)

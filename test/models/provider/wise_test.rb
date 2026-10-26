@@ -5,6 +5,17 @@ class Provider::WiseTest < ActiveSupport::TestCase
     @provider = Provider::Wise.new("test_token", base_url: "https://api.wise.com")
   end
 
+  # Wise retired the V1 sandbox host, api.sandbox.transferwise.tech, on 30 June
+  # 2026. The provider panel tells testers which host to set as WISE_BASE_URL.
+  test "points the sandbox at Wise's current host, as the panel says in every locale" do
+    assert_equal "https://api.wise-sandbox.com", Provider::Wise::SANDBOX_BASE_URL
+
+    I18n.available_locales.each do |locale|
+      assert_includes I18n.t("wise_items.provider_panel.sandbox_note_html", locale: locale), Provider::Wise::SANDBOX_BASE_URL,
+                      "sandbox note in #{locale}"
+    end
+  end
+
   test "chunks balance statement requests into windows under the 469-day limit" do
     start_date = Date.new(2015, 4, 12)
     end_date = Date.new(2018, 4, 30)

@@ -6,7 +6,6 @@ hu:
       subtitle: Átfogó betekintés a pénzügyi helyzetedbe
       export: CSV exportálása
       print_report: Jelentés nyomtatása
-      drag_to_reorder: "Húzd a szakasz átrendezéséhez"
       toggle_section: "Szakasz láthatóságának váltása"
       periods:
         monthly: Havi
@@ -176,19 +175,14 @@ hu:
       net_flow: Nettó pénzáramlás
       net_flow_description: Teljes nettó változás
     google_sheets_instructions:
-      title_with_key: "✅ URL másolása Google Sheetshez"
-      title_no_key: "⚠️ API-kulcs szükséges"
-      ready: A CSV URL (API-kulccsal) készen áll.
-      steps: "Importálás Google Sheetsbe:\n1. Hozz létre egy új Google Sheetet\n2. Az A1 cellába írd be az alábbi képletet\n3. Nyomj Entert"
-      security_warning: "Ez az URL tartalmazza az API-kulcsodat. Tartsd biztonságban!"
+      title_no_key: "API-kulcs szükséges"
       need_key: Az adatok Google Sheetsbe importálásához API-kulcs szükséges.
       step1: "Menj a Beállítások → API-kulcsok menüpontra"
       step2: "Hozz létre egy új API-kulcsot \"olvasás\" jogosultsággal"
       step3: Másold ki az API-kulcsot
-      step4: "Add hozzá az URL-hez így: ?api_key=A_TE_KULCSOD"
+      step4: "Add hozzá az URL-hez így: &api_key=A_TE_KULCSOD"
       example: Példa
       then_use: Ezután használd a teljes URL-t =IMPORTDATA() képlettel a Google Sheetsben.
-      open_sheets: Google Sheets megnyitása
       go_to_api_keys: Ugrás az API-kulcsokhoz
       close: Rendben
     print:
