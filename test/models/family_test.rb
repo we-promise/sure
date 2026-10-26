@@ -294,6 +294,96 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "vs_test123", family.reload.vector_store_id
   end
 
+  test "upload_document keeps the bytes, digest and document attributes" do
+    family = families(:dylan_family)
+    family.update!(vector_store_id: "vs_existing")
+
+    adapter = mock("vector_store_adapter")
+    adapter.expects(:upload_file).returns(
+      VectorStore::Response.new(success?: true, data: { file_id: "file-w2" }, error: nil)
+    )
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    document = family.upload_document(
+      file_content: "%PDF-1.4 w2 bytes",
+      filename: "w2-2025.pdf",
+      kind: "tax_form",
+      tax_year: 2025,
+      issuer_name: " Acme Payroll ",
+      document_date: Date.new(2026, 1, 31),
+      title: "2025 W-2"
+    )
+
+    assert document.persisted?
+    assert document.file.attached?
+    assert_equal "%PDF-1.4 w2 bytes", document.file.download
+    assert_equal Digest::SHA256.hexdigest("%PDF-1.4 w2 bytes"), document.content_sha256
+    assert_equal "tax_form", document.kind
+    assert_equal 2025, document.tax_year
+    assert_equal "Acme Payroll", document.issuer_name
+    assert_equal Date.new(2026, 1, 31), document.document_date
+    assert_equal "2025 W-2", document.title
+  end
+
+  test "upload_document derives kind from the classifier type" do
+    family = families(:dylan_family)
+    family.update!(vector_store_id: "vs_existing")
+
+    adapter = mock("vector_store_adapter")
+    adapter.expects(:upload_file).returns(
+      VectorStore::Response.new(success?: true, data: { file_id: "file-stmt" }, error: nil)
+    )
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    document = family.upload_document(
+      file_content: "statement bytes",
+      filename: "statement.pdf",
+      metadata: { "type" => "bank_statement" }
+    )
+
+    assert_equal "account_statement", document.kind
+  end
+
+  test "upload_document returns the existing document for the same bytes without uploading again" do
+    family = families(:dylan_family)
+    family.update!(vector_store_id: "vs_existing")
+    account = family.accounts.first
+
+    adapter = mock("vector_store_adapter")
+    adapter.expects(:upload_file).once.returns(
+      VectorStore::Response.new(success?: true, data: { file_id: "file-once" }, error: nil)
+    )
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    original = family.upload_document(file_content: "same bytes", filename: "first.pdf")
+
+    duplicate = nil
+    assert_no_difference -> { family.family_documents.count } do
+      duplicate = family.upload_document(
+        file_content: "same bytes",
+        filename: "second.pdf",
+        metadata: { "type" => "account_statement", "account_statement_id" => "stmt-1", "account_id" => account.id }
+      )
+    end
+
+    assert_equal original, duplicate
+    # The statement bridge's idempotency key is adopted, so the statement does
+    # not look unindexed forever; the classifier type already on file is kept.
+    assert_equal "stmt-1", duplicate.reload.metadata["account_statement_id"]
+    assert_nil duplicate.metadata["type"]
+    assert_equal account.id, duplicate.account_id
+    assert_equal "first.pdf", duplicate.filename
+  end
+
+  test "upload_document still returns nil without a vector store" do
+    family = families(:dylan_family)
+    VectorStore::Registry.stubs(:adapter).returns(nil)
+
+    assert_no_difference -> { FamilyDocument.count } do
+      assert_nil family.upload_document(file_content: "bytes", filename: "notes.txt")
+    end
+  end
+
   # auto_share_existing_accounts_with -----------------------------------------
 
   test "auto_share_existing_accounts_with shares existing family accounts read_write when sharing is default" do

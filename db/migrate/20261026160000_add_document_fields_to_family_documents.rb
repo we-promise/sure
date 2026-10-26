@@ -25,8 +25,23 @@ class AddDocumentFieldsToFamilyDocuments < ActiveRecord::Migration[8.1]
               name: "index_family_documents_on_family_id_and_content_sha256"
     add_index :family_documents, [ :family_id, :kind, :tax_year ]
 
-    # Backfill kind from the classifier type the two writers already store in
-    # metadata. Anything unrecognised stays "other", the column default.
+    backfill_kinds
+  end
+
+  def down
+    remove_index :family_documents, name: "index_family_documents_on_family_id_and_content_sha256"
+    remove_index :family_documents, [ :family_id, :kind, :tax_year ]
+
+    change_table :family_documents, bulk: true do |t|
+      t.remove :kind, :tax_year, :document_date, :issuer_name, :title, :content_sha256
+    end
+  end
+
+  # Backfill kind from the classifier type the two writers already store in
+  # metadata. Anything unrecognised stays "other", the column default. Mirrors
+  # FamilyDocument::IMPORT_DOCUMENT_TYPE_KINDS, written out so the migration
+  # does not change meaning if that constant does.
+  def backfill_kinds
     execute <<~SQL
       UPDATE family_documents
       SET kind = CASE metadata->>'type'
@@ -39,14 +54,5 @@ class AddDocumentFieldsToFamilyDocuments < ActiveRecord::Migration[8.1]
       END
       WHERE metadata ? 'type'
     SQL
-  end
-
-  def down
-    remove_index :family_documents, name: "index_family_documents_on_family_id_and_content_sha256"
-    remove_index :family_documents, [ :family_id, :kind, :tax_year ]
-
-    change_table :family_documents, bulk: true do |t|
-      t.remove :kind, :tax_year, :document_date, :issuer_name, :title, :content_sha256
-    end
   end
 end
