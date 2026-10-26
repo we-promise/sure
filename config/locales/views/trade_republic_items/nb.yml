@@ -7,10 +7,10 @@ nb:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Brokerage"
-      private_markets: "Private Markets"
+      brokerage: "Meglerkonto"
+      private_markets: "Private markeder"
       interest_products: "Renteprodukter"
-      crypto_wallet: "Crypto Wallet"
+      crypto_wallet: "Kryptolommebok"
     duplicate_connection: "Denne Trade Republic-kontoen er allerede koblet til. Den nye tilkoblingen ble fjernet."
     defaults:
       name: Trade Republic

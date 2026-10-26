@@ -8,10 +8,10 @@ ca:
   trade_republic_items:
     duplicate_connection: "Aquest compte de Trade Republic ja està connectat. S'ha eliminat la connexió nova."
     portfolio_categories:
-      brokerage: "Brokerage"
-      private_markets: "Private Markets"
+      brokerage: "Compte de corretatge"
+      private_markets: "Mercats privats"
       interest_products: "Productes d'interès"
-      crypto_wallet: "Crypto Wallet"
+      crypto_wallet: "Cartera de criptomonedes"
     trade_republic_item:
       syncing: "S'està sincronitzant"
       requires_update: "Cal tornar a autenticar-se"

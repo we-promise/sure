@@ -7,10 +7,10 @@ zh-CN:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Brokerage"
-      private_markets: "Private Markets"
+      brokerage: "券商账户"
+      private_markets: "私募市场"
       interest_products: "计息产品"
-      crypto_wallet: "Crypto Wallet"
+      crypto_wallet: "加密货币钱包"
     duplicate_connection: "此 Trade Republic 账户已连接。新的连接已被移除。"
     defaults:
       name: Trade Republic

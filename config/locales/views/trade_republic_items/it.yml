@@ -7,10 +7,10 @@ it:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Brokerage"
-      private_markets: "Private Markets"
+      brokerage: "Conto di intermediazione"
+      private_markets: "Mercati privati"
       interest_products: "Prodotti fruttiferi"
-      crypto_wallet: "Crypto Wallet"
+      crypto_wallet: "Portafoglio crypto"
     duplicate_connection: "Questo conto Trade Republic è già collegato. La nuova connessione è stata rimossa."
     defaults:
       name: Trade Republic
