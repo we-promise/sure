@@ -64,7 +64,9 @@ export default class extends Controller {
     }));
     const comparisonPoints = comparisons.flatMap((c) => c.series);
 
-    if (current.length === 0 && comparisonPoints.length === 0) return;
+    const maxValue =
+      d3.max([...current, ...comparisonPoints], (d) => d.value) || 0;
+    if (maxValue <= 0) return;
 
     // With one compared month the header already names both lines.
     if (comparisons.length > 1) this._drawLegend(comparisons);
@@ -72,7 +74,11 @@ export default class extends Controller {
     const width = this.element.clientWidth;
     const height = this.element.clientHeight - this._legendHeight();
 
-    if (width < 50 || height < 50) return;
+    // The legend must be in the DOM to be measured
+    if (width < 50 || height < 50) {
+      this._teardown();
+      return;
+    }
 
     // Room on the right for the axis labels ($0, $1.5K, …), like the
     // reference design; the curves run to the axis, not the card edge.
@@ -90,10 +96,6 @@ export default class extends Controller {
     const group = svg
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    const maxValue =
-      d3.max([...current, ...comparisonPoints], (d) => d.value) || 0;
-    if (maxValue <= 0) return;
 
     const x = d3.scaleLinear().domain([1, days]).range([0, innerWidth]);
     const y = d3
