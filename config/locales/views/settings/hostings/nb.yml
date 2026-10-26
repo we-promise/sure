@@ -22,9 +22,11 @@ nb:
         danger_zone: Fareområde
         clear_cache: Tøm cache
         clear_cache_warning: "Tømming av cache beregner kontobalansene og beholdningene til familien din på nytt og laster inn valutakursene og verdipapirprisene de bruker på nytt. Bare familiens balanser og beholdninger slettes; valutakurser og verdipapirpriser deles med de andre familiene på denne instansen og oppdateres også for dem. Dette vil ikke slette kontoer, transaksjoner, kategorier eller andre bruker-eide data."
+        clear_cache_warning_without_provider: "Tømming av cache beregner kontobalansene og beholdningene til familien din på nytt. Ingen leverandør av valutakurser eller verdipapirpriser er konfigurert, så de lagrede valutakursene og verdipapirprisene beholdes. Dette vil ikke slette kontoer, transaksjoner, kategorier eller andre bruker-eide data."
         confirm_clear_cache:
           title: Tøm cache?
           body: "Er du sikker på at du vil tømme cache? Kontobalansene og beholdningene til familien din beregnes på nytt, og valutakursene og verdipapirprisene de bruker lastes inn på nytt. Bare familiens balanser og beholdninger slettes; valutakurser og verdipapirpriser deles med de andre familiene på denne instansen og oppdateres også for dem. Denne handlingen kan ikke angres."
+          body_without_provider: "Er du sikker på at du vil tømme cache? Kontobalansene og beholdningene til familien din beregnes på nytt. Ingen leverandør av valutakurser eller verdipapirpriser er konfigurert, så de lagrede valutakursene og verdipapirprisene beholdes. Denne handlingen kan ikke angres."
       update:
         failure: Ugyldig innstillingsverdi
         success: Innstillinger oppdatert

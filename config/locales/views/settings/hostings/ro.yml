@@ -21,9 +21,11 @@ ro:
         danger_zone: Zonă de Pericol
         clear_cache: Șterge cache-ul de date
         clear_cache_warning: "Ștergerea cache-ului de date recalculează soldurile și pozițiile conturilor familiei tale și reîncarcă ratele de schimb și prețurile titlurilor de valoare pe care le folosesc. Se șterg doar soldurile și pozițiile familiei tale; ratele de schimb și prețurile titlurilor de valoare sunt comune tuturor familiilor de pe această instanță și se actualizează și pentru ele. Aceasta nu va șterge conturile, tranzacțiile, categoriile sau alte date deținute de utilizator."
+        clear_cache_warning_without_provider: "Ștergerea cache-ului de date recalculează soldurile și pozițiile conturilor familiei tale. Nu este configurat niciun furnizor de rate de schimb sau de prețuri ale titlurilor de valoare, așa că ratele de schimb și prețurile salvate se păstrează. Aceasta nu va șterge conturile, tranzacțiile, categoriile sau alte date deținute de utilizator."
         confirm_clear_cache:
           title: Ștergi cache-ul de date?
           body: "Ești sigur că vrei să ștergi cache-ul de date? Soldurile și pozițiile conturilor familiei tale vor fi recalculate, iar ratele de schimb și prețurile titlurilor de valoare pe care le folosesc vor fi reîncărcate. Se șterg doar soldurile și pozițiile familiei tale; ratele de schimb și prețurile titlurilor de valoare sunt comune tuturor familiilor de pe această instanță și se actualizează și pentru ele. Această acțiune nu poate fi anulată."
+          body_without_provider: "Ești sigur că vrei să ștergi cache-ul de date? Soldurile și pozițiile conturilor familiei tale vor fi recalculate. Nu este configurat niciun furnizor de rate de schimb sau de prețuri ale titlurilor de valoare, așa că ratele de schimb și prețurile salvate se păstrează. Această acțiune nu poate fi anulată."
       brand_fetch_settings:
         description: Introdu ID-ul Clientului furnizat de Brandfetch
         label: ID Client

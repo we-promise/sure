@@ -181,6 +181,21 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "clear cache texts promise reloaded market data only when a provider is configured" do
+    with_self_hosting do
+      ExchangeRate.stubs(:provider).returns(@provider)
+      get settings_hosting_url
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+
+      ExchangeRate.stubs(:provider).returns(nil)
+      Security.stubs(:provider).returns(nil)
+      get settings_hosting_url
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning_without_provider"))
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.confirm_clear_cache.body_without_provider"))
+      assert_not_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+    end
+  end
+
   test "shows Yahoo Finance rate limiting as a warning" do
     @provider.stubs(:health_status).returns(:rate_limited)
 

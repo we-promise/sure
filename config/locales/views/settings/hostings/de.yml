@@ -25,9 +25,11 @@ de:
         danger_zone: Gefahrenbereich
         clear_cache: Daten-Cache leeren
         clear_cache_warning: "Das Leeren des Daten-Caches berechnet die Kontostände und Bestände deiner Familie neu und lädt die dafür verwendeten Wechselkurse und Wertpapierpreise neu. Gelöscht werden nur die Kontostände und Bestände deiner Familie; Wechselkurse und Wertpapierpreise teilen sich alle Familien dieser Instanz und werden auch für sie aktualisiert. Dies löscht keine Konten, Transaktionen, Kategorien oder andere benutzereigenen Daten."
+        clear_cache_warning_without_provider: "Das Leeren des Daten-Caches berechnet die Kontostände und Bestände deiner Familie neu. Es ist kein Anbieter für Wechselkurse oder Wertpapierpreise eingerichtet, daher bleiben die gespeicherten Wechselkurse und Wertpapierpreise erhalten. Dies löscht keine Konten, Transaktionen, Kategorien oder andere benutzereigenen Daten."
         confirm_clear_cache:
           title: Daten-Cache leeren?
           body: "Bist du sicher, dass du den Daten-Cache leeren möchtest? Die Kontostände und Bestände deiner Familie werden neu berechnet und die dafür verwendeten Wechselkurse und Wertpapierpreise neu geladen. Gelöscht werden nur die Kontostände und Bestände deiner Familie; Wechselkurse und Wertpapierpreise teilen sich alle Familien dieser Instanz und werden auch für sie aktualisiert. Diese Aktion kann nicht rückgängig gemacht werden."
+          body_without_provider: "Bist du sicher, dass du den Daten-Cache leeren möchtest? Die Kontostände und Bestände deiner Familie werden neu berechnet. Es ist kein Anbieter für Wechselkurse oder Wertpapierpreise eingerichtet, daher bleiben die gespeicherten Wechselkurse und Wertpapierpreise erhalten. Diese Aktion kann nicht rückgängig gemacht werden."
         ai_assistant: KI-Assistent
         property_valuation_providers: Anbieter für Immobilienbewertung
       provider_selection:

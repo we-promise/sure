@@ -26,9 +26,11 @@ it:
         danger_zone: Zona pericolosa
         clear_cache: Svuota cache dati
         clear_cache_warning: "Svuotare la cache dei dati ricalcola i saldi e le posizioni dei conti della tua famiglia e ricarica i tassi di cambio e i prezzi dei titoli che utilizzano. Vengono eliminati solo i saldi e le posizioni della tua famiglia; i tassi di cambio e i prezzi dei titoli sono condivisi con le altre famiglie di questa istanza e vengono aggiornati anche per loro. Questo non eliminerà conti, transazioni, categorie o altri dati degli utenti."
+        clear_cache_warning_without_provider: "Svuotare la cache dei dati ricalcola i saldi e le posizioni dei conti della tua famiglia. Non è configurato alcun fornitore di tassi di cambio o di prezzi dei titoli, quindi i tassi di cambio e i prezzi salvati vengono mantenuti. Questo non eliminerà conti, transazioni, categorie o altri dati degli utenti."
         confirm_clear_cache:
           title: Svuotare la cache dei dati?
           body: "Sei sicuro di voler svuotare la cache dei dati? I saldi e le posizioni dei conti della tua famiglia verranno ricalcolati e i tassi di cambio e i prezzi dei titoli che utilizzano verranno ricaricati. Vengono eliminati solo i saldi e le posizioni della tua famiglia; i tassi di cambio e i prezzi dei titoli sono condivisi con le altre famiglie di questa istanza e vengono aggiornati anche per loro. Questa azione non può essere annullata."
+          body_without_provider: "Sei sicuro di voler svuotare la cache dei dati? I saldi e le posizioni dei conti della tua famiglia verranno ricalcolati. Non è configurato alcun fornitore di tassi di cambio o di prezzi dei titoli, quindi i tassi di cambio e i prezzi salvati vengono mantenuti. Questa azione non può essere annullata."
       provider_selection:
         exchange_rate_title: Provider tasso di cambio
         exchange_rate_description: Seleziona un singolo provider per recuperare i tassi di cambio.
