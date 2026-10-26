@@ -83,7 +83,7 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
     assert @new_offline_security.offline?
   end
 
-  test "after enough consecutive health check failures, security goes offline and prices are deleted" do
+  test "after enough consecutive health check failures, security with existing price history goes offline but keeps its prices" do
     # Create one test price
     Security::Price.create!(
       security: @due_for_check_security,
@@ -110,10 +110,90 @@ class Security::HealthCheckerTest < ActiveSupport::TestCase
     refute @due_for_check_security.offline?
     assert_equal 1, @due_for_check_security.prices.count
 
-    # We've now exceeded the max consecutive failures, so the security should be marked offline
-    hc.run_check
+    # We've now exceeded the max consecutive failures, so the security should be marked offline —
+    # but since it had a real, previously-fetched price, five failed *new* fetches don't make that
+    # existing history untrustworthy, so it must be preserved.
+    assert_difference "DebugLogEntry.count", 1 do
+      hc.run_check
+    end
+    assert @due_for_check_security.offline?
+    assert_equal "health_check_failed", @due_for_check_security.offline_reason
+    assert_equal 1, @due_for_check_security.prices.count, "Existing price history must be preserved"
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "security_health_check", entry.category
+    assert_equal "error", entry.level
+    assert_equal true, entry.metadata["had_price_history"]
+  end
+
+  test "after enough consecutive health check failures, security with no prior price history goes offline with no prices to preserve" do
+    hc = Security::HealthChecker.new(@due_for_check_security)
+
+    @provider.expects(:fetch_security_price)
+      .with(
+        symbol: @due_for_check_security.ticker,
+        exchange_operating_mic: @due_for_check_security.exchange_operating_mic,
+        date: Date.current
+      )
+      .returns(provider_error_response(StandardError.new("No prices found")))
+      .times(Security::HealthChecker::MAX_CONSECUTIVE_FAILURES + 1)
+
+    Security::HealthChecker::MAX_CONSECUTIVE_FAILURES.times { hc.run_check }
+
+    assert_difference "DebugLogEntry.count", 1 do
+      hc.run_check
+    end
     assert @due_for_check_security.offline?
     assert_equal 0, @due_for_check_security.prices.count
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "security_health_check", entry.category
+    assert_equal "error", entry.level
+    assert_equal false, entry.metadata["had_price_history"]
+  end
+
+  test "an intermediate (non-terminal) health check failure logs a warn-level debug entry" do
+    hc = Security::HealthChecker.new(@due_for_check_security)
+
+    @provider.expects(:fetch_security_price)
+      .with(
+        symbol: @due_for_check_security.ticker,
+        exchange_operating_mic: @due_for_check_security.exchange_operating_mic,
+        date: Date.current
+      )
+      .returns(provider_error_response(StandardError.new("No prices found")))
+      .once
+
+    assert_difference "DebugLogEntry.count", 1 do
+      hc.run_check
+    end
+
+    refute @due_for_check_security.offline?
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "security_health_check", entry.category
+    assert_equal "warn", entry.level
+    assert_equal 1, entry.metadata["failed_fetch_count"]
+  end
+
+  test "run_check does not count a missing/unavailable provider as a fetch failure" do
+    # e.g. the security's assigned provider was disabled in settings —
+    # offline_reason: "provider_disabled" is more specific than the generic
+    # health-check failure path and must not be overwritten by it.
+    @due_for_check_security.update!(offline: true, offline_reason: "provider_disabled", price_provider: "twelve_data")
+    @due_for_check_security.stubs(:price_data_provider).returns(nil)
+
+    hc = Security::HealthChecker.new(@due_for_check_security)
+
+    @provider.expects(:fetch_security_price).never
+
+    assert_no_difference "DebugLogEntry.count" do
+      hc.run_check
+    end
+
+    assert @due_for_check_security.offline?
+    assert_equal "provider_disabled", @due_for_check_security.offline_reason
+    assert_equal 0, @due_for_check_security.failed_fetch_count
+    assert_not_nil @due_for_check_security.reload.last_health_check_at, "Skipped checks still update last_health_check_at so they aren't re-queued daily"
   end
 
   test "failure incrementor increases for each health check failure" do
