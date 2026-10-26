@@ -529,7 +529,8 @@ class TransactionsController < ApplicationController
   end
 
   def name_suggestions
-    transactions = Current.family.transactions.merge(Account.accessible_by(Current.user))
+    unknown_names = LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t("transactions.unknown_name", locale: locale) }
+    transactions = Current.family.transactions.merge(Account.accessible_by(Current.user)).where.not(entries: { name: unknown_names })
     query = params[:q].to_s.strip
 
     @suggestions = if query.length < Transaction::MIN_LENGTH_FOR_NAME_SUGGESTION

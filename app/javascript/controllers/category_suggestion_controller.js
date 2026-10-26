@@ -29,8 +29,10 @@ export default class extends Controller {
   }
 
   onNameSuggestionSelected(event) {
-    const { value } = event.detail
-    if (!value) return
+    // Leaving the field after typing part of a name also fires a selection for the
+    // highlighted option; only a name actually picked from the list carries a category.
+    const { value, display } = event.detail
+    if (!value || value !== display) return
 
     const option = event.target.querySelector(`[role="option"][data-value="${CSS.escape(value)}"]`)
     const categoryId = option?.querySelector("[data-category-id]")?.dataset.categoryId
