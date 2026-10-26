@@ -38,11 +38,6 @@ class Provider::Simplefin
   # Blocked on managed instances besides loopback and private ranges:
   # carrier-grade NAT, IETF protocol assignments and benchmarking ranges.
   MANAGED_BLOCKED_NETWORKS = %w[100.64.0.0/10 192.0.0.0/24 198.18.0.0/15].map { |range| IPAddr.new(range) }.freeze
-  # IPv6 ranges that carry an IPv4 address, checked like that IPv4 address.
-  NAT64_NETWORK = IPAddr.new("64:ff9b::/96")
-  IPV4_TRANSLATED_NETWORK = IPAddr.new("::ffff:0:0:0/96")
-  SIX_TO_FOUR_NETWORK = IPAddr.new("2002::/16")
-  IPV4_COMPATIBLE_NETWORK = IPAddr.new("::/96")
 
   # Connects to the address that ensure_allowed_url! checked instead of
   # resolving the host a second time, so DNS rebinding cannot swap in an
@@ -250,16 +245,7 @@ class Provider::Simplefin
     # IPv4-mapped, IPv4-compatible, NAT64 and 6to4 addresses reach the IPv4
     # address they carry, so they are checked as that address.
     def embedded_ipv4(ip)
-      return ip unless ip.ipv6?
-      return ip.native if ip.ipv4_mapped?
-
-      if NAT64_NETWORK.include?(ip) || IPV4_TRANSLATED_NETWORK.include?(ip) || (IPV4_COMPATIBLE_NETWORK.include?(ip) && ip.to_i > 1)
-        IPAddr.new(ip.to_i & 0xffff_ffff, Socket::AF_INET)
-      elsif SIX_TO_FOUR_NETWORK.include?(ip)
-        IPAddr.new((ip.to_i >> 80) & 0xffff_ffff, Socket::AF_INET)
-      else
-        ip
-      end
+      NetworkAddress.embedded_ipv4(ip)
     end
 
     def managed_mode?
