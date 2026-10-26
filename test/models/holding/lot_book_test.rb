@@ -321,17 +321,21 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     end
   end
 
+  # A short position has no open lots; the shortfall it leaves is filled before
+  # a later acquisition opens one.
   test "sum of open lot qty equals the trade-driven position on every date" do
     travel_to Time.zone.local(2024, 6, 10, 12) do
       build_forward_fixture
-      probe = PartitionProbe.new(@account, security_ids: [ @parcels.id, @transferred.id, @split.id ])
+      probe = PartitionProbe.new(@account, security_ids: [ @parcels.id, @transferred.id, @split.id, @negative.id ])
 
       probe.calculate
 
-      assert_equal (d(1)..d(10)).count * 3, probe.checks.size, "every date for each of the three positions"
+      assert_equal (d(1)..d(10)).count * 4, probe.checks.size, "every date for each of the four positions"
       probe.checks.each do |date, security_id, position, open_qty|
-        assert_equal position.to_d, open_qty, "#{Security.find(security_id).ticker} on #{date}"
+        assert_equal [ position.to_d, 0 ].max, open_qty, "#{Security.find(security_id).ticker} on #{date}"
       end
+      assert(probe.checks.any? { |date, id, position, _| id == @negative.id && date == d(3) && position.zero? },
+        "the transfer brings the short position back to zero")
       # Every movement kind is crossed: buy, sell, transfer, split.
       assert(probe.checks.any? { |_, id, position, _| id == @split.id && position == 81 }, "after the 3-for-1 split and the sales")
       assert(probe.checks.any? { |_, id, position, _| id == @transferred.id && position == 15 }, "the transfer lot is counted")
