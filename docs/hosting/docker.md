@@ -76,10 +76,10 @@ In order to configure the app, you will need to create a file called `.env`, whi
 To do this, you should get our .env.example as a starting point:
 
 ```bash
-[ -e .env ] || curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
+[ -e .env ] || (umask 077 && curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example)
 ```
 
-The command does nothing if `.env` already exists.
+The command does nothing if `.env` already exists, and creates it readable only by you.
 
 #### Generate the app secret key
 
@@ -112,7 +112,7 @@ POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 
 #### Add a secret key to an existing `.env`
 
-Use this when you already have a `.env` or are upgrading an install. It adds a key only when `.env` has no non-empty `SECRET_KEY_BASE`, creating the file if needed, and leaves an existing key alone. A blank `SECRET_KEY_BASE=` line, as in `.env.example`, stays in the file but no longer matters, because Compose uses the last assignment. On an install that has its own key, it adds nothing.
+Use this when you already have a `.env` or are upgrading an install. It adds a key only when `.env` has no non-empty `SECRET_KEY_BASE`, creating the file (readable only by you) if needed, and leaves an existing key alone. A blank `SECRET_KEY_BASE=` line, as in `.env.example`, stays in the file but no longer matters, because Compose uses the last assignment. On an install that has its own key, it adds nothing. A `.env` created before this guide made it owner-only keeps its old permissions; `chmod 600 .env` makes it readable only by you.
 
 1. Choose the key. For a new install:
 
@@ -129,7 +129,7 @@ Use this when you already have a `.env` or are upgrading an install. It adds a k
 2. In the same terminal, add it to `.env` unless it already has a key:
 
    ```bash
-   grep -qE "^[[:space:]]*(export[[:space:]]+)?SECRET_KEY_BASE[[:space:]]*=[[:space:]]*[\"']?[^\"'[:space:]]" .env 2>/dev/null || printf '\nSECRET_KEY_BASE=%s\n' "${SECRET:?run the SECRET= line from step 1 first}" >> .env
+   grep -qE "^[[:space:]]*(export[[:space:]]+)?SECRET_KEY_BASE[[:space:]]*=[[:space:]]*[\"']?[^\"'[:space:]]" .env 2>/dev/null || (umask 077 && printf '\nSECRET_KEY_BASE=%s\n' "${SECRET:?run the SECRET= line from step 1 first}" >> .env)
    ```
 
 #### Set explicit encryption keys (recommended)
