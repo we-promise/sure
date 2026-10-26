@@ -350,6 +350,12 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     end
   end
 
+  test "apply_category_filter requires family when categories are present" do
+    assert_raises(ArgumentError) do
+      Transaction::Search.apply_category_filter(Transaction.all, [ "Food & Drink" ], nil)
+    end
+  end
+
   # Totals method tests (lifted from Transaction::TotalsTest)
 
   test "totals computes basic expense and income totals" do
@@ -451,6 +457,45 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal 1, totals.count
     assert_equal Money.new(100, "USD"), totals.expense_money # Only food transaction
     assert_equal Money.new(0, "USD"), totals.income_money
+  end
+
+  test "totals cache invalidates when family currency changes" do
+    create_transaction(
+      account: @checking_account,
+      amount: 100,
+      category: categories(:food_and_drink),
+      kind: "standard"
+    )
+
+    search_usd = Transaction::Search.new(@family, filters: {})
+    before_key = search_usd.cache_key_base
+    totals_usd = search_usd.totals
+
+    assert_equal Money.new(100, "USD"), totals_usd.expense_money
+
+    @family.update!(currency: "EUR")
+    search_eur = Transaction::Search.new(@family.reload, filters: {})
+    after_key = search_eur.cache_key_base
+    totals_eur = search_eur.totals
+
+    assert_not_equal before_key, after_key
+    assert_equal "EUR", totals_eur.expense_money.currency.iso_code
+  end
+
+  test "totals is served from cache when nothing has changed" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+
+    search1 = Transaction::Search.new(@family)
+    key1 = search1.cache_key_base
+    result1 = search1.totals
+
+    search2 = Transaction::Search.new(@family.reload)
+    key2 = search2.cache_key_base
+
+    assert_equal key1, key2
+    assert_not_nil cache.read("transaction_search_totals/v3/#{key2}")
+    assert_equal result1, search2.totals
   end
 
   test "category filter includes subcategories" do

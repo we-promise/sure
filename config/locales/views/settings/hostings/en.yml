@@ -33,6 +33,7 @@ en:
         invites: Invite Codes
         title: Self-Hosting
         danger_zone: Danger Zone
+        instance_settings_restricted: Provider credentials, the shared AI connection and sync settings apply to every family on this instance, so only a super admin can change them. Which assistant your family uses is still set per family. Someone with access to the server can promote a user to super admin; the Docker self-hosting guide shows the command in its upgrade notes.
         clear_cache: Clear data cache
         clear_cache_warning: Clearing the data cache will remove all exchange rates, security prices, account balances, and other data. This will not delete accounts, transactions, categories, or other user-owned data.
         confirm_clear_cache:
@@ -130,6 +131,8 @@ en:
         not_configured_hint: "Add a %{provider} API key below to activate it."
         data_retention_heading: Data handling
         data_retention: API inputs are not used to train models by default; the providers' hosted APIs retain data for ~30 days for trust & safety. Custom or self-hosted endpoints follow your own policy.
+        max_items_per_call_label: Max Items Per Batch (Optional)
+        max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. With OpenAI-compatible providers, larger batches are auto-sliced to fit the context window."
       anthropic_settings:
         title: Anthropic (Claude)
         description: Enter your Anthropic API key. Optionally point Base URL at AWS Bedrock or GCP Vertex.
@@ -202,8 +205,6 @@ en:
         context_window_help: "Total tokens the model will accept. Default: 2048 — raise to 8192+ for cloud OpenAI or large-context local models."
         max_response_tokens_label: Max Response Tokens (Optional)
         max_response_tokens_help: "Tokens reserved for the model's reply. Default: 512. Lower to free up room for longer history."
-        max_items_per_call_label: Max Items Per Batch (Optional)
-        max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. Larger batches are auto-sliced to fit the context window."
         timeout_heading: Timeouts
         timeout_description: Controls how long OpenAI-compatible model calls may run before Sure gives up. Raise these if you run a local model on slow hardware.
         openai_request_timeout_label: Request Timeout in Seconds (Optional)
@@ -343,6 +344,10 @@ en:
         auto_sync_description: When enabled, all accounts will be automatically synced daily at the specified time.
         auto_sync_time_label: Sync time (HH:MM)
         auto_sync_time_description: Specify the time of day when automatic sync should occur.
+        market_data_sync_label: Enable daily market data import
+        market_data_sync_description: When enabled, security prices are imported automatically once a day (Monday-Friday) at the specified time.
+        market_data_sync_time_label: Market data import time (HH:MM)
+        market_data_sync_time_description: Specify the time of day when the daily security price import should run — e.g. shortly after your primary exchange closes.
         include_pending_label: Include pending transactions
         include_pending_description: When enabled, pending (uncleared) transactions will be imported and automatically reconciled when they post. Disable if your bank provides unreliable pending data.
         env_configured_message: This setting is disabled because a provider environment variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove it to enable this setting.

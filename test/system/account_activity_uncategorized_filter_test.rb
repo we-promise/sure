@@ -17,8 +17,13 @@ class AccountActivityUncategorizedFilterTest < ApplicationSystemTestCase
     assert_selector "##{dom_id(@categorized)}"
     assert_selector "##{dom_id(@uncategorized)}"
 
-    click_button "Filter"
-    check "Uncategorized only"
+    find("#activity-filters-button").click
+
+    within "#transaction-filters-menu" do
+      find("button[data-id='category_filter']").click
+      check Category.uncategorized.display_name, allow_label_click: true
+      click_button "Apply"
+    end
 
     assert_no_selector "##{dom_id(@categorized)}"
     assert_selector "##{dom_id(@uncategorized)}"

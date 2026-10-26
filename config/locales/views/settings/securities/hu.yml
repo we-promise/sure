@@ -21,6 +21,8 @@ hu:
         webauthn_empty: Még nincsenek regisztrált hozzáférési kulcsok vagy biztonsági kulcsok.
         webauthn_last_used: Utoljára használva %{time_ago} ezelőtt
         webauthn_name_label: Kulcsnév
+        webauthn_code_label: "Hitelesítő- vagy tartalékkód"
+        webauthn_code_placeholder: "Aktuális hitelesítőkód vagy egy fel nem használt tartalékkód"
         webauthn_name_placeholder: MacBook Touch ID, YubiKey stb.
         webauthn_remove: Eltávolítás
         webauthn_remove_confirm: Biztosan el szeretnéd távolítani ezt a hozzáférési kulcsot vagy
@@ -31,6 +33,9 @@ hu:
         webauthn_unsupported: Ez a böngésző nem támogatja a hozzáférési kulcsokat és biztonsági
           kulcsokat.
   webauthn_credentials:
+    code_already_used: "Ezt a kódot már felhasználták. Várd meg a következő kódot a hitelesítő alkalmazásban."
+    invalid_code: "Ez a kód érvénytelen. Adj meg egy aktuális kódot a hitelesítő alkalmazásból vagy egy fel nem használt tartalékkódot."
+    rate_limited: "Túl sok próbálkozás. Várj egy percet, majd próbáld újra."
     default_name: Biztonsági kulcs
     failure: Nem sikerült menteni a hozzáférési kulcsot vagy biztonsági kulcsot. Kérjük, próbáld újra.
     mfa_required: Engedélyezd a kétlépéses hitelesítést, mielőtt hozzáférési kulcsot vagy biztonsági kulcsot adsz hozzá.
