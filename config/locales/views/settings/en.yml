@@ -272,7 +272,7 @@ en:
         member_removed: Member was successfully removed.
         not_authorized: You are not authorized to remove members.
       show:
-        account: account
+        account: your account
         confirm_delete:
           body: Are you sure you want to permanently delete your account? This action
             is irreversible.

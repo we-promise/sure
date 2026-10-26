@@ -13,6 +13,22 @@ class Settings::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "account deletion confirmation keeps the localized account wording" do
+    sign_in @admin
+
+    { "en" => "your account", "ru" => "аккаунт" }.each do |locale, resource|
+      @admin.update!(locale: locale)
+      get settings_profile_path
+      assert_response :success
+
+      assert_select "form[action=?] button[data-turbo-confirm]", user_path(@admin) do |buttons|
+        confirmation = JSON.parse(buttons.first["data-turbo-confirm"])
+        assert_equal I18n.t("shared.custom_confirm.resource_deletion_title", locale: locale, resource: resource), confirmation.fetch("title")
+        assert_equal I18n.t("shared.custom_confirm.resource_deletion_body", locale: locale, resource: resource), confirmation.fetch("body")
+      end
+    end
+  end
+
   test "intro user sees profile without settings navigation" do
     sign_in @intro_user
     get settings_profile_path
