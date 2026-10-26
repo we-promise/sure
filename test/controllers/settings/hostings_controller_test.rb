@@ -196,6 +196,20 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "shows the clear cache text without provider when no exchange rate provider is set" do
+    Setting.stubs(:exchange_rate_provider).returns(nil)
+    Security.stubs(:provider).returns(nil)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil) do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning_without_provider"))
+      end
+    end
+  end
+
   test "shows Yahoo Finance rate limiting as a warning" do
     @provider.stubs(:health_status).returns(:rate_limited)
 
