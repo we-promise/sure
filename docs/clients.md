@@ -115,7 +115,7 @@ Read monthly server-calculated totals and the daily spending comparison using
 use these values instead of rebuilding Sure's reporting rules from transactions.
 
 Structural node `name` values are fallback labels; clients should localize
-`cash_flow`, `surplus`, and `deficit` by `kind` at the presentation boundary.
+`cash_flow`, `surplus`, `deficit`, and `invested` by `kind` at the presentation boundary.
 
 `include` and `view` are mutually exclusive; combining them returns `422 invalid_view`.
 
