@@ -117,6 +117,8 @@ class EntryTest < ActiveSupport::TestCase
     entry.transaction.lock_attr!(:category_id)
 
     assert_transaction_row_first { entry.unlock_for_sync! }
+    assert_transaction_row_first { entry.reload.save_and_lock_attributes { entry.update(name: "Locked name") } }
+    assert_transaction_row_first { entry.reload.lock_with_entryable! }
     assert_transaction_row_first { entry.reload.destroy! }
   end
 

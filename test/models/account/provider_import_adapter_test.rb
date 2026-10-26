@@ -77,6 +77,44 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "claimed_mid_edit", manual.external_id
   end
 
+  test "keeps an amount the user locked while the posted copy claimed the pending entry" do
+    pending = @adapter.import_transaction(
+      external_id: "pending_tip", amount: 60, currency: "USD",
+      date: Date.current, name: "Restaurant", source: "plaid",
+      extra: { "plaid" => { "pending" => true } }
+    )
+    # The import loads the pending entry, then the user edits its amount.
+    stale = Entry.find(pending.id)
+    pending.save_and_lock_attributes { pending.update(amount: 99) }
+    @adapter.stubs(:find_pending_transaction).returns(stale)
+
+    claimed = @adapter.import_transaction(
+      external_id: "posted_tip", amount: 72, currency: "USD",
+      date: Date.current, name: "Restaurant", source: "plaid"
+    )
+
+    assert_equal pending.id, claimed.id
+    assert_equal 99, pending.reload.amount
+    assert_equal "posted_tip", pending.external_id
+  end
+
+  test "does not claim a manual duplicate another import claimed meanwhile" do
+    manual = @account.entries.create!(
+      name: "Manual", date: Date.current, amount: 42, currency: "USD", entryable: Transaction.new
+    )
+    stale = Entry.find(manual.id)
+    manual.update!(external_id: "first_import", source: "plaid")
+    @adapter.stubs(:find_duplicate_transaction).returns(stale)
+
+    imported = @adapter.import_transaction(
+      external_id: "second_import", amount: 42, currency: "USD",
+      date: Date.current, name: "Provider name", source: "plaid"
+    )
+
+    assert_not_equal manual.id, imported.id
+    assert_equal "first_import", manual.reload.external_id
+  end
+
   test "imports transaction with minimal parameters" do
     assert_difference "@account.entries.count", 1 do
       entry = @adapter.import_transaction(

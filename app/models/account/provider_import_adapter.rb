@@ -130,6 +130,8 @@ class Account::ProviderImportAdapter
         unless duplicate.nil? || duplicate.protected_from_sync?
           begin
             duplicate.lock_with_entryable!
+            # Another import may have claimed it while this one waited for the lock.
+            duplicate = nil if duplicate.external_id.present?
           rescue ActiveRecord::RecordNotFound
             duplicate = nil
           end
@@ -167,6 +169,16 @@ class Account::ProviderImportAdapter
           pending_match = find_pending_transaction(date: date, amount: amount, currency: currency, source: source)
           if pending_match
             Rails.logger.info("Reconciling pending→posted via exact amount match: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
+          end
+        end
+
+        # Claiming overwrites the amount and date unless they are locked, so
+        # read those locks under a row lock too.
+        if pending_match
+          begin
+            pending_match.lock_with_entryable!
+          rescue ActiveRecord::RecordNotFound
+            pending_match = nil
           end
         end
 
