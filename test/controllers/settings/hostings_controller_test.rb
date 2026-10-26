@@ -210,6 +210,18 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an unknown exchange rate provider does not hide a configured security provider" do
+    ExchangeRate.stubs(:provider).raises(Provider::Registry::Error, "Provider 'nope' not found")
+    Security.stubs(:provider).returns(@provider)
+
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.hostings.show.clear_cache_warning"))
+    end
+  end
+
   test "shows Yahoo Finance rate limiting as a warning" do
     @provider.stubs(:health_status).returns(:rate_limited)
 

@@ -520,7 +520,11 @@ class Settings::HostingsController < ApplicationController
 
     # A cache clear can only reload rates and prices when a provider is configured
     def market_data_provider_configured?(exchange_rate_provider)
-      (exchange_rate_provider.present? && ExchangeRate.provider.present?) || Security.provider.present?
+      exchange_rate_provider_available?(exchange_rate_provider) || Security.provider.present?
+    end
+
+    def exchange_rate_provider_available?(exchange_rate_provider)
+      exchange_rate_provider.present? && ExchangeRate.provider.present?
     rescue Provider::Registry::Error
       false
     end
