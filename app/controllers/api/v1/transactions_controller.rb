@@ -206,8 +206,6 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     }, status: :internal_server_error
   end
 
-  ANNOTATE_ONLY_PARAMS = %w[notes category_id merchant_id tag_ids].freeze
-
   private
 
     def set_transaction
@@ -215,23 +213,24 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     # Reading needs access to the account. Deleting or changing amount, date,
-    # name or currency needs full control; read_write members may only annotate
+    # name or currency needs the write tier (AccountPolicy#update?); a member
+    # in the annotate tier may only change the AccountShare annotate fields
     # (notes, category, merchant, tags), the same split the web UI applies in
     # TransactionsController#permitted_entry_params. A refused request is a 403,
     # not a silently trimmed update, so the client learns nothing was applied.
     def ensure_write_permission
-      permission = @entry.account.permission_for(current_resource_owner)
-      return if permission.in?([ :owner, :full_control ])
-      return if action_name == "update" && permission == :read_write && annotate_only_update?
+      level = action_name == "update" && annotate_only_update? ? :annotate : :write
 
-      render json: {
-        error: "forbidden",
-        message: "You do not have permission to #{action_name == 'destroy' ? 'delete' : 'change'} this transaction"
-      }, status: :forbidden
+      require_api_account_permission!(@entry.account, level, resource: "transaction")
     end
 
+    # Judged on the permitted params, not raw params: keys outside
+    # transaction_params are ignored on update for every role (account_id
+    # included), so they cannot widen what an annotate-tier member changes.
     def annotate_only_update?
-      (transaction_params.keys.map(&:to_s) - ANNOTATE_ONLY_PARAMS).empty?
+      transaction_params.except(
+        *AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES
+      ).empty?
     end
 
     def ensure_read_scope
