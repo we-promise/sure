@@ -338,6 +338,23 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     end
   end
 
+  test "repeated partial relief keeps lot quantities at the trade scale and the open sum exact" do
+    book = Holding::LotBook.new
+    book.apply(BigDecimal("1"), 1, source_id: "a", acquired_on: Date.new(2024, 1, 1))
+    book.apply(BigDecimal("1"), 2, source_id: "b", acquired_on: Date.new(2024, 1, 2))
+
+    # Five halves of the open position: the first relief divides by three, so
+    # every lot quantity is a non-terminating decimal from there on.
+    5.times { book.apply(nil, -BigDecimal("0.5")) }
+
+    assert_equal BigDecimal("0.5"), book.open_qty, "the last-lot drift correction keeps the open sum exact"
+    book.lots.each do |lot|
+      decimals = lot.qty.to_s("F").split(".").last.to_s.length
+      assert_operator decimals, :<=, Security::Split::QTY_SCALE,
+        "lot #{lot.source_id} has #{decimals} decimal places after five partial sells"
+    end
+  end
+
   class PartitionProbe < Holding::ForwardCalculator
     def checks
       @checks ||= []

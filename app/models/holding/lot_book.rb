@@ -9,9 +9,11 @@
 #
 # The figure the calculators report, #average_cost, comes from a running pool
 # of priced acquisitions rather than from the lots. The two agree, but pro-rata
-# lot quantities carry BigDecimal rounding the pool does not, and the pool is
-# what every stored figure is computed from. A transfer-in stays outside the
-# pool; the calculators report a position holding one as unknown.
+# lot quantities carry BigDecimal rounding the pool does not; relief now rounds
+# at the trade quantity scale and #rescale_lots puts the difference back, so
+# the open sum stays exact to the last digit and every stored figure is
+# computed from the pool. A transfer-in stays outside the pool; the calculators
+# report a position holding one as unknown.
 #
 # Buys add to the running cost and quantity. Sells relieve quantity at the
 # current average cost (leaving the per-share average unchanged), and once the
@@ -114,12 +116,16 @@ class Holding::LotBook
     end
 
     # Pro-rata relief across every open lot; an oversell closes them all.
+    # Rounding at the split scale, with #rescale_lots' drift correction on the
+    # last lot, keeps each quantity bounded and the open sum exact — without
+    # it, repeated partial relief at non-terminating ratios grows each
+    # quantity one decimal place per step.
     def relieve_lots(qty)
       open = open_qty
       return if open.zero?
 
       remaining = open - [ qty, open ].min
-      rescale_lots(remaining) { |lot| lot.with(qty: lot.qty * remaining / open) }
+      rescale_lots(remaining) { |lot| lot.with(qty: (lot.qty * remaining / open).round(Security::Split::QTY_SCALE)) }
     end
 
     # Restates each lot, then gives the last open lot whatever rounding is left,
