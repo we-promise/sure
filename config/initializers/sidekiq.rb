@@ -63,6 +63,12 @@ end
 Sidekiq.configure_server do |config|
   config.redis = redis_config
 
+  # At startup: app classes aren't loadable yet when this file runs.
+  config.on(:startup) do
+    config[:fetch_class] = ChatReservation::Fetch
+    config[:labels] << BackgroundJobHealth::ONE_AI_THREAD_LABEL if BackgroundJobHealth.one_ai_thread_worker?(config)
+  end
+
   # Initialize auto-sync scheduler when Sidekiq server starts
   config.on(:startup) do
     AutoSyncScheduler.sync!
