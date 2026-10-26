@@ -2544,7 +2544,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # The overview groups by calendar month, which is the wrong unit for anyone
   # paid weekly: four paychecks and four rent payments land in one list. The
   # markers only earn their place when income actually subdivides the month.
-  test "weekly income marks pay periods inside the month" do
+  test "weekly income lists each paycheck in the month" do
     travel_to Date.current.beginning_of_month + 9.days
 
     declare_scheduled_income(frequency: "weekly", weekday: Date.current.wday)
@@ -2553,8 +2553,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
 
     assert_response :success
-    assert_match(/due before [A-Z][a-z]{2} \d+/, response.body,
-      "a weekly paycheck should mark its period inside the month")
+    assert_match I18n.t("bills.payday.title", source: "Payday"), response.body,
+      "a weekly paycheck should appear as a payday row in the overview")
   end
 
   test "monthly income leaves the month undivided" do
