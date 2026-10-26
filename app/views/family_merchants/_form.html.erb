@@ -38,8 +38,8 @@
 
         <% if saved_logo %>
           <div class="flex items-center justify-between gap-4">
-            <span class="text-sm text-primary"><%= t(".remove_logo_label") %></span>
-            <%= f.toggle :remove_logo %>
+            <span id="remove_logo_label" class="text-sm text-primary"><%= t(".remove_logo_label") %></span>
+            <%= f.toggle :remove_logo, "aria-labelledby": "remove_logo_label" %>
           </div>
         <% end %>
       <% end %>
