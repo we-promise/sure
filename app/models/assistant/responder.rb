@@ -78,8 +78,9 @@ class Assistant::Responder
       response_has_text = false
 
       streamer = proc do |chunk|
-        if chunk.type == "output_text" && chunk.data.present?
-          response_has_text = true
+        # A whitespace-only chunk is real text (OpenAI streams the space before a number as its own chunk)
+        if chunk.type == "output_text" && !chunk.data.to_s.empty?
+          response_has_text ||= chunk.data.present?
           emit(:output_text, chunk.data)
         end
       end
