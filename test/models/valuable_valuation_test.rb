@@ -220,6 +220,7 @@ class ValuableValuationTest < ActiveSupport::TestCase
     gold_api = mock
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(twelve_data)
     Provider::Registry.stubs(:get_provider).with(:gold_api).returns(gold_api)
+    Provider::Registry.stubs(:get_provider).with(:gold_api_com).returns(nil)
     twelve_data.expects(:fetch_gold_price).returns(
       Provider::Response.new(success?: false, data: nil, error: Provider::TwelveData::Error.new("Commodity access requires a higher plan"))
     )
@@ -263,8 +264,12 @@ class ValuableValuationTest < ActiveSupport::TestCase
         error: nil
       )
     )
-    winning_rate = Struct.new(:date, :rate).new(Date.current, 3_110.34768)
-    ExchangeRate.expects(:create_or_find_by!).returns(winning_rate)
+    racing_rate = ExchangeRate.new(from_currency: "XAU", to_currency: "USD", date: Date.current)
+    racing_rate.define_singleton_method(:update!) do |*|
+      ExchangeRate.create!(from_currency: "XAU", to_currency: "USD", date: Date.current, rate: 3_110.34768)
+      raise ActiveRecord::RecordNotUnique
+    end
+    ExchangeRate.stubs(:find_or_initialize_by).returns(racing_rate)
 
     value = ValuableValuation.new(account: @account).refresh!
 
@@ -282,4 +287,68 @@ class ValuableValuationTest < ActiveSupport::TestCase
 
     assert_in_delta 10_000, valuation.refresh!, 0.01
   end
+
+  test "falls back to keyless gold-api.com and stores the quote as provisional" do
+    stub_spot_providers(gold_api_com: 3_110.34768)
+
+    assert_in_delta 10_000, ValuableValuation.new(account: @account).refresh!, 0.01
+
+    rate = ExchangeRate.find_by!(from_currency: "XAU", to_currency: "USD", date: Date.current)
+    assert_equal "gold_api_com", rate.source
+    assert rate.provisional?
+  end
+
+  test "replaces a provisional quote older than an hour" do
+    ExchangeRate.create!(from_currency: "XAU", to_currency: "USD", date: Date.current, rate: 1_555.17384, source: "gold_api_com", provisional: true, updated_at: 2.hours.ago)
+    stub_spot_providers(gold_api_com: 3_110.34768)
+
+    assert_in_delta 10_000, ValuableValuation.new(account: @account).refresh!, 0.01
+    assert_in_delta 3_110.34768, ExchangeRate.find_by!(from_currency: "XAU", date: Date.current).rate, 0.00001
+  end
+
+  test "reuses a recent provisional quote without fetching" do
+    ExchangeRate.create!(from_currency: "XAU", to_currency: "USD", date: Date.current, rate: 3_110.34768, source: "gold_api_com", provisional: true)
+    Provider::Registry.expects(:get_provider).never
+
+    assert_in_delta 10_000, ValuableValuation.new(account: @account).refresh!, 0.01
+  end
+
+  test "replaces a futures value for today with a spot quote" do
+    ExchangeRate.create!(from_currency: "XAU", to_currency: "USD", date: Date.current, rate: 1_555.17384, source: "yahoo_futures", provisional: true)
+    stub_spot_providers(gold_api_com: 3_110.34768)
+
+    ValuableValuation.new(account: @account).refresh!
+
+    assert_equal "gold_api_com", ExchangeRate.find_by!(from_currency: "XAU", date: Date.current).source
+  end
+
+  test "keeps a stale provisional quote when every provider fails" do
+    ExchangeRate.create!(from_currency: "XAU", to_currency: "USD", date: Date.current, rate: 3_110.34768, source: "gold_api_com", provisional: true, updated_at: 2.hours.ago)
+    stub_spot_providers(gold_api_com: nil)
+
+    assert_difference -> { DebugLogEntry.with_provider_key("gold_api_com").count }, 1 do
+      assert_in_delta 10_000, ValuableValuation.new(account: @account).refresh!, 0.01
+    end
+  end
+
+  test "never fetches over a final close" do
+    ExchangeRate.create!(from_currency: "XAU", to_currency: "USD", date: Date.current, rate: 3_110.34768, source: "twelve_data", provisional: false, updated_at: 2.hours.ago)
+    Provider::Registry.expects(:get_provider).never
+
+    assert_in_delta 10_000, ValuableValuation.new(account: @account).refresh!, 0.01
+  end
+
+  private
+    def stub_spot_providers(gold_api_com:)
+      Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
+      Provider::Registry.stubs(:get_provider).with(:gold_api).returns(nil)
+      provider = mock
+      Provider::Registry.stubs(:get_provider).with(:gold_api_com).returns(provider)
+      response = if gold_api_com
+        Provider::Response.new(success?: true, data: Provider::GoldApi::Price.new(date: Date.current, currency: "USD", price_per_troy_ounce: gold_api_com, symbol: "XAU"), error: nil)
+      else
+        Provider::Response.new(success?: false, data: nil, error: Provider::GoldApiCom::Error.new("gold-api.com unavailable"))
+      end
+      provider.expects(:fetch_bullion_price).with(symbol: "XAU").returns(response)
+    end
 end

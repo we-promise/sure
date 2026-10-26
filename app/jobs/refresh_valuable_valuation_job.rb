@@ -10,6 +10,7 @@ class RefreshValuableValuationJob < ApplicationJob
 
     Time.use_zone(ActiveSupport::TimeZone[@account.family.timezone.to_s] || Time.zone) do
       ValuableValuation.new(account: @account).refresh!
+      ValuablePriceHistory.new(account: @account).import
     end
   end
 

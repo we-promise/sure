@@ -3,6 +3,13 @@
 class ValuableValuation
   Error = Class.new(StandardError)
 
+  QUOTE_SOURCES = {
+    "twelve_data" => :fetch_twelve_data_price,
+    "goldapi_io" => :fetch_gold_api_price,
+    "gold_api_com" => :fetch_gold_api_com_price
+  }.freeze
+  PROVISIONAL_REFETCH_AFTER = 1.hour
+
   def initialize(account:, date: Date.current, reconciliation_name: nil)
     @account = account
     @date = date
@@ -48,26 +55,52 @@ class ValuableValuation
     end
 
     def rate_for(symbol)
-      cached = ExchangeRate.find_by(from_currency: symbol, to_currency: account.currency, date: date)
-      return price_from_rate(cached, symbol) if cached
+      cached = cached_rate(symbol)
+      return price_from_rate(cached, symbol) if cached && !refetch?(cached)
 
       with_spot_rate_lock(symbol) do
-        cached = ExchangeRate.find_by(from_currency: symbol, to_currency: account.currency, date: date)
-        return price_from_rate(cached, symbol) if cached
+        cached = cached_rate(symbol)
+        return price_from_rate(cached, symbol) if cached && !refetch?(cached)
 
-        price = fetch_twelve_data_price(symbol) { |error| log_twelve_data_fallback(symbol, error) } || fetch_gold_api_price(symbol)
-        raise Error, "No bullion price provider is configured for #{symbol}" unless price
-        unless price.date == date && price.currency == account.currency && price.price_per_troy_ounce.to_d > 0
-          raise Error, "The bullion provider returned an invalid or stale #{symbol} quote"
+        price, source = fetch_quote(symbol)
+        unless price
+          return price_from_rate(cached, symbol) if cached
+          raise Error, "No bullion price provider could provide a current #{symbol} quote"
         end
 
-        cached = ExchangeRate.create_or_find_by!(from_currency: symbol, to_currency: account.currency, date: date) { |rate| rate.rate = price.price_per_troy_ounce }
-        price_from_rate(cached, symbol)
+        # Spot quotes are intraday, so they only replace provisional rows: an
+        # earlier quote or a futures value, never a close.
+        rate = ExchangeRate.find_or_initialize_by(from_currency: symbol, to_currency: account.currency, date: date)
+        rate.update!(rate: price.price_per_troy_ounce, source: source, provisional: true) if rate.new_record? || rate.provisional?
+        price_from_rate(rate, symbol)
       end
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
-      cached = ExchangeRate.find_by(from_currency: symbol, to_currency: account.currency, date: date)
+      cached = cached_rate(symbol)
       raise unless cached
       price_from_rate(cached, symbol)
+    end
+
+    def cached_rate(symbol)
+      ExchangeRate.find_by(from_currency: symbol, to_currency: account.currency, date: date)
+    end
+
+    def refetch?(rate)
+      rate.provisional? && (rate.source == "yahoo_futures" || rate.updated_at < PROVISIONAL_REFETCH_AFTER.ago)
+    end
+
+    # Returns [price, source] from the first provider with a valid quote for
+    # today, recording each provider that fails along the way.
+    def fetch_quote(symbol)
+      QUOTE_SOURCES.each do |source, fetcher|
+        price = send(fetcher, symbol) { |error| log_quote_failure(symbol, source, error) }
+        next unless price
+
+        if price.date == date && price.currency == account.currency && price.price_per_troy_ounce.to_d > 0
+          return [ price, source ]
+        end
+        log_quote_failure(symbol, source, Error.new("#{source} returned an invalid or stale #{symbol} quote"))
+      end
+      nil
     end
 
     def price_from_rate(rate, symbol)
@@ -96,7 +129,7 @@ class ValuableValuation
       return unless provider.present?
       response = symbol == "XAU" ? provider.fetch_gold_price(date:) : provider.fetch_bullion_price(symbol:, date:)
       if response.success? && response.data
-        price = convert_twelve_data_price(response.data)
+        price = convert_usd_price(response.data)
         return price if price &&
           price.price_per_troy_ounce.present? &&
           price.price_per_troy_ounce.to_d.positive? &&
@@ -106,22 +139,33 @@ class ValuableValuation
       nil
     end
 
-    def log_twelve_data_fallback(symbol, error)
-      DebugLogEntry.capture(category: symbol == "XAU" ? "gold_valuation" : "valuable_valuation", level: "warn", message: "Twelve Data #{symbol} quote unavailable; falling back to GoldAPI", source: "ValuableValuation#fetch_twelve_data_price", provider_key: "twelve_data", family: account.family, account: account, metadata: { account_id: account.id, symbol: symbol, error: error.message, failure_code: error.respond_to?(:failure_code) ? error.failure_code : nil })
+    def log_quote_failure(symbol, source, error)
+      DebugLogEntry.capture(category: symbol == "XAU" ? "gold_valuation" : "valuable_valuation", level: "warn", message: "#{source} #{symbol} quote unavailable", source: "ValuableValuation#fetch_quote", provider_key: source, family: account.family, account: account, metadata: { account_id: account.id, symbol: symbol, error: error.message, failure_code: error.respond_to?(:failure_code) ? error.failure_code : nil })
     end
 
-    def convert_twelve_data_price(price)
+    def convert_usd_price(price)
       return price if account.currency == "USD"
       fx_rate = ExchangeRate.find_or_fetch_rate(from: "USD", to: account.currency, date: date)
       return unless fx_rate.present?
-      Provider::TwelveData::BullionPrice.new(date: date, currency: account.currency, price_per_troy_ounce: price.price_per_troy_ounce.to_d * fx_rate.rate.to_d, symbol: price.symbol)
+      Provider::GoldApi::Price.new(date: date, currency: account.currency, price_per_troy_ounce: price.price_per_troy_ounce.to_d * fx_rate.rate.to_d, symbol: price.symbol)
     end
 
     def fetch_gold_api_price(symbol)
       provider = Provider::Registry.get_provider(:gold_api)
       return unless provider.present?
       response = symbol == "XAU" ? provider.fetch_gold_price(currency: account.currency) : provider.fetch_bullion_price(symbol:, currency: account.currency)
-      raise Error, response.error&.message || "GoldAPI could not provide a #{symbol} price" unless response.success?
-      response.data
+      return response.data if response.success?
+      yield(response.error || Provider::GoldApi::Error.new("GoldAPI could not provide a #{symbol} price"))
+      nil
+    end
+
+    def fetch_gold_api_com_price(symbol)
+      provider = Provider::Registry.get_provider(:gold_api_com)
+      return unless provider.present?
+      response = provider.fetch_bullion_price(symbol:)
+      price = convert_usd_price(response.data) if response.success?
+      return price if price
+      yield(response.error || Provider::GoldApiCom::Error.new("#{symbol} spot quote or currency conversion unavailable"))
+      nil
     end
 end

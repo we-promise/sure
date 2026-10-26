@@ -66,6 +66,10 @@ class Provider::Registry
         Provider::GoldApi.new(api_key)
       end
 
+      def gold_api_com
+        Provider::GoldApiCom.new
+      end
+
       def plaid_us
         Provider::PlaidAdapter.ensure_configuration_loaded
         config = Rails.application.config.plaid
