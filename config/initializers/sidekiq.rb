@@ -70,6 +70,15 @@ Sidekiq.configure_server do |config|
   rescue => e
     Rails.logger.error("[AutoSyncScheduler] Failed to initialize: #{e.message}")
   end
+
+  # Initialize market data (security price) import scheduler when Sidekiq server starts
+  config.on(:startup) do
+    MarketDataScheduler.sync!
+    Rails.logger.info("[MarketDataScheduler] Initialized import_market_data cron job")
+  rescue => e
+    Rails.logger.error("[MarketDataScheduler] Failed to initialize: #{e.message}")
+    MarketDataScheduler.capture_sync_failure(e, source: "Sidekiq startup")
+  end
 end
 
 Sidekiq.configure_client do |config|

@@ -139,6 +139,34 @@ en:
       total_liabilities: Liabilities
       no_assets: No assets
       no_liabilities: No liabilities
+    spending_vs_normal:
+      title: Spending vs normal
+      summary_html: "%{total} spent in this period. Normal for a period this long is %{normal}, based on %{baseline_start} to %{baseline_end}."
+      summary_so_far_html: "%{total} spent so far. Normal for this many days is %{normal}, based on %{baseline_start} to %{baseline_end}."
+      no_history_html: "%{total} spent in this period. There isn't enough earlier history yet to say what's normal."
+      no_history_short: Not enough earlier history to compare against yet.
+      no_spending: No spending in this period.
+      no_changes: Spending matched normal in every category.
+      treemap_title: Where it went
+      changes_title: What changed
+      direct: "%{category} (no subcategory)"
+      tooltip:
+        path: "%{parent} › %{category}"
+        total: "%{category}: %{amount}"
+        normal: "Normal: %{amount}"
+        more: "%{amount} more than normal (%{percent})"
+        less: "%{amount} less than normal (%{percent})"
+        more_no_percent: "%{amount} more than normal"
+        less_no_percent: "%{amount} less than normal"
+        no_normal: No earlier history to compare against
+        open: Select to see these transactions
+      legend:
+        less: 50–100% less
+        slightly_less: 15–50% less
+        normal: About normal
+        slightly_more: 15–50% more
+        more: 50–100% more
+        much_more: 100%+ more
     investment_performance:
       title: Investment Performance
       portfolio_value: Portfolio Value

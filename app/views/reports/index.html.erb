@@ -189,6 +189,9 @@
               <h2 class="text-base font-medium">
                 <%= t(section[:title]) %>
               </h2>
+              <% if section[:preview] %>
+                <%= render DS::Pill.new(label: t("shared.preview")) %>
+              <% end %>
             </div>
             <%# A mouse grab hint. Keys only grab the section itself, so the hint
                 stays out of the tab order instead of being an invisible stop. %>
