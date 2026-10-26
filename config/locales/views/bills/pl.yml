@@ -13,13 +13,9 @@ pl:
       any_type: Dowolny typ
       col_actions: Akcje
       col_amount: Kwota
-      col_frequency: Częstotliwość
       col_name: Nazwa
       col_next: Następny termin
-      col_status: Status
-      col_type: Typ
       monthly_equivalent: "%{amount}/mies."
-      next_short: następny %{date}
       no_matches_description: Spróbuj wyczyścić filtr lub wyszukiwanie.
       no_matches_title: Brak wyników
       search_placeholder: Szukaj rachunków
@@ -289,6 +285,14 @@ pl:
       bridge_amount: "· do zapłaty %{amount}"
       bridge_label: Przed następną wypłatą
       bridge_split: Termin przed %{date}, pokryte przez %{cash} na Twoich kontach.
+      bridge_left: "%{amount} zostaje po rachunkach"
+      bridge_show_more:
+        few: "Pokaż %{count} więcej"
+        many: "Pokaż %{count} więcej"
+        one: Pokaż 1 więcej
+        other: "Pokaż %{count} więcej"
+      bridge_allocation_aria: "Z %{cash} na Twoich kontach %{due} jest do zapłaty przed następną wypłatą, a zostaje %{left}."
+      item_overdue: Zaległe
       due_this_period: Termin w tym okresie
       empty:
         action: Dodaj przychód

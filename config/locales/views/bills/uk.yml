@@ -218,6 +218,14 @@ uk:
       bridge_label: До наступної зарплати
       bridge_amount: · %{amount} до сплати
       bridge_split: Сплатити до %{date}; покривається коштами на ваших рахунках (%{cash}).
+      bridge_left: "%{amount} залишиться після платежів"
+      bridge_show_more:
+        one: "Показати ще %{count}"
+        few: "Показати ще %{count}"
+        many: "Показати ще %{count}"
+        other: "Показати ще %{count}"
+      bridge_allocation_aria: "З %{cash} на ваших рахунках %{due} треба сплатити до наступної зарплати, залишається %{left}."
+      item_overdue: Прострочено
       shortfall_label: Бракує до наступної зарплати
       shortfall_amount: · %{amount}
       shortfall_split: До %{date} треба сплатити %{obligations}, а на ваших рахунках %{cash}.
@@ -258,12 +266,8 @@ uk:
       no_matches_title: Нічого не знайдено
       no_matches_description: Спробуйте скинути фільтр або пошук.
       col_name: Назва
-      col_type: Тип
-      col_frequency: Частота
       col_amount: Сума
       col_next: Наступний строк
-      next_short: наступний %{date}
-      col_status: Статус
       col_actions: Дії
       monthly_equivalent: '%{amount}/міс.'
       types:

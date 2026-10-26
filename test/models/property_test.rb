@@ -50,4 +50,19 @@ class PropertyTest < ActiveSupport::TestCase
 
     assert_equal "Original purchase price", entry.reload.name
   end
+
+  test "link_avm_provider! never clears a link another request already made" do
+    property = accounts(:property).property
+    property.update!(avm_provider: nil)
+    stale = Property.find(property.id)
+    Provider::Registry.stubs(:rentcast).returns(mock)
+    Property.where(id: property.id).update_all(avm_provider: "realie", avm_last_synced_on: Date.current)
+
+    SyncPropertyValuationsJob.expects(:perform_now).never
+    assert_not stale.link_avm_provider!("rentcast")
+
+    property.reload
+    assert_equal "realie", property.avm_provider
+    assert_equal Date.current, property.avm_last_synced_on
+  end
 end

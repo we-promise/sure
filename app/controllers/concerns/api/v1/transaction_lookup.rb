@@ -25,4 +25,11 @@ module Api::V1::TransactionLookup
         message: "Transaction not found"
       }, status: :not_found
     end
+
+    # Entry ids among `transactions` that have split children, as a Set, in one
+    # query that loads no child rows. The transaction partial reads it for
+    # `split_parent`.
+    def split_parent_entry_ids_for(transactions)
+      Entry.split_parent_ids_among(transactions.map { |transaction| transaction.entry.id })
+    end
 end

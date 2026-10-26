@@ -91,6 +91,8 @@ class Settings::CategorizationProviderTest < ApplicationSystemTestCase
     # The key field used to live in a separate panel below, so an operator could
     # enter a key and have nothing happen. Selecting the provider and giving it
     # a key are one task and belong in one place.
+    # The credentials are instance-wide, so only a super admin is offered them.
+    @user.update!(role: :super_admin)
     set_preview_features(true)
 
     visit settings_hosting_path

@@ -25,6 +25,8 @@ pl:
           bezpieczeństwa.
         webauthn_last_used: Ostatnio użyto %{time_ago} temu
         webauthn_name_label: Nazwa klucza
+        webauthn_code_label: "Kod z aplikacji uwierzytelniającej lub zapasowy"
+        webauthn_code_placeholder: "Aktualny kod z aplikacji uwierzytelniającej lub nieużyty kod zapasowy"
         webauthn_name_placeholder: MacBook Touch ID, YubiKey itp.
         webauthn_remove: Usuń
         webauthn_remove_confirm: Czy na pewno chcesz usunąć ten klucz dostępu lub
@@ -36,6 +38,9 @@ pl:
         webauthn_unsupported: Ta przeglądarka nie obsługuje kluczy dostępu ani kluczy
           bezpieczeństwa.
   webauthn_credentials:
+    code_already_used: "Ten kod został już użyty. Poczekaj na kolejny kod z aplikacji uwierzytelniającej."
+    invalid_code: "Ten kod jest nieprawidłowy. Wpisz aktualny kod z aplikacji uwierzytelniającej lub nieużyty kod zapasowy."
+    rate_limited: "Zbyt wiele prób. Poczekaj minutę i spróbuj ponownie."
     default_name: Klucz bezpieczeństwa
     failure: Nie udało się zapisać klucza dostępu ani klucza bezpieczeństwa. Spróbuj
       ponownie.

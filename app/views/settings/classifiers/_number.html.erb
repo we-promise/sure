@@ -1,0 +1,14 @@
+<%# locals: (key:, label:, hint:, settings:, attrs: {}) %>
+<%# One number row of Settings → Classifier. A blank number goes back to its
+    default; min and max come from Family::BayesSettings::RANGES. %>
+<% range = Family::BayesSettings::RANGES[key] %>
+<div class="flex items-center justify-between gap-x-4">
+  <div class="flex-1 min-w-0">
+    <p class="text-sm text-primary"><%= label %></p>
+    <p class="text-xs text-secondary"><%= hint %></p>
+  </div>
+  <%= number_field_tag "bayes_settings[#{key}]", settings.public_send(key),
+                       id: nil, autocomplete: "off", aria: { label: label },
+                       class: "rounded-lg border border-primary px-3 py-1.5 text-sm bg-container text-primary w-36 shrink-0",
+                       data: { auto_submit_form_target: "auto" }, min: range&.min, max: range&.max, **attrs %>
+</div>
