@@ -159,9 +159,13 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "pagination links are not prefetched so a clicked page is remembered" do
+    provider_merchant = ProviderMerchant.create!(name: "Prefetch Provider", source: "plaid", provider_merchant_id: "prefetch-provider")
+    entries(:transaction).transaction.update!(merchant: provider_merchant)
+
     get family_merchants_path
 
-    assert_select "div[data-turbo-prefetch=false] nav", minimum: 1
+    # One pagination for family merchants, one for provider merchants.
+    assert_select "div[data-turbo-prefetch=false] nav", count: 2
   end
 
   test "should destroy merchant" do
