@@ -1,10 +1,10 @@
 <%# locals: (occurrence:) %>
 <%# A payday in the month's date order, drawn like a bill row so it reads as
-    what arrives between the bills, not as a separate list. Its state comes from
-    the transaction linked to it, so a passed payday is shown as matched or as
-    not matched yet rather than dropped. %>
+    what arrives between the bills, not as a separate list. Its state is the
+    model's call (RecurringOccurrence#payday_state), so a passed payday is shown
+    as matched, received, or not matched yet rather than dropped. %>
 <% series = occurrence.recurring_transaction %>
-<% state = if occurrence.paid? then "matched" elsif occurrence.due_on < Date.current then "unmatched" else "expected" end %>
+<% state = occurrence.payday_state %>
 
 <div class="flex items-center gap-3 @lg:gap-4 p-3 @lg:p-4">
   <div class="hidden @lg:block w-14 shrink-0 text-xs text-secondary">
@@ -30,6 +30,8 @@
       +<%= format_money(occurrence.resolved_expected_amount_money.abs) %>
     </p>
   </div>
-  <%# A payday has no verb, but keeps the verb slot empty so amounts share one right edge. %>
+
+  <%# The verb slot every bill row reserves from @lg, so the amounts share one
+      right edge. A payday has no verb, but it keeps the slot empty. %>
   <div class="hidden @lg:flex shrink-0 min-w-36"></div>
 </div>

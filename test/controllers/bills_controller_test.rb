@@ -172,6 +172,12 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.payday.title", source: "OutSystems"), response.body
     assert_match I18n.t("bills.payday.unmatched"), response.body
     assert_match I18n.t("bills.payday.expected"), response.body
+
+    # This month's payday sits above After this month; next month's sits below it.
+    title = I18n.t("bills.payday.title", source: "OutSystems")
+    later_at = response.body.index(I18n.t("bills.index.later"))
+    assert response.body.index(title) < later_at, "this month's payday should be above After this month"
+    assert response.body.index(title, later_at), "next month's payday should be under After this month"
   end
 
   test "index excludes income and inactive rows but shows debt payments" do

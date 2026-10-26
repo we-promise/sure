@@ -80,6 +80,18 @@ class RecurringOccurrence < ApplicationRecord
     Money.new(confirmed_allocated, currency)
   end
 
+  # What a payday row says, read from what backs it. Status alone can't tell a
+  # payday matched to a transaction from one settled by hand with no entry, so
+  # the allocations decide between them.
+  def payday_state
+    return :skipped if skipped?
+    return :missed if missed?
+    return :matched if allocations.confirmed.where.not(entry_id: nil).exists?
+    return :received if paid?
+
+    due_on < Date.current ? :unmatched : :expected
+  end
+
   def remaining_amount
     [ resolved_expected_amount - confirmed_allocated, 0 ].max
   end

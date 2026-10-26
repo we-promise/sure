@@ -149,10 +149,13 @@ en:
       paycheck: Income plan
       all: All bills
     payday:
-      title: "Paycheck · %{source}"
+      title: "Income · %{source}"
       matched: Matched to a transaction
+      received: Marked as received
       unmatched: Not matched yet
       expected: Expected
+      skipped: Skipped
+      missed: Missed
     pay_period:
       paycheck_on: "Paycheck %{date}"
       before_next_paycheck: Before your next paycheck
