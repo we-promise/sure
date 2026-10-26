@@ -29,7 +29,7 @@
             <% end %>
             <span class="truncate"><%= selected_merchant.name %></span>
           <% else %>
-            <span class="text-secondary"><%= include_blank %></span>
+            <span class="text-secondary"><%= selected_special_option&.dig(:label) || include_blank %></span>
           <% end %>
         </span>
       </button>
@@ -62,21 +62,22 @@
            role="listbox"
            tabindex="-1"
            data-merchant-select-target="listbox">
-        <% if include_blank.present? %>
+        <% special_options.each do |option| %>
+          <% selected = option[:value] == selected_id.to_s %>
           <button type="button"
-                  class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if selected_id.blank? %>"
+                  class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if selected %>"
                   role="option"
-                  aria-selected="<%= selected_id.blank? %>"
+                  aria-selected="<%= selected %>"
                   tabindex="-1"
                   data-action="click->merchant-select#selectOption"
                   data-merchant-select-target="option"
-                  data-merchant-id=""
+                  data-merchant-id="<%= option[:value] %>"
                   data-merchant-name=""
-                  data-filter-name="<%= include_blank %>">
-            <span class="check-icon w-5 shrink-0 <%= "hidden" unless selected_id.blank? %>">
+                  data-filter-name="<%= option[:label] %>">
+            <span class="check-icon w-5 shrink-0 <%= "hidden" unless selected %>">
               <%= helpers.icon("check") %>
             </span>
-            <span class="text-secondary"><%= include_blank %></span>
+            <span class="text-secondary"><%= option[:label] %></span>
           </button>
         <% end %>
 

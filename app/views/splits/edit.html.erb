@@ -41,7 +41,7 @@
                      name: child.name,
                      amount: (-child.amount).to_f,
                      category_id: child.entryable.try(:category_id),
-                     merchant_id: child.entryable.try(:merchant_id),
+                     merchant_id: split_row_merchant_id(child, parent_merchant_id: @entry.entryable.merchant_id),
                      tag_ids: child.entryable.try(:tag_ids) || [],
                      categories: @categories,
                      merchants: @merchants,

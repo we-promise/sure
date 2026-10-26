@@ -292,6 +292,20 @@ class EntrySplitTest < ActiveSupport::TestCase
     end
   end
 
+  test "split! keeps an own merchant as given, even none or the parent's, and locks it" do
+    @entry.entryable.update!(merchant: merchants(:amazon))
+
+    without, pinned = @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil, merchant_id: nil, own_merchant: true },
+      { name: "Part 2", amount: 40, category_id: nil, merchant_id: merchants(:amazon).id, own_merchant: true }
+    ])
+
+    assert_nil without.entryable.merchant_id
+    assert without.entryable.locked?(:merchant_id)
+    assert_equal merchants(:amazon), pinned.entryable.merchant
+    assert pinned.entryable.locked?(:merchant_id)
+  end
+
   test "changing the parent's merchant passes it on to children the user has not changed" do
     @entry.entryable.update!(merchant: merchants(:amazon))
     @entry.split!([
