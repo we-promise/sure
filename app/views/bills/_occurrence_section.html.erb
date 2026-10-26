@@ -15,6 +15,10 @@
                  currency: Current.family.currency,
                  due_total: marker[:due_total] %>
     <% end %>
-    <%= render "bills/occurrence", occurrence: occurrence, suggestion: suggestions[occurrence.id] %>
+    <% if occurrence.recurring_transaction.typed_income? %>
+      <%= render "bills/payday", occurrence: occurrence %>
+    <% else %>
+      <%= render "bills/occurrence", occurrence: occurrence, suggestion: suggestions[occurrence.id] %>
+    <% end %>
   <% end %>
 <% end %>

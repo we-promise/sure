@@ -108,6 +108,10 @@ class BillsController < ApplicationController
                  .select { |occurrence| occurrence.effective_due_on >= today }
                  .sort_by(&:effective_due_on)
                  .first(NEXT_UP_LIMIT)
+
+    # Paydays join the month in date order, after the counts above so they are
+    # not counted as bills.
+    @month_rows = (@month_rows + overview_paydays(today)).sort_by { |occurrence| [ occurrence.effective_due_on, occurrence.id ] }
   end
 
   # One-click detection for a page with nothing on it: run the full pipeline
@@ -442,6 +446,25 @@ class BillsController < ApplicationController
     # month, for every payable series (bills, subscriptions, and debt
     # payments alike). Inactive series ride along so their leftover open
     # occurrences can render as Dormant instead of haunting Past Due.
+    # Manually declared income due this month or next, whether or not its date
+    # has passed. Its matched or unmatched state is read from its allocations
+    # on the row, so no date window decides what is shown.
+    def overview_paydays(today)
+      series_ids = Current.family.recurring_transactions
+                          .accessible_by(Current.user)
+                          .where(bill_type: "income", manual: true, status: "active")
+                          .select(:id)
+
+      paydays = Current.family.recurring_occurrences
+                       .where(recurring_transaction_id: series_ids)
+                       .due_between(today.beginning_of_month, today.next_month.end_of_month)
+                       .includes(recurring_transaction: :merchant)
+                       .order(:due_on)
+                       .to_a
+      preload_allocation_sums(paydays)
+      paydays
+    end
+
     def payable_series_ids
       debt_accounts = Account.where(accountable_type: %w[CreditCard Loan]).select(:id)
 

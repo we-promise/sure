@@ -148,6 +148,11 @@ en:
       # promising the earnings reporting that Reports already owns.
       paycheck: Income plan
       all: All bills
+    payday:
+      title: "Paycheck · %{source}"
+      matched: Matched to a transaction
+      unmatched: Not matched yet
+      expected: Expected
     pay_period:
       paycheck_on: "Paycheck %{date}"
       before_next_paycheck: Before your next paycheck

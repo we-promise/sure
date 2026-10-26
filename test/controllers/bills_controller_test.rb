@@ -158,6 +158,22 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
   # A bill is something you owe. Income is not owed, an internal transfer is not owed,
   # and a paused row was explicitly set aside, so none of them belong on the list.
+  # Paydays are listed for this month and next whether or not they have passed,
+  # so a payday with no bill after it still shows and a missed one is visible.
+  test "index lists declared paydays for this month and next, passed or not" do
+    travel_to Date.new(2026, 10, 23)
+    declare_income(name: "Santa Maria", amount: -1700, payday: Date.new(2026, 10, 21))
+    declare_income(name: "OutSystems", amount: -4300, payday: Date.new(2026, 10, 26))
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.payday.title", source: "Santa Maria"), response.body
+    assert_match I18n.t("bills.payday.title", source: "OutSystems"), response.body
+    assert_match I18n.t("bills.payday.unmatched"), response.body
+    assert_match I18n.t("bills.payday.expected"), response.body
+  end
+
   test "index excludes income and inactive rows but shows debt payments" do
     create_bill(name: "Real bill", amount: 50)
     create_bill(name: "Salary deposit", amount: -2000)
