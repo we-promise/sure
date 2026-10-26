@@ -123,8 +123,10 @@ module ExchangeRate::Provided
       # another instead of skipping: a sync that returned without rates would
       # materialize its balances without them. Once the first import is done the
       # next one finds the rates in place and returns without calling the provider.
-      # A fresh importer re-reads what the import it waited for stored.
-      with_import_lock(from, to, start_date, account) { build_importer.call.import_provider_rates }
+      # After a wait, a fresh importer re-reads what the import it waited for stored.
+      with_import_lock(from, to, start_date, account) do |waited|
+        (waited ? build_importer.call : importer).import_provider_rates
+      end
     end
 
     def import_lock_key(from, to)
@@ -142,11 +144,18 @@ module ExchangeRate::Provided
       # the connection closes, so a crashed worker cannot leave the pair locked.
       # After the wait the import runs anyway: its rows are upserts, so an
       # overlapping import costs a provider call but never duplicates data.
+      # Yields whether it had to wait for another import.
+      #
+      # The wait holds the connection the job already uses, not an extra one:
+      # the pool has one connection per worker thread. Callers should not hold
+      # a transaction across this call, as the wait would keep it open too; sync
+      # and the daily import call it outside one.
       def with_import_lock(from, to, start_date, account)
         # The unlock must run on the session that took the lock.
         connection = lease_connection
         key = import_lock_key(from, to)
         acquired = try_import_lock(connection, key)
+        waited = !acquired
 
         attempts = IMPORT_LOCK_WAIT_SECONDS / IMPORT_LOCK_POLL_SECONDS
         until acquired || attempts.zero?
@@ -170,9 +179,9 @@ module ExchangeRate::Provided
         # Inside a caller's transaction a failed statement would abort it and
         # the unlock below could not run; the savepoint keeps it usable.
         if connection.transaction_open?
-          transaction(requires_new: true) { yield }
+          transaction(requires_new: true) { yield waited }
         else
-          yield
+          yield waited
         end
       ensure
         advisory_lock_query(connection, "pg_advisory_unlock", key) if acquired

@@ -75,6 +75,17 @@ class ExchangeRate::ImportLockTest < ActiveSupport::TestCase
     assert other_worker_can_lock?, "the lock should be released after the import"
   end
 
+  test "an import that takes the lock right away reuses the importer it checked" do
+    importer = ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider, from: "EUR", to: "USD", start_date: @entry_date, end_date: Date.current
+    )
+    ExchangeRate::Importer.expects(:new).once.returns(importer)
+
+    ExchangeRate.import_provider_rates(from: "EUR", to: "USD", start_date: @entry_date, end_date: Date.current)
+
+    assert ExchangeRate.exists?(from_currency: "EUR", to_currency: "USD", date: @entry_date)
+  end
+
   test "releases the lock when the import raises" do
     ExchangeRate::Importer.any_instance.stubs(:import_provider_rates).raises(StandardError, "provider down")
 
