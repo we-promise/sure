@@ -734,12 +734,21 @@ class Account < ApplicationRecord
   # Mirrors the restore_after_failed_deletion and disable events, but written
   # directly: an unrelated validation (an owner who has since left the family,
   # say) must not leave the account hidden in pending_deletion or replace the
-  # destroy error with its own.
+  # destroy error with its own. Only while the row still holds the status this
+  # record saw, so a newer write (another worker's restore the user has since
+  # re-enabled, say) is not overwritten.
   def restore_after_failed_destroy
     return unless may_restore_after_failed_deletion? || may_disable?
 
-    restored_disabled_at = (disabled_at_in_database if pending_deletion?) || Time.current
-    update_columns(status: "disabled", disabled_at: restored_disabled_at, updated_at: Time.current)
+    restored = {
+      status: "disabled",
+      disabled_at: (disabled_at_in_database if pending_deletion?) || Time.current,
+      updated_at: Time.current
+    }
+    return unless Account.where(id: id, status: status_in_database).update_all(restored) == 1
+
+    assign_attributes(restored)
+    clear_attribute_changes(restored.keys)
   end
 
   def current_holdings

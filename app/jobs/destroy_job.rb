@@ -38,6 +38,8 @@ class DestroyJob < ApplicationJob
     # send the job into Sidekiq's retries, failing and reporting each time.
     def restore(model)
       if model.is_a?(Account)
+        # Account#destroy has usually restored it already; this call then
+        # finds it disabled and does nothing.
         model.restore_after_failed_destroy
       elsif model.respond_to?(:scheduled_for_deletion)
         model.update_column(:scheduled_for_deletion, false)
