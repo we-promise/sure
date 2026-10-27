@@ -12,7 +12,6 @@ pt-BR:
       welcome: "Bem-vindo(a) de volta, %{name}"
       subtitle: "Veja o que está acontecendo com suas finanças"
       new: "Novo"
-      drag_to_reorder: "Arraste para reordenar a seção"
       toggle_section: "Alternar visibilidade da seção"
       net_worth_chart:
         data_not_available: Dados não disponíveis para o período selecionado
