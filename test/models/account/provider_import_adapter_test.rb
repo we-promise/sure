@@ -98,6 +98,86 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "posted_tip", pending.external_id
   end
 
+  test "claims the next pending entry when another posted import claimed the first meanwhile" do
+    older = @adapter.import_transaction(
+      external_id: "pending_older", amount: 50, currency: "USD",
+      date: 1.day.ago.to_date, name: "Coffee", source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    pending = @adapter.import_transaction(
+      external_id: "pending_race", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    stale = Entry.find(pending.id)
+    first = @adapter.import_transaction(
+      external_id: "posted_first", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+    assert_equal pending.id, first.id
+    return_once_from_find_pending(stale)
+
+    second = @adapter.import_transaction(
+      external_id: "posted_second", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+
+    assert_equal older.id, second.id
+    assert_equal "posted_first", pending.reload.external_id
+    assert_equal [ "pending_race" ], pending.transaction.extra["auto_claimed_pending_ids"]
+    assert_equal [ "pending_older" ], older.reload.transaction.extra["auto_claimed_pending_ids"]
+  end
+
+  test "does not claim a pending entry booked in place meanwhile" do
+    pending = @adapter.import_transaction(
+      external_id: "same_id", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    stale = Entry.find(pending.id)
+    # Providers that keep the id for the booked copy update the entry in place.
+    @adapter.import_transaction(
+      external_id: "same_id", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+    assert_not pending.reload.transaction.pending?
+    return_once_from_find_pending(stale)
+
+    other = @adapter.import_transaction(
+      external_id: "other_posted", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+
+    assert_not_equal pending.id, other.id
+    assert_equal "same_id", pending.reload.external_id
+  end
+
+  test "does not claim a Plaid pending entry another import claimed meanwhile" do
+    pending = @adapter.import_transaction(
+      external_id: "plaid_pending_race", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      extra: { "plaid" => { "pending" => true } }
+    )
+    stale = Entry.find(pending.id)
+    @adapter.import_transaction(
+      external_id: "plaid_posted_first", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      pending_transaction_id: "plaid_pending_race"
+    )
+    entries = @account.entries
+    entries.stubs(:find_by).returns(nil)
+    entries.stubs(:find_by).with(external_id: "plaid_pending_race", source: "plaid").returns(stale)
+
+    second = @adapter.import_transaction(
+      external_id: "plaid_posted_second", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      pending_transaction_id: "plaid_pending_race", allow_heuristic_matching: false
+    )
+
+    assert_not_equal pending.id, second.id
+    assert_equal "plaid_posted_first", pending.reload.external_id
+  end
+
   test "does not claim a manual duplicate another import claimed meanwhile" do
     manual = @account.entries.create!(
       name: "Manual", date: Date.current, amount: 42, currency: "USD", entryable: Transaction.new
@@ -2614,5 +2694,18 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         source: "plaid",
         account_provider_id: account_provider.id
       )
+    end
+
+    # The first lookup returns an entry loaded before another import changed
+    # it, as when two imports race; later lookups run the real query.
+    def return_once_from_find_pending(stale)
+      real = @adapter.method(:find_pending_transaction)
+      returned = false
+      @adapter.define_singleton_method(:find_pending_transaction) do |**args|
+        next real.call(**args) if returned
+
+        returned = true
+        stale
+      end
     end
 end
