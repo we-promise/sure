@@ -120,4 +120,31 @@ class DataCacheClearJobTest < ActiveJob::TestCase
     assert lock_index, "accounts are not locked"
     assert lock_index < sync_check_index, "accounts are locked only after the running-sync check"
   end
+
+  test "clears the balances and syncs when no exchange rate provider is set" do
+    Setting.stubs(:exchange_rate_provider).returns(nil)
+    Security.stubs(:provider).returns(nil)
+    balance = @account.balances.create!(date: 1.day.ago.to_date, balance: 1000, currency: "CAD")
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil) do
+      DataCacheClearJob.perform_now(@family)
+    end
+
+    assert_not Balance.exists?(balance.id)
+    assert_enqueued_jobs 1, only: SyncJob
+  end
+
+  test "clears the balances and syncs when the exchange rate provider is unknown" do
+    Provider::Registry.any_instance.stubs(:get_provider).raises(Provider::Registry::Error)
+    Setting.stubs(:exchange_rate_provider).returns("nope")
+    Security.stubs(:provider).returns(nil)
+    balance = @account.balances.create!(date: 1.day.ago.to_date, balance: 1000, currency: "CAD")
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil) do
+      DataCacheClearJob.perform_now(@family)
+    end
+
+    assert_not Balance.exists?(balance.id)
+    assert_enqueued_jobs 1, only: SyncJob
+  end
 end

@@ -41,7 +41,7 @@ class Family::MarketDataRefresher
     end
 
     def refresh_exchange_rates
-      provider = ExchangeRate.provider
+      provider = ExchangeRate.configured_provider
       return unless provider
 
       pair_dates = importers.each_with_object({}) do |importer, merged|

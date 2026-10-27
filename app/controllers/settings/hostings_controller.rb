@@ -58,7 +58,7 @@ class Settings::HostingsController < ApplicationController
     @rentcast_usage = Provider::Registry.get_provider(:rentcast)&.usage
     @realie_usage = Provider::Registry.get_provider(:realie)&.usage
     @chimnie_usage = Provider::Registry.get_provider(:chimnie)&.usage
-    @market_data_refreshable = market_data_provider_configured?(exchange_rate_provider)
+    @market_data_refreshable = market_data_provider_configured?
 
     load_external_assistant_models
   end
@@ -519,13 +519,7 @@ class Settings::HostingsController < ApplicationController
     end
 
     # A cache clear can only reload rates and prices when a provider is configured
-    def market_data_provider_configured?(exchange_rate_provider)
-      exchange_rate_provider_available?(exchange_rate_provider) || Security.provider.present?
-    end
-
-    def exchange_rate_provider_available?(exchange_rate_provider)
-      exchange_rate_provider.present? && ExchangeRate.provider.present?
-    rescue Provider::Registry::Error
-      false
+    def market_data_provider_configured?
+      ExchangeRate.configured_provider.present? || Security.provider.present?
     end
 end
