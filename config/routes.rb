@@ -501,6 +501,8 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :merchants, only: :show
+
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
       get :merge
