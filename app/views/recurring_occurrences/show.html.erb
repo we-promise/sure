@@ -35,13 +35,13 @@
         <div class="min-w-0 space-y-0.5">
           <p class="text-2xl font-medium text-primary privacy-sensitive">
             <% if @occurrence.paid? %>
-              <%= t(".paid_headline", amount: format_money(paid)) %>
+              <%= t(series.typed_income? ? ".received_headline" : ".paid_headline", amount: format_money(paid)) %>
             <% elsif @occurrence.skipped? %>
               <%= t(".skipped") %>
             <% elsif @occurrence.missed? %>
               <%= t(".missed") %>
             <% else %>
-              <%= t(".remaining", amount: format_money(@occurrence.remaining_amount_money)) %>
+              <%= t(series.typed_income? ? ".expected" : ".remaining", amount: format_money(@occurrence.remaining_amount_money)) %>
             <% end %>
           </p>
           <p class="text-sm text-secondary privacy-sensitive">
@@ -63,7 +63,7 @@
       <%# What has already paid this, and the only route in the app to undo it. %>
       <% if @occurrence.allocations.any? %>
         <div class="space-y-1">
-          <p class="text-xs font-medium text-secondary uppercase"><%= t(".payments") %></p>
+          <p class="text-xs font-medium text-secondary uppercase"><%= t(series.typed_income? ? ".received_heading" : ".payments") %></p>
           <div class="bg-container-inset rounded-lg divide-y divide-subdued">
             <% @occurrence.allocations.order(:paid_on).each do |allocation| %>
               <div class="flex items-center justify-between gap-3 px-3 py-2">
@@ -132,13 +132,13 @@
 
             <div class="flex items-center gap-2">
               <%= render DS::Link.new(
-                    text: t(".link_payment"),
+                    text: t(series.typed_income? ? ".link_income" : ".link_payment"),
                     variant: "primary",
                     href: confirm_recurring_allocation_path(@pending_suggestion),
                     method: :post
                   ) %>
               <%= render DS::Link.new(
-                    text: t(".not_this_one"),
+                    text: t(series.typed_income? ? ".not_this_income" : ".not_this_one"),
                     variant: "ghost",
                     href: reject_recurring_allocation_path(@pending_suggestion),
                     method: :post
@@ -151,7 +151,7 @@
       <% if @occurrence.scheduled? %>
         <div class="space-y-2">
           <p class="text-xs font-medium text-secondary uppercase">
-            <%= @occurrence.partially_paid? ? t(".add_heading") : t(".find_heading") %>
+            <%= @occurrence.partially_paid? ? t(".add_heading") : t(series.typed_income? ? ".find_income_heading" : ".find_heading") %>
           </p>
 
           <%# Ranked by the engine that decides auto-links, so the app agrees
