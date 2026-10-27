@@ -5,6 +5,7 @@ nl:
       payments:
         renewal: "Uw bijdrage wordt voortgezet op %{date}."
   settings:
+    encryption_migration_guide: Handleiding voor het instellen van versleuteling en migratie
     ai_prompts:
       show:
         page_title: AI Prompts

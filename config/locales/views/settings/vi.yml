@@ -6,6 +6,7 @@ vi:
         renewal: "Đóng góp của bạn tiếp tục vào ngày %{date}."
         cancellation: "Đóng góp của bạn kết thúc vào ngày %{date}."
   settings:
+    encryption_migration_guide: Hướng dẫn thiết lập mã hóa và di chuyển dữ liệu
     debugs:
       show:
         page_title: "Gỡ lỗi"

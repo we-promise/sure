@@ -6,6 +6,7 @@ es:
         renewal: Tu contribución continúa el %{date}.
         cancellation: Tu contribución finaliza el %{date}.
   settings:
+    encryption_migration_guide: Guía de configuración del cifrado y migración
     debugs:
       show:
         page_title: Depuración

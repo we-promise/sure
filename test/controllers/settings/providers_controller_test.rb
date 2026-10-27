@@ -682,6 +682,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :success
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+      assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    minimum: 1
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
     end
@@ -700,6 +703,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  count: 0
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
     refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
   ensure
@@ -723,6 +729,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :success
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+      assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    minimum: 1
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
       refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
@@ -737,6 +746,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :success
       refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+      assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    count: 0
       refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
       refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
@@ -751,6 +763,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  count: 0
     refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
     assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
     refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
@@ -764,6 +779,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :success
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+      assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                    "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                    minimum: 1
       assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
       refute_includes response.body, I18n.t("wise_items.provider_panel.encryption_warning.title")
       refute_includes response.body, I18n.t("wise_items.provider_panel.encryption_warning.message")

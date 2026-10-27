@@ -1,5 +1,6 @@
 class Provider::Anthropic::AutoCategorizer
   include Provider::Anthropic::Concerns::UsageRecorder
+  include Provider::Anthropic::Concerns::StructuredOutput
 
   TOOL_NAME = "report_categorizations".freeze
 
@@ -21,7 +22,9 @@ class Provider::Anthropic::AutoCategorizer
       user_categories: user_categories
     })
 
-    response = client.messages.create(
+    response = create_structured_message(
+      tool_name: TOOL_NAME,
+      operation: "auto_categorize",
       model: model,
       max_tokens: max_tokens,
       system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),
@@ -135,10 +138,10 @@ class Provider::Anthropic::AutoCategorizer
     end
 
     def extract_categorizations(response)
-      tool_use = Array(response.content).find { |block| block_type(block) == :tool_use }
+      tool_use = Array(response.content).find { |block| structured_block_type(block) == :tool_use }
       raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME} (stop_reason: #{response.stop_reason})" unless tool_use
 
-      input = block_input(tool_use)
+      input = structured_block_input(tool_use)
       input = JSON.parse(input) if input.is_a?(String)
       categorizations = input.is_a?(Hash) ? (input["categorizations"] || input[:categorizations]) : nil
 
@@ -163,14 +166,5 @@ class Provider::Anthropic::AutoCategorizer
 
       match = user_categories.find { |c| c[:name].to_s.casecmp(str).zero? }
       match ? match[:name] : str
-    end
-
-    def block_type(block)
-      raw = block.respond_to?(:type) ? block.type : block[:type] || block["type"]
-      raw.to_s.to_sym
-    end
-
-    def block_input(block)
-      block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
     end
 end

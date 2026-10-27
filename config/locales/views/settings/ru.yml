@@ -1,6 +1,7 @@
 ---
 ru:
   settings:
+    encryption_migration_guide: Руководство по настройке шифрования и миграции
     ai_prompts:
       show:
         disable_ai: Отключить AI Ассистента
