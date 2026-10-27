@@ -1,17 +1,22 @@
 <%# locals: (loan:, as_of:) %>
 
-<%# The repayment ring and the instalment the borrower is on. Rendered only
-    when the paydown can be measured -- an account with no balance to compare
-    against what was borrowed gets no ring rather than an empty one. %>
+<%# The repayment ring, the instalment the borrower is on, and the cumulative
+    principal/interest split. Each card appears only when its figure can be
+    measured; an account with no balance to compare against what was borrowed
+    gets no ring rather than an empty one. %>
 <% segments = loan.to_donut_segments_json %>
-<%# The instalment for the Overview's own reference date, so this card and the
-    ones above it answer for the same day. %>
+<%# The instalment and totals for the Overview's own reference date, so these
+    cards answer for the same day as the ones above them. %>
 <% breakdown = loan.payment_breakdown(as_of: as_of) %>
+<% paid = preview_features_enabled? ? loan.paid_breakdown(as_of: as_of) : nil %>
+<% show_paid = paid.present? && paid.total.amount.positive? %>
+<% column_count = [ segments.present?, breakdown.present?, show_paid ].count(true) %>
 
-<% if segments.present? || breakdown.present? %>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+<% if column_count.positive? %>
+  <% grid_columns = { 1 => "md:grid-cols-1", 2 => "md:grid-cols-2", 3 => "md:grid-cols-3" }.fetch(column_count) %>
+  <div class="grid grid-cols-1 <%= grid_columns %> gap-4 mt-4">
     <% if segments.present? %>
-      <div class="bg-container rounded-lg border border-primary p-4">
+      <%= render DS::Card.new do %>
         <p class="text-sm text-secondary mb-2"><%= t(".repaid") %></p>
 
         <%# The paid arc is declared as the controller's pass-through segment so
@@ -33,11 +38,11 @@
             </div>
           </div>
         </div>
-      </div>
+      <% end %>
     <% end %>
 
     <% if breakdown.present? %>
-      <div class="bg-container rounded-lg border border-primary p-4">
+      <%= render DS::Card.new do %>
         <p class="text-sm text-secondary mb-2">
           <%= t(".instalment", number: breakdown[:number], date: l(breakdown[:date], format: :long)) %>
         </p>
@@ -45,21 +50,50 @@
         <dl class="space-y-2">
           <% [ :principal, :interest, :insurance ].each do |part| %>
             <% next if part == :insurance && breakdown[:insurance].zero? %>
-            <div class="flex items-center justify-between gap-2">
-              <dt class="text-sm text-secondary"><%= t(".#{part}") %></dt>
-              <dd class="text-sm text-primary privacy-sensitive tabular-nums">
+            <%= render DS::DetailRow.new(label: t(".#{part}"), value_class: "privacy-sensitive tabular-nums") do |row| %>
+              <% row.with_value do %>
                 <%= format_money(breakdown[part]) %>
                 <span class="text-secondary"><%= number_to_percentage(breakdown[:ratios][part] * 100, precision: 0) %></span>
-              </dd>
-            </div>
+              <% end %>
+            <% end %>
           <% end %>
 
-          <div class="flex items-center justify-between gap-2 pt-2 border-t border-primary">
-            <dt class="text-sm text-secondary"><%= t(".total") %></dt>
-            <dd class="text-sm font-medium text-primary privacy-sensitive tabular-nums"><%= format_money(breakdown[:total]) %></dd>
-          </div>
+          <%= render DS::DetailRow.new(
+                label: t(".total"),
+                value_class: "font-medium privacy-sensitive tabular-nums",
+                class: "pt-2 border-t border-primary"
+              ) do |row| %>
+            <% row.with_value { format_money(breakdown[:total]) } %>
+          <% end %>
         </dl>
-      </div>
+      <% end %>
+    <% end %>
+
+    <% if show_paid %>
+      <%= render DS::Card.new do %>
+        <p class="text-sm text-secondary mb-2">
+          <%= t(".paid_so_far", date: l(as_of, format: :long)) %>
+        </p>
+
+        <dl class="space-y-2">
+          <% [ :principal, :interest ].each do |part| %>
+            <%= render DS::DetailRow.new(label: t(".#{part}"), value_class: "privacy-sensitive tabular-nums") do |row| %>
+              <% row.with_value do %>
+                <%= format_money(paid.public_send(part)) %>
+                <span class="text-secondary"><%= number_to_percentage(paid.ratios[part] * 100, precision: 0) %></span>
+              <% end %>
+            <% end %>
+          <% end %>
+
+          <%= render DS::DetailRow.new(
+                label: t(".principal_and_interest"),
+                value_class: "font-medium privacy-sensitive tabular-nums",
+                class: "pt-2 border-t border-primary"
+              ) do |row| %>
+            <% row.with_value { format_money(paid.total) } %>
+          <% end %>
+        </dl>
+      <% end %>
     <% end %>
   </div>
 <% end %>

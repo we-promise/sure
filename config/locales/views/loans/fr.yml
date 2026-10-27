@@ -19,6 +19,8 @@ fr:
       insurance_rate_type: Type d'assurance
       insurance_rate_type_decreasing_life: Dégressive
       insurance_rate_type_level_term: Constante
+      principal_only_transfers: Les virements liés portent uniquement sur le capital
+      principal_only_transfers_hint: Activez cette option si vous virez uniquement le capital et enregistrez les intérêts séparément. Laissez-la désactivée si le virement lié correspond au paiement complet.
       subtype_none: Aucun
       subtype_prompt: Sélectionner le type de prêt
       term_months: Durée (mois)
@@ -59,6 +61,8 @@ fr:
         insurance: Assurance
         interest: Intérêts
         of_original: sur %{amount}
+        paid_so_far: Payé à ce jour · %{date}
         principal: Capital
+        principal_and_interest: Capital + intérêts
         repaid: Remboursé
         total: Total
