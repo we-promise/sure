@@ -10,14 +10,17 @@
     subline already says why the row matters, and tapping it opens the drawer.
 
     `drawer: true` is what the drawer passes. There the verb comes from
-    bills_drawer_verb, is always present, and renders at full size. %>
+    bills_drawer_verb, is always present, and renders at full size. An income
+    keeps the find action under its own words, "Find income", since it is the
+    same search for the transaction that carries the payday. %>
 <% verb = drawer ? bills_drawer_verb(occurrence, suggestion: suggestion) : bills_row_verb(occurrence, suggestion: suggestion) %>
 
 <% if verb == :pay %>
   <%= render "recurring_transactions/pay_link", recurring_transaction: occurrence.recurring_transaction %>
 <% elsif verb %>
+  <% label = verb == :find_payment && occurrence.recurring_transaction.typed_income? ? "bills.find_income" : "bills.#{verb}" %>
   <%= render DS::Link.new(
-        text: t("bills.#{verb}"),
+        text: t(label),
         icon: BillsHelper::VERB_ICONS[verb],
         variant: drawer ? "primary" : "outline",
         size: drawer ? "md" : "sm",
