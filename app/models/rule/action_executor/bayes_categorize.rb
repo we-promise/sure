@@ -2,10 +2,6 @@
 # the uncategorized matches it's sure of, in the rule's place in the order.
 # Free, so offered without a provider. Never overrides a lock.
 class Rule::ActionExecutor::BayesCategorize < Rule::ActionExecutor
-  def label
-    "Categorize with the classifier (no AI)"
-  end
-
   def claimed_attributes
     [ :category_id ]
   end

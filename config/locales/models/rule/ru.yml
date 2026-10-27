@@ -1,6 +1,12 @@
 ---
 ru:
   activerecord:
+    models:
+      rule:
+        one: правило
+        few: правила
+        many: правил
+        other: правила
     errors:
       models:
         rule:

@@ -12,7 +12,42 @@ ru:
       condition:
         value_placeholder: Введите значение
   rules:
+    back_to_rules: К правилам
+    condition_summary: Если %{field} %{operator} %{value}
+    if: ЕСЛИ
+    for: ДЛЯ
+    resource_types:
+      transaction:
+        one: операция
+        few: операции
+        many: операций
+        other: операции
+    new:
+      title: Новое правило для операций
+    edit:
+      title: Изменить правило для операций
+      title_with_name: Изменить правило «%{name}»
+    apply:
+      success: Правило для операций включено
     actions:
+      labels:
+        set_transaction_category: Назначить категорию
+        set_transaction_tags: Добавить метки
+        set_transaction_merchant: Указать продавца
+        set_transaction_name: Изменить название операции
+        set_investment_activity_label: Указать вид инвестиционной операции
+        exclude_transaction: Исключить из бюджета и отчётов
+        set_as_transfer_or_payment: Отметить как перевод или платёж
+        split_transaction: Разбить операцию
+        send_email_notification: Отправить уведомление по электронной почте
+        fill_similar_merchants: Заполнить продавцов по похожим операциям (без ИИ)
+        bayes_categorize: Назначить категории с помощью классификатора (без ИИ)
+        auto_categorize: Назначить категории с помощью ИИ
+        auto_detect_merchants: Определить продавцов автоматически
+      auto_categorize_with_cost: "%{label} (~$%{cost} за 20 операций)"
+      auto_categorize_cost_unavailable: "%{label} (стоимость неизвестна)"
+      auto_categorize_no_provider: "%{label} (поставщик категоризации не настроен)"
+      auto_detect_merchants_with_ai: Определить продавцов с помощью ИИ ($$)
       value_placeholder: Введите значение
       to_label: на
       split:
@@ -58,6 +93,16 @@ ru:
       confirm_title: Сбросить кэш ИИ?
       success: Кэш ИИ очищается. Это может занять несколько минут.
     condition_filters:
+      labels:
+        transaction_name: Название операции
+        transaction_amount: Сумма операции
+        transaction_type: Тип операции
+        transaction_merchant: Продавец
+        transaction_category: Категория
+        transaction_tag: Метка
+        transaction_details: Дополнительные данные
+        transaction_notes: Примечания
+        transaction_account: Счёт
       transaction_type:
         equal_to: Равно
         expense: Расход
@@ -83,9 +128,7 @@ ru:
       ai_cost_title: Оценка стоимости ИИ
       ai_cost_with_estimate_html: 'Это использует ИИ для категоризации %{count} операций.
         Оценочная стоимость: <span class="font-semibold">~$%{cost}</span>'
-      apply_notice_html: Вы собираетесь применить это правило к <span class="text-primary
-        font-medium">%{count} %{resource}</span>, которые соответствуют указанным
-        критериям правила. Пожалуйста, подтвердите, если хотите продолжить это изменение.
+      apply_notice_html: 'Правило затронет следующие данные: <span class="text-primary font-medium">%{count} %{resource}</span>. Подтвердите изменения.'
       confirm_changes: Подтвердить изменения
       cost_unavailable_model: Оценка стоимости недоступна для модели "%{model}".
       cost_unavailable_no_provider: Оценка стоимости недоступна (поставщик LLM не
@@ -152,7 +195,7 @@ ru:
       title: Недавние запуски
       unnamed_rule: Безымянное правило
     rule:
-      action_label_to: "%{label} на %{value}"
+      action_label_to: "%{label}: %{value}"
       all_past_and_future: Все прошлые и будущие %{resource}
       and_more_actions:
         few: и ещё %{count} действия
@@ -166,7 +209,7 @@ ru:
         other: и ещё %{count} условий
       delete: Удалить
       edit: Редактировать
-      on_or_after: "%{resource} на или после %{date}"
+      on_or_after: "%{resource} начиная с %{date}"
       re_apply_rule: Применить правило повторно
       then: ТОГДА
       stop_processing: Остановить

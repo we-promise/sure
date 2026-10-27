@@ -1,6 +1,6 @@
 class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
   def label
-    base_label = "Auto-categorize transactions with AI"
+    base_label = super
 
     if rule.family.self_hoster?
       selected_model = rule.family.categorization_model_name
@@ -12,15 +12,13 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
           category_count: rule.family.categories.count,
           model: selected_model
         )
-        suffix =
-          if estimated_cost.nil?
-            " (cost: N/A)"
-          else
-            " (~$#{sprintf('%.4f', estimated_cost)} per 20 transactions)"
-          end
-        "#{base_label}#{suffix}"
+        if estimated_cost.nil?
+          I18n.t("rules.actions.auto_categorize_cost_unavailable", label: base_label)
+        else
+          I18n.t("rules.actions.auto_categorize_with_cost", label: base_label, cost: sprintf("%.4f", estimated_cost))
+        end
       else
-        "#{base_label} (no categorization provider configured)"
+        I18n.t("rules.actions.auto_categorize_no_provider", label: base_label)
       end
     else
       base_label
