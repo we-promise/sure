@@ -57,6 +57,19 @@ class Provider::Registry
         Provider::TwelveData.new(api_key)
       end
 
+      def gold_api
+        return nil unless ENV["GOLD_API_KEY"].present? || Setting.gold_api_enabled
+
+        api_key = ENV["GOLD_API_KEY"].presence || Setting.gold_api_key # pipelock:ignore
+        return nil unless api_key.present?
+
+        Provider::GoldApi.new(api_key)
+      end
+
+      def gold_api_com
+        Provider::GoldApiCom.new
+      end
+
       def plaid_us
         Provider::PlaidAdapter.ensure_configuration_loaded
         config = Rails.application.config.plaid

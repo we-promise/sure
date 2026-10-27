@@ -39,6 +39,37 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_match(/rails\/active_storage\/disk/, response.header["Location"])
   end
 
+  test "protected redirects are not cacheable" do
+    sign_in @user_a
+
+    get rails_blob_path(@statement_a.original_file)
+
+    assert_response :redirect
+    assert_equal "no-store", response.headers["Cache-Control"]
+  end
+
+  test "protected blob proxy responses are not cacheable" do
+    sign_in @user_a
+
+    get rails_storage_proxy_path(@statement_a.original_file)
+
+    assert_response :success
+    assert_equal "no-store", response.headers["Cache-Control"]
+  end
+
+  test "protected representation proxy responses are not cacheable" do
+    file = File.open(Rails.root.join("test/fixtures/files/square-placeholder.png"))
+    @transaction_a.attachments.attach(io: file, filename: "test.png", content_type: "image/png")
+    variant = @transaction_a.attachments.last.variant(resize_to_limit: [ 100, 100 ]).processed
+
+    sign_in @user_a
+
+    get rails_storage_proxy_path(variant)
+
+    assert_response :success
+    assert_equal "no-store", response.headers["Cache-Control"]
+  end
+
   test "disk service urls require authentication" do
     sign_in @user_a
 

@@ -154,6 +154,27 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "a withdrawal cannot book into a valuable account" do
+    valuable = @entry.account.family.accounts.create!(name: "Gold bars", balance: 0, currency: "USD", accountable: Valuable.new)
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      post trades_url(account_id: @entry.account_id), params: {
+        model: { type: "withdrawal", date: Date.current, amount: 10, currency: "USD", transfer_account_id: valuable.id }
+      }
+    end
+
+    assert_response :not_found
+  end
+
+  test "the transfer account picker does not offer valuable accounts" do
+    valuable = @entry.account.family.accounts.create!(name: "Gold bars", balance: 0, currency: "USD", accountable: Valuable.new)
+
+    get new_trade_url(account_id: @entry.account_id, type: "withdrawal")
+
+    assert_response :success
+    assert_select "[role=option][data-value='#{valuable.id}']", count: 0
+  end
+
   test "a member can still book a withdrawal into an account shared with full control" do
     sign_in_as_member_with_writable_investment
 

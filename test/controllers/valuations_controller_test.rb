@@ -31,6 +31,22 @@ class ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(created_entry.account)
   end
 
+  test "rejects manual reconciliations for Gems and Bullion accounts" do
+    account = @user.family.accounts.create!(name: "Gold collection", balance: 0, currency: "USD", accountable: Valuable.new)
+
+    assert_no_difference [ "Entry.count", "Valuation.count" ] do
+      post valuations_url, params: {
+        entry: {
+          amount: 100,
+          date: Date.current.to_s,
+          account_id: account.id
+        }
+      }
+    end
+
+    assert_response :not_found
+  end
+
   test "updates entry with basic attributes" do
     assert_no_difference [ "Entry.count", "Valuation.count" ] do
       patch valuation_url(@entry), params: {
