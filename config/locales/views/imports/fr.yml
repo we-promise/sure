@@ -67,7 +67,12 @@ fr:
         process_button: Traiter les règles
         process_help: Cliquez sur le bouton ci-dessous pour traiter votre CSV et générer les lignes de règles.
       show:
+        apply_template: Appliquer le modèle
         description: Sélectionnez les colonnes qui correspondent à chaque champ dans votre CSV.
+        manually_configure: Configurer manuellement
+        sample_caption: Exemple de données issues de votre CSV importé
+        template_description: Nous avons trouvé la configuration d'un import précédent pour ce compte. Voulez-vous l'appliquer à cet import ?
+        template_found: Configuration modèle trouvée
         title: Configurez votre importation
       trade_import:
         account_label: Compte
@@ -267,6 +272,7 @@ fr:
       invalid_file_type: Type de fichier invalide. Veuillez téléverser un fichier CSV.
       invalid_ndjson_file_type: Type ou format de fichier invalide. Veuillez téléverser un fichier d'export .ndjson ou .json valide.
       invalid_pdf: Le fichier téléversé n'est pas un PDF valide.
+      missing_upload: Nous n'avons pas reçu votre fichier. Veuillez réessayer de le téléverser.
       ndjson_uploaded: Fichier NDJSON téléversé avec succès.
       pdf_processing: Votre PDF est en cours de traitement. Vous recevrez un e-mail lorsque l'analyse sera terminée.
       pdf_too_large: Le fichier PDF est trop volumineux. La taille maximale est de %{max_size} Mo.
@@ -398,13 +404,36 @@ fr:
       unknown_state_title: État inconnu
       view_summary: Voir le récapitulatif de l'import
     publish:
+      guest_new_categories_or_tags: Les invités ne peuvent pas créer de catégories ni d'étiquettes. Associez-les à des catégories ou étiquettes existantes, ou laissez-les vides.
       max_rows_exceeded: Votre importation dépasse le nombre maximal de lignes de %{max}.
       started: Votre importation a démarré en arrière-plan.
     ready:
       back_to_imports: Retour aux importations
       description: Voici un résumé des nouveaux éléments qui seront ajoutés à votre compte une fois que vous aurez publié cette importation.
       empty_summary: Aucun enregistrement importable n'a été trouvé dans ce fichier. Il est peut-être vide, ou les lignes ne correspondent pas au format d'export attendu (chaque ligne doit être un objet JSON avec les clés « type » et « data », pour des types pris en charge par cet import).
+      missing_merchant_warning_description:
+        one: '1 référence de marchand dans ce fichier renvoie à un marchand qui n''y figure pas. Cela peut arriver avec un export réalisé avant que les marchands attribués par les fournisseurs soient inclus dans les exports Sure. Vous pouvez tout de même publier cet import : l''enregistrement concerné sera simplement importé sans marchand, et vous pourrez l''ajouter ensuite.'
+        other: "%{count} références de marchand dans ce fichier renvoient à des marchands qui n'y figurent pas. Cela peut arriver avec un export réalisé avant que les marchands attribués par les fournisseurs soient inclus dans les exports Sure. Vous pouvez tout de même publier cet import : les enregistrements concernés seront simplement importés sans marchand, et vous pourrez les ajouter ensuite."
+      missing_merchant_warning_title: Certains marchands sont absents de cet export
+      provider_merchant_diff_description:
+        one: 1 marchand de ce fichier existe déjà avec des informations différentes. Le marchand existant sera conservé et les valeurs de ce fichier ne seront pas appliquées.
+        other: "%{count} marchands de ce fichier existent déjà avec des informations différentes. Les marchands existants seront conservés et les valeurs de ce fichier ne seront pas appliquées."
+      provider_merchant_diff_fields:
+        name: Nom
+        provider_merchant_id: ID fournisseur
+        website_url: Site web
+      provider_merchant_diff_none: aucun
+      provider_merchant_diff_row: "%{field} : %{kept} conservé, le fichier contient %{imported}"
+      provider_merchant_diff_summary: Voir les différences
+      provider_merchant_diff_title: Certains marchands existent déjà avec des informations différentes
       publish_import: Publier l'importation
+      reused_taxonomy_notice_description:
+        one: 1 catégorie, étiquette ou marchand de ce fichier existe déjà dans votre compte (par exemple parmi les catégories par défaut créées à l'inscription). Il sera réutilisé et mis à jour avec les données de ce fichier au lieu de créer un doublon.
+        other: "%{count} catégories, étiquettes ou marchands de ce fichier existent déjà dans votre compte (par exemple parmi les catégories par défaut créées à l'inscription). Ils seront réutilisés et mis à jour avec les données de ce fichier au lieu de créer des doublons."
+      reused_taxonomy_notice_title: Certaines catégories, étiquettes ou certains marchands existent déjà
+      skipped_recurring_description:
+        one: '1 transaction récurrente n''a pas de nom et son marchand est absent : elle sera donc ignorée. Les transactions récurrentes détectées automatiquement sont reconstruites après l''import.'
+        other: "%{count} transactions récurrentes n'ont pas de nom et leurs marchands sont absents : elles seront donc ignorées. Les transactions récurrentes détectées automatiquement sont reconstruites après l'import."
       summary_count_label: Nombre
       summary_item_label: Élément
       title: Confirmez vos données d'importation

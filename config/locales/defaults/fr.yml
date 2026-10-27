@@ -222,6 +222,11 @@ fr:
     precision:
       format:
         delimiter: ''
+  oauth:
+    registration:
+      invalid_client_name: client_name ne doit pas contenir de caractères de contrôle bidirectionnels
+      invalid_redirect_uris: redirect_uris doit utiliser https, http en loopback ou un schéma d'URI d'application native
+      reserved_client_name: client_name est réservé aux applications propriétaires
   support:
     array:
       last_word_connector: " et "
