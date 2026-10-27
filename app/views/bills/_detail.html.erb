@@ -12,11 +12,11 @@
     <div class="space-y-4">
       <%# Why this bill matches what it matches, in words rather than engine terms. %>
       <div class="space-y-1.5">
-        <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.rules") %></p>
+        <p class="text-xs font-medium text-secondary uppercase"><%= t(series.typed_income? ? "bills.detail.rules_income" : "bills.detail.rules") %></p>
         <div class="flex flex-wrap gap-1.5">
           <%= render DS::Pill.new(label: t("bills.detail.rule_named", name: series.merchant&.name.presence || series.name), tone: :neutral, marker: false) %>
           <% amount_label = series.has_amount_variance? ?
-               t("bills.detail.rule_amount_range", min: format_money(series.expected_amount_min_money), max: format_money(series.expected_amount_max_money)) :
+               t("bills.detail.rule_amount_range", min: format_money(bills_amount_bounds(series).first), max: format_money(bills_amount_bounds(series).last)) :
                format_money(Money.new(series.amount.abs, series.currency)) %>
           <span class="privacy-sensitive"><%= render DS::Pill.new(label: amount_label, tone: :neutral, marker: false) %></span>
           <%= render DS::Pill.new(label: frequency_label(series), tone: :neutral, marker: false) %>
@@ -56,18 +56,18 @@
           <% if analytics %>
             <div class="grid grid-cols-3 gap-2">
               <div>
-                <p class="text-xs text-secondary"><%= t("bills.detail.average") %></p>
+                <p class="text-xs text-secondary"><%= t(series.typed_income? ? "bills.detail.average_received" : "bills.detail.average") %></p>
                 <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(analytics[:average]) %></p>
                 <p class="text-xs text-subdued privacy-sensitive">
                   <%= t("bills.detail.range", min: format_money(analytics[:lowest]), max: format_money(analytics[:highest])) %>
                 </p>
               </div>
               <div>
-                <p class="text-xs text-secondary"><%= t("bills.detail.annualized") %></p>
-                <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(analytics[:annualized]) %></p>
+                <p class="text-xs text-secondary"><%= t(series.typed_income? ? "bills.detail.annualized_income" : "bills.detail.annualized") %></p>
+                <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(series.typed_income? ? analytics[:annualized].abs : analytics[:annualized]) %></p>
               </div>
               <div>
-                <p class="text-xs text-secondary"><%= t("bills.detail.ytd") %></p>
+                <p class="text-xs text-secondary"><%= t(series.typed_income? ? "bills.detail.ytd_income" : "bills.detail.ytd") %></p>
                 <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(analytics[:ytd]) %></p>
               </div>
             </div>
@@ -81,8 +81,8 @@
               <div class="divide-y divide-subdued pt-1">
                 <div class="grid grid-cols-3 text-xs text-secondary pb-1">
                   <p><%= t("bills.detail.year") %></p>
-                  <p class="text-right"><%= t("bills.detail.spent_per_year") %></p>
-                  <p class="text-right"><%= t("bills.detail.avg_payment") %></p>
+                  <p class="text-right"><%= t(series.typed_income? ? "bills.detail.received_per_year" : "bills.detail.spent_per_year") %></p>
+                  <p class="text-right"><%= t(series.typed_income? ? "bills.detail.avg_per_payday" : "bills.detail.avg_payment") %></p>
                 </div>
                 <% yearly_metrics.each do |row| %>
                   <div class="grid grid-cols-3 py-1.5 text-sm">
@@ -154,7 +154,7 @@
             <div class="min-w-0">
               <p class="text-sm text-primary"><%= l(occurrence.due_on, format: :long) %></p>
               <p class="text-xs text-secondary truncate">
-                <%= t("recurring_occurrences.history_status.#{occurrence.status}") %>
+                <%= t(series.typed_income? && occurrence.paid? ? "bills.detail.received_status" : "recurring_occurrences.history_status.#{occurrence.status}") %>
                 <% if payments.size > 1 %>
                   &middot; <%= t("bills.detail.payment_count", count: payments.size) %>
                 <% elsif (payment = payments.first) %>
