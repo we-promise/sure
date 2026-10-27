@@ -966,6 +966,31 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", print_reports_path(period_type: :monthly, start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month, currency: "EUR")
   end
 
+  # A EUR account holding 5 shares at 150 EUR, bought at 100 EUR: the
+  # position is worth 750 EUR and up 250 EUR. At today's EUR->USD 1.5, the
+  # holding's line reads $375.00 and the account card $15,000.00, not the
+  # EUR figures under a dollar sign or in euros beside dollar totals.
+  test "a foreign holding's return and its account card are shown in the report currency" do
+    date = Date.current.beginning_of_month
+    account = @family.accounts.create!(name: "Brokerage EUR", balance: 10_000,
+                                       currency: "EUR", accountable: Investment.new)
+    security = Security.create!(ticker: "EUH#{SecureRandom.hex(3)}", name: "Euro Held")
+    [ date, Date.current ].uniq.each do |rate_date|
+      ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "USD", date: rate_date).update!(rate: 1.5)
+    end
+    account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                             amount: BigDecimal(750), currency: "EUR", cost_basis: 100)
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "a[href=?]", account_path(account), text: /\$15,000\.00/
+
+    line = css_select("[data-testid='unrealized-gain-line']").map(&:text).find { |text| text.include?(security.ticker) }
+    assert line, "the holding must be listed at all, or this proves nothing"
+    assert_match "$375.00", line
+  end
+
   test "index falls back to the family currency for a currency that is not enabled or not real" do
     @family.update!(enabled_currencies: [ "EUR" ])
     category = create_currency_probe_spending(amount: 100, rate: 0.5)

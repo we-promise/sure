@@ -553,6 +553,9 @@ class ReportsController < ApplicationController
         period_withdrawals: period_totals.withdrawals,
         top_holdings: investment_statement.top_holdings(limit: 5),
         accounts: investment_accounts.to_a,
+        # In the report currency, at the rates the portfolio value uses, so
+        # the account cards add up to it.
+        account_balances: investment_accounts.to_a.index_with { |account| investment_statement.account_balance_money(account) },
         gains_by_tax_treatment: build_gains_by_tax_treatment(investment_statement)
       }
     end
@@ -633,11 +636,13 @@ class ReportsController < ApplicationController
         holdings = holdings_by_treatment[treatment] || []
         trades = trades_by_treatment[treatment] || []
 
-        # Sum unrealized gains from holdings (only those with known cost basis)
-        unrealized = holdings.sum do |h|
+        # Unrealized gains from holdings with a known cost basis, each in the
+        # report currency, so the lines under the card and its total agree.
+        unrealized_by_holding = holdings.each_with_object({}) do |h, memo|
           trend = h.trend
-          trend ? convert_current.call(trend.value, h.currency) : 0
+          memo[h.id] = Money.new(convert_current.call(trend.value, h.currency), currency) if trend
         end
+        unrealized = unrealized_by_holding.values.sum(BigDecimal(0), &:amount)
 
         # Sum realized gains from sell trades, each converted from the currency
         # its own figure carries.
@@ -659,6 +664,7 @@ class ReportsController < ApplicationController
           sell_trades: trades,
           unrealized_gain: Money.new(unrealized, currency),
           realized_gain: Money.new(realized, currency),
+          unrealized_gain_by_holding: unrealized_by_holding,
           # Per-trade figures in the report currency, so the lines under the
           # card and the card's own total are the same arithmetic.
           realized_gain_by_trade: realized_by_trade,

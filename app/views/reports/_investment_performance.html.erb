@@ -178,10 +178,11 @@
                     <div class="space-y-1">
                       <p class="text-secondary font-medium"><%= t("reports.investment_performance.holdings") %></p>
                       <% data[:holdings].first(5).each do |holding| %>
-                        <div class="flex justify-between pl-2">
+                        <% amount = data[:unrealized_gain_by_holding][holding.id] %>
+                        <div class="flex justify-between pl-2" data-testid="unrealized-gain-line">
                           <span class="text-primary"><%= holding.ticker %></span>
-                          <span class="<%= holding.trend ? "" : "text-secondary" %>" style="<%= holding.trend ? "color: #{holding.trend.color}" : "" %>">
-                            <%= holding.trend ? format_money(Money.new(holding.trend.value, @report_currency)) : t("reports.investment_performance.no_data") %>
+                          <span class="<%= amount ? "" : "text-secondary" %>" style="<%= amount ? "color: #{holding.trend.color}" : "" %>">
+                            <%= amount ? format_money(amount) : t("reports.investment_performance.no_data") %>
                           </span>
                         </div>
                       <% end %>
@@ -233,7 +234,7 @@
                   <p class="text-xs text-secondary"><%= account.short_subtype_label %></p>
                 </div>
               </div>
-              <p class="font-medium text-primary privacy-sensitive"><%= format_money(account.balance_money) %></p>
+              <p class="font-medium text-primary privacy-sensitive"><%= format_money(investment_metrics[:account_balances][account]) %></p>
             <% end %>
           <% end %>
         </div>

@@ -46,6 +46,11 @@ class InvestmentStatement
     Money.new(portfolio_value, currency)
   end
 
+  # One account's share of portfolio_value, in the statement currency.
+  def account_balance_money(account)
+    Money.new(convert_to_currency(account.balance, account.currency), currency)
+  end
+
   # Total cash in investment accounts
   def cash_balance
     investment_accounts.sum { |a| convert_to_currency(a.cash_balance, a.currency) }
