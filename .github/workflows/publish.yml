@@ -344,6 +344,44 @@ jobs:
             "${WORKER_DEPLOY_HOOK_URL}"
 
 
+  deploy_app:
+    name: Deploy stable to Render sure-app
+    # Strict version validation below also rejects malformed/non-release v* tags.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+    needs: [merge]
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+
+    environment:
+      name: stable
+      url: https://sure-web-6y53.onrender.com
+
+    concurrency:
+      group: render-sure-app-stable
+      cancel-in-progress: false
+
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Check out release tooling
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Deploy and verify web and worker
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_APP_WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WEB_DEPLOY_HOOK_URL }}
+          RENDER_APP_WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WORKER_DEPLOY_HOOK_URL }}
+          RENDER_APP_WEB_SERVICE_ID: srv-dauth3vpn0mc739470bg
+          RENDER_APP_WORKER_SERVICE_ID: srv-dauthr7pn0mc7394a270
+          RENDER_APP_URL: https://sure-web-6y53.onrender.com
+        run: python3 .github/deployment/deploy_render_stable.py
+
+
   helm:
     name: Package Helm chart
     if: startsWith(github.ref, 'refs/tags/v')
