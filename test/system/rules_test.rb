@@ -46,7 +46,10 @@ class RulesTest < ApplicationSystemTestCase
         assert_no_text(/\blike\b|transactions/)
       end
 
-      visit edit_rule_path(rule)
+      within "##{ActionView::RecordIdentifier.dom_id(rule)}" do
+        find("button[aria-haspopup='menu']").click
+        click_on "Редактировать"
+      end
       within "dialog" do
         assert_selector "h2", text: "Изменить правило «Кофе «утро» <проверка>»"
         assert_operator page.evaluate_script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), :<=, 0
