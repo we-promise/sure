@@ -115,6 +115,41 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 0, @parent_budget_category.bills_reserved_unconvertible_count
   end
 
+  test "bills_reserved loads occurrences once per budget, not once per category" do
+    [ [ @parent_category, 120 ], [ @subcategory_with_limit, 40 ] ].each do |category, amount|
+      bill = @family.recurring_transactions.create!(
+        name: "Bill #{category.id}", account: accounts(:depository), amount: amount,
+        currency: "USD", bill_type: "bill", category_id: category.id,
+        expected_day_of_month: 3, anchor_date: @budget.start_date,
+        last_occurrence_date: @budget.start_date, next_expected_date: @budget.start_date,
+        status: "active", manual: true
+      )
+      bill.recurring_occurrences.destroy_all
+      bill.recurring_occurrences.create!(
+        family: @family, original_due_on: @budget.start_date + 3,
+        due_on: @budget.start_date + 3, currency: "USD", expected_amount: amount
+      )
+    end
+
+    budget = Budget.find(@budget.id)
+    budget_categories = budget.budget_categories.to_a
+    assert budget_categories.size >= 3
+
+    by_category = {}
+    # One occurrence query (joined eager load of the series) plus one grouped
+    # allocation SUM, regardless of how many categories render.
+    assert_queries_count(2) do
+      budget_categories.each do |bc|
+        by_category[bc.category_id] = bc.bills_reserved.amount
+        bc.bills_reserved_unconvertible_count
+      end
+    end
+
+    assert_equal 120, by_category[@parent_category.id]
+    assert_equal 40, by_category[@subcategory_with_limit.id]
+    assert_equal 0, by_category[@subcategory_inheriting.id]
+  end
+
   test "subcategory with zero budget inherits from parent" do
     assert @subcategory_inheriting_bc.inherits_parent_budget?
     refute @subcategory_with_limit_bc.inherits_parent_budget?
