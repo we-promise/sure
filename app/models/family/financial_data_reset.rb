@@ -34,6 +34,7 @@ class Family::FinancialDataReset
     taggings
     merchants
     family_merchant_associations
+    valuable_locations
     provider_items
     syncs
     active_storage_attachments
@@ -160,6 +161,7 @@ class Family::FinancialDataReset
       scope(:categories).destroy_all
       scope(:tags).destroy_all
       scope(:merchants).destroy_all
+      scope(:valuable_locations).destroy_all
       delete_provider_items!
       family.financekit_account_lineages.destroy_all
       scope(:accounts).destroy_all
@@ -294,6 +296,7 @@ class Family::FinancialDataReset
           taggings: Tagging.where(tag_id: tag_scope.select(:id)),
           merchants: FamilyMerchant.where(family_id: family.id),
           family_merchant_associations: FamilyMerchantAssociation.where(family_id: family.id),
+          valuable_locations: ValuableLocation.where(family_id: family.id),
           syncs: Sync.for_family(family)
         }
       end

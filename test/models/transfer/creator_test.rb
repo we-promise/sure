@@ -219,6 +219,38 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "refuses to book a transfer into a valuable account" do
+    valuable = @family.accounts.create!(name: "Gold bars", balance: 0, currency: "USD", accountable: Valuable.new)
+
+    creator = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: valuable.id,
+      date: @date,
+      amount: @amount
+    )
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      assert_raises(ActiveRecord::RecordNotFound) { creator.create }
+    end
+  end
+
+  test "refuses to book a transfer out of a valuable account" do
+    valuable = @family.accounts.create!(name: "Gold bars", balance: 0, currency: "USD", accountable: Valuable.new)
+
+    creator = Transfer::Creator.new(
+      family: @family,
+      source_account_id: valuable.id,
+      destination_account_id: @destination_account.id,
+      date: @date,
+      amount: @amount
+    )
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      assert_raises(ActiveRecord::RecordNotFound) { creator.create }
+    end
+  end
+
   test "creates transfer with custom exchange rate when provided" do
     # Create accounts with different currencies
     usd_account = @family.accounts.create!(name: "USD Account", balance: 1000, currency: "USD", accountable: Depository.new)

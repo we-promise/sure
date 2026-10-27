@@ -32,7 +32,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id
+    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key gold_api_key gold_api_enabled openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id
        market_data_sync_enabled market_data_sync_time market_data_sync_timezone].each do |key|
       Setting.public_send("#{key}=", nil)
     end
@@ -239,6 +239,62 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { rentcast_api_key: "rentcast-token" } }
 
       assert_equal "rentcast-token", Setting.rentcast_api_key
+    end
+  end
+
+  test "can update GoldAPI key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { gold_api_key: "gold-token" } }
+
+      assert_equal "gold-token", Setting.gold_api_key
+    end
+  end
+
+  test "shows the GoldAPI key field only after GoldAPI is enabled" do
+    with_self_hosting do
+      Setting.gold_api_enabled = false
+      get settings_hosting_url
+      assert_not_includes response.body, "Enter your GoldAPI key"
+      assert_select "input[name='setting[gold_api_enabled]'][type='checkbox']", count: 1
+      assert_operator response.body.index("T-Invest (T-Bank)"), :<, response.body.index("GoldAPI")
+
+      patch settings_hosting_url, params: { setting: { gold_api_enabled: "1" } }
+      assert Setting.gold_api_enabled
+
+      patch settings_hosting_url, params: { setting: { gold_api_enabled: "0" } }
+      assert_not Setting.gold_api_enabled
+
+      patch settings_hosting_url, params: { setting: { gold_api_enabled: "1" } }
+
+      get settings_hosting_url
+      assert_includes response.body, "Enter your GoldAPI key"
+    end
+  end
+
+  test "the GoldAPI toggle is not part of the securities provider form" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      document = Nokogiri::HTML(response.body)
+      checkbox = document.at_css("input[name='setting[gold_api_enabled]'][type='checkbox']")
+      assert checkbox, "expected a GoldAPI checkbox"
+      form = checkbox.ancestors("form").first
+      assert form, "expected the GoldAPI checkbox to sit inside a form"
+      assert_nil form.at_css("input[name='setting[securities_providers][]']")
+    end
+  end
+
+  test "toggling GoldAPI does not clear environment-managed securities providers" do
+    security = Security.create!(ticker: "CSPX3", exchange_operating_mic: "XLON", price_provider: "tiingo", offline: false)
+
+    with_env_overrides("SECURITIES_PROVIDERS" => "tiingo") do
+      with_self_hosting do
+        patch settings_hosting_url, params: { setting: { gold_api_enabled: "1", securities_providers: [ "" ] } }
+
+        assert_redirected_to settings_hosting_url
+        assert_equal [ "tiingo" ], Setting.enabled_securities_providers
+        refute security.reload.offline?, "securities must stay online when the environment sets their provider"
+      end
     end
   end
 
