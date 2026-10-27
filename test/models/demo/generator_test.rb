@@ -84,6 +84,26 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     assert_equal 1, ApiKey.where(display_key: ApiKey::DEMO_MONITORING_KEY).count
   end
 
+  test "sample rules come in groups and are all switched off" do
+    generator = Demo::Generator.new(seed: 42)
+    generator.send(:create_realistic_categories!, @family)
+    existing_rule_ids = @family.rules.ids
+    generator.send(:create_sample_rules!, @family)
+
+    rules = @family.rules.where.not(id: existing_rule_ids).ordered.includes(:rule_group, :conditions, :actions).to_a
+    assert_equal 5, rules.size
+    assert rules.none?(&:active?), "sample rules must stay off until someone switches them on"
+    assert_equal [ "Groceries", "Subscriptions" ], @family.rule_groups.order(:name).pluck(:name)
+    assert rules.any? { |rule| rule.rule_group.nil? }, "the demo should also show a rule without a group"
+
+    netflix = rules.find { |rule| rule.conditions.first.value == "Netflix" }
+    assert_equal "Subscriptions", netflix.rule_group.name
+    assert_equal @family.categories.find_by!(name: "Entertainment").id, netflix.actions.first.value
+
+    # Each group's rules sit directly below it, in the order the page shows.
+    assert_equal @family.rules.ordered.to_a, Rule::Layout.new(@family).items.flat_map { |item| item.group? ? item.rules : [ item.rule ] }
+  end
+
   # Regression for a `rake demo_data:default` crash: the goal-seeding matrix
   # linked several active goals to the same account as a 100%-whole-account
   # claim each, which violates GoalAccount#whole_account_link_must_be_exclusive

@@ -76,6 +76,7 @@ class Demo::Generator
         create_realistic_accounts!(family)
         create_realistic_transactions!(family)
         generate_budget_auto_fill!(family)
+        create_sample_rules!(family)
 
         puts "🎯 Seeding goals..."
         generate_goals!(family)
@@ -106,6 +107,9 @@ class Demo::Generator
       create_realistic_transactions!(family)
       # Auto-fill current-month budget based on recent spending averages
       generate_budget_auto_fill!(family)
+
+      puts "📏 Creating sample rules..."
+      create_sample_rules!(family)
 
       puts "🎯 Seeding goals..."
       generate_goals!(family)
@@ -260,6 +264,32 @@ class Demo::Generator
 
       # Interest expense bucket
       @interest_cat = family.categories.create!(name: "Loan Interest", color: "#475569")
+    end
+
+    # Example rules, two groups and one rule without a group, so the rules page
+    # shows how rules are grouped. All are off, so the demo transactions stay as
+    # generated until someone switches the rules on or applies them.
+    def create_sample_rules!(family)
+      sample_rules = [
+        [ "Subscriptions", [ [ "Netflix", @entertainment_cat ], [ "Spotify", @entertainment_cat ] ] ],
+        [ "Groceries", [ [ "Whole Foods", @groceries_cat ], [ "Trader Joe's", @groceries_cat ] ] ],
+        [ nil, [ [ "Local Coffee", @coffee_cat ] ] ]
+      ]
+
+      sample_rules.each do |group_name, rules|
+        group = family.rule_groups.find_or_create_named!(group_name) if group_name
+
+        rules.each do |name_contains, category|
+          family.rules.create!(
+            name: "#{name_contains} → #{category.name}",
+            resource_type: "transaction",
+            active: false,
+            rule_group: group,
+            conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: name_contains } ],
+            actions_attributes: [ { action_type: "set_transaction_category", value: category.id } ]
+          )
+        end
+      end
     end
 
     def create_realistic_accounts!(family)
