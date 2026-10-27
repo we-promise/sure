@@ -20,7 +20,7 @@
       <div class="flex items-center gap-2">
         <%# Display currency: re-renders the page with every figure converted to the chosen currency %>
         <% if @report_currency_options.size > 1 %>
-          <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form", turbo_action: "advance" }, class: "w-40 sm:w-64" do |f| %>
+          <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form", turbo_action: "advance" }, html: { aria: { label: t("reports.index.currency.label") } }, class: "w-40 sm:w-64" do |f| %>
             <% request.query_parameters.except("currency").each do |name, value| %>
               <%= hidden_field_tag name, value if value.is_a?(String) %>
             <% end %>
@@ -31,7 +31,7 @@
                   selected: @report_currency,
                   searchable: true,
                   menu_placement: :down,
-                  label: t("reports.index.currency.label"),
+                  container_class: "rounded-lg",
                   html_options: { data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } }
                 ) %>
           <% end %>

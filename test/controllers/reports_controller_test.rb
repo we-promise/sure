@@ -957,7 +957,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     get reports_path(period_type: :monthly, currency: "eur")
     assert_response :ok
 
-    assert_select "form[data-controller=auto-submit-form] input[type=hidden][name=currency][value=EUR][data-auto-submit-form-target=auto][data-autosubmit-trigger-event=change]"
+    assert_select "form[data-controller=auto-submit-form][aria-label=?] input[type=hidden][name=currency][value=EUR][data-auto-submit-form-target=auto][data-autosubmit-trigger-event=change]", I18n.t("reports.index.currency.label")
     assert_select "tr[data-category='category-#{category.id}']", text: /€50\.00/
     assert_select "tr[data-category='category-#{category.id}']", text: /\$100\.00/, count: 0
 
