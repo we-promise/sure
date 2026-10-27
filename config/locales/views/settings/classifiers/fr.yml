@@ -94,7 +94,7 @@ fr:
         similar_skip_self_hint: Confirmé signifie que vous l'avez modifié ou verrouillé. Une mauvaise copie n'est pas propagée ; un marchand laissé tel quel aussi longtemps est considéré comme accepté.
       merchant:
         merchant_field: Inclure le marchand comme un seul jeton, s'il est défini
-        merchant_field_hint: 'Compte par identité : un marchand renommé conserve donc son historique.'
+        merchant_field_hint: 'Le marchand est compté par identité : un marchand renommé conserve donc son historique.'
         merchant_name_words: Inclure le nom du marchand en tant que mots
         merchant_name_words_hint: Lu comme le libellé, ainsi que le fait l'original, pour que des noms proches partagent leurs indices. Recoupe le jeton ci-dessous.
       run:
