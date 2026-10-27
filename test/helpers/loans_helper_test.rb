@@ -31,18 +31,24 @@ class LoansHelperTest < ActionView::TestCase
     Loan.const_set(:DAY_COUNT_CONVENTIONS, original)
   end
 
-  # `raise: true` must not turn a missing TRANSLATION into a failure: only en
-  # and de carry these labels, and a Spanish user editing a loan must get the
-  # English labels through the configured fallbacks, not an error page. The
-  # raise is for a key missing in every locale, which the test above covers.
+  # A missing translation must fall back, even when all supported locales have
+  # their own labels. The test above covers a key missing in every locale.
   test "a locale without its own labels falls back to English rather than failing" do
     key = "loans.form.day_count_convention_actual_365"
-    assert_nil I18n.t(key, locale: :es, fallback: false, default: nil),
+    locale = :"en-test"
+    original_locales = I18n.available_locales
+    I18n.available_locales = original_locales + [ locale ]
+    I18n.fallbacks[locale] = [ locale, :en ]
+
+    assert_nil I18n.t(key, locale: locale, fallback: false, default: nil),
                "the precondition is a locale that does not carry the label itself"
 
     english = I18n.with_locale(:en) { loan_day_count_convention_options }
-    spanish = I18n.with_locale(:es) { loan_day_count_convention_options }
+    fallback = I18n.with_locale(locale) { loan_day_count_convention_options }
 
-    assert_equal english, spanish
+    assert_equal english, fallback
+  ensure
+    I18n.fallbacks.delete(locale) if locale
+    I18n.available_locales = original_locales if original_locales
   end
 end

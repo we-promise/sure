@@ -1,0 +1,803 @@
+---
+zh-CN:
+  properties:
+    avm_providers:
+      chimnie: Chimnie
+    new:
+      avm_uk_only: "%{provider} 仅支持位于英国的住宅物业。"
+      avm_uprn_label: UPRN
+      avm_uprn_placeholder: '100023336956'
+      avm_uprn_help: 唯一物业参考编号（UPRN，最多 12 位数字）用于标识英国的每个地址。可在 GeoPlace 的 findmyaddress.co.uk 查询，或向当地政府咨询。%{provider} 使用该编号免费估值。
+      avm_county_label: 郡（选填）
+      avm_town_label: 城镇或城市
+      avm_postcode_label: 邮政编码
+      avm_preview_uprn: UPRN
+      avm_preview_range: 估值范围
+      avm_preview_confidence: 置信度
+      avm_confidence:
+        high: 高
+        medium: 中
+        low: 低
+      avm_attribution_chimnie: 估值数据来自 Chimnie。包含 OS 数据 © Crown 版权及数据库权利、Royal Mail 数据 © Royal Mail 版权及数据库权利，以及 HM Land Registry 数据 © Crown 版权及数据库权利，依据 Open Government Licence v3.0 授权。
+    tabs:
+      overview:
+        refresh_valuation: 重新估值
+        valuation_source: 由 %{provider} 估值，上次更新于 %{date}
+        link_valuation: 使用 %{provider} 自动更新估值
+        link_valuation_description: 此物业的价值目前仅能手动更新。
+    refresh_valuation:
+      queued: 已开始刷新估值，新估值稍后显示。
+      not_linked: 此物业尚未关联估值服务商。
+      not_configured: "%{provider} 尚未配置。请在“设置 → 自托管”中添加其 API 密钥，以刷新估值。"
+    link_valuation:
+      linked: 已关联 %{provider} 并更新物业价值。
+      link_failed: "%{provider} 无法为此物业估值，因此未建立关联。请检查地址是否正确，然后重试。"
+      not_linkable: 无法将此物业关联到该服务商。请检查地址是否完整、所在国家是否受支持，以及账户币种是否与服务商匹配。
+  settings:
+    providers:
+      trade_republic_panel:
+        requires_update: 再次登录以恢复同步 。
+        session_expires_in: 登录将在 %{time}后过期（%{at}）。
+    classifiers:
+      account:
+        account_field: 将账户作为一个特征
+        account_field_hint: 交易所属账户会作为判断依据，但不会单独决定分类：交易还需要有已知词语或商家。
+      amount:
+        amount_by_direction: 包含资金流入或流出方向
+        amount_by_direction_hint: 每个类别分别学习资金流向，因此同一商家的退款和消费会分开处理。
+        amount_field: 包含金额
+        amount_field_hint: 按对数尺度比较金额与该币种下各类别的常见金额。
+      category_training:
+        apply: 应用
+        categories: 分类
+        categories_all: 所有分类
+        categories_hint: 未勾选的类别及其子类别不会用于训练，Bayes 也不会选择这些类别。
+        categories_some: "%{total} 个类别中已选 %{count} 个"
+        exclude_transfers: 排除转账
+        exclude_transfers_hint: 排除您账户之间的转账和付款。
+        search_categories: 搜索分类
+        skip_self_labels: 仅在确认或经过指定天数后，才从 Bayes 自己的预测结果中学习
+        skip_self_labels_hint: 更改或锁定结果即视为确认。错误预测不会被反馈和强化；保持不变达到指定天数的结果视为已接受。
+      add_rule:
+        success: 已将 %{name} 规则添加到规则列表顶部。
+      classifier:
+        apply: 应用
+        lock_results: 锁定分类器设置的类别
+        lock_results_hint: 阻止规则更改 Bayes 的分类，除非您在规则上点击“应用”。无论是否锁定，AI 都不会更改 Bayes 的分类。
+        rule: 使用分类器分类
+        rule_hint: 分类器规则可在“规则”中启用或关闭。每次同步后，它按规则顺序对未分类交易进行分类；不确定的交易会留给自动分类规则。
+        threshold: 阈值
+        threshold_hint: Bayes 执行分类的最低分数（0.05–0.99）。阈值越低，分类的交易越多，但错误也越多。
+      clear_locks:
+        success: 正在清除 Bayes 的锁定，可能需要片刻。
+      evaluation:
+        apply_best: 应用这些设置
+        best: 找到的最佳设置
+        best_changes: 找到的最佳设置与当前设置的差异：
+        best_no_changes: 没有找到比当前设置得分更高的方案。
+        buttons_hint: "“测试我的设置”为当前设置评分。“查找最佳设置”搜索展示月份之前的 %{tuning} 个月，并在未参与搜索的月份上评分。它通过 ROC-AUC 衡量各类别交易相对于其他交易的排序效果；只有整体得分提高，且在这 %{tuning} 个月中最多有一个月未提高时，才保留更改。它先选择输入特征：依次尝试商家特征、金额和账户的所有组合，将商家和账户分开评分，再将商家名称和备注作为词语；接着逐项调整其他设置，最后调整评分设置。默认值是原分类器的设置，并保留您选择的类别；重置会恢复并测试这些默认值。"
+        categories_heading: 类别分类器
+        change: "%{setting}: %{value}"
+        confusion: "%{actual} → %{predicted}"
+        confusions: 最常见的错误：%{column}，阈值 %{threshold}
+        current: 我的设置
+        defaults: 默认
+        description: 每列将最近 %{months} 个月逐月作为新交易进行评分：使用该月之前的历史训练，再与您的分类比较。测试不会更改交易类别，只有应用或重置时才会更改分类器设置。
+        find_best: 查找最佳设置
+        matcher_confusions: 最常见的商家匹配错误：%{column}，相似度 %{similarity}
+        matcher_description: 商家匹配器在同样的 %{months} 个月中测试 %{count} 笔有商家的交易：隐藏每笔交易的商家，使用该月之前的历史进行匹配；右侧显示原商家。系统会对各截断值和商家数量评分；找到的最佳结果按错误代价选择得分最高的单元格，点击“应用”即可采用。测试不会填写商家。
+        merchants_heading: 商家匹配器
+        no_confusions: 在此阈值下没有错误。
+        no_matcher_confusions: 在此相似度下没有商家匹配错误。
+        no_uncategorized: 在此阈值下没有未分类的交易。
+        no_unfilled: 在此相似度下没有未填写商家的交易。
+        none: 还没有测试。
+        'off': 关闭
+        'on': 开启
+        ran_at: "%{time}前完成评分，涉及 %{count} 笔交易（%{months}）。"
+        reset: 重置为默认值
+        reset_confirm: 将每个分类器设置重置为默认值, 并测试它们 ?
+        right_wrong: 每个单元格显示正确数 / 错误数。
+        run: 测试我的设置
+        running: 正在测试……完成后此区域将自动更新。
+        short_history: 历史数据不足，暂时无法调整类别分类器。约需 %{months} 个月的已分类交易，因此应用时暂不会更改其设置。
+        similarity: 相似性
+        stale: 自此测试以来, 设置已经改变 。
+        threshold: 阈值
+        trying: 尝试%{changes}...
+        uncategorized: 最常见的未分类交易：%{column}，阈值 %{threshold}
+        unfilled: 最常见的未填写商家：%{column}，相似度 %{similarity}
+        weight: 一次错误的代价
+        weight_hint: 决定“应用”采用的设置：在每次错误扣除指定数量的正确答案后，得分最高的单元格会以粗体显示。它用于选择分类阈值，以及匹配器的截断值、相似度和商家数量。
+        weight_option:
+          one: 1 个正确结果
+          other: "%{count} 个正确结果"
+      matcher:
+        lock_similar_merchants: 锁定匹配器设置的商家
+        lock_similar_merchants_hint: 阻止规则、AI 和同步更改商家，除非您在规则上点击“应用”。匹配器自己的锁定不视为确认（用于商家匹配器调优）。
+        rule: 根据近似重复交易填写缺失的商家
+        rule_hint: 商家匹配器规则可在“规则”中启用或关闭。按规则顺序，无商家的交易会采用所有近似重复交易共有的商家，例如“NETFLIX.COM 8812”和“Netflix com”。转账不参与匹配。
+        similar_threshold: 相似性
+        similar_threshold_hint: 描述的最低相似度，忽略数字和参考代码（0.5–0.99）。阈值越低，填写的商家越多，但错误也越多。自动调优的“应用”也会设置此值。
+      matcher_tuning:
+        similar_common_share: 常见词截断比例
+        similar_common_share_hint: 如果某个词或三字母片段出现在超过此比例（0.01–1）的参考交易中，且至少出现 50 次，就会因过于常见而被忽略，例如“card”或“payment”。比例越高，保留的词越多。自动调优的“应用”也会设置此值。
+        similar_min_neighbours: 一致的商家数量
+        similar_min_neighbours_hint: 要求多少笔近似重复交易具有同一商家，且没有交易使用其他商家。设为 1 时，只根据一笔交易复制，也可能复制错误。
+        similar_min_neighbours_option:
+          one: 1 个商家
+          other: "%{count} 个商家"
+        similar_skip_self: 仅在确认或经过指定天数后，才复制匹配器自己填写的商家
+        similar_skip_self_hint: 更改或锁定结果即视为确认。错误的匹配不会被传播；保持不变达到指定天数的结果视为已接受。
+      merchant:
+        merchant_field: 将已设置的商家作为一个特征
+        merchant_field_hint: 按商家身份计数，因此重命名后仍会保留历史记录。
+        merchant_name_words: 将商家名称拆分为词语
+        merchant_name_words_hint: 与原分类器一样，按描述的方式读取名称，使相似名称共享判断依据。与下方的商家特征存在重叠。
+      run:
+        success: Bayes 正在对未分类的交易进行分类。这可能需要一些时间。
+      scoring:
+        complement: 使用补集朴素贝叶斯
+        complement_hint: 根据交易与其他类别的不匹配程度为每个类别评分，更适合大小差异很大的类别。关闭时使用原来的多项式模型。
+        prior: 包含每个类别的使用频率
+        prior_hint: 倾向于您最常用的类别。关闭时与原模型一样平等对待所有类别。
+        separate_fields: 将商家和账户与词语分开评分
+        separate_fields_hint: 各字段使用独立的分布，避免较长的描述盖过其他字段。需要包含商家或账户；金额始终单独评分。
+        smoothing: 平滑参数
+        smoothing_hint: 为每个计数加上该值，避免未见过的词导致类别被排除（0.001–10）。原模型使用 1；值越低，越依赖已观察到的数据。
+      show:
+        add_rule_body: 规则列表中没有 %{name} 规则，因此无法启用。是否将它添加到列表顶部？
+        add_rule_cancel: 否
+        add_rule_confirm: 添加规则
+        add_rule_title: 加上%{name}规则?
+        account: 账户调优
+        amount: 金额调优
+        auto_tune: 自动调优
+        category_training: 类别分类器调优
+        clear_locks: 清除Bayes锁
+        clear_locks_confirm_body: 解锁 Bayes 设置且未被修改的类别，以及匹配器设置且未被修改的商家，让规则和 AI 可以再次更改它们。类别和商家本身会保留。
+        clear_locks_confirm_button: 清除锁
+        clear_locks_confirm_title: 清除Bayes锁?
+        description: Bayes 类别分类器从您已分类的交易中学习，并在任何 AI 服务商之前为新交易分类。设置更改将在下次分类运行时生效；已分类交易保留原类别。
+        matcher: 商家匹配器
+        matcher_description: 根据近似重复交易填写缺失的商家，可通过商家匹配器规则在每次同步后执行，也可手动运行。此操作会更改已保存的商家。
+        matcher_tuning: 商家匹配器调优
+        merchant: 商家调优
+        run: 运行
+        scoring: 评分
+        title: 分类器
+        training: 训练
+        words: 交易调优
+      training:
+        max_training_transactions: 训练交易数量
+        max_training_transactions_hint: 使用多少笔最新交易（100–20,000）：分类器从已分类交易中学习，匹配器从有商家的交易中复制。
+      words:
+        bigrams: 包含单词对
+        bigrams_hint: 相邻词语也会一起计入，例如“card payment”。
+        binary: 不包括重复的单词
+        binary_hint: 每笔交易中的每个词只计数一次。
+        drop_codes: 排除参考代码
+        drop_codes_hint: 排除混合字母和两个或更多数字的词，例如 2k4l19。
+        drop_numbers: 不包括数字
+        drop_numbers_hint: 排除描述中的商店编号、日期和金额。
+        include_notes: 包含备注
+        include_notes_hint: 同时读取名称和备注。
+        keep_single_chars: 包含单字符词
+        keep_single_chars_hint: 拆分后保留单个字母和数字，例如 mcdonald's 中的“s”。
+        spread_filter: 排除各类别使用频率相近的词
+        spread_filter_hint: 这些词不能帮助区分类别。该数值指定某类别的使用频率需高出平均比例多少。
+        word_split: 词语由以下字符组成
+        word_split_ascii: a–z 和 0–9
+        word_split_hint: 其他字符都会分割词语。选择任意文字的字母时，Geschäft 或 Кофейня 等词会保持完整；选择内部符号时，由单个符号连接的字母也会保持为一个词，例如 mcdonald's、s/o 和 m&s（两端的符号，如 *netflix 中的 *，仍会被丢弃）。
+        word_split_symbols: 字母、数字和内部符号
+        word_split_unicode: 任意文字的字母和数字
+    ai_prompts:
+      show:
+        insight_dig_in:
+          title: 深入分析洞察
+          subtitle: 使用 AI 深入分析洞察时的首条聊天消息
+          label: 深入分析消息
+    preferences:
+      show:
+        default_account_order_hint: 手动时, 拖动侧边栏的账户以设定顺序 。
+        investment_contributions_as_spending: 投资算作支出
+        investment_contributions_as_spending_hint: 转入投资账户的资金会计入预算、报告和现金流图表的支出。关闭后将其显示为投资。
+    securities:
+      show:
+        disable_mfa_password_label: 用密码确认
+        disable_mfa_password_placeholder: 输入密码
+        mfa_sso_only: 双重身份验证由您的身份提供商管理。
+    settings_nav:
+      classifier_label: 分类器
+    hostings:
+      show:
+        instance_settings_restricted: 服务商凭据、共享 AI 连接和同步设置适用于此实例中的所有家庭，因此只有超级管理员可以更改。每个家庭仍可自行选择助手。拥有服务器访问权限的人员可以将用户提升为超级管理员；命令见 Docker 自托管指南的升级说明。
+      assistant_settings:
+        type_mcp_only: 应用内不使用助手（通过 MCP 连接自己的智能体）
+        mcp_only_help: 此家庭的应用内助手对所有人关闭。账单 AI 快捷操作和 AI 撰写的洞察内容也会停止。MCP 和后台分类仍可使用；请在“设置 > MCP”中连接外部智能体。
+      openai_settings:
+        ai_health_probe_timeout_label: 健康检查超时时间（秒，选填）
+        ai_health_probe_timeout_help: 默认值：5。仅适用于“设置 → 系统健康”中的实时 AI 检查，不影响实际 AI 调用。如果云模型的 PDF 检查超时，可适当增大此值。AI_HEALTH_PROBE_TIMEOUT 环境变量优先于此字段。
+      chimnie_settings:
+        title: Chimnie
+        description: 输入 Chimnie API 密钥，通过 UPRN 为英国住宅物业估值。可在 dashboard.chimnie.com 免费申请密钥（注册需使用企业邮箱或自定义域名邮箱，不接受 Gmail、Outlook 等邮箱）。UPRN 估值免费，每月刷新；Sure 默认限制每月 1,000 次请求，可通过 CHIMNIE_MAX_REQUESTS_PER_MONTH 环境变量更改。
+        env_configured_message: 通过CHIMNIE_API_KEY环境变量成功配置.
+        label: API 密钥
+        placeholder: 在此输入您的Chimnie API 密钥
+        usage: 本月已使用 %{used} 次请求，上限为 %{limit} 次
+      sync_settings:
+        market_data_sync_label: 启用每日市场数据导入
+        market_data_sync_description: 启用后，系统会在指定时间每天（周一至周五）自动导入一次证券价格。
+        market_data_sync_time_label: 市场数据导入时间(HH:MM)
+        market_data_sync_time_description: 指定每日证券价格导入时间，例如主要交易所收盘后不久。
+  shared:
+    money_field:
+      above_max: 请输入不超过 %{max} 的金额。
+      below_min: 请输入不低于 %{min} 的金额。
+      invalid_amount: 请输入有效金额或表达式。
+      operator_add: 加
+      operator_subtract: 减
+      operator_multiply: 乘
+      operator_divide: 除
+    require_non_guest: 来宾无法执行此动作
+    sidekiq_health_banner:
+      reasons:
+        ai_queues_not_polled: 没有工作进程处理 AI 队列（聊天、商家识别、分类）。请检查工作进程是否加载了 config/sidekiq.yml。
+  loans:
+    form:
+      day_count_convention: 计息基准
+      day_count_convention_actual_365: 实际天数/365
+      day_count_convention_actual_actual: 实际天数/实际天数
+      day_count_convention_hint: 贷款机构用此方式计算每期天数占一年的比例。实际天数/365 按月份实际天数计息，是英国和澳大利亚房贷的标准做法。30/360 按每期固定的十二分之一计息，是 Sure 一直使用的基准。
+      day_count_convention_thirty_360: 30/360（固定十二分之一）
+  breadcrumbs:
+    classifier: 分类器
+  oauth:
+    registration:
+      invalid_client_name: client_name 不能包含双向控制字符
+      reserved_client_name: client_name 为第一方应用保留
+  activerecord:
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              missing_exchange_rate: 此目标的某个账户尚无可用汇率，无法完成目标。
+        rule:
+          split_not_alone: 拆分规则不能包含其他操作
+        rule/action:
+          attributes:
+            value:
+              invalid_config: 必须是有效的拆分配置
+              invalid_split_count: 拆分数量必须介于 %{min} 和 %{max} 之间
+              split_name_required: 第 %{index} 项拆分缺少名称
+              split_name_too_long: 第 %{index} 项拆分的名称过长（最多 255 个字符）
+              split_name_invalid: 第 %{index} 项拆分的名称包含无效字符
+              split_type_invalid: 第 %{index} 项拆分的类型必须是固定金额或百分比
+              split_share_invalid: 第 %{index} 项拆分的份额必须为正数
+              split_category_invalid: 第 %{index} 项拆分的类别不属于此家庭
+              split_merchant_invalid: 第 %{index} 项拆分的商家不属于此家庭
+              split_tags_invalid: 第 %{index} 项拆分包含不属于此家庭的标签
+              percentages_must_total_100: 百分比之和必须为 100（当前为 %{total}）
+              fixed_requires_exact_amount_condition: 固定金额拆分需要规则条件匹配精确的交易金额（例如金额等于 42.00），否则各份额无法可靠地等于每笔匹配交易的总额
+              fixed_shares_must_equal_condition_amount: 拆分份额之和必须等于 %{amount}，即该规则条件要求的精确金额
+        rule/condition:
+          attributes:
+            value:
+              regex_invalid: 不是一个有效的正则表达式
+              regex_too_complex: 过于复杂,无法安全运行
+              regex_too_long: 长度太长( 最大值为 %{count} 字符)
+              regex_backreference: 不能使用反向引用（\1 至 \9）
+  rules:
+    form:
+      stop_processing_label: 停止处理更多规则
+      stop_processing_description: 列表下方的规则不会更改此规则匹配的交易。
+    condition_filters:
+      operators:
+        starts_with: 开始于
+        ends_with: 结尾
+        matches_regex: 匹配正则
+    notification_baseline_timed_out: 此规则仍处于关闭状态。检查现有匹配交易耗时过长，而不检查会向所有匹配交易发送邮件。请简化条件后重新开启。
+    classifier_rules:
+      category_classifier: 类别分类器
+      merchant_matcher: 商家匹配器
+    rule:
+      stop_processing: 停止
+      stop_processing_hint: 下方规则不会更改此规则匹配的交易。
+    index:
+      order_hint: 规则从上到下执行。规则为交易设置某个字段后，下方规则不会更改该字段。每个匹配的规则都会添加标签。拖动规则可更改顺序。
+      reorder_rule: 移动规则 %{name}。按 Enter 或空格选中，然后使用方向键移动。
+    confirm:
+      rules_above_notice:
+        one: 上方启用的规则会先执行，因此结果与完整运行时相同。
+        other: 上方 %{count} 条启用的规则会先执行，因此结果与完整运行时相同。
+    actions:
+      split:
+        type_fixed: 固定数额
+        type_percentage: 百分比
+        type_label: 拆分类型
+        add_split: 添加拆分
+        name_placeholder: 拆分名称
+        share_label: 拆分数额或百分比
+        category_label: 拆分类别
+        merchant_label: 拆分商家
+        tags_label: 拆分标签
+        remove_split: 删除拆分
+        hint: 固定金额会先按精确数额扣除，然后按百分比分配剩余金额。如果所有拆分都使用固定金额，还需添加匹配精确交易金额的条件（例如金额等于 42.00），因为每笔匹配交易的总额都必须相同，固定金额之和才能与之相等。拆分规则不能包含其他操作。
+        fixed_summary_label: 固定
+        summary:
+          one: "%{count} 项拆分"
+          other: "%{count} 项拆分"
+  binance_items:
+    select_accounts:
+      connection_unavailable: 该 Binance 连接不可用。请在服务商设置中选择一个连接。
+      no_credentials_configured: 请先在服务商设置中连接 Binance，再添加账户。
+      select_connection: 请在服务商设置中选择一个 Binance 连接。
+  reports:
+    index:
+      sections_aria: 报告部分
+    spending_vs_normal:
+      title: 支出与平时比较
+      summary_html: 此期间支出 %{total}。根据 %{baseline_start} 至 %{baseline_end} 的记录，同等时长的通常支出为 %{normal}。
+      summary_so_far_html: 目前已支出 %{total}。根据 %{baseline_start} 至 %{baseline_end} 的记录，相同天数的通常支出为 %{normal}。
+      no_history_html: 此期间支出 %{total}。此前记录不足，暂时无法计算通常支出。
+      no_history_short: 此前记录不足，暂时无法比较。
+      no_spending: 这一时期没有开支.
+      no_changes: 各类别支出均与平时相当。
+      treemap_title: 支出去向
+      changes_title: 支出变化
+      direct: "%{category}（无子类别）"
+      tooltip:
+        path: "%{parent} › %{category}"
+        total: "%{category}: %{amount}"
+        normal: 通常支出：%{amount}
+        more: 比平时多 %{amount}（%{percent}）
+        less: 比平时少 %{amount}（%{percent}）
+        more_no_percent: 比平时多 %{amount}
+        less_no_percent: 比平时少 %{amount}
+        no_normal: 没有可供比较的历史记录
+        open: 选择查看这些交易
+      legend:
+        less: 少 50–100%
+        slightly_less: 少 15–50%
+        normal: 与平时相当
+        slightly_more: 多 15–50%
+        more: 多 50–100%
+        much_more: 多 100% 以上
+  account_order:
+    manual:
+      label: 手动（拖动排序）
+      label_short: 手动
+  onchain:
+    chains:
+      cosmos: Cosmos Hub
+      polkadot: Polkadot
+  providers:
+    property_valuation:
+      missing_fields_gb: 请提供名称、街道地址、邮政编码和物业的 UPRN。
+      entry_name: "%{provider} 估值"
+    chimnie:
+      errors:
+        invalid_uprn: UPRN 是最多 12 位的数字。请检查后重试。
+        no_estimate: Chimnie 没有此物业的估值。
+        not_found: Chimnie 找不到此 UPRN 对应的物业。
+        unsupported_property: Chimnie 仅为住宅物业估值；此 UPRN 对应商业或混合用途物业。
+        unauthorized: Chimnie 拒绝了 API 密钥。请在“设置 → 自托管”中检查密钥。
+        insufficient_balance: 您的 Chimnie 账户余额不足，无法完成此请求。
+  recurring_transactions:
+    allocator:
+      entry_exhausted: 此交易的全额已计入其他到期付款
+      already_allocated: 此交易已应用于此账单
+    new:
+      covered_title: 此交易已经属于账单
+      covered_body: "%{name}已经追踪到这笔付款,所以新账单会算两次."
+      covered_open: 打开帐单
+      covered_suggested_title: Sure 已为此付款推荐账单
+      covered_suggested_body: "%{name} 已在建议列表中。确认后即可开始跟踪，避免新账单重复计算此付款。匹配的付款会自动关联，您也可以在账单中关联此付款。"
+      covered_confirm: 确认帐单
+      covered_create_anyway: 无论如何另立帐单
+      covered_income_title: 此笔存入交易已属于一项收入
+      covered_income_body: "%{name} 已跟踪此笔存入交易，再次添加会导致重复计算。"
+      covered_income_open: 查看收入
+      covered_income_suggested_title: Sure 已推荐此项收入
+      covered_income_suggested_body: "%{name} 已在建议列表中。添加后即可开始跟踪，避免重复计算此笔存入交易。匹配的存入交易会自动关联，您也可以在收入中关联此交易。"
+      covered_income_confirm: 添加收入
+      covered_income_create_anyway: 无论如何,增加一个单独的收入
+    create:
+      amount_too_precise: 最多使用4 小数位
+      category_invalid: 请选择您的一个类别，或留空
+    already_covered: 此交易已经匹配重复进行的交易
+    suggested_income:
+      title: 可能的新收入
+      confirm: 添加收入
+      dismiss: 非收入
+    confirmed_income: 已将收入添加到周期性交易
+  transfers:
+    show:
+      investment_contribution_subtitle: 将这笔转账算作预算和报表中的支出。 当经纪或加密账户只将资金兑换成另一种货币时, 则关闭它 。
+      investment_contribution_title: 投资转入
+  transactions:
+    form:
+      create_as_subcategory: 添加为子类...
+      choose_parent: 在以下类别中创建“%{name}”：
+      back_to_categories: 返回
+      no_matching_categories: 没有匹配的分类
+    transaction_category:
+      set_on_outflow: 该类别属于此转账的转出交易，只能在转出交易中更改
+    show:
+      category_set_on_hidden_outflow: 这是转账的转入交易。其类别属于您无权访问的账户中的转出交易，只能在转出交易中更改。
+      category_set_on_outflow: 这是转账的转入交易。其类别属于转出交易，只能在转出交易中更改，以便预算只计算一次。
+    search:
+      filters:
+        attachment: 附件
+    searches:
+      filters:
+        badge:
+          attachment_with: 带有附件
+          attachment_without: 无附件
+        attachment_filter:
+          with: 带有附件
+          without: 无附件
+  accounts:
+    sidebar:
+      reorder_account: 移动 %{account}
+      reorder_hint: 拖曳以重排顺序。用键盘按 Enter,然后按箭头键。
+      sort_mode:
+        start: 排序账户
+        hint: 拖动账户的手柄调整顺序。
+        done: 完成
+  admin:
+    system_health:
+      optional_services:
+        title: 可选服务
+        description: 可选的运营方集成。未配置的服务仅供参考。这些检查只检查设置，不测试连接、不发送测试事件，也不更改分析数据授权。展开服务可查看配置详情。
+        missing_settings: '缺少设置: %{settings}'
+        statuses:
+          configured: 已配置
+          not_configured: 未配置
+          incomplete: 配置不完整
+          disabled: 在此进程中已禁用
+          not_checked: 未校验
+        notes:
+          environment_disabled: 已加载的集成在此 Rails 环境中被禁用。
+          explicitly_disabled: SKYLIGHT_ENABLED 明确禁用了性能监测。
+          self_hosted_checkout_disabled: 自托管模式下订阅结账和账单门户已禁用。仍可配置 Stripe webhook；此处不需要结账价格 ID。
+          browser_analytics_disabled: 此环境已禁用浏览器分析。这不会禁用单独配置的服务端客户端。
+          shared_feedback_configured: 自托管反馈使用单独的内置项目，并由其配置启用。它不需要运营方设置 POSTHOG_KEY。此检查不验证浏览器是否选择退出或 SDK 是否可用。
+          shared_feedback_disabled: 独立的自托管反馈项目因反馈或环境设置而禁用。这不会禁用运营方自己的分析。
+          production_only: 按应用当前配置，此集成仅在生产环境使用。
+        services:
+          langfuse:
+            title: Langfuse
+            description: 可选的 AI 跟踪和评估报告。此检查不会发送跟踪记录或评估请求。
+            guidance: 同时设置 LANGFUSE_PUBLIC_KEY 和 LANGFUSE_SECRET_KEY。LANGFUSE_HOST 为可选项。更改后请重启受影响的服务。
+          sentry:
+            title: Sentry
+            description: 可选的错误和性能报告。当前初始化配置仅在生产环境启用报告。
+            guidance: 设置 SENTRY_DSN 并重启受影响的服务。此检查只检查已加载的 SDK 配置，不捕获错误或发送事件。
+          skylight:
+            title: Skylight
+            description: 可选的应用性能监测。存在配置不代表监测代理正在运行或报告数据。
+            guidance: 设置 SKYLIGHT_AUTHENTICATION，并确保在目标 Rails 环境中加载 Skylight。SKYLIGHT_ENABLED=false 会禁用监测；仅设置该标志不会加载 gem。更改后请重启。
+          stripe:
+            title: Stripe
+            description: 可选的订阅计费和支付 webhook。此检查不会创建 Stripe 客户端、验证凭据或发起支付请求。
+            guidance: 同时设置 STRIPE_SECRET_KEY 和 STRIPE_WEBHOOK_SECRET。托管订阅结账还需要 STRIPE_MONTHLY_PRICE_ID 和 STRIPE_ANNUAL_PRICE_ID。
+          posthog:
+            title: PostHog
+            description: 可选的运营方分析，使用启动时加载的配置。已配置不代表用户同意分析。
+            guidance: 设置 POSTHOG_KEY 和非空的 POSTHOG_HOST，或不设置主机以使用默认值。浏览器分析要求生产环境，或在开发环境中启用 POSTHOG_DEVELOPMENT_ENABLED。POSTHOG_FEEDBACK_ENABLED 控制单独的自托管反馈，不控制运营方分析。
+          logtail:
+            title: Logtail
+            description: 可选的生产日志转发。未配置时，应用继续将日志输出到标准输出。
+            guidance: 同时设置 LOGTAIL_API_KEY 和 LOGTAIL_INGESTING_HOST，并重启受影响的服务。此检查不会发送测试日志。
+      configuration:
+        description: 此 Web 进程可见的配置。这些检查不会发送邮件、联系服务商或上传下载文件。“已配置”表示设置存在，不代表邮件投递、服务商访问或存储访问已经验证。
+        statuses:
+          configured: 已配置
+          not_configured: 未配置
+          incomplete: 配置不完整
+          disabled: 已禁用
+          not_checked: 未校验
+        settings_needed: 要审查的设置
+        unknown_provider: 未识别提供者选择
+        provider_statuses:
+          configured: 已配置
+          not_configured: 缺少 API 密钥
+          invalid: 无效的选择
+        configure_providers: 打开自托管设置
+        storage_backend: 所选存储：%{backend}
+        storage_backends:
+          local: 本地磁盘
+          test: 测试盘
+          amazon: Amazon S3
+          cloudflare: Cloudflare R2
+          generic_s3: S3 兼容存储
+          google: Google Cloud Storage
+          other: 自定义或未识别的后端
+        checks:
+          smtp:
+            title: 电子邮件（SMTP）
+            statuses:
+              configured: SMTP 设置已配置。
+              not_configured: SMTP 未配置。无法通过 SMTP 发送密码重置、邀请等系统邮件。
+              incomplete: 部分邮件设置缺失或不完整。系统邮件或其中的链接可能无法正常工作。
+              disabled: 当前邮件发送配置已禁用邮件投递。
+              not_checked: 此进程使用 SMTP 以外的投递方式，例如开发预览。未检查 SMTP 投递。
+            guidance: 无法在管理员界面配置 SMTP。请为 Web 和工作进程设置邮件环境变量，然后重启两者。对于无需认证的中继，可同时省略 SMTP_USERNAME 和 SMTP_PASSWORD。
+            issues:
+              address: SMTP_ADDRESS
+              port: SMTP_PORT（1 至 65535 之间的数字）
+              sender: EMAIL_SENDER（替换默认的 sender@sure.local）
+              app_domain: APP_DOMAIN（用于邮件链接）
+              authentication: SMTP_USERNAME 和 SMTP_PASSWORD（同时提供或同时省略）
+          securities:
+            title: 市场价格
+            statuses:
+              configured: 所有已启用的市场价格服务商均已配置。
+              not_configured: 已启用的市场价格服务商缺少 API 密钥，无法通过这些服务商自动搜索证券或查询价格。
+              incomplete: 至少一个已启用的市场价格服务商缺少配置或选择无效。分配给该服务商的证券可能无法收到价格更新。
+              disabled: 未启用市场价格服务商。无法自动搜索证券或查询价格。
+            guidance: 在自托管设置中选择服务商并添加所需的 API 密钥，或在部署环境中配置。环境变量优先。公共服务商不需要 API 密钥。
+          exchange_rates:
+            title: 汇率
+            statuses:
+              configured: 选定的汇率提供者有配置。
+              not_configured: 没有配置可用的汇率提供者。 缺少存储汇率时可能无法自动进行货币转换 。
+            guidance: 在自托管设置中选择汇率服务商并添加所需的 API 密钥，或在部署环境中配置。EXCHANGE_RATE_PROVIDER 及服务商 API 密钥环境变量优先。
+            issues:
+              invalid_provider: 无法识别所选汇率服务商。选择受支持的服务商之前，自动汇率查询会失败。
+          storage:
+            title: 文件上传和存储
+            statuses:
+              configured: 存在存储设置; 本地磁盘不需要云认证 。
+              not_configured: 选中的存储后端没有匹配配置。 文件上传可能无法使用 。
+              incomplete: 需要的存储设置缺失或不完整。 文件上传或检索可能无效 。
+              not_checked: 此后端使用外部凭据发现或自定义配置，无法仅根据这些设置判断其访问权限。
+            guidance: 检查 ACTIVE_STORAGE_SERVICE 和所选存储后端的部署设置。本地磁盘需要 Web 和工作进程共享的持久存储。更换后端不会迁移现有文件；请单独规划迁移。
+            issues:
+              root: 本地存储根
+              bucket: 存储桶
+              region: 储存区域
+              credentials: 存储访问密钥和密钥（同时提供，或使用外部凭据发现）
+              endpoint: 储存端点(R2为CLOUDFLARE_ACCOUNT_ID)
+      show:
+        tabs:
+          configuration: 配置
+    users:
+      update:
+        password_disabled: 由于用户只能通过 SSO 登录，已禁用设置密码。
+  bills:
+    detail:
+      overview: 概览
+      rule_detected: 匹配名称为 %{name} 的交易
+    match:
+      same_transfer: 转入同一账户的款项
+    paycheck:
+      bridge_left: 支付账单后剩余 %{amount}
+      bridge_show_more:
+        one: 再显示 1 项
+        other: 再显示 %{count} 项
+      bridge_allocation_aria: 账户中共有 %{cash}，其中 %{due} 在下次发薪前到期，剩余 %{left}。
+      item_overdue: 已逾期
+  budgets:
+    available_cash:
+      currency_warning: "%{currencies}的余额没有包括在内,因为还没有到%{currency}的汇率."
+  categories:
+    locked: 分类被锁定。 解锁以添加新分类 。
+    toggle_lock:
+      locked: 锁定类别
+      unlocked: 解锁类别
+    index:
+      lock_categories: 锁定类别创建
+      locked_message: 分类创建被锁定。 导入和银行同步仍然可以添加分类 。
+      unlock_categories: 解锁类别创建
+  category:
+    dropdowns:
+      show:
+        assign_error: 已创建类别，但无法分配。请再次选择“创建”以重试。
+        back: 返回
+        choose_parent: 在以下类别中创建“%{name}”：
+        create: 创建“%{name}”
+        create_as_subcategory: 添加为子类...
+        create_error: 无法创建这个类别 请再试一次
+  chats:
+    ai_busy: 正在完成一项后台任务，随后会立即处理您的消息。
+    reservation:
+      ready_html: 我已暂缓部分后台任务，以便立即处理您的消息。这些任务将在 %{countdown} 秒后恢复，请继续输入！
+      busy: 正在完成一项后台任务，随后就可以处理您的消息。请继续输入！
+  coinbase_items:
+    select_accounts:
+      connection_unavailable: 该 Coinbase 连接不可用。请在服务商设置中选择一个连接。
+      no_credentials_configured: 请先在服务商设置中连接 Coinbase，再添加钱包。
+      select_connection: 请在服务商设置中选择一个 Coinbase 连接。
+  credit_cards:
+    due:
+      in_days:
+        zero: 今天到期
+        one: 明天到期
+        other: 应在%{count}天到期
+      overdue:
+        one: 昨天到期
+        other: 已逾期 %{count} 天
+    form:
+      due_day: 应缴款日
+      statement_close_day: 账单日
+      statement_cycle_description: 设置每月账单日和还款日后，概览标签会显示上期账单金额及下期正在累计的金额。关联的信用卡会自动填写这些日期，并保留您手动设置的值。
+      sophtron_balance_sign_auto: 自动
+      sophtron_balance_sign_credit: 溢缴款（银行欠你）
+      sophtron_balance_sign_debt: 欠款（你欠银行）
+      sophtron_balance_sign_description: 仅在 Sophtron 返回的余额正负号含义不明确时覆盖。自动模式会继续对信用卡余额取反。
+      sophtron_balance_sign_label: Sophtron 余额含义
+    tabs:
+      overview:
+        above_minimum: 本期账单金额为 %{balance}，高于最低还款额 %{minimum}。仅支付最低还款额时，剩余余额将按此年利率计息。
+        apr: 年利率
+        closes_on: 下期账单于 %{date} 结算
+        credit_toward_next: 计入下期账单的溢缴款
+        due_on: "%{date} 到期"
+        edit_card_details: 编辑卡片细节
+        since_last_statement: 上期账单以来
+        statement_balance: 账单余额
+        multi_currency_unavailable: 此账单包含多种币种的记录；没有各币种汇率时无法汇总。余额暂留空，不进行估算。
+        no_cycle_description: 设置账单日和还款日后，此标签会显示上期账单金额及下期正在累计的金额。关联的信用卡通常会自动填写这些日期。
+        no_cycle_title: 未设置账单周期
+        unknown: 未知
+    update:
+      sophtron_balance_sign_error: 无法应用 Sophtron 余额含义，已保留之前的设置。请重试。
+  demo_family_refresh_mailer:
+    completed:
+      subject: Demo 家庭刷新完成
+      activity_heading: 这一期间的活动
+      sessions_label: 上一个演示家庭的独立登录会话
+      families_label: 创建新家庭账户
+      period_heading: 报告期间（UTC）
+      from_label: 从：
+      to_label: 至：
+      time_format: "%Y年%b%-d日 %H:%M:%S UTC"
+      family_heading: 上一个演示家族
+      family_not_found: 未找到
+      id_label: '编号:'
+  goals:
+    currency_warning:
+      title: 有些余额不算
+      body:
+        one: 尚无 %{from} → %{to} 汇率，因此总额不包含 %{from} 余额。
+        other: 尚无从 %{from} 到 %{to} 的汇率，因此总额不包含这些余额。
+      settings_link: 汇率提供者设置
+    consume:
+      goal_currency_hint: 请输入以 %{currency} 计价的金额。对于其他币种的账户，将先按今日汇率换算，再从该账户的专款中扣除。
+      errors:
+        missing_exchange_rate: 此账户币种尚无可用汇率，因此无法记录这笔支出。
+    show:
+      funding_accounts:
+        converted: "≈ %{amount}"
+        rate_unavailable: 尚无汇率，因此不计入此账户。
+    goal_card:
+      partial_total: 部分余额未计入（尚无汇率）
+    form:
+      earmark:
+        converted: 这笔专款约为 {amount}。
+      fields:
+        currency_conversion_hint: 账户可以使用不同币种。总额换算为 %{currency}；账户专款保留各自账户的币种。
+  imports:
+    publish:
+      guest_new_categories_or_tags: 来宾不能创建分类或标签,将其映射到已有的或留空.
+    create:
+      missing_upload: 我们没有收到你的文件 请再上传一次
+  insights:
+    card:
+      dig_in: 使用 AI 深入分析
+    dig_in:
+      prompt: |-
+        请帮我深入分析这条洞察。
+
+        洞察：%{title}
+        Sure 的发现：%{body}
+        期间：%{period}
+        数据：
+        %{facts}
+
+        背后的原因是什么？我需要采取什么行动吗？
+  mfa:
+    local_password_required: 双重身份验证需要本地密码。您的密码由身份提供商管理。
+    create:
+      invalid_password: 密码错误。 请再试一次 。
+    disable:
+      invalid_password: 密码错误。 请再试一次 。
+    new:
+      password_label: 用密码确认
+      password_placeholder: 输入密码
+  pages:
+    dashboard:
+      customize:
+        start: 自定义
+        done: 完成
+        hide: 隐藏 %{title}
+        hidden_title: 已隐藏的小组件
+        hidden_description: 将小组件添加回仪表盘。
+        none_hidden: 所有小组件均已显示。点击眼睛按钮可隐藏。
+        all_hidden_title: 所有小组件均已隐藏
+        all_hidden_description: 自定义仪表盘以重新添加小组件。
+      cashflow_preview:
+        node_labels:
+          invested: 投资
+        group_by_label: 资金流分组方式
+        group_by_category: 分类
+        group_by_account: 账户
+        sort_label: 资金流排序
+        sort_auto: 自动
+        sort_ascending: 从小到大
+        sort_descending: 从大到小
+      spending_trend:
+        filter_categories: 筛选类别（%{count}）
+        filter_categories_all: 所有分类
+        search_categories: 搜索分类
+        apply: 应用
+  plaid_items:
+    auto_link_opener:
+      create_failed: 我们无法确认此连接已被添加。 重新装入页面以检查后再尝试 。
+    create:
+      already_connected: 您已连接此机构，因此未添加此次连接。
+      exchange_failed: 我们无法添加此连接。 再试一次, 如果问题继续存在, 请检查服务器日志 。
+      token_expired: 此连接在添加前已过期 。 再次连接机构 。
+    duplicate_warning:
+      close: 关闭
+      confirm: 确认此连接
+      connected_by: 由%{name}连接
+      eu_no_add_accounts: Plaid 不支持向已有的欧盟连接添加账户。要更改连接的账户，请移除此连接后重新添加。
+      linked_on: 关联于 %{date}
+      manage_connection: 转到账户
+      mask: "****%{mask}"
+      no_accounts: 此连接尚未同步账户 。
+      overlap:
+        all_connected:
+          one: 您尝试添加的账户已经连接, 因此再次添加只会产生重复 。
+          other: 你试图添加的%{count}账户已经全部连接,所以再次添加只会产生重复.
+        different_login: 要连接 %{institution} 的其他登录账户，请再次选择“新账户”，并通过 Plaid 使用该账户登录。
+        more_accounts: 要向此连接添加更多账户，请关闭此窗口，然后在 %{institution} 连接上选择“添加账户”。
+        others_connected:
+          one: Sure 已通过 %{name} 的连接添加此账户；再添加您的连接只会产生重复。
+          other: Sure 已通过 %{name} 的连接添加这些账户；再添加您的连接只会产生重复。
+        others_connected_several:
+          one: Sure 已通过其他成员的连接添加此账户；再添加您的连接只会产生重复。
+          other: Sure 已通过其他成员的连接添加这些账户；再添加您的连接只会产生重复。
+        none_connected: 您尝试添加的账户均未连接，这很可能是不同的登录账户。添加后只会计为一个额外的 Plaid 连接。
+        some_connected:
+          connected:
+            one: 另一个账户已连接，添加此连接会使其重复，并计为一个额外的 Plaid 连接。
+            other: 另外 %{count} 个账户已连接，添加此连接会使其重复，并计为一个额外的 Plaid 连接。
+          unconnected:
+            one: 您尝试添加的一个账户尚未连接：
+            other: 您尝试添加的 %{count} 个账户尚未连接：
+        unknown:
+          one: 无法将这些账户与现有连接核对。如果它们是相同的账户，添加此连接会造成重复，并计为一个额外的 Plaid 连接。
+          other: 无法将这些账户与现有连接核对。如果它们是相同的账户，添加此连接会造成重复，并计为一个额外的 Plaid 连接。
+      title:
+        one: 您已连接此机构
+        other: 您已为此机构建立 %{count} 个连接
+      title_all_connected: 您已建立此连接
+      title_others_connected:
+        one: 此账户已连接
+        other: 这些账户已经连接
+      update_existing: 更新已有连接
+  plans:
+    goals_card:
+      currency_warning:
+        one: 1 个目标未计入 %{currencies} 余额（尚无汇率）。
+        other: "%{count} 个目标未计入 %{currencies} 余额（尚无汇率）。"
+  recurring_allocations:
+    entry_exhausted: 这笔交易的全额已计入其他到期付款
+  valuations:
+    names:
+      current_account_value: 当前账户价值
+      current_balance: 当前余额
+      current_loan_balance: 当前贷款余额
+      current_market_value: 当前市场价值
+      manual_balance_update: 手动更新余额
+      manual_principal_update: 手动更新本金
+      manual_value_update: 手动更新价值
+      opening_account_value: 期初账户价值
+      opening_balance: 期初余额
+      original_principal: 原始本金
+      original_purchase_price: 原购价

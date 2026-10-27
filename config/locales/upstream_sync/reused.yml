@@ -1,0 +1,915 @@
+---
+fr:
+  properties:
+    new:
+      avm_confidence:
+        high: Élevé
+  settings:
+    classifiers:
+      category_training:
+        apply: Appliquer
+        categories: Catégories
+        categories_all: Toutes les catégories
+        search_categories: Rechercher des catégories
+      classifier:
+        apply: Appliquer
+      show:
+        add_rule_cancel: Non
+    hostings:
+      chimnie_settings:
+        usage: "%{used} sur %{limit} requêtes mensuelles utilisées"
+  rules:
+    actions:
+      split:
+        add_split: Ajouter une division
+        name_placeholder: Nom de la division
+  account_order:
+    manual:
+      label_short: Manuel
+  transactions:
+    form:
+      no_matching_categories: Aucune catégorie correspondante
+  accounts:
+    sidebar:
+      sort_mode:
+        done: Terminé
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          configured: Configuré
+          not_configured: Non configuré
+          not_checked: Non vérifié
+      configuration:
+        statuses:
+          configured: Configuré
+          not_configured: Non configuré
+          disabled: Désactivé
+          not_checked: Non vérifié
+        provider_statuses:
+          configured: Configuré
+  category:
+    dropdowns:
+      show:
+        choose_parent: 'Créer « %{name} » dans :'
+        create: Créer « %{name} »
+        create_as_subcategory: Ajouter comme sous-catégorie…
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Automatique
+      sophtron_balance_sign_credit: Crédit (la banque vous doit de l’argent)
+      sophtron_balance_sign_debt: Dette (vous devez de l’argent à la banque)
+    tabs:
+      overview:
+        apr: TAEG
+        unknown: Inconnu
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: Introuvable
+  pages:
+    dashboard:
+      customize:
+        done: Terminé
+      cashflow_preview:
+        group_by_category: Catégorie
+        group_by_account: Compte
+        sort_auto: C/A
+      spending_trend:
+        filter_categories_all: Toutes les catégories
+        search_categories: Rechercher des catégories
+        apply: Appliquer
+  plaid_items:
+    duplicate_warning:
+      close: Fermer
+tr:
+  properties:
+    new:
+      avm_confidence:
+        high: Yüksek
+  settings:
+    classifiers:
+      category_training:
+        apply: Uygula
+        categories: Kategoriler
+        categories_all: Tüm kategoriler
+        search_categories: Kategori ara
+      classifier:
+        apply: Uygula
+      show:
+        add_rule_cancel: Hayır
+    hostings:
+      chimnie_settings:
+        usage: Aylık %{limit} isteğin %{used} tanesi kullanıldı
+  rules:
+    actions:
+      split:
+        add_split: Bölüm ekle
+        name_placeholder: Bölüm adı
+  account_order:
+    manual:
+      label_short: Manuel
+  transactions:
+    form:
+      no_matching_categories: Eşleşen kategori yok
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          configured: Yapılandırıldı
+          not_configured: Yapılandırılmadı
+          not_checked: Doğrulanmadı
+      configuration:
+        statuses:
+          configured: Yapılandırıldı
+          not_configured: Yapılandırılmadı
+          disabled: Devre dışı
+          not_checked: Doğrulanmadı
+        provider_statuses:
+          configured: Yapılandırıldı
+  category:
+    dropdowns:
+      show:
+        choose_parent: '"%{name}" şunun altında oluştur:'
+        create: '"%{name}" oluştur'
+        create_as_subcategory: Alt kategori olarak ekle…
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Otomatik
+      sophtron_balance_sign_credit: Alacak (banka size borçlu)
+      sophtron_balance_sign_debt: Borç (bankaya borçlusunuz)
+    tabs:
+      overview:
+        apr: Yıllık faiz oranı (APR)
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: Bulunamadı
+  pages:
+    dashboard:
+      cashflow_preview:
+        group_by_category: Kategori
+        group_by_account: Hesap
+      spending_trend:
+        filter_categories_all: Tüm kategoriler
+        search_categories: Kategori ara
+        apply: Uygula
+  plaid_items:
+    duplicate_warning:
+      close: Kapat
+ca:
+  properties:
+    new:
+      avm_confidence:
+        high: Alt
+  settings:
+    classifiers:
+      category_training:
+        apply: Aplica
+        categories_all: Totes les categories
+        search_categories: Cerca categories
+      classifier:
+        apply: Aplica
+    hostings:
+      chimnie_settings:
+        usage: "%{used} de %{limit} sol·licituds mensuals utilitzades"
+  rules:
+    actions:
+      split:
+        add_split: Afegeix divisió
+        name_placeholder: Nom de la divisió
+  transactions:
+    form:
+      no_matching_categories: No hi ha categories coincidents
+  accounts:
+    sidebar:
+      sort_mode:
+        done: Fet
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          configured: Configurat
+          not_configured: No configurat
+          not_checked: No verificat
+      configuration:
+        statuses:
+          configured: Configurat
+          not_configured: No configurat
+          disabled: Desactivat
+          not_checked: No verificat
+        provider_statuses:
+          configured: Configurat
+  category:
+    dropdowns:
+      show:
+        choose_parent: 'Crea "%{name}" dins de:'
+        create: Crea "%{name}"
+        create_as_subcategory: Afegeix com a subcategoria…
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Automàtic
+      sophtron_balance_sign_credit: Crèdit (el banc et deu diners)
+      sophtron_balance_sign_debt: Deute (deus diners al banc)
+    tabs:
+      overview:
+        apr: TAE
+        unknown: Desconegut
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: No trobada
+  pages:
+    dashboard:
+      customize:
+        done: Fet
+      cashflow_preview:
+        group_by_category: Categoria
+        group_by_account: Compte
+      spending_trend:
+        filter_categories_all: Totes les categories
+        search_categories: Cerca categories
+        apply: Aplica
+  plaid_items:
+    duplicate_warning:
+      close: Tanca
+ro:
+  properties:
+    new:
+      avm_confidence:
+        high: Ridicat
+  settings:
+    classifiers:
+      category_training:
+        apply: Aplică
+        categories: Categorii
+        categories_all: Toate categoriile
+        search_categories: Caută categorii
+      classifier:
+        apply: Aplică
+      show:
+        add_rule_cancel: Nu
+    hostings:
+      chimnie_settings:
+        usage: 'Cereri lunare folosite: %{used} din %{limit}'
+  rules:
+    actions:
+      split:
+        add_split: Adaugă o parte
+        name_placeholder: Numele părții
+  transactions:
+    form:
+      no_matching_categories: Nicio categorie corespunzătoare
+  accounts:
+    sidebar:
+      sort_mode:
+        done: Gata
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          configured: Configurat
+          not_configured: Neconfigurat
+          not_checked: Neverificat
+      configuration:
+        statuses:
+          configured: Configurat
+          not_configured: Neconfigurat
+          disabled: Dezactivat
+          not_checked: Neverificat
+        provider_statuses:
+          configured: Configurat
+  category:
+    dropdowns:
+      show:
+        create: Creează „%{name}”
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Automat
+      sophtron_balance_sign_credit: Sold creditor (banca îți datorează bani)
+      sophtron_balance_sign_debt: Datorie (datorezi bani băncii)
+    tabs:
+      overview:
+        unknown: Necunoscut
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: Negăsit
+  pages:
+    dashboard:
+      customize:
+        done: Gata
+      cashflow_preview:
+        group_by_category: Categorie
+        group_by_account: Cont
+      spending_trend:
+        filter_categories_all: Toate categoriile
+        search_categories: Caută categorii
+        apply: Aplică
+  plaid_items:
+    duplicate_warning:
+      close: Închide
+ru:
+  properties:
+    new:
+      avm_confidence:
+        high: Высокое
+  settings:
+    classifiers:
+      category_training:
+        apply: Применить
+        categories: Категории
+        categories_all: Все категории
+        search_categories: Поиск категорий
+      classifier:
+        apply: Применить
+      show:
+        add_rule_cancel: Нет
+    hostings:
+      chimnie_settings:
+        usage: Использовано %{used} из %{limit} запросов в месяц
+  rules:
+    actions:
+      split:
+        add_split: Добавить разделение
+        name_placeholder: Название разделения
+  account_order:
+    manual:
+      label_short: Вручную
+  transactions:
+    form:
+      no_matching_categories: Нет подходящих категорий
+  accounts:
+    sidebar:
+      sort_mode:
+        done: Готово
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          not_configured: Не настроено
+          not_checked: Не проверено
+      configuration:
+        statuses:
+          not_configured: Не настроено
+          disabled: Отключено
+          not_checked: Не проверено
+  category:
+    dropdowns:
+      show:
+        choose_parent: 'Создать «%{name}» в:'
+        create: Создать «%{name}»
+        create_as_subcategory: Добавить как подкатегорию…
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Автоматически
+      sophtron_balance_sign_credit: Переплата (банк должен вам)
+      sophtron_balance_sign_debt: Задолженность (вы должны банку)
+    tabs:
+      overview:
+        apr: Годовая процентная ставка (APR)
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: Не найдено
+  pages:
+    dashboard:
+      customize:
+        done: Готово
+      cashflow_preview:
+        group_by_category: Категория
+        group_by_account: Счёт
+      spending_trend:
+        filter_categories_all: Все категории
+        search_categories: Поиск категорий
+        apply: Применить
+  plaid_items:
+    duplicate_warning:
+      close: Закрыть
+pl:
+  properties:
+    new:
+      avm_confidence:
+        high: Wysoka
+  settings:
+    classifiers:
+      category_training:
+        apply: Zastosuj
+        categories: Kategorie
+        categories_all: Wszystkie kategorie
+        search_categories: Szukaj kategorii
+      classifier:
+        apply: Zastosuj
+      show:
+        add_rule_cancel: Nie
+    hostings:
+      chimnie_settings:
+        usage: Wykorzystano %{used} z %{limit} miesięcznych zapytań
+  rules:
+    actions:
+      split:
+        add_split: Dodaj podział
+        name_placeholder: Nazwa podziału
+  transactions:
+    form:
+      no_matching_categories: Brak pasujących kategorii
+  accounts:
+    sidebar:
+      sort_mode:
+        done: Gotowe
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          not_checked: Niezweryfikowane
+      configuration:
+        statuses:
+          disabled: Wyłączony
+          not_checked: Niezweryfikowane
+  category:
+    dropdowns:
+      show:
+        choose_parent: 'Utwórz "%{name}" w:'
+        create: Utwórz "%{name}"
+        create_as_subcategory: Dodaj jako podkategorię…
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Automatycznie
+      sophtron_balance_sign_credit: Nadpłata (bank jest Ci winien pieniądze)
+      sophtron_balance_sign_debt: Zadłużenie (jesteś winien pieniądze bankowi)
+    tabs:
+      overview:
+        apr: RRSO
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: Nie znaleziono
+  pages:
+    dashboard:
+      customize:
+        done: Gotowe
+      cashflow_preview:
+        group_by_category: Kategoria
+        group_by_account: Konto
+      spending_trend:
+        filter_categories_all: Wszystkie kategorie
+        search_categories: Szukaj kategorii
+        apply: Zastosuj
+  plaid_items:
+    duplicate_warning:
+      close: Zamknij
+pt-PT:
+  properties:
+    new:
+      avm_confidence:
+        high: Alta
+  settings:
+    classifiers:
+      category_training:
+        apply: Aplicar
+        categories: Categorias
+        categories_all: Todas as categorias
+        search_categories: Procurar categorias
+      classifier:
+        apply: Aplicar
+      show:
+        add_rule_cancel: Não
+    hostings:
+      chimnie_settings:
+        usage: "%{used} de %{limit} pedidos mensais utilizados"
+  rules:
+    actions:
+      split:
+        add_split: Adicionar divisão
+        name_placeholder: Designação da divisão
+  transactions:
+    form:
+      no_matching_categories: Sem categorias correspondentes
+  accounts:
+    sidebar:
+      sort_mode:
+        done: Concluído
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          configured: Configurado
+          not_configured: Não configurado
+          not_checked: Não verificado
+      configuration:
+        statuses:
+          configured: Configurado
+          not_configured: Não configurado
+          disabled: Desativado
+          not_checked: Não verificado
+        provider_statuses:
+          configured: Configurado
+  category:
+    dropdowns:
+      show:
+        choose_parent: 'Criar "%{name}" em:'
+        create: Criar "%{name}"
+        create_as_subcategory: Adicionar como subcategoria…
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Automático
+      sophtron_balance_sign_credit: Crédito (o banco deve-lhe dinheiro)
+      sophtron_balance_sign_debt: Dívida (deve dinheiro ao banco)
+    tabs:
+      overview:
+        apr: TAE
+        unknown: Desconhecido
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: Não encontrado
+  pages:
+    dashboard:
+      customize:
+        done: Concluído
+      cashflow_preview:
+        group_by_category: Categoria
+        group_by_account: Conta
+      spending_trend:
+        filter_categories_all: Todas as categorias
+        search_categories: Procurar categorias
+        apply: Aplicar
+  plaid_items:
+    duplicate_warning:
+      close: Fechar
+pt-BR:
+  properties:
+    new:
+      avm_confidence:
+        high: Alta
+  settings:
+    classifiers:
+      category_training:
+        apply: Aplicar
+        categories: Categorias
+        categories_all: Todas as categorias
+        search_categories: Procurar categorias
+      classifier:
+        apply: Aplicar
+      show:
+        add_rule_cancel: Não
+    hostings:
+      chimnie_settings:
+        usage: "%{used} de %{limit} pedidos mensais utilizados"
+  rules:
+    actions:
+      split:
+        add_split: Adicionar divisão
+        name_placeholder: Nome da divisão
+  transactions:
+    form:
+      no_matching_categories: Sem categorias correspondentes
+  accounts:
+    sidebar:
+      sort_mode:
+        done: Concluído
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          configured: Configurado
+          not_configured: Não configurado
+          not_checked: Não verificado
+      configuration:
+        statuses:
+          configured: Configurado
+          not_configured: Não configurado
+          disabled: Desativado
+          not_checked: Não verificado
+        provider_statuses:
+          configured: Configurado
+  category:
+    dropdowns:
+      show:
+        create: Criar "%{name}"
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Automático
+      sophtron_balance_sign_credit: Crédito (o banco deve a você)
+      sophtron_balance_sign_debt: Dívida (você deve ao banco)
+    tabs:
+      overview:
+        apr: TAE
+        unknown: Desconhecido
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: Não encontrado
+  pages:
+    dashboard:
+      customize:
+        done: Concluído
+      cashflow_preview:
+        group_by_category: Categoria
+        group_by_account: Conta
+      spending_trend:
+        filter_categories_all: Todas as categorias
+        search_categories: Procurar categorias
+        apply: Aplicar
+  plaid_items:
+    duplicate_warning:
+      close: Fechar
+nl:
+  properties:
+    new:
+      avm_confidence:
+        high: Hoog
+  settings:
+    classifiers:
+      category_training:
+        apply: Toepassen
+        categories: Categorieën
+        categories_all: Alle categorieën
+        search_categories: Categorieën zoeken
+      classifier:
+        apply: Toepassen
+      show:
+        add_rule_cancel: Nee
+    hostings:
+      chimnie_settings:
+        usage: "%{used} van %{limit} maandelijkse verzoeken gebruikt"
+  rules:
+    actions:
+      split:
+        add_split: Splitsing toevoegen
+        name_placeholder: Naam van splitsing
+  account_order:
+    manual:
+      label_short: Handmatig
+  transactions:
+    form:
+      no_matching_categories: Geen passende categorieën
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          configured: Ingesteld
+          not_configured: Niet ingesteld
+          not_checked: Niet geverifieerd
+      configuration:
+        statuses:
+          configured: Ingesteld
+          not_configured: Niet ingesteld
+          disabled: Uitgeschakeld
+          not_checked: Niet geverifieerd
+        provider_statuses:
+          configured: Ingesteld
+  category:
+    dropdowns:
+      show:
+        create: "‘%{name}’ aanmaken"
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Automatisch
+      sophtron_balance_sign_credit: Tegoed (de bank is jou geld verschuldigd)
+      sophtron_balance_sign_debt: Schuld (jij bent de bank geld verschuldigd)
+    tabs:
+      overview:
+        apr: Rentepercentage
+        unknown: Onbekend
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: Niet gevonden
+  pages:
+    dashboard:
+      cashflow_preview:
+        group_by_category: Categorie
+        group_by_account: Rekening
+        sort_auto: Automatisch
+      spending_trend:
+        filter_categories_all: Alle categorieën
+        search_categories: Categorieën zoeken
+        apply: Toepassen
+  plaid_items:
+    duplicate_warning:
+      close: Sluiten
+hu:
+  properties:
+    new:
+      avm_confidence:
+        high: Magas
+  settings:
+    classifiers:
+      category_training:
+        categories: Kategóriák
+        categories_all: Minden kategória
+        search_categories: Kategóriák keresése
+      show:
+        add_rule_cancel: Nem
+    hostings:
+      chimnie_settings:
+        usage: A havi %{limit} kérésből %{used} felhasználva
+  rules:
+    actions:
+      split:
+        add_split: Felosztás hozzáadása
+        name_placeholder: Felosztás neve
+  account_order:
+    manual:
+      label_short: Manuális
+  transactions:
+    form:
+      no_matching_categories: Nincs egyező kategória
+  accounts:
+    sidebar:
+      sort_mode:
+        done: Kész
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          configured: Konfigurálva
+          not_configured: Nincs beállítva
+          not_checked: Nincs ellenőrizve
+      configuration:
+        statuses:
+          configured: Konfigurálva
+          not_configured: Nincs beállítva
+          disabled: Letiltva
+          not_checked: Nincs ellenőrizve
+        provider_statuses:
+          configured: Konfigurálva
+  category:
+    dropdowns:
+      show:
+        create: "„%{name}” létrehozása"
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Automatikus
+      sophtron_balance_sign_credit: Követelés (a bank tartozik neked)
+      sophtron_balance_sign_debt: Tartozás (te tartozol a banknak)
+    tabs:
+      overview:
+        apr: THM
+        unknown: Ismeretlen
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: Nem található
+  pages:
+    dashboard:
+      customize:
+        done: Kész
+      cashflow_preview:
+        group_by_category: Kategória
+        group_by_account: Számla
+      spending_trend:
+        filter_categories_all: Minden kategória
+        search_categories: Kategóriák keresése
+  plaid_items:
+    duplicate_warning:
+      close: Bezárás
+vi:
+  properties:
+    new:
+      avm_confidence:
+        high: Cao
+  settings:
+    classifiers:
+      category_training:
+        apply: Áp dụng
+        categories: Danh mục
+        categories_all: Tất cả danh mục
+        search_categories: Tìm danh mục
+      classifier:
+        apply: Áp dụng
+      show:
+        add_rule_cancel: Không
+    hostings:
+      chimnie_settings:
+        usage: Đã dùng %{used} trên %{limit} yêu cầu trong tháng
+  rules:
+    actions:
+      split:
+        add_split: Thêm phần chia
+        name_placeholder: Tên phần chia
+  account_order:
+    manual:
+      label_short: Thủ công
+  transactions:
+    form:
+      no_matching_categories: Không có danh mục phù hợp
+  accounts:
+    sidebar:
+      sort_mode:
+        done: Xong
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          configured: Đã cấu hình
+          not_configured: Chưa cấu hình
+          not_checked: Chưa xác minh
+      configuration:
+        statuses:
+          configured: Đã cấu hình
+          not_configured: Chưa cấu hình
+          disabled: Đã tắt
+          not_checked: Chưa xác minh
+        provider_statuses:
+          configured: Đã cấu hình
+  category:
+    dropdowns:
+      show:
+        create: Tạo "%{name}"
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Tự động
+      sophtron_balance_sign_credit: Có (ngân hàng nợ bạn)
+      sophtron_balance_sign_debt: Nợ (bạn nợ ngân hàng)
+    tabs:
+      overview:
+        apr: Lãi suất APR
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: Không tìm thấy
+  pages:
+    dashboard:
+      customize:
+        done: Xong
+      cashflow_preview:
+        group_by_category: Danh mục
+        group_by_account: Tài khoản
+      spending_trend:
+        filter_categories_all: Tất cả danh mục
+        search_categories: Tìm danh mục
+        apply: Áp dụng
+  plaid_items:
+    duplicate_warning:
+      close: Đóng
+uk:
+  properties:
+    new:
+      avm_confidence:
+        high: Високий
+  settings:
+    classifiers:
+      category_training:
+        apply: Застосувати
+        categories: Категорії
+        categories_all: Усі категорії
+        search_categories: Пошук категорій
+      classifier:
+        apply: Застосувати
+      show:
+        add_rule_cancel: Ні
+    hostings:
+      chimnie_settings:
+        usage: Використано %{used} з %{limit} запитів на місяць
+  rules:
+    actions:
+      split:
+        add_split: Додати розділення
+        name_placeholder: Назва розділення
+  account_order:
+    manual:
+      label_short: Вручну
+  transactions:
+    form:
+      no_matching_categories: Немає відповідних категорій
+  accounts:
+    sidebar:
+      sort_mode:
+        done: Готово
+  admin:
+    system_health:
+      optional_services:
+        statuses:
+          configured: Налаштовано
+          not_configured: Не налаштовано
+          not_checked: Не перевірено
+      configuration:
+        statuses:
+          configured: Налаштовано
+          not_configured: Не налаштовано
+          disabled: Вимкнено
+          not_checked: Не перевірено
+        provider_statuses:
+          configured: Налаштовано
+  category:
+    dropdowns:
+      show:
+        choose_parent: 'Створити «%{name}» у:'
+        create: Створити «%{name}»
+        create_as_subcategory: Додати як підкатегорію…
+  credit_cards:
+    form:
+      sophtron_balance_sign_auto: Автоматично
+      sophtron_balance_sign_credit: Кредитовий залишок (банк винен вам)
+      sophtron_balance_sign_debt: Борг (ви винні банку)
+    tabs:
+      overview:
+        apr: Річна процентна ставка
+  demo_family_refresh_mailer:
+    completed:
+      family_not_found: Не знайдено
+  pages:
+    dashboard:
+      customize:
+        done: Готово
+      cashflow_preview:
+        group_by_category: Категорія
+        group_by_account: Рахунок
+      spending_trend:
+        filter_categories_all: Усі категорії
+        search_categories: Пошук категорій
+        apply: Застосувати
+  plaid_items:
+    duplicate_warning:
+      close: Закрити

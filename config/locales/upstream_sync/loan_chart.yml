@@ -1,0 +1,154 @@
+---
+zh-CN:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: 首年还款金额中约 %{first}% 为利息；最后一年约为 %{last}%。
+          aria_interest_share_overall: 所有还款金额中约 %{share}% 为利息。
+          interest_share: 利息占比
+          principal_share: 本金占比
+zh-TW:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: 首年還款金額中約 %{first}% 為利息；最後一年約為 %{last}%。
+          aria_interest_share_overall: 所有還款金額中約 %{share}% 為利息。
+          interest_share: 利息占比
+          principal_share: 本金占比
+fr:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: Sur les remboursements de la première année, environ %{first}% du montant payé correspond aux intérêts ; sur ceux de la dernière année, environ %{last}%.
+          aria_interest_share_overall: Sur l'ensemble des remboursements, environ %{share}% du montant payé correspond aux intérêts.
+          interest_share: Part des intérêts
+          principal_share: Part du capital
+es:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: En los pagos del primer año, aproximadamente el %{first}% del importe pagado corresponde a intereses; en los del último año, aproximadamente el %{last}%.
+          aria_interest_share_overall: En todos los pagos, aproximadamente el %{share}% del importe pagado corresponde a intereses.
+          interest_share: Parte de intereses
+          principal_share: Parte de capital
+it:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: Nei rimborsi del primo anno circa il %{first}% dell’importo pagato è costituito da interessi; in quelli dell’ultimo anno circa il %{last}%.
+          aria_interest_share_overall: In tutti i rimborsi circa il %{share}% dell’importo pagato è costituito da interessi.
+          interest_share: Quota interessi
+          principal_share: Quota capitale
+nb:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: Av betalingene det første året er omtrent %{first}% av beløpet renter; det siste året er andelen omtrent %{last}%.
+          aria_interest_share_overall: Av alle betalingene er omtrent %{share}% av beløpet renter.
+          interest_share: Renteandel
+          principal_share: Avdragsandel
+ca:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: En els pagaments del primer any, aproximadament el %{first}% de l’import pagat correspon a interessos; en els de l’últim any, aproximadament el %{last}%.
+          aria_interest_share_overall: En tots els pagaments, aproximadament el %{share}% de l’import pagat correspon a interessos.
+          interest_share: Part dels interessos
+          principal_share: Part del capital
+pt-PT:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: Nos pagamentos do primeiro ano, cerca de %{first}% do montante pago corresponde a juros; nos do último ano, cerca de %{last}%.
+          aria_interest_share_overall: Em todos os pagamentos, cerca de %{share}% do montante pago corresponde a juros.
+          interest_share: Parcela de juros
+          principal_share: Parcela de capital
+pt-BR:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: Nos pagamentos do primeiro ano, cerca de %{first}% do valor pago corresponde a juros; nos do último ano, cerca de %{last}%.
+          aria_interest_share_overall: Em todos os pagamentos, cerca de %{share}% do valor pago corresponde a juros.
+          interest_share: Parcela de juros
+          principal_share: Parcela do principal
+nl:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: Van de betalingen in het eerste jaar bestaat ongeveer %{first}% uit rente; in het laatste jaar is dat ongeveer %{last}%.
+          aria_interest_share_overall: Van alle betalingen bestaat ongeveer %{share}% uit rente.
+          interest_share: Rentedeel
+          principal_share: Aflossingsdeel
+tr:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: İlk yılın geri ödemelerinde ödenen tutarın yaklaşık %{first}% kadarı faizdir; son yılda bu oran yaklaşık %{last}% kadardır.
+          aria_interest_share_overall: Tüm geri ödemelerde ödenen tutarın yaklaşık %{share}% kadarı faizdir.
+          interest_share: Faiz payı
+          principal_share: Anapara payı
+ro:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: Din rambursările primului an, aproximativ %{first}% din suma plătită reprezintă dobândă; în ultimul an, aproximativ %{last}%.
+          aria_interest_share_overall: Din toate rambursările, aproximativ %{share}% din suma plătită reprezintă dobândă.
+          interest_share: Ponderea dobânzii
+          principal_share: Ponderea principalului
+pl:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: W spłatach z pierwszego roku około %{first}% wpłaconej kwoty stanowią odsetki, a w ostatnim roku około %{last}%.
+          aria_interest_share_overall: We wszystkich spłatach około %{share}% wpłaconej kwoty stanowią odsetki.
+          interest_share: Udział odsetek
+          principal_share: Udział kapitału
+ru:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: В платежах за первый год проценты составляют около %{first}% уплаченной суммы, а за последний год — около %{last}%.
+          aria_interest_share_overall: Во всех платежах проценты составляют около %{share}% уплаченной суммы.
+          interest_share: Доля процентов
+          principal_share: Доля основного долга
+uk:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: У платежах за перший рік відсотки становлять близько %{first}% сплаченої суми, а за останній рік — близько %{last}%.
+          aria_interest_share_overall: В усіх платежах відсотки становлять близько %{share}% сплаченої суми.
+          interest_share: Частка відсотків
+          principal_share: Частка основного боргу
+hu:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: Az első év törlesztéseiben a befizetett összeg körülbelül %{first}%-a kamat; az utolsó évben ez körülbelül %{last}%.
+          aria_interest_share_overall: Az összes törlesztésben a befizetett összeg körülbelül %{share}%-a kamat.
+          interest_share: Kamat aránya
+          principal_share: Tőke aránya
+vi:
+  UI:
+    account:
+      chart:
+        loan:
+          aria_interest_share: Trong các khoản trả của năm đầu, khoảng %{first}% số tiền đã trả là tiền lãi; trong năm cuối, tỷ lệ này khoảng %{last}%.
+          aria_interest_share_overall: Trong tất cả các khoản trả, khoảng %{share}% số tiền đã trả là tiền lãi.
+          interest_share: Tỷ lệ tiền lãi
+          principal_share: Tỷ lệ tiền gốc

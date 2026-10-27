@@ -10,8 +10,12 @@ zh-TW:
       settings_updated: 自動配對設定已更新
     bulk_update:
       invalid_selection: 請至少選擇一項建議以確認或拒絕
-      bulk_confirmed: 已確認 %{count} 筆轉帳
-      bulk_rejected: 已拒絕 %{count} 筆轉帳
+      bulk_confirmed:
+        one: "已確認 1 筆轉帳"
+        other: "已確認 %{count} 筆轉帳"
+      bulk_rejected:
+        one: "已拒絕 1 筆轉帳"
+        other: "已拒絕 %{count} 筆轉帳"
     empty:
       title: 目前沒有待處理的自動配對建議
       description: 當同步偵測到您的兩個帳戶之間可能存在轉帳時，會顯示在此處供您審核。

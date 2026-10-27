@@ -1,0 +1,848 @@
+---
+nb:
+  properties:
+    avm_providers:
+      chimnie: Chimnie
+    new:
+      avm_uk_only: "%{provider} støtter kun boligeiendommer i Storbritannia."
+      avm_uprn_label: UPRN
+      avm_uprn_placeholder: '100023336956'
+      avm_uprn_help: Det unike eiendomsreferansenummeret (opptil 12 sifre) identifiserer hver britiske adresse. Finn den på GeoPlace sin findmyaddress.co.uk eller spør ditt lokale råd. %{provider} bruker den til å verdsette eiendommen gratis.
+      avm_county_label: fylke (valgfritt)
+      avm_town_label: By eller by
+      avm_postcode_label: Postnummer
+      avm_preview_uprn: UPRN
+      avm_preview_range: Estimert rekkevidde
+      avm_preview_confidence: Confidence
+      avm_confidence:
+        high: Høy
+        medium: Medium
+        low: Lav
+      avm_attribution_chimnie: Verdidata fra Chimnie. Inneholder OS data © Crown copyright og databaserettigheter, Royal Mail data © Royal Mail copyright og databaserettigheter, og HM Land Registry data © Crown copyright og databaserettigheter, lisensiert under Open Government License v3.0.
+    tabs:
+      overview:
+        refresh_valuation: Oppdater verdivurdering
+        valuation_source: verdsatt av %{provider}, sist oppdatert %{date}
+        link_valuation: Oppdater verdien automatisk med %{provider}
+        link_valuation_description: Denne egenskapens verdi oppdateres kun manuelt.
+    refresh_valuation:
+      queued: Verdsettingsoppdateringen har startet. Den nye verdien vises snart.
+      not_linked: Denne egenskapen er ikke knyttet til en verdivurderingsleverandør.
+      not_configured: "%{provider} er ikke konfigurert. Legg til dens API-nøkkel i Innstillinger → Self-Hosting for å oppdatere denne verdivurderingen."
+    link_valuation:
+      linked: Koblet til %{provider} og oppdatert eiendommens verdi.
+      link_failed: "%{provider} kunne ikke verdsette denne egenskapen, så den var ikke koblet. Sjekk at adressen er riktig, og prøv på nytt."
+      not_linkable: Denne egenskapen kan ikke kobles til den leverandøren. Sjekk at adressen er fullstendig og i et støttet land, og at kontovalutaen samsvarer med leverandøren.
+  settings:
+    providers:
+      meta:
+        login_required: Pålogging kreves
+        login_expires_soon: Pålogging utløper om %{time} (%{at})
+      enable_banking_panel:
+        keep_client_certificate_hint: La stå tomt for å beholde det gjeldende sertifikatet
+      trade_republic_panel:
+        requires_update: Logg på igjen for å gjenoppta synkroniseringen.
+        session_expires_in: Pålogging utløper i %{time} (%{at}).
+    classifiers:
+      account:
+        account_field: Inkluder kontoen som ett token
+        account_field_hint: 'Hvilken konto en transaksjon er på, teller som bevis. Den bestemmer aldri alene: en transaksjon trenger et kjent ord eller en kjøpmann.'
+      amount:
+        amount_by_direction: Inkluder retningen, pengene inn eller ut
+        amount_by_direction_hint: Hver kategori lærer hvilken vei pengene går, og refusjoner og kjøp i samme butikk holder seg fra hverandre.
+        amount_field: Ta med beløpet
+        amount_field_hint: Sammenligner beløpet med hver kategoris vanlige beløp i samme valuta, på en loggskala.
+      category_training:
+        apply: Bruk
+        categories: Kategorier
+        categories_all: Alle kategorier
+        categories_hint: Ukontrollerte kategorier, med deres underkategorier, er utelatt fra trening, så Bayes velger dem aldri.
+        categories_some: "%{count} av %{total} kategorier"
+        exclude_transfers: Ekskluder overføringer
+        exclude_transfers_hint: Overføringer og betalinger mellom kontoene dine.
+        search_categories: Søkekategorier
+        skip_self_labels: Ikke lær av Bayes sine egne gjetninger før de er bekreftet eller så mange dager gamle
+        skip_self_labels_hint: Bekreftet betyr at du har endret eller låst den. En feil gjetning blir ikke matet tilbake og forsterket; en som er alene så lenge regnes som akseptert.
+      add_rule:
+        success: "%{name}-regelen ble lagt til øverst i reglene dine."
+      classifier:
+        apply: Bruk
+        lock_results: Lås kategoriene klassifisereren setter
+        lock_results_hint: Stopper regler som endrer Bayes' valg, med mindre du klikker på Bruk på en regel. AI endrer aldri Bayes' valg, låst eller ikke.
+        rule: Kategoriser med klassifisereren
+        rule_hint: Kategoriklassifiseringsregelen, av og på med den i Rules. Den kategoriserer ukategoriserte transaksjoner i regelrekkefølgen din, etter hver synkronisering; det den ikke er sikker på er overlatt til en autokategoriseringsregel.
+        threshold: Terskel
+        threshold_hint: Laveste poengsum Bayes virker på (0,05–0,99). Lavere kategoriserer mer, med flere feil.
+      clear_locks:
+        success: Bayes' låser blir tømt. Dette kan ta noen få øyeblikk.
+      evaluation:
+        apply_best: Bruk disse innstillingene
+        best: Best funnet
+        best_changes: 'Best funnet, endret fra din:'
+        best_no_changes: Ingenting scoret bedre enn innstillingene dine.
+        buttons_hint: 'Test mine innstillinger scorer innstillingene dine. Finn de beste innstillingene søker %{tuning} måneder før de som vises, så det den finner blir skåret på måneder den ikke så. Den bedømmer etter ROC-AUC: hvor godt poengsummen rangerer hver kategoris transaksjoner over resten, ved en hvilken som helst terskel, og holder en endring bare når den er høyere totalt sett og i alle unntatt én av disse %{tuning}-månedene alene. Den velger først inndataene (hver kombinasjon av selgersymbolet, beløpet og kontoen; deretter skårer selgeren og kontoen fra hverandre; deretter selgerens navn og notatene som ord), prøver deretter én endring om gangen til de andre innstillingene, og sist til Poengsetting. Standarder er den opprinnelige klassifisereren, med ditt valg av kategorier; Tilbakestill til standardinnstillinger bytter til dem og tester dem.'
+        categories_heading: Kategoriklassifisering
+        change: "%{setting}: %{value}"
+        confusion: "%{actual} → %{predicted}"
+        confusions: 'De vanligste feilene: %{column} på %{threshold}'
+        current: Mine innstillinger
+        defaults: Standard
+        description: Hver kolonne scores på de siste %{months}-månedene som nye transaksjoner, hver måned trent på historien før den, og deretter sammenlignet med kategoriene dine. Testing endrer ingen transaksjonskategori, og klassifiseringsinnstillingene endres bare når du bruker eller tilbakestiller.
+        find_best: Finn de beste innstillingene
+        matcher_confusions: 'Vanligste selgerfeil: %{column} på %{similarity}'
+        matcher_description: 'Selgere som matcheren fyller på de samme %{months}-månedene: %{count} transaksjoner med en selger, hver matchet mot historikken før sin måned med sin selger skjult; høyre er kjøpmannen den har. Hver cutoff og antall selgere blir skåret; Best funnet er den med den beste cellen for kostnadene ved en feil, som Apply angir. Testing fyller inn ingen selgere.'
+        merchants_heading: Selgermatcher
+        no_confusions: Ingen feil ved denne terskelen.
+        no_matcher_confusions: Ingen selgerfeil ved denne likheten.
+        no_uncategorized: Ingenting er ukategorisert ved denne terskelen.
+        no_unfilled: Ingenting igjen uten en kjøpmann ved denne likheten.
+        none: Ikke testet ennå.
+        'off': av
+        'on': på
+        ran_at: Scoret %{time} siden på %{count} transaksjoner (%{months}).
+        reset: Tilbakestill til standard
+        reset_confirm: Tilbakestille hver klassifiseringsinnstilling til standard, og teste dem?
+        right_wrong: Hver celle er riktig/feil.
+        run: Test innstillingene mine
+        running: Testing... denne delen oppdateres når den er ferdig.
+        short_history: Ikke nok historikk til å stille inn kategoriklassifisereren ennå. Dette krever ca %{months} måneder med kategoriserte transaksjoner, så Apply lar innstillingene være i fred for nå.
+        similarity: Likhet
+        stale: Innstillingene har endret seg siden denne testen.
+        threshold: Terskel
+        trying: Prøver %{changes}…
+        uncategorized: 'Mest vanlige ukategorisert: %{column} på %{threshold}'
+        unfilled: 'Mest vanlig ufylt: %{column} på %{similarity}'
+        weight: En feil koster
+        weight_hint: 'Velger hva Apply setter: de fete cellene, der riktige svar minus så mange per feil er høyest. Beste funnets terskel for kategorier; cutoff, likhet og antall selgere for matcheren.'
+        weight_option:
+          one: 1 riktig svar
+          other: "%{count} riktige svar"
+      matcher:
+        lock_similar_merchants: Lås selgerne som matcheren setter
+        lock_similar_merchants_hint: Stopper regler, AI og synkroniserer å endre dem, med mindre du klikker på Bruk på en regel. Dens egne låser teller ikke som bekreftet (Merchant matcher tuning).
+        rule: Fyll ut manglende selgere fra nesten duplikater
+        rule_hint: Merchant Matcher-regelen, av og på med den i Rules. I regelrekkefølgen din får en transaksjon uten en selger den dens nesten duplikater, som "NETFLIX.COM 8812" og "Netflix com", alle har. Overføringer utelates.
+        similar_threshold: Likhet
+        similar_threshold_hint: Laveste likhet mellom beskrivelsene, ignorerer tall og referansekoder (0,5–0,99). Lavere fyller mer, med flere feil. Auto-tune's Apply setter det også.
+      matcher_tuning:
+        similar_common_share: Cutoff
+        similar_common_share_hint: Et ord eller 3-bokstavsstykke i mer enn denne andelen av transaksjonene det kopierer fra (0,01–1), og i minst 50 av dem, er for vanlig til å skille dem fra hverandre, som "kort" eller "betaling", så det ignoreres. Høyere teller flere av dem. Auto-tune's Apply setter det også.
+        similar_min_neighbours: Selgere godtar
+        similar_min_neighbours_hint: Hvor mange nesten duplikater må ha selgeren, uten at noen har en annen. 1 kopier en enkelt transaksjon, feil også.
+        similar_min_neighbours_option:
+          one: 1 selger
+          other: "%{count} selgere"
+        similar_skip_self: Ikke kopier fra matcherens egne selgere før bekreftet eller så mange dager gammel
+        similar_skip_self_hint: Bekreftet betyr at du har endret eller låst den. En feil kopi spres ikke; en som er alene så lenge regnes som akseptert.
+      merchant:
+        merchant_field: Inkluder selgeren som ett token, når satt
+        merchant_field_hint: Teller etter identitet, så en omdøpt selger beholder sin historie.
+        merchant_name_words: Ta med selgerens navn som ord
+        merchant_name_words_hint: Les som beskrivelsen, som originalen gjør, så lignende navn deler bevis. Overlapper med tokenet nedenfor.
+      run:
+        success: Bayes kategoriserer ukategoriserte transaksjoner. Dette kan ta noen få øyeblikk.
+      scoring:
+        complement: Bruk komplement naiv Bayes
+        complement_hint: Scorer hver kategori etter hvor dårlig transaksjonen passer de andre, noe som takler kategorier av svært forskjellige størrelser bedre. Av er det originale multinomiale.
+        prior: Ta med hvor ofte hver kategori brukes
+        prior_hint: Lener seg mot kategoriene du bruker mest. Off behandler alle kategorier likt, slik originalen gjør.
+        separate_fields: Poeng selgeren og kontoen bortsett fra ordene
+        separate_fields_hint: Hver får sin egen distribusjon, så en lang beskrivelse oppveier dem ikke. Trenger selgeren eller kontoen inkludert; beløpet scores alltid på egen hånd.
+        smoothing: Utjevning
+        smoothing_hint: Lagt til hver telling slik at et usett ord ikke utelukker en kategori (0,001–10). 1 er originalens; lavere stoler mer på det som er sett.
+      show:
+        add_rule_body: Det er ingen %{name}-regel i reglene dine, så det er ingenting å slå på. Vil du legge det til øverst i reglene dine?
+        add_rule_cancel: Nei
+        add_rule_confirm: Legg til regel
+        add_rule_title: Vil du legge til %{name}-regelen?
+        account: Kontojustering
+        amount: Mengdejustering
+        auto_tune: Auto-tune
+        category_training: Kategoriklassifiseringsinnstilling
+        clear_locks: Clear Bayes låser
+        clear_locks_confirm_body: Låser opp kategoriene Bayes låst og selgerne som matcheren låste, som fortsatt er det de angir, så regler og AI kan endre dem igjen. Kategoriene og selgerne blir værende.
+        clear_locks_confirm_button: Tydelige låser
+        clear_locks_confirm_title: Tømme Bayes låser?
+        description: Bayes kategoriklassifisereren lærer av dine kategoriserte transaksjoner og kategoriserer nye før enhver AI-leverandør. Endringer i disse innstillingene trer i kraft fra neste kategoriseringskjøring; transaksjoner som allerede er kategorisert beholder sine kategorier.
+        matcher: Matcher
+        matcher_description: Fyller inn manglende selgere fra nesten duplikater, som samsvarsregelen for selger (etter hver synkronisering) og på kjøring. Det endrer selgerne som er lagret.
+        matcher_tuning: Merchant matcher tuning
+        merchant: Merchant tuning
+        run: Kjør
+        scoring: Poengsum
+        title: Klassifisering
+        training: Trening
+        words: Transaksjonsjustering
+      training:
+        max_training_transactions: Treningstransaksjoner
+        max_training_transactions_hint: 'Hvor mange av de nyeste transaksjonene som skal brukes (100–20 000): de kategoriserte som klassifisereren lærer av, og de med en selger som matcheren kopierer fra.'
+      words:
+        bigrams: Inkluder ordpar
+        bigrams_hint: Naboord teller også sammen, som "kortbetaling".
+        binary: Ekskluder gjentatte ord
+        binary_hint: Hvert ord teller én gang per transaksjon.
+        drop_codes: Ekskluder referansekoder
+        drop_codes_hint: Ord som blander bokstaver med 2 eller flere sifre, som 2k4l19.
+        drop_numbers: Ekskluder tall
+        drop_numbers_hint: Lagre tall, datoer og beløp i beskrivelsen.
+        include_notes: Inkluder notater
+        include_notes_hint: Leser notatene samt navnet.
+        keep_single_chars: Ta med ord med ett tegn
+        keep_single_chars_hint: Enkeltbokstaver og sifre igjen etter deling, som "s" til mcdonald's.
+        spread_filter: Ekskluder ord som hver kategori bruker likt
+        spread_filter_hint: De sier ingenting om kategorien. Tallet er hvor langt over en partall en kategoris bruk må være.
+        word_split: Ord er laget av
+        word_split_ascii: a–z og 0–9
+        word_split_hint: Annenhvert tegn deler ord. Bokstaver i ethvert skrift holder ord som Geschäft eller Кофейня hele; med indre symboler forblir bokstaver sammen med ett symbol ett ord også, som mcdonald's, s/o og m&s (et symbol i hver ende, som i *netflix, er fortsatt utelatt).
+        word_split_symbols: Bokstaver, sifre, indre symboler
+        word_split_unicode: Bokstaver og sifre, hvilket som helst skript
+    ai_prompts:
+      show:
+        insight_dig_in:
+          title: Insight Grav In
+          subtitle: Første chattemelding når du graver i en innsikt med AI
+          label: Grav i melding
+    preferences:
+      show:
+        default_account_order_hint: Med Manuell drar du kontoer i sidefeltet for å angi rekkefølgen.
+        investment_contributions_as_spending: Tell investering som utgifter
+        investment_contributions_as_spending_hint: Penger flyttet inn på investeringskontoer teller som utgifter i budsjetter, rapporter og kontantstrømskjemaet. Slå av for å vise den som investert i stedet.
+    securities:
+      show:
+        disable_mfa_password_label: Bekreft med passordet ditt
+        disable_mfa_password_placeholder: Skriv inn passordet ditt
+        mfa_sso_only: Tofaktorautentisering administreres gjennom din identitetsleverandør.
+    settings_nav:
+      auto_matches_label: Auto Matches
+      classifier_label: Klassifisering
+    hostings:
+      show:
+        instance_settings_restricted: Leverandørlegitimasjon, den delte AI-tilkoblingen og synkroniseringsinnstillingene gjelder for hver familie på denne forekomsten, så bare en superadministrator kan endre dem. Hvilken assistent familien din bruker er fortsatt angitt per familie. Noen med tilgang til serveren kan promotere en bruker til superadmin; Docker selvvertsguide viser kommandoen i oppgraderingsnotatene.
+      assistant_settings:
+        type_mcp_only: Ingen i appen (koble til din egen agent via MCP)
+        mcp_only_help: In-app-assistenten er av for alle i denne husstanden. Regninger AI snarveier og AI-skrevet innsiktstekst stopper også. MCP og bakgrunnskategorisering forblir tilgjengelig; koble til eksterne agenter i Innstillinger > MCP.
+      llm_provider_selector:
+        max_items_per_call_label: Maks. varer per batch (valgfritt)
+        max_items_per_call_help: 'Øvre grense for auto-kategorisering / selgerdeteksjonspartier. Standard: 25. Med OpenAI-kompatible leverandører blir større partier automatisk oppdelt for å passe til kontekstvinduet.'
+      openai_settings:
+        ai_health_probe_timeout_label: Tidsavbrudd for helsesjekk i sekunder (valgfritt)
+        ai_health_probe_timeout_help: 'Standard: 5. Gjelder kun for live AI-sjekker under Innstillinger → Systemhelse, aldri for ekte AI-anrop. Hev den hvis PDF-sjekkene rapporterer et tidsavbrudd med en skymodell. AI_HEALTH_PROBE_TIMEOUT overstyrer dette feltet.'
+      chimnie_settings:
+        title: Chimnie
+        description: Skriv inn din Chimnie API nøkkel for å verdsette britiske boligeiendommer etter deres UPRN. Opprett en gratis nøkkel på dashboard.chimnie.com (registrering krever en bedrifts- eller egendefinert e-postadresse; Gmail, Outlook og lignende adresser godtas ikke). UPRN verdivurderinger er gratis og oppdateres månedlig; Sure begrenser dem til 1000 forespørsler per måned, som du kan endre med miljøvariabelen CHIMNIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Konfigurert gjennom miljøvariabelen CHIMNIE_API_KEY.
+        label: API nøkkel
+        placeholder: Skriv inn din Chimnie API nøkkel her
+        usage: "%{used} av %{limit} månedlige forespørsler brukt"
+      sync_settings:
+        market_data_sync_label: Aktiver daglig import av markedsdata
+        market_data_sync_description: Når den er aktivert, importeres sikkerhetspriser automatisk én gang om dagen (mandag-fredag) på det angitte tidspunktet.
+        market_data_sync_time_label: Importtid for markedsdata (TT:MM)
+        market_data_sync_time_description: Angi tidspunktet på dagen da den daglige importen av verdipapirprisen skal kjøres – f.eks. kort tid etter at den primære sentralen stenger.
+  shared:
+    money_field:
+      above_max: Angi et beløp på maksimalt %{max}.
+      below_min: Angi et beløp på minst %{min}.
+      invalid_amount: Angi et gyldig beløp eller uttrykk.
+      operator_add: Legg til
+      operator_subtract: Trekk fra
+      operator_multiply: Multipliser
+      operator_divide: Del
+    require_non_guest: Gjester kan ikke utføre denne handlingen
+    sidekiq_health_banner:
+      reasons:
+        ai_queues_not_polled: Ingen arbeidere behandler AI-køene (chat, selgerdeteksjon, kategorisering). Sjekk at arbeideren laster inn config/sidekiq.yml.
+  loans:
+    form:
+      day_count_convention: Rentegrunnlag
+      day_count_convention_actual_365: Faktisk/365
+      day_count_convention_actual_actual: Faktisk/faktisk
+      day_count_convention_hint: Hvordan långiveren din måler hver periode mot et år. Faktiske/365-kostnader etter lengden på måneden og er standard for britiske og australske boliglån. 30/360 lader en flat tolvtedel, grunnlaget Sure alltid har brukt.
+      day_count_convention_thirty_360: 30/360 (en flat tolvtedel)
+  breadcrumbs:
+    classifier: Klassifisering
+  oauth:
+    registration:
+      invalid_client_name: klientnavn må ikke inneholde toveis kontrolltegn
+      reserved_client_name: client_name er reservert for førstepartsapper
+  activerecord:
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              missing_exchange_rate: Ingen valutakurs er tilgjengelig ennå for en av dette målets kontoer, så den kan ikke fullføres.
+        rule:
+          split_not_alone: En delt regel kan ikke ha andre handlinger
+        rule/action:
+          attributes:
+            value:
+              invalid_config: må være en gyldig delt konfigurasjon
+              invalid_split_count: må ha mellom %{min} og %{max} splitter
+              split_name_required: 'delt #%{index} mangler et navn'
+              split_name_too_long: 'delt #%{index} navnet er for langt (maks 255 tegn)'
+              split_name_invalid: 'delt #%{index} navn inneholder ugyldige tegn'
+              split_type_invalid: 'delt #%{index} type må være fast eller prosent'
+              split_share_invalid: 'splitt #%{index} andel må være et positivt tall'
+              split_category_invalid: 'delt #%{index} kategori tilhører ikke denne familien'
+              split_merchant_invalid: 'delt #%{index} selgeren tilhører ikke denne familien'
+              split_tags_invalid: 'delt #%{index} har en kode som ikke tilhører denne familien'
+              percentages_must_total_100: prosenter må summere seg til 100 (har %{total})
+              fixed_requires_exact_amount_condition: oppdelinger av faste beløp krever en regelbetingelse som samsvarer med et eksakt transaksjonsbeløp (f.eks. Beløp = 42,00), ellers kan ikke aksjene på en pålitelig måte summere til hver samsvarende transaksjons totale
+              fixed_shares_must_equal_condition_amount: delte aksjer må summere seg til %{amount}, det nøyaktige beløpet som kreves av denne regelens betingelse
+        rule/condition:
+          attributes:
+            value:
+              regex_invalid: er ikke et gyldig regulært uttrykk
+              regex_too_complex: er for kompleks til å kjøre sikkert
+              regex_too_long: er for lang (maksimalt er %{count} tegn)
+              regex_backreference: kan ikke bruke tilbakereferanser (\1 til \9)
+  rules:
+    form:
+      stop_processing_label: Slutt å behandle ytterligere regler
+      stop_processing_description: Regler lenger ned på listen endrer ikke transaksjoner denne regelen samsvarer med.
+    condition_filters:
+      operators:
+        starts_with: Starter med
+        ends_with: Ender med
+        matches_regex: Matcher regulært uttrykk
+    notification_baseline_timed_out: Denne regelen er fortsatt av. Det tok for lang tid å sjekke hvilke transaksjoner den allerede samsvarer med, og uten den sjekken ville den sende e-post til alle. Forenkle forholdene, og slå den på igjen.
+    classifier_rules:
+      category_classifier: Kategoriklassifisering
+      merchant_matcher: Selgermatcher
+    rule:
+      stop_processing: Stopp
+      stop_processing_hint: Regler lenger ned endrer ikke transaksjoner som samsvarer med denne regelen.
+    index:
+      order_hint: Regler går fra topp til bunn. Når en regel angir et felt på en transaksjon, endrer ikke regler lenger ned det feltet. Etiketter legges til av hver samsvarsregel. Dra regler for å endre rekkefølgen.
+      reorder_rule: Flytt regel %{name}. Trykk Enter eller Space for å ta den, og bruk deretter piltastene for å flytte den.
+    confirm:
+      rules_above_notice:
+        one: Den aktive regelen over den kjører først, så resultatet er det samme som i hele kjøringen.
+        other: De aktive reglene for %{count} over den kjører først, så resultatet er det samme som i hele kjøringen.
+    actions:
+      split:
+        type_fixed: Fast beløp
+        type_percentage: Prosent
+        type_label: Delt type
+        add_split: Legg til delt
+        name_placeholder: Delt navn
+        share_label: Delt beløp eller prosent
+        category_label: Delt kategori
+        merchant_label: Delt selger
+        tags_label: Delte tagger
+        remove_split: Fjern delt
+        hint: Faste deler trekkes først, som eksakte beløp. Prosentdeling deler deretter det som er igjen. Hvis hver deling her bruker et fast beløp, legg også til en betingelse som samsvarer med et eksakt transaksjonsbeløp (f.eks. Beløp = 42,00), siden hver samsvarende transaksjon trenger den samme summen for at de faste beløpene skal summere seg. En delt regel kan ikke ha andre handlinger.
+        fixed_summary_label: fast
+        summary:
+          one: "%{count} delt"
+          other: "%{count} deler"
+  binance_items:
+    select_accounts:
+      connection_unavailable: Den Binance-tilkoblingen er ikke tilgjengelig. Velg en i leverandørinnstillingene.
+      no_credentials_configured: Koble til Binance i leverandørinnstillingene før du legger til kontoene.
+      select_connection: Velg en Binance-tilkobling i leverandørinnstillinger.
+  reports:
+    index:
+      sections_aria: Rapportseksjoner
+    spending_vs_normal:
+      title: "-forbruk kontra vanlige"
+      summary_html: "%{total} brukt i denne perioden. Normal for en så lang periode er %{normal}, basert på %{baseline_start} til %{baseline_end}."
+      summary_so_far_html: "%{total} brukt så langt. Normal for så mange dager er %{normal}, basert på %{baseline_start} til %{baseline_end}."
+      no_history_html: "%{total} brukt i denne perioden. Det er ikke nok tidligere historie ennå til å si hva som er normalt."
+      no_history_short: Ikke nok tidligere historie til å sammenligne med ennå.
+      no_spending: Ingen utgifter i denne perioden.
+      no_changes: Utgiftene samsvarte med normalt i alle kategorier.
+      treemap_title: Hvor det ble
+      changes_title: Hva endret
+      direct: "%{category} (ingen underkategori)"
+      tooltip:
+        path: "%{parent} › %{category}"
+        total: "%{category}: %{amount}"
+        normal: 'Normal: %{amount}'
+        more: "%{amount} mer enn normalt (%{percent})"
+        less: "%{amount} mindre enn normalt (%{percent})"
+        more_no_percent: "%{amount} mer enn vanlig"
+        less_no_percent: "%{amount} mindre enn vanlig"
+        no_normal: Ingen tidligere historikk å sammenligne med
+        open: Velg for å se disse transaksjonene
+      legend:
+        less: 50–100 % mindre
+        slightly_less: 15–50 % mindre
+        normal: Omtrent normal
+        slightly_more: 15–50 % mer
+        more: 50–100 % mer
+        much_more: 100 %+ mer
+  account_order:
+    manual:
+      label: Manual (dra for å omorganisere)
+      label_short: Manual
+  onchain:
+    chains:
+      cosmos: Cosmos Hub
+      polkadot: Polkadot
+  providers:
+    property_valuation:
+      missing_fields_gb: Vennligst oppgi navn, gateadresse og postnummer og eiendommens UPRN.
+      entry_name: "%{provider} verdivurdering"
+    chimnie:
+      errors:
+        invalid_uprn: En UPRN er et tall på opptil 12 sifre. Vennligst sjekk UPRN og prøv igjen.
+        no_estimate: Chimnie har ikke et verdiestimat for denne egenskapen.
+        not_found: Chimnie kunne ikke finne en egenskap med denne UPRN.
+        unsupported_property: Chimnie verdsetter kun boligeiendommer; denne UPRN tilhører en kommersiell eiendom eller eiendom med blandet bruk.
+        unauthorized: Chimnie avviste API-nøkkelen. Sjekk nøkkelen i Innstillinger → Self-Hosting.
+        insufficient_balance: Din Chimnie-kontosaldo er for lav for denne forespørselen.
+  recurring_transactions:
+    allocator:
+      entry_exhausted: hele beløpet for denne transaksjonen er allerede brukt på andre betalinger som forfaller
+      already_allocated: denne transaksjonen er allerede brukt på denne regningen
+    new:
+      covered_title: Denne transaksjonen tilhører allerede en regning
+      covered_body: "%{name} sporer allerede denne betalingen, så en ny regning vil telle den to ganger."
+      covered_open: Åpen regning
+      covered_suggested_title: Sure har allerede foreslått en regning for denne betalingen
+      covered_suggested_body: "%{name} venter på forslagene dine. Bekreft den for å begynne å spore den, så en ny regning teller ikke denne betalingen to ganger. Matchende betalinger kobles automatisk, og du kan koble denne fra regningen."
+      covered_confirm: Bekreft regning
+      covered_create_anyway: Opprett en egen regning uansett
+      covered_income_title: Dette innskuddet tilhører allerede en inntekt
+      covered_income_body: "%{name} sporer allerede dette innskuddet, så å legge det til igjen vil telle det to ganger."
+      covered_income_open: Åpen inntekt
+      covered_income_suggested_title: Sure har allerede foreslått denne inntekten
+      covered_income_suggested_body: "%{name} venter på forslagene dine. Legg den til for å begynne å spore den, så dette innskuddet ikke telles to ganger. Matchende innskudd kobles automatisk, og du kan koble dette fra inntekten."
+      covered_income_confirm: Legg til inntekt
+      covered_income_create_anyway: Legg til en separat inntekt likevel
+    create:
+      amount_too_precise: Bruk maksimalt 4 desimaler
+      category_invalid: Velg en av kategoriene dine, eller la den stå tom
+    already_covered: Denne transaksjonen samsvarer allerede med en gjentakende transaksjon
+    suggested_income:
+      title: Mulig ny inntekt
+      confirm: Legg til inntekt
+      dismiss: Ikke inntekt
+    confirmed_income: Inntekt lagt til dine gjentakende transaksjoner
+  transfers:
+    show:
+      investment_contribution_subtitle: Tell denne overføringen som utgifter i budsjetter og rapporter. Slå den av når megler- eller kryptokontoen kun konverterer pengene til en annen valuta.
+      investment_contribution_title: Investeringsbidrag
+  transactions:
+    form:
+      create_as_subcategory: Legg til som en underkategori…
+      choose_parent: 'Opprett "%{name}" under:'
+      back_to_categories: Tilbake
+      no_matching_categories: Ingen samsvarende kategorier
+    transaction_category:
+      set_on_outflow: Kategorien tilhører den utgående siden av denne overføringen og kan kun endres der
+    show:
+      category_set_on_hidden_outflow: Dette er den innkommende siden av en overføring. Dens kategori tilhører den utgående siden, på en konto du ikke har tilgang til, og kan bare endres der.
+      category_set_on_outflow: Dette er den innkommende siden av en overføring. Dens kategori tilhører den utgående siden og kan bare endres der, så budsjetter teller den én gang.
+    search:
+      filters:
+        attachment: Vedlegg
+    searches:
+      filters:
+        badge:
+          attachment_with: Med vedlegg
+          attachment_without: Uten vedlegg
+        attachment_filter:
+          with: Med vedlegg
+          without: Uten vedlegg
+  account_statements:
+    form:
+      period_hint: Sure leser perioden fra PDF når den oppgir en, eller fra en dato i filnavnet (f.eks. 2026-04). Du kan også angi det på erklæringen.
+  accounts:
+    sidebar:
+      reorder_account: Move %{account}
+      reorder_hint: Dra for å omorganisere. Med tastaturet trykker du på Enter og deretter på piltastene.
+      sort_mode:
+        start: Sorter kontoer
+        hint: Dra kontoer etter håndtaket for å omorganisere dem.
+        done: Ferdig
+  admin:
+    system_health:
+      optional_services:
+        title: Valgfrie tjenester
+        description: Valgfrie operatørintegrasjoner. Ukonfigurerte tjenester er informative. Disse kontrollene inspiserer kun innstillinger; de tester ikke tilkobling, sender testhendelser eller endrer analysesamtykke. Utvid en tjeneste for oppsettdetaljer.
+        missing_settings: 'Manglende innstillinger: %{settings}'
+        statuses:
+          configured: Konfigurert
+          not_configured: Ikke konfigurert
+          incomplete: Ufullstendig konfigurasjon
+          disabled: Deaktivert i denne prosessen
+          not_checked: Ikke verifisert
+        notes:
+          environment_disabled: Den innlastede integrasjonen er deaktivert for dette Rails-miljøet.
+          explicitly_disabled: SKYLIGHT_ENABLED deaktiverer eksplisitt instrumentering.
+          self_hosted_checkout_disabled: Abonnementsutsjekking og faktureringsportalen er deaktivert i selvvertsmodus. Stripe webhooks kan fortsatt konfigureres; betalings-ID er ikke nødvendig her.
+          browser_analytics_disabled: Nettleseranalyse er deaktivert for dette miljøet. Dette deaktiverer ikke den separat konfigurerte serverklienten.
+          shared_feedback_configured: Tilbakemelding fra egen vert har et separat samlet prosjekt og aktiveres av konfigurasjonen. Det krever ikke en operatør POSTHOG_KEY. Nettleseropt-out og SDK tilgjengelighet er ikke merket av.
+          shared_feedback_disabled: Det separate selvvertede tilbakemeldingsprosjektet er deaktivert av tilbakemeldings- eller miljøinnstillingen. Dette deaktiverer ikke operatøreid analyse.
+          production_only: Denne integrasjonen brukes kun i produksjon av applikasjonens nåværende konfigurasjon.
+        services:
+          langfuse:
+            title: Langfuse
+            description: Valgfri AI sporing og evalueringsrapportering. Ingen spor eller evalueringsforespørsler sendes av denne sjekken.
+            guidance: Sett LANGFUSE_PUBLIC_KEY og LANGFUSE_SECRET_KEY sammen. LANGFUSE_HOST er valgfritt. Start de berørte tjenestene på nytt etter å ha endret disse innstillingene.
+          sentry:
+            title: Sentry
+            description: Valgfri feil- og ytelsesrapportering. Den gjeldende initialiseringen muliggjør rapportering bare i produksjon.
+            guidance: Sett SENTRY_DSN og start de berørte tjenestene på nytt. Dette sjekker den innlastede SDK-konfigurasjonen uten å fange opp en feil eller sende en hendelse.
+          skylight:
+            title: Skylight
+            description: Valgfri applikasjonsytelsesinstrumentering. Konfigurasjonstilstedeværelse bekrefter ikke at agenten kjører eller rapporterer.
+            guidance: Sett SKYLIGHT_AUTHENTICATION og sørg for at Skylight er lastet inn i det tiltenkte Rails-miljøet. SKYLIGHT_ENABLED=false deaktiverer instrumentering; flagget alene laster ikke edelstenen. Start på nytt etter endringer.
+          stripe:
+            title: Stripe
+            description: Valgfri abonnementsfakturering og betalingswebhooks. Denne sjekken oppretter ikke en Stripe-klient, validerer ikke legitimasjon eller sender betalingsforespørsler.
+            guidance: Sett STRIPE_SECRET_KEY og STRIPE_WEBHOOK_SECRET sammen. Utsjekking av administrert abonnement krever også STRIPE_MONTHLY_PRICE_ID og STRIPE_ANNUAL_PRICE_ID.
+          posthog:
+            title: PostHog
+            description: Valgfri operatøreid analyse, ved å bruke konfigurasjonen som ble lastet ved oppstart. Konfigurert betyr ikke at en bruker har samtykket til analyser.
+            guidance: Angi POSTHOG_KEY og en ikke-blank POSTHOG_HOST, eller la verten være udefinert for å bruke standarden. Nettleseranalyse krever produksjon eller POSTHOG_DEVELOPMENT_ENABLED under utvikling. POSTHOG_FEEDBACK_ENABLED kontrollerer separat egenvertsbasert tilbakemelding, ikke operatøranalyse.
+          logtail:
+            title: Logtail
+            description: Valgfri videresending av produksjonslogg. Når den er ukonfigurert, fortsetter applikasjonen å logge til standard utgang.
+            guidance: Sett LOGTAIL_API_KEY og LOGTAIL_INGESTING_HOST sammen og start de berørte tjenestene på nytt. Ingen testlogg sendes ut av denne sjekken.
+      configuration:
+        description: Konfigurasjon synlig for denne nettprosessen. Disse sjekkene sender ikke e-post, kontakter leverandører eller laster opp eller laster ned filer. Konfigurert betyr at innstillinger er til stede, ikke at levering, leverandørtilgang eller lagringstilgang er bekreftet.
+        statuses:
+          configured: Konfigurert
+          not_configured: Ikke konfigurert
+          incomplete: Ufullstendig konfigurasjon
+          disabled: Deaktivert
+          not_checked: Ikke verifisert
+        settings_needed: Innstillinger for å se gjennom
+        unknown_provider: Ukjent leverandørvalg
+        provider_statuses:
+          configured: Konfigurert
+          not_configured: API nøkkel mangler
+          invalid: Ugyldig valg
+        configure_providers: Åpne innstillingene for selvhosting
+        storage_backend: 'Valgt lagring: %{backend}'
+        storage_backends:
+          local: Lokal disk
+          test: Testdisk
+          amazon: Amazon S3
+          cloudflare: Cloudflare R2
+          generic_s3: S3-kompatibel lagring
+          google: Google Cloud Lagring
+          other: Egendefinert eller ukjent backend
+        checks:
+          smtp:
+            title: E-post (SMTP)
+            statuses:
+              configured: SMTP-innstillinger er tilstede.
+              not_configured: SMTP er ikke konfigurert. Tilbakestilling av passord, invitasjoner og andre system-e-poster kan ikke sendes gjennom SMTP.
+              incomplete: Noen e-postinnstillinger mangler eller er ufullstendige. System-e-poster eller koblingene de inneholder fungerer kanskje ikke.
+              disabled: E-postlevering er deaktivert i konfigurasjonen for løpende e-post.
+              not_checked: Denne prosessen bruker en annen leveringsmetode enn SMTP, for eksempel en forhåndsvisning av utvikling. SMTP levering er ikke vurdert.
+            guidance: SMTP kan ikke konfigureres i administrasjonsgrensesnittet. Angi e-postmiljøvariablene for både web- og arbeidstjenestene, og start deretter begge på nytt. SMTP_USERNAME og SMTP_PASSWORD kan begge utelates for et uautentisert relé.
+            issues:
+              address: SMTP_ADDRESS
+              port: SMTP_PORT (et tall fra 1 til 65535)
+              sender: EMAIL_SENDER (erstatt standard avsender@sure.local)
+              app_domain: APP_DOMAIN (brukes i e-postlenker)
+              authentication: SMTP_USERNAME og SMTP_PASSWORD (leverer begge eller ingen av dem)
+          securities:
+            title: Markedspriser
+            statuses:
+              configured: Alle aktiverte markedsprisleverandører har konfigurasjon.
+              not_configured: De aktiverte markedsprisleverandørene mangler API-nøklene. Automatiske sikkerhetssøk og prisoppslag er utilgjengelige gjennom disse leverandørene.
+              incomplete: Minst én aktivert markedsprisleverandør har manglende konfigurasjon eller et ugyldig valg. Verdipapirer som er tildelt denne leverandøren vil kanskje ikke motta prisoppdateringer.
+              disabled: Ingen markedsprisleverandør er aktivert. Automatiske sikkerhetssøk og prisoppslag er utilgjengelige.
+            guidance: Velg leverandører og legg til eventuelle nødvendige API-nøkler i innstillinger for selvhosting, eller konfigurer dem i distribusjonsmiljøet. Miljøoverstyringer har forrang. Offentlige leverandører trenger ikke en API-nøkkel.
+          exchange_rates:
+            title: Valutakurser
+            statuses:
+              configured: Den valgte valutakursleverandøren har konfigurasjon.
+              not_configured: Ingen brukbar valutakursleverandør er konfigurert. Automatisk valutakonvertering kan være utilgjengelig når en lagret kurs mangler.
+            guidance: Velg en valutakursleverandør og legg til dens API-nøkkel hvis nødvendig i innstillingene for selvhosting, eller konfigurer den i distribusjonsmiljøet. Overstyring av EXCHANGE_RATE_PROVIDER og leverandør API-nøkkelmiljø har forrang.
+            issues:
+              invalid_provider: Den valgte valutakursleverandøren gjenkjennes ikke. Automatiske satsoppslag mislykkes før en støttet leverandør er valgt.
+          storage:
+            title: Filopplasting og lagring
+            statuses:
+              configured: Lagringsinnstillinger er tilstede; lokal disk trenger ingen sky-legitimasjon.
+              not_configured: Den valgte lagringsstøtten har ingen samsvarende konfigurasjon. Filopplasting kan være utilgjengelig.
+              incomplete: Nødvendige lagringsinnstillinger mangler eller er ufullstendige. Filopplasting eller henting fungerer kanskje ikke.
+              not_checked: Denne backend bruker ekstern påloggingsinformasjon eller en tilpasset konfigurasjon. Dens tilgang kan ikke bestemmes fra disse innstillingene alene.
+            guidance: Se gjennom ACTIVE_STORAGE_SERVICE og den valgte backends distribusjonsinnstillinger. Lokal disk trenger vedvarende lagring som deles av nettet og arbeidstjenester. Endring av backends migrerer ikke eksisterende filer; planlegge eventuell migrasjon separat.
+            issues:
+              root: Lokal lagringsrot
+              bucket: Oppbevaringsbøtte
+              region: Lagringsregion
+              credentials: Lagringstilgangsnøkkel og hemmelig nøkkel (gi begge deler eller bruk ekstern legitimasjonsoppdagelse)
+              endpoint: Lagringsendepunkt (og CLOUDFLARE_ACCOUNT_ID for R2)
+      show:
+        tabs:
+          configuration: Config
+    users:
+      update:
+        password_disabled: Å angi et passord er deaktivert fordi brukere bare kan logge på med SSO.
+  auto_matches:
+    title: Auto Matches
+    settings:
+      enable_label: Aktiver Auto Match
+      enable_description: Oppdag og foreslå overføringstreff mellom kontoer automatisk ved hver synkronisering. Forslag brukes ikke før du bekrefter dem nedenfor.
+      admin_only: Bare administratorer kan endre denne innstillingen.
+    update_settings:
+      settings_updated: Automatch-innstillinger oppdatert
+    bulk_update:
+      invalid_selection: Velg minst ett forslag for å bekrefte eller avvise
+      bulk_confirmed:
+        one: Bekreftet 1 overføring
+        other: bekreftet %{count}-overføringer
+      bulk_rejected:
+        one: Avvist 1 overføring
+        other: Avvist %{count}-overføringer
+    empty:
+      title: Ingen ventende forslag til automatisk samsvar
+      description: Når en synkronisering oppdager en sannsynlig overføring mellom to av kontoene dine, vil den vises her for gjennomgang.
+    table:
+      from: Fra
+      to: til
+      date: Dato
+      actions: Handlinger
+      separator: "·"
+    bulk_actions:
+      selected_label: valgt
+      confirm_selected: Bekreft valgt
+      reject_selected: Avvis valgt
+      select_all: Velg alle
+  bills:
+    detail:
+      overview: Oversikt
+      rule_detected: Matcher transaksjoner kalt %{name}
+    match:
+      same_transfer: Overfør til samme konto
+    paycheck:
+      bridge_left: "%{amount} igjen etter regninger"
+      bridge_show_more:
+        one: Vis 1 til
+        other: Vis %{count} mer
+      bridge_allocation_aria: Av %{cash} på kontoene dine, forfaller %{due} før neste lønnsslipp og %{left} er igjen.
+      item_overdue: Forfall
+  budgets:
+    available_cash:
+      currency_warning: "%{currencies}-saldoer er ikke inkludert fordi ingen valutakurs til %{currency} er tilgjengelig ennå."
+  categories:
+    locked: Kategorier er låst. Lås opp dem for å legge til en ny kategori.
+    toggle_lock:
+      locked: Kategorier låst
+      unlocked: Kategorier låst opp
+    index:
+      lock_categories: Oppretting av låskategori
+      locked_message: Kategorioppretting er låst. Importer og banksynkroniseringer kan fortsatt legge til kategorier.
+      unlock_categories: Lås opp kategorioppretting
+  category:
+    dropdowns:
+      show:
+        assign_error: Opprettet kategorien, men kunne ikke tilordne den. Velg Opprett igjen for å prøve på nytt.
+        back: Tilbake
+        choose_parent: 'Opprett "%{name}" under:'
+        create: Opprett "%{name}"
+        create_as_subcategory: Legg til som en underkategori…
+        create_error: Kunne ikke opprette den kategorien. Vennligst prøv igjen.
+  chats:
+    ai_busy: Bare ved å fullføre en bakgrunnsoppgave, så går jeg rett inn på meldingen din.
+    reservation:
+      ready_html: Jeg har utsatt noen bakgrunnsoppgaver slik at jeg kan komme rett inn på meldingen din. De vil snike seg tilbake i %{countdown} s, så fortsett å skrive!
+      busy: Bare ferdig med en bakgrunnsoppgave, så er jeg helt din. Fortsett å skrive!
+  coinbase_items:
+    select_accounts:
+      connection_unavailable: Den Coinbase-tilkoblingen er ikke tilgjengelig. Velg en i leverandørinnstillingene.
+      no_credentials_configured: Koble til Coinbase i leverandørinnstillingene før du legger til lommebøker.
+      select_connection: Velg en Coinbase-tilkobling i leverandørinnstillinger.
+  credit_cards:
+    due:
+      in_days:
+        zero: Frist i dag
+        one: Frist i morgen
+        other: Forfaller om %{count} dager
+      overdue:
+        one: Frist i går
+        other: "%{count} dager forsinket"
+    form:
+      due_day: Betaling forfallsdag
+      statement_close_day: "-erklæringen avsluttes på"
+      statement_cycle_description: Dagen i måneden kontoutskriften din avsluttes og dagen betalingen forfaller. Med disse settene viser Oversikt-fanen hva det siste utsagnet ditt kom til og hva som bygger seg mot den neste. Et koblet kort fyller disse ut automatisk og beholder det du angir for hånd.
+      sophtron_balance_sign_auto: Automatisk
+      sophtron_balance_sign_credit: Kreditt (banken skylder deg)
+      sophtron_balance_sign_debt: Gjeld (du skylder banken)
+      sophtron_balance_sign_description: Bruk kun en overstyring når Sophtron rapporterer et tvetydig tegn. Automatisk fortsetter å negere kredittkortsaldoene.
+      sophtron_balance_sign_label: Sophtron balanse som betyr
+    tabs:
+      overview:
+        above_minimum: Denne uttalelsen kom til %{balance}, over %{minimum} minimum. Hvis du bare betaler minimumsbeløpet, blir saldoen på kortet ved denne april.
+        apr: APR
+        closes_on: Neste uttalelse avsluttes %{date}
+        credit_toward_next: Kreditt til neste uttalelse
+        due_on: Frist %{date}
+        edit_card_details: Rediger kortdetaljer
+        since_last_statement: Siden siste uttalelse
+        statement_balance: Saldo
+        multi_currency_unavailable: Denne setningen legger sammen oppføringer registrert i mer enn én valuta, som ikke kan summeres her uten en kurs for hver av dem. Saldoene er tomme i stedet for gjettet.
+        no_cycle_description: Angi dagen din kontoutskrift stenger og dagen betaling forfaller, og denne fanen vil vise hva din siste kontoutskrift kom til og hva som bygger seg mot neste. Et koblet kort fyller vanligvis disse ut for deg.
+        no_cycle_title: Ingen setningssyklus satt
+        unknown: Ukjent
+    update:
+      sophtron_balance_sign_error: Kunne ikke bruke Sophtron-balansebetydningen. Den forrige innstillingen ble beholdt. Vennligst prøv igjen.
+  demo_family_refresh_mailer:
+    completed:
+      subject: Demofamilieoppdatering fullført
+      activity_heading: Aktivitet i denne perioden
+      sessions_label: Unike påloggingsøkter for den forrige demofamilien
+      families_label: Nye familiekontoer opprettet
+      period_heading: Rapporteringsperiode (UTC)
+      from_label: 'Fra:'
+      to_label: 'Til:'
+      time_format: "%b %-d, %Y ved %H:%M:%S UTC"
+      family_heading: Tidligere demofamilie
+      family_not_found: Ikke funnet
+      id_label: 'ID:'
+  goals:
+    currency_warning:
+      title: Noen saldoer telles ikke
+      body:
+        one: Ingen %{from} → %{to} valutakurs er tilgjengelig ennå, så %{from}-saldoer er utelatt fra denne summen.
+        other: Ingen valutakurser fra %{from} til %{to} er tilgjengelig ennå, så disse saldoene er utelatt fra denne summen.
+      settings_link: Innstillinger for valutakursleverandør
+    consume:
+      goal_currency_hint: Angi beløpet i %{currency}. For en konto i en annen valuta konverteres den til dagens kurs før den forsvinner fra den kontoens øremerke.
+      errors:
+        missing_exchange_rate: Ingen valutakurs er tilgjengelig ennå for denne kontoens valuta, så dette forbruket kan ikke registreres.
+    show:
+      funding_accounts:
+        converted: "≈ %{amount}"
+        rate_unavailable: Ingen valutakurs ennå, så denne kontoen telles ikke.
+    goal_card:
+      partial_total: Noen saldoer telles ikke (ingen valutakurs ennå)
+    form:
+      earmark:
+        converted: Dette øremerket ≈ {amount}.
+      fields:
+        currency_conversion_hint: Kontoer kan bruke forskjellige valutaer. Totaler konverteres til %{currency}; kontoøremerker forblir i hver kontos valuta.
+  holdings:
+    cost_basis_cell:
+      per_share_label: Per aksje
+  imports:
+    publish:
+      guest_new_categories_or_tags: Gjester kan ikke opprette kategorier eller tagger. Tilordne dem til eksisterende eller la dem stå tomme.
+    create:
+      missing_upload: Vi mottok ikke filen din. Prøv å laste den opp igjen.
+  insights:
+    card:
+      dig_in: Grav inn med AI
+    dig_in:
+      prompt: |-
+        Hjelp meg å grave i denne innsikten.
+
+        Innsikt: %{title}
+        Hva Sure fant: %{body}
+        Periode: %{period}
+        Tall:
+        %{facts}
+
+        Hva ligger bak, og er det noe jeg bør gjøre?
+  mfa:
+    local_password_required: Tofaktorautentisering trenger et lokalt passord. Din administreres gjennom din identitetsleverandør.
+    create:
+      invalid_password: Feil passord. Vennligst prøv igjen.
+    disable:
+      invalid_password: Feil passord. Vennligst prøv igjen.
+    new:
+      password_label: Bekreft med passordet ditt
+      password_placeholder: Skriv inn passordet ditt
+  pages:
+    dashboard:
+      customize:
+        start: Tilpass
+        done: Ferdig
+        hide: Skjul %{title}
+        hidden_title: Skjulte widgets
+        hidden_description: Legg til en widget tilbake til dashbordet.
+        none_hidden: Hver widget vises. Skjul en med øyeknappen.
+        all_hidden_title: Hver widget er skjult
+        all_hidden_description: Tilpass dashbordet for å legge til widgets tilbake.
+      cashflow_preview:
+        node_labels:
+          invested: Investert
+        group_by_label: Vis flyter etter
+        group_by_category: Kategori
+        group_by_account: "-konto"
+        sort_label: Sorteringsflyter
+        sort_auto: Auto
+        sort_ascending: Minste først
+        sort_descending: Største første
+      spending_trend:
+        filter_categories: Filterkategorier (%{count})
+        filter_categories_all: Alle kategorier
+        search_categories: Søkekategorier
+        apply: Bruk
+  plaid_items:
+    auto_link_opener:
+      create_failed: Vi kunne ikke bekrefte at denne tilkoblingen ble lagt til. Last inn siden på nytt for å sjekke før du prøver igjen.
+    create:
+      already_connected: Du har allerede en tilkobling for denne institusjonen, så denne ble ikke lagt til.
+      exchange_failed: Vi kunne ikke legge til denne tilkoblingen. Prøv igjen, og hvis problemet vedvarer, sjekk serverloggene.
+      token_expired: Denne tilkoblingen utløp før den ble lagt til. Koble til institusjonen igjen.
+    duplicate_warning:
+      close: Lukk
+      confirm: Bekreft denne tilkoblingen
+      connected_by: Tilkoblet av %{name}
+      eu_no_add_accounts: Plaid støtter ikke å legge til kontoer til en eksisterende EU-tilkobling. For å endre hvilke kontoer som er tilkoblet, fjern denne og legg den til på nytt.
+      linked_on: koblet %{date}
+      manage_connection: Gå til kontoer
+      mask: "****%{mask}"
+      no_accounts: Ingen kontoer har synkronisert fra denne tilkoblingen ennå.
+      overlap:
+        all_connected:
+          one: Kontoen du prøvde å legge til er allerede tilkoblet, så å legge den til igjen ville bare opprette en duplikat.
+          other: "%{count}-kontoene du prøvde å legge til er alle allerede tilkoblet, så å legge dem til igjen ville bare skape duplikater."
+        different_login: For å koble til en annen %{institution}-pålogging, velg Ny konto på nytt, og logg på med den påloggingen via Plaid.
+        more_accounts: For å legge til flere kontoer til denne tilkoblingen, lukk denne og velg Legg til kontoer på %{institution}-tilkoblingen.
+        others_connected:
+          one: Sure har allerede denne kontoen gjennom %{name} sin tilkobling, så å legge til din vil bare skape et duplikat.
+          other: Sure har allerede disse kontoene gjennom %{name}s tilkobling, så å legge til din vil bare skape duplikater.
+        others_connected_several:
+          one: Sure har allerede denne kontoen gjennom andre medlemmers tilkoblinger, så å legge til din vil bare skape et duplikat.
+          other: Sure har allerede disse kontoene gjennom andre medlemmers forbindelser, så å legge til din vil bare skape duplikater.
+        none_connected: Ingen av kontoene du prøvde å legge til er tilkoblet ennå, så dette er sannsynligvis en annen pålogging. Å legge til det teller bare som en annen Plaid-tilkobling.
+        some_connected:
+          connected:
+            one: Den andre er allerede tilkoblet, så å legge til denne tilkoblingen vil duplisere den og telle som en annen Plaid-tilkobling.
+            other: De andre %{count} er allerede tilkoblet, så å legge til denne tilkoblingen vil duplisere dem og telle som en annen Plaid-tilkobling.
+          unconnected:
+            one: 'En konto du prøvde å legge til er ikke tilkoblet ennå:'
+            other: "%{count} kontoer du prøvde å legge til er ikke tilkoblet ennå:"
+        unknown:
+          one: Disse kontoene kan ikke kontrolleres mot din eksisterende tilkobling. Hvis de er de samme kontoene, vil det å legge til denne tilkoblingen duplisere dem og telle som en annen Plaid-tilkobling.
+          other: Disse kontoene kan ikke kontrolleres mot dine eksisterende tilkoblinger. Hvis de er de samme kontoene, vil det å legge til denne tilkoblingen duplisere dem og telle som en annen Plaid-tilkobling.
+      title:
+        one: Du har allerede en tilkobling for denne institusjonen
+        other: Du har allerede %{count}-tilkoblinger for denne institusjonen
+      title_all_connected: Du har allerede opprettet denne tilkoblingen
+      title_others_connected:
+        one: Denne kontoen er allerede tilkoblet
+        other: Disse kontoene er allerede tilkoblet
+      update_existing: Oppdater eksisterende tilkobling
+  plans:
+    goals_card:
+      currency_warning:
+        one: 1 mål utelater %{currencies}-saldoer (ingen valutakurs ennå).
+        other: "%{count}-mål utelater %{currencies}-saldoer (ingen valutakurs ennå)."
+  recurring_allocations:
+    entry_exhausted: Denne transaksjonens fulle beløp er allerede brukt på andre betalinger som forfaller
+  valuations:
+    names:
+      current_account_value: Brukskontoverdi
+      current_balance: Gjeldende saldo
+      current_loan_balance: Gjeldende lånesaldo
+      current_market_value: Nåværende markedsverdi
+      manual_balance_update: Manuell balanseoppdatering
+      manual_principal_update: Manuell hovedoppdatering
+      manual_value_update: Manuell verdioppdatering
+      opening_account_value: Åpningskontoverdi
+      opening_balance: Inngående balanse
+      original_principal: Original oppdragsgiver
+      original_purchase_price: Opprinnelig kjøpesum

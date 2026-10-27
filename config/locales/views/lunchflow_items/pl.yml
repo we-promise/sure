@@ -82,7 +82,11 @@ pl:
       status_with_summary: Ostatnia synchronizacja %{timestamp} temu • %{summary}
       sync_status:
         no_accounts: Nie znaleziono kont
-        partial_setup: 'Zsynchronizowano: %{linked}; do konfiguracji: %{unlinked}'
+        partial_setup:
+          many: "Zsynchronizowano: %{linked}; do konfiguracji: %{unlinked}"
+          one: "Zsynchronizowano: %{linked}; do konfiguracji: %{unlinked}"
+          few: "Zsynchronizowano: %{linked}; do konfiguracji: %{unlinked}"
+          other: "Zsynchronizowano: %{linked}; do konfiguracji: %{unlinked}"
         synced:
           few: "%{count} konta zsynchronizowane"
           many: "%{count} kont zsynchronizowanych"

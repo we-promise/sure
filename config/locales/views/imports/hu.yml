@@ -558,9 +558,9 @@ hu:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: 'Feldolgozási hiba: %{error}'
       ready_for_review_title: Felülvizsgálatra kész
-      ready_for_review_description: >-
-        A kivonatod %{count} tranzakciója még nem szerepel ezen a számlán. Ellenőrizd a tételeket, majd
-        véglegesítsd az importálást a hozzáadásukhoz.
+      ready_for_review_description:
+        other: "A kivonatod %{count} tranzakciója még nem szerepel ezen a számlán. Ellenőrizd a tételeket, majd véglegesítsd az importálást a hozzáadásukhoz."
+        one: "A kivonatod %{count} tranzakciója még nem szerepel ezen a számlán. Ellenőrizd a tételeket, majd véglegesítsd az importálást a hozzáadásukhoz."
       transactions_extracted: Kinyert tranzakciók
       transactions_extracted_count:
         one: "%{count} tranzakció"

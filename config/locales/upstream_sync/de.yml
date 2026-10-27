@@ -1,0 +1,559 @@
+---
+de:
+  properties:
+    avm_providers:
+      chimnie: Chimnie
+    new:
+      avm_uk_only: "%{provider} unterstützt nur Wohnimmobilien im Vereinigten Königreich."
+      avm_uprn_label: UPRN
+      avm_uprn_placeholder: '100023336956'
+      avm_uprn_help: Die eindeutige Immobilienreferenznummer (bis zu 12 Ziffern) identifiziert jede Adresse im Vereinigten Königreich. Finden Sie es auf findmyaddress.co.uk von GeoPlace oder fragen Sie Ihre Gemeindeverwaltung. %{provider} nutzt es, um die Immobilie kostenlos zu bewerten.
+      avm_county_label: Landkreis (optional)
+      avm_town_label: Stadt
+      avm_postcode_label: Postleitzahl
+      avm_preview_uprn: UPRN
+      avm_preview_range: Geschätzter Bereich
+      avm_preview_confidence: Vertrauen
+      avm_confidence:
+        high: Hoch
+        medium: Mittel
+        low: Niedrig
+      avm_attribution_chimnie: Bewertungsdaten von Chimnie. Enthält OS-Daten © Crown Urheberrecht und Datenbankrecht, Royal Mail-Daten © Royal Mail Urheberrecht und Datenbankrecht und HM Land Registry-Daten © Crown Urheberrecht und Datenbankrecht, lizenziert unter der Open Government License v3.0.
+    tabs:
+      overview:
+        refresh_valuation: Bewertung aktualisieren
+        valuation_source: Bewertet von %{provider}, zuletzt aktualisiert %{date}
+        link_valuation: Wert automatisch aktualisieren mit %{provider}
+        link_valuation_description: Der Wert dieser Eigenschaft wird nur manuell aktualisiert.
+    refresh_valuation:
+      queued: Die Bewertungsaktualisierung wurde gestartet. Der neue Wert wird in Kürze angezeigt.
+      not_linked: Diese Eigenschaft ist nicht mit einem Bewertungsanbieter verknüpft.
+      not_configured: "%{provider} ist nicht konfiguriert. Fügen Sie den Schlüssel API unter Einstellungen → Selbsthosting hinzu, um diese Bewertung zu aktualisieren."
+    link_valuation:
+      linked: Mit %{provider} verknüpft und den Wert der Eigenschaft aktualisiert.
+      link_failed: "%{provider} konnte diese Eigenschaft nicht bewerten, daher wurde sie nicht verknüpft. Überprüfen Sie, ob die Adresse korrekt ist, und versuchen Sie es dann erneut."
+      not_linkable: Diese Eigenschaft kann nicht mit diesem Anbieter verknüpft werden. Überprüfen Sie, ob die Adresse vollständig ist, sich in einem unterstützten Land befindet und ob die Kontowährung mit der des Anbieters übereinstimmt.
+  settings:
+    classifiers:
+      account:
+        account_field: Fügen Sie das Konto als ein Token hinzu
+        account_field_hint: 'Als Beweis gilt, auf welchem Konto sich eine Transaktion befindet. Es entscheidet nie allein: Eine Transaktion braucht ein bekanntes Wort oder einen Händler.'
+      amount:
+        amount_by_direction: Geben Sie die Richtung, den Geldeingang oder -ausgang an.
+        amount_by_direction_hint: Jede Kategorie lernt, wohin ihr Geld fließt, und Rückerstattungen und Einkäufe im selben Shop bleiben getrennt.
+        amount_field: Geben Sie den Betrag an
+        amount_field_hint: Vergleicht den Betrag mit den üblichen Beträgen jeder Kategorie in derselben Währung auf einer Protokollskala.
+      category_training:
+        apply: Anwenden
+        categories: Kategorien
+        categories_all: Alle Kategorien
+        categories_hint: Ungeprüfte Kategorien und ihre Unterkategorien werden beim Training nicht berücksichtigt, sodass Bayes sie nie auswählt.
+        categories_some: "%{count} der %{total}-Kategorien"
+        exclude_transfers: Übertragungen ausschließen
+        exclude_transfers_hint: Überweisungen und Zahlungen zwischen Ihren Konten.
+        search_categories: Kategorien durchsuchen
+        skip_self_labels: Lernen Sie nicht aus den eigenen Vermutungen von Bayes, bis diese bestätigt wurden oder so viele Tage alt sind.
+        skip_self_labels_hint: Bestätigt bedeutet, dass Sie es geändert oder gesperrt haben. Eine falsche Vermutung wird nicht zurückgeführt und verstärkt; wer so lange allein gelassen wird, gilt als akzeptiert.
+      add_rule:
+        success: Die Regel %{name} wurde oben zu Ihren Regeln hinzugefügt.
+      classifier:
+        apply: Anwenden
+        lock_results: Sperren Sie die Kategorien, die der Klassifizierer festlegt
+        lock_results_hint: Verhindert, dass Regeln die Auswahl von Bayes ändern, es sei denn, Sie klicken bei einer Regel auf „Übernehmen“. AI ändert niemals die Picks von Bayes, ob gesperrt oder nicht.
+        rule: Kategorisieren mit dem Klassifikator
+        rule_hint: Die Kategorieklassifikatorregel, ein- und ausgeschaltet damit in Regeln. Nach jeder Synchronisierung werden nicht kategorisierte Transaktionen in Ihrer Regelreihenfolge kategorisiert. Worüber es nicht sicher ist, wird einer automatischen Kategorisierungsregel überlassen.
+        threshold: Schwellenwert
+        threshold_hint: Niedrigster Wert Bayes wirkt auf (0,05–0,99). Niedriger kategorisiert mehr, mit mehr Fehlern.
+      clear_locks:
+        success: Bayes' Sperren werden gelöscht. Dies kann einige Augenblicke dauern.
+      evaluation:
+        apply_best: Wenden Sie diese Einstellungen an
+        best: Am besten gefunden
+        best_changes: 'Am besten gefunden, geändert von Ihrem:'
+        best_no_changes: Nichts hat besser abgeschnitten als Ihre Einstellungen.
+        buttons_hint: "„Meine Einstellungen testen“ bewertet Ihre Einstellungen. „Beste Einstellungen suchen“ durchsucht den %{tuning} Monate vor den angezeigten, so dass die Ergebnisse für Monate bewertet werden, die nicht angezeigt wurden. Die Beurteilung erfolgt anhand von ROC-AUC: Wie gut ordnen die Bewertungen die Transaktionen jeder Kategorie über den Rest ein, bei jedem Schwellenwert, wobei eine Änderung nur dann beibehalten wird, wenn sie insgesamt und in allen bis auf einen dieser %{tuning}-Monate allein höher ist? Zuerst werden die Eingaben ausgewählt (jede Kombination aus Händler-Token, Betrag und Konto; dann wird der Händler und das Konto einzeln bewertet; dann der Name des Händlers und die Notizen als Wörter), dann wird eine Änderung nach der anderen an den anderen Einstellungen vorgenommen und zuletzt wird die Bewertung durchgeführt. Die Standardwerte sind die des ursprünglichen Klassifikators mit den von Ihnen gewählten Kategorien. Auf Standardwerte zurücksetzen wechselt zu ihnen und testet sie."
+        categories_heading: Kategorieklassifikator
+        change: "%{setting}: %{value}"
+        confusion: "%{actual} → %{predicted}"
+        confusions: 'Häufigste Fehler: %{column} und %{threshold}'
+        current: Meine Einstellungen
+        defaults: Standardwerte
+        description: Jede Spalte wird für die letzten %{months} Monate als neue Transaktionen bewertet, jeden Monat anhand des Verlaufs davor trainiert und dann mit Ihren Kategorien verglichen. Beim Testen wird die Kategorie der Transaktion nicht geändert, und die Klassifizierungseinstellungen ändern sich nur, wenn Sie sie anwenden oder zurücksetzen.
+        find_best: Finden Sie die besten Einstellungen
+        matcher_confusions: 'Die häufigsten Händlerfehler: %{column} bei %{similarity}'
+        matcher_description: 'Händler, die der Matcher in denselben %{months} Monaten ausfüllt: %{count} Transaktionen mit einem Händler, jede mit der Historie vor ihrem Monat abgeglichen, wobei der Händler ausgeblendet ist; Rechts ist der Händler, den es hat. Jeder Cutoff und jede Anzahl von Händlern wird gewertet; Am besten gefunden wird diejenige mit der besten Zelle zum Preis eines Fehlers, den Apply festlegt. Testen füllt keine Händler aus.'
+        merchants_heading: Händler-Matcher
+        no_confusions: Keine Fehler bei diesem Schwellenwert.
+        no_matcher_confusions: Keine Händlerfehler bei dieser Ähnlichkeit.
+        no_uncategorized: Bei diesem Schwellenwert bleibt nichts unkategorisiert.
+        no_unfilled: Ohne einen Händler bleibt bei dieser Ähnlichkeit nichts übrig.
+        none: Noch nicht getestet.
+        'off': aus
+        'on': an
+        ran_at: Hat vor %{time} einen Wert für %{count}-Transaktionen erzielt (%{months}).
+        reset: Auf Standardwerte zurücksetzen
+        reset_confirm: Alle Klassifikatoreinstellungen auf die Standardeinstellungen zurücksetzen und testen?
+        right_wrong: Jede Zelle ist richtig / falsch.
+        run: Meine Einstellungen testen
+        running: Testen… dieser Abschnitt wird aktualisiert, wenn er fertig ist.
+        short_history: Noch nicht genügend Verlauf, um den Kategorieklassifikator zu optimieren. Hierfür sind etwa %{months} Monate an kategorisierten Transaktionen erforderlich, daher lässt Apply seine Einstellungen vorerst in Ruhe.
+        similarity: Ähnlichkeit
+        stale: Die Einstellungen haben sich seit diesem Test geändert.
+        threshold: Schwellenwert
+        trying: Versuche %{changes}…
+        uncategorized: 'Am häufigsten nicht kategorisiert: %{column} bei %{threshold}'
+        unfilled: 'Am häufigsten ungefüllt: %{column} bei %{similarity}'
+        weight: Ein Fehler kostet
+        weight_hint: 'Wählt aus, was „Anwenden“ festlegt: die fett gedruckten Zellen, in denen richtige Antworten abzüglich dieser Anzahl pro Fehler am höchsten sind. Schwellenwert für das beste Ergebnis für Kategorien; der Cutoff, die Ähnlichkeit und die Anzahl der Händler für den Matcher.'
+        weight_option:
+          one: 1 richtige Antwort
+          other: "%{count} richtige Antworten"
+      matcher:
+        lock_similar_merchants: Sperren Sie die Händler, die der Matcher festlegt
+        lock_similar_merchants_hint: Stoppt Regeln, AI und synchronisiert Änderungen, es sei denn, Sie klicken bei einer Regel auf „Übernehmen“. Seine eigenen Sperren gelten nicht als bestätigt (Händler-Matcher-Tuning).
+        rule: Fehlende Händler aus Beinahe-Duplikaten ergänzen
+        rule_hint: Die Händler-Matcher-Regel, ein- und ausgeschaltet damit in den Regeln. In Ihrer Regelreihenfolge erhält eine Transaktion ohne Händler diejenige, die ihre Beinahe-Duplikate, wie „NETFLIX.COM 8812“ und „Netflix com“, alle haben. Überweisungen bleiben außen vor.
+        similar_threshold: Ähnlichkeit
+        similar_threshold_hint: Geringste Ähnlichkeit der Beschreibungen, ohne Berücksichtigung von Zahlen und Referenzcodes (0,5–0,99). Niedriger füllt mehr, mit mehr Fehlern. Mit Apply von Auto-tune wird es ebenfalls eingestellt.
+      matcher_tuning:
+        similar_common_share: Cutoff
+        similar_common_share_hint: Ein Wort oder ein aus drei Buchstaben bestehendes Teil ist in mehr als diesem Anteil der Transaktionen, aus denen es kopiert wird (0,01–1), und in mindestens 50 davon, zu häufig, um sie auseinanderzuhalten, wie etwa „Karte“ oder „Zahlung“, und wird daher ignoriert. Höher zählt mehr davon. Mit Apply von Auto-tune wird es ebenfalls eingestellt.
+        similar_min_neighbours: Händler, die zustimmen
+        similar_min_neighbours_hint: Wie viele Beinahe-Duplikate muss der Händler haben, ohne dass es ein anderes gibt. 1 kopiert eine einzelne Transaktion, auch Fehler.
+        similar_min_neighbours_option:
+          one: 1 Händler
+          other: "%{count} Händler"
+        similar_skip_self: Nicht von den eigenen Händlern des Matchers kopieren, bis bestätigt oder so viele Tage alt
+        similar_skip_self_hint: Bestätigt bedeutet, dass Sie es geändert oder gesperrt haben. Eine falsche Kopie wird nicht verbreitet; wer so lange allein gelassen wird, gilt als akzeptiert.
+      merchant:
+        merchant_field: Schließen Sie den Händler als einen Token ein, wenn dies festgelegt ist
+        merchant_field_hint: Zählt nach Identität, sodass ein umbenannter Händler seinen Verlauf behält.
+        merchant_name_words: Geben Sie den Namen des Händlers als Wörter ein
+        merchant_name_words_hint: Liest sich wie die Beschreibung, wie das Original, also weisen ähnliche Namen gemeinsame Beweise auf. Überschneidet sich mit dem Token unten.
+      run:
+        success: Bayes kategorisiert nicht kategorisierte Transaktionen. Dies kann einige Augenblicke dauern.
+      scoring:
+        complement: Komplementnaiv verwenden Bayes
+        complement_hint: Bewertet jede Kategorie danach, wie schlecht die Transaktion zu den anderen passt, wodurch Kategorien mit sehr unterschiedlichen Größen besser zurechtkommen. Off ist das ursprüngliche Multinomial.
+        prior: Geben Sie an, wie oft jede Kategorie verwendet wird.
+        prior_hint: Orientiert sich an den Kategorien, die Sie am häufigsten verwenden. Off behandelt jede Kategorie gleich, wie das Original.
+        separate_fields: Bewerten Sie den Händler und das Konto mit Ausnahme der Wörter
+        separate_fields_hint: Jeder erhält seine eigene Distribution, daher ist eine lange Beschreibung nicht wichtiger. Muss der Händler oder das Konto enthalten sein; Der Betrag wird immer einzeln bewertet.
+        smoothing: Glättung
+        smoothing_hint: Wird zu jeder Zählung addiert, damit ein unsichtbares Wort eine Kategorie nicht ausschließt (0,001–10). 1 ist das Original; Weniger vertraut dem, was man gesehen hat, mehr.
+      show:
+        add_rule_body: In Ihren Regeln gibt es keine %{name}-Regel, daher gibt es nichts zum Aktivieren. Fügen Sie es oben in Ihre Regeln ein?
+        add_rule_cancel: Nein
+        add_rule_confirm: Regel hinzufügen
+        add_rule_title: Regel %{name} hinzufügen?
+        account: Kontooptimierung
+        amount: Mengenoptimierung
+        auto_tune: Automatische Optimierung
+        category_training: Optimierung des Kategorieklassifikators
+        clear_locks: Löschen Sie die Bayes-Sperren
+        clear_locks_confirm_body: Entsperrt die gesperrten Kategorien Bayes und die vom Matcher gesperrten Händler, die immer noch das sind, was sie festgelegt haben, sodass Regeln und AI sie wieder ändern können. Die Kategorien und Händler bleiben bestehen.
+        clear_locks_confirm_button: Klare Schlösser
+        clear_locks_confirm_title: Bayes-Sperren löschen?
+        description: Der Kategorieklassifizierer Bayes lernt aus Ihren kategorisierten Transaktionen und kategorisiert neue Transaktionen vor jedem AI-Anbieter. Änderungen an diesen Einstellungen werden ab dem nächsten Kategorisierungslauf wirksam; Bereits kategorisierte Transaktionen behalten ihre Kategorien.
+        matcher: Matcher
+        matcher_description: Füllt fehlende Händler aus Beinahe-Duplikaten aus, als Händler-Matcher-Regel (nach jeder Synchronisierung) und bei der Ausführung. Es verändert die hinterlegten Händler.
+        matcher_tuning: Händler-Matcher-Tuning
+        merchant: Händler-Tuning
+        run: Laufen
+        scoring: Bewertung
+        title: Klassifikator
+        training: Schulung
+        words: Transaktionsoptimierung
+      training:
+        max_training_transactions: Schulungstransaktionen
+        max_training_transactions_hint: 'Wie viele der neuesten Transaktionen verwendet werden sollen (100–20.000): die kategorisierten Transaktionen, von denen der Klassifikator lernt, und die Transaktionen mit einem Händler, von dem der Matcher kopiert.'
+      words:
+        bigrams: Wortpaare einbeziehen
+        bigrams_hint: Benachbarte Wörter zählen ebenfalls zusammen, z. B. „Kartenzahlung“.
+        binary: Wiederholte Wörter ausschließen
+        binary_hint: Jedes Wort zählt einmal pro Transaktion.
+        drop_codes: Referenzcodes ausschließen
+        drop_codes_hint: Wörter, die Buchstaben mit zwei oder mehr Ziffern kombinieren, wie 2k4l19.
+        drop_numbers: Zahlen ausschließen
+        drop_numbers_hint: Zahlen, Daten und Beträge in der Beschreibung hinterlegen.
+        include_notes: Notizen einschließen
+        include_notes_hint: Liest die Notizen sowie den Namen.
+        keep_single_chars: Einstellige Wörter einschließen
+        keep_single_chars_hint: Einzelne Buchstaben und Ziffern, die nach der Aufteilung übrig bleiben, wie das „s“ von McDonald’s.
+        spread_filter: Wörter ausschließen, die in jeder Kategorie gleichermaßen verwendet werden
+        spread_filter_hint: Sie sagen nichts über die Kategorie aus. Die Zahl gibt an, wie weit die Nutzung einer Kategorie über einem geraden Anteil liegen muss.
+        word_split: Wörter bestehen aus
+        word_split_ascii: a–z und 0–9
+        word_split_hint: Jedes zweite Zeichen teilt Wörter. Buchstaben jeglicher Schrift behalten Wörter wie Geschäft oder Кофейня als Ganzes; Bei inneren Symbolen bleiben Buchstaben, die durch ein Symbol verbunden sind, ebenfalls ein Wort, wie McDonald's, S/O und M&S (ein Symbol an beiden Enden, wie in *Netflix, wird immer noch weggelassen).
+        word_split_symbols: Buchstaben, Ziffern, innere Symbole
+        word_split_unicode: Buchstaben und Ziffern, beliebige Schrift
+    preferences:
+      show:
+        investment_contributions_as_spending: Investieren als Ausgaben zählen
+        investment_contributions_as_spending_hint: Auf Anlagekonten überwiesene Gelder zählen als Ausgaben in Budgets, Berichten und dem Cashflow-Diagramm. Deaktivieren Sie die Option, um sie stattdessen als investiert anzuzeigen.
+    securities:
+      show:
+        disable_mfa_password_label: Bestätigen Sie mit Ihrem Passwort
+        disable_mfa_password_placeholder: Geben Sie Ihr Passwort ein
+        mfa_sso_only: Die Zwei-Faktor-Authentifizierung wird über Ihren Identitätsanbieter verwaltet.
+    settings_nav:
+      classifier_label: Klassifikator
+    hostings:
+      assistant_settings:
+        type_mcp_only: Keine in der App (verbinden Sie Ihren eigenen Agenten über MCP)
+        mcp_only_help: Der In-App-Assistent ist für alle in diesem Haushalt deaktiviert. Rechnungen AI-Verknüpfungen und AI-geschriebener Einsichtstext hören ebenfalls auf. MCP und Hintergrundkategorisierung bleiben verfügbar; Verbinden Sie externe Agenten unter Einstellungen > MCP.
+      chimnie_settings:
+        title: Chimnie
+        description: Geben Sie Ihren Chimnie API-Schlüssel ein, um britische Wohnimmobilien anhand ihres UPRN zu bewerten. Erstellen Sie einen kostenlosen Schlüssel unter Dashboard.chimnie.com (für die Anmeldung ist eine geschäftliche oder benutzerdefinierte Domain-E-Mail-Adresse erforderlich; Gmail, Outlook und ähnliche Adressen werden nicht akzeptiert). UPRN-Bewertungen sind kostenlos und werden monatlich aktualisiert. Sure begrenzt sie auf 1.000 Anfragen pro Monat, was Sie mit der Umgebungsvariablen CHIMNIE_MAX_REQUESTS_PER_MONTH ändern können.
+        env_configured_message: Erfolgreich über die Umgebungsvariable CHIMNIE_API_KEY konfiguriert.
+        label: API Schlüssel
+        placeholder: Geben Sie hier Ihren Chimnie API-Schlüssel ein.
+        usage: "%{used} von %{limit} monatliche Anfragen verwendet"
+  shared:
+    money_field:
+      above_max: Geben Sie einen Betrag von höchstens %{max} ein.
+      below_min: Geben Sie einen Betrag von mindestens %{min} ein.
+      invalid_amount: Geben Sie einen gültigen Betrag oder Ausdruck ein.
+      operator_add: Hinzufügen
+      operator_subtract: Subtrahieren
+      operator_multiply: Multiplizieren
+      operator_divide: Teilen
+  breadcrumbs:
+    classifier: Klassifikator
+  activerecord:
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              missing_exchange_rate: Für eines der Konten dieses Ziels ist noch kein Wechselkurs verfügbar, daher kann es nicht abgeschlossen werden.
+        rule/condition:
+          attributes:
+            value:
+              regex_invalid: ist kein gültiger regulärer Ausdruck
+              regex_too_complex: ist zu komplex, um sicher ausgeführt zu werden.
+              regex_too_long: ist zu lang (maximal %{count} Zeichen)
+              regex_backreference: kann keine Rückverweise (\1 bis \9) verwenden.
+  rules:
+    condition_filters:
+      operators:
+        starts_with: Beginnt mit
+        ends_with: endet mit
+        matches_regex: Entspricht dem regulären Ausdruck
+    notification_baseline_timed_out: Diese Regel ist immer noch deaktiviert. Es hat zu lange gedauert, zu prüfen, welche Transaktionen bereits übereinstimmen, und ohne diese Prüfung würden alle per E-Mail verschickt. Vereinfachen Sie die Bedingungen und schalten Sie es dann wieder ein.
+    classifier_rules:
+      category_classifier: Kategorieklassifikator
+      merchant_matcher: Händler-Matcher
+  binance_items:
+    select_accounts:
+      connection_unavailable: Diese Binance-Verbindung ist nicht verfügbar. Wählen Sie einen in den Anbietereinstellungen aus.
+      no_credentials_configured: Verbinden Sie Binance in den Anbietereinstellungen, bevor Sie seine Konten hinzufügen.
+      select_connection: Wählen Sie in den Anbietereinstellungen eine Binance-Verbindung aus.
+  reports:
+    spending_vs_normal:
+      title: Ausgaben im Vergleich zu normalen Ausgaben
+      summary_html: "%{total} in diesem Zeitraum ausgegeben. Normal für einen so langen Zeitraum ist %{normal}, basierend auf %{baseline_start} bis %{baseline_end}."
+      summary_so_far_html: Bisher ausgegebene %{total}. Normal für diese vielen Tage ist %{normal}, basierend auf %{baseline_start} bis %{baseline_end}.
+      no_history_html: "%{total} in diesem Zeitraum ausgegeben. Es gibt noch nicht genügend Vorgeschichte, um sagen zu können, was normal ist."
+      no_history_short: Noch nicht genügend frühere Historie zum Vergleich.
+      no_spending: Keine Ausgaben in diesem Zeitraum.
+      no_changes: Die Ausgaben entsprachen in jeder Kategorie dem Normalwert.
+      treemap_title: Wohin es ging
+      changes_title: Was hat sich geändert?
+      direct: "%{category} (keine Unterkategorie)"
+      tooltip:
+        path: "%{parent} › %{category}"
+        total: "%{category}: %{amount}"
+        normal: 'Normal: %{amount}'
+        more: "%{amount} mehr als normal (%{percent})"
+        less: "%{amount} weniger als normal (%{percent})"
+        more_no_percent: "%{amount} mehr als normal"
+        less_no_percent: "%{amount} kleiner als normal"
+        no_normal: Kein früherer Verlauf zum Vergleich mit
+        open: Wählen Sie diese Option, um diese Transaktionen anzuzeigen
+      legend:
+        less: 50–100 % weniger
+        slightly_less: 15–50 % weniger
+        normal: Ungefähr normal
+        slightly_more: 15–50 % mehr
+        more: 50–100 % mehr
+        much_more: 100 %+ mehr
+  onchain:
+    chains:
+      cosmos: Cosmos Nabe
+      polkadot: Polkadot
+  providers:
+    property_valuation:
+      missing_fields_gb: Bitte geben Sie einen Namen, die Straße, die Postleitzahl und die Eigenschaft UPRN der Unterkunft an.
+      entry_name: "%{provider} Bewertung"
+    chimnie:
+      errors:
+        invalid_uprn: Ein UPRN ist eine bis zu 12-stellige Zahl. Bitte überprüfen Sie UPRN und versuchen Sie es erneut.
+        no_estimate: Chimnie verfügt über keine Wertschätzung für diese Immobilie.
+        not_found: Chimnie konnte mit diesem UPRN keine Eigenschaft finden.
+        unsupported_property: Chimnie bewertet nur Wohnimmobilien; Dieses UPRN gehört zu einer gewerblich genutzten oder gemischt genutzten Immobilie.
+        unauthorized: Chimnie hat den Schlüssel API abgelehnt. Überprüfen Sie den Schlüssel unter Einstellungen → Selbsthosting.
+        insufficient_balance: Ihr Chimnie-Kontostand ist für diese Anfrage zu niedrig.
+  recurring_transactions:
+    allocator:
+      entry_exhausted: Der Gesamtbetrag dieser Transaktion wird bereits auf andere fällige Zahlungen angewendet
+      already_allocated: Diese Transaktion wurde bereits auf diese Rechnung angewendet
+    new:
+      covered_title: Diese Transaktion gehört bereits zu einer Rechnung
+      covered_body: "%{name} verfolgt diese Zahlung bereits, sodass eine neue Rechnung sie doppelt zählen würde."
+      covered_open: Offene Rechnung
+      covered_suggested_title: Sure hat für diese Zahlung bereits eine Rechnung vorgeschlagen
+      covered_suggested_body: "%{name} wartet in Ihren Vorschlägen. Bestätigen Sie es, um mit der Nachverfolgung zu beginnen, damit eine neue Rechnung diese Zahlung nicht doppelt zählt. Passende Zahlungen werden automatisch verknüpft, und Sie können diese von der Rechnung aus verknüpfen."
+      covered_confirm: Rechnung bestätigen
+      covered_create_anyway: Erstellen Sie trotzdem eine separate Rechnung
+      covered_income_title: Diese Einzahlung gehört bereits zu einem Einkommen
+      covered_income_body: "%{name} verfolgt diese Einzahlung bereits, daher würde ein erneutes Hinzufügen dazu führen, dass sie doppelt gezählt wird."
+      covered_income_open: Offenes Einkommen
+      covered_income_suggested_title: Sure hat dieses Einkommen bereits vorgeschlagen
+      covered_income_suggested_body: "%{name} wartet in Ihren Vorschlägen. Fügen Sie es hinzu, um mit der Nachverfolgung zu beginnen, damit diese Einzahlung nicht doppelt gezählt wird. Passende Einzahlungen werden automatisch verknüpft, und Sie können diese aus den Einnahmen verknüpfen."
+      covered_income_confirm: Einkommen hinzufügen
+      covered_income_create_anyway: Fügen Sie trotzdem ein separates Einkommen hinzu
+    create:
+      amount_too_precise: Verwenden Sie höchstens 4 Dezimalstellen
+      category_invalid: Wählen Sie eine Ihrer Kategorien aus oder lassen Sie das Feld leer
+    already_covered: Diese Transaktion entspricht bereits einer wiederkehrenden Transaktion
+    suggested_income:
+      title: Mögliches neues Einkommen
+      confirm: Einkommen hinzufügen
+      dismiss: Kein Einkommen
+    confirmed_income: Einnahmen, die Ihren wiederkehrenden Transaktionen hinzugefügt werden
+  transfers:
+    show:
+      investment_contribution_subtitle: Zählen Sie diese Übertragung als Ausgaben in Budgets und Berichten. Schalten Sie es aus, wenn das Brokerage- oder Kryptokonto das Geld nur in eine andere Währung umwandelt.
+      investment_contribution_title: Investitionsbeitrag
+  transactions:
+    form:
+      no_matching_categories: Keine passenden Kategorien
+    search:
+      filters:
+        attachment: Anhang
+    searches:
+      filters:
+        badge:
+          attachment_with: Mit Aufsatz
+          attachment_without: Ohne Aufsatz
+        attachment_filter:
+          with: Mit Aufsatz
+          without: Ohne Aufsatz
+  admin:
+    users:
+      update:
+        password_disabled: Das Festlegen eines Passworts ist deaktiviert, da sich Benutzer nur mit SSO anmelden können.
+  bills:
+    detail:
+      overview: Übersicht
+      rule_detected: Entspricht Transaktionen mit dem Namen %{name}
+    match:
+      same_transfer: Überweisung auf dasselbe Konto
+    paycheck:
+      bridge_left: "%{amount} nach Rechnungen verlassen"
+      bridge_show_more:
+        one: 1 weitere anzeigen
+        other: Zeige %{count} mehr
+      bridge_allocation_aria: Von %{cash} in Ihren Konten ist %{due} vor Ihrem nächsten Gehaltsscheck fällig und %{left} bleibt übrig.
+      item_overdue: Überfällig
+  budgets:
+    available_cash:
+      currency_warning: "%{currencies}-Salden sind nicht enthalten, da noch kein Wechselkurs zu %{currency} verfügbar ist."
+  categories:
+    locked: Kategorien sind gesperrt. Entsperren Sie sie, um eine neue Kategorie hinzuzufügen.
+    toggle_lock:
+      locked: Kategorien gesperrt
+      unlocked: Kategorien freigeschaltet
+    index:
+      lock_categories: Kategorieerstellung sperren
+      locked_message: Die Kategorieerstellung ist gesperrt. Durch Importe und Banksynchronisierungen können weiterhin Kategorien hinzugefügt werden.
+      unlock_categories: Kategorieerstellung freischalten
+  category:
+    dropdowns:
+      show:
+        assign_error: Die Kategorie wurde erstellt, konnte aber nicht zugewiesen werden. Wählen Sie „Erneut erstellen“, um es erneut zu versuchen.
+        back: Zurück
+        choose_parent: 'Erstellen Sie „%{name}“ unter:'
+        create: Erstellen Sie „%{name}“
+        create_as_subcategory: Als Unterkategorie hinzufügen…
+        create_error: Diese Kategorie konnte nicht erstellt werden. Bitte versuchen Sie es erneut.
+  coinbase_items:
+    select_accounts:
+      connection_unavailable: Diese Coinbase-Verbindung ist nicht verfügbar. Wählen Sie einen in den Anbietereinstellungen aus.
+      no_credentials_configured: Verbinden Sie Coinbase in den Anbietereinstellungen, bevor Sie seine Wallets hinzufügen.
+      select_connection: Wählen Sie in den Anbietereinstellungen eine Coinbase-Verbindung aus.
+  credit_cards:
+    due:
+      in_days:
+        zero: Heute fällig
+        one: Fällig morgen
+        other: Fällig in %{count} Tagen
+      overdue:
+        one: Gestern fällig
+        other: "%{count} Tage überfällig"
+    form:
+      due_day: Fälligkeitstag der Zahlung
+      statement_close_day: "-Anweisung schließt am"
+      statement_cycle_description: Der Tag des Monats, an dem Ihr Kontoauszug endet und an dem die Zahlung fällig ist. Wenn diese festgelegt sind, zeigt die Registerkarte „Übersicht“, wozu Ihre letzte Aussage kam und was auf die nächste aufbaut. Eine verknüpfte Karte füllt diese automatisch aus und behält, was Sie manuell eingestellt haben.
+      sophtron_balance_sign_auto: Automatik
+      sophtron_balance_sign_credit: Kredit (Bank schuldet Ihnen)
+      sophtron_balance_sign_debt: Schulden (Sie schulden der Bank)
+      sophtron_balance_sign_description: Verwenden Sie eine Außerkraftsetzung nur, wenn Sophtron ein mehrdeutiges Zeichen meldet. Die Funktion „Automatisch“ negiert weiterhin Kreditkartenguthaben.
+      sophtron_balance_sign_label: Sophtron Saldo bedeutet
+    tabs:
+      overview:
+        above_minimum: Diese Anweisung belief sich auf %{balance}, also über dem Minimum von %{minimum}. Wenn Sie nur den Mindestbetrag bezahlen, verbleibt zu diesem effektiven Jahreszins das Guthaben auf der Karte.
+        apr: APR
+        closes_on: Nächste Anweisung schließt %{date}
+        credit_toward_next: Gutschrift für die nächste Anweisung
+        due_on: Fällig %{date}
+        edit_card_details: Kartendetails bearbeiten
+        since_last_statement: Seit der letzten Anweisung
+        statement_balance: Kontoauszug
+        multi_currency_unavailable: Diese Anweisung addiert Buchungen, die in mehr als einer Währung erfasst wurden, und kann hier nicht summiert werden, ohne dass für jede Währung ein Wechselkurs angegeben wird. Die Salden bleiben leer und werden nicht geschätzt.
+        no_cycle_description: Legen Sie den Tag fest, an dem Ihr Kontoauszug geschlossen wird, und den Tag, an dem die Zahlung fällig ist. Auf dieser Registerkarte wird angezeigt, wie hoch Ihr letzter Kontoauszug war und was auf den nächsten Kontoauszug aufbaut. Eine verknüpfte Karte füllt diese normalerweise für Sie aus.
+        no_cycle_title: Kein Anweisungszyklus gesetzt
+        unknown: Unbekannt
+    update:
+      sophtron_balance_sign_error: Die Bedeutung des Kontostands Sophtron konnte nicht angewendet werden. Ihre vorherige Einstellung wurde beibehalten. Bitte versuchen Sie es erneut.
+  demo_family_refresh_mailer:
+    completed:
+      subject: Aktualisierung der Demo-Familie abgeschlossen
+      activity_heading: Aktivität während dieses Zeitraums
+      sessions_label: Eindeutige Anmeldesitzungen für die vorherige Demo-Familie
+      families_label: Neue Familienkonten erstellt
+      period_heading: Berichtszeitraum (UTC)
+      from_label: 'Von:'
+      to_label: 'An:'
+      time_format: "%b %-d, %Y um %H:%M:%S UTC"
+      family_heading: Vorherige Demo-Familie
+      family_not_found: Nicht gefunden
+      id_label: 'ID:'
+  goals:
+    currency_warning:
+      title: Einige Salden werden nicht gezählt
+      body:
+        one: Es ist noch kein Wechselkurs %{from} → %{to} verfügbar, daher werden %{from}-Salden in dieser Summe nicht berücksichtigt.
+        other: Es sind noch keine Wechselkurse von %{from} zu %{to} verfügbar, daher werden diese Salden in dieser Summe nicht berücksichtigt.
+      settings_link: Wechselkursanbietereinstellungen
+    consume:
+      goal_currency_hint: Geben Sie den Betrag in %{currency} ein. Bei einem Konto in einer anderen Währung wird der Betrag zum aktuellen Kurs umgerechnet, bevor er von der Zweckbindung dieses Kontos abgebucht wird.
+      errors:
+        missing_exchange_rate: Für die Währung dieses Kontos ist noch kein Wechselkurs verfügbar, daher können diese Ausgaben nicht erfasst werden.
+    show:
+      funding_accounts:
+        converted: "≈ %{amount}"
+        rate_unavailable: Noch kein Wechselkurs, daher wird dieses Konto nicht gezählt.
+    goal_card:
+      partial_total: Einige Salden werden nicht gezählt (noch kein Wechselkurs)
+    form:
+      earmark:
+        converted: Diese Zweckbindung ≈ {amount}.
+      fields:
+        currency_conversion_hint: Konten können unterschiedliche Währungen verwenden. Summen werden in %{currency} umgerechnet; Kontovormerkungen bleiben in der Währung jedes Kontos.
+  imports:
+    create:
+      missing_upload: Wir haben Ihre Datei nicht erhalten. Bitte versuchen Sie es erneut hochzuladen.
+  mfa:
+    local_password_required: Zwei-Faktor-Authentifizierung erfordert ein lokales Passwort. Ihre wird über Ihren Identitätsanbieter verwaltet.
+    create:
+      invalid_password: Falsches Passwort. Bitte versuchen Sie es erneut.
+    disable:
+      invalid_password: Falsches Passwort. Bitte versuchen Sie es erneut.
+    new:
+      password_label: Bestätigen Sie mit Ihrem Passwort
+      password_placeholder: Geben Sie Ihr Passwort ein
+  pages:
+    dashboard:
+      customize:
+        start: Anpassen
+        done: Fertig
+        hide: Ausblenden %{title}
+        hidden_title: Versteckte Widgets
+        hidden_description: Fügen Sie ein Widget wieder zum Dashboard hinzu.
+        none_hidden: Jedes Widget wird angezeigt. Verstecke einen mit seinem Augenknopf.
+        all_hidden_title: Jedes Widget ist ausgeblendet
+        all_hidden_description: Passen Sie das Dashboard an, um Widgets wieder hinzuzufügen.
+      cashflow_preview:
+        node_labels:
+          invested: Investiert
+        group_by_label: Vorbeiströmende anzeigen
+        group_by_category: Kategorie
+        group_by_account: Konto
+        sort_label: Sortierflüsse
+        sort_auto: Auto
+        sort_ascending: Kleinster zuerst
+        sort_descending: Größter zuerst
+      spending_trend:
+        filter_categories: Filterkategorien (%{count})
+        filter_categories_all: Alle Kategorien
+        search_categories: Kategorien durchsuchen
+        apply: Anwenden
+  plaid_items:
+    auto_link_opener:
+      create_failed: Wir konnten nicht bestätigen, dass diese Verbindung hinzugefügt wurde. Laden Sie die Seite neu, um sie zu überprüfen, bevor Sie es erneut versuchen.
+    create:
+      already_connected: Sie haben bereits eine Verbindung für diese Institution, daher wurde diese nicht hinzugefügt.
+      exchange_failed: Wir konnten diese Verbindung nicht hinzufügen. Versuchen Sie es erneut. Wenn das Problem weiterhin besteht, überprüfen Sie die Serverprotokolle.
+      token_expired: Diese Verbindung ist abgelaufen, bevor sie hinzugefügt wurde. Verbinden Sie die Einrichtung erneut.
+    duplicate_warning:
+      close: Schließen
+      confirm: Bestätigen Sie diese Verbindung
+      connected_by: Verbunden durch %{name}
+      eu_no_add_accounts: Plaid unterstützt das Hinzufügen von Konten zu einer bestehenden EU-Verbindung nicht. Um zu ändern, welche Konten verbunden sind, entfernen Sie dieses und fügen Sie es erneut hinzu.
+      linked_on: Verknüpft %{date}
+      manage_connection: Gehen Sie zu Konten
+      mask: "****%{mask}"
+      no_accounts: Es wurden noch keine Konten über diese Verbindung synchronisiert.
+      overlap:
+        all_connected:
+          one: Das Konto, das Sie hinzuzufügen versuchten, ist bereits verbunden, sodass durch ein erneutes Hinzufügen nur ein Duplikat erstellt würde.
+          other: Die %{count}-Konten, die Sie hinzuzufügen versuchten, sind alle bereits verbunden, sodass durch ein erneutes Hinzufügen nur Duplikate entstehen würden.
+        different_login: Um einen anderen %{institution}-Anmeldenamen zu verbinden, wählen Sie erneut „Neues Konto“ und melden Sie sich mit diesem Anmeldenamen über Plaid an.
+        more_accounts: Um weitere Konten zu dieser Verbindung hinzuzufügen, schließen Sie diese und wählen Sie Konten hinzufügen für die Verbindung %{institution}.
+        others_connected:
+          one: Sure verfügt bereits über die Verbindung von %{name} über dieses Konto, sodass durch das Hinzufügen Ihres Kontos nur ein Duplikat erstellt würde.
+          other: Sure verfügt bereits über diese Konten über die Verbindung von %{name}, sodass durch das Hinzufügen Ihres Kontos nur Duplikate entstehen würden.
+        others_connected_several:
+          one: Sure verfügt bereits über die Verbindungen anderer Mitglieder über dieses Konto, sodass durch das Hinzufügen Ihres Kontos nur ein Duplikat erstellt würde.
+          other: Sure verfügt bereits über diese Konten über die Verbindungen anderer Mitglieder, sodass durch das Hinzufügen Ihres Kontos nur Duplikate entstehen würden.
+        none_connected: Keines der Konten, die Sie hinzuzufügen versuchten, ist bisher verbunden, daher handelt es sich wahrscheinlich um eine andere Anmeldung. Das Hinzufügen zählt nur als eine weitere Plaid-Verbindung.
+        some_connected:
+          connected:
+            one: Die andere Verbindung ist bereits verbunden, daher würde das Hinzufügen dieser Verbindung sie duplizieren und als weitere Plaid-Verbindung zählen.
+            other: Die anderen %{count} sind bereits verbunden, daher würde das Hinzufügen dieser Verbindung sie duplizieren und als eine weitere Plaid-Verbindung zählen.
+          unconnected:
+            one: 'Ein Konto, das Sie hinzufügen wollten, ist noch nicht verbunden:'
+            other: "%{count} Konten, die Sie hinzufügen wollten, sind noch nicht verbunden:"
+        unknown:
+          one: Diese Konten können nicht mit Ihrer bestehenden Verbindung abgeglichen werden. Wenn es sich um dieselben Konten handelt, würde das Hinzufügen dieser Verbindung sie duplizieren und als eine weitere Plaid-Verbindung zählen.
+          other: Diese Konten können nicht mit Ihren bestehenden Verbindungen verglichen werden. Wenn es sich um dieselben Konten handelt, würde das Hinzufügen dieser Verbindung sie duplizieren und als eine weitere Plaid-Verbindung zählen.
+      title:
+        one: Sie haben bereits eine Verbindung für diese Institution
+        other: Sie haben bereits %{count} Verbindungen für diese Institution
+      title_all_connected: Sie haben diese Verbindung bereits hergestellt
+      title_others_connected:
+        one: Dieses Konto ist bereits verbunden
+        other: Diese Konten sind bereits verbunden
+      update_existing: Bestehende Verbindung aktualisieren
+  plans:
+    goals_card:
+      currency_warning:
+        one: 1 Tor lässt %{currencies}-Salden außer Acht (noch kein Wechselkurs).
+        other: "%{count}-Ziele lassen %{currencies}-Salden außer Acht (noch kein Wechselkurs)."
+  recurring_allocations:
+    entry_exhausted: Der Gesamtbetrag dieser Transaktion wird bereits auf andere fällige Zahlungen angewendet
+  valuations:
+    names:
+      current_account_value: Aktueller Kontowert
+      current_balance: Aktueller Kontostand
+      current_loan_balance: Aktueller Kreditsaldo
+      current_market_value: Aktueller Marktwert
+      manual_balance_update: Manuelle Aktualisierung des Kontostands
+      manual_principal_update: Manuelle Hauptaktualisierung
+      manual_value_update: Manuelle Wertaktualisierung
+      opening_account_value: Eröffnungskontowert
+      opening_balance: Eröffnungssaldo
+      original_principal: Ursprünglicher Auftraggeber
+      original_purchase_price: Ursprünglicher Kaufpreis

@@ -14,7 +14,7 @@ class ReleaseHighlightsSystemTest < ApplicationSystemTestCase
       published_at: Date.current,
       body: "<p>Hotfix release notes</p>"
     )
-    Provider::Registry.stubs(:get_provider).with(:github).returns(github_provider)
+    Provider::Registry.stubs(:github).returns(github_provider)
     sign_in @user
   end
 

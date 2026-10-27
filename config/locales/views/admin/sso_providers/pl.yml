@@ -31,7 +31,11 @@ pl:
         default_role_label: Domyślna rola dla nowych użytkowników
         enabled_help: Użytkownicy mogą logować się przez tego dostawcę, gdy jest włączony
         enabled_label: Włącz tego dostawcę
-        errors_title: 'Liczba błędów uniemożliwiających zapisanie tego dostawcy: %{count}'
+        errors_title:
+          many: "Liczba błędów uniemożliwiających zapisanie tego dostawcy: %{count}"
+          one: "Liczba błędów uniemożliwiających zapisanie tego dostawcy: %{count}"
+          few: "Liczba błędów uniemożliwiających zapisanie tego dostawcy: %{count}"
+          other: "Liczba błędów uniemożliwiających zapisanie tego dostawcy: %{count}"
         groups_help: Lista nazw grup IdP oddzielona przecinkami. Użyj *, aby pasować
           do wszystkich grup.
         guest_groups: Grupy Gościa

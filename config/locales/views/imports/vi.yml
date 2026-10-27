@@ -510,7 +510,8 @@ vi:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Xử lý thất bại: %{error}"
       ready_for_review_title: Sẵn sàng xem xét
-      ready_for_review_description: "%{count} giao dịch trên sao kê chưa có trong tài khoản này. Xem lại và xác nhận nhập để thêm vào."
+      ready_for_review_description:
+        other: "%{count} giao dịch trên sao kê chưa có trong tài khoản này. Xem lại và xác nhận nhập để thêm vào."
       transactions_extracted: Giao dịch đã trích xuất
       transactions_extracted_count:
         one: "%{count} giao dịch"

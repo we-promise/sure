@@ -105,7 +105,9 @@ hu:
         submit: Szolgáltató mentése
         create_provider: Szolgáltató létrehozása
         update_provider: Szolgáltató frissítése
-        errors_title: "%{count} hiba akadályozta meg a szolgáltató mentését:"
+        errors_title:
+          other: "%{count} hiba akadályozta meg a szolgáltató mentését:"
+          one: "%{count} hiba akadályozta meg a szolgáltató mentését:"
         provisioning_title: Felhasználói kiépítés
         default_role_label: Alapértelmezett szerepkör az új felhasználókhoz
         default_role_help: >-

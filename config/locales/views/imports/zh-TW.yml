@@ -493,7 +493,8 @@ zh-TW:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: 處理失敗：%{error}
       ready_for_review_title: 可以開始檢視了
-      ready_for_review_description: 對帳單中有 %{count} 筆交易尚未存在於此帳戶。請審閱後確認匯入，將它們加入帳戶。
+      ready_for_review_description:
+        other: "對帳單中有 %{count} 筆交易尚未存在於此帳戶。請審閱後確認匯入，將它們加入帳戶。"
       transactions_extracted: 擷取到的交易
       transactions_extracted_count:
         one: "%{count} 筆交易"
