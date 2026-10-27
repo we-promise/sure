@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+require "json"
+require_relative "../lib/release_version"
+
+root = File.expand_path("..", __dir__)
+release = ReleaseVersion.new(File.read(File.join(root, ".sure-version")).strip,
+  aliases: JSON.parse(File.read(File.join(root, "config/release_aliases.json"))))
+ref = ENV.fetch("GITHUB_REF")
+tag_push = ENV.fetch("GITHUB_EVENT_NAME") == "push" && ref.start_with?("refs/tags/")
+publish = !tag_push || release.publish_tag?(ref)
+is_release = tag_push && publish
+
+if is_release && release.calver? && release.stable?
+  branch = File.read(File.join(root, ".sure-release-branch")).strip
+  unless branch.match?(/\Av[0-9]+\.[0-9]+\.[0-9]+-release-branch\z/)
+    abort "Invalid release branch: #{branch}"
+  end
+  # Stable tags must already belong to the maintained release branch. A newer
+  # hotfix date must not silently create a different maintenance line.
+  unless system("git", "merge-base", "--is-ancestor", "HEAD", "refs/remotes/origin/#{branch}")
+    abort "Stable release commit must be on #{branch}"
+  end
+end
+
+values = {
+  "publish" => publish, "release" => is_release, "stable" => release.stable?,
+  "alpha" => release.modifier == "alpha", "calver" => release.calver?,
+  "version" => release.version, "compatibility_version" => release.compatibility_version.to_s,
+  "alias_note" => ("Compatibility alias: `#{release.alias_tag}` (same commit and image)." if release.alias_tag).to_s,
+  "release_name" => [ release.tag, ("compatibility: #{release.alias_tag}" if release.alias_tag) ].compact.join(" — ")
+}
+File.open(ENV.fetch("GITHUB_OUTPUT"), "a") do |file|
+  values.each { |key, value| file.puts "#{key}=#{value}" }
+  file.puts "image_tags<<RELEASE_TAGS"
+  if is_release
+    release.image_versions.each { |version| file.puts "type=raw,value=#{version}" }
+  elsif ENV.fetch("GITHUB_EVENT_NAME") == "schedule"
+    file.puts "type=sha,format=long", "type=schedule,pattern=nightly", "type=schedule,pattern=nightly-{{date 'ddd'}}"
+  else
+    file.puts "type=sha,format=long"
+  end
+  file.puts "RELEASE_TAGS"
+end

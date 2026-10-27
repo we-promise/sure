@@ -44,14 +44,63 @@ permissions:
   packages: write
 
 jobs:
+  prepare:
+    name: Resolve canonical release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      publish: ${{ steps.release.outputs.publish }}
+      release: ${{ steps.release.outputs.release }}
+      stable: ${{ steps.release.outputs.stable }}
+      alpha: ${{ steps.release.outputs.alpha }}
+      calver: ${{ steps.release.outputs.calver }}
+      version: ${{ steps.release.outputs.version }}
+      compatibility_version: ${{ steps.release.outputs.compatibility_version }}
+      release_name: ${{ steps.release.outputs.release_name }}
+      alias_note: ${{ steps.release.outputs.alias_note }}
+      image_tags: ${{ steps.release.outputs.image_tags }}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
+      - uses: ruby/setup-ruby@97ecb7b512899eb71ab1bf2310a624c6f1589ac6 # v1.308.0
+        with:
+          ruby-version: .ruby-version
+      - name: Resolve release metadata and verify stable branch
+        id: release
+        run: bin/release-metadata
+
   ci:
+    needs: [prepare]
+    if: needs.prepare.outputs.publish == 'true'
     uses: ./.github/workflows/ci.yml
     with:
       require_js_dependency_audit: false
 
+  compatibility_tag:
+    name: Ensure immutable compatibility tag
+    needs: [prepare, ci]
+    if: needs.prepare.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - name: Create or verify alias at the canonical commit
+        env:
+          COMPATIBILITY_VERSION: ${{ needs.prepare.outputs.compatibility_version }}
+          IS_RELEASE: ${{ needs.prepare.outputs.release }}
+        run: |
+          if [[ "$IS_RELEASE" == "true" && -n "$COMPATIBILITY_VERSION" ]]; then
+            bin/release-alias "$COMPATIBILITY_VERSION"
+          fi
+
   build:
     name: Build Docker image
-    needs: [ ci ]
+    needs: [prepare, ci, compatibility_tag]
 
     strategy:
       fail-fast: false
@@ -90,31 +139,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure image tags
-        id: tag_config
-        shell: bash
-        run: |
-          BASE_CONFIG="type=sha,format=long"
-          if [[ $GITHUB_EVENT_NAME == "schedule" ]]; then
-            BASE_CONFIG+=$'\n'"type=schedule,pattern=nightly"
-            BASE_CONFIG+=$'\n'"type=schedule,pattern=nightly-{{date 'ddd'}}"
-          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            TAG_NAME="${GITHUB_REF#refs/tags/}"
-            if [[ "$TAG_NAME" == v* ]]; then
-              BASE_CONFIG="type=semver,pattern={{version}}"
-              if [[ "$TAG_NAME" == v*-alpha* ]]; then
-                BASE_CONFIG+=$'\n'"type=raw,value=latest"
-              else
-                BASE_CONFIG+=$'\n'"type=raw,value=stable"
-              fi
-            fi
-          fi
-          {
-            echo 'TAGS_SPEC<<EOF'
-            echo "$BASE_CONFIG"
-            echo EOF
-          } >> $GITHUB_ENV
-
       - name: Get current date (RFC 3339 format)
         id: date
         run: echo "date=$(date -Iseconds)" >> $GITHUB_OUTPUT
@@ -125,7 +149,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: latest=false
-          tags: ${{ env.TAGS_SPEC }}
+          tags: ${{ needs.prepare.outputs.image_tags }}
           labels: |
             org.opencontainers.image.version=${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
@@ -253,8 +277,8 @@ jobs:
 
   deploy_demo:
     name: Deploy alpha to Render demo
-    if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, '-alpha.')
-    needs: [merge]
+    if: needs.prepare.outputs.release == 'true' && needs.prepare.outputs.alpha == 'true'
+    needs: [prepare, merge]
 
     timeout-minutes: 15
     runs-on: 'ubuntu-24.04'
@@ -346,8 +370,8 @@ jobs:
 
   deploy_app:
     name: Deploy stable to Render sure-app
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
-    needs: [merge]
+    if: needs.prepare.outputs.release == 'true' && needs.prepare.outputs.stable == 'true'
+    needs: [prepare, merge]
 
     timeout-minutes: 15
     runs-on: 'ubuntu-24.04'
@@ -444,30 +468,34 @@ jobs:
 
   helm:
     name: Package Helm chart
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [prepare, ci, compatibility_tag]
+    if: needs.prepare.outputs.release == 'true'
     uses: ./.github/workflows/helm-publish.yml
     with:
       chart_version: ${{ github.ref_name }}
       app_version: ${{ github.ref_name }}
       update_gh_pages: true
+      compatibility_version: ${{ needs.prepare.outputs.compatibility_version }}
     secrets: inherit
 
   mobile:
     name: Build Mobile Apps
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [prepare, ci, compatibility_tag]
+    if: needs.prepare.outputs.release == 'true'
     uses: ./.github/workflows/flutter-build.yml
     secrets: inherit
 
   desktop:
     name: Build macOS Desktop App
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [prepare, ci, compatibility_tag]
+    if: needs.prepare.outputs.release == 'true'
     uses: ./.github/workflows/desktop-release.yml
     secrets: inherit
 
   release:
     name: Create GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [merge, mobile, desktop, helm]
+    if: needs.prepare.outputs.release == 'true'
+    needs: [prepare, merge, mobile, desktop, helm]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -556,13 +584,15 @@ jobs:
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
+          name: ${{ needs.prepare.outputs.release_name }}
           draft: false
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          prerelease: ${{ needs.prepare.outputs.stable != 'true' }}
           generate_release_notes: true
           files: |
             ${{ runner.temp }}/release-assets/*
           body: |
+            ${{ needs.prepare.outputs.alias_note }}
+
             ## Mobile Debug Builds
 
             This release includes debug builds of the mobile applications.  Download from the `Assets` area below.
@@ -575,8 +605,8 @@ jobs:
 
   create_release_branch:
     name: Create or update release branch
-    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc')
-    needs: [release]
+    if: needs.prepare.outputs.release == 'true' && needs.prepare.outputs.stable == 'true' && needs.prepare.outputs.calver != 'true'
+    needs: [prepare, release]
     runs-on: ubuntu-latest
 
     permissions:
@@ -606,8 +636,8 @@ jobs:
 
   bump-pre_release-version:
     name: Bump Pre-release Version
-    if: startsWith(github.ref, 'refs/tags/v') && (contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc'))
-    needs: [merge]
+    if: needs.prepare.outputs.release == 'true' && needs.prepare.outputs.stable != 'true' && needs.prepare.outputs.calver != 'true'
+    needs: [prepare, merge]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
