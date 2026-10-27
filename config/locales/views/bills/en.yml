@@ -88,9 +88,12 @@ en:
     summary:
       remaining: "%{amount} remaining"
       paid_headline: "%{amount} paid"
+      received_headline: "%{amount} received"
+      expected_headline: "%{amount} expected"
     add_bill: Add bill
     manage: View
     find_payment: Find payment
+    find_income: Find income
     add_payment: Add payment
     review_match: Review match
     resolve: Resolve
