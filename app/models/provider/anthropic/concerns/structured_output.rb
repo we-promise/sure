@@ -43,6 +43,10 @@ module Provider::Anthropic::Concerns::StructuredOutput
       raw.to_s.to_sym
     end
 
+    def structured_block_input(block)
+      block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
+    end
+
     def structured_block_text(block)
       return unless structured_block_type(block) == :text
 

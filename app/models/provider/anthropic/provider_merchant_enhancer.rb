@@ -110,10 +110,10 @@ class Provider::Anthropic::ProviderMerchantEnhancer
     end
 
     def extract_enhancements(response)
-      tool_use = Array(response.content).find { |block| block_type(block) == :tool_use }
+      tool_use = Array(response.content).find { |block| structured_block_type(block) == :tool_use }
       raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME} (stop_reason: #{response.stop_reason})" unless tool_use
 
-      input = block_input(tool_use)
+      input = structured_block_input(tool_use)
       input = JSON.parse(input) if input.is_a?(String)
       enhanced = input.is_a?(Hash) ? (input["merchants"] || input[:merchants]) : nil
 
@@ -135,14 +135,5 @@ class Provider::Anthropic::ProviderMerchantEnhancer
       str = value.to_s.strip
       return nil if str.empty? || str.casecmp("null").zero?
       str
-    end
-
-    def block_type(block)
-      raw = block.respond_to?(:type) ? block.type : block[:type] || block["type"]
-      raw.to_s.to_sym
-    end
-
-    def block_input(block)
-      block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
     end
 end
