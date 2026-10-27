@@ -23,7 +23,7 @@
         </div>
         <% if investment_metrics[:unrealized_trend] %>
           <p class="text-xl font-semibold privacy-sensitive" style="color: <%= investment_metrics[:unrealized_trend].color %>">
-            <%= format_money(Money.new(investment_metrics[:unrealized_trend].value, Current.family.currency)) %>
+            <%= format_money(Money.new(investment_metrics[:unrealized_trend].value, @report_currency)) %>
             (<%= investment_metrics[:unrealized_trend].percent_formatted %>)
           </p>
         <% else %>
@@ -39,7 +39,7 @@
         </div>
         <% if investment_metrics[:period_return_trend] %>
           <p class="text-xl font-semibold privacy-sensitive" style="color: <%= investment_metrics[:period_return_trend].color %>">
-            <%= format_money(Money.new(investment_metrics[:period_return_trend].value, Current.family.currency)) %>
+            <%= format_money(Money.new(investment_metrics[:period_return_trend].value, @report_currency)) %>
             (<%= investment_metrics[:period_return_trend].percent_formatted %>)
           </p>
         <% else %>
@@ -181,7 +181,7 @@
                         <div class="flex justify-between pl-2">
                           <span class="text-primary"><%= holding.ticker %></span>
                           <span class="<%= holding.trend ? "" : "text-secondary" %>" style="<%= holding.trend ? "color: #{holding.trend.color}" : "" %>">
-                            <%= holding.trend ? format_money(Money.new(holding.trend.value, Current.family.currency)) : t("reports.investment_performance.no_data") %>
+                            <%= holding.trend ? format_money(Money.new(holding.trend.value, @report_currency)) : t("reports.investment_performance.no_data") %>
                           </span>
                         </div>
                       <% end %>
@@ -196,7 +196,7 @@
                       <p class="text-secondary font-medium"><%= t("reports.investment_performance.sell_trades") %></p>
                       <% data[:sell_trades].first(5).each do |trade| %>
                         <% gain = trade.realized_gain_loss %>
-                        <%# Converted in the controller, at the trade's own date: gain.value is carried in the currency the position is held in, and labelling it family currency here was reporting a EUR figure as USD. %>
+                        <%# Converted in the controller, at the trade's own date: gain.value is carried in the currency the position is held in. %>
                         <% amount = data[:realized_gain_by_trade][trade.id] %>
                         <div class="flex justify-between pl-2" data-testid="realized-gain-line">
                           <span class="text-primary"><%= trade.security.ticker %></span>

@@ -17,15 +17,36 @@
         </div>
       <% end %>
 
-      <%# Print Report Button %>
-        <%= link_to print_reports_path(period_type: @period_type, start_date: @start_date, end_date: @end_date),
-                  target: "_blank",
-                  rel: "noopener",
-                  aria: { label: t("reports.index.print_report") },
-                  class: "font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary bg-transparent hover:bg-surface-hover" do %>
-        <%= icon("printer", size: "sm") %>
-        <span class="hidden sm:inline"><%= t("reports.index.print_report") %></span>
-      <% end %>
+      <div class="flex items-center gap-2">
+        <%# Display currency: re-renders the page with every figure converted to the chosen currency %>
+        <% if @report_currency_options.size > 1 %>
+          <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form", turbo_action: "advance" }, class: "w-40 sm:w-64" do |f| %>
+            <% request.query_parameters.except("currency").each do |name, value| %>
+              <%= hidden_field_tag name, value if value.is_a?(String) %>
+            <% end %>
+            <%= render DS::Select.new(
+                  form: f,
+                  method: :currency,
+                  items: @report_currency_options.map { |code| { value: code, label: currency_label(code) } },
+                  selected: @report_currency,
+                  searchable: true,
+                  menu_placement: :down,
+                  label: t("reports.index.currency.label"),
+                  html_options: { data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } }
+                ) %>
+          <% end %>
+        <% end %>
+
+        <%# Print Report Button %>
+        <%= link_to print_reports_path(period_type: @period_type, start_date: @start_date, end_date: @end_date, **report_currency_params),
+                    target: "_blank",
+                    rel: "noopener",
+                    aria: { label: t("reports.index.print_report") },
+                    class: "font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary bg-transparent hover:bg-surface-hover" do %>
+          <%= icon("printer", size: "sm") %>
+          <span class="hidden sm:inline"><%= t("reports.index.print_report") %></span>
+        <% end %>
+      </div>
     </header>
 
     <%# Period Navigation Tabs %>
@@ -34,7 +55,7 @@
         <% %i[monthly quarterly ytd last_6_months custom].each do |ptype| %>
           <% sc.with_segment(t("reports.index.periods.#{ptype}"),
                active: @period_type == ptype,
-               href: reports_path(period_type: ptype),
+               href: reports_path(period_type: ptype, **report_currency_params),
                class: "whitespace-nowrap") %>
         <% end %>
       <% end %>
@@ -44,6 +65,9 @@
     <% if @period_type == :custom %>
       <%= form_with url: reports_path, method: :get, data: { controller: "auto-submit-form" }, class: "flex items-center gap-3 bg-surface-inset p-3 rounded-lg" do |f| %>
         <%= f.hidden_field :period_type, value: :custom %>
+        <% report_currency_params.each do |name, value| %>
+          <%= f.hidden_field name, value: value %>
+        <% end %>
 
         <div class="flex items-center gap-2">
           <label class="text-sm font-medium text-secondary"><%= t("reports.index.date_range.from") %></label>
@@ -74,7 +98,7 @@
               <%= render DS::Link.new(
                 variant: "icon",
                 icon: "chevron-left",
-                href: reports_path(period_type: @period_type, start_date: @nav[:prev_start], end_date: @nav[:prev_end]),
+                href: reports_path(period_type: @period_type, start_date: @nav[:prev_start], end_date: @nav[:prev_end], **report_currency_params),
                 aria: { label: t("reports.index.previous_period"), keyshortcuts: "ArrowLeft" },
                 data: { controller: "hotkey", hotkey: "ArrowLeft" },
               ) %>
@@ -91,7 +115,7 @@
                 <%= render DS::Link.new(
                   variant: "icon",
                   icon: "chevron-right",
-                  href: reports_path(period_type: @period_type, start_date: @nav[:next_start], end_date: @nav[:next_end]),
+                  href: reports_path(period_type: @period_type, start_date: @nav[:next_start], end_date: @nav[:next_end], **report_currency_params),
                   aria: { label: t("reports.index.next_period"), keyshortcuts: "ArrowRight" },
                   data: { controller: "hotkey", hotkey: "ArrowRight" },
                 ) %>
@@ -119,7 +143,7 @@
           <%= render DS::Link.new(
             text: t("reports.index.today"),
             variant: "outline",
-            href: reports_path(period_type: @period_type),
+            href: reports_path(period_type: @period_type, **report_currency_params),
           ) %>
         </div>
       </div>

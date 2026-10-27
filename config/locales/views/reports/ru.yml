@@ -32,6 +32,8 @@ ru:
       then_use: Затем используйте полный URL с =IMPORTDATA() в Google Sheets.
       title_no_key: "Требуется API-ключ"
     index:
+      currency:
+        label: Валюта
       date_range:
         from: С
         to: По

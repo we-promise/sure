@@ -176,6 +176,20 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal assets.total, assets.account_groups.sum(&:total)
   end
 
+  test "converts balances into a requested currency at today's rate" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+    create_account(balance: 1000, accountable: Depository.new)
+    create_account(balance: 300, currency: "EUR", accountable: Depository.new)
+    create_account(balance: 200, accountable: CreditCard.new)
+
+    balance_sheet = BalanceSheet.new(@family, currency: "EUR")
+
+    assert_equal "EUR", balance_sheet.currency
+    assert_equal 500 + 300, balance_sheet.assets.total
+    assert_equal 100, balance_sheet.liabilities.total
+    assert_equal Money.new(700, "EUR"), balance_sheet.net_worth_money
+  end
+
   test "calculates asset group totals" do
     create_account(balance: 1000, accountable: Depository.new)
     create_account(balance: 2000, accountable: Depository.new)

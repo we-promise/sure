@@ -156,9 +156,9 @@
           <% @trends_data.each do |trend| %>
             <tr class="<%= trend[:is_current_month] ? "tufte-highlight" : "" %>">
               <td><%= trend[:month] %><%= trend[:is_current_month] ? " *" : "" %></td>
-              <td class="tufte-right tufte-income"><%= Money.new(trend[:income], Current.family.currency).format %></td>
-              <td class="tufte-right tufte-expense"><%= Money.new(trend[:expenses], Current.family.currency).format %></td>
-              <td class="tufte-right <%= trend[:net] >= 0 ? "tufte-income" : "tufte-expense" %>"><%= Money.new(trend[:net], Current.family.currency).format %></td>
+              <td class="tufte-right tufte-income"><%= Money.new(trend[:income], @report_currency).format %></td>
+              <td class="tufte-right tufte-expense"><%= Money.new(trend[:expenses], @report_currency).format %></td>
+              <td class="tufte-right <%= trend[:net] >= 0 ? "tufte-income" : "tufte-expense" %>"><%= Money.new(trend[:net], @report_currency).format %></td>
               <td class="tufte-right">
                 <% month_savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(0) : 0 %>
                 <%= month_savings_rate %>%
@@ -179,9 +179,9 @@
           %>
           <tr>
             <td><%= t("reports.print.trends.average") %></td>
-            <td class="tufte-right tufte-income"><%= Money.new(avg_income, Current.family.currency).format %></td>
-            <td class="tufte-right tufte-expense"><%= Money.new(avg_expenses, Current.family.currency).format %></td>
-            <td class="tufte-right <%= avg_net >= 0 ? "tufte-income" : "tufte-expense" %>"><%= Money.new(avg_net, Current.family.currency).format %></td>
+            <td class="tufte-right tufte-income"><%= Money.new(avg_income, @report_currency).format %></td>
+            <td class="tufte-right tufte-expense"><%= Money.new(avg_expenses, @report_currency).format %></td>
+            <td class="tufte-right <%= avg_net >= 0 ? "tufte-income" : "tufte-expense" %>"><%= Money.new(avg_net, @report_currency).format %></td>
             <td class="tufte-right"><%= overall_savings_rate %>%</td>
           </tr>
         </tfoot>
@@ -210,7 +210,7 @@
           <div class="tufte-metric-card tufte-metric-card-sm">
             <span class="tufte-metric-card-label"><%= t("reports.print.investments.total_return") %></span>
             <span class="tufte-metric-card-value" style="color: <%= @investment_metrics[:unrealized_trend].color %>">
-              <%= @investment_metrics[:unrealized_trend].value >= 0 ? "+" : "" %><%= format_money(Money.new(@investment_metrics[:unrealized_trend].value, Current.family.currency)) %>
+              <%= @investment_metrics[:unrealized_trend].value >= 0 ? "+" : "" %><%= format_money(Money.new(@investment_metrics[:unrealized_trend].value, @report_currency)) %>
             </span>
             <span class="tufte-metric-card-change" style="color: <%= @investment_metrics[:unrealized_trend].color %>">
               <%= @investment_metrics[:unrealized_trend].percent_formatted %>
@@ -221,7 +221,7 @@
           <div class="tufte-metric-card tufte-metric-card-sm">
             <span class="tufte-metric-card-label"><%= t("reports.print.investments.period_return") %></span>
             <span class="tufte-metric-card-value" style="color: <%= @investment_metrics[:period_return_trend].color %>">
-              <%= @investment_metrics[:period_return_trend].value >= 0 ? "+" : "" %><%= format_money(Money.new(@investment_metrics[:period_return_trend].value, Current.family.currency)) %>
+              <%= @investment_metrics[:period_return_trend].value >= 0 ? "+" : "" %><%= format_money(Money.new(@investment_metrics[:period_return_trend].value, @report_currency)) %>
             </span>
             <span class="tufte-metric-card-change" style="color: <%= @investment_metrics[:period_return_trend].color %>">
               <%= @investment_metrics[:period_return_trend].percent_formatted %>
@@ -286,7 +286,7 @@
       <div class="tufte-two-col">
         <% if income_groups.any? %>
           <div>
-            <h3 class="tufte-subsection"><%= t("reports.print.spending.income") %> <span class="tufte-income"><%= Money.new(income_total, Current.family.currency).format %></span></h3>
+            <h3 class="tufte-subsection"><%= t("reports.print.spending.income") %> <span class="tufte-income"><%= Money.new(income_total, @report_currency).format %></span></h3>
             <table class="tufte-table tufte-compact">
               <thead>
                 <tr>
@@ -303,7 +303,7 @@
                       <span class="tufte-dot" style="background: <%= group[:category_color] %>"></span>
                       <%= group[:category_name] %>
                     </td>
-                    <td class="tufte-right"><%= Money.new(group[:total], Current.family.currency).format %></td>
+                    <td class="tufte-right"><%= Money.new(group[:total], @report_currency).format %></td>
                     <td class="tufte-right tufte-muted"><%= percentage %>%</td>
                   </tr>
                 <% end %>
@@ -321,7 +321,7 @@
 
         <% if expense_groups.any? %>
           <div>
-            <h3 class="tufte-subsection"><%= t("reports.print.spending.expenses") %> <span class="tufte-expense"><%= Money.new(expense_total, Current.family.currency).format %></span></h3>
+            <h3 class="tufte-subsection"><%= t("reports.print.spending.expenses") %> <span class="tufte-expense"><%= Money.new(expense_total, @report_currency).format %></span></h3>
             <table class="tufte-table tufte-compact">
               <thead>
                 <tr>
@@ -338,7 +338,7 @@
                       <span class="tufte-dot" style="background: <%= group[:category_color] %>"></span>
                       <%= group[:category_name] %>
                     </td>
-                    <td class="tufte-right"><%= Money.new(group[:total], Current.family.currency).format %></td>
+                    <td class="tufte-right"><%= Money.new(group[:total], @report_currency).format %></td>
                     <td class="tufte-right tufte-muted"><%= percentage %>%</td>
                   </tr>
                 <% end %>

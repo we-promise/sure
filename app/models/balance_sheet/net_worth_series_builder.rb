@@ -1,7 +1,8 @@
 class BalanceSheet::NetWorthSeriesBuilder
-  def initialize(family, user: nil)
+  def initialize(family, user: nil, currency: nil)
     @family = family
     @user = user
+    @currency = currency.presence || family.currency
   end
 
   def net_worth_series(period: Period.last_30_days)
@@ -9,7 +10,7 @@ class BalanceSheet::NetWorthSeriesBuilder
       builder = Balance::ChartSeriesBuilder.new(
         account_ids: historical_account_ids,
         account_active_until_dates: disabled_account_active_until_dates,
-        currency: family.currency,
+        currency: currency,
         period: period,
         favorable_direction: "up"
       )
@@ -19,7 +20,7 @@ class BalanceSheet::NetWorthSeriesBuilder
   end
 
   private
-    attr_reader :family, :user
+    attr_reader :family, :user, :currency
 
     def historical_accounts
       @historical_accounts ||= historical_account_scope.relation.to_a
@@ -47,6 +48,7 @@ class BalanceSheet::NetWorthSeriesBuilder
       key = [
         "balance_sheet_net_worth_series_historical",
         user&.id,
+        currency,
         shares_version,
         period.start_date,
         period.end_date

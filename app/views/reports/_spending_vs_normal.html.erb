@@ -1,6 +1,6 @@
 <%# locals: (comparison:, start_date:, end_date:) %>
 <%
-  whole = ->(amount) { Money.new(amount, Current.family.currency).format(precision: 0) }
+  whole = ->(amount) { Money.new(amount, @report_currency).format(precision: 0) }
   tree = spending_treemap_nodes(comparison, start_date: start_date, end_date: end_date)
   changes = spending_changes(comparison, start_date: start_date, end_date: end_date)
 %>

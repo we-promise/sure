@@ -8,7 +8,8 @@
         start_date: start_date,
         end_date: end_date,
         sort_by: params[:sort_by],
-        sort_direction: params[:sort_direction]
+        sort_direction: params[:sort_direction],
+        **report_currency_params
       }.compact
     %>
 

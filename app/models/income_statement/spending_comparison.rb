@@ -38,6 +38,8 @@ class IncomeStatement::SpendingComparison
 
   attr_reader :period, :baseline_period
 
+  delegate :currency, to: :income_statement
+
   # The first transaction these totals could count, filtered as
   # IncomeStatement::Totals filters: in the statement's eligible accounts, not
   # excluded, not pending, and not a kind analytics skip (transfers, card
@@ -107,13 +109,13 @@ class IncomeStatement::SpendingComparison
     end
   end
 
-  # Amounts are decimal strings in the family currency; ratio is a decimal
+  # Amounts are decimal strings in the statement currency; ratio is a decimal
   # string too (0.5 = 50% more than normal). A parent's own spending, booked on
   # the parent rather than a subcategory, is listed among its subcategories
   # with the parent's id, so the subcategories add up to the parent.
   def as_json(*)
     {
-      currency: income_statement.family.currency,
+      currency: currency,
       period: period_json(period),
       in_progress: in_progress?,
       baseline_period: baseline_period && period_json(baseline_period),

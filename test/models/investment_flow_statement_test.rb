@@ -41,6 +41,21 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
     assert_includes aggregate_queries.first, '"entries"."account_id" IN (SELECT DISTINCT "accounts"."id"'
   end
 
+  test "period totals convert each flow at its own date's rate into the requested currency" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: period.start_date, rate: 0.5)
+
+    create_flow(label: "Contribution", amount: -200, date: period.start_date)
+    create_flow(label: "Contribution", amount: -30, date: period.start_date, currency: "EUR")
+    create_flow(label: "Withdrawal", amount: 40, date: period.start_date)
+
+    totals = InvestmentFlowStatement.new(@family, user: @user, currency: "EUR").period_totals(period: period)
+
+    assert_equal Money.new(100 + 30, "EUR"), totals.contributions
+    assert_equal Money.new(20, "EUR"), totals.withdrawals
+    assert_equal Money.new(110, "EUR"), totals.net_flow
+  end
+
   test "a matched provider contribution still counts once after resync" do
     family = families(:dylan_family)
     brokerage = Account::ProviderImportAdapter.new(accounts(:investment))
@@ -139,12 +154,12 @@ class InvestmentFlowStatementTest < ActiveSupport::TestCase
       inflow
     end
 
-    def create_flow(label:, amount:, date:)
+    def create_flow(label:, amount:, date:, currency: "USD")
       @account.entries.create!(
         name: label,
         amount: amount,
         date: date,
-        currency: "USD",
+        currency: currency,
         entryable: Transaction.new(
           kind: "standard",
           investment_activity_label: label

@@ -4,9 +4,10 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
   INTERVAL = "1 month"
   CACHE_VERSION = "v2"
 
-  def initialize(family, user: nil)
+  def initialize(family, user: nil, currency: nil)
     @family = family
     @user = user
+    @currency = currency.presence || family.currency
   end
 
   # Returns a chart payload where each monthly point carries the net worth
@@ -30,7 +31,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
   end
 
   private
-    attr_reader :family, :user
+    attr_reader :family, :user, :currency
 
     def breakdown_value(value, previous, groups)
       point_groups = groups.map do |group|
@@ -38,7 +39,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
           name: group[:name],
           color: group[:color],
           classification: group[:classification],
-          value: group[:values_by_date][value.date] || Money.new(0, family.currency)
+          value: group[:values_by_date][value.date] || Money.new(0, currency)
         }
       end
 
@@ -75,7 +76,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
         .select { |group| group[:classification] == classification }
         .sum { |group| group[:value].amount }
 
-      Money.new(total, family.currency)
+      Money.new(total, currency)
     end
 
     def group_series(period)
@@ -110,7 +111,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
       Balance::ChartSeriesBuilder.new(
         account_ids: accounts.map(&:id),
         account_active_until_dates: disabled_account_active_until_dates(accounts),
-        currency: family.currency,
+        currency: currency,
         period: period,
         interval: INTERVAL,
         favorable_direction: favorable_direction
@@ -136,6 +137,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
         "balance_sheet_net_worth_breakdown_series",
         CACHE_VERSION,
         user&.id,
+        currency,
         shares_version,
         period.start_date,
         period.end_date

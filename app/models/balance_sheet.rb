@@ -3,17 +3,20 @@ class BalanceSheet
 
   monetize :net_worth
 
-  attr_reader :family, :user
+  attr_reader :family, :user, :currency
 
-  def initialize(family, user: nil)
+  # `currency:` is the currency balances are converted to; it defaults to the
+  # family's.
+  def initialize(family, user: nil, currency: nil)
     @family = family
     @user = user || Current.user
+    @currency = currency.presence || family.currency
   end
 
   def assets
     @assets ||= ClassificationGroup.new(
       classification: "asset",
-      currency: family.currency,
+      currency: currency,
       accounts: sorted(account_totals.asset_accounts)
     )
   end
@@ -21,7 +24,7 @@ class BalanceSheet
   def liabilities
     @liabilities ||= ClassificationGroup.new(
       classification: "liability",
-      currency: family.currency,
+      currency: currency,
       accounts: sorted(account_totals.liability_accounts)
     )
   end
@@ -42,10 +45,6 @@ class BalanceSheet
     net_worth_series_builder.net_worth_series(period: period)
   end
 
-  def currency
-    family.currency
-  end
-
   def syncing?
     sync_status_monitor.syncing?
   end
@@ -56,11 +55,11 @@ class BalanceSheet
     end
 
     def account_totals
-      @account_totals ||= AccountTotals.new(family, user: user, sync_status_monitor: sync_status_monitor)
+      @account_totals ||= AccountTotals.new(family, user: user, currency: currency, sync_status_monitor: sync_status_monitor)
     end
 
     def net_worth_series_builder
-      @net_worth_series_builder ||= NetWorthSeriesBuilder.new(family, user: user)
+      @net_worth_series_builder ||= NetWorthSeriesBuilder.new(family, user: user, currency: currency)
     end
 
     def sorted(accounts)

@@ -1,4 +1,4 @@
-# Per-day expense totals (in the family's currency) for a period, used by the
+# Per-day expense totals (in the target currency) for a period, used by the
 # dashboard's cumulative spending chart. Shares its scoping SQL with the
 # other IncomeStatement query classes via
 # IncomeStatement::ScopedTransactionsQuery (visible, posted, budget-included
@@ -11,8 +11,9 @@ class IncomeStatement::DailyExpenseTotals
   # `by_category: true` splits each day's total by the transactions'
   # category_id (nil for uncategorized), so callers can narrow the series to
   # some categories without another query.
-  def initialize(family, transactions_scope:, date_range:, included_account_ids: nil, by_category: false)
+  def initialize(family, transactions_scope:, date_range:, included_account_ids: nil, by_category: false, currency: nil)
     @family = family
+    @currency = currency
     @transactions_scope = transactions_scope
     @date_range = date_range
     @included_account_ids = included_account_ids

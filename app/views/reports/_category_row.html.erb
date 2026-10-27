@@ -54,7 +54,7 @@
   <td class="py-3 px-4 lg:px-6 text-right">
     <%
       amount_content = tag.span(
-        Money.new(item[:total], Current.family.currency).format,
+        Money.new(item[:total], @report_currency).format,
         class: "text-sm #{color_class} privacy-sensitive"
       )
     %>

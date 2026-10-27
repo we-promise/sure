@@ -68,7 +68,7 @@ module ReportsHelper
       {
         row: row,
         width: (row.change.abs / max_change * 100).round(1),
-        amount_label: "#{row.change.negative? ? "−" : "+"}#{spending_money(row.change.abs, precision: 0)}",
+        amount_label: "#{row.change.negative? ? "−" : "+"}#{spending_money(comparison, row.change.abs, precision: 0)}",
         href: spending_category_href(row.category, start_date:, end_date:)
       }
     end
@@ -82,7 +82,7 @@ module ReportsHelper
         name: name,
         direct: row.direct,
         total: row.total.to_f,
-        total_label: spending_money(row.total, precision: 0),
+        total_label: spending_money(comparison, row.total, precision: 0),
         ratio: row.ratio&.to_f,
         change_sign: row.change && (row.change.negative? ? -1 : 1),
         has_normal: comparison.comparable? && !row.normal.nil?,
@@ -92,15 +92,15 @@ module ReportsHelper
     end
 
     def spending_description(comparison, row, name)
-      lines = [ t("reports.spending_vs_normal.tooltip.total", category: name, amount: spending_money(row.total)) ]
+      lines = [ t("reports.spending_vs_normal.tooltip.total", category: name, amount: spending_money(comparison, row.total)) ]
       unless comparison.comparable? && row.normal
         return lines << t("reports.spending_vs_normal.tooltip.no_normal")
       end
 
-      lines << t("reports.spending_vs_normal.tooltip.normal", amount: spending_money(row.normal))
+      lines << t("reports.spending_vs_normal.tooltip.normal", amount: spending_money(comparison, row.normal))
       if row.change.abs >= IncomeStatement::SpendingComparison::MIN_CHANGE
         direction = row.change.negative? ? "less" : "more"
-        amount = spending_money(row.change.abs)
+        amount = spending_money(comparison, row.change.abs)
         lines << if row.ratio
           t("reports.spending_vs_normal.tooltip.#{direction}", amount: amount, percent: number_to_percentage(row.ratio.abs * 100, precision: 0))
         else
@@ -110,8 +110,8 @@ module ReportsHelper
       lines
     end
 
-    def spending_money(amount, precision: 2)
-      Money.new(amount, Current.family.currency).format(precision: precision)
+    def spending_money(comparison, amount, precision: 2)
+      Money.new(amount, comparison.currency).format(precision: precision)
     end
 
     def spending_category_href(category, start_date:, end_date:)
