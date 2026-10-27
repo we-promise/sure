@@ -11,6 +11,12 @@ en:
       paid_of: "%{paid} of %{expected} paid"
       paid_headline: "%{amount} paid"
       remaining: "%{amount} remaining"
+      expected: "%{amount} expected"
+      received_headline: "%{amount} received"
+      received_heading: Received
+      link_income: Link income
+      not_this_income: Not this income
+      find_income_heading: Find income
       settled: Paid in full
       overpaid: more than expected
       skipped: Skipped
