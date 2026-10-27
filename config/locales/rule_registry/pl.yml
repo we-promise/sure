@@ -14,6 +14,9 @@ pl:
         transaction_account: Konto transakcji
     action_executors:
       labels:
+        split_transaction: "Podziel transakcję"
+        fill_similar_merchants: "Uzupełnij sprzedawców na podstawie podobnych transakcji (bez AI)"
+        bayes_categorize: "Klasyfikuj za pomocą klasyfikatora (bez AI)"
         set_transaction_category: Ustaw kategorię transakcji
         set_transaction_tags: Ustaw tagi transakcji
         set_transaction_merchant: Ustaw sprzedawcę transakcji

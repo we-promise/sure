@@ -22,6 +22,9 @@ pl:
       amounts_must_match: Kwoty podziału muszą być równe kwocie oryginalnej transakcji.
       cancel: Anuluj
       category_label: Kategoria
+      merchant_label: "Sprzedawca"
+      no_merchant: "(sprzedawca transakcji)"
+      tags_label: "Tagi"
       description: Podziel tę transakcję na wiele wpisów z różnymi kategoriami i kwotami.
       name_label: Nazwa
       name_placeholder: Nazwa podziału

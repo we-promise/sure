@@ -47,12 +47,13 @@ it:
         transfer: Bonifico
     amount_range: da %{min} a %{max}
     attention:
+      paused: "In pausa"
       amount_changed: Importo modificato
       needs_review: Corrispondenza da verificare
       overdue:
         one: 1 giorno di ritardo
         other: "%{count} giorni di ritardo"
-      partial: Parziale · restano %{amount}
+      partial: Parziale
     calendar:
       empty_month: Nessun pagamento in scadenza questo mese.
       month_totals: "%{expected} previsti · %{paid} pagati"
@@ -64,7 +65,7 @@ it:
     cancelled_still_scheduled: 'Hai contrassegnato questo pagamento come annullato
       il %{date}, ma è ancora pianificato: continueranno quindi a comparire le scadenze
       future.'
-    debt_payment: "· rimborso debito"
+    debt_payment: "rimborso debito"
     detail:
       annualized: All'anno
       around: intorno al %{date}
@@ -121,6 +122,7 @@ it:
       calendar_name: Scadenze Sure
     find_payment: Trova pagamento
     index:
+      notices_heading: "Modifiche"
       accept: Applica
       add_bill: Aggiungi scadenza
       add_income: Aggiungi entrata
@@ -133,7 +135,7 @@ it:
         other: Abbiamo trovato %{count} pagamenti ricorrenti nelle tue transazioni.
           Verificali affinché i totali qui corrispondano a quanto paghi effettivamente.
       detected_review_action: Verifica
-      dormant: Inattivo
+      dormant: "In pausa"
       empty:
         action: Trova transazioni ricorrenti
         description: Le scadenze rappresentano le tue spese ricorrenti. Sure le individua

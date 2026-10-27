@@ -11,3 +11,12 @@
 .icost-map .leaflet-control-attribution a {
   color: var(--color-link);
 }
+
+/* Invert and dim bright map tiles in dark mode to prevent glare */
+[data-theme="dark"] .icost-map .leaflet-tile-pane {
+  filter: brightness(0.65) invert(1) contrast(2.5) hue-rotate(180deg) saturate(0.35);
+}
+
+[data-theme="dark"] .icost-map .leaflet-bar a {
+  border-bottom-color: var(--utility-border-subdued);
+}

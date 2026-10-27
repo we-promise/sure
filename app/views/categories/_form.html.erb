@@ -27,12 +27,12 @@
                 <% Category::COLORS.each do |color| %>
                   <label class="relative">
                     <%= f.radio_button :color, color, class: "sr-only peer", data: { action: "change->color-icon-picker#handleColorChange" } %>
-                    <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-gray-500" style="background-color: <%= color %>"></div>
+                    <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-offset-container peer-checked:ring-focus-ring" style="background-color: <%= color %>"></div>
                   </label>
                 <% end %>
                 <label class="relative">
                   <%= f.radio_button :color, "custom-color", class: "sr-only peer", data: { color_icon_picker_target: "colorPickerRadioBtn"} %>
-                  <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-blue-500" data-color-icon-picker-target="pickerBtn" style="background: conic-gradient(red,orange,yellow,lime,green,teal,cyan,blue,indigo,purple,magenta,pink,red)"></div>
+                  <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-offset-container peer-checked:ring-focus-ring" data-color-icon-picker-target="pickerBtn" style="background: conic-gradient(red,orange,yellow,lime,green,teal,cyan,blue,indigo,purple,magenta,pink,red)"></div>
                 </label>
               </div>
               <div class="hidden flex-col gap-2" data-color-icon-picker-target="paletteSection">

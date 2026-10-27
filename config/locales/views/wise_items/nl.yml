@@ -23,7 +23,7 @@ nl:
         title: Databaseversleuteling is niet ingesteld
       import_all_history_help: Haal alle historische Wise-afschriften op in plaats van alleen die van het afgelopen jaar.
       import_all_history_label: Volledige transactiegeschiedenis importeren
-      sandbox_note_html: Gebruik voor tests de <strong>sandbox</strong>-basis-URL (<code>https://api.sandbox.transferwise.tech</code>). Stel <code>WISE_BASE_URL</code> in je omgeving in.
+      sandbox_note_html: Gebruik voor tests de <strong>sandbox</strong>-basis-URL (<code>https://api.wise-sandbox.com</code>). Stel <code>WISE_BASE_URL</code> in je omgeving in.
       sca:
         copied: Gekopieerd!
         copy: Kopiëren

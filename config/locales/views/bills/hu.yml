@@ -47,12 +47,13 @@ hu:
         transfer: Átutalás
     amount_range: "%{min} és %{max} között"
     attention:
+      paused: "Szüneteltetve"
       amount_changed: Az összeg megváltozott
       needs_review: Az egyeztetés ellenőrzést igényel
       overdue:
         one: 1 napja lejárt
         other: "%{count} napja lejárt"
-      partial: Részben fizetve · %{amount} hátralék
+      partial: Részben fizetve
     calendar:
       empty_month: Ebben a hónapban nincs esedékes fizetési kötelezettség.
       month_totals: "%{expected} várható · %{paid} kifizetve"
@@ -64,7 +65,7 @@ hu:
     cancelled_still_scheduled: >-
       Ezt %{date} napján lemondottnak jelölted, de az ütemezése még aktív, így a későbbi esedékességek
       továbbra is megjelennek.
-    debt_payment: "· adósságtörlesztés"
+    debt_payment: "adósságtörlesztés"
     detail:
       annualized: Évente
       around: "%{date} körül"
@@ -120,6 +121,7 @@ hu:
       calendar_name: Sure fizetési kötelezettségek
     find_payment: Fizetés keresése
     index:
+      notices_heading: "Változások"
       accept: Alkalmazás
       add_bill: Fizetési kötelezettség hozzáadása
       add_income: Bevétel hozzáadása
@@ -134,7 +136,7 @@ hu:
           %{count} ismétlődő fizetést találtunk a tranzakcióid között. Ellenőrizd őket, hogy az itt szereplő
           összegek a tényleges fizetéseidet tükrözzék.
       detected_review_action: Ellenőrzés
-      dormant: Szunnyadó
+      dormant: "Szüneteltetve"
       empty:
         action: Ismétlődő tranzakciók keresése
         description: >-

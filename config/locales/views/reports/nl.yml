@@ -191,10 +191,9 @@ nl:
       step1: Ga naar Instellingen → API Keys
       step2: Maak een nieuwe API Key aan met "lezen" permissie
       step3: Kopieer de API Key
-      step4: 'Voeg deze toe aan de URL als: ?api_key=UW_KEY'
+      step4: "Voeg deze toe aan de URL als: &api_key=UW_KEY"
       example: Voorbeeld
       then_use: Gebruik dan de volledige URL met =IMPORTDATA() in Google Sheets.
-      open_sheets: Google Sheets openen
       go_to_api_keys: Ga naar API Keys
       close: Begrepen
     print:

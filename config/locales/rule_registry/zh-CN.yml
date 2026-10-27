@@ -14,6 +14,9 @@ zh-CN:
         transaction_account: 交易账户
     action_executors:
       labels:
+        split_transaction: "拆分交易"
+        fill_similar_merchants: "根据相似交易补全商户（无需 AI）"
+        bayes_categorize: "使用分类器进行分类（无需 AI）"
         set_transaction_category: 设置交易分类
         set_transaction_tags: 设置交易标签
         set_transaction_merchant: 设置交易商户

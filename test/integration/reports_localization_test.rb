@@ -56,7 +56,7 @@ class ReportsLocalizationTest < ActionDispatch::IntegrationTest
     LanguagesHelper::SUPPORTED_LOCALES.each do |locale|
       get reports_path, params: period_params.merge(locale: locale)
       assert_response :success
-      assert_select "[data-controller='reports-sortable'][role='list'][aria-label=?]", tr("reports.index.sections_aria_label", locale)
+      assert_select "[data-controller='sortable-list'][role='list'][aria-label=?]", tr("reports.index.sections_aria_label", locale)
       assert_select "section[data-section-key='trends_insights'][role='listitem'][aria-label=?]",
         tr("reports.index.section_reorder_aria", locale, title: tr("reports.trends.title", locale))
       assert_select "section[data-section-key='trends_insights'] td span", text: month(@start_date, locale)
@@ -112,7 +112,7 @@ class ReportsLocalizationTest < ActionDispatch::IntegrationTest
         tr("reports.index.section_reorder_aria", locale, title: title) do
         assert_select "h2", text: title
       end
-      assert_select "section[data-section-key='balance_sheet'][data-action*='keydown->dashboard-sortable#handleKeyDown']", count: 1
+      assert_select "section[data-section-key='balance_sheet'][data-action*='keydown->sortable-list#handleKeyDown']", count: 1
     end
   end
 

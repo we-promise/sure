@@ -6,6 +6,7 @@ ro:
         renewal: Contribuția ta continuă pe %{date}.
         cancellation: Contribuția ta se încheie la %{date}.
   settings:
+    encryption_migration_guide: Ghid de configurare a criptării și de migrare
     ai_prompts:
       show:
         page_title: Prompturi AI
@@ -170,6 +171,8 @@ ro:
           principală în lista de tranzacții. Dacă opțiunea este dezactivată, părțile
           apar pe rânduri individuale.
         split_grouped_title: Grupează tranzacțiile împărțite
+        auto_generate_transaction_names_title: "Generează automat numele tranzacțiilor"
+        auto_generate_transaction_names_description: "Dacă numele unei tranzacții introduse manual este gol, completează-l din categoria și comerciantul selectate (de exemplu „Divertisment - Netflix”). Numele rămâne obligatoriu dacă nu este selectat niciunul. Se aplică întregii familii și doar tranzacțiilor noi."
         theme_subtitle: Alege tema preferată pentru aplicație
         theme_title: Temă
         transactions_subtitle: Personalizează afișarea tranzacțiilor
@@ -272,6 +275,7 @@ ro:
       accounts_label: Conturi
       advanced_section_title: Avansat
       ai_prompts_label: Prompturi AI
+      auto_matches_label: Potriviri automate
       api_key_label: Cheie API
       payment_label: Plată
       categories_label: Categorii

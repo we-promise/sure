@@ -6,6 +6,7 @@ pt-BR:
         renewal: Sua contribuição continua em %{date}.
         cancellation: Sua contribuição termina em %{date}.
   settings:
+    encryption_migration_guide: Guia de configuração da criptografia e migração
     ai_prompts:
       show:
         page_title: Prompts de IA
@@ -103,6 +104,8 @@ pt-BR:
           Estas seções de contas começarão expandidas no painel e na barra lateral
           de contas. Você poderá recolhê-las manualmente a qualquer momento.
         dashboard_account_groups_title: Começar expandido por padrão
+        auto_generate_transaction_names_title: "Gerar nomes de transações automaticamente"
+        auto_generate_transaction_names_description: "Quando o nome de uma transação inserida manualmente fica em branco, ele é preenchido a partir da categoria e do comerciante selecionados (ex.: \"Entretenimento - Netflix\"). O nome continua obrigatório se nenhum dos dois for selecionado. Vale para toda a família e apenas para novas transações."
     preferences:
       show:
         country: País
@@ -286,6 +289,7 @@ pt-BR:
       accounts_label: Contas
       advanced_section_title: Avançado
       ai_prompts_label: Sugestões de IA
+      auto_matches_label: Correspondências automáticas
       api_key_label: Chave da API
       payment_label: Pagamento
       categories_label: Categorias
@@ -361,6 +365,7 @@ pt-BR:
       enable_banking_panel:
         callback_url_instruction: Para a URL de retorno de chamada, use %{callback_url}.
         connection_error: Erro de conexão
+        keep_client_certificate_hint: "Deixe em branco para manter o certificado atual"
         add_connection: Adicionar Conexão
         application_id_label: ID do aplicativo
         application_id_placeholder_new: Digite o ID do aplicativo

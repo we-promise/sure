@@ -14,6 +14,9 @@ zh-TW:
       name_placeholder: 拆分名稱
       amount_label: 金額
       category_label: 分類
+      merchant_label: "商家"
+      no_merchant: "（使用原交易的商家）"
+      tags_label: "標籤"
       uncategorized: （未分類）
       original_name: 名稱：
       original_date: 日期：

@@ -22,6 +22,7 @@ uk:
       accounts_need_setup_description: Ваш рахунок Trade Republic потрібно пов’язати з рахунком Sure.
       no_accounts_discovered: Рахунок Trade Republic ще не знайдено.
       no_accounts_discovered_description: Завершіть вхід і запустіть синхронізацію, щоб знайти рахунок.
+      session_expires_in: "Вхід завершиться через %{time} (%{at})."
       data_quality:
         title: Якість даних і відомості про синхронізацію
         repair: Відновити імпортовані дані

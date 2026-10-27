@@ -46,7 +46,7 @@ nb:
       import_all_history_help: Hent alle historiske Wise-kontoutskrifter i stedet
         for bare det siste året.
       import_all_history_label: Importer full transaksjonshistorikk
-      sandbox_note_html: Bruk basisadressen for <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>)
+      sandbox_note_html: Bruk basisadressen for <strong>sandbox</strong> (<code>https://api.wise-sandbox.com</code>)
         til testing. Angi <code>WISE_BASE_URL</code> i miljøet ditt.
       sync_start_date_help: Wise-kontoutskrifter importeres fra og med denne datoen.
         Behold standardverdien for opptil ett års historikk.

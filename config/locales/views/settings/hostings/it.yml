@@ -166,6 +166,8 @@ it:
           impostazione predefinita; le API hosted dei provider conservano i dati per
           ~30 giorni per fiducia e sicurezza. Gli endpoint personalizzati o self-hosted
           seguono la tua politica.
+        max_items_per_call_label: Elementi massimi per batch (facoltativo)
+        max_items_per_call_help: "Limite superiore per batch di auto-categorizzazione/rilevamento commercianti. Predefinito: 25. Con provider compatibili con OpenAI, i batch più grandi vengono suddivisi automaticamente per adattarsi alla finestra di contesto."
       anthropic_settings:
         title: Anthropic (Claude)
         description: Inserisci la tua chiave API Anthropic. Opzionalmente punta l'URL

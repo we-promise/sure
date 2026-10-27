@@ -207,6 +207,8 @@ zh-CN:
         not_configured_hint: "%{provider} 尚未配置。"
         data_retention_heading: 数据处理
         data_retention: 发送给 AI 提供商的数据可能包含财务上下文，请按你的部署策略配置。
+        max_items_per_call_label: 每次调用最大项目数
+        max_items_per_call_help: 限制单次请求传给模型的数据项数量。默认：25。使用 OpenAI 兼容服务时，过大的批次会自动切分以适应上下文窗口。
       anthropic_settings:
         title: Anthropic (Claude)
         description: 使用 Anthropic Claude 作为 AI 提供商。

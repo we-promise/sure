@@ -1,9 +1,10 @@
-<%# locals: (name:, path:, icon:) %>
+<%# locals: (name:, path:, icon:, active: nil) %>
+<% is_active = active.nil? ? page_active?(path) : active %>
 
 <%= link_to path, class: class_names(
   "flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm focus-ring",
-  page_active?(path) ? "text-primary bg-container shadow-border-xs" : "text-secondary hover:bg-surface-hover border-transparent"
-), aria: { current: ("page" if page_active?(path)) } do %>
+  is_active ? "text-primary bg-container shadow-border-xs" : "text-secondary hover:bg-surface-hover border-transparent"
+), aria: { current: ("page" if is_active) } do %>
   <%= icon(icon) if icon %>
   <%= name %>
 <% end %>

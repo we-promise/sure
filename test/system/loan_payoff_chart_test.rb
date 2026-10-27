@@ -20,8 +20,11 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
   TODAY = Date.new(2027, 1, 15)
   SERIES = %w[actual scheduled projected].freeze
 
+  # Sign in on the pinned date: a session signed in at the real clock would
+  # count as idle beyond Session::INACTIVITY_TIMEOUT once the tests travel to
+  # TODAY, and every visit would land on the login page.
   setup do
-    sign_in @user = users(:family_admin)
+    travel_to(TODAY) { sign_in @user = users(:family_admin) }
   end
 
   test "the chart paints all three lines, in the light theme and the dark" do
@@ -94,6 +97,34 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
       JS
       assert_selector "[data-controller='loan-payoff-chart'] div.chart-tooltip", text: I18n.t("UI.account.chart.loan.scheduled")
       assert_no_selector "[data-controller='loan-payoff-chart'] div[aria-live='polite']", visible: :all
+    end
+  end
+
+  # we-promise/sure#3958: stopped on a scheduled payment, the tooltip says what
+  # that payment is made of. The first stop is origination, the amount
+  # borrowed rather than a payment, so it has no split; the second is the
+  # first payment.
+  test "the tooltip splits a scheduled payment into principal and interest" do
+    travel_to TODAY do
+      account = on_contract_loan_account
+      first_payment = account.loan.amortization_schedule.payments.first
+
+      visit account_path(account, period: "all_time")
+      svg = find("[data-controller='loan-payoff-chart'] svg")
+      principal_label = I18n.t("loans.tabs.schedule.principal")
+
+      svg.send_keys(:arrow_right)
+      tooltip = find("[data-controller='loan-payoff-chart'] div[aria-live='polite']", visible: :all)
+      assert_not_includes tooltip.text(:all), principal_label, "origination is not a payment"
+
+      svg.send_keys(:arrow_right)
+      # The split at the currency's precision (cents for USD), so a small
+      # component never shows as zero; the balance stays in whole units.
+      money = ->(value, digits) { page.evaluate_script("new Intl.NumberFormat('en', { style: 'currency', currency: 'USD', minimumFractionDigits: #{digits}, maximumFractionDigits: #{digits} }).format(#{value})") }
+      expected = "#{principal_label}: #{money.(first_payment.principal.amount.to_f, 2)} · " \
+                 "#{I18n.t('loans.tabs.schedule.interest')}: #{money.(first_payment.interest.amount.to_f, 2)}"
+      assert_includes tooltip.text(:all), expected
+      assert_includes tooltip.text(:all), money.(first_payment.ending_balance.amount.to_f, 0)
     end
   end
 

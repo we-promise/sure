@@ -24,6 +24,7 @@ hu:
       no_accounts_discovered: Még nem található Trade Republic-fiók.
       no_accounts_discovered_description: Fejezd be a bejelentkezést, majd indíts szinkronizálást a fiók
         felderítéséhez.
+      session_expires_in: "A bejelentkezés %{time} múlva lejár (%{at})."
       data_quality:
         title: Adatminőség és szinkronizálási részletek
         repair: Importált adatok javítása

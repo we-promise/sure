@@ -39,6 +39,32 @@
     max-height: 100dvh;
   }
 
+  dialog[open] {
+    opacity: 1;
+    transition: opacity 0.18s ease-out, overlay 0.18s allow-discrete, display 0.18s allow-discrete;
+  }
+
+  @starting-style {
+    dialog[open] {
+      opacity: 0;
+    }
+  }
+
+  dialog::backdrop {
+    opacity: 0;
+    transition: opacity 0.18s ease-out, overlay 0.18s allow-discrete, display 0.18s allow-discrete;
+  }
+
+  dialog[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
   details>summary::-webkit-details-marker {
     @apply hidden;
   }

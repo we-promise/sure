@@ -26,26 +26,16 @@ tr:
       go_to_api_keys: API Anahtarlarına Git
       need_key: Google E-Tablolar'a veri aktarmak için bir API anahtarına ihtiyacınız
         var.
-      open_sheets: Google E-Tablolar'ı Aç
-      ready: CSV URL'niz (API anahtarıyla birlikte) hazır.
-      security_warning: Bu URL, API anahtarınızı içerir. Güvende tutun!
       step1: Ayarlar → API Anahtarları'na gidin
       step2: '"okuma" izniyle yeni bir API anahtarı oluşturun'
       step3: API anahtarını kopyalayın
-      step4: 'Bu URL''ye şu şekilde ekleyin: ?api_key=ANAHTARINIZ'
-      steps: |-
-        Google E-Tablolar'a aktarmak için:
-        1. Yeni bir Google E-Tablo oluşturun
-        2. A1 hücresine aşağıda gösterilen formülü girin
-        3. Enter'a basın
+      step4: 'Bu URL''ye şu şekilde ekleyin: &api_key=ANAHTARINIZ'
       then_use: Ardından Google E-Tablolar'da =IMPORTDATA() ile tam URL'yi kullanın.
-      title_no_key: "⚠️ API Anahtarı Gerekli"
-      title_with_key: "✅ Google E-Tablolar için URL'yi Kopyala"
+      title_no_key: "API Anahtarı Gerekli"
     index:
       date_range:
         from: Başlangıç
         to: Bitiş
-      drag_to_reorder: Bölümü yeniden sıralamak için sürükleyin
       export: CSV Dışa Aktar
       next_decade: Sonraki on yıl
       next_period: Sonraki dönem

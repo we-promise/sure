@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import replaceUrl from "utils/replace_url";
 
 // Free-text + status-chip filter for the goals index grid.
 // Mirrors the providers-filter pattern. Each card has data-goal-name
@@ -67,10 +68,10 @@ export default class extends Controller {
     this.#scheduleUrlSync();
   }
 
-  // Debounced wrapper. Firing replaceState on every keystroke is wasteful
+  // Debounced wrapper. Firing replaceUrl on every keystroke is wasteful
   // and produced visible jank on slow CPUs; deferring 200 ms collapses a
   // typing burst into a single URL update without losing back-button
-  // fidelity (replaceState doesn't create history entries anyway).
+  // fidelity (replaceUrl doesn't create history entries anyway).
   #scheduleUrlSync() {
     clearTimeout(this._urlSyncTimer);
     this._urlSyncTimer = setTimeout(() => this.#syncUrl(), 200);
@@ -103,7 +104,7 @@ export default class extends Controller {
     }
     const qs = params.toString();
     const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
-    window.history.replaceState(window.history.state, "", url);
+    replaceUrl(url);
   }
 
   updateEmptyState(visible, query, active) {

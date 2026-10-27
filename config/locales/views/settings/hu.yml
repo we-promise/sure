@@ -6,6 +6,7 @@ hu:
         renewal: A hozzájárulásod %{date}-én megújul.
         cancellation: A hozzájárulásod %{date}-én lejár.
   settings:
+    encryption_migration_guide: Titkosítási beállítási és migrációs útmutató
     llm_usages:
       show:
         page_title: LLM-használat és -költségek
@@ -127,6 +128,8 @@ hu:
           Ezek a számlacsoportok kezdetben kibontva jelennek meg az irányítópulton és a számlák oldalsávjában.
           Bármikor összecsukhatod őket kézzel.
         dashboard_account_groups_title: Alapértelmezés szerint kibontva
+        auto_generate_transaction_names_title: "Tranzakciónevek automatikus létrehozása"
+        auto_generate_transaction_names_description: "Ha egy kézzel rögzített tranzakció neve üresen marad, a kiválasztott kategóriából és kereskedőből töltődik ki (pl. „Szórakozás - Netflix”). Ha egyik sincs kiválasztva, a név továbbra is kötelező. Az egész háztartásra vonatkozik, és csak az új tranzakciókra."
     preferences:
       show:
         country: Ország
@@ -295,6 +298,7 @@ hu:
       accounts_label: Számlák
       advanced_section_title: Speciális
       ai_prompts_label: MI promptok
+      auto_matches_label: Automatikus egyeztetés
       api_key_label: API-kulcs
       payment_label: Fizetés
       categories_label: Kategóriák
@@ -373,6 +377,8 @@ hu:
         sync_error: Szinkronizálási hiba
         no_recent_sync: Szinkronizálás lejárt
         reconsent_required: Újrahozzájárulás szükséges
+        login_required: "Bejelentkezés szükséges"
+        login_expires_soon: "A bejelentkezés %{time} múlva lejár (%{at})"
         reconsent_needed:
           one: Újrahozzájárulás szükséges 1 napon belül
           other: Újrahozzájárulás szükséges %{count} napon belül
@@ -542,6 +548,7 @@ hu:
         syncing: Szinkronizálás
         select_country: Ország kiválasztása...
         country_label: Ország
+        keep_client_certificate_hint: "Hagyd üresen az aktuális tanúsítvány megtartásához"
       lunchflow_panel:
         step_1_html: Menj a(z) %{link} oldalra és hozz létre egy API-kulcsot.
         step_2: Illeszd be a kulcsodat alább és csatlakozz.

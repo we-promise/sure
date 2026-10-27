@@ -27,6 +27,7 @@ nb:
       no_accounts_discovered: Ingen Trade Republic-konto er oppdaget ennå.
       no_accounts_discovered_description: Fullfør påloggingen og kjør en synkronisering
         for å finne kontoen.
+      session_expires_in: "Påloggingen utløper om %{time} (%{at})."
       data_quality:
         title: Datakvalitet og synkroniseringsdetaljer
         repair: Reparer importerte data

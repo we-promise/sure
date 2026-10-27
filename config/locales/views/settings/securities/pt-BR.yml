@@ -20,6 +20,8 @@ pt-BR:
           de segurança.
         mfa_enabled_status_html: >-
           A autenticação de dois fatores está <span class="font-medium text-green-600">ativada</span>
+        webauthn_code_label: "Código do autenticador ou código de recuperação"
+        webauthn_code_placeholder: "Código atual do autenticador ou código de recuperação não utilizado"
         webauthn_add: Adicionar chave de acesso ou chave de segurança
         webauthn_added: Adicionada em %{date}
         webauthn_description: >-
@@ -40,6 +42,9 @@ pt-BR:
         webauthn_unsupported: Este navegador não suporta chaves de acesso ou chaves
           de segurança.
   webauthn_credentials:
+    code_already_used: "Este código já foi usado. Aguarde o próximo código do aplicativo autenticador."
+    invalid_code: "Este código é inválido. Digite um código atual do autenticador ou um código de recuperação não utilizado."
+    rate_limited: "Muitas tentativas. Aguarde um minuto e tente novamente."
     default_name: Chave de segurança
     failure: >-
       Não foi possível salvar essa chave de acesso ou chave de segurança. Tente novamente.

@@ -37,11 +37,13 @@ class Rule::RegistryLocalizationTest < ActiveSupport::TestCase
       Rule::ActionExecutor::SetTransactionMerchant, Rule::ActionExecutor::SetTransactionName,
       Rule::ActionExecutor::SetInvestmentActivityLabel, Rule::ActionExecutor::ExcludeTransaction,
       Rule::ActionExecutor::SetAsTransferOrPayment, Rule::ActionExecutor::SendEmailNotification,
-      Rule::ActionExecutor::AutoCategorize, Rule::ActionExecutor::AutoDetectMerchants
+      Rule::ActionExecutor::AutoCategorize, Rule::ActionExecutor::AutoDetectMerchants,
+      Rule::ActionExecutor::SplitTransaction, Rule::ActionExecutor::FillSimilarMerchants,
+      Rule::ActionExecutor::BayesCategorize
     ]
     actions = classes.map { |klass| klass.new(@rule) }
     I18n.with_locale(:"zh-CN") do
-      assert_equal [ "设置交易分类", "设置交易标签", "设置交易商户", "设置交易名称", "设置投资活动类型", "从预算和报表中排除", "设为转账或还款", "发送邮件通知", "使用 AI 自动分类交易", "自动识别商户" ], actions.map(&:label)
+      assert_equal [ "设置交易分类", "设置交易标签", "设置交易商户", "设置交易名称", "设置投资活动类型", "从预算和报表中排除", "设为转账或还款", "发送邮件通知", "使用 AI 自动分类交易", "自动识别商户", "拆分交易", "根据相似交易补全商户（无需 AI）", "使用分类器进行分类（无需 AI）" ], actions.map(&:label)
     end
     baseline = actions.to_h { |action| [ action.key, action.type ] }
     LanguagesHelper::SUPPORTED_LOCALES.each do |locale|

@@ -23,13 +23,18 @@
     <%= form.select :category, @categories, { include_blank: t("icost_maps.all_categories"), selected: params[:category], label: t("icost_imports.fields.category_path") } %>
     <%= render DS::Button.new(text: t("icost_maps.filter"), type: :submit, variant: :secondary) %>
   <% end %>
-  <%= render DS::Card.new(class: "space-y-3") do %>
-    <p class="text-sm text-secondary"><%= t("icost_maps.privacy") %></p>
-    <div>
-      <%= render DS::Button.new(text: t("icost_maps.load"), data: { action: "icost-map#load" }) %>
+  <%= render DS::Card.new(class: "relative overflow-hidden p-0") do %>
+    <div class="h-[60dvh] min-h-80 w-full rounded-lg bg-container-inset relative z-0" role="region" aria-label="<%= t("icost_maps.title") %>" data-icost-map-target="canvas">
+      <div class="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center bg-container/90 backdrop-blur-xs transition-opacity duration-300" data-icost-map-target="placeholder">
+        <div class="w-12 h-12 rounded-full bg-container-inset flex items-center justify-center mb-3 text-secondary">
+          <%= icon("map-pin", size: "lg") %>
+        </div>
+        <h3 class="text-base font-medium text-primary mb-1"><%= t("icost_maps.title") %></h3>
+        <p class="text-sm text-secondary max-w-md mb-4"><%= t("icost_maps.privacy") %></p>
+        <%= render DS::Button.new(text: t("icost_maps.load"), icon: "map", variant: :primary, data: { action: "icost-map#load" }) %>
+        <p role="status" class="text-xs text-secondary mt-2" data-icost-map-target="status"></p>
+      </div>
     </div>
-    <p role="status" class="text-sm text-secondary" data-icost-map-target="status"></p>
-    <div class="h-[60dvh] min-h-80 w-full rounded-lg bg-container-inset relative z-0" role="region" aria-label="<%= t("icost_maps.title") %>" data-icost-map-target="canvas"></div>
   <% end %>
   <% @located.each do |record| %>
     <% coordinates = record.map_coordinates %>
@@ -53,15 +58,27 @@
       <h2 class="text-lg font-medium text-primary"><%= t("icost_maps.match_title") %></h2>
       <p class="text-sm text-secondary"><%= t("icost_maps.search_privacy") %></p>
       <%= styled_form_with url: search_icost_map_path, method: :post, scope: :icost_location, class: "space-y-3" do |form| %>
-        <%= form.text_field :query, label: t("icost_maps.query"), value: params.dig(:icost_location, :query), required: true, maxlength: 160, minlength: 3 %>
+        <%= form.text_field :query, label: t("icost_maps.query"), value: params.dig(:icost_location, :query), required: true, maxlength: 160, minlength: 3, data: { icost_map_target: "searchQuery" } %>
         <%= render DS::Button.new(text: t("icost_maps.search"), type: :submit, variant: :secondary) %>
       <% end %>
       <% if @searched && @results.empty? %>
         <p role="status" class="text-secondary"><%= t("icost_maps.no_results") %></p>
       <% end %>
-      <% @results.each do |result| %>
-        <p class="text-sm text-primary"><%= result.fetch("name") %></p>
-        <%= render DS::Button.new(text: t("icost_maps.use_result"), variant: :outline, data: { action: "icost-map#choose", latitude: result.fetch("latitude"), longitude: result.fetch("longitude") }) %>
+      <% if @results.any? %>
+        <div class="divide-y divide-subdued rounded-lg border border-secondary bg-container-inset overflow-hidden">
+          <% @results.each do |result| %>
+            <div class="p-3 flex items-center justify-between gap-3">
+              <div class="flex items-start gap-2.5 min-w-0">
+                <%= icon("map-pin", size: "sm", class: "text-secondary shrink-0 mt-0.5") %>
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-primary truncate"><%= result.fetch("name") %></p>
+                  <p class="text-xs text-secondary font-mono"><%= result.fetch("latitude") %>, <%= result.fetch("longitude") %></p>
+                </div>
+              </div>
+              <%= render DS::Button.new(text: t("icost_maps.use_result"), size: :sm, variant: :outline, data: { action: "icost-map#choose", latitude: result.fetch("latitude"), longitude: result.fetch("longitude") }) %>
+            </div>
+          <% end %>
+        </div>
       <% end %>
       <%= styled_form_with url: icost_map_path, method: :patch, scope: :icost_location, class: "space-y-3" do |form| %>
         <%= form.select :place, @place_names, { label: t("icost_imports.fields.location_text"), include_blank: t("icost_maps.choose_place"), selected: @selected_place }, { required: true } %>
@@ -74,13 +91,24 @@
     <% end %>
   <% end %>
   <%= render DS::Disclosure.new(title: t("icost_maps.unmapped"), open: @located.empty?) do %>
-    <% @places.each do |place, records| %>
-      <p class="text-sm text-primary" data-icost-place><%= place %> · <%= records.size %></p>
-    <% end %>
+    <div class="flex flex-wrap gap-2 pt-1">
+      <% @places.each do |place, records| %>
+        <button type="button"
+                class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-container-inset hover:bg-container-inset-hover border border-secondary text-primary transition-colors focus-ring"
+                data-icost-place
+                data-place="<%= place %>"
+                data-action="click->icost-map#fillSearch"
+                title="<%= place %>">
+          <span class="truncate max-w-xs font-medium"><%= place %></span>
+          <span class="text-xs text-secondary font-mono bg-container px-1.5 py-0.5 rounded-md"><%= records.size %></span>
+          <%= icon("search", size: "xs", class: "text-secondary opacity-0 group-hover:opacity-100 transition-opacity") %>
+        </button>
+      <% end %>
+    </div>
   <% end %>
   <%= render DS::Disclosure.new(title: t("icost_maps.ledger")) do %>
     <%= render DS::Table.new(rows: @records, label: t("icost_maps.ledger")) do |table| %>
-      <% table.with_column(t("icost_imports.fields.source_row")) { |record| link_to(record.source_row.to_s, icost_import_record_path(record.icost_import_id, record), class: "text-link underline") } %>
+      <% table.with_column(t("icost_imports.fields.source_row")) { |record| link_to(record.source_row.to_s, icost_import_record_path(record.icost_import_id, record), class: "text-link hover:underline focus-ring rounded-sm") } %>
       <% table.with_column(t("icost_imports.fields.category_path")) { |record| record.category_path.join(" / ") } %>
       <% table.with_column(t("icost_imports.fields.amount"), numeric: true) { |record| "#{icost_value(record.amount)} #{record.currency}" } %>
       <% table.with_column(t("icost_imports.fields.location_text")) { |record| record.location_text.to_s } %>

@@ -14,6 +14,9 @@ tr:
         transaction_account: İşlem hesabı
     action_executors:
       labels:
+        split_transaction: "İşlemi böl"
+        fill_similar_merchants: "Eksik iş yerlerini benzer işlemlerden doldur (yapay zekâ olmadan)"
+        bayes_categorize: "Sınıflandırıcıyla kategorilere ayır (yapay zekâ olmadan)"
         set_transaction_category: İşlem kategorisini ayarla
         set_transaction_tags: İşlem etiketlerini ayarla
         set_transaction_merchant: İşlemin satıcısını ayarla

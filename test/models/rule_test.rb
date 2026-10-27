@@ -10,6 +10,160 @@ class RuleTest < ActiveSupport::TestCase
     @groceries_category = @family.categories.create!(name: "Groceries")
   end
 
+  test "rejects a null byte in the rule name" do
+    rule = @family.rules.build(name: "bad\0name", resource_type: "transaction")
+    rule.actions.build(action_type: "exclude_transaction")
+
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:name, :invalid)
+
+    rule.name = " \0 "
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:name, :invalid)
+
+    rule.name = "\0"
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:name, :invalid)
+  end
+
+  test "rejects invalid text encoding in rule fields" do
+    invalid_text = "bad\xFF".dup.force_encoding("UTF-8")
+    rule = @family.rules.build(name: invalid_text, resource_type: "transaction")
+    rule.actions.build(action_type: "exclude_transaction")
+
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:name, :invalid)
+
+    rule.name = "Valid name"
+    rule.resource_type = invalid_text
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:resource_type, :invalid)
+  end
+
+  test "rejects null bytes and invalid encoding in condition and action metadata" do
+    invalid_text = "bad\xFF".dup.force_encoding("UTF-8")
+    rule = @family.rules.build(resource_type: "transaction")
+    condition = rule.conditions.build(condition_type: "transaction_name", operator: "like\0", value: "coffee")
+    action = rule.actions.build(action_type: "exclude_transaction\0")
+
+    assert_not rule.valid?
+    assert condition.errors.of_kind?(:operator, :invalid)
+    assert action.errors.of_kind?(:action_type, :invalid)
+
+    condition.operator = "like"
+    condition.value = invalid_text
+    action.action_type = "set_transaction_name"
+    action.value = invalid_text
+
+    assert_not rule.valid?
+    assert condition.errors.of_kind?(:value, :invalid)
+    assert action.errors.of_kind?(:value, :invalid)
+
+    condition.condition_type = invalid_text
+    assert_not rule.valid?
+    assert condition.errors.of_kind?(:condition_type, :invalid)
+  end
+
+  test "rejects invalid encoding in a multi-value action" do
+    invalid_text = "bad\xFF".dup.force_encoding("UTF-8")
+    rule = @family.rules.build(resource_type: "transaction")
+    action = rule.actions.build(action_type: "set_transaction_tags", value: [ invalid_text ])
+
+    assert_not rule.valid?
+    assert action.errors.of_kind?(:value, :invalid)
+  end
+
+  test "rejects a null byte in a nested condition value" do
+    rule = @family.rules.build(resource_type: "transaction")
+    compound = rule.conditions.build(condition_type: "compound", operator: "and")
+    condition = compound.sub_conditions.build(condition_type: "transaction_name", operator: "like", value: "bad\0value")
+    rule.actions.build(action_type: "exclude_transaction")
+
+    assert_not rule.valid?
+    assert condition.errors.of_kind?(:value, :invalid)
+  end
+
+  test "rejects a null byte in an action value" do
+    rule = @family.rules.build(resource_type: "transaction")
+    action = rule.actions.build(action_type: "set_transaction_name", value: "bad\0value")
+
+    assert_not rule.valid?
+    assert action.errors.of_kind?(:value, :invalid)
+  end
+
+  test "allows other whitespace and Unicode in rule text" do
+    rule = @family.rules.build(name: "咖啡\n提醒", resource_type: "transaction")
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "café\tshop")
+    rule.actions.build(action_type: "set_transaction_name", value: "Tea\nshop")
+
+    assert rule.valid?
+  end
+
+  test "create_from_grouping returns nil for a null byte" do
+    assert_no_difference "Rule.count" do
+      assert_nil Rule.create_from_grouping(@family, "bad\0name", @groceries_category)
+    end
+  end
+
+  test "rejects an unknown action type" do
+    rule = @family.rules.build(resource_type: "transaction")
+    action = rule.actions.build(action_type: "garbage")
+
+    assert_not rule.valid?
+    assert action.errors.of_kind?(:action_type, :inclusion)
+  end
+
+  test "accepts every action executor as an action type" do
+    keys = Dir[Rails.root.join("app/models/rule/action_executor/*.rb")].map { |path| File.basename(path, ".rb") }
+    assert_includes keys, "auto_categorize"
+
+    keys.each do |key|
+      rule = @family.rules.build(resource_type: "transaction")
+      action = rule.actions.build(action_type: key)
+
+      # A split action is only valid with a split configuration in `value`;
+      # its action_type is still accepted.
+      if key == "split_transaction"
+        rule.valid?
+      else
+        assert rule.valid?, "#{key}: #{rule.errors.full_messages.to_sentence}"
+      end
+      assert_empty action.errors[:action_type], key
+    end
+  end
+
+  test "rejects an unknown resource type without raising or flagging its actions" do
+    rule = @family.rules.build(resource_type: "account")
+    action = rule.actions.build(action_type: "exclude_transaction")
+
+    assert_nothing_raised { assert_not rule.valid? }
+    assert rule.errors.of_kind?(:resource_type, :inclusion)
+    assert_empty action.errors[:action_type]
+
+    rule.resource_type = "transaction"
+    assert rule.valid?
+  end
+
+  test "keeps reporting a null byte in a type as invalid text" do
+    rule = @family.rules.build(resource_type: "transaction\0")
+    action = rule.actions.build(action_type: "exclude_transaction\0")
+
+    assert_not rule.valid?
+    assert rule.errors.of_kind?(:resource_type, :invalid)
+    assert action.errors.of_kind?(:action_type, :invalid)
+    assert_not rule.errors.of_kind?(:resource_type, :inclusion)
+    assert_not action.errors.of_kind?(:action_type, :inclusion)
+  end
+
+  test "an untouched saved action with an unknown type does not block an unrelated edit" do
+    rule = @family.rules.create!(resource_type: "transaction", actions_attributes: [ { action_type: "exclude_transaction" } ])
+    rule.actions.first.update_column(:action_type, "retired_action")
+
+    rule = Rule.find(rule.id)
+    assert rule.update(name: "Renamed"), rule.errors.full_messages.to_sentence
+    assert_equal "Renamed", rule.reload.name
+  end
+
   test "basic rule" do
     transaction_entry = create_transaction(date: Date.current, account: @account, merchant: @whole_foods_merchant)
 
@@ -26,6 +180,60 @@ class RuleTest < ActiveSupport::TestCase
     transaction_entry.reload
 
     assert_equal @groceries_category, transaction_entry.transaction.category
+  end
+
+  test "split_transaction rule end to end" do
+    transaction_entry = create_transaction(
+      date: Date.current,
+      amount: 100,
+      account: @account,
+      name: "Netflix+Hulu Bundle"
+    )
+
+    hulu_category = @family.categories.create!(name: "Streaming")
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Netflix+Hulu Bundle"),
+        Rule::Condition.new(condition_type: "transaction_amount", operator: "=", value: 100)
+      ],
+      actions: [
+        Rule::Action.new(
+          action_type: "split_transaction",
+          value: {
+            splits: [
+              { type: "fixed", name: "Netflix", share: "70", category_id: @groceries_category.id },
+              { type: "fixed", name: "Hulu", share: "30", category_id: hulu_category.id }
+            ]
+          }.to_json
+        )
+      ]
+    )
+
+    rule.apply
+
+    transaction_entry.reload
+    assert transaction_entry.split_parent?
+    assert_equal [ 30, 70 ], transaction_entry.child_entries.order(:amount).pluck(:amount).map(&:to_i)
+  end
+
+  test "a split rule cannot have other actions" do
+    split = { splits: [ { type: "percentage", name: "A", share: "50" }, { type: "percentage", name: "B", share: "50" } ] }
+
+    rule = @family.rules.build(
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Bundle") ],
+      actions: [
+        Rule::Action.new(action_type: "split_transaction", value: split.to_json),
+        Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id)
+      ]
+    )
+
+    assert_not rule.valid?
+    assert_includes rule.errors[:base], I18n.t("activerecord.errors.models.rule.split_not_alone")
   end
 
   test "compound rule" do
@@ -348,4 +556,38 @@ class RuleTest < ActiveSupport::TestCase
     assert_nil transaction_entry2.transaction.category,
       "Transaction on other account should not be categorized"
   end
+
+  test "new rules are added at the end of the run order" do
+    first = create_exclude_rule
+    second = create_exclude_rule
+
+    assert_equal first.position + 1, second.position
+    assert_equal [ first, second ], @family.rules.ordered.to_a
+  end
+
+  test "update_positions! sets the order of all rules of the family" do
+    first = create_exclude_rule
+    second = create_exclude_rule
+
+    Rule.update_positions!(@family, [ second.id, first.id ])
+
+    assert_equal [ second, first ], @family.rules.ordered.to_a
+  end
+
+  test "update_positions! rejects foreign and incomplete id lists" do
+    first = create_exclude_rule
+    second = create_exclude_rule
+    foreign = rules(:one)
+
+    assert_raises(ArgumentError) { Rule.update_positions!(@family, [ first.id, second.id, foreign.id ]) }
+    assert_raises(ArgumentError) { Rule.update_positions!(@family, [ first.id ]) }
+    assert_raises(ArgumentError) { Rule.update_positions!(@family, [ first.id, first.id ]) }
+    assert_equal 1, foreign.reload.position
+    assert_equal [ first, second ], @family.rules.ordered.to_a
+  end
+
+  private
+    def create_exclude_rule
+      @family.rules.create!(resource_type: "transaction", actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    end
 end

@@ -143,6 +143,12 @@ de:
       new_account_group: "Neue %{account_group}"
       collapse_all: Alle einklappen
       expand_all: Alle aufklappen
+      reorder_account: "%{account} verschieben"
+      reorder_hint: Zum Umsortieren ziehen. Mit der Tastatur Enter drücken, dann die Pfeiltasten.
+      sort_mode:
+        start: Konten sortieren
+        hint: Konten am Griff an ihre Stelle ziehen.
+        done: Fertig
     types:
       depository: Bankkonto
       investment: Investment

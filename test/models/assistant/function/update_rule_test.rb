@@ -1,0 +1,153 @@
+require "test_helper"
+
+class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
+  include EntriesTestHelper, ActiveJob::TestHelper
+
+  setup do
+    @user = users(:family_admin)
+    @family = @user.family
+    @fn = Assistant::Function::UpdateRule.new(@user)
+    @category = categories(:food_and_drink)
+
+    @rule = @family.rules.create!(
+      name: "Coffee",
+      resource_type: "transaction",
+      active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "zxq coffee" } ],
+      actions_attributes: [ { action_type: "set_transaction_category", value: @category.id } ]
+    )
+  end
+
+  test "renaming keeps an active rule active" do
+    result = @fn.call("rule_id" => @rule.id, "name" => "Morning coffee")
+
+    assert result[:success]
+    @rule.reload
+    assert_equal "Morning coffee", @rule.name
+    assert @rule.active
+  end
+
+  test "replacing conditions deactivates the rule" do
+    create_transaction(name: "ZXQ Tea House")
+
+    result = @fn.call("rule_id" => @rule.id, "conditions" => [
+      { "condition_type" => "transaction_name", "operator" => "like", "value" => "zxq tea" }
+    ])
+
+    assert result[:success], result.inspect
+    @rule.reload
+    assert_not @rule.active
+    assert_equal [ "zxq tea" ], @rule.conditions.map(&:value)
+    assert_equal 1, @rule.actions.count
+    assert_equal 1, result[:preview][:match_count]
+    assert_match "deactivated", result[:message]
+  end
+
+  test "replacing actions swaps the whole list" do
+    result = @fn.call("rule_id" => @rule.id, "actions" => [ { "action_type" => "exclude_transaction" } ])
+
+    assert result[:success]
+    assert_equal [ "exclude_transaction" ], @rule.reload.actions.map(&:action_type)
+  end
+
+  test "an invalid update changes nothing" do
+    result = @fn.call("rule_id" => @rule.id, "name" => "Changed", "actions" => [])
+
+    assert_equal "invalid_rule", result[:error]
+    @rule.reload
+    assert_equal "Coffee", @rule.name
+    assert @rule.active
+    assert_equal 1, @rule.actions.count
+  end
+
+  test "can deactivate but not activate" do
+    assert @fn.call("rule_id" => @rule.id, "active" => false)[:success]
+    assert_not @rule.reload.active
+
+    assert_equal "cannot_activate", @fn.call("rule_id" => @rule.id, "active" => true)[:error]
+    assert_not @rule.reload.active
+  end
+
+  test "requires a change and a rule in the family" do
+    assert_equal "no_changes", @fn.call("rule_id" => @rule.id)[:error]
+    assert_equal "not_found", @fn.call("rule_id" => SecureRandom.uuid, "name" => "x")[:error]
+  end
+
+  test "another family's rule is not found and left untouched" do
+    foreign = families(:empty).rules.create!(
+      name: "Theirs",
+      resource_type: "transaction",
+      active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "zxq" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "x" } ]
+    )
+
+    assert_equal "not_found", @fn.call("rule_id" => foreign.id, "name" => "Mine now", "active" => false)[:error]
+    foreign.reload
+    assert_equal "Theirs", foreign.name
+    assert foreign.active
+  end
+
+  test "an update returns a preview with a token for apply_rule" do
+    create_transaction(name: "ZXQ Coffee Shop")
+
+    result = @fn.call("rule_id" => @rule.id, "conditions" => [ { "condition_type" => "transaction_name", "operator" => "like", "value" => "zxq" } ])
+
+    assert result[:success], result.inspect
+    assert result.dig(:preview, :preview_token).present?
+  end
+
+  test "resending an unchanged email action keeps the baseline, so a pending match is still emailed" do
+    old = create_transaction(name: "ZXQ Coffee Old").transaction
+    rule = email_rule
+    assert_equal [ old.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+    pending = create_transaction(name: "ZXQ Coffee New").transaction
+
+    result = @fn.call("rule_id" => rule.id, "actions" => [ { "action_type" => "send_email_notification" } ])
+
+    assert result[:success], result.inspect
+    assert_equal [ old.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+    # update_rule leaves a changed rule inactive, and apply_rule switches it back
+    # on before running it. Do the same here without callbacks, so only the
+    # baseline update_rule left is under test.
+    rule.update_columns(active: true)
+    assert_enqueued_with(job: RuleEmailNotificationJob, args: [ rule.id, [ pending.id ] ]) do
+      Rule.find(rule.id).apply
+    end
+  end
+
+  test "replacing a rule's actions with an email action records the baseline" do
+    old = create_transaction(name: "ZXQ Coffee Old").transaction
+
+    result = @fn.call("rule_id" => @rule.id, "actions" => [ { "action_type" => "send_email_notification" } ])
+
+    assert result[:success], result.inspect
+    assert_equal [ old.id ], NotificationDelivery.where(rule: @rule).pluck(:transaction_id)
+    assert_no_enqueued_jobs(only: RuleEmailNotificationJob) { Rule.find(@rule.id).apply }
+  end
+
+  test "a pattern that times out in the preview reports the updated rule with a regex_timeout error" do
+    Rule.any_instance.stubs(:matching_scope).raises(Rule::SafeRegex::TimeoutError)
+
+    result = @fn.call("rule_id" => @rule.id, "conditions" => [
+      { "condition_type" => "transaction_name", "operator" => "matches_regex", "value" => "zxq" }
+    ])
+
+    assert_not result[:success]
+    assert_equal "regex_timeout", result[:error]
+    assert_match "updated", result[:message]
+    assert_equal [ "zxq" ], @rule.reload.conditions.map(&:value)
+    assert_not result[:rule][:active]
+  end
+
+  private
+    def email_rule
+      @family.rules.create!(
+        name: "Coffee alerts",
+        resource_type: "transaction",
+        active: true,
+        conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "zxq coffee" } ],
+        actions_attributes: [ { action_type: "send_email_notification" } ]
+      )
+    end
+end

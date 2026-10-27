@@ -35,6 +35,7 @@ de:
     preview: Vorschau
     dot_separator: "·"
     require_admin: Das dürfen nur Admins
+    require_non_guest: Gäste können diese Aktion nicht ausführen
     sync_toast:
       message: Neue Daten verfügbar
       refresh: Aktualisieren
@@ -56,6 +57,7 @@ de:
           oder die systemd-Unit.
         stale_heartbeat: Der Sidekiq-Worker hat seit einiger Zeit kein Lebenszeichen
           gesendet. Möglicherweise hängt er oder ist abgestürzt.
+        ai_queues_not_polled: "Kein Worker verarbeitet die KI-Warteschlangen (Chat, Händlererkennung, Kategorisierung). Prüfe, ob der Worker config/sidekiq.yml lädt."
         queue_backed_up: Die älteste Hintergrundaufgabe in der Warteschlange wartet
           bereits länger als vorgesehen. Der Worker läuft, kommt aber mit der Verarbeitung
           nicht hinterher.

@@ -11,10 +11,25 @@
     <% end %>
     <%= render "icost_imports/upload_errors" %>
     <% if @imports.empty? %>
-      <p class="text-secondary"><%= t("icost_imports.no_imports") %></p>
+      <%= render DS::EmptyState.new(
+            icon: "file-spreadsheet",
+            title: t("icost_imports.no_imports"),
+            description: t("icost_imports.upload_help")
+          ) do |es| %>
+        <% unless Current.user.guest? %>
+          <% es.with_action do %>
+            <%= render DS::Link.new(
+                  text: t("icost_imports.new_import"),
+                  href: new_icost_import_path,
+                  icon: "upload",
+                  variant: :primary
+                ) %>
+          <% end %>
+        <% end %>
+      <% end %>
     <% else %>
       <%= render DS::Table.new(rows: @imports, label: t("icost_imports.title")) do |table| %>
-        <% table.with_column(t("icost_imports.fields.filename")) { |batch| link_to(batch.filename, icost_import_path(batch), class: "text-link underline") } %>
+        <% table.with_column(t("icost_imports.fields.filename")) { |batch| link_to(batch.filename, icost_import_path(batch), class: "text-link hover:underline focus-ring rounded-sm") } %>
         <% table.with_column(t("icost_imports.fields.created_at")) { |batch| l(batch.created_at, format: :long) } %>
         <% IcostRecord::DISPLAY_STATUSES.each do |status| %>
           <% table.with_column(t("icost_imports.statuses.#{status}"), numeric: true) { |batch| @counts.fetch([batch.id, status], 0).to_s } %>

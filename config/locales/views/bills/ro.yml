@@ -82,6 +82,7 @@ ro:
       upcoming: În curând
       ytd: Plătit anul acesta
     index:
+      notices_heading: "Modificări"
       accept: Aplică
       needs_review: Necesită revizuire
       add_income: Adaugă venit
@@ -99,7 +100,7 @@ ro:
         few: Am găsit %{count} plăți recurente în tranzacțiile tale. Verifică-le,
           pentru ca totalurile de aici să reflecte ceea ce plătești efectiv.
       detected_review_action: Verifică-le
-      dormant: Inactiv
+      dormant: "În pauză"
       empty:
         action: Găsește tranzacții recurente
         description: Facturile reprezintă cheltuielile tale recurente. Sure le detectează
@@ -280,16 +281,17 @@ ro:
       subscriptions_up: Care abonamente s-au scumpit anul acesta?
     amount_range: între %{min} și %{max}
     attention:
+      paused: "Întreruptă"
       amount_changed: Sumă modificată
       needs_review: Asocierea necesită verificare
       overdue:
         one: 1 zi de întârziere
         other: "%{count} de zile de întârziere"
         few: "%{count} zile de întârziere"
-      partial: Parțial · mai sunt de plătit %{amount}
+      partial: Parțial
     cancelled_still_scheduled: Ai marcat anularea la %{date}, dar este încă programat,
       așa că facturile viitoare vor continua să apară.
-    debt_payment: "· plată datorie"
+    debt_payment: "plată datorie"
     detect:
       already_running: Detectarea este deja în curs. Revino peste puțin timp.
       found:

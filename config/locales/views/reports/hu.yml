@@ -192,10 +192,9 @@ hu:
       step1: Menj a Beállítások → API-kulcsok menüpontra
       step2: Hozz létre egy új API-kulcsot "olvasás" jogosultsággal
       step3: Másold ki az API-kulcsot
-      step4: 'Add hozzá az URL-hez így: ?api_key=A_TE_KULCSOD'
+      step4: "Add hozzá az URL-hez így: &api_key=A_TE_KULCSOD"
       example: Példa
       then_use: Ezután használd a teljes URL-t =IMPORTDATA() képlettel a Google Sheetsben.
-      open_sheets: Google Sheets megnyitása
       go_to_api_keys: Ugrás az API-kulcsokhoz
       close: Rendben
     print:

@@ -14,6 +14,9 @@ uk:
         transaction_account: Рахунок транзакції
     action_executors:
       labels:
+        split_transaction: "Розділити операцію"
+        fill_similar_merchants: "Заповнити продавців зі схожих операцій (без ШІ)"
+        bayes_categorize: "Категоризувати класифікатором (без ШІ)"
         set_transaction_category: Установити категорію транзакції
         set_transaction_tags: Установити теги транзакції
         set_transaction_merchant: Установити продавця транзакції

@@ -41,8 +41,11 @@ class RecurringTransaction
         name: attrs[:name],
         amount: amount,
         bill_type: is_income ? "income" : "bill",
+        # A paycheck is not spend, so it carries no category. Ownership of the
+        # id is checked by the model's category_belongs_to_family validation.
+        category_id: is_income ? nil : attrs[:category_id].presence,
         account: account,
-        currency: account&.currency || family.currency,
+        currency: chosen_currency || account&.currency || family.currency,
         payment_url: attrs[:payment_url],
         autopay: ActiveModel::Type::Boolean.new.cast(attrs[:autopay]) || false,
         notes: attrs[:notes],
@@ -63,8 +66,23 @@ class RecurringTransaction
         return recurring
       end
 
+      # The same goes for a chosen category. A malformed id casts to nil on
+      # the uuid column, which category_belongs_to_family then skips, so it
+      # would save as an uncategorised bill. A paycheck takes no category, so
+      # whatever was posted for one is ignored.
+      if !is_income && attrs[:category_id].present? && recurring.category_id.nil?
+        recurring.errors.add(:base, I18n.t("recurring_transactions.create.category_invalid"))
+        return recurring
+      end
+
       if amount.nil?
         recurring.errors.add(:base, I18n.t("recurring_transactions.create.amount_invalid"))
+        return recurring
+      end
+
+      # Checked on the input: assigning it already rounded to the column.
+      unless RecurringTransaction.storable_amount?(amount)
+        recurring.errors.add(:base, I18n.t("recurring_transactions.create.amount_too_precise"))
         return recurring
       end
 
@@ -110,7 +128,10 @@ class RecurringTransaction
         return false
       end
 
-      recurring.save
+      # Its own savepoint: a caller may hold a transaction open around this
+      # (the add-bill form locks the source entry), and a unique violation
+      # inside that one would abort it before the rescue below could answer.
+      RecurringTransaction.transaction(requires_new: true) { recurring.save }
     rescue ActiveRecord::RecordNotUnique
       recurring.errors.add(:base, I18n.t("recurring_transactions.create.already_exists"))
       false
@@ -133,5 +154,17 @@ class RecurringTransaction
         scope.exists?(name: recurring.name, merchant_id: nil)
       end
     end
+
+    private
+      # A currency picked on the form wins, the way a transaction's does: a USD
+      # subscription charged to a EUR card is a USD bill. With none, the bill
+      # takes its account's currency. A code the app doesn't know is ignored
+      # rather than saved, since formatting it would raise later.
+      def chosen_currency
+        code = attrs[:currency].to_s.strip.presence
+        Money::Currency.new(code).iso_code if code
+      rescue Money::Currency::UnknownCurrencyError
+        nil
+      end
   end
 end

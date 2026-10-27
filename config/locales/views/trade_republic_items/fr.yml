@@ -53,6 +53,7 @@ fr:
       no_accounts_discovered: Aucun compte Trade Republic découvert pour le moment.
       no_accounts_discovered_description: Terminez la connexion et lancez une synchronisation pour découvrir
         votre compte.
+      session_expires_in: "La connexion expire dans %{time} (%{at})."
       data_quality:
         title: Qualité des données et détails de synchronisation
         repair: Réparer les données importées

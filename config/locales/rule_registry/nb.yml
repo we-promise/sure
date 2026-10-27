@@ -14,6 +14,9 @@ nb:
         transaction_account: Transaksjonskonto
     action_executors:
       labels:
+        split_transaction: "Del transaksjon"
+        fill_similar_merchants: "Fyll inn manglende forhandlere fra lignende transaksjoner (uten KI)"
+        bayes_categorize: "Kategoriser med klassifiseringen (uten KI)"
         set_transaction_category: Angi transaksjonskategori
         set_transaction_tags: Angi transaksjonstagger
         set_transaction_merchant: Angi brukersted for transaksjonen

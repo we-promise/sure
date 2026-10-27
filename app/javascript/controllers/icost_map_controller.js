@@ -1,7 +1,15 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["canvas", "record", "latitude", "longitude", "status"];
+  static targets = [
+    "canvas",
+    "record",
+    "latitude",
+    "longitude",
+    "status",
+    "placeholder",
+    "searchQuery",
+  ];
   static values = { tiles: String, error: String, pick: String };
 
   async load(event) {
@@ -39,12 +47,28 @@ export default class extends Controller {
       this.renderMarkers();
       this.statusTarget.textContent = this.pickValue;
       button.disabled = true;
+      if (this.hasPlaceholderTarget) {
+        this.placeholderTarget.classList.add("hidden");
+      }
     } catch {
       this.map?.remove();
       this.map = null;
       this.statusTarget.textContent = this.errorValue;
     } finally {
       this.loading = false;
+    }
+  }
+
+  fillSearch(event) {
+    const place = event.currentTarget.dataset.place;
+    if (!place) return;
+    const input = this.hasSearchQueryTarget
+      ? this.searchQueryTarget
+      : document.querySelector('input[name="icost_location[query]"]');
+    if (input) {
+      input.value = place;
+      input.focus();
+      input.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }
 

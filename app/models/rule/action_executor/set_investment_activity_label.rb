@@ -9,6 +9,14 @@ class Rule::ActionExecutor::SetInvestmentActivityLabel < Rule::ActionExecutor
     end
   end
 
+  def claimed_attributes
+    [ :investment_activity_label ]
+  end
+
+  def actionable?(value)
+    Transaction::ACTIVITY_LABELS.include?(value)
+  end
+
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     return 0 unless Transaction::ACTIVITY_LABELS.include?(value)
 

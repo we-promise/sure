@@ -276,6 +276,8 @@ class TradeRepublicItemsController < ApplicationController
 
   def update
     attrs = trade_republic_item_params.to_h
+    # The form leaves the phone number blank to keep the current one.
+    attrs.delete("phone_number") if attrs["phone_number"].blank?
     login_pin = attrs["pin"]
     reauthentication_required = reauthentication_needed?(attrs)
 
@@ -319,7 +321,14 @@ class TradeRepublicItemsController < ApplicationController
   end
 
   def sync
-    @trade_republic_item.sync_later unless @trade_republic_item.syncing?
+    # A connection that needs a new login can only fail to sync.
+    syncing = @trade_republic_item.syncing?
+    queued = @trade_republic_item.ready_for_sync? && !syncing
+    @trade_republic_item.sync_later if queued
+    if provider_panel_form? && turbo_panel_request?
+      # Only this card, as the login steps do, so the other cards keep their state.
+      return render_login_panel(notice: (t("settings.providers.sync_provider_in_progress") if queued || syncing))
+    end
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -335,7 +344,7 @@ class TradeRepublicItemsController < ApplicationController
   def select_accounts
     item = current_trade_republic_item
     unless item
-      redirect_to settings_providers_path, alert: t(".not_configured")
+      frame_redirect_to settings_providers_path, alert: t(".not_configured")
       return
     end
 
@@ -403,7 +412,8 @@ class TradeRepublicItemsController < ApplicationController
       )
     end
 
-    tr_account.trade_republic_item.sync_later unless tr_account.trade_republic_item.syncing?
+    linked_item = tr_account.trade_republic_item
+    linked_item.sync_later if linked_item.ready_for_sync? && !linked_item.syncing?
     if processing_failed
       redirect_to account_path(account), notice: t(".success"), alert: t(".processing_failed"), status: :see_other
     else
@@ -430,7 +440,7 @@ class TradeRepublicItemsController < ApplicationController
     latest_sync = @trade_republic_item.syncs.ordered.first
     should_sync = latest_sync.nil? || !latest_sync.completed?
 
-    if no_accounts && !@trade_republic_item.syncing? && should_sync && @trade_republic_item.session_configured?
+    if no_accounts && !@trade_republic_item.syncing? && should_sync && @trade_republic_item.ready_for_sync?
       @trade_republic_item.sync_later
     end
 
@@ -500,7 +510,8 @@ class TradeRepublicItemsController < ApplicationController
     end
 
     @trade_republic_item.update!(pending_account_setup: @trade_republic_item.unlinked_accounts_count.positive?)
-    @trade_republic_item.sync_later if created_accounts.any?
+    # The accounts are set up from stored data; syncing them needs a login.
+    @trade_republic_item.sync_later if created_accounts.any? && @trade_republic_item.ready_for_sync?
 
     if created_accounts.any?
       options = { notice: t(".success", count: created_accounts.count), status: :see_other }
@@ -643,28 +654,11 @@ class TradeRepublicItemsController < ApplicationController
       @trade_republic_item.destroy_later if @trade_republic_item.trade_republic_accounts.none?
     end
 
-    def turbo_panel_request?
-      turbo_frame_request? || request.format.turbo_stream?
-    end
-
+    # Only the add-connection form's own unsaved item should replace its blank
+    # default; an existing item failing update/login keeps the add form blank.
     def render_panel_error(message)
-      @error_message = message
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "trade-republic-providers-panel",
-          partial: "settings/providers/trade_republic_panel",
-          locals: {
-            error_message: @error_message,
-            # Only the add-connection form's own unsaved item should replace
-            # its blank default; an existing item failing update/login keeps
-            # the add form blank.
-            new_item: (@trade_republic_item if @trade_republic_item&.new_record?)
-          }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path(anchor: "trade-republic"), alert: @error_message, status: :see_other
-      end
+      render_provider_panel("trade_republic", alert: message, fallback_path: settings_providers_path(anchor: "trade-republic"),
+                            new_item: (@trade_republic_item if @trade_republic_item&.new_record?))
     end
 
     def render_qr_login_error(error, pending: nil, status: :unprocessable_entity, retryable: false)

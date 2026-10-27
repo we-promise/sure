@@ -6,6 +6,7 @@ nb:
         renewal: Bidraget ditt fortsetter den %{date}.
         cancellation: Bidraget ditt avsluttes %{date}.
   settings:
+    encryption_migration_guide: Veiledning for oppsett av kryptering og migrering
     payments:
       show:
         page_title: Betaling
@@ -112,6 +113,8 @@ nb:
         split_grouped_description: Vis delte transaksjoner gruppert under hovedtransaksjonen
           i transaksjonslisten. Når dette er av, vises delene som egne rader.
         split_grouped_title: Grupper delte transaksjoner
+        auto_generate_transaction_names_title: "Opprett transaksjonsnavn automatisk"
+        auto_generate_transaction_names_description: "Når navnet på en manuelt registrert transaksjon er tomt, fylles det inn fra valgt kategori og forhandler (for eksempel «Underholdning - Netflix»). Navn er fortsatt påkrevd hvis ingen av dem er valgt. Gjelder hele husstanden og bare nye transaksjoner."
         theme_subtitle: Velg ønsket tema for appen
         theme_system: System
         theme_title: Tema

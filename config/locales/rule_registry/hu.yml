@@ -14,6 +14,9 @@ hu:
         transaction_account: Tranzakció számlája
     action_executors:
       labels:
+        split_transaction: "Tranzakció felosztása"
+        fill_similar_merchants: "Hiányzó kereskedők kitöltése hasonló tranzakciókból (AI nélkül)"
+        bayes_categorize: "Kategorizálás az osztályozóval (AI nélkül)"
         set_transaction_category: Tranzakció kategóriájának beállítása
         set_transaction_tags: Tranzakció címkéinek beállítása
         set_transaction_merchant: Tranzakció kereskedőjének beállítása

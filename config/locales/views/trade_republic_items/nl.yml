@@ -23,6 +23,7 @@ nl:
       accounts_need_setup_description: Je Trade Republic-rekening moet aan een Sure-rekening worden gekoppeld.
       no_accounts_discovered: Nog geen Trade Republic-rekening gevonden.
       no_accounts_discovered_description: Voltooi de aanmelding en voer een synchronisatie uit om je rekening te vinden.
+      session_expires_in: "Login verloopt over %{time} (%{at})."
       data_quality:
         title: Datakwaliteit en synchronisatiedetails
         repair: Geïmporteerde gegevens herstellen

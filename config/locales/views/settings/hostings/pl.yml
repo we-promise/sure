@@ -223,6 +223,8 @@ pl:
           wykrywanie kontrahenta i przetwarzanie PDF) obecnie zawsze korzystają z
           OpenAI.
         env_configured_message: Skonfigurowano przez zmienną środowiskową LLM_PROVIDER.
+        max_items_per_call_help: "Górny limit dla wsadów auto-kategoryzacji / wykrywania kontrahenta. Domyślnie: 25. W przypadku dostawców zgodnych z OpenAI większe wsady są automatycznie dzielone, aby zmieścić się w oknie kontekstu."
+        max_items_per_call_label: Maks. elementów na wsad (opcjonalnie)
         not_configured_hint: Dodaj poniżej klucz API %{provider}, aby go aktywować.
         provider_anthropic: Anthropic (Claude)
         provider_help: >-

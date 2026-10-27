@@ -1,6 +1,7 @@
 ---
 tr:
   settings:
+    encryption_migration_guide: Şifreleme kurulumu ve geçiş kılavuzu
     ai_prompts:
       show:
         disable_ai: Yapay Zeka Asistanını Devre Dışı Bırak
@@ -58,6 +59,8 @@ tr:
           altında gruplandırılmış olarak gösterin. Kapalıyken bölünen alt işlemler
           ayrı satırlar olarak görünür.
         split_grouped_title: Bölünmüş işlemleri grupla
+        auto_generate_transaction_names_title: "İşlem adlarını otomatik oluştur"
+        auto_generate_transaction_names_description: "Elle girilen bir işlemin adı boş bırakılırsa, seçilen kategori ve satıcıdan doldurulur (ör. \"Eğlence - Netflix\"). İkisi de seçilmezse ad yine zorunludur. Tüm hane için geçerlidir ve yalnızca yeni işlemleri etkiler."
         theme_dark: Koyu
         theme_light: Açık
         theme_subtitle: Uygulama için tercih edilen temayı seçin
@@ -377,6 +380,7 @@ tr:
         application_id_placeholder_update: Güncellemek için yeni ID girin
         callback_url_instruction: Geri çağırma URL'si için %{callback_url} kullanın.
         client_certificate_label: İstemci Sertifikası (Özel Anahtar ile)
+        keep_client_certificate_hint: "Mevcut sertifikayı korumak için boş bırakın"
         config_locked_message: Bu kimlik bilgilerini değiştirmeden önce bağlı tüm
           bankaların bağlantısını kesin.
         config_locked_title: Yapılandırma kilitli
@@ -536,6 +540,8 @@ tr:
           one: "%{count} gün içinde yeniden onay gerekiyor"
           other: "%{count} gün içinde yeniden onay gerekiyor"
         reconsent_required: Yeniden onay gerekiyor
+        login_required: "Giriş gerekli"
+        login_expires_soon: "Girişin süresi %{time} içinde doluyor (%{at})"
         registration_needed: Kayıt gerekiyor
         sync_error: Senkronizasyon hatası
       not_authorized: Yetkiniz yok
@@ -615,7 +621,7 @@ tr:
         monobank: Ukrayna Monobank kartlarını ve kumbaralarını kişisel bir API token ile senkronize edin.
         fio: Bir Fio banka hesabını salt okunur bir API token ile senkronize edin.
         coinspot: CoinSpot bakiyelerini, AUD değerlerini, transferleri, para yatırma, para çekme ve emir geçmişini salt okunur bir API anahtarıyla senkronize edin.
-        onchain_wallet: Gözetimsiz Bitcoin, EVM ve Solana cüzdanlarını herkese açık adresleri üzerinden takip edin.
+        onchain_wallet: Gözetimsiz Bitcoin, EVM, Solana, Cosmos ve Polkadot cüzdanlarını herkese açık adresleri üzerinden takip edin.
         trading212: Trading 212 yatırım portföyünüzü salt okunur bir API anahtarıyla senkronize edin.
         trade_republic: Trade Republic yatırım hesabınızı güvenli, salt okunur web girişiyle senkronize edin.
         financekit: Bazı FinanceKit hesaplarını Sure iOS uygulaması üzerinden senkronize edin.
@@ -714,9 +720,11 @@ tr:
         qr_cancel: QR girişini iptal et
         qr_back_to_credentials: Telefon numarası ve PIN'e veya şifreye dön
         qr_loading: QR kod hazırlanıyor …
-        qr_instruction: QR kodu Trade Republic uygulamanızla tarayın ve girişi onaylayın.
+        qr_instruction: QR kodu telefonunuzun kamerasıyla tarayın, ardından girişi Trade Republic uygulamasında onaylayın.
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
         qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
+        requires_update: "Senkronizasyona devam etmek için yeniden giriş yapın."
+        session_expires_in: "Girişin süresi %{time} içinde doluyor (%{at})."
         add_account: "Başka bir bağlantı ekle"
         save_configuration: Kaydet ve Girişi Başlat
         update_configuration: Yapılandırmayı Güncelle
@@ -820,6 +828,7 @@ tr:
       accounts_label: Hesaplar
       advanced_section_title: Gelişmiş
       ai_prompts_label: Yapay Zeka İstemleri
+      auto_matches_label: Otomatik Eşleştirme
       api_key_label: API Anahtarı
       api_keys_label: API Anahtarları
       appearance_label: Görünüm

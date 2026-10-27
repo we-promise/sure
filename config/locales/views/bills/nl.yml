@@ -39,6 +39,7 @@ nl:
       subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
       subscription_price_changes: Prijswijzigingen dit jaar
     index:
+      notices_heading: "Wijzigingen"
       needs_attention: Aandacht vereist
       title: Facturen
       this_month: Deze maand
@@ -54,7 +55,7 @@ nl:
         one: We hebben 1 terugkerende betaling in je transacties gevonden. Controleer deze zodat de totalen overeenkomen met wat je werkelijk betaalt.
         other: We hebben %{count} terugkerende betalingen in je transacties gevonden. Controleer ze zodat de totalen overeenkomen met wat je werkelijk betaalt.
       detected_review_action: Controleren
-      dormant: Inactief
+      dormant: "Gepauzeerd"
       empty:
         action: Terugkerende transacties zoeken
         description: Facturen zijn je terugkerende uitgaven. Sure vindt ze automatisch in je transactiegeschiedenis. Je kunt aan elke factuur een betaallink toevoegen om direct vanaf hier te betalen.
@@ -261,12 +262,13 @@ nl:
     show:
       edit: Factuur bewerken
     attention:
+      paused: "Gepauzeerd"
       overdue:
         other: "%{count} dagen te laat"
         one: 1 dag te laat
       amount_changed: Bedrag gewijzigd
       needs_review: Koppeling moet worden gecontroleerd
-      partial: Gedeeltelijk · nog %{amount}
+      partial: Gedeeltelijk
     add_payment: Betaling toevoegen
     ai_prompts:
       due_before_paycheck: Wat moet ik vóór mijn volgende salaris betalen?
@@ -275,7 +277,7 @@ nl:
       subscriptions_up: Welke abonnementen zijn dit jaar duurder geworden?
     amount_range: varieert van %{min} tot %{max}
     cancelled_still_scheduled: Je hebt dit als opgezegd gemarkeerd op %{date}, maar het staat nog ingepland. Toekomstige facturen blijven daarom verschijnen.
-    debt_payment: "· schuldbetaling"
+    debt_payment: "schuldbetaling"
     feed:
       calendar_name: Sure Facturen
     find_payment: Betaling zoeken

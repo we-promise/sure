@@ -47,12 +47,13 @@ zh-CN:
         transfer: 转账
     amount_range: 范围为 %{min} 至 %{max}
     attention:
+      paused: "已暂停"
       amount_changed: 金额已变更
       needs_review: 匹配结果待核对
       overdue:
         one: 已逾期 1 天
         other: 已逾期 %{count} 天
-      partial: 部分已付 · 尚余 %{amount}
+      partial: 部分已付
     calendar:
       empty_month: 本月没有到期账单。
       month_totals: 预计 %{expected} · 已付 %{paid}
@@ -62,7 +63,7 @@ zh-CN:
       subscribe_ical: 订阅（iCal）
       today: 今天
     cancelled_still_scheduled: 您于 %{date} 将此账单标记为已取消，但它仍在计划中，因此后续账单仍会出现。
-    debt_payment: "· 债务还款"
+    debt_payment: "债务还款"
     detail:
       annualized: 每年
       around: "%{date} 左右"
@@ -117,6 +118,7 @@ zh-CN:
       calendar_name: Sure 账单
     find_payment: 查找付款
     index:
+      notices_heading: "变更"
       accept: 应用
       add_bill: 添加账单
       add_income: 添加收入
@@ -127,7 +129,7 @@ zh-CN:
         one: 在您的交易中发现了 1 笔循环付款。请核对，以便这里的合计与您的实际付款一致。
         other: 在您的交易中发现了 %{count} 笔循环付款。请核对，以便这里的合计与您的实际付款一致。
       detected_review_action: 前往核对
-      dormant: 长期无活动
+      dormant: "已暂停"
       empty:
         action: 查找循环交易
         description: 账单是您的周期性支出。Sure 会从交易历史中自动识别账单；您也可以为每笔账单添加付款链接，直接从这里前往付款。

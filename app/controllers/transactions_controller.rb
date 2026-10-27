@@ -33,8 +33,9 @@ class TransactionsController < ApplicationController
                          # - outflow rows need inflow_transaction (to_account) for both
                          #   counterpart display and Transfer#categorizable?/#payment?
                          # - inflow rows need outflow_transaction (from_account) for
-                         #   counterpart display, and inflow_transaction (to_account)
-                         #   for the category menu on the same row
+                         #   counterpart display, inflow_transaction (to_account)
+                         #   for the category menu on the same row, and the
+                         #   outflow's category, which the inflow row shows
                          {
                            transfer_as_outflow: {
                              inflow_transaction: { entry: :account }
@@ -43,7 +44,7 @@ class TransactionsController < ApplicationController
                          {
                            transfer_as_inflow: {
                              inflow_transaction: { entry: :account },
-                             outflow_transaction: { entry: :account }
+                             outflow_transaction: [ :category, { entry: :account } ]
                            }
                          }
                        )
@@ -69,14 +70,12 @@ class TransactionsController < ApplicationController
     end
 
     # Preload which entries on this page are split parents (have children) to avoid N+1
-    @split_parent_entry_ids = if entry_ids.any?
-      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
-    else
-      Set.new
-    end
+    @split_parent_entry_ids = Entry.split_parent_ids_among(entry_ids)
 
+    # Counts what the categorize wizard can act on, so read-only shares don't
+    # keep the "Categorize" menu item visible.
     @uncategorized_count = Rails.cache.fetch(uncategorized_count_cache_key) do
-      Current.accessible_entries.uncategorized_transactions.count
+      Current.annotatable_entries.uncategorized_transactions.count
     end
 
     # Load projected recurring transactions for next 10 days. Only the IDs are
@@ -136,6 +135,7 @@ class TransactionsController < ApplicationController
     if account.nil?
       @entry = Current.family.entries.new(entry_params)
       @entry.valid?
+      clear_stale_auto_generated_name!(@entry)
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
       return
@@ -165,6 +165,7 @@ class TransactionsController < ApplicationController
 
       respond_with_created_entry(@entry)
     else
+      clear_stale_auto_generated_name!(@entry)
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
     end
@@ -183,6 +184,7 @@ class TransactionsController < ApplicationController
 
   def update
     if @entry.update(permitted_entry_params)
+      sync_needed = @entry.saved_changes_affect_balances?
       transaction = @entry.transaction
       transaction.record_category_usage!
 
@@ -197,7 +199,7 @@ class TransactionsController < ApplicationController
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.sync_account_later
+      @entry.sync_account_later if sync_needed
 
       notes_changed = @entry.saved_change_to_notes?
 
@@ -261,7 +263,6 @@ class TransactionsController < ApplicationController
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
     @entry.transaction.lock_attr!(:tag_ids)
-    @entry.sync_account_later
 
     respond_to do |format|
       # JSON stays first so Accept: */* callers keep the original response.
@@ -329,13 +330,14 @@ class TransactionsController < ApplicationController
     redirect_back_or_to transactions_path
   end
 
+  # Offer transaction conversion only for account types that can own trades.
   def convert_to_trade
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
 
     return unless require_account_permission!(@entry.account)
 
-    unless @entry.account.investment?
+    unless @entry.account.supports_trades?
       flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
@@ -344,6 +346,7 @@ class TransactionsController < ApplicationController
     render :convert_to_trade
   end
 
+  # Lock and recheck the source entry before creating a trade and excluding the transaction.
   def create_trade_from_transaction
     @transaction = accessible_transactions.includes(entry: :account).find(params[:id])
     @entry = @transaction.entry
@@ -351,7 +354,7 @@ class TransactionsController < ApplicationController
     return unless require_account_permission!(@entry.account)
 
     # Pre-transaction validations
-    unless @entry.account.investment?
+    unless @entry.account.supports_trades?
       flash[:alert] = t("transactions.convert_to_trade.errors.not_investment_account")
       redirect_back_or_to transactions_path
       return
@@ -367,15 +370,25 @@ class TransactionsController < ApplicationController
     security = resolve_security_for_conversion
     return if performed? # Early exit if redirect already happened
 
-    # Validate and calculate qty/price before transaction
-    qty, price = calculate_qty_and_price
-    return if performed? # Early exit if redirect already happened
-
     activity_label = params[:investment_activity_label].presence
-    # Infer sell from amount sign: negative amount = money coming in = sell
-    is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount < 0)
-
+    # Serialize replacements on the source, including requests already in flight.
     ActiveRecord::Base.transaction do
+      # Entry#transaction is its delegated transaction record, so use an
+      # explicit DB transaction rather than ActiveRecord's instance with_lock.
+      @entry.lock!
+      if @entry.excluded?
+        flash[:alert] = t("transactions.convert_to_trade.errors.already_converted")
+        redirect_back_or_to transactions_path
+        next
+      end
+
+      # Infer missing values from the locked source amount, including edits
+      # committed while the security was being resolved.
+      qty, price = calculate_qty_and_price
+      next if performed?
+
+      # Infer sell from the refreshed source: negative amount means money in.
+      is_sell = activity_label == "Sell" || (activity_label.blank? && @entry.amount < 0)
       # For trades: positive qty = buy (money out), negative qty = sell (money in)
       signed_qty = is_sell ? -qty : qty
       trade_amount = qty * price
@@ -413,6 +426,8 @@ class TransactionsController < ApplicationController
       @entry.update!(excluded: true)
     end
 
+    return if performed?
+
     flash[:notice] = t("transactions.convert_to_trade.success")
     redirect_to account_path(@entry.account), status: :see_other
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
@@ -437,19 +452,24 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(transaction.entry.account)
 
-    # Check if a recurring transaction already exists for this pattern.
-    # The UI disables the button ahead of time using the same lookup, but this
-    # guard remains as the authoritative check (e.g. stale page, direct POST).
-    existing = transaction.existing_manual_recurring_transaction
-
-    if existing
-      flash[:alert] = t("recurring_transactions.already_exists")
-      redirect_back_or_to transactions_path
-      return
-    end
-
     begin
-      recurring_transaction = RecurringTransaction.create_from_transaction(transaction)
+      # Check if a recurring transaction already exists for this pattern.
+      # The UI disables the button ahead of time using the same lookup, but
+      # this guard remains as the authoritative check (e.g. stale page, direct
+      # POST). The check and the create hold the entry lock the Allocator and
+      # the add-bill form take, so neither can slip in between them.
+      blocked = nil
+      Entry.transaction do
+        RecurringTransaction::Allocator.lock_entry!(transaction.entry)
+        blocked = mark_recurring_blocked_message(transaction)
+        RecurringTransaction.create_from_transaction(transaction) unless blocked
+      end
+
+      if blocked
+        flash[:alert] = blocked
+        redirect_back_or_to transactions_path
+        return
+      end
 
       respond_to do |format|
         format.html do
@@ -508,48 +528,54 @@ class TransactionsController < ApplicationController
     end
   end
 
+  def name_suggestions
+    unknown_names = LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t("transactions.unknown_name", locale: locale) }
+    transactions = Current.family.transactions.merge(Account.accessible_by(Current.user)).where.not(entries: { name: unknown_names })
+    query = params[:q].to_s.strip
+
+    @suggestions = if query.length < Transaction::MIN_LENGTH_FOR_NAME_SUGGESTION
+      names = recent_transaction_names.select { |name| name.downcase.include?(query.downcase) }
+      transactions.name_suggestions_for_names(names)
+    else
+      transactions.name_suggestions_for(query)
+    end
+  end
+
   private
-    # Scoped by user (not just family) because Current.accessible_entries is
-    # user-scoped for family sharing (see Current#accessible_entries).
-    #
-    # Includes Family#accounts_status_version because `uncategorized_transactions`
-    # filters on account status (draft/active), and toggling an account's
-    # active status (AccountsController#toggle_active) doesn't touch `entries`
-    # or `AccountShare`, so it wouldn't otherwise bust this cache.
     def uncategorized_count_cache_key
-      "transactions_uncategorized_count/v4/#{Current.family.id}/#{Current.user.id}/" \
+      "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 
-    # Scoped additionally by Date.current since the "next 10 days" window is
-    # date-dependent and would otherwise return a stale window on a cache hit
-    # from an earlier day.
-    #
-    # Includes Family#recurring_transaction_merchants_version because the
-    # cached records are preloaded with :merchant and rendered with its
-    # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
-    # doesn't touch `recurring_transactions`.
     def projected_recurring_cache_key
       "transactions_projected_recurring/v6/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
         "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
         "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
     end
 
-    # The "Mark as Recurring" block is only ever rendered under these same
-    # conditions (see transactions/show.html.erb), so skip the extra query
-    # entirely when it won't be used — this runs on every show/failed-update
-    # render, including read-only viewers and split-child transactions.
+    def covering_series_for(entry)
+      Current.family.recurring_transactions.accessible_by(Current.user).covering(entry)
+    end
+
+    def mark_recurring_blocked_message(transaction)
+      if covering_series_for(transaction.entry)
+        t("recurring_transactions.already_covered")
+      elsif RecurringTransaction.identity_taken_by(transaction)
+        t("recurring_transactions.already_exists")
+      end
+    end
+
     def assign_mark_recurring_state
       return unless can_edit_entry? && !@entry.split_child?
 
-      existing = @entry.transaction.existing_manual_recurring_transaction
+      blocked = mark_recurring_blocked_message(@entry.transaction)
 
       @mark_recurring_href = mark_as_recurring_transaction_path(@entry.transaction)
-      @mark_recurring_subtitle_class = existing ? "text-subdued" : "text-secondary"
-      @mark_recurring_subtitle = existing ? t("recurring_transactions.already_exists") : t("transactions.show.mark_recurring_subtitle")
-      @mark_recurring_disabled = existing.present?
-      @mark_recurring_title = existing ? t("recurring_transactions.already_exists") : nil
-      @mark_recurring_button_class = existing ? "disabled:opacity-50" : nil
+      @mark_recurring_subtitle_class = blocked ? "text-subdued" : "text-secondary"
+      @mark_recurring_subtitle = blocked || t("transactions.show.mark_recurring_subtitle")
+      @mark_recurring_disabled = blocked.present?
+      @mark_recurring_title = blocked
+      @mark_recurring_button_class = blocked ? "disabled:opacity-50" : nil
     end
 
     def accessible_transactions
@@ -593,6 +619,7 @@ class TransactionsController < ApplicationController
     end
 
     def needs_rule_notification?(transaction)
+      return false if Current.user.guest?
       return false if Current.user.rule_prompts_disabled
 
       if Current.user.rule_prompt_dismissed_at.present?
@@ -675,6 +702,16 @@ class TransactionsController < ApplicationController
       set_entry
     end
 
+    # Entry#set_default_name may have already filled in a category/merchant
+    # -derived name during this failed validation attempt. A blank
+    # submission must still render blank -- otherwise the generated text
+    # becomes the field's literal value, and if the user then changes the
+    # category/merchant and resubmits, that stale generated name (no longer
+    # blank) skips the callback entirely and gets saved as-is.
+    def clear_stale_auto_generated_name!(entry)
+      entry.name = "" if entry_params[:name].blank?
+    end
+
     def set_new_transaction_form_options
       accessible_accounts_scope = accessible_accounts
 
@@ -690,32 +727,78 @@ class TransactionsController < ApplicationController
       @tags = Current.family.tags.alphabetically.to_a
     end
 
+    # Autocomplete suggestions for the name field, only queried when the
+    # auto-generate setting is on: lets a user reuse an actual previous name
+    # instead of leaving the field blank (which would produce a generic
+    # fallback), the same way it curbs bulk-identical generated names.
+    def recent_transaction_names
+      return [] unless Current.family.auto_generate_transaction_names?
+
+      # Current.accessible_entries (not Entry.family_scope), so a non-admin
+      # family member never sees names from accounts that weren't shared
+      # with them -- family-wide settings still respect per-account sharing.
+      # Its underlying Account.accessible_by scope is itself a `.distinct`
+      # query, so ORDER BY created_at must stay in the pluck'd column list
+      # (a plain "pluck(:name)" here would hit Postgres's "SELECT DISTINCT
+      # ... ORDER BY expressions must appear in select list"); dedup by name
+      # happens in Ruby afterward instead.
+      #
+      # Checked across every supported locale (like Entry#generic_name?'s
+      # unknown-name check), not just the current one -- otherwise an old
+      # entry named under a different locale's fallback (e.g. "Unbekannte
+      # Transaktion") would still surface as a "recent name" suggestion. A
+      # full generic_name? reuse isn't practical here since it also needs a
+      # loaded entryable.category, which isn't available cheaply from a pluck.
+      unknown_names = LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t("transactions.unknown_name", locale: locale) }
+
+      Current.accessible_entries
+        .where(entryable_type: "Transaction")
+        .where.not(name: unknown_names)
+        .order(created_at: :desc)
+        .limit(200)
+        .pluck(:name, :created_at)
+        .map(&:first)
+        .uniq
+        .first(20)
+    end
+
     # Filters entry_params based on the user's permission on the account.
     # read_write users can only annotate (category, tags, notes, merchant).
     # read_only users cannot update anything.
     def permitted_entry_params
-      case entry_permission
+      permitted = case entry_permission
       when :owner, :full_control
         entry_params
       when :read_write
         # Annotate only: category, tags, merchant, notes
-        ep = entry_params.slice(:notes)
+        ep = entry_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES)
         if entry_params[:entryable_attributes].present?
-          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :merchant_id, :tag_ids)
+          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES)
         end
         ep
       else
         {} # read_only — no edits allowed
       end
+
+      # A matched transfer's category lives on its outflow leg; a category
+      # sent for the inflow leg would look saved but never reach a budget.
+      if permitted[:entryable_attributes]&.key?(:category_id) && @entry.transaction.category_set_on_transfer_outflow?
+        permitted[:entryable_attributes] = permitted[:entryable_attributes].except(:category_id)
+      end
+
+      permitted
     end
 
+    # Permitted search filters from the q param, with blank values and
+    # unsupported ai_status / attachment_status values dropped.
     def search_params
       cleaned_params = params.fetch(:q, {})
               .permit(
                 :start_date, :end_date, :search, :amount,
                 :amount_operator, :active_accounts_only,
                 accounts: [], account_ids: [],
-                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: []
+                categories: [], merchants: [], types: [], tags: [], status: [], ai_status: [],
+                attachment_status: []
               )
               .to_h
               .compact_blank
@@ -725,6 +808,11 @@ class TransactionsController < ApplicationController
       if cleaned_params[:ai_status]
         cleaned_params[:ai_status] &= Transaction::Search::AI_STATUSES
         cleaned_params.delete(:ai_status) if cleaned_params[:ai_status].empty?
+      end
+
+      if cleaned_params[:attachment_status]
+        cleaned_params[:attachment_status] &= Transaction::Search::ATTACHMENT_STATUSES
+        cleaned_params.delete(:attachment_status) if cleaned_params[:attachment_status].empty?
       end
 
       cleaned_params
@@ -760,6 +848,7 @@ class TransactionsController < ApplicationController
 
     # Helper methods for convert_to_trade
 
+    # Resolve the allowed ticker/provider before locking the source, avoiding network calls under its lock.
     def resolve_security_for_conversion
       user_country = Current.family.country
 
@@ -828,6 +917,7 @@ class TransactionsController < ApplicationController
       end
     end
 
+    # Validate submitted trade values and infer a missing value from the locked amount.
     def calculate_qty_and_price
       amount = @entry.amount.abs
       qty = params[:qty].present? ? params[:qty].to_d.abs : nil

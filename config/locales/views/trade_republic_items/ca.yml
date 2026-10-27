@@ -27,6 +27,7 @@ ca:
       no_accounts_discovered: Encara no s'ha descobert cap compte de Trade Republic.
       no_accounts_discovered_description: Completa l'inici de sessió i executa una
         sincronització per descobrir el compte.
+      session_expires_in: "La sessió caduca d'aquí a %{time} (%{at})."
       data_quality:
         title: Qualitat de les dades i detalls de sincronització
         repair: Repara les dades importades

@@ -5,6 +5,7 @@ de:
         renewal: Dein Beitrag wird am %{date} fortgesetzt.
         cancellation: Dein Beitrag endet am %{date}.
   settings:
+    encryption_migration_guide: Anleitung zur Einrichtung der Verschlüsselung und zur Migration
     ai_prompts:
       show:
         page_title: KI-Eingabeaufforderungen
@@ -21,6 +22,10 @@ de:
         merchant_detector:
           title: Händlererkennung
           subtitle: Die KI identifiziert und ergänzt Transaktionsdaten mit Händlerinformationen
+        insight_dig_in:
+          title: Analyse mit KI nachhaken
+          subtitle: Erste Chat-Nachricht, wenn du bei einer Analyse mit KI nachhakst
+          label: Nachricht zum Nachhaken
         save: Prompts speichern
         save_confirm:
           body: Eigene Prompts ersetzen die integrierten Systemanweisungen und Schutzvorkehrungen
@@ -72,6 +77,7 @@ de:
         general_title: Allgemein
         default_period: Standardzeitraum
         default_account_order: Standardreihenfolge der Konten
+        default_account_order_hint: Bei „Manuell“ ziehst du die Konten in der Seitenleiste in die gewünschte Reihenfolge.
         language: Sprache
         language_auto: Browsersprache
         page_title: Einstellungen
@@ -140,6 +146,8 @@ de:
         page_title: Darstellung
         split_grouped_description: Zeigt geteilte Transaktionen in der Liste gebündelt unter ihrer Ursprungsbuchung. Ist die Option aus, erscheint jede Teilbuchung als eigene Zeile.
         split_grouped_title: Geteilte Transaktionen gruppieren
+        auto_generate_transaction_names_title: Transaktionsnamen automatisch erzeugen
+        auto_generate_transaction_names_description: Bleibt der Name einer manuell erfassten Transaktion leer, wird er aus der gewählten Kategorie und dem Händler gebildet (z. B. „Unterhaltung - Netflix“). Ist beides nicht gewählt, bleibt der Name Pflicht. Gilt für den ganzen Haushalt und nur für neue Transaktionen.
         theme_dark: Dunkel
         theme_light: Hell
         theme_subtitle: Wähle das Erscheinungsbild der App
@@ -233,6 +241,7 @@ de:
       accounts_label: Konten
       advanced_section_title: Erweitert
       ai_prompts_label: KI-Eingabeaufforderungen
+      auto_matches_label: Automatischer Abgleich
       api_key_label: API-Schlüssel
       payment_label: Zahlung
       categories_label: Kategorien
@@ -301,6 +310,7 @@ de:
         application_id_placeholder_new: Application ID eintragen
         application_id_placeholder_update: Neue ID eintragen, um sie zu ändern
         client_certificate_label: Client-Zertifikat (mit Private Key)
+        keep_client_certificate_hint: "Leer lassen, um das aktuelle Zertifikat beizubehalten"
         config_locked_message: Trenn alle verknüpften Banken, bevor du diese Zugangsdaten änderst.
         config_locked_title: Konfiguration gesperrt
         configured: Eingerichtet
@@ -467,6 +477,8 @@ de:
           one: Erneute Zustimmung in 1 Tag nötig
           other: Erneute Zustimmung in %{count} Tagen nötig
         reconsent_required: Erneute Zustimmung nötig
+        login_required: "Anmeldung erforderlich"
+        login_expires_soon: "Anmeldung läuft in %{time} ab (%{at})"
         sync_error: Sync-Fehler
       not_authorized: Nicht berechtigt
       not_found: Anbieter nicht gefunden.
@@ -601,9 +613,11 @@ de:
         qr_cancel: QR-Login abbrechen
         qr_back_to_credentials: Zurück zu Telefonnummer und PIN oder Passwort
         qr_loading: QR-Code wird vorbereitet …
-        qr_instruction: Scanne den QR-Code mit deiner Trade-Republic-App und bestätige die Anmeldung.
+        qr_instruction: Scanne den QR-Code mit der Kamera deines Smartphones und bestätige die Anmeldung anschließend in der Trade-Republic-App.
         qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
         qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
+        requires_update: "Melde dich erneut an, um die Synchronisierung fortzusetzen."
+        session_expires_in: "Anmeldung läuft in %{time} ab (%{at})."
         add_account: Weitere Verbindung hinzufügen
         save_configuration: Speichern und Login starten
         update_configuration: Konfiguration aktualisieren

@@ -20,6 +20,7 @@ nav_sections = [
       { label: t(".rules_label"), path: rules_path, icon: "git-branch" },
       { label: t(".merchants_label"), path: family_merchants_path, icon: "store" },
       { label: t(".recurring_transactions_label"), path: recurring_transactions_path, icon: "repeat" },
+      { label: t(".auto_matches_label"), path: auto_matches_path, icon: "link-2" },
       { label: t(".statement_vault_label"), path: account_statements_path, icon: "archive", if: Current.user&.admin? }
     ]
   },
@@ -28,13 +29,14 @@ nav_sections = [
       header: t(".advanced_section_title"),
       items: [
         { label: t(".ai_prompts_label"), path: settings_ai_prompts_path, icon: "bot" },
+        { label: t(".classifier_label"), path: settings_classifier_path, icon: "sliders-horizontal" },
         { label: t(".llm_usage_label"), path: settings_llm_usage_path, icon: "activity" },
         { label: t(".api_keys_label"), path: settings_api_keys_path, icon: "key" },
         { label: t(".mcp_label"), path: settings_mcp_path, icon: "plug" },
         { label: t(".debug_label", default: "Debug"), path: settings_debug_path, icon: "bug", if: Current.user&.super_admin? },
         { label: t(".background_jobs_label"), path: settings_background_jobs_path, icon: "list-checks", if: Current.user&.super_admin? },
         { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", if: self_hosted? },
-        { label: t(".imports_label"), path: imports_path, icon: "download" },
+        { label: t(".imports_label"), path: imports_path, icon: "download", active: page_active?(imports_path) || request.path.start_with?("/icost_") },
         { label: t(".exports_label"), path: family_exports_path, icon: "upload" },
         { label: t(".sso_providers_label"), path: admin_sso_providers_path, icon: "key-round", if: Current.user&.super_admin? },
         { label: t(".users_label"), path: admin_users_path, icon: "users", if: Current.user&.super_admin? },
@@ -76,7 +78,7 @@ nav_sections = [
           <% section[:items].each do |item| %>
             <% next if item[:if] == false %>
             <li>
-              <%= render "settings/settings_nav_item", name: item[:label], path: item[:path], icon: item[:icon] %>
+              <%= render "settings/settings_nav_item", name: item[:label], path: item[:path], icon: item[:icon], active: item[:active] %>
             </li>
           <% end %>
         </ul>
@@ -103,7 +105,7 @@ nav_sections = [
         <% section[:items].each do |item| %>
           <% next if item[:if] == false %>
           <li>
-            <%= render "settings/settings_nav_item", name: item[:label], path: item[:path], icon: item[:icon] %>
+            <%= render "settings/settings_nav_item", name: item[:label], path: item[:path], icon: item[:icon], active: item[:active] %>
           </li>
         <% end %>
       <% end %>

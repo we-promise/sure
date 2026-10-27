@@ -14,6 +14,9 @@ zh-TW:
         transaction_account: 交易帳戶
     action_executors:
       labels:
+        split_transaction: "拆分交易"
+        fill_similar_merchants: "根據相似交易補齊商家（不使用 AI）"
+        bayes_categorize: "使用分類器分類（不使用 AI）"
         set_transaction_category: 設定交易分類
         set_transaction_tags: 設定交易標籤
         set_transaction_merchant: 設定交易商家

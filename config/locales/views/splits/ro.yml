@@ -5,6 +5,9 @@ ro:
       amount_label: Sumă
       cancel: Anulează
       category_label: Categorie
+      merchant_label: "Comerciant"
+      no_merchant: "(comerciantul tranzacției)"
+      tags_label: "Etichete"
       name_label: Nume
       original_amount: Sumă
       original_name: 'Nume:'

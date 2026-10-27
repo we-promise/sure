@@ -30,7 +30,7 @@ pt-BR:
       import_all_history_label: Importar o histórico completo de transações
       keep_token_placeholder: Deixe em branco para manter o token atual
       sandbox_note_html: >-
-        Utilize o URL base <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>)
+        Utilize o URL base <strong>sandbox</strong> (<code>https://api.wise-sandbox.com</code>)
         para testes. Defina <code>WISE_BASE_URL</code> no seu ambiente.
       sca:
         copied: Copiado!

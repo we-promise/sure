@@ -81,6 +81,7 @@ nb:
       upcoming: Kommende
       ytd: Betalt i år
     index:
+      notices_heading: "Endringer"
       accept: Bruk
       add_income: Legg til inntekt
       needs_review: Må gjennomgås
@@ -99,7 +100,7 @@ nb:
         other: Vi fant %{count} gjentakende betalinger i transaksjonene dine. Kontroller
           dem slik at summene her samsvarer med det du faktisk betaler.
       detected_review_action: Gjennomgå dem
-      dormant: Inaktiv
+      dormant: "Satt på pause"
       empty:
         action: Finn gjentakende transaksjoner
         description: Regninger er de gjentakende utgiftene dine. Sure finner dem automatisk
@@ -254,12 +255,13 @@ nb:
     paid_label: Betalt
     row_overdue: Forfalt
     attention:
+      paused: "Pauset"
       overdue:
         other: "%{count} dager på overtid"
         one: 1 dag på overtid
       amount_changed: Beløpet er endret
       needs_review: Koblingen må gjennomgås
-      partial: Delvis · %{amount} gjenstår
+      partial: Delvis
     due_label:
       due_since: Forfaller %{date}
       snoozed: Utsatt til %{date}
@@ -295,7 +297,7 @@ nb:
     amount_range: varierer fra %{min} til %{max}
     cancelled_still_scheduled: Du merket denne som avsluttet %{date}, men den er fortsatt
       planlagt, så fremtidige regninger vil fortsette å vises.
-    debt_payment: "· gjeldsbetaling"
+    debt_payment: "gjeldsbetaling"
     feed:
       calendar_name: Sure-regninger
     find_payment: Finn betaling

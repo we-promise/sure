@@ -91,7 +91,7 @@ nb:
       overwrite_confirm_body: Dette erstatter den nåværende inngangsverdien på %{current}.
       overwrite_confirm_title: Overskrive inngangsverdi?
       set: Angi
-      set_cost_basis_header: Angi inngangsverdi for %{ticker} (%{qty} aksjer)
+      set_cost_basis_header: Angi inngangsverdi for %{ticker}
       total_cost_basis_label: Samlet inngangsverdi
       unknown: "--"
     cost_basis_sources:

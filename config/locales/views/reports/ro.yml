@@ -164,10 +164,9 @@ ro:
       step1: Mergi la Setări → Chei API
       step2: Creează o cheie API nouă cu permisiunea „citire”
       step3: Copiază cheia API
-      step4: 'Adaug-o la acest URL ca: ?api_key=CHEIA_TA'
+      step4: "Adaug-o la acest URL ca: &api_key=CHEIA_TA"
       example: Exemplu
       then_use: Apoi utilizează URL-ul complet cu =IMPORTDATA() în Google Sheets.
-      open_sheets: Deschide Google Sheets
       go_to_api_keys: Mergi la Chei API
       close: Am înțeles
     investment_performance:

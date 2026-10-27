@@ -1143,4 +1143,46 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     get "/auth/desktop/openid_connect"
     assert_redirected_to new_session_path
   end
+
+  test "a session inactive past the timeout is rejected and destroyed" do
+    sign_in @user
+    session_record = Session.order(created_at: :desc).first
+    session_record.update_column(:updated_at, Session::INACTIVITY_TIMEOUT.ago - 1.day)
+
+    get root_url
+    assert_redirected_to new_session_url
+    assert_not Session.exists?(session_record.id)
+  end
+
+  test "an active session is touched at most once per touch interval" do
+    sign_in @user
+    session_record = Session.order(created_at: :desc).first
+    recent_activity = 5.minutes.ago
+    session_record.update_column(:updated_at, recent_activity)
+
+    get root_url
+    assert_response :success
+    session_record.reload
+    assert_in_delta recent_activity, session_record.updated_at, 10.seconds
+  end
+
+  # create_session_for refuses a deactivated user, so the OIDC callback cannot
+  # mint one either. Nothing covered that, and the identity record survives
+  # deactivation, so it is worth pinning down.
+  test "a deactivated user cannot sign in again through their SSO identity" do
+    oidc_identity = oidc_identities(:bob_google)
+    @user.sessions.destroy_all
+    @user.update_column(:active, false)
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    get "/auth/openid_connect/callback"
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
+  end
 end

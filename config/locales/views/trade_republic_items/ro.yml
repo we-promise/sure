@@ -27,6 +27,7 @@ ro:
       no_accounts_discovered: Niciun cont Trade Republic nu a fost descoperit încă.
       no_accounts_discovered_description: Finalizează autentificarea și rulează o
         sincronizare pentru a descoperi contul.
+      session_expires_in: "Autentificarea expiră în %{time} (%{at})."
       data_quality:
         title: Calitatea datelor și detalii de sincronizare
         repair: Repară datele importate

@@ -27,6 +27,7 @@ it:
       no_accounts_discovered: Nessun conto Trade Republic ancora rilevato.
       no_accounts_discovered_description: Completa l’accesso ed esegui una sincronizzazione
         per rilevare il conto.
+      session_expires_in: "L'accesso scade tra %{time} (%{at})."
       data_quality:
         title: Qualità dei dati e dettagli della sincronizzazione
         repair: Ripara i dati importati

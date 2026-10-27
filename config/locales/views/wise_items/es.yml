@@ -33,7 +33,7 @@ es:
       disconnect_confirm: "¿Seguro que quieres desconectar %{name}? Esto eliminará todos los datos de las cuentas sincronizadas."
       import_all_history_help: Obtén todos los extractos históricos de Wise, en lugar de solo los del último año.
       import_all_history_label: Importar todo el historial de transacciones
-      sandbox_note_html: Usa la URL base de <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>) para las pruebas. Configura <code>WISE_BASE_URL</code> en tu entorno.
+      sandbox_note_html: Usa la URL base de <strong>sandbox</strong> (<code>https://api.wise-sandbox.com</code>) para las pruebas. Configura <code>WISE_BASE_URL</code> en tu entorno.
       sync_start_date_help: Los extractos de Wise se importan a partir de esta fecha. Deja el valor predeterminado para obtener hasta un año de historial.
       sync_start_date_label: Importar transacciones desde
       token_label: Token de API

@@ -47,12 +47,13 @@ pt-PT:
         transfer: Transferência
     amount_range: varia de %{min} a %{max}
     attention:
+      paused: "Em pausa"
       amount_changed: Montante alterado
       needs_review: Associação a rever
       overdue:
         one: 1 dia de atraso
         other: "%{count} dias em atraso"
-      partial: Parcial · faltam %{amount}
+      partial: Parcial
     calendar:
       empty_month: Não há despesas a pagar este mês.
       month_totals: "%{expected} previstos · %{paid} pagos"
@@ -64,7 +65,7 @@ pt-PT:
     cancelled_still_scheduled: >-
       Marcou esta despesa como cancelada em %{date}, mas continua agendada, pelo que
       continuarão a aparecer vencimentos futuros.
-    debt_payment: "· pagamento de dívida"
+    debt_payment: "pagamento de dívida"
     detail:
       annualized: Por ano
       around: por volta de %{date}
@@ -123,6 +124,7 @@ pt-PT:
       calendar_name: Despesas a pagar do Sure
     find_payment: Encontrar pagamento
     index:
+      notices_heading: "Alterações"
       accept: Aplicar
       add_bill: Adicionar despesa a pagar
       add_income: Adicionar rendimento
@@ -137,7 +139,7 @@ pt-PT:
           Foram encontrados %{count} pagamentos recorrentes nas suas transações. Reveja-os
           para que os totais correspondam ao que realmente paga.
       detected_review_action: Rever
-      dormant: Inativa
+      dormant: "Pausadas"
       empty:
         action: Encontrar transações recorrentes
         description: >-

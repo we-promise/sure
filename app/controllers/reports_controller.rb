@@ -80,9 +80,8 @@ class ReportsController < ApplicationController
       sort_direction: params[:sort_direction]
     }.compact
 
-    # Build the full URL with the API key, if present
+    # The CSV URL the instructions tell people to add their API key to
     @csv_url = export_transactions_reports_url(base_params.merge(format: :csv))
-    @api_key_present = @csv_url.include?("api_key=")
 
     # This action will render `app/views/reports/google_sheets_instructions.html.erb`
     # It will render *inside* the modal frame.
@@ -133,6 +132,9 @@ class ReportsController < ApplicationController
       # Investment metrics
       @investment_metrics = build_investment_metrics
 
+      # Spending vs normal (preview): this period against the year before it
+      @spending_comparison = build_spending_comparison
+
       # Investment flows (contributions/withdrawals)
       @investment_flows = InvestmentFlowStatement.new(Current.family, user: Current.user).period_totals(period: @period)
 
@@ -168,6 +170,15 @@ class ReportsController < ApplicationController
           locals: { trends_data: @trends_data },
           visible: @has_accounts,
           collapsible: true
+        },
+        {
+          key: "spending_vs_normal",
+          title: "reports.spending_vs_normal.title",
+          partial: "reports/spending_vs_normal",
+          locals: { comparison: @spending_comparison, start_date: @start_date, end_date: @end_date },
+          visible: @has_accounts && @spending_comparison.present?,
+          collapsible: true,
+          preview: true
         },
         {
           key: "investment_performance",
@@ -321,6 +332,16 @@ class ReportsController < ApplicationController
       nil
     end
 
+    def build_spending_comparison
+      return nil unless preview_features_enabled?
+
+      IncomeStatement::SpendingComparison.new(
+        @income_statement,
+        period: @period,
+        history_start: IncomeStatement::SpendingComparison.history_start(@income_statement)
+      )
+    end
+
     def build_trends_data(income_statement:)
       # Generate month-by-month data based on the current period filter
       trends = []
@@ -364,7 +385,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Current.family.analytics_excluded_kinds)
         .includes(entry: :account, category: :parent)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
@@ -492,7 +513,12 @@ class ReportsController < ApplicationController
       investment_statement = Current.family.investment_statement
       investment_accounts = investment_statement.investment_accounts
 
-      return { has_investments: false } unless investment_accounts.any?
+      # Shown when there is something to show: an investment account in scope,
+      # or a disposal in the period for the realised-gains half. That half reads
+      # every account included in reports, disabled ones too, while
+      # `investment_accounts` is visible accounts only -- so a family whose only
+      # brokerage account is closed used to get no card at all.
+      return { has_investments: false } unless investment_accounts.any? || period_sell_trades.exists?
 
       period_totals = investment_statement.totals(period: @period)
       {
@@ -520,17 +546,7 @@ class ReportsController < ApplicationController
 
       # Get sell trades in period with realized gains
       # Eager-load security, account, and accountable to avoid N+1
-      sell_trades = Current.family.trades
-        .joins(entry: :account)
-        .where(entries: { date: @period.date_range })
-        .merge(Account.included_in_reports)
-        .where("trades.qty < 0")
-        # A transfer out has the same negative quantity as a sale and would be
-        # counted and listed as one. Nothing was sold, so it belongs in neither.
-        .where(
-          "trades.investment_activity_label IS NULL OR trades.investment_activity_label NOT IN (?)",
-          Trade::INTERNAL_MOVEMENT_LABELS
-        )
+      sell_trades = period_sell_trades
         .includes(:security, entry: { account: :accountable })
         .to_a
 
@@ -627,6 +643,29 @@ class ReportsController < ApplicationController
           total_gain: Money.new(unrealized + realized, currency)
         }
       end
+    end
+
+    # The period's disposals, as the realised-gains half of the investment
+    # card lists them. The card's gate asks the same relation, so the two
+    # cannot disagree about what counts as a disposal. Scoped to the accounts
+    # this user includes in their finances -- the per-user scope
+    # `investment_accounts` applies -- so another member's unshared account
+    # is neither listed nor opens the card.
+    def period_sell_trades
+      Current.family.trades
+        .joins(entry: :account)
+        # An excluded trade is left out of reports, as InvestmentStatement::Totals
+        # leaves it out of the same card's contributions and withdrawals.
+        .where(entries: { date: @period.date_range, excluded: false })
+        .where(entries: { account_id: Current.user.finance_accounts.select(:id) })
+        .merge(Account.included_in_reports)
+        .where("trades.qty < 0")
+        # A transfer out has the same negative quantity as a sale and would be
+        # counted and listed as one. Nothing was sold, so it belongs in neither.
+        .where(
+          "trades.investment_activity_label IS NULL OR trades.investment_activity_label NOT IN (?)",
+          Trade::INTERNAL_MOVEMENT_LABELS
+        )
     end
 
     def build_net_worth_metrics
@@ -740,7 +779,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Current.family.analytics_excluded_kinds)
         .includes(entry: :account, category: [])
       transactions = exclude_tax_advantaged_accounts(transactions)
 
@@ -779,7 +818,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Current.family.analytics_excluded_kinds)
         .includes(entry: :account, category: [])
       transactions = exclude_tax_advantaged_accounts(transactions)
 

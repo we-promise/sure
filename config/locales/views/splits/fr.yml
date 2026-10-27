@@ -23,6 +23,9 @@ fr:
         initial de la transaction.
       cancel: Annuler
       category_label: Catégorie
+      merchant_label: "Commerçant"
+      no_merchant: "(commerçant de la transaction)"
+      tags_label: "Étiquettes"
       description: Divisez cette transaction en plusieurs entrées avec différentes
         catégories et montants.
       name_label: Nom

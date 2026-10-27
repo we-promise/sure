@@ -15,7 +15,7 @@ const Confirm = await load("confirm_dialog_controller.js");
 function node() {
   const el = {
     textContent: "", value: "", id: "synthetic-id", name: "synthetic-name", children: [], dataset: {}, attributes: {},
-    classList: { add() {}, remove() {}, contains() { return false; }, *[Symbol.iterator]() { yield "synthetic-class"; } },
+    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; }, *[Symbol.iterator]() { yield "synthetic-class"; } },
     appendChild(child) { this.children.push(child); },
     setAttribute(key, value) { this.attributes[key] = value; },
     removeAttribute(key) { delete this.attributes[key]; }, focus() {},

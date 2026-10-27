@@ -8,7 +8,7 @@ es:
       col_status: Estado
       col_type: Tipo
       status_filters:
-        paused: Inactiva
+        paused: En pausa
         paid: Pagado
         ended: Descartada
         due: Vence pronto
@@ -39,12 +39,13 @@ es:
       subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
       subscription_price_changes: Cambios de precio este año
     attention:
+      paused: "En pausa"
       overdue:
         other: "%{count} días de retraso"
         one: 1 día de retraso
       amount_changed: Importe cambiado
       needs_review: La coincidencia necesita revisión
-      partial: Parcial · quedan %{amount}
+      partial: Parcial
     calendar:
       today: Hoy
       empty_month: No hay facturas que venzan este mes.
@@ -87,6 +88,7 @@ es:
       ytd: Pagado este año
       annualized: Al año
     index:
+      notices_heading: "Cambios"
       accept: Aplicar
       kpi_past_due: Vencido
       needs_review: Requiere revisión
@@ -102,7 +104,7 @@ es:
         one: Hemos encontrado 1 pago recurrente en tus transacciones. Revísalo para que los totales de aquí coincidan con lo que realmente pagas.
         other: Hemos encontrado %{count} pagos recurrentes en tus transacciones. Revísalos para que los totales de aquí coincidan con lo que realmente pagas.
       detected_review_action: Revisarlos
-      dormant: Sin actividad
+      dormant: "En pausa"
       empty:
         action: Buscar transacciones recurrentes
         description: Las facturas son tus gastos recurrentes. Sure las detecta automáticamente en tu historial de transacciones y puedes añadir un enlace de pago a cada una para pagar directamente desde aquí.
@@ -276,7 +278,7 @@ es:
       subscriptions_up: "¿Qué suscripciones han subido de precio este año?"
     amount_range: entre %{min} y %{max}
     cancelled_still_scheduled: La marcaste como cancelada el %{date}, pero sigue programada, por lo que continuarán apareciendo facturas futuras.
-    debt_payment: "· pago de deuda"
+    debt_payment: "pago de deuda"
     feed:
       calendar_name: Facturas de Sure
     find_payment: Buscar pago

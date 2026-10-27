@@ -14,6 +14,9 @@ vi:
         transaction_account: Tài khoản giao dịch
     action_executors:
       labels:
+        split_transaction: "Chia giao dịch"
+        fill_similar_merchants: "Điền người bán còn thiếu từ giao dịch tương tự (không dùng AI)"
+        bayes_categorize: "Phân loại bằng bộ phân loại (không dùng AI)"
         set_transaction_category: Đặt danh mục giao dịch
         set_transaction_tags: Đặt nhãn giao dịch
         set_transaction_merchant: Đặt đơn vị bán hàng của giao dịch

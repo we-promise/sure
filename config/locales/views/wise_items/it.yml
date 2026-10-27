@@ -48,7 +48,7 @@ it:
         solo quelli dell'ultimo anno.
       import_all_history_label: Importa tutta la cronologia delle transazioni
       sandbox_note_html: Per le prove usa l'URL di base dell'<strong>ambiente di prova</strong>
-        (<code>https://api.sandbox.transferwise.tech</code>). Imposta <code>WISE_BASE_URL</code>
+        (<code>https://api.wise-sandbox.com</code>). Imposta <code>WISE_BASE_URL</code>
         nell'ambiente.
       setup_accounts: Configura conti
       sync_start_date_help: Gli estratti conto Wise vengono importati da questa data

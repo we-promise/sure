@@ -6,6 +6,7 @@ es:
         renewal: Tu contribución continúa el %{date}.
         cancellation: Tu contribución finaliza el %{date}.
   settings:
+    encryption_migration_guide: Guía de configuración del cifrado y migración
     debugs:
       show:
         page_title: Depuración
@@ -140,6 +141,8 @@ es:
         dashboard_two_column_title: Diseño de dos columnas
         dashboard_two_column_description: Muestra los widgets del panel en dos columnas en pantallas grandes, con controles de ancho y alto por widget en la cabecera de cada uno. Si está desactivado, los widgets se apilan en una sola columna.
         split_grouped_title: Agrupar transacciones divididas
+        auto_generate_transaction_names_title: "Generar nombres de transacciones automáticamente"
+        auto_generate_transaction_names_description: "Si el nombre de una transacción introducida manualmente se deja en blanco, se rellena con la categoría y el comercio seleccionados (p. ej. «Entretenimiento - Netflix»). Si no se selecciona ninguno, el nombre sigue siendo obligatorio. Se aplica a todo el grupo familiar y solo a transacciones nuevas."
         split_grouped_description: Muestra las transacciones divididas agrupadas bajo su transacción principal en la lista. Si está desactivado, las divisiones aparecen como filas individuales.
         dashboard_account_groups_description: Estas secciones de cuentas aparecerán expandidas en el panel y en la barra lateral de cuentas. Puedes contraerlas manualmente en cualquier momento.
         dashboard_account_groups_title: Mostrar expandidas de forma predeterminada
@@ -307,6 +310,7 @@ es:
       accounts_label: Cuentas
       advanced_section_title: Avanzado
       ai_prompts_label: Indicaciones de IA
+      auto_matches_label: Coincidencias automáticas
       api_key_label: Clave API
       payment_label: Pago
       categories_label: Categorías
@@ -382,6 +386,8 @@ es:
         no_recent_sync: Sincronización pendiente
         registration_needed: Registro necesario
         reconsent_required: Se requiere renovar el consentimiento
+        login_required: "Inicio de sesión requerido"
+        login_expires_soon: "El inicio de sesión caduca en %{time} (%{at})"
         reconsent_needed:
           one: Renovar consentimiento en 1 día
           other: Renovar consentimiento en %{count} días
@@ -505,6 +511,7 @@ es:
         application_id_placeholder_new: Introduce el Application ID
         application_id_placeholder_update: Introduce un nuevo ID para actualizarlo
         client_certificate_label: Certificado de cliente (con clave privada)
+        keep_client_certificate_hint: "Déjalo en blanco para conservar el certificado actual"
         save_and_connect: Guardar y conectar
         update_connection: Actualizar conexión
         connected_bank: Banco conectado

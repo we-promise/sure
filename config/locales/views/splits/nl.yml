@@ -14,6 +14,9 @@ nl:
       name_placeholder: Naam van splitsing
       amount_label: Bedrag
       category_label: Categorie
+      merchant_label: "Verkoper"
+      no_merchant: "(verkoper van de transactie)"
+      tags_label: "Labels"
       uncategorized: "(geen categorie)"
       original_name: "Naam:"
       original_date: "Datum:"

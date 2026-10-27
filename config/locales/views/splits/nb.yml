@@ -5,6 +5,9 @@ nb:
       amount_label: Beløp
       cancel: Avbryt
       category_label: Kategori
+      merchant_label: "Forhandler"
+      no_merchant: "(transaksjonens forhandler)"
+      tags_label: "Tagger"
       name_label: Navn
       original_amount: Beløp
       original_name: 'Navn:'

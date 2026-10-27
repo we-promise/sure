@@ -14,6 +14,9 @@ en:
         transaction_account: Transaction account
     action_executors:
       labels:
+        split_transaction: "Split transaction"
+        fill_similar_merchants: "Fill missing merchants from similar transactions (no AI)"
+        bayes_categorize: "Categorize with the classifier (no AI)"
         set_transaction_category: Set transaction category
         set_transaction_tags: Set transaction tags
         set_transaction_merchant: Set transaction merchant

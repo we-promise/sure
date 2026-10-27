@@ -199,10 +199,9 @@ uk:
       step1: Перейдіть до Налаштування → Ключі API
       step2: Створіть новий ключ API з дозволом на читання
       step3: Скопіюйте ключ API
-      step4: 'Додайте його до цієї URL-адреси як: ?api_key=ВАШ_КЛЮЧ'
+      step4: "Додайте його до цієї URL-адреси як: &api_key=ВАШ_КЛЮЧ"
       example: Приклад
       then_use: Потім використовуйте повну URL-адресу з =IMPORTDATA() в Google Sheets.
-      open_sheets: Відкрити Google Sheets
       go_to_api_keys: Перейти до ключів API
       close: Зрозуміло
     print:

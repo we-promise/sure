@@ -16,6 +16,7 @@ zh-CN:
       syncing: 正在同步
       requires_update: 需要重新认证
       error: 错误
+      session_expires_in: "登录将在 %{time}后过期（%{at}）。"
       synced: "%{time}前同步。%{summary}。"
       setup_accounts: 设置账户
       delete: 删除

@@ -1,6 +1,7 @@
 ---
 ca:
   settings:
+    encryption_migration_guide: Guia de configuració del xifratge i migració
     ai_prompts:
       show:
         disable_ai: Desactiva l'assistent d'IA
@@ -60,6 +61,8 @@ ca:
           la seva matriu a la llista de transaccions. Si està desactivat, els fills
           apareixen com a files individuals.
         split_grouped_title: Agrupa les transaccions dividides
+        auto_generate_transaction_names_title: "Genera automàticament els noms de les transaccions"
+        auto_generate_transaction_names_description: "Quan el nom d'una transacció introduïda manualment es deixa en blanc, s'omple a partir de la categoria i el comerç seleccionats (p. ex. «Entreteniment - Netflix»). Si no se'n selecciona cap, el nom continua sent obligatori. S'aplica a tota la llar i només a les transaccions noves."
         theme_dark: Fosc
         theme_light: Clar
         theme_subtitle: Tria el tema preferit per a l'aplicació
@@ -355,6 +358,7 @@ ca:
         application_id_placeholder_update: Introdueix el nou ID per actualitzar
         callback_url_instruction: Per a l'URL de retorn de trucada, fes servir %{callback_url}.
         client_certificate_label: Certificat de client (amb clau privada)
+        keep_client_certificate_hint: "Deixa-ho en blanc per mantenir el certificat actual"
         config_locked_message: Desconnecta tots els bancs vinculats abans de canviar
           aquestes credencials.
         config_locked_title: Configuració bloquejada
@@ -512,6 +516,8 @@ ca:
           one: Cal renovar el consentiment en %{count} dia
           other: Cal renovar el consentiment en %{count} dies
         reconsent_required: Cal renovar el consentiment
+        login_required: "Cal iniciar sessió"
+        login_expires_soon: "La sessió caduca d'aquí a %{time} (%{at})"
         sync_error: Error de sincronització
       not_authorized: No autoritzat
       not_found: Proveïdor no trobat.
@@ -591,8 +597,7 @@ ca:
           internacionals de Wise.
         coinspot: Sincronitza saldos, valors en AUD, transferències, dipòsits, retirades
           i historial d'ordres de CoinSpot amb una clau API de només lectura.
-        onchain_wallet: Fes el seguiment de carteres Bitcoin, EVM i Solana d'autocustòdia
-          a partir de les seves adreces públiques.
+        onchain_wallet: Fes el seguiment de carteres Bitcoin, EVM, Solana, Cosmos i Polkadot d'autocustòdia a partir de les seves adreces públiques.
         trading212: Sincronitza la teva cartera d'inversió de Trading 212 amb una
           clau API de només lectura.
         trade_republic: Sincronitza el teu compte d'inversió de Trade Republic mitjançant
@@ -730,12 +735,13 @@ ca:
         qr_cancel: Cancel·la l'inici de sessió amb QR
         qr_back_to_credentials: Torna al número de telèfon i PIN
         qr_loading: Preparant el codi QR…
-        qr_instruction: Escaneja el codi QR amb l'aplicació de Trade Republic i aprova
-          l'inici de sessió.
+        qr_instruction: Escaneja el codi QR amb la càmera del telèfon i després aprova l'inici de sessió a l'aplicació de Trade Republic.
         qr_success: Inici de sessió aprovat. Sure està actualitzant la pàgina del
           proveïdor.
         qr_error: No s'ha pogut iniciar la sessió amb QR. Torna-ho a provar.
         add_account: Afegeix una altra connexió
+        requires_update: "Torna a iniciar sessió per reprendre la sincronització."
+        session_expires_in: "La sessió caduca d'aquí a %{time} (%{at})."
         save_configuration: Desa i inicia sessió
         update_configuration: Actualitza la configuració
         sync: Sincronitza
@@ -919,6 +925,7 @@ ca:
       accounts_label: Comptes
       advanced_section_title: Avançat
       ai_prompts_label: Prompts d'IA
+      auto_matches_label: Coincidències automàtiques
       api_key_label: Clau API
       api_keys_label: Clau API
       appearance_label: Aparença

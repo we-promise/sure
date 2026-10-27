@@ -6,7 +6,6 @@ zh-TW:
       subtitle: 深入洞察您的財務健康狀況
       export: 匯出 CSV
       print_report: 列印報表
-      drag_to_reorder: 拖曳以重新排列區塊
       toggle_section: 切換區塊顯示狀態
       periods:
         monthly: 按月
@@ -192,10 +191,9 @@ zh-TW:
       step1: 前往「設定」→「API 金鑰」
       step2: 建立一個具備「讀取」權限的新 API 金鑰
       step3: 複製該 API 金鑰
-      step4: 將其加入此 URL 結尾：?api_key=您的金鑰
+      step4: 將其加入此 URL 結尾：&api_key=您的金鑰
       example: 範例
       then_use: 接著在 Google 試算表中使用帶有 =IMPORTDATA() 的完整連結。
-      open_sheets: 開啟 Google 試算表
       go_to_api_keys: 前往 API 金鑰設定
       close: 我知道了
     print:

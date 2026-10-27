@@ -37,7 +37,7 @@
                 icon: "refresh-cw",
                 variant: :outline,
                 size: :sm,
-                href: sync_brex_item_path(item),
+                href: sync_brex_item_path(item, source: "panel"),
                 method: :post,
                 disabled: item.syncing?
               ) %>

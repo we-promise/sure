@@ -174,8 +174,8 @@
         <%= render DS::Button.new(
           text: t(".cancel"),
           variant: "outline",
-          href: "#",
-          data: { action: "click->ds--dialog#close" }
+          type: "button",
+          data: { action: "DS--dialog#close" }
         ) %>
         <%= render DS::Button.new(
           text: t(".submit"),

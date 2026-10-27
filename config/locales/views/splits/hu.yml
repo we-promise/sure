@@ -14,6 +14,9 @@ hu:
       name_placeholder: Felosztás neve
       amount_label: Összeg
       category_label: Kategória
+      merchant_label: "Kereskedő"
+      no_merchant: "(a tranzakció kereskedője)"
+      tags_label: "Címkék"
       uncategorized: "(kategorizálatlan)"
       original_name: "Név:"
       original_date: "Dátum:"

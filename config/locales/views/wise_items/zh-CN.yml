@@ -20,7 +20,7 @@ zh-CN:
       import_all_history_help: 获取 Wise 的全部历史对账单，而非仅最近一年的记录。
       import_all_history_label: 导入完整交易历史
       keep_token_placeholder: 留空以保留当前令牌
-      sandbox_note_html: 测试时请使用<strong>沙盒</strong>基础 URL（<code>https://api.sandbox.transferwise.tech</code>），并在环境变量中设置 <code>WISE_BASE_URL</code>。
+      sandbox_note_html: 测试时请使用<strong>沙盒</strong>基础 URL（<code>https://api.wise-sandbox.com</code>），并在环境变量中设置 <code>WISE_BASE_URL</code>。
       sca:
         copied: 已复制！
         copy: 复制

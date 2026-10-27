@@ -443,6 +443,8 @@ hu:
         model_label: Modell (nem kötelező)
         model_placeholder: jev-latest (alapértelmezett)
       llm_provider_selector:
+        max_items_per_call_label: Maximális elemek kötegenként (nem kötelező)
+        max_items_per_call_help: "Felső korlát az automatikus kategorizálási / kereskedő-felismerési kötegeknél. Alapértelmezett: 25. OpenAI-kompatibilis szolgáltatóknál a nagyobb kötegek automatikusan felosztódnak a kontextusablakba féréshez."
         data_retention: >-
           Az API-bemeneteket alapértelmezetten nem használják modelltréningre; a szolgáltatók üzemeltetett
           API-jai bizalmi és biztonsági célból körülbelül 30 napig őrzik az adatokat. Az egyéni vagy saját

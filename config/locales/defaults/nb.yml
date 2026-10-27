@@ -48,6 +48,7 @@ nb:
       long: "%e. %B %Y"
       short: "%e. %b"
       month_year: "%B %Y"
+      short_with_year: "%-d. %b %Y"
     month_names:
     -
     - Januar

@@ -22,6 +22,9 @@ tr:
       amounts_must_match: Bölüm tutarları, orijinal işlem tutarına eşit olmalıdır.
       cancel: İptal
       category_label: Kategori
+      merchant_label: "İş yeri"
+      no_merchant: "(işlemin iş yeri)"
+      tags_label: "Etiketler"
       description: Bu işlemi farklı kategoriler ve tutarlarla birden fazla kayda bölün.
       name_label: Ad
       name_placeholder: Bölüm adı

@@ -18,6 +18,8 @@ nb:
         mfa_enabled_description: Kontoen din er beskyttet med et ekstra sikkerhetslag.
         mfa_enabled_status_html: Tofaktorautentisering er <span class="font-medium
           text-green-600">aktivert</span>
+        webauthn_code_label: "Kode fra autentiseringsapp eller reservekode"
+        webauthn_code_placeholder: "Gjeldende kode fra appen eller en ubrukt reservekode"
         webauthn_add: Legg til tilgangsnøkkel eller sikkerhetsnøkkel
         webauthn_added: Lagt til %{date}
         webauthn_description: Bruk en tilgangsnøkkel, Touch ID, Windows Hello eller
@@ -35,6 +37,9 @@ nb:
         webauthn_unsupported: Denne nettleseren støtter ikke tilgangsnøkler eller
           sikkerhetsnøkler.
   webauthn_credentials:
+    code_already_used: "Koden er allerede brukt. Vent på neste kode fra autentiseringsappen."
+    invalid_code: "Koden er ugyldig. Bruk en gjeldende kode fra appen eller en ubrukt reservekode."
+    rate_limited: "For mange forsøk. Vent et minutt og prøv igjen."
     default_name: Sikkerhetsnøkkel
     failure: Kunne ikke lagre tilgangsnøkkelen eller sikkerhetsnøkkelen. Prøv igjen.
     mfa_required: Aktiver tofaktorautentisering før du legger til en tilgangsnøkkel

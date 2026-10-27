@@ -34,7 +34,7 @@ module EntriesTestHelper
     Entry.create! entry_defaults.merge(entry_attributes)
   end
 
-  def create_trade(security, account:, qty:, date:, price: nil, currency: "USD")
+  def create_trade(security, account:, qty:, date:, price: nil, currency: "USD", fee: 0)
     trade_price = price || Security::Price.find_by!(security: security, date: date).price
 
     trade = Trade.new \
@@ -42,6 +42,7 @@ module EntriesTestHelper
       security: security,
       price: trade_price,
       currency: currency,
+      fee: fee,
       investment_activity_label: qty > 0 ? "Buy" : "Sell"
 
     account.entries.create! \
@@ -59,7 +60,8 @@ module EntriesTestHelper
     transfer = Transfer.create!(
       outflow_transaction: outflow_transaction,
       inflow_transaction: inflow_transaction,
-      amount: amount.abs
+      amount: amount.abs,
+      status: "confirmed" # like Transfer::Creator; only a confirmed transfer carries transfer kinds
     )
 
     from_account.entries.create!(

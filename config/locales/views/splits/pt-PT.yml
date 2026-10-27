@@ -14,6 +14,9 @@ pt-PT:
       name_placeholder: Designação da divisão
       amount_label: Montante
       category_label: Categoria
+      merchant_label: "Comerciante"
+      no_merchant: "(comerciante da transação)"
+      tags_label: "Etiquetas"
       uncategorized: "(sem categoria)"
       original_name: "Designação:"
       original_date: "Data:"

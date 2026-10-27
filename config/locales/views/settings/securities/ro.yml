@@ -19,6 +19,8 @@ ro:
           de securitate.
         mfa_enabled_status_html: Autentificarea în doi pași este <span class="font-medium
           text-success">activată</span>
+        webauthn_code_label: "Cod de autentificare sau de rezervă"
+        webauthn_code_placeholder: "Codul curent din aplicația de autentificare sau un cod de rezervă nefolosit"
         webauthn_add: Adaugă o cheie de acces sau de securitate
         webauthn_added: Adăugată la %{date}
         webauthn_description: Folosește o cheie de acces, Touch ID, Windows Hello
@@ -35,6 +37,9 @@ ro:
         webauthn_title: Chei de acces și de securitate
         webauthn_unsupported: Acest browser nu acceptă chei de acces sau de securitate.
   webauthn_credentials:
+    code_already_used: "Acest cod a fost deja folosit. Așteaptă următorul cod din aplicația de autentificare."
+    invalid_code: "Codul nu este valid. Introdu un cod curent din aplicație sau un cod de rezervă nefolosit."
+    rate_limited: "Prea multe încercări. Așteaptă un minut și încearcă din nou."
     default_name: Cheie de securitate
     failure: Cheia de acces sau de securitate nu a putut fi salvată. Încearcă din
       nou.

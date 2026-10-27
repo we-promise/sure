@@ -23,6 +23,7 @@ es:
       accounts_need_setup_description: Tu cuenta de Trade Republic debe vincularse a una cuenta de Sure.
       no_accounts_discovered: Aún no se ha descubierto ninguna cuenta de Trade Republic.
       no_accounts_discovered_description: Completa el inicio de sesión y ejecuta una sincronización para descubrir tu cuenta.
+      session_expires_in: "El inicio de sesión caduca en %{time} (%{at})."
       data_quality:
         title: Calidad de los datos y detalles de sincronización
         repair: Reparar datos importados

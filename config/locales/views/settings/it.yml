@@ -6,6 +6,7 @@ it:
         renewal: Il tuo contributo continua il %{date}.
         cancellation: Il tuo contributo termina il %{date}.
   settings:
+    encryption_migration_guide: Guida alla configurazione della crittografia e alla migrazione
     debugs:
       show:
         page_title: Debug
@@ -168,6 +169,8 @@ it:
           espanse nella dashboard e nella barra laterale. Puoi comunque comprimerle
           manualmente in qualsiasi momento.
         dashboard_account_groups_title: Espandi per impostazione predefinita
+        auto_generate_transaction_names_title: "Genera automaticamente i nomi delle transazioni"
+        auto_generate_transaction_names_description: "Se il nome di una transazione inserita manualmente viene lasciato vuoto, viene compilato con la categoria e l'esercente selezionati (es. «Intrattenimento - Netflix»). Il nome resta obbligatorio se nessuno dei due è selezionato. Vale per tutto il nucleo familiare e solo per le nuove transazioni."
     preferences:
       show:
         country: Paese
@@ -364,6 +367,7 @@ it:
       accounts_label: Conti
       advanced_section_title: Avanzate
       ai_prompts_label: Prompt AI
+      auto_matches_label: Corrispondenze automatiche
       api_key_label: Chiave API
       payment_label: Pagamento
       categories_label: Categorie
@@ -441,6 +445,8 @@ it:
         no_recent_sync: Sincronizzazione in ritardo
         registration_needed: Registrazione richiesta
         reconsent_required: Nuovo consenso richiesto
+        login_required: "Accesso richiesto"
+        login_expires_soon: "L'accesso scade tra %{time} (%{at})"
         reconsent_needed:
           one: Nuovo consenso richiesto tra 1 giorno
           other: Nuovo consenso richiesto tra %{count} giorni
@@ -614,6 +620,7 @@ it:
         syncing: Sincronizzazione
         select_country: Seleziona paese...
         country_label: Paese
+        keep_client_certificate_hint: "Lascia vuoto per mantenere il certificato attuale"
       lunchflow_panel:
         step_1_html: Vai su %{link} e crea una chiave API.
         step_2: Incolla la tua chiave qui sotto e connetti.

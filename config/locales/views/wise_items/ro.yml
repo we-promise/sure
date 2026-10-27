@@ -45,7 +45,7 @@ ro:
       import_all_history_help: Preia toate extrasele istorice Wise, nu doar pe cele
         din ultimul an.
       import_all_history_label: Importă întregul istoric al tranzacțiilor
-      sandbox_note_html: Folosește URL-ul de bază <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>)
+      sandbox_note_html: Folosește URL-ul de bază <strong>sandbox</strong> (<code>https://api.wise-sandbox.com</code>)
         pentru teste. Setează <code>WISE_BASE_URL</code> în mediu.
       sync_start_date_help: Extrasele Wise sunt importate începând cu această dată.
         Păstrează valoarea implicită pentru până la un an de istoric.

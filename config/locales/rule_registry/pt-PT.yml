@@ -14,6 +14,9 @@ pt-PT:
         transaction_account: Conta da transação
     action_executors:
       labels:
+        split_transaction: "Dividir transação"
+        fill_similar_merchants: "Preencher comerciantes a partir de transações semelhantes (sem IA)"
+        bayes_categorize: "Categorizar com o classificador (sem IA)"
         set_transaction_category: Definir a categoria da transação
         set_transaction_tags: Definir as etiquetas da transação
         set_transaction_merchant: Definir o comerciante da transação

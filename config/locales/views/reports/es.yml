@@ -6,7 +6,6 @@ es:
       subtitle: Información completa sobre tu salud financiera
       export: Exportar CSV
       print_report: Imprimir informe
-      drag_to_reorder: Arrastra para reordenar la sección
       toggle_section: Mostrar / Ocultar sección
       periods:
         monthly: Mensual
@@ -191,10 +190,9 @@ es:
       step1: Ve a Ajustes → Claves API
       step2: Crea una nueva clave API con permiso de lectura ("read")
       step3: Copia la clave API
-      step4: 'Añádela a esta URL como: ?api_key=TU_CLAVE'
+      step4: 'Añádela a esta URL como: &api_key=TU_CLAVE'
       example: Ejemplo
       then_use: Después usa la URL completa con =IMPORTDATA() en Google Sheets.
-      open_sheets: Abrir Google Sheets
       go_to_api_keys: Ir a Claves API
       close: Entendido
     print:

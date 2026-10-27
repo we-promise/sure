@@ -1,8 +1,10 @@
 class PropertiesController < ApplicationController
   include AccountableResource, StreamExtensions
 
-  before_action :set_property, only: [ :balances, :address, :update_balances, :update_address ]
-  before_action :require_property_write_permission!, only: [ :update_balances, :update_address ]
+  before_action :set_property, only: [ :balances, :address, :update_balances, :update_address, :refresh_valuation, :link_valuation ]
+  before_action :require_property_write_permission!, only: [ :update_balances, :update_address, :refresh_valuation, :link_valuation ]
+
+  helper_method :avm_provider_class
 
   def new
     @account = Current.family.accounts.build(accountable: Property.new)
@@ -68,6 +70,40 @@ class PropertiesController < ApplicationController
     end
   end
 
+  # Manual refresh bypasses the provider's automatic refresh interval (e.g.
+  # Chimnie's monthly cadence) but still counts against its request budget.
+  def refresh_valuation
+    unless @property.avm_provider.present?
+      redirect_back_or_to account_path(@account), alert: t(".not_linked") and return
+    end
+
+    unless configured_avm_providers.map(&:to_s).include?(@property.avm_provider)
+      redirect_back_or_to account_path(@account),
+                          alert: t(".not_configured", provider: t("properties.avm_providers.#{@property.avm_provider}")) and return
+    end
+
+    SyncPropertyValuationsJob.perform_later(property_id: @property.id, force: true)
+    redirect_back_or_to account_path(@account), notice: t(".queued")
+  end
+
+  # Links a manually created property to an AVM provider so its value is
+  # refreshed automatically. The first valuation runs during the request and
+  # the link is only kept if it succeeds.
+  def link_valuation
+    provider_key = params[:avm_provider].to_s
+
+    unless configured_avm_providers.map(&:to_s).include?(provider_key) && @property.avm_linkable?(provider_key)
+      redirect_back_or_to account_path(@account), alert: t(".not_linkable") and return
+    end
+
+    provider_name = t("properties.avm_providers.#{provider_key}")
+    if @property.link_avm_provider!(provider_key)
+      redirect_back_or_to account_path(@account), notice: t(".linked", provider: provider_name)
+    else
+      redirect_back_or_to account_path(@account), alert: t(".link_failed", provider: provider_name)
+    end
+  end
+
   def address
     @property = @account.property
     @property.address ||= Address.new
@@ -123,7 +159,8 @@ class PropertiesController < ApplicationController
           owner: Current.user,
           provider_key: payload["provider_key"],
           name: payload["name"],
-          address_attributes: payload["address"].symbolize_keys
+          address_attributes: payload["address"].symbolize_keys,
+          external_id: payload["external_id"]
         )
 
         @account = importer.create_account(avm_data_from_payload(payload))
@@ -145,7 +182,8 @@ class PropertiesController < ApplicationController
           owner: Current.user,
           provider_key: provider_key,
           name: params.dig(:account, :name),
-          address_attributes: avm_address_params.to_h.symbolize_keys
+          address_attributes: avm_address_params.to_h.symbolize_keys,
+          external_id: avm_external_id_param
         )
 
         @avm_preview = importer.lookup
@@ -154,6 +192,7 @@ class PropertiesController < ApplicationController
             "provider_key" => provider_key,
             "name" => params.dig(:account, :name),
             "address" => avm_address_params.to_h,
+            "external_id" => avm_external_id_param,
             "data" => @avm_preview.to_h.transform_values(&:to_s)
           },
           expires_in: 1.hour,
@@ -171,11 +210,18 @@ class PropertiesController < ApplicationController
       # The confirm step doesn't resubmit the address fields, so build
       # defensively — an expired token re-renders an empty lookup form.
       @avm_address = Address.new(params.dig(:account, :address)&.permit(:line1, :locality, :region, :postal_code)&.to_h || {})
+      @avm_external_id = avm_external_id_param
       render :new, status: :unprocessable_entity
     end
 
     def avm_address_params
       params.require(:account).require(:address).permit(:line1, :locality, :region, :postal_code)
+    end
+
+    # Provider-side property identifier (e.g. a UK UPRN), for providers that
+    # look properties up by ID rather than address.
+    def avm_external_id_param
+      params.dig(:account, :property, :avm_external_id).to_s.strip.presence
     end
 
     def avm_preview_verifier
@@ -206,8 +252,18 @@ class PropertiesController < ApplicationController
         property_type: raw["property_type"].presence,
         year_built: raw["year_built"].presence&.to_i,
         area_value: raw["area_value"].presence&.to_i,
-        area_unit: raw["area_unit"].presence || "sqft"
+        area_unit: raw["area_unit"].presence || "sqft",
+        external_id: raw["external_id"].presence,
+        valuation_low: raw["valuation_low"].presence&.to_d,
+        valuation_high: raw["valuation_high"].presence&.to_d,
+        confidence: raw["confidence"].presence
       )
+    end
+
+    # Lets the lookup form adapt to what the provider needs (e.g. a UPRN
+    # instead of a full US address).
+    def avm_provider_class(key)
+      Provider::PropertyValuationConcept.provider_class(key)
     end
 
     def configured_avm_providers

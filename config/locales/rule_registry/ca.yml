@@ -14,6 +14,9 @@ ca:
         transaction_account: Compte de la transacció
     action_executors:
       labels:
+        split_transaction: "Divideix la transacció"
+        fill_similar_merchants: "Completa els comerços amb transaccions similars (sense IA)"
+        bayes_categorize: "Categoritza amb el classificador (sense IA)"
         set_transaction_category: Estableix la categoria de la transacció
         set_transaction_tags: Estableix les etiquetes de la transacció
         set_transaction_merchant: Estableix el comerç de la transacció

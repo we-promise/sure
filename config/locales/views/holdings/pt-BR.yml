@@ -97,7 +97,7 @@ pt-BR:
       per_share: por ação
       save: Salvar
       set: Definir
-      set_cost_basis_header: Definir custo de aquisição de %{ticker} (%{qty} ações)
+      set_cost_basis_header: Definir custo de aquisição de %{ticker}
       total_cost_basis_label: Custo de aquisição total
       unknown: "--"
     cost_basis_sources:

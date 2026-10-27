@@ -47,12 +47,13 @@ zh-TW:
         transfer: 轉帳
     amount_range: 範圍為 %{min} 至 %{max}
     attention:
+      paused: "已暫停"
       amount_changed: 金額已變更
       needs_review: 配對待審閱
       overdue:
         one: 逾期 1 天
         other: 逾期 %{count} 天
-      partial: 已付部分款項 · 尚欠 %{amount}
+      partial: 已付部分款項
     calendar:
       empty_month: 本月沒有到期帳單。
       month_totals: 預計 %{expected} · 已付 %{paid}
@@ -62,7 +63,7 @@ zh-TW:
       subscribe_ical: 訂閱（iCal）
       today: 今天
     cancelled_still_scheduled: 您已在 %{date} 將此項目標記為取消，但排程仍在，因此未來帳單仍會持續出現。
-    debt_payment: "· 債務還款"
+    debt_payment: "債務還款"
     detail:
       annualized: 每年
       around: "%{date} 左右"
@@ -117,6 +118,7 @@ zh-TW:
       calendar_name: Sure 帳單
     find_payment: 尋找付款
     index:
+      notices_heading: "變更"
       accept: 套用
       add_bill: 新增帳單
       add_income: 新增收入
@@ -127,7 +129,7 @@ zh-TW:
         one: 我們在您的交易中找到 1 筆定期付款。請確認內容，讓此處的總額符合您的實際支出。
         other: 我們在您的交易中找到 %{count} 筆定期付款。請確認內容，讓此處的總額符合您的實際支出。
       detected_review_action: 審閱項目
-      dormant: 已久未使用
+      dormant: "已暫停"
       empty:
         action: 尋找定期交易
         description: 帳單是您的定期支出。Sure 會從交易紀錄自動找出帳單，您也可以為每筆帳單加入付款連結，方便直接從此處付款。

@@ -93,8 +93,7 @@ ro:
       or_per_share_label: 'Sau introdu valoarea pe acțiune:'
       overwrite_confirm_body: Aceasta va înlocui costul de achiziție curent de %{current}.
       overwrite_confirm_title: Suprascrii costul de achiziție?
-      set_cost_basis_header: Stabilește costul de achiziție pentru %{ticker} (%{qty}
-        acțiuni)
+      set_cost_basis_header: Stabilește costul de achiziție pentru %{ticker}
       total_cost_basis_label: Cost total de achiziție
       unknown: "--"
     cost_basis_sources:

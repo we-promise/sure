@@ -23,6 +23,9 @@ ca:
         original de la transacció.
       cancel: Cancel·la
       category_label: Categoria
+      merchant_label: "Comerç"
+      no_merchant: "(comerç de la transacció)"
+      tags_label: "Etiquetes"
       description: Divideix aquesta transacció en diverses entrades amb categories
         i imports diferents.
       name_label: Nom

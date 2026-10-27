@@ -136,8 +136,6 @@ vi:
         context_window_help: "Tổng số token mô hình sẽ chấp nhận. Mặc định: 2048 — tăng lên 8192+ cho OpenAI đám mây hoặc mô hình cục bộ ngữ cảnh lớn."
         max_response_tokens_label: Số token phản hồi tối đa (Tùy chọn)
         max_response_tokens_help: "Token dành cho phản hồi của mô hình. Mặc định: 512. Giảm để dành chỗ cho lịch sử dài hơn."
-        max_items_per_call_label: Số mục tối đa mỗi lô (Tùy chọn)
-        max_items_per_call_help: "Giới hạn trên cho lô phân loại tự động / phát hiện nhà cung cấp. Mặc định: 25. Lô lớn hơn được tự động cắt để phù hợp với cửa sổ ngữ cảnh."
         title: OpenAI
         ai_response_timeout_help: 'Mặc định: 90. Chỉ áp dụng cho bộ giám sát toàn bộ lượt
           trò chuyện; hãy tính bằng tổng: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × thời
@@ -334,6 +332,8 @@ vi:
         model_label: Mô hình (không bắt buộc)
         model_placeholder: jev-latest (mặc định)
       llm_provider_selector:
+        max_items_per_call_label: Số mục tối đa mỗi lô (Tùy chọn)
+        max_items_per_call_help: "Giới hạn trên cho lô phân loại tự động / phát hiện nhà cung cấp. Mặc định: 25. Với nhà cung cấp tương thích OpenAI, lô lớn hơn được tự động cắt để phù hợp với cửa sổ ngữ cảnh."
         data_retention: Đầu vào API mặc định không được dùng để huấn luyện mô hình; API
           lưu trữ của các nhà cung cấp giữ dữ liệu khoảng 30 ngày cho mục đích tin cậy và
           an toàn. Điểm cuối tùy chỉnh hoặc tự lưu trữ tuân theo chính sách của bạn.

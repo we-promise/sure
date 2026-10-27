@@ -47,12 +47,13 @@ pt-BR:
         transfer: Transferência
     amount_range: varia de %{min} a %{max}
     attention:
+      paused: "Pausado"
       amount_changed: Valor alterado
       needs_review: Associação precisa de revisão
       overdue:
         one: 1 dia de atraso
         other: "%{count} dias de atraso"
-      partial: Parcial · faltam %{amount}
+      partial: Parcial
     calendar:
       empty_month: Nenhuma conta vence neste mês.
       month_totals: "%{expected} previstos · %{paid} pagos"
@@ -64,7 +65,7 @@ pt-BR:
     cancelled_still_scheduled: >-
       Você marcou esta conta como cancelada em %{date}, mas ela continua agendada.
       Por isso, os próximos vencimentos continuarão aparecendo.
-    debt_payment: "· pagamento de dívida"
+    debt_payment: "pagamento de dívida"
     detail:
       annualized: Por ano
       around: por volta de %{date}
@@ -122,6 +123,7 @@ pt-BR:
       calendar_name: Contas a pagar do Sure
     find_payment: Encontrar pagamento
     index:
+      notices_heading: "Alterações"
       accept: Aplicar
       add_bill: Adicionar conta a pagar
       add_income: Adicionar receita
@@ -136,7 +138,7 @@ pt-BR:
           Encontramos %{count} pagamentos recorrentes nas suas transações. Confira
           para que os totais aqui reflitam o que você realmente paga.
       detected_review_action: Revisar
-      dormant: Inativa
+      dormant: "Pausadas"
       empty:
         action: Encontrar transações recorrentes
         description: >-

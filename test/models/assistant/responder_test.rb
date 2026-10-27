@@ -26,8 +26,62 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
     )
   end
 
+  test "group_by_round splits consecutive results by round and keeps untagged results together" do
+    a = { call_id: "a", round: 1 }
+    b = { call_id: "b", round: 2 }
+    c = { call_id: "c", round: 2 }
+
+    assert_equal [ [ a ], [ b, c ] ], Assistant::Responder.group_by_round([ a, b, c ])
+    assert_equal [ [ { call_id: "x" }, { call_id: "y" } ] ],
+                 Assistant::Responder.group_by_round([ { call_id: "x" }, { call_id: "y" } ])
+    assert_equal [], Assistant::Responder.group_by_round([])
+  end
+
   test "default iteration cap is eight rounds" do
     assert_equal 8, Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS
+  end
+
+  test "streamed chunks that are only whitespace are emitted so the spaces before numbers survive" do
+    reply = Provider::LlmConcept::ChatResponse.new(
+      id: "1", model: "gpt-4.1",
+      messages: [ Provider::LlmConcept::ChatMessage.new(id: "1", output_text: "as of 10-22-2026") ],
+      function_requests: []
+    )
+
+    @llm.stubs(:chat_response).with do |_prompt, **kwargs|
+      [ "as", " of", " ", "10", "-", "22", "-", "202", "6" ].each do |text|
+        kwargs[:streamer].call(Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text, usage: nil))
+      end
+      true
+    end.returns(provider_success_response(reply))
+
+    streamed = []
+    @responder.on(:output_text) { |text| streamed << text }
+    @responder.respond
+
+    assert_equal "as of 10-22-2026", streamed.join
+  end
+
+  test "leading whitespace-only chunks are held back and emitted with the first non-blank chunk" do
+    reply = Provider::LlmConcept::ChatResponse.new(
+      id: "1", model: "gpt-4.1",
+      messages: [ Provider::LlmConcept::ChatMessage.new(id: "1", output_text: "\n Hello there") ],
+      function_requests: []
+    )
+
+    @llm.stubs(:chat_response).with do |_prompt, **kwargs|
+      [ "\n", " ", "Hello", " ", "there" ].each do |text|
+        kwargs[:streamer].call(Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text, usage: nil))
+      end
+      true
+    end.returns(provider_success_response(reply))
+
+    streamed = []
+    @responder.on(:output_text) { |text| streamed << text }
+    @responder.respond
+
+    assert_equal "\n Hello", streamed.first
+    assert_equal "\n Hello there", streamed.join
   end
 
   test "final round requests forbid tool calls via tool_choice while keeping tool definitions" do

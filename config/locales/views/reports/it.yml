@@ -197,10 +197,9 @@ it:
       step1: Vai su Impostazioni → Chiavi API
       step2: Crea una nuova chiave API con permesso "lettura"
       step3: Copia la chiave API
-      step4: 'Aggiungila a questo URL come: ?api_key=LA_TUA_CHIAVE'
+      step4: "Aggiungila a questo URL come: &api_key=LA_TUA_CHIAVE"
       example: Esempio
       then_use: Poi usa l'URL completo con =IMPORTDATA() in Google Sheets.
-      open_sheets: Apri Google Sheets
       go_to_api_keys: Vai alle chiavi API
       close: Capito
     print:

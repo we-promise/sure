@@ -195,6 +195,8 @@ pt-PT:
           as APIs alojadas dos serviços retêm dados durante ~30 dias para confiança
           e segurança. Os endpoints personalizados ou autoalojados seguem a sua própria
           política.
+        max_items_per_call_label: Máx. de Itens por Lote (Opcional)
+        max_items_per_call_help: "Limite superior para os lotes de categorização automática / deteção de comerciantes. Predefinição: 25. Com fornecedores compatíveis com OpenAI, lotes maiores são automaticamente divididos para caberem na janela de contexto."
       anthropic_settings:
         title: Anthropic (Claude)
         description: >-

@@ -14,6 +14,8 @@ nl:
         mfa_disabled_status_html: Tweestapsverificatie is <span class="font-medium text-red-600">uitgeschakeld</span>
         mfa_enabled_description: Je account is beschermd met een extra beveiligingslaag.
         mfa_enabled_status_html: Tweestapsverificatie is <span class="font-medium text-green-600">ingeschakeld</span>
+        webauthn_code_label: "Authenticatorcode of herstelcode"
+        webauthn_code_placeholder: "Huidige authenticatorcode of ongebruikte herstelcode"
         webauthn_add: Passkey of beveiligingssleutel toevoegen
         webauthn_added: Toegevoegd op %{date}
         webauthn_description: Gebruik een passkey, Touch ID, Windows Hello of een fysieke beveiligingssleutel als tweede factor bij het inloggen.
@@ -25,6 +27,9 @@ nl:
         webauthn_remove_confirm_body: Je moet deze passkey of beveiligingssleutel opnieuw registreren voordat je haar voor inlogverificatie kunt gebruiken.
         webauthn_title: Passkeys en beveiligingssleutels
   webauthn_credentials:
+    code_already_used: "Deze code is al gebruikt. Wacht op de volgende code van je authenticator-app."
+    invalid_code: "Deze code is ongeldig. Gebruik een huidige authenticatorcode of ongebruikte herstelcode."
+    rate_limited: "Te veel pogingen. Wacht een minuut en probeer het opnieuw."
     default_name: Beveiligingssleutel
     failure: Die passkey of beveiligingssleutel kon niet worden opgeslagen. Probeer het opnieuw.
     mfa_required: Schakel tweestapsverificatie in voordat je een passkey of beveiligingssleutel toevoegt.

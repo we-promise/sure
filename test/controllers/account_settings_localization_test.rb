@@ -42,6 +42,7 @@ class AccountSettingsLocalizationTest < ActionDispatch::IntegrationTest
   end
 
   test "provider form localizes static hints while keeping supplied field content" do
+    @user.update!(role: :super_admin)
     field = Struct.new(:setting_key, :env_key, :label, :default, :required, :secret, :description).new(
       "synthetic_ui_option", "SURE_TEST_UI_ENV", "Synthetic field label", nil, false, false, "Synthetic field description"
     )
@@ -62,6 +63,7 @@ class AccountSettingsLocalizationTest < ActionDispatch::IntegrationTest
   end
 
   test "provider update failure is localized and does not expose internal errors" do
+    @user.update!(role: :super_admin)
     Provider::Factory.ensure_adapters_loaded
     Setting.expects(:[]=).with("plaid_client_id", "synthetic").raises(StandardError.new("Synthetic internal detail"))
     patch settings_providers_path(locale: "zh-CN"), params: { setting: { plaid_client_id: "synthetic" } }

@@ -61,7 +61,7 @@ export default class extends Controller {
       if (
         this.extensionsValue.some((extension) =>
           file.name.toLowerCase().endsWith(`.${extension}`),
-        )
+        ) || (this.extensionsValue.includes("csv") && file.type === "text/csv")
       ) {
         this.inputTarget.files = event.dataTransfer.files;
         this.formTarget.requestSubmit();

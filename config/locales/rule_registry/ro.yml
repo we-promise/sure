@@ -14,6 +14,9 @@ ro:
         transaction_account: Contul tranzacției
     action_executors:
       labels:
+        split_transaction: "Divizează tranzacția"
+        fill_similar_merchants: "Completează comercianții din tranzacții similare (fără AI)"
+        bayes_categorize: "Categorisește cu clasificatorul (fără AI)"
         set_transaction_category: Stabilește categoria tranzacției
         set_transaction_tags: Stabilește etichetele tranzacției
         set_transaction_merchant: Stabilește comerciantul tranzacției

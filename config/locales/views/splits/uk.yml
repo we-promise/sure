@@ -13,6 +13,9 @@ uk:
       name_placeholder: Назва розділення
       amount_label: Сума
       category_label: Категорія
+      merchant_label: "Продавець"
+      no_merchant: "(продавець операції)"
+      tags_label: "Мітки"
       uncategorized: "(без категорії)"
       original_name: "Назва:"
       original_date: "Дата:"

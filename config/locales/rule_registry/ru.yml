@@ -14,6 +14,9 @@ ru:
         transaction_account: Счёт транзакции
     action_executors:
       labels:
+        split_transaction: "Разделить операцию"
+        fill_similar_merchants: "Заполнить продавцов по похожим операциям (без ИИ)"
+        bayes_categorize: "Категоризировать классификатором (без ИИ)"
         set_transaction_category: Установить категорию транзакции
         set_transaction_tags: Установить теги транзакции
         set_transaction_merchant: Установить продавца транзакции

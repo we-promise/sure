@@ -43,6 +43,7 @@ vi:
       long: "%d %B, %Y"
       short: "%d %b"
       month_year: "%m/%Y"
+      short_with_year: '%d %b, %Y'
     month_names:
     -
     - Tháng một

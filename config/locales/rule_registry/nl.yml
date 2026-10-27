@@ -14,6 +14,9 @@ nl:
         transaction_account: Transactierekening
     action_executors:
       labels:
+        split_transaction: "Transactie splitsen"
+        fill_similar_merchants: "Ontbrekende verkopers aanvullen uit vergelijkbare transacties (zonder AI)"
+        bayes_categorize: "Categoriseren met de classificator (zonder AI)"
         set_transaction_category: Transactiecategorie instellen
         set_transaction_tags: Transactietags instellen
         set_transaction_merchant: Handelaar van de transactie instellen

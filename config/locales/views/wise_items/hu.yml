@@ -26,7 +26,7 @@ hu:
       import_all_history_label: Teljes tranzakciós előzmény importálása
       keep_token_placeholder: Hagyd üresen az aktuális token megtartásához
       sandbox_note_html: >-
-        Teszteléshez használd a <strong>tesztkörnyezet</strong> alap URL-jét (<code>https://api.sandbox.transferwise.tech</code>).
+        Teszteléshez használd a <strong>tesztkörnyezet</strong> alap URL-jét (<code>https://api.wise-sandbox.com</code>).
         Állítsd be a <code>WISE_BASE_URL</code> környezeti változót.
       sca:
         copied: Másolva!

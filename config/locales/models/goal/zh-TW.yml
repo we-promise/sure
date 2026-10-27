@@ -20,7 +20,6 @@ zh-TW:
               whole_account_conflict_on_restore: 無法還原此目標：「%{account_name}」目前已全額預留給「%{goal_name}」。請先為其中一個目標輸入具體金額。
             linked_accounts:
               must_be_fundable: 所有已連結的帳戶都必須是現金或投資帳戶。
-              currency_mismatch: 所有已連結的帳戶必須使用相同的幣別。
               must_belong_to_family: 已連結的帳戶必須和這個目標屬於同一個家庭。
             currency:
               locked_after_linked: 目標連結帳戶之後就不能再更改幣別了。

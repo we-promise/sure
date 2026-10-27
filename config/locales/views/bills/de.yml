@@ -20,9 +20,10 @@ de:
       all: Alle Rechnungen
     index:
       title: Rechnungen
-      add_bill: Rechnung hinzufügen
-      add_income: Einkommen hinzufügen
+      add_bill: Neue Rechnung
+      add_income: Neues Einkommen
       review_with_ai: Mit KI prüfen
+      notices_heading: Änderungen
       accept: Übernehmen
       all_automatic: alle mit automatischer Zahlung
       attention_overdue_total: "%{amount} überfällig"
@@ -33,7 +34,7 @@ de:
         other: Wir haben %{count} wiederkehrende Zahlungen in deinen Transaktionen gefunden.
           Prüfe sie, damit die Summen hier deinen tatsächlichen Zahlungen entsprechen.
       detected_review_action: Zahlungen prüfen
-      dormant: Ruhend
+      dormant: "Pausiert"
       empty:
         action: Wiederkehrende Transaktionen suchen
         description: Rechnungen sind deine wiederkehrenden Ausgaben. Sure erkennt sie automatisch
@@ -132,12 +133,13 @@ de:
         transfer: Überweisung
     amount_range: zwischen %{min} und %{max}
     attention:
+      paused: "Pausiert"
       amount_changed: Betrag geändert
       needs_review: Zuordnung prüfen
       overdue:
         one: Seit 1 Tag überfällig
         other: Seit %{count} Tagen überfällig
-      partial: Teilweise bezahlt · %{amount} offen
+      partial: Teilweise bezahlt
     calendar:
       empty_month: Diesen Monat sind keine Rechnungen fällig.
       month_totals: "%{expected} erwartet · %{paid} bezahlt"
@@ -148,7 +150,7 @@ de:
       today: Heute
     cancelled_still_scheduled: Du hast die Kündigung zum %{date} vermerkt. Die Rechnung
       ist aber weiterhin eingeplant, daher erscheinen auch künftig Fälligkeiten.
-    debt_payment: "· Schuldentilgung"
+    debt_payment: "Schuldentilgung"
     detail:
       annualized: Pro Jahr
       around: um den %{date}

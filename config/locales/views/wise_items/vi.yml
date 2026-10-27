@@ -23,7 +23,7 @@ vi:
         nhất.
       import_all_history_label: Nhập toàn bộ lịch sử giao dịch
       keep_token_placeholder: Để trống để giữ token hiện tại
-      sandbox_note_html: Dùng URL cơ sở <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>)
+      sandbox_note_html: Dùng URL cơ sở <strong>sandbox</strong> (<code>https://api.wise-sandbox.com</code>)
         để thử nghiệm. Đặt <code>WISE_BASE_URL</code> trong môi trường.
       sca:
         copied: Đã sao chép!

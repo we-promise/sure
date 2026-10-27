@@ -181,6 +181,8 @@ fr:
         provider_label: Fournisseur de LLM actif
         provider_openai: OpenAI
         title: Fournisseur d'IA
+        max_items_per_call_help: "Limite supérieure pour les lots d'auto-catégorisation / détection de marchand. Par défaut : 25. Avec les fournisseurs compatibles OpenAI, les lots plus grands sont automatiquement découpés pour tenir dans la fenêtre de contexte."
+        max_items_per_call_label: Nombre maximum d'éléments par lot (Optionnel)
       not_authorized: Vous n'êtes pas autorisé(e) à effectuer cette action
       openai_settings:
         access_token_label: Jeton d'accès

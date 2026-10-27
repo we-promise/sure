@@ -14,6 +14,9 @@ de:
         transaction_account: Transaktionskonto
     action_executors:
       labels:
+        split_transaction: "Transaktion aufteilen"
+        fill_similar_merchants: "Fehlende Händler aus ähnlichen Transaktionen ergänzen (ohne KI)"
+        bayes_categorize: "Mit dem Klassifizierer kategorisieren (ohne KI)"
         set_transaction_category: Transaktionskategorie festlegen
         set_transaction_tags: Transaktions-Tags festlegen
         set_transaction_merchant: Händler der Transaktion festlegen

@@ -47,12 +47,13 @@ vi:
         transfer: Chuyển khoản
     amount_range: từ %{min} đến %{max}
     attention:
+      paused: "Đã tạm dừng"
       amount_changed: Số tiền đã thay đổi
       needs_review: Cần xem lại kết quả đối chiếu
       overdue:
         one: Quá hạn 1 ngày
         other: Quá hạn %{count} ngày
-      partial: Một phần · còn %{amount}
+      partial: Một phần
     calendar:
       empty_month: Không có hóa đơn đến hạn trong tháng này.
       month_totals: Dự kiến %{expected} · đã trả %{paid}
@@ -63,7 +64,7 @@ vi:
       today: Hôm nay
     cancelled_still_scheduled: Bạn đã đánh dấu hủy vào %{date}, nhưng lịch thanh toán
       vẫn còn nên các hóa đơn tương lai sẽ tiếp tục xuất hiện.
-    debt_payment: "· trả nợ"
+    debt_payment: "trả nợ"
     detail:
       annualized: Một năm
       around: khoảng %{date}
@@ -119,6 +120,7 @@ vi:
       calendar_name: Hóa đơn Sure
     find_payment: Tìm khoản thanh toán
     index:
+      notices_heading: "Thay đổi"
       accept: Áp dụng
       add_bill: Thêm hóa đơn
       add_income: Thêm thu nhập
@@ -131,7 +133,7 @@ vi:
         other: Chúng tôi tìm thấy %{count} khoản thanh toán định kỳ trong giao dịch
           của bạn. Hãy kiểm tra để tổng số ở đây khớp với số tiền thực tế bạn trả.
       detected_review_action: Xem lại
-      dormant: Không còn hoạt động
+      dormant: "Đã tạm dừng"
       empty:
         action: Tìm giao dịch định kỳ
         description: Hóa đơn là các khoản chi định kỳ của bạn. Sure tự động tìm từ

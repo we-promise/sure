@@ -99,6 +99,7 @@ test("upload progress interpolates the original filename literally as text", () 
 function drag(files) {
   const controller = new DragController();
   controller.invalidFileTypeValue = "Tipo di file non valido. Carica un file CSV.";
+  controller.extensionsValue = ["csv"];
   controller.overlayTarget = element();
   controller.inputTarget = { files: [] };
   controller.submits = 0;
@@ -127,4 +128,18 @@ test("CSV MIME or filename acceptance stays unchanged and keeps the original fil
     assert.equal(controller.submits, 1);
     assert.equal(controller.inputTarget.files, event.dataTransfer.files);
   }
+});
+
+
+test("configured QIF drops work without allowing CSV when it is not configured", () => {
+  const { controller, event } = drag([{ name: "synthetic.QIF", type: "" }]);
+  controller.extensionsValue = ["qif"];
+  controller.drop(event);
+  assert.equal(controller.submits, 1);
+  const csv = drag([{ name: "synthetic.txt", type: "text/csv" }]);
+  csv.controller.extensionsValue = ["qif"];
+  const previousAlert = globalThis.alert;
+  globalThis.alert = () => {};
+  try { csv.controller.drop(csv.event); } finally { globalThis.alert = previousAlert; }
+  assert.equal(csv.controller.submits, 0);
 });
