@@ -46,6 +46,7 @@ en:
       snooze_week: Snooze a week
       reopen: Reopen
       view_bill: View bill
+      view_income: View income
     mark_paid:
       success: Bill marked paid
     skip:
