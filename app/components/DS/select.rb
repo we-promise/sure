@@ -44,7 +44,7 @@ module DS
     end
 
     def selected_item
-      items.find { |item| item[:value] == selected_value }
+      items.find { |item| !item[:value].nil? && item[:value] == selected_value }
     end
 
     # Returns the color for a given item (used in :badge variant)
