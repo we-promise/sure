@@ -43,6 +43,28 @@ class MerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Private Netflix", response.body
   end
 
+  test "averages spending over purchases only" do
+    create_transaction(account: accounts(:depository), name: "Netflix plan", merchant: @merchant, amount: 100)
+    create_transaction(account: accounts(:depository), name: "Netflix refund", merchant: @merchant, amount: -100)
+
+    get merchant_url(@merchant)
+
+    assert_response :success
+    assert_select "dt", text: "Average transaction" do |dt|
+      assert_equal "$100.00", dt.first.next_element.text.strip
+    end
+  end
+
+  test "does not show a provider merchant used only on accounts the user cannot access" do
+    provider = ProviderMerchant.create!(name: "Private Co", source: "plaid")
+    create_transaction(account: accounts(:investment), name: "Private purchase", merchant: provider)
+
+    sign_in users(:family_member)
+    get merchant_url(provider)
+
+    assert_response :not_found
+  end
+
   test "does not show another family's merchant" do
     other = families(:empty).merchants.create!(name: "Elsewhere")
 

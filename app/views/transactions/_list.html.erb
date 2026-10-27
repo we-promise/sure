@@ -16,6 +16,15 @@
     <%= render "imports/drag_drop_overlay", title: t(".drag_drop_title"), subtitle: t(".drag_drop_subtitle") %>
 
     <%= render "transactions/searches/search" %>
+  <% else %>
+    <div class="flex justify-end mb-4 lg:hidden">
+      <%= render DS::Button.new(
+        variant: :outline,
+        icon: "list-todo",
+        aria: { label: t("transactions.searches.form.toggle_selection_checkboxes") },
+        data: { action: "click->checkbox-toggle#toggle", checkbox_toggle_target: "toggleButton" }
+      ) %>
+    </div>
   <% end %>
 
   <div id="entry-selection-bar" data-bulk-select-target="selectionBar" class="flex justify-center hidden">
