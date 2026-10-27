@@ -28,7 +28,12 @@
                 aria-expanded="false"
                 tabindex="0"
                 <%= tag.attributes(aria: { labelledby: "#{label_id} #{trigger_id}" }) if options[:label].present? %>>
-          <%= selected_item&.dig(:label) || @placeholder %>
+          <% if (short_label = short_label_for(selected_item)) %>
+            <span class="sm:hidden"><%= short_label %></span>
+            <span class="hidden sm:inline"><%= selected_item[:label] %></span>
+          <% else %>
+            <%= selected_item&.dig(:label) || @placeholder %>
+          <% end %>
         </button>
     </div>
   </div>
@@ -38,6 +43,7 @@
         <%= render DS::SearchInput.new(
           variant: :embedded,
           placeholder: t("helpers.select.search_placeholder"),
+          class: search_input_classes,
           data: {
             list_filter_target: "input",
             action: "input->list-filter#filter input->select#syncTabindex"
@@ -61,6 +67,7 @@
               data-select-target="option"
               data-action="click->select#select"
               data-value="<%= item[:value] %>"
+              <%= tag.attributes(data: { short_label: short_label_for(item) }) %>
               data-filter-name="<%= item[:label] %>">
 
           <span class="check-icon <%= "hidden" unless is_selected %>">
@@ -73,7 +80,12 @@
 
           <% case variant %>
           <% when :simple %>
-            <%= item[:label] %>
+            <% if (short_label = short_label_for(item)) %>
+              <span class="sm:hidden"><%= short_label %></span>
+              <span class="hidden sm:inline"><%= item[:label] %></span>
+            <% else %>
+              <%= item[:label] %>
+            <% end %>
 
           <% when :logo %>
             <% unless item[:value].nil? %>

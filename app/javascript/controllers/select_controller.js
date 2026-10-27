@@ -133,7 +133,16 @@ export default class extends Controller {
     const value = selectedElement.dataset.value
     const label = selectedElement.dataset.filterName || selectedElement.textContent.trim()
 
-    this.buttonTarget.textContent = label
+    const shortLabel = selectedElement.dataset.shortLabel
+    if (shortLabel) {
+      this.buttonTarget.replaceChildren(
+        this.labelSpan(shortLabel, "sm:hidden"),
+        this.labelSpan(label, "hidden sm:inline")
+      )
+    } else {
+      this.buttonTarget.textContent = label
+    }
+
     if (this.hasInputTarget) {
       this.inputTarget.value = value
       this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
@@ -391,5 +400,12 @@ export default class extends Controller {
       this.menuTarget.style.left = "auto"
       this.menuTarget.style.right = "0"
     }
+  }
+
+  labelSpan(text, className) {
+    const span = document.createElement("span")
+    span.className = className
+    span.textContent = text
+    return span
   }
 }
