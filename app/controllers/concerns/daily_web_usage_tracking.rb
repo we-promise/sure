@@ -11,9 +11,9 @@ module DailyWebUsageTracking
       return if controller_path.start_with?("api/")
       return if request.xhr? || turbo_frame_request?
       return if %w[Purpose Sec-Purpose X-Sec-Purpose].any? { |header| request.headers[header].to_s.match?(/prefetch|prerender/i) }
-      return unless DailyUsage.enabled?("web_ui_served_daily")
+      return unless Usage.enabled?("web_ui_served_daily")
 
-      DailyUsage.capture(
+      Usage.capture(
         "web_ui_served_daily",
         user: Current.user,
         date: Time.current.in_time_zone(resolved_timezone).to_date,

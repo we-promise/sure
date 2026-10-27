@@ -2,7 +2,7 @@ require "test_helper"
 
 # Opt in against a disposable Redis configured through REDIS_URL. No collector
 # requests are sent: the fake collector records accepted captures in Redis.
-class DailyUsageRedisTest < ActiveSupport::TestCase
+class UsageRedisTest < ActiveSupport::TestCase
   test "independent worker processes share atomic claims for installation events" do
     skip "Set DAILY_USAGE_REDIS_TESTS=1 with disposable REDIS_URL" unless ENV["DAILY_USAGE_REDIS_TESTS"] == "1"
     skip "Requires fork" unless Process.respond_to?(:fork)
@@ -29,8 +29,8 @@ class DailyUsageRedisTest < ActiveSupport::TestCase
         reader.read(1)
         10.times do
           DailyJobUsageTracking.new.call(nil, {}, nil) { true }
-          DailyUsage.capture("ai_assistant_served_daily")
-          DailyUsage.capture("mcp_call_served_daily")
+          Usage.capture("ai_assistant_served_daily")
+          Usage.capture("mcp_call_served_daily")
         end
         exit! 0
       rescue StandardError
@@ -47,7 +47,7 @@ class DailyUsageRedisTest < ActiveSupport::TestCase
     travel_to Time.utc(2031, 1, 2)
     next_id = OpenSSL::HMAC.hexdigest("SHA256", secret, "2031-01-02")
     claim_keys.concat(expected_events.map { |event| "daily-installation-usage:#{event}:#{next_id}" })
-    2.times { expected_events.each { |event| DailyUsage.capture(event) } }
+    2.times { expected_events.each { |event| Usage.capture(event) } }
     events = Sidekiq.redis { |redis| redis.call("LRANGE", results_key, 0, -1) }.map { |json| JSON.parse(json) }
     assert_equal 6, events.size
     assert_equal [ daily_id, next_id ].sort, events.map { |event| event["distinct_id"] }.uniq.sort

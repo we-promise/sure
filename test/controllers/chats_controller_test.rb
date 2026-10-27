@@ -8,8 +8,8 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "gets index" do
-    DailyUsage.stubs(:capture)
-    DailyUsage.expects(:capture).with("ai_assistant_served_daily").never
+    Usage.stubs(:capture)
+    Usage.expects(:capture).with("ai_assistant_served_daily").never
     get chats_url
     assert_response :success
   end
@@ -58,8 +58,8 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "creates chat" do
-    DailyUsage.stubs(:capture)
-    DailyUsage.expects(:capture).with("ai_assistant_served_daily").never
+    Usage.stubs(:capture)
+    Usage.expects(:capture).with("ai_assistant_served_daily").never
     assert_difference("Chat.count") do
       post chats_url, params: { chat: { content: "Hello", ai_model: "gpt-4.1" } }
     end

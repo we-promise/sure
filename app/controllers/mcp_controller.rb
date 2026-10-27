@@ -108,7 +108,7 @@ class McpController < ApplicationController
       end
 
       fn = fn_class.new(mcp_user)
-      DailyUsage.capture("mcp_call_served_daily")
+      Usage.capture("mcp_call_served_daily")
       result = fn.call(arguments)
 
       { content: [ { type: "text", text: result.to_json } ] }

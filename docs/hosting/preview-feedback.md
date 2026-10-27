@@ -212,7 +212,7 @@ preserve the same routing, privacy, and opt-out behavior for both features.
 
 ## Daily installation activity
 
-`DailyUsage` captures all daily events through the same shared feedback
+`Usage` captures all daily events through the same shared feedback
 client, environment/opt-out gates, pseudonym generation and error handling. The
 web controller concern only selects qualifying responses and supplies user,
 family-local date and resolved IP; assistant/MCP hooks and Sidekiq middleware supply
@@ -267,6 +267,6 @@ collector-side deduplication. A quiet installation without qualifying activity
 emits nothing.
 
 Run the shared-store concurrency regression against disposable Redis with
-`DAILY_USAGE_REDIS_TESTS=1 REDIS_URL=redis://localhost:6379/15 bin/rails test test/integration/daily_usage_redis_test.rb`.
+`DAILY_USAGE_REDIS_TESTS=1 REDIS_URL=redis://localhost:6379/15 bin/rails test test/integration/usage_redis_test.rb`.
 It forks eight workers and replaces the collector with a Redis-backed fake;
 it sends no live telemetry and deletes only its own randomly scoped keys.

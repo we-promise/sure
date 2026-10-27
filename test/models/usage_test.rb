@@ -1,6 +1,6 @@
 require "test_helper"
 
-class DailyUsageTest < ActiveSupport::TestCase
+class UsageTest < ActiveSupport::TestCase
   setup do
     travel_to Time.utc(2026, 10, 18, 23, 59)
     @previous_client = $posthog_feedback
@@ -31,9 +31,9 @@ class DailyUsageTest < ActiveSupport::TestCase
 
   test "events have independent install claims and minimal daily identities" do
     3.times do
-      DailyUsage.capture("ai_assistant_served_daily")
-      DailyUsage.capture("job_served_daily")
-      DailyUsage.capture("mcp_call_served_daily")
+      Usage.capture("ai_assistant_served_daily")
+      Usage.capture("job_served_daily")
+      Usage.capture("mcp_call_served_daily")
     end
     assert_equal %w[ai_assistant_served_daily job_served_daily mcp_call_served_daily], @events.pluck(:event)
     assert_equal 1, @events.pluck(:distinct_id).uniq.size
@@ -50,10 +50,10 @@ class DailyUsageTest < ActiveSupport::TestCase
     date = Date.new(2026, 10, 18)
 
     2.times do
-      DailyUsage.capture("web_ui_served_daily", user: user, date: date, ip: "203.0.113.42")
-      DailyUsage.capture("ai_assistant_served_daily")
-      DailyUsage.capture("job_served_daily")
-      DailyUsage.capture("mcp_call_served_daily")
+      Usage.capture("web_ui_served_daily", user: user, date: date, ip: "203.0.113.42")
+      Usage.capture("ai_assistant_served_daily")
+      Usage.capture("job_served_daily")
+      Usage.capture("mcp_call_served_daily")
     end
 
     assert_equal %w[web_ui_served_daily ai_assistant_served_daily job_served_daily mcp_call_served_daily], @events.pluck(:event)
@@ -77,9 +77,9 @@ class DailyUsageTest < ActiveSupport::TestCase
   end
 
   test "web events require a user and family-local date" do
-    DailyUsage.capture("web_ui_served_daily")
-    DailyUsage.capture("web_ui_served_daily", user: stub(id: "web-user"))
-    DailyUsage.capture("web_ui_served_daily", date: Date.current)
+    Usage.capture("web_ui_served_daily")
+    Usage.capture("web_ui_served_daily", user: stub(id: "web-user"))
+    Usage.capture("web_ui_served_daily", date: Date.current)
 
     assert_empty @claims
     assert_empty @events
@@ -88,62 +88,62 @@ class DailyUsageTest < ActiveSupport::TestCase
   test "a null Rails cache disables web capture while installation events stay enabled" do
     Rails.stubs(:cache).returns(ActiveSupport::Cache::NullStore.new)
 
-    assert_not DailyUsage.enabled?("web_ui_served_daily")
-    assert DailyUsage.enabled?("ai_assistant_served_daily")
-    assert DailyUsage.enabled?("job_served_daily")
-    assert DailyUsage.enabled?("mcp_call_served_daily")
+    assert_not Usage.enabled?("web_ui_served_daily")
+    assert Usage.enabled?("ai_assistant_served_daily")
+    assert Usage.enabled?("job_served_daily")
+    assert Usage.enabled?("mcp_call_served_daily")
   end
 
   test "UTC rollover is independent of thread or family timezone" do
     events = %w[ai_assistant_served_daily job_served_daily mcp_call_served_daily]
-    Time.use_zone("Pacific/Auckland") { events.each { |event| DailyUsage.capture(event) } }
-    Time.use_zone("America/Los_Angeles") { events.each { |event| DailyUsage.capture(event) } }
+    Time.use_zone("Pacific/Auckland") { events.each { |event| Usage.capture(event) } }
+    Time.use_zone("America/Los_Angeles") { events.each { |event| Usage.capture(event) } }
     assert_equal 3, @events.size
     travel_to Time.utc(2026, 10, 19)
-    events.each { |event| DailyUsage.capture(event) }
+    events.each { |event| Usage.capture(event) }
     assert_equal 6, @events.size
     assert_not_equal @events.first[:distinct_id], @events.last[:distinct_id]
   end
 
   test "feedback opt out does not claim a day and later opt in can capture" do
     Rails.configuration.x.posthog.stubs(:feedback_enabled).returns(false)
-    DailyUsage.capture("job_served_daily")
+    Usage.capture("job_served_daily")
     assert_empty @claims
     assert_empty @events
     Rails.configuration.x.posthog.stubs(:feedback_enabled).returns(true)
-    DailyUsage.capture("job_served_daily")
+    Usage.capture("job_served_daily")
     assert_equal 1, @events.size
   end
 
   test "tests and development without explicit opt in do not claim" do
     Rails.env.stubs(:production?).returns(false)
     Rails.env.stubs(:development?).returns(false)
-    DailyUsage.capture("job_served_daily")
+    Usage.capture("job_served_daily")
     Rails.env.stubs(:development?).returns(true)
     Rails.configuration.x.posthog.stubs(:development_enabled).returns(false)
-    DailyUsage.capture("job_served_daily")
+    Usage.capture("job_served_daily")
     assert_empty @claims
     Rails.configuration.x.posthog.stubs(:development_enabled).returns(true)
-    DailyUsage.capture("job_served_daily")
+    Usage.capture("job_served_daily")
     assert_equal 1, @events.size
   end
 
   test "missing collector and unrecognized events do not claim" do
-    DailyUsage.capture("private_job_name")
+    Usage.capture("private_job_name")
     $posthog_feedback = nil
-    DailyUsage.capture("job_served_daily")
+    Usage.capture("job_served_daily")
     assert_empty @claims
   end
 
   test "Redis failures do not escape or capture" do
     @redis.stubs(:call).raises(IOError)
-    DailyUsage.capture("job_served_daily")
+    Usage.capture("job_served_daily")
     assert_empty @events
   end
 
   test "collector failures preserve the claim rather than retry delivery" do
     $posthog_feedback.expects(:capture).once.raises(IOError)
-    2.times { DailyUsage.capture("job_served_daily") }
+    2.times { Usage.capture("job_served_daily") }
     assert_equal 1, @claims.size
   end
 end

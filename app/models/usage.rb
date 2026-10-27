@@ -1,5 +1,5 @@
 # Best-effort daily activity sent to the shared feedback project.
-class DailyUsage
+class Usage
   EVENTS = %w[web_ui_served_daily ai_assistant_served_daily job_served_daily mcp_call_served_daily].freeze
 
   def self.enabled?(event)
