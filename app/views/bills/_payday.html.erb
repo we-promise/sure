@@ -19,11 +19,8 @@
       <%= bills_rail_date(occurrence) %>
     </div>
 
-    <%# The income icon, green, so a payday reads as money in rather than a bill.
-        The amount below keeps the bill colour. %>
-    <div class="size-8 shrink-0 rounded-full bg-success/10 flex items-center justify-center">
-      <%= icon "arrow-down-circle", size: "sm", color: "success" %>
-    </div>
+    <%# The bill's avatar, tinted success: the income reads as money in among the bills. %>
+    <%= render "bills/series_avatar", series: series, tone: :income %>
 
     <div class="min-w-0 flex-1">
       <p class="text-primary text-sm font-medium truncate hover:underline">
