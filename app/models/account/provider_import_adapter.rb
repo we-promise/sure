@@ -162,6 +162,9 @@ class Account::ProviderImportAdapter
           if linked && lock_unclaimed_pending(linked)
             pending_match = linked
             Rails.logger.info("Reconciling pending→posted via Plaid pending_transaction_id: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
+          elsif linked&.external_id == external_id
+            # A concurrent import of this same posted transaction claimed it.
+            return linked
           end
         end
 
@@ -175,6 +178,9 @@ class Account::ProviderImportAdapter
               Rails.logger.info("Reconciling pending→posted via exact amount match: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
               break
             end
+            # A concurrent import of this same posted transaction claimed it.
+            return candidate if candidate.external_id == external_id
+
             skipped_ids << candidate.id
           end
         end

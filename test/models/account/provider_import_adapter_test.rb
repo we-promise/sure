@@ -128,6 +128,64 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal [ "pending_older" ], older.reload.transaction.extra["auto_claimed_pending_ids"]
   end
 
+  test "returns the entry a concurrent import of the same posted transaction claimed" do
+    @adapter.import_transaction(
+      external_id: "pending_other", amount: 50, currency: "USD",
+      date: 1.day.ago.to_date, name: "Coffee", source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    pending = @adapter.import_transaction(
+      external_id: "pending_same", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    stale = Entry.find(pending.id)
+    @adapter.import_transaction(
+      external_id: "posted_same", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+    # The concurrent import looked the posted id up before the claim committed.
+    entries = @account.entries
+    entries.stubs(:find_or_initialize_by).returns(entries.new(external_id: "posted_same", source: "simplefin", entryable: Transaction.new))
+    return_once_from_find_pending(stale)
+
+    again = @adapter.import_transaction(
+      external_id: "posted_same", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+
+    assert_equal pending.id, again.id
+    assert_equal 1, @account.entries.where(external_id: "posted_same").count
+    assert_equal [ "pending_same" ], pending.reload.transaction.extra["auto_claimed_pending_ids"]
+    assert_equal 1, @account.entries.where(external_id: "pending_other").count
+  end
+
+  test "returns the Plaid entry a concurrent import of the same posted transaction claimed" do
+    pending = @adapter.import_transaction(
+      external_id: "plaid_pending_same", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      extra: { "plaid" => { "pending" => true } }
+    )
+    stale = Entry.find(pending.id)
+    @adapter.import_transaction(
+      external_id: "plaid_posted_same", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      pending_transaction_id: "plaid_pending_same"
+    )
+    entries = @account.entries
+    entries.stubs(:find_or_initialize_by).returns(entries.new(external_id: "plaid_posted_same", source: "plaid", entryable: Transaction.new))
+    entries.stubs(:find_by).with(external_id: "plaid_pending_same", source: "plaid").returns(stale)
+
+    again = @adapter.import_transaction(
+      external_id: "plaid_posted_same", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      pending_transaction_id: "plaid_pending_same"
+    )
+
+    assert_equal pending.id, again.id
+    assert_equal [ "plaid_pending_same" ], pending.reload.transaction.extra["auto_claimed_pending_ids"]
+  end
+
   test "does not claim a pending entry booked in place meanwhile" do
     pending = @adapter.import_transaction(
       external_id: "same_id", amount: 50, currency: "USD",
