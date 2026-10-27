@@ -141,7 +141,7 @@ class PlaidItem::AccountsSnapshotTest < ActiveSupport::TestCase
   end
 
   test "fetches liabilities data if item supports liabilities and liabilities accounts present" do
-    @plaid_item.update!(available_products: [ "liabilities" ], billed_products: [])
+    @plaid_item.update!(available_products: [], billed_products: [ "liabilities" ])
 
     @snapshot.expects(:accounts).returns([
       OpenStruct.new(
@@ -159,11 +159,65 @@ class PlaidItem::AccountsSnapshotTest < ActiveSupport::TestCase
   end
 
   test "does not fetch liabilities if no liabilities accounts" do
-    @plaid_item.update!(available_products: [ "liabilities" ], billed_products: [])
+    @plaid_item.update!(available_products: [], billed_products: [ "liabilities" ])
 
     @snapshot.expects(:accounts).returns([]).at_least_once
 
     @plaid_provider.expects(:get_transactions).never
+    @plaid_provider.expects(:get_item_investments).never
+    @plaid_provider.expects(:get_item_liabilities).never
+
+    @snapshot.get_account_data("123")
+  end
+
+  test "fetches liabilities for a credit account when liabilities was an additionally consented product" do
+    @plaid_item.update!(
+      available_products: [],
+      billed_products: [],
+      raw_payload: { "consented_products" => [ "liabilities" ] }
+    )
+
+    @snapshot.expects(:accounts).returns([
+      OpenStruct.new(
+        account_id: "123",
+        type: "credit",
+        subtype: "credit card"
+      )
+    ]).at_least_once
+
+    @plaid_provider.expects(:get_transactions).never
+    @plaid_provider.expects(:get_item_investments).never
+    @plaid_provider.expects(:get_item_liabilities).with(@plaid_item.access_token).once
+
+    @snapshot.get_account_data("123")
+  end
+
+  test "does not fetch liabilities the institution offers but the user did not consent to" do
+    # A Depository link consents to transactions and investments only. Plaid
+    # still lists liabilities in available_products when the institution
+    # offers it, but /liabilities/get then fails with ADDITIONAL_CONSENT_REQUIRED.
+    @plaid_item.update!(
+      available_products: [ "liabilities" ],
+      billed_products: [ "transactions" ],
+      raw_payload: { "consented_products" => [ "transactions", "investments" ] }
+    )
+
+    @snapshot.expects(:accounts).returns([
+      OpenStruct.new(
+        account_id: "123",
+        type: "credit",
+        subtype: "credit card"
+      )
+    ]).at_least_once
+
+    @plaid_provider.expects(:get_transactions).with(@plaid_item.access_token, next_cursor: nil).returns(
+      OpenStruct.new(
+        added: [],
+        modified: [],
+        removed: [],
+        cursor: "test_cursor_1"
+      )
+    ).once
     @plaid_provider.expects(:get_item_investments).never
     @plaid_provider.expects(:get_item_liabilities).never
 

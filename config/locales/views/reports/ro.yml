@@ -120,18 +120,13 @@ ro:
         previous: Anterioare
         next: Următoarele
     google_sheets_instructions:
-      title_with_key: "✅ Copiază URL-ul pentru Google Sheets"
-      title_no_key: "⚠️ Cheie API necesară"
-      ready: URL-ul tău CSV (cu cheie API) este gata.
-      steps: "Pentru a importa în Google Sheets:\n1. Creează o foaie Google nouă\n2. În celula A1, introdu formula afișată mai jos\n3. Apasă Enter"
-      security_warning: "Acest URL include cheia ta API. Păstreaz-o în siguranță!"
+      title_no_key: "Cheie API necesară"
       need_key: Pentru a importa date în Google Sheets, ai nevoie de o cheie API.
       step1: "Mergi la Setări → Chei API"
       step2: "Creează o cheie API nouă cu permisiunea „citire”"
       step3: Copiază cheia API
-      step4: "Adaug-o la acest URL ca: ?api_key=CHEIA_TA"
+      step4: "Adaug-o la acest URL ca: &api_key=CHEIA_TA"
       example: Exemplu
       then_use: Apoi utilizează URL-ul complet cu =IMPORTDATA() în Google Sheets.
-      open_sheets: Deschide Google Sheets
       go_to_api_keys: Mergi la Chei API
       close: Am înțeles
