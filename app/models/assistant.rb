@@ -42,8 +42,7 @@ module Assistant
     Function::UpdateTag,
     Function::CreateCategory,
     Function::UpdateCategory,
-    Function::DeleteCategory,
-    Function::DeleteTag
+    Function::DeleteCategory
   ].freeze
 
   class << self
@@ -120,7 +119,7 @@ module Assistant
         Function::DeleteGoal,
         Function::DeleteTag
       ]
-      classes -= FAMILY_CONFIG_FUNCTION_CLASSES if user&.guest?
+      classes.delete(Function::DeleteTag) if user&.guest?
       classes
     end
 
