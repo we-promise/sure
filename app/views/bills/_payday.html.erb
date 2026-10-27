@@ -2,40 +2,46 @@
 <%# A payday in the month's date order, drawn like a bill row so it reads as
     what arrives between the bills. Its state is the model's call
     (RecurringOccurrence#payday_state), so a passed payday is shown as received
-    or not matched yet rather than dropped. A payday has no verb and no drawer:
-    the income is recorded by matching or marking it, not by paying it. %>
+    or not matched yet rather than dropped. Its row opens the same drawer a bill
+    does, for this occurrence, which speaks in income terms. %>
 <% series = occurrence.recurring_transaction %>
 <% state = occurrence.payday_state %>
 <% received = state.in?(%i[matched received]) %>
 <% amount = occurrence.resolved_expected_amount_money.abs %>
 
-<div class="flex items-center gap-3 @lg:gap-4 p-3 @lg:p-4">
-  <div class="hidden @lg:block w-14 shrink-0 text-xs text-secondary">
-    <%= bills_rail_date(occurrence) %>
-  </div>
+<div class="flex items-center gap-3 @lg:gap-4 p-3 @lg:p-4"
+     data-controller="clickable-row"
+     data-action="click->clickable-row#open">
+  <%= link_to bill_path(series, display: "drawer", occurrence: occurrence.id),
+        data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
+        class: "flex items-center gap-3 @lg:gap-4 min-w-0 flex-1 rounded-lg focus-ring outline-offset-4" do %>
+    <div class="hidden @lg:block w-14 shrink-0 text-xs text-secondary">
+      <%= bills_rail_date(occurrence) %>
+    </div>
 
-  <div class="size-8 shrink-0 rounded-full bg-success/10 flex items-center justify-center"><%= icon "arrow-down-circle", size: "sm", color: "success" %></div>
+    <%= render "bills/series_avatar", series: series %>
 
-  <div class="min-w-0 flex-1">
-    <p class="text-primary text-sm font-medium truncate">
-      <%= t("bills.payday.title", source: series.display_name) %>
-    </p>
-    <p class="text-xs text-secondary truncate">
-      <span class="@lg:hidden"><%= bills_row_date(occurrence) %> &middot;</span>
-      <%= frequency_label(series) %>
-    </p>
-  </div>
+    <div class="min-w-0 flex-1">
+      <p class="text-primary text-sm font-medium truncate hover:underline">
+        <%= t("bills.payday.title", source: series.display_name) %>
+      </p>
+      <p class="text-xs text-secondary truncate">
+        <span class="@lg:hidden"><%= bills_row_date(occurrence) %> &middot;</span>
+        <%= frequency_label(series) %>
+      </p>
+    </div>
 
-  <%# The same amount column as a bill row: the figure, then its status under
-      it. Received uses the success tone the Paid label uses on bills. %>
-  <div class="shrink-0 text-right min-w-0">
-    <p class="text-sm font-medium text-primary privacy-sensitive whitespace-nowrap">
-      <%= format_money(received && occurrence.confirmed_allocated.positive? ? occurrence.confirmed_allocated_money : amount) %>
-    </p>
-    <p class="text-xs <%= received ? "text-success" : "text-secondary" %>">
-      <%= t("bills.payday.#{state}") %>
-    </p>
-  </div>
+    <%# The same amount column as a bill row: the figure, then its status under
+        it. Received uses the success tone the Paid label uses on bills. %>
+    <div class="shrink-0 text-right min-w-0">
+      <p class="text-sm font-medium text-primary privacy-sensitive whitespace-nowrap">
+        <%= format_money(received && occurrence.confirmed_allocated.positive? ? occurrence.confirmed_allocated_money : amount) %>
+      </p>
+      <p class="text-xs <%= received ? "text-success" : "text-secondary" %>">
+        <%= t("bills.payday.#{state}") %>
+      </p>
+    </div>
+  <% end %>
 
   <%# The verb slot every bill row reserves from @lg, so the amounts share one
       right edge. A payday has no verb, but it keeps the slot empty. %>
