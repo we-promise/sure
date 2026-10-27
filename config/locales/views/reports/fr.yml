@@ -26,26 +26,16 @@ fr:
       go_to_api_keys: Aller aux clés API
       need_key: Pour importer des données dans Google Sheets, vous avez besoin d'une
         clé API.
-      open_sheets: Ouvrir Google Sheets
-      ready: Votre URL CSV (avec clé API) est prête.
-      security_warning: Cette URL inclut votre clé API. Gardez-la en sécurité !
       step1: Allez dans Paramètres → Clés API
       step2: Créez une nouvelle clé API avec la permission "lecture"
       step3: Copiez la clé API
-      step4: 'Ajoutez-la à cette URL comme : ?api_key=VOTRE_CLÉ'
-      steps: |-
-        Pour importer dans Google Sheets :
-        1. Créez une nouvelle feuille Google
-        2. Dans la cellule A1, entrez la formule ci-dessous
-        3. Appuyez sur Entrée
+      step4: 'Ajoutez-la à cette URL comme : &api_key=VOTRE_CLÉ'
       then_use: Ensuite, utilisez l'URL complète avec =IMPORTDATA() dans Google Sheets.
-      title_no_key: "⚠️ Clé API requise"
-      title_with_key: "✅ Copier l'URL pour Google Sheets"
+      title_no_key: "Clé API requise"
     index:
       date_range:
         from: Du
         to: Au
-      drag_to_reorder: Glisser pour réorganiser la section
       export: Exporter CSV
       next_decade: La prochaine décennie
       next_period: Période suivante
