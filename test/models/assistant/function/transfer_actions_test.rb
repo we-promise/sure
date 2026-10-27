@@ -57,6 +57,36 @@ class Assistant::Function::TransferActionsTest < ActiveSupport::TestCase
     assert Transaction.exists?(inflow_id)
   end
 
+  test "unlink reports deleted fees while preserving both principal transactions" do
+    created = Assistant::Function::CreateTransfer.new(@user).call(
+      "from_account_id" => @source.id, "to_account_id" => @destination.id,
+      "amount" => 125, "date" => Date.current.iso8601,
+      "source_fee_amount" => 2, "destination_fee_amount" => 3,
+      "external_id" => "fee-disclosure-#{SecureRandom.uuid}"
+    )
+    assert created[:success]
+    transfer = Transfer.find(created.dig(:transfer, :id))
+    principal_ids = [ transfer.outflow_transaction_id, transfer.inflow_transaction_id ]
+    fees = transfer.fee_transactions.map { |fee| [ fee.id, fee.entry.id, fee.entry.account_id, fee.entry.currency, fee.entry.amount.abs.to_s ] }
+    assert_equal 2, fees.size
+
+    result = Assistant::Function::DeleteTransfer.new(@user).call("id" => transfer.id)
+
+    assert result[:success]
+    assert_equal principal_ids.sort, result[:remaining_transaction_ids].sort
+    assert_equal fees.map(&:first).sort, result[:deleted_fee_transactions].pluck(:id).sort
+    fees.each do |id, entry_id, account_id, currency, amount|
+      reported = result[:deleted_fee_transactions].find { |fee| fee[:id] == id }
+      assert_equal account_id, reported[:account_id]
+      assert_equal currency, reported[:currency]
+      assert_equal amount, reported[:amount]
+      assert_not Transaction.exists?(id)
+      assert_not Entry.exists?(entry_id)
+    end
+    assert_equal principal_ids.sort, Transaction.where(id: principal_ids).pluck(:id).sort
+    assert_not Transfer.exists?(transfer.id)
+  end
+
   test "moves fee entries with principal entries when transfer date changes" do
     created = Assistant::Function::CreateTransfer.new(@user).call(
       "from_account_id" => @source.id,

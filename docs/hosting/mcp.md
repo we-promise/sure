@@ -154,11 +154,13 @@ At the time of writing, `tools/list` includes:
 | `delete_tag` | Delete a tag, optionally reassigning its transactions |
 | `set_opening_balance` | Set a manual account's opening balance and the date it applies from, reporting whether the current balance changes. Supports `dry_run` |
 | `unmatch_transfer` | Unlink a confirmed or pending transfer (by either transaction's id) so a wrong match can be redone; rejects the pairing for auto-match by default. Supports `dry_run` |
-| `create_category` / `update_category` | Manage categories |
-| `delete_category` | Delete a category, optionally reassigning its transactions |
+| `create_category` / `update_category` / `delete_category` | Manage categories: create, rename, recolor, move between parents, and delete (optionally moving transactions to a replacement) |
 | `create_transaction` / `delete_transaction` | Create and delete standard income and expense transactions |
 | `get_transfers` / `create_transfer` / `update_transfer` / `delete_transfer` | List and manage transfers between writable accounts. `update_transfer` accepts a stable transfer ID (or either transaction ID), edits amount/date/notes/rate, and can switch confirmed cash-to-Investment/Crypto transfers between spending and plain-transfer treatment with an optional dry-run. |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
+| `get_transfer_match_candidates` | A transaction's current transfer (including a pending auto-match) or the transactions it could be matched with, as in the "Match transfer" dialog |
+| `match_transfer` | Match a transaction as a transfer with an existing counterpart, or create the counterpart in a target account (e.g. a manual loan). Supports `dry_run` |
+| `review_transfer` | Confirm or reject a pending auto-matched transfer |
 | `update_budget` | Update budget allocations for a month |
 | `get_rules` / `get_rule_options` | Transaction rules in readable form (ids resolved to names, latest run; paginated, with a text search), and the condition and action types a rule can use |
 | `preview_rule` | Match count and a sample of matching transactions for a saved rule or an unsaved definition, without changing anything |
@@ -169,8 +171,42 @@ At the time of writing, `tools/list` includes:
 
 `get_accounts`, `get_goals`, `get_tags`, `get_transfers`, and the other list tools return the stable IDs required by follow-up actions. `get_accounts` includes each account's current type, subtype, permission, and `goal_funding` status. Goal create/update calls use one complete `funding_accounts` list; every item identifies an account ID and chooses either `whole_account` or `fixed_amount`. Call `get_account_types` before `create_account` to discover valid subtype values. In `get_accounts`, `writable` means the account can be used for account-level and balance-affecting write tools; `transaction_editing.annotations` separately reports whether the user can update transaction notes, categories, merchants, or tags on that account. Creation tools that accept an `external_id` require the caller to reuse the same key when retrying an operation.
 
-Destructive MCP-only tools are not automatically exposed to Sure's built-in
-assistant.
+The new `delete_account`, `delete_transfer`, `delete_goal`, and `delete_tag` tools
+are MCP-only. The existing `delete_transaction` and `delete_category` tools remain
+available to the built-in assistant. Guests cannot discover or invoke family
+category/tag mutations; the deletion functions also reject direct guest calls.
+
+### Transaction creation and deletion contracts
+
+`create_transaction` preserves the existing signed-amount contract: `account_id`,
+`date`, `amount`, and `name` are required. A negative amount is income; optional
+`type` (`income`, `expense`, `inflow`, or `outflow`) derives the sign from its
+magnitude. `external_id` remains optional for these callers, but a call without
+one is not safe to retry automatically.
+
+The magnitude-based contract accepts `nature: income/expense`, a strictly positive
+`amount`, and a required stable `external_id`. Both contracts honor explicit
+`currency`, `source`, and `user_modified`. Currency defaults to the account's;
+source defaults to `mcp` and must be paired with an external ID. Provider-sync
+protection defaults to true with `nature` and false with the signed/type contract.
+Contradictory `type`/`nature` values are rejected without a write.
+
+Responses retain the existing signed string amount for signed/type requests and
+the absolute amount plus `nature` for magnitude requests. Both include transaction,
+entry and account IDs. Reusing a `(source, external_id)` pair anywhere in the
+family is accepted only for the same canonical creation request, including its
+account, currency, direction, annotations and provider-sync protection.
+
+`delete_transaction` retains optional `account_id` as a safety guard. A mismatch
+or malformed guard cannot delete anything; split and linked-transfer transactions
+require their dedicated workflows. `delete_category` accepts upstream's
+`replacement_id` and the existing `replacement_category_id` alias, rejecting
+conflicting replacements.
+
+`delete_transfer` uses the same unlink operation as `unmatch_transfer` with
+`reject: false`: it preserves the two principal transactions but permanently
+deletes associated fees. Its response lists `deleted_fee_transactions` and
+`remaining_transaction_ids`. Confirm the fee deletion before invoking it.
 
 ### Preview Tools
 

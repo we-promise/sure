@@ -15,6 +15,8 @@ class Assistant::Function::DeleteTag < Assistant::Function
   end
 
   def call(params = {})
+    return error("not_authorized", "Guests cannot delete tags.") if user.guest?
+
     tag_id = normalized_uuid(params["id"])
     return error("not_found", "Tag not found.") unless tag_id
 

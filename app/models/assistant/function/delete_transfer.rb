@@ -1,51 +1,44 @@
 class Assistant::Function::DeleteTransfer < Assistant::Function
   class << self
     def name = "delete_transfer"
-    def description = "Unlinks a transfer whose two accounts are writable. The underlying transactions remain available for delete_transaction."
+
+    def description
+      <<~INSTRUCTIONS
+        Unlinks a transfer whose accounts are writable. Principal transactions
+        remain available for delete_transaction, but associated fee transactions
+        are permanently deleted and listed in deleted_fee_transactions.
+        Confirm the fee deletion with the user before calling this tool.
+      INSTRUCTIONS
+    end
   end
 
   def params_schema
-    build_schema(required: [ "id" ], properties: { id: { type: "string", description: "Transfer id from get_transfers" } })
+    build_schema(required: [ "id" ], properties: { id: { type: "string", description: "Transfer ID from get_transfers" } })
   end
 
   def call(params = {})
-    transfer = find_family_transfer(params["id"])
-    return error("not_found", "Writable transfer not found.") unless transfer
+    response = Assistant::Function::UnmatchTransfer.new(user).call("transfer_id" => params["id"], "reject" => false)
+    return response unless response[:success]
 
-    result = Transfer.transaction do
-      accounts = [ transfer.from_account, transfer.to_account ].compact
-      Account::MutationAccess.lock!(accounts:, user:, level: Account::MutationAccess::WRITE)
-      transfer.lock!
-
-      id = transfer.id
-      transaction_ids = [ transfer.outflow_transaction_id, transfer.inflow_transaction_id ]
-      transfer.destroy!
-      { id:, transaction_ids:, accounts: }
+    snapshot = response.fetch(:transfer)
+    fees = snapshot.fetch(:deleted_fee_transactions)
+    principal = [ snapshot.fetch(:outflow), snapshot.fetch(:inflow) ]
+    # UnmatchTransfer already resyncs all affected accounts when fees were deleted.
+    if fees.empty?
+      begin
+        family.accounts.where(id: principal.pluck(:account_id)).each(&:sync_later)
+      rescue StandardError => e
+        response[:warning] = "Transfer unlinked, but the account sync could not be enqueued (#{e.class}). Balances will recalculate on the next sync."
+      end
     end
 
-    result.fetch(:accounts).each(&:sync_later)
-    {
-      success: true,
-      deleted_transfer_id: result.fetch(:id),
-      remaining_transaction_ids: result.fetch(:transaction_ids),
-      message: "Transfer link deleted; underlying transactions were preserved."
-    }
-  rescue Account::MutationAccess::Denied
-    error("not_found", "Writable transfer not found.")
+    response.merge(
+      deleted_transfer_id: snapshot.fetch(:id),
+      remaining_transaction_ids: principal.pluck(:id),
+      deleted_fee_transactions: fees,
+      message: "Transfer link deleted; principal transactions were preserved. Associated fee transactions were deleted as listed in deleted_fee_transactions."
+    )
   rescue ActiveRecord::RecordNotDestroyed => e
-    error("delete_failed", e.record.errors.full_messages.join("; "))
+    { success: false, error: "delete_failed", message: e.record.errors.full_messages.join("; ") }
   end
-
-  private
-    def find_family_transfer(id)
-      return nil unless valid_uuid?(id)
-
-      Transfer.for_family(family)
-        .between_accounts(family.accounts.writable_by(user).visible.select(:id))
-        .find_by(id:)
-    end
-
-    def error(key, message)
-      { success: false, error: key, message: }
-    end
 end

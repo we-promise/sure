@@ -64,4 +64,22 @@ class Assistant::Function::DeleteTaxonomyTest < ActiveSupport::TestCase
     assert Tag.exists?(tag.id)
     assert Category.exists?(category.id)
   end
+
+  test "direct guest calls preserve taxonomy and its transaction associations" do
+    transaction = transactions(:one)
+    category = @family.categories.create!(name: "Guest-protected category", color: "#e99537", lucide_icon: "tag")
+    tag = @family.tags.create!(name: "Guest-protected tag", color: "#e99537")
+    transaction.update!(category: category)
+    transaction.tags << tag
+    original_tag_ids = transaction.tag_ids.sort
+    guest = users(:family_member)
+    guest.update!(role: "guest")
+
+    assert_no_difference [ "Category.count", "Tag.count" ] do
+      assert_equal "not_authorized", Assistant::Function::DeleteCategory.new(guest).call("id" => category.id)[:error]
+      assert_equal "not_authorized", Assistant::Function::DeleteTag.new(guest).call("id" => tag.id)[:error]
+    end
+    assert_equal category.id, transaction.reload.category_id
+    assert_equal original_tag_ids, transaction.tag_ids.sort
+  end
 end

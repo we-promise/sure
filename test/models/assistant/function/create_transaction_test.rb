@@ -13,7 +13,9 @@ class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
 
     assert_equal "create_transaction", definition[:name]
     assert_includes Assistant.function_classes, Assistant::Function::CreateTransaction
-    assert_equal %w[account_id amount date name nature external_id], definition.dig(:params_schema, :required)
+    assert_equal %w[account_id date amount name], definition.dig(:params_schema, :required)
+    assert definition.dig(:params_schema, :properties).key?(:nature)
+    assert definition.dig(:params_schema, :properties).key?(:external_id)
   end
 
   test "creates an expense on a writable account with annotations" do
@@ -178,6 +180,61 @@ class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
 
       assert_equal false, result[:success]
       assert_equal "idempotency_conflict", result[:error]
+    end
+  end
+
+  test "honors custom currency source and explicit provider protection" do
+    result = @function.call(required_params("currency" => "EUR", "source" => "statement-export", "user_modified" => false))
+
+    assert result[:success]
+    entry = Entry.find(result.dig(:transaction, :entry_id))
+    assert_equal "EUR", entry.currency
+    assert_equal "statement-export", entry.source
+    assert_not entry.user_modified?
+    assert_equal "EUR", result.dig(:transaction, :currency)
+  end
+
+  test "currency changes conflict while sources have separate idempotency namespaces" do
+    params = required_params("external_id" => "currency-source-key", "source" => "first-source")
+    first = @function.call(params)
+    assert first[:success]
+
+    assert_no_difference "@account.entries.count" do
+      assert_equal "idempotency_conflict", @function.call(params.merge("currency" => "EUR"))[:error]
+    end
+    assert_difference "@account.entries.count", 1 do
+      assert @function.call(params.merge("source" => "second-source"))[:success]
+    end
+  end
+
+  test "accepts retries with the earlier magnitude contract fingerprint" do
+    params = required_params
+    first = @function.call(params)
+    assert first[:success]
+    entry = Entry.find(first.dig(:transaction, :entry_id))
+    legacy = {
+      account_id: @account.id, name: params.fetch("name"), amount: BigDecimal(params.fetch("amount").to_s).to_s("F"),
+      date: params.fetch("date"), category_id: nil, merchant_id: nil, tag_ids: [], notes: nil
+    }
+    entry.transaction.update!(extra: { "mcp" => { "idempotency_fingerprint" => Digest::SHA256.hexdigest(JSON.generate(legacy)) } })
+
+    assert_no_difference "@account.entries.count" do
+      retry_result = @function.call(params)
+      assert retry_result[:success]
+      assert_equal false, retry_result[:created]
+    end
+    other_account = @family.accounts.create!(owner: @user, name: "Legacy retry account", accountable: Depository.new(subtype: "savings"), balance: 0, currency: @account.currency)
+    assert_no_difference "@family.entries.count" do
+      assert_equal "idempotency_conflict", @function.call(params.merge("account_id" => other_account.id))[:error]
+    end
+  end
+
+  test "rejects contradictory directions and nonfinite amounts" do
+    assert_no_difference "@account.entries.count" do
+      assert_equal "invalid_nature", @function.call(required_params("type" => "income"))[:error]
+      %w[NaN Infinity -Infinity].each do |amount|
+        assert_equal "invalid_amount", @function.call(required_params("amount" => amount))[:error]
+      end
     end
   end
 
