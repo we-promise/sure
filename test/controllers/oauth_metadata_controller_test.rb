@@ -13,6 +13,8 @@ class OauthMetadataControllerTest < ActionDispatch::IntegrationTest
     json = JSON.parse(response.body)
     assert_equal @base, json["resource"]
     assert_equal [ @base ], json["authorization_servers"]
+    assert_equal [ "read_write" ], json["scopes_supported"]
+    assert_equal [ "header" ], json["bearer_methods_supported"]
   end
 
   test "authorization_server returns RFC 8414 metadata" do

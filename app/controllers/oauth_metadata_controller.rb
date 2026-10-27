@@ -10,7 +10,9 @@ class OauthMetadataController < ApplicationController
   def protected_resource
     render json: {
       resource: configured_base_url,
-      authorization_servers: [ configured_base_url ]
+      authorization_servers: [ configured_base_url ],
+      scopes_supported: [ McpController::REQUIRED_SCOPE ],
+      bearer_methods_supported: [ "header" ]
     }
   end
 
@@ -23,7 +25,7 @@ class OauthMetadataController < ApplicationController
       response_types_supported: [ "code" ],
       grant_types_supported: [ "authorization_code" ],
       code_challenge_methods_supported: [ "S256" ],
-      scopes_supported: [ "read_write" ]
+      scopes_supported: [ McpController::REQUIRED_SCOPE ]
     }
   end
 end
