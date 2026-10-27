@@ -1,53 +1,73 @@
-# Stable releases on Render
+# Render release deployment verification
 
-`publish.yml` deploys stable releases to the existing `sure-app` project using
-GitHub's **stable** environment. It follows the same hook-and-health-check sequence
-as the existing alpha/demo deployment; no Render API key is required.
+Both `deploy_demo` and `deploy_app` in `publish.yml` use the same Python helper,
+`.github/deployment/deploy_render.py`. Release policy remains environment-specific:
+alpha tags deploy to **demo**, and stable version-tag pushes deploy to **stable**.
+Existing reviewer gates and concurrency groups are preserved.
 
-## Configuration
+## Setup required before enabling this follow-up
 
-The **stable** GitHub environment needs these two secrets:
+Add a **`RENDER_API_KEY` environment secret to both demo and stable**. Each key must
+be able to read its target services and deployment statuses. An operator's existing
+credential is not automatically available to GitHub Actions. This is required for
+status verification, not for triggering deployment hooks. Never put keys or hook
+URLs into repository files or logs.
 
-- `RENDER_APP_WEB_DEPLOY_HOOK_URL`: web service deploy hook.
-- `RENDER_APP_WORKER_DEPLOY_HOOK_URL`: worker deploy hook.
+Existing configuration is reused:
 
-No additional environment variables are required. The app URL is explicitly
-`https://sure-web-6y53.onrender.com`, not `app.sure.am`.
-The existing environment reviewer gate remains in effect. Approve each deployment,
-or change environment protection separately if unattended deployment is desired.
-Keep Render auto-deploy disabled for these prebuilt image services.
+- **demo**: `RENDER_DEMO_WEB_DEPLOY_HOOK_URL`,
+  `RENDER_DEMO_WORKER_DEPLOY_HOOK_URL`, and the `RENDER_DEMO_URL` variable.
+- **stable**: `RENDER_APP_WEB_DEPLOY_HOOK_URL` and
+  `RENDER_APP_WORKER_DEPLOY_HOOK_URL`. The web URL remains explicitly configured as
+  `https://sure-web-6y53.onrender.com`, not `app.sure.am`.
 
-## Release flow
+Service IDs are taken from the environment's hook URLs; no new service-ID variables
+are needed. Before any trigger, the helper validates the hook host/path and checks
+that the two services have the expected web/worker roles and use the Sure image.
+Configure the hooks for the intended installation: their environment placement is
+the source of truth for deployment targets.
 
-Merge this workflow into the release source branch before pushing a stable
-`vMAJOR.MINOR.PATCH` tag. A literal Git tag `stable` is not supported. Prerelease,
-branch, scheduled and manual-dispatch runs do not trigger the app deployment.
+## Verification
 
-After image publication succeeds, the job follows the demo sequence:
+After successful image publication, both jobs:
 
-1. Check that both hook URLs and the web URL are configured.
-2. Trigger the web hook with the exact versioned GHCR image (`v` prefix removed).
-3. Wait 60 seconds, then poll `/up` up to 24 times at 15-second intervals.
-4. Smoke-test `/sessions/new`.
-5. Trigger the worker hook with the same versioned image.
+1. Validate the tag against their configured stable/alpha channel and preflight
+   all credentials and both services before triggering any deployment.
+2. Trigger the web hook with the exact versioned GHCR image.
+3. Poll the returned deployment ID (up to ten minutes) until `live`, verifying
+   the requested image reference and a nonempty image digest.
+4. Check `/up` and `/sessions/new`.
+5. Trigger and verify the worker deployment, comparing its digest with web.
 
-Deployments are serialized without cancelling an active rollout. GitHub can replace
-an older pending run; concurrency is not a FIFO release queue.
+This verifies rollout completion for the requested image, unlike `/up` alone,
+which can be satisfied by an old instance. It does not prove provider syncs or
+background jobs work correctly. Unit tests use mocked network responses and run
+in reusable CI; they do not constitute a live deployment rehearsal.
 
-**Success means deployment requests were accepted and web health checks passed.**
-The old web instance can satisfy those checks. This does not verify that the new
-web image is live or that worker deployment completed. Check Render deployment
-events for those guarantees. Stronger API-backed verification is separate work.
+## Release and recovery
 
-## First rollout and recovery
+Merge the workflow into the release source branch before tagging. Existing
+reviewer gates still need approval. Deployments are serialized without cancelling
+an active rollout; GitHub concurrency is not a FIFO release queue. Do not rerun an
+older release after a newer deployment unless intentionally rolling back.
 
-Before updating this existing installation, verify database/storage recovery and
-release upgrade prerequisites, including encryption-key migration. Web startup runs
-`db:prepare`; the old worker may still run during migrations. Breaking migrations
-need a coordinated maintenance rollout rather than this automated path.
+Verify backups and upgrade prerequisites before updating an installation. Web
+startup runs `db:prepare`; old workers can remain active during migrations. This
+rollout is not atomic, and breaking migrations require coordinated maintenance.
 
-If a job fails, inspect Render before retrying: hook-triggered deployments are
-asynchronous and may continue after the workflow stops. There is no automatic
-rollback. Before a rollback, check schema compatibility and choose a known release
-for both services. Do not rerun an older release after a newer rollout unless that
-rollback is intentional.
+HTTP errors are sanitized and redirects rejected to protect credentials. Trigger
+requests are not retried automatically: an ambiguous failure may have started a
+deployment. A queued response without a deployment ID fails verification rather
+than claiming success. Inspect Render for active/queued deployments before retrying.
+A worker failure can leave web on the new version. No automatic rollback is attempted
+because database migrations might already have run; assess schema compatibility
+before selecting a previous image or restoring data.
+
+## Tests
+
+```sh
+python3 -m unittest discover -s .github/deployment -p 'test_*.py'
+```
+
+References: [Render deploy hooks](https://render.com/docs/deploy-hooks),
+[deployment status API](https://api-docs.render.com/reference/retrieve-deploy).
