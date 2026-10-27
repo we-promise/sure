@@ -106,21 +106,13 @@ jobs:
 
   test_unit:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    container:
-      image: rubylang/ruby:3.4.9-dev-noble
-      options: --user root
-
-    defaults:
-      run:
-        shell: bash
+    timeout-minutes: 20
 
     env:
       PLAID_CLIENT_ID: foo
       PLAID_SECRET: bar
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432 # pipelock:ignore
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432 # pipelock:ignore
+      REDIS_URL: redis://localhost:6379
       RAILS_ENV: test
 
     services:
@@ -141,7 +133,7 @@ jobs:
 
     steps:
       - name: Install packages
-        run: apt-get update && apt-get install --no-install-recommends -y curl libvips postgresql-client libpq-dev
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y curl libvips postgresql-client libpq-dev
 
       - name: Checkout code
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
