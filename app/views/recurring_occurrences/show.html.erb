@@ -301,7 +301,7 @@
 
         <div class="flex items-center justify-between gap-2">
           <%= render DS::Link.new(
-                text: t(".view_bill"),
+                text: t(series.typed_income? ? ".view_income" : ".view_bill"),
                 variant: "default",
                 href: bill_path(series, occurrence: @occurrence.id),
                 frame: :drawer,
