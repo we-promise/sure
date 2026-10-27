@@ -38,6 +38,12 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Resolve app version
+        shell: bash
+        run: |
+          version="$(tr -d '[:space:]' < .sure-version)"
+          echo "SURE_BUILD_NAME=${version%%-*}" >> "$GITHUB_ENV"
+
       - name: Get dependencies
         working-directory: mobile
         run: flutter pub get
@@ -88,10 +94,10 @@ jobs:
         run: |
           if [ "${{ steps.check_secrets.outputs.has_keystore }}" == "true" ]; then
             echo "Building signed release APK..."
-            flutter build apk --release
+            flutter build apk --release --build-name="$SURE_BUILD_NAME"
           else
             echo "Building debug-signed APK..."
-            flutter build apk --debug
+            flutter build apk --debug --build-name="$SURE_BUILD_NAME"
           fi
 
       - name: Upload APK artifact
@@ -107,7 +113,7 @@ jobs:
       - name: Build App Bundle (Release)
         if: steps.check_secrets.outputs.has_keystore == 'true'
         working-directory: mobile
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --build-name="$SURE_BUILD_NAME"
 
       - name: Upload AAB artifact
         if: steps.check_secrets.outputs.has_keystore == 'true'
@@ -135,6 +141,12 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Resolve app version
+        shell: bash
+        run: |
+          version="$(tr -d '[:space:]' < .sure-version)"
+          echo "SURE_BUILD_NAME=${version%%-*}" >> "$GITHUB_ENV"
+
       - name: Get dependencies
         working-directory: mobile
         run: flutter pub get
@@ -160,7 +172,7 @@ jobs:
 
       - name: Build iOS (No Code Signing)
         working-directory: mobile
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign --build-name="$SURE_BUILD_NAME"
 
       - name: Create IPA archive info
         working-directory: mobile

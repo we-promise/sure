@@ -11,6 +11,10 @@ on:
         description: App version value for Chart.yaml appVersion
         required: false
         type: string
+      compatibility_version:
+        description: Optional legacy chart version; uses the canonical app image
+        required: false
+        type: string
       update_gh_pages:
         description: Whether to publish packaged chart to gh-pages index
         required: false
@@ -99,6 +103,16 @@ jobs:
         run: |
           mkdir -p .cr-release-packages
           helm package charts/sure -d .cr-release-packages
+
+      - name: Package compatibility chart
+        if: inputs.compatibility_version != ''
+        env:
+          COMPATIBILITY_VERSION: ${{ inputs.compatibility_version }}
+          APP_VERSION: ${{ steps.version.outputs.app_version }}
+        run: |
+          set -euo pipefail
+          [[ "$COMPATIBILITY_VERSION" =~ ^0\.[0-9]+\.[0-9]+$ ]] || exit 1
+          helm package charts/sure --version "$COMPATIBILITY_VERSION" --app-version "$APP_VERSION" -d .cr-release-packages
 
       - name: Upload packaged chart artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
