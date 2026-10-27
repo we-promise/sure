@@ -23,6 +23,16 @@ class GoalPledgeTest < ActiveSupport::TestCase
     assert_includes pledge.errors[:account], "Pick one of the goal's linked accounts."
   end
 
+  test "does not allow pledges for Gems and Bullion accounts" do
+    account = @goal.family.accounts.create!(name: "Gold collection", balance: 0, currency: "USD", accountable: Valuable.new)
+    @goal.goal_accounts.create!(account: account)
+
+    pledge = @goal.goal_pledges.new(account: account, amount: 50, currency: "USD")
+
+    assert_not pledge.valid?
+    assert_includes pledge.errors[:account], "Gems and Bullion accounts cannot receive pledges."
+  end
+
   test "currency must match goal currency" do
     @pledge.currency = "EUR"
     assert_not @pledge.valid?

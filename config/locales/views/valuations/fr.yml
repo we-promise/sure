@@ -6,6 +6,7 @@ fr:
       current_balance: Solde actuel
       current_loan_balance: Solde actuel du prêt
       current_market_value: Valeur marchande actuelle
+      current_valuation: Évaluation actuelle
       manual_balance_update: Mise à jour manuelle du solde
       manual_principal_update: Mise à jour manuelle du principal
       manual_value_update: Mise à jour manuelle de la valeur

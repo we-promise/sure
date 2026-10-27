@@ -1,0 +1,12 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        valuable_item:
+          attributes:
+            merchant:
+              must_belong_to_account_family: must belong to the account family
+            invoice:
+              too_large: must be smaller than %{max_mb} MB
+              invalid_format: must be a PDF or image
