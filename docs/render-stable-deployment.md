@@ -1,84 +1,53 @@
 # Stable releases on Render
 
 `publish.yml` deploys stable releases to the existing `sure-app` project using
-GitHub's **stable** environment. The alpha/demo path is unchanged.
+GitHub's **stable** environment. It follows the same hook-and-health-check sequence
+as the existing alpha/demo deployment; no Render API key is required.
 
-## One-time setup outside this repository
+## Configuration
 
-Configure these **environment secrets** in GitHub Settings → Environments → stable:
+The **stable** GitHub environment needs these two secrets:
 
-- `RENDER_APP_WEB_DEPLOY_HOOK_URL`: unmodified hook URL for `sure-web-6y53`
-  (`srv-dauth3vpn0mc739470bg`).
-- `RENDER_APP_WORKER_DEPLOY_HOOK_URL`: unmodified hook URL for `sure-worker-6y53`
-  (`srv-dauthr7pn0mc7394a270`).
-- `RENDER_API_KEY`: a Render API key able to read both services and their deploys.
-  Hooks trigger deployment; the API key is required to verify completion.
-  A key stored in an operator's automation environment is **not** automatically
-  available in GitHub Actions. Never paste keys or hook URLs into issues or logs.
+- `RENDER_APP_WEB_DEPLOY_HOOK_URL`: web service deploy hook.
+- `RENDER_APP_WORKER_DEPLOY_HOOK_URL`: worker deploy hook.
 
-No GitHub environment variables are required. The workflow explicitly identifies
-both services and `https://sure-web-6y53.onrender.com`; update those constants if
-moving the installation. This is not the `app.sure.am` installation.
-
-Ensure environment deployment rules permit release tags (`v*`). Required reviewers
-will pause the workflow for approval; omit that requirement if unattended deployment
-is intended. Keep Render auto-deploy disabled: these are prebuilt image services,
-not Git-connected builds. The workflow does not provision resources or change DNS.
-
-Before the first rollout, verify a recoverable PostgreSQL backup and storage backup,
-review release upgrade instructions (including encryption-key migration), and confirm
-shared web/worker configuration. `bin/docker-entrypoint` runs `db:prepare` when the
-web server starts. The old worker can run during web migrations; releases must be
-backward-compatible with it. Breaking migrations require a separately coordinated
-maintenance rollout, not this automated path.
+No additional environment variables are required. The app URL is explicitly
+`https://sure-web-6y53.onrender.com`, not `app.sure.am`.
+The existing environment reviewer gate remains in effect. Approve each deployment,
+or change environment protection separately if unattended deployment is desired.
+Keep Render auto-deploy disabled for these prebuilt image services.
 
 ## Release flow
 
-Merge this change into the branch from which the release tag will be created
-**before** pushing the tag. Push a conventional stable `vMAJOR.MINOR.PATCH` tag.
-A literal Git tag `stable` is not supported. Alpha, beta, RC, branch, schedule and
-manual-dispatch runs do not trigger this deployment job.
+Merge this workflow into the release source branch before pushing a stable
+`vMAJOR.MINOR.PATCH` tag. A literal Git tag `stable` is not supported. Prerelease,
+branch, scheduled and manual-dispatch runs do not trigger the app deployment.
 
-After CI and multi-architecture image publication succeed, the job:
+After image publication succeeds, the job follows the demo sequence:
 
-1. Validates all configuration and reads both target services before any deploy.
-2. Calls the web hook with `imgURL=ghcr.io/we-promise/sure:MAJOR.MINOR.PATCH`.
-3. Polls the returned deployment ID (up to ten minutes) until it is `live`, and
-   checks that Render reports the requested image and a digest.
-4. Checks `/up` and `/sessions/new` on the configured web origin.
-5. Deploys the worker using the same version, waits for its exact deployment, and
-   verifies its digest matches the web deployment.
+1. Check that both hook URLs and the web URL are configured.
+2. Trigger the web hook with the exact versioned GHCR image (`v` prefix removed).
+3. Wait 60 seconds, then poll `/up` up to 24 times at 15-second intervals.
+4. Smoke-test `/sessions/new`.
+5. Trigger the worker hook with the same versioned image.
 
-The GitHub environment reports the job outcome. The job does not wait for mobile,
-Helm or GitHub Release creation; it waits for successful image publication. Each hook request explicitly supplies the release image, regardless of the
-service's configured default tag. Version tags must not be overwritten. Production runs share a
-concurrency group and do not cancel an in-progress deployment. GitHub may replace
-an older pending run with a newer one; this is not a FIFO release queue.
+Deployments are serialized without cancelling an active rollout. GitHub can replace
+an older pending run; concurrency is not a FIFO release queue.
 
-## Failure and recovery
+**Success means deployment requests were accepted and web health checks passed.**
+The old web instance can satisfy those checks. This does not verify that the new
+web image is live or that worker deployment completed. Check Render deployment
+events for those guarantees. Stronger API-backed verification is separate work.
 
-Inspect the Actions job and the Render service's deployment events. HTTP errors
-are deliberately sanitized to avoid logging credentials; no trigger is automatically
-retried. A timeout or network error does not prove the deployment was cancelled.
-If Render returns 202 (queued without an ID), the job fails rather than claiming
-unverified success; inspect the queued deployment before retrying.
+## First rollout and recovery
 
-The rollout is **not atomic**: web may be updated while worker deployment fails.
-No automatic rollback is attempted, because database migrations may already have
-run. Resolve the failure and rerun the failed job for the same release only after
-checking Render for active/queued deployments. Do not rerun an older release after
-a newer one has deployed unless intentionally rolling back. For rollback, select a
-known compatible image version for both services and assess schema compatibility
-first; restore backups only through a separately approved recovery procedure.
+Before updating this existing installation, verify database/storage recovery and
+release upgrade prerequisites, including encryption-key migration. Web startup runs
+`db:prepare`; the old worker may still run during migrations. Breaking migrations
+need a coordinated maintenance rollout rather than this automated path.
 
-## Local tooling tests
-
-```sh
-python3 -m unittest discover -s .github/deployment -p 'test_*.py'
-```
-
-These tests mock all network calls and run in reusable CI before image publication.
-They never read real credentials or deploy services.
-
-References: [Render deploy hooks](https://render.com/docs/deploy-hooks),
-[deployment status API](https://api-docs.render.com/reference/retrieve-deploy).
+If a job fails, inspect Render before retrying: hook-triggered deployments are
+asynchronous and may continue after the workflow stops. There is no automatic
+rollback. Before a rollback, check schema compatibility and choose a known release
+for both services. Do not rerun an older release after a newer rollout unless that
+rollback is intentional.

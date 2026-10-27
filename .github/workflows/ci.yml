@@ -10,19 +10,6 @@ on:
         default: false
 
 jobs:
-  test_deployment_tooling:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
-        with:
-          persist-credentials: false
-      - name: Test Render deployment tooling (no network or secrets)
-        run: python3 -m unittest discover -s .github/deployment -p 'test_*.py'
-
   scan_ruby:
     runs-on: ubuntu-latest
     timeout-minutes: 10
