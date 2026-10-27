@@ -25,10 +25,10 @@
   <%= render DS::Card.new(class: "gap-3") do %>
     <h2 class="text-base font-medium text-primary"><%= t(".summary") %></h2>
     <dl class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-10 gap-y-3">
-      <%= render DS::DetailRow.new(label: t(".total_transactions"), value: totals.count.to_s, align: :center) %>
+      <%= render DS::DetailRow.new(label: t(".total_transactions"), value: totals.count.to_s, align: :center, value_class: "privacy-sensitive") %>
       <%= render DS::DetailRow.new(label: t(".total_spending"), value: format_money(@expense_totals.expense_money), align: :center, value_class: "privacy-sensitive") %>
-      <% if @expense_totals.count.positive? %>
-        <%= render DS::DetailRow.new(label: t(".average_transaction"), value: format_money(@expense_totals.expense_money / @expense_totals.count), align: :center, value_class: "privacy-sensitive") %>
+      <% if @average_expense_money %>
+        <%= render DS::DetailRow.new(label: t(".average_transaction"), value: format_money(@average_expense_money), align: :center, value_class: "privacy-sensitive") %>
       <% end %>
       <% if @first_date %>
         <%= render DS::DetailRow.new(label: t(".first_transaction"), value: l(@first_date, format: :long), align: :center) %>
